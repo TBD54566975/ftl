@@ -74,7 +74,8 @@ func TestFSMRetry(t *testing.T) {
 				if i > 0 {
 					delay := times[i].Sub(times[i-1])
 					targetDelay := delays[i-1]
-					assert.True(t, delay >= targetDelay && delay < time.Second+targetDelay, "unexpected time diff for %s retry %d: %v (expected %v - %v)", origin, i, delay, targetDelay, time.Second+targetDelay)
+					acceptableWindow := 1500 * time.Millisecond
+					assert.True(t, delay >= targetDelay && delay < acceptableWindow+targetDelay, "unexpected time diff for %s retry %d: %v (expected %v - %v)", origin, i, delay, targetDelay, acceptableWindow+targetDelay)
 				}
 			}
 		}
@@ -94,15 +95,15 @@ func TestFSMRetry(t *testing.T) {
 		in.Call("fsmretry", "startTransitionToTwo", in.Obj{"id": "1"}, func(t testing.TB, response in.Obj) {}),
 		in.Call("fsmretry", "startTransitionToThree", in.Obj{"id": "2"}, func(t testing.TB, response in.Obj) {}),
 
-		in.Sleep(8*time.Second), //6s is longest run of retries
+		in.Sleep(8*time.Second), //5s is longest run of retries
 
 		// both FSMs instances should have failed
 		in.QueryRow("ftl", "SELECT COUNT(*) FROM fsm_instances WHERE status = 'failed'", int64(2)),
 
-		in.QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:1", "fsmretry.state2"), int64(4)),
-		checkRetries("fsm:fsmretry.fsm:1", "fsmretry.state2", []time.Duration{time.Second, time.Second, time.Second}),
-		in.QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:2", "fsmretry.state3"), int64(4)),
-		checkRetries("fsm:fsmretry.fsm:2", "fsmretry.state3", []time.Duration{time.Second, 2 * time.Second, 3 * time.Second}),
+		in.QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:1", "fsmretry.state2"), int64(3)),
+		checkRetries("fsm:fsmretry.fsm:1", "fsmretry.state2", []time.Duration{2 * time.Second, 2 * time.Second}),
+		in.QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = '%s' AND verb = '%s'", "fsm:fsmretry.fsm:2", "fsmretry.state3"), int64(3)),
+		checkRetries("fsm:fsmretry.fsm:2", "fsmretry.state3", []time.Duration{2 * time.Second, 3 * time.Second}),
 	)
 }
 

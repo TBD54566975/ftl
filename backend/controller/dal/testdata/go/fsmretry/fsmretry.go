@@ -7,7 +7,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-//ftl:retry 3 1s 3s
+//ftl:retry 2 2s 3s
 var fsm = ftl.FSM("fsm",
 	ftl.Start(State1),
 	ftl.Transition(State1, State2),
@@ -32,7 +32,7 @@ func State1(ctx context.Context, in StartEvent) error {
 }
 
 //ftl:verb
-//ftl:retry 3 1s 1s
+//ftl:retry 2 2s 2s
 func State2(ctx context.Context, in TransitionToTwoEvent) error {
 	return fmt.Errorf("transition will never succeed")
 }
