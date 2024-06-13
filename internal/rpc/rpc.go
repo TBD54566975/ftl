@@ -31,6 +31,7 @@ func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 	h2cClient = &http.Client{
 		Transport: authn.Transport(&http2.Transport{
 			AllowHTTP: true,
+			// #nosec G402
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: allowInsecure,
 			},
@@ -42,6 +43,7 @@ func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 	}
 	tlsClient = &http.Client{
 		Transport: authn.Transport(&http2.Transport{
+			// #nosec G402
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: allowInsecure,
 			},
