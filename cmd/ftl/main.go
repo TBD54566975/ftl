@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"slices"
 	"strconv"
 	"syscall"
 
@@ -85,7 +86,7 @@ func main() {
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	config, err := projectconfig.Load(ctx, cli.ConfigFlag)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	if isLoadConfigErrorFatal(err, kctx.Command()) {
 		kctx.Fatalf(err.Error())
 	}
 	kctx.Bind(config)
@@ -139,4 +140,9 @@ func main() {
 
 	err = kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
+}
+
+func isLoadConfigErrorFatal(err error, cmd string) bool {
+	configRequired := slices.Contains([]string{"dev", "serve"}, cmd)
+	return err != nil && configRequired || !errors.Is(err, os.ErrNotExist)
 }
