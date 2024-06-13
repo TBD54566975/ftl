@@ -64,7 +64,7 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	}
 
 	if _, ok := internal.GitRoot(i.Dir).Get(); !ok {
-		return fmt.Errorf("directory %s is not a git repository", i.Dir)
+		return fmt.Errorf("directory %s is not in a git repository, run 'git init' at the root of your project", i.Dir)
 	}
 
 	logger := log.FromContext(ctx)
