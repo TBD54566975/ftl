@@ -87,7 +87,7 @@ ctx := ftltest.Context(
 )
 ```
 
-To can also allow the use of all maps:
+You can also allow the use of all maps:
 ```go
 ctx := ftltest.Context(
     ftltest.WithMapsAllowed(),
