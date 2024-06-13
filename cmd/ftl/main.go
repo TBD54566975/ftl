@@ -30,6 +30,7 @@ type CLI struct {
 	ConfigFlag string           `name:"config" short:"C" help:"Path to FTL project configuration file." env:"FTL_CONFIG" placeholder:"FILE"`
 
 	Authenticators map[string]string `help:"Authenticators to use for FTL endpoints." mapsep:"," env:"FTL_AUTHENTICATORS" placeholder:"HOST=EXE,…"`
+	Insecure       bool              `help:"Skip TLS certificate verification. Caution: susceptible to machine-in-the-middle attacks."`
 
 	Ping     pingCmd     `cmd:"" help:"Ping the FTL cluster."`
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
@@ -74,7 +75,7 @@ func main() {
 		},
 	)
 
-	rpc.InitialiseClients(cli.Authenticators)
+	rpc.InitialiseClients(cli.Authenticators, cli.Insecure)
 
 	// Set some envars for child processes.
 	os.Setenv("LOG_LEVEL", cli.LogConfig.Level.String())
@@ -83,6 +84,10 @@ func main() {
 
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
+
+	if cli.Insecure {
+		logger.Warnf("--insecure skips TLS certificate verification")
+	}
 
 	configPath := cli.ConfigFlag
 	if configPath == "" {

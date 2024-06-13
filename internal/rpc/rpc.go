@@ -23,12 +23,17 @@ import (
 //
 // "authenticators" are authenticator executables to use for each endpoint. The key is the URL of the endpoint, the
 // value is the path to the authenticator executable.
-func InitialiseClients(authenticators map[string]string) {
+//
+// "allowInsecure" skips certificate verification, making TLS susceptible to machine-in-the-middle attacks.
+func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 	// We can't have a client-wide timeout because it also applies to
 	// streaming RPCs, timing them out.
 	h2cClient = &http.Client{
 		Transport: authn.Transport(&http2.Transport{
 			AllowHTTP: true,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: allowInsecure,
+			},
 			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
 				conn, err := dialer.Dial(network, addr)
 				return conn, err
@@ -37,6 +42,9 @@ func InitialiseClients(authenticators map[string]string) {
 	}
 	tlsClient = &http.Client{
 		Transport: authn.Transport(&http2.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: allowInsecure,
+			},
 			DialTLSContext: func(ctx context.Context, network, addr string, config *tls.Config) (net.Conn, error) {
 				tlsDialer := tls.Dialer{Config: config, NetDialer: dialer}
 				conn, err := tlsDialer.DialContext(ctx, network, addr)
@@ -47,7 +55,7 @@ func InitialiseClients(authenticators map[string]string) {
 }
 
 func init() {
-	InitialiseClients(map[string]string{})
+	InitialiseClients(map[string]string{}, false)
 }
 
 var (
