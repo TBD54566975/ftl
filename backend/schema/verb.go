@@ -62,11 +62,15 @@ func (v *Verb) Position() Position { return v.Pos }
 func (v *Verb) schemaDecl()        {}
 func (v *Verb) schemaSymbol()      {}
 func (v *Verb) schemaChildren() []Node {
-	children := make([]Node, 2+len(v.Metadata))
-	children[0] = v.Request
-	children[1] = v.Response
-	for i, c := range v.Metadata {
-		children[i+2] = c
+	children := []Node{}
+	if v.Request != nil {
+		children = append(children, v.Request)
+	}
+	if v.Response != nil {
+		children = append(children, v.Response)
+	}
+	for _, c := range v.Metadata {
+		children = append(children, c)
 	}
 	return children
 }
