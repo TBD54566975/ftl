@@ -4,6 +4,10 @@
 
 # FTL [![CI](https://github.com/TBD54566975/ftl/actions/workflows/ci.yml/badge.svg)](https://github.com/TBD54566975/ftl/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+## Documentation
+
+https://tbd54566975.github.io/ftl/
+
 ## Getting started
 
 ### Install ftl, for example on macos:
