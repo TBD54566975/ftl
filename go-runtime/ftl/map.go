@@ -26,8 +26,8 @@ func (mh *MapHandle[T, U]) Get(ctx context.Context) U {
 }
 
 // Map an FTL resource type to a new type.
-func Map[T, U any](getter Handle[T], fn func(context.Context, T) (U, error)) MapHandle[T, U] {
-	return MapHandle[T, U]{
+func Map[T, U any](getter Handle[T], fn func(context.Context, T) (U, error)) *MapHandle[T, U] {
+	return &MapHandle[T, U]{
 		fn:     fn,
 		handle: getter,
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/alecthomas/types/optional"
 )
@@ -119,9 +120,11 @@ func (f *fakeFTL) FSMSend(ctx context.Context, fsm string, instance string, even
 //
 // mockMap provides the whole mock implemention, so it gets called in place of both `fn`
 // and `getter` in ftl.Map.
-func (f *fakeFTL) addMapMock(mapper any, mockMap func(context.Context) (any, error)) {
+func addMapMock[T, U any](f *fakeFTL, mapper *ftl.MapHandle[T, U], mockMap func(context.Context) (U, error)) {
 	key := makeMapKey(mapper)
-	f.mockMaps[key] = mockMap
+	f.mockMaps[key] = func(ctx context.Context) (any, error) {
+		return mockMap(ctx)
+	}
 }
 
 func (f *fakeFTL) startAllowingMapCalls() {

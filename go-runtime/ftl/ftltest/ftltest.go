@@ -332,10 +332,10 @@ func WithCallsAllowedWithinModule() Option {
 //		}),
 //		// ... other options
 //	)
-func WhenMap[T, U any](mapper *ftl.MapHandle[T, U], fake func(context.Context) (any, error)) Option {
+func WhenMap[T, U any](mapper *ftl.MapHandle[T, U], fake func(context.Context) (U, error)) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
-		fftl.addMapMock(mapper, fake)
+		addMapMock(fftl, mapper, fake)
 		return nil
 	}
 }
