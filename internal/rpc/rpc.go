@@ -31,9 +31,8 @@ func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 	h2cClient = &http.Client{
 		Transport: authn.Transport(&http2.Transport{
 			AllowHTTP: true,
-			// #nosec G402
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: allowInsecure,
+				InsecureSkipVerify: allowInsecure, // #nosec G402
 			},
 			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
 				conn, err := dialer.Dial(network, addr)
@@ -43,9 +42,8 @@ func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 	}
 	tlsClient = &http.Client{
 		Transport: authn.Transport(&http2.Transport{
-			// #nosec G402
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: allowInsecure,
+				InsecureSkipVerify: allowInsecure, // #nosec G402
 			},
 			DialTLSContext: func(ctx context.Context, network, addr string, config *tls.Config) (net.Conn, error) {
 				tlsDialer := tls.Dialer{Config: config, NetDialer: dialer}
