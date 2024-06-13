@@ -81,7 +81,7 @@ By default, calling `Get(ctx)` on a map handle will panic.
 You can inject a fake via a map:
 ```go
 ctx := ftltest.Context(
-    ftltest.WhenMap(exampleMap, func(ctx context.Context) (any, error) {
+    ftltest.WhenMap(exampleMap, func(ctx context.Context) (string, error) {
        return "Test Value"
     }),
 )
