@@ -32,7 +32,9 @@ func TestWatch(t *testing.T) {
 	waitForEvents(t, events, []WatchEvent{})
 
 	// Initiate two modules
-	err := ftl("init", "go", dir, "one")
+	err := git("init", dir)
+	assert.NoError(t, err)
+	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "two")
 	assert.NoError(t, err)
@@ -202,6 +204,13 @@ func keyForEvent(event WatchEvent) string {
 	default:
 		panic("unknown event type")
 	}
+}
+
+func git(args ...string) error {
+	cmd := exec.Command("git", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func ftl(args ...string) error {
