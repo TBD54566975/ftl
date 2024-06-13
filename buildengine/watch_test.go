@@ -32,7 +32,7 @@ func TestWatch(t *testing.T) {
 	waitForEvents(t, events, []WatchEvent{})
 
 	// Initiate two modules
-	err := git("init", dir)
+	err := gitInit(dir)
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
@@ -72,7 +72,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	w := NewWatcher()
 
 	// Initiate a module
-	err := git("init", dir)
+	err := gitInit(dir)
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
@@ -107,7 +107,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	// Initiate a module
-	err := git("init", dir)
+	err := gitInit(dir)
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
@@ -210,8 +210,8 @@ func keyForEvent(event WatchEvent) string {
 	}
 }
 
-func git(args ...string) error {
-	cmd := exec.Command("git", args...)
+func gitInit(dir string) error {
+	cmd := exec.Command("git", "init", dir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
