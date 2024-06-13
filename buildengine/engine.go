@@ -189,6 +189,9 @@ func (e *Engine) Graph(projects ...ProjectKey) (map[string][]string, error) {
 
 func (e *Engine) buildGraph(key string, out map[string][]string) error {
 	var deps []string
+	if _, ok := out[key]; ok {
+		return fmt.Errorf("module %q contains a cyclical dependency", key)
+	}
 	if meta, ok := e.projectMetas.Load(ProjectKey(key)); ok {
 		deps = meta.project.Config().Dependencies
 	} else if sch, ok := e.controllerSchema.Load(key); ok {
