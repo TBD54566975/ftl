@@ -197,10 +197,10 @@ func isCurrentValueAllowedForDayOfWeekStep(step Step, values componentValues, t 
 	}
 
 	results := slices.Map(days, func(day int) bool {
-		if values[t] < start || values[t] > end {
+		if value < start || value > end {
 			return false
 		}
-		if (values[t]-start)%incr != 0 {
+		if (value-start)%incr != 0 {
 			return false
 		}
 		return true

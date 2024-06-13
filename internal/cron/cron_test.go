@@ -148,22 +148,19 @@ func TestNext(t *testing.T) {
 				time.Date(2025, 6, 6, 0, 0, 0, 0, time.UTC),
 			},
 		}},
-		// TODO: These two are failing on the NextAfter with inclusive=true
-		/*
-			// Every wednesday
-			{"0 0 0 * * 3 *", [][]time.Time{
-				{ // 2024-06-09 is a Sunday
-					time.Date(2024, 6, 9, 0, 0, 0, 0, time.UTC),
-					time.Date(2024, 6, 12, 0, 0, 0, 0, time.UTC),
-				},
-			}},
-			{"Wednesday", [][]time.Time{
-				{ // 2024-06-09 is a Sunday
-					time.Date(2024, 6, 9, 0, 0, 0, 0, time.UTC),
-					time.Date(2024, 6, 12, 0, 0, 0, 0, time.UTC),
-				},
-			}},
-		*/
+		// Every wednesday
+		{"0 0 0 * * 3 *", [][]time.Time{
+			{ // 2024-06-09 is a Sunday
+				time.Date(2024, 6, 9, 0, 0, 0, 0, time.UTC),
+				time.Date(2024, 6, 12, 0, 0, 0, 0, time.UTC),
+			},
+		}},
+		{"Wed", [][]time.Time{
+			{ // 2024-06-09 is a Sunday
+				time.Date(2024, 6, 9, 0, 0, 0, 0, time.UTC),
+				time.Date(2024, 6, 12, 0, 0, 0, 0, time.UTC),
+			},
+		}},
 	} {
 		t.Run(fmt.Sprintf("CronSeries:%s", tt.str), func(t *testing.T) {
 			pattern, err := Parse(tt.str)
