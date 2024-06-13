@@ -202,12 +202,14 @@ func WithDatabase(dbHandle ftl.Database) Option {
 		}
 		_, err = sqlDB.ExecContext(ctx, `DO $$
 		DECLARE
-		   table_name text;
+			table_name text;
 		BEGIN
-		   FOR table_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
-		   LOOP
-			  EXECUTE 'DELETE FROM ' || table_name;
-		   END LOOP;
+			FOR table_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
+			LOOP
+				EXECUTE 'ALTER TABLE ' || quote_ident(table_name) || ' DISABLE TRIGGER ALL;';
+				EXECUTE 'DELETE FROM ' || quote_ident(table_name) || ';';
+				EXECUTE 'ALTER TABLE ' || quote_ident(table_name) || ' ENABLE TRIGGER ALL;';
+			END LOOP;
 		END $$;`)
 		if err != nil {
 			return fmt.Errorf("could not clear tables in database %q: %w", dbHandle.Name, err)
