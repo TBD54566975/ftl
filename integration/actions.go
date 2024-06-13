@@ -60,6 +60,16 @@ func CopyModule(module string) Action {
 	)
 }
 
+// SetEnv sets an environment variable for the duration of the test.
+//
+// Note that the FTL controller will already be running.
+func SetEnv(key string, value func(ic TestContext) string) Action {
+	return func(t testing.TB, ic TestContext) {
+		Infof("Setting environment variable %s=%s", key, value(ic))
+		t.Setenv(key, value(ic))
+	}
+}
+
 // Copy a directory from the testdata directory to the working directory.
 func CopyDir(src, dest string) Action {
 	return func(t testing.TB, ic TestContext) {
@@ -114,7 +124,7 @@ func DebugShell() Action {
 // Exec runs a command from the test working directory.
 func Exec(cmd string, args ...string) Action {
 	return func(t testing.TB, ic TestContext) {
-		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
+		Infof("Executing (in %s): %s %s", ic.workDir, cmd, shellquote.Join(args...))
 		err := ftlexec.Command(ic, log.Debug, ic.workDir, cmd, args...).RunBuffered(ic)
 		assert.NoError(t, err)
 	}

@@ -95,7 +95,7 @@ func (s *secretGetCmd) Run(ctx context.Context, adminClient admin.Client) error 
 		Ref: configRefFromRef(s.Ref),
 	}))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get secret: %w", err)
 	}
 	fmt.Printf("%s\n", resp.Msg.Value)
 	return nil
@@ -124,18 +124,23 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient adm
 		}
 	}
 
-	var secretValue []byte
+	var secretJSON json.RawMessage
 	if s.JSON {
-		if err := json.Unmarshal(secret, &secretValue); err != nil {
+		var jsonValue any
+		if err := json.Unmarshal(secret, &jsonValue); err != nil {
 			return fmt.Errorf("secret is not valid JSON: %w", err)
 		}
+		secretJSON = secret
 	} else {
-		secretValue = secret
+		secretJSON, err = json.Marshal(string(secret))
+		if err != nil {
+			return fmt.Errorf("failed to encode secret as JSON: %w", err)
+		}
 	}
 
 	req := &ftlv1.SetSecretRequest{
 		Ref:   configRefFromRef(s.Ref),
-		Value: secretValue,
+		Value: secretJSON,
 	}
 	if provider, ok := scmd.provider().Get(); ok {
 		req.Provider = &provider
