@@ -69,6 +69,7 @@ func TestCycleDetection(t *testing.T) {
 
 	defer engine.Close()
 
-	_, err = engine.Graph()
-	assert.Contains(t, err.Error(), "contains a cyclical dependency")
+	err = engine.Build(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "detected a module dependency cycle that impacts these modules:")
 }

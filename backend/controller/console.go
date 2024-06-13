@@ -161,7 +161,10 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		})
 	}
 
-	sorted := buildengine.TopologicalSort(graph(sch))
+	sorted, unsorted := buildengine.TopologicalSort(graph(sch))
+	if len(unsorted) > 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, buildengine.NewDependencyCycleError(unsorted))
+	}
 	topology := &pbconsole.Topology{
 		Levels: make([]*pbconsole.TopologyGroup, len(sorted)),
 	}
