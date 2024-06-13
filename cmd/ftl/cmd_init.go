@@ -63,6 +63,10 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 		return fmt.Errorf("module name %q is invalid", i.Name)
 	}
 
+	if _, ok := internal.GitRoot(i.Dir).Get(); !ok {
+		return fmt.Errorf("directory %s is not a git repository", i.Dir)
+	}
+
 	logger := log.FromContext(ctx)
 	logger.Debugf("Initializing FTL Go module %s in %s", i.Name, i.Dir)
 	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
@@ -71,7 +75,7 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if err := updateGitIgnore(i.Dir); err != nil {
 		return err
 	}
-	if err := projectconfig.MaybeCreateDefault(ctx, i.Dir); err != nil {
+	if err := projectconfig.MaybeCreateDefault(ctx); err != nil {
 		return err
 	}
 	logger.Debugf("Running go mod tidy")

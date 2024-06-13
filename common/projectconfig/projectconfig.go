@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -79,8 +80,12 @@ func DefaultConfigPath() optional.Option[string] {
 	if err != nil {
 		return optional.None[string]()
 	}
-	// Find the first ftl-project.toml file in the parent directories.
-	for {
+	// Find the first ftl-project.toml file in the parent directories, up until the gitroot.
+	root, ok := internal.GitRoot(dir).Get()
+	if !ok {
+		root = "/"
+	}
+	for dir != root && dir != "." {
 		path := filepath.Join(dir, "ftl-project.toml")
 		_, err := os.Stat(path)
 		if err == nil {
@@ -90,16 +95,13 @@ func DefaultConfigPath() optional.Option[string] {
 			return optional.None[string]()
 		}
 		dir = filepath.Dir(dir)
-		if dir == "/" || dir == "." {
-			break
-		}
 	}
 	return optional.Some(filepath.Join(dir, "ftl-project.toml"))
 }
 
-// MaybeCreateDefault creates the ftl-project.toml file in the given dir if it
-// does not already exist in any parent directory.
-func MaybeCreateDefault(ctx context.Context, dir string) error {
+// MaybeCreateDefault creates the ftl-project.toml file in the Git root if it
+// does not already exist.
+func MaybeCreateDefault(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 	path, ok := DefaultConfigPath().Get()
 	if !ok {
@@ -113,13 +115,6 @@ func MaybeCreateDefault(ctx context.Context, dir string) error {
 	if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-
-	// No project file exists, create one in the given dir.
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		return err
-	}
-	path = filepath.Join(absDir, "ftl-project.toml")
 	logger.Debugf("Creating a new project config file at %q", path)
 	return Save(Config{Path: path})
 }
