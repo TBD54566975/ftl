@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -79,8 +80,12 @@ func DefaultConfigPath() optional.Option[string] {
 	if err != nil {
 		return optional.None[string]()
 	}
-	// Find the first ftl-project.toml file in the parent directories.
-	for {
+	// Find the first ftl-project.toml file in the parent directories, up until the gitroot.
+	root, ok := internal.GitRoot(dir).Get()
+	if !ok {
+		root = "/"
+	}
+	for dir != root && dir != "." {
 		path := filepath.Join(dir, "ftl-project.toml")
 		_, err := os.Stat(path)
 		if err == nil {
@@ -90,9 +95,6 @@ func DefaultConfigPath() optional.Option[string] {
 			return optional.None[string]()
 		}
 		dir = filepath.Dir(dir)
-		if dir == "/" || dir == "." {
-			break
-		}
 	}
 	return optional.Some(filepath.Join(dir, "ftl-project.toml"))
 }

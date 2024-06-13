@@ -32,7 +32,9 @@ func TestWatch(t *testing.T) {
 	waitForEvents(t, events, []WatchEvent{})
 
 	// Initiate two modules
-	err := ftl("init", "go", dir, "one")
+	err := gitInit(dir)
+	assert.NoError(t, err)
+	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 	err = ftl("init", "go", dir, "two")
 	assert.NoError(t, err)
@@ -70,7 +72,9 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	w := NewWatcher()
 
 	// Initiate a module
-	err := ftl("init", "go", dir, "one")
+	err := gitInit(dir)
+	assert.NoError(t, err)
+	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 
 	events, topic := startWatching(ctx, t, w, dir)
@@ -103,7 +107,9 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	// Initiate a module
-	err := ftl("init", "go", dir, "one")
+	err := gitInit(dir)
+	assert.NoError(t, err)
+	err = ftl("init", "go", dir, "one")
 	assert.NoError(t, err)
 
 	one := loadModule(t, dir, "one")
@@ -202,6 +208,13 @@ func keyForEvent(event WatchEvent) string {
 	default:
 		panic("unknown event type")
 	}
+}
+
+func gitInit(dir string) error {
+	cmd := exec.Command("git", "init", dir)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func ftl(args ...string) error {
