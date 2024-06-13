@@ -71,7 +71,7 @@ func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
 	if err := updateGitIgnore(i.Dir); err != nil {
 		return err
 	}
-	if err := projectconfig.MaybeCreateDefault(ctx); err != nil {
+	if err := projectconfig.MaybeCreateDefault(ctx, i.Dir); err != nil {
 		return err
 	}
 	logger.Debugf("Running go mod tidy")

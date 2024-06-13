@@ -97,9 +97,9 @@ func DefaultConfigPath() optional.Option[string] {
 	return optional.Some(filepath.Join(dir, "ftl-project.toml"))
 }
 
-// MaybeCreateDefault creates the ftl-project.toml file in the Git root if it
-// does not already exist.
-func MaybeCreateDefault(ctx context.Context) error {
+// MaybeCreateDefault creates the ftl-project.toml file in the given dir if it
+// does not already exist in any parent directory.
+func MaybeCreateDefault(ctx context.Context, dir string) error {
 	logger := log.FromContext(ctx)
 	path, ok := DefaultConfigPath().Get()
 	if !ok {
@@ -113,6 +113,13 @@ func MaybeCreateDefault(ctx context.Context) error {
 	if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+
+	// No project file exists, create one in the given dir.
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	path = filepath.Join(absDir, "ftl-project.toml")
 	logger.Debugf("Creating a new project config file at %q", path)
 	return Save(Config{Path: path})
 }
