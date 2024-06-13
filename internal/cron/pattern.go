@@ -84,6 +84,9 @@ func (p Pattern) standardizedComponents() ([]Component, error) {
 		}
 
 		components := newComponentsFilled()
+		components[0] = newComponentWithValue(0) // seconds
+		components[1] = newComponentWithValue(0) // minutes
+		components[2] = newComponentWithValue(0) // hours
 		components[5] = newComponentWithValue(dayOfWeekInt)
 		return components, nil
 	}
