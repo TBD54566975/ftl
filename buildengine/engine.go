@@ -189,6 +189,10 @@ func (e *Engine) Graph(projects ...ProjectKey) (map[string][]string, error) {
 
 func (e *Engine) buildGraph(key string, out map[string][]string) error {
 	var deps []string
+	// Short-circuit previously explored nodes
+	if _, ok := out[key]; ok {
+		return nil
+	}
 	if meta, ok := e.projectMetas.Load(ProjectKey(key)); ok {
 		deps = meta.project.Config().Dependencies
 	} else if sch, ok := e.controllerSchema.Load(key); ok {
@@ -478,7 +482,10 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		"builtin": schema.Builtins(),
 	}
 
-	topology := TopologicalSort(graph)
+	topology, err := TopologicalSort(graph)
+	if err != nil {
+		return err
+	}
 	errCh := make(chan error, 1024)
 	for _, group := range topology {
 		// Collect schemas to be inserted into "built" map for subsequent groups.

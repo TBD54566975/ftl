@@ -43,6 +43,32 @@ func TestDiscoverModules(t *testing.T) {
 		},
 		Module{
 			ModuleConfig: moduleconfig.ModuleConfig{
+				Dir:       "testdata/projects/depcycle1",
+				Language:  "go",
+				Realm:     "home",
+				Module:    "depcycle1",
+				Deploy:    []string{"main"},
+				DeployDir: "_ftl",
+				Schema:    "schema.pb",
+				Errors:    "errors.pb",
+				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
+			},
+		},
+		Module{
+			ModuleConfig: moduleconfig.ModuleConfig{
+				Dir:       "testdata/projects/depcycle2",
+				Language:  "go",
+				Realm:     "home",
+				Module:    "depcycle2",
+				Deploy:    []string{"main"},
+				DeployDir: "_ftl",
+				Schema:    "schema.pb",
+				Errors:    "errors.pb",
+				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
+			},
+		},
+		Module{
+			ModuleConfig: moduleconfig.ModuleConfig{
 				Dir:      "testdata/projects/echokotlin",
 				Language: "kotlin",
 				Realm:    "home",

@@ -58,3 +58,18 @@ func TestEngine(t *testing.T) {
 	err = engine.Build(ctx)
 	assert.NoError(t, err)
 }
+
+func TestCycleDetection(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	engine, err := buildengine.New(ctx, nil, []string{"testdata/projects/depcycle1", "testdata/projects/depcycle2"}, nil)
+	assert.NoError(t, err)
+
+	defer engine.Close()
+
+	err = engine.Build(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "detected a module dependency cycle that impacts these modules:")
+}

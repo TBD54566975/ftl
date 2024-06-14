@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/reugn/go-quartz/logger"
 	"time"
 
 	"connectrpc.com/connect"
@@ -161,7 +162,10 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		})
 	}
 
-	sorted := buildengine.TopologicalSort(graph(sch))
+	sorted, err := buildengine.TopologicalSort(graph(sch))
+	if err != nil {
+		logger.Debugf(err.Error())
+	}
 	topology := &pbconsole.Topology{
 		Levels: make([]*pbconsole.TopologyGroup, len(sorted)),
 	}
