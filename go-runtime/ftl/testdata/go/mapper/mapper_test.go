@@ -23,7 +23,7 @@ func TestPanicsWithoutExplicitlyAllowingMaps(t *testing.T) {
 
 func TestMockGet(t *testing.T) {
 	mockOut := 123
-	ctx := ftltest.Context(ftltest.WhenMap(&m, func(ctx context.Context) (any, error) {
+	ctx := ftltest.Context(ftltest.WhenMap(m, func(ctx context.Context) (int, error) {
 		return mockOut, nil
 	}))
 	got := m.Get(ctx)
