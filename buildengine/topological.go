@@ -54,8 +54,5 @@ func TopologicalSort(graph map[string][]string) (groups [][]string, unsorted []s
 }
 
 func NewDependencyCycleError(unsorted []string) error {
-	if len(unsorted) > 0 {
-		return fmt.Errorf("detected a module dependency cycle that impacts these modules: %q", unsorted)
-	}
-	return nil
+	return fmt.Errorf("detected a module dependency cycle that impacts these modules: %q", unsorted)
 }

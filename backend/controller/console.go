@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/reugn/go-quartz/logger"
 	"time"
 
 	"connectrpc.com/connect"
@@ -163,7 +164,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 
 	sorted, unsorted := buildengine.TopologicalSort(graph(sch))
 	if len(unsorted) > 0 {
-		return nil, connect.NewError(connect.CodeInvalidArgument, buildengine.NewDependencyCycleError(unsorted))
+		logger.Debugf(buildengine.NewDependencyCycleError(unsorted).Error())
 	}
 	topology := &pbconsole.Topology{
 		Levels: make([]*pbconsole.TopologyGroup, len(sorted)),
