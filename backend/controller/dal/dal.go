@@ -742,9 +742,14 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		return translatePGError(err)
 	}
 
-	var replacedDeploymentKey optional.Option[model.DeploymentKey]
+	// must be called before deploymentWillDeactivate for the old deployment
+	err = d.deploymentWillActivate(ctx, tx, newDeploymentKey)
+	if err != nil {
+		return translatePGError(err)
+	}
 
 	// If there's an existing deployment, set its desired replicas to 0
+	var replacedDeploymentKey optional.Option[model.DeploymentKey]
 	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
 	if err == nil {
 		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Key, newDeploymentKey, int32(minReplicas))
@@ -767,10 +772,6 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		if err != nil {
 			return translatePGError(err)
 		}
-		err = d.deploymentWillActivate(ctx, tx, newDeploymentKey)
-		if err != nil {
-			return translatePGError(err)
-		}
 	}
 
 	err = tx.InsertDeploymentCreatedEvent(ctx, sql.InsertDeploymentCreatedEventParams{
@@ -787,6 +788,10 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	return nil
 }
 
+// deploymentWillActivate is called whenever a deployment goes from min_replicas=0 to min_replicas>0.
+//
+// when replacing a deployment, this should be called first before calling deploymentWillDeactivate on the old deployment.
+// This allows the new deployment to migrate from the old deployment (such as subscriptions).
 func (d *DAL) deploymentWillActivate(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
 	module, err := tx.GetSchemaForDeployment(ctx, key)
 	if err != nil {
@@ -799,6 +804,9 @@ func (d *DAL) deploymentWillActivate(ctx context.Context, tx *sql.Tx, key model.
 	return d.createSubscribers(ctx, tx, key, module)
 }
 
+// deploymentWillDeactivate is called whenever a deployment goes to min_replicas=0.
+//
+// it may be called when min_replicas was already 0
 func (d *DAL) deploymentWillDeactivate(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
 	return d.removeSubscriptionsAndSubscribers(ctx, tx, key)
 }
