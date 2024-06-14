@@ -564,27 +564,12 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	}
 
 	// update subscriptions
-	subscriptionNames := []string{}
 	for _, decl := range moduleSchema.Decls {
 		s, ok := decl.(*schema.Subscription)
 		if !ok {
 			continue
 		}
-		// look for subscribers
-		if _, hasSubscriber := slices.Find(moduleSchema.Decls, func(in schema.Decl) bool {
-			v, ok := in.(*schema.Verb)
-			if !ok {
-				return false
-			}
-			_, subscribes := slices.Find(v.Metadata, func(in schema.Metadata) bool {
-				md, ok := in.(*schema.MetadataSubscriber)
-				if !ok {
-					return false
-				}
-				return md.Name == s.Name
-			})
-			return subscribes
-		}); !hasSubscriber {
+		if !hasSubscribers(s, moduleSchema.Decls) {
 			// Ignore subscriptions without subscribers
 			// This ensures that controllers don't endlessly try to progress subscriptions without subscribers
 			// https://github.com/TBD54566975/ftl/issues/1685
@@ -602,7 +587,6 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		}); err != nil {
 			return model.DeploymentKey{}, fmt.Errorf("could not insert subscription: %w", translatePGError(err))
 		}
-		subscriptionNames = append(subscriptionNames, s.Name)
 	}
 
 	// create subscribers
@@ -644,6 +628,25 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	}
 
 	return deploymentKey, nil
+}
+
+func hasSubscribers(subscription *schema.Subscription, decls []schema.Decl) bool {
+	for _, d := range decls {
+		verb, ok := d.(*schema.Verb)
+		if !ok {
+			continue
+		}
+		for _, md := range verb.Metadata {
+			subscriber, ok := md.(*schema.MetadataSubscriber)
+			if !ok {
+				continue
+			}
+			if subscriber.Name == subscription.Name {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (d *DAL) GetDeployment(ctx context.Context, key model.DeploymentKey) (*model.Deployment, error) {
