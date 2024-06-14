@@ -11,8 +11,8 @@ import (
 // their topologically sorted order. A cycle in the module dependency graph
 // will cause this sort to be incomplete. The sorted modules are returned as a
 // sequence of `groups` of modules that may be built in parallel. The `unsorted`
-// modules impacted by a dependency cycle are listed in random order.
-func TopologicalSort(graph map[string][]string) (groups [][]string, unsorted []string) {
+// modules impacted by a dependency cycle get reported as an error.
+func TopologicalSort(graph map[string][]string) (groups [][]string, cycleError error) {
 	modulesByName := map[string]bool{}
 	for module := range graph {
 		modulesByName[module] = true
@@ -40,7 +40,9 @@ func TopologicalSort(graph map[string][]string) (groups [][]string, unsorted []s
 			// The remaining modules are either a member of the cyclical
 			// dependency chain or depend (directly or transitively) on
 			// a member of the cyclical dependency chain
-			unsorted = maps.Keys(modulesByName)
+			modules := maps.Keys(modulesByName)
+			sort.Strings(modules)
+			cycleError = fmt.Errorf("detected a module dependency cycle that impacts these modules: %q", modules)
 			break
 		}
 		orderedGroup := maps.Keys(group)
@@ -50,9 +52,5 @@ func TopologicalSort(graph map[string][]string) (groups [][]string, unsorted []s
 		}
 		groups = append(groups, orderedGroup)
 	}
-	return groups, unsorted
-}
-
-func NewDependencyCycleError(unsorted []string) error {
-	return fmt.Errorf("detected a module dependency cycle that impacts these modules: %q", unsorted)
+	return groups, cycleError
 }

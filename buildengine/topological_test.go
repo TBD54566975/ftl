@@ -1,7 +1,6 @@
 package buildengine
 
 import (
-	"sort"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -15,14 +14,14 @@ func TestTopologicalSort(t *testing.T) {
 		"kappa": {},
 		"delta": {},
 	}
-	topo, unsorted := TopologicalSort(graph)
+	topo, err := TopologicalSort(graph)
 	expected := [][]string{
 		{"delta", "kappa"},
 		{"beta", "gamma"},
 		{"alpha"},
 	}
 	assert.Equal(t, expected, topo)
-	assert.Equal(t, nil, unsorted)
+	assert.NoError(t, err)
 }
 
 func TestTopologicalSortCycleDetection(t *testing.T) {
@@ -34,13 +33,13 @@ func TestTopologicalSortCycleDetection(t *testing.T) {
 		"gamma": {"kappa", "base"},
 		"base":  {},
 	}
-	topo, unsorted := TopologicalSort(graph)
+	topo, err := TopologicalSort(graph)
 	expected := [][]string{
 		{"base"},
 		{"kappa"},
 		{"gamma"},
 	}
 	assert.Equal(t, expected, topo)
-	sort.Strings(unsorted)
-	assert.Equal(t, []string{"alpha", "beta", "delta"}, unsorted)
+	assert.Error(t, err)
+	assert.Equal(t, "detected a module dependency cycle that impacts these modules: [\"alpha\" \"beta\" \"delta\"]", err.Error())
 }

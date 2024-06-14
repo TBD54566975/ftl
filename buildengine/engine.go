@@ -482,9 +482,9 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		"builtin": schema.Builtins(),
 	}
 
-	topology, unsorted := TopologicalSort(graph)
-	if len(unsorted) > 0 {
-		return NewDependencyCycleError(unsorted)
+	topology, err := TopologicalSort(graph)
+	if err != nil {
+		return err
 	}
 	errCh := make(chan error, 1024)
 	for _, group := range topology {
