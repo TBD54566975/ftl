@@ -278,10 +278,18 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	})
 
 	// Watch for file and schema changes
+	didUpdateDeployments := false
 	for {
+		var completedUpdatesTimer <-chan time.Time
+		if didUpdateDeployments {
+			completedUpdatesTimer = time.After(period * 2)
+		}
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case <-completedUpdatesTimer:
+			logger.Infof("All modules deployed, watching for changes...")
+			didUpdateDeployments = false
 		case event := <-watchEvents:
 			switch event := event.(type) {
 			case WatchEventProjectAdded:
@@ -291,6 +299,8 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					err := e.buildAndDeploy(ctx, 1, true, config.Key)
 					if err != nil {
 						logger.Errorf(err, "deploy %s failed", config.Key)
+					} else {
+						didUpdateDeployments = true
 					}
 				}
 			case WatchEventProjectRemoved:
@@ -299,6 +309,8 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					err := teminateModuleDeployment(ctx, e.client, module.Module)
 					if err != nil {
 						logger.Errorf(err, "terminate %s failed", module.Module)
+					} else {
+						didUpdateDeployments = true
 					}
 				}
 				e.projectMetas.Delete(config.Key)
@@ -323,6 +335,8 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					case ExternalLibrary:
 						logger.Errorf(err, "build failed for library %q: %v", project.Config().Key, err)
 					}
+				} else {
+					didUpdateDeployments = true
 				}
 			}
 		case change := <-schemaChanges:
@@ -350,6 +364,8 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				err = e.buildAndDeploy(ctx, 1, true, dependentProjectKeys...)
 				if err != nil {
 					logger.Errorf(err, "deploy %s failed", change.Name)
+				} else {
+					didUpdateDeployments = true
 				}
 			}
 		}
