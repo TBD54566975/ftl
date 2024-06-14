@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/internal"
@@ -63,52 +62,67 @@ func (c Config) AbsModuleDirs() []string {
 	return absDirs
 }
 
-// DefaultConfigPath returns the absolute default path for the project config file, if possible.
+// The directory the binary was executed from.
+var startDir = func() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	return dir
+}()
+
+// DefaultConfigPath returns the absolute default path for the ftl-project.toml
+// file.
 //
-// The default path is determined by the FTL_CONFIG environment variable, if set, or by the presence of a Git
-// repository. If the Git repository is found, the default path is the root of the repository with the filename
-// "ftl-project.toml".
-func DefaultConfigPath() optional.Option[string] {
+// The semantics are the following:
+//
+//  1. If the `FTL_CONFIG` environment variable is set, it is used directly.
+//  2. Otherwise the parent directories are searched for an existing file.
+//  3. If not found and a git root is present, ${GIT_ROOT}/ftl-project.toml is returned.
+//  4. Finally, the current directory is used.
+func DefaultConfigPath() (string, error) {
+	// First try the FTL_CONFIG environment variable.
 	if envar, ok := os.LookupEnv("FTL_CONFIG"); ok {
 		absPath, err := filepath.Abs(envar)
 		if err != nil {
-			return optional.None[string]()
+			return "", fmt.Errorf("failed to resolve FTL_CONFIG path %q: %w", envar, err)
 		}
-		return optional.Some(absPath)
+		return absPath, nil
 	}
-	dir, err := os.Getwd()
-	if err != nil {
-		return optional.None[string]()
-	}
-	// Find the first ftl-project.toml file in the parent directories, up until the gitroot.
-	root, ok := internal.GitRoot(dir).Get()
-	if !ok {
-		root = "/"
-	}
-	for dir != root && dir != "." {
+
+	// Next, try to find the first ftl-project.toml file in parent directories.
+	//
+	// This is used to support the case where the config is in a subdirectory of the project.
+	for dir := startDir; dir != "/" && dir != "."; dir = filepath.Dir(dir) {
 		path := filepath.Join(dir, "ftl-project.toml")
 		_, err := os.Stat(path)
 		if err == nil {
-			return optional.Some(path)
+			return path, nil
 		}
 		if !errors.Is(err, os.ErrNotExist) {
-			return optional.None[string]()
+			return "", fmt.Errorf("failed to check for ftl-project.toml in %q: %w", dir, err)
 		}
 		dir = filepath.Dir(dir)
 	}
-	return optional.Some(filepath.Join(dir, "ftl-project.toml"))
+
+	// Default to the git root if found.
+	if git, ok := internal.GitRoot(startDir).Get(); ok {
+		return filepath.Join(git, "ftl-project.toml"), nil
+	}
+
+	// Finally, default to the current directory.
+	return filepath.Join(startDir, "ftl-project.toml"), nil
 }
 
 // MaybeCreateDefault creates the ftl-project.toml file in the Git root if it
 // does not already exist.
 func MaybeCreateDefault(ctx context.Context) error {
 	logger := log.FromContext(ctx)
-	path, ok := DefaultConfigPath().Get()
-	if !ok {
-		logger.Warnf("Failed to find Git root, so cannot verify whether an ftl-project.toml file exists there")
-		return nil
+	path, err := DefaultConfigPath()
+	if err != nil {
+		return err
 	}
-	_, err := os.Stat(path)
+	_, err = os.Stat(path)
 	if err == nil {
 		return nil
 	}
@@ -135,20 +149,20 @@ func LoadOrCreate(ctx context.Context, target string) (Config, error) {
 // Load project config from a file.
 func Load(ctx context.Context, path string) (Config, error) {
 	if path == "" {
-		maybePath, ok := DefaultConfigPath().Get()
-		if !ok {
-			return Config{}, nil
+		defaultPath, err := DefaultConfigPath()
+		if err != nil {
+			return Config{}, err
 		}
-		path = maybePath
+		path = defaultPath
 	}
 	path, err := filepath.Abs(path)
 	if err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("failed to resolve config path %q: %w", path, err)
 	}
 	config := Config{}
 	md, err := toml.DecodeFile(path, &config)
 	if err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("failed to decode %q: %w", path, err)
 	}
 	if len(md.Undecoded()) > 0 {
 		keys := make([]string, len(md.Undecoded()))

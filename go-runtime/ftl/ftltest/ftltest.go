@@ -78,11 +78,7 @@ func WithProjectFile(path string) Option {
 	// Convert to absolute path immediately in case working directory changes
 	var preprocessingErr error
 	if path == "" {
-		var ok bool
-		path, ok = pc.DefaultConfigPath().Get()
-		if !ok {
-			preprocessingErr = fmt.Errorf("could not find default project file in $FTL_CONFIG or git")
-		}
+		path, preprocessingErr = pc.DefaultConfigPath()
 	}
 	return func(ctx context.Context, state *OptionsState) error {
 		if preprocessingErr != nil {

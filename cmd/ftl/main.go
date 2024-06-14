@@ -91,11 +91,9 @@ func main() {
 
 	configPath := cli.ConfigFlag
 	if configPath == "" {
-		var ok bool
-		configPath, ok = projectconfig.DefaultConfigPath().Get()
-		if !ok {
-			kctx.Fatalf("could not determine default config path, either place an ftl-project.toml file in the root of your project, use --config=FILE, or set the FTL_CONFIG envar")
-		}
+		var err error
+		configPath, err = projectconfig.DefaultConfigPath()
+		kctx.FatalIfErrorf(err, "could not determine default ftl-project.toml path")
 	}
 
 	os.Setenv("FTL_CONFIG", configPath)
