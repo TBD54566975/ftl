@@ -42,7 +42,7 @@ var apiKey = ftl.Secret[string]("apiKey")
 Then to retrieve a secret value:
 
 ```go
-username = defaultUser.Get(ctx)
+key = apiKey.Get(ctx)
 ```
 
 ### Transforming secrets/configuration
