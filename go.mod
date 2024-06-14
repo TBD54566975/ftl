@@ -39,6 +39,7 @@ require (
 	github.com/multiformats/go-base36 v0.2.0
 	github.com/otiai10/copy v1.14.0
 	github.com/radovskyb/watcher v1.0.7
+	github.com/reugn/go-quartz v0.11.2
 	github.com/rs/cors v1.11.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
