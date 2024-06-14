@@ -393,8 +393,11 @@ CREATE TABLE topic_subscriptions (
 
     topic_id BIGINT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
 
-     -- Each subscription is associated with an owning module.
+    -- Each subscription is associated with an owning module.
     module_id BIGINT NOT NULL REFERENCES modules(id),
+
+    -- The latest deployment that uses the subscription.
+    deployment_id BIGINT NOT NULL REFERENCES deployments(id),
 
     -- Name of the subscription.
     name TEXT NOT NULL,

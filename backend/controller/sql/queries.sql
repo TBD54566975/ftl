@@ -627,7 +627,12 @@ UPDATE SET
 RETURNING id;
 
 -- name: UpsertSubscription :exec
-INSERT INTO topic_subscriptions (key, topic_id, module_id, name)
+INSERT INTO topic_subscriptions (
+  key,
+  topic_id,
+  module_id,
+  deployment_id,
+  name)
 VALUES (
   sqlc.arg('key')::subscription_key,
   (
@@ -638,25 +643,34 @@ VALUES (
       AND topics.name = sqlc.arg('topic_name')::TEXT
   ),
   (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT),
+  (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key),
   sqlc.arg('name')::TEXT
 )
 ON CONFLICT (name, module_id) DO
 UPDATE SET 
-  topic_id = excluded.topic_id
+  topic_id = excluded.topic_id,
+  deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key)
 RETURNING id;
 
--- name: DeleteOldSubscriptions :exec
+-- name: DeleteObsoleteSubscriptions :exec
 DELETE FROM topic_subscriptions
-WHERE module_id = (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT)
-  AND NOT name = ANY (sqlc.arg('subscriptions')::TEXT[]);
+WHERE module_id IN (
+  SELECT modules.id
+  FROM modules
+  WHERE modules.name = sqlc.arg('module')
+)
+AND deployment_id NOT IN (
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = sqlc.arg('active_deployment')::deployment_key
+);
 
 -- name: DeleteSubscribers :exec
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
-    SELECT deployments.id
-    FROM deployments
-    LEFT JOIN modules ON deployments.module_id = modules.id
-    WHERE modules.name = sqlc.arg('module')::TEXT
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = sqlc.arg('deployment')::deployment_key
 );
 
 -- name: InsertSubscriber :exec

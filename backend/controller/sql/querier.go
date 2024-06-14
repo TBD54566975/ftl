@@ -29,8 +29,8 @@ type Querier interface {
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
-	DeleteOldSubscriptions(ctx context.Context, module string, subscriptions []string) error
-	DeleteSubscribers(ctx context.Context, module string) error
+	DeleteObsoleteSubscriptions(ctx context.Context, module string, activeDeployment model.DeploymentKey) error
+	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) error
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error)
 	ExpireLeases(ctx context.Context) (int64, error)

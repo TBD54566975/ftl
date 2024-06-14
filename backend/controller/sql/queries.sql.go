@@ -256,29 +256,36 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
-const deleteOldSubscriptions = `-- name: DeleteOldSubscriptions :exec
+const deleteObsoleteSubscriptions = `-- name: DeleteObsoleteSubscriptions :exec
 DELETE FROM topic_subscriptions
-WHERE module_id = (SELECT id FROM modules WHERE name = $1::TEXT)
-  AND NOT name = ANY ($2::TEXT[])
+WHERE module_id IN (
+  SELECT modules.id
+  FROM modules
+  WHERE modules.name = $1
+)
+AND deployment_id NOT IN (
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = $2::deployment_key
+)
 `
 
-func (q *Queries) DeleteOldSubscriptions(ctx context.Context, module string, subscriptions []string) error {
-	_, err := q.db.Exec(ctx, deleteOldSubscriptions, module, subscriptions)
+func (q *Queries) DeleteObsoleteSubscriptions(ctx context.Context, module string, activeDeployment model.DeploymentKey) error {
+	_, err := q.db.Exec(ctx, deleteObsoleteSubscriptions, module, activeDeployment)
 	return err
 }
 
 const deleteSubscribers = `-- name: DeleteSubscribers :exec
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
-    SELECT deployments.id
-    FROM deployments
-    LEFT JOIN modules ON deployments.module_id = modules.id
-    WHERE modules.name = $1::TEXT
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = $1::deployment_key
 )
 `
 
-func (q *Queries) DeleteSubscribers(ctx context.Context, module string) error {
-	_, err := q.db.Exec(ctx, deleteSubscribers, module)
+func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) error {
+	_, err := q.db.Exec(ctx, deleteSubscribers, deployment)
 	return err
 }
 
@@ -2363,7 +2370,12 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (opt
 }
 
 const upsertSubscription = `-- name: UpsertSubscription :exec
-INSERT INTO topic_subscriptions (key, topic_id, module_id, name)
+INSERT INTO topic_subscriptions (
+  key,
+  topic_id,
+  module_id,
+  deployment_id,
+  name)
 VALUES (
   $1::subscription_key,
   (
@@ -2374,11 +2386,13 @@ VALUES (
       AND topics.name = $3::TEXT
   ),
   (SELECT id FROM modules WHERE name = $4::TEXT),
-  $5::TEXT
+  (SELECT id FROM deployments WHERE key = $5::deployment_key),
+  $6::TEXT
 )
 ON CONFLICT (name, module_id) DO
 UPDATE SET 
-  topic_id = excluded.topic_id
+  topic_id = excluded.topic_id,
+  deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
 RETURNING id
 `
 
@@ -2387,6 +2401,7 @@ type UpsertSubscriptionParams struct {
 	TopicModule string
 	TopicName   string
 	Module      string
+	Deployment  model.DeploymentKey
 	Name        string
 }
 
@@ -2396,6 +2411,7 @@ func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscription
 		arg.TopicModule,
 		arg.TopicName,
 		arg.Module,
+		arg.Deployment,
 		arg.Name,
 	)
 	return err

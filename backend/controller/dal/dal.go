@@ -501,53 +501,6 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		}
 	}
 
-	// update subscriptions
-	subscriptionNames := []string{}
-	for _, decl := range moduleSchema.Decls {
-		s, ok := decl.(*schema.Subscription)
-		if !ok {
-			continue
-		}
-		// look for subscribers
-		if _, hasSubscriber := slices.Find(moduleSchema.Decls, func(in schema.Decl) bool {
-			v, ok := in.(*schema.Verb)
-			if !ok {
-				return false
-			}
-			_, subscribes := slices.Find(v.Metadata, func(in schema.Metadata) bool {
-				md, ok := in.(*schema.MetadataSubscriber)
-				if !ok {
-					return false
-				}
-				return md.Name == s.Name
-			})
-			return subscribes
-		}); !hasSubscriber {
-			// Ignore subscriptions without subscribers
-			// This ensures that controllers don't endlessly try to progress subscriptions without subscribers
-			// https://github.com/TBD54566975/ftl/issues/1685
-			//
-			// It does mean that a subscription will reset to the topic's head if all subscribers are removed and then later re-added
-			continue
-		}
-		if err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
-			Key:         model.NewSubscriptionKey(moduleSchema.Name, s.Name),
-			Module:      moduleSchema.Name,
-			TopicModule: s.Topic.Module,
-			TopicName:   s.Topic.Name,
-			Name:        s.Name,
-		}); err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("could not insert subscription: %w", translatePGError(err))
-		}
-		subscriptionNames = append(subscriptionNames, s.Name)
-	}
-	if err := tx.DeleteOldSubscriptions(ctx, moduleSchema.Name, subscriptionNames); err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("could not delete old subscriptions: %w", translatePGError(err))
-	}
-	if err := tx.DeleteSubscribers(ctx, moduleSchema.Name); err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("could not delete old subscribers: %w", translatePGError(err))
-	}
-
 	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
 
 	// Create the deployment
@@ -608,6 +561,48 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		if err != nil {
 			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", translatePGError(err))
 		}
+	}
+
+	// update subscriptions
+	subscriptionNames := []string{}
+	for _, decl := range moduleSchema.Decls {
+		s, ok := decl.(*schema.Subscription)
+		if !ok {
+			continue
+		}
+		// look for subscribers
+		if _, hasSubscriber := slices.Find(moduleSchema.Decls, func(in schema.Decl) bool {
+			v, ok := in.(*schema.Verb)
+			if !ok {
+				return false
+			}
+			_, subscribes := slices.Find(v.Metadata, func(in schema.Metadata) bool {
+				md, ok := in.(*schema.MetadataSubscriber)
+				if !ok {
+					return false
+				}
+				return md.Name == s.Name
+			})
+			return subscribes
+		}); !hasSubscriber {
+			// Ignore subscriptions without subscribers
+			// This ensures that controllers don't endlessly try to progress subscriptions without subscribers
+			// https://github.com/TBD54566975/ftl/issues/1685
+			//
+			// It does mean that a subscription will reset to the topic's head if all subscribers are removed and then later re-added
+			continue
+		}
+		if err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
+			Key:         model.NewSubscriptionKey(moduleSchema.Name, s.Name),
+			Module:      moduleSchema.Name,
+			Deployment:  deploymentKey,
+			TopicModule: s.Topic.Module,
+			TopicName:   s.Topic.Name,
+			Name:        s.Name,
+		}); err != nil {
+			return model.DeploymentKey{}, fmt.Errorf("could not insert subscription: %w", translatePGError(err))
+		}
+		subscriptionNames = append(subscriptionNames, s.Name)
 	}
 
 	// create subscribers
@@ -829,6 +824,12 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 		if count == 1 {
 			return fmt.Errorf("deployment already exists: %w", ErrConflict)
+		}
+		if err := tx.DeleteObsoleteSubscriptions(ctx, newDeployment.ModuleName, newDeploymentKey); err != nil {
+			return fmt.Errorf("could not delete old subscriptions: %w", translatePGError(err))
+		}
+		if err := tx.DeleteSubscribers(ctx, oldDeployment.Key); err != nil {
+			return fmt.Errorf("could not delete old subscribers: %w", translatePGError(err))
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !isNotFound(err) {
