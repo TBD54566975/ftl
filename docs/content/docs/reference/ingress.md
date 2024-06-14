@@ -35,6 +35,8 @@ func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.Http
 
 > **NOTE!**
 > The `req` and `resp` types of HTTP `ingress` [verbs](../verbs) must be `builtin.HttpRequest` and `builtin.HttpResponse` respectively. These types provide the necessary fields for HTTP `ingress` (`headers`, `statusCode`, etc.)
+> 
+> You will need to import `ftl/builtin`.
 
 Key points to note
 
