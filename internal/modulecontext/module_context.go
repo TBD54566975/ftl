@@ -5,7 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/alecthomas/atomic"
+	"github.com/jpillora/backoff"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -33,6 +39,13 @@ type ModuleContext struct {
 	mockVerbs               map[schema.RefKey]Verb
 	allowDirectVerbBehavior bool
 	leaseClient             optional.Option[LeaseClient]
+}
+
+// DynamicModuleContext provides up-to-date ModuleContext instances supplied by the controller
+type DynamicModuleContext struct {
+	current atomic.Value[ModuleContext]
+	await   sync.WaitGroup
+	release sync.Once
 }
 
 // Builder is used to build a ModuleContext
@@ -177,6 +190,56 @@ func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBeha
 		return optional.None[VerbBehavior](), fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s.%s, ...)", ref.Module, strings.ToUpper(ref.Name[:1])+ref.Name[1:])
 	}
 	return optional.None[VerbBehavior](), nil
+}
+
+// NewDynamicContext creates a new DynamicModuleContext. This operation blocks
+// until the first ModuleContext is supplied by the controller.
+//
+// The DynamicModuleContext will continually update as updated ModuleContext's
+// are streamed from the controller. This operation may time out if the first
+// module context is not supplied quickly enough (fixed at 5 seconds).
+func NewDynamicContext(ctx context.Context, client ftlv1connect.VerbServiceClient, moduleName string) (*DynamicModuleContext, error) {
+	request := &ftlv1.ModuleContextRequest{Module: moduleName}
+	result := &DynamicModuleContext{
+		await:   sync.WaitGroup{},
+		release: sync.Once{},
+	}
+	result.await.Add(1)
+	rpc.RetryStreamingServerStream(ctx, backoff.Backoff{}, request, client.GetModuleContext, result.handleResponse)
+
+	// Establishing channel used to await first ModuleContext result from GetModuleContext's stream
+	firstContext := make(chan struct{})
+	go func() {
+		defer close(firstContext)
+		result.await.Wait()
+	}()
+
+	select {
+	case <-firstContext:
+		return nil, fmt.Errorf("timedout waiting for first ModuleContext")
+	case <-time.After(5 * time.Second):
+		return result, nil
+	}
+}
+
+// CurrentContext immediately returns the most recently updated ModuleContext
+func (m *DynamicModuleContext) CurrentContext() ModuleContext {
+	return m.current.Load()
+}
+
+// handleResponse processes the received ModuleContextResponse by converting
+// and storing the value. The wait handle used to block New is released the
+// first time handleResponse is invoked.
+func (m *DynamicModuleContext) handleResponse(_ context.Context, resp *ftlv1.ModuleContextResponse) error {
+	mc, err := FromProto(resp)
+	if err != nil {
+		return err
+	}
+	m.current.Store(mc)
+	m.release.Do(func() {
+		m.await.Done()
+	})
+	return nil
 }
 
 // VerbBehavior indicates how to execute a verb

@@ -36,23 +36,12 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
-		stream, err := verbServiceClient.GetModuleContext(ctx, connect.NewRequest(&ftlv1.ModuleContextRequest{
-			Module: moduleName,
-		}))
-		defer stream.Close()
-
+		dmc, err := modulecontext.NewDynamicContext(ctx, verbServiceClient, moduleName)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get config: %w", err)
 		}
-		// TODO use proper stream handling
-		if !stream.Receive() {
-			return nil, nil, fmt.Errorf("failed to retrieve ModuleContext from stream")
-		}
-		resp := stream.Msg()
-		moduleCtx, err := modulecontext.FromProto(resp)
-		if err != nil {
-			return nil, nil, err
-		}
+		moduleCtx := dmc.CurrentContext()
+
 		ctx = moduleCtx.ApplyToContext(ctx)
 		ctx = internal.WithContext(ctx, internal.New(moduleCtx))
 
