@@ -14,9 +14,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
+
+	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
@@ -1224,8 +1225,8 @@ func visitFuncDecl(pctx *parseContext, node *ast.FuncDecl) (verb *schema.Verb) {
 		return nil
 	}
 
-	if expVerbName := strcase.ToUpperCamel(node.Name.Name); node.Name.Name != expVerbName {
-		pctx.errors.add(errorf(node, "unexpected verb name %q, did you mean to use %q instead?", node.Name.Name, expVerbName))
+	if expName := exportedName(node.Name.Name); node.Name.Name != expName {
+		pctx.errors.add(errorf(node, "verb %q is not exported, did you mean to use %q instead?", node.Name.Name, expName))
 		return nil
 	}
 
@@ -1830,4 +1831,11 @@ func isIotaEnum(node ast.Node) bool {
 	default:
 		return false
 	}
+}
+
+func exportedName(name string) string {
+	if name == "" {
+		return ""
+	}
+	return string(unicode.ToUpper(rune(name[0]))) + name[1:]
 }
