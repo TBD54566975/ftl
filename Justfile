@@ -38,7 +38,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
-build-all: build-protos build-frontend build-generate build-sqlc build-zips
+build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips
   @just build ftl ftl-controller ftl-runner ftl-initdb
 
 # Run "go generate" on all packages
@@ -108,6 +108,11 @@ npm-install:
 build-protos: npm-install
   @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
+
+# Unconditionally rebuild protos
+build-protos-unconditionally: npm-install
+  ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint
+  cd backend/protos && buf generate
 
 # Run integration test(s)
 integration-tests *test:
