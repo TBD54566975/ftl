@@ -282,6 +282,10 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			case *schema.Optional, *schema.Unit:
 				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
 
+			case *schema.Topic:
+				if n.IsExported() {
+					imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
+				}
 			default:
 			}
 			return next()
@@ -367,15 +371,6 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			}
 		}
 		return out
-	},
-	"needsFTLImport": func(m *schema.Module) bool {
-		for _, d := range m.Decls {
-			if topic, ok := d.(*schema.Topic); ok && topic.IsExported() {
-				// uses ftl.Topic(...) function calls
-				return true
-			}
-		}
-		return false
 	},
 }
 
