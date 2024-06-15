@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -23,6 +24,7 @@ type devCmd struct {
 	NoServe        bool          `help:"Do not start the FTL server." default:"false"`
 	Lsp            bool          `help:"Run the language server." default:"false"`
 	ServeCmd       serveCmd      `embed:""`
+	InitDB         bool          `help:"Initialize the database and exit." default:"false"`
 	languageServer *lsp.Server
 }
 
@@ -43,6 +45,16 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		logger := log.FromContext(ctx)
 		return KillBackgroundServe(logger)
 	}
+
+	if d.InitDB {
+		dsn, err := d.ServeCmd.setupDB(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to setup database: %w", err)
+		}
+		fmt.Println(dsn)
+		return nil
+	}
+
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
 			err := d.ServeCmd.Run(ctx)
