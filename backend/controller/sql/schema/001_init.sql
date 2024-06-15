@@ -397,7 +397,7 @@ CREATE TABLE topic_subscriptions (
     module_id BIGINT NOT NULL REFERENCES modules(id),
 
     -- Name of the subscription.
-    name TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
 
     -- Cursor pointing into the topic_events table.
     cursor BIGINT REFERENCES topic_events(id) ON DELETE CASCADE,
