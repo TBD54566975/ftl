@@ -1,4 +1,4 @@
-Snippet for defining a type enum (sum types).
+Snippet for declare a type enum (sum types).
 
 ```go
 //ftl:enum
@@ -9,6 +9,8 @@ const (
 	Value2 MyEnum = "Value2"
 )
 ```
+
+See https://tbd54566975.github.io/ftl/docs/reference/types/
 ---
 //ftl:enum
 type ${1:Enum} string

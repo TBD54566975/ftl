@@ -2,6 +2,7 @@ package lsp
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"strings"
 
@@ -18,24 +19,76 @@ var enumTypeCompletionDocs string
 //go:embed markdown/completion/enumValue.md
 var enumValueCompletionDocs string
 
+//go:embed markdown/completion/typeAlias.md
+var typeAliasCompletionDocs string
+
+//go:embed markdown/completion/ingress.md
+var ingressCompletionDocs string
+
+//go:embed markdown/completion/cron.md
+var cronCompletionDocs string
+
+//go:embed markdown/completion/retry.md
+var retryCompletionDocs string
+
+//go:embed markdown/completion/configDeclare.md
+var declareConfigCompletionDocs string
+
+//go:embed markdown/completion/configGet.md
+var getConfigCompletionDocs string
+
+//go:embed markdown/completion/secretDeclare.md
+var declareSecretCompletionDocs string
+
+//go:embed markdown/completion/secretGet.md
+var getSecretCompletionDocs string
+
+//go:embed markdown/completion/pubSubTopic.md
+var declarePubSubTopicCompletionDocs string
+
+//go:embed markdown/completion/pubSubSubscription.md
+var declarePubSubSubscriptionCompletionDocs string
+
+//go:embed markdown/completion/pubSubSink.md
+var definePubSubSinkCompletionDocs string
+
+//go:embed markdown/completion/pubSubPublish.md
+var publishPubSubEventCompletionDocs string
+
+// Markdown is split by "---". First half is completion docs, second half is insert text.
 var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:verb", "FTL Verb", verbCompletionDocs),
 	completionItem("ftl:enum (sum type)", "FTL Enum (sum type)", enumTypeCompletionDocs),
 	completionItem("ftl:enum (value)", "FTL Enum (value type)", enumValueCompletionDocs),
+	completionItem("ftl:typealias", "FTL Type Alias", typeAliasCompletionDocs),
+	completionItem("ftl:ingress", "FTL Ingress", ingressCompletionDocs),
+	completionItem("ftl:cron", "FTL Cron", cronCompletionDocs),
+	completionItem("ftl:retry", "FTL Retry", retryCompletionDocs),
+	completionItem("config:declare", "Declare config", declareConfigCompletionDocs),
+	completionItem("config:get", "Get config", getConfigCompletionDocs),
+	completionItem("secret:declare", "Declare secret", declareSecretCompletionDocs),
+	completionItem("secret:get", "Get secret", getSecretCompletionDocs),
+	completionItem("pubsub:topic", "Declare PubSub topic", declarePubSubTopicCompletionDocs),
+	completionItem("pubsub:subscription", "Declare a PubSub subscription", declarePubSubSubscriptionCompletionDocs),
+	completionItem("pubsub:sink", "Define a PubSub sink", definePubSubSinkCompletionDocs),
+	completionItem("pubsub:publish", "Publish a PubSub event", publishPubSubEventCompletionDocs),
 }
 
 func completionItem(label, detail, markdown string) protocol.CompletionItem {
 	snippetKind := protocol.CompletionItemKindSnippet
 	insertTextFormat := protocol.InsertTextFormatSnippet
 
-	// Split markdown by "---"
-	// First half is completion docs, second half is insert text
 	parts := strings.Split(markdown, "---")
 	if len(parts) != 2 {
 		panic("invalid markdown. must contain exactly one '---' to separate completion docs from insert text")
 	}
 
 	insertText := strings.TrimSpace(parts[1])
+	// Warn if we see two spaces in the insert text.
+	if strings.Contains(insertText, "  ") {
+		fmt.Fprintf(os.Stderr, "warning: completion item %q contains two spaces in the insert text. Use tabs instead!\n", label)
+	}
+
 	return protocol.CompletionItem{
 		Label:      label,
 		Kind:       &snippetKind,
@@ -59,7 +112,7 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 			return nil, nil
 		}
 
-		line := int(position.Line - 1)
+		line := int(position.Line)
 		if line >= len(doc.lines) {
 			return nil, nil
 		}
@@ -70,7 +123,7 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 			character = len(lineContent)
 		}
 
-		prefix := lineContent[:character]
+		prefix := lineContent[character:]
 
 		// Filter completion items based on the prefix
 		var filteredItems []protocol.CompletionItem
@@ -103,9 +156,4 @@ func (s *Server) completionItemResolve() protocol.CompletionItemResolveFunc {
 
 		return params, nil
 	}
-}
-
-func stringPtr(v string) *string {
-	s := v
-	return &s
 }
