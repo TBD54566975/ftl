@@ -20,7 +20,7 @@ Configuration values are named, typed values. They are managed by the `ftl confi
 To declare a configuration value use the following syntax:
 
 ```go
-var defaultUser = ftl.Config[string]("default")
+var defaultUser = ftl.Config[string]("defaultUser")
 ```
 
 Then to retrieve a configuration value:
