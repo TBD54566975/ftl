@@ -34,14 +34,8 @@ var retryCompletionDocs string
 //go:embed markdown/completion/configDeclare.md
 var declareConfigCompletionDocs string
 
-//go:embed markdown/completion/configGet.md
-var getConfigCompletionDocs string
-
 //go:embed markdown/completion/secretDeclare.md
 var declareSecretCompletionDocs string
-
-//go:embed markdown/completion/secretGet.md
-var getSecretCompletionDocs string
 
 //go:embed markdown/completion/pubSubTopic.md
 var declarePubSubTopicCompletionDocs string
@@ -52,8 +46,8 @@ var declarePubSubSubscriptionCompletionDocs string
 //go:embed markdown/completion/pubSubSink.md
 var definePubSubSinkCompletionDocs string
 
-//go:embed markdown/completion/pubSubPublish.md
-var publishPubSubEventCompletionDocs string
+//go:embed markdown/completion/fsmDeclare.md
+var fsmCompletionDocs string
 
 // Markdown is split by "---". First half is completion docs, second half is insert text.
 var completionItems = []protocol.CompletionItem{
@@ -64,14 +58,12 @@ var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:ingress", "FTL Ingress", ingressCompletionDocs),
 	completionItem("ftl:cron", "FTL Cron", cronCompletionDocs),
 	completionItem("ftl:retry", "FTL Retry", retryCompletionDocs),
-	completionItem("config:declare", "Declare config", declareConfigCompletionDocs),
-	completionItem("config:get", "Get config", getConfigCompletionDocs),
-	completionItem("secret:declare", "Declare secret", declareSecretCompletionDocs),
-	completionItem("secret:get", "Get secret", getSecretCompletionDocs),
-	completionItem("pubsub:topic", "Declare PubSub topic", declarePubSubTopicCompletionDocs),
-	completionItem("pubsub:subscription", "Declare a PubSub subscription", declarePubSubSubscriptionCompletionDocs),
-	completionItem("pubsub:sink", "Define a PubSub sink", definePubSubSinkCompletionDocs),
-	completionItem("pubsub:publish", "Publish a PubSub event", publishPubSubEventCompletionDocs),
+	completionItem("ftl:config:declare", "Declare config", declareConfigCompletionDocs),
+	completionItem("ftl:secret:declare", "Declare secret", declareSecretCompletionDocs),
+	completionItem("ftl:pubsub:topic", "Declare PubSub topic", declarePubSubTopicCompletionDocs),
+	completionItem("ftl:pubsub:subscription", "Declare a PubSub subscription", declarePubSubSubscriptionCompletionDocs),
+	completionItem("ftl:pubsub:sink", "Define a PubSub sink", definePubSubSinkCompletionDocs),
+	completionItem("ftl:fsm", "Model a FSM", fsmCompletionDocs),
 }
 
 func completionItem(label, detail, markdown string) protocol.CompletionItem {
