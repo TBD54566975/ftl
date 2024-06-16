@@ -20,7 +20,7 @@ Configuration values are named, typed values. They are managed by the `ftl confi
 To declare a configuration value use the following syntax:
 
 ```go
-var defaultUser = ftl.Config[string]("defaultUser")
+var defaultUser = ftl.Config[Username]("defaultUser")
 ```
 
 Then to retrieve a configuration value:
@@ -36,7 +36,7 @@ Secrets are encrypted, named, typed values. They are managed by the `ftl secret`
 Declare a secret with the following:
 
 ```go
-var apiKey = ftl.Secret[string]("apiKey")
+var apiKey = ftl.Secret[Credentials]("apiKey")
 ```
 
 Then to retrieve a secret value:
