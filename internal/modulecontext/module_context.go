@@ -205,7 +205,8 @@ func NewDynamicContext(ctx context.Context, client ftlv1connect.VerbServiceClien
 		release: sync.Once{},
 	}
 	result.await.Add(1)
-	rpc.RetryStreamingServerStream(ctx, backoff.Backoff{}, request, client.GetModuleContext, result.handleResponse)
+
+	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{}, request, client.GetModuleContext, result.handleResponse)
 
 	// Establishing channel used to await first ModuleContext result from GetModuleContext's stream
 	firstContext := make(chan struct{})
@@ -216,9 +217,9 @@ func NewDynamicContext(ctx context.Context, client ftlv1connect.VerbServiceClien
 
 	select {
 	case <-firstContext:
-		return nil, fmt.Errorf("timedout waiting for first ModuleContext")
-	case <-time.After(5 * time.Second):
 		return result, nil
+	case <-time.After(5 * time.Second):
+		return nil, fmt.Errorf("time out waiting for first ModuleContext")
 	}
 }
 
