@@ -173,3 +173,8 @@ func BadPublish(ctx context.Context) error {
 	ps.PublicBroadcast.Publish(ctx, ps.PayinEvent{Name: "Test"})
 	return ps.Broadcast(ctx)
 }
+
+//ftl:data
+type UnexportedFieldStruct struct {
+	unexported string
+}

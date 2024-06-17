@@ -14,7 +14,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/analyzers"
+	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 	sets "github.com/deckarep/golang-set/v2"
 	gomaps "golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
@@ -45,6 +45,8 @@ type ExternalModuleContext struct {
 
 type goVerb struct {
 	Name        string
+	Package     string
+	MustImport  string
 	HasRequest  bool
 	HasResponse bool
 }
@@ -169,7 +171,10 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 			return fmt.Errorf("missing native name for verb %s", verb.Name)
 		}
 
-		goverb := goVerb{Name: nativeName}
+		goverb, err := goVerbFromQualifiedName(nativeName)
+		if err != nil {
+			return err
+		}
 		if _, ok := verb.Request.(*schema.Unit); !ok {
 			goverb.HasRequest = true
 		}
@@ -329,6 +334,9 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		imports := sets.NewSet[string]()
 		if len(ctx.Verbs) > 0 {
 			imports.Add(ctx.Name)
+		}
+		for _, v := range ctx.Verbs {
+			imports.Add(strings.TrimPrefix(v.MustImport, "ftl/"))
 		}
 		for _, st := range ctx.SumTypes {
 			if i := strings.LastIndex(st.Discriminator, "."); i != -1 {
@@ -612,22 +620,22 @@ func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalE
 //
 // TODO: once migrated off of the legacy extractor, we can inline `extract.Extract(dir)` and delete this
 // function
-func ExtractModuleSchema(dir string, sch *schema.Schema) (analyzers.ExtractResult, error) {
+func ExtractModuleSchema(dir string, sch *schema.Schema) (finalize.Result, error) {
 	result, err := extract.Extract(dir)
 	if err != nil {
-		return analyzers.ExtractResult{}, err
+		return finalize.Result{}, err
 	}
 
 	// merge with legacy results for now
 	if err = legacyExtractModuleSchema(dir, sch, &result); err != nil {
-		return analyzers.ExtractResult{}, err
+		return finalize.Result{}, err
 	}
 
 	schema.SortErrorsByPosition(result.Errors)
 	if !schema.ContainsTerminalError(result.Errors) {
 		err = schema.ValidateModule(result.Module)
 		if err != nil {
-			return analyzers.ExtractResult{}, err
+			return finalize.Result{}, err
 		}
 	}
 	updateVisibility(result.Module)
@@ -677,4 +685,19 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 		}
 		return next()
 	})
+}
+
+func goVerbFromQualifiedName(qualifiedName string) (goVerb, error) {
+	lastDotIndex := strings.LastIndex(qualifiedName, ".")
+	if lastDotIndex == -1 {
+		return goVerb{}, fmt.Errorf("invalid qualified type format %q", qualifiedName)
+	}
+	pkgPath := qualifiedName[:lastDotIndex]
+	typeName := qualifiedName[lastDotIndex+1:]
+	pkgName := path.Base(pkgPath)
+	return goVerb{
+		Name:       typeName,
+		Package:    pkgName,
+		MustImport: pkgPath,
+	}, nil
 }

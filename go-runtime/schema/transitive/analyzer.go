@@ -1,0 +1,94 @@
+package transitive
+
+import (
+	"go/ast"
+	"go/types"
+
+	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/TBD54566975/golang-tools/go/analysis"
+	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
+	"github.com/TBD54566975/golang-tools/go/ast/inspector"
+	sets "github.com/deckarep/golang-set/v2"
+)
+
+// Extractor extracts transitive schema.Decls to the module schema.
+//
+// This extractor is used to extract schema.Decls that are implicitly included in the schema via other schema.Decls
+// but not themselves explicitly annotated.
+var Extractor = common.NewExtractor("transitive", (*Fact)(nil), Extract)
+
+type Fact struct {
+	value common.SchemaFactValue
+}
+
+func (t *Fact) AFact()                       {}
+func (t *Fact) Set(v common.SchemaFactValue) { t.value = v }
+func (t *Fact) Get() common.SchemaFactValue  { return t.value }
+
+// Extract traverses all schema type root AST nodes and determines if a node has been marked for extraction.
+//
+// Transitive data decls are marked via "facts", annotating the object which must be extracted to the schema with
+// common.NeedsExtraction. This allows us to identify objects for extraction that are not explicitly
+// annotated with an FTL directive.
+func Extract(pass *analysis.Pass) (interface{}, error) {
+	needsExtraction := sets.NewSet[types.Object]()
+	for obj, fact := range common.MergeAllFacts(pass) {
+		if _, ok := fact.Get().(*common.NeedsExtraction); ok {
+			needsExtraction.Add(obj)
+		}
+	}
+	for !needsExtraction.IsEmpty() {
+		extractTransitive(pass, needsExtraction)
+		needsExtraction = refreshNeedsExtraction(pass)
+	}
+	return common.NewExtractorResult(pass), nil
+}
+
+func extractTransitive(pass *analysis.Pass, needsExtraction sets.Set[types.Object]) {
+	in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
+	nodeFilter := []ast.Node{
+		(*ast.TypeSpec)(nil),
+		(*ast.FuncDecl)(nil),
+	}
+	in.Preorder(nodeFilter, func(n ast.Node) {
+		obj, ok := common.GetObjectForNode(pass.TypesInfo, n).Get()
+		if !ok {
+			return
+		}
+		if !needsExtraction.Contains(obj) {
+			return
+		}
+		schType, ok := common.InferDeclType(pass, n, obj).Get()
+		if !ok {
+			// if we can't infer the type, try to extract it as data
+			schType = &schema.Data{}
+		}
+		extract, err := common.ExtractFuncForDecl(schType)
+		if err != nil {
+			// unmigrated, skip
+			// temporarily marking as extracted to avoid infinite loop
+			common.MarkSchemaDecl(pass, obj, nil)
+			return
+		}
+		if decl, ok := extract(pass, n, obj).Get(); ok {
+			common.MarkSchemaDecl(pass, obj, decl)
+		} else {
+			common.MarkFailedExtraction(pass, obj)
+		}
+	})
+}
+
+func refreshNeedsExtraction(pass *analysis.Pass) sets.Set[types.Object] {
+	facts := sets.NewSet[types.Object]()
+	for _, fact := range pass.AllObjectFacts() {
+		f, ok := fact.Fact.(common.SchemaFact)
+		if !ok {
+			continue
+		}
+		if _, ok := f.Get().(*common.NeedsExtraction); ok {
+			facts.Add(fact.Object)
+		}
+	}
+	return facts
+}
