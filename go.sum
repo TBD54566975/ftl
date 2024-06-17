@@ -14,6 +14,8 @@ github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migc
 github.com/Microsoft/go-winio v0.6.1/go.mod h1:LRdKpFKfdobln8UmuiYcKPot9D2v6svN5+sAH+4kjUM=
 github.com/TBD54566975/golang-tools v0.1.8 h1:sMQafQAxiGMYzqx6TTCizMpbcimm1Jo1aOhUcDYSNmM=
 github.com/TBD54566975/golang-tools v0.1.8/go.mod h1:rEEXIq0/pFgZqi/MTOq4DBmVpLHLgI9WocJWXYhu050=
+github.com/TBD54566975/golang-tools v0.2.0 h1:85wd9MG6S50q3xNB0sTUcpxikUriydvFsKNAiwu12w0=
+github.com/TBD54566975/golang-tools v0.2.0/go.mod h1:rEEXIq0/pFgZqi/MTOq4DBmVpLHLgI9WocJWXYhu050=
 github.com/TBD54566975/scaffolder v1.0.0 h1:QUFSy2wVzumLDg7IHcKC6AP+IYyqWe9Wxiu72nZn5qU=
 github.com/TBD54566975/scaffolder v1.0.0/go.mod h1:auVpczIbOAdIhYDVSruIw41DanxOKB9bSvjf6MEl7Fs=
 github.com/alecthomas/assert/v2 v2.10.0 h1:jjRCHsj6hBJhkmhznrCzoNpbA3zqy0fYiUcYZP/GkPY=
@@ -56,6 +58,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.11 h1:o4T+fKxA
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.11/go.mod h1:84oZdJ+VjuJKs9v1UTC9NaodRZRseOXCTgku+vQJWR8=
 github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.29.3 h1:+pg3v9mWOmnR01Pxd0dcsDWSLN0GWbcFiKf2YgZ4+SY=
 github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.29.3/go.mod h1:M9TqBwpQ7AC6zu1Yji7vijRliqir7hxjuRcnxIk7jCc=
+github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.30.0 h1:nqR1mkoDntCpOwdlEfa2pZLiwvQeF4Mi56WzOTyuF/s=
+github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.30.0/go.mod h1:M9TqBwpQ7AC6zu1Yji7vijRliqir7hxjuRcnxIk7jCc=
 github.com/aws/aws-sdk-go-v2/service/sso v1.20.11 h1:gEYM2GSpr4YNWc6hCd5nod4+d4kd9vWIAWrmGuLdlMw=
 github.com/aws/aws-sdk-go-v2/service/sso v1.20.11/go.mod h1:gVvwPdPNYehHSP9Rs7q27U1EU+3Or2ZpXvzAYJNh63w=
 github.com/aws/aws-sdk-go-v2/service/ssooidc v1.24.5 h1:iXjh3uaH3vsVcnyZX7MqCoCfcyxIrVE9iOQruRaWPrQ=
@@ -209,6 +213,8 @@ github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/reugn/go-quartz v0.11.2 h1:+jc54Ji06n/D/endEPmc+CuG/Jc8466nda1oxtFRrks=
 github.com/reugn/go-quartz v0.11.2/go.mod h1:no4ktgYbAAuY0E1SchR8cTx1LF4jYIzdgaQhzRPSkpk=
+github.com/reugn/go-quartz v0.12.0 h1:RsrklW++R5Swc7mCPYseXM06PTWN4N7/f1rsYkhHiww=
+github.com/reugn/go-quartz v0.12.0/go.mod h1:no4ktgYbAAuY0E1SchR8cTx1LF4jYIzdgaQhzRPSkpk=
 github.com/rivo/uniseg v0.2.0 h1:S1pD9weZBuJdFmowNwbpi7BJ8TNftyUImj/0WQi72jY=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/robertkrimen/otto v0.2.1 h1:FVP0PJ0AHIjC+N4pKCG9yCDz6LHNPCwi/GKID5pGGF0=
@@ -253,6 +259,8 @@ github.com/tliron/kutil v0.3.24 h1:LvaqizF4htpEef9tC0B//sqtvQzEjDu69A4a1HrY+ko=
 github.com/tliron/kutil v0.3.24/go.mod h1:2iSIhOnOe1reqczZQy6TauVHhItsq6xRLV2rVBvodpk=
 github.com/tmc/langchaingo v0.1.10 h1:+cssnyaY1avZwzdDFvJYlVUsch9oFRgoqw3Avk5Zig4=
 github.com/tmc/langchaingo v0.1.10/go.mod h1:lPKUIu8ZGI7RAksRFtKbgtS2v3LL0j7LcccHPCvgNfY=
+github.com/tmc/langchaingo v0.1.11 h1:QXK6T8zQzRSKispzeUk66yWcwVV3Igkq7R15y9NtZxM=
+github.com/tmc/langchaingo v0.1.11/go.mod h1:MFQg4CUOwjT5VTYjorSmXHhQju6XqdJkSbdpBcZf7SQ=
 github.com/yudai/gojsondiff v1.0.0 h1:27cbfqXLVEJ1o8I6v3y9lg8Ydm53EKqHXAOMxEGlCOA=
 github.com/yudai/gojsondiff v1.0.0/go.mod h1:AY32+k2cwILAkW1fbgxQ5mUmMiZFgLIV+FBNExI05xg=
 github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 h1:BHyfKlQyqbsFN5p3IfnEUduWvb9is428/nNb5L3U01M=
