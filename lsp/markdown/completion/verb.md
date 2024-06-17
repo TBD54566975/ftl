@@ -9,6 +9,7 @@ func Name(ctx context.Context, req Request) (Response, error) {}
 
 See https://tbd54566975.github.io/ftl/docs/reference/verbs/
 ---
+
 type ${1:Request} struct {}
 type ${2:Response} struct {}
 

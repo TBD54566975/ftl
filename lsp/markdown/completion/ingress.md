@@ -23,6 +23,7 @@ func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.Http
 
 See https://tbd54566975.github.io/ftl/docs/reference/ingress/
 ---
+
 type ${1:Func}Request struct {
 	${2:Field} ${3:Type} `json:"${4:field}"`
 }
