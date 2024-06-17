@@ -44,14 +44,12 @@ type ModuleContext struct {
 // DynamicModuleContext provides up-to-date ModuleContext instances supplied by the controller
 type DynamicModuleContext struct {
 	current atomic.Value[ModuleContext]
-	await   sync.WaitGroup
-	release sync.Once
 }
 
 // Builder is used to build a ModuleContext
 type Builder ModuleContext
 
-type contextKeyModuleContext struct{}
+type contextKeyDynamicModuleContext struct{}
 
 func Empty(module string) ModuleContext {
 	return NewBuilder(module).Build()
@@ -105,20 +103,6 @@ func (b *Builder) UpdateForTesting(mockVerbs map[schema.RefKey]Verb, allowDirect
 
 func (b *Builder) Build() ModuleContext {
 	return ModuleContext(reflect.DeepCopy(*b))
-}
-
-// FromContext returns the ModuleContext attached to a context.
-func FromContext(ctx context.Context) ModuleContext {
-	m, ok := ctx.Value(contextKeyModuleContext{}).(ModuleContext)
-	if !ok {
-		panic("no ModuleContext in context")
-	}
-	return m
-}
-
-// ApplyToContext returns a Go context.Context with ModuleContext added.
-func (m ModuleContext) ApplyToContext(ctx context.Context) context.Context {
-	return context.WithValue(ctx, contextKeyModuleContext{}, m)
 }
 
 // GetConfig reads a configuration value for the module.
@@ -192,31 +176,62 @@ func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBeha
 	return optional.None[VerbBehavior](), nil
 }
 
+type ModuleContextSink = func(ctx context.Context, moduleContext ModuleContext)
+type ModuleContextSupplier interface {
+	Subscribe(ctx context.Context, moduleName string, sink ModuleContextSink)
+}
+
+type grpcModuleContextSupplier struct {
+	client ftlv1connect.VerbServiceClient
+}
+
+func NewModuleContextSupplier(client ftlv1connect.VerbServiceClient) ModuleContextSupplier {
+	return ModuleContextSupplier(grpcModuleContextSupplier{client})
+}
+
+func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName string, sink ModuleContextSink) {
+	request := &ftlv1.ModuleContextRequest{Module: moduleName}
+	callback := func(_ context.Context, resp *ftlv1.ModuleContextResponse) error {
+		mc, err := FromProto(resp)
+		if err != nil {
+			return err
+		}
+		sink(ctx, mc)
+		return nil
+	}
+	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{}, request, g.client.GetModuleContext, callback)
+}
+
 // NewDynamicContext creates a new DynamicModuleContext. This operation blocks
 // until the first ModuleContext is supplied by the controller.
 //
 // The DynamicModuleContext will continually update as updated ModuleContext's
 // are streamed from the controller. This operation may time out if the first
 // module context is not supplied quickly enough (fixed at 5 seconds).
-func NewDynamicContext(ctx context.Context, client ftlv1connect.VerbServiceClient, moduleName string) (*DynamicModuleContext, error) {
-	request := &ftlv1.ModuleContextRequest{Module: moduleName}
-	result := &DynamicModuleContext{
-		await:   sync.WaitGroup{},
-		release: sync.Once{},
-	}
-	result.await.Add(1)
+func NewDynamicContext(ctx context.Context, supplier ModuleContextSupplier, moduleName string) (*DynamicModuleContext, error) {
+	result := &DynamicModuleContext{}
 
-	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{}, request, client.GetModuleContext, result.handleResponse)
+	await := sync.WaitGroup{}
+	await.Add(1)
+	releaseOnce := sync.Once{}
+
+	// asynchronously consumes a subscription of ModuleContext changes and signals the arrival of the first
+	supplier.Subscribe(ctx, moduleName, func(ctx context.Context, moduleContext ModuleContext) {
+		result.current.Store(moduleContext)
+		releaseOnce.Do(func() {
+			await.Done()
+		})
+	})
 
 	// Establishing channel used to await first ModuleContext result from GetModuleContext's stream
-	firstContext := make(chan struct{})
+	moduleContextAvailable := make(chan struct{})
 	go func() {
-		defer close(firstContext)
-		result.await.Wait()
+		defer close(moduleContextAvailable)
+		await.Wait()
 	}()
 
 	select {
-	case <-firstContext:
+	case <-moduleContextAvailable:
 		return result, nil
 	case <-time.After(5 * time.Second):
 		return nil, fmt.Errorf("time out waiting for first ModuleContext")
@@ -228,19 +243,18 @@ func (m *DynamicModuleContext) CurrentContext() ModuleContext {
 	return m.current.Load()
 }
 
-// handleResponse processes the received ModuleContextResponse by converting
-// and storing the value. The wait handle used to block New is released the
-// first time handleResponse is invoked.
-func (m *DynamicModuleContext) handleResponse(_ context.Context, resp *ftlv1.ModuleContextResponse) error {
-	mc, err := FromProto(resp)
-	if err != nil {
-		return err
+// FromContext returns the DynamicModuleContext attached to a context.
+func FromContext(ctx context.Context) *DynamicModuleContext {
+	m, ok := ctx.Value(contextKeyDynamicModuleContext{}).(*DynamicModuleContext)
+	if !ok {
+		panic("no ModuleContext in context")
 	}
-	m.current.Store(mc)
-	m.release.Do(func() {
-		m.await.Done()
-	})
-	return nil
+	return m
+}
+
+// ApplyToContext returns a Go context.Context with DynamicModuleContext added.
+func (m *DynamicModuleContext) ApplyToContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, contextKeyDynamicModuleContext{}, m)
 }
 
 // VerbBehavior indicates how to execute a verb
@@ -262,6 +276,6 @@ type MockBehavior struct {
 	Mock Verb
 }
 
-func (b MockBehavior) Call(ctx context.Context, verb Verb, req any) (any, error) {
+func (b MockBehavior) Call(ctx context.Context, _ Verb, req any) (any, error) {
 	return b.Mock(ctx, req)
 }

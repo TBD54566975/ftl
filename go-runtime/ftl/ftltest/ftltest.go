@@ -51,7 +51,7 @@ func Context(options ...Option) context.Context {
 
 	builder := modulecontext.NewBuilder(name).AddDatabases(state.databases)
 	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newFakeLeaseClient())
-	return builder.Build().ApplyToContext(ctx)
+	return builder.Build().MakeDynamic(ctx).ApplyToContext(ctx)
 }
 
 // WithDefaultProjectFile loads config and secrets from the default project

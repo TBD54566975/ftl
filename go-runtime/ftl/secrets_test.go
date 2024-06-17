@@ -24,7 +24,7 @@ func TestSecret(t *testing.T) {
 	assert.NoError(t, err)
 
 	mctx := modulecontext.NewBuilder("test").AddSecrets(map[string][]byte{"test": data}).Build()
-	ctx = internal.WithContext(ctx, internal.New(mctx))
+	ctx = internal.WithContext(ctx, internal.New(mctx.MakeDynamic(ctx)))
 
 	secret := Secret[C]("test")
 	assert.Equal(t, C{"one", "two"}, secret.Get(ctx))

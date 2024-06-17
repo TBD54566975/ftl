@@ -103,7 +103,7 @@ func Lease(ctx context.Context, ttl time.Duration, key ...string) (LeaseHandle, 
 //
 // It allows module context to override the client with a mock if appropriate
 func newClient(ctx context.Context) modulecontext.LeaseClient {
-	moduleCtx := modulecontext.FromContext(ctx)
+	moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
 	if mock, ok := moduleCtx.MockLeaseClient().Get(); ok {
 		return mock
 	}
@@ -139,7 +139,7 @@ func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, 
 	return fmt.Errorf("lease acquisition failed: %w", err)
 }
 
-func (c *leaseClient) Heartbeat(ctx context.Context, module string, key []string, ttl time.Duration) error {
+func (c *leaseClient) Heartbeat(_ context.Context, module string, key []string, ttl time.Duration) error {
 	req := &ftlv1.AcquireLeaseRequest{Key: key, Module: module, Ttl: durationpb.New(ttl)}
 	err := c.stream.Send(req)
 	if err == nil {
@@ -151,7 +151,7 @@ func (c *leaseClient) Heartbeat(ctx context.Context, module string, key []string
 	return err
 }
 
-func (c *leaseClient) Release(ctx context.Context, key []string) error {
+func (c *leaseClient) Release(_ context.Context, _ []string) error {
 	if err := c.stream.CloseRequest(); err != nil {
 		return fmt.Errorf("close lease: %w", err)
 	}

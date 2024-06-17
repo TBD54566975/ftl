@@ -36,14 +36,14 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
-		dmc, err := modulecontext.NewDynamicContext(ctx, verbServiceClient, moduleName)
+		moduleContextSupplier := modulecontext.NewModuleContextSupplier(verbServiceClient)
+		dynamicCtx, err := modulecontext.NewDynamicContext(ctx, moduleContextSupplier, moduleName)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get config: %w", err)
 		}
-		moduleCtx := dmc.CurrentContext()
 
-		ctx = moduleCtx.ApplyToContext(ctx)
-		ctx = internal.WithContext(ctx, internal.New(moduleCtx))
+		ctx = dynamicCtx.ApplyToContext(ctx)
+		ctx = internal.WithContext(ctx, internal.New(dynamicCtx))
 
 		err = observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
@@ -159,7 +159,7 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	}), nil
 }
 
-func (m *moduleServer) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest], resp *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
+func (m *moduleServer) GetModuleContext(_ context.Context, _ *connect.Request[ftlv1.ModuleContextRequest], _ *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, fmt.Errorf("GetModuleContext not implemented"))
 }
 
@@ -167,7 +167,7 @@ func (m *moduleServer) AcquireLease(context.Context, *connect.BidiStream[ftlv1.A
 	return connect.NewError(connect.CodeUnimplemented, fmt.Errorf("AcquireLease not implemented"))
 }
 
-func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+func (m *moduleServer) Ping(_ context.Context, _ *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 

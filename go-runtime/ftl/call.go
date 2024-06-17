@@ -17,7 +17,8 @@ import (
 )
 
 func call[Req, Resp any](ctx context.Context, callee reflection.Ref, req Req, inline Verb[Req, Resp]) (resp Resp, err error) {
-	override, err := modulecontext.FromContext(ctx).BehaviorForVerb(schema.Ref{Module: callee.Module, Name: callee.Name})
+	moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
+	override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: callee.Module, Name: callee.Name})
 	if err != nil {
 		return resp, fmt.Errorf("%s: %w", callee, err)
 	}
