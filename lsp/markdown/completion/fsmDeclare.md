@@ -19,4 +19,3 @@ var ${1:FSM} = ftl.FSM(
 	ftl.Start(${2:verbState}),
 	ftl.Transition(${2:fromVerbState}, ${3:toVerbState}),
 )
-```
