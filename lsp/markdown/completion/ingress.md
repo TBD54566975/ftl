@@ -1,4 +1,6 @@
-Snippet for declaring an ingress function.
+Declare an ingress function.
+
+Verbs annotated with `ftl:ingress` will be exposed via HTTP (http is the default ingress type). These endpoints will then be available on one of our default ingress ports (local development defaults to http://localhost:8891).
 
 ```go
 type GetRequest struct {

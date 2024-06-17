@@ -1,4 +1,4 @@
-Snippet for declaring a topic.
+Declare a PubSub topic.
 
 ```go
 var invoicesTopic = ftl.Topic[Invoice]("invoices")

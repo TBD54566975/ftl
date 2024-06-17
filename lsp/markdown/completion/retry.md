@@ -1,4 +1,6 @@
-Snippet for retrying an async operation.
+Directive for retrying an async operation.
+
+Any verb called asynchronously (specifically, PubSub subscribers and FSM states), may optionally specify a basic exponential backoff retry policy.
 
 ```go
 //ftl:retry [<attempts>] <min-backoff> [<max-backoff>]

@@ -1,4 +1,6 @@
-Snippet for declaring a verb function.
+Declare a Verb function.
+
+A Verb is a remotely callable function that takes an input and returns an output.
 
 ```go
 //ftl:verb

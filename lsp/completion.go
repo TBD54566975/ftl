@@ -28,6 +28,9 @@ var ingressCompletionDocs string
 //go:embed markdown/completion/cron.md
 var cronCompletionDocs string
 
+//go:embed markdown/completion/cronExpression.md
+var cronExpressionCompletionDocs string
+
 //go:embed markdown/completion/retry.md
 var retryCompletionDocs string
 
@@ -57,6 +60,7 @@ var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:typealias", "FTL Type Alias", typeAliasCompletionDocs),
 	completionItem("ftl:ingress", "FTL Ingress", ingressCompletionDocs),
 	completionItem("ftl:cron", "FTL Cron", cronCompletionDocs),
+	completionItem("ftl:cron:expression", "FTL Cron with expression", cronExpressionCompletionDocs),
 	completionItem("ftl:retry", "FTL Retry", retryCompletionDocs),
 	completionItem("ftl:config:declare", "Declare config", declareConfigCompletionDocs),
 	completionItem("ftl:secret:declare", "Declare secret", declareSecretCompletionDocs),

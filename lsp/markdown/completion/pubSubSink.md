@@ -1,4 +1,4 @@
-Snippet for a sink function that consume events from a PubSub subscription.
+Declare a sink function that consumes events from a PubSub subscription.
 
 ```go
 //ftl:subscribe emailInvoices

@@ -1,17 +1,24 @@
-Snippet for declaring a value enum.
+Declare a value enum.
+
+A value enum is an enumerated set of string or integer values.
 
 ```go
 //ftl:enum
-type Animal interface { animal() }
+type Colour string
 
-type Cat struct {}
-func (Cat) animal() {}
+const (
+  Red   Colour = "red"
+  Green Colour = "green"
+  Blue  Colour = "blue"
+)
 ```
 
 See https://tbd54566975.github.io/ftl/docs/reference/types/
 ---
 //ftl:enum
-type ${1:Type} interface { ${2:interface}() }
+type ${1:Enum} string
 
-type ${3:Value} struct {}
-func (${3:Value}) ${2:interface}() {}
+const (
+	${2:Value1} ${1:Enum} = "${2:Value1}"
+	${3:Value2} ${1:Enum} = "${3:Value2}"
+)

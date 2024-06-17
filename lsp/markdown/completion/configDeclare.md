@@ -1,4 +1,6 @@
-Snippet for declaring a config variable.
+Declare a config variable.
+
+Configuration values are named, typed values. They are managed by the `ftl config` command-line.
 
 ```go
 var defaultUser = ftl.Config[string]("defaultUser")

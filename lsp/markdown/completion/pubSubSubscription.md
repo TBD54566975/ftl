@@ -1,4 +1,4 @@
-Snippet for declaring a subscription to a topic.
+Declare a subscription to a topic.
 
 ```go
 var _ = ftl.Subscription(invoicesTopic, "emailInvoices")

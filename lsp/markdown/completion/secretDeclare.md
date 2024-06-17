@@ -1,4 +1,6 @@
-Snippet for declaring a secret.
+Declare a secret.
+
+Secrets are encrypted, named, typed values. They are managed by the `ftl secret` command-line.
 
 ```go
 var apiKey = ftl.Secret[string]("apiKey")

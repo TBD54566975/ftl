@@ -1,4 +1,6 @@
-Snippet for declaring a type alias.
+Declare a type alias.
+
+A type alias is an alternate name for an existing type.
 
 ```go
 //ftl:typealias
