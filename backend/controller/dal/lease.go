@@ -12,6 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -47,8 +48,8 @@ func (l *Lease) renew(ctx context.Context, cancelCtx context.CancelFunc) {
 			cancel()
 
 			if err != nil {
-				err = translatePGError(err)
-				if errors.Is(err, ErrNotFound) {
+				err = dalerrs.TranslatePGError(err)
+				if errors.Is(err, dalerrs.ErrNotFound) {
 					logger.Warnf("Lease expired")
 				} else {
 					logger.Errorf(err, "Failed to renew lease %s", l.key)
@@ -64,7 +65,7 @@ func (l *Lease) renew(ctx context.Context, cancelCtx context.CancelFunc) {
 			}
 			logger.Debugf("Releasing lease")
 			_, err := l.db.ReleaseLease(ctx, l.idempotencyKey, l.key)
-			l.errch <- translatePGError(err)
+			l.errch <- dalerrs.TranslatePGError(err)
 			cancelCtx()
 			return
 		}
@@ -95,7 +96,7 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 	}
 	idempotencyKey, err := d.db.NewLease(ctx, key, ttl, metadataBytes)
 	if err != nil {
-		return nil, nil, translatePGError(err)
+		return nil, nil, dalerrs.TranslatePGError(err)
 	}
 	leaseCtx, lease := d.newLease(ctx, key, idempotencyKey, ttl)
 	return leaseCtx, lease, nil
@@ -121,7 +122,7 @@ func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.
 func (d *DAL) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (expiry time.Time, err error) {
 	l, err := d.db.GetLeaseInfo(ctx, key)
 	if err != nil {
-		return expiry, translatePGError(err)
+		return expiry, dalerrs.TranslatePGError(err)
 	}
 	if err := json.Unmarshal(l.Metadata, metadata); err != nil {
 		return expiry, fmt.Errorf("could not unmarshal lease metadata: %w", err)
@@ -136,5 +137,5 @@ func (d *DAL) ExpireLeases(ctx context.Context) error {
 	if count > 0 {
 		log.FromContext(ctx).Warnf("Expired %d leases", count)
 	}
-	return translatePGError(err)
+	return dalerrs.TranslatePGError(err)
 }

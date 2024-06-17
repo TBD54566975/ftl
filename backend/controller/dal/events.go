@@ -12,6 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -260,7 +261,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 	rows, err := d.db.Conn().Query(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
-		return nil, translatePGError(err)
+		return nil, dalerrs.TranslatePGError(err)
 	}
 	deploymentIDs := []int64{}
 	for rows.Next() {
@@ -315,7 +316,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	// Issue query.
 	rows, err = d.db.Conn().Query(ctx, q, args...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", q, translatePGError(err))
+		return nil, fmt.Errorf("%s: %w", q, dalerrs.TranslatePGError(err))
 	}
 	defer rows.Close()
 

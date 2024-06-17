@@ -13,16 +13,17 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func leaseExists(t *testing.T, conn sql.ConnI, idempotencyKey uuid.UUID, key leases.Key) bool {
 	t.Helper()
 	var count int
-	err := translatePGError(conn.
+	err := dalerrs.TranslatePGError(conn.
 		QueryRow(context.Background(), "SELECT COUNT(*) FROM leases WHERE idempotency_key = $1 AND key = $2", idempotencyKey, key).
 		Scan(&count))
-	if errors.Is(err, ErrNotFound) {
+	if errors.Is(err, dalerrs.ErrNotFound) {
 		return false
 	}
 	assert.NoError(t, err)
@@ -49,7 +50,7 @@ func TestLease(t *testing.T) {
 
 	// Try to acquire the same lease again, which should fail.
 	_, _, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
-	assert.IsError(t, err, ErrConflict)
+	assert.IsError(t, err, dalerrs.ErrConflict)
 
 	time.Sleep(time.Second * 6)
 

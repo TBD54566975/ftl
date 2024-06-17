@@ -47,6 +47,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	frontend "github.com/TBD54566975/ftl/frontend"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
@@ -282,7 +283,7 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
 	if err != nil {
-		if errors.Is(err, dal.ErrNotFound) {
+		if errors.Is(err, dalerrs.ErrNotFound) {
 			http.NotFound(w, r)
 			return
 		}
@@ -481,7 +482,7 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 
 	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, int(req.Msg.MinReplicas))
 	if err != nil {
-		if errors.Is(err, dal.ErrNotFound) {
+		if errors.Is(err, dalerrs.ErrNotFound) {
 			logger.Errorf(err, "Deployment not found: %s", deploymentKey)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		}
@@ -503,10 +504,10 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 
 	err = s.dal.ReplaceDeployment(ctx, newDeploymentKey, int(c.Msg.MinReplicas))
 	if err != nil {
-		if errors.Is(err, dal.ErrNotFound) {
+		if errors.Is(err, dalerrs.ErrNotFound) {
 			logger.Errorf(err, "Deployment not found: %s", newDeploymentKey)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
-		} else if errors.Is(err, dal.ErrConflict) {
+		} else if errors.Is(err, dalerrs.ErrConflict) {
 			logger.Infof("Reusing deployment: %s", newDeploymentKey)
 		} else {
 			logger.Errorf(err, "Could not replace deployment: %s", newDeploymentKey)
@@ -566,14 +567,14 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			Deployment: maybeDeployment,
 			Labels:     msg.Labels.AsMap(),
 		})
-		if errors.Is(err, dal.ErrConflict) {
+		if errors.Is(err, dalerrs.ErrConflict) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		} else if err != nil {
 			return nil, err
 		}
 
 		routes, err := s.dal.GetRoutingTable(ctx, nil)
-		if errors.Is(err, dal.ErrNotFound) {
+		if errors.Is(err, dalerrs.ErrNotFound) {
 			routes = map[string][]dal.Route{}
 		} else if err != nil {
 			return nil, err
@@ -1220,7 +1221,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	logger.Tracef("Acquiring async call")
 
 	call, err := s.dal.AcquireAsyncCall(ctx)
-	if errors.Is(err, dal.ErrNotFound) {
+	if errors.Is(err, dalerrs.ErrNotFound) {
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
 	} else if err != nil {
@@ -1555,7 +1556,7 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 // Periodically sync the routing table from the DB.
 func (s *Service) syncRoutes(ctx context.Context) (time.Duration, error) {
 	routes, err := s.dal.GetRoutingTable(ctx, nil)
-	if errors.Is(err, dal.ErrNotFound) {
+	if errors.Is(err, dalerrs.ErrNotFound) {
 		routes = map[string][]dal.Route{}
 	} else if err != nil {
 		return 0, err

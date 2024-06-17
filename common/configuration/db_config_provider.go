@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/alecthomas/types/optional"
 )
 
@@ -31,7 +31,7 @@ func (DBConfigProvider) Key() string         { return "db" }
 func (d DBConfigProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	value, err := d.dal.GetModuleConfiguration(ctx, ref.Module, ref.Name)
 	if err != nil {
-		return nil, dal.ErrNotFound
+		return nil, dalerrs.ErrNotFound
 	}
 	return value, nil
 }

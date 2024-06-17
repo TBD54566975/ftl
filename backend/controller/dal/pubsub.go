@@ -7,6 +7,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -20,7 +21,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, pa
 		Payload: payload,
 	})
 	if err != nil {
-		return translatePGError(err)
+		return dalerrs.TranslatePGError(err)
 	}
 	return nil
 }
@@ -28,7 +29,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, pa
 func (d *DAL) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]model.Subscription, error) {
 	rows, err := d.db.GetSubscriptionsNeedingUpdate(ctx)
 	if err != nil {
-		return nil, translatePGError(err)
+		return nil, dalerrs.TranslatePGError(err)
 	}
 	return slices.Map(rows, func(row sql.GetSubscriptionsNeedingUpdateRow) model.Subscription {
 		return model.Subscription{
@@ -53,18 +54,18 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	// also gets a lock on the subscription, and skips any subscriptions locked by others
 	subs, err := tx.db.GetSubscriptionsNeedingUpdate(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("could not get subscriptions to progress: %w", translatePGError(err))
+		return 0, fmt.Errorf("could not get subscriptions to progress: %w", dalerrs.TranslatePGError(err))
 	}
 
 	successful := 0
 	for _, subscription := range subs {
 		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, eventConsumptionDelay, subscription.Topic, subscription.Cursor)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get next cursor: %w", translatePGError(err))
+			return 0, fmt.Errorf("failed to get next cursor: %w", dalerrs.TranslatePGError(err))
 		}
 		nextCursorKey, ok := nextCursor.Event.Get()
 		if !ok {
-			return 0, fmt.Errorf("could not find event to progress subscription: %w", translatePGError(err))
+			return 0, fmt.Errorf("could not find event to progress subscription: %w", dalerrs.TranslatePGError(err))
 		}
 		if !nextCursor.Ready {
 			logger.Tracef("Skipping subscription %s because event is too new", subscription.Key)
@@ -79,7 +80,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 		err = tx.db.BeginConsumingTopicEvent(ctx, subscription.Key, nextCursorKey)
 		if err != nil {
-			return 0, fmt.Errorf("failed to progress subscription: %w", translatePGError(err))
+			return 0, fmt.Errorf("failed to progress subscription: %w", dalerrs.TranslatePGError(err))
 		}
 
 		origin := AsyncOriginPubSub{
@@ -97,7 +98,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			MaxBackoff:        subscriber.MaxBackoff,
 		})
 		if err != nil {
-			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", translatePGError(err))
+			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
 		}
 		successful++
 	}
@@ -107,7 +108,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 func (d *DAL) CompleteEventForSubscription(ctx context.Context, module, name string) error {
 	err := d.db.CompleteEventForSubscription(ctx, name, module)
 	if err != nil {
-		return fmt.Errorf("failed to complete event for subscription: %w", translatePGError(err))
+		return fmt.Errorf("failed to complete event for subscription: %w", dalerrs.TranslatePGError(err))
 	}
 	return nil
 }
@@ -134,7 +135,7 @@ func (d *DAL) createSubscriptions(ctx context.Context, tx *sql.Tx, key model.Dep
 			TopicName:   s.Topic.Name,
 			Name:        s.Name,
 		}); err != nil {
-			return fmt.Errorf("could not insert subscription: %w", translatePGError(err))
+			return fmt.Errorf("could not insert subscription: %w", dalerrs.TranslatePGError(err))
 		}
 	}
 	return nil
@@ -193,7 +194,7 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 				MaxBackoff:       retryParams.MaxBackoff,
 			})
 			if err != nil {
-				return fmt.Errorf("could not insert subscriber: %w", translatePGError(err))
+				return fmt.Errorf("could not insert subscriber: %w", dalerrs.TranslatePGError(err))
 			}
 		}
 	}
@@ -202,10 +203,10 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 
 func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
 	if err := tx.DeleteSubscriptions(ctx, key); err != nil {
-		return fmt.Errorf("could not delete old subscriptions: %w", translatePGError(err))
+		return fmt.Errorf("could not delete old subscriptions: %w", dalerrs.TranslatePGError(err))
 	}
 	if err := tx.DeleteSubscribers(ctx, key); err != nil {
-		return fmt.Errorf("could not delete old subscribers: %w", translatePGError(err))
+		return fmt.Errorf("could not delete old subscribers: %w", dalerrs.TranslatePGError(err))
 	}
 	return nil
 }

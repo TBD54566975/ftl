@@ -14,9 +14,9 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	cfdal "github.com/TBD54566975/ftl/common/configuration/dal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -47,7 +47,7 @@ func main() {
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
 	conn, err := pgxpool.New(ctx, cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
-	dal, err := dal.New(ctx, conn)
+	dal, err := cfdal.New(ctx, conn)
 	kctx.FatalIfErrorf(err)
 	configProviders := []cf.Provider[cf.Configuration]{cf.NewDBConfigProvider(dal)}
 	configResolver := cf.NewDBConfigResolver(dal)
