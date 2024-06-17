@@ -34,7 +34,7 @@ type ${1:Func}Response struct {
 
 //ftl:ingress ${8:GET} ${9:/url/path}
 func ${1:Func}(ctx context.Context, req builtin.HttpRequest[${1:Func}Request]) (builtin.HttpResponse[${1:Func}Response, string], error) {
-	${7:// TODO: Implement}
+	${10:// TODO: Implement}
 	return builtin.HttpResponse[${1:Func}Response, string]{
 		Status: 200,
 		Body: ftl.Some(${1:Func}Response{}),

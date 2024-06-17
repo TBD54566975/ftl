@@ -70,7 +70,7 @@ var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:fsm", "Model a FSM", fsmCompletionDocs),
 }
 
-// Track which directives are //ftl: prefixed, so the we can autocomplete them via `/` (see below).
+// Track which directives are //ftl: prefixed, so the we can autocomplete them via `/`.
 var directiveItems = map[string]bool{}
 
 func completionItem(label, detail, markdown string) protocol.CompletionItem {
@@ -88,7 +88,7 @@ func completionItem(label, detail, markdown string) protocol.CompletionItem {
 		panic(fmt.Sprintf("completion item %q contains two spaces in the insert text. Use tabs instead!", label))
 	}
 
-	// If there is a `//ftl:` this can be autocompleted when the user types `//`.
+	// If there is a `//ftl:` this can be autocompleted when the user types `/`.
 	if strings.Contains(insertText, "//ftl:") {
 		directiveItems[label] = true
 	}
@@ -128,22 +128,16 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 		}
 
 		// Currently all completions are in global scope, so the completion must be triggered at the beginning of the line.
-		// To do this, check to the start of the line and if there is any whitespace, it is not completing from the start.
-		// We also want to check that the cursor is at the end of the line so we dont stomp over existing text.
+		// To do this, check to the start of the line and if there is any whitespace, it is not completing a whole word from the start.
+		// We also want to check that the cursor is at the end of the line so we dont let stray chars shoved at the end of the completion.
 		isAtEOL := character == len(lineContent)
 		if !isAtEOL {
-			return &protocol.CompletionList{
-				IsIncomplete: false,
-				Items:        []protocol.CompletionItem{},
-			}, nil
+			return nil, nil
 		}
 
 		// Is not completing from the start of the line.
 		if strings.ContainsAny(lineContent, " \t") {
-			return &protocol.CompletionList{
-				IsIncomplete: false,
-				Items:        []protocol.CompletionItem{},
-			}, nil
+			return nil, nil
 		}
 
 		// If there is a single `/` at the start of the line, we can autocomplete directives. eg `/f`.
