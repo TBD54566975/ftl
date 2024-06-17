@@ -22,7 +22,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.27.2 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.29.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.30.0 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect

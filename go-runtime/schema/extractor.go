@@ -29,9 +29,14 @@ func Extract(moduleDir string) (analyzers.ExtractResult, error) {
 	if !ok {
 		return analyzers.ExtractResult{}, fmt.Errorf("schema extraction finalizer result not found")
 	}
-	r, ok := fResult.(analyzers.ExtractResult)
+
+	if len(fResult) == 0 {
+		return analyzers.ExtractResult{}, fmt.Errorf("schema extraction finalizer result is empty")
+	}
+
+	r, ok := fResult[0].(analyzers.ExtractResult)
 	if !ok {
-		return analyzers.ExtractResult{}, fmt.Errorf("unexpected schema extraction result type: %T", r)
+		return analyzers.ExtractResult{}, fmt.Errorf("unexpected schema extraction result type: %T", fResult[0])
 	}
 
 	errors := diagnosticsToSchemaErrors(diagnostics)

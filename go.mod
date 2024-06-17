@@ -7,7 +7,7 @@ require (
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/otelconnect v0.7.0
 	github.com/BurntSushi/toml v1.4.0
-	github.com/TBD54566975/golang-tools v0.1.8
+	github.com/TBD54566975/golang-tools v0.2.0
 	github.com/TBD54566975/scaffolder v1.0.0
 	github.com/alecthomas/assert/v2 v2.10.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
@@ -20,7 +20,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.27.2
 	github.com/aws/aws-sdk-go-v2/config v1.27.18
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.18
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.29.3
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.30.0
 	github.com/aws/smithy-go v1.20.2
 	github.com/beevik/etree v1.4.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
@@ -39,16 +39,15 @@ require (
 	github.com/multiformats/go-base36 v0.2.0
 	github.com/otiai10/copy v1.14.0
 	github.com/radovskyb/watcher v1.0.7
-	github.com/reugn/go-quartz v0.11.2
+	github.com/reugn/go-quartz v0.12.0
 	github.com/rs/cors v1.11.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/swaggest/jsonschema-go v0.3.70
 	github.com/titanous/json5 v1.0.0
 	github.com/tliron/commonlog v0.2.17
 	github.com/tliron/glsp v0.2.2
 	github.com/tliron/kutil v0.3.24
-	github.com/tmc/langchaingo v0.1.10
+	github.com/tmc/langchaingo v0.1.11
 	github.com/zalando/go-keyring v0.2.5
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.27.0
