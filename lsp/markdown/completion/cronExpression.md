@@ -18,4 +18,3 @@ func ${1:Name}(ctx context.Context) error {
 	${7:// TODO: Implement}
 	return nil
 }
-```
