@@ -82,7 +82,7 @@ func completionItem(label, detail, markdown string) protocol.CompletionItem {
 	insertText := strings.TrimSpace(parts[1])
 	// Warn if we see two spaces in the insert text.
 	if strings.Contains(insertText, "  ") {
-		fmt.Fprintf(os.Stderr, "warning: completion item %q contains two spaces in the insert text. Use tabs instead!\n", label)
+		panic(fmt.Sprintf("completion item %q contains two spaces in the insert text. Use tabs instead!", label))
 	}
 
 	return protocol.CompletionItem{
