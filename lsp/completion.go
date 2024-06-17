@@ -89,7 +89,7 @@ func completionItem(label, detail, markdown string) protocol.CompletionItem {
 	}
 
 	// If there is a `//ftl:` this can be autocompleted when the user types `//`.
-	if strings.HasPrefix(insertText, "//ftl:") {
+	if strings.Contains(insertText, "//ftl:") {
 		directiveItems[label] = true
 	}
 
@@ -165,10 +165,24 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 				continue
 			}
 
-			// We need to remove the leading `/` if it is a directive so that the final completion doesn't have `///`.
 			if isSlashed {
-				s := strings.TrimPrefix(*item.InsertText, "/")
-				item.InsertText = &s
+				// Remove that / from the start of the line, so that the completion doesn't have `///`.
+				// VSCode doesn't seem to want to remove the `/` for us.
+				item.AdditionalTextEdits = []protocol.TextEdit{
+					{
+						Range: protocol.Range{
+							Start: protocol.Position{
+								Line:      uint32(line),
+								Character: 0,
+							},
+							End: protocol.Position{
+								Line:      uint32(line),
+								Character: 1,
+							},
+						},
+						NewText: "",
+					},
+				}
 			}
 
 			filteredItems = append(filteredItems, item)
