@@ -2,6 +2,7 @@ package lsp
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"strings"
 
@@ -18,24 +19,72 @@ var enumTypeCompletionDocs string
 //go:embed markdown/completion/enumValue.md
 var enumValueCompletionDocs string
 
+//go:embed markdown/completion/typeAlias.md
+var typeAliasCompletionDocs string
+
+//go:embed markdown/completion/ingress.md
+var ingressCompletionDocs string
+
+//go:embed markdown/completion/cron.md
+var cronCompletionDocs string
+
+//go:embed markdown/completion/cronExpression.md
+var cronExpressionCompletionDocs string
+
+//go:embed markdown/completion/retry.md
+var retryCompletionDocs string
+
+//go:embed markdown/completion/configDeclare.md
+var declareConfigCompletionDocs string
+
+//go:embed markdown/completion/secretDeclare.md
+var declareSecretCompletionDocs string
+
+//go:embed markdown/completion/pubSubTopic.md
+var declarePubSubTopicCompletionDocs string
+
+//go:embed markdown/completion/pubSubSubscription.md
+var declarePubSubSubscriptionCompletionDocs string
+
+//go:embed markdown/completion/pubSubSink.md
+var definePubSubSinkCompletionDocs string
+
+//go:embed markdown/completion/fsmDeclare.md
+var fsmCompletionDocs string
+
+// Markdown is split by "---". First half is completion docs, second half is insert text.
 var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:verb", "FTL Verb", verbCompletionDocs),
 	completionItem("ftl:enum (sum type)", "FTL Enum (sum type)", enumTypeCompletionDocs),
 	completionItem("ftl:enum (value)", "FTL Enum (value type)", enumValueCompletionDocs),
+	completionItem("ftl:typealias", "FTL Type Alias", typeAliasCompletionDocs),
+	completionItem("ftl:ingress", "FTL Ingress", ingressCompletionDocs),
+	completionItem("ftl:cron", "FTL Cron", cronCompletionDocs),
+	completionItem("ftl:cron:expression", "FTL Cron with expression", cronExpressionCompletionDocs),
+	completionItem("ftl:retry", "FTL Retry", retryCompletionDocs),
+	completionItem("ftl:config:declare", "Declare config", declareConfigCompletionDocs),
+	completionItem("ftl:secret:declare", "Declare secret", declareSecretCompletionDocs),
+	completionItem("ftl:pubsub:topic", "Declare PubSub topic", declarePubSubTopicCompletionDocs),
+	completionItem("ftl:pubsub:subscription", "Declare a PubSub subscription", declarePubSubSubscriptionCompletionDocs),
+	completionItem("ftl:pubsub:sink", "Define a PubSub sink", definePubSubSinkCompletionDocs),
+	completionItem("ftl:fsm", "Model a FSM", fsmCompletionDocs),
 }
 
 func completionItem(label, detail, markdown string) protocol.CompletionItem {
 	snippetKind := protocol.CompletionItemKindSnippet
 	insertTextFormat := protocol.InsertTextFormatSnippet
 
-	// Split markdown by "---"
-	// First half is completion docs, second half is insert text
 	parts := strings.Split(markdown, "---")
 	if len(parts) != 2 {
 		panic("invalid markdown. must contain exactly one '---' to separate completion docs from insert text")
 	}
 
 	insertText := strings.TrimSpace(parts[1])
+	// Warn if we see two spaces in the insert text.
+	if strings.Contains(insertText, "  ") {
+		panic(fmt.Sprintf("completion item %q contains two spaces in the insert text. Use tabs instead!", label))
+	}
+
 	return protocol.CompletionItem{
 		Label:      label,
 		Kind:       &snippetKind,
@@ -59,7 +108,7 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 			return nil, nil
 		}
 
-		line := int(position.Line - 1)
+		line := int(position.Line)
 		if line >= len(doc.lines) {
 			return nil, nil
 		}
@@ -70,7 +119,7 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 			character = len(lineContent)
 		}
 
-		prefix := lineContent[:character]
+		prefix := lineContent[character:]
 
 		// Filter completion items based on the prefix
 		var filteredItems []protocol.CompletionItem
@@ -103,9 +152,4 @@ func (s *Server) completionItemResolve() protocol.CompletionItemResolveFunc {
 
 		return params, nil
 	}
-}
-
-func stringPtr(v string) *string {
-	s := v
-	return &s
 }

@@ -1,19 +1,22 @@
-Snippet for defining a type enum (sum types).
+Declare a type enum (sum types).
+
+A type enum is a set of types that can be used as a single type, which `go` does not directly support.
 
 ```go
 //ftl:enum
-type MyEnum string
+type Animal interface { animal() }
 
-const (
-	Value1 MyEnum = "Value1"
-	Value2 MyEnum = "Value2"
-)
+type Cat struct {}
+func (Cat) animal() {}
+
+type Dog struct {}
+func (Dog) animal() {}
 ```
+
+See https://tbd54566975.github.io/ftl/docs/reference/types/
 ---
 //ftl:enum
-type ${1:Enum} string
+type ${1:Type} interface { ${2:interface}() }
 
-const (
-	${2:Value1} ${1:Enum} = "${2:Value1}"
-	${3:Value2} ${1:Enum} = "${3:Value2}"
-)
+type ${3:Value} struct {}
+func (${3:Value}) ${2:interface}() {}
