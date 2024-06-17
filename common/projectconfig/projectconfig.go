@@ -99,24 +99,24 @@ func DefaultConfigPath() optional.Option[string] {
 	return optional.Some(filepath.Join(dir, "ftl-project.toml"))
 }
 
-// MaybeCreateDefault creates the ftl-project.toml file in the Git root if it
-// does not already exist.
-func MaybeCreateDefault(ctx context.Context) error {
+// CreateDefault creates the ftl-project.toml file with the given Config into dir.
+func CreateDefault(ctx context.Context, config Config, dir string) error {
 	logger := log.FromContext(ctx)
-	path, ok := DefaultConfigPath().Get()
-	if !ok {
-		logger.Warnf("Failed to find Git root, so cannot verify whether an ftl-project.toml file exists there")
-		return nil
+	path, err := filepath.Abs(dir)
+	if err != nil {
+		return err
 	}
-	_, err := os.Stat(path)
+	path = filepath.Join(path, "ftl-project.toml")
+	_, err = os.Stat(path)
 	if err == nil {
-		return nil
+		return fmt.Errorf("project config file already exists at %q", path)
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	logger.Debugf("Creating a new project config file at %q", path)
-	return Save(Config{Path: path})
+	config.Path = path
+	return Save(config)
 }
 
 // LoadOrCreate loads or creates the given configuration file.

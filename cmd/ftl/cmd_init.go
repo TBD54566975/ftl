@@ -1,150 +1,67 @@
 package main
 
 import (
-	"archive/zip"
 	"bufio"
 	"context"
 	"fmt"
-	"go/token"
-	"html/template"
 	"os"
 	"path"
-	"path/filepath"
-	"regexp"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
-
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
-	"github.com/TBD54566975/ftl/buildengine"
+	commonruntime "github.com/TBD54566975/ftl/common-runtime"
 	"github.com/TBD54566975/ftl/common/projectconfig"
-	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
 )
 
 type initCmd struct {
-	Hermit bool          `help:"Include Hermit language-specific toolchain binaries in the module." negatable:""`
-	Go     initGoCmd     `cmd:"" help:"Initialize a new FTL Go module."`
-	Kotlin initKotlinCmd `cmd:"" help:"Initialize a new FTL Kotlin module."`
+	Hermit       bool     `help:"Include Hermit language-specific toolchain binaries in the module." negatable:""`
+	Dir          string   `arg:"" help:"Directory to initialize the project in."`
+	ExternalDirs []string `help:"Directories of existing external modules."`
+	ModuleDirs   []string `help:"Child directories of existing modules."`
+	NoGit        bool     `help:"Do not initialize a git repository in the project directory."`
+	Startup      string   `help:"Command to run on startup."`
 }
 
-type initGoCmd struct {
-	Replace map[string]string `short:"r" help:"Replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..." env:"FTL_INIT_GO_REPLACE"`
-	Dir     string            `arg:"" help:"Directory to initialize the module in."`
-	Name    string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-}
-
-func isValidModuleName(name string) bool {
-	validNamePattern := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
-	if !validNamePattern.MatchString(name) {
-		return false
-	}
-	if token.Lookup(name).IsKeyword() {
-		return false
-	}
-	return true
-}
-
-func (i initGoCmd) Run(ctx context.Context, parent *initCmd) error {
-	if i.Name == "" {
-		i.Name = filepath.Base(i.Dir)
-	}
-
-	// Validate the module name with custom validation
-	if !isValidModuleName(i.Name) {
-		return fmt.Errorf("module name %q must be a valid Go module name and not a reserved keyword", i.Name)
-	}
-
-	if !schema.ValidateName(i.Name) {
-		return fmt.Errorf("module name %q is invalid", i.Name)
-	}
-
-	if _, ok := internal.GitRoot(i.Dir).Get(); !ok {
-		return fmt.Errorf("directory %s is not in a git repository, run 'git init' at the root of your project", i.Dir)
+func (i initCmd) Run(ctx context.Context) error {
+	if i.Dir == "" {
+		return fmt.Errorf("directory is required")
 	}
 
 	logger := log.FromContext(ctx)
-	logger.Debugf("Initializing FTL Go module %s in %s", i.Name, i.Dir)
-	if err := scaffold(parent.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
-		return err
-	}
-	if err := updateGitIgnore(i.Dir); err != nil {
-		return err
-	}
-	if err := projectconfig.MaybeCreateDefault(ctx); err != nil {
-		return err
-	}
-	logger.Debugf("Running go mod tidy")
-	return exec.Command(ctx, log.Debug, filepath.Join(i.Dir, i.Name), "go", "mod", "tidy").RunBuffered(ctx)
-}
-
-type initKotlinCmd struct {
-	GroupID    string `short:"g" help:"Base Maven group ID (defaults to \"ftl\")." default:"ftl"`
-	ArtifactID string `short:"a" help:"Base Maven artifact ID (defaults to \"ftl\")." default:"ftl"`
-	Dir        string `arg:"" help:"Directory to initialize the module in."`
-	Name       string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-}
-
-func (i initKotlinCmd) Run(ctx context.Context, parent *initCmd) error {
-	if i.Name == "" {
-		i.Name = filepath.Base(i.Dir)
-	}
-
-	if !schema.ValidateName(i.Name) {
-		return fmt.Errorf("module name %q is invalid", i.Name)
-	}
-
-	moduleDir := filepath.Join(i.Dir, i.Name)
-	if _, err := os.Stat(moduleDir); err == nil {
-		return fmt.Errorf("module directory %s already exists", filepath.Join(i.Dir, i.Name))
-	}
-
-	if err := scaffold(parent.Hermit, kotlinruntime.Files(), i.Dir, i); err != nil {
+	logger.Debugf("Initializing FTL project in %s", i.Dir)
+	if err := scaffold(ctx, i.Hermit, commonruntime.Files(), i.Dir, i); err != nil {
 		return err
 	}
 
-	return buildengine.SetPOMProperties(ctx, moduleDir)
+	if !i.NoGit {
+		if err := maybeCreateGitRepo(ctx, i.Dir); err != nil {
+			return err
+		}
+	}
+
+	config := projectconfig.Config{
+		ExternalDirs: i.ExternalDirs,
+		ModuleDirs:   i.ModuleDirs,
+		Commands: projectconfig.Commands{
+			Startup: []string{i.Startup},
+		},
+	}
+	return projectconfig.CreateDefault(ctx, config, i.Dir)
 }
 
-func unzipToTmpDir(reader *zip.Reader) (string, error) {
-	tmpDir, err := os.MkdirTemp("", "ftl-init-*")
-	if err != nil {
-		return "", err
+func maybeCreateGitRepo(ctx context.Context, dir string) error {
+	_, hasGitRoot := internal.GitRoot(dir).Get()
+	if !hasGitRoot {
+		if err := exec.Command(ctx, log.Debug, dir, "git", "init").RunBuffered(ctx); err != nil {
+			return err
+		}
 	}
-	err = internal.UnzipDir(reader, tmpDir)
-	if err != nil {
-		return "", err
-	}
-	return tmpDir, nil
-}
-
-func scaffold(hermit bool, source *zip.Reader, destination string, ctx any, options ...scaffolder.Option) error {
-	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("^go.mod$")}
-	if !hermit {
-		opts = append(opts, scaffolder.Exclude("^bin"))
-	}
-	opts = append(opts, options...)
-	if err := internal.ScaffoldZip(source, destination, ctx, opts...); err != nil {
-		return fmt.Errorf("failed to scaffold: %w", err)
+	if err := updateGitIgnore(dir); err != nil {
+		return err
 	}
 	return nil
-}
-
-var scaffoldFuncs = template.FuncMap{
-	"snake":          strcase.ToLowerSnake,
-	"screamingSnake": strcase.ToUpperSnake,
-	"camel":          strcase.ToUpperCamel,
-	"lowerCamel":     strcase.ToLowerCamel,
-	"kebab":          strcase.ToLowerKebab,
-	"screamingKebab": strcase.ToUpperKebab,
-	"upper":          strings.ToUpper,
-	"lower":          strings.ToLower,
-	"title":          strings.Title,
-	"typename":       schema.TypeName,
 }
 
 func updateGitIgnore(dir string) error {

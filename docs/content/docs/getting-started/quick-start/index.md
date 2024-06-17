@@ -50,14 +50,24 @@ The [FTL VSCode extension](https://marketplace.visualstudio.com/items?itemName=F
 
 ## Development
 
-### Create a new module
+### Intitialize an FTL project
 
-Once FTL is installed, create a new module:
+Once FTL is installed, initialize an FTL project:
 
 ```
 mkdir myproject
 cd myproject
-ftl init go . alice
+ftl init . --hermit
+```
+
+This will create an `ftl-project.toml` file, a git repository, and a `bin/` directory with Hermit tooling.
+
+### Create a new module
+
+Now that you have an FTL project, create a new module:
+
+```
+ftl new go . alice
 ```
 
 This will place the code for the new module `alice` in `myproject/alice/alice.go`:
