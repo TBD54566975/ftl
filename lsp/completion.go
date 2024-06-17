@@ -71,6 +71,7 @@ var completionItems = []protocol.CompletionItem{
 }
 
 // Track which directives are //ftl: prefixed, so the we can autocomplete them via `/`.
+// This is built at init time and does not change during runtime.
 var directiveItems = map[string]bool{}
 
 func completionItem(label, detail, markdown string) protocol.CompletionItem {
@@ -79,13 +80,13 @@ func completionItem(label, detail, markdown string) protocol.CompletionItem {
 
 	parts := strings.Split(markdown, "---")
 	if len(parts) != 2 {
-		panic("invalid markdown. must contain exactly one '---' to separate completion docs from insert text")
+		panic(fmt.Sprintf("completion item %q: invalid markdown. must contain exactly one '---' to separate completion docs from insert text", label))
 	}
 
 	insertText := strings.TrimSpace(parts[1])
 	// Warn if we see two spaces in the insert text.
 	if strings.Contains(insertText, "  ") {
-		panic(fmt.Sprintf("completion item %q contains two spaces in the insert text. Use tabs instead!", label))
+		panic(fmt.Sprintf("completion item %q: contains two spaces in the insert text. Use tabs instead!", label))
 	}
 
 	// If there is a `//ftl:` this can be autocompleted when the user types `/`.
