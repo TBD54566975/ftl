@@ -37,6 +37,7 @@ func InitialiseClients(authenticators map[string]string) {
 	}
 	tlsClient = &http.Client{
 		Transport: authn.Transport(&http2.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			DialTLSContext: func(ctx context.Context, network, addr string, config *tls.Config) (net.Conn, error) {
 				tlsDialer := tls.Dialer{Config: config, NetDialer: dialer}
 				conn, err := tlsDialer.DialContext(ctx, network, addr)

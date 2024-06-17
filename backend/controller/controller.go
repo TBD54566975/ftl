@@ -523,6 +523,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 	initialised := false
 
 	logger := log.FromContext(ctx)
+	logger.Tracef("Revceived runner registration")
 	for stream.Receive() {
 		msg := stream.Msg()
 		endpoint, err := url.Parse(msg.Endpoint)
