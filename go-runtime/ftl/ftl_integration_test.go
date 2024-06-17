@@ -15,7 +15,8 @@ import (
 func TestLifecycle(t *testing.T) {
 	in.Run(t, "",
 		in.GitInit(),
-		in.Exec("ftl", "init", "go", ".", "echo"),
+		in.Exec("ftl", "init", "."),
+		in.Exec("ftl", "new", "go", ".", "echo"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", in.Obj{"name": "Bob"}, func(t testing.TB, response in.Obj) {
 			assert.Equal(t, "Hello, Bob!", response["message"])
