@@ -15,6 +15,7 @@ import (
 func TestLifecycle(t *testing.T) {
 	in.Run(t, "",
 		in.GitInit(),
+		in.Exec("rm", "ftl-project.toml"),
 		in.Exec("ftl", "init", "."),
 		in.Exec("ftl", "new", "go", ".", "echo"),
 		in.Deploy("echo"),
