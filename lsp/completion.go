@@ -70,7 +70,7 @@ var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:fsm", "Model a FSM", fsmCompletionDocs),
 }
 
-// Track which directives are //ftl: prefixed, so the we can autocomplete them via `//`.
+// Track which directives are //ftl: prefixed, so the we can autocomplete them via `/` (see below).
 var directiveItems = map[string]bool{}
 
 func completionItem(label, detail, markdown string) protocol.CompletionItem {
@@ -89,7 +89,7 @@ func completionItem(label, detail, markdown string) protocol.CompletionItem {
 	}
 
 	// If there is a `//ftl:` this can be autocompleted when the user types `//`.
-	if strings.Contains(insertText, "//ftl:") {
+	if strings.HasPrefix(insertText, "//ftl:") {
 		directiveItems[label] = true
 	}
 
@@ -108,8 +108,6 @@ func completionItem(label, detail, markdown string) protocol.CompletionItem {
 
 func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 	return func(context *glsp.Context, params *protocol.CompletionParams) (interface{}, error) {
-		fmt.Fprintf(os.Stderr, "textDocument/completion: %v\n", params)
-
 		uri := params.TextDocument.URI
 		position := params.Position
 
@@ -134,8 +132,6 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 		// We also want to check that the cursor is at the end of the line so we dont stomp over existing text.
 		isAtEOL := character == len(lineContent)
 		if !isAtEOL {
-			fmt.Fprintf(os.Stderr, "not at end of line character: %d lineContent: %q len(lineContent): %d\n", character, lineContent, len(lineContent))
-
 			return &protocol.CompletionList{
 				IsIncomplete: false,
 				Items:        []protocol.CompletionItem{},
@@ -144,8 +140,6 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 
 		// Is not completing from the start of the line.
 		if strings.ContainsAny(lineContent, " \t") {
-			fmt.Fprintf(os.Stderr, "not at start of line\n")
-
 			return &protocol.CompletionList{
 				IsIncomplete: false,
 				Items:        []protocol.CompletionItem{},
@@ -155,8 +149,8 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 		// If there is a single `/` at the start of the line, we can autocomplete directives. eg `/f`.
 		// This is a hint to the user that these are ftl directives.
 		// Note that what I can tell, VSCode won't trigger completion on and after `//` so we can only complete on half of a comment.
-		isDirective := strings.HasPrefix(lineContent, "/")
-		if isDirective {
+		isSlashed := strings.HasPrefix(lineContent, "/")
+		if isSlashed {
 			lineContent = strings.TrimPrefix(lineContent, "/")
 		}
 
@@ -164,16 +158,19 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 		var filteredItems []protocol.CompletionItem
 		for _, item := range completionItems {
 			if !strings.Contains(item.Label, lineContent) {
-				fmt.Fprintf(os.Stderr, "skipping item %q\n", item.Label)
 				continue
 			}
 
-			if isDirective && !directiveItems[item.Label] {
-				fmt.Fprintf(os.Stderr, "skipping directive item %q\n", item.Label)
+			if isSlashed && !directiveItems[item.Label] {
 				continue
 			}
 
-			fmt.Fprintf(os.Stderr, "adding item %q\n", item.Label)
+			// We need to remove the leading `/` if it is a directive so that the final completion doesn't have `///`.
+			if isSlashed {
+				s := strings.TrimPrefix(*item.InsertText, "/")
+				item.InsertText = &s
+			}
+
 			filteredItems = append(filteredItems, item)
 		}
 
@@ -186,8 +183,6 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 
 func (s *Server) completionItemResolve() protocol.CompletionItemResolveFunc {
 	return func(context *glsp.Context, params *protocol.CompletionItem) (*protocol.CompletionItem, error) {
-		fmt.Fprintf(os.Stderr, "completionItem/resolve: %v\n", params)
-
 		if path, ok := params.Data.(string); ok {
 			content, err := os.ReadFile(path)
 			if err != nil {
