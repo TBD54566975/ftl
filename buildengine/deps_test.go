@@ -7,25 +7,13 @@ import (
 )
 
 func TestExtractModuleDepsGo(t *testing.T) {
-	deps, err := extractGoFTLImports("test", "testdata/projects/alpha")
+	deps, err := extractGoFTLImports("test", "testdata/alpha")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"another", "other"}, deps)
 }
 
 func TestExtractModuleDepsKotlin(t *testing.T) {
-	deps, err := extractKotlinFTLImports("test", "testdata/projects/alphakotlin")
+	deps, err := extractKotlinFTLImports("test", "testdata/alphakotlin")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"builtin", "other"}, deps)
-}
-
-func TestExtractLibraryDepsGo(t *testing.T) {
-	deps, err := extractGoFTLImports("test", "testdata/projects/lib")
-	assert.NoError(t, err)
-	assert.Equal(t, []string{"alpha"}, deps)
-}
-
-func TestExtractLibraryDepsKotlin(t *testing.T) {
-	deps, err := extractKotlinFTLImports("test", "testdata/projects/libkotlin")
-	assert.NoError(t, err)
-	assert.Equal(t, []string{"builtin", "echo"}, deps)
 }

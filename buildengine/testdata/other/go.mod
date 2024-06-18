@@ -1,4 +1,4 @@
-module ftl/alpha
+module ftl/other
 
 go 1.22.2
 
@@ -41,4 +41,4 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 )
 
-replace github.com/TBD54566975/ftl => ../../../..
+replace github.com/TBD54566975/ftl => ../../..

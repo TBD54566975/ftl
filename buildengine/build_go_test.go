@@ -177,7 +177,7 @@ func init() {
 }
 `
 	bctx := buildContext{
-		moduleDir: "testdata/projects/another",
+		moduleDir: "testdata/another",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
@@ -197,7 +197,7 @@ func TestGoBuildClearsBuildDir(t *testing.T) {
 		},
 	}
 	bctx := buildContext{
-		moduleDir: "testdata/projects/another",
+		moduleDir: "testdata/another",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
@@ -255,7 +255,7 @@ func Call(context.Context, Req) (Resp, error) {
 }
 `
 	bctx := buildContext{
-		moduleDir: "testdata/projects/another",
+		moduleDir: "testdata/another",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
@@ -269,7 +269,7 @@ func TestExternalType(t *testing.T) {
 		t.SkipNow()
 	}
 	bctx := buildContext{
-		moduleDir: "testdata/projects/external",
+		moduleDir: "testdata/external",
 		buildDir:  "_ftl",
 		sch:       &schema.Schema{},
 	}
@@ -301,7 +301,7 @@ func TestGoModVersion(t *testing.T) {
 		},
 	}
 	bctx := buildContext{
-		moduleDir: "testdata/projects/highgoversion",
+		moduleDir: "testdata/highgoversion",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}
@@ -344,7 +344,7 @@ func TestGeneratedTypeRegistry(t *testing.T) {
 	expected, err := os.ReadFile("testdata/type_registry_main.go")
 	assert.NoError(t, err)
 	bctx := buildContext{
-		moduleDir: "testdata/projects/other",
+		moduleDir: "testdata/other",
 		buildDir:  "_ftl",
 		sch:       sch,
 	}

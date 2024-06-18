@@ -16,7 +16,7 @@ func TestEngine(t *testing.T) {
 		t.SkipNow()
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, []string{"testdata/projects/alpha", "testdata/projects/other", "testdata/projects/another"}, nil)
+	engine, err := buildengine.New(ctx, nil, []string{"testdata/alpha", "testdata/other", "testdata/another"})
 	assert.NoError(t, err)
 
 	defer engine.Close()
@@ -64,7 +64,7 @@ func TestCycleDetection(t *testing.T) {
 		t.SkipNow()
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, []string{"testdata/projects/depcycle1", "testdata/projects/depcycle2"}, nil)
+	engine, err := buildengine.New(ctx, nil, []string{"testdata/depcycle1", "testdata/depcycle2"})
 	assert.NoError(t, err)
 
 	defer engine.Close()

@@ -63,8 +63,8 @@ func CompareFileHashes(oldFiles, newFiles FileHashes) (FileChangeType, string, b
 
 // ComputeFileHashes computes the SHA256 hash of all (non-git-ignored) files in
 // the given directory.
-func ComputeFileHashes(project Project) (FileHashes, error) {
-	config := project.Config()
+func ComputeFileHashes(module Module) (FileHashes, error) {
+	config := module.Config
 
 	fileHashes := make(FileHashes)
 	rootDirs := computeRootDirs(config.Dir, config.Watch)

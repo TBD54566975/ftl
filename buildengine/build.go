@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -16,49 +15,39 @@ import (
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const BuildLockTimeout = time.Minute
 
-// Build a project in the given directory given the schema and project config.
-//
-// For a module, this will build the module. For an external library, this will build stubs for imported modules.
+// Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func Build(ctx context.Context, sch *schema.Schema, project Project, filesTransaction ModifyFilesTransaction) error {
-	switch project := project.(type) {
-	case Module:
-		return buildModule(ctx, sch, project, filesTransaction)
-	case ExternalLibrary:
-		return buildExternalLibrary(ctx, sch, project)
-	default:
-		panic(fmt.Sprintf("unsupported project type: %T", project))
-	}
+func Build(ctx context.Context, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
+	return buildModule(ctx, sch, module, filesTransaction)
 }
 
 func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
-	release, err := flock.Acquire(ctx, filepath.Join(module.Dir, ".ftl.lock"), BuildLockTimeout)
+	release, err := flock.Acquire(ctx, filepath.Join(module.Config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
 		return err
 	}
 	defer release() //nolint:errcheck
-	logger := log.FromContext(ctx).Scope(module.Module)
+	logger := log.FromContext(ctx).Scope(module.Config.Module)
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	// clear the deploy directory before extracting schema
-	if err := os.RemoveAll(module.AbsDeployDir()); err != nil {
+	if err := os.RemoveAll(module.Config.AbsDeployDir()); err != nil {
 		return fmt.Errorf("failed to clear errors: %w", err)
 	}
 
 	logger.Infof("Building module")
-	switch module.Language {
+	switch module.Config.Language {
 	case "go":
 		err = buildGoModule(ctx, sch, module, filesTransaction)
 	case "kotlin":
 		err = buildKotlinModule(ctx, sch, module)
 	default:
-		return fmt.Errorf("unknown language %q", module.Language)
+		return fmt.Errorf("unknown language %q", module.Config.Language)
 	}
 
 	var errs []error
@@ -66,7 +55,7 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 		errs = append(errs, err)
 	}
 	// read runtime-specific build errors from the build directory
-	errorList, err := loadProtoErrors(module.ModuleConfig)
+	errorList, err := loadProtoErrors(module.Config)
 	if err != nil {
 		return fmt.Errorf("failed to read build errors for module: %w", err)
 	}
@@ -82,34 +71,8 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 	return nil
 }
 
-func buildExternalLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {
-	logger := log.FromContext(ctx).Scope(filepath.Base(lib.Dir))
-	ctx = log.ContextWithLogger(ctx, logger)
-
-	imported := slices.Map(sch.Modules, func(m *schema.Module) string {
-		return m.Name
-	})
-	logger.Debugf("Generating stubs [%s] for %v", strings.Join(imported, ", "), lib)
-
-	switch lib.Language {
-	case "go":
-		if err := buildGoLibrary(ctx, sch, lib); err != nil {
-			return err
-		}
-	case "kotlin":
-		if err := buildKotlinLibrary(ctx, sch, lib); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown language %q for library %q", lib.Language, lib.Config().Key)
-	}
-
-	logger.Infof("Generated stubs [%s] for %v", strings.Join(imported, ", "), lib)
-	return nil
-}
-
-func loadProtoErrors(module moduleconfig.ModuleConfig) (*schema.ErrorList, error) {
-	f := filepath.Join(module.AbsDeployDir(), module.Errors)
+func loadProtoErrors(config moduleconfig.ModuleConfig) (*schema.ErrorList, error) {
+	f := filepath.Join(config.AbsDeployDir(), config.Errors)
 	if _, err := os.Stat(f); errors.Is(err, os.ErrNotExist) {
 		return &schema.ErrorList{Errors: make([]*schema.Error, 0)}, nil
 	}

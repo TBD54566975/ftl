@@ -32,7 +32,6 @@ type Config struct {
 	Global        ConfigAndSecrets            `toml:"global"`
 	Modules       map[string]ConfigAndSecrets `toml:"modules"`
 	ModuleDirs    []string                    `toml:"module-dirs"`
-	ExternalDirs  []string                    `toml:"external-dirs"`
 	Commands      Commands                    `toml:"commands"`
 	FTLMinVersion string                      `toml:"ftl-min-version"`
 }

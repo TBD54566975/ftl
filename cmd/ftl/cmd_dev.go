@@ -19,7 +19,6 @@ import (
 type devCmd struct {
 	Parallelism    int           `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
 	Dirs           []string      `arg:"" help:"Base directories containing modules." type:"existingdir" optional:""`
-	External       []string      `help:"Directories for libraries that require FTL module stubs." type:"existingdir" optional:""`
 	Watch          time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
 	NoServe        bool          `help:"Do not start the FTL server." default:"false"`
 	Lsp            bool          `help:"Run the language server." default:"false"`
@@ -29,11 +28,10 @@ type devCmd struct {
 }
 
 func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	if len(d.Dirs) == 0 && len(d.External) == 0 {
+	if len(d.Dirs) == 0 {
 		d.Dirs = projConfig.AbsModuleDirs()
-		d.External = projConfig.ExternalDirs
 	}
-	if len(d.Dirs) == 0 && len(d.External) == 0 {
+	if len(d.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
 
@@ -86,7 +84,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			})
 		}
 
-		engine, err := buildengine.New(ctx, client, d.Dirs, d.External, opts...)
+		engine, err := buildengine.New(ctx, client, d.Dirs, opts...)
 		if err != nil {
 			return err
 		}
@@ -96,6 +94,6 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	return g.Wait()
 }
 
-func (d *devCmd) OnBuildStarted(project buildengine.Project) {
-	d.languageServer.BuildStarted(project.Config().Dir)
+func (d *devCmd) OnBuildStarted(module buildengine.Module) {
+	d.languageServer.BuildStarted(module.Config.Dir)
 }

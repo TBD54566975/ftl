@@ -13,44 +13,44 @@ import (
 	"github.com/TBD54566975/ftl/internal/maps"
 )
 
-// A WatchEvent is an event that occurs when a project is added, removed, or
+// A WatchEvent is an event that occurs when a module is added, removed, or
 // changed.
 type WatchEvent interface{ watchEvent() }
 
-type WatchEventProjectAdded struct{ Project Project }
+type WatchEventModuleAdded struct{ Module Module }
 
-func (WatchEventProjectAdded) watchEvent() {}
+func (WatchEventModuleAdded) watchEvent() {}
 
-type WatchEventProjectRemoved struct{ Project Project }
+type WatchEventModuleRemoved struct{ Module Module }
 
-func (WatchEventProjectRemoved) watchEvent() {}
+func (WatchEventModuleRemoved) watchEvent() {}
 
-type WatchEventProjectChanged struct {
-	Project Project
-	Change  FileChangeType
-	Path    string
-	Time    time.Time
+type WatchEventModuleChanged struct {
+	Module Module
+	Change FileChangeType
+	Path   string
+	Time   time.Time
 }
 
-func (WatchEventProjectChanged) watchEvent() {}
+func (WatchEventModuleChanged) watchEvent() {}
 
-type projectHashes struct {
-	Hashes  FileHashes
-	Project Project
+type moduleHashes struct {
+	Hashes FileHashes
+	Module Module
 }
 
 type Watcher struct {
 	isWatching bool
 
-	// use mutex whenever accessing / modifying existingProjects or moduleTransactions
+	// use mutex whenever accessing / modifying existingModules or moduleTransactions
 	mutex              sync.Mutex
-	existingProjects   map[string]projectHashes
+	existingModules    map[string]moduleHashes
 	moduleTransactions map[string][]*modifyFilesTransaction
 }
 
 func NewWatcher() *Watcher {
 	svc := &Watcher{
-		existingProjects:   map[string]projectHashes{},
+		existingModules:    map[string]moduleHashes{},
 		moduleTransactions: map[string][]*modifyFilesTransaction{},
 	}
 
@@ -64,9 +64,9 @@ func (w *Watcher) GetTransaction(moduleDir string) ModifyFilesTransaction {
 	}
 }
 
-// Watch the given directories for new projects, deleted projects, and changes to
-// existing projects, publishing a change event for each.
-func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []string, externalLibDirs []string) (*pubsub.Topic[WatchEvent], error) {
+// Watch the given directories for new modules, deleted modules, and changes to
+// existing modules, publishing a change event for each.
+func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []string) (*pubsub.Topic[WatchEvent], error) {
 	if w.isWatching {
 		return nil, fmt.Errorf("file watcher is already watching")
 	}
@@ -89,58 +89,58 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 				return
 			}
 
-			projects, err := DiscoverProjects(ctx, moduleDirs, externalLibDirs)
+			modules, err := DiscoverModules(ctx, moduleDirs)
 			if err != nil {
-				logger.Tracef("error discovering projects: %v", err)
+				logger.Tracef("error discovering modules: %v", err)
 				continue
 			}
 
-			projectsByDir := maps.FromSlice(projects, func(project Project) (string, Project) {
-				return project.Config().Dir, project
+			modulesByDir := maps.FromSlice(modules, func(module Module) (string, Module) {
+				return module.Config.Dir, module
 			})
 
 			w.mutex.Lock()
-			// Trigger events for removed projects.
-			for _, existingProject := range w.existingProjects {
-				if transactions, ok := w.moduleTransactions[existingProject.Project.Config().Dir]; ok && len(transactions) > 0 {
-					// Skip projects that currently have transactions
+			// Trigger events for removed modules.
+			for _, existingModule := range w.existingModules {
+				if transactions, ok := w.moduleTransactions[existingModule.Module.Config.Dir]; ok && len(transactions) > 0 {
+					// Skip modules that currently have transactions
 					continue
 				}
-				existingConfig := existingProject.Project.Config()
-				if _, haveProject := projectsByDir[existingConfig.Dir]; !haveProject {
-					logger.Debugf("removed %s %q", existingProject.Project.TypeString(), existingProject.Project.Config().Key)
-					topic.Publish(WatchEventProjectRemoved{Project: existingProject.Project})
-					delete(w.existingProjects, existingConfig.Dir)
+				existingConfig := existingModule.Module.Config
+				if _, haveModule := modulesByDir[existingConfig.Dir]; !haveModule {
+					logger.Debugf("removed %q", existingModule.Module.Config.Module)
+					topic.Publish(WatchEventModuleRemoved{Module: existingModule.Module})
+					delete(w.existingModules, existingConfig.Dir)
 				}
 			}
 
-			// Compare the projects to the existing projects.
-			for _, project := range projectsByDir {
-				if transactions, ok := w.moduleTransactions[project.Config().Dir]; ok && len(transactions) > 0 {
-					// Skip projects that currently have transactions
+			// Compare the modules to the existing modules.
+			for _, module := range modulesByDir {
+				config := module.Config
+				if transactions, ok := w.moduleTransactions[config.Dir]; ok && len(transactions) > 0 {
+					// Skip modules that currently have transactions
 					continue
 				}
-				config := project.Config()
-				existingProject, haveExistingProject := w.existingProjects[config.Dir]
-				hashes, err := ComputeFileHashes(project)
+				existingModule, haveExistingModule := w.existingModules[config.Dir]
+				hashes, err := ComputeFileHashes(module)
 				if err != nil {
 					logger.Tracef("error computing file hashes for %s: %v", config.Dir, err)
 					continue
 				}
 
-				if haveExistingProject {
-					changeType, path, equal := CompareFileHashes(existingProject.Hashes, hashes)
+				if haveExistingModule {
+					changeType, path, equal := CompareFileHashes(existingModule.Hashes, hashes)
 					if equal {
 						continue
 					}
-					logger.Debugf("changed %s %q: %c%s", project.TypeString(), project.Config().Key, changeType, path)
-					topic.Publish(WatchEventProjectChanged{Project: existingProject.Project, Change: changeType, Path: path, Time: time.Now()})
-					w.existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: existingProject.Project}
+					logger.Debugf("changed %q: %c%s", config.Module, changeType, path)
+					topic.Publish(WatchEventModuleChanged{Module: existingModule.Module, Change: changeType, Path: path, Time: time.Now()})
+					w.existingModules[config.Dir] = moduleHashes{Hashes: hashes, Module: existingModule.Module}
 					continue
 				}
-				logger.Debugf("added %s %q", project.TypeString(), project.Config().Key)
-				topic.Publish(WatchEventProjectAdded{Project: project})
-				w.existingProjects[config.Dir] = projectHashes{Hashes: hashes, Project: project}
+				logger.Debugf("added %q", config.Module)
+				topic.Publish(WatchEventModuleAdded{Module: module})
+				w.existingModules[config.Dir] = moduleHashes{Hashes: hashes, Module: module}
 			}
 			w.mutex.Unlock()
 		}
@@ -207,14 +207,14 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 	t.watcher.mutex.Lock()
 	defer t.watcher.mutex.Unlock()
 
-	projectHashes, ok := t.watcher.existingProjects[t.moduleDir]
+	moduleHashes, ok := t.watcher.existingModules[t.moduleDir]
 	if !ok {
-		// skip updating hashes because we have not discovered this project yet
+		// skip updating hashes because we have not discovered this module yet
 		return nil
 	}
 
 	for _, path := range paths {
-		hash, matched, err := ComputeFileHash(projectHashes.Project.Config().Dir, path, projectHashes.Project.Config().Watch)
+		hash, matched, err := ComputeFileHash(moduleHashes.Module.Config.Dir, path, moduleHashes.Module.Config.Watch)
 		if err != nil {
 			return err
 		}
@@ -222,9 +222,9 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 			continue
 		}
 
-		projectHashes.Hashes[path] = hash
+		moduleHashes.Hashes[path] = hash
 	}
-	t.watcher.existingProjects[t.moduleDir] = projectHashes
+	t.watcher.existingModules[t.moduleDir] = moduleHashes
 
 	return nil
 }

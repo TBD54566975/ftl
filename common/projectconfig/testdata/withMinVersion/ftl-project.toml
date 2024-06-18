@@ -1,5 +1,4 @@
 module-dirs = ["a/b/c", "d"]
-external-dirs = ["e/f", "g/h"]
 ftl-min-version = "0.129.2"
 
 [modules.module.configuration]

@@ -43,8 +43,8 @@ func TestWatch(t *testing.T) {
 	two := loadModule(t, dir, "two")
 
 	waitForEvents(t, events, []WatchEvent{
-		WatchEventProjectAdded{Project: one},
-		WatchEventProjectAdded{Project: two},
+		WatchEventModuleAdded{Module: one},
+		WatchEventModuleAdded{Module: two},
 	})
 
 	// Delete a module
@@ -55,8 +55,8 @@ func TestWatch(t *testing.T) {
 	updateModFile(t, filepath.Join(dir, "one"))
 
 	waitForEvents(t, events, []WatchEvent{
-		WatchEventProjectChanged{Project: one},
-		WatchEventProjectRemoved{Project: two},
+		WatchEventModuleChanged{Module: one},
+		WatchEventModuleRemoved{Module: two},
 	})
 	topic.Close()
 }
@@ -80,7 +80,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	events, topic := startWatching(ctx, t, w, dir)
 
 	waitForEvents(t, events, []WatchEvent{
-		WatchEventProjectAdded{Project: loadModule(t, dir, "one")},
+		WatchEventModuleAdded{Module: loadModule(t, dir, "one")},
 	})
 
 	// Change a file in a module, within a transaction
@@ -118,7 +118,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	events, topic := startWatching(ctx, t, w, dir)
 
 	waitForEvents(t, events, []WatchEvent{
-		WatchEventProjectAdded{Project: one},
+		WatchEventModuleAdded{Module: one},
 	})
 
 	// Change a file in a module, within a transaction
@@ -140,7 +140,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	assert.NoError(t, err)
 
 	waitForEvents(t, events, []WatchEvent{
-		WatchEventProjectChanged{Project: one},
+		WatchEventModuleChanged{Module: one},
 	})
 	topic.Close()
 }
@@ -150,14 +150,14 @@ func loadModule(t *testing.T, dir, name string) Module {
 	config, err := moduleconfig.LoadModuleConfig(filepath.Join(dir, name))
 	assert.NoError(t, err)
 	return Module{
-		ModuleConfig: config,
+		Config: config,
 	}
 }
 
 func startWatching(ctx context.Context, t *testing.T, w *Watcher, dir string) (chan WatchEvent, *pubsub.Topic[WatchEvent]) {
 	t.Helper()
 	events := make(chan WatchEvent, 128)
-	topic, err := w.Watch(ctx, pollFrequency, []string{dir}, nil)
+	topic, err := w.Watch(ctx, pollFrequency, []string{dir})
 	assert.NoError(t, err)
 	topic.Subscribe(events)
 
@@ -199,12 +199,12 @@ func waitForEvents(t *testing.T, events chan WatchEvent, expected []WatchEvent) 
 
 func keyForEvent(event WatchEvent) string {
 	switch event := event.(type) {
-	case WatchEventProjectAdded:
-		return "added:" + string(event.Project.Config().Key)
-	case WatchEventProjectRemoved:
-		return "removed:" + string(event.Project.Config().Key)
-	case WatchEventProjectChanged:
-		return "updated:" + string(event.Project.Config().Key)
+	case WatchEventModuleAdded:
+		return "added:" + event.Module.Config.Module
+	case WatchEventModuleRemoved:
+		return "removed:" + event.Module.Config.Module
+	case WatchEventModuleChanged:
+		return "updated:" + event.Module.Config.Module
 	default:
 		panic("unknown event type")
 	}
