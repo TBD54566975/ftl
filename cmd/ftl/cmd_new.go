@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -50,14 +51,29 @@ func (i newGoCmd) Run(ctx context.Context) error {
 		return fmt.Errorf("module name %q must be a valid Go module name and not a reserved keyword", name)
 	}
 
+	config, err := projectconfig.Load(ctx, "")
+	if err != nil {
+		return fmt.Errorf("failed to load project config: %w", err)
+	}
+
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating FTL Go module %q in %s", name, path)
-	if err := scaffold(ctx, hasBinDir(i.Dir), goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
+	if err := scaffold(ctx, config.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
 		return err
 	}
 
 	logger.Debugf("Running go mod tidy")
-	return exec.Command(ctx, log.Debug, path, "go", "mod", "tidy").RunBuffered(ctx)
+	if err := exec.Command(ctx, log.Debug, path, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+		return err
+	}
+
+	logger.Debugf("Adding files to git")
+	if !config.NoGit {
+		if err := maybeGitAdd(ctx, ".", fmt.Sprintf("%s/*", path), "bin/*"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (i newKotlinCmd) Run(ctx context.Context) error {
@@ -66,13 +82,28 @@ func (i newKotlinCmd) Run(ctx context.Context) error {
 		return err
 	}
 
+	config, err := projectconfig.Load(ctx, "")
+	if err != nil {
+		return fmt.Errorf("failed to load project config: %w", err)
+	}
+
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating FTL Kotlin module %q in %s", name, path)
-	if err := scaffold(ctx, hasBinDir(i.Dir), kotlinruntime.Files(), i.Dir, i); err != nil {
+	if err := scaffold(ctx, config.Hermit, kotlinruntime.Files(), i.Dir, i); err != nil {
 		return err
 	}
 
-	return buildengine.SetPOMProperties(ctx, path)
+	if err := buildengine.SetPOMProperties(ctx, path); err != nil {
+		return err
+	}
+
+	logger.Debugf("Adding files to git")
+	if !config.NoGit {
+		if err := maybeGitAdd(ctx, ".", fmt.Sprintf("%s/*", path), "bin/*"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validateModule(dir string, name string) (string, string, error) {
@@ -101,11 +132,6 @@ func isValidGoModuleName(name string) bool {
 		return false
 	}
 	return true
-}
-
-func hasBinDir(path string) bool {
-	_, err := os.Stat(filepath.Join(path, "bin"))
-	return err == nil
 }
 
 func scaffold(ctx context.Context, includeBinDir bool, source *zip.Reader, destination string, sctx any, options ...scaffolder.Option) error {

@@ -35,6 +35,8 @@ type Config struct {
 	ExternalDirs  []string                    `toml:"external-dirs"`
 	Commands      Commands                    `toml:"commands"`
 	FTLMinVersion string                      `toml:"ftl-min-version"`
+	Hermit        bool                        `toml:"hermit"`
+	NoGit         bool                        `toml:"no-git"`
 }
 
 // Root directory of the project.
@@ -99,8 +101,8 @@ func DefaultConfigPath() optional.Option[string] {
 	return optional.Some(filepath.Join(dir, "ftl-project.toml"))
 }
 
-// CreateDefault creates the ftl-project.toml file with the given Config into dir.
-func CreateDefault(ctx context.Context, config Config, dir string) error {
+// Create creates the ftl-project.toml file with the given Config into dir.
+func Create(ctx context.Context, config Config, dir string) error {
 	logger := log.FromContext(ctx)
 	path, err := filepath.Abs(dir)
 	if err != nil {

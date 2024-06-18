@@ -8,6 +8,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/TBD54566975/ftl"
 	commonruntime "github.com/TBD54566975/ftl/common-runtime"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal"
@@ -16,11 +17,11 @@ import (
 )
 
 type initCmd struct {
-	Hermit       bool     `help:"Include Hermit language-specific toolchain binaries in the module." negatable:""`
+	Hermit       bool     `help:"Include Hermit language-specific toolchain binaries." negatable:""`
 	Dir          string   `arg:"" help:"Directory to initialize the project in."`
 	ExternalDirs []string `help:"Directories of existing external modules."`
 	ModuleDirs   []string `help:"Child directories of existing modules."`
-	NoGit        bool     `help:"Do not initialize a git repository in the project directory."`
+	NoGit        bool     `help:"Don't add files to the git repository."`
 	Startup      string   `help:"Command to run on startup."`
 }
 
@@ -35,30 +36,44 @@ func (i initCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	if !i.NoGit {
-		if err := maybeCreateGitRepo(ctx, i.Dir); err != nil {
-			return err
-		}
-	}
-
 	config := projectconfig.Config{
-		ExternalDirs: i.ExternalDirs,
-		ModuleDirs:   i.ModuleDirs,
+		Hermit:        i.Hermit,
+		NoGit:         i.NoGit,
+		FTLMinVersion: ftl.Version,
+		ExternalDirs:  i.ExternalDirs,
+		ModuleDirs:    i.ModuleDirs,
 		Commands: projectconfig.Commands{
 			Startup: []string{i.Startup},
 		},
 	}
-	return projectconfig.CreateDefault(ctx, config, i.Dir)
-}
+	if err := projectconfig.Create(ctx, config, i.Dir); err != nil {
+		return err
+	}
 
-func maybeCreateGitRepo(ctx context.Context, dir string) error {
-	_, hasGitRoot := internal.GitRoot(dir).Get()
-	if !hasGitRoot {
-		if err := exec.Command(ctx, log.Debug, dir, "git", "init").RunBuffered(ctx); err != nil {
+	if !i.NoGit {
+		logger.Debugf("Updating .gitignore")
+		if err := updateGitIgnore(i.Dir); err != nil {
+			return err
+		}
+		logger.Debugf("Adding files to git")
+		if i.Hermit {
+			if err := maybeGitAdd(ctx, i.Dir, "bin/*"); err != nil {
+				return err
+			}
+		}
+		if err := maybeGitAdd(ctx, i.Dir, "ftl-project.toml", ".gitignore"); err != nil {
 			return err
 		}
 	}
-	if err := updateGitIgnore(dir); err != nil {
+	return nil
+}
+
+func maybeGitAdd(ctx context.Context, dir string, paths ...string) error {
+	if _, ok := internal.GitRoot(dir).Get(); !ok {
+		return nil
+	}
+	args := append([]string{"add"}, paths...)
+	if err := exec.Command(ctx, log.Debug, dir, "git", args...).RunBuffered(ctx); err != nil {
 		return err
 	}
 	return nil
