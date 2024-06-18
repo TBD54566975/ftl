@@ -14,7 +14,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 	sets "github.com/deckarep/golang-set/v2"
 	gomaps "golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
@@ -620,23 +619,24 @@ func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalE
 //
 // TODO: once migrated off of the legacy extractor, we can inline `extract.Extract(dir)` and delete this
 // function
-func ExtractModuleSchema(dir string, sch *schema.Schema) (finalize.Result, error) {
+func ExtractModuleSchema(dir string, sch *schema.Schema) (extract.Result, error) {
 	result, err := extract.Extract(dir)
 	if err != nil {
-		return finalize.Result{}, err
+		return extract.Result{}, err
 	}
 
 	// merge with legacy results for now
 	if err = legacyExtractModuleSchema(dir, sch, &result); err != nil {
-		return finalize.Result{}, err
+		return extract.Result{}, err
 	}
 
 	schema.SortErrorsByPosition(result.Errors)
-	if !schema.ContainsTerminalError(result.Errors) {
-		err = schema.ValidateModule(result.Module)
-		if err != nil {
-			return finalize.Result{}, err
-		}
+	if schema.ContainsTerminalError(result.Errors) {
+		return result, nil
+	}
+	err = schema.ValidateModule(result.Module)
+	if err != nil {
+		return extract.Result{}, err
 	}
 	updateVisibility(result.Module)
 	return result, nil

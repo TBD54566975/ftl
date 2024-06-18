@@ -3,6 +3,7 @@ package metadata
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 	"reflect"
 
 	"github.com/alecthomas/types/optional"
@@ -29,20 +30,29 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 	}
 	in.Preorder(nodeFilter, func(n ast.Node) {
 		var doc *ast.CommentGroup
+		var name string
 		switch n := n.(type) {
 		case *ast.TypeSpec:
 			doc = n.Doc
+			name = n.Name.Name
 		case *ast.GenDecl:
 			doc = n.Doc
-			if doc == nil && len(n.Specs) > 0 {
-				if ts, ok := n.Specs[0].(*ast.TypeSpec); ok {
+			if ts, ok := n.Specs[0].(*ast.TypeSpec); len(n.Specs) > 0 && ok {
+				if doc == nil {
 					doc = ts.Doc
 				}
+				name = ts.Name.Name
 			}
 		case *ast.FuncDecl:
 			doc = n.Doc
+			name = n.Name.Name
 		}
 		if mdFact, ok := extractMetadata(pass, n, doc).Get(); ok {
+			if prev, ok := getDuplicate(pass, name, mdFact).Get(); ok {
+				common.Errorf(pass, n, "duplicate declaration of %q at %s", name,
+					common.GoPosToSchemaPos(pass.Fset, prev.Pos()))
+			}
+
 			obj, ok := common.GetObjectForNode(pass.TypesInfo, n).Get()
 			if !ok {
 				return
@@ -181,4 +191,13 @@ func isAnnotatingValidGoNode(dir common.Directive, node ast.Node) bool {
 		}
 	}
 	return false
+}
+
+func getDuplicate(pass *analysis.Pass, name string, newMd *common.ExtractedMetadata) optional.Option[types.Object] {
+	for obj, md := range common.GetFacts[*common.ExtractedMetadata](pass) {
+		if reflect.TypeOf(md.Type) == reflect.TypeOf(newMd.Type) && obj.Name() == name {
+			return optional.Some(obj)
+		}
+	}
+	return optional.None[types.Object]()
 }

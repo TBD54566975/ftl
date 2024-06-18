@@ -12,6 +12,18 @@ func Visit(n Node, visit func(n Node, next func() error) error) error {
 	})
 }
 
+// VisitWithParent all nodes in the schema providing the parent node when visiting its schema children.
+func VisitWithParent(n Node, parent Node, visit func(n Node, parent Node, next func() error) error) error {
+	return visit(n, parent, func() error {
+		for _, child := range n.schemaChildren() {
+			if err := VisitWithParent(child, n, visit); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
 // VisitExcludingMetadataChildren visits all nodes in the schema except the children of metadata nodes.
 // This is used when generating external modules to avoid adding imports only referenced in the bodies of
 // stubbed verbs.

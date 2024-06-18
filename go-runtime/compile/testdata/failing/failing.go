@@ -6,6 +6,7 @@ import (
 	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 
+	"ftl/failing/child"
 	ps "ftl/pubsub"
 )
 
@@ -177,4 +178,9 @@ func BadPublish(ctx context.Context) error {
 //ftl:data
 type UnexportedFieldStruct struct {
 	unexported string
+}
+
+//ftl:data
+type BadChildField struct {
+	Child child.BadChildStruct
 }

@@ -20,6 +20,7 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 	if !ok {
 		return optional.None[*schema.TypeAlias]()
 	}
+	// type aliases must have an underlying type, and the type cannot be a reference to the alias itself.
 	if common.IsSelfReference(pass, obj, schType) {
 		return optional.None[*schema.TypeAlias]()
 	}
@@ -29,9 +30,6 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 		Type: schType,
 	}
 	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
-		if _, ok := md.Type.(*schema.TypeAlias); !ok {
-			return optional.None[*schema.TypeAlias]()
-		}
 		alias.Comments = md.Comments
 		alias.Export = md.IsExported
 	}
