@@ -69,7 +69,12 @@ func (i newGoCmd) Run(ctx context.Context) error {
 
 	logger.Debugf("Adding files to git")
 	if !config.NoGit {
-		if err := maybeGitAdd(ctx, ".", fmt.Sprintf("%s/*", path), "bin/*"); err != nil {
+		if config.Hermit {
+			if err := maybeGitAdd(ctx, ".", "bin/*"); err != nil {
+				return err
+			}
+		}
+		if err := maybeGitAdd(ctx, ".", fmt.Sprintf("%s/*", path)); err != nil {
 			return err
 		}
 	}
@@ -99,7 +104,12 @@ func (i newKotlinCmd) Run(ctx context.Context) error {
 
 	logger.Debugf("Adding files to git")
 	if !config.NoGit {
-		if err := maybeGitAdd(ctx, ".", fmt.Sprintf("%s/*", path), "bin/*"); err != nil {
+		if config.Hermit {
+			if err := maybeGitAdd(ctx, ".", "bin/*"); err != nil {
+				return err
+			}
+		}
+		if err := maybeGitAdd(ctx, ".", fmt.Sprintf("%s/*", path)); err != nil {
 			return err
 		}
 	}
