@@ -178,7 +178,7 @@ func init() {
 `
 	bctx := buildContext{
 		moduleDir: "testdata/another",
-		buildDir:  "_ftl",
+		buildDir:  ".ftl",
 		sch:       sch,
 	}
 	testBuild(t, bctx, "", []assertion{
@@ -198,7 +198,7 @@ func TestGoBuildClearsBuildDir(t *testing.T) {
 	}
 	bctx := buildContext{
 		moduleDir: "testdata/another",
-		buildDir:  "_ftl",
+		buildDir:  ".ftl",
 		sch:       sch,
 	}
 	testBuildClearsBuildDir(t, bctx)
@@ -256,7 +256,7 @@ func Call(context.Context, Req) (Resp, error) {
 `
 	bctx := buildContext{
 		moduleDir: "testdata/another",
-		buildDir:  "_ftl",
+		buildDir:  ".ftl",
 		sch:       sch,
 	}
 	testBuild(t, bctx, "", []assertion{
@@ -270,7 +270,7 @@ func TestExternalType(t *testing.T) {
 	}
 	bctx := buildContext{
 		moduleDir: "testdata/external",
-		buildDir:  "_ftl",
+		buildDir:  ".ftl",
 		sch:       &schema.Schema{},
 	}
 	testBuild(t, bctx, "unsupported external type", []assertion{
@@ -302,7 +302,7 @@ func TestGoModVersion(t *testing.T) {
 	}
 	bctx := buildContext{
 		moduleDir: "testdata/highgoversion",
-		buildDir:  "_ftl",
+		buildDir:  ".ftl",
 		sch:       sch,
 	}
 	testBuild(t, bctx, fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version()[2:]), []assertion{})
@@ -345,7 +345,7 @@ func TestGeneratedTypeRegistry(t *testing.T) {
 	assert.NoError(t, err)
 	bctx := buildContext{
 		moduleDir: "testdata/other",
-		buildDir:  "_ftl",
+		buildDir:  ".ftl",
 		sch:       sch,
 	}
 	testBuild(t, bctx, "", []assertion{

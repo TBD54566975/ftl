@@ -47,7 +47,7 @@ func testBuild(
 	assert.NoError(t, err, "Error getting absolute path for module directory")
 	module, err := LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	err = Build(ctx, t.TempDir(), bctx.sch, module, &mockModifyFilesTransaction{})
 	if len(expectedBuildErrMsg) > 0 {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), expectedBuildErrMsg)
@@ -73,7 +73,7 @@ func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
 	// build to generate the build directory
 	module, err := LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	err = Build(ctx, t.TempDir(), bctx.sch, module, &mockModifyFilesTransaction{})
 	assert.NoError(t, err)
 
 	// create a temporary file in the build directory
@@ -85,7 +85,7 @@ func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
 	// build to clear the old build directory
 	module, err = LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	err = Build(ctx, t.TempDir(), bctx.sch, module, &mockModifyFilesTransaction{})
 	assert.NoError(t, err)
 
 	// ensure the temporary file was removed

@@ -65,6 +65,11 @@ func (c ModuleConfig) AbsDeployDir() string {
 	return filepath.Join(c.Dir, c.DeployDir)
 }
 
+// AbsSchemaDir returns the absolute path to the generated schema.pb file.
+func (c ModuleConfig) AbsSchemaDir() string {
+	return filepath.Join(c.AbsDeployDir(), c.Schema)
+}
+
 func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	if config.Realm == "" {
 		config.Realm = "home"
@@ -92,7 +97,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 
 	case "go":
 		if config.DeployDir == "" {
-			config.DeployDir = "_ftl"
+			config.DeployDir = ".ftl"
 		}
 		if len(config.Deploy) == 0 {
 			config.Deploy = []string{"main"}

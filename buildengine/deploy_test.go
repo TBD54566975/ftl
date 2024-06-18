@@ -72,10 +72,10 @@ func TestDeploy(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Build first to make sure the files are there.
-	err = Build(ctx, sch, module, &mockModifyFilesTransaction{})
+	err = Build(ctx, t.TempDir(), sch, module, &mockModifyFilesTransaction{})
 	assert.NoError(t, err)
 
-	sum, err := sha256.SumFile(modulePath + "/_ftl/main")
+	sum, err := sha256.SumFile(modulePath + "/.ftl/main")
 	assert.NoError(t, err)
 
 	client := &mockDeployClient{

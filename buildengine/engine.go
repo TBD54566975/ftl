@@ -50,6 +50,7 @@ func (b BuildStartedListenerFunc) OnBuildStarted(module Module) { b(module) }
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
+	projectRootDir   string
 	moduleDirs       []string
 	watcher          *Watcher
 	controllerSchema *xsync.MapOf[string, *schema.Module]
@@ -82,10 +83,11 @@ func WithListener(listener Listener) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projectRootDir string, moduleDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
+		projectRootDir:   projectRootDir,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
 		watcher:          NewWatcher(),
@@ -100,6 +102,11 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 	e.controllerSchema.Store("builtin", schema.Builtins())
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
+
+	err := GenerateStubs(ctx, projectRootDir, schema.Builtins(), e.watcher.GetTransaction(projectRootDir))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate stubs: %w", err)
+	}
 
 	modules, err := DiscoverModules(ctx, moduleDirs)
 	if err != nil {
@@ -574,7 +581,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if e.listener != nil {
 		e.listener.OnBuildStarted(meta.module)
 	}
-	err := Build(ctx, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir))
+	err := Build(ctx, e.projectRootDir, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir))
 	if err != nil {
 		return err
 	}

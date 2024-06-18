@@ -14,3 +14,7 @@ func externalModuleTemplateFiles() *zip.Reader {
 func buildTemplateFiles() *zip.Reader {
 	return internal.ZipRelativeToCaller("build-template")
 }
+
+func goWorkTemplateFiles() *zip.Reader {
+	return internal.ZipRelativeToCaller("go-work-template")
+}

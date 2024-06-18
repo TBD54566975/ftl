@@ -85,7 +85,7 @@ func updateGitIgnore(ctx context.Context, gitRoot string) error {
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		if strings.TrimSpace(scanner.Text()) == "**/_ftl" {
+		if strings.TrimSpace(scanner.Text()) == "**/.ftl" {
 			return nil
 		}
 	}
@@ -95,7 +95,7 @@ func updateGitIgnore(ctx context.Context, gitRoot string) error {
 	}
 
 	// append if not already present
-	if _, err = f.WriteString("**/_ftl\n"); err != nil {
+	if _, err = f.WriteString("**/.ftl\n"); err != nil {
 		return err
 	}
 
