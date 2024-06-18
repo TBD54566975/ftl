@@ -40,7 +40,7 @@ var (
 type Pattern struct {
 	Duration   *string     `parser:"@(Number ('s' | 'm' | 'h'))"`
 	DayOfWeek  *DayOfWeek  `parser:"| @('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun')"`
-	Components []Component `parser:"| @@*"`
+	Components []Component `parser:"| @@+"`
 }
 
 func (p Pattern) String() string {
