@@ -17,7 +17,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	cf "github.com/TBD54566975/ftl/common/configuration"
-	"github.com/TBD54566975/ftl/common/projectconfig"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -69,19 +68,6 @@ func main() {
 	}
 	ctx = cf.ContextWithSecrets(ctx, sm)
 
-	// Load the project config.
-	configPath := cli.ConfigFlag
-	if configPath == "" {
-		var ok bool
-		configPath, ok = projectconfig.DefaultConfigPath().Get()
-		if !ok {
-			kctx.Fatalf("could not determine default config path, either place an ftl-project.toml file in the root of your project, use --config=FILE, or set the FTL_CONFIG envar")
-		}
-	}
-	os.Setenv("FTL_CONFIG", configPath)
-	projConfig, err := projectconfig.Load(ctx, configPath)
-	kctx.FatalIfErrorf(err)
-
-	err = controller.Start(ctx, cli.ControllerConfig, projConfig, scaling.NewK8sScaling())
+	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling())
 	kctx.FatalIfErrorf(err)
 }

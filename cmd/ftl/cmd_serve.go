@@ -25,6 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/container"
+	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -78,6 +79,15 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 
 	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
 
+	if len(projConfig.Commands.Startup) > 0 {
+		for _, cmd := range projConfig.Commands.Startup {
+			logger.Debugf("Executing startup command: %s", cmd)
+			if err := exec.Command(ctx, log.Info, ".", "bash", "-c", cmd).Run(); err != nil {
+				return fmt.Errorf("startup command failed: %w", err)
+			}
+		}
+	}
+
 	dsn, err := s.setupDB(ctx)
 	if err != nil {
 		return err
@@ -117,7 +127,7 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, projConfig, runnerScaling); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling); err != nil {
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
 			return nil
