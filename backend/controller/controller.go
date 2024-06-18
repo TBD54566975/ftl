@@ -47,8 +47,10 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	frontend "github.com/TBD54566975/ftl/frontend"
 	"github.com/TBD54566975/ftl/internal/cors"
+	"github.com/TBD54566975/ftl/internal/exec"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
@@ -95,11 +97,20 @@ func (c *Config) SetDefaults() {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling) error {
+func Start(ctx context.Context, config Config, projConfig projectconfig.Config, runnerScaling scaling.RunnerScaling) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL controller")
+
+	if len(projConfig.Commands.Startup) > 0 {
+		for _, cmd := range projConfig.Commands.Startup {
+			logger.Debugf("Executing startup command: %s", cmd)
+			if err := exec.Command(ctx, log.Info, ".", "bash", "-c", cmd).Run(); err != nil {
+				return fmt.Errorf("startup command failed: %w", err)
+			}
+		}
+	}
 
 	var consoleHandler http.Handler
 	var err error

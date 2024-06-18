@@ -55,7 +55,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
-			err := d.ServeCmd.Run(ctx)
+			err := d.ServeCmd.Run(ctx, projConfig)
 			if err != nil {
 				return err
 			}
@@ -65,7 +65,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return errors.New(ftlRunningErrorMsg)
 		}
 
-		g.Go(func() error { return d.ServeCmd.Run(ctx) })
+		g.Go(func() error { return d.ServeCmd.Run(ctx, projConfig) })
 	}
 
 	g.Go(func() error {
