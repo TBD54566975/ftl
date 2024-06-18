@@ -50,9 +50,10 @@ func (i initCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	if !i.NoGit {
+	gitRoot, ok := internal.GitRoot(i.Dir).Get()
+	if !i.NoGit && ok {
 		logger.Debugf("Updating .gitignore")
-		if err := updateGitIgnore(ctx, i.Dir); err != nil {
+		if err := updateGitIgnore(ctx, gitRoot); err != nil {
 			return err
 		}
 		logger.Debugf("Adding files to git")
@@ -69,9 +70,6 @@ func (i initCmd) Run(ctx context.Context) error {
 }
 
 func maybeGitAdd(ctx context.Context, dir string, paths ...string) error {
-	if _, ok := internal.GitRoot(dir).Get(); !ok {
-		return nil
-	}
 	args := append([]string{"add"}, paths...)
 	if err := exec.Command(ctx, log.Debug, dir, "git", args...).RunBuffered(ctx); err != nil {
 		return err
@@ -79,11 +77,7 @@ func maybeGitAdd(ctx context.Context, dir string, paths ...string) error {
 	return nil
 }
 
-func updateGitIgnore(ctx context.Context, dir string) error {
-	gitRoot, ok := internal.GitRoot(dir).Get()
-	if !ok {
-		return nil
-	}
+func updateGitIgnore(ctx context.Context, gitRoot string) error {
 	f, err := os.OpenFile(path.Join(gitRoot, ".gitignore"), os.O_RDWR|os.O_CREATE, 0644) //nolint:gosec
 	if err != nil {
 		return err
