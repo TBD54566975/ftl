@@ -29,8 +29,8 @@ type Querier interface {
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
-	DeleteObsoleteSubscriptions(ctx context.Context, module string, activeDeployment model.DeploymentKey) error
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) error
+	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) error
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error)
 	ExpireLeases(ctx context.Context) (int64, error)
@@ -74,6 +74,7 @@ type Querier interface {
 	GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error)
 	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
+	GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error)
 	GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) ([]GetStaleCronJobsRow, error)
 	// Results may not be ready to be scheduled yet due to event consumption delay
 	// Sorting ensures that brand new events (that may not be ready for consumption)

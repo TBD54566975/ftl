@@ -562,91 +562,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", translatePGError(err))
 		}
 	}
-
-	// update subscriptions
-	for _, decl := range moduleSchema.Decls {
-		s, ok := decl.(*schema.Subscription)
-		if !ok {
-			continue
-		}
-		if !hasSubscribers(s, moduleSchema.Decls) {
-			// Ignore subscriptions without subscribers
-			// This ensures that controllers don't endlessly try to progress subscriptions without subscribers
-			// https://github.com/TBD54566975/ftl/issues/1685
-			//
-			// It does mean that a subscription will reset to the topic's head if all subscribers are removed and then later re-added
-			continue
-		}
-		if err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
-			Key:         model.NewSubscriptionKey(moduleSchema.Name, s.Name),
-			Module:      moduleSchema.Name,
-			Deployment:  deploymentKey,
-			TopicModule: s.Topic.Module,
-			TopicName:   s.Topic.Name,
-			Name:        s.Name,
-		}); err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("could not insert subscription: %w", translatePGError(err))
-		}
-	}
-
-	// create subscribers
-	for _, decl := range moduleSchema.Decls {
-		v, ok := decl.(*schema.Verb)
-		if !ok {
-			continue
-		}
-		for _, md := range v.Metadata {
-			s, ok := md.(*schema.MetadataSubscriber)
-			if !ok {
-				continue
-			}
-			sinkRef := schema.RefKey{
-				Module: moduleSchema.Name,
-				Name:   v.Name,
-			}
-			retryParams := schema.RetryParams{}
-			if retryMd, ok := slices.FindVariant[*schema.MetadataRetry](v.Metadata); ok {
-				retryParams, err = retryMd.RetryParams()
-				if err != nil {
-					return model.DeploymentKey{}, fmt.Errorf("could not parse retry parameters for %q: %w", v.Name, err)
-				}
-			}
-			err := tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
-				Key:              model.NewSubscriberKey(moduleSchema.Name, s.Name, v.Name),
-				Module:           moduleSchema.Name,
-				SubscriptionName: s.Name,
-				Deployment:       deploymentKey,
-				Sink:             sinkRef,
-				RetryAttempts:    int32(retryParams.Count),
-				Backoff:          retryParams.MinBackoff,
-				MaxBackoff:       retryParams.MaxBackoff,
-			})
-			if err != nil {
-				return model.DeploymentKey{}, fmt.Errorf("could not insert subscriber: %w", translatePGError(err))
-			}
-		}
-	}
-
 	return deploymentKey, nil
-}
-
-func hasSubscribers(subscription *schema.Subscription, decls []schema.Decl) bool {
-	for _, d := range decls {
-		verb, ok := d.(*schema.Verb)
-		if !ok {
-			continue
-		}
-		for _, md := range verb.Metadata {
-			subscriber, ok := md.(*schema.MetadataSubscriber)
-			if !ok {
-				continue
-			}
-			if subscriber.Name == subscription.Name {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (d *DAL) GetDeployment(ctx context.Context, key model.DeploymentKey) (*model.Deployment, error) {
@@ -789,7 +705,17 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	if err != nil {
 		return translatePGError(err)
 	}
-
+	if minReplicas == 0 {
+		err = d.deploymentWillDeactivate(ctx, tx, key)
+		if err != nil {
+			return translatePGError(err)
+		}
+	} else if deployment.MinReplicas == 0 {
+		err = d.deploymentWillActivate(ctx, tx, key)
+		if err != nil {
+			return translatePGError(err)
+		}
+	}
 	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
 		DeploymentKey:   key,
 		MinReplicas:     int32(minReplicas),
@@ -828,11 +754,9 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		if count == 1 {
 			return fmt.Errorf("deployment already exists: %w", ErrConflict)
 		}
-		if err := tx.DeleteObsoleteSubscriptions(ctx, newDeployment.ModuleName, newDeploymentKey); err != nil {
-			return fmt.Errorf("could not delete old subscriptions: %w", translatePGError(err))
-		}
-		if err := tx.DeleteSubscribers(ctx, oldDeployment.Key); err != nil {
-			return fmt.Errorf("could not delete old subscribers: %w", translatePGError(err))
+		err = d.deploymentWillDeactivate(ctx, tx, oldDeployment.Key)
+		if err != nil {
+			return translatePGError(err)
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !isNotFound(err) {
@@ -840,6 +764,10 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	} else {
 		// Set the desired replicas for the new deployment
 		err = tx.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
+		if err != nil {
+			return translatePGError(err)
+		}
+		err = d.deploymentWillActivate(ctx, tx, newDeploymentKey)
 		if err != nil {
 			return translatePGError(err)
 		}
@@ -857,6 +785,22 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	}
 
 	return nil
+}
+
+func (d *DAL) deploymentWillActivate(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
+	module, err := tx.GetSchemaForDeployment(ctx, key)
+	if err != nil {
+		return fmt.Errorf("could not get schema: %w", translatePGError(err))
+	}
+	err = d.createSubscriptions(ctx, tx, key, module)
+	if err != nil {
+		return err
+	}
+	return d.createSubscribers(ctx, tx, key, module)
+}
+
+func (d *DAL) deploymentWillDeactivate(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
+	return d.removeSubscriptionsAndSubscribers(ctx, tx, key)
 }
 
 // GetDeploymentsNeedingReconciliation returns deployments that have a

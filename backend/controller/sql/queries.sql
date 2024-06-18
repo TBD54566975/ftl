@@ -161,6 +161,9 @@ ORDER BY d.key;
 -- name: GetActiveDeploymentSchemas :many
 SELECT key, schema FROM deployments WHERE min_replicas > 0;
 
+-- name: GetSchemaForDeployment :one
+SELECT schema FROM deployments WHERE key = sqlc.arg('key')::deployment_key;
+
 -- name: GetProcessList :many
 SELECT d.min_replicas,
        d.key   AS deployment_key,
@@ -652,17 +655,12 @@ UPDATE SET
   deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key)
 RETURNING id;
 
--- name: DeleteObsoleteSubscriptions :exec
+-- name: DeleteSubscriptions :exec
 DELETE FROM topic_subscriptions
-WHERE module_id IN (
-  SELECT modules.id
-  FROM modules
-  WHERE modules.name = sqlc.arg('module')
-)
-AND deployment_id NOT IN (
+WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
-  WHERE deployments.key = sqlc.arg('active_deployment')::deployment_key
+  WHERE deployments.key = sqlc.arg('deployment')::deployment_key
 );
 
 -- name: DeleteSubscribers :exec

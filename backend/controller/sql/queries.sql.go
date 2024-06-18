@@ -256,25 +256,6 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
-const deleteObsoleteSubscriptions = `-- name: DeleteObsoleteSubscriptions :exec
-DELETE FROM topic_subscriptions
-WHERE module_id IN (
-  SELECT modules.id
-  FROM modules
-  WHERE modules.name = $1
-)
-AND deployment_id NOT IN (
-  SELECT deployments.id
-  FROM deployments
-  WHERE deployments.key = $2::deployment_key
-)
-`
-
-func (q *Queries) DeleteObsoleteSubscriptions(ctx context.Context, module string, activeDeployment model.DeploymentKey) error {
-	_, err := q.db.Exec(ctx, deleteObsoleteSubscriptions, module, activeDeployment)
-	return err
-}
-
 const deleteSubscribers = `-- name: DeleteSubscribers :exec
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
@@ -286,6 +267,20 @@ WHERE deployment_id IN (
 
 func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) error {
 	_, err := q.db.Exec(ctx, deleteSubscribers, deployment)
+	return err
+}
+
+const deleteSubscriptions = `-- name: DeleteSubscriptions :exec
+DELETE FROM topic_subscriptions
+WHERE deployment_id IN (
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = $1::deployment_key
+)
+`
+
+func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) error {
+	_, err := q.db.Exec(ctx, deleteSubscriptions, deployment)
 	return err
 }
 
@@ -1523,6 +1518,17 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.Deploym
 		return nil, err
 	}
 	return items, nil
+}
+
+const getSchemaForDeployment = `-- name: GetSchemaForDeployment :one
+SELECT schema FROM deployments WHERE key = $1::deployment_key
+`
+
+func (q *Queries) GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error) {
+	row := q.db.QueryRow(ctx, getSchemaForDeployment, key)
+	var schema *schema.Module
+	err := row.Scan(&schema)
+	return schema, err
 }
 
 const getStaleCronJobs = `-- name: GetStaleCronJobs :many
