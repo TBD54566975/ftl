@@ -10,6 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	. "github.com/TBD54566975/ftl/testutils/modulecontext"
 )
 
 func TestConfig(t *testing.T) {
@@ -24,7 +25,7 @@ func TestConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	moduleCtx := modulecontext.NewBuilder("test").AddConfigs(map[string][]byte{"test": data}).Build()
-	ctx = internal.WithContext(ctx, internal.New(moduleCtx.MakeDynamic(ctx)))
+	ctx = internal.WithContext(ctx, internal.New(MakeDynamic(ctx, moduleCtx)))
 
 	config := Config[C]("test")
 	assert.Equal(t, C{"one", "two"}, config.Get(ctx))

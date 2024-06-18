@@ -1,4 +1,4 @@
-package modulecontext
+package modulecontext_test
 
 import (
 	"context" //nolint:depguard
@@ -7,6 +7,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	. "github.com/TBD54566975/ftl/internal/modulecontext"
+	. "github.com/TBD54566975/ftl/testutils/modulecontext"
 )
 
 type manualContextSupplier struct {
@@ -17,7 +19,7 @@ type manualContextSupplier struct {
 func TestGettingAndSettingFromContext(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	moduleCtx := NewBuilder("test").Build()
-	ctx = moduleCtx.MakeDynamic(ctx).ApplyToContext(ctx)
+	ctx = MakeDynamic(ctx, moduleCtx).ApplyToContext(ctx)
 	assert.Equal(t, moduleCtx, FromContext(ctx).CurrentContext(), "module context should be the same when read from context")
 }
 
