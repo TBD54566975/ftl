@@ -12,12 +12,12 @@ import (
 
 func TestDiscoverModules(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	projects, err := DiscoverProjects(ctx, []string{"testdata/projects"}, []string{"testdata/projects/lib", "testdata/projects/libkotlin"})
+	modules, err := DiscoverModules(ctx, []string{"testdata"})
 	assert.NoError(t, err)
-	expected := []Project{
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/projects/alpha",
+	expected := []Module{
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:       "testdata/alpha",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "alpha",
@@ -25,12 +25,12 @@ func TestDiscoverModules(t *testing.T) {
 				DeployDir: "_ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../go-runtime/ftl/**/*.go"},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/projects/another",
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:       "testdata/another",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "another",
@@ -38,12 +38,12 @@ func TestDiscoverModules(t *testing.T) {
 				DeployDir: "_ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../go-runtime/ftl/**/*.go"},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/projects/depcycle1",
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:       "testdata/depcycle1",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "depcycle1",
@@ -54,9 +54,9 @@ func TestDiscoverModules(t *testing.T) {
 				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/projects/depcycle2",
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:       "testdata/depcycle2",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "depcycle2",
@@ -67,9 +67,9 @@ func TestDiscoverModules(t *testing.T) {
 				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:      "testdata/projects/echokotlin",
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:      "testdata/echokotlin",
 				Language: "kotlin",
 				Realm:    "home",
 				Module:   "echo",
@@ -90,9 +90,9 @@ func TestDiscoverModules(t *testing.T) {
 				},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:      "testdata/projects/external",
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:      "testdata/external",
 				Language: "go",
 				Realm:    "home",
 				Module:   "external",
@@ -110,9 +110,9 @@ func TestDiscoverModules(t *testing.T) {
 				},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:      "testdata/projects/externalkotlin",
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:      "testdata/externalkotlin",
 				Language: "kotlin",
 				Realm:    "home",
 				Module:   "externalkotlin",
@@ -133,9 +133,9 @@ func TestDiscoverModules(t *testing.T) {
 				},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/projects/highgoversion",
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:       "testdata/highgoversion",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "highgoversion",
@@ -143,12 +143,12 @@ func TestDiscoverModules(t *testing.T) {
 				DeployDir: "_ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../go-runtime/ftl/**/*.go"},
 			},
 		},
-		Module{
-			ModuleConfig: moduleconfig.ModuleConfig{
-				Dir:       "testdata/projects/other",
+		{
+			Config: moduleconfig.ModuleConfig{
+				Dir:       "testdata/other",
 				Language:  "go",
 				Realm:     "home",
 				Module:    "other",
@@ -156,17 +156,10 @@ func TestDiscoverModules(t *testing.T) {
 				DeployDir: "_ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
+				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../go-runtime/ftl/**/*.go"},
 			},
 		},
-		ExternalLibrary{
-			Dir:      "testdata/projects/lib",
-			Language: "go",
-		},
-		ExternalLibrary{
-			Dir:      "testdata/projects/libkotlin",
-			Language: "kotlin",
-		},
 	}
-	assert.Equal(t, expected, projects)
+
+	assert.Equal(t, expected, modules)
 }

@@ -1,4 +1,4 @@
-module lib
+module ftl/external
 
 go 1.22.2
 

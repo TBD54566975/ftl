@@ -17,7 +17,7 @@ type deployCmd struct {
 
 func (d *deployCmd) Run(ctx context.Context) error {
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-	engine, err := buildengine.New(ctx, client, d.Dirs, []string{}, buildengine.Parallelism(d.Parallelism))
+	engine, err := buildengine.New(ctx, client, d.Dirs, buildengine.Parallelism(d.Parallelism))
 	if err != nil {
 		return err
 	}

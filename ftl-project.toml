@@ -1,5 +1,4 @@
 module-dirs = ["examples/go"]
-external-dirs = []
 ftl-min-version = ""
 
 [global]

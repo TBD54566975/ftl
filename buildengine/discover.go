@@ -10,11 +10,10 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// DiscoverProjects recursively loads all modules under the given directories
-// (or if none provided, the current working directory is used) and external
-// libraries in externalLibDirs.
-func DiscoverProjects(ctx context.Context, moduleDirs []string, externalLibDirs []string) ([]Project, error) {
-	out := []Project{}
+// DiscoverModules recursively loads all modules under the given directories
+// (or if none provided, the current working directory is used).
+func DiscoverModules(ctx context.Context, moduleDirs []string) ([]Module, error) {
+	out := []Module{}
 	logger := log.FromContext(ctx)
 
 	modules, err := discoverModules(moduleDirs...)
@@ -22,17 +21,8 @@ func DiscoverProjects(ctx context.Context, moduleDirs []string, externalLibDirs 
 		logger.Tracef("error discovering modules: %v", err)
 		return nil, err
 	}
-	for _, module := range modules {
-		out = append(out, Project(module))
-	}
-	for _, dir := range externalLibDirs {
-		lib, err := LoadExternalLibrary(dir)
-		if err != nil {
-			logger.Tracef("error discovering external library: %v", err)
-			return nil, err
-		}
-		out = append(out, Project(lib))
-	}
+
+	out = append(out, modules...)
 	return out, nil
 }
 
@@ -66,7 +56,7 @@ func discoverModules(dirs ...string) ([]Module, error) {
 		}
 	}
 	sort.Slice(out, func(i, j int) bool {
-		return out[i].Config().Key < out[j].Config().Key
+		return out[i].Config.Module < out[j].Config.Module
 	})
 	return out, nil
 }

@@ -19,14 +19,14 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// UpdateDependencies finds the dependencies for a project and returns a
-// Project with those dependencies populated.
-func UpdateDependencies(ctx context.Context, project Project) (Project, error) {
+// UpdateDependencies finds the dependencies for a module and returns a
+// Module with those dependencies populated.
+func UpdateDependencies(ctx context.Context, module Module) (Module, error) {
 	logger := log.FromContext(ctx)
-	logger.Debugf("Extracting dependencies for %s %q", project.TypeString(), project.Config().Key)
-	dependencies, err := extractDependencies(project)
+	logger.Debugf("Extracting dependencies for %q", module.Config.Module)
+	dependencies, err := extractDependencies(module)
 	if err != nil {
-		return Project(&Module{}), err
+		return Module{}, err
 	}
 	containsBuiltin := false
 	for _, dep := range dependencies {
@@ -39,29 +39,24 @@ func UpdateDependencies(ctx context.Context, project Project) (Project, error) {
 		dependencies = append(dependencies, "builtin")
 	}
 
-	out := project.CopyWithDependencies(dependencies)
+	out := module.CopyWithDependencies(dependencies)
 	return out, nil
 }
 
-func extractDependencies(project Project) ([]string, error) {
-	config := project.Config()
-	name := ""
-	if config, ok := project.(Module); ok {
-		name = config.Module
-	}
-	switch config.Language {
+func extractDependencies(module Module) ([]string, error) {
+	switch module.Config.Language {
 	case "go":
-		return extractGoFTLImports(name, config.Dir)
+		return extractGoFTLImports(module.Config.Module, module.Config.Dir)
 
 	case "kotlin":
-		return extractKotlinFTLImports(name, config.Dir)
+		return extractKotlinFTLImports(module.Config.Module, module.Config.Dir)
 
 	default:
-		return nil, fmt.Errorf("unsupported language: %s", config.Language)
+		return nil, fmt.Errorf("unsupported language: %s", module.Config.Language)
 	}
 }
 
-func extractGoFTLImports(self, dir string) ([]string, error) {
+func extractGoFTLImports(moduleName, dir string) ([]string, error) {
 	dependencies := map[string]bool{}
 	fset := token.NewFileSet()
 	err := WalkDir(dir, func(path string, d fs.DirEntry) error {
@@ -86,7 +81,7 @@ func extractGoFTLImports(self, dir string) ([]string, error) {
 						continue
 					}
 					module := strings.Split(strings.TrimPrefix(path, "ftl/"), "/")[0]
-					if module == self {
+					if module == moduleName {
 						continue
 					}
 					dependencies[module] = true
@@ -96,7 +91,7 @@ func extractGoFTLImports(self, dir string) ([]string, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", self, err)
+		return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", moduleName, err)
 	}
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)

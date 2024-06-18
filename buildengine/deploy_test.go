@@ -67,7 +67,7 @@ func TestDeploy(t *testing.T) {
 	}
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, log.Config{}))
 
-	modulePath := "testdata/projects/another"
+	modulePath := "testdata/another"
 	module, err := LoadModule(modulePath)
 	assert.NoError(t, err)
 

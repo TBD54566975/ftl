@@ -23,18 +23,14 @@ import (
 )
 
 type externalModuleContext struct {
-	project Project
+	module Module
 	*schema.Schema
 }
 
 func (e externalModuleContext) ExternalModules() []*schema.Module {
-	name := ""
-	if module, ok := e.project.(Module); ok {
-		name = module.Module
-	}
 	modules := make([]*schema.Module, 0, len(e.Modules))
 	for _, module := range e.Modules {
-		if module.Name == name {
+		if module.Name == e.module.Config.Module {
 			continue
 		}
 		modules = append(modules, module)
@@ -44,31 +40,24 @@ func (e externalModuleContext) ExternalModules() []*schema.Module {
 
 func buildKotlinModule(ctx context.Context, sch *schema.Schema, module Module) error {
 	logger := log.FromContext(ctx)
-	if err := SetPOMProperties(ctx, module.Dir); err != nil {
-		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Dir, err)
+	if err := SetPOMProperties(ctx, module.Config.Dir); err != nil {
+		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Config.Dir, err)
 	}
 
-	if err := generateExternalModules(ctx, &module, sch); err != nil {
-		return fmt.Errorf("unable to generate external modules for %s: %w", module.Module, err)
+	if err := generateExternalModules(ctx, module, sch); err != nil {
+		return fmt.Errorf("unable to generate external modules for %s: %w", module.Config.Module, err)
 	}
 
 	if err := prepareFTLRoot(module); err != nil {
-		return fmt.Errorf("unable to prepare FTL root for %s: %w", module.Module, err)
+		return fmt.Errorf("unable to prepare FTL root for %s: %w", module.Config.Module, err)
 	}
 
-	logger.Debugf("Using build command '%s'", module.Build)
-	err := exec.Command(ctx, log.Debug, module.Dir, "bash", "-c", module.Build).RunBuffered(ctx)
+	logger.Debugf("Using build command '%s'", module.Config.Build)
+	err := exec.Command(ctx, log.Debug, module.Config.Dir, "bash", "-c", module.Config.Build).RunBuffered(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to build module %q: %w", module.Module, err)
+		return fmt.Errorf("failed to build module %q: %w", module.Config.Module, err)
 	}
 
-	return nil
-}
-
-func buildKotlinLibrary(ctx context.Context, sch *schema.Schema, lib ExternalLibrary) error {
-	if err := generateExternalModules(ctx, &lib, sch); err != nil {
-		return fmt.Errorf("unable to generate external modules for %q: %w", lib.Config().Key, err)
-	}
 	return nil
 }
 
@@ -104,7 +93,7 @@ func SetPOMProperties(ctx context.Context, baseDir string) error {
 }
 
 func prepareFTLRoot(module Module) error {
-	buildDir := module.AbsDeployDir()
+	buildDir := module.Config.AbsDeployDir()
 	if err := os.MkdirAll(buildDir, 0700); err != nil {
 		return err
 	}
@@ -118,7 +107,7 @@ SchemaExtractorRuleSet:
 
 	detektYmlPath := filepath.Join(buildDir, "detekt.yml")
 	if err := os.WriteFile(detektYmlPath, []byte(fileContent), 0600); err != nil {
-		return fmt.Errorf("unable to configure detekt for %s: %w", module.Module, err)
+		return fmt.Errorf("unable to configure detekt for %s: %w", module.Config.Module, err)
 	}
 
 	mainFilePath := filepath.Join(buildDir, "main")
@@ -127,23 +116,22 @@ SchemaExtractorRuleSet:
 exec java -cp "classes:$(cat classpath.txt)" xyz.block.ftl.main.MainKt
 `
 	if err := os.WriteFile(mainFilePath, []byte(mainFile), 0700); err != nil { //nolint:gosec
-		return fmt.Errorf("unable to configure main executable for %s: %w", module.Module, err)
+		return fmt.Errorf("unable to configure main executable for %s: %w", module.Config.Module, err)
 	}
 	return nil
 }
 
-func generateExternalModules(ctx context.Context, project Project, sch *schema.Schema) error {
+func generateExternalModules(ctx context.Context, module Module, sch *schema.Schema) error {
 	logger := log.FromContext(ctx)
 	funcs := maps.Clone(scaffoldFuncs)
-	config := project.Config()
 
 	// Wipe the modules directory to ensure we don't have any stale modules.
-	_ = os.RemoveAll(filepath.Join(config.Dir, "target", "generated-sources", "ftl"))
+	_ = os.RemoveAll(filepath.Join(module.Config.Dir, "target", "generated-sources", "ftl"))
 
 	logger.Debugf("Generating external modules")
-	return internal.ScaffoldZip(kotlinruntime.ExternalModuleTemplates(), config.Dir, externalModuleContext{
-		project: project,
-		Schema:  sch,
+	return internal.ScaffoldZip(kotlinruntime.ExternalModuleTemplates(), module.Config.Dir, externalModuleContext{
+		module: module,
+		Schema: sch,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
 }
 
