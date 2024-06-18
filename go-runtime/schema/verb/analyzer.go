@@ -41,11 +41,11 @@ func Extract(pass *analysis.Pass, root *ast.FuncDecl, obj types.Object) optional
 	reqt, respt := checkSignature(pass, root, sig)
 	req := optional.Some[schema.Type](&schema.Unit{})
 	if reqt.Ok() {
-		req = common.ExtractType(pass, root.Pos(), params.At(1).Type())
+		req = common.ExtractType(pass, params.At(1).Pos(), params.At(1).Type())
 	}
 	resp := optional.Some[schema.Type](&schema.Unit{})
 	if respt.Ok() {
-		resp = common.ExtractType(pass, root.Pos(), results.At(0).Type())
+		resp = common.ExtractType(pass, results.At(0).Pos(), results.At(0).Type())
 	}
 	reqV, ok := req.Get()
 	if !ok {

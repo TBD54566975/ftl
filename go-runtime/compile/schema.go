@@ -16,10 +16,9 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
-
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
+	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal/goast"
 	"github.com/TBD54566975/golang-tools/go/ast/astutil"
 	"github.com/TBD54566975/golang-tools/go/packages"
@@ -93,7 +92,7 @@ func (e errorSet) add(err *schema.Error) {
 	e[err.Error()] = err
 }
 
-func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *finalize.Result) error {
+func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *extract.Result) error {
 	pkgs, err := packages.Load(&packages.Config{
 		Dir:  dir,
 		Fset: fset,
@@ -1467,7 +1466,7 @@ type parseContext struct {
 	topicsByPos    map[schema.Position]*schema.Topic
 }
 
-func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schema.Schema, out *finalize.Result) *parseContext {
+func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schema.Schema, out *extract.Result) *parseContext {
 	if out.NativeNames == nil {
 		out.NativeNames = NativeNames{}
 	}

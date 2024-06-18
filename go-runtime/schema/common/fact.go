@@ -176,6 +176,20 @@ func GetFactsForObject[T SchemaFactValue](pass *analysis.Pass, obj types.Object)
 	return facts
 }
 
+func GetFacts[T SchemaFactValue](pass *analysis.Pass) map[types.Object]T {
+	facts := make(map[types.Object]T)
+	for _, fact := range allFactsForPass(pass) {
+		sf, ok := fact.Fact.(SchemaFact)
+		if !ok {
+			continue
+		}
+		if f, ok := sf.Get().(T); ok {
+			facts[fact.Object] = f
+		}
+	}
+	return facts
+}
+
 // GetFactForObject returns the first fact of the provided type marked on the object.
 func GetFactForObject[T SchemaFactValue](pass *analysis.Pass, obj types.Object) optional.Option[T] {
 	for _, fact := range allFactsForPass(pass) {

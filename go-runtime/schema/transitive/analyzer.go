@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/types"
 
+	"github.com/alecthomas/types/optional"
 	sets "github.com/deckarep/golang-set/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -41,6 +42,20 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 	return common.NewExtractorResult(pass), nil
 }
 
+func refreshNeedsExtraction(pass *analysis.Pass) sets.Set[types.Object] {
+	facts := sets.NewSet[types.Object]()
+	for _, fact := range pass.AllObjectFacts() {
+		f, ok := fact.Fact.(common.SchemaFact)
+		if !ok {
+			continue
+		}
+		if _, ok := f.Get().(*common.NeedsExtraction); ok {
+			facts.Add(fact.Object)
+		}
+	}
+	return facts
+}
+
 func extractTransitive(pass *analysis.Pass, needsExtraction sets.Set[types.Object]) {
 	in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
 	nodeFilter := []ast.Node{
@@ -55,7 +70,7 @@ func extractTransitive(pass *analysis.Pass, needsExtraction sets.Set[types.Objec
 		if !needsExtraction.Contains(obj) {
 			return
 		}
-		schType, ok := common.InferDeclType(pass, n, obj).Get()
+		schType, ok := inferDeclType(pass, n, obj).Get()
 		if !ok {
 			// if we can't infer the type, try to extract it as data
 			schType = &schema.Data{}
@@ -75,16 +90,26 @@ func extractTransitive(pass *analysis.Pass, needsExtraction sets.Set[types.Objec
 	})
 }
 
-func refreshNeedsExtraction(pass *analysis.Pass) sets.Set[types.Object] {
-	facts := sets.NewSet[types.Object]()
-	for _, fact := range pass.AllObjectFacts() {
-		f, ok := fact.Fact.(common.SchemaFact)
-		if !ok {
-			continue
-		}
-		if _, ok := f.Get().(*common.NeedsExtraction); ok {
-			facts.Add(fact.Object)
+func inferDeclType(pass *analysis.Pass, node ast.Node, obj types.Object) optional.Option[schema.Decl] {
+	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
+		if md.Type != nil {
+			return optional.Some[schema.Decl](md.Type)
 		}
 	}
-	return facts
+
+	ts, ok := node.(*ast.TypeSpec)
+	if !ok {
+		return optional.None[schema.Decl]()
+	}
+	if _, ok := ts.Type.(*ast.InterfaceType); ok {
+		return optional.Some[schema.Decl](&schema.Enum{})
+	}
+	t, ok := common.ExtractTypeForNode(pass, obj, ts.Type, nil).Get()
+	if !ok {
+		return optional.None[schema.Decl]()
+	}
+	if !common.IsSelfReference(pass, obj, t) {
+		return optional.Some[schema.Decl](&schema.TypeAlias{})
+	}
+	return optional.Some[schema.Decl](&schema.Data{})
 }

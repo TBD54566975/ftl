@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"go/types"
 
 	"golang.org/x/exp/maps"
 
@@ -46,8 +47,18 @@ var Extractors = [][]*analysis.Analyzer{
 	},
 }
 
+// Result contains the final schema extraction result.
+type Result struct {
+	// Module is the extracted module schema.
+	Module *schema.Module
+	// NativeNames maps schema nodes to their native Go names.
+	NativeNames map[schema.Node]string
+	// Errors is a list of errors encountered during schema extraction.
+	Errors []*schema.Error
+}
+
 // Extract statically parses Go FTL module source into a schema.Module
-func Extract(moduleDir string) (finalize.Result, error) {
+func Extract(moduleDir string) (Result, error) {
 	pkgConfig := packages.Config{
 		Dir:  moduleDir,
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
@@ -59,7 +70,7 @@ func Extract(moduleDir string) (finalize.Result, error) {
 	}
 	results, diagnostics, err := checker.Run(cConfig, analyzersWithDependencies()...)
 	if err != nil {
-		return finalize.Result{}, err
+		return Result{}, err
 	}
 	return combineAllPackageResults(results, diagnostics)
 }
@@ -82,43 +93,45 @@ func analyzersWithDependencies() []*analysis.Analyzer {
 
 // the run will produce finalizer results for all packages it executes on, so we need to aggregate the results into a
 // single schema
-func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics []analysis.SimpleDiagnostic) (finalize.Result, error) {
+func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics []analysis.SimpleDiagnostic) (Result, error) {
 	fResults, ok := results[finalize.Analyzer]
 	if !ok {
-		return finalize.Result{}, fmt.Errorf("schema extraction finalizer result not found")
+		return Result{}, fmt.Errorf("schema extraction finalizer result not found")
 	}
-	combined := finalize.Result{
+	combined := Result{
 		NativeNames: make(map[schema.Node]string),
 		Errors:      diagnosticsToSchemaErrors(diagnostics),
 	}
+	failedRefs := make(map[schema.RefKey]types.Object)
+	extractedDecls := make(map[schema.Decl]types.Object)
 	for _, r := range fResults {
 		fr, ok := r.(finalize.Result)
 		if !ok {
-			return finalize.Result{}, fmt.Errorf("unexpected schema extraction result type: %T", r)
+			return Result{}, fmt.Errorf("unexpected schema extraction result type: %T", r)
 		}
-
 		if combined.Module == nil {
-			combined.Module = fr.Module
+			combined.Module = &schema.Module{Name: fr.ModuleName, Comments: fr.ModuleComments}
 		} else {
-			if combined.Module.Name != fr.Module.Name {
-				return finalize.Result{}, fmt.Errorf("unexpected schema extraction result module name: %s", fr.Module.Name)
+			if combined.Module.Name != fr.ModuleName {
+				return Result{}, fmt.Errorf("unexpected schema extraction result module name: %s", fr.ModuleName)
 			}
-			combined.Module.AddDecls(fr.Module.Decls)
+			if len(combined.Module.Comments) == 0 {
+				combined.Module.Comments = fr.ModuleComments
+			}
 		}
-		maps.Copy(combined.NativeNames, fr.NativeNames)
+		maps.Copy(failedRefs, fr.Failed)
+		maps.Copy(extractedDecls, fr.Extracted)
 	}
+
+	combined.Module.AddDecls(maps.Keys(extractedDecls))
+	for decl, obj := range extractedDecls {
+		combined.NativeNames[decl] = common.GetNativeName(obj)
+	}
+	combined.Errors = append(combined.Errors, propagateTypeErrors(combined.Module, failedRefs)...)
 	schema.SortErrorsByPosition(combined.Errors)
 	updateVisibility(combined.Module)
 	// TODO: validate schema once we have the full schema here
 	return combined, nil
-}
-
-func dependenciesBeforeIndex(idx int) []*analysis.Analyzer {
-	var deps []*analysis.Analyzer
-	for i := range idx {
-		deps = append(deps, Extractors[i]...)
-	}
-	return deps
 }
 
 // updateVisibility traverses the module schema via refs and updates visibility as needed.
@@ -166,6 +179,43 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 	})
 }
 
+// propagateTypeErrors propagates type errors to referencing nodes. This improves error messaging for the LSP client by
+// surfacing errors all the way up the schema chain.
+func propagateTypeErrors(module *schema.Module, failedRefs map[schema.RefKey]types.Object) []*schema.Error {
+	var errs []*schema.Error
+	_ = schema.VisitWithParent(module, nil, func(n schema.Node, p schema.Node, next func() error) error {
+		if p == nil {
+			return next()
+		}
+		ref, ok := n.(*schema.Ref)
+		if !ok {
+			return next()
+		}
+		if obj, ok := failedRefs[ref.ToRefKey()]; ok {
+			refNativeName := common.GetNativeName(obj)
+			switch pt := p.(type) {
+			case *schema.Verb:
+				if pt.Request == n {
+					errs = append(errs, schema.Errorf(pt.Request.Position(), pt.Request.Position().Column,
+						"unsupported request type %q", refNativeName))
+				}
+				if pt.Response == n {
+					errs = append(errs, schema.Errorf(pt.Response.Position(), pt.Response.Position().Column,
+						"unsupported response type %q", refNativeName))
+				}
+			case *schema.Field:
+				errs = append(errs, schema.Errorf(pt.Position(), pt.Position().Column, "unsupported type %q for "+
+					"field %q", refNativeName, pt.Name))
+			default:
+				errs = append(errs, schema.Errorf(p.Position(), p.Position().Column, "unsupported type %q",
+					refNativeName))
+			}
+		}
+		return next()
+	})
+	return errs
+}
+
 func diagnosticsToSchemaErrors(diagnostics []analysis.SimpleDiagnostic) []*schema.Error {
 	if len(diagnostics) == 0 {
 		return nil
@@ -180,6 +230,14 @@ func diagnosticsToSchemaErrors(diagnostics []analysis.SimpleDiagnostic) []*schem
 		})
 	}
 	return errors
+}
+
+func dependenciesBeforeIndex(idx int) []*analysis.Analyzer {
+	var deps []*analysis.Analyzer
+	for i := range idx {
+		deps = append(deps, Extractors[i]...)
+	}
+	return deps
 }
 
 func simplePosToSchemaPos(pos analysis.SimplePosition) schema.Position {

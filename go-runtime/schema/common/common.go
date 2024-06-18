@@ -195,24 +195,6 @@ func ExtractType(pass *analysis.Pass, pos token.Pos, tnode types.Type) optional.
 	}
 }
 
-func InferDeclType(pass *analysis.Pass, node ast.Node, obj types.Object) optional.Option[schema.Decl] {
-	ts, ok := node.(*ast.TypeSpec)
-	if !ok {
-		return optional.None[schema.Decl]()
-	}
-	if _, ok := ts.Type.(*ast.InterfaceType); ok {
-		return optional.Some[schema.Decl](&schema.Enum{})
-	}
-	t, ok := ExtractTypeForNode(pass, obj, ts.Type, nil).Get()
-	if !ok {
-		return optional.None[schema.Decl]()
-	}
-	if !IsSelfReference(pass, obj, t) {
-		return optional.Some[schema.Decl](&schema.TypeAlias{})
-	}
-	return optional.Some[schema.Decl](&schema.Data{})
-}
-
 func ExtractFuncForDecl(t schema.Decl) (ExtractDeclFunc[schema.Decl, ast.Node], error) {
 	if f, ok := extractorRegistery.Load(reflect.TypeOf(t)); ok {
 		return f, nil
@@ -468,4 +450,8 @@ func isLocalRef(pass *analysis.Pass, ref *schema.Ref) bool {
 		return false
 	}
 	return ref.Module == "" || ref.Module == moduleName
+}
+
+func GetNativeName(obj types.Object) string {
+	return obj.Pkg().Path() + "." + obj.Name()
 }
