@@ -40,7 +40,6 @@ func (i initCmd) Run(ctx context.Context) error {
 		Hermit:        i.Hermit,
 		NoGit:         i.NoGit,
 		FTLMinVersion: ftl.Version,
-		ExternalDirs:  i.ExternalDirs,
 		ModuleDirs:    i.ModuleDirs,
 		Commands: projectconfig.Commands{
 			Startup: []string{i.Startup},
