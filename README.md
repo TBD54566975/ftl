@@ -52,7 +52,8 @@ diff -u <(
 ```sh file=test.sh region=init
 mkdir myproject
 cd myproject
-ftl init go . alice
+ftl init .
+ftl new go . alice
 ```
 
 ### Build and deploy the module

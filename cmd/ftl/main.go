@@ -34,7 +34,8 @@ type CLI struct {
 
 	Ping     pingCmd     `cmd:"" help:"Ping the FTL cluster."`
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
-	Init     initCmd     `cmd:"" help:"Initialize a new FTL module."`
+	Init     initCmd     `cmd:"" help:"Initialize a new FTL project."`
+	New      newCmd      `cmd:"" help:"Create a new FTL module."`
 	Dev      devCmd      `cmd:"" help:"Develop FTL modules. Will start the FTL cluster, build and deploy all modules found in the specified directories, and watch for changes."`
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
