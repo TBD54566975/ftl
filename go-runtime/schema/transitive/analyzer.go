@@ -4,12 +4,13 @@ import (
 	"go/ast"
 	"go/types"
 
+	sets "github.com/deckarep/golang-set/v2"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	"github.com/TBD54566975/golang-tools/go/ast/inspector"
-	sets "github.com/deckarep/golang-set/v2"
 )
 
 // Extractor extracts transitive schema.Decls to the module schema.
@@ -18,13 +19,8 @@ import (
 // but not themselves explicitly annotated.
 var Extractor = common.NewExtractor("transitive", (*Fact)(nil), Extract)
 
-type Fact struct {
-	value common.SchemaFactValue
-}
-
-func (t *Fact) AFact()                       {}
-func (t *Fact) Set(v common.SchemaFactValue) { t.value = v }
-func (t *Fact) Get() common.SchemaFactValue  { return t.value }
+type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
+type Fact = common.DefaultFact[Tag]
 
 // Extract traverses all schema type root AST nodes and determines if a node has been marked for extraction.
 //

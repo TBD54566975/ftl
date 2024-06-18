@@ -4,23 +4,16 @@ import (
 	"go/ast"
 	"go/types"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/alecthomas/types/optional"
 )
 
 // Extractor extracts type aliases to the module schema.
-var Extractor = common.NewDeclExtractor[*schema.TypeAlias, *ast.TypeSpec]("typealias", (*Fact)(nil), Extract)
-
-type Fact struct {
-	value common.SchemaFactValue
-}
-
-func (t *Fact) AFact()                       {}
-func (t *Fact) Set(v common.SchemaFactValue) { t.value = v }
-func (t *Fact) Get() common.SchemaFactValue  { return t.value }
+var Extractor = common.NewDeclExtractor[*schema.TypeAlias, *ast.TypeSpec]("typealias", Extract)
 
 func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional.Option[*schema.TypeAlias] {
 	schType, ok := common.ExtractTypeForNode(pass, obj, node, nil).Get()

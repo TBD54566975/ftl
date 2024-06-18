@@ -4,24 +4,17 @@ import (
 	"go/ast"
 	"go/types"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/initialize"
 	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/alecthomas/types/optional"
 )
 
 // Extractor extracts verbs to the module schema.
-var Extractor = common.NewDeclExtractor[*schema.Verb, *ast.FuncDecl]("verb", (*Fact)(nil), Extract)
-
-type Fact struct {
-	value common.SchemaFactValue
-}
-
-func (t *Fact) AFact()                       {}
-func (t *Fact) Set(v common.SchemaFactValue) { t.value = v }
-func (t *Fact) Get() common.SchemaFactValue  { return t.value }
+var Extractor = common.NewDeclExtractor[*schema.Verb, *ast.FuncDecl]("verb", Extract)
 
 func Extract(pass *analysis.Pass, root *ast.FuncDecl, obj types.Object) optional.Option[*schema.Verb] {
 	md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get()
