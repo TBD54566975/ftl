@@ -52,7 +52,7 @@ func (i initCmd) Run(ctx context.Context) error {
 
 	if !i.NoGit {
 		logger.Debugf("Updating .gitignore")
-		if err := updateGitIgnore(i.Dir); err != nil {
+		if err := updateGitIgnore(ctx, i.Dir); err != nil {
 			return err
 		}
 		logger.Debugf("Adding files to git")
@@ -61,7 +61,7 @@ func (i initCmd) Run(ctx context.Context) error {
 				return err
 			}
 		}
-		if err := maybeGitAdd(ctx, i.Dir, "ftl-project.toml", ".gitignore"); err != nil {
+		if err := maybeGitAdd(ctx, i.Dir, "ftl-project.toml"); err != nil {
 			return err
 		}
 	}
@@ -79,7 +79,7 @@ func maybeGitAdd(ctx context.Context, dir string, paths ...string) error {
 	return nil
 }
 
-func updateGitIgnore(dir string) error {
+func updateGitIgnore(ctx context.Context, dir string) error {
 	gitRoot, ok := internal.GitRoot(dir).Get()
 	if !ok {
 		return nil
@@ -102,6 +102,10 @@ func updateGitIgnore(dir string) error {
 	}
 
 	// append if not already present
-	_, err = f.WriteString("**/_ftl\n")
-	return err
+	if _, err = f.WriteString("**/_ftl\n"); err != nil {
+		return err
+	}
+
+	// Add .gitignore to git
+	return maybeGitAdd(ctx, gitRoot, ".gitignore")
 }
