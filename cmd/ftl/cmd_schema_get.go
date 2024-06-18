@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"connectrpc.com/connect"
 	"golang.org/x/exp/maps"
@@ -49,9 +50,9 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerSe
 			slices.Sort(missingNames)
 			if len(missingNames) > 0 {
 				if g.Watch {
-					fmt.Printf("missing modules: %v\n", missingNames)
+					fmt.Printf("missing modules: %s\n", strings.Join(missingNames, ", "))
 				} else {
-					return fmt.Errorf("missing modules: %v", missingNames)
+					return fmt.Errorf("missing modules: %s", strings.Join(missingNames, ", "))
 				}
 			}
 			if !g.Watch {
