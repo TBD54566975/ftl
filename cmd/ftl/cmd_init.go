@@ -17,12 +17,11 @@ import (
 )
 
 type initCmd struct {
-	Hermit       bool     `help:"Include Hermit language-specific toolchain binaries." negatable:""`
-	Dir          string   `arg:"" help:"Directory to initialize the project in."`
-	ExternalDirs []string `help:"Directories of existing external modules."`
-	ModuleDirs   []string `help:"Child directories of existing modules."`
-	NoGit        bool     `help:"Don't add files to the git repository."`
-	Startup      string   `help:"Command to run on startup."`
+	Hermit     bool     `help:"Include Hermit language-specific toolchain binaries." negatable:""`
+	Dir        string   `arg:"" help:"Directory to initialize the project in."`
+	ModuleDirs []string `help:"Child directories of existing modules."`
+	NoGit      bool     `help:"Don't add files to the git repository."`
+	Startup    string   `help:"Command to run on startup."`
 }
 
 func (i initCmd) Run(ctx context.Context) error {
