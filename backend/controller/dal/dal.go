@@ -501,24 +501,6 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		}
 	}
 
-	// upsert subscriptions
-	for _, decl := range moduleSchema.Decls {
-		s, ok := decl.(*schema.Subscription)
-		if !ok {
-			continue
-		}
-		err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
-			Key:         model.NewSubscriptionKey(moduleSchema.Name, s.Name),
-			Module:      moduleSchema.Name,
-			TopicModule: s.Topic.Module,
-			TopicName:   s.Topic.Name,
-			Name:        s.Name,
-		})
-		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("could not insert subscription: %w", translatePGError(err))
-		}
-	}
-
 	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
 
 	// Create the deployment
@@ -580,45 +562,6 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", translatePGError(err))
 		}
 	}
-
-	// create subscribers
-	for _, decl := range moduleSchema.Decls {
-		v, ok := decl.(*schema.Verb)
-		if !ok {
-			continue
-		}
-		for _, md := range v.Metadata {
-			s, ok := md.(*schema.MetadataSubscriber)
-			if !ok {
-				continue
-			}
-			sinkRef := schema.RefKey{
-				Module: moduleSchema.Name,
-				Name:   v.Name,
-			}
-			retryParams := schema.RetryParams{}
-			if retryMd, ok := slices.FindVariant[*schema.MetadataRetry](v.Metadata); ok {
-				retryParams, err = retryMd.RetryParams()
-				if err != nil {
-					return model.DeploymentKey{}, fmt.Errorf("could not parse retry parameters for %q: %w", v.Name, err)
-				}
-			}
-			err := tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
-				Key:              model.NewSubscriberKey(moduleSchema.Name, s.Name, v.Name),
-				Module:           moduleSchema.Name,
-				SubscriptionName: s.Name,
-				Deployment:       deploymentKey,
-				Sink:             sinkRef,
-				RetryAttempts:    int32(retryParams.Count),
-				Backoff:          retryParams.MinBackoff,
-				MaxBackoff:       retryParams.MaxBackoff,
-			})
-			if err != nil {
-				return model.DeploymentKey{}, fmt.Errorf("could not insert subscriber: %w", translatePGError(err))
-			}
-		}
-	}
-
 	return deploymentKey, nil
 }
 
@@ -762,7 +705,17 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	if err != nil {
 		return translatePGError(err)
 	}
-
+	if minReplicas == 0 {
+		err = d.deploymentWillDeactivate(ctx, tx, key)
+		if err != nil {
+			return translatePGError(err)
+		}
+	} else if deployment.MinReplicas == 0 {
+		err = d.deploymentWillActivate(ctx, tx, key)
+		if err != nil {
+			return translatePGError(err)
+		}
+	}
 	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
 		DeploymentKey:   key,
 		MinReplicas:     int32(minReplicas),
@@ -789,9 +742,14 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		return translatePGError(err)
 	}
 
-	var replacedDeploymentKey optional.Option[model.DeploymentKey]
+	// must be called before deploymentWillDeactivate for the old deployment
+	err = d.deploymentWillActivate(ctx, tx, newDeploymentKey)
+	if err != nil {
+		return translatePGError(err)
+	}
 
 	// If there's an existing deployment, set its desired replicas to 0
+	var replacedDeploymentKey optional.Option[model.DeploymentKey]
 	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
 	if err == nil {
 		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Key, newDeploymentKey, int32(minReplicas))
@@ -800,6 +758,10 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 		if count == 1 {
 			return fmt.Errorf("deployment already exists: %w", ErrConflict)
+		}
+		err = d.deploymentWillDeactivate(ctx, tx, oldDeployment.Key)
+		if err != nil {
+			return translatePGError(err)
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !isNotFound(err) {
@@ -824,6 +786,29 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	}
 
 	return nil
+}
+
+// deploymentWillActivate is called whenever a deployment goes from min_replicas=0 to min_replicas>0.
+//
+// when replacing a deployment, this should be called first before calling deploymentWillDeactivate on the old deployment.
+// This allows the new deployment to migrate from the old deployment (such as subscriptions).
+func (d *DAL) deploymentWillActivate(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
+	module, err := tx.GetSchemaForDeployment(ctx, key)
+	if err != nil {
+		return fmt.Errorf("could not get schema: %w", translatePGError(err))
+	}
+	err = d.createSubscriptions(ctx, tx, key, module)
+	if err != nil {
+		return err
+	}
+	return d.createSubscribers(ctx, tx, key, module)
+}
+
+// deploymentWillDeactivate is called whenever a deployment goes to min_replicas=0.
+//
+// it may be called when min_replicas was already 0
+func (d *DAL) deploymentWillDeactivate(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
+	return d.removeSubscriptionsAndSubscribers(ctx, tx, key)
 }
 
 // GetDeploymentsNeedingReconciliation returns deployments that have a

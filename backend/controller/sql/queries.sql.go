@@ -256,6 +256,34 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
+const deleteSubscribers = `-- name: DeleteSubscribers :exec
+DELETE FROM topic_subscribers
+WHERE deployment_id IN (
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = $1::deployment_key
+)
+`
+
+func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) error {
+	_, err := q.db.Exec(ctx, deleteSubscribers, deployment)
+	return err
+}
+
+const deleteSubscriptions = `-- name: DeleteSubscriptions :exec
+DELETE FROM topic_subscriptions
+WHERE deployment_id IN (
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = $1::deployment_key
+)
+`
+
+func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) error {
+	_, err := q.db.Exec(ctx, deleteSubscriptions, deployment)
+	return err
+}
+
 const deregisterRunner = `-- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
@@ -1278,10 +1306,8 @@ SELECT
   subscribers.backoff as backoff,
   subscribers.max_backoff as max_backoff
 FROM topic_subscribers as subscribers
-JOIN deployments ON subscribers.deployment_id = deployments.id
 JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
 WHERE topic_subscriptions.key = $1::subscription_key
-  AND deployments.min_replicas > 0
 ORDER BY RANDOM()
 LIMIT 1
 `
@@ -1492,6 +1518,17 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.Deploym
 		return nil, err
 	}
 	return items, nil
+}
+
+const getSchemaForDeployment = `-- name: GetSchemaForDeployment :one
+SELECT schema FROM deployments WHERE key = $1::deployment_key
+`
+
+func (q *Queries) GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error) {
+	row := q.db.QueryRow(ctx, getSchemaForDeployment, key)
+	var schema *schema.Module
+	err := row.Scan(&schema)
+	return schema, err
 }
 
 const getStaleCronJobs = `-- name: GetStaleCronJobs :many
@@ -2339,7 +2376,12 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (opt
 }
 
 const upsertSubscription = `-- name: UpsertSubscription :exec
-INSERT INTO topic_subscriptions (key, topic_id, module_id, name)
+INSERT INTO topic_subscriptions (
+  key,
+  topic_id,
+  module_id,
+  deployment_id,
+  name)
 VALUES (
   $1::subscription_key,
   (
@@ -2350,11 +2392,13 @@ VALUES (
       AND topics.name = $3::TEXT
   ),
   (SELECT id FROM modules WHERE name = $4::TEXT),
-  $5::TEXT
+  (SELECT id FROM deployments WHERE key = $5::deployment_key),
+  $6::TEXT
 )
 ON CONFLICT (name, module_id) DO
 UPDATE SET 
-  topic_id = excluded.topic_id
+  topic_id = excluded.topic_id,
+  deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
 RETURNING id
 `
 
@@ -2363,6 +2407,7 @@ type UpsertSubscriptionParams struct {
 	TopicModule string
 	TopicName   string
 	Module      string
+	Deployment  model.DeploymentKey
 	Name        string
 }
 
@@ -2372,6 +2417,7 @@ func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscription
 		arg.TopicModule,
 		arg.TopicName,
 		arg.Module,
+		arg.Deployment,
 		arg.Name,
 	)
 	return err

@@ -161,6 +161,9 @@ ORDER BY d.key;
 -- name: GetActiveDeploymentSchemas :many
 SELECT key, schema FROM deployments WHERE min_replicas > 0;
 
+-- name: GetSchemaForDeployment :one
+SELECT schema FROM deployments WHERE key = sqlc.arg('key')::deployment_key;
+
 -- name: GetProcessList :many
 SELECT d.min_replicas,
        d.key   AS deployment_key,
@@ -627,7 +630,12 @@ UPDATE SET
 RETURNING id;
 
 -- name: UpsertSubscription :exec
-INSERT INTO topic_subscriptions (key, topic_id, module_id, name)
+INSERT INTO topic_subscriptions (
+  key,
+  topic_id,
+  module_id,
+  deployment_id,
+  name)
 VALUES (
   sqlc.arg('key')::subscription_key,
   (
@@ -638,12 +646,30 @@ VALUES (
       AND topics.name = sqlc.arg('topic_name')::TEXT
   ),
   (SELECT id FROM modules WHERE name = sqlc.arg('module')::TEXT),
+  (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key),
   sqlc.arg('name')::TEXT
 )
 ON CONFLICT (name, module_id) DO
 UPDATE SET 
-  topic_id = excluded.topic_id
+  topic_id = excluded.topic_id,
+  deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key)
 RETURNING id;
+
+-- name: DeleteSubscriptions :exec
+DELETE FROM topic_subscriptions
+WHERE deployment_id IN (
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = sqlc.arg('deployment')::deployment_key
+);
+
+-- name: DeleteSubscribers :exec
+DELETE FROM topic_subscribers
+WHERE deployment_id IN (
+  SELECT deployments.id
+  FROM deployments
+  WHERE deployments.key = sqlc.arg('deployment')::deployment_key
+);
 
 -- name: InsertSubscriber :exec
 INSERT INTO topic_subscribers (
@@ -733,10 +759,8 @@ SELECT
   subscribers.backoff as backoff,
   subscribers.max_backoff as max_backoff
 FROM topic_subscribers as subscribers
-JOIN deployments ON subscribers.deployment_id = deployments.id
 JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
 WHERE topic_subscriptions.key = sqlc.arg('key')::subscription_key
-  AND deployments.min_replicas > 0
 ORDER BY RANDOM()
 LIMIT 1;
 

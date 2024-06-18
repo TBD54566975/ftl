@@ -111,3 +111,101 @@ func (d *DAL) CompleteEventForSubscription(ctx context.Context, module, name str
 	}
 	return nil
 }
+
+func (d *DAL) createSubscriptions(ctx context.Context, tx *sql.Tx, key model.DeploymentKey, module *schema.Module) error {
+	for _, decl := range module.Decls {
+		s, ok := decl.(*schema.Subscription)
+		if !ok {
+			continue
+		}
+		if !hasSubscribers(s, module.Decls) {
+			// Ignore subscriptions without subscribers
+			// This ensures that controllers don't endlessly try to progress subscriptions without subscribers
+			// https://github.com/TBD54566975/ftl/issues/1685
+			//
+			// It does mean that a subscription will reset to the topic's head if all subscribers are removed and then later re-added
+			continue
+		}
+		if err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
+			Key:         model.NewSubscriptionKey(module.Name, s.Name),
+			Module:      module.Name,
+			Deployment:  key,
+			TopicModule: s.Topic.Module,
+			TopicName:   s.Topic.Name,
+			Name:        s.Name,
+		}); err != nil {
+			return fmt.Errorf("could not insert subscription: %w", translatePGError(err))
+		}
+	}
+	return nil
+}
+
+func hasSubscribers(subscription *schema.Subscription, decls []schema.Decl) bool {
+	for _, d := range decls {
+		verb, ok := d.(*schema.Verb)
+		if !ok {
+			continue
+		}
+		for _, md := range verb.Metadata {
+			subscriber, ok := md.(*schema.MetadataSubscriber)
+			if !ok {
+				continue
+			}
+			if subscriber.Name == subscription.Name {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.DeploymentKey, module *schema.Module) error {
+	for _, decl := range module.Decls {
+		v, ok := decl.(*schema.Verb)
+		if !ok {
+			continue
+		}
+		for _, md := range v.Metadata {
+			s, ok := md.(*schema.MetadataSubscriber)
+			if !ok {
+				continue
+			}
+			sinkRef := schema.RefKey{
+				Module: module.Name,
+				Name:   v.Name,
+			}
+			retryParams := schema.RetryParams{}
+			var err error
+			if retryMd, ok := slices.FindVariant[*schema.MetadataRetry](v.Metadata); ok {
+				retryParams, err = retryMd.RetryParams()
+				if err != nil {
+					return fmt.Errorf("could not parse retry parameters for %q: %w", v.Name, err)
+				}
+			}
+			err = tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
+				Key:              model.NewSubscriberKey(module.Name, s.Name, v.Name),
+				Module:           module.Name,
+				SubscriptionName: s.Name,
+				Deployment:       key,
+				Sink:             sinkRef,
+				RetryAttempts:    int32(retryParams.Count),
+				Backoff:          retryParams.MinBackoff,
+				MaxBackoff:       retryParams.MaxBackoff,
+			})
+			if err != nil {
+				return fmt.Errorf("could not insert subscriber: %w", translatePGError(err))
+			}
+		}
+	}
+	return nil
+}
+
+func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
+	if err := tx.DeleteSubscriptions(ctx, key); err != nil {
+		return fmt.Errorf("could not delete old subscriptions: %w", translatePGError(err))
+	}
+	if err := tx.DeleteSubscribers(ctx, key); err != nil {
+		return fmt.Errorf("could not delete old subscribers: %w", translatePGError(err))
+	}
+	return nil
+}
