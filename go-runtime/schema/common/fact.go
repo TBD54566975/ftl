@@ -4,10 +4,11 @@ import (
 	"go/types"
 	"reflect"
 
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
 	sets "github.com/deckarep/golang-set/v2"
+
+	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/golang-tools/go/analysis"
 )
 
 // SchemaFact is a fact that associates a schema node with a Go object.
@@ -16,6 +17,21 @@ type SchemaFact interface {
 	Set(v SchemaFactValue)
 	Get() SchemaFactValue
 }
+
+// DefaultFact should be used as the base type for all schema facts. Each
+// Analyzer needs a uniuqe Fact type that is otherwise identical, and this type
+// simply reduces that boilerplate.
+//
+// Usage:
+//
+//	type Fact = common.DefaultFact[struct{}]
+type DefaultFact[T any] struct {
+	value SchemaFactValue
+}
+
+func (*DefaultFact[T]) AFact()                  {}
+func (t *DefaultFact[T]) Set(v SchemaFactValue) { t.value = v }
+func (t *DefaultFact[T]) Get() SchemaFactValue  { return t.value }
 
 // SchemaFactValue is the value of a SchemaFact.
 type SchemaFactValue interface {

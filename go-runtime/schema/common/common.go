@@ -8,13 +8,14 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
+	"github.com/puzpuzpuz/xsync/v3"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	"github.com/TBD54566975/golang-tools/go/ast/inspector"
-	"github.com/alecthomas/types/optional"
-	"github.com/puzpuzpuz/xsync/v3"
 )
 
 var (
@@ -41,7 +42,8 @@ func NewExtractor(name string, factType analysis.Fact, run func(*analysis.Pass) 
 
 type ExtractDeclFunc[T schema.Decl, N ast.Node] func(pass *analysis.Pass, node N, object types.Object) optional.Option[T]
 
-func NewDeclExtractor[T schema.Decl, N ast.Node](name string, factType analysis.Fact, extractFunc ExtractDeclFunc[T, N]) *analysis.Analyzer {
+func NewDeclExtractor[T schema.Decl, N ast.Node](name string, extractFunc ExtractDeclFunc[T, N]) *analysis.Analyzer {
+	type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
 	dType := reflect.TypeFor[T]()
 	if _, ok := extractorRegistery.Load(dType); ok {
 		panic(fmt.Sprintf("multiple extractors registered for %s", dType.String()))
@@ -54,7 +56,7 @@ func NewDeclExtractor[T schema.Decl, N ast.Node](name string, factType analysis.
 		return optional.None[schema.Decl]()
 	}
 	extractorRegistery.Store(dType, wrapped)
-	return NewExtractor(name, factType, runExtractDeclsFunc[T, N](extractFunc))
+	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractDeclsFunc[T, N](extractFunc))
 }
 
 type ExtractorResult struct {
