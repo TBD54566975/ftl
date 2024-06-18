@@ -23,17 +23,16 @@ func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.Http
 
 See https://tbd54566975.github.io/ftl/docs/reference/ingress/
 ---
+
 type ${1:Func}Request struct {
-	${2:Field} ${3:Type} `json:"${4:field}"`
 }
 
 type ${1:Func}Response struct {
-	${5:Field} ${6:Type} `json:"${7:field}"`
 }
 
-//ftl:ingress ${8:GET} ${9:/url/path}
+//ftl:ingress ${2:GET} ${3:/url/path}
 func ${1:Func}(ctx context.Context, req builtin.HttpRequest[${1:Func}Request]) (builtin.HttpResponse[${1:Func}Response, string], error) {
-	${7:// TODO: Implement}
+	${4:// TODO: Implement}
 	return builtin.HttpResponse[${1:Func}Response, string]{
 		Status: 200,
 		Body: ftl.Some(${1:Func}Response{}),

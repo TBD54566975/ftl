@@ -15,7 +15,7 @@ top = false
 
 ## Defining Verbs
 
-To declare a Verb, write a normal Go function with the following signature,annotated with the Go [comment directive](https://tip.golang.org/doc/comment#syntax) `//ftl:verb`:
+To declare a Verb, write a normal Go function with the following signature, annotated with the Go [comment directive](https://tip.golang.org/doc/comment#syntax) `//ftl:verb`:
 
 ```go
 //ftl:verb

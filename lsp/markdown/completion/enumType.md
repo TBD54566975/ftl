@@ -15,6 +15,7 @@ func (Dog) animal() {}
 
 See https://tbd54566975.github.io/ftl/docs/reference/types/
 ---
+
 //ftl:enum
 type ${1:Type} interface { ${2:interface}() }
 

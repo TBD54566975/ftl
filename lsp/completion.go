@@ -70,19 +70,28 @@ var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:fsm", "Model a FSM", fsmCompletionDocs),
 }
 
+// Track which directives are //ftl: prefixed, so the we can autocomplete them via `/`.
+// This is built at init time and does not change during runtime.
+var directiveItems = map[string]bool{}
+
 func completionItem(label, detail, markdown string) protocol.CompletionItem {
 	snippetKind := protocol.CompletionItemKindSnippet
 	insertTextFormat := protocol.InsertTextFormatSnippet
 
 	parts := strings.Split(markdown, "---")
 	if len(parts) != 2 {
-		panic("invalid markdown. must contain exactly one '---' to separate completion docs from insert text")
+		panic(fmt.Sprintf("completion item %q: invalid markdown. must contain exactly one '---' to separate completion docs from insert text", label))
 	}
 
 	insertText := strings.TrimSpace(parts[1])
 	// Warn if we see two spaces in the insert text.
 	if strings.Contains(insertText, "  ") {
-		panic(fmt.Sprintf("completion item %q contains two spaces in the insert text. Use tabs instead!", label))
+		panic(fmt.Sprintf("completion item %q: contains two spaces in the insert text. Use tabs instead!", label))
+	}
+
+	// If there is a `//ftl:` this can be autocompleted when the user types `/`.
+	if strings.Contains(insertText, "//ftl:") {
+		directiveItems[label] = true
 	}
 
 	return protocol.CompletionItem{
@@ -108,25 +117,70 @@ func (s *Server) textDocumentCompletion() protocol.TextDocumentCompletionFunc {
 			return nil, nil
 		}
 
+		// Line and Character are 0-based, however the cursor can be after the last character in the line.
 		line := int(position.Line)
 		if line >= len(doc.lines) {
 			return nil, nil
 		}
-
 		lineContent := doc.lines[line]
-		character := int(position.Character - 1)
+		character := int(position.Character)
 		if character > len(lineContent) {
 			character = len(lineContent)
 		}
 
-		prefix := lineContent[character:]
+		// Currently all completions are in global scope, so the completion must be triggered at the beginning of the line.
+		// To do this, check to the start of the line and if there is any whitespace, it is not completing a whole word from the start.
+		// We also want to check that the cursor is at the end of the line so we dont let stray chars shoved at the end of the completion.
+		isAtEOL := character == len(lineContent)
+		if !isAtEOL {
+			return nil, nil
+		}
 
-		// Filter completion items based on the prefix
+		// Is not completing from the start of the line.
+		if strings.ContainsAny(lineContent, " \t") {
+			return nil, nil
+		}
+
+		// If there is a single `/` at the start of the line, we can autocomplete directives. eg `/f`.
+		// This is a hint to the user that these are ftl directives.
+		// Note that what I can tell, VSCode won't trigger completion on and after `//` so we can only complete on half of a comment.
+		isSlashed := strings.HasPrefix(lineContent, "/")
+		if isSlashed {
+			lineContent = strings.TrimPrefix(lineContent, "/")
+		}
+
+		// Filter completion items based on the line content and if it is a directive.
 		var filteredItems []protocol.CompletionItem
 		for _, item := range completionItems {
-			if strings.HasPrefix(item.Label, prefix) || strings.Contains(item.Label, prefix) {
-				filteredItems = append(filteredItems, item)
+			if !strings.Contains(item.Label, lineContent) {
+				continue
 			}
+
+			if isSlashed && !directiveItems[item.Label] {
+				continue
+			}
+
+			if isSlashed {
+				// Remove that / from the start of the line, so that the completion doesn't have `///`.
+				// VSCode doesn't seem to want to remove the `/` for us.
+				item.AdditionalTextEdits = []protocol.TextEdit{
+					{
+						Range: protocol.Range{
+							Start: protocol.Position{
+								Line:      uint32(line),
+								Character: 0,
+							},
+							End: protocol.Position{
+								Line:      uint32(line),
+								Character: 1,
+							},
+						},
+						NewText: "",
+					},
+				}
+			}
+
+			filteredItems = append(filteredItems, item)
 		}
 
 		return &protocol.CompletionList{
