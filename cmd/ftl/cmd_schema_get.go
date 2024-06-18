@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"connectrpc.com/connect"
 	"golang.org/x/exp/maps"
@@ -17,6 +18,7 @@ import (
 )
 
 type getSchemaCmd struct {
+	Watch    bool     `help:"Watch for changes to the schema."`
 	Protobuf bool     `help:"Output the schema as binary protobuf."`
 	Modules  []string `help:"Modules to include" type:"string" optional:""`
 }
@@ -44,16 +46,22 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerSe
 			delete(remainingNames, msg.Schema.Name)
 		}
 		if !msg.More {
-			break
+			missingNames := maps.Keys(remainingNames)
+			slices.Sort(missingNames)
+			if len(missingNames) > 0 {
+				if g.Watch {
+					fmt.Printf("missing modules: %s\n", strings.Join(missingNames, ", "))
+				} else {
+					return fmt.Errorf("missing modules: %s", strings.Join(missingNames, ", "))
+				}
+			}
+			if !g.Watch {
+				break
+			}
 		}
 	}
 	if err := resp.Err(); err != nil {
 		return resp.Err()
-	}
-	missingNames := maps.Keys(remainingNames)
-	slices.Sort(missingNames)
-	if len(missingNames) > 0 {
-		return fmt.Errorf("missing modules: %v", missingNames)
 	}
 	return nil
 }
