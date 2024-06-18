@@ -1,17 +1,21 @@
 #!/bin/bash
 
+map_to_markdown() {
+  echo 'map("- #\(.number) \(.labels | map("https://github.com/TBD54566975/ftl/labels/\(.name | gsub(" ";"%20"))") | join(" "))")[]'
+}
+
 list_issues() {
-  gh issue list "$@" --json number --jq 'map("- #\(.number)")[]' | sort -n
+  gh issue list "$@" --json number,labels --jq "$(map_to_markdown)" | sort -n
 }
 
 list_prs() {
-  gh pr list "$@" --json number --jq 'map("- #\(.number)")[]' | sort -n
+  gh pr list "$@" --json number,labels --jq "$(map_to_markdown)" | sort -n
 }
 
 list_issues_and_prs() {
   user="$1"
   shift
-  (gh pr list -A "$user" "$@" --json number,mergedAt | jq '[.[] | .["closedAt"] = .mergedAt | del(.mergedAt)]'; gh issue list -a "$user" "$@" --json number,closedAt) | jq '.[]' | jq -rs 'sort_by(.closedAt) | reverse | map("- #\(.number)")[]'
+  (gh pr list -A "$user" "$@" --json number,labels,mergedAt | jq '[.[] | .["closedAt"] = .mergedAt | del(.mergedAt)]'; gh issue list -a "$user" "$@" --json number,labels,closedAt) | jq '.[]' | jq -rs 'sort_by(.closedAt) | reverse' | jq -r "$(map_to_markdown)"
 }
 
 update() {
@@ -40,7 +44,7 @@ $(
 
 $(
 
-if [ "$(uname -o)" = "GNU/Linux" ]; then
+if [ "$(uname -o)" = "GNU/Linux" ] || date --help | grep -q "GNU"; then
   date="$(date -d "- 5 days" +%Y-%m-%d)"
 else
   date="$(date -v "-5d" +%Y-%m-%d)"
