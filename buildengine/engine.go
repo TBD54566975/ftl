@@ -21,7 +21,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -224,7 +223,7 @@ func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline
 }
 
 // Dev builds and deploys all local modules and watches for changes, redeploying as necessary.
-func (e *Engine) Dev(ctx context.Context, period time.Duration, commands projectconfig.Commands) error {
+func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 	return e.watchForModuleChanges(ctx, period)
 }
 
