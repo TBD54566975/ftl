@@ -22,8 +22,10 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/container"
+	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -44,7 +46,7 @@ type serveCmd struct {
 const ftlContainerName = "ftl-db-1"
 const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
-func (s *serveCmd) Run(ctx context.Context) error {
+func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
 	logger := log.FromContext(ctx)
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
@@ -76,6 +78,15 @@ func (s *serveCmd) Run(ctx context.Context) error {
 	}
 
 	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
+
+	if len(projConfig.Commands.Startup) > 0 {
+		for _, cmd := range projConfig.Commands.Startup {
+			logger.Debugf("Executing startup command: %s", cmd)
+			if err := exec.Command(ctx, log.Info, ".", "bash", "-c", cmd).Run(); err != nil {
+				return fmt.Errorf("startup command failed: %w", err)
+			}
+		}
+	}
 
 	dsn, err := s.setupDB(ctx)
 	if err != nil {
