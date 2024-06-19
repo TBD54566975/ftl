@@ -60,8 +60,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Po
 		}
 	}
 
-	// PG doesn't support "IF NOT EXISTS" so instead we just ignore any error.
-	_, _ = conn.Exec(ctx, fmt.Sprintf("CREATE DATABASE %q", config.Database))
+	_, _ = conn.Exec(ctx, fmt.Sprintf("CREATE DATABASE %q", config.Database)) //nolint:errcheck // PG doesn't support "IF NOT EXISTS" so instead we just ignore any error.
 
 	err = sql.Migrate(ctx, dsn)
 	if err != nil {

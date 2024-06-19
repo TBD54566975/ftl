@@ -46,7 +46,10 @@ func (f *FSM) TerminalStates() []*Ref {
 	}
 	for key := range all {
 		if _, ok := in[key]; !ok {
-			ref, _ := ParseRef(key)
+			ref, err := ParseRef(key)
+			if err != nil {
+				panic(err) // key must be valid
+			}
 			out = append(out, ref)
 		}
 	}

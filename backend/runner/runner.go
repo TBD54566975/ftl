@@ -458,7 +458,7 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 
 func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.DeploymentKey) *log.Logger {
 	attrs := map[string]string{"deployment": deploymentKey.String()}
-	if requestKey, _ := rpc.RequestKeyFromContext(ctx); requestKey.Ok() {
+	if requestKey, _ := rpc.RequestKeyFromContext(ctx); requestKey.Ok() { //nolint:errcheck // best effort
 		attrs["request"] = requestKey.MustGet().String()
 	}
 

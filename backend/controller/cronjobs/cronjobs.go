@@ -166,7 +166,7 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 // the newly created cron jobs until other controllers have a chance to resync their list of jobs and start sharing responsibility of the new cron jobs.
 func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context, newDeploymentKey model.DeploymentKey) {
 	// Rather than finding old/new cron jobs and updating our state, we can just resync the list of jobs
-	_ = s.syncJobsWithNewDeploymentKey(ctx, optional.Some(newDeploymentKey))
+	_ = s.syncJobsWithNewDeploymentKey(ctx, optional.Some(newDeploymentKey)) //nolint:errcheck // TODO(matt2e) is this valid?
 }
 
 // SyncJobs is run periodically via a scheduled task

@@ -10,9 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TBD54566975/golang-tools/go/packages"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+
+	"github.com/TBD54566975/golang-tools/go/packages"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
@@ -343,7 +344,7 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
 	expected := `module parent {
-		export typealias ChildAlias String 
+		export typealias ChildAlias String
 
 		export data ChildStruct {
 			name parent.ChildAlias?
@@ -379,7 +380,7 @@ func TestExtractModulePubSub(t *testing.T) {
         export data PayinEvent {
         	name String
         }
-        
+
 		export verb broadcast(Unit) Unit
 
         verb payin(Unit) Unit
@@ -498,12 +499,12 @@ func TestErrorReporting(t *testing.T) {
 		t.SkipNow()
 	}
 
-	// prebuild so we have external_module.go for pubsub module, but ignore these initial errors
-	_ = prebuildTestModule(t, "testdata/failing", "testdata/pubsub")
+	_ = prebuildTestModule(t, "testdata/failing", "testdata/pubsub") //nolint:errcheck // prebuild so we have external_module.go for pubsub module, but ignore these initial errors
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	pwd, _ := os.Getwd()
-	err := exec.Command(ctx, log.Debug, "testdata/failing", "go", "mod", "tidy").RunBuffered(ctx)
+	pwd, err := os.Getwd()
+	assert.NoError(t, err)
+	err = exec.Command(ctx, log.Debug, "testdata/failing", "go", "mod", "tidy").RunBuffered(ctx)
 	assert.NoError(t, err)
 	r, err := ExtractModuleSchema("testdata/failing", &schema.Schema{})
 	assert.NoError(t, err)
@@ -578,8 +579,9 @@ func TestValidationFailures(t *testing.T) {
 		t.SkipNow()
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	pwd, _ := os.Getwd()
-	err := exec.Command(ctx, log.Debug, "testdata/validation", "go", "mod", "tidy").RunBuffered(ctx)
+	pwd, err := os.Getwd()
+	assert.NoError(t, err)
+	err = exec.Command(ctx, log.Debug, "testdata/validation", "go", "mod", "tidy").RunBuffered(ctx)
 	assert.NoError(t, err)
 	_, err = ExtractModuleSchema("testdata/validation", &schema.Schema{})
 	assert.Error(t, err)

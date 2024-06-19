@@ -361,7 +361,8 @@ func TestDAL(t *testing.T) {
 			{Message: optional.Some(Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},
 			{Message: optional.Some(Deployment{Language: "go", Module: "test", MinReplicas: 1, Schema: &schema.Module{Name: "test"}})},
 		}
-		_ = wg.Wait()
+		err = wg.Wait()
+		assert.NoError(t, err)
 		assert.Equal(t, expectedDeploymentChanges, deploymentChanges,
 			assert.Exclude[model.DeploymentKey](), assert.Exclude[time.Time](), assert.IgnoreGoStringer())
 	})

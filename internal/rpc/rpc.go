@@ -175,7 +175,10 @@ func RetryStreamingClientStream[Req, Resp any](
 		}
 
 		// We've hit an error.
-		_, _ = stream.CloseAndReceive()
+		_, closeErr := stream.CloseAndReceive()
+		if closeErr != nil {
+			logger.Logf(logLevel, "Failed to close stream: %s", closeErr)
+		}
 
 		errored = true
 		delay := retry.Duration()

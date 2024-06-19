@@ -265,7 +265,7 @@ func ValidateModule(module *Module) error {
 	// Key is <type>:<name>
 	duplicateDecls := map[string]Decl{}
 
-	_ = Visit(module, func(n Node, next func() error) error {
+	_ = Visit(module, func(n Node, next func() error) error { //nolint:errcheck
 		if scoped, ok := n.(Scoped); ok {
 			pop := scopes
 			scopes = scopes.PushScope(scoped.Scope())

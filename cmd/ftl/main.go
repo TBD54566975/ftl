@@ -133,7 +133,7 @@ func main() {
 		sig := <-sigch
 		logger.Debugf("FTL terminating with signal %s", sig)
 		cancel()
-		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
+		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert,errcheck // best effort
 		os.Exit(0)
 	}()
 

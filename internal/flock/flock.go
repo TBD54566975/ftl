@@ -32,7 +32,7 @@ func Acquire(ctx context.Context, path string, timeout time.Duration) (release f
 			return nil, fmt.Errorf("failed to acquire lock %s: %w", absPath, err)
 		}
 		if time.Now().After(end) {
-			pid, _ := os.ReadFile(absPath)
+			pid, _ := os.ReadFile(absPath) //nolint:errcheck
 			return nil, fmt.Errorf("timed out acquiring lock %s, locked by pid %s: %w", absPath, pid, err)
 		}
 		select {
