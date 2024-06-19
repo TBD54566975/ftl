@@ -145,3 +145,7 @@ lint-backend:
 docs:
   git submodule update --init --recursive
   cd docs && zola serve
+
+# Generate LSP hover help text
+lsp-generate:
+  go run ./cmd/ftl-lsp-gen

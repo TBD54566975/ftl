@@ -75,4 +75,6 @@ eg.
 type UserID string
 ```
 
+---
+
 [^1]: Note that until [type widening](https://github.com/TBD54566975/ftl/issues/1296) is implemented, external types are not supported.
