@@ -40,7 +40,7 @@ type Listener interface {
 	// OnBuildStarted is called when a build is started for a project.
 	OnBuildStarted(module Module)
 
-	// OnBuildSuccess is called when all projects have been built successfully and deployed.
+	// OnBuildSuccess is called when all modules have been built successfully and deployed.
 	OnBuildSuccess()
 
 	// OnBuildFailed is called for any build failures.
