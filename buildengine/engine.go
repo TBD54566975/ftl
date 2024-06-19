@@ -328,8 +328,8 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 
 				err := terminateModuleDeployment(ctx, e.client, config.Module)
 				if err != nil {
-						didError = true
-						e.reportBuildFailed(err)
+					didError = true
+					e.reportBuildFailed(err)
 					logger.Errorf(err, "terminate %s failed", config.Module)
 				} else {
 					didUpdateDeployments = true
@@ -354,12 +354,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
-					switch project := event.Project.(type) {
-					case Module:
-						logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
-					case ExternalLibrary:
-						logger.Errorf(err, "build failed for library %q: %v", project.Config().Key, err)
-					}
+					logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
 				} else {
 					didUpdateDeployments = true
 				}

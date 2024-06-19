@@ -74,8 +74,8 @@ type errSet []*schema.Error
 
 // OnBuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
 // Also emit an FTL message to set the status.
-func (s *Server) OnBuildStarted(project buildengine.Project) {
-	dirURI := "file://" + project.Config().Dir
+func (s *Server) OnBuildStarted(module buildengine.Module) {
+	dirURI := "file://" + module.Config.Dir
 
 	s.diagnostics.Range(func(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) bool {
 		if strings.HasPrefix(uri, dirURI) {
