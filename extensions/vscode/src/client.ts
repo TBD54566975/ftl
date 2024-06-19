@@ -73,6 +73,7 @@ export class FTLClient {
         FTLStatus.buildError(this.statusBarItem, message.error)
       } else {
         FTLStatus.ftlError(this.statusBarItem, 'Unknown build status from FTL LSP server')
+        this.outputChannel.appendLine(`Unknown build status from FTL LSP server: ${state}`)
       }
     })
     context.subscriptions.push(buildStatus)
