@@ -25,7 +25,7 @@ type Lease struct {
 	ttl            time.Duration
 	errch          chan error
 	release        chan bool
-	cancelCtx      context.CancelFunc // cancels context created for lease owner
+	cancelCtx      context.CancelFunc // Cancels context created for lease owner.
 	leak           bool               // For testing.
 }
 
