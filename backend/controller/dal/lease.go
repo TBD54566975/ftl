@@ -2,10 +2,12 @@ package dal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
@@ -23,7 +25,8 @@ type Lease struct {
 	ttl            time.Duration
 	errch          chan error
 	release        chan bool
-	leak           bool // For testing.
+	cancelCtx      context.CancelFunc // cancels context created for lease owner
+	leak           bool               // For testing.
 }
 
 func (l *Lease) String() string {
@@ -52,6 +55,7 @@ func (l *Lease) renew(ctx context.Context) {
 					logger.Errorf(err, "Failed to renew lease %s", l.key)
 				}
 				l.errch <- err
+				l.cancelCtx()
 				return
 			}
 
@@ -62,6 +66,7 @@ func (l *Lease) renew(ctx context.Context) {
 			logger.Debugf("Releasing lease")
 			_, err := l.db.ReleaseLease(ctx, l.idempotencyKey, l.key)
 			l.errch <- translatePGError(err)
+			l.cancelCtx()
 			return
 		}
 	}
@@ -75,18 +80,28 @@ func (l *Lease) Release() error {
 // AcquireLease acquires a lease for the given key.
 //
 // Will return ErrConflict if the lease is already held by another controller.
-func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duration) (leases.Lease, error) {
+func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata optional.Option[any]) (leases.Lease, context.Context, error) {
 	if ttl < time.Second*5 {
-		return nil, fmt.Errorf("lease TTL must be at least 5 seconds")
+		return nil, nil, fmt.Errorf("lease TTL must be at least 5 seconds")
 	}
-	idempotencyKey, err := d.db.NewLease(ctx, key, ttl)
+	var metadataBytes []byte
+	if md, ok := metadata.Get(); ok {
+		var err error
+		metadataBytes, err = json.Marshal(md)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal lease metadata: %w", err)
+		}
+	}
+	idempotencyKey, err := d.db.NewLease(ctx, key, ttl, metadataBytes)
 	if err != nil {
-		return nil, translatePGError(err)
+		return nil, nil, translatePGError(err)
 	}
-	return d.newLease(ctx, key, idempotencyKey, ttl), nil
+	leaseCtx, lease := d.newLease(ctx, key, idempotencyKey, ttl)
+	return leaseCtx, lease, nil
 }
 
-func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) *Lease {
+func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) (*Lease, context.Context) {
+	leaseCtx, cancelCtx := context.WithCancel(ctx)
 	lease := &Lease{
 		idempotencyKey: idempotencyKey,
 		key:            key,
@@ -94,9 +109,24 @@ func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.
 		ttl:            ttl,
 		release:        make(chan bool),
 		errch:          make(chan error, 1),
+		cancelCtx:      cancelCtx,
 	}
 	go lease.renew(ctx)
-	return lease
+	return lease, leaseCtx
+}
+
+// GetLeaseInfo returns the metadata and expiry time for the lease with the given key.
+//
+// metadata should be a pointer to the type that metadata should be unmarshaled into.
+func (d *DAL) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (expiry time.Time, err error) {
+	l, err := d.db.GetLeaseInfo(ctx, key)
+	if err != nil {
+		return expiry, translatePGError(err)
+	}
+	if err := json.Unmarshal(l.Metadata, metadata); err != nil {
+		return expiry, fmt.Errorf("could not unmarshal lease metadata: %w", err)
+	}
+	return l.ExpiresAt, nil
 }
 
 // ExpireLeases expires (deletes) all leases that have expired.

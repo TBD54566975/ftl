@@ -463,8 +463,18 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id;
 
 -- name: NewLease :one
-INSERT INTO leases (idempotency_key, key, expires_at)
-VALUES (gen_random_uuid(), @key::lease_key, (NOW() AT TIME ZONE 'utc') + @ttl::interval)
+INSERT INTO leases (
+  idempotency_key,
+  key,
+  expires_at,
+  metadata
+)
+VALUES (
+  gen_random_uuid(),
+  @key::lease_key,
+  (NOW() AT TIME ZONE 'utc') + @ttl::interval,
+  sqlc.narg('metadata')::JSONB
+)
 RETURNING idempotency_key;
 
 -- name: RenewLease :one
@@ -486,6 +496,9 @@ WITH expired AS (
 )
 SELECT COUNT(*)
 FROM expired;
+
+-- name: GetLeaseInfo :one
+SELECT expires_at, metadata FROM leases WHERE key = @key::lease_key;
 
 -- name: CreateAsyncCall :one
 INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff)

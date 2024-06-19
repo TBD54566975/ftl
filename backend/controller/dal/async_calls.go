@@ -105,12 +105,13 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
+	lease, _ := d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
 	return &AsyncCall{
 		ID:                row.AsyncCallID,
 		Verb:              row.Verb,
 		Origin:            origin,
 		Request:           row.Request,
-		Lease:             d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl),
+		Lease:             lease,
 		ScheduledAt:       row.ScheduledAt,
 		RemainingAttempts: row.RemainingAttempts,
 		Backoff:           row.Backoff,

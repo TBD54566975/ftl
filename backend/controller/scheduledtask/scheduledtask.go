@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/types/optional"
 	clock "github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
@@ -128,7 +129,7 @@ func (s *Scheduler) run(ctx context.Context) {
 				}
 				// If the job is singly homed, see if we can acquire the lease.
 				if job.singlyHomed && job.lease == nil {
-					lease, err := s.leaser.AcquireLease(ctx, leases.SystemKey("scheduledtask", job.name), time.Second*10)
+					lease, _, err := s.leaser.AcquireLease(ctx, leases.SystemKey("scheduledtask", job.name), time.Second*10, optional.None[any]())
 					if err != nil {
 						if errors.Is(err, leases.ErrConflict) {
 							logger.Scope(job.name).Tracef("Lease is held by another controller, will try again shortly.")
