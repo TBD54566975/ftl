@@ -37,12 +37,16 @@ type moduleMeta struct {
 }
 
 type Listener interface {
+	// OnBuildStarted is called when a build is started for a project.
 	OnBuildStarted(module Module)
+
+	// OnBuildSuccess is called when all modules have been built successfully and deployed.
+	OnBuildSuccess()
+
+	// OnBuildFailed is called for any build failures.
+	// OnBuildSuccess should not be called if this is called after a OnBuildStarted.
+	OnBuildFailed(err error)
 }
-
-type BuildStartedListenerFunc func(module Module)
-
-func (b BuildStartedListenerFunc) OnBuildStarted(module Module) { b(module) }
 
 // Engine for building a set of modules.
 type Engine struct {
@@ -227,6 +231,18 @@ func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 	return e.watchForModuleChanges(ctx, period)
 }
 
+func (e *Engine) reportBuildFailed(err error) {
+	if e.listener != nil {
+		e.listener.OnBuildFailed(err)
+	}
+}
+
+func (e *Engine) reportSuccess() {
+	if e.listener != nil {
+		e.listener.OnBuildSuccess()
+	}
+}
+
 func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration) error {
 	logger := log.FromContext(ctx)
 
@@ -253,8 +269,10 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	err = e.buildAndDeploy(ctx, 1, true)
 	if err != nil {
 		logger.Errorf(err, "initial deploy failed")
+		e.reportBuildFailed(err)
 	} else {
 		logger.Infof("All modules deployed, watching for changes...")
+		e.reportSuccess()
 	}
 
 	moduleHashes := map[string][]byte{}
@@ -262,14 +280,17 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		hash, err := computeModuleHash(sch)
 		if err != nil {
 			logger.Errorf(err, "compute hash for %s failed", name)
+			e.reportBuildFailed(err)
 			return false
 		}
 		moduleHashes[name] = hash
 		return true
 	})
 
-	// Watch for file and schema changes
 	didUpdateDeployments := false
+	// Track if there was an error, so that when deployments are complete we don't report success.
+	didError := false
+	// Watch for file and schema changes
 	for {
 		var completedUpdatesTimer <-chan time.Time
 		if didUpdateDeployments {
@@ -280,6 +301,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			return ctx.Err()
 		case <-completedUpdatesTimer:
 			logger.Infof("All modules deployed, watching for changes...")
+			// Some cases, this will trigger after a build failure, so report accordingly.
+			if !didError {
+				e.reportSuccess()
+			}
+
 			didUpdateDeployments = false
 		case event := <-watchEvents:
 			switch event := event.(type) {
@@ -287,8 +313,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				config := event.Module.Config
 				if _, exists := e.moduleMetas.Load(config.Module); !exists {
 					e.moduleMetas.Store(config.Module, moduleMeta{module: event.Module})
+					didError = false
 					err := e.buildAndDeploy(ctx, 1, true, config.Module)
 					if err != nil {
+						didError = true
+						e.reportBuildFailed(err)
 						logger.Errorf(err, "deploy %s failed", config.Module)
 					} else {
 						didUpdateDeployments = true
@@ -297,8 +326,10 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			case WatchEventModuleRemoved:
 				config := event.Module.Config
 
-				err := teminateModuleDeployment(ctx, e.client, config.Module)
+				err := terminateModuleDeployment(ctx, e.client, config.Module)
 				if err != nil {
+					didError = true
+					e.reportBuildFailed(err)
 					logger.Errorf(err, "terminate %s failed", config.Module)
 				} else {
 					didUpdateDeployments = true
@@ -318,8 +349,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					logger.Debugf("Skipping build and deploy; event time %v is before the last build time %v", event.Time, meta.lastBuildStartTime)
 					continue // Skip this event as it's outdated
 				}
+				didError = false
 				err := e.buildAndDeploy(ctx, 1, true, config.Module)
 				if err != nil {
+					didError = true
+					e.reportBuildFailed(err)
 					logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
 				} else {
 					didUpdateDeployments = true
@@ -332,6 +366,8 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 
 			hash, err := computeModuleHash(change.Module)
 			if err != nil {
+				didError = true
+				e.reportBuildFailed(err)
 				logger.Errorf(err, "compute hash for %s failed", change.Name)
 				continue
 			}
@@ -346,8 +382,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			dependentModuleNames := e.getDependentModuleNames(change.Name)
 			if len(dependentModuleNames) > 0 {
 				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join(dependentModuleNames, ", "))
+				didError = false
 				err = e.buildAndDeploy(ctx, 1, true, dependentModuleNames...)
 				if err != nil {
+					didError = true
+					e.reportBuildFailed(err)
 					logger.Errorf(err, "deploy %s failed", change.Name)
 				} else {
 					didUpdateDeployments = true

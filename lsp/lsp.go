@@ -16,6 +16,7 @@ import (
 	"github.com/tliron/kutil/version"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/buildengine"
 	ftlErrors "github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -71,9 +72,10 @@ func (s *Server) Run() error {
 
 type errSet []*schema.Error
 
-// BuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
-func (s *Server) BuildStarted(dir string) {
-	dirURI := "file://" + dir
+// OnBuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
+// Also emit an FTL message to set the status.
+func (s *Server) OnBuildStarted(module buildengine.Module) {
+	dirURI := "file://" + module.Config.Dir
 
 	s.diagnostics.Range(func(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) bool {
 		if strings.HasPrefix(uri, dirURI) {
@@ -82,6 +84,16 @@ func (s *Server) BuildStarted(dir string) {
 		}
 		return true
 	})
+
+	s.publishBuildState(buildStateBuilding, nil)
+}
+
+func (s *Server) OnBuildSuccess() {
+	s.publishBuildState(buildStateSuccess, nil)
+}
+
+func (s *Server) OnBuildFailed(err error) {
+	s.publishBuildState(buildStateFailure, err)
 }
 
 // Post sends diagnostics to the client.
@@ -180,6 +192,33 @@ func (s *Server) publishDiagnostics(uri protocol.DocumentUri, diagnostics []prot
 		URI:         uri,
 		Diagnostics: diagnostics,
 	})
+}
+
+type buildState string
+
+const (
+	buildStateBuilding buildState = "building"
+	buildStateSuccess  buildState = "success"
+	buildStateFailure  buildState = "failure"
+)
+
+type buildStateMessage struct {
+	State buildState `json:"state"`
+	Err   string     `json:"error,omitempty"`
+}
+
+func (s *Server) publishBuildState(state buildState, err error) {
+	msg := buildStateMessage{State: state}
+	if err != nil {
+		msg.Err = err.Error()
+	}
+
+	s.logger.Debugf("Publishing build state: %s\n", msg)
+	if s.glspContext == nil {
+		return
+	}
+
+	go s.glspContext.Notify("ftl/buildState", msg)
 }
 
 func (s *Server) initialize() protocol.InitializeFunc {
