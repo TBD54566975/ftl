@@ -66,8 +66,6 @@ export const activate = async (context: ExtensionContext) => {
     showCommands,
     showLogsCommand
   )
-
-  outputChannel.show()
 }
 
 export const deactivate = async () => client.stop()
