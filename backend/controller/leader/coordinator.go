@@ -102,7 +102,10 @@ func (c *Coordinator[P]) Get() (leaderOrFollower P, err error) {
 		// became leader
 		l, err := c.leaderFactory(leaderCtx)
 		if err != nil {
-			lease.Release()
+			err := lease.Release()
+			if err != nil {
+				logger.Warnf("could not release lease after failing to create leader for %s: %s", c.key, err)
+			}
 			return leaderOrFollower, fmt.Errorf("could not create leader for %s: %w", c.key, err)
 		}
 		c.leader = optional.Some(leader[P]{
