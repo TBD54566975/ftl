@@ -61,7 +61,7 @@ export class FTLClient {
     )
     context.subscriptions.push(this.client)
 
-    let buildStatus = this.client.onNotification("ftl/buildState", (data) => {
+    const buildStatus = this.client.onNotification('ftl/buildState', (data) => {
       console.log('Build status', data)
 
       if (data == 'building') {
@@ -82,8 +82,6 @@ export class FTLClient {
       this.outputChannel.appendLine('Client started')
       console.log(`${this.clientName} started`)
       FTLStatus.buildOK(this.statusBarItem)
-
-
     } catch (error) {
       console.error(`Error starting ${this.clientName}: ${error}`)
       FTLStatus.ftlError(this.statusBarItem, `Error starting ${this.clientName}: ${error}`)
