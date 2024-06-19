@@ -140,7 +140,10 @@ func checkAuth(ctx context.Context, logger *log.Logger, endpoint *url.URL, creds
 	}
 	defer resp.Body.Close() //nolint:gosec
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response body: %w", err)
+		}
 		logger.Tracef("Endpoint returned %d for authenticated request", resp.StatusCode)
 		logger.Tracef("Response headers: %s", resp.Header)
 		logger.Tracef("Response body: %s", body)

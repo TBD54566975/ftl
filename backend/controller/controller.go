@@ -106,7 +106,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	if config.NoConsole {
 		consoleHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotImplemented)
-			_, _ = w.Write([]byte("Console not installed."))
+			_, _ = w.Write([]byte("Console not installed.")) //nolint:errcheck
 		})
 	} else {
 		consoleHandler, err = frontend.Server(ctx, config.ContentTime, config.Bind, config.ConsoleURL)
@@ -1165,7 +1165,9 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 		lock.Unlock()
 	}
 
-	_ = wg.Wait()
+	if err := wg.Wait(); err != nil {
+		return 0, fmt.Errorf("failed to reconcile deployments: %w", err)
+	}
 	return time.Second, nil
 }
 
@@ -1543,7 +1545,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 
 func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.DeploymentKey) *log.Logger {
 	attrs := map[string]string{"deployment": deploymentKey.String()}
-	if requestKey, _ := rpc.RequestKeyFromContext(ctx); requestKey.Ok() {
+	if requestKey, _ := rpc.RequestKeyFromContext(ctx); requestKey.Ok() { //nolint:errcheck // best effort?
 		attrs["request"] = requestKey.MustGet().String()
 	}
 

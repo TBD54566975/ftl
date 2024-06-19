@@ -33,7 +33,10 @@ func ZipRelativeToCaller(relativePath string) *zip.Reader {
 	if err != nil {
 		panic(err)
 	}
-	_, _ = w.Seek(0, 0)
+	_, err = w.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
 	zr, err := zip.NewReader(w, info.Size())
 	if err != nil {
 		panic(err)

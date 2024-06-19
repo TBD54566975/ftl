@@ -205,7 +205,7 @@ func newControllers(ctx context.Context, count int, dal DAL, clockFactory func()
 					Key: ctrl.key,
 				}
 			}))
-			_, _ = s.syncJobs(ctx)
+			_, _ = s.syncJobs(ctx) //nolint:errcheck
 		}()
 	}
 

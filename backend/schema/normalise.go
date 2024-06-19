@@ -7,7 +7,7 @@ import (
 // Normalise clones and normalises (zeroes) positional information in schema Nodes.
 func Normalise[T Node](n T) T {
 	ni := reflect.DeepCopy(n)
-	_ = Visit(ni, func(n Node, next func() error) error {
+	_ = Visit(ni, func(n Node, next func() error) error { //nolint:errcheck
 		switch n := n.(type) {
 		case *Bool:
 			n.Bool = false

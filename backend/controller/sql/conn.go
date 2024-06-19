@@ -2,6 +2,7 @@ package sql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -86,7 +87,7 @@ func (t *Tx) Rollback(ctx context.Context) error {
 //	}
 func (t *Tx) CommitOrRollback(ctx context.Context, err *error) {
 	if *err != nil {
-		_ = t.Rollback(ctx)
+		*err = errors.Join(*err, t.Rollback(ctx))
 	} else {
 		*err = t.Commit(ctx)
 	}

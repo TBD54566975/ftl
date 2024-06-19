@@ -95,8 +95,8 @@ func generateStruct(t reflect.Type, messages map[string]string) {
 		if aid == "-" || bid == "-" {
 			return strings.Compare(aid, bid)
 		}
-		an, _ := strconv.Atoi(aid)
-		bn, _ := strconv.Atoi(bid)
+		an, _ := strconv.Atoi(aid) //nolint:errcheck // 0 is fine
+		bn, _ := strconv.Atoi(bid) //nolint:errcheck // 0 is fine
 		return an - bn
 	})
 	// Filter out fields with protobuf tag "-"

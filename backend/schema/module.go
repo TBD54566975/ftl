@@ -190,7 +190,7 @@ func (m *Module) Data() []*Data {
 // Imports returns the modules imported by this module.
 func (m *Module) Imports() []string {
 	imports := map[string]bool{}
-	_ = Visit(m, func(n Node, next func() error) error {
+	_ = Visit(m, func(n Node, next func() error) error { //nolint:errcheck
 		switch n := n.(type) {
 		case *Ref:
 			if n.Module != "" && n.Module != m.Name {

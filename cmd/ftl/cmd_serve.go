@@ -53,8 +53,7 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 	if s.Background {
 		if s.Stop {
 			// allow usage of --background and --stop together to "restart" the background process
-			// ignore error here if the process is not running
-			_ = KillBackgroundServe(logger)
+			_ = KillBackgroundServe(logger) //nolint:errcheck // ignore error here if the process is not running
 		}
 
 		if err := runInBackground(logger); err != nil {
@@ -141,7 +140,9 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 }
 
 func runInBackground(logger *log.Logger) error {
-	if running, _ := isServeRunning(logger); running {
+	if running, err := isServeRunning(logger); err != nil {
+		return fmt.Errorf("failed to check if FTL is running: %w", err)
+	} else if running {
 		logger.Warnf(ftlRunningErrorMsg)
 		return nil
 	}
@@ -162,7 +163,10 @@ func runInBackground(logger *log.Logger) error {
 		return fmt.Errorf("failed to start background process: %w", err)
 	}
 
-	pidFilePath, _ := pidFilePath()
+	pidFilePath, err := pidFilePath()
+	if err != nil {
+		return fmt.Errorf("failed to get pid file path: %w", err)
+	}
 	if err := os.MkdirAll(filepath.Dir(pidFilePath), 0750); err != nil {
 		return fmt.Errorf("failed to create directory for pid file: %w", err)
 	}

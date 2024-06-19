@@ -22,7 +22,7 @@ func OpenForTesting(ctx context.Context, t testing.TB) *pgxpool.Pool {
 	lockPath := filepath.Join(os.TempDir(), "ftl-db-test.lock")
 	release, err := flock.Acquire(ctx, lockPath, 10*time.Second)
 	assert.NoError(t, err)
-	t.Cleanup(func() { _ = release() })
+	t.Cleanup(func() { _ = release() }) //nolint:errcheck
 
 	testDSN := "postgres://localhost:15432/ftl-test?user=postgres&password=secret&sslmode=disable"
 	conn, err := databasetesting.CreateForDevel(ctx, testDSN, true)

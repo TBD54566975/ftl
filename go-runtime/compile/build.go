@@ -262,7 +262,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"imports": func(m *schema.Module) map[string]string {
 		imports := map[string]string{}
-		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error {
+		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error { //nolint:errcheck
 			switch n := n.(type) {
 			case *schema.Ref:
 				if n.Module == "" || n.Module == m.Name {
@@ -273,7 +273,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 				for _, tp := range n.TypeParameters {
 					tpRef, err := schema.ParseRef(tp.String())
 					if err != nil {
-						return err
+						panic(err)
 					}
 					if tpRef.Module != "" && tpRef.Module != m.Name {
 						imports[path.Join("ftl", tpRef.Module)] = "ftl" + tpRef.Module
@@ -657,7 +657,7 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 		return
 	}
 
-	_ = schema.Visit(d, func(n schema.Node, next func() error) error {
+	_ = schema.Visit(d, func(n schema.Node, next func() error) error { //nolint:errcheck
 		ref, ok := n.(*schema.Ref)
 		if !ok {
 			return next()

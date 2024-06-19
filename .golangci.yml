@@ -85,6 +85,8 @@ linters-settings:
   gocritic:
     disabled-checks:
       - ifElseChain
+  errcheck:
+    check-blank: true
   depguard:
     rules:
       main:

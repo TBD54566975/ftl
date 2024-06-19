@@ -1551,7 +1551,7 @@ func (p *parseContext) getDeclForTypeName(name string) optional.Option[schema.De
 }
 
 func (p *parseContext) markAsExported(node schema.Node) {
-	_ = schema.Visit(node, func(n schema.Node, next func() error) error {
+	_ = schema.Visit(node, func(n schema.Node, next func() error) error { //nolint:errcheck
 		if decl, ok := n.(schema.Decl); ok {
 			switch decl := decl.(type) {
 			case *schema.Enum:

@@ -149,7 +149,7 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 		return
 	}
 
-	_ = schema.Visit(d, func(n schema.Node, next func() error) error {
+	_ = schema.Visit(d, func(n schema.Node, next func() error) error { //nolint:errcheck
 		ref, ok := n.(*schema.Ref)
 		if !ok {
 			return next()
@@ -183,7 +183,7 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 // surfacing errors all the way up the schema chain.
 func propagateTypeErrors(module *schema.Module, failedRefs map[schema.RefKey]types.Object) []*schema.Error {
 	var errs []*schema.Error
-	_ = schema.VisitWithParent(module, nil, func(n schema.Node, p schema.Node, next func() error) error {
+	_ = schema.VisitWithParent(module, nil, func(n schema.Node, p schema.Node, next func() error) error { //nolint:errcheck
 		if p == nil {
 			return next()
 		}

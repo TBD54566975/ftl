@@ -151,7 +151,7 @@ func Spawn[Client PingableClient](
 	defer func() {
 		if err != nil {
 			logger.Warnf("Plugin failed to start, terminating pid %d", cmd.Process.Pid)
-			_ = cmd.Kill(syscall.SIGTERM)
+			_ = cmd.Kill(syscall.SIGTERM) //nolint:errcheck // best effort
 		}
 	}()
 

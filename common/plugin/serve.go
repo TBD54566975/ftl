@@ -128,7 +128,7 @@ func Start[Impl any, Iface any, Config any](
 		sig := <-sigch
 		logger.Debugf("Terminated by signal %s", sig)
 		cancel()
-		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert
+		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert,errcheck // best effort
 		os.Exit(0)
 	}()
 

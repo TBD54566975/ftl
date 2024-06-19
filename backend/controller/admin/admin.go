@@ -56,7 +56,10 @@ func (s *AdminService) ConfigList(ctx context.Context, req *connect.Request[ftlv
 			if err != nil {
 				return nil, err
 			}
-			cv, _ = json.Marshal(value)
+			cv, err = json.Marshal(value)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal value for %s: %w", ref, err)
+			}
 		}
 
 		configs = append(configs, &ftlv1.ListConfigResponse_Config{
@@ -139,7 +142,10 @@ func (s *AdminService) SecretsList(ctx context.Context, req *connect.Request[ftl
 			if err != nil {
 				return nil, err
 			}
-			sv, _ = json.Marshal(value)
+			sv, err = json.Marshal(value)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal value for %s: %w", ref, err)
+			}
 		}
 		secrets = append(secrets, &ftlv1.ListSecretsResponse_Secret{
 			RefPath: ref,
