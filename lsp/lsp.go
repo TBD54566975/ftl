@@ -16,6 +16,7 @@ import (
 	"github.com/tliron/kutil/version"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/buildengine"
 	ftlErrors "github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -71,9 +72,10 @@ func (s *Server) Run() error {
 
 type errSet []*schema.Error
 
-// BuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
-func (s *Server) BuildStarted(dir string) {
-	dirURI := "file://" + dir
+// OnBuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
+// Also emit an FTL message to set the status.
+func (s *Server) OnBuildStarted(project buildengine.Project) {
+	dirURI := "file://" + project.Config().Dir
 
 	s.diagnostics.Range(func(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) bool {
 		if strings.HasPrefix(uri, dirURI) {
@@ -82,6 +84,16 @@ func (s *Server) BuildStarted(dir string) {
 		}
 		return true
 	})
+
+	s.publishBuildState(buildStateBuilding)
+}
+
+func (s *Server) OnBuildSuccess() {
+	s.publishBuildState(buildStateSuccess)
+}
+
+func (s *Server) OnBuildFailed(err error) {
+	s.publishBuildState(buildStateFailure)
 }
 
 // Post sends diagnostics to the client.
@@ -180,6 +192,23 @@ func (s *Server) publishDiagnostics(uri protocol.DocumentUri, diagnostics []prot
 		URI:         uri,
 		Diagnostics: diagnostics,
 	})
+}
+
+type buildState string
+
+const (
+	buildStateBuilding buildState = "building"
+	buildStateSuccess  buildState = "success"
+	buildStateFailure  buildState = "failure"
+)
+
+func (s *Server) publishBuildState(state buildState) {
+	s.logger.Debugf("Publishing build state: %s\n", state)
+	if s.glspContext == nil {
+		return
+	}
+
+	go s.glspContext.Notify("ftl/buildState", state)
 }
 
 func (s *Server) initialize() protocol.InitializeFunc {

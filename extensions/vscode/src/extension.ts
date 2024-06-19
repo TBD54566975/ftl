@@ -106,7 +106,7 @@ const promptStartClient = async (context: vscode.ExtensionContext) => {
   outputChannel.appendLine(`FTL configuration: ${JSON.stringify(configuration)}`)
   const automaticallyStartServer = configuration.get<string>('automaticallyStartServer')
 
-  FTLStatus.stopped(statusBarItem)
+  FTLStatus.ftlStopped(statusBarItem)
 
   if (automaticallyStartServer === 'always') {
     outputChannel.appendLine(`FTL development server automatically started`)
@@ -132,19 +132,19 @@ const promptStartClient = async (context: vscode.ExtensionContext) => {
         break
       case 'No':
         outputChannel.appendLine('FTL development server disabled')
-        FTLStatus.stopped(statusBarItem)
+        FTLStatus.ftlStopped(statusBarItem)
         break
       case 'Never':
         outputChannel.appendLine('FTL development server set to never auto start')
         configuration.update('automaticallyStartServer', 'never', vscode.ConfigurationTarget.Global)
-        FTLStatus.stopped(statusBarItem)
+        FTLStatus.ftlStopped(statusBarItem)
         break
     }
   })
 }
 
 const startClient = async (context: ExtensionContext) => {
-  FTLStatus.starting(statusBarItem)
+  FTLStatus.ftlStarting(statusBarItem)
 
   const ftlConfig = vscode.workspace.getConfiguration('ftl')
   const workspaceRootPath = await getProjectOrWorkspaceRoot()
@@ -155,7 +155,7 @@ const startClient = async (context: ExtensionContext) => {
 
   const ftlOK = await FTLPreflightCheck(resolvedFtlPath)
   if (!ftlOK) {
-    FTLStatus.stopped(statusBarItem)
+    FTLStatus.ftlStopped(statusBarItem)
     return
   }
 

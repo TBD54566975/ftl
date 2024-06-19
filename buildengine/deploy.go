@@ -105,7 +105,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 	return nil
 }
 
-func teminateModuleDeployment(ctx context.Context, client ftlv1connect.ControllerServiceClient, module string) error {
+func terminateModuleDeployment(ctx context.Context, client ftlv1connect.ControllerServiceClient, module string) error {
 	logger := log.FromContext(ctx).Scope(module)
 
 	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))

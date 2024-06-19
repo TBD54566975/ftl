@@ -7,7 +7,7 @@ import {
 import { FTLStatus } from './status'
 
 export class FTLClient {
-  private clientName = 'ftl languge server'
+  private clientName = 'ftl language server'
   private clientId = 'ftl'
 
   private statusBarItem: vscode.StatusBarItem
@@ -59,18 +59,34 @@ export class FTLClient {
       serverOptions,
       clientOptions
     )
-
     context.subscriptions.push(this.client)
+
+    let buildStatus = this.client.onNotification("ftl/buildState", (data) => {
+      console.log('Build status', data)
+
+      if (data == 'building') {
+        FTLStatus.buildRunning(this.statusBarItem)
+      } else if (data == 'success') {
+        FTLStatus.buildOK(this.statusBarItem)
+      } else if (data == 'failure') {
+        FTLStatus.buildError(this.statusBarItem, 'FTL project build failed')
+      } else {
+        FTLStatus.ftlError(this.statusBarItem, 'Unknown build status')
+      }
+    })
+    context.subscriptions.push(buildStatus)
 
     this.outputChannel.appendLine('Starting lsp client')
     try {
       await this.client.start()
       this.outputChannel.appendLine('Client started')
       console.log(`${this.clientName} started`)
-      FTLStatus.started(this.statusBarItem)
+      FTLStatus.buildOK(this.statusBarItem)
+
+
     } catch (error) {
       console.error(`Error starting ${this.clientName}: ${error}`)
-      FTLStatus.error(this.statusBarItem, `Error starting ${this.clientName}: ${error}`)
+      FTLStatus.ftlError(this.statusBarItem, `Error starting ${this.clientName}: ${error}`)
       this.outputChannel.appendLine(`Error starting ${this.clientName}: ${error}`)
     }
 
@@ -124,7 +140,7 @@ export class FTLClient {
         try {
           // Forcefully terminate if SIGTERM fails
           process.kill(serverProcess.pid, 'SIGKILL')
-          console.log('Server process terminiated with SIGKILL')
+          console.log('Server process terminated with SIGKILL')
         } catch (killError) {
           console.log('Failed to kill server process', killError)
         }
@@ -133,6 +149,6 @@ export class FTLClient {
       console.log('Server process was already killed')
     }
 
-    FTLStatus.stopped(this.statusBarItem)
+    FTLStatus.ftlStopped(this.statusBarItem)
   }
 }
