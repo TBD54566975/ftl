@@ -85,15 +85,15 @@ func (s *Server) OnBuildStarted(module buildengine.Module) {
 		return true
 	})
 
-	s.publishBuildState(buildStateBuilding)
+	s.publishBuildState(buildStateBuilding, nil)
 }
 
 func (s *Server) OnBuildSuccess() {
-	s.publishBuildState(buildStateSuccess)
+	s.publishBuildState(buildStateSuccess, nil)
 }
 
 func (s *Server) OnBuildFailed(err error) {
-	s.publishBuildState(buildStateFailure)
+	s.publishBuildState(buildStateFailure, err)
 }
 
 // Post sends diagnostics to the client.
@@ -202,13 +202,23 @@ const (
 	buildStateFailure  buildState = "failure"
 )
 
-func (s *Server) publishBuildState(state buildState) {
-	s.logger.Debugf("Publishing build state: %s\n", state)
+type buildStateMessage struct {
+	State buildState `json:"state"`
+	Err   string     `json:"error,omitempty"`
+}
+
+func (s *Server) publishBuildState(state buildState, err error) {
+	msg := buildStateMessage{State: state}
+	if err != nil {
+		msg.Err = err.Error()
+	}
+
+	s.logger.Debugf("Publishing build state: %s\n", msg)
 	if s.glspContext == nil {
 		return
 	}
 
-	go s.glspContext.Notify("ftl/buildState", state)
+	go s.glspContext.Notify("ftl/buildState", msg)
 }
 
 func (s *Server) initialize() protocol.InitializeFunc {

@@ -61,17 +61,18 @@ export class FTLClient {
     )
     context.subscriptions.push(this.client)
 
-    const buildStatus = this.client.onNotification('ftl/buildState', (data) => {
-      console.log('Build status', data)
+    const buildStatus = this.client.onNotification('ftl/buildState', (message) => {
+      console.log('Build status', message)
+      const state = message.state
 
-      if (data == 'building') {
+      if (state == 'building') {
         FTLStatus.buildRunning(this.statusBarItem)
-      } else if (data == 'success') {
+      } else if (state == 'success') {
         FTLStatus.buildOK(this.statusBarItem)
-      } else if (data == 'failure') {
-        FTLStatus.buildError(this.statusBarItem, 'FTL project build failed')
+      } else if (state == 'failure') {
+        FTLStatus.buildError(this.statusBarItem, message.error)
       } else {
-        FTLStatus.ftlError(this.statusBarItem, 'Unknown build status')
+        FTLStatus.ftlError(this.statusBarItem, 'Unknown build status from FTL LSP server')
       }
     })
     context.subscriptions.push(buildStatus)
