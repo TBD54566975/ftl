@@ -461,6 +461,7 @@ type Lease struct {
 	Key            leases.Key
 	CreatedAt      time.Time
 	ExpiresAt      time.Time
+	Metadata       []byte
 }
 
 type Module struct {

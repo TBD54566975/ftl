@@ -720,7 +720,7 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
 		}
 		if lease == nil {
-			lease, err = s.dal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration())
+			lease, _, err = s.dal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
 			if err != nil {
 				if errors.Is(err, leases.ErrConflict) {
 					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))

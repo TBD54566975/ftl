@@ -63,6 +63,7 @@ type Querier interface {
 	GetIdleRunners(ctx context.Context, labels []byte, limit int64) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
+	GetLeaseInfo(ctx context.Context, key leases.Key) (GetLeaseInfoRow, error)
 	GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay time.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
@@ -91,7 +92,7 @@ type Querier interface {
 	KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error)
 	ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
-	NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error)
+	NewLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata []byte) (uuid.UUID, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
 	RenewLease(ctx context.Context, ttl time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error)

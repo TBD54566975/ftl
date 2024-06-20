@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
@@ -38,16 +39,16 @@ func TestLease(t *testing.T) {
 	assert.NoError(t, err)
 
 	// TTL is too short, expect an error
-	_, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*1)
+	_, _, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*1, optional.None[any]())
 	assert.Error(t, err)
 
-	leasei, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5)
+	leasei, leaseCtx, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
 	assert.NoError(t, err)
 
 	lease := leasei.(*Lease) //nolint:forcetypeassert
 
 	// Try to acquire the same lease again, which should fail.
-	_, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5)
+	_, _, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
 	assert.IsError(t, err, ErrConflict)
 
 	time.Sleep(time.Second * 6)
@@ -58,6 +59,9 @@ func TestLease(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.False(t, leaseExists(t, conn, lease.idempotencyKey, lease.key))
+
+	time.Sleep(time.Second)
+	assert.Error(t, leaseCtx.Err(), "context should be cancelled after lease was released")
 }
 
 func TestExpireLeases(t *testing.T) {
@@ -69,7 +73,7 @@ func TestExpireLeases(t *testing.T) {
 	dal, err := New(ctx, conn)
 	assert.NoError(t, err)
 
-	leasei, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5)
+	leasei, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
 	assert.NoError(t, err)
 
 	lease := leasei.(*Lease) //nolint:forcetypeassert
@@ -93,7 +97,7 @@ func TestExpireLeases(t *testing.T) {
 
 	assert.False(t, leaseExists(t, conn, lease.idempotencyKey, lease.key))
 
-	leasei, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5)
+	leasei, _, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
 	assert.NoError(t, err)
 
 	err = leasei.Release()

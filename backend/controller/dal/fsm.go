@@ -97,7 +97,7 @@ type FSMInstance struct {
 //
 // The lease must be released by the caller.
 func (d *DAL) AcquireFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) (*FSMInstance, error) {
-	lease, err := d.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5)
+	lease, _, err := d.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire FSM lease: %w", err)
 	}

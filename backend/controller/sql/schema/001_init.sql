@@ -442,7 +442,8 @@ CREATE TABLE leases (
     idempotency_key UUID UNIQUE NOT NULL,
     key lease_key UNIQUE NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
-    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc')
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    metadata JSONB
 );
 
 CREATE INDEX leases_expires_at_idx ON leases (expires_at);

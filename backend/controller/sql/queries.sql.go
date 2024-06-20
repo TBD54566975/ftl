@@ -27,7 +27,7 @@ WITH async_call AS (
 ), lease AS (
   INSERT INTO leases (idempotency_key, key, expires_at)
   VALUES (gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + $1::interval)
-  RETURNING id, idempotency_key, key, created_at, expires_at
+  RETURNING id, idempotency_key, key, created_at, expires_at, metadata
 )
 UPDATE async_calls
 SET state = 'executing', lease_id = (SELECT id FROM lease)
@@ -1168,6 +1168,22 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIng
 	return items, nil
 }
 
+const getLeaseInfo = `-- name: GetLeaseInfo :one
+SELECT expires_at, metadata FROM leases WHERE key = $1::lease_key
+`
+
+type GetLeaseInfoRow struct {
+	ExpiresAt time.Time
+	Metadata  []byte
+}
+
+func (q *Queries) GetLeaseInfo(ctx context.Context, key leases.Key) (GetLeaseInfoRow, error) {
+	row := q.db.QueryRow(ctx, getLeaseInfo, key)
+	var i GetLeaseInfoRow
+	err := row.Scan(&i.ExpiresAt, &i.Metadata)
+	return i, err
+}
+
 const getModuleConfiguration = `-- name: GetModuleConfiguration :one
 SELECT value
 FROM module_configuration
@@ -1976,13 +1992,23 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 }
 
 const newLease = `-- name: NewLease :one
-INSERT INTO leases (idempotency_key, key, expires_at)
-VALUES (gen_random_uuid(), $1::lease_key, (NOW() AT TIME ZONE 'utc') + $2::interval)
+INSERT INTO leases (
+  idempotency_key,
+  key,
+  expires_at,
+  metadata
+)
+VALUES (
+  gen_random_uuid(),
+  $1::lease_key,
+  (NOW() AT TIME ZONE 'utc') + $2::interval,
+  $3::JSONB
+)
 RETURNING idempotency_key
 `
 
-func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl time.Duration) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, newLease, key, ttl)
+func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata []byte) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, newLease, key, ttl, metadata)
 	var idempotency_key uuid.UUID
 	err := row.Scan(&idempotency_key)
 	return idempotency_key, err
