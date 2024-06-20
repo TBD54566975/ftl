@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"connectrpc.com/connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/alecthomas/types/optional"
 )
 
 // asmFollower uses AdminService to get/set secrets from the leader
@@ -31,20 +29,9 @@ func (f *asmFollower) list(ctx context.Context) ([]Entry, error) {
 	}
 	entries := []Entry{}
 	for _, s := range resp.Msg.Secrets {
-		components := strings.Split(s.RefPath, ".")
-		var ref Ref
-		switch len(components) {
-		case 1:
-			ref = Ref{
-				Name: components[0],
-			}
-		case 2:
-			ref = Ref{
-				Module: optional.Some(components[0]),
-				Name:   components[1],
-			}
-		default:
-			return nil, fmt.Errorf("invalid ref path: %s", s.RefPath)
+		ref, err := ParseRef(s.RefPath)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ref %q: %w", s.RefPath, err)
 		}
 		entries = append(entries, Entry{
 			Ref:      ref,
