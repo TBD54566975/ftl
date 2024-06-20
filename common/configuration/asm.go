@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/benbjohnson/clock"
 
 	"github.com/TBD54566975/ftl/backend/controller/leader"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
@@ -38,8 +39,12 @@ var _ Resolver[Secrets] = &ASM{}
 var _ Provider[Secrets] = &ASM{}
 
 func NewASM(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser) *ASM {
+	return newASMForTesting(ctx, secretsClient, advertise, leaser, clock.New())
+}
+
+func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser, clock clock.Clock) *ASM {
 	leaderFactory := func(ctx context.Context) (asmClient, error) {
-		return newASMLeader(ctx, secretsClient), nil
+		return newASMLeader(ctx, secretsClient, clock), nil
 	}
 	followerFactory := func(ctx context.Context, url *url.URL) (client asmClient, err error) {
 		rpcClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, url.String(), log.Error)

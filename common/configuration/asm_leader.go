@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/atomic"
+	"github.com/benbjohnson/clock"
 	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/internal/log"
@@ -62,25 +63,25 @@ type asmLeader struct {
 
 var _ asmClient = &asmLeader{}
 
-func newASMLeader(ctx context.Context, client *secretsmanager.Client) *asmLeader {
+func newASMLeader(ctx context.Context, client *secretsmanager.Client, clock clock.Clock) *asmLeader {
 	l := &asmLeader{
 		client:  client,
 		secrets: xsync.NewMapOf[Ref, asmSecretValue](),
 		topic:   pubsub.New[updateASMSecretEvent](),
 	}
 	go func() {
-		l.watchForUpdates(ctx)
+		l.watchForUpdates(ctx, clock)
 	}()
 	return l
 }
 
-func (l *asmLeader) watchForUpdates(ctx context.Context) {
+func (l *asmLeader) watchForUpdates(ctx context.Context, clock clock.Clock) {
 	logger := log.FromContext(ctx)
 	events := make(chan updateASMSecretEvent, 64)
 	l.topic.Subscribe(events)
 	defer l.topic.Unsubscribe(events)
 
-	nextSync := time.Now()
+	nextSync := clock.Now()
 	backOff := syncInitialBackoff
 	for {
 		select {
@@ -90,8 +91,8 @@ func (l *asmLeader) watchForUpdates(ctx context.Context) {
 		case e := <-events:
 			l.processEvent(e)
 
-		case <-time.After(time.Until(nextSync)):
-			nextSync = time.Now().Add(syncInterval)
+		case <-clock.After(clock.Until(nextSync)):
+			nextSync = clock.Now().Add(syncInterval)
 
 			err := l.sync(ctx)
 			if err == nil {
@@ -100,9 +101,9 @@ func (l *asmLeader) watchForUpdates(ctx context.Context) {
 			}
 			// back off if we fail to sync
 			logger.Warnf("unable to sync ASM secrets: %v", err)
-			nextSync = time.Now().Add(backOff)
-			if nextSync.After(time.Now().Add(syncInterval)) {
-				nextSync = time.Now().Add(syncInterval)
+			nextSync = clock.Now().Add(backOff)
+			if nextSync.After(clock.Now().Add(syncInterval)) {
+				nextSync = clock.Now().Add(syncInterval)
 			} else {
 				backOff *= 2
 			}
