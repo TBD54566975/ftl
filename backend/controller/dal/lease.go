@@ -79,6 +79,8 @@ func (l *Lease) Release() error {
 // AcquireLease acquires a lease for the given key.
 //
 // Will return ErrConflict if the lease is already held by another controller.
+//
+// The returned context will be cancelled when the lease fails to renew.
 func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata optional.Option[any]) (leases.Lease, context.Context, error) {
 	if ttl < time.Second*5 {
 		return nil, nil, fmt.Errorf("lease TTL must be at least 5 seconds")
