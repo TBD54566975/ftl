@@ -461,6 +461,7 @@ type Lease struct {
 	Key            leases.Key
 	CreatedAt      time.Time
 	ExpiresAt      time.Time
+	Metadata       []byte
 }
 
 type Module struct {
@@ -528,12 +529,13 @@ type TopicSubscriber struct {
 }
 
 type TopicSubscription struct {
-	ID        int64
-	Key       model.SubscriptionKey
-	CreatedAt time.Time
-	TopicID   int64
-	ModuleID  int64
-	Name      string
-	Cursor    optional.Option[int64]
-	State     TopicSubscriptionState
+	ID           int64
+	Key          model.SubscriptionKey
+	CreatedAt    time.Time
+	TopicID      int64
+	ModuleID     int64
+	DeploymentID int64
+	Name         string
+	Cursor       optional.Option[int64]
+	State        TopicSubscriptionState
 }
