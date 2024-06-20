@@ -10,6 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/alecthomas/atomic"
 	"github.com/jpillora/backoff"
+	"golang.org/x/sync/errgroup"
 	"strings"
 	"sync"
 	"time"
@@ -176,9 +177,8 @@ func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBeha
 	return optional.None[VerbBehavior](), nil
 }
 
-type ModuleContextSink = func(ctx context.Context, moduleContext ModuleContext)
 type ModuleContextSupplier interface {
-	Subscribe(ctx context.Context, moduleName string, sink ModuleContextSink)
+	Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext))
 }
 
 type grpcModuleContextSupplier struct {
@@ -189,7 +189,7 @@ func NewModuleContextSupplier(client ftlv1connect.VerbServiceClient) ModuleConte
 	return ModuleContextSupplier(grpcModuleContextSupplier{client})
 }
 
-func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName string, sink ModuleContextSink) {
+func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext)) {
 	request := &ftlv1.ModuleContextRequest{Module: moduleName}
 	callback := func(_ context.Context, resp *ftlv1.ModuleContextResponse) error {
 		mc, err := FromProto(resp)
@@ -223,19 +223,21 @@ func NewDynamicContext(ctx context.Context, supplier ModuleContextSupplier, modu
 		})
 	})
 
-	// Establishing channel used to await first ModuleContext result from GetModuleContext's stream
-	moduleContextAvailable := make(chan struct{})
-	go func() {
-		defer close(moduleContextAvailable)
-		await.Wait()
-	}()
+	deadline, cancellation := context.WithTimeout(ctx, 5*time.Second)
+	g, _ := errgroup.WithContext(deadline)
+	defer cancellation()
 
-	select {
-	case <-moduleContextAvailable:
-		return result, nil
-	case <-time.After(5 * time.Second):
-		return nil, fmt.Errorf("time out waiting for first ModuleContext")
+	// wait for first ModuleContext to be made available (with the above timeout)
+	g.Go(func() error {
+		await.Wait()
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, fmt.Errorf("error waiting for first ModuleContext: %w", err)
 	}
+
+	return result, nil
 }
 
 // CurrentContext immediately returns the most recently updated ModuleContext

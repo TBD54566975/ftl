@@ -13,7 +13,7 @@ import (
 
 type manualContextSupplier struct {
 	initialCtx ModuleContext
-	sink       ModuleContextSink
+	sink       func(ctx context.Context, mCtx ModuleContext)
 }
 
 func TestGettingAndSettingFromContext(t *testing.T) {
@@ -28,13 +28,15 @@ func TestDynamicContextUpdate(t *testing.T) {
 	mc1 := NewBuilder("test").AddConfigs(map[string][]byte{"value": {0}}).Build()
 	mc2 := NewBuilder("test").AddConfigs(map[string][]byte{"value": {1}}).Build()
 	mcs := &manualContextSupplier{initialCtx: mc1}
-	dynamic, _ := NewDynamicContext(ctx, ModuleContextSupplier(mcs), "test")
+	dynamic, err := NewDynamicContext(ctx, ModuleContextSupplier(mcs), "test")
+	assert.NoError(t, err)
+	assert.NotEqual(t, nil, dynamic)
 	assert.Equal(t, mc1, dynamic.CurrentContext())
 	mcs.sink(ctx, mc2)
 	assert.Equal(t, mc2, dynamic.CurrentContext())
 }
 
-func (mcs *manualContextSupplier) Subscribe(ctx context.Context, _ string, sink ModuleContextSink) {
+func (mcs *manualContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx ModuleContext)) {
 	sink(ctx, mcs.initialCtx)
 	mcs.sink = sink
 }

@@ -11,12 +11,17 @@ type SingleContextSupplier struct {
 	moduleCtx modulecontext.ModuleContext
 }
 
+// MakeDynamic converts the specified ModuleContext to a DynamicModuleContext whose underlying
+// current context never updates.
 func MakeDynamic(ctx context.Context, m modulecontext.ModuleContext) *modulecontext.DynamicModuleContext {
 	supplier := modulecontext.ModuleContextSupplier(SingleContextSupplier{m})
-	result, _ := modulecontext.NewDynamicContext(ctx, supplier, "test")
+	result, err := modulecontext.NewDynamicContext(ctx, supplier, "test")
+	if err != nil {
+		panic(err)
+	}
 	return result
 }
 
-func (smc SingleContextSupplier) Subscribe(ctx context.Context, _ string, sink modulecontext.ModuleContextSink) {
+func (smc SingleContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx modulecontext.ModuleContext)) {
 	sink(ctx, smc.moduleCtx)
 }
