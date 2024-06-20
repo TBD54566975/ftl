@@ -13,6 +13,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -30,7 +31,7 @@ func Handle(
 	logger.Debugf("%s %s", r.Method, r.URL.Path)
 	route, err := GetIngressRoute(routes, r.Method, r.URL.Path)
 	if err != nil {
-		if errors.Is(err, dal.ErrNotFound) {
+		if errors.Is(err, dalerrs.ErrNotFound) {
 			http.NotFound(w, r)
 			return
 		}

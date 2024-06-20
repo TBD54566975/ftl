@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/types/optional"
 )
@@ -132,7 +132,7 @@ func (c *Coordinator[P]) Get() (leaderOrFollower P, err error) {
 		logger.Tracef("new leader for %s: %s", c.key, c.advertise)
 		return l, nil
 	}
-	if !errors.Is(leaseErr, dal.ErrConflict) {
+	if !errors.Is(leaseErr, dalerrs.ErrConflict) {
 		return leaderOrFollower, fmt.Errorf("could not acquire lease for %s: %w", c.key, leaseErr)
 	}
 	// lease already held
@@ -155,7 +155,7 @@ func (c *Coordinator[P]) createFollower() (out P, err error) {
 	var urlString string
 	expiry, err := c.leaser.GetLeaseInfo(c.ctx, c.key, &urlString)
 	if err != nil {
-		if errors.Is(err, dal.ErrNotFound) {
+		if errors.Is(err, dalerrs.ErrNotFound) {
 			return out, fmt.Errorf("could not acquire or find lease for %s", c.key)
 		}
 		return out, fmt.Errorf("could not get lease for %s: %w", c.key, err)

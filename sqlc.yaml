@@ -1,12 +1,13 @@
 version: "2"
 sql:
-  - engine: "postgresql"
+  - &daldir
+    engine: "postgresql"
     queries: "backend/controller/sql/queries.sql"
     schema: "backend/controller/sql/schema"
     database:
       uri: postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret
     gen:
-      go:
+      go: &gengo
         package: "sql"
         sql_package: "pgx/v5"
         out: "backend/controller/sql"
@@ -137,6 +138,12 @@ sql:
       - sqlc/db-prepare
       # - postgresql-query-too-costly
       - postgresql-no-seq-scan
+  - <<: *daldir
+    queries: "common/configuration/sql/queries.sql"
+    gen:
+      go:
+        <<: *gengo
+        out: "common/configuration/sql"
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"

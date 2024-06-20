@@ -10,6 +10,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -20,14 +21,14 @@ func TestSendFSMEvent(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = dal.AcquireAsyncCall(ctx)
-	assert.IsError(t, err, ErrNotFound)
+	assert.IsError(t, err, dalerrs.ErrNotFound)
 
 	ref := schema.RefKey{Module: "module", Name: "verb"}
 	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`), schema.RetryParams{})
 	assert.NoError(t, err)
 
 	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`), schema.RetryParams{})
-	assert.IsError(t, err, ErrConflict)
+	assert.IsError(t, err, dalerrs.ErrConflict)
 	assert.EqualError(t, err, "transition already executing: conflict")
 
 	call, err := dal.AcquireAsyncCall(ctx)
