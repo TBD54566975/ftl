@@ -1,7 +1,7 @@
 // Package leader provides a way to coordinate a single leader and multiple followers.
 //
 // Coordinator uses factory functions for leaders and followers, creating each as needed.
-// Leader and followers conform to the same protocol so other components can interact with them in the same way.
+// Leader and followers conform to the same protocol, abstracting away the difference to callers.
 // Each coordinator has a url to advertise the leader to other coordinators if it generates one.
 //
 // A leader is created when a lease can be acquired in the database.
