@@ -65,6 +65,7 @@ type Listener interface {
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
+	projectRoot      string
 	moduleDirs       []string
 	watcher          *Watcher
 	controllerSchema *xsync.MapOf[string, *schema.Module]
@@ -97,10 +98,11 @@ func WithListener(listener Listener) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
+		projectRoot:      projectRoot,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
 		watcher:          NewWatcher(),
@@ -566,6 +568,16 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 	}
 	errCh := make(chan error, 1024)
 	for _, group := range topology {
+		groupSchemas := map[string]*schema.Module{}
+		err := e.gatherGroupSchemas(builtModules, group, groupSchemas)
+		if err != nil {
+			return err
+		}
+		err = GenerateStubs(ctx, e.projectRoot, maps.Values(groupSchemas))
+		if err != nil {
+			return err
+		}
+
 		// Collect schemas to be inserted into "built" map for subsequent groups.
 		schemas := make(chan *schema.Module, len(group))
 
@@ -664,7 +676,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if e.listener != nil {
 		e.listener.OnBuildStarted(meta.module)
 	}
-	err := Build(ctx, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir))
+	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir))
 	if err != nil {
 		return err
 	}
@@ -674,6 +686,28 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		return fmt.Errorf("could not load schema for module %q: %w", config.Module, err)
 	}
 	schemas <- moduleSchema
+	return nil
+}
+
+// Construct a combined schema for a group of modules and their transitive dependencies.
+func (e *Engine) gatherGroupSchemas(
+	moduleSchemas map[string]*schema.Module,
+	group []string,
+	out map[string]*schema.Module,
+) error {
+	for _, module := range group {
+		if module == "builtin" {
+			continue // Skip the builtin module
+		}
+
+		meta, ok := e.moduleMetas.Load(module)
+		if !ok {
+			return fmt.Errorf("Module %q not found", module)
+		}
+		if err := e.gatherSchemas(moduleSchemas, meta.module, out); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
