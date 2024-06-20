@@ -25,8 +25,7 @@ type Lease struct {
 	ttl            time.Duration
 	errch          chan error
 	release        chan bool
-	cancelCtx      context.CancelFunc // Cancels context created for lease owner.
-	leak           bool               // For testing.
+	leak           bool // For testing.
 }
 
 func (l *Lease) String() string {
@@ -34,7 +33,7 @@ func (l *Lease) String() string {
 }
 
 // Periodically renew the lease until it is released.
-func (l *Lease) renew(ctx context.Context) {
+func (l *Lease) renew(ctx context.Context, cancelCtx context.CancelFunc) {
 	defer close(l.errch)
 	leaseRenewalInterval := l.ttl / 2
 	logger := log.FromContext(ctx).Scope("lease:" + l.key.String())
@@ -55,7 +54,7 @@ func (l *Lease) renew(ctx context.Context) {
 					logger.Errorf(err, "Failed to renew lease %s", l.key)
 				}
 				l.errch <- err
-				l.cancelCtx()
+				cancelCtx()
 				return
 			}
 
@@ -66,7 +65,7 @@ func (l *Lease) renew(ctx context.Context) {
 			logger.Debugf("Releasing lease")
 			_, err := l.db.ReleaseLease(ctx, l.idempotencyKey, l.key)
 			l.errch <- translatePGError(err)
-			l.cancelCtx()
+			cancelCtx()
 			return
 		}
 	}
@@ -109,9 +108,8 @@ func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.
 		ttl:            ttl,
 		release:        make(chan bool),
 		errch:          make(chan error, 1),
-		cancelCtx:      cancelCtx,
 	}
-	go lease.renew(ctx)
+	go lease.renew(ctx, cancelCtx)
 	return lease, leaseCtx
 }
 
