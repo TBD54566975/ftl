@@ -148,4 +148,4 @@ docs:
 
 # Generate LSP hover help text
 lsp-generate:
-  go run ./cmd/ftl-lsp-gen
+  @mk lsp/hoveritems.go : lsp docs/content -- "scripts/ftl-gen-lsp"
