@@ -107,7 +107,10 @@ func (s *Server) post(err error) {
 			continue
 		}
 		var ce *schema.Error
-		if errors.As(e, &ce) {
+		if errors.Is(e, buildengine.CompilerBuildError{}) {
+			// CompilerBuildErrors have emitted errors beforehand so don't alert the user again.
+			continue
+		} else if errors.As(e, &ce) {
 			filename := ce.Pos.Filename
 			if _, exists := errByFilename[filename]; !exists {
 				errByFilename[filename] = errSet{}
