@@ -100,7 +100,7 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 }
 
 func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) (*Lease, context.Context) {
-	leaseCtx, cancelCtx := context.WithCancel(ctx)
+	ctx, cancelCtx := context.WithCancel(ctx)
 	lease := &Lease{
 		idempotencyKey: idempotencyKey,
 		key:            key,
@@ -110,7 +110,7 @@ func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.
 		errch:          make(chan error, 1),
 	}
 	go lease.renew(ctx, cancelCtx)
-	return lease, leaseCtx
+	return lease, ctx
 }
 
 // GetLeaseInfo returns the metadata and expiry time for the lease with the given key.
