@@ -8,17 +8,6 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 )
 
-//go:embed markdown/hover/verb.md
-var verbHoverContent string
-
-//go:embed markdown/hover/enum.md
-var enumHoverContent string
-
-var hoverMap = map[string]string{
-	"//ftl:verb": verbHoverContent,
-	"//ftl:enum": enumHoverContent,
-}
-
 func (s *Server) textDocumentHover() protocol.TextDocumentHoverFunc {
 	return func(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
 		uri := params.TextDocument.URI

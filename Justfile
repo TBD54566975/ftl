@@ -38,7 +38,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips
+build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips lsp-generate
   @just build ftl ftl-controller ftl-runner ftl-initdb
 
 # Run "go generate" on all packages
@@ -145,3 +145,7 @@ lint-backend:
 docs:
   git submodule update --init --recursive
   cd docs && zola serve
+
+# Generate LSP hover help text
+lsp-generate:
+  @mk lsp/hoveritems.go : lsp docs/content -- "scripts/ftl-gen-lsp"
