@@ -1,3 +1,15 @@
+// Package leader provides a way to coordinate a single leader and multiple followers.
+//
+// Coordinator uses factory functions for leaders and followers, creating each as needed.
+// Leader and followers conform to the same protocol so other components can interact with them in the same way.
+// Each coordinator has a url to advertise the leader to other coordinators if it generates one.
+//
+// A leader is created when a lease can be acquired in the database.
+// Leaders last as long as the lease can be successfully renewed. Leaders should react to the context being cancelled to know
+// when they are no longer leading.
+//
+// A follower is created with with the url of the leader. Followers last as long as the url for the leader has not changed.
+
 package leader
 
 import (
@@ -36,7 +48,9 @@ type follower[P any] struct {
 }
 
 // Coordinator assigns a single leader for the rest to follow.
-// It uses a lease to ensure that only one leader is active at a time.
+//
+// P is the protocol that the leader and followers must implement. Callers of Get() will receive a P,
+// abstracting away whether they are interacting with a leader or a follower.
 type Coordinator[P any] struct {
 	// ctx is passed into the follower factory and is the parent context of leader's lease context
 	// it is captured at the time of Coordinator creation as the context when getting may be short lived
