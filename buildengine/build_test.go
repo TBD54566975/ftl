@@ -47,7 +47,14 @@ func testBuild(
 	assert.NoError(t, err, "Error getting absolute path for module directory")
 	module, err := LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+
+	projectRootDir := t.TempDir()
+
+	// generate stubs to create the shared modules directory
+	err = GenerateStubs(ctx, projectRootDir, bctx.sch.Modules)
+	assert.NoError(t, err)
+
+	err = Build(ctx, projectRootDir, bctx.sch, module, &mockModifyFilesTransaction{})
 	if len(expectedBuildErrMsg) > 0 {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), expectedBuildErrMsg)
@@ -70,10 +77,16 @@ func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
 	abs, err := filepath.Abs(bctx.moduleDir)
 	assert.NoError(t, err, "Error getting absolute path for module directory")
 
+	projectRoot := t.TempDir()
+
+	// generate stubs to create the shared modules directory
+	err = GenerateStubs(ctx, projectRoot, bctx.sch.Modules)
+	assert.NoError(t, err)
+
 	// build to generate the build directory
 	module, err := LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	err = Build(ctx, projectRoot, bctx.sch, module, &mockModifyFilesTransaction{})
 	assert.NoError(t, err)
 
 	// create a temporary file in the build directory
@@ -85,7 +98,7 @@ func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
 	// build to clear the old build directory
 	module, err = LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	err = Build(ctx, projectRoot, bctx.sch, module, &mockModifyFilesTransaction{})
 	assert.NoError(t, err)
 
 	// ensure the temporary file was removed

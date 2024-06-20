@@ -71,11 +71,17 @@ func TestDeploy(t *testing.T) {
 	module, err := LoadModule(modulePath)
 	assert.NoError(t, err)
 
-	// Build first to make sure the files are there.
-	err = Build(ctx, sch, module, &mockModifyFilesTransaction{})
+	projectRootDir := t.TempDir()
+
+	// generate stubs to create the shared modules directory
+	err = GenerateStubs(ctx, projectRootDir, sch.Modules)
 	assert.NoError(t, err)
 
-	sum, err := sha256.SumFile(modulePath + "/_ftl/main")
+	// Build first to make sure the files are there.
+	err = Build(ctx, projectRootDir, sch, module, &mockModifyFilesTransaction{})
+	assert.NoError(t, err)
+
+	sum, err := sha256.SumFile(modulePath + "/.ftl/main")
 	assert.NoError(t, err)
 
 	client := &mockDeployClient{
