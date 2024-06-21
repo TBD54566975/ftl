@@ -34,7 +34,7 @@ type LeaderFactory[P any] func(ctx context.Context) (P, error)
 // FollowerFactory is a function that is called whenever we follow a new leader.
 //
 // If the new leader has the same url as the previous leader, the existing follower will be used.
-type FollowerFactory[P any] func(ctx context.Context, url *url.URL) (P, error)
+type FollowerFactory[P any] func(ctx context.Context, leaderURL *url.URL) (P, error)
 
 type leader[P any] struct {
 	value P
