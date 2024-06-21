@@ -216,7 +216,9 @@ func pidFilePath() (string, error) {
 
 func getPIDFromPath(path string) (int, error) {
 	pidBytes, err := os.ReadFile(path)
-	if err != nil {
+	if os.IsNotExist(err) {
+		return 0, nil
+	} else if err != nil {
 		return 0, err
 	}
 	pid, err := strconv.Atoi(string(pidBytes))
