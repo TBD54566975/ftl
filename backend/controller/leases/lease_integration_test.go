@@ -49,7 +49,7 @@ func TestLease(t *testing.T) {
 				Body: []byte("{}"),
 			}))
 			assert.NoError(t, err)
-			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "could not acquire lease") {
+			if resp.Msg.GetError() == nil || !strings.Contains(resp.Msg.GetError().Message, "lease already held") {
 				t.Fatalf("expected error but got: %#v", resp.Msg.GetError())
 			}
 			err = wg.Wait()

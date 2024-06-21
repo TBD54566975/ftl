@@ -50,7 +50,7 @@ func TestLease(t *testing.T) {
 
 	// Try to acquire the same lease again, which should fail.
 	_, _, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
-	assert.IsError(t, err, dalerrs.ErrConflict)
+	assert.IsError(t, err, leases.ErrConflict)
 
 	time.Sleep(time.Second * 6)
 
