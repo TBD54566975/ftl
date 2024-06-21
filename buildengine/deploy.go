@@ -141,11 +141,17 @@ func loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig, replica
 	if err != nil {
 		return nil, err
 	}
-	module.Runtime = &schemapb.ModuleRuntime{
-		CreateTime:  timestamppb.Now(),
-		Language:    config.Language,
-		MinReplicas: replicas,
+	runtime := module.Runtime
+	if runtime == nil {
+		runtime = &schemapb.ModuleRuntime{}
+		module.Runtime = runtime
 	}
+	module.Runtime = runtime
+	if runtime.CreateTime == nil {
+		runtime.CreateTime = timestamppb.Now()
+	}
+	runtime.Language = config.Language
+	runtime.MinReplicas = replicas
 	return module, nil
 }
 
