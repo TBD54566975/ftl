@@ -1615,10 +1615,3 @@ func isIotaEnum(node ast.Node) bool {
 		return false
 	}
 }
-
-func exportedName(name string) string {
-	if name == "" {
-		return ""
-	}
-	return string(unicode.ToUpper(rune(name[0]))) + name[1:]
-}

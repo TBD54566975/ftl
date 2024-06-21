@@ -12,13 +12,13 @@ import (
 
 // Headers used by the internal RPC system.
 const (
-	DirectRoutingHeader = "FTL-Direct"
+	DirectRoutingHeader = "Ftl-Direct"
 	// VerbHeader is the header used to pass the module.verb of the current request.
 	//
 	// One header will be present for each hop in the request path.
-	VerbHeader = "FTL-Verb"
+	VerbHeader = "Ftl-Verb"
 	// RequestIDHeader is the header used to pass the inbound request ID.
-	RequestIDHeader = "FTL-Request-ID"
+	RequestIDHeader = "Ftl-Request-Id"
 )
 
 func IsDirectRouted(header http.Header) bool {

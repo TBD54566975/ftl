@@ -283,14 +283,14 @@ func (v versionInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc 
 				log.FromContext(ctx).Warnf("%s", err)
 			}
 		} else {
-			resp.Header().Set("X-FTL-Version", ftl.Version)
+			resp.Header().Set("X-Ftl-Version", ftl.Version)
 		}
 		return resp, nil
 	}
 }
 
 func (v versionInterceptor) checkVersion(header http.Header) error {
-	version := header.Get("X-FTL-Version")
+	version := header.Get("X-Ftl-Version")
 	if semver.Compare(ftl.Version, version) < 0 {
 		return fmt.Errorf("FTL client (%s) is older than server (%s), consider upgrading: https://github.com/TBD54566975/ftl/releases", ftl.Version, version)
 	}

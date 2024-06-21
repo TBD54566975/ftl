@@ -231,7 +231,6 @@ func Parse(text string) (Pattern, error) {
 
 // A helper struct to build up a cron pattern with a short syntax.
 type shortState struct {
-	position    int
 	seenNonZero bool
 	components  []Component
 	err         error

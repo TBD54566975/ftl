@@ -598,8 +598,12 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, reqOrResp string, r Type) (fieldType Type, body Symbol, merr []error) {
 	rref, _ := r.(*Ref)
 	resp, sym := ResolveTypeAs[*Data](scopes, r)
-	m, _ := sym.Module.Get()
-	if sym == nil || m == nil || m.Name != "builtin" || resp.Name != "Http"+strings.Title(reqOrResp) {
+	invalid := sym == nil
+	if !invalid {
+		m, _ := sym.Module.Get()
+		invalid = m == nil || m.Name != "builtin" || resp.Name != "Http"+strings.Title(reqOrResp)
+	}
+	if invalid {
 		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpRequest", n.Name, reqOrResp, r))
 		return
 	}
