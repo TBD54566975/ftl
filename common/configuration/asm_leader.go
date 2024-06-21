@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alecthomas/atomic"
 	"github.com/benbjohnson/clock"
 	"github.com/puzpuzpuz/xsync/v3"
 
@@ -47,7 +46,7 @@ type asmLeader struct {
 	client *secretsmanager.Client
 
 	// indicates if the initial sync with ASM has finished
-	loaded atomic.Value[bool]
+	loaded chan bool
 
 	// secrets is a map of secrets that have been loaded from ASM.
 	// optional is nil when not loaded yet
@@ -68,6 +67,7 @@ func newASMLeader(ctx context.Context, client *secretsmanager.Client, clock cloc
 		client:  client,
 		secrets: xsync.NewMapOf[Ref, asmSecretValue](),
 		topic:   pubsub.New[updateASMSecretEvent](),
+		loaded:  make(chan bool),
 	}
 	go func() {
 		l.watchForUpdates(ctx, clock)
@@ -83,13 +83,16 @@ func (l *asmLeader) watchForUpdates(ctx context.Context, clock clock.Clock) {
 
 	nextSync := clock.Now()
 	backOff := syncInitialBackoff
+	loaded := false
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
 		case e := <-events:
-			l.processEvent(e)
+			if loaded {
+				l.processEvent(e)
+			}
 
 		case <-clock.After(clock.Until(nextSync)):
 			nextSync = clock.Now().Add(syncInterval)
@@ -97,6 +100,10 @@ func (l *asmLeader) watchForUpdates(ctx context.Context, clock clock.Clock) {
 			err := l.sync(ctx)
 			if err == nil {
 				backOff = syncInitialBackoff
+				if !loaded {
+					loaded = true
+					close(l.loaded)
+				}
 				continue
 			}
 			// back off if we fail to sync
@@ -195,8 +202,6 @@ func (l *asmLeader) sync(ctx context.Context) error {
 			delete(refsToLoad, ref)
 		}
 	}
-
-	l.loaded.Store(true)
 	return nil
 }
 
@@ -205,10 +210,6 @@ func (l *asmLeader) processEvent(e updateASMSecretEvent) {
 	// waitGroup updated so testing can wait for events to be processed
 	defer l.topicWaitGroup.Done()
 
-	if !l.loaded.Load() {
-		// cache not loaded, nothing to update
-		return
-	}
 	if data, ok := e.value.Get(); ok {
 		// updated value
 		l.secrets.Store(e.ref, asmSecretValue{
@@ -234,14 +235,12 @@ func (l *asmLeader) publish(event updateASMSecretEvent) {
 //
 // If secrets have not yet been synced, this will retry until they are, returning an error if it takes too long.
 func (l *asmLeader) waitForSecrets() error {
-	deadline := time.Now().Add(loadSecretsTimeout)
-	for deadline.After(time.Now()) {
-		if loaded := l.loaded.Load(); loaded {
-			return nil
-		}
-		time.Sleep(time.Millisecond * 100)
+	select {
+	case <-time.After(loadSecretsTimeout):
+		return errors.New("secrets not synced from ASM yet")
+	case <-l.loaded:
+		return nil
 	}
-	return errors.New("secrets not synced from ASM yet")
 }
 
 // list all secrets in the account.
