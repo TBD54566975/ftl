@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"os"
+	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/golang/protobuf/jsonpb"
+	jsonpb "google.golang.org/protobuf/encoding/protojson"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -30,7 +30,11 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 			deployment.Schema = nil
 		}
 	}
-	return (&jsonpb.Marshaler{
-		Indent: "  ",
-	}).Marshal(os.Stdout, status.Msg)
+	marshaler := jsonpb.MarshalOptions{Indent: "  "}
+	data, err := marshaler.Marshal(status.Msg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal status: %w", err)
+	}
+	fmt.Printf("%s\n", data)
+	return nil
 }

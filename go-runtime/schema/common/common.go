@@ -266,8 +266,6 @@ func GetTypeForNode(node ast.Node, info *types.Info) types.Type {
 		if obj := info.ObjectOf(n); obj != nil {
 			return obj.Type()
 		}
-	case ast.Expr:
-		return info.TypeOf(n)
 	case *ast.AssignStmt:
 		if len(n.Lhs) > 0 {
 			return info.TypeOf(n.Lhs[0])
@@ -296,6 +294,8 @@ func GetTypeForNode(node ast.Node, info *types.Info) types.Type {
 				return t
 			}
 		}
+	case ast.Expr:
+		return info.TypeOf(n)
 	}
 	return nil
 }

@@ -36,14 +36,3 @@ func Normalise[T Node](n T) T {
 	})
 	return ni //nolint:forcetypeassert
 }
-
-func normaliseSlice[T Node](in []T) []T {
-	if in == nil {
-		return nil
-	}
-	var out []T
-	for _, n := range in {
-		out = append(out, Normalise(n))
-	}
-	return out
-}

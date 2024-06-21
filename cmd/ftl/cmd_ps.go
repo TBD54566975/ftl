@@ -3,13 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/golang/protobuf/jsonpb"
 	"golang.org/x/exp/maps"
+	jsonpb "google.golang.org/protobuf/encoding/protojson"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -26,13 +25,13 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 		return err
 	}
 	if s.JSON {
-		marshaller := jsonpb.Marshaler{Indent: "  "}
+		marshaller := jsonpb.MarshalOptions{Indent: "  "}
 		for _, process := range status.Msg.Processes {
-			err = marshaller.Marshal(os.Stdout, process)
+			data, err := marshaller.Marshal(process)
 			if err != nil {
 				return err
 			}
-			fmt.Println()
+			fmt.Printf("%s\n", data)
 		}
 		return nil
 	}
@@ -65,19 +64,19 @@ func (s *psCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceCl
 					key = fmt.Sprintf("%s-%s", key, strings.ToLower(runner.Key[len(runner.Key)-5:]))
 					runnerKey = runner.Key
 					endpoint = runner.Endpoint
-					labels, err := (&jsonpb.Marshaler{}).MarshalToString(runner.Labels)
+					labels, err := jsonpb.Marshal(runner.Labels)
 					if err != nil {
 						return err
 					}
-					runnerLabels = labels
+					runnerLabels = string(labels)
 				}
 				args := []any{key, fmt.Sprintf("%d/%d", i+1, first.MinReplicas), "live", runnerKey, endpoint}
 				if s.Verbose > 1 {
-					labels, err := (&jsonpb.Marshaler{}).MarshalToString(first.Labels)
+					labels, err := jsonpb.Marshal(first.Labels)
 					if err != nil {
 						return err
 					}
-					args = append(args, labels, runnerLabels)
+					args = append(args, string(labels), runnerLabels)
 				}
 				fmt.Printf(format, args...)
 			}

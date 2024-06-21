@@ -77,13 +77,6 @@ func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	pass.ExportObjectFact(obj, fact)
 }
 
-// markSchemaDeclIncluded marks the given decl as included in the schema.
-func markSchemaDeclIncluded(pass *analysis.Pass, obj types.Object) {
-	for _, f := range GetFactsForObject[*ExtractedDecl](pass, obj) {
-		f.ShouldInclude = true
-	}
-}
-
 // MarkFailedExtraction marks the given object as having failed extraction.
 func MarkFailedExtraction(pass *analysis.Pass, obj types.Object) {
 	fact := newFact(pass)

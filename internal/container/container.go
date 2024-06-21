@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 
@@ -41,15 +42,15 @@ func DoesExist(ctx context.Context, name string) (bool, error) {
 }
 
 // Pull pulls the given image.
-func Pull(ctx context.Context, image string) error {
+func Pull(ctx context.Context, imageName string) error {
 	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
 	}
 
-	reader, err := cli.ImagePull(ctx, image, types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx, imageName, image.PullOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to pull %s image: %w", image, err)
+		return fmt.Errorf("failed to pull %s image: %w", imageName, err)
 	}
 	defer reader.Close()
 

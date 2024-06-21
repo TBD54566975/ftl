@@ -8,8 +8,6 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
-	"reflect"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -1623,46 +1621,6 @@ func (s *Service) getActiveSchema(ctx context.Context) (*schema.Schema, error) {
 			return d.Schema
 		}),
 	})
-}
-
-func runWithRetries(ctx context.Context, success, failure time.Duration, fn func(ctx context.Context) error) {
-	name := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
-	name = name[strings.LastIndex(name, ".")+1:]
-	name = strings.TrimSuffix(name, "-fm")
-
-	ctx = log.ContextWithLogger(ctx, log.FromContext(ctx).Scope(name))
-	failureRetry := backoff.Backoff{
-		Min:    failure,
-		Max:    failure * 2,
-		Jitter: true,
-		Factor: 2,
-	}
-	failed := false
-	logger := log.FromContext(ctx)
-	for {
-		err := fn(ctx)
-		if err != nil {
-			next := failureRetry.Duration()
-			logger.Errorf(err, "Failed, retrying in %s", next)
-			select {
-			case <-time.After(next):
-			case <-ctx.Done():
-				return
-			}
-		} else {
-			if failed {
-				logger.Debugf("Recovered")
-				failed = false
-			}
-			failureRetry.Reset()
-			logger.Tracef("Success, next run in %s", success)
-			select {
-			case <-time.After(success):
-			case <-ctx.Done():
-				return
-			}
-		}
-	}
 }
 
 func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {

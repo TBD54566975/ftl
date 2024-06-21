@@ -8,15 +8,14 @@ output:
 linters:
   enable-all: true
   disable:
-    - maligned
-    - megacheck
+    - mnd # So annoying
+    - execinquery
     - lll
     - typecheck # `go build` catches this, and it doesn't currently work with Go 1.11 modules
     - goimports # horrendously slow with go modules :(
     - dupl # has never been actually useful
     - gochecknoglobals
     - gochecknoinits
-    - interfacer # author deprecated it because it provides bad suggestions
     - funlen
     - whitespace
     - godox
@@ -25,22 +24,18 @@ linters:
     - gomnd
     - gocognit
     - gocyclo
-    - scopelint
     - godot
     - nestif
     - testpackage
-    - goerr113
     - gci
     - gofumpt
-    - exhaustivestruct
     - nlreturn
     - forbidigo
     - cyclop
     - paralleltest
-    - ifshort # so annoying
-    - golint
     - tagliatelle
     - gomoddirectives
+    - err113
     - varnamelen
     - ireturn
     - containedctx
@@ -48,14 +43,10 @@ linters:
     - contextcheck
     - nonamedreturns
     - exhaustruct
-    - nosnakecase
     - nosprintfhostport
     - nilerr
     - goconst
     - prealloc
-    - deadcode # doesn't support generics
-    - varcheck # doesn't support generics
-    - structcheck # doesn't support generics
     - rowserrcheck # doesn't support generics
     - wastedassign # doesn't support generics
     - goprintffuncname
@@ -143,3 +134,4 @@ issues:
     - "^dot-imports:"
     - "fmt.Errorf can be replaced with errors.New"
     - "fmt.Sprintf can be replaced with string concatenation"
+    - "strings.Title has been deprecated"
