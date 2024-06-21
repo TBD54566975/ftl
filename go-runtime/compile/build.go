@@ -53,12 +53,13 @@ type goVerb struct {
 }
 
 type mainModuleContext struct {
-	GoVersion    string
-	FTLVersion   string
-	Name         string
-	Verbs        []goVerb
-	Replacements []*modfile.Replace
-	SumTypes     []goSumType
+	GoVersion     string
+	FTLVersion    string
+	Name          string
+	Verbs         []goVerb
+	Replacements  []*modfile.Replace
+	SumTypes      []goSumType
+	LocalSumTypes []goSumType
 }
 
 type goSumType struct {
@@ -185,12 +186,13 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		goVerbs = append(goVerbs, goverb)
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
-		GoVersion:    goModVersion,
-		FTLVersion:   ftlVersion,
-		Name:         result.Module.Name,
-		Verbs:        goVerbs,
-		Replacements: replacements,
-		SumTypes:     getSumTypes(result.Module, sch, result.NativeNames),
+		GoVersion:     goModVersion,
+		FTLVersion:    ftlVersion,
+		Name:          result.Module.Name,
+		Verbs:         goVerbs,
+		Replacements:  replacements,
+		SumTypes:      getSumTypes(result.Module, sch, result.NativeNames),
+		LocalSumTypes: getLocalSumTypes(result.Module),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -551,6 +553,29 @@ func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error)
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}
 	return os.WriteFile(config.Abs().Errors, elBytes, 0600)
+}
+
+func getLocalSumTypes(module *schema.Module) []goSumType {
+	sumTypes := make(map[string]goSumType)
+	for _, d := range module.Decls {
+		if e, ok := d.(*schema.Enum); ok && !e.IsValueEnum() {
+			variants := make([]goSumTypeVariant, 0, len(e.Variants))
+			for _, v := range e.Variants {
+				variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+					Name: v.Name,
+				})
+			}
+			sumTypes[e.Name] = goSumType{
+				Discriminator: e.Name,
+				Variants:      variants,
+			}
+		}
+	}
+	out := gomaps.Values(sumTypes)
+	slices.SortFunc(out, func(a, b goSumType) int {
+		return strings.Compare(a.Discriminator, b.Discriminator)
+	})
+	return out
 }
 
 func getSumTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNames) []goSumType {

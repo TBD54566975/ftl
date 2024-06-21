@@ -49,3 +49,11 @@ func TestSchemaGenerate(t *testing.T) {
 		in.FileContains("build/schema-generate/test.txt", "olleh"),
 	)
 }
+
+func TestTypeRegistryUnitTest(t *testing.T) {
+	in.Run(t, "",
+		in.CopyModule("typeregistry"),
+		in.Deploy("typeregistry"),
+		in.ExecModuleTest("typeregistry"),
+	)
+}
