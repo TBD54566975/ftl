@@ -107,7 +107,7 @@ func (l *asmLeader) watchForUpdates(ctx context.Context, clock clock.Clock) {
 				continue
 			}
 			// back off if we fail to sync
-			logger.Warnf("unable to sync ASM secrets: %v", err)
+			logger.Warnf("Unable to sync ASM secrets: %v", err)
 			nextSync = clock.Now().Add(backOff)
 			if nextSync.After(clock.Now().Add(syncInterval)) {
 				nextSync = clock.Now().Add(syncInterval)
