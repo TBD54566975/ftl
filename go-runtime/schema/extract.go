@@ -174,6 +174,7 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 				t.Export = true
 			case *schema.Database, *schema.Config, *schema.FSM, *schema.Secret, *schema.Subscription:
 			}
+			updateTransitiveVisibility(decl, module)
 		}
 		return next()
 	})
