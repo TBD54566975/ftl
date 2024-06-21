@@ -40,25 +40,29 @@ func (f *FakeLeaser) AcquireLease(ctx context.Context, key Key, ttl time.Duratio
 }
 
 func (f *FakeLeaser) GetLeaseInfo(ctx context.Context, key Key, metadata any) (expiry time.Time, err error) {
-	if lease, ok := f.leases.Load(key.String()); ok {
-		if md, ok := lease.metadata.Get(); ok && metadata != nil {
-			// set metadata value
-			metaValue := reflect.ValueOf(metadata)
-			if metaValue.Kind() != reflect.Ptr || metaValue.IsNil() {
-				return time.Time{}, fmt.Errorf("metadata must be a non-nil pointer")
-			}
-			if !metaValue.Elem().CanSet() {
-				return time.Time{}, fmt.Errorf("cannot set metadata value")
-			}
-			mdValue := reflect.ValueOf(md)
-			if mdValue.Type() != metaValue.Elem().Type() {
-				return time.Time{}, fmt.Errorf("type mismatch between metadata and md")
-			}
-			metaValue.Elem().Set(mdValue)
-		}
-		return time.Now().Add(lease.ttl), nil
+	lease, ok := f.leases.Load(key.String())
+	if !ok {
+		return time.Time{}, fmt.Errorf("not found")
 	}
-	return time.Time{}, fmt.Errorf("not found")
+	expiry = time.Now().Add(lease.ttl)
+	md, ok := lease.metadata.Get()
+	if !ok || metadata == nil {
+		// no need to parse metadata
+		return
+	}
+	metaValue := reflect.ValueOf(metadata)
+	if metaValue.Kind() != reflect.Ptr || metaValue.IsNil() {
+		return time.Time{}, fmt.Errorf("metadata must be a non-nil pointer")
+	}
+	if !metaValue.Elem().CanSet() {
+		return time.Time{}, fmt.Errorf("cannot set metadata value")
+	}
+	mdValue := reflect.ValueOf(md)
+	if mdValue.Type() != metaValue.Elem().Type() {
+		return time.Time{}, fmt.Errorf("type mismatch between metadata and md")
+	}
+	metaValue.Elem().Set(mdValue)
+	return
 }
 
 type FakeLease struct {

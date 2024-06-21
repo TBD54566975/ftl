@@ -15,9 +15,9 @@ import (
 )
 
 func TestExistingLeaseForURL(t *testing.T) {
-	// Test that if the a lease exists with the current URL, neither a leader or follower is created
-	// This can occur when a leader fails to renew a lease, and we then try and coordinate while the db still has the lease active
-	// If we create a new follower then we can end up in an infinte loop with the follower calling the leader's service which is really a follower
+	// Test that if the a lease exists with the coordinator's URL but the coordinator does not have the lease, neither a leader or follower is created.
+	// This can occur when a leader fails to renew a lease, and we then try and coordinate while the db still has the lease active.
+	// If we create a new follower then we can end up in an infinte loop with the follower calling the leader's service which is really a follower.
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	key := leases.SystemKey("leader-test")
 	endpoint, err := url.Parse("http://localhost:1234")
