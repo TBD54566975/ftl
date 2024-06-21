@@ -36,18 +36,14 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
-		resp, err := verbServiceClient.GetModuleContext(ctx, connect.NewRequest(&ftlv1.ModuleContextRequest{
-			Module: moduleName,
-		}))
+		moduleContextSupplier := modulecontext.NewModuleContextSupplier(verbServiceClient)
+		dynamicCtx, err := modulecontext.NewDynamicContext(ctx, moduleContextSupplier, moduleName)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get config: %w", err)
 		}
-		moduleCtx, err := modulecontext.FromProto(resp.Msg)
-		if err != nil {
-			return nil, nil, err
-		}
-		ctx = moduleCtx.ApplyToContext(ctx)
-		ctx = internal.WithContext(ctx, internal.New(moduleCtx))
+
+		ctx = dynamicCtx.ApplyToContext(ctx)
+		ctx = internal.WithContext(ctx, internal.New(dynamicCtx))
 
 		err = observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
@@ -163,15 +159,15 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	}), nil
 }
 
-func (m *moduleServer) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("GetModuleContext not implemented"))
+func (m *moduleServer) GetModuleContext(_ context.Context, _ *connect.Request[ftlv1.ModuleContextRequest], _ *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, fmt.Errorf("GetModuleContext not implemented"))
 }
 
 func (m *moduleServer) AcquireLease(context.Context, *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, fmt.Errorf("AcquireLease not implemented"))
 }
 
-func (m *moduleServer) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+func (m *moduleServer) Ping(_ context.Context, _ *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 

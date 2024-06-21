@@ -683,27 +683,34 @@ nextModule:
 }
 
 // GetModuleContext retrieves config, secrets and DSNs for a module.
-func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest]) (*connect.Response[ftlv1.ModuleContextResponse], error) {
+func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest], resp *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
 	name := req.Msg.Module
+
+	// TODO migrate to a polling implementation that only emits responses when the configuration changes
 
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
 
 	configs, err := cm.MapForModule(ctx, name)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
 	}
 	secrets, err := sm.MapForModule(ctx, name)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 	}
 	databases, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
 	}
 
 	response := modulecontext.NewBuilder(name).AddConfigs(configs).AddSecrets(secrets).AddDatabases(databases).Build().ToProto()
-	return connect.NewResponse(response), nil
+
+	if err := resp.Send(response); err != nil {
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not send response: %w", err))
+	}
+
+	return nil
 }
 
 // AcquireLease acquires a lease on behalf of a module.

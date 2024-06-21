@@ -132,7 +132,7 @@ type VerbServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// Get configuration state for the module
-	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error)
+	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.ServerStreamForClient[v1.ModuleContextResponse], error)
 	// Acquire (and renew) a lease for a deployment.
 	//
 	// Returns ResourceExhausted if the lease is held.
@@ -205,8 +205,8 @@ func (c *verbServiceClient) Ping(ctx context.Context, req *connect.Request[v1.Pi
 }
 
 // GetModuleContext calls xyz.block.ftl.v1.VerbService.GetModuleContext.
-func (c *verbServiceClient) GetModuleContext(ctx context.Context, req *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error) {
-	return c.getModuleContext.CallUnary(ctx, req)
+func (c *verbServiceClient) GetModuleContext(ctx context.Context, req *connect.Request[v1.ModuleContextRequest]) (*connect.ServerStreamForClient[v1.ModuleContextResponse], error) {
+	return c.getModuleContext.CallServerStream(ctx, req)
 }
 
 // AcquireLease calls xyz.block.ftl.v1.VerbService.AcquireLease.
@@ -234,7 +234,7 @@ type VerbServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	// Get configuration state for the module
-	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error)
+	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest], *connect.ServerStream[v1.ModuleContextResponse]) error
 	// Acquire (and renew) a lease for a deployment.
 	//
 	// Returns ResourceExhausted if the lease is held.
@@ -259,7 +259,7 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
-	verbServiceGetModuleContextHandler := connect.NewUnaryHandler(
+	verbServiceGetModuleContextHandler := connect.NewServerStreamHandler(
 		VerbServiceGetModuleContextProcedure,
 		svc.GetModuleContext,
 		opts...,
@@ -311,8 +311,8 @@ func (UnimplementedVerbServiceHandler) Ping(context.Context, *connect.Request[v1
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.Ping is not implemented"))
 }
 
-func (UnimplementedVerbServiceHandler) GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.Response[v1.ModuleContextResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.GetModuleContext is not implemented"))
+func (UnimplementedVerbServiceHandler) GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest], *connect.ServerStream[v1.ModuleContextResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.GetModuleContext is not implemented"))
 }
 
 func (UnimplementedVerbServiceHandler) AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error {

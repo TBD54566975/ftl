@@ -28,27 +28,27 @@ type mapCacheEntry struct {
 
 // RealFTL is the real implementation of the [internal.FTL] interface using the Controller.
 type RealFTL struct {
-	mctx modulecontext.ModuleContext
+	dmctx *modulecontext.DynamicModuleContext
 	// Cache for Map() calls
 	mapped *xsync.MapOf[uintptr, mapCacheEntry]
 }
 
 // New creates a new [RealFTL]
-func New(mctx modulecontext.ModuleContext) *RealFTL {
+func New(dmctx *modulecontext.DynamicModuleContext) *RealFTL {
 	return &RealFTL{
-		mctx:   mctx,
+		dmctx:  dmctx,
 		mapped: xsync.NewMapOf[uintptr, mapCacheEntry](),
 	}
 }
 
 var _ FTL = &RealFTL{}
 
-func (r *RealFTL) GetConfig(ctx context.Context, name string, dest any) error {
-	return r.mctx.GetConfig(name, dest)
+func (r *RealFTL) GetConfig(_ context.Context, name string, dest any) error {
+	return r.dmctx.CurrentContext().GetConfig(name, dest)
 }
 
-func (r *RealFTL) GetSecret(ctx context.Context, name string, dest any) error {
-	return r.mctx.GetSecret(name, dest)
+func (r *RealFTL) GetSecret(_ context.Context, name string, dest any) error {
+	return r.dmctx.CurrentContext().GetSecret(name, dest)
 }
 
 func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) error {

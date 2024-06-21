@@ -35,7 +35,7 @@ export const VerbService = {
       name: "GetModuleContext",
       I: ModuleContextRequest,
       O: ModuleContextResponse,
-      kind: MethodKind.Unary,
+      kind: MethodKind.ServerStreaming,
     },
     /**
      * Acquire (and renew) a lease for a deployment.

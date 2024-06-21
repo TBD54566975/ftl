@@ -10,6 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	. "github.com/TBD54566975/ftl/testutils/modulecontext"
 )
 
 func TestConfig(t *testing.T) {
@@ -23,7 +24,8 @@ func TestConfig(t *testing.T) {
 	data, err := json.Marshal(C{"one", "two"})
 	assert.NoError(t, err)
 
-	ctx = internal.WithContext(ctx, internal.New(modulecontext.NewBuilder("test").AddConfigs(map[string][]byte{"test": data}).Build()))
+	moduleCtx := modulecontext.NewBuilder("test").AddConfigs(map[string][]byte{"test": data}).Build()
+	ctx = internal.WithContext(ctx, internal.New(MakeDynamic(ctx, moduleCtx)))
 
 	config := Config[C]("test")
 	assert.Equal(t, C{"one", "two"}, config.Get(ctx))

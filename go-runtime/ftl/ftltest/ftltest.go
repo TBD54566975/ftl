@@ -21,6 +21,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	mcu "github.com/TBD54566975/ftl/testutils/modulecontext"
 )
 
 type OptionsState struct {
@@ -51,7 +52,7 @@ func Context(options ...Option) context.Context {
 
 	builder := modulecontext.NewBuilder(name).AddDatabases(state.databases)
 	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newFakeLeaseClient())
-	return builder.Build().ApplyToContext(ctx)
+	return mcu.MakeDynamic(ctx, builder.Build()).ApplyToContext(ctx)
 }
 
 // WithDefaultProjectFile loads config and secrets from the default project

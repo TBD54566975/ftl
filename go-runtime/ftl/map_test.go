@@ -3,6 +3,7 @@ package ftl
 import (
 	"context"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/log"
 	"strconv"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	. "github.com/TBD54566975/ftl/testutils/modulecontext"
 )
 
 type intHandle int
@@ -17,7 +19,8 @@ type intHandle int
 func (s intHandle) Get(ctx context.Context) int { return int(s) }
 
 func TestMapPanic(t *testing.T) {
-	ctx := internal.WithContext(context.Background(), internal.New(modulecontext.Empty("test")))
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	ctx = internal.WithContext(context.Background(), internal.New(MakeDynamic(ctx, modulecontext.Empty("test"))))
 	n := intHandle(1)
 	once := Map(n, func(ctx context.Context, n int) (string, error) {
 		return "", fmt.Errorf("test error %d", n)
@@ -28,7 +31,8 @@ func TestMapPanic(t *testing.T) {
 }
 
 func TestMapGet(t *testing.T) {
-	ctx := internal.WithContext(context.Background(), internal.New(modulecontext.Empty("test")))
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	ctx = internal.WithContext(context.Background(), internal.New(MakeDynamic(ctx, modulecontext.Empty("test"))))
 	n := intHandle(1)
 	once := Map(n, func(ctx context.Context, n int) (string, error) {
 		return strconv.Itoa(n), nil

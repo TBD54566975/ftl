@@ -10,6 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	. "github.com/TBD54566975/ftl/testutils/modulecontext"
 )
 
 func TestSecret(t *testing.T) {
@@ -24,7 +25,7 @@ func TestSecret(t *testing.T) {
 	assert.NoError(t, err)
 
 	mctx := modulecontext.NewBuilder("test").AddSecrets(map[string][]byte{"test": data}).Build()
-	ctx = internal.WithContext(ctx, internal.New(mctx))
+	ctx = internal.WithContext(ctx, internal.New(MakeDynamic(ctx, mctx)))
 
 	secret := Secret[C]("test")
 	assert.Equal(t, C{"one", "two"}, secret.Get(ctx))
