@@ -2,6 +2,7 @@ package buildengine
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -181,8 +182,10 @@ func init() {
 	err := GenerateStubs(ctx, projectRoot, modules)
 	assert.NoError(t, err)
 
-	generatedPath := filepath.Join(projectRoot, "go/modules/other/external_module.go")
-	assertGeneratedModule(generatedPath, expected)
+	generatedPath := filepath.Join(projectRoot, ".ftl/go/modules/other/external_module.go")
+	fileContent, err := os.ReadFile(generatedPath)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, string(fileContent))
 }
 
 func TestMetadataImportsExcluded(t *testing.T) {
@@ -239,6 +242,8 @@ func Call(context.Context, Req) (Resp, error) {
 	err := GenerateStubs(ctx, projectRoot, modules)
 	assert.NoError(t, err)
 
-	generatedPath := filepath.Join(projectRoot, "go/modules/test/external_module.go")
-	assertGeneratedModule(generatedPath, expected)
+	generatedPath := filepath.Join(projectRoot, ".ftl/go/modules/test/external_module.go")
+	fileContent, err := os.ReadFile(generatedPath)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, string(fileContent))
 }

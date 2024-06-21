@@ -123,7 +123,7 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	if len(b.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
-	engine, err := buildengine.New(ctx, client, b.Dirs, buildengine.Parallelism(b.Parallelism))
+	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Dirs, buildengine.Parallelism(b.Parallelism))
 	if err != nil {
 		return err
 	}
