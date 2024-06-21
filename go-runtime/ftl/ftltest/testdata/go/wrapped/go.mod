@@ -24,6 +24,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.30.0 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
+	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
