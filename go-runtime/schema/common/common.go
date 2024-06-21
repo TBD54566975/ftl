@@ -441,7 +441,7 @@ func IsSelfReference(pass *analysis.Pass, obj types.Object, t schema.Type) bool 
 	if err != nil {
 		return false
 	}
-	return ref.Module == moduleName && obj.Name() == ref.Name
+	return ref.Module == moduleName && strcase.ToUpperCamel(obj.Name()) == ref.Name
 }
 
 func isLocalRef(pass *analysis.Pass, ref *schema.Ref) bool {

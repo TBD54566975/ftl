@@ -49,7 +49,7 @@ func refreshNeedsExtraction(pass *analysis.Pass) sets.Set[types.Object] {
 		if !ok {
 			continue
 		}
-		if _, ok := f.Get().(*common.NeedsExtraction); ok {
+		if _, ok := f.Get().(*common.NeedsExtraction); ok && fact.Object.Pkg().Path() == pass.Pkg.Path() {
 			facts.Add(fact.Object)
 		}
 	}
