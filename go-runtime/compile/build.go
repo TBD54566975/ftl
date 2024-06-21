@@ -20,10 +20,12 @@ import (
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
@@ -516,6 +518,23 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 }
 
 func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error {
+	modulepb := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	// If user has overridden GOOS and GOARCH we want to use those values.
+	goos, ok := os.LookupEnv("GOOS")
+	if !ok {
+		goos = runtime.GOOS
+	}
+	goarch, ok := os.LookupEnv("GOARCH")
+	if !ok {
+		goarch = runtime.GOARCH
+	}
+
+	modulepb.Runtime = &schemapb.ModuleRuntime{
+		CreateTime: timestamppb.Now(),
+		Language:   "go",
+		Os:         &goos,
+		Arch:       &goarch,
+	}
 	schemaBytes, err := proto.Marshal(module.ToProto())
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)

@@ -101,7 +101,7 @@ build-kt-runtime:
 
 # Install Node dependencies
 npm-install:
-  @mk frontend/node_modules : frontend/package.json frontend/src -- "cd frontend && npm install"
+  @mk frontend/node_modules : frontend/package.json -- "cd frontend && npm install"
   @mk extensions/vscode/node_modules : extensions/vscode/package.json extensions/vscode/src -- "cd extensions/vscode && npm install"
 
 # Regenerate protos

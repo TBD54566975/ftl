@@ -69,6 +69,20 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
    */
   minReplicas = 0;
 
+  /**
+   * OS the module was built for. If empty, the module is OS-agnostic.
+   *
+   * @generated from field: optional string os = 4;
+   */
+  os?: string;
+
+  /**
+   * CPU architecture the module was built for. If empty, the module is CPU-agnostic.
+   *
+   * @generated from field: optional string arch = 5;
+   */
+  arch?: string;
+
   constructor(data?: PartialMessage<ModuleRuntime>) {
     super();
     proto3.util.initPartial(data, this);
@@ -80,6 +94,8 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
     { no: 1, name: "create_time", kind: "message", T: Timestamp },
     { no: 2, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "os", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "arch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntime {
