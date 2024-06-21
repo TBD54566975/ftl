@@ -20,9 +20,10 @@ func TestExistingLeaseForURL(t *testing.T) {
 	// If we create a new follower then we can end up in an infinte loop with the follower calling the leader's service which is really a follower
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	key := leases.SystemKey("leader-test")
-	endpoint, _ := url.Parse("http://localhost:1234")
+	endpoint, err := url.Parse("http://localhost:1234")
+	assert.NoError(t, err)
 	leaser := leases.NewFakeLeaser()
-	_, _, err := leaser.AcquireLease(ctx, key, time.Second*5, optional.Some[any](endpoint.String()))
+	_, _, err = leaser.AcquireLease(ctx, key, time.Second*5, optional.Some[any](endpoint.String()))
 	if err != nil {
 		t.Fatal()
 	}
@@ -76,7 +77,8 @@ func TestSingleLeader(t *testing.T) {
 
 	// release the lease the leader is using, to simulate the lease not being able to be renewed by the leader
 	// a new leader should be elected
-	coordinators[leaderIdx].leader.MustGet().lease.Release()
+	err := coordinators[leaderIdx].leader.MustGet().lease.Release()
+	assert.NoError(t, err)
 	time.Sleep(leaseTTL + time.Millisecond*500)
 
 	leaderIdx, finalLeaderStr := leaderFromCoordinators(t, coordinators)
