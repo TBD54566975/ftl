@@ -125,7 +125,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
 
-	admin := admin.NewAdminService(cm, sm)
+	admin := admin.NewAdminService(cm, sm, optional.Some(dal))
 	console := NewConsoleService(dal)
 
 	ingressHandler := http.Handler(svc)

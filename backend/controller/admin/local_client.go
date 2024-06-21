@@ -3,6 +3,9 @@ package admin
 import (
 	"context"
 
+	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/common/configuration"
 )
 
@@ -16,5 +19,5 @@ type localClient struct {
 func newLocalClient(ctx context.Context) *localClient {
 	cm := configuration.ConfigFromContext(ctx)
 	sm := configuration.SecretsFromContext(ctx)
-	return &localClient{NewAdminService(cm, sm)}
+	return &localClient{NewAdminService(cm, sm, optional.None[*dal.DAL]())}
 }

@@ -143,7 +143,7 @@ func TestValidation(t *testing.T) {
 			sch, err := schema.ParseString("", test.schema)
 			assert.NoError(t, err)
 
-			err = validateRequestMap(&schema.Ref{Module: "test", Name: "Test"}, nil, test.request, sch)
+			err = schema.ValidateRequestMap(&schema.Ref{Module: "test", Name: "Test"}, nil, test.request, sch)
 			if test.err != "" {
 				assert.EqualError(t, err, test.err)
 			} else {
@@ -407,7 +407,7 @@ func TestEnumValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := validateValue(test.validateRoot, []string{test.validateRoot.String()}, test.req, sch)
+		err := schema.ValidateJSONalue(test.validateRoot, []string{test.validateRoot.String()}, test.req, sch)
 		if test.err == "" {
 			assert.NoError(t, err)
 		} else {

@@ -1,28 +1,41 @@
 package admin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
+	"google.golang.org/protobuf/proto"
 
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/buildengine"
 	cf "github.com/TBD54566975/ftl/common/configuration"
+	"github.com/TBD54566975/ftl/common/projectconfig"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type AdminService struct {
-	cm *cf.Manager[cf.Configuration]
-	sm *cf.Manager[cf.Secrets]
+	dal optional.Option[*dal.DAL]
+	cm  *cf.Manager[cf.Configuration]
+	sm  *cf.Manager[cf.Secrets]
 }
 
 var _ ftlv1connect.AdminServiceHandler = (*AdminService)(nil)
 
-func NewAdminService(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets]) *AdminService {
+func NewAdminService(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets], dal optional.Option[*dal.DAL]) *AdminService {
 	return &AdminService{
-		cm: cm,
-		sm: sm,
+		dal: dal,
+		cm:  cm,
+		sm:  sm,
 	}
 }
 
@@ -101,8 +114,13 @@ func configProviderKey(p *ftlv1.ConfigProvider) string {
 
 // ConfigSet sets the configuration at the given ref to the provided value.
 func (s *AdminService) ConfigSet(ctx context.Context, req *connect.Request[ftlv1.SetConfigRequest]) (*connect.Response[ftlv1.SetConfigResponse], error) {
+	err := validateAgainstSchema(ctx, s.dal, false, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
+	if err != nil {
+		return nil, err
+	}
+
 	pkey := configProviderKey(req.Msg.Provider)
-	err := s.cm.SetJSON(ctx, pkey, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
+	err = s.cm.SetJSON(ctx, pkey, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -190,8 +208,13 @@ func secretProviderKey(p *ftlv1.SecretProvider) string {
 
 // SecretSet sets the secret at the given ref to the provided value.
 func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1.SetSecretRequest]) (*connect.Response[ftlv1.SetSecretResponse], error) {
+	err := validateAgainstSchema(ctx, s.dal, true, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
+	if err != nil {
+		return nil, err
+	}
+
 	pkey := secretProviderKey(req.Msg.Provider)
-	err := s.sm.SetJSON(ctx, pkey, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
+	err = s.sm.SetJSON(ctx, pkey, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -206,4 +229,101 @@ func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftl
 		return nil, err
 	}
 	return connect.NewResponse(&ftlv1.UnsetSecretResponse{}), nil
+}
+
+func schemaFromDal(ctx context.Context, optDal optional.Option[*dal.DAL]) (*schema.Schema, error) {
+	d, ok := optDal.Get()
+	if !ok {
+		return nil, fmt.Errorf("no DAL available")
+	}
+	deployments, err := d.GetActiveDeployments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return schema.ValidateSchema(&schema.Schema{
+		Modules: slices.Map(deployments, func(depl dal.Deployment) *schema.Module {
+			return depl.Schema
+		}),
+	})
+}
+
+func schemaFromDisk(ctx context.Context) (*schema.Schema, error) {
+	path, ok := projectconfig.DefaultConfigPath().Get()
+	if !ok {
+		return nil, fmt.Errorf("no project config path available")
+	}
+	projConfig, err := projectconfig.Load(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	modules, err := buildengine.DiscoverModules(ctx, projConfig.AbsModuleDirs())
+	if err != nil {
+		return nil, err
+	}
+
+	var pbModules []*schemapb.Module
+	for _, m := range modules {
+		deployDir := m.Config.AbsDeployDir()
+		schemaPath := filepath.Join(deployDir, m.Config.Schema)
+		content, err := os.ReadFile(schemaPath)
+		if err != nil {
+			return nil, err
+		}
+		pbModule := &schemapb.Module{}
+		err = proto.Unmarshal(content, pbModule)
+		if err != nil {
+			return nil, err
+		}
+		pbModules = append(pbModules, pbModule)
+	}
+	return schema.FromProto(&schemapb.Schema{Modules: pbModules})
+}
+
+type DeclType interface {
+	schema.Config | schema.Secret
+}
+
+func validateAgainstSchema(ctx context.Context, dal optional.Option[*dal.DAL], isSecret bool, ref cf.Ref, value json.RawMessage) error {
+	sch, err := schemaFromDal(ctx, dal)
+	if err != nil {
+		sch, err = schemaFromDisk(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	r := schema.RefKey{Module: ref.Module.Default(""), Name: ref.Name}.ToRef()
+	decl, ok := sch.Resolve(r).Get()
+	if !ok {
+		return fmt.Errorf("declaration %q not found", ref.Name)
+	}
+
+	var fieldType schema.Type
+	if isSecret {
+		decl, ok := decl.(*schema.Secret)
+		if !ok {
+			return fmt.Errorf("%q is not a secret declaration", ref.Name)
+		}
+		fieldType = decl.Type
+	} else {
+		decl, ok := decl.(*schema.Config)
+		if !ok {
+			return fmt.Errorf("%q is not a config declaration", ref.Name)
+		}
+		fieldType = decl.Type
+	}
+
+	var v any
+	dec := json.NewDecoder(bytes.NewReader(value))
+	dec.DisallowUnknownFields()
+	err = dec.Decode(&v)
+	if err != nil {
+		return err
+	}
+
+	err = schema.ValidateJSONalue(fieldType, []string{ref.Name}, v, sch)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

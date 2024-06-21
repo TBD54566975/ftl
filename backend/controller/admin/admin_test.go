@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -31,7 +32,7 @@ func TestAdminService(t *testing.T) {
 			cf.InlineProvider[cf.Secrets]{},
 		})
 	assert.NoError(t, err)
-	admin := NewAdminService(cm, sm)
+	admin := NewAdminService(cm, sm, optional.None[*dal.DAL]())
 	assert.NotZero(t, admin)
 
 	expectedEnvarValue, err := json.MarshalIndent(map[string]string{"bar": "barfoo"}, "", "  ")
