@@ -21,14 +21,12 @@ require (
 	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/alecthomas/types v0.16.0 // indirect
 	github.com/alessio/shellescape v1.4.2 // indirect
-	github.com/amacneil/dbmate/v2 v2.17.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.27.2 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.30.0 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
-	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -41,7 +39,6 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
-	github.com/lib/pq v1.10.9 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.1.0 // indirect
