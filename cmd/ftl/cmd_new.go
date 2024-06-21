@@ -67,8 +67,9 @@ func (i newGoCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	logger.Debugf("Adding files to git")
-	if !config.NoGit {
+	_, ok := internal.GitRoot(i.Dir).Get()
+	if !config.NoGit && ok {
+		logger.Debugf("Adding files to git")
 		if config.Hermit {
 			if err := maybeGitAdd(ctx, i.Dir, "bin/*"); err != nil {
 				return err
