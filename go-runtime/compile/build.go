@@ -147,7 +147,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		GoVersion:         goModVersion,
 		SharedModulesPath: filepath.Join(projectRootDir, buildDirName, "go", "modules"),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
-		return err
+		return fmt.Errorf("failed to scaffold zip: %w", err)
 	}
 
 	logger.Debugf("Extracting schema")
@@ -236,7 +236,7 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, sch *schem
 	// Wipe the modules directory to ensure we don't have any stale modules.
 	err := os.RemoveAll(sharedFtlDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to remove %s: %w", sharedFtlDir, err)
 	}
 
 	ftlVersion := ""
@@ -260,21 +260,10 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, sch *schem
 
 	modulesDir := filepath.Join(sharedFtlDir, "go", "modules")
 	if err := exec.Command(ctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
-		return fmt.Errorf("%s: failed to tidy go.mod: %w", modulesDir, err)
+		return fmt.Errorf("failed to tidy go.mod: %w", err)
 	}
 
 	return nil
-}
-
-func generateExternalModules(context ExternalModuleContext) error {
-	// Wipe the modules directory to ensure we don't have any stale modules.
-	err := os.RemoveAll(filepath.Join(buildDir(context.ModuleDir), "go", "modules"))
-	if err != nil {
-		return err
-	}
-
-	funcs := maps.Clone(scaffoldFuncs)
-	return internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{

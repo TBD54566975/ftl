@@ -2,6 +2,7 @@ package buildengine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
@@ -16,5 +17,9 @@ func GenerateStubs(ctx context.Context, projectRoot string, modules []*schema.Mo
 
 func generateGoStubs(ctx context.Context, projectRoot string, modules []*schema.Module) error {
 	sch := &schema.Schema{Modules: modules}
-	return compile.GenerateStubsForModules(ctx, projectRoot, sch)
+	err := compile.GenerateStubsForModules(ctx, projectRoot, sch)
+	if err != nil {
+		return fmt.Errorf("failed to generate Go stubs: %w", err)
+	}
+	return nil
 }
