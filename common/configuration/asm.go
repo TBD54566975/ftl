@@ -48,7 +48,7 @@ func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client,
 	}
 	followerFactory := func(ctx context.Context, url *url.URL) (client asmClient, err error) {
 		rpcClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, url.String(), log.Error)
-		return &asmFollower{client: rpcClient}, nil
+		return newASMFollower(ctx, rpcClient, clock), nil
 	}
 	return &ASM{
 		coordinator: leader.NewCoordinator[asmClient](
