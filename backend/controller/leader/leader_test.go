@@ -49,10 +49,15 @@ func TestSingleLeader(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	leaser := leases.NewFakeLeaser()
 	leaseTTL := time.Second * 5
+
+	leaderContexts := []context.Context{}
+	followerContexts := []context.Context{}
 	leaderFactory := func(ctx context.Context) (string, error) {
+		leaderContexts = append(leaderContexts, ctx)
 		return fmt.Sprintf("leader:%v", time.Now()), nil
 	}
 	followerFactory := func(ctx context.Context, leaderURL *url.URL) (string, error) {
+		followerContexts = append(followerContexts, ctx)
 		fmt.Printf("creating follower with leader url: %s\n", leaderURL.String())
 		return fmt.Sprintf("following:%s", leaderURL.String()), nil
 	}
@@ -75,15 +80,33 @@ func TestSingleLeader(t *testing.T) {
 	leaderIdx, initialLeaderStr := leaderFromCoordinators(t, coordinators)
 	validateAllFollowTheLeader(t, coordinators, leaderIdx)
 
+	originalLeaderCtxs := leaderContexts
+	originalFollowerCtxs := followerContexts
+	leaderContexts = []context.Context{}
+	followerContexts = []context.Context{}
+
 	// release the lease the leader is using, to simulate the lease not being able to be renewed by the leader
 	// a new leader should be elected
 	err := coordinators[leaderIdx].leader.MustGet().lease.Release()
+	assert.NoError(t, err)
+
+	// replace original leading coordinator's advertising url to ensure the leader url changes
+	coordinators[leaderIdx].advertise, err = url.Parse("http://localhost:9999")
 	assert.NoError(t, err)
 	time.Sleep(leaseTTL + time.Millisecond*500)
 
 	leaderIdx, finalLeaderStr := leaderFromCoordinators(t, coordinators)
 	assert.NotEqual(t, finalLeaderStr, initialLeaderStr, "leader should have been changed when the lease broke")
 	validateAllFollowTheLeader(t, coordinators, leaderIdx)
+
+	time.Sleep(time.Second * 1)
+	// ensure the old contexts were cancelled
+	for _, ctx := range originalLeaderCtxs {
+		assert.Error(t, ctx.Err(), "expected old contexts for leader to be cancelled")
+	}
+	for _, ctx := range originalFollowerCtxs {
+		assert.Error(t, ctx.Err(), "expected old contexts for followers to be cancelled")
+	}
 }
 
 func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (idx int, leaderStr string) {
@@ -94,6 +117,7 @@ func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (
 		result, err := coordinators[i].Get()
 		assert.NoError(t, err)
 		if strings.HasPrefix(result, "leader:") {
+			// no early exit because we want to call Get() on all coordinators so they coordinate a follower
 			leaderIdx = i
 			leaderStr = result
 		}
