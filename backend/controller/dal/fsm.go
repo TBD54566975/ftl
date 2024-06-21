@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -97,8 +99,8 @@ type FSMInstance struct {
 // AcquireFSMInstance returns an FSM instance, also acquiring a lease on it.
 //
 // The lease must be released by the caller.
-func (d *DAL) AcquireFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) (*FSMInstance, error) {
-	lease, _, err := d.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
+func (d *DAL) AcquireFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string, pool *pgxpool.Pool) (*FSMInstance, error) {
+	lease, _, err := leasesdal.New(pool).AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire FSM lease: %w", err)
 	}

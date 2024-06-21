@@ -13,6 +13,7 @@ import (
 	xslices "golang.org/x/exp/slices"
 
 	db "github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -35,8 +36,11 @@ func TestServiceWithMockDal(t *testing.T) {
 		lock:            sync.Mutex{},
 		attemptCountMap: map[string]int{},
 	}
+	conn := sqltest.OpenForTesting(ctx, t)
+	parentDAL, err := db.New(ctx, conn)
+	assert.NoError(t, err)
 
-	testServiceWithDal(ctx, t, mockDal, clk)
+	testServiceWithDal(ctx, t, mockDal, parentDAL, clk)
 }
 
 func TestHashRing(t *testing.T) {

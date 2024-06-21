@@ -9,7 +9,9 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/either"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -70,12 +72,12 @@ func ParseAsyncOrigin(origin string) (AsyncOrigin, error) {
 }
 
 type AsyncCall struct {
-	*Lease      // May be nil
-	ID          int64
-	Origin      AsyncOrigin
-	Verb        schema.RefKey
-	Request     json.RawMessage
-	ScheduledAt time.Time
+	*leasesdal.Lease // May be nil
+	ID               int64
+	Origin           AsyncOrigin
+	Verb             schema.RefKey
+	Request          json.RawMessage
+	ScheduledAt      time.Time
 
 	RemainingAttempts int32
 	Backoff           time.Duration
@@ -85,7 +87,7 @@ type AsyncCall struct {
 // AcquireAsyncCall acquires a pending async call to execute.
 //
 // Returns ErrNotFound if there are no async calls to acquire.
-func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error) {
+func (d *DAL) AcquireAsyncCall(ctx context.Context, pool *pgxpool.Pool) (call *AsyncCall, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -106,7 +108,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
-	lease, _ := d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
+	lease, _ := leasesdal.New(pool).NewLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
 	return &AsyncCall{
 		ID:                row.AsyncCallID,
 		Verb:              row.Verb,

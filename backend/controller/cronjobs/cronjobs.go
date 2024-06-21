@@ -15,7 +15,8 @@ import (
 	"github.com/jpillora/backoff"
 	"github.com/serialx/hashring"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
+	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -61,7 +62,7 @@ func (updatedHashRingEvent) cronJobEvent() {}
 
 type hashRingState struct {
 	hashRing    *hashring.HashRing
-	controllers []dal.Controller
+	controllers []parentdal.Controller
 	idx         int
 }
 
@@ -408,7 +409,7 @@ func (s *Service) nextAttemptForJob(job model.CronJob, state *state, allowsNow b
 }
 
 // UpdatedControllerList synchronises the hash ring with the active controllers.
-func (s *Service) UpdatedControllerList(ctx context.Context, controllers []dal.Controller) {
+func (s *Service) UpdatedControllerList(ctx context.Context, controllers []parentdal.Controller) {
 	logger := log.FromContext(ctx).Scope("cron")
 	controllerIdx := -1
 	for idx, controller := range controllers {
@@ -436,7 +437,7 @@ func (s *Service) UpdatedControllerList(ctx context.Context, controllers []dal.C
 		}
 	}
 
-	hashRing := hashring.New(slices.Map(controllers, func(c dal.Controller) string { return c.Key.String() }))
+	hashRing := hashring.New(slices.Map(controllers, func(c parentdal.Controller) string { return c.Key.String() }))
 	s.hashRingState.Store(&hashRingState{
 		hashRing:    hashRing,
 		controllers: controllers,

@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/backend/controller/leases/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -102,11 +102,11 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 		}
 		return nil, nil, err
 	}
-	leaseCtx, lease := d.newLease(ctx, key, idempotencyKey, ttl)
+	leaseCtx, lease := d.NewLease(ctx, key, idempotencyKey, ttl)
 	return leaseCtx, lease, nil
 }
 
-func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) (*Lease, context.Context) {
+func (d *DAL) NewLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) (*Lease, context.Context) {
 	ctx, cancelCtx := context.WithCancel(ctx)
 	lease := &Lease{
 		idempotencyKey: idempotencyKey,

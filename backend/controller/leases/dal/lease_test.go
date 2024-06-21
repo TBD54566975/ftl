@@ -36,11 +36,10 @@ func TestLease(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
-	assert.NoError(t, err)
+	dal := New(conn)
 
 	// TTL is too short, expect an error
-	_, _, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*1, optional.None[any]())
+	_, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*1, optional.None[any]())
 	assert.Error(t, err)
 
 	leasei, leaseCtx, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
@@ -71,8 +70,7 @@ func TestExpireLeases(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
-	assert.NoError(t, err)
+	dal := New(conn)
 
 	leasei, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
 	assert.NoError(t, err)

@@ -282,66 +282,6 @@ WITH rows AS (
 SELECT COUNT(*)
 FROM rows;
 
--- name: GetCronJobs :many
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
-FROM cron_jobs j
-  INNER JOIN deployments d on j.deployment_id = d.id
-WHERE d.min_replicas > 0;
-
--- name: CreateCronJob :exec
-INSERT INTO cron_jobs (key, deployment_id, module_name, verb, schedule, start_time, next_execution)
-  VALUES (
-    sqlc.arg('key')::cron_job_key,
-    (SELECT id FROM deployments WHERE key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
-    sqlc.arg('module_name')::TEXT,
-    sqlc.arg('verb')::TEXT,
-    sqlc.arg('schedule')::TEXT,
-    sqlc.arg('start_time')::TIMESTAMPTZ,
-    sqlc.arg('next_execution')::TIMESTAMPTZ);
-
--- name: StartCronJobs :many
-WITH updates AS (
-  UPDATE cron_jobs
-  SET state = 'executing',
-    start_time = (NOW() AT TIME ZONE 'utc')::TIMESTAMPTZ
-  WHERE key = ANY (sqlc.arg('keys'))
-    AND state = 'idle'
-    AND start_time < next_execution
-    AND (next_execution AT TIME ZONE 'utc') < (NOW() AT TIME ZONE 'utc')::TIMESTAMPTZ
-  RETURNING id, key, state, start_time, next_execution)
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule,
-  COALESCE(u.start_time, j.start_time) as start_time,
-  COALESCE(u.next_execution, j.next_execution) as next_execution,
-  COALESCE(u.state, j.state) as state,
-  d.min_replicas > 0 as has_min_replicas,
-  CASE WHEN u.key IS NULL THEN FALSE ELSE TRUE END as updated
-FROM cron_jobs j
-  INNER JOIN deployments d on j.deployment_id = d.id
-  LEFT JOIN updates u on j.id = u.id
-WHERE j.key = ANY (sqlc.arg('keys'));
-
--- name: EndCronJob :one
-WITH j AS (
-UPDATE cron_jobs
-  SET state = 'idle',
-    next_execution = sqlc.arg('next_execution')::TIMESTAMPTZ
-  WHERE key = sqlc.arg('key')::cron_job_key
-    AND state = 'executing'
-    AND start_time = sqlc.arg('start_time')::TIMESTAMPTZ
-  RETURNING *
-)
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
-  FROM j
-  INNER JOIN deployments d on j.deployment_id = d.id
-  LIMIT 1;
-
--- name: GetStaleCronJobs :many
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
-FROM cron_jobs j
-  INNER JOIN deployments d on j.deployment_id = d.id
-WHERE state = 'executing'
-  AND start_time < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL;
-
 -- name: InsertLogEvent :exec
 INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
 VALUES ((SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
@@ -461,44 +401,6 @@ INSERT INTO events (deployment_id, request_id, type,
                     payload)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id;
-
--- name: NewLease :one
-INSERT INTO leases (
-  idempotency_key,
-  key,
-  expires_at,
-  metadata
-)
-VALUES (
-  gen_random_uuid(),
-  @key::lease_key,
-  (NOW() AT TIME ZONE 'utc') + @ttl::interval,
-  sqlc.narg('metadata')::JSONB
-)
-RETURNING idempotency_key;
-
--- name: RenewLease :one
-UPDATE leases
-SET expires_at = (NOW() AT TIME ZONE 'utc') + @ttl::interval
-WHERE idempotency_key = @idempotency_key AND key = @key::lease_key
-RETURNING true;
-
--- name: ReleaseLease :one
-DELETE FROM leases
-WHERE idempotency_key = @idempotency_key AND key = @key::lease_key
-RETURNING true;
-
--- name: ExpireLeases :one
-WITH expired AS (
-    DELETE FROM leases
-    WHERE expires_at < NOW() AT TIME ZONE 'utc'
-    RETURNING 1
-)
-SELECT COUNT(*)
-FROM expired;
-
--- name: GetLeaseInfo :one
-SELECT expires_at, metadata FROM leases WHERE key = @key::lease_key;
 
 -- name: CreateAsyncCall :one
 INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff)

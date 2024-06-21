@@ -23,6 +23,7 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
 	"golang.org/x/exp/maps"
@@ -34,9 +35,11 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
+	cronjobsdal "github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
@@ -118,7 +121,13 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, dal, config, runnerScaling)
+	// Bring up the DB connection and DAL.
+	conn, err := pgxpool.New(ctx, config.DSN)
+	if err != nil {
+		return err
+	}
+
+	svc, err := New(ctx, conn, config, runnerScaling)
 	if err != nil {
 		return err
 	}
@@ -128,7 +137,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	sm := cf.SecretsFromContext(ctx)
 
 	admin := admin.NewAdminService(cm, sm)
-	console := NewConsoleService(dal)
+	console := NewConsoleService(svc.dal)
 
 	ingressHandler := http.Handler(svc)
 	if len(config.AllowOrigins) > 0 {
@@ -170,6 +179,7 @@ type ControllerListListener interface {
 }
 
 type Service struct {
+	pool               *pgxpool.Pool
 	dal                *dal.DAL
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
@@ -193,7 +203,7 @@ type Service struct {
 	asyncCallsLock          sync.Mutex
 }
 
-func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
+func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -207,8 +217,14 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 		config.ControllerTimeout = time.Second * 5
 	}
 
+	db, err := dal.New(ctx, pool)
+	if err != nil {
+		return nil, err
+	}
+
 	svc := &Service{
-		tasks:                   scheduledtask.New(ctx, key, db),
+		tasks:                   scheduledtask.New(ctx, key, leasesdal.New(pool)),
+		pool:                    pool,
 		dal:                     db,
 		key:                     key,
 		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
@@ -220,7 +236,7 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, db, svc.tasks, svc.callWithRequest)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, cronjobsdal.New(pool), svc.tasks, svc.callWithRequest)
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 
@@ -772,7 +788,7 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
 		}
 		if lease == nil {
-			lease, _, err = s.dal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
+			lease, _, err = leasesdal.New(s.pool).AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
 			if err != nil {
 				if errors.Is(err, leases.ErrConflict) {
 					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))
@@ -810,7 +826,7 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	instance, err := tx.AcquireFSMInstance(ctx, fsmKey, msg.Instance)
+	instance, err := tx.AcquireFSMInstance(ctx, fsmKey, msg.Instance, s.pool)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("could not acquire fsm instance: %w", err))
 	}
@@ -1271,7 +1287,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	logger := log.FromContext(ctx)
 	logger.Tracef("Acquiring async call")
 
-	call, err := s.dal.AcquireAsyncCall(ctx)
+	call, err := s.dal.AcquireAsyncCall(ctx, s.pool)
 	if errors.Is(err, dalerrs.ErrNotFound) {
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
@@ -1342,7 +1358,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, origin dal.AsyncOriginFSM, failed bool) error {
 	logger := log.FromContext(ctx).Scope(origin.FSM.String())
 
-	instance, err := tx.AcquireFSMInstance(ctx, origin.FSM, origin.Key)
+	instance, err := tx.AcquireFSMInstance(ctx, origin.FSM, origin.Key, s.pool)
 	if err != nil {
 		return fmt.Errorf("could not acquire lock on FSM instance: %w", err)
 	}
@@ -1387,7 +1403,7 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, orig
 }
 
 func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {
-	err := s.dal.ExpireLeases(ctx)
+	err := leasesdal.New(s.pool).ExpireLeases(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to expire leases: %w", err)
 	}
