@@ -132,7 +132,7 @@ func (c *Coordinator[P]) Get() (leaderOrFollower P, err error) {
 		logger.Tracef("new leader for %s: %s", c.key, c.advertise)
 		return l, nil
 	}
-	if !errors.Is(leaseErr, dalerrs.ErrConflict) {
+	if !errors.Is(leaseErr, leases.ErrConflict) {
 		return leaderOrFollower, fmt.Errorf("could not acquire lease for %s: %w", c.key, leaseErr)
 	}
 	// lease already held

@@ -79,7 +79,7 @@ func (l *Lease) Release() error {
 
 // AcquireLease acquires a lease for the given key.
 //
-// Will return ErrConflict if the lease is already held by another controller.
+// Will return leases.ErrConflict (not dalerrs.ErrConflict) if the lease is already held by another controller.
 //
 // The returned context will be cancelled when the lease fails to renew.
 func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata optional.Option[any]) (leases.Lease, context.Context, error) {
@@ -96,7 +96,11 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 	}
 	idempotencyKey, err := d.db.NewLease(ctx, key, ttl, metadataBytes)
 	if err != nil {
-		return nil, nil, dalerrs.TranslatePGError(err)
+		err = dalerrs.TranslatePGError(err)
+		if errors.Is(err, dalerrs.ErrConflict) {
+			return nil, nil, leases.ErrConflict
+		}
+		return nil, nil, err
 	}
 	leaseCtx, lease := d.newLease(ctx, key, idempotencyKey, ttl)
 	return leaseCtx, lease, nil
