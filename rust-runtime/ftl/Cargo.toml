@@ -3,6 +3,10 @@ name = "ftl"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "ftl"
+path = "src/bin/ftl.rs"
+
 [lib]
 
 [dependencies]

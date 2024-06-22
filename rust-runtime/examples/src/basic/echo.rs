@@ -15,7 +15,6 @@ struct Response {
     pub message: String,
 }
 
-// pub async fn test_verb(ctx: &Context, request: Request) -> Result<Response, Box<dyn Error>> {
 #[ftl::verb]
 pub async fn test_verb(ctx: Context, request: ()) -> Result<(), Box<dyn Error>> {
     println!("test_verb was called!");

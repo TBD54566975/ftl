@@ -11,7 +11,7 @@ path = "src/basic/main.rs"
 ftl = { workspace = true }
 
 tokio = { workspace = true }
-serde = { version = "1.0.203", features = ["derive"] }
+serde = { workspace = true }
 
 [build-dependencies]
 ftl = { workspace = true }

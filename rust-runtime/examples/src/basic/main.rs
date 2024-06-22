@@ -19,13 +19,3 @@ async fn main() {
 
     ftl::serve(config).await.unwrap();
 }
-
-// this is generated now...
-// async fn call_immediate(ctx: &Context, module: &str, verb: &str) {
-//     match (module, verb) {
-//         ("echo", "test_verb") => {
-//             echo::test_verb(ctx, ()).await.unwrap();
-//         }
-//         _ => panic!("Unknown verb"),
-//     }
-// }
