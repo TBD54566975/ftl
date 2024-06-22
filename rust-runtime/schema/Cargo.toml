@@ -1,0 +1,31 @@
+[package]
+name = "schema"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["lib"]
+
+[[bin]]
+name = "schema"
+path = "src/main.rs"
+
+[dependencies]
+tonic = "0.11.0"
+
+prost = "0.12.6"
+#prost-types = "0.12.6"
+pbjson = "0.6.0"
+pbjson-types = "0.6.0"
+
+#tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
+syn = { version = "2.0.66", features = ["full", "extra-traits"] }
+clap = { version = "4.5.7", features = ["derive"] }
+serde_json = "1.0.117"
+serde = { version = "1.0.203", features = ["derive"] }
+
+[build-dependencies]
+prost-build = "0.12.6"
+pbjson-build = "0.6.2"
+
+tonic-build = "0.11.0"
