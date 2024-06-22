@@ -1,15 +1,16 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use tonic::{Request, Response, Status, Streaming};
 use tonic::codegen::tokio_stream::Stream;
 use tonic::transport::Server;
-use tonic::{Request, Response, Status, Streaming};
 
 use ftl_protos as protos;
 use ftl_protos::ftl::verb_service_server::VerbService;
 
 use crate::Context;
 
+#[derive(Debug)]
 pub struct Config {
     pub call_immediate:
         fn(Context, String, String) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>>,
@@ -17,7 +18,7 @@ pub struct Config {
 
 pub async fn serve(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse()?;
-    let service = FtlService::default();
+    let service = FtlService { config };
 
     Server::builder()
         .add_service(protos::ftl::verb_service_server::VerbServiceServer::new(
@@ -29,8 +30,10 @@ pub async fn serve(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[derive(Debug, Default)]
-pub struct FtlService {}
+#[derive(Debug)]
+pub struct FtlService {
+    config: Config,
+}
 
 type ModuleContextResponseStream =
     Pin<Box<dyn Stream<Item = Result<protos::ftl::ModuleContextResponse, Status>> + Send>>;
@@ -85,14 +88,11 @@ impl VerbService for FtlService {
     ) -> Result<Response<protos::ftl::CallResponse>, Status> {
         let request = request.into_inner();
         let verb_ref = request.verb.unwrap();
-        let s = format!("{}::{}", verb_ref.module, verb_ref.name);
-        match s.as_str() {
-            "echo::test_verb" => {
-                todo!()
-            }
-            unknown => {
-                todo!("Unknown verb: {}", unknown);
-            }
-        }
+        let module = verb_ref.module;
+        let name = verb_ref.name;
+
+        (self.config.call_immediate)(Context::default(), module, name).await;
+
+        Ok(Response::new(protos::ftl::CallResponse { response: None }))
     }
 }

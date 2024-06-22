@@ -3,6 +3,7 @@ pub use ftl_derive::verb;
 pub use server::serve;
 
 mod build;
+pub mod client;
 pub mod schema;
 pub mod server;
 
