@@ -1,21 +1,29 @@
 [workspace]
 resolver = "2"
 
-members = ["cli", "protos", "schema", "schema_derive", "server"]
+members = [
+    "examples",
+    "ftl",
+    "ftl_derive",
+    "ftl_protos",
+]
 
 [workspace.dependencies]
-protos = { path = "protos" }
-schema = { path = "schema" }
-schema_derive = { path = "schema_derive" }
-server = { path = "server" }
+ftl = { path = "ftl" }
+ftl_derive = { path = "ftl_derive" }
+ftl_protos = { path = "ftl_protos" }
 
 clap = { version = "4.5.7", features = ["derive"] }
+glob = "0.3.1"
+prettyplease = "0.2.20"
 pbjson = "0.6.0"
 pbjson-build = "0.6.2"
 pbjson-types = "0.6.0"
+proc-macro2 = "1.0.86"
 prost = "0.12.6"
 prost-build = "0.12.6"
 prost-types = "0.12.6"
+quote = "1.0.36"
 serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.117"
 syn = { version = "2.0.66", features = ["full", "extra-traits"] }

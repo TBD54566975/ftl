@@ -1,0 +1,23 @@
+[package]
+name = "ftl"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+
+[dependencies]
+ftl_derive = { workspace = true }
+ftl_protos = { workspace = true }
+
+clap = { workspace = true }
+glob = { workspace = true }
+prettyplease = { workspace = true }
+proc-macro2 = { workspace = true }
+prost = { workspace = true }
+quote = { workspace = true }
+serde_json = { workspace = true }
+syn = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }

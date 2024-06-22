@@ -1,0 +1,17 @@
+[package]
+name = "examples"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "basic"
+path = "src/basic/main.rs"
+
+[dependencies]
+ftl = { workspace = true }
+
+tokio = { workspace = true }
+serde = { version = "1.0.203", features = ["derive"] }
+
+[build-dependencies]
+ftl = { workspace = true }

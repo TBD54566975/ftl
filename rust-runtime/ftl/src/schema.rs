@@ -1,14 +1,9 @@
 //! A crate for parsing/generating code to and from schema binary.
+use proc_macro2::Ident;
 use prost::Message;
 use syn::Path;
 
-use protos::schema;
-
-pub struct Context {
-    // TODO
-}
-
-struct Schema;
+use ftl_protos::schema;
 
 pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     let mut buf = Vec::new();
@@ -16,12 +11,12 @@ pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     schema::Module::decode(&buf[..]).unwrap()
 }
 
-pub fn code_to_module(code: &str) -> schema::Module {
+pub fn code_to_module(module: &Ident, code: &str) -> schema::Module {
     let ast = syn::parse_file(code).unwrap();
-    let verbs = extract_ast_verbs(ast);
+    let verbs = extract_ast_verbs(module, ast);
 
     let verbs = verbs.iter().filter_map(|verb| {
-        let has_ctx = fn_has_context_as_first_arg(&verb.0);
+        let has_ctx = fn_has_context_as_first_arg(&verb.func);
         if !has_ctx {
             panic!("First argument must be of type Context");
         }
@@ -44,14 +39,18 @@ pub fn code_to_module(code: &str) -> schema::Module {
     }
 }
 
-struct VerbToken(syn::ItemFn);
+#[derive(Debug)]
+pub struct VerbToken {
+    pub module: Ident,
+    pub func: syn::ItemFn,
+}
 
 impl VerbToken {
     fn to_proto(&self) -> schema::Verb {
         let mut verb = schema::Verb::default();
-        verb.name = self.0.sig.ident.to_string();
+        verb.name = self.func.sig.ident.to_string();
 
-        let syn::FnArg::Typed(arg) = self.0.sig.inputs.first().unwrap() else {
+        let syn::FnArg::Typed(arg) = self.func.sig.inputs.first().unwrap() else {
             panic!("Function must have at least one argument");
         };
 
@@ -73,7 +72,7 @@ impl VerbToken {
             pos: None,
             comments: vec![],
             export: false,
-            name: self.0.sig.ident.to_string(),
+            name: self.func.sig.ident.to_string(),
             request: None,
             response: None,
             metadata: vec![],
@@ -82,24 +81,26 @@ impl VerbToken {
 }
 
 /// Extract functions that are annotated with #[ftl::verb] and extract the AST node.
-fn extract_ast_verbs(ast: syn::File) -> Vec<VerbToken> {
+pub fn extract_ast_verbs(module: &Ident, ast: syn::File) -> Vec<VerbToken> {
     let ftl_verb_path = syn::parse_str("ftl::verb").unwrap();
 
-    ast.items
-        .iter()
-        .filter_map(|item| {
-            let syn::Item::Fn(func) = item else {
-                return None;
-            };
+    let mut verbs = vec![];
+    for item in ast.items {
+        let item = match item {
+            syn::Item::Fn(func) => func,
+            _ => continue,
+        };
 
-            return if has_meta_path(&func.attrs, &ftl_verb_path) {
-                Some(func.clone())
-            } else {
-                None
-            };
-        })
-        .map(|func| VerbToken(func))
-        .collect()
+        if !has_meta_path(&item.attrs, &ftl_verb_path) {
+            continue;
+        }
+
+        verbs.push(VerbToken {
+            module: module.clone(),
+            func: item,
+        });
+    }
+    verbs
 }
 
 // Look for #[path_str] e.g. #[ftl::verb], and extract the function signature.
@@ -180,11 +181,17 @@ mod tests {
             pub age: u32,
         }
 
-        #[ftl::verb]
-        pub async fn test_verb(ctx: &Context, request: Request) -> Result<String, Box<dyn Error>> {
-            let response = ctx.call("module::other_verb", request).await?;
+        struct Response {
+            pub message: String,
+        }
 
-            Ok("Hello, World!".to_string())
+        #[ftl::verb]
+        pub async fn test_verb(ctx: &Context, request: Request) -> Result<Response, Box<dyn Error>> {
+            // let response = ctx.call(module::other_verb, request).await?;
+
+            Ok(Response {
+                message: format!("Hello {}!", request.name),
+            })
         }
         "#;
 
