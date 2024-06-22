@@ -2,7 +2,7 @@
 use prost::Message;
 use syn::Path;
 
-pub mod proto {}
+use protos::schema;
 
 pub struct Context {
     // TODO
@@ -10,13 +10,13 @@ pub struct Context {
 
 struct Schema;
 
-pub fn binary_to_module(mut reader: impl std::io::Read) -> protos::Module {
+pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     let mut buf = Vec::new();
     reader.read_to_end(&mut buf).unwrap();
-    protos::Module::decode(&buf[..]).unwrap()
+    schema::Module::decode(&buf[..]).unwrap()
 }
 
-pub fn code_to_module(code: &str) -> protos::Module {
+pub fn code_to_module(code: &str) -> schema::Module {
     let ast = syn::parse_file(code).unwrap();
     let verbs = extract_ast_verbs(ast);
 
@@ -30,11 +30,11 @@ pub fn code_to_module(code: &str) -> protos::Module {
     });
 
     let mut decls = vec![];
-    decls.extend(verbs.into_iter().map(|verb| protos::Decl {
-        value: Some(protos::decl::Value::Verb(verb)),
+    decls.extend(verbs.into_iter().map(|verb| schema::Decl {
+        value: Some(schema::decl::Value::Verb(verb)),
     }));
 
-    protos::Module {
+    schema::Module {
         runtime: None,
         pos: None,
         comments: vec![],
@@ -47,8 +47,8 @@ pub fn code_to_module(code: &str) -> protos::Module {
 struct VerbToken(syn::ItemFn);
 
 impl VerbToken {
-    fn to_proto(&self) -> protos::Verb {
-        let mut verb = protos::Verb::default();
+    fn to_proto(&self) -> schema::Verb {
+        let mut verb = schema::Verb::default();
         verb.name = self.0.sig.ident.to_string();
 
         let syn::FnArg::Typed(arg) = self.0.sig.inputs.first().unwrap() else {
@@ -68,7 +68,7 @@ impl VerbToken {
             panic!("First argument must be of type Context");
         }
 
-        protos::Verb {
+        schema::Verb {
             runtime: None,
             pos: None,
             comments: vec![],
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let config = protos::Config {
+        let config = schema::Config {
             pos: None,
             comments: vec![],
             name: "sup".to_string(),
@@ -162,7 +162,7 @@ mod tests {
         let mut encoded = Vec::new();
         Message::encode(&config, &mut encoded).unwrap();
 
-        let decoded = protos::Config::decode(&encoded[..]).unwrap();
+        let decoded = schema::Config::decode(&encoded[..]).unwrap();
         assert_eq!(config, decoded);
 
         dbg!(encoded);
@@ -191,14 +191,14 @@ mod tests {
         let m = code_to_module(code);
         assert_eq!(
             m,
-            protos::Module {
+            schema::Module {
                 runtime: None,
                 pos: None,
                 comments: vec![],
                 builtin: false,
                 name: "".to_string(),
-                decls: vec![protos::Decl {
-                    value: Some(protos::decl::Value::Verb(protos::Verb {
+                decls: vec![schema::Decl {
+                    value: Some(schema::decl::Value::Verb(schema::Verb {
                         runtime: None,
                         pos: None,
                         comments: vec![],
