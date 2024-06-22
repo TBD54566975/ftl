@@ -1,0 +1,14 @@
+[package]
+name = "protos"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pbjson = { workspace = true }
+pbjson-types = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true }
+
+[build-dependencies]
+pbjson-build = { workspace = true }
+prost-build = { workspace = true }

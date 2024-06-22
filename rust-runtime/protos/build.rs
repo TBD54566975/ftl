@@ -4,19 +4,11 @@ use std::path::PathBuf;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // println!("cargo:rustc-env=PROTOC=../../../bin/protoc"); // TODO: Hacks!
 
-    // tonic_build::configure()
-    //     // .type_attribute(".", "#[derive(serde::Serialize)]")
-    //     .compile(
-    //         &["../../backend/protos/xyz/block/ftl/v1/schema/schema.proto"],
-    //         &["../../backend/protos"],
-    //     )?;
-    // Ok(())
-
-    // let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("protos");
-    // let proto_files = vec![root.join("../protos/xyz/block/ftl/v1/schema/schema.proto")];
-
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../backend/protos");
-    let proto_files = vec![root.join("xyz/block/ftl/v1/schema/schema.proto")];
+    let proto_files = vec![
+        root.join("xyz/block/ftl/v1/schema/schema.proto"),
+        root.join("xyz/block/ftl/v1/ftl.proto"),
+    ];
 
     // Tell cargo to recompile if any of these proto files are changed
     for proto_file in &proto_files {
