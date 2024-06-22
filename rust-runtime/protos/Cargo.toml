@@ -8,7 +8,11 @@ pbjson = { workspace = true }
 pbjson-types = { workspace = true }
 prost = { workspace = true }
 serde = { workspace = true }
+tonic = { workspace = true }
+prost-types = { workspace = true }
 
 [build-dependencies]
 pbjson-build = { workspace = true }
 prost-build = { workspace = true }
+prost = { workspace = true }
+tonic-build = { workspace = true }

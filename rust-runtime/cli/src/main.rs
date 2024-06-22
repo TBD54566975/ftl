@@ -11,7 +11,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Serve {
+    Server {
         #[arg(short, long, default_value = "8080")]
         port: u16,
     },
@@ -20,13 +20,15 @@ enum Commands {
     },
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = Cli::parse();
     tracing_subscriber::fmt::init();
 
     match cli.command {
-        Some(Commands::Serve { port }) => {
+        Some(Commands::Server { port }) => {
             eprintln!("Serving on port {}", port);
+            server::serve().await.unwrap()
         }
         Some(Commands::DumpModule { file }) => {
             eprintln!("Dumping {:?}", file);
