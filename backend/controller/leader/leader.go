@@ -173,7 +173,7 @@ func (c *Coordinator[P]) createFollower() (out P, err error) {
 			f.deadline = expiry
 			return f.value, nil
 		}
-		//retire old follower
+		// retire old follower
 		f.cancelCtx()
 		c.follower = optional.None[*follower[P]]()
 	}
