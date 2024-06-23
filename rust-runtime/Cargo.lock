@@ -299,7 +299,10 @@ version = "0.1.0"
 dependencies = [
  "ftl",
  "serde",
+ "serde_json",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

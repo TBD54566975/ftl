@@ -78,6 +78,14 @@ impl VerbToken {
             metadata: vec![],
         }
     }
+
+    pub fn get_request_type(&self) -> Box<syn::Type> {
+        let syn::FnArg::Typed(arg) = self.func.sig.inputs.last().unwrap() else {
+            panic!("Function must have two arguments");
+        };
+
+        arg.ty.clone()
+    }
 }
 
 /// Extract functions that are annotated with #[ftl::verb] and extract the AST node.

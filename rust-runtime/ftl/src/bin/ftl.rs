@@ -12,8 +12,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    CallVerb { module: String, verb: String },
-    DumpModule { file: PathBuf },
+    CallVerb {
+        module: String,
+        verb: String,
+        request: String,
+    },
+    DumpModule {
+        file: PathBuf,
+    },
 }
 
 #[tokio::main]
@@ -22,9 +28,13 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     match cli.command {
-        Some(Commands::CallVerb { module, verb }) => {
+        Some(Commands::CallVerb {
+            module,
+            verb,
+            request,
+        }) => {
             info!("Calling verb {} in module {}", verb, module);
-            ftl::client::call_verb(module, verb).await;
+            ftl::client::call_verb(module, verb, request).await;
         }
         Some(Commands::DumpModule { file }) => {
             info!("Dumping {:?}", file);

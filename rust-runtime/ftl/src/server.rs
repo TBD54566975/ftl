@@ -13,7 +13,7 @@ use crate::Context;
 #[derive(Debug)]
 pub struct Config {
     pub call_immediate:
-        fn(Context, String, String) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>>,
+        fn(Context, String, String, String) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>>,
 }
 
 pub async fn serve(config: Config) -> Result<(), Box<dyn std::error::Error>> {
@@ -90,8 +90,10 @@ impl VerbService for FtlService {
         let verb_ref = request.verb.unwrap();
         let module = verb_ref.module;
         let name = verb_ref.name;
+        let request_body: Vec<u8> = request.body;
+        let request_body = String::from_utf8(request_body).unwrap();
 
-        (self.config.call_immediate)(Context::default(), module, name).await;
+        (self.config.call_immediate)(Context::default(), module, name, request_body).await;
 
         Ok(Response::new(protos::ftl::CallResponse { response: None }))
     }

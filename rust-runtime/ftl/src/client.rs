@@ -3,7 +3,7 @@ use tracing::info;
 use ftl_protos::ftl::verb_service_client::VerbServiceClient;
 use ftl_protos::schema::Ref;
 
-pub async fn call_verb(module: String, name: String) {
+pub async fn call_verb(module: String, name: String, request_body: String) {
     info!("Calling verb {} in module {}", name, module);
 
     let mut client = VerbServiceClient::connect("http://[::1]:50051")
@@ -17,7 +17,7 @@ pub async fn call_verb(module: String, name: String) {
             module,
             type_parameters: vec![],
         }),
-        body: vec![],
+        body: request_body.into_bytes(),
     });
 
     let response = client.call(request).await.unwrap();
