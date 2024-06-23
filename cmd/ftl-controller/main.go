@@ -59,13 +59,12 @@ func main() {
 	// The FTL controller currently only supports AWS Secrets Manager as a secrets provider.
 	awsConfig, err := config.LoadDefaultConfig(ctx)
 	kctx.FatalIfErrorf(err)
-	asmClient := secretsmanager.NewFromConfig(awsConfig)
-	secretsResolver := cf.ASM{Client: *asmClient}
-	secretsProviders := []cf.Provider[cf.Secrets]{cf.ASM{Client: *asmClient}}
+	secretsResolver := cf.NewASM(ctx, secretsmanager.NewFromConfig(awsConfig), cli.ControllerConfig.Advertise, dal)
+	secretsProviders := []cf.Provider[cf.Secrets]{secretsResolver}
 	sm, err := cf.New[cf.Secrets](ctx, secretsResolver, secretsProviders)
 	kctx.FatalIfErrorf(err)
 	ctx = cf.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling())
+	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), dal)
 	kctx.FatalIfErrorf(err)
 }

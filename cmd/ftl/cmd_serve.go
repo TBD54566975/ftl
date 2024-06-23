@@ -15,9 +15,11 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -87,7 +89,16 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 		}
 	}
 
+	// Bring up the DB and DAL.
 	dsn, err := s.setupDB(ctx)
+	if err != nil {
+		return err
+	}
+	conn, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return err
+	}
+	dal, err := dal.New(ctx, conn)
 	if err != nil {
 		return err
 	}
@@ -126,7 +137,7 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling, dal); err != nil {
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
 			return nil
