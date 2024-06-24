@@ -1,17 +1,16 @@
 import * as vscode from 'vscode'
+import { moduleNewCommand } from './commands/module-new'
 
 export const ftlModulesActivate = (context: vscode.ExtensionContext) => {
   const treeDataProvider = new FtlModulesDataProvider()
   vscode.window.registerTreeDataProvider('ftlModulesView', treeDataProvider)
   context.subscriptions.push(
-    vscode.commands.registerCommand('ftlModulesView.refresh', () => treeDataProvider.refresh()),
-    vscode.commands.registerCommand('ftlModulesView.add', () => {
-      vscode.window.showInformationMessage('Add command executed')
-      // Add your logic for adding an item
+    vscode.commands.registerCommand('ftl.newModuleCommand', moduleNewCommand),
+    vscode.commands.registerCommand('ftlModule.addNode', async (node: TreeItem) => {
+      vscode.window.showInformationMessage(`Add node command executed on ${node.label}`)
     }),
-    vscode.commands.registerCommand('ftlModulesView.delete', (node: TreeItem) => {
+    vscode.commands.registerCommand('ftlModule.delete', (node: TreeItem) => {
       vscode.window.showInformationMessage(`Delete command executed on ${node.label}`)
-      // Add your logic for deleting an item
     })
   )
 }
@@ -24,14 +23,14 @@ export class FtlModulesDataProvider implements vscode.TreeDataProvider<TreeItem>
   private data: TreeItem[] = [
     new TreeItem('modules', new vscode.ThemeIcon('rocket'), vscode.TreeItemCollapsibleState.Expanded, [
       new TreeItem('time', new vscode.ThemeIcon('package'), vscode.TreeItemCollapsibleState.Collapsed, [
-        new TreeItem('verb1', new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None),
-        new TreeItem('verb2', new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None)
-      ]),
+        new TreeItem('verb1', new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None, [], 'ftlVerb'),
+        new TreeItem('verb2', new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None, [], 'ftlVerb')
+      ], 'ftlModule'),
       new TreeItem('echo', new vscode.ThemeIcon('package'), vscode.TreeItemCollapsibleState.Collapsed, [
-        new TreeItem('verb1', new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None),
-        new TreeItem('verb2', new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None)
-      ]),
-    ], 'ftlModule')
+        new TreeItem('verb1', new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None, [], 'ftlVerb'),
+        new TreeItem('verb2', new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None, [], 'ftlVerb')
+      ], 'ftlModule'),
+    ], 'ftlModules')
   ]
 
   refresh(): void {
