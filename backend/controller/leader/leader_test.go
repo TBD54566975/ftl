@@ -121,10 +121,10 @@ func TestSingleLeader(t *testing.T) {
 	ctxSlicesLock.Unlock()
 }
 
-func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (idx int, leaderStr string) {
+func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (leaderIdx int, leaderStr string) {
 	t.Helper()
 
-	leaderIdx := -1
+	leaderIdx = -1
 	for i := range 5 {
 		result, err := coordinators[i].Get()
 		assert.NoError(t, err)
@@ -135,7 +135,7 @@ func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (
 		}
 	}
 	assert.NotEqual(t, -1, leaderIdx)
-	return idx, leaderStr
+	return leaderIdx, leaderStr
 }
 
 func validateAllFollowTheLeader(t *testing.T, coordinators []*Coordinator[string], leaderIdx int) {
