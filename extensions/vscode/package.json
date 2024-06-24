@@ -83,8 +83,28 @@
       {
         "command": "ftl.statusItemClicked",
         "title": "FTL: Show Commands"
+      },
+      {
+        "command": "ftlModulesView.add",
+        "title": "Add Item"
+      },
+      {
+        "command": "ftlModulesView.delete",
+        "title": "Delete Item"
       }
-    ]
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "ftlModulesView.add",
+          "when": "viewItem == ftlModule"
+        },
+        {
+          "command": "ftlModulesView.delete",
+          "when": "view == ftlModulesView"
+        }
+      ]
+    }
   },
   "main": "./dist/extension.js",
   "scripts": {
