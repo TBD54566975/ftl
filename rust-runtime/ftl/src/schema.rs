@@ -27,7 +27,7 @@ impl Parser {
             pos: None,
             comments: vec![],
             builtin: false,
-            name: "".to_string(),
+            name: module.0.to_string(),
             decls,
         }
     }
@@ -95,7 +95,7 @@ mod tests {
                 pos: None,
                 comments: vec![],
                 builtin: false,
-                name: "".to_string(),
+                name: "moo".to_string(),
                 decls: vec![schema::Decl {
                     value: Some(schema::decl::Value::Verb(schema::Verb {
                         runtime: None,
