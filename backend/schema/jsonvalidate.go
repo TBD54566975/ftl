@@ -47,6 +47,7 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 		case int64, float64:
 			typeMatches = true
 		case string:
+			fmt.Printf("found string %s\n", value)
 			if _, err := strconv.ParseInt(value, 10, 64); err == nil {
 				typeMatches = true
 			}
@@ -137,8 +138,14 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 						}
 					}
 				case *IntValue:
-					if valueInt, ok := value.(int); ok {
-						if t.Value == valueInt {
+					switch value := value.(type) {
+					case int, int64:
+						if t.Value == value {
+							typeMatches = true
+							break
+						}
+					case float64:
+						if float64(t.Value) == value {
 							typeMatches = true
 							break
 						}

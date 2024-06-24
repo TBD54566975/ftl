@@ -226,10 +226,6 @@ func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.UnsetSecretResponse{}), nil
 }
 
-type DeclType interface {
-	schema.Config | schema.Secret
-}
-
 func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool, ref cf.Ref, value json.RawMessage) error {
 	var sch *schema.Schema
 	var err error

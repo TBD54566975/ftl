@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -141,4 +142,117 @@ func testAdminSecrets(
 		assert.NoError(t, err)
 		assert.Equal(t, entry.Value, string(resp.Msg.Value))
 	}
+}
+
+var testSchema = schema.MustValidate(&schema.Schema{
+	Modules: []*schema.Module{
+		{
+			Name:     "batmobile",
+			Comments: []string{"A batmobile comment"},
+			Decls: []schema.Decl{
+				&schema.Secret{
+					Comments: []string{"top secret"},
+					Name:     "owner",
+					Type:     &schema.String{},
+				},
+				&schema.Secret{
+					Comments: []string{"ultra secret"},
+					Name:     "horsepower",
+					Type:     &schema.Int{},
+				},
+				&schema.Config{
+					Comments: []string{"car color"},
+					Name:     "color",
+					Type:     &schema.Ref{Module: "batmobile", Name: "Color"},
+				},
+				&schema.Config{
+					Comments: []string{"car capacity"},
+					Name:     "capacity",
+					Type:     &schema.Ref{Module: "batmobile", Name: "Capacity"},
+				},
+				&schema.Enum{
+					Comments: []string{"Car colors"},
+					Name:     "Color",
+					Type:     &schema.String{},
+					Variants: []*schema.EnumVariant{
+						{Name: "Black", Value: &schema.StringValue{Value: "Black"}},
+						{Name: "Blue", Value: &schema.StringValue{Value: "Blue"}},
+						{Name: "Green", Value: &schema.StringValue{Value: "Green"}},
+					},
+				},
+				&schema.Enum{
+					Comments: []string{"Car capacities"},
+					Name:     "Capacity",
+					Type:     &schema.Int{},
+					Variants: []*schema.EnumVariant{
+						{Name: "One", Value: &schema.IntValue{Value: int(1)}},
+						{Name: "Two", Value: &schema.IntValue{Value: int(2)}},
+						{Name: "Four", Value: &schema.IntValue{Value: int(4)}},
+					},
+				},
+			},
+		},
+	},
+})
+
+func TestAdminValidation(t *testing.T) {
+	config := tempConfigPath(t, "testdata/ftl-project.toml", "admin")
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+
+	cm, err := cf.NewConfigurationManager(ctx, cf.ProjectConfigResolver[cf.Configuration]{Config: config})
+	assert.NoError(t, err)
+
+	sm, err := cf.New(ctx,
+		cf.ProjectConfigResolver[cf.Secrets]{Config: config},
+		[]cf.Provider[cf.Secrets]{
+			cf.EnvarProvider[cf.Secrets]{},
+			cf.InlineProvider[cf.Secrets]{},
+		})
+	assert.NoError(t, err)
+	admin := NewAdminService(cm, sm, optional.None[*dal.DAL](), optional.Some(testSchema))
+	assert.NotZero(t, admin)
+
+	testSetConfig(t, ctx, admin, "batmobile", "color", "Black", "")
+	testSetConfig(t, ctx, admin, "batmobile", "color", "Red", "Red is not a valid variant of enum batmobile.Color")
+	testSetConfig(t, ctx, admin, "batmobile", "capacity", 2, "")
+	testSetConfig(t, ctx, admin, "batmobile", "capacity", 3, "%!s(float64=3) is not a valid variant of enum batmobile.Capacity")
+	testSetSecret(t, ctx, admin, "batmobile", "owner", "Bruce Wayne", "")
+	testSetSecret(t, ctx, admin, "batmobile", "owner", 99, "owner has wrong type, expected String found float64")
+	testSetSecret(t, ctx, admin, "batmobile", "horsepower", 1000, "")
+	testSetSecret(t, ctx, admin, "batmobile", "horsepower", "thousand", "horsepower has wrong type, expected Int found string")
+
+}
+
+func testSetConfig(t testing.TB, ctx context.Context, admin *AdminService, module string, name string, jsonVal any, expectedError string) error {
+	t.Helper()
+	var buffer bytes.Buffer
+	enc := json.NewEncoder(&buffer)
+	if err := enc.Encode(jsonVal); err != nil {
+		return err
+	}
+
+	_, err := admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
+		Provider: ftlv1.ConfigProvider_CONFIG_INLINE.Enum(),
+		Ref:      &ftlv1.ConfigRef{Module: &module, Name: name},
+		Value:    buffer.Bytes(),
+	}))
+	assert.EqualError(t, err, expectedError)
+	return nil
+}
+
+func testSetSecret(t testing.TB, ctx context.Context, admin *AdminService, module string, name string, jsonVal any, expectedError string) error {
+	t.Helper()
+	var buffer bytes.Buffer
+	enc := json.NewEncoder(&buffer)
+	if err := enc.Encode(jsonVal); err != nil {
+		return err
+	}
+
+	_, err := admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
+		Provider: ftlv1.SecretProvider_SECRET_INLINE.Enum(),
+		Ref:      &ftlv1.ConfigRef{Module: &module, Name: name},
+		Value:    buffer.Bytes(),
+	}))
+	assert.EqualError(t, err, expectedError)
+	return nil
 }
