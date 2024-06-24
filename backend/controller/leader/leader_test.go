@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -50,13 +51,20 @@ func TestSingleLeader(t *testing.T) {
 	leaser := leases.NewFakeLeaser()
 	leaseTTL := time.Second * 5
 
+	ctxSlicesLock := sync.Mutex{}
 	leaderContexts := []context.Context{}
 	followerContexts := []context.Context{}
 	leaderFactory := func(ctx context.Context) (string, error) {
+		ctxSlicesLock.Lock()
+		defer ctxSlicesLock.Unlock()
+
 		leaderContexts = append(leaderContexts, ctx)
 		return fmt.Sprintf("leader:%v", time.Now()), nil
 	}
 	followerFactory := func(ctx context.Context, leaderURL *url.URL) (string, error) {
+		ctxSlicesLock.Lock()
+		defer ctxSlicesLock.Unlock()
+
 		followerContexts = append(followerContexts, ctx)
 		fmt.Printf("creating follower with leader url: %s\n", leaderURL.String())
 		return fmt.Sprintf("following:%s", leaderURL.String()), nil
@@ -80,10 +88,12 @@ func TestSingleLeader(t *testing.T) {
 	leaderIdx, initialLeaderStr := leaderFromCoordinators(t, coordinators)
 	validateAllFollowTheLeader(t, coordinators, leaderIdx)
 
+	ctxSlicesLock.Lock()
 	originalLeaderCtxs := leaderContexts
 	originalFollowerCtxs := followerContexts
 	leaderContexts = []context.Context{}
 	followerContexts = []context.Context{}
+	ctxSlicesLock.Unlock()
 
 	// release the lease the leader is using, to simulate the lease not being able to be renewed by the leader
 	// a new leader should be elected
@@ -99,6 +109,7 @@ func TestSingleLeader(t *testing.T) {
 	assert.NotEqual(t, finalLeaderStr, initialLeaderStr, "leader should have been changed when the lease broke")
 	validateAllFollowTheLeader(t, coordinators, leaderIdx)
 
+	ctxSlicesLock.Lock()
 	time.Sleep(time.Second * 1)
 	// ensure the old contexts were cancelled
 	for _, ctx := range originalLeaderCtxs {
@@ -107,6 +118,7 @@ func TestSingleLeader(t *testing.T) {
 	for _, ctx := range originalFollowerCtxs {
 		assert.Error(t, ctx.Err(), "expected old contexts for followers to be cancelled")
 	}
+	ctxSlicesLock.Unlock()
 }
 
 func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (idx int, leaderStr string) {
