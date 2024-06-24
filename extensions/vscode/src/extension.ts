@@ -4,6 +4,7 @@ import * as vscode from 'vscode'
 import { FTLStatus } from './status'
 import { MIN_FTL_VERSION, checkMinimumVersion, getFTLVersion, getProjectOrWorkspaceRoot, isFTLRunning, resolveFtlPath } from './config'
 import { FTLClient } from './client'
+import { FtlModulesDataProvider } from './ftl-modules'
 
 const extensionId = 'ftl'
 let client: FTLClient
@@ -13,6 +14,9 @@ let outputChannel: vscode.OutputChannel
 export const activate = async (context: ExtensionContext) => {
   outputChannel = vscode.window.createOutputChannel('FTL', 'log')
   outputChannel.appendLine('FTL extension activated')
+
+  const treeDataProvider = new FtlModulesDataProvider()
+  vscode.window.registerTreeDataProvider('ftlModulesView', treeDataProvider)
 
   statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Right,

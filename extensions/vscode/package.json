@@ -20,6 +20,23 @@
     "workspaceContains:**/ftl.toml"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ftlModulesViewContainer",
+          "title": "FTL",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "ftlModulesViewContainer": [
+        {
+          "id": "ftlModulesView",
+          "name": "FTL"
+        }
+      ]
+    },
     "configuration": {
       "title": "FTL",
       "properties": {
