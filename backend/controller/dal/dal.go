@@ -841,6 +841,19 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 	})
 }
 
+// GetActiveSchema returns the schema for all active deployments.
+func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
+	deployments, err := d.GetActiveDeployments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return schema.ValidateSchema(&schema.Schema{
+		Modules: slices.Map(deployments, func(d Deployment) *schema.Module {
+			return d.Schema
+		}),
+	})
+}
+
 func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]Deployment, error) {
 	rows, err := d.db.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {

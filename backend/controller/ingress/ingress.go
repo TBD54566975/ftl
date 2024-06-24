@@ -56,7 +56,7 @@ func ValidateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error 
 		return fmt.Errorf("HTTP request body is not valid JSON: %w", err)
 	}
 
-	return schema.ValidateJSONalue(verb.Request, []string{verb.Request.String()}, requestMap, sch)
+	return schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, requestMap, sch)
 }
 
 func getBodyField(ref *schema.Ref, sch *schema.Schema) (*schema.Field, error) {

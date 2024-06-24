@@ -16,7 +16,8 @@ func (p path) String() string {
 	return strings.TrimLeft(strings.Join(p, ""), ".")
 }
 
-func ValidateJSONalue(fieldType Type, path path, value any, sch *Schema) error { //nolint:maintidx
+// ValidateJSONValue validates a given JSON value against the provided schema.
+func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error { //nolint:maintidx
 	var typeMatches bool
 	switch fieldType := fieldType.(type) {
 	case *Any:
@@ -83,7 +84,7 @@ func ValidateJSONalue(fieldType Type, path path, value any, sch *Schema) error {
 		for i := range rv.Len() {
 			elemPath := append(path, fmt.Sprintf("[%d]", i)) //nolint:gocritic
 			elem := rv.Index(i).Interface()
-			if err := ValidateJSONalue(elementType, elemPath, elem, sch); err != nil {
+			if err := ValidateJSONValue(elementType, elemPath, elem, sch); err != nil {
 				return err
 			}
 		}
@@ -99,10 +100,10 @@ func ValidateJSONalue(fieldType Type, path path, value any, sch *Schema) error {
 		for _, key := range rv.MapKeys() {
 			elemPath := append(path, fmt.Sprintf("[%q]", key)) //nolint:gocritic
 			elem := rv.MapIndex(key).Interface()
-			if err := ValidateJSONalue(keyType, elemPath, key.Interface(), sch); err != nil {
+			if err := ValidateJSONValue(keyType, elemPath, key.Interface(), sch); err != nil {
 				return err
 			}
-			if err := ValidateJSONalue(valueType, elemPath, elem, sch); err != nil {
+			if err := ValidateJSONValue(valueType, elemPath, elem, sch); err != nil {
 				return err
 			}
 		}
@@ -122,7 +123,7 @@ func ValidateJSONalue(fieldType Type, path path, value any, sch *Schema) error {
 				typeMatches = true
 			}
 		case *TypeAlias:
-			return ValidateJSONalue(d.Type, path, value, sch)
+			return ValidateJSONValue(d.Type, path, value, sch)
 		case *Enum:
 			var inputName any
 			inputName = value
@@ -163,7 +164,7 @@ func ValidateJSONalue(fieldType Type, path path, value any, sch *Schema) error {
 						}
 
 						if v.Name == vNameStr {
-							return ValidateJSONalue(t.Value, path, vValue, sch)
+							return ValidateJSONValue(t.Value, path, vValue, sch)
 						}
 					} else {
 						return fmt.Errorf(`malformed enum type %s: expected structure is `+
@@ -193,7 +194,7 @@ func ValidateJSONalue(fieldType Type, path path, value any, sch *Schema) error {
 		if value == nil {
 			typeMatches = true
 		} else {
-			return ValidateJSONalue(fieldType.Type, path, value, sch)
+			return ValidateJSONValue(fieldType.Type, path, value, sch)
 		}
 	}
 
@@ -220,7 +221,7 @@ func ValidateRequestMap(ref *Ref, path path, request map[string]any, sch *Schema
 		}
 
 		if haveValue {
-			err := ValidateJSONalue(field.Type, fieldPath, value, sch)
+			err := ValidateJSONValue(field.Type, fieldPath, value, sch)
 			if err != nil {
 				errs = append(errs, err)
 			}

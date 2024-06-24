@@ -9,6 +9,8 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -125,7 +127,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
 
-	admin := admin.NewAdminService(cm, sm, optional.Some(dal))
+	admin := admin.NewAdminService(cm, sm, optional.Some(dal), optional.None[*schema.Schema]())
 	console := NewConsoleService(dal)
 
 	ingressHandler := http.Handler(svc)
@@ -279,7 +281,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sch, err := s.getActiveSchema(r.Context())
+	sch, err := s.dal.GetActiveSchema(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -889,7 +891,7 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
 
-	sch, err := s.getActiveSchema(ctx)
+	sch, err := s.dal.GetActiveSchema(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1642,16 +1644,44 @@ func (s *Service) syncSchema(ctx context.Context) {
 	}
 }
 
-func (s *Service) getActiveSchema(ctx context.Context) (*schema.Schema, error) {
-	deployments, err := s.dal.GetActiveDeployments(ctx)
-	if err != nil {
-		return nil, err
+func runWithRetries(ctx context.Context, success, failure time.Duration, fn func(ctx context.Context) error) {
+	name := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+	name = name[strings.LastIndex(name, ".")+1:]
+	name = strings.TrimSuffix(name, "-fm")
+
+	ctx = log.ContextWithLogger(ctx, log.FromContext(ctx).Scope(name))
+	failureRetry := backoff.Backoff{
+		Min:    failure,
+		Max:    failure * 2,
+		Jitter: true,
+		Factor: 2,
 	}
-	return schema.ValidateSchema(&schema.Schema{
-		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
-			return d.Schema
-		}),
-	})
+	failed := false
+	logger := log.FromContext(ctx)
+	for {
+		err := fn(ctx)
+		if err != nil {
+			next := failureRetry.Duration()
+			logger.Errorf(err, "Failed, retrying in %s", next)
+			select {
+			case <-time.After(next):
+			case <-ctx.Done():
+				return
+			}
+		} else {
+			if failed {
+				logger.Debugf("Recovered")
+				failed = false
+			}
+			failureRetry.Reset()
+			logger.Tracef("Success, next run in %s", success)
+			select {
+			case <-time.After(success):
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
 }
 
 func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {

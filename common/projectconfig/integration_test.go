@@ -24,8 +24,8 @@ func TestCmdsCreateProjectTomlFilesIfNonexistent(t *testing.T) {
 
 	in.Run(t, fileName,
 		in.CopyModule("echo"),
-		in.Exec("ftl", "config", "set", "key", "--inline", "value"),
-		in.FileContains(configPath, "key"),
+		in.Exec("ftl", "config", "set", "default", "--inline", "value"),
+		in.FileContains(configPath, "default"),
 		in.FileContains(configPath, "InZhbHVlIg"),
 	)
 

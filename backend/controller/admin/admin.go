@@ -5,35 +5,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/buildengine"
 	cf "github.com/TBD54566975/ftl/common/configuration"
-	"github.com/TBD54566975/ftl/common/projectconfig"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type AdminService struct {
 	dal optional.Option[*dal.DAL]
+	sch optional.Option[*schema.Schema]
 	cm  *cf.Manager[cf.Configuration]
 	sm  *cf.Manager[cf.Secrets]
 }
 
 var _ ftlv1connect.AdminServiceHandler = (*AdminService)(nil)
 
-func NewAdminService(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets], dal optional.Option[*dal.DAL]) *AdminService {
+func NewAdminService(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets], dal optional.Option[*dal.DAL], sch optional.Option[*schema.Schema]) *AdminService {
 	return &AdminService{
 		dal: dal,
+		sch: sch,
 		cm:  cm,
 		sm:  sm,
 	}
@@ -114,7 +109,7 @@ func configProviderKey(p *ftlv1.ConfigProvider) string {
 
 // ConfigSet sets the configuration at the given ref to the provided value.
 func (s *AdminService) ConfigSet(ctx context.Context, req *connect.Request[ftlv1.SetConfigRequest]) (*connect.Response[ftlv1.SetConfigResponse], error) {
-	err := validateAgainstSchema(ctx, s.dal, false, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
+	err := s.validateAgainstSchema(ctx, false, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +203,7 @@ func secretProviderKey(p *ftlv1.SecretProvider) string {
 
 // SecretSet sets the secret at the given ref to the provided value.
 func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1.SetSecretRequest]) (*connect.Response[ftlv1.SetSecretResponse], error) {
-	err := validateAgainstSchema(ctx, s.dal, true, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
+	err := s.validateAgainstSchema(ctx, true, cf.NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -231,66 +226,24 @@ func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.UnsetSecretResponse{}), nil
 }
 
-func schemaFromDal(ctx context.Context, optDal optional.Option[*dal.DAL]) (*schema.Schema, error) {
-	d, ok := optDal.Get()
-	if !ok {
-		return nil, fmt.Errorf("no DAL available")
-	}
-	deployments, err := d.GetActiveDeployments(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return schema.ValidateSchema(&schema.Schema{
-		Modules: slices.Map(deployments, func(depl dal.Deployment) *schema.Module {
-			return depl.Schema
-		}),
-	})
-}
-
-func schemaFromDisk(ctx context.Context) (*schema.Schema, error) {
-	path, ok := projectconfig.DefaultConfigPath().Get()
-	if !ok {
-		return nil, fmt.Errorf("no project config path available")
-	}
-	projConfig, err := projectconfig.Load(ctx, path)
-	if err != nil {
-		return nil, err
-	}
-	modules, err := buildengine.DiscoverModules(ctx, projConfig.AbsModuleDirs())
-	if err != nil {
-		return nil, err
-	}
-
-	var pbModules []*schemapb.Module
-	for _, m := range modules {
-		deployDir := m.Config.AbsDeployDir()
-		schemaPath := filepath.Join(deployDir, m.Config.Schema)
-		content, err := os.ReadFile(schemaPath)
-		if err != nil {
-			return nil, err
-		}
-		pbModule := &schemapb.Module{}
-		err = proto.Unmarshal(content, pbModule)
-		if err != nil {
-			return nil, err
-		}
-		pbModules = append(pbModules, pbModule)
-	}
-	return schema.FromProto(&schemapb.Schema{Modules: pbModules})
-}
-
 type DeclType interface {
 	schema.Config | schema.Secret
 }
 
-func validateAgainstSchema(ctx context.Context, dal optional.Option[*dal.DAL], isSecret bool, ref cf.Ref, value json.RawMessage) error {
-	sch, err := schemaFromDal(ctx, dal)
-	if err != nil {
-		sch, err = schemaFromDisk(ctx)
+func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool, ref cf.Ref, value json.RawMessage) error {
+	var sch *schema.Schema
+	var err error
+	if dal, ok := s.dal.Get(); ok {
+		sch, err = dal.GetActiveSchema(ctx)
 		if err != nil {
 			return err
 		}
+	} else if ss, ok := s.sch.Get(); ok {
+		sch = ss
+	} else {
+		return fmt.Errorf("no schema available")
 	}
+
 	r := schema.RefKey{Module: ref.Module.Default(""), Name: ref.Name}.ToRef()
 	decl, ok := sch.Resolve(r).Get()
 	if !ok {
@@ -320,7 +273,7 @@ func validateAgainstSchema(ctx context.Context, dal optional.Option[*dal.DAL], i
 		return err
 	}
 
-	err = schema.ValidateJSONalue(fieldType, []string{ref.Name}, v, sch)
+	err = schema.ValidateJSONValue(fieldType, []string{ref.Name}, v, sch)
 	if err != nil {
 		return err
 	}

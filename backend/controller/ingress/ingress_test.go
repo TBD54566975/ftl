@@ -407,7 +407,7 @@ func TestEnumValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := schema.ValidateJSONalue(test.validateRoot, []string{test.validateRoot.String()}, test.req, sch)
+		err := schema.ValidateJSONValue(test.validateRoot, []string{test.validateRoot.String()}, test.req, sch)
 		if test.err == "" {
 			assert.NoError(t, err)
 		} else {
