@@ -14,7 +14,7 @@ async fn main() {
 
     let config = ftl::verb_server::Config {
         // call_immediate is a generated function that will call the appropriate verb.
-        // See build.rs for how this is generated.
+        // See parser for how this is generated.
         bind,
         call_immediate,
     };

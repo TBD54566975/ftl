@@ -46,6 +46,8 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 		err = buildGoModule(ctx, sch, module, filesTransaction)
 	case "kotlin":
 		err = buildKotlinModule(ctx, sch, module)
+	case "rust":
+		panic("unimplemented")
 	default:
 		return fmt.Errorf("unknown language %q", module.Config.Language)
 	}

@@ -145,6 +145,9 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 			}
 			config.Watch = append(config.Watch, watches...)
 		}
+
+	case "rust":
+		panic("unimplemented")
 	}
 
 	// Do some validation.
