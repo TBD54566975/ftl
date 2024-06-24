@@ -1,34 +1,38 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use proc_macro2::{Ident, Span};
 
 use ftl_protos::schema;
 
-fn brainstorm() {
-    let parsed = parse(Path::new("src").join("**/*.rs"));
-
-    let out_dir = std::env::var("OUT_DIR").unwrap();
-    let out_path = Path::new(&out_dir).join("call_immediate.rs");
-    parsed.generate_call_immediate_file(&out_path);
-    parsed.generate_protos();
+pub struct Parser {
+    pub verb_tokens: HashMap<ModuleIdent, Vec<VerbToken>>,
 }
 
-pub fn parse(path: PathBuf) -> Parsed {
-    let sources = find_sources();
-    let mut verb_tokens = vec![];
-    for source in sources {
-        let contents = std::fs::read_to_string(&source).unwrap();
-        let ast = syn::parse_file(&contents).unwrap();
-        let file_name = source.file_stem().unwrap().to_str().unwrap();
-        let mod_ident = Ident::new(file_name, Span::call_site());
-        verb_tokens.extend(extract_ast_verbs(&mod_ident, ast));
+impl Parser {
+    pub fn new() -> Self {
+        Self {
+            verb_tokens: HashMap::new(),
+        }
     }
 
-    Parsed { verb_tokens }
-}
+    pub fn add_module(&mut self, module: &ModuleIdent, code: &str) {
+        let ast = syn::parse_file(code).unwrap();
+        let verbs = extract_ast_verbs(module, ast);
 
-pub struct Parsed {
-    pub verb_tokens: Vec<VerbToken>,
+        self.verb_tokens.insert(module.clone(), verbs);
+    }
+
+    pub fn add_glob(&mut self, path: &Path) {
+        let sources = find_sources(path);
+        for source in sources {
+            let contents = std::fs::read_to_string(&source).unwrap();
+            let file_name = source.file_stem().unwrap().to_str().unwrap();
+            let mod_ident = ModuleIdent::new(file_name);
+
+            self.add_module(&mod_ident, &contents);
+        }
+    }
 }
 
 /// Find all .rs sources in src.
@@ -40,9 +44,18 @@ fn find_sources(path: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+pub struct ModuleIdent(pub Ident);
+
+impl ModuleIdent {
+    pub fn new(name: &str) -> Self {
+        Self(Ident::new(name, Span::call_site()))
+    }
+}
+
 #[derive(Debug)]
 pub struct VerbToken {
-    pub module: Ident,
+    pub module: ModuleIdent,
     pub func: syn::ItemFn,
 }
 
@@ -90,7 +103,7 @@ impl VerbToken {
 }
 
 /// Extract functions that are annotated with #[ftl::verb] and extract the AST node.
-pub fn extract_ast_verbs(module: &Ident, ast: syn::File) -> Vec<VerbToken> {
+pub fn extract_ast_verbs(module: &ModuleIdent, ast: syn::File) -> Vec<VerbToken> {
     let ftl_verb_path = syn::parse_str("ftl::verb").unwrap();
 
     let mut verbs = vec![];
@@ -99,6 +112,11 @@ pub fn extract_ast_verbs(module: &Ident, ast: syn::File) -> Vec<VerbToken> {
             syn::Item::Fn(func) => func,
             _ => continue,
         };
+
+        let has_ctx = fn_has_context_as_first_arg(&item);
+        if !has_ctx {
+            panic!("First argument must be of type Context");
+        }
 
         if !has_meta_path(&item.attrs, &ftl_verb_path) {
             continue;

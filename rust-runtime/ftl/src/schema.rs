@@ -1,10 +1,9 @@
 //! A crate for parsing/generating code to and from schema binary.
-use proc_macro2::Ident;
 use prost::Message;
 
 use ftl_protos::schema;
 
-use crate::parser;
+use crate::parser::{ModuleIdent, Parser};
 
 pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     let mut buf = Vec::new();
@@ -12,36 +11,32 @@ pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     schema::Module::decode(&buf[..]).unwrap()
 }
 
-pub fn code_to_module(module: &Ident, code: &str) -> schema::Module {
-    let ast = syn::parse_file(code).unwrap();
-    let verbs = parser::extract_ast_verbs(module, ast);
+impl Parser {
+    pub fn generate_module_proto(&self, module: &ModuleIdent) -> schema::Module {
+        let verbs = &self.verb_tokens.get(module).unwrap();
 
-    let verbs = verbs.iter().filter_map(|verb| {
-        let has_ctx = parser::fn_has_context_as_first_arg(&verb.func);
-        if !has_ctx {
-            panic!("First argument must be of type Context");
+        let verbs = verbs.iter().map(|verb| verb.to_proto());
+
+        let mut decls = vec![];
+        decls.extend(verbs.into_iter().map(|verb| schema::Decl {
+            value: Some(schema::decl::Value::Verb(verb)),
+        }));
+
+        schema::Module {
+            runtime: None,
+            pos: None,
+            comments: vec![],
+            builtin: false,
+            name: "".to_string(),
+            decls,
         }
-
-        Some(verb.to_proto())
-    });
-
-    let mut decls = vec![];
-    decls.extend(verbs.into_iter().map(|verb| schema::Decl {
-        value: Some(schema::decl::Value::Verb(verb)),
-    }));
-
-    schema::Module {
-        runtime: None,
-        pos: None,
-        comments: vec![],
-        builtin: false,
-        name: "".to_string(),
-        decls,
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::parser::Parser;
+
     use super::*;
 
     #[test]
@@ -88,7 +83,11 @@ mod tests {
         }
         "#;
 
-        let m = code_to_module(code);
+        let mut parser = Parser::new();
+        let moo = ModuleIdent::new("moo");
+        parser.add_module(&moo, code);
+        let m = parser.generate_module_proto(&moo);
+
         assert_eq!(
             m,
             schema::Module {

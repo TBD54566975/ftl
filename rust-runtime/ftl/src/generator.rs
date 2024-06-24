@@ -2,15 +2,17 @@ use std::path::Path;
 
 use quote::quote;
 
-use crate::parser::{Parsed, VerbToken};
+use crate::parser::{Parser, VerbToken};
 
-impl Parsed {
-    fn generate_call_immediate_file(&self, out_path: &Path) {
-        let call_immediate_case_tokens = self
-            .verb_tokens
-            .iter()
-            .map(Self::to_call_immediate_case_token)
-            .collect::<Vec<_>>();
+impl Parser {
+    pub fn generate_call_immediate_file(&self, out_path: &Path) {
+        let mut call_immediate_case_tokens = vec![];
+        for verb_tokens in self.verb_tokens.values() {
+            for verb_token in verb_tokens {
+                call_immediate_case_tokens.push(Self::to_call_immediate_case_token(verb_token));
+            }
+        }
+
         let token_stream = quote::quote! {
             pub fn call_immediate(ctx: ::ftl::Context, module: String, verb: String, request_body: String) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = ()> + Send + Sync>> {
                  let fut = async move {
@@ -33,7 +35,7 @@ impl Parsed {
     }
 
     pub fn to_call_immediate_case_token(verb_token: &VerbToken) -> proc_macro2::TokenStream {
-        let module_name = verb_token.module.clone();
+        let module_name = verb_token.module.0.clone();
         let verb_name = verb_token.func.sig.ident.clone();
         let module_name_str = module_name.to_string();
         let verb_name_str = verb_name.to_string();
