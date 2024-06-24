@@ -105,6 +105,17 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 			}
 			config.Watch = append(config.Watch, watches...)
 		}
+
+	case "swift":
+		if config.Build == "" {
+			config.Build = "swift build -c release"
+		}
+		if config.DeployDir == "" {
+			config.DeployDir = "_ftl"
+		}
+		if len(config.Watch) == 0 {
+			config.Watch = []string{"**/*.swift"}
+		}
 	}
 
 	// Do some validation.

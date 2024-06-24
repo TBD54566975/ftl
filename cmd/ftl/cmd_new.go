@@ -27,6 +27,7 @@ import (
 type newCmd struct {
 	Go     newGoCmd     `cmd:"" help:"Initialize a new FTL Go module."`
 	Kotlin newKotlinCmd `cmd:"" help:"Initialize a new FTL Kotlin module."`
+	Swift  newSwiftCmd  `cmd:"" help:"Initialize a new FTL Swift module."`
 }
 
 type newGoCmd struct {
@@ -36,6 +37,11 @@ type newGoCmd struct {
 }
 
 type newKotlinCmd struct {
+	Dir  string `arg:"" help:"Directory to initialize the module in."`
+	Name string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+}
+
+type newSwiftCmd struct {
 	Dir  string `arg:"" help:"Directory to initialize the module in."`
 	Name string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
@@ -114,6 +120,41 @@ func (i newKotlinCmd) Run(ctx context.Context) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func (i newSwiftCmd) Run(ctx context.Context) error {
+	name, path, err := validateModule(i.Dir, i.Name)
+	if err != nil {
+		return err
+	}
+
+	// // config, err := projectconfig.Load(ctx, "")
+	// // if err != nil {
+	// // 	return fmt.Errorf("failed to load project config: %w", err)
+	// }
+
+	logger := log.FromContext(ctx)
+	logger.Debugf("Creating FTL Swift module %q in %s", name, path)
+	// if err := scaffold(ctx, config.Hermit, kotlinruntime.Files(), i.Dir, i); err != nil {
+	// 	return err
+	// }
+
+	// if err := buildengine.SetPOMProperties(ctx, path); err != nil {
+	// 	return err
+	// }
+
+	// logger.Debugf("Adding files to git")
+	// if !config.NoGit {
+	// 	if config.Hermit {
+	// 		if err := maybeGitAdd(ctx, i.Dir, "bin/*"); err != nil {
+	// 			return err
+	// 		}
+	// 	}
+	// 	if err := maybeGitAdd(ctx, i.Dir, filepath.Join(path, "*")); err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 

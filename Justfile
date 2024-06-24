@@ -99,6 +99,10 @@ build-kt-runtime:
   @mkdir -p build/template/ftl && touch build/template/ftl/temp.txt
   @cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} .
 
+# Build the Swift runtime
+build-swift-runtime:
+  swift build --package-path swift-runtime/compile -c release
+
 # Install Node dependencies
 npm-install:
   @mk frontend/node_modules : frontend/package.json -- "cd frontend && npm install"
