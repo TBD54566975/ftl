@@ -235,6 +235,10 @@ func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool,
 	r := schema.RefKey{Module: ref.Module.Default(""), Name: ref.Name}.ToRef()
 	decl, ok := sch.Resolve(r).Get()
 	if !ok {
+		// Globals aren't in the module schemas, so we have nothing to validate them against.
+		if !ref.Module.Ok() {
+			return nil
+		}
 		return fmt.Errorf("declaration %q not found", ref.Name)
 	}
 

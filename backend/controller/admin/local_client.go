@@ -35,7 +35,6 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 	if !ok {
 		return nil, fmt.Errorf("no project config path available")
 	}
-	fmt.Printf("!!! loading schema from path: %s\n", path)
 	projConfig, err := projectconfig.Load(ctx, path)
 	if err != nil {
 		return nil, err
@@ -49,7 +48,6 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 	for _, m := range modules {
 		deployDir := m.Config.AbsDeployDir()
 		schemaPath := filepath.Join(deployDir, m.Config.Schema)
-		fmt.Printf("!!!! loading module schema from %s\n", schemaPath)
 		content, err := os.ReadFile(schemaPath)
 		if err != nil {
 			return nil, err
