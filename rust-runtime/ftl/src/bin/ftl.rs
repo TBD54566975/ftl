@@ -34,7 +34,7 @@ async fn main() {
             request,
         }) => {
             info!("Calling verb {} in module {}", verb, module);
-            ftl::client::call_verb(module, verb, request).await;
+            // ftl::verb_client::call_verb(module, verb, request).await;
         }
         Some(Commands::DumpModule { file }) => {
             info!("Dumping {:?}", file);

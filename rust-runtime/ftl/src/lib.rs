@@ -1,11 +1,10 @@
 pub use build::build;
 pub use ftl_derive::verb;
-pub use server::serve;
 
 mod build;
-pub mod client;
+pub mod runner;
 pub mod schema;
-pub mod server;
+pub mod verb_server;
 
 #[derive(Debug, Default)]
 pub struct Context {}

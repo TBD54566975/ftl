@@ -12,12 +12,19 @@ use crate::Context;
 
 #[derive(Debug)]
 pub struct Config {
+    pub bind: String,
     pub call_immediate:
         fn(Context, String, String, String) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>>,
 }
 
-pub async fn serve(config: Config) -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "[::1]:50051".parse()?;
+impl Config {
+    pub fn bind_url(&self) -> String {
+        format!("http://{}", self.bind)
+    }
+}
+
+pub async fn serve(config: Config) -> () {
+    let addr = config.bind.parse().unwrap();
     let service = FtlService { config };
 
     Server::builder()
@@ -25,9 +32,10 @@ pub async fn serve(config: Config) -> Result<(), Box<dyn std::error::Error>> {
             service,
         ))
         .serve(addr)
-        .await?;
+        .await
+        .unwrap();
 
-    Ok(())
+    ()
 }
 
 #[derive(Debug)]

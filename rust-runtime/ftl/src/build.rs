@@ -54,7 +54,7 @@ pub fn to_call_immediate_case_token(verb_token: &VerbToken) -> proc_macro2::Toke
     let verb_name_str = verb_name.to_string();
     let request_type = verb_token.get_request_type();
 
-    // check for () request type
+    // request type only supports existing in the same module or unit
     if matches!(*request_type, syn::Type::Tuple(_)) {
         quote! {
             (#module_name_str, #verb_name_str) => {
@@ -64,7 +64,6 @@ pub fn to_call_immediate_case_token(verb_token: &VerbToken) -> proc_macro2::Toke
     } else {
         quote! {
             (#module_name_str, #verb_name_str) => {
-                // request type only supports existing in the same module
                 let request = ::serde_json::from_str::<#module_name::#request_type>(&request_body).unwrap();
                 #module_name::#verb_name(ctx, request).await.unwrap();
             }

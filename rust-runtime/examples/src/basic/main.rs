@@ -7,11 +7,15 @@ include!(concat!(env!("OUT_DIR"), "/call_immediate.rs"));
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-    info!("Starting server");
+    info!("Starting verb server");
 
-    let config = ftl::server::Config {
+    let bind = "localhost:1234".to_string();
+    let bind_url = format!("http://{}", bind);
+
+    let config = ftl::verb_server::Config {
         // call_immediate is a generated function that will call the appropriate verb.
         // See build.rs for how this is generated.
+        bind,
         call_immediate,
     };
 
@@ -24,5 +28,10 @@ async fn main() {
     )
     .await;
 
-    ftl::serve(config).await.unwrap();
+    let controller_url = "http://localhost:8892".to_string();
+    let config = ftl::runner::Config {
+        verb_server_config: config,
+        controller_url,
+    };
+    ftl::runner::run(config).await.unwrap();
 }
