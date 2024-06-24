@@ -7,9 +7,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -17,20 +15,22 @@ import (
 )
 
 type AdminService struct {
-	dal optional.Option[*dal.DAL]
-	sch optional.Option[*schema.Schema]
-	cm  *cf.Manager[cf.Configuration]
-	sm  *cf.Manager[cf.Secrets]
+	schr SchemaRetriever
+	cm   *cf.Manager[cf.Configuration]
+	sm   *cf.Manager[cf.Secrets]
 }
 
 var _ ftlv1connect.AdminServiceHandler = (*AdminService)(nil)
 
-func NewAdminService(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets], dal optional.Option[*dal.DAL], sch optional.Option[*schema.Schema]) *AdminService {
+type SchemaRetriever interface {
+	GetActiveSchema(ctx context.Context) (*schema.Schema, error)
+}
+
+func NewAdminService(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets], schr SchemaRetriever) *AdminService {
 	return &AdminService{
-		dal: dal,
-		sch: sch,
-		cm:  cm,
-		sm:  sm,
+		schr: schr,
+		cm:   cm,
+		sm:   sm,
 	}
 }
 
@@ -227,17 +227,9 @@ func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftl
 }
 
 func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool, ref cf.Ref, value json.RawMessage) error {
-	var sch *schema.Schema
-	var err error
-	if dal, ok := s.dal.Get(); ok {
-		sch, err = dal.GetActiveSchema(ctx)
-		if err != nil {
-			return err
-		}
-	} else if ss, ok := s.sch.Get(); ok {
-		sch = ss
-	} else {
-		return fmt.Errorf("no schema available")
+	sch, err := s.schr.GetActiveSchema(ctx)
+	if err != nil {
+		return err
 	}
 
 	r := schema.RefKey{Module: ref.Module.Default(""), Name: ref.Name}.ToRef()

@@ -6,10 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
@@ -24,21 +22,20 @@ type localClient struct {
 	*AdminService
 }
 
-func newLocalClient(ctx context.Context) (*localClient, error) {
+type diskSchemaRetriever struct{}
+
+func newLocalClient(ctx context.Context) *localClient {
 	cm := configuration.ConfigFromContext(ctx)
 	sm := configuration.SecretsFromContext(ctx)
-	sch, err := schemaFromDisk(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &localClient{NewAdminService(cm, sm, optional.None[*dal.DAL](), optional.Some(sch))}, nil
+	return &localClient{NewAdminService(cm, sm, &diskSchemaRetriever{})}
 }
 
-func schemaFromDisk(ctx context.Context) (*schema.Schema, error) {
+func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 	path, ok := projectconfig.DefaultConfigPath().Get()
 	if !ok {
 		return nil, fmt.Errorf("no project config path available")
 	}
+	fmt.Printf("!!! loading schema from path: %s\n", path)
 	projConfig, err := projectconfig.Load(ctx, path)
 	if err != nil {
 		return nil, err
@@ -52,6 +49,7 @@ func schemaFromDisk(ctx context.Context) (*schema.Schema, error) {
 	for _, m := range modules {
 		deployDir := m.Config.AbsDeployDir()
 		schemaPath := filepath.Join(deployDir, m.Config.Schema)
+		fmt.Printf("!!!! loading module schema from %s\n", schemaPath)
 		content, err := os.ReadFile(schemaPath)
 		if err != nil {
 			return nil, err

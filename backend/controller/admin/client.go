@@ -54,7 +54,7 @@ func NewClient(ctx context.Context, adminClient ftlv1connect.AdminServiceClient,
 	}
 	_, err = adminClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
 	if isConnectUnavailableError(err) && isLocal {
-		return newLocalClient(ctx)
+		return newLocalClient(ctx), nil
 	}
 	return adminClient, nil
 }
