@@ -1,3 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@-webkit-keyframes animationFish {
+    100% {-webkit-transform:translate(1000px, 0px)} 
+}

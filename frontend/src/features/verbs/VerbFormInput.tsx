@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 
 export const VerbFormInput = (
-  { requestType, initialPath, requestPath, readOnly, onSubmit }:
+  { requestType, initialPath, requestPath, readOnly, onSubmit, onSave }:
     {
       requestType: string,
       initialPath: string,
       requestPath: string,
       readOnly: boolean,
-      onSubmit: (path: string) => void
+      onSubmit: (path: string) => void,
+      onSave: (path: string) => void
     }
 ) => {
   const [path, setPath] = useState(initialPath)
@@ -15,6 +16,10 @@ export const VerbFormInput = (
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault()
     onSubmit(path)
+  }
+
+  const handleSave: React.FormEventHandler<HTMLFormElement> = async (event) => {
+    onSave(path)
   }
 
   useEffect(() => {
@@ -41,6 +46,12 @@ export const VerbFormInput = (
           className='bg-indigo-700 text-white ml-2 px-4 py-2 rounded-lg hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
         >
           Send
+        </button>
+        <button
+          className='bg-indigo-700 text-white ml-2 px-4 py-2 rounded-lg hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
+          onClick={handleSave}
+        >
+	  Save
         </button>
       </div>
       {!readOnly && (

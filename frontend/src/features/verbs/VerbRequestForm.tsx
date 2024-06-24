@@ -86,6 +86,34 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
     }
   }
 
+  const handleSave = async (path: string) => {
+    setResponse(null)
+    setError(null)
+
+    try {
+      const verbRef: Ref = {
+        name: verb?.verb?.name,
+        module: module?.name,
+      } as Ref
+
+      const requestBytes = createVerbRequest(path, verb, editorText, headersText)
+      if (!window.savedReqs) {
+        window.savedReqs = {}
+      }
+      const key = `${verbRef.module}.${verbRef.name}`
+      if (!window.savedReqs[key]) {
+        window.savedReqs[key] = []
+      }
+      window.savedReqs[key].push({
+        req: requestBytes,
+        ms: 1000,
+      })
+    } catch (error) {
+      console.error('There was an error with the request:', error)
+      setError(String(error))
+    }
+  }
+
   const bottomText = response ?? error ?? ''
 
   return (
@@ -96,6 +124,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
         requestPath={fullRequestPath(module, verb)}
         readOnly={!isHttpIngress(verb)}
         onSubmit={handleSubmit}
+        onSave={handleSave}
       />
       <div>
         <div className='border-b border-gray-200 dark:border-white/10'>
