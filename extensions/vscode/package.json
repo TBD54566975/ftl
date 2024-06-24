@@ -85,23 +85,34 @@
         "title": "FTL: Show Commands"
       },
       {
-        "command": "ftlModulesView.add",
-        "title": "Add Item"
+        "command": "ftl.newModuleCommand",
+        "title": "Add module",
+        "category": "FTL"
       },
       {
-        "command": "ftlModulesView.delete",
-        "title": "Delete Item"
+        "command": "ftlModule.addNode",
+        "title": "Add node",
+        "category": "FTL"
+      },
+      {
+        "command": "ftlModule.delete",
+        "title": "Delete module",
+        "category": "FTL"
       }
     ],
     "menus": {
       "view/item/context": [
         {
-          "command": "ftlModulesView.add",
+          "command": "ftl.newModuleCommand",
+          "when": "viewItem == ftlModules"
+        },
+        {
+          "command": "ftlModule.addNode",
           "when": "viewItem == ftlModule"
         },
         {
-          "command": "ftlModulesView.delete",
-          "when": "view == ftlModulesView"
+          "command": "ftlModule.delete",
+          "when": "viewItem == ftlModule"
         }
       ]
     }
