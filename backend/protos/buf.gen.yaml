@@ -12,3 +12,9 @@ plugins:
   - plugin: connect-es
     out: ../../frontend/src/protos
     opt: target=ts
+  - plugin: es
+    out: ../../extensions/vscode/src/protos
+    opt: target=ts
+  - plugin: connect-es
+    out: ../../extensions/vscode/src/protos
+    opt: target=ts
