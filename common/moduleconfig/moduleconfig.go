@@ -18,6 +18,9 @@ type ModuleGoConfig struct{}
 // ModuleKotlinConfig is language-specific configuration for Kotlin modules.
 type ModuleKotlinConfig struct{}
 
+// ModuleSwiftConfig is language-specific configuration for Swift modules.
+type ModuleSwiftConfig struct{}
+
 // ModuleConfig is the configuration for an FTL module.
 //
 // Module config files are currently TOML.
@@ -43,6 +46,7 @@ type ModuleConfig struct {
 
 	Go     ModuleGoConfig     `toml:"go,optional"`
 	Kotlin ModuleKotlinConfig `toml:"kotlin,optional"`
+	Swift  ModuleSwiftConfig  `toml:"swift,optional"`
 }
 
 // LoadModuleConfig from a directory.
