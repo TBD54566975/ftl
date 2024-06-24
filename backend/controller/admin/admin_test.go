@@ -223,36 +223,34 @@ func TestAdminValidation(t *testing.T) {
 
 }
 
-func testSetConfig(t testing.TB, ctx context.Context, admin *AdminService, module string, name string, jsonVal any, expectedError string) error {
+// nolint
+func testSetConfig(t testing.TB, ctx context.Context, admin *AdminService, module string, name string, jsonVal any, expectedError string) {
 	t.Helper()
 	var buffer bytes.Buffer
 	enc := json.NewEncoder(&buffer)
-	if err := enc.Encode(jsonVal); err != nil {
-		return err
-	}
+	err := enc.Encode(jsonVal)
+	assert.NoError(t, err)
 
-	_, err := admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
+	_, err = admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
 		Provider: ftlv1.ConfigProvider_CONFIG_INLINE.Enum(),
 		Ref:      &ftlv1.ConfigRef{Module: &module, Name: name},
 		Value:    buffer.Bytes(),
 	}))
 	assert.EqualError(t, err, expectedError)
-	return nil
 }
 
-func testSetSecret(t testing.TB, ctx context.Context, admin *AdminService, module string, name string, jsonVal any, expectedError string) error {
+// nolint
+func testSetSecret(t testing.TB, ctx context.Context, admin *AdminService, module string, name string, jsonVal any, expectedError string) {
 	t.Helper()
 	var buffer bytes.Buffer
 	enc := json.NewEncoder(&buffer)
-	if err := enc.Encode(jsonVal); err != nil {
-		return err
-	}
+	err := enc.Encode(jsonVal)
+	assert.NoError(t, err)
 
-	_, err := admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
+	_, err = admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
 		Provider: ftlv1.SecretProvider_SECRET_INLINE.Enum(),
 		Ref:      &ftlv1.ConfigRef{Module: &module, Name: name},
 		Value:    buffer.Bytes(),
 	}))
 	assert.EqualError(t, err, expectedError)
-	return nil
 }
