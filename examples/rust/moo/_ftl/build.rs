@@ -2,7 +2,7 @@ use std::env;
 use std::path::Path;
 
 fn main() {
-    let module_dir = Path::new("../..");
+    let module_dir = Path::new("..");
     let out_dir = env::var("OUT_DIR").unwrap();
 
     let src = module_dir.join("src/lib.rs");

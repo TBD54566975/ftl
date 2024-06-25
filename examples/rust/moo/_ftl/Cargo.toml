@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ftl = { path = "../../../../../rust-runtime/ftl" }
-moo = { path = "../.." }
+ftl = { path = "../../../../rust-runtime/ftl" }
+moo = { path = ".." }
 tokio = "1.38.0"
 serde_json = "1.0.117"
 
 [build-dependencies]
-ftl = { path = "../../../../../rust-runtime/ftl" }
+ftl = { path = "../../../../rust-runtime/ftl" }
