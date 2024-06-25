@@ -11,12 +11,13 @@ export class FtlTreeItem extends vscode.TreeItem {
     collapsibleState: vscode.TreeItemCollapsibleState,
     position: Position | undefined,
     public readonly children?: FtlTreeItem[],
-    public readonly contextValue: string = 'ftlModulesView') {
+    public readonly contextValue: string = 'ftlModulesView',
+    public readonly tappable: boolean = true) {
     super(label, collapsibleState)
     this.position = position
     this.iconPath = icon
     this.contextValue = contextValue
-    if (position) {
+    if (position && tappable) {
       this.command = {
         command: 'ftlModules.itemClicked',
         title: `Node Clicked: ${label}`,
@@ -27,23 +28,25 @@ export class FtlTreeItem extends vscode.TreeItem {
 }
 
 export const eventToTreeItem = (event: PullSchemaResponse): FtlTreeItem => {
+  const isBuiltIn = event.moduleName === 'builtin'
   return new FtlTreeItem(
-    event.moduleName, new vscode.ThemeIcon('package'),
+    event.moduleName,
+    new vscode.ThemeIcon('package'),
     vscode.TreeItemCollapsibleState.Collapsed,
     estimateModulePosition(event.schema),
-    schemaToTreeItems(event.schema),
-    'ftlModule'
+    schemaToTreeItems(isBuiltIn, event.schema),
+    isBuiltIn ? 'ftlBuiltinModule' : 'ftlModule'
   )
 }
 
-const schemaToTreeItems = (module?: Module | undefined): FtlTreeItem[] => {
+const schemaToTreeItems = (isBuiltIn: boolean, module?: Module | undefined,): FtlTreeItem[] => {
   const treeItems: FtlTreeItem[] = []
   if (module === undefined) {
     return treeItems
   }
 
   module.decls.forEach(decl => {
-    const item = declToTreeItem(decl)
+    const item = declToTreeItem(decl, isBuiltIn)
     if (item) {
       treeItems.push(item)
     }
@@ -52,29 +55,34 @@ const schemaToTreeItems = (module?: Module | undefined): FtlTreeItem[] => {
   return treeItems
 }
 
-const declToTreeItem = (decl: Decl): FtlTreeItem | undefined => {
+const declToTreeItem = (decl: Decl, isBuiltIn: boolean): FtlTreeItem | undefined => {
   const pos = decl.value.value?.pos
+  const name = decl.value.value?.name ?? ''
+  const collapsibleState = vscode.TreeItemCollapsibleState.None
   switch (decl.value.case) {
     case 'data':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('symbol-struct'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlData')
+      if (isBuiltIn) {
+        return new FtlTreeItem(name, new vscode.ThemeIcon('symbol-struct'), collapsibleState, pos, [], 'ftlData', false)
+      }
+      return new FtlTreeItem(name, new vscode.ThemeIcon('symbol-struct'), collapsibleState, pos, [], 'ftlData')
     case 'verb':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlVerb')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('symbol-function'), collapsibleState, pos, [], 'ftlVerb')
     case 'database':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('database'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlDatabase')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('database'), collapsibleState, pos, [], 'ftlDatabase')
     case 'enum':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('symbol-enum'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlEnum')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('symbol-enum'), collapsibleState, pos, [], 'ftlEnum')
     case 'typeAlias':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('symbol-class'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlTypeAlias')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('symbol-class'), collapsibleState, pos, [], 'ftlTypeAlias')
     case 'config':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('gear'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlConfig')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('gear'), collapsibleState, pos, [], 'ftlConfig')
     case 'secret':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('key'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlSecret')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('key'), collapsibleState, pos, [], 'ftlSecret')
     case 'fsm':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('server-process'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlFsm')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('server-process'), collapsibleState, pos, [], 'ftlFsm')
     case 'topic':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('broadcast'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlTopic')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('broadcast'), collapsibleState, pos, [], 'ftlTopic')
     case 'subscription':
-      return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('broadcast'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlSubscription')
+      return new FtlTreeItem(name, new vscode.ThemeIcon('broadcast'), collapsibleState, pos, [], 'ftlSubscription')
   }
 
   return undefined

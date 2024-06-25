@@ -3,7 +3,15 @@ import { FtlTreeItem } from '../tree-item'
 
 export const nodeNewCommand = async (item: FtlTreeItem) => {
   const uri = vscode.Uri.file(item.position?.filename || '')
-  const document = vscode.workspace.textDocuments.find(doc => doc.uri.toString() === uri.toString())
+  let document: vscode.TextDocument
+
+  try {
+    document = await vscode.workspace.openTextDocument(uri)
+  } catch (error) {
+    vscode.window.showErrorMessage(`Error opening file ${item.position?.filename}: ${error}`)
+    return
+  }
+
   if (document === undefined) {
     return
   }
