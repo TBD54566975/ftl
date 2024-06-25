@@ -4,6 +4,7 @@ import { createClient } from './console-service'
 import { ControllerService } from './protos/xyz/block/ftl/v1/ftl_connect'
 import { FtlTreeItem, eventToTreeItem } from './tree-item'
 import { gotoPositionCommand } from './commands/goto-position'
+import { nodeNewCommand } from './commands/node-new'
 
 const controllerClient = createClient(ControllerService)
 
@@ -16,9 +17,7 @@ export const ftlModulesActivate = (context: vscode.ExtensionContext) => {
   vscode.window.registerTreeDataProvider('ftlModulesView', dataProvider)
   context.subscriptions.push(
     vscode.commands.registerCommand('ftl.newModuleCommand', moduleNewCommand),
-    vscode.commands.registerCommand('ftlModule.addNode', async (node: FtlTreeItem) => {
-      vscode.window.showInformationMessage(`Add node command executed on ${node.label}`)
-    }),
+    vscode.commands.registerCommand('ftlModule.addNode', nodeNewCommand),
     vscode.commands.registerCommand('ftlModule.delete', (node: FtlTreeItem) => {
       vscode.window.showInformationMessage(`Delete command executed on ${node.label}`)
     })
@@ -28,11 +27,7 @@ export const ftlModulesActivate = (context: vscode.ExtensionContext) => {
 
 export const watchSchema = async (abortController: AbortController) => {
   for await (const event of controllerClient.pullSchema({ signal: abortController.signal })) {
-
     ftlModules.set(event.moduleName, eventToTreeItem(event))
-
-    console.log('ftlModules:', ftlModules)
-
     dataProvider?.updateData(Array.from(ftlModules.values()))
   }
 }
