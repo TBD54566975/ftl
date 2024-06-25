@@ -18,7 +18,7 @@ export const VerbFormInput = (
     onSubmit(path)
   }
 
-  const handleSave: React.FormEventHandler<HTMLFormElement> = async (event) => {
+    const handleSave: React.MouseEventHandler<HTMLButtonElement> = async () => {
     onSave(path)
   }
 
