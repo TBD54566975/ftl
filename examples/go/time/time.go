@@ -21,29 +21,3 @@ func Time(ctx context.Context, req TimeRequest) (TimeResponse, error) {
 func Internal(ctx context.Context, req TimeRequest) (TimeResponse, error) {
 	return TimeResponse{Time: time.Now()}, nil
 }
-
-type SampleRequest struct {
-	Name string
-}
-
-type SampleResponse struct {
-	Message string
-}
-
-//ftl:verb
-func Sample(ctx context.Context, req SampleRequest) (SampleResponse, error) {
-	return SampleResponse{Message: "Hello, world!"}, nil
-}
-
-type SampleRequest struct {
-	Name string
-}
-
-type SampleResponse struct {
-	Message string
-}
-
-//ftl:verb
-func Sample(ctx context.Context, req SampleRequest) (SampleResponse, error) {
-	return SampleResponse{Message: "Hello, world!"}, nil
-}

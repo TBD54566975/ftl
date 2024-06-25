@@ -15,7 +15,7 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
 
   //TODO: Add all the types here...
   // Also would be cool to have an httpingress type which would populate a valid //ftl:ingress ....
-  const nodeType = await vscode.window.showQuickPick(['verb', 'enum', 'pubsub', 'fsm', 'database', 'config', 'secret', 'cron'], {
+  const nodeType = await vscode.window.showQuickPick(['verb', 'enum', 'publisher', 'subscriber', 'fsm', 'database', 'config', 'secret', 'cron'], {
     title: 'Which type of node would you like to add',
     placeHolder: 'Choose a node type',
     canPickMany: false,
@@ -55,8 +55,11 @@ const snippetForNodeType = (nodeType: string): string => {
     case 'enum':
       return enumSnippet
 
-    case 'pubsub':
-      return `//TODO: Complete pubsub snippet`
+    case 'publisher':
+      return publisherSnippet
+
+    case 'subscriber':
+      return subscriberSnippet
 
     case 'fsm':
       return `//TODO: Complete fsm snippet`
@@ -64,14 +67,14 @@ const snippetForNodeType = (nodeType: string): string => {
     case 'database':
       return `var sampleDatabase = ftl.PostgresDatabase("sampledb")`
 
-    case  'config':
+    case 'config':
       return `//TODO: Complete config snippet`
 
     case 'secret':
       return `//TODO: Complete secret snippet`
 
     case 'cron':
-      return `//TODO: Complete cron snippet`
+      return cronSnippet
 
     // Add more cases here for other node types
   }
@@ -96,8 +99,27 @@ func Sample(ctx context.Context, req SampleRequest) (SampleResponse, error) {
 const enumSnippet = `//ftl:enum
 type SampleEnum string
 const (
-  FirstValue SampleEnum = "first"
-  SecondValue SampleEnum = "second"
+	FirstValue SampleEnum = "first"
+	SecondValue SampleEnum = "second"
 )`
 
-const 
+const publisherSnippet = `//ftl:export
+var sampleTopic = ftl.Topic[SamplePubSubEvent]("sample_topic")
+
+type SamplePubSubEvent struct {
+	Message string
+}`
+
+const subscriberSnippet = `var _ = ftl.Subscription(publisher.Sample_topic, "sample_subscription")
+
+//ftl:verb
+//ftl:subscribe sample_subscription
+func SampleSubscriber(ctx context.Context, event publisher.SamplePubSubEvent) error {
+	return nil
+}`
+
+// TODO: include some examples of different cron schedules in the comments
+const cronSnippet = `//ftl:cron * * * * * * *
+func SampleCron(ctx context.Context) error {
+	return nil
+}`
