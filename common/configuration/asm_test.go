@@ -110,6 +110,8 @@ func TestASMPagination(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
+	waitForUpdatesToProcess(leader.cache)
+
 	items, err := manager.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, len(items), 210)
