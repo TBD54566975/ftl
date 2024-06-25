@@ -39,7 +39,6 @@ WORKDIR /root/
 ENV PATH="/root/jre/bin:$PATH"
 COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
 COPY --from=builder /src/build/template template
-COPY --from=builder /src/build/release/ftl-runner .
 COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments
 
