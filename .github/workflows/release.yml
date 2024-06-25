@@ -68,7 +68,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: [build-runner, build-controller]
+    needs: [build-runner, build-controller, build-box]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
