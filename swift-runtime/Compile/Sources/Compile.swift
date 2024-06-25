@@ -4,6 +4,7 @@ import Schema
 
 enum CompileError: Error {
     case serializeSchema(Error)
+    case build(Error)
 }
 
 @main
@@ -38,6 +39,13 @@ struct Compile: ParsableCommand {
         }
         catch {
             throw CompileError.serializeSchema(error)
+        }
+        
+        do {
+            _ = try execute(command: self.buildCmd, directory: rootURL)
+        }
+        catch {
+            throw CompileError.build(error)
         }
     }
 }
