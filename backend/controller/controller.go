@@ -680,12 +680,6 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	lastChecksum := int64(0)
 
 	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(30 * time.Second):
-		}
-
 		configs, err := cm.MapForModule(ctx, name)
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
@@ -711,6 +705,12 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 			}
 
 			lastChecksum = checksum
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(30 * time.Second):
 		}
 	}
 }
