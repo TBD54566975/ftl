@@ -74,7 +74,7 @@ mod tests {
         }
 
         #[ftl::verb]
-        pub async fn test_verb(ctx: &Context, request: Request) -> Result<Response, Box<dyn Error>> {
+        pub async fn test_verb(ctx: Context, request: Request) -> Result<Response, Box<dyn Error>> {
             // let response = ctx.call(module::other_verb, request).await?;
 
             Ok(Response {

@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
-    "examples",
+    #    "examples",
     "ftl",
     "ftl_derive",
     "ftl_protos",

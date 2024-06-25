@@ -64,26 +64,30 @@ pub struct VerbToken {
 }
 
 impl VerbToken {
-    pub(crate) fn to_proto(&self) -> schema::Verb {
+    pub fn try_parse_any_item(module: &ModuleIdent, item: syn::Item) -> Option<Self> {
+        let func = match item {
+            syn::Item::Fn(func) => func,
+            // Quietly ignore non-functions.
+            _ => return None,
+        };
+
+        let ftl_verb_path = syn::parse_str("ftl::verb").unwrap();
+        if !has_meta_path(&func.attrs, &ftl_verb_path) {
+            // No #[ftl::verb] annotation, ignore.
+            return None;
+        }
+
+        VerbToken::ensure_fn_has_context_as_first_arg(&func);
+
+        Some(VerbToken {
+            module: module.clone(),
+            func,
+        })
+    }
+
+    pub fn to_proto(&self) -> schema::Verb {
         let mut verb = schema::Verb::default();
         verb.name = self.func.sig.ident.to_string();
-
-        let syn::FnArg::Typed(arg) = self.func.sig.inputs.first().unwrap() else {
-            panic!("Function must have at least one argument");
-        };
-
-        let syn::Type::Reference(path) = &*arg.ty else {
-            panic!("First argument must not be a self argument");
-        };
-
-        let syn::Type::Path(type_path) = &*path.elem else {
-            panic!("First argument must be of type Path");
-        };
-
-        let context_path = syn::parse_str("Context").unwrap();
-        if type_path.path != context_path {
-            panic!("First argument must be of type Context");
-        }
 
         schema::Verb {
             runtime: None,
@@ -104,32 +108,53 @@ impl VerbToken {
 
         arg.ty.clone()
     }
+
+    // TODO: make this a bit less overly specific. eg require_arg_type(&func, 0, "Context")
+    pub fn ensure_fn_has_context_as_first_arg(func: &syn::ItemFn) {
+        let Some(arg) = func.sig.inputs.first() else {
+            panic!("Function must have at least one argument");
+        };
+
+        let syn::FnArg::Typed(pat) = arg else {
+            dbg!(arg);
+            panic!("First argument must not be a self argument");
+        };
+
+        let syn::Type::Path(path) = &*pat.ty else {
+            panic!(
+                "First argument must be of type Path instead of {:?}",
+                pat.ty
+            );
+        };
+        let path = &path.path else {
+            panic!(
+                "First argument must be of type Path instead of {:?}",
+                path.path
+            );
+        };
+
+        // let context_path = syn::parse_str("Context").unwrap();
+        // if path != context_path {
+        //     println!(
+        //         "First argument must be of type Context instead of {:?}",
+        //         path
+        //     );
+        //     return false;
+        // }
+
+        dbg!(path);
+    }
 }
 
 /// Extract functions that are annotated with #[ftl::verb] and extract the AST node.
 pub fn extract_ast_verbs(module: &ModuleIdent, ast: syn::File) -> Vec<VerbToken> {
-    let ftl_verb_path = syn::parse_str("ftl::verb").unwrap();
-
     let mut verbs = vec![];
     for item in ast.items {
-        let item = match item {
-            syn::Item::Fn(func) => func,
-            _ => continue,
+        let Some(verb_token) = VerbToken::try_parse_any_item(&module, item) else {
+            continue;
         };
 
-        let has_ctx = fn_has_context_as_first_arg(&item);
-        if !has_ctx {
-            panic!("First argument must be of type Context");
-        }
-
-        if !has_meta_path(&item.attrs, &ftl_verb_path) {
-            continue;
-        }
-
-        verbs.push(VerbToken {
-            module: module.clone(),
-            func: item,
-        });
+        verbs.push(verb_token);
     }
     verbs
 }
@@ -137,43 +162,4 @@ pub fn extract_ast_verbs(module: &ModuleIdent, ast: syn::File) -> Vec<VerbToken>
 // Look for #[path_str] e.g. #[ftl::verb], and extract the function signature.
 fn has_meta_path(attrs: &[syn::Attribute], expected_path: &syn::Path) -> bool {
     attrs.iter().any(|attr| attr.meta.path() == expected_path)
-}
-
-// TODO: make this a bit less overly specific. eg require_arg_type(&func, 0, "Context")
-pub fn fn_has_context_as_first_arg(func: &syn::ItemFn) -> bool {
-    let Some(arg) = func.sig.inputs.first() else {
-        println!("Function must have at least one argument");
-        return false;
-    };
-
-    let syn::FnArg::Typed(pat) = arg else {
-        println!("First argument must not be a self argument");
-        return false;
-    };
-
-    let syn::Type::Reference(path) = &*pat.ty else {
-        println!(
-            "First argument must be of type Reference instead of {:?}",
-            pat.ty
-        );
-        return false;
-    };
-    let syn::Type::Path(type_path) = &*path.elem else {
-        println!(
-            "First argument must be of type Path instead of {:?}",
-            path.elem
-        );
-        return false;
-    };
-
-    let context_path = syn::parse_str("Context").unwrap();
-    if type_path.path != context_path {
-        println!(
-            "First argument must be of type Context instead of {:?}",
-            type_path.path
-        );
-        return false;
-    }
-
-    true
 }
