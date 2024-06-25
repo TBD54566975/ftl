@@ -221,6 +221,18 @@ func (e *Engine) Build(ctx context.Context) error {
 	return e.buildWithCallback(ctx, nil)
 }
 
+// Each iterates over all local modules.
+func (e *Engine) Each(fn func(Module) error) (err error) {
+	e.moduleMetas.Range(func(key string, value moduleMeta) bool {
+		if ferr := fn(value.module); ferr != nil {
+			err = fmt.Errorf("%s: %w", key, ferr)
+			return false
+		}
+		return true
+	})
+	return
+}
+
 // Deploy attempts to build and deploy all local modules.
 func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline bool) error {
 	return e.buildAndDeploy(ctx, replicas, waitForDeployOnline)
@@ -429,11 +441,10 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 	}
 
 	buildGroup := errgroup.Group{}
-	deployGroup := errgroup.Group{}
 
 	buildGroup.Go(func() error {
 		return e.buildWithCallback(ctx, func(buildCtx context.Context, module Module) error {
-			deployGroup.Go(func() error {
+			buildGroup.Go(func() error {
 				e.modulesToBuild.Store(module.Config.Module, false)
 				return Deploy(buildCtx, module, replicas, waitForDeployOnline, e.client)
 			})
@@ -443,7 +454,6 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 
 	// Wait for all build and deploy attempts to complete
 	buildErr := buildGroup.Wait()
-	deployErr := deployGroup.Wait()
 
 	pendingInitialBuilds := []string{}
 	e.modulesToBuild.Range(func(name string, value bool) bool {
@@ -458,11 +468,7 @@ func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 		logger.Infof("Modules waiting to build: %s", strings.Join(pendingInitialBuilds, ", "))
 	}
 
-	if buildErr != nil {
-		return buildErr
-	}
-
-	return deployErr
+	return buildErr
 }
 
 type buildCallback func(ctx context.Context, module Module) error

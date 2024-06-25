@@ -15,9 +15,9 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: |
-          docker build -t ghcr.io/tbd54566975/ftl-runner:"$GITHUB_SHA" -t ghcr.io/tbd54566975/ftl-runner:latest -f Dockerfile.runner .
+          docker build -t ftl0/ftl-runner:"$GITHUB_SHA" -t ftl0/ftl-runner:latest -f Dockerfile.runner .
           mkdir -p artifacts/ftl-runner
-          docker save -o artifacts/ftl-runner/ftl-runner.tar ghcr.io/tbd54566975/ftl-runner:latest
+          docker save -o artifacts/ftl-runner/ftl-runner.tar ftl0/ftl-runner:latest
       - name: Temporarily save Docker image
         uses: actions/upload-artifact@v4
         with:
@@ -34,9 +34,9 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: |
-          docker build -t ghcr.io/tbd54566975/ftl-controller:"$GITHUB_SHA" -t ghcr.io/tbd54566975/ftl-controller:latest -f Dockerfile.controller .
+          docker build -t ftl0/ftl-controller:"$GITHUB_SHA" -t ftl0/ftl-controller:latest -f Dockerfile.controller .
           mkdir -p artifacts/ftl-controller
-          docker save -o artifacts/ftl-controller/ftl-controller.tar ghcr.io/tbd54566975/ftl-controller:latest
+          docker save -o artifacts/ftl-controller/ftl-controller.tar ftl0/ftl-controller:latest
       - name: Temporarily save Docker image
         uses: actions/upload-artifact@v4
         with:
@@ -74,18 +74,17 @@ jobs:
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          username: ftl0
+          password: ${{ secrets.FTL_DOCKER_PUSH_TOKEN }}
       - name: Push Docker Images
         run: |
           version="$(git describe --tags --abbrev=0)"
-          docker tag ghcr.io/tbd54566975/ftl-runner:latest ghcr.io/tbd54566975/ftl-runner:"$GITHUB_SHA"
-          docker tag ghcr.io/tbd54566975/ftl-runner:latest ghcr.io/tbd54566975/ftl-runner:"$version"
-          docker push -a ghcr.io/tbd54566975/ftl-runner
-          docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:"$GITHUB_SHA"
-          docker tag ghcr.io/tbd54566975/ftl-controller:latest ghcr.io/tbd54566975/ftl-controller:"$version"
-          docker push -a ghcr.io/tbd54566975/ftl-controller
+          docker tag ftl0/ftl-runner:latest ftl0/ftl-runner:"$GITHUB_SHA"
+          docker tag ftl0/ftl-runner:latest ftl0/ftl-runner:"$version"
+          docker push -a ftl0/ftl-runner
+          docker tag ftl0/ftl-controller:latest ftl0/ftl-controller:"$GITHUB_SHA"
+          docker tag ftl0/ftl-controller:latest ftl0/ftl-controller:"$version"
+          docker push -a ftl0/ftl-controller
   create-release:
     name: Release Go Binaries
     runs-on: ubuntu-latest

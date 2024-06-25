@@ -4,9 +4,9 @@ resources:
   - ftl-controller
   - ftl-runner
 images:
-  - name: ghcr.io/tbd54566975/ftl-controller
-    newName: ghcr.io/tbd54566975/ftl-controller
+  - name: ftl0/ftl-controller
+    newName: ftl0/ftl-controller
     newTag: latest
-  - name: ghcr.io/tbd54566975/ftl-runner
-    newName: ghcr.io/tbd54566975/ftl-runner
+  - name: ftl0/ftl-runner
+    newName: ftl0/ftl-runner
     newTag: latest

@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/tbd54566975/ftl-runner
+          image: ftl0/ftl-runner
           env:
             - name: MY_POD_IP
               valueFrom:

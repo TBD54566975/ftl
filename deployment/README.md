@@ -57,7 +57,7 @@ make docker-controller
 Tag the image for the local registry:
 
 ```
-docker tag ghcr.io/tbd54566975/ftl-controller:latest localhost:5000/ftl-controller
+docker tag ftl0/ftl-controller:latest localhost:5000/ftl-controller
 ```
 
 Push the image to the local registry:
