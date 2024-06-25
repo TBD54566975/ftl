@@ -15,7 +15,7 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
 
   //TODO: Add all the types here...
   // Also would be cool to have an httpingress type which would populate a valid //ftl:ingress ....
-  const nodeType = await vscode.window.showQuickPick(['verb', 'enum', 'publisher', 'subscriber', 'fsm', 'database', 'config', 'secret', 'cron'], {
+  const nodeType = await vscode.window.showQuickPick(['verb', 'enum', 'pubsub', 'pubsub:subscription', 'fsm', 'database', 'config:string', 'config:struct', 'secret', 'cron'], {
     title: 'Which type of node would you like to add',
     placeHolder: 'Choose a node type',
     canPickMany: false,
@@ -55,23 +55,26 @@ const snippetForNodeType = (nodeType: string): string => {
     case 'enum':
       return enumSnippet
 
-    case 'publisher':
-      return publisherSnippet
+    case 'pubsub':
+      return publisherSnippet + '\n\n' + subscriberSnippet
 
-    case 'subscriber':
+    case 'pubsub:subscription':
       return subscriberSnippet
 
     case 'fsm':
-      return `//TODO: Complete fsm snippet`
+      return fsmSnippet
 
     case 'database':
-      return `var sampleDatabase = ftl.PostgresDatabase("sampledb")`
+      return `var sampleDatabase = ftl.PostgresDatabase("sample_db")`
 
-    case 'config':
-      return `//TODO: Complete config snippet`
+    case 'config:string':
+      return `var sampleConfig = ftl.Config[string]("sample_config")`
+
+    case 'config:struct':
+      return configStructSnippet
 
     case 'secret':
-      return `//TODO: Complete secret snippet`
+      return `var sampleSecret = ftl.Secret[string]("sample_secret")`
 
     case 'cron':
       return cronSnippet
@@ -110,13 +113,57 @@ type SamplePubSubEvent struct {
 	Message string
 }`
 
-const subscriberSnippet = `var _ = ftl.Subscription(publisher.Sample_topic, "sample_subscription")
+const subscriberSnippet = `var _ = ftl.Subscription(sampleTopic, "sample_subscription")
 
 //ftl:verb
 //ftl:subscribe sample_subscription
-func SampleSubscriber(ctx context.Context, event publisher.SamplePubSubEvent) error {
+func SampleSubscriber(ctx context.Context, event SamplePubSubEvent) error {
 	return nil
 }`
+
+const fsmSnippet = `type SampleFSMMessage struct {
+	Instance string
+	Message string
+}
+
+var sampleFsm = ftl.FSM("sample_fsm",
+	ftl.Start(SampleFSMState0),
+	ftl.Transition(SampleFSMState0, SampleFSMState1),
+	ftl.Transition(SampleFSMState1, SampleFSMState2),
+)
+
+//ftl:verb
+func SampleFSMState0(ctx context.Context, in SampleFSMMessage) error {
+	logger := ftl.LoggerFromContext(ctx)
+	logger.Infof("message %q entering state 0", in.Message)
+	return nil
+}
+
+//ftl:verb
+func SampleFSMState1(ctx context.Context, in SampleFSMMessage) error {
+	logger := ftl.LoggerFromContext(ctx)
+	logger.Infof("message %q entering state 1", in.Message)
+	return nil
+}
+
+//ftl:verb
+func SampleFSMState2(ctx context.Context, in SampleFSMMessage) error {
+	logger := ftl.LoggerFromContext(ctx)
+	logger.Infof("message %q entering state 2", in.Message)
+	return nil
+}
+
+//ftl:verb
+func SendSampleFSMMessage(ctx context.Context, in SampleFSMMessage) error {
+	return sampleFsm.Send(ctx, in.Instance, in)
+}
+`
+
+const configStructSnippet = `type SampleConfig struct {
+	Field string
+}
+
+var sampleConfigValue = ftl.Config[SampleConfig]("sample_config")`
 
 // TODO: include some examples of different cron schedules in the comments
 const cronSnippet = `//ftl:cron * * * * * * *
