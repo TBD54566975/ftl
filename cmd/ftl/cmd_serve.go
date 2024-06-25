@@ -79,15 +79,6 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 
 	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
 
-	if len(projConfig.Commands.Startup) > 0 {
-		for _, cmd := range projConfig.Commands.Startup {
-			logger.Debugf("Executing startup command: %s", cmd)
-			if err := exec.Command(ctx, log.Info, ".", "bash", "-c", cmd).Run(); err != nil {
-				return fmt.Errorf("startup command failed: %w", err)
-			}
-		}
-	}
-
 	// Bring up the DB and DAL.
 	dsn, err := s.setupDB(ctx)
 	if err != nil {
@@ -146,6 +137,16 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 	if err := wg.Wait(); err != nil {
 		return fmt.Errorf("serve failed: %w", err)
 	}
+
+	if len(projConfig.Commands.Startup) > 0 {
+		for _, cmd := range projConfig.Commands.Startup {
+			logger.Debugf("Executing startup command: %s", cmd)
+			if err := exec.Command(ctx, log.Info, ".", "bash", "-c", cmd).Run(); err != nil {
+				return fmt.Errorf("startup command failed: %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 
