@@ -148,10 +148,10 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 
 	case "rust":
 		if config.Build == "" {
-			config.Build = "cargo build"
+			config.Build = "cargo build --package main"
 		}
 		if config.DeployDir == "" {
-			config.DeployDir = "_ftl"
+			config.DeployDir = "target/debug"
 		}
 		if len(config.Deploy) == 0 {
 			config.Deploy = []string{"main"}
@@ -159,7 +159,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		if len(config.Watch) == 0 {
 			config.Watch = []string{"**/*.rs", "Cargo.toml", "Cargo.lock"}
 		}
-		fmt.Fprintf(os.Stderr, "RUST 3\n")
+		fmt.Fprintf(os.Stderr, "RUST 3 setConfigDeftaults\n")
 	}
 
 	// Do some validation.
