@@ -3,20 +3,19 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
-	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type buildCmd struct {
 	Parallelism int      `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
-	Dirs        []string `arg:"" help:"Base directories containing modules." type:"existingdir" optional:""`
+	Dirs        []string `arg:"" help:"Base directories containing modules (defaults to modules in project config)." type:"existingdir" optional:""`
 }
 
-func (b *buildCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig projectconfig.Config) error {
 	if len(b.Dirs) == 0 {
 		b.Dirs = projConfig.AbsModuleDirs()
 	}
@@ -27,5 +26,8 @@ func (b *buildCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 	if err != nil {
 		return err
 	}
-	return engine.Build(ctx)
+	if err := engine.Build(ctx); err != nil {
+		return fmt.Errorf("build failed: %w", err)
+	}
+	return nil
 }
