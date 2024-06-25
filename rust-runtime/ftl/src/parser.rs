@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use proc_macro2::{Ident, Span};
+use tracing::warn;
 
 use ftl_protos::schema;
 
@@ -36,6 +37,10 @@ impl Parser {
 
     pub fn modules_count(&self) -> usize {
         self.verb_tokens.len()
+    }
+
+    pub fn verb_count(&self) -> usize {
+        self.verb_tokens.values().map(|verbs| verbs.len()).sum()
     }
 }
 
@@ -89,14 +94,22 @@ impl VerbToken {
         let mut verb = schema::Verb::default();
         verb.name = self.func.sig.ident.to_string();
 
+        warn!("TODO: for now just give unit types");
+        let request = Some(schema::Type {
+            value: Some(schema::r#type::Value::Unit(schema::Unit { pos: None })),
+        });
+        let response = Some(schema::Type {
+            value: Some(schema::r#type::Value::Unit(schema::Unit { pos: None })),
+        });
+
         schema::Verb {
             runtime: None,
             pos: None,
             comments: vec![],
             export: false,
             name: self.func.sig.ident.to_string(),
-            request: None,
-            response: None,
+            request,
+            response,
             metadata: vec![],
         }
     }
