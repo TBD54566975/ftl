@@ -53,22 +53,22 @@ const LilFish = ({color, col}) => {
 const Editor = ({req, setMs, close}) => {
   const [msVal, setMsVal] = useState(req.ms)
   const modalBg = {
-      position: 'absolute',
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
+    position: 'absolute',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    top: 0,
+    left: 0,
+    width: '100vw',
+    height: '100vh',
   }
   const modal = {
-      borderRadius: '8px',
-      position: 'absolute',
-      backgroundColor: 'rgba(255,255,255,1)',
-      opacity: 1,
-      width: 250,
-      top: '25vh',
-      left: 'calc(50vw)',
-      padding: '10px 0 40px 0',
+    borderRadius: '8px',
+    position: 'absolute',
+    backgroundColor: 'rgba(255,255,255,1)',
+    opacity: 1,
+    width: 250,
+    top: '25vh',
+    left: 'calc(50vw)',
+    padding: '10px 0 40px 0',
   }
   const onChange = (e) => {
     setMsVal(e.target.value)
@@ -198,7 +198,7 @@ const Row = ({verbRef, callVerb}) => {
     module: verbRefParts[0],
   } as Ref
   const [poos, setPoos] = useState([])
-  const [lastErr, setLastErr] = useState('err adfasdfasdf asdfasdfasdfasdf asdf')
+  const [lastErr, setLastErr] = useState('')
   const addPoo = (color) => {
     const key = `${Date.now()}`
     setPoos([...poos, <Poo key={key} color={color} />])
@@ -218,7 +218,7 @@ const Row = ({verbRef, callVerb}) => {
     <FishBlock
       key={i} col={i}
       req={req}
-      color={blues[Math.floor(Math.random() * blues.length)]}
+      color={blues[i % blues.length]}
       callVerb={callVerbFn}
     />
   ))
@@ -277,20 +277,12 @@ export const LoadTestPage = () => {
     height: rowHeight * Object.keys(savedReqs).length,
     backgroundImage: "repeating-linear-gradient(#ccc 0 1px, transparent 1px 100%)",
     backgroundSize: `${rowHeight}px ${rowHeight}px`,
-    marginTop: '60px'
   }
 
   return (
     <Page>
       <Page.Header icon={<CubeTransparentIcon />} title='Console' />
       <Page.Body className='flex h-full'>
-        <div style={{float:'bottom', position:'absolute'}}>
-          <button
-            style={{marginTop: '10px'}}
-            className='bg-indigo-700 text-white ml-2 px-4 py-2 rounded-lg hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
-            onClick={() => console.log('adsf')}
-          >Start</button>
-        </div>
         <div style={gridStyle}>
           {rows}
         </div>
