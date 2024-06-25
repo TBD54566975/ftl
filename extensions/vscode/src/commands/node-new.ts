@@ -15,7 +15,7 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
 
   //TODO: Add all the types here...
   // Also would be cool to have an httpingress type which would populate a valid //ftl:ingress ....
-  const nodeType = await vscode.window.showQuickPick(['verb', 'enum'], {
+  const nodeType = await vscode.window.showQuickPick(['verb', 'enum', 'pubsub', 'fsm', 'database', 'config', 'secret', 'cron'], {
     title: 'Which type of node would you like to add',
     placeHolder: 'Choose a node type',
     canPickMany: false,
@@ -51,7 +51,36 @@ const snippetForNodeType = (nodeType: string): string => {
   //TODO: fill out for all node types.
   switch (nodeType) {
     case 'verb':
-      return `type SampleRequest struct {
+      return verbSnippet
+    case 'enum':
+      return enumSnippet
+
+    case 'pubsub':
+      return `//TODO: Complete pubsub snippet`
+
+    case 'fsm':
+      return `//TODO: Complete fsm snippet`
+
+    case 'database':
+      return `var sampleDatabase = ftl.PostgresDatabase("sampledb")`
+
+    case  'config':
+      return `//TODO: Complete config snippet`
+
+    case 'secret':
+      return `//TODO: Complete secret snippet`
+
+    case 'cron':
+      return `//TODO: Complete cron snippet`
+
+    // Add more cases here for other node types
+  }
+
+  return ''
+  // vscode.window.showInformationMessage(`Adding a new ${nodeType} node to ${document.uri.toString()}`)
+}
+
+const verbSnippet = `type SampleRequest struct {
 	Name string
 }
 
@@ -63,12 +92,12 @@ type SampleResponse struct {
 func Sample(ctx context.Context, req SampleRequest) (SampleResponse, error) {
 	return SampleResponse{Message: "Hello, world!"}, nil
 }`
-    case 'enum':
-      return `put enum stuff here (maybe type and value enums?)`
 
-    // Add more cases here for other node types
-  }
+const enumSnippet = `//ftl:enum
+type SampleEnum string
+const (
+  FirstValue SampleEnum = "first"
+  SecondValue SampleEnum = "second"
+)`
 
-  return ''
-  // vscode.window.showInformationMessage(`Adding a new ${nodeType} node to ${document.uri.toString()}`)
-}
+const 

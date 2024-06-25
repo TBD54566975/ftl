@@ -34,3 +34,16 @@ type SampleResponse struct {
 func Sample(ctx context.Context, req SampleRequest) (SampleResponse, error) {
 	return SampleResponse{Message: "Hello, world!"}, nil
 }
+
+type SampleRequest struct {
+	Name string
+}
+
+type SampleResponse struct {
+	Message string
+}
+
+//ftl:verb
+func Sample(ctx context.Context, req SampleRequest) (SampleResponse, error) {
+	return SampleResponse{Message: "Hello, world!"}, nil
+}
