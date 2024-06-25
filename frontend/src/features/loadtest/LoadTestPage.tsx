@@ -67,6 +67,15 @@ const Editor = ({req, setMs, close}) => {
     setMsVal(e.target.value)
     req.ms = e.target.value
   }
+  const submit = (e) => {
+    setMs(msVal)
+    close(e)
+  }
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      submit(e)
+    }
+  }
 
   return (
     <div style={modalBg}>
@@ -75,14 +84,15 @@ const Editor = ({req, setMs, close}) => {
           style={{marginLeft: 30}}
         >Set Call Interval (ms)</span>
         <hr style={{margin: '10px 0 30px 0'}} />
-        <input type='number'
+        <input type='number' autoFocus
           style={{width: 100, marginLeft: 30, borderRadius: 8}}
           value={msVal}
           onChange={onChange}
+          onKeyDown={onKeyDown}
         />
         <button
           className='bg-indigo-700 text-white ml-2 px-4 py-2 rounded-lg hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
-          onClick={(e) => {setMs(msVal); close(e)}}
+          onClick={submit}
         >
           OK
         </button>
@@ -106,28 +116,28 @@ const FishBlock = ({req, color, col}) => {
   }, [lilFish, req, color])
 
   const onClick = (e) => {
-      e.stopPropagation()
-      if (!e.shiftKey) {
-          return addLilFish()
-      }
-      setShowEditor(true)
+    e.stopPropagation()
+    if (!e.shiftKey) {
+      return addLilFish()
+    }
+    setShowEditor(true)
   }
   const close = (e) => {
     e.stopPropagation()
     setShowEditor(false)
   }
 
-    return [
-      (
-        <div
-          style={{display: 'inline-block', float: 'left', width: 80, margin: '10px 10px'}}
-          onClick={onClick}
-        >
-          <Fish color={color} />
-        </div>
-      ),
-      ...lilFish,
-      showEditor ? (<Editor req={req} setMs={setMs} close={close} />) : null,
+  return [
+    (
+      <div key='bigfish'
+        style={{display: 'inline-block', float: 'left', width: 80, margin: '10px 10px'}}
+        onClick={onClick}
+      >
+        <Fish color={color} />
+      </div>
+    ),
+    ...lilFish,
+    showEditor ? (<Editor key='editor' req={req} setMs={setMs} close={close} />) : null,
   ]
 }
 
