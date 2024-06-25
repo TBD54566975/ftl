@@ -98,6 +98,11 @@
         "command": "ftlModule.delete",
         "title": "Delete module",
         "category": "FTL"
+      },
+      {
+        "command": "ftlModules.itemClicked",
+        "title": "Item Clicked",
+        "category": "FTL"
       }
     ],
     "menus": {
