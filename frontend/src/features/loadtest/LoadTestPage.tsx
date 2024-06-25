@@ -17,6 +17,10 @@ const Cat = ({color}) => (
   <svg style={{transform: 'scale(-1,1)'}} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill={color} d="M290.6 192c-20.2 0-106.8 2-162.6 86V192c0-52.9-43.1-96-96-96-17.7 0-32 14.3-32 32s14.3 32 32 32c17.6 0 32 14.4 32 32v256c0 35.3 28.7 64 64 64h176c8.8 0 16-7.2 16-16v-16c0-17.7-14.3-32-32-32h-32l128-96v144c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V289.9c-10.3 2.7-20.9 4.5-32 4.5-61.8 0-113.5-44.1-125.4-102.4zM448 96h-64l-64-64v134.4c0 53 43 96 96 96s96-43 96-96V32l-64 64zm-72 80c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16zm80 0c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16z"/></svg>
 )
 
+const PooIcon = ({color}) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill={color} d="M254.4 6.6c3.5-4.3 9-6.5 14.5-5.7C315.8 7.2 352 47.4 352 96c0 11.2-1.9 22-5.5 32H352c35.3 0 64 28.7 64 64c0 19.1-8.4 36.3-21.7 48H408c39.8 0 72 32.2 72 72c0 23.2-11 43.8-28 57c34.1 5.7 60 35.3 60 71c0 39.8-32.2 72-72 72H72c-39.8 0-72-32.2-72-72c0-35.7 25.9-65.3 60-71c-17-13.2-28-33.8-28-57c0-39.8 32.2-72 72-72h13.7C104.4 228.3 96 211.1 96 192c0-35.3 28.7-64 64-64h16.2c44.1-.1 79.8-35.9 79.8-80c0-9.2-1.5-17.9-4.3-26.1c-1.8-5.2-.8-11.1 2.8-15.4z"/></svg>
+)
+
 const LilFish = ({color, col}) => {
   const [shouldRender, setShouldRender] = useState(true)
   setTimeout(() => setShouldRender(false), 1000)
@@ -141,6 +145,47 @@ const FishBlock = ({req, color, col}) => {
   ]
 }
 
+const Poo = ({color}) => {
+  const [shouldRender, setShouldRender] = useState(true)
+  setTimeout(() => setShouldRender(false), 1000)
+  if (!shouldRender) {
+    return []
+  }
+
+  return (
+    <div style={{
+      position: 'absolute',
+      marginTop: '-20px',
+      marginLeft: 60,
+      width: '20px',
+      height: '20px',
+      animationName: `animationPoo${Math.floor(Math.random()*4)}`,
+      animationDuration: '0.8s',
+      animationDelay: '0.0s',
+      animationIterationCount: 1,
+      animationDirection: "normal",
+      animationFillMode: "forwards"
+    }}>
+      <PooIcon color={color} />
+    </div>
+  )
+}
+
+const CatBlock = ({verbRef}) => {
+  const [poos, setPoos] = useState([])
+  const addPoo = () => {
+    const key = `${Date.now()}`
+    setPoos([...poos, <Poo key={key} color={'green'} />])
+  }
+
+  return (
+    <div style={{float: 'right', width: 80, margin: '10px 10px'}} onClick={addPoo}>
+      <Cat color='#fa0' />
+      {poos}
+    </div>
+  );
+}
+
 const blues = ['#03045e', '#023e8a', '#0077b6', '#0096c7', '#00b4d8', '#1576bb']
 
 const Row = ({verbRef}) => {
@@ -158,9 +203,7 @@ const Row = ({verbRef}) => {
       >
         {fishes}
       </div>
-      <div style={{float: 'right', width: 80, margin: '10px 10px'}}>
-        <Cat color='#fa0' />
-      </div>
+      <CatBlock verbRef={verbRef} />
     </div>
   )
 }
