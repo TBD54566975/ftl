@@ -5,6 +5,7 @@ import { ControllerService } from './protos/xyz/block/ftl/v1/ftl_connect'
 import { FtlTreeItem, eventToTreeItem } from './tree-item'
 import { gotoPositionCommand } from './commands/goto-position'
 import { nodeNewCommand } from './commands/node-new'
+import { DeploymentChangeType } from './protos/xyz/block/ftl/v1/ftl_pb'
 
 const controllerClient = createClient(ControllerService)
 
@@ -27,6 +28,11 @@ export const ftlModulesActivate = (context: vscode.ExtensionContext) => {
 
 export const watchSchema = async (abortController: AbortController) => {
   for await (const event of controllerClient.pullSchema({ signal: abortController.signal })) {
+    if (event.changeType === DeploymentChangeType.DEPLOYMENT_REMOVED) {
+      ftlModules.delete(event.moduleName)
+      dataProvider?.updateData(Array.from(ftlModules.values()))
+      continue
+    }
     ftlModules.set(event.moduleName, eventToTreeItem(event))
     dataProvider?.updateData(Array.from(ftlModules.values()))
   }

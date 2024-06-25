@@ -147,6 +147,7 @@
     "@connectrpc/protoc-gen-connect-es": "^1.4.0",
     "lookpath": "^1.2.2",
     "semver": "^7.6.0",
+    "toml": "^3.0.0",
     "vscode-languageclient": "^9.0.1"
   }
 }
