@@ -116,6 +116,7 @@ func (c *Coordinator[P]) Get() (leaderOrFollower P, err error) {
 	lease, leaderCtx, leaseErr := c.leaser.AcquireLease(c.ctx, c.key, c.leaseTTL, optional.Some[any](c.advertise.String()))
 	if leaseErr == nil {
 		// became leader
+		c.retireFollower()
 		l, err := c.leaderFactory(leaderCtx)
 		if err != nil {
 			err := lease.Release()
@@ -168,16 +169,11 @@ func (c *Coordinator[P]) createFollower() (out P, err error) {
 		return out, fmt.Errorf("could not follow %s leader at own url: %s", c.key, urlString)
 	}
 	// check if url matches existing follower's url, just with newer deadline
-	if f, ok := c.follower.Get(); ok {
-		if f.url.String() == urlString {
-			f.deadline = expiry
-			return f.value, nil
-		}
-		// retire old follower
-		f.cancelCtx()
-		c.follower = optional.None[*follower[P]]()
+	if f, ok := c.follower.Get(); ok && f.url.String() == urlString {
+		f.deadline = expiry
+		return f.value, nil
 	}
-
+	c.retireFollower()
 	url, err := url.Parse(urlString)
 	if err != nil {
 		return out, fmt.Errorf("could not parse leader url for %s: %w", c.key, err)
@@ -195,4 +191,13 @@ func (c *Coordinator[P]) createFollower() (out P, err error) {
 		cancelCtx: cancel,
 	})
 	return f, nil
+}
+
+func (c *Coordinator[P]) retireFollower() {
+	f, ok := c.follower.Get()
+	if !ok {
+		return
+	}
+	f.cancelCtx()
+	c.follower = optional.None[*follower[P]]()
 }

@@ -3,6 +3,7 @@ package leader
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"net/url"
 	"strings"
 	"sync"
@@ -124,8 +125,17 @@ func TestSingleLeader(t *testing.T) {
 func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (leaderIdx int, leaderStr string) {
 	t.Helper()
 
+	// randomize iteration order so that Get() is called in different order each time to help make sure the first coordinator isn't usually the leader
+	randIdxs := make([]int, 0, len(coordinators))
+	for i := range len(coordinators) {
+		randIdxs = append(randIdxs, i)
+	}
+	rand.Shuffle(len(randIdxs), func(i, j int) {
+		randIdxs[i], randIdxs[j] = randIdxs[j], randIdxs[i]
+	})
+
 	leaderIdx = -1
-	for i := range 5 {
+	for _, i := range randIdxs {
 		result, err := coordinators[i].Get()
 		assert.NoError(t, err)
 		if strings.HasPrefix(result, "leader:") {
@@ -140,8 +150,7 @@ func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (
 
 func validateAllFollowTheLeader(t *testing.T, coordinators []*Coordinator[string], leaderIdx int) {
 	t.Helper()
-
-	for i := range 5 {
+	for i := range len(coordinators) {
 		if leaderIdx == i {
 			// known leader
 			continue
