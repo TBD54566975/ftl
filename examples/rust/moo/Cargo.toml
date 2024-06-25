@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 ftl = { path = "../../../rust-runtime/ftl" }
+serde = { version = "1.0.203", features = ["derive"] }
