@@ -3,5 +3,6 @@
 @tailwind utilities;
 
 @-webkit-keyframes animationFish {
-    100% {-webkit-transform:translate(1000px, 0px)} 
+    99.9% {-webkit-transform:translate(calc(100vw - 400px), 0px)} 
+    100%{display:none}
 }

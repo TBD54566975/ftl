@@ -14,46 +14,121 @@ const Fish = ({color}) => (
 )
 
 const Cat = ({color}) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill={color} d="M290.6 192c-20.2 0-106.8 2-162.6 86V192c0-52.9-43.1-96-96-96-17.7 0-32 14.3-32 32s14.3 32 32 32c17.6 0 32 14.4 32 32v256c0 35.3 28.7 64 64 64h176c8.8 0 16-7.2 16-16v-16c0-17.7-14.3-32-32-32h-32l128-96v144c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V289.9c-10.3 2.7-20.9 4.5-32 4.5-61.8 0-113.5-44.1-125.4-102.4zM448 96h-64l-64-64v134.4c0 53 43 96 96 96s96-43 96-96V32l-64 64zm-72 80c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16zm80 0c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16z"/></svg>
+    <svg style={{transform: 'scale(-1,1)'}} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill={color} d="M290.6 192c-20.2 0-106.8 2-162.6 86V192c0-52.9-43.1-96-96-96-17.7 0-32 14.3-32 32s14.3 32 32 32c17.6 0 32 14.4 32 32v256c0 35.3 28.7 64 64 64h176c8.8 0 16-7.2 16-16v-16c0-17.7-14.3-32-32-32h-32l128-96v144c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16V289.9c-10.3 2.7-20.9 4.5-32 4.5-61.8 0-113.5-44.1-125.4-102.4zM448 96h-64l-64-64v134.4c0 53 43 96 96 96s96-43 96-96V32l-64 64zm-72 80c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16zm80 0c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16z"/></svg>
 )
 
-const LilFish = ({color}) => (
-  <div style={{
+const LilFish = ({color}) => {
+  const [shouldRender, setShouldRender] = useState(true)
+  setTimeout(() => setShouldRender(false), 1000)
+  if (!shouldRender) {
+    return []
+  }
+
+  return (
+    <div style={{
       position: 'absolute',
-      marginTop: '-50px',
+      marginTop: '30px',
       marginLeft: '60px',
       width: '30px',
       height: '30px',
       animationName: 'animationFish',
-    animationDuration: '0.8s',
-    animationDelay: '0.0s',
-    animationIterationCount: 1,
-    animationDirection: "normal",
-    animationFillMode: "forwards"
-  }}>
-    <Fish color={color} />
-  </div>
-)
+      animationDuration: '0.8s',
+      animationDelay: '0.0s',
+      animationIterationCount: 1,
+      animationDirection: "normal",
+      animationFillMode: "forwards"
+    }}>
+      <Fish color={color} />
+    </div>
+  )
+}
 
 const FishBlock = ({req, color}) => {
+  const [ms, setMs] = useState(req.ms)
   const [lilFish, setLilFish] = useState([])
+  const [showEditor, setShowEditor] = useState(false)
   const addLilFish = () => {
-    setLilFish([...lilFish, <LilFish key={Date.now()} color={color} />])
-    setTimeout(() => setLilFish(lilFish.slice(1)), 1000)
+    const key = `${Date.now()}`
+    setLilFish([...lilFish, <LilFish key={key} color={color} />])
   }
 
   useEffect(() => {
-    const interval = setInterval(addLilFish, req.ms)
+    const interval = setInterval(addLilFish, ms)
     return () => clearInterval(interval)
   }, [lilFish, req, color])
 
+  const onClick = (e) => {
+      e.stopPropagation()
+      if (!e.shiftKey) {
+          return addLilFish()
+      }
+      setShowEditor(true)
+  }
+  const close = (e) => {
+    e.stopPropagation()
+    setShowEditor(false)
+  }
+
   return (
     <div
-      style={{display: 'inline-block', float: 'left', width: 80, margin: '10px 10px'}}
-      onClick={addLilFish}
+      style={{display: 'inline-block', float: 'left', width: 'calc(100% - 120px)', margin: '10px 10px'}}
     >
-      <Fish color={color} />
+      <div
+        style={{display: 'inline-block', float: 'left', width: 80, margin: '10px 10px'}}
+        onClick={onClick}
+      >
+        <Fish color={color} />
+      </div>
       {lilFish}
+      {showEditor ? <Editor req={req} setMs={setMs} close={close} /> : []}
+    </div>
+  )
+}
+
+const Editor = ({req, setMs, close}) => {
+  const [msVal, setMsVal] = useState(req.ms)
+  const modalBg = {
+      position: 'absolute',
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+  }
+  const modal = {
+      borderRadius: '8px',
+      position: 'absolute',
+      backgroundColor: 'rgba(255,255,255,1)',
+      opacity: 1,
+      width: 250,
+      top: '25vh',
+      left: 'calc(50vw)',
+      padding: '10px 0 40px 0',
+  }
+  const onChange = (e) => {
+    setMsVal(e.target.value)
+    req.ms = e.target.value
+  }
+
+  return (
+    <div style={modalBg}>
+      <div style={modal}>
+        <span className='text-lg'
+          style={{marginLeft: 30}}
+        >Set Call Interval (ms)</span>
+        <hr style={{margin: '10px 0 30px 0'}} />
+        <input type='number'
+          style={{width: 100, marginLeft: 30, borderRadius: 8}}
+          value={msVal}
+          onChange={onChange}
+        />
+        <button
+          className='bg-indigo-700 text-white ml-2 px-4 py-2 rounded-lg hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
+          onClick={(e) => {setMs(msVal); close(e)}}
+        >
+          OK
+        </button>
+      </div>
     </div>
   )
 }
