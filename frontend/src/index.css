@@ -2,7 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-@-webkit-keyframes animationFish {
-    99.9% {-webkit-transform:translate(calc(100vw - 400px), 0px)} 
-    100%{display:none}
+@-webkit-keyframes animationFish0 {
+    99.9% {-webkit-transform: translate(calc(100vw - 400px), 0px)}
+    100% {display:none}
+}
+
+@-webkit-keyframes animationFish1 {
+    99.9% {-webkit-transform: translate(calc(100vw - 500px), 0px)}
+    100% {display:none}
+}
+
+@-webkit-keyframes animationFish2 {
+    99.9% {-webkit-transform: translate(calc(100vw - 600px), 0px)}
+    100% {display:none}
+}
+
+@-webkit-keyframes animationFish3 {
+    99.9% {-webkit-transform: translate(calc(100vw - 700px), 0px)}
+    100% {display:none}
+}
+
+@-webkit-keyframes animationFish4 {
+    99.9% {-webkit-transform: translate(calc(100vw - 800px), 0px)}
+    100% {display:none}
+}
+
+@-webkit-keyframes animationFish5 {
+    99.9% {-webkit-transform: translate(calc(100vw - 900px), 0px)}
+    100% {display:none}
+}
+
+@-webkit-keyframes animationFish6 {
+    99.9% {-webkit-transform: translate(calc(100vw - 1000px), 0px)}
+    100% {display:none}
 }
