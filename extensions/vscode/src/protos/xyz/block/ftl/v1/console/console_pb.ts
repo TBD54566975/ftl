@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-import { Config as Config$1, Data as Data$1, Ref, Secret as Secret$1, Verb as Verb$1 } from "../schema/schema_pb.js";
+import { Config as Config$1, Data as Data$1, Ref, Secret as Secret$1, Verb as Verb$1 } from "../schema/schema_pb.ts";
 
 /**
  * @generated from enum xyz.block.ftl.v1.console.EventType
@@ -145,7 +145,7 @@ export class LogEvent extends Message<LogEvent> {
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: { kind: "scalar", T: 9 /* ScalarType.STRING */ } },
     { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "stack", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },

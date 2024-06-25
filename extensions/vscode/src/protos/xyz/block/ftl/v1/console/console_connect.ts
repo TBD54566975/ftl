@@ -3,9 +3,9 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { PingRequest, PingResponse } from "../ftl_pb.js";
+import { PingRequest, PingResponse } from "../ftl_pb.ts";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { EventsQuery, GetEventsResponse, GetModulesRequest, GetModulesResponse, StreamEventsRequest, StreamEventsResponse } from "./console_pb.js";
+import { EventsQuery, GetEventsResponse, GetModulesRequest, GetModulesResponse, StreamEventsRequest, StreamEventsResponse } from "./console_pb.ts";
 
 /**
  * @generated from service xyz.block.ftl.v1.console.ConsoleService
