@@ -38,21 +38,21 @@
 }
 
 @-webkit-keyframes animationPoo0 {
-    99.9% {-webkit-transform: translate(-20px, -200px) rotate(90deg)}
+    99.9% {-webkit-transform: translate(-20px, -500px) rotate(90deg)}
     100% {display:none}
 }
 
 @-webkit-keyframes animationPoo1 {
-    99.9% {-webkit-transform: translate(20px, -200px) rotate(90deg)}
+    99.9% {-webkit-transform: translate(20px, -500px) rotate(90deg)}
     100% {display:none}
 }
 
 @-webkit-keyframes animationPoo2 {
-    99.9% {-webkit-transform: translate(-20px, -200px) rotate(-90deg)}
+    99.9% {-webkit-transform: translate(-20px, -500px) rotate(-90deg)}
     100% {display:none}
 }
 
 @-webkit-keyframes animationPoo3 {
-    99.9% {-webkit-transform: translate(20px, -200px) rotate(-90deg)}
+    99.9% {-webkit-transform: translate(20px, -500px) rotate(-90deg)}
     100% {display:none}
 }

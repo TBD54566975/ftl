@@ -1,6 +1,9 @@
 import { useContext, useState, useEffect } from 'react'
 import { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { FTLNode, GraphPane } from '../graph/GraphPane'
+import { useClient } from '../../hooks/use-client'
+import { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { Page } from '../../layout'
 import { CubeTransparentIcon } from '@heroicons/react/24/outline'
 import { modulesContext } from '../../providers/modules-provider'
@@ -88,7 +91,7 @@ const Editor = ({req, setMs, close}) => {
           style={{marginLeft: 30}}
         >Set Call Interval (ms)</span>
         <hr style={{margin: '10px 0 30px 0'}} />
-        <input type='number' autoFocus
+        <input name='ms' type='number' autoFocus
           style={{width: 100, marginLeft: 30, borderRadius: 8}}
           value={msVal}
           onChange={onChange}
@@ -105,13 +108,19 @@ const Editor = ({req, setMs, close}) => {
   )
 }
 
-const FishBlock = ({req, color, col}) => {
+function timeoutPromise(ms) {
+    return new Promise((r) => setTimeout(r, ms))
+}
+
+const FishBlock = ({req, color, col, callVerb}) => {
   const [ms, setMs] = useState(req.ms)
   const [lilFish, setLilFish] = useState([])
   const [showEditor, setShowEditor] = useState(false)
-  const addLilFish = () => {
+  const addLilFish = async () => {
     const key = `${Date.now()}`
     setLilFish([...lilFish, <LilFish key={key} color={color} col={col} />])
+    await timeoutPromise(700)
+    callVerb(req.req)
   }
 
   useEffect(() => {
@@ -134,7 +143,7 @@ const FishBlock = ({req, color, col}) => {
   return [
     (
       <div key='bigfish'
-        style={{display: 'inline-block', float: 'left', width: 80, margin: '10px 10px'}}
+        style={{display: 'inline-block', float: 'left', width: 80, margin: '5px 10px'}}
         onClick={onClick}
       >
         <Fish color={color} />
@@ -147,7 +156,7 @@ const FishBlock = ({req, color, col}) => {
 
 const Poo = ({color}) => {
   const [shouldRender, setShouldRender] = useState(true)
-  setTimeout(() => setShouldRender(false), 1000)
+  setTimeout(() => setShouldRender(false), 3000)
   if (!shouldRender) {
     return []
   }
@@ -160,7 +169,7 @@ const Poo = ({color}) => {
       width: '20px',
       height: '20px',
       animationName: `animationPoo${Math.floor(Math.random()*4)}`,
-      animationDuration: '0.8s',
+      animationDuration: '2s',
       animationDelay: '0.0s',
       animationIterationCount: 1,
       animationDirection: "normal",
@@ -171,15 +180,9 @@ const Poo = ({color}) => {
   )
 }
 
-const CatBlock = ({verbRef}) => {
-  const [poos, setPoos] = useState([])
-  const addPoo = () => {
-    const key = `${Date.now()}`
-    setPoos([...poos, <Poo key={key} color={'green'} />])
-  }
-
+const CatBlock = ({verbRef, poos}) => {
   return (
-    <div style={{float: 'right', width: 80, margin: '10px 10px'}} onClick={addPoo}>
+    <div style={{float: 'right', width: 80, margin: '10px 10px'}}>
       <Cat color='#fa0' />
       {poos}
     </div>
@@ -188,39 +191,91 @@ const CatBlock = ({verbRef}) => {
 
 const blues = ['#03045e', '#023e8a', '#0077b6', '#0096c7', '#00b4d8', '#1576bb']
 
-const Row = ({verbRef}) => {
+const Row = ({verbRef, callVerb}) => {
+  const verbRefParts = verbRef.split('.')
+  const verbRefPb: Ref = {
+    name: verbRefParts[1],
+    module: verbRefParts[0],
+  } as Ref
+  const [poos, setPoos] = useState([])
+  const [lastErr, setLastErr] = useState('err adfasdfasdf asdfasdfasdfasdf asdf')
+  const addPoo = (color) => {
+    const key = `${Date.now()}`
+    setPoos([...poos, <Poo key={key} color={color} />])
+  }
+  const addGoodPoo = () => addPoo('green')
+  const addBadPoo = () => addPoo('red')
+  const callVerbFn = async (req) => {
+    const maybeErr = await callVerb(verbRefPb, req)
+    if (maybeErr === null) {
+        addGoodPoo()
+    } else {
+        addBadPoo()
+        setLastErr(maybeErr)
+    }
+  }
   const fishes = window.savedReqs[verbRef].map((req, i) => (
     <FishBlock
       key={i} col={i}
       req={req}
       color={blues[Math.floor(Math.random() * blues.length)]}
+      callVerb={callVerbFn}
     />
   ))
+  const titleStyle = {
+    position: 'absolute',
+    padding: '2px 20px',
+  }
+  const errStyle = {
+      position: 'absolute',
+      color: 'red',
+      marginTop: 40,
+      marginLeft: 100 * fishes.length + 20
+  }
+  const maybeErrEl = lastErr == '' ? [] : (
+      <div style={errStyle}>{lastErr}</div>
+  )
   return (
     <div style={{width: '100%', height: rowHeight}}>
+      <div className='text-lg' style={titleStyle}>{verbRef}</div>
+      {maybeErrEl}
       <div
         style={{display: 'inline-block', float: 'left', width: 'calc(100% - 120px)', margin: '10px 10px'}}
       >
         {fishes}
       </div>
-      <CatBlock verbRef={verbRef} />
+      <CatBlock verbRef={verbRef} poos={poos} />
     </div>
   )
 }
 
 export const LoadTestPage = () => {
+  const savedReqs = window.savedReqs ? window.savedReqs : []
+
+  const client = useClient(VerbService)
   const modules = useContext(modulesContext)
   const navigate = useNavigate()
   const [selectedNode, setSelectedNode] = useState<FTLNode | null>(null)
 
-  const savedReqs = window.savedReqs ? window.savedReqs : []
-  const rows = Object.keys(savedReqs).toSorted().map((ref) => <Row key={ref} verbRef={ref} />)
+  const callVerb = async (verbRef, req) => {
+    const response = await client.call({ verb: verbRef, body: req })
+    if (response.response.case === 'body') {
+      const jsonString = Buffer.from(response.response.value).toString('utf-8')
+      return null
+    } else if (response.response.case === 'error') {
+      return response.response.value.message
+    }
+  }
+
+  const rows = Object.keys(savedReqs).toSorted().map((ref) => (
+    <Row key={ref} verbRef={ref} callVerb={callVerb} />
+  ))
 
   const gridStyle = {
     display: 'block',
     width: '100%',
     height: rowHeight * Object.keys(savedReqs).length,
-    backgroundImage: "repeating-linear-gradient(#ccc 0 1px, transparent 1px 100%),repeating-linear-gradient(90deg, #ccc 0 1px, transparent 1px 100%)",
+    backgroundImage: "repeating-linear-gradient(#ccc 0 1px, transparent 1px 100%)",
     backgroundSize: `${rowHeight}px ${rowHeight}px`,
     marginTop: '60px'
   }
