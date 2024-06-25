@@ -26,40 +26,6 @@ pub struct Config {
     pub controller_url: String,
 }
 
-#[derive(clap::Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Cli {
-    #[clap(short = 'e', env = "FTL_ENDPOINT", required = true)]
-    ftl_endpoint: String,
-    #[clap(short = 'c', env = "FTL_CONFIG", required = true)]
-    config: Vec<String>,
-}
-
-/// The entrypoint for the generated runner.
-pub fn main(call_immediate_fn: CallImmediateFn) {
-    let filter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info,ftl=debug"));
-    fmt::Subscriber::builder().with_env_filter(filter).init();
-    info!("Starting runner");
-
-    let cli = Cli::parse();
-
-    debug!(?cli);
-}
-
-pub fn build(module_name: &str, src_file: &Path, dest_file: &Path) {
-    let mut parser = parser::Parser::new();
-    let module = parser::ModuleIdent::new(module_name);
-    let code = std::fs::read_to_string(src_file).unwrap();
-    parser.add_module(&module, &code);
-    assert!(
-        parser.modules_count() > 0,
-        "No modules found in {:?}",
-        src_file
-    );
-    parser.generate_call_immediate_file(dest_file);
-}
-
 pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting runner");
 

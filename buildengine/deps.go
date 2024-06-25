@@ -52,7 +52,8 @@ func extractDependencies(module Module) ([]string, error) {
 		return extractKotlinFTLImports(module.Config.Module, module.Config.Dir)
 
 	case "rust":
-		panic("unimplemented")
+		fmt.Fprintf(os.Stderr, "RUST TODO extractDependencies\n")
+		return nil, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported language: %s", module.Config.Language)

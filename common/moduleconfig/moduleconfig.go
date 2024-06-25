@@ -147,7 +147,19 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		}
 
 	case "rust":
-		panic("unimplemented")
+		if config.Build == "" {
+			config.Build = "cargo build"
+		}
+		if config.DeployDir == "" {
+			config.DeployDir = "_ftl"
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main"}
+		}
+		if len(config.Watch) == 0 {
+			config.Watch = []string{"**/*.rs", "Cargo.toml", "Cargo.lock"}
+		}
+		fmt.Fprintf(os.Stderr, "RUST 3\n")
 	}
 
 	// Do some validation.
