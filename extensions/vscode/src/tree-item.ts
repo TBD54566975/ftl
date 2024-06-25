@@ -16,10 +16,12 @@ export class FtlTreeItem extends vscode.TreeItem {
     this.position = position
     this.iconPath = icon
     this.contextValue = contextValue
-    this.command = {
-      command: 'ftlModules.itemClicked',
-      title: `Node Clicked: ${label}`,
-      arguments: [this]
+    if (position) {
+      this.command = {
+        command: 'ftlModules.itemClicked',
+        title: `Node Clicked: ${label}`,
+        arguments: [this]
+      }
     }
   }
 }
@@ -54,7 +56,6 @@ const declToTreeItem = (decl: Decl): FtlTreeItem | undefined => {
   const pos = decl.value.value?.pos
   switch (decl.value.case) {
     case 'data':
-      console.log('pos', decl.value.value.pos)
       return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('symbol-struct'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlData')
     case 'verb':
       return new FtlTreeItem(decl.value.value.name, new vscode.ThemeIcon('symbol-function'), vscode.TreeItemCollapsibleState.None, pos, [], 'ftlVerb')
@@ -80,6 +81,10 @@ const declToTreeItem = (decl: Decl): FtlTreeItem | undefined => {
 }
 
 const estimateModulePosition = (module: Module | undefined): Position | undefined => {
+  if (module?.name === 'builtin') {
+    return undefined
+  }
+
   const declPos = module?.decls.find(decl => decl.value.value?.pos !== undefined)?.value.value?.pos
   if (!declPos) {
     return undefined

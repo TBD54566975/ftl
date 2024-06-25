@@ -4,7 +4,7 @@ go 1.22.2
 
 replace github.com/TBD54566975/ftl => ../../..
 
-require github.com/TBD54566975/ftl v0.242.1
+require github.com/TBD54566975/ftl v0.268.2
 
 require (
 	connectrpc.com/connect v1.16.1 // indirect

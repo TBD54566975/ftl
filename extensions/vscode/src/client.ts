@@ -62,22 +62,22 @@ export class FTLClient {
     )
     context.subscriptions.push(this.client)
 
-    // const buildStatus = this.client.onNotification('ftl/buildState', (message) => {
-    //   console.log('Build status', message)
-    //   const state = message.state
+    const buildStatus = this.client.onNotification('ftl/buildState', (message) => {
+      console.log('Build status', message)
+      const state = message.state
 
-    //   if (state == 'building') {
-    //     FTLStatus.buildRunning(this.statusBarItem)
-    //   } else if (state == 'success') {
-    //     FTLStatus.buildOK(this.statusBarItem)
-    //   } else if (state == 'failure') {
-    //     FTLStatus.buildError(this.statusBarItem, message.error)
-    //   } else {
-    //     FTLStatus.ftlError(this.statusBarItem, 'Unknown build status from FTL LSP server')
-    //     this.outputChannel.appendLine(`Unknown build status from FTL LSP server: ${state}`)
-    //   }
-    // })
-    // context.subscriptions.push(buildStatus)
+      if (state == 'building') {
+        FTLStatus.buildRunning(this.statusBarItem)
+      } else if (state == 'success') {
+        FTLStatus.buildOK(this.statusBarItem)
+      } else if (state == 'failure') {
+        FTLStatus.buildError(this.statusBarItem, message.error)
+      } else {
+        FTLStatus.ftlError(this.statusBarItem, 'Unknown build status from FTL LSP server')
+        this.outputChannel.appendLine(`Unknown build status from FTL LSP server: ${state}`)
+      }
+    })
+    context.subscriptions.push(buildStatus)
 
     this.outputChannel.appendLine('Starting lsp client')
 
