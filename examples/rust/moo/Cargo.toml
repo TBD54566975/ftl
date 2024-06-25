@@ -1,6 +1,7 @@
 [package]
-name = "ruuu"
+name = "moo"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+ftl = { path = "../../../rust-runtime/ftl" }

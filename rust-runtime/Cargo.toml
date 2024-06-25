@@ -13,7 +13,7 @@ ftl = { path = "ftl" }
 ftl_derive = { path = "ftl_derive" }
 ftl_protos = { path = "ftl_protos" }
 
-clap = { version = "4.5.7", features = ["derive"] }
+clap = { version = "4.5.7", features = ["derive", "env"] }
 glob = "0.3.1"
 prettyplease = "0.2.20"
 pbjson = "0.6.0"

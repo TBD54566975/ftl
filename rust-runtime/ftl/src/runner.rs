@@ -1,9 +1,13 @@
 //! Communicates with the controller and manages the verb server.
 
+use std::path::Path;
+
+use clap::Parser;
 use tonic::{Request, Response, Status};
 use tonic::codegen::tokio_stream;
 use tonic::transport::Server;
-use tracing::{info, trace};
+use tracing::{debug, info, trace};
+use tracing_subscriber::{EnvFilter, fmt};
 
 use ftl_protos::ftl::{
     call_response, CallRequest, DeployRequest, DeployResponse, GetSchemaRequest, PingRequest,
@@ -14,11 +18,46 @@ use ftl_protos::ftl::runner_service_server::RunnerServiceServer;
 use ftl_protos::ftl::verb_service_client::VerbServiceClient;
 use ftl_protos::schema::{decl, Decl, Ref, Verb};
 
-use crate::verb_server;
+use crate::{parser, verb_server};
+use crate::verb_server::CallImmediateFn;
 
 pub struct Config {
     pub verb_server_config: verb_server::Config,
     pub controller_url: String,
+}
+
+#[derive(clap::Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    #[clap(short = 'e', env = "FTL_ENDPOINT", required = true)]
+    ftl_endpoint: String,
+    #[clap(short = 'c', env = "FTL_CONFIG", required = true)]
+    config: Vec<String>,
+}
+
+/// The entrypoint for the generated runner.
+pub fn main(call_immediate_fn: CallImmediateFn) {
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info,ftl=debug"));
+    fmt::Subscriber::builder().with_env_filter(filter).init();
+    info!("Starting runner");
+
+    let cli = Cli::parse();
+
+    debug!(?cli);
+}
+
+pub fn build(module_name: &str, src_file: &Path, dest_file: &Path) {
+    let mut parser = parser::Parser::new();
+    let module = parser::ModuleIdent::new(module_name);
+    let code = std::fs::read_to_string(src_file).unwrap();
+    parser.add_module(&module, &code);
+    assert!(
+        parser.modules_count() > 0,
+        "No modules found in {:?}",
+        src_file
+    );
+    parser.generate_call_immediate_file(dest_file);
 }
 
 pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {

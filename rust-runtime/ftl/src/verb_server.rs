@@ -10,11 +10,13 @@ use ftl_protos::ftl::verb_service_server::VerbService;
 
 use crate::Context;
 
+pub type CallImmediateFn =
+    fn(Context, String, String, String) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>>;
+
 #[derive(Debug)]
 pub struct Config {
     pub bind: String,
-    pub call_immediate:
-        fn(Context, String, String, String) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>>,
+    pub call_immediate: CallImmediateFn,
 }
 
 impl Config {

@@ -33,6 +33,10 @@ impl Parser {
             self.add_module(&mod_ident, &contents);
         }
     }
+
+    pub fn modules_count(&self) -> usize {
+        self.verb_tokens.len()
+    }
 }
 
 /// Find all .rs sources in src.
