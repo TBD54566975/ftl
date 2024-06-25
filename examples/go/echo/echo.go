@@ -44,10 +44,10 @@ func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 func FlakyEcho(ctx context.Context, req FlakyEchoRequest) (EchoResponse, error) {
 	rr, ok := req.RandRange.Get()
 	if !ok {
-		return nil, fmt.Errorf("RandRange field is missing")
+		return EchoResponse{}, fmt.Errorf("RandRange field is missing")
 	}
 	if rand.Intn(rr) == 0 {
-		return nil, fmt.Errorf("Gamble lost!")
+		return EchoResponse{}, fmt.Errorf("Gamble lost!")
 	}
 
 	tresp, err := ftl.Call(ctx, time.Time, time.TimeRequest{})

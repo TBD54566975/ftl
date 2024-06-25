@@ -56,3 +56,9 @@
     99.9% {-webkit-transform: translate(20px, -500px) rotate(-90deg)}
     100% {display:none}
 }
+
+@-webkit-keyframes fadeOut {
+    0% {opacity: 1}
+    99% {opacity: 0.01}
+    100% {opacity: 0}
+}

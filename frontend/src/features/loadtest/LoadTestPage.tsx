@@ -251,7 +251,13 @@ const Row = ({ verbRef, callVerb }: {
     position: 'absolute' as 'absolute',
     color: 'red',
     marginTop: 40,
-    marginLeft: 100 * fishes.length + 20
+    marginLeft: 100 * fishes.length + 20,
+    animationName: 'fadeOut',
+    animationDuration: '5s',
+    animationDelay: '0.0s',
+    animationIterationCount: 1,
+    animationDirection: "normal",
+    animationFillMode: "forwards"
   }
   const maybeErrEl = lastErr == '' ? [] : (
       <div style={errStyle}>{lastErr}</div>
