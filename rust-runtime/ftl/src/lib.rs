@@ -1,6 +1,6 @@
 pub use ftl_derive::verb;
 
-mod builder;
+pub mod builder;
 pub mod generator;
 pub mod parser;
 pub mod runner;
