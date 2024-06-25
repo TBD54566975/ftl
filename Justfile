@@ -28,6 +28,9 @@ clean:
   rm -rf frontend/node_modules
   find . -name '*.zip' -exec rm {} \;
   mvn -f kotlin-runtime/ftl-runtime clean
+  rm -rf swift-runtime/Compile/.build
+  rm -rf swift-runtime/FTL/.build
+  rm -rf swift-runtime/Schema/.build
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
@@ -40,6 +43,7 @@ dev *args:
 # Build everything
 build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips lsp-generate
   @just build ftl ftl-controller ftl-runner ftl-initdb
+  @just build-swift-runtime
 
 # Run "go generate" on all packages
 build-generate:
@@ -101,7 +105,9 @@ build-kt-runtime:
 
 # Build the Swift runtime
 build-swift-runtime:
-  swift build --package-path swift-runtime/compile -c release
+  swift build --package-path swift-runtime/Compile -c release
+  cp swift-runtime/Compile/.build/release/Compile build/devel/ftl-swift-compile
+  cp swift-runtime/Compile/.build/release/Compile build/release/ftl-swift-compile
 
 # Install Node dependencies
 npm-install:
