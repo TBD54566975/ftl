@@ -165,8 +165,10 @@ const configStructSnippet = `type SampleConfig struct {
 
 var sampleConfigValue = ftl.Config[SampleConfig]("sample_config")`
 
-// TODO: include some examples of different cron schedules in the comments
-const cronSnippet = `//ftl:cron * * * * * * *
+const cronSnippet = `// This cron job will run every 5 minutes
+//ftl:cron * /5 * * * * *
 func SampleCron(ctx context.Context) error {
+	logger := ftl.LoggerFromContext(ctx)
+	logger.Infof("sample cron job triggered")
 	return nil
 }`
