@@ -8,7 +8,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func buildRustModule(ctx context.Context, sch *schema.Schema, module Module) error {
+func buildRustModule(ctx context.Context, _ *schema.Schema, module Module) error {
 	logger := log.FromContext(ctx)
 
 	if err := prepareFTLRoot(module); err != nil {
