@@ -7,7 +7,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { ModuleRuntime, VerbRuntime } from "./runtime_pb.js";
+import { ModuleRuntime, VerbRuntime } from "./runtime_pb.ts";
 
 /**
  * @generated from message xyz.block.ftl.v1.schema.Any

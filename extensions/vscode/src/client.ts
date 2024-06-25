@@ -5,6 +5,7 @@ import {
   ServerOptions,
 } from 'vscode-languageclient/node'
 import { FTLStatus } from './status'
+import { watchSchema } from './ftl-modules'
 
 export class FTLClient {
   private clientName = 'ftl language server'
@@ -79,11 +80,14 @@ export class FTLClient {
     context.subscriptions.push(buildStatus)
 
     this.outputChannel.appendLine('Starting lsp client')
+
+    const abortController = new AbortController()
     try {
       await this.client.start()
       this.outputChannel.appendLine('Client started')
       console.log(`${this.clientName} started`)
       FTLStatus.buildOK(this.statusBarItem)
+      watchSchema(abortController)
     } catch (error) {
       console.error(`Error starting ${this.clientName}: ${error}`)
       FTLStatus.ftlError(this.statusBarItem, `Error starting ${this.clientName}: ${error}`)

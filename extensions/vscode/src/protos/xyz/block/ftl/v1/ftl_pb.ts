@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, Struct, Timestamp } from "@bufbuild/protobuf";
-import { Module, Ref, Schema, Type } from "./schema/schema_pb.js";
+import { Module, Ref, Schema, Type } from "./schema/schema_pb.ts";
 
 /**
  * @generated from enum xyz.block.ftl.v1.DeploymentChangeType
@@ -294,8 +294,8 @@ export class ModuleContextResponse extends Message<ModuleContextResponse> {
   static readonly typeName = "xyz.block.ftl.v1.ModuleContextResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "configs", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
-    { no: 3, name: "secrets", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 12 /* ScalarType.BYTES */} },
+    { no: 2, name: "configs", kind: "map", K: 9 /* ScalarType.STRING */, V: { kind: "scalar", T: 12 /* ScalarType.BYTES */ } },
+    { no: 3, name: "secrets", kind: "map", K: 9 /* ScalarType.STRING */, V: { kind: "scalar", T: 12 /* ScalarType.BYTES */ } },
     { no: 4, name: "databases", kind: "message", T: ModuleContextResponse_DSN, repeated: true },
   ]);
 
@@ -1817,7 +1817,7 @@ export class StreamDeploymentLogsRequest extends Message<StreamDeploymentLogsReq
     { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
     { no: 4, name: "log_level", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: {kind: "scalar", T: 9 /* ScalarType.STRING */} },
+    { no: 5, name: "attributes", kind: "map", K: 9 /* ScalarType.STRING */, V: { kind: "scalar", T: 9 /* ScalarType.STRING */ } },
     { no: 6, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);

@@ -1,6 +1,5 @@
 {
 	"compilerOptions": {
-		"module": "Node16",
 		"target": "ES2022",
 		"lib": [
 			"ES2022"
@@ -11,5 +10,12 @@
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
 		"noUnusedParameters": true,
+		"moduleResolution": "node",
+		"esModuleInterop": true,
+		"paths": {
+			"*": [
+				"./src/*"
+			]
+		}
 	}
 }

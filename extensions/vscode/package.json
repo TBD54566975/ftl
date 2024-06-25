@@ -145,6 +145,10 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "@bufbuild/protoc-gen-es": "^1.10.0",
+    "@connectrpc/connect": "^1.4.0",
+    "@connectrpc/connect-web": "^1.4.0",
+    "@connectrpc/protoc-gen-connect-es": "^1.4.0",
     "lookpath": "^1.2.2",
     "semver": "^7.6.0",
     "vscode-languageclient": "^9.0.1"
