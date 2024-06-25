@@ -9,6 +9,7 @@
 // when they are no longer leading.
 //
 // A follower is created with with the url of the leader. Followers last as long as the url for the leader has not changed.
+// Followers should react to the context being cancelled to know when they are no longer active.
 
 package leader
 
@@ -42,9 +43,10 @@ type leader[P any] struct {
 }
 
 type follower[P any] struct {
-	value    P
-	deadline time.Time
-	url      *url.URL
+	value     P
+	deadline  time.Time
+	url       *url.URL
+	cancelCtx context.CancelFunc
 }
 
 // Coordinator assigns a single leader for the rest to follow.
@@ -114,6 +116,7 @@ func (c *Coordinator[P]) Get() (leaderOrFollower P, err error) {
 	lease, leaderCtx, leaseErr := c.leaser.AcquireLease(c.ctx, c.key, c.leaseTTL, optional.Some[any](c.advertise.String()))
 	if leaseErr == nil {
 		// became leader
+		c.retireFollower()
 		l, err := c.leaderFactory(leaderCtx)
 		if err != nil {
 			err := lease.Release()
@@ -170,18 +173,31 @@ func (c *Coordinator[P]) createFollower() (out P, err error) {
 		f.deadline = expiry
 		return f.value, nil
 	}
+	c.retireFollower()
 	url, err := url.Parse(urlString)
 	if err != nil {
 		return out, fmt.Errorf("could not parse leader url for %s: %w", c.key, err)
 	}
-	f, err := c.followerFactory(c.ctx, url)
+	followerContext, cancel := context.WithCancel(c.ctx)
+	f, err := c.followerFactory(followerContext, url)
 	if err != nil {
+		cancel()
 		return out, fmt.Errorf("could not generate follower for %s: %w", c.key, err)
 	}
 	c.follower = optional.Some(&follower[P]{
-		value:    f,
-		deadline: expiry,
-		url:      url,
+		value:     f,
+		deadline:  expiry,
+		url:       url,
+		cancelCtx: cancel,
 	})
 	return f, nil
+}
+
+func (c *Coordinator[P]) retireFollower() {
+	f, ok := c.follower.Get()
+	if !ok {
+		return
+	}
+	f.cancelCtx()
+	c.follower = optional.None[*follower[P]]()
 }

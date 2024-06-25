@@ -20,7 +20,6 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
 	"golang.org/x/exp/maps"
@@ -94,7 +93,7 @@ func (c *Config) SetDefaults() {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling) error {
+func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, dal *dal.DAL) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -113,16 +112,6 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 			return err
 		}
 		logger.Infof("Web console available at: %s", config.Bind)
-	}
-
-	// Bring up the DB connection and DAL.
-	conn, err := pgxpool.New(ctx, config.DSN)
-	if err != nil {
-		return err
-	}
-	dal, err := dal.New(ctx, conn)
-	if err != nil {
-		return err
 	}
 
 	svc, err := New(ctx, dal, config, runnerScaling)
