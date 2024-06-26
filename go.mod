@@ -28,7 +28,6 @@ require (
 	github.com/docker/docker v26.1.4+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/go-logr/logr v1.4.2
-	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.6.0
