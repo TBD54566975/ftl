@@ -41,7 +41,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 	logger.Infof("Deploying module")
 
 	moduleConfig := module.Config.Abs()
-	files, err := findFiles(moduleConfig)
+	files, err := FindFilesToDeploy(moduleConfig)
 	if err != nil {
 		logger.Errorf(err, "failed to find files in %s", moduleConfig)
 		return err
@@ -154,7 +154,8 @@ func loadProtoSchema(config moduleconfig.AbsModuleConfig, replicas int32) (*sche
 	return module, nil
 }
 
-func findFiles(moduleConfig moduleconfig.AbsModuleConfig) ([]string, error) {
+// FindFilesToDeploy returns a list of files to deploy for the given module.
+func FindFilesToDeploy(moduleConfig moduleconfig.AbsModuleConfig) ([]string, error) {
 	var out []string
 	for _, file := range moduleConfig.Deploy {
 		info, err := os.Stat(file)
