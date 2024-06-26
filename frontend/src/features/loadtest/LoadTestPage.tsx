@@ -35,8 +35,8 @@ const LilFish = ({ color, col }: { color: string, col: number }) => {
   return (
     <div style={{
       position: 'absolute',
-      marginTop: '30px',
-      marginLeft: 60 + 100*(col),
+      marginTop: '-55px',
+      marginLeft: 100,
       width: '30px',
       height: '30px',
       animationName: `animationFish${col}`,
@@ -152,16 +152,17 @@ const FishBlock = ({ req, color, col, callVerb }: {
     setShowEditor(false)
   }
 
+    // style={{display: 'inline-block', float: 'left', width: 80, margin: '5px 10px'}}
   return [
     (
       <div key='bigfish'
-        style={{display: 'inline-block', float: 'left', width: 80, margin: '5px 10px'}}
+        style={{gridColumn: col + 1, paddingLeft: 10}}
         onClick={onClick}
       >
         <Fish color={color} />
+        {lilFish}
       </div>
     ),
-    ...lilFish,
     showEditor ? (<Editor key='editor' req={req} setMs={setMs} close={close} />) : null,
   ]
 }
@@ -193,12 +194,45 @@ const Poo = ({ color }: { color: string }) => {
 }
 
 const CatBlock = ({ poos }: { poos: React.ReactElement[] }) => {
+    // <div style={{float: 'right', width: 80, margin: '10px 10px'}}>
+  const style = {
+      gridColumn: 8,
+      width: 80,
+  }
   return (
-    <div style={{float: 'right', width: 80, margin: '10px 10px'}}>
+    <div style={style}>
       <Cat color='#fa0' />
       {poos}
     </div>
   );
+}
+
+const AnalyticsPanel = () => {
+    const [isOpen, setIsOpen] = useState(false)
+    if (!isOpen) {
+      const style = {
+          gridColumn: '1 / 9',
+          backgroundColor: '#eee',
+          paddingLeft: 10,
+          fontSize: 14,
+      }
+      return (
+        <div style={style} onClick={() => setIsOpen(true)}>
+              + Analytics Panel
+        </div>
+      )
+    }
+    const style = {
+        gridColumn: '1 / 9',
+        backgroundColor: '#eee',
+        paddingLeft: 10,
+    }
+    return (
+      <div style={style}>
+            <div style={{fontSize: 14}} onClick={() => setIsOpen(false)}>- Analytics Panel </div>
+            (todo)
+      </div>
+    )
 }
 
 const blues = ['#03045e', '#023e8a', '#0077b6', '#0096c7', '#00b4d8', '#1576bb']
@@ -244,36 +278,29 @@ const Row = ({ verbRef, callVerb }: {
     />
   ))
   const titleStyle = {
-    position: 'absolute' as 'absolute',
-    padding: '2px 20px',
+    gridColumnStart: 1,
+    gridColumnEnd: 9,
+      verticalAlign: 'middle',
+      paddingLeft: 10,
   }
   const errStyle = {
-    position: 'absolute' as 'absolute',
+    gridColumnStart: 1,
+    gridColumnEnd: 8,
     color: 'red',
-    marginTop: 40,
-    marginLeft: 100 * fishes.length + 20,
-    animationName: 'fadeOut',
-    animationDuration: '5s',
-    animationDelay: '0.0s',
-    animationIterationCount: 1,
-    animationDirection: "normal",
-    animationFillMode: "forwards"
+    fontSize: 12,
   }
-  const maybeErrEl = lastErr == '' ? [] : (
-      <div style={errStyle}>{lastErr}</div>
-  )
-  return (
-    <div style={{width: '100%', height: rowHeight}}>
-      <div className='text-lg' style={titleStyle}>{verbRef}</div>
-      {maybeErrEl}
-      <div
-        style={{display: 'inline-block', float: 'left', width: 'calc(100% - 120px)', margin: '10px 10px'}}
-      >
-        {fishes}
-      </div>
-      <CatBlock poos={poos} />
-    </div>
-  )
+  const maybeErrEl = lastErr == '' ? [] : [
+    <span style={errStyle}>Last Error: {lastErr}</span>
+  ]
+  return [
+      <div style={titleStyle}>
+        <span className='text-lg'>{verbRef}</span>{' '}
+        {maybeErrEl}
+      </div>,
+      ...fishes,
+      <CatBlock poos={poos} />,
+      <AnalyticsPanel />
+  ]
 }
 
 export const LoadTestPage = () => {
@@ -295,11 +322,13 @@ export const LoadTestPage = () => {
   ))
 
   const gridStyle = {
-    display: 'block',
     width: '100%',
-    height: rowHeight * Object.keys(savedReqs).length,
-    backgroundImage: "repeating-linear-gradient(#ccc 0 1px, transparent 1px 100%)",
-    backgroundSize: `${rowHeight}px ${rowHeight}px`,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, 100px) auto 100px',
+    gridTemplateRows: '30px 100px auto '.repeat(rows.length),
+    columnGap: 20,
+    rowGap: 10,
+    margin: 5,
   }
 
   return (
