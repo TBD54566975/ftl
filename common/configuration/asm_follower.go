@@ -27,7 +27,7 @@ var _ asmClient = &asmFollower{}
 func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient, clock clock.Clock) *asmFollower {
 	f := &asmFollower{
 		client: rpcClient,
-		cache:  newSecretsCache(),
+		cache:  newSecretsCache("asm-follower"),
 	}
 	go f.cache.sync(ctx, asmFollowerSyncInterval, func(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
 		return f.sync(ctx, secrets)
@@ -43,7 +43,7 @@ func (f *asmFollower) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cached
 		IncludeValues: &includeValues,
 	}))
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting secrets list from leader: %w", err)
 	}
 	visited := map[Ref]bool{}
 	for _, s := range resp.Msg.Secrets {
