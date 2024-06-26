@@ -45,6 +45,7 @@ async fn main() {
             let mut parser = parser::Parser::new();
             let module = parser::ModuleIdent::new(name);
             parser.add_module(&module, &content);
+            parser.resolve_types();
 
             let proto = parser.generate_module_proto(&module);
 

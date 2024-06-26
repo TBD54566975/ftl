@@ -57,7 +57,7 @@ impl VerbService for FtlService {
         &self,
         request: Request<protos::ftl::PingRequest>,
     ) -> Result<Response<protos::ftl::PingResponse>, Status> {
-        todo!()
+        Ok(Response::new(protos::ftl::PingResponse { not_ready: None }))
     }
 
     type GetModuleContextStream = ModuleContextResponseStream;

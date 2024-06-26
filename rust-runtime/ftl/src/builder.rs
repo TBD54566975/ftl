@@ -68,11 +68,12 @@ pub fn build(module_name: &str) {
     let module = parser::ModuleIdent::new(module_name);
     let code = std::fs::read_to_string(&src).unwrap();
     parser.add_module(&module, &code);
-    assert!(parser.modules_count() > 0, "No modules found in {:?}", src);
-    assert!(parser.verb_count() > 0, "No modules found in {:?}", src);
-    parser.generate_call_immediate_file(&call_immediate_path);
+    let parsed = parser.parse();
+    assert!(parsed.modules_count() > 0, "No modules found in {:?}", src);
+    assert!(parsed.verb_count() > 0, "No modules found in {:?}", src);
+    parsed.generate_call_immediate_file(&call_immediate_path);
 
-    let module = parser.generate_module_proto(&module);
+    let module = parsed.generate_module_proto(&module);
     let mut encoded = Vec::new();
     module.encode(&mut encoded).unwrap();
     std::fs::write(&schema_path, &encoded).unwrap();

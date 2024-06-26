@@ -3,7 +3,7 @@ use prost::Message;
 
 use ftl_protos::schema;
 
-use crate::parser::{ModuleIdent, Parser};
+use crate::parser::{ModuleIdent, Parsed, Parser};
 
 pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     let mut buf = Vec::new();
@@ -11,12 +11,14 @@ pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     schema::Module::decode(&buf[..]).unwrap()
 }
 
-impl Parser {
+impl Parsed {
     pub fn generate_module_proto(&self, module: &ModuleIdent) -> schema::Module {
-        let verbs = &self.verb_tokens.get(module).unwrap();
-
-        let verbs = verbs.iter().map(|verb| verb.to_proto());
-
+        let verbs = &self
+            .verbs
+            .iter()
+            .filter(|verb| &verb.module == module)
+            .collect::<Vec<_>>();
+        let verbs = verbs.iter().map(|verb| verb.to_proto()).collect::<Vec<_>>();
         let mut decls = vec![];
         decls.extend(verbs.into_iter().map(|verb| schema::Decl {
             value: Some(schema::decl::Value::Verb(verb)),
@@ -86,7 +88,8 @@ mod tests {
         let mut parser = Parser::new();
         let moo = ModuleIdent::new("moo");
         parser.add_module(&moo, code);
-        let m = parser.generate_module_proto(&moo);
+        let parsed = parser.parse();
+        let m = parsed.generate_module_proto(&moo);
 
         assert_eq!(
             m,
