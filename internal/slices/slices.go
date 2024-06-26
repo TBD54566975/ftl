@@ -1,5 +1,10 @@
 package slices
 
+import (
+	"cmp"
+	"sort"
+)
+
 func Map[T, U any](slice []T, fn func(T) U) []U {
 	result := make([]U, len(slice))
 	for i, v := range slice {
@@ -59,6 +64,16 @@ func AppendOrReplace[T any](slice []T, value T, fn func(T) bool) []T {
 		}
 	}
 	return append(slice, value)
+}
+
+// Sort returns a sorted clone of slice.
+func Sort[T cmp.Ordered](slice []T) []T {
+	out := make([]T, len(slice))
+	copy(out, slice)
+	sort.Slice(out, func(i, j int) bool {
+		return out[i] < out[j]
+	})
+	return out
 }
 
 func FlatMap[T, U any](slice []T, fn func(T) []U) []U {
