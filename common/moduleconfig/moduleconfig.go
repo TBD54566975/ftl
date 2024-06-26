@@ -105,11 +105,6 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 	return AbsModuleConfig(clone)
 }
 
-// AbsDeployDir returns the absolute path to the deploy directory.
-func (c ModuleConfig) AbsDeployDir() string {
-	return filepath.Join(c.Dir, c.DeployDir)
-}
-
 func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	if config.Realm == "" {
 		config.Realm = "home"

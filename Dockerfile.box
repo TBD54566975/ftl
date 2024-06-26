@@ -41,8 +41,10 @@ COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
 COPY --from=builder /src/build/template template
 COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments
+# Where the module artifacts are stored
+RUN mkdir modules
 
 EXPOSE 8891
 EXPOSE 8892
 
-CMD ["/root/ftl", "dev"]
+CMD ["/root/ftl", "box", "run"]

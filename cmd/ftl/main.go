@@ -44,6 +44,7 @@ type CLI struct {
 	Kill     killCmd     `cmd:"" help:"Kill a deployment."`
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
 	Build    buildCmd    `cmd:"" help:"Build all modules found in the specified directories."`
+	Box      boxCmd      `cmd:"" help:"Build a self-contained Docker container for running a set of module."`
 	Deploy   deployCmd   `cmd:"" help:"Build and deploy all modules found in the specified directories."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
