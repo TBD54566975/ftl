@@ -27,34 +27,22 @@ COPY modules /root
 EXPOSE 8891
 EXPOSE 8892
 
-CMD ["/root/ftl", "dev"]
+ENTRYPOINT ["/root/ftl", "box-run", "/root/modules"]
 
 `
 
 type boxCmd struct {
-	Build boxBuildCmd `cmd:"" help:"Build a self-contained Docker container (FTL-in-a-box) for running a set of modules."`
-	Run   boxRunCmd   `cmd:"" help:"Run an FTL-in-a-box container."`
-}
-
-type boxRunCmd struct {
-}
-
-func (b *boxRunCmd) Run() error {
-	return fmt.Errorf("not implemented")
-}
-
-type boxBuildCmd struct {
 	BaseImage   string   `help:"Name of the ftl-box Docker image to use as a base." default:"ftl0/ftl-box:${version}"`
 	Parallelism int      `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
 	Image       string   `arg:"" help:"Name of image to build."`
 	Dirs        []string `arg:"" help:"Base directories containing modules (defaults to modules in project config)." type:"existingdir" optional:""`
 }
 
-func (b *boxBuildCmd) Help() string {
+func (b *boxCmd) Help() string {
 	return ``
 }
 
-func (b *boxBuildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig projectconfig.Config) error {
+func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig projectconfig.Config) error {
 	if len(b.Dirs) == 0 {
 		b.Dirs = projConfig.AbsModuleDirs()
 	}
@@ -121,5 +109,6 @@ func (b *boxBuildCmd) Run(ctx context.Context, client ftlv1connect.ControllerSer
 	if err != nil {
 		return fmt.Errorf("failed to write Dockerfile: %w", err)
 	}
-	return exec.Command(ctx, log.Info, workDir, "docker", "build", "-t", b.Image, "--progress=plain", "--platform=linux/amd64", ".").Run()
+	logger.Infof("Building image %s", b.Image)
+	return exec.Command(ctx, log.Debug, workDir, "docker", "build", "-t", b.Image, "--progress=plain", "--platform=linux/amd64", ".").RunBuffered(ctx)
 }

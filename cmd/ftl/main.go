@@ -45,6 +45,7 @@ type CLI struct {
 	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
 	Build    buildCmd    `cmd:"" help:"Build all modules found in the specified directories."`
 	Box      boxCmd      `cmd:"" help:"Build a self-contained Docker container for running a set of module."`
+	BoxRun   boxRunCmd   `cmd:"" hidden:"" help:"Run FTL inside an ftl-in-a-box container"`
 	Deploy   deployCmd   `cmd:"" help:"Build and deploy all modules found in the specified directories."`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`

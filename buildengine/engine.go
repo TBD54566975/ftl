@@ -115,7 +115,6 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 		e.moduleMetas.Store(module.Config.Module, moduleMeta{module: module})
 		e.modulesToBuild.Store(module.Config.Module, true)
 	}
-
 	if client == nil {
 		return e, nil
 	}
@@ -233,9 +232,50 @@ func (e *Engine) Each(fn func(Module) error) (err error) {
 	return
 }
 
-// Deploy attempts to build and deploy all local modules.
+// Deploy attempts to deploy all (already compiled) local modules.
+//
+// If waitForDeployOnline is true, this function will block until all deployments are online.
 func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline bool) error {
-	return e.buildAndDeploy(ctx, replicas, waitForDeployOnline)
+	graph, err := e.Graph(e.Modules()...)
+	if err != nil {
+		return err
+	}
+
+	groups, err := TopologicalSort(graph)
+	if err != nil {
+		return fmt.Errorf("topological sort failed: %w", err)
+	}
+
+	for _, group := range groups {
+		deployGroup, ctx := errgroup.WithContext(ctx)
+		for _, moduleName := range group {
+			if moduleName == "builtin" {
+				continue
+			}
+			deployGroup.Go(func() error {
+				module, ok := e.moduleMetas.Load(moduleName)
+				if !ok {
+					return fmt.Errorf("module %q not found", moduleName)
+				}
+				return Deploy(ctx, module.module, replicas, waitForDeployOnline, e.client)
+			})
+		}
+		if err := deployGroup.Wait(); err != nil {
+			return fmt.Errorf("deploy failed: %w", err)
+		}
+	}
+	log.FromContext(ctx).Infof("All modules deployed")
+	return nil
+}
+
+// Modules returns the names of all modules.
+func (e *Engine) Modules() []string {
+	var moduleNames []string
+	e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
+		moduleNames = append(moduleNames, name)
+		return true
+	})
+	return moduleNames
 }
 
 // Dev builds and deploys all local modules and watches for changes, redeploying as necessary.
@@ -278,7 +318,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	}()
 
 	// Build and deploy all modules first.
-	err = e.buildAndDeploy(ctx, 1, true)
+	err = e.BuildAndDeploy(ctx, 1, true)
 	if err != nil {
 		logger.Errorf(err, "initial deploy failed")
 		e.reportBuildFailed(err)
@@ -326,7 +366,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				if _, exists := e.moduleMetas.Load(config.Module); !exists {
 					e.moduleMetas.Store(config.Module, moduleMeta{module: event.Module})
 					didError = false
-					err := e.buildAndDeploy(ctx, 1, true, config.Module)
+					err := e.BuildAndDeploy(ctx, 1, true, config.Module)
 					if err != nil {
 						didError = true
 						e.reportBuildFailed(err)
@@ -362,7 +402,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					continue // Skip this event as it's outdated
 				}
 				didError = false
-				err := e.buildAndDeploy(ctx, 1, true, config.Module)
+				err := e.BuildAndDeploy(ctx, 1, true, config.Module)
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
@@ -395,7 +435,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			if len(dependentModuleNames) > 0 {
 				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join(dependentModuleNames, ", "))
 				didError = false
-				err = e.buildAndDeploy(ctx, 1, true, dependentModuleNames...)
+				err = e.BuildAndDeploy(ctx, 1, true, dependentModuleNames...)
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
@@ -431,13 +471,11 @@ func (e *Engine) getDependentModuleNames(moduleName string) []string {
 	return maps.Keys(dependentModuleNames)
 }
 
-func (e *Engine) buildAndDeploy(ctx context.Context, replicas int32, waitForDeployOnline bool, moduleNames ...string) error {
+// BuildAndDeploy attempts to build and deploy all local modules.
+func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDeployOnline bool, moduleNames ...string) error {
 	logger := log.FromContext(ctx)
 	if len(moduleNames) == 0 {
-		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
-			moduleNames = append(moduleNames, name)
-			return true
-		})
+		moduleNames = e.Modules()
 	}
 
 	buildGroup := errgroup.Group{}

@@ -21,5 +21,5 @@ func (d *deployCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return engine.Deploy(ctx, d.Replicas, !d.NoWait)
+	return engine.BuildAndDeploy(ctx, d.Replicas, !d.NoWait)
 }
