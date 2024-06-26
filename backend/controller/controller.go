@@ -80,6 +80,7 @@ type Config struct {
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
+	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	CommonConfig
 }
@@ -677,7 +678,8 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
 
-	lastChecksum := int64(0)
+	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
+	lastChecksum := int64(-1)
 
 	for {
 		configs, err := cm.MapForModule(ctx, name)
@@ -710,7 +712,7 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(30 * time.Second):
+		case <-time.After(30000 * time.Millisecond /*s.config.ModuleUpdateFrequency*/):
 		}
 	}
 }
