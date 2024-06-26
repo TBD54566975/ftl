@@ -1,17 +1,22 @@
 import React , { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useClient } from '../../hooks/use-client'
 import { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import { Page } from '../../layout'
-import { CubeTransparentIcon } from '@heroicons/react/24/outline'
+import { CubeTransparentIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/outline'
+
+interface SavedReq {
+    req: Uint8Array,
+    reqBodyText: string,
+    ms: number,
+}
 
 declare global {
   interface Window {
-    savedReqs?: { [key: string]: {req: Uint8Array, ms: number}[] }
+    savedReqs?: { [key: string]: SavedReq[] }
   }
 }
-
-const rowHeight = 100
 
 const Fish = ({ color }: { color: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><path fill={color} d="M180.5 141.5C219.7 108.5 272.6 80 336 80s116.3 28.5 155.5 61.5c39.1 33 66.9 72.4 81 99.8c4.7 9.2 4.7 20.1 0 29.3c-14.1 27.4-41.9 66.8-81 99.8C452.3 403.5 399.4 432 336 432s-116.3-28.5-155.5-61.5c-16.2-13.7-30.5-28.5-42.7-43.1L48.1 379.6c-12.5 7.3-28.4 5.3-38.7-4.9S-3 348.7 4.2 336.1L50 256 4.2 175.9c-7.2-12.6-5-28.4 5.3-38.6s26.1-12.2 38.7-4.9l89.7 52.3c12.2-14.6 26.5-29.4 42.7-43.1zM448 256a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"/></svg>
@@ -52,7 +57,7 @@ const LilFish = ({ color, col }: { color: string, col: number }) => {
 }
 
 const Editor = ({ req, setMs, close }: {
-    req: { req: Uint8Array, ms: number },
+    req: SavedReq,
     setMs: (ms: number) => void,
     close: () => void,
 }) => {
@@ -122,7 +127,7 @@ function timeoutPromise(ms: number) {
 }
 
 const FishBlock = ({ req, color, col, callVerb }: {
-    req: {req: Uint8Array, ms: number},
+    req: SavedReq,
     color: string,
     col: number,
     callVerb: (req: Uint8Array) => void,
@@ -152,7 +157,6 @@ const FishBlock = ({ req, color, col, callVerb }: {
     setShowEditor(false)
   }
 
-    // style={{display: 'inline-block', float: 'left', width: 80, margin: '5px 10px'}}
   return [
     (
       <div key='bigfish'
@@ -194,7 +198,6 @@ const Poo = ({ color }: { color: string }) => {
 }
 
 const CatBlock = ({ poos }: { poos: React.ReactElement[] }) => {
-    // <div style={{float: 'right', width: 80, margin: '10px 10px'}}>
   const style = {
       gridColumn: 8,
       width: 80,
@@ -207,69 +210,137 @@ const CatBlock = ({ poos }: { poos: React.ReactElement[] }) => {
   );
 }
 
-const AnalyticsPanel = () => {
+const ErrTable = ({ errs }: { errs: ErrLog[] }) => {
+    const errRows = errs.reverse().map((err, i) => (
+        <tr key={i} className='flex text-xs'>
+          <td className="p-1 w-20 items-center flex-none text-gray-400 dark:text-gray-400">{new Date(err.timestamp).toTimeString().split(' ')[0]}</td>
+          <td className="items-center text-red-500 dark:text-red-400 flex-grow">{err.msg}</td>
+        </tr>
+    ))
+    return (
+        <table className='text-gray-600 dark:text-gray-300' style={{marginLeft: 4}}>
+            <thead><tr className='flex text-xs'>
+            <th className="p-1 w-20 text-left border-b border-gray-100 dark:border-slate-700 flex-none">Time</th>
+            <th className="p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-shrink flex-grow">Message</th>
+            </tr></thead>
+            <tbody style={{display: 'block', maxHeight: 120, overflow: 'scroll'}}>{errRows}</tbody>
+        </table>
+    )
+}
+
+const DetailsPanel = ({ verbRef, errs }: { verbRef: string, errs: ErrLog[] }) => {
+  const navigate = useNavigate()
+  const savedReqs: SavedReq[] = window.savedReqs ? (
+    window.savedReqs[verbRef] ?
+      window.savedReqs[verbRef] : []
+  ) : []
+
     const [isOpen, setIsOpen] = useState(false)
-    if (!isOpen) {
-      const style = {
-          gridColumn: '1 / 9',
-          backgroundColor: '#eee',
-          paddingLeft: 10,
-          fontSize: 14,
-      }
-      return (
-        <div style={style} onClick={() => setIsOpen(true)}>
-              + Analytics Panel
-        </div>
-      )
-    }
     const style = {
         gridColumn: '1 / 9',
         backgroundColor: '#eee',
-        paddingLeft: 10,
+        padding: '4px 8px 4px 8px',
+        borderRadius: 8,
+    }
+    const iconStyle = {width: 12, marginTop: -2, display: 'inline-block'}
+    if (!isOpen) {
+      return (
+        <div style={{...style, fontSize: 14}} onClick={() => setIsOpen(true)}>
+              <PlusIcon style={iconStyle} /> Details Panel
+        </div>
+      )
+    }
+    const detailStyle = {
+        fontSize: 12,
+        margin: '0 8px 0 0',
+        display: 'inline-block',
+        backgroundColor: 'white',
+        padding: 8,
+        borderRadius: 8,
+    }
+    const details = savedReqs.map((savedReq) => (
+        <div style={detailStyle}>
+          <div style={{fontFamily: 'Roboto Mono', display: 'block', marginBottom: 4}}>
+            {savedReq.reqBodyText}
+          </div>
+          Firing Interval (ms): {savedReq.ms}
+        </div>
+    ))
+    const headerStyle = {
+        display: 'block',
+        fontSize: 12,
+        fontWeight: 500,
+        margin: '16px 8px 4px 8px',
     }
     return (
       <div style={style}>
-            <div style={{fontSize: 14}} onClick={() => setIsOpen(false)}>- Analytics Panel </div>
-            (todo)
+        <div style={{fontSize: 14}} onClick={() => setIsOpen(false)}>
+          <MinusIcon style={iconStyle} /> Details Panel
+        </div>
+        <div style={{margin: '8px 0 24px 8px'}}>
+            <div style={headerStyle}>Saved Requests</div>
+            {details}
+        </div>
+        <div style={{margin: '8px 0 8px 8px'}}>
+          <div style={headerStyle}>
+            ErrorLog{' '}
+            <span className='text-gray-600' style={{fontWeight: 400}}>
+              (visit{' '}
+              <span onClick={() => navigate('/events')}>Events</span>
+              {' '}for details)
+            </span>
+          </div>
+          <ErrTable errs={errs} />
+        </div>
       </div>
     )
 }
 
 const blues = ['#03045e', '#023e8a', '#0077b6', '#0096c7', '#00b4d8', '#1576bb']
+const greens = ['#4FFFB0', '#66FF00', '#17B169', '#1CAC78']
+
+interface ErrLog {
+    msg: string,
+    timestamp: number,
+}
 
 const Row = ({ verbRef, callVerb }: {
     verbRef: string,
     callVerb: (vr: Ref, req: Uint8Array) => Promise<string|null>
 }) => {
-  const savedReqs: {req: Uint8Array, ms: number}[] = window.savedReqs ? (
+  const savedReqs: SavedReq[] = window.savedReqs ? (
     window.savedReqs[verbRef] ?
       window.savedReqs[verbRef] : []
   ) : []
-
   const verbRefParts = verbRef.split('.')
   const verbRefPb: Ref = {
     name: verbRefParts[1],
     module: verbRefParts[0],
   } as Ref
+
   const [poos, setPoos] = useState([] as React.ReactElement[])
-  const [lastErr, setLastErr] = useState('')
+  const [errs, setErrs] = useState([] as ErrLog[])
   const addPoo = (color: string) => {
     const key = `${Date.now()}`
     setPoos([...poos, <Poo key={key} color={color} />])
   }
-  const addGoodPoo = () => addPoo('green')
+  const addGoodPoo = () => addPoo(greens[Math.floor(Math.random() * greens.length)])
   const addBadPoo = () => addPoo('red')
+
   const callVerbFn = async (req: Uint8Array) => {
     const maybeErr = await callVerb(verbRefPb, req)
     if (maybeErr === null) {
         addGoodPoo()
     } else {
         addBadPoo()
-        setLastErr(maybeErr)
+        setErrs([...errs, {
+            msg: maybeErr,
+            timestamp: Date.now(),
+        }])
     }
   }
 
-  const fishes = savedReqs.map((req: {req: Uint8Array, ms: number}, i: number) => (
+  const fishes = savedReqs.map((req: SavedReq, i: number) => (
     <FishBlock
       key={i} col={i}
       req={req}
@@ -289,8 +360,8 @@ const Row = ({ verbRef, callVerb }: {
     color: 'red',
     fontSize: 12,
   }
-  const maybeErrEl = lastErr == '' ? [] : [
-    <span style={errStyle}>Last Error: {lastErr}</span>
+  const maybeErrEl = errs.length == 0 ? [] : [
+    <span key='err' style={errStyle}>Last Error: {errs[errs.length - 1].msg}</span>
   ]
   return [
       <div style={titleStyle}>
@@ -299,7 +370,7 @@ const Row = ({ verbRef, callVerb }: {
       </div>,
       ...fishes,
       <CatBlock poos={poos} />,
-      <AnalyticsPanel />
+      <DetailsPanel verbRef={verbRef} errs={errs} />
   ]
 }
 
@@ -325,7 +396,7 @@ export const LoadTestPage = () => {
     width: '100%',
     display: 'grid',
     gridTemplateColumns: 'repeat(6, 100px) auto 100px',
-    gridTemplateRows: '30px 100px auto '.repeat(rows.length),
+    gridTemplateRows: '30px 80px fit-content(1em) '.repeat(rows.length),
     columnGap: 20,
     rowGap: 10,
     margin: 5,
@@ -333,9 +404,9 @@ export const LoadTestPage = () => {
 
   return (
     <Page>
-      <Page.Header icon={<CubeTransparentIcon />} title='Console' />
+      <Page.Header icon={<CubeTransparentIcon />} title='Load Test' />
       <Page.Body className='flex h-full'>
-        <div style={gridStyle}>
+        <div className='overflow-y-scroll' style={gridStyle}>
           {rows}
         </div>
       </Page.Body>

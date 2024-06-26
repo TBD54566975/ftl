@@ -106,6 +106,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       }
       window.savedReqs[key].push({
         req: requestBytes,
+        reqBodyText: editorText,
         ms: 1000,
       })
     } catch (error) {
