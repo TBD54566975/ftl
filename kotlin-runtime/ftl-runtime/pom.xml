@@ -90,7 +90,7 @@
         <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
-            <version>4.8.173</version>
+            <version>4.8.174</version>
         </dependency>
 
         <!-- Gson -->
@@ -268,7 +268,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.7.0</version>
+                    <version>3.7.1</version>
                     <executions>
                         <execution>
                             <phase>initialize</phase>
