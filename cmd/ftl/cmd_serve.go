@@ -122,6 +122,7 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 		if err := kong.ApplyDefaults(&config); err != nil {
 			return err
 		}
+		config.ModuleUpdateFrequency = time.Second * 1
 
 		scope := fmt.Sprintf("controller%d", i)
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))

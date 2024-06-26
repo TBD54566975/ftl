@@ -79,6 +79,7 @@ type Config struct {
 	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
+	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	CommonConfig
 }
@@ -678,26 +679,28 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
 
-	configs, err := cm.MapForModule(ctx, name)
-	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
-	}
-	secrets, err := sm.MapForModule(ctx, name)
-	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
-	}
-	databases, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets)
-	if err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
-	}
+	for {
+		configs, err := cm.MapForModule(ctx, name)
+		if err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
+		}
+		secrets, err := sm.MapForModule(ctx, name)
+		if err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
+		}
+		databases, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets)
+		if err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
+		}
 
-	response := modulecontext.NewBuilder(name).AddConfigs(configs).AddSecrets(secrets).AddDatabases(databases).Build().ToProto()
+		response := modulecontext.NewBuilder(name).AddConfigs(configs).AddSecrets(secrets).AddDatabases(databases).Build().ToProto()
 
-	if err := resp.Send(response); err != nil {
-		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not send response: %w", err))
+		if err := resp.Send(response); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not send response: %w", err))
+		}
+
+		time.Sleep(s.config.ModuleUpdateFrequency)
 	}
-
-	return nil
 }
 
 // AcquireLease acquires a lease on behalf of a module.
