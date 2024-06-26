@@ -162,7 +162,7 @@ func RetryStreamingClientStream[Req, Resp any](
 				break
 			}
 			if errored {
-				logger.Debugf("Stream recovered")
+				logger.Debugf("Client stream recovered")
 				errored = false
 			}
 			select {
@@ -218,7 +218,7 @@ func RetryStreamingServerStream[Req, Resp any](
 					break
 				}
 				if errored {
-					logger.Debugf("Stream recovered")
+					logger.Debugf("Server stream recovered")
 					errored = false
 				}
 				select {
@@ -238,6 +238,8 @@ func RetryStreamingServerStream[Req, Resp any](
 		delay := retry.Duration()
 		if err != nil && !errors.Is(err, context.Canceled) {
 			logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
+		} else if err == nil {
+			logger.Debugf("Stream finished, retrying in %s", delay)
 		}
 		select {
 		case <-ctx.Done():

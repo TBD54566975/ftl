@@ -47,4 +47,4 @@ RUN mkdir modules
 EXPOSE 8891
 EXPOSE 8892
 
-CMD ["/root/ftl", "box", "run"]
+CMD ["/root/ftl", "box-run", "/root/deployments"]
