@@ -5,15 +5,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/alecthomas/atomic"
-	"github.com/jpillora/backoff"
-	"golang.org/x/sync/errgroup"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/alecthomas/atomic"
+	"github.com/jpillora/backoff"
+	"golang.org/x/sync/errgroup"
+
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/rpc"
 
 	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
