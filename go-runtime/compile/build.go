@@ -539,7 +539,7 @@ func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error 
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	return os.WriteFile(filepath.Join(config.AbsDeployDir(), "schema.pb"), schemaBytes, 0600)
+	return os.WriteFile(config.Abs().Schema, schemaBytes, 0600)
 }
 
 func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error) error {
@@ -550,7 +550,7 @@ func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error)
 	if err != nil {
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}
-	return os.WriteFile(filepath.Join(config.AbsDeployDir(), config.Errors), elBytes, 0600)
+	return os.WriteFile(config.Abs().Errors, elBytes, 0600)
 }
 
 func getSumTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNames) []goSumType {

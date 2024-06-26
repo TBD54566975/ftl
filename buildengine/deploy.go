@@ -40,14 +40,14 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Deploying module")
 
-	deployDir := module.Config.AbsDeployDir()
-	files, err := findFiles(deployDir, module.Config.Deploy)
+	moduleConfig := module.Config.Abs()
+	files, err := findFiles(moduleConfig)
 	if err != nil {
-		logger.Errorf(err, "failed to find files in %s", deployDir)
+		logger.Errorf(err, "failed to find files in %s", moduleConfig)
 		return err
 	}
 
-	filesByHash, err := hashFiles(deployDir, files)
+	filesByHash, err := hashFiles(moduleConfig.DeployDir, files)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 		return err
 	}
 
-	moduleSchema, err := loadProtoSchema(deployDir, module.Config, replicas)
+	moduleSchema, err := loadProtoSchema(moduleConfig, replicas)
 	if err != nil {
 		return fmt.Errorf("failed to load protobuf schema from %q: %w", module.Config.Schema, err)
 	}
@@ -130,9 +130,8 @@ func terminateModuleDeployment(ctx context.Context, client ftlv1connect.Controll
 	return err
 }
 
-func loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig, replicas int32) (*schemapb.Module, error) {
-	schema := filepath.Join(deployDir, config.Schema)
-	content, err := os.ReadFile(schema)
+func loadProtoSchema(config moduleconfig.AbsModuleConfig, replicas int32) (*schemapb.Module, error) {
+	content, err := os.ReadFile(config.Schema)
 	if err != nil {
 		return nil, err
 	}
@@ -155,10 +154,9 @@ func loadProtoSchema(deployDir string, config moduleconfig.ModuleConfig, replica
 	return module, nil
 }
 
-func findFiles(base string, files []string) ([]string, error) {
+func findFiles(moduleConfig moduleconfig.AbsModuleConfig) ([]string, error) {
 	var out []string
-	for _, file := range files {
-		file = filepath.Join(base, file)
+	for _, file := range moduleConfig.Deploy {
 		info, err := os.Stat(file)
 		if err != nil {
 			return nil, err

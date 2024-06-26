@@ -36,7 +36,7 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	// clear the deploy directory before extracting schema
-	if err := os.RemoveAll(module.Config.AbsDeployDir()); err != nil {
+	if err := os.RemoveAll(module.Config.Abs().DeployDir); err != nil {
 		return fmt.Errorf("failed to clear errors: %w", err)
 	}
 
@@ -55,7 +55,7 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 		errs = append(errs, err)
 	}
 	// read runtime-specific build errors from the build directory
-	errorList, err := loadProtoErrors(module.Config)
+	errorList, err := loadProtoErrors(module.Config.Abs())
 	if err != nil {
 		return fmt.Errorf("failed to read build errors for module: %w", err)
 	}
@@ -71,13 +71,12 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 	return nil
 }
 
-func loadProtoErrors(config moduleconfig.ModuleConfig) (*schema.ErrorList, error) {
-	f := filepath.Join(config.AbsDeployDir(), config.Errors)
-	if _, err := os.Stat(f); errors.Is(err, os.ErrNotExist) {
+func loadProtoErrors(config moduleconfig.AbsModuleConfig) (*schema.ErrorList, error) {
+	if _, err := os.Stat(config.Errors); errors.Is(err, os.ErrNotExist) {
 		return &schema.ErrorList{Errors: make([]*schema.Error, 0)}, nil
 	}
 
-	content, err := os.ReadFile(f)
+	content, err := os.ReadFile(config.Errors)
 	if err != nil {
 		return nil, err
 	}
