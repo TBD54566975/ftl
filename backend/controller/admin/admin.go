@@ -54,7 +54,7 @@ func (s *AdminService) ConfigList(ctx context.Context, req *connect.Request[ftlv
 			var value any
 			err := s.cm.Get(ctx, config.Ref, &value)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to get value for %v: %w", ref, err)
 			}
 			cv, err = json.Marshal(value)
 			if err != nil {
@@ -140,7 +140,7 @@ func (s *AdminService) SecretsList(ctx context.Context, req *connect.Request[ftl
 			var value any
 			err := s.sm.Get(ctx, secret.Ref, &value)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to get value for %v: %w", ref, err)
 			}
 			sv, err = json.Marshal(value)
 			if err != nil {

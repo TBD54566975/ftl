@@ -4,6 +4,7 @@ package configuration
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"testing"
@@ -51,7 +52,7 @@ func TestASMWorkflow(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm, leader, _, _ := localstack(ctx, t)
 	ref := Ref{Module: Some("foo"), Name: "bar"}
-	var mySecret = []byte("my secret")
+	var mySecret = jsonBytes(t, "my secret")
 	manager, err := New(ctx, asm, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
@@ -75,7 +76,7 @@ func TestASMWorkflow(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Set again to make sure it updates.
-	mySecret = []byte("hunter1")
+	mySecret = jsonBytes(t, "hunter1")
 	err = manager.Set(ctx, "asm", ref, mySecret)
 	waitForUpdatesToProcess(leader.cache)
 	assert.NoError(t, err)
@@ -106,7 +107,7 @@ func TestASMPagination(t *testing.T) {
 	// Create 210 secrets, so we paginate at least twice.
 	for i := range 210 {
 		ref := NewRef("foo", fmt.Sprintf("bar%03d", i))
-		err := manager.Set(ctx, "asm", ref, []byte(fmt.Sprintf("hunter%03d", i)))
+		err := manager.Set(ctx, "asm", ref, jsonBytes(t, fmt.Sprintf("hunter%03d", i)))
 		assert.NoError(t, err)
 	}
 
@@ -130,7 +131,7 @@ func TestASMPagination(t *testing.T) {
 		var secret []byte
 		err := manager.Get(ctx, item.Ref, &secret)
 		assert.NoError(t, err)
-		assert.Equal(t, secret, []byte(fmt.Sprintf("hunter%03d", i)))
+		assert.Equal(t, secret, jsonBytes(t, fmt.Sprintf("hunter%03d", i)))
 	}
 
 	// Delete them
@@ -195,18 +196,18 @@ func testClientSync(ctx context.Context,
 
 	// write a secret via asmClient
 	clientRef := Ref{Module: Some("sync"), Name: "set-by-client"}
-	_, err = client.store(ctx, clientRef, []byte("client-first"))
+	_, err = client.store(ctx, clientRef, jsonBytes(t, "client-first"))
 	assert.NoError(t, err)
 	waitForUpdatesToProcess(cache)
 	value, err := client.load(ctx, clientRef, asmURLForRef(clientRef))
 	assert.NoError(t, err, "failed to load secret via asm")
-	assert.Equal(t, value, []byte("client-first"), "unexpected secret value")
+	assert.Equal(t, value, jsonBytes(t, "client-first"), "unexpected secret value")
 
 	// write another secret via sm directly
 	smRef := Ref{Module: Some("sync"), Name: "set-by-sm"}
 	_, err = sm.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(smRef.String()),
-		SecretString: aws.String(string("sm-first")),
+		SecretString: aws.String(jsonString(t, "sm-first")),
 	})
 	assert.NoError(t, err, "failed to create secret via sm")
 	waitForUpdatesToProcess(cache)
@@ -215,31 +216,31 @@ func testClientSync(ctx context.Context,
 
 	// write a secret via client and then by sm directly
 	clientSmRef := Ref{Module: Some("sync"), Name: "set-by-client-then-sm"}
-	_, err = client.store(ctx, clientSmRef, []byte("client-sm-first"))
+	_, err = client.store(ctx, clientSmRef, jsonBytes(t, "client-sm-first"))
 	assert.NoError(t, err)
 	_, err = sm.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
 		SecretId:     aws.String(clientSmRef.String()),
-		SecretString: aws.String("client-sm-second"),
+		SecretString: aws.String(jsonString(t, "client-sm-second")),
 	})
 	assert.NoError(t, err)
 	waitForUpdatesToProcess(cache)
 	value, err = client.load(ctx, clientSmRef, asmURLForRef(clientSmRef))
 	assert.NoError(t, err, "failed to load secret via asm")
-	assert.Equal(t, value, []byte("client-sm-first"), "expected initial value before client has a chance to sync newest value")
+	assert.Equal(t, value, jsonBytes(t, "client-sm-first"), "expected initial value before client has a chance to sync newest value")
 
 	// write a secret via sm directly and then by client
 	smClientRef := Ref{Module: Some("sync"), Name: "set-by-sm-then-client"}
 	_, err = sm.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(smClientRef.String()),
-		SecretString: aws.String(string("sm-client-first")),
+		SecretString: aws.String(jsonString(t, "sm-client-first")),
 	})
 	assert.NoError(t, err, "failed to create secret via sm")
-	_, err = client.store(ctx, smClientRef, []byte("sm-client-second"))
+	_, err = client.store(ctx, smClientRef, jsonBytes(t, "sm-client-second"))
 	assert.NoError(t, err)
 	waitForUpdatesToProcess(cache)
 	value, err = client.load(ctx, smClientRef, asmURLForRef(smClientRef))
 	assert.NoError(t, err, "failed to load secret via asm")
-	assert.Equal(t, value, []byte("sm-client-second"), "unexpected secret value")
+	assert.Equal(t, value, jsonBytes(t, "sm-client-second"), "unexpected secret value")
 
 	// give client a change to sync
 	progressByIntervalPercentage(1.0)
@@ -255,13 +256,13 @@ func testClientSync(ctx context.Context,
 		var expectedValue string
 		switch entry.Ref {
 		case clientRef:
-			expectedValue = "client-first"
+			expectedValue = jsonString(t, "client-first")
 		case smRef:
-			expectedValue = "sm-first"
+			expectedValue = jsonString(t, "sm-first")
 		case clientSmRef:
-			expectedValue = "client-sm-second"
+			expectedValue = jsonString(t, "client-sm-second")
 		case smClientRef:
-			expectedValue = "sm-client-second"
+			expectedValue = jsonString(t, "sm-client-second")
 		default:
 			t.Fatal(fmt.Sprintf("unexpected ref: %s", entry.Ref))
 		}
@@ -293,6 +294,18 @@ func testClientSync(ctx context.Context,
 	assert.Error(t, err, "expected to fail because secret was deleted")
 	_, err = client.load(ctx, smClientRef, asmURLForRef(smClientRef))
 	assert.Error(t, err, "expected to fail because secret was deleted")
+}
+
+func jsonBytes(t *testing.T, value string) []byte {
+	t.Helper()
+	json, err := json.Marshal(value)
+	assert.NoError(t, err, "failed to marshal value")
+	return []byte("c" + string(json))
+}
+
+func jsonString(t *testing.T, value string) string {
+	t.Helper()
+	return string(jsonBytes(t, value))
 }
 
 type fakeAdminClient struct {

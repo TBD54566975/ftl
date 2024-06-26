@@ -98,7 +98,11 @@ func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(data, value)
+	err = json.Unmarshal(data, value)
+	if err != nil {
+		return fmt.Errorf("could not unmarshal: %w", err)
+	}
+	return nil
 }
 
 func (m *Manager[R]) availableProviderKeys() []string {
