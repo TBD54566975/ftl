@@ -10,6 +10,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"golang.org/x/mod/modfile"
+
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // ModuleGoConfig is language-specific configuration for Go modules.
@@ -22,7 +24,7 @@ type ModuleKotlinConfig struct{}
 //
 // Module config files are currently TOML.
 type ModuleConfig struct {
-	// Dir is the root of the module.
+	// Dir is the absolute path to the root of the module.
 	Dir string `toml:"-"`
 
 	Language string `toml:"language"`
@@ -45,6 +47,11 @@ type ModuleConfig struct {
 	Kotlin ModuleKotlinConfig `toml:"kotlin,optional"`
 }
 
+// AbsModuleConfig is a ModuleConfig with all paths made absolute.
+//
+// This is a type alias to prevent accidental use of the wrong type.
+type AbsModuleConfig ModuleConfig
+
 // LoadModuleConfig from a directory.
 func LoadModuleConfig(dir string) (ModuleConfig, error) {
 	path := filepath.Join(dir, "ftl.toml")
@@ -58,6 +65,44 @@ func LoadModuleConfig(dir string) (ModuleConfig, error) {
 	}
 	config.Dir = dir
 	return config, nil
+}
+
+func (c ModuleConfig) String() string {
+	return fmt.Sprintf("%s (%s)", c.Module, c.Dir)
+}
+
+// Abs creates a clone of ModuleConfig with all paths made absolute.
+//
+// This function will panic if any paths are not beneath the module directory.
+// This should never happen under normal use, as LoadModuleConfig performs this
+// validation separately. This is just a sanity check.
+func (c ModuleConfig) Abs() AbsModuleConfig {
+	clone := c
+	clone.Dir = filepath.Clean(clone.Dir)
+	clone.DeployDir = filepath.Clean(filepath.Join(clone.Dir, clone.DeployDir))
+	if !strings.HasPrefix(clone.DeployDir, clone.Dir) {
+		panic(fmt.Sprintf("deploy-dir %q is not beneath module directory %q", clone.DeployDir, clone.Dir))
+	}
+	clone.Schema = filepath.Clean(filepath.Join(clone.DeployDir, clone.Schema))
+	if !strings.HasPrefix(clone.Schema, clone.DeployDir) {
+		panic(fmt.Sprintf("schema %q is not beneath deploy directory %q", clone.Schema, clone.DeployDir))
+	}
+	clone.Errors = filepath.Clean(filepath.Join(clone.DeployDir, clone.Errors))
+	if !strings.HasPrefix(clone.Errors, clone.DeployDir) {
+		panic(fmt.Sprintf("errors %q is not beneath deploy directory %q", clone.Errors, clone.DeployDir))
+	}
+	clone.Deploy = slices.Map(clone.Deploy, func(p string) string {
+		out := filepath.Clean(filepath.Join(clone.DeployDir, p))
+		if !strings.HasPrefix(out, clone.DeployDir) {
+			panic(fmt.Sprintf("deploy path %q is not beneath deploy directory %q", out, clone.DeployDir))
+		}
+		return out
+	})
+	// Watch paths are allowed to be outside the deploy directory.
+	clone.Watch = slices.Map(clone.Watch, func(p string) string {
+		return filepath.Clean(filepath.Join(clone.Dir, p))
+	})
+	return AbsModuleConfig(clone)
 }
 
 // AbsDeployDir returns the absolute path to the deploy directory.

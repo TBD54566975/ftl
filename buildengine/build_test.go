@@ -122,7 +122,7 @@ func assertBuildProtoErrors(msgs ...string) assertion {
 		t.Helper()
 		config, err := moduleconfig.LoadModuleConfig(bctx.moduleDir)
 		assert.NoError(t, err, "Error loading module config")
-		errorList, err := loadProtoErrors(config)
+		errorList, err := loadProtoErrors(config.Abs())
 		assert.NoError(t, err, "Error loading proto errors")
 
 		expected := make([]*schema.Error, 0, len(msgs))
