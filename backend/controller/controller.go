@@ -712,7 +712,7 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		select {
 		case <-ctx.Done():
 			return nil
-		case <-time.After(30000 * time.Millisecond /*s.config.ModuleUpdateFrequency*/):
+		case <-time.After(s.config.ModuleUpdateFrequency):
 		}
 	}
 }
