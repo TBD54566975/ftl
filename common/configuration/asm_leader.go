@@ -30,7 +30,7 @@ var _ asmClient = &asmLeader{}
 func newASMLeader(ctx context.Context, client *secretsmanager.Client, clock clock.Clock) *asmLeader {
 	l := &asmLeader{
 		client: client,
-		cache:  newSecretsCache(),
+		cache:  newSecretsCache("asm-leader"),
 	}
 	go l.cache.sync(ctx, asmLeaderSyncInterval, func(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
 		return l.sync(ctx, secrets)
@@ -56,7 +56,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 			NextToken:  nextToken.Ptr(),
 		})
 		if err != nil {
-			return fmt.Errorf("unable to list secrets: %w", err)
+			return fmt.Errorf("unable to get list of secrets from ASM: %w", err)
 		}
 
 		var activeSecrets = slices.Filter(out.SecretList, func(s types.SecretListEntry) bool {
@@ -65,7 +65,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 		for _, s := range activeSecrets {
 			ref, err := ParseRef(*s.Name)
 			if err != nil {
-				return fmt.Errorf("unable to parse ref: %w", err)
+				return fmt.Errorf("unable to parse ref from ASM secret: %w", err)
 			}
 			seen[ref] = true
 
@@ -103,7 +103,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 			SecretIdList: secretIDs,
 		})
 		if err != nil {
-			return fmt.Errorf("unable to batch get secret values: %w", err)
+			return fmt.Errorf("unable to get batch of secret values from ASM: %w", err)
 		}
 		for _, s := range out.SecretValues {
 			ref, err := ParseRef(*s.Name)
@@ -112,7 +112,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 			}
 			// Expect secrets to be strings, not binary
 			if s.SecretBinary != nil {
-				return fmt.Errorf("secret for %s is not a string", ref)
+				return fmt.Errorf("secret for %s in ASM is not a string", ref)
 			}
 			data := []byte(*s.SecretString)
 			secrets.Store(ref, cachedSecret{
@@ -159,11 +159,11 @@ func (l *asmLeader) store(ctx context.Context, ref Ref, value []byte) (*url.URL,
 			SecretString: aws.String(string(value)),
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to update secret: %w", err)
+			return nil, fmt.Errorf("unable to update secret in ASM: %w", err)
 		}
 
 	} else if err != nil {
-		return nil, fmt.Errorf("unable to store secret: %w", err)
+		return nil, fmt.Errorf("unable to store secret in ASM: %w", err)
 	}
 	l.cache.updatedSecret(ref, value)
 	return asmURLForRef(ref), nil
@@ -176,7 +176,7 @@ func (l *asmLeader) delete(ctx context.Context, ref Ref) error {
 		ForceDeleteWithoutRecovery: &t,
 	})
 	if err != nil {
-		return fmt.Errorf("unable to delete secret: %w", err)
+		return fmt.Errorf("unable to delete secret from ASM: %w", err)
 	}
 	l.cache.deletedSecret(ref)
 	return nil

@@ -2,7 +2,6 @@ package configuration
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -36,14 +35,16 @@ type updatedSecretEvent struct {
 }
 
 type secretsCache struct {
-	// closed when secrets have been loaded from ASM for the first time
+	name string
+
+	// closed when secrets have been synced for the first time
 	loaded chan bool
 
-	// secrets is a map of secrets that have been loaded from ASM.
+	// secrets is a map of secrets that have been synced.
 	// optional is nil when not loaded yet
 	// it is updated via:
-	// - polling ASM
-	// - when we write to ASM
+	// - periodic syncs
+	// - when we update or delete a secret
 	secrets *xsync.MapOf[Ref, cachedSecret]
 
 	topic *pubsub.Topic[updatedSecretEvent]
@@ -51,8 +52,9 @@ type secretsCache struct {
 	topicWaitGroup sync.WaitGroup
 }
 
-func newSecretsCache() *secretsCache {
+func newSecretsCache(name string) *secretsCache {
 	return &secretsCache{
+		name:    name,
 		loaded:  make(chan bool),
 		secrets: xsync.NewMapOf[Ref, cachedSecret](),
 		topic:   pubsub.New[updatedSecretEvent](),
@@ -134,7 +136,7 @@ func (c *secretsCache) sync(ctx context.Context, frequency time.Duration, synchr
 				continue
 			}
 			// back off if we fail to sync
-			logger.Warnf("Unable to sync ASM secrets: %v", err)
+			logger.Warnf("Unable to sync %s: %v", c.name, err)
 			nextSync = clock.Now().Add(backOff)
 			if nextSync.After(clock.Now().Add(frequency)) {
 				nextSync = clock.Now().Add(frequency)
@@ -168,7 +170,7 @@ func (c *secretsCache) processEvent(e updatedSecretEvent) {
 func (c *secretsCache) waitForSecrets() error {
 	select {
 	case <-time.After(loadSecretsTimeout):
-		return errors.New("secrets not synced from ASM yet")
+		return fmt.Errorf("secrets not synced for %s yet", c.name)
 	case <-c.loaded:
 		return nil
 	}
