@@ -57,7 +57,6 @@ linters:
     - interfacebloat
     - tagalign
     - nolintlint
-    - wrapcheck # We might want to re-enable this if we manually wrap all the existing errors with fmt.Errorf
     - protogetter
 
 linters-settings:
