@@ -46,7 +46,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 
 	var pbModules []*schemapb.Module
 	for _, m := range modules {
-		deployDir := m.Config.AbsDeployDir()
+		deployDir := m.Config.Abs().DeployDir
 		schemaPath := filepath.Join(deployDir, m.Config.Schema)
 		content, err := os.ReadFile(schemaPath)
 		if err != nil {
