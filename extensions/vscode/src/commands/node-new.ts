@@ -23,8 +23,7 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
 
   //TODO: Add all the types here...
   // Also would be cool to have an httpingress type which would populate a valid //ftl:ingress ....
-  const nodeType = await vscode.window.showQuickPick(['verb', 'enum', 'pubsub', 'pubsub:subscription', 'fsm', 'database', 'config:string', 'config:struct', 'secret', 'cron'], {
-    title: 'Which type of node would you like to add',
+  const nodeType = await vscode.window.showQuickPick(['verb', 'enum', 'pubsub', 'pubsub:subscription', 'fsm', 'database', 'config:string', 'config:struct', 'secret', 'cron'], {    title: 'Which type of node would you like to add',
     placeHolder: 'Choose a node type',
     canPickMany: false,
     ignoreFocusOut: true
@@ -34,7 +33,7 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
     return
   }
 
-  const snippet = snippetForNodeType(nodeType)
+  const snippet = await snippetForNodeType(nodeType)
 
   if (snippet === '') {
     vscode.window.showErrorMessage(`No snippet available for node type ${nodeType}`)
@@ -55,11 +54,11 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
   editor.revealRange(lastLineRange, vscode.TextEditorRevealType.Default)
 }
 
-const snippetForNodeType = (nodeType: string): string => {
+const snippetForNodeType = async (nodeType: string): Promise<string> => {
   //TODO: fill out for all node types.
   switch (nodeType) {
     case 'verb':
-      return verbSnippet
+      return await verbSnippetBuilder()
     case 'enum':
       return enumSnippet
 
@@ -94,17 +93,32 @@ const snippetForNodeType = (nodeType: string): string => {
   // vscode.window.showInformationMessage(`Adding a new ${nodeType} node to ${document.uri.toString()}`)
 }
 
-const verbSnippet = `type SampleRequest struct {
+const verbSnippetBuilder = async (): Promise<string> => {
+  const inputBoxOptions: vscode.InputBoxOptions = {
+    prompt: "Enter the verb's name",
+    placeHolder: 'Sample',
+  };
+  const name = await vscode.window.showInputBox(inputBoxOptions);
+
+  if (name) {
+    return verbSnippetTemplate.replace(/<name>/g, name)
+  }
+
+  vscode.window.showErrorMessage(`Verb name cannot be empty`)
+  return ""
+}
+
+const verbSnippetTemplate = `type <name>Request struct {
 	Name string
 }
 
-type SampleResponse struct {
+type <name>Response struct {
 	Message string
 }
 
 //ftl:verb
-func Sample(ctx context.Context, req SampleRequest) (SampleResponse, error) {
-	return SampleResponse{Message: "Hello, world!"}, nil
+func <name>(ctx context.Context, req <name>Request) (<name>Response, error) {
+	return <name>Response{Message: "Hello, world!"}, nil
 }`
 
 const enumSnippet = `//ftl:enum
