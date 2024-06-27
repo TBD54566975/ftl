@@ -28,13 +28,13 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
     ignoreFocusOut: true
   })
 
-  if (nodeType === undefined) {
+  if (!nodeType) {
     return
   }
 
   const snippet = await snippetForNodeType(nodeType, item)
 
-  if (snippet === '') {
+  if (!snippet) {
     vscode.window.showErrorMessage(`No snippet available for node type ${nodeType}`)
     return
   }
@@ -108,7 +108,7 @@ const snakeToPascal = (snake: string): string => {
 
 const verbSnippet = async () => {
   const name = await getTemplateArgument('What would you like to name the verb?', 'MyVerb')
-  if (name === undefined) {
+  if (!name) {
     return undefined
   }
 
@@ -126,7 +126,7 @@ func ${name}(ctx context.Context, req ${name}Request) (${name}Response, error) {
 
 const ingressSnippet = async (item: FtlTreeItem) => {
   const name = await getTemplateArgument('What would you like to name the ingress?', 'MyEndpoint')
-  if (name === undefined) {
+  if (!name) {
     return undefined
   }
 
@@ -137,7 +137,7 @@ const ingressSnippet = async (item: FtlTreeItem) => {
     ignoreFocusOut: true
   })
 
-  if (method === undefined) {
+  if (!method) {
     return undefined
   }
 
@@ -155,7 +155,7 @@ func ${name}(ctx context.Context, req builtin.HttpRequest[${name}Request]) (buil
 
 const enumSnippet = async () => {
   const name = await getTemplateArgument('What would you like to name the enum?', 'MyEnum')
-  if (name === undefined) {
+  if (!name) {
     return undefined
   }
 
@@ -169,17 +169,17 @@ const (
 
 const publisherSnippet = async () => {
   const topic = await getTemplateArgument('What would you like to name the topic?', 'my_topic')
-  const event = await getTemplateArgument('What would you like to name the event for this topic?', '"MyEvent')
-  if (topic === undefined || event === undefined) {
+  const event = await getTemplateArgument('What would you like to name the event for this topic?', 'MyEvent')
+  if (!topic || !event) {
     return undefined
   }
 
   const subscription = await getTemplateArgument('What would you like to name the subscription?', `${topic}_subscription`)
-  if (subscription === undefined) {
+  if (!subscription) {
     return undefined
   }
-  const subscriber = await getTemplateArgument('What would you like to name the subscriber?', snakeToPascal(subscription))
-  if (subscriber === undefined) {
+  const subscriber = await getTemplateArgument('What would you like to name the subscriber?', `${snakeToPascal(topic)}Subscriber`)
+  if (!subscriber) {
     return undefined
   }
 
@@ -201,20 +201,20 @@ func ${subscriber}(ctx context.Context, event ${event}) error {
 
 const databaseSnippet = async () => {
   const name = await getTemplateArgument('What would you like to name the database?', 'my_db')
-  if (name === undefined) {
+  if (!name) {
     return undefined
   }
 
-  return `var ${name.toLowerCase()}Database = ftl.PostgresDatabase("${name.toLowerCase()}")`
+  return `var ${snakeToCamel(name)}Database = ftl.PostgresDatabase("${name.toLowerCase()}")`
 }
 
 const fsmSnippet = async () => {
   const name = await getTemplateArgument('What would you like to name the fsm?', 'my_fsm')
-  if (name === undefined) {
+  if (!name) {
     return undefined
   }
   const message = await getTemplateArgument('What would you like to message type for this fsm?', `${snakeToPascal(name)}Message`)
-  if (message == undefined) {
+  if (!message) {
     return undefined
   }
   const dispatcher = await getTemplateArgument('What would you like to name the message sender for this fsm?', `Send${snakeToPascal(name)}Message`)
@@ -258,12 +258,12 @@ const configValueSnippet = async () => {
   const name = await getTemplateArgument('What would you like to name the setting for this config?', 'my_config')
   const type = await vscode.window.showQuickPick(['string', 'bool', 'int'], {
     title: 'What value type would you like to assign to this config?',
-    placeHolder: 'string',
+    placeHolder: 'Choose a value type',
     canPickMany: false,
     ignoreFocusOut: true
   })
 
-  if (name === undefined || type === undefined) {
+  if (!name || !type) {
     return undefined
   }
 
@@ -272,11 +272,11 @@ const configValueSnippet = async () => {
 
 const configStructSnippet = async() => {
   const name = await getTemplateArgument('What would you like to name the setting for this config?', 'my_config')
-  if (name === undefined) {
+  if (!name) {
     return undefined
   }
   const type = await getTemplateArgument('What would you like to name the struct for this config?', `${snakeToPascal(name)}Config`)
-  if (type == undefined) {
+  if (!type) {
     return undefined
   }
 
@@ -291,12 +291,12 @@ const secretSnippet = async () => {
   const name = await getTemplateArgument('What would you like to name the setting for this secret?', 'my_secret')
   const type = await vscode.window.showQuickPick(['string', 'bool', 'int'], {
     title: 'What value type would you like to assign to this secret?',
-    placeHolder: 'string',
+    placeHolder: 'Choose a value type',
     canPickMany: false,
     ignoreFocusOut: true
   })
 
-  if (name === undefined || type === undefined) {
+  if (!name || !type) {
     return undefined
   }
 
@@ -306,7 +306,7 @@ const secretSnippet = async () => {
 const cronSnippet = async() => {
   const name = await getTemplateArgument('What would you like to name the cron task?', 'MyCronTask')
   const schedule = await getTemplateArgument('What schedule would you like to set for this cron task?', '*/5 * * * *')
-  if (name == undefined) {
+  if (!name || !schedule) {
     return undefined
   }
   return `//ftl:cron ${schedule}
