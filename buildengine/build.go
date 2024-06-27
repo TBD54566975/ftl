@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
+	swiftbuilder "github.com/TBD54566975/ftl/swift-runtime/builder"
 )
 
 const BuildLockTimeout = time.Minute
@@ -47,7 +48,7 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 	case "kotlin":
 		err = buildKotlinModule(ctx, sch, module)
 	case "swift":
-		err = buildSwiftModule(ctx, sch, module)
+		err = swiftbuilder.Build(ctx, sch, module.Config.Module, module.Config.Dir, module.Config.Build, module.Config.AbsDeployDir(), module.Config.Schema)
 	default:
 		return fmt.Errorf("unknown language %q", module.Config.Language)
 	}

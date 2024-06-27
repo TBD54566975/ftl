@@ -46,7 +46,7 @@ type Config struct {
 	TemplateDir           string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
 	DeploymentDir         string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
 	DeploymentKeepHistory int             `help:"Number of deployments to keep history for." default:"3"`
-	Language              []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin"`
+	Language              []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,swift"`
 	HeartbeatPeriod       time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter       time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
 }

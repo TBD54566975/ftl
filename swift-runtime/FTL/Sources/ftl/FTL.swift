@@ -6,5 +6,10 @@
 public macro FTLVerb() = #externalMacro(module: "FTLMacros", type: "VerbMacro")
 
 /// Declares an FTL data type
-@attached(member, names: overloaded)
+@attached(extension, conformances: FTLType, names: arbitrary)
 public macro FTLData() = #externalMacro(module: "FTLMacros", type: "DataMacro")
+
+public protocol FTLType {
+   static func ftlDecode(_ json:Any?) throws -> Self
+   func ftlEncode() -> Any?
+}

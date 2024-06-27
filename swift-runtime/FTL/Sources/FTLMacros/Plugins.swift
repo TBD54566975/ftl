@@ -5,8 +5,8 @@ import SwiftSyntaxMacros
 
 @main
 struct MacroPlugin: CompilerPlugin {
-    let providingMacros: [Macro.Type] = [
-        VerbMacro.self,
-        DataMacro.self,
-    ]
+   let providingMacros: [Macro.Type] = [
+      VerbMacro.self,
+      DataMacro.self,
+   ]
 }

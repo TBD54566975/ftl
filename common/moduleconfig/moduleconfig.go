@@ -112,13 +112,16 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 
 	case "swift":
 		if config.Build == "" {
-			config.Build = "swift build -c release"
+			config.Build = "cd _ftl/swift/Main && swift build -c debug --scratch-path ../../.build && cp ../../.build/debug/Main ../.."
 		}
 		if config.DeployDir == "" {
 			config.DeployDir = "_ftl"
 		}
 		if len(config.Watch) == 0 {
 			config.Watch = []string{"**/*.swift"}
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main"}
 		}
 	}
 
