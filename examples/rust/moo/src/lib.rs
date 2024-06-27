@@ -1,4 +1,3 @@
-use std::error::Error;
 use ftl::Context;
 use serde::{Deserialize, Serialize};
 use tracing::info;
