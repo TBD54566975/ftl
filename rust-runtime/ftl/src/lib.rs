@@ -1,3 +1,5 @@
+use serde::{de::DeserializeOwned, Serialize};
+
 pub use ftl_derive::verb;
 use ftl_protos::ftl::call_response::Response;
 use ftl_protos::ftl::CallRequest;
@@ -11,6 +13,14 @@ pub mod runtime;
 pub mod schema;
 pub mod verb_server;
 
+pub trait VerbFn {
+    type Request: Serialize;
+    type Response: DeserializeOwned;
+
+    fn module() -> &'static str;
+    fn name() -> &'static str;
+}
+
 #[derive(Clone, Debug)]
 pub struct Context {
     verb_client: VerbServiceClient<tonic::transport::Channel>,
@@ -21,12 +31,13 @@ impl Context {
         Self { verb_client }
     }
 
-    pub async fn call<Req, Res>(&mut self, module: String, name: String, request: Req) -> Res
+    pub async fn call<V>(&mut self, v: V, request: V::Request) -> V::Response
     where
-        // F: Fn(Context, Req) -> Res,
-        Req: serde::Serialize,
-        Res: serde::de::DeserializeOwned,
+        V: VerbFn,
     {
+        let name = V::name().to_string();
+        let module = V::module().to_string();
+
         let response = self
             .verb_client
             .call(tonic::Request::new(CallRequest {

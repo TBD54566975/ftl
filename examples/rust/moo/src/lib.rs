@@ -16,9 +16,30 @@ mod echo {
     }
 
     // scaffolding
-    pub fn echo(_ctx: ftl::Context, _request: EchoRequest) -> EchoResponse {
-        panic!("Do not call this directly!")
+    // pub fn echo(_ctx: ftl::Context, _request: EchoRequest) -> EchoResponse {
+    //     panic!("Do not call this directly!")
+    // }
+
+    // impl VerbFn for echo {
+    //     fn module_and_verb() -> (String, String) {
+    //         ("echo".to_string(), "echo".to_string())
+    //     }
+    // }
+
+    pub struct EchoVerb;
+
+    impl ftl::VerbFn for EchoVerb {
+        type Request = EchoRequest;
+        type Response = EchoResponse;
+
+        fn module() -> &'static str {
+            "echo"
+        }
+        fn name() -> &'static str {
+            "echo"
+        }
     }
+
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,17 +61,9 @@ pub async fn test_verb(mut ctx: Context, request: Request) -> Response {
     info!("test_verb was called");
     info!("request: {:?}", &request);
 
-    let echo_response: echo::EchoResponse = ctx.call("echo".to_string(), "echo".to_string(), echo::EchoRequest {
-        name: request.your_name.clone(),
+    let echo_response = ctx.call(echo::EchoVerb, echo::EchoRequest {
+        name: request.your_name,
     }).await;
-
-    /*
-    ideas:
-
-    let echo_response: echo::EchoResponse = ctx.new_call(echo::echo, echo::EchoRequest {
-        name: request.your_name.clone(),
-    }).await;
-     */
 
     Response {
         message: format!("Hello. Ping response was: {}!", echo_response.message),
