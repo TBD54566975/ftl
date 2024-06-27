@@ -1,6 +1,8 @@
 use std::future::Future;
 use std::pin::Pin;
 
+use heck::ToSnakeCase;
+use prost::Message;
 use tonic::{Request, Response, Status, Streaming};
 use tonic::codegen::tokio_stream::Stream;
 use tonic::transport::Server;
@@ -10,8 +12,9 @@ use ftl_protos::ftl::verb_service_server::VerbService;
 
 use crate::Context;
 
-pub type CallImmediateFn =
-    fn(Context, String, String, String) -> Pin<Box<dyn Future<Output = ()> + Send + Sync>>;
+pub type CallImmediateReturn = Pin<Box<dyn Future<Output = String> + Send + Sync>>;
+
+pub type CallImmediateFn = fn(Context, String, String, String) -> CallImmediateReturn;
 
 #[derive(Debug)]
 pub struct Config {
@@ -99,12 +102,17 @@ impl VerbService for FtlService {
         let request = request.into_inner();
         let verb_ref = request.verb.unwrap();
         let module = verb_ref.module;
-        let name = verb_ref.name;
+        let name = verb_ref.name.to_snake_case();
         let request_body: Vec<u8> = request.body;
         let request_body = String::from_utf8(request_body).unwrap();
 
-        (self.config.call_immediate)(Context::default(), module, name, request_body).await;
+        let response =
+            (self.config.call_immediate)(Context::default(), module, name, request_body).await;
 
-        Ok(Response::new(protos::ftl::CallResponse { response: None }))
+        Ok(Response::new(protos::ftl::CallResponse {
+            response: Some(protos::ftl::call_response::Response::Body(
+                response.encode_to_vec(),
+            )),
+        }))
     }
 }

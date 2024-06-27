@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 
+use heck::ToLowerCamelCase;
 use proc_macro2::{Ident, Span};
 
 use ftl_protos::schema;
@@ -201,9 +202,6 @@ impl VerbToken {
     }
 
     pub fn to_verb_proto(&self) -> schema::Verb {
-        let mut verb = schema::Verb::default();
-        verb.name = self.func.sig.ident.to_string();
-
         let request = Some(schema::Type {
             value: Some(schema::r#type::Value::Ref(schema::Ref {
                 pos: None,
@@ -226,7 +224,7 @@ impl VerbToken {
             pos: None,
             comments: vec![],
             export: false,
-            name: self.func.sig.ident.to_string(),
+            name: self.func.sig.ident.to_string().to_lower_camel_case(),
             request,
             response,
             metadata: vec![],

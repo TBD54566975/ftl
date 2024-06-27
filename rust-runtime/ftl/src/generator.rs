@@ -12,7 +12,9 @@ impl Parsed {
         }
 
         let token_stream = quote::quote! {
-            pub fn call_immediate(ctx: ::ftl::Context, module: String, verb: String, request_body: String) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = ()> + Send + Sync>> {
+            // Output should be boxed trait of Deserializable
+            pub fn call_immediate(ctx: ::ftl::Context, module: String, verb: String, request_body: String)
+                -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = String> + Send + Sync>> {
                  let fut = async move {
                     match (module.as_str(), verb.as_str()) {
                         #(#call_immediate_case_tokens)*
@@ -38,6 +40,7 @@ impl Parsed {
         let module_name_str = module_name.to_string();
         let verb_name_str = verb_name.to_string();
         let request_type = &verb_token.request_ident;
+        let response_type = &verb_token.response_ident;
 
         // request type only supports existing in the same module or unit
         dbg!(&verb_token.request_ident);
@@ -51,7 +54,8 @@ impl Parsed {
         quote! {
             (#module_name_str, #verb_name_str) => {
                 let request = ::serde_json::from_str::<#module_name::#request_type>(&request_body).unwrap();
-                #module_name::#verb_name(ctx, request).await;
+                let response: #module_name::#response_type = #module_name::#verb_name(ctx, request).await;
+                serde_json::to_string(&response).unwrap()
             }
         }
         // }
