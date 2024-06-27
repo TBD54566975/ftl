@@ -2,7 +2,6 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 
 use proc_macro2::{Ident, Span};
-use tracing::{debug, warn};
 
 use ftl_protos::schema;
 
@@ -55,10 +54,8 @@ impl Parser {
         // For each verb, queue request and response types.
         let mut type_queue = VecDeque::new();
         for verb in &verbs {
-            let request_ident = ident_from_type(&verb.request_type);
-            let response_ident = ident_from_type(&verb.response_type);
-            type_queue.push_back(request_ident.clone());
-            type_queue.push_back(response_ident.clone());
+            type_queue.push_back(verb.request_ident.clone());
+            type_queue.push_back(verb.response_ident.clone());
         }
 
         // Iterate queue until empty.
@@ -66,6 +63,8 @@ impl Parser {
         while let Some(ident) = type_queue.pop_front() {
             let (item, add_to_queue) = self.find_type_ast(&ident);
             if let Some(item) = item {
+                println!("Found type: {:?}", ident);
+                dbg!(&item);
                 types.insert(ident.clone(), item);
             }
             for ident in add_to_queue {
@@ -113,10 +112,11 @@ impl Parser {
 }
 
 fn ident_from_path(path: &syn::Path) -> Ident {
+    dbg!(&path);
     path.get_ident().unwrap().clone()
 }
 
-fn ident_from_type(ty: &syn::Type) -> Ident {
+pub fn ident_from_type(ty: &syn::Type) -> Ident {
     match ty {
         syn::Type::Path(path) => ident_from_path(&path.path),
         _ => panic!("Expected type path, got {:?}", ty),
@@ -125,7 +125,7 @@ fn ident_from_type(ty: &syn::Type) -> Ident {
 
 pub struct Parsed {
     pub verbs: Vec<VerbToken>,
-    types: HashMap<Ident, syn::Item>,
+    pub types: HashMap<Ident, syn::Item>,
 }
 
 impl Parsed {
@@ -164,8 +164,9 @@ impl ModuleIdent {
 pub struct VerbToken {
     pub module: ModuleIdent,
     pub func: syn::ItemFn,
-    pub request_type: syn::Type,
-    pub response_type: syn::Type,
+    pub ident: Ident,
+    pub request_ident: Ident,
+    pub response_ident: Ident,
 }
 
 impl VerbToken {
@@ -187,25 +188,37 @@ impl VerbToken {
         ensure_arg_is_path(&func, 1);
         let request_type = get_arg_type(&func, 1);
         let response_type = get_return_type_or_unit(&func);
+        let request_type_ident = ident_from_type(&request_type);
+        let response_type_ident = ident_from_type(&response_type);
 
         Some(VerbToken {
             module: module.clone(),
             func: func.clone(),
-            request_type,
-            response_type,
+            ident: func.sig.ident.clone(),
+            request_ident: request_type_ident,
+            response_ident: response_type_ident,
         })
     }
 
-    pub fn to_proto(&self) -> schema::Verb {
+    pub fn to_verb_proto(&self) -> schema::Verb {
         let mut verb = schema::Verb::default();
         verb.name = self.func.sig.ident.to_string();
 
-        warn!("TODO: for now just give unit types");
         let request = Some(schema::Type {
-            value: Some(schema::r#type::Value::Unit(schema::Unit { pos: None })),
+            value: Some(schema::r#type::Value::Ref(schema::Ref {
+                pos: None,
+                name: self.request_ident.to_string(),
+                module: self.module.0.to_string(),
+                type_parameters: vec![],
+            })),
         });
         let response = Some(schema::Type {
-            value: Some(schema::r#type::Value::Unit(schema::Unit { pos: None })),
+            value: Some(schema::r#type::Value::Ref(schema::Ref {
+                pos: None,
+                name: self.response_ident.to_string(),
+                module: self.module.0.to_string(),
+                type_parameters: vec![],
+            })),
         });
 
         schema::Verb {
@@ -332,7 +345,7 @@ mod tests {
             }
 
             #[ftl::verb]
-            pub fn test(ctx: Context, request: Request) -> Response {
+            pub fn test_verb(ctx: Context, request: Request) -> Response {
                 println!("Hello, world!");
             }
         "#,
@@ -341,5 +354,9 @@ mod tests {
 
         assert_eq!(parsed.modules_count(), 1);
         assert_eq!(parsed.verb_count(), 1);
+        assert_eq!(parsed.types.len(), 3);
+
+        let user = parsed.generate_module_proto(&ModuleIdent::new("test"));
+        dbg!(user);
     }
 }

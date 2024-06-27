@@ -3,7 +3,7 @@ use prost::Message;
 
 use ftl_protos::schema;
 
-use crate::parser::{ModuleIdent, Parsed, Parser};
+use crate::parser::{ident_from_type, ModuleIdent, Parsed, Parser, VerbToken};
 
 pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     let mut buf = Vec::new();
@@ -13,16 +13,16 @@ pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
 
 impl Parsed {
     pub fn generate_module_proto(&self, module: &ModuleIdent) -> schema::Module {
-        let verbs = &self
-            .verbs
-            .iter()
-            .filter(|verb| &verb.module == module)
-            .collect::<Vec<_>>();
-        let verbs = verbs.iter().map(|verb| verb.to_proto()).collect::<Vec<_>>();
         let mut decls = vec![];
-        decls.extend(verbs.into_iter().map(|verb| schema::Decl {
-            value: Some(schema::decl::Value::Verb(verb)),
-        }));
+
+        for verb_token in &self.verbs {
+            decls.push(self.get_decl_for_verb(verb_token));
+        }
+        for ident in self.types.keys() {
+            decls.push(self.get_decl_for_data(ident));
+        }
+
+        dbg!(&decls);
 
         schema::Module {
             runtime: None,
@@ -32,6 +32,93 @@ impl Parsed {
             name: module.0.to_string(),
             decls,
         }
+    }
+
+    fn get_decl_for_verb(&self, verb_token: &VerbToken) -> schema::Decl {
+        let verb = verb_token.to_verb_proto();
+        schema::Decl {
+            value: Some(schema::decl::Value::Verb(verb)),
+        }
+    }
+
+    fn get_decl_for_data(&self, ident: &syn::Ident) -> schema::Decl {
+        let item = self.types.get(ident).unwrap();
+        match item {
+            syn::Item::Struct(item_struct) => {
+                let mut fields = vec![];
+
+                for field in &item_struct.fields {
+                    // let ident = field.ty;
+                    let type_ident = ident_from_type(&field.ty);
+                    fields.push(schema::Field {
+                        pos: None,
+                        comments: vec![],
+                        name: field.ident.as_ref().unwrap().to_string(),
+                        r#type: Some(self.get_type_recursive(&type_ident)),
+                        metadata: vec![],
+                    });
+                }
+
+                let data = schema::Data {
+                    pos: None,
+                    comments: vec![],
+                    export: true,
+                    name: ident.to_string(),
+                    type_parameters: vec![],
+                    fields,
+                    metadata: vec![],
+                };
+
+                schema::Decl {
+                    value: Some(schema::decl::Value::Data(data)),
+                }
+            }
+            _ => todo!(),
+        }
+    }
+
+    fn get_type_recursive(&self, ident: &syn::Ident) -> schema::Type {
+        let maybe_value = match ident.to_string().as_str() {
+            "String" => Some(schema::r#type::Value::String(schema::String { pos: None })),
+            "u32" => Some(schema::r#type::Value::Int(schema::Int { pos: None })),
+            _ => None,
+        };
+        if let Some(value) = maybe_value {
+            return schema::Type { value: Some(value) };
+        }
+
+        println!("maybe not an internal type: {:?}", ident);
+
+        let item = self
+            .types
+            .get(ident)
+            .expect(format!("type not found: {:?}", ident).as_str());
+        let value = match item {
+            syn::Item::Struct(item_struct) => schema::r#type::Value::Ref(schema::Ref {
+                pos: None,
+                name: ident.to_string(),
+                module: "".to_string(),
+                type_parameters: vec![],
+            }),
+            unknown => todo!("unhandled type {:?}", unknown),
+            // Item::Const(_) => {}
+            // Item::Enum(_) => {}
+            // Item::ExternCrate(_) => {}
+            // Item::Fn(_) => {}
+            // Item::ForeignMod(_) => {}
+            // Item::Impl(_) => {}
+            // Item::Macro(_) => {}
+            // Item::Mod(_) => {}
+            // Item::Static(_) => {}
+            // Item::Trait(_) => {}
+            // Item::TraitAlias(_) => {}
+            // Item::Type(_) => {}
+            // Item::Union(_) => {}
+            // Item::Use(_) => {}
+            // Item::Verbatim(_) => {}
+        };
+
+        schema::Type { value: Some(value) }
     }
 }
 

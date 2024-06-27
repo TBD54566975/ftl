@@ -45,15 +45,16 @@ async fn main() {
             let mut parser = parser::Parser::new();
             let module = parser::ModuleIdent::new(name);
             parser.add_module(&module, &content);
-            parser.resolve_types();
+            todo!()
+            // parser.resolve_types();
 
-            let proto = parser.generate_module_proto(&module);
-
-            let mut buf = Vec::new();
-            proto.encode(&mut buf).unwrap();
-
-            let mut file = File::create(&output).unwrap();
-            file.write_all(&buf).unwrap();
+            // let proto = parser.generate_module_proto(&module);
+            //
+            // let mut buf = Vec::new();
+            // proto.encode(&mut buf).unwrap();
+            //
+            // let mut file = File::create(&output).unwrap();
+            // file.write_all(&buf).unwrap();
         }
         Some(Commands::CallVerb {
             module,
