@@ -1,4 +1,5 @@
 //! A crate for parsing/generating code to and from schema binary.
+use heck::ToLowerCamelCase;
 use prost::Message;
 
 use ftl_protos::schema;
@@ -53,7 +54,12 @@ impl Parsed {
                     fields.push(schema::Field {
                         pos: None,
                         comments: vec![],
-                        name: field.ident.as_ref().unwrap().to_string(),
+                        name: field
+                            .ident
+                            .as_ref()
+                            .unwrap()
+                            .to_string()
+                            .to_lower_camel_case(),
                         r#type: Some(self.get_type_recursive(&type_ident)),
                         metadata: vec![],
                     });
