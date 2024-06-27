@@ -58,12 +58,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: golangci-lint
-        run: golangci-lint run --out-format github-actions ./...
+        run: golangci-lint run --new-from-rev="$(git merge-base origin/main HEAD)" --out-format github-actions ./...
       - name: go-check-sumtype
         shell: bash
         run: go-check-sumtype ./... 2>&1 | to-annotation

@@ -139,7 +139,7 @@ lint-frontend: build-frontend
 
 # Lint the backend
 lint-backend:
-  @golangci-lint run ./...
+  @golangci-lint run --new-from-rev=$(git merge-base origin/main HEAD) ./...
 
 # Run live docs server
 docs:
