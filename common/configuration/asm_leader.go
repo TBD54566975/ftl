@@ -55,7 +55,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 			MaxResults: aws.Int32(100),
 			NextToken:  nextToken.Ptr(),
 			Filters: []types.Filter{
-				{Key: types.FilterNameStringTypeTagKey, Values: []string{"_ftl"}},
+				{Key: types.FilterNameStringTypeTagKey, Values: []string{"ftl"}},
 			},
 		})
 		if err != nil {
@@ -105,7 +105,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 		out, err := l.client.BatchGetSecretValue(ctx, &secretsmanager.BatchGetSecretValueInput{
 			Filters: []types.Filter{
 				{Key: types.FilterNameStringTypeName, Values: secretIDs},
-				{Key: types.FilterNameStringTypeTagKey, Values: []string{"_ftl"}},
+				{Key: types.FilterNameStringTypeTagKey, Values: []string{"ftl"}},
 			},
 		})
 		if err != nil {
@@ -156,7 +156,7 @@ func (l *asmLeader) store(ctx context.Context, ref Ref, value []byte) (*url.URL,
 		Name:         aws.String(ref.String()),
 		SecretString: aws.String(string(value)),
 		Tags: []types.Tag{
-			{Key: aws.String("_ftl"), Value: aws.String(ref.Module.Default("_"))},
+			{Key: aws.String("ftl"), Value: aws.String(ref.Module.Default("_"))},
 		},
 	})
 

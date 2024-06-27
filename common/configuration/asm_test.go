@@ -210,7 +210,7 @@ func testClientSync(ctx context.Context,
 		Name:         aws.String(smRef.String()),
 		SecretString: aws.String(jsonString(t, "sm-first")),
 		Tags: []types.Tag{
-			{Key: aws.String("_ftl"), Value: aws.String(smRef.Module.Default("_"))},
+			{Key: aws.String("ftl"), Value: aws.String(smRef.Module.Default("_"))},
 		},
 	})
 	assert.NoError(t, err, "failed to create secret via sm")
@@ -238,7 +238,7 @@ func testClientSync(ctx context.Context,
 		Name:         aws.String(smClientRef.String()),
 		SecretString: aws.String(jsonString(t, "sm-client-first")),
 		Tags: []types.Tag{
-			{Key: aws.String("_ftl"), Value: aws.String(smClientRef.Module.Default("_"))},
+			{Key: aws.String("ftl"), Value: aws.String(smClientRef.Module.Default("_"))},
 		},
 	})
 	assert.NoError(t, err, "failed to create secret via sm")
