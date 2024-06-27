@@ -21,9 +21,7 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
     return
   }
 
-  //TODO: Add all the types here...
-  // Also would be cool to have an httpingress type which would populate a valid //ftl:ingress ....
-  const nodeType = await vscode.window.showQuickPick(['verb', 'enum', 'pubsub', 'pubsub:subscription', 'fsm', 'database', 'config:string', 'config:struct', 'secret', 'cron'], {
+  const nodeType = await vscode.window.showQuickPick(['verb', 'ingress:http', 'enum', 'pubsub', 'pubsub:subscription', 'fsm', 'database', 'config:string', 'config:struct', 'secret', 'cron'], {
     title: 'Which type of node would you like to add',
     placeHolder: 'Choose a node type',
     canPickMany: false,
@@ -34,7 +32,7 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
     return
   }
 
-  const snippet = snippetForNodeType(nodeType)
+  const snippet = await snippetForNodeType(nodeType, item)
 
   if (snippet === '') {
     vscode.window.showErrorMessage(`No snippet available for node type ${nodeType}`)
@@ -55,11 +53,14 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
   editor.revealRange(lastLineRange, vscode.TextEditorRevealType.Default)
 }
 
-const snippetForNodeType = (nodeType: string): string => {
-  //TODO: fill out for all node types.
+const snippetForNodeType = async (nodeType: string, item: FtlTreeItem): Promise<string | undefined> => {
   switch (nodeType) {
     case 'verb':
-      return verbSnippet
+      return verbSnippet()
+
+    case 'ingress:http':
+      return ingressSnippet(item)
+
     case 'enum':
       return enumSnippet
 
@@ -73,7 +74,7 @@ const snippetForNodeType = (nodeType: string): string => {
       return fsmSnippet
 
     case 'database':
-      return `var sampleDatabase = ftl.PostgresDatabase("sample_db")`
+      return databaseSnippet()
 
     case 'config:string':
       return `var sampleConfig = ftl.Config[string]("sample_config")`
@@ -86,26 +87,65 @@ const snippetForNodeType = (nodeType: string): string => {
 
     case 'cron':
       return cronSnippet
-
-    // Add more cases here for other node types
   }
 
   return ''
-  // vscode.window.showInformationMessage(`Adding a new ${nodeType} node to ${document.uri.toString()}`)
 }
 
-const verbSnippet = `type SampleRequest struct {
-	Name string
-}
+const verbSnippet = async () => {
+  const inputBoxOptions: vscode.InputBoxOptions = {
+    prompt: 'What would you like to name the verb?',
+    placeHolder: 'MyVerb',
+  }
+  const name = await vscode.window.showInputBox(inputBoxOptions)
+  if (name === undefined) {
+    return undefined
+  }
 
-type SampleResponse struct {
-	Message string
+  return `type ${name}Request struct {}
+
+type ${name}Response struct {
+  Message string
 }
 
 //ftl:verb
-func Sample(ctx context.Context, req SampleRequest) (SampleResponse, error) {
-	return SampleResponse{Message: "Hello, world!"}, nil
+func ${name}(ctx context.Context, req ${name}Request) (${name}Response, error) {
+	return ${name}Response{Message: "Hello, world!"}, nil
 }`
+}
+
+const ingressSnippet = async (item: FtlTreeItem) => {
+  const inputBoxOptions: vscode.InputBoxOptions = {
+    prompt: 'What would you like to name the ingress?',
+    placeHolder: 'MyEndpoint',
+  }
+  const name = await vscode.window.showInputBox(inputBoxOptions)
+  if (name === undefined) {
+    return undefined
+  }
+
+  const method = await vscode.window.showQuickPick(['GET', 'POST', 'PUT', 'DELETE'], {
+    title: 'What method will you use for the ingress?',
+    placeHolder: 'Choose a method',
+    canPickMany: false,
+    ignoreFocusOut: true
+  })
+
+  if (method === undefined) {
+    return undefined
+  }
+
+  return `type ${name}Request struct {}
+type ${name}Response struct {}
+
+//ftl:ingress ${method} /${item.moduleName}/${name.toLowerCase()}
+func ${name}(ctx context.Context, req builtin.HttpRequest[${name}Request]) (builtin.HttpResponse[${name}Response, ftl.Unit], error) {
+	return builtin.HttpResponse[${name}Response, ftl.Unit]{
+		Body: ftl.Some(${name}Response{}),
+	}, nil
+}
+`
+}
 
 const enumSnippet = `//ftl:enum
 type SampleEnum string
@@ -128,6 +168,19 @@ const subscriberSnippet = `var _ = ftl.Subscription(sampleTopic, "sample_subscri
 func SampleSubscriber(ctx context.Context, event SamplePubSubEvent) error {
 	return nil
 }`
+
+const databaseSnippet = async () => {
+  const inputBoxOptions: vscode.InputBoxOptions = {
+    prompt: 'What would you like to name the database?',
+    placeHolder: 'my_db',
+  }
+  const name = await vscode.window.showInputBox(inputBoxOptions)
+  if (name === undefined) {
+    return undefined
+  }
+
+  return `var ${name.toLowerCase()}Database = ftl.PostgresDatabase("${name.toLowerCase()}")`
+}
 
 const fsmSnippet = `type SampleFSMMessage struct {
 	Instance string

@@ -44,7 +44,7 @@ export class FtlModulesDataProvider implements vscode.TreeDataProvider<FtlTreeIt
   readonly onDidChangeTreeData: vscode.Event<FtlTreeItem | undefined | void> = this._onDidChangeTreeData.event
 
   private data: FtlTreeItem[] = [
-    new FtlTreeItem('modules', new vscode.ThemeIcon('rocket'), vscode.TreeItemCollapsibleState.Expanded, undefined, [], 'ftlModules')
+    new FtlTreeItem('modules', new vscode.ThemeIcon('rocket'), vscode.TreeItemCollapsibleState.Expanded, undefined, undefined, [], 'ftlModules')
   ]
 
   refresh(): void {
@@ -53,7 +53,7 @@ export class FtlModulesDataProvider implements vscode.TreeDataProvider<FtlTreeIt
 
   updateData(newData: FtlTreeItem[]): void {
     this.data = [
-      new FtlTreeItem('modules', new vscode.ThemeIcon('rocket'), vscode.TreeItemCollapsibleState.Expanded, undefined, newData, 'ftlModules')
+      new FtlTreeItem('modules', new vscode.ThemeIcon('rocket'), vscode.TreeItemCollapsibleState.Expanded, undefined, undefined, newData, 'ftlModules')
     ]
 
     this.refresh()
