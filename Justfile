@@ -105,8 +105,10 @@ build-kt-runtime:
 
 # Build the Swift runtime
 build-swift-runtime:
-  swift build --package-path swift-runtime/Compile -c release
+  swift build --package-path swift-runtime/Compile -c
+  @mkdir -p build/devel
   cp swift-runtime/Compile/.build/release/Compile build/devel/ftl-swift-compile
+  @mkdir -p build/release
   cp swift-runtime/Compile/.build/release/Compile build/release/ftl-swift-compile
 
 # Install Node dependencies

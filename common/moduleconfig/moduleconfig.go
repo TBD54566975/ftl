@@ -112,7 +112,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 
 	case "swift":
 		if config.Build == "" {
-			config.Build = "cd _ftl/swift/Main && swift build -c debug --scratch-path ../../.build && cp ../../.build/debug/Main ../.."
+			config.Build = "cd _ftl/swift/Main && swift build -c debug --scratch-path ../../../.build -Xswiftc -enable-batch-mode -Xswiftc -incremental && cp ../../../.build/debug/Main ../.."
 		}
 		if config.DeployDir == "" {
 			config.DeployDir = "_ftl"
