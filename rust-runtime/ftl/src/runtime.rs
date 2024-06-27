@@ -35,5 +35,5 @@ pub async fn run(config: Config) -> () {
         .unwrap();
     info!("Connected");
 
-    verb_server::serve(config.verb_server_config).await;
+    verb_server::serve(config.verb_server_config, verb_client).await;
 }

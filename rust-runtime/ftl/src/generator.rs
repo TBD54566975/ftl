@@ -14,7 +14,7 @@ impl Parsed {
         let token_stream = quote::quote! {
             // Output should be boxed trait of Deserializable
             pub fn call_immediate(ctx: ::ftl::Context, module: String, verb: String, request_body: String)
-                -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = String> + Send + Sync>> {
+                -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = String> + Send>> {
                  let fut = async move {
                     match (module.as_str(), verb.as_str()) {
                         #(#call_immediate_case_tokens)*

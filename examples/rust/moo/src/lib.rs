@@ -2,6 +2,24 @@ use std::error::Error;
 use ftl::Context;
 use serde::{Deserialize, Serialize};
 use tracing::info;
+// use echo;
+
+mod echo {
+    #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+    pub struct EchoRequest {
+        pub name: String,
+    }
+
+    #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
+    pub struct EchoResponse {
+        pub message: String,
+    }
+
+    // scaffolding
+    pub fn echo(_ctx: ftl::Context, _request: EchoRequest) -> EchoResponse {
+        panic!("Do not call this directly!")
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,13 +36,19 @@ pub struct Response {
 }
 
 #[ftl::verb]
-pub async fn test_verb(ctx: Context, request: Request) -> Response {
+pub async fn test_verb(mut ctx: Context, request: Request) -> Response {
     info!("test_verb was called");
-    info!("request: {:?}", request);
-    // let response = ctx.call(module::other_verb, request).await?;
+    info!("request: {:?}", &request);
+
+    let echo_response: echo::EchoResponse = tokio::spawn(async move {
+        ctx.call("echo".to_string(), "echo".to_string(), echo::EchoRequest {
+            name: request.your_name.clone(),
+        }).await
+    }).await.unwrap();
 
     Response {
-        message: format!("Hello {}!", request.your_name),
+        message: format!("Hello. Ping response was: {}!", echo_response.message),
         your_score: request.age * 42,
     }
 }
+

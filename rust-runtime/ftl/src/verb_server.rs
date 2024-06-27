@@ -5,14 +5,15 @@ use heck::ToSnakeCase;
 use prost::Message;
 use tonic::{Request, Response, Status, Streaming};
 use tonic::codegen::tokio_stream::Stream;
-use tonic::transport::Server;
+use tonic::transport::{Channel, Server};
 
 use ftl_protos as protos;
+use ftl_protos::ftl::verb_service_client::VerbServiceClient;
 use ftl_protos::ftl::verb_service_server::VerbService;
 
 use crate::Context;
 
-pub type CallImmediateReturn = Pin<Box<dyn Future<Output = String> + Send + Sync>>;
+pub type CallImmediateReturn = Pin<Box<dyn Future<Output = String> + Send>>;
 
 pub type CallImmediateFn = fn(Context, String, String, String) -> CallImmediateReturn;
 
@@ -28,9 +29,12 @@ impl Config {
     }
 }
 
-pub async fn serve(config: Config) -> () {
+pub async fn serve(config: Config, verb_client: VerbServiceClient<Channel>) -> () {
     let addr = config.bind.parse().unwrap();
-    let service = FtlService { config };
+    let service = FtlService {
+        config,
+        context: Context::new(verb_client),
+    };
 
     Server::builder()
         .add_service(protos::ftl::verb_service_server::VerbServiceServer::new(
@@ -46,6 +50,7 @@ pub async fn serve(config: Config) -> () {
 #[derive(Debug)]
 pub struct FtlService {
     config: Config,
+    context: Context,
 }
 
 type ModuleContextResponseStream =
@@ -106,8 +111,8 @@ impl VerbService for FtlService {
         let request_body: Vec<u8> = request.body;
         let request_body = String::from_utf8(request_body).unwrap();
 
-        let response =
-            (self.config.call_immediate)(Context::default(), module, name, request_body).await;
+        let context = self.context.clone();
+        let response = (self.config.call_immediate)(context, module, name, request_body).await;
 
         Ok(Response::new(protos::ftl::CallResponse {
             response: Some(protos::ftl::call_response::Response::Body(
