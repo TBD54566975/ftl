@@ -24,7 +24,7 @@ type asmClient interface {
 	delete(ctx context.Context, ref Ref) error
 }
 
-// ASM implements Router (previously named Resolver) and Provider for AWS Secrets Manager (ASM).
+// ASM implements Router and Provider for AWS Secrets Manager (ASM).
 // Only supports loading "string" secrets, not binary secrets.
 //
 // The router does a direct/proxy map from a Ref to a URL, module.name <-> asm://module.name and does not access ASM at all.

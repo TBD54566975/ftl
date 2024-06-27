@@ -26,7 +26,7 @@ type Configuration struct{}
 func (Configuration) String() string { return "configuration" }
 
 // Manager is a high-level configuration manager that abstracts the details of
-// the Router (previously Resolver) and Provider interfaces.
+// the Router and Provider interfaces.
 type Manager[R Role] struct {
 	providers map[string]Provider[R]
 	router    Router[R]

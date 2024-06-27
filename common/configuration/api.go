@@ -69,7 +69,7 @@ func (k *Ref) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// A Router (previously named Resolver) resolves configuration names to keys that are then used to load
+// A Router resolves configuration names to keys that are then used to load
 // values from a Provider.
 //
 // This indirection allows for the storage of configuration values to be
