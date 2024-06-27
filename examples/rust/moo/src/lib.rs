@@ -40,11 +40,17 @@ pub async fn test_verb(mut ctx: Context, request: Request) -> Response {
     info!("test_verb was called");
     info!("request: {:?}", &request);
 
-    let echo_response: echo::EchoResponse = tokio::spawn(async move {
-        ctx.call("echo".to_string(), "echo".to_string(), echo::EchoRequest {
-            name: request.your_name.clone(),
-        }).await
-    }).await.unwrap();
+    let echo_response: echo::EchoResponse = ctx.call("echo".to_string(), "echo".to_string(), echo::EchoRequest {
+        name: request.your_name.clone(),
+    }).await;
+
+    /*
+    ideas:
+
+    let echo_response: echo::EchoResponse = ctx.new_call(echo::echo, echo::EchoRequest {
+        name: request.your_name.clone(),
+    }).await;
+     */
 
     Response {
         message: format!("Hello. Ping response was: {}!", echo_response.message),
