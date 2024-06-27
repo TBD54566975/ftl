@@ -93,9 +93,9 @@ const getTemplateArgument = async (prompt: string, placeHolder: string): Promise
   const inputBoxOptions: vscode.InputBoxOptions = {
     prompt: prompt,
     placeHolder: placeHolder,
-  };
+  }
 
-  return await vscode.window.showInputBox(inputBoxOptions) || ""
+  return await vscode.window.showInputBox(inputBoxOptions) || ''
 }
 
 const snakeToCamel = (snake: string): string => {
