@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl"
@@ -46,6 +44,7 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
+	fmt.Printf("cli.ControllerConfig.DSN: %s\n", cli.ControllerConfig.DSN)
 	conn, err := pgxpool.New(ctx, cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
 	dal, err := dal.New(ctx, conn)
@@ -53,20 +52,26 @@ func main() {
 
 	configDal, err := cfdal.New(ctx, conn)
 	kctx.FatalIfErrorf(err)
-	configProviders := []cf.Provider[cf.Configuration]{cf.NewDBConfigProvider(configDal)}
-	configResolver := cf.NewDBConfigResolver(configDal)
+	configProviders := []cf.Provider[cf.Configuration]{cf.NewDBProvider[cf.Configuration](configDal)}
+	configResolver := cf.NewDBResolver[cf.Configuration](configDal)
 	cm, err := cf.New[cf.Configuration](ctx, configResolver, configProviders)
 	kctx.FatalIfErrorf(err)
 
 	ctx = cf.ContextWithConfig(ctx, cm)
 
-	// The FTL controller currently only supports AWS Secrets Manager as a secrets provider.
-	awsConfig, err := config.LoadDefaultConfig(ctx)
-	kctx.FatalIfErrorf(err)
-	secretsResolver := cf.NewASM(ctx, secretsmanager.NewFromConfig(awsConfig), cli.ControllerConfig.Advertise, dal)
-	secretsProviders := []cf.Provider[cf.Secrets]{secretsResolver}
-	sm, err := cf.New[cf.Secrets](ctx, secretsResolver, secretsProviders)
-	kctx.FatalIfErrorf(err)
+	// TODO WIP currently only using the DB for secrets. WIP.
+	dbProvider := cf.NewDBProvider[cf.Secrets](configDal)
+	dbResolver := cf.NewDBResolver[cf.Secrets](configDal)
+	sm, err := cf.New[cf.Secrets](ctx, dbResolver, []cf.Provider[cf.Secrets]{dbProvider})
+
+	// The FTL controller currently supports DB and AWS Secrets Manager as a secrets providers.
+	// awsConfig, err := config.LoadDefaultConfig(ctx)
+	// kctx.FatalIfErrorf(err)
+	// asmResolver := cf.NewASM(ctx, secretsmanager.NewFromConfig(awsConfig), cli.ControllerConfig.Advertise, dal)
+	// dbProvider := cf.NewDBProvider[cf.Secrets](configDal)
+	// secretsProviders := []cf.Provider[cf.Secrets]{asmResolver, dbProvider}
+	// sm, err := cf.New[cf.Secrets](ctx, asmResolver, secretsProviders)
+	// kctx.FatalIfErrorf(err)
 	ctx = cf.ContextWithSecrets(ctx, sm)
 
 	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), dal)

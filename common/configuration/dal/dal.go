@@ -45,3 +45,29 @@ func (d *DAL) ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfigur
 	}
 	return l, nil
 }
+
+func (d *DAL) GetModuleSecret(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
+	b, err := d.db.GetModuleSecret(ctx, module, name)
+	if err != nil {
+		return nil, dalerrs.TranslatePGError(err)
+	}
+	return b, nil
+}
+
+func (d *DAL) SetModuleSecret(ctx context.Context, module optional.Option[string], name string, value []byte) error {
+	err := d.db.SetModuleSecret(ctx, module, name, value)
+	return dalerrs.TranslatePGError(err)
+}
+
+func (d *DAL) UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error {
+	err := d.db.UnsetModuleSecret(ctx, module, name)
+	return dalerrs.TranslatePGError(err)
+}
+
+func (d *DAL) ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error) {
+	l, err := d.db.ListModuleSecrets(ctx)
+	if err != nil {
+		return nil, dalerrs.TranslatePGError(err)
+	}
+	return l, nil
+}
