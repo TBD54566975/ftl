@@ -31,7 +31,7 @@ impl Context {
         Self { verb_client }
     }
 
-    pub async fn call<V>(&mut self, v: V, request: V::Request) -> V::Response
+    pub async fn call<V>(&mut self, _v: V, request: V::Request) -> V::Response
     where
         V: VerbFn,
     {

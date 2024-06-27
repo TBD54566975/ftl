@@ -12,15 +12,14 @@ pub struct Module {
     pub ast: syn::File,
 }
 
+#[derive(Default)]
 pub struct Parser {
     modules: Vec<Module>,
 }
 
 impl Parser {
     pub fn new() -> Self {
-        Self {
-            modules: Vec::new(),
-        }
+        Default::default()
     }
 
     pub fn add_module(&mut self, module_ident: &ModuleIdent, code: &str) {
@@ -184,11 +183,11 @@ impl VerbToken {
             return None;
         }
 
-        ensure_arg_is_path(&func, 0);
-        ensure_arg_type_ident(&func, 0, "Context");
-        ensure_arg_is_path(&func, 1);
-        let request_type = get_arg_type(&func, 1);
-        let response_type = get_return_type_or_unit(&func);
+        ensure_arg_is_path(func, 0);
+        ensure_arg_type_ident(func, 0, "Context");
+        ensure_arg_is_path(func, 1);
+        let request_type = get_arg_type(func, 1);
+        let response_type = get_return_type_or_unit(func);
         let request_type_ident = ident_from_type(&request_type);
         let response_type_ident = ident_from_type(&response_type);
 
@@ -236,7 +235,7 @@ impl VerbToken {
 pub fn extract_ast_verbs(module: &ModuleIdent, ast: &syn::File) -> Vec<VerbToken> {
     let mut verbs = vec![];
     for item in &ast.items {
-        let Some(verb_token) = VerbToken::try_parse_any_item(&module, &item) else {
+        let Some(verb_token) = VerbToken::try_parse_any_item(module, item) else {
             continue;
         };
 
@@ -255,7 +254,7 @@ fn ensure_arg_is_path(func: &syn::ItemFn, index: usize) {
         panic!("Argument {} must not be a self argument", index);
     };
 
-    let syn::Type::Path(path) = &*pat.ty else {
+    let syn::Type::Path(_) = &*pat.ty else {
         panic!(
             "Argument {} must be of type Path instead of {:?}",
             index, pat.ty
@@ -263,7 +262,7 @@ fn ensure_arg_is_path(func: &syn::ItemFn, index: usize) {
     };
 }
 
-fn ensure_arg_type_ident(func: &syn::ItemFn, index: usize, ident: &str) {
+fn ensure_arg_type_ident(func: &syn::ItemFn, index: usize, expected_ident: &str) {
     if func.sig.inputs.len() <= index {
         panic!("Function must have at least {} arguments", index + 1);
     }
@@ -280,12 +279,13 @@ fn ensure_arg_type_ident(func: &syn::ItemFn, index: usize, ident: &str) {
         );
     };
 
-    let path = &path.path else {
+    let ident = path.path.get_ident().unwrap();
+    if ident != expected_ident {
         panic!(
-            "Argument {} must be of type Path instead of {:?}",
-            index, path.path
+            "Argument {} must be of type {} instead of {}",
+            index, expected_ident, ident
         );
-    };
+    }
 }
 
 fn get_arg_type(func: &syn::ItemFn, index: usize) -> syn::Type {

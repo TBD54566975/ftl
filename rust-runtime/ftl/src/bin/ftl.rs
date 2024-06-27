@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufWriter, Write};
+use std::io::Write;
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
@@ -17,18 +17,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    BuildSchema {
-        input: PathBuf,
-        output: PathBuf,
-    },
-    DumpModuleSchema {
-        file: PathBuf,
-    },
-    CallVerb {
-        module: String,
-        verb: String,
-        request: String,
-    },
+    BuildSchema { input: PathBuf, output: PathBuf },
+    DumpModuleSchema { file: PathBuf },
 }
 
 #[tokio::main]
@@ -45,25 +35,14 @@ async fn main() {
             let mut parser = parser::Parser::new();
             let module = parser::ModuleIdent::new(name);
             parser.add_module(&module, &content);
-            todo!()
-            // parser.resolve_types();
+            let parsed = parser.parse();
 
-            // let proto = parser.generate_module_proto(&module);
-            //
-            // let mut buf = Vec::new();
-            // proto.encode(&mut buf).unwrap();
-            //
-            // let mut file = File::create(&output).unwrap();
-            // file.write_all(&buf).unwrap();
-        }
-        Some(Commands::CallVerb {
-            module,
-            verb,
-            request,
-        }) => {
-            info!("Calling verb {} in module {}", verb, module);
-            // ftl::verb_client::call_verb(module, verb, request).await;
-            todo!()
+            let proto = parsed.generate_module_proto(&module);
+            let mut buf = Vec::new();
+            proto.encode(&mut buf).unwrap();
+
+            let mut file = File::create(output).unwrap();
+            file.write_all(&buf).unwrap();
         }
         Some(Commands::DumpModuleSchema { file }) => {
             info!("Dumping {:?}", file);

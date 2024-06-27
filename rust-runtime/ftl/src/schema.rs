@@ -4,7 +4,7 @@ use prost::Message;
 
 use ftl_protos::schema;
 
-use crate::parser::{ident_from_type, ModuleIdent, Parsed, Parser, VerbToken};
+use crate::parser::{ident_from_type, ModuleIdent, Parsed, VerbToken};
 
 pub fn binary_to_module(mut reader: impl std::io::Read) -> schema::Module {
     let mut buf = Vec::new();
@@ -100,7 +100,7 @@ impl Parsed {
             .get(ident)
             .expect(format!("type not found: {:?}", ident).as_str());
         let value = match item {
-            syn::Item::Struct(item_struct) => schema::r#type::Value::Ref(schema::Ref {
+            syn::Item::Struct(_item_struct) => schema::r#type::Value::Ref(schema::Ref {
                 pos: None,
                 name: ident.to_string(),
                 module: "".to_string(),

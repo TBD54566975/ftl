@@ -4,7 +4,7 @@ use std::path::Path;
 use clap::Parser;
 use prost::Message;
 use tonic::transport::Uri;
-use tracing::{debug, info};
+use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
 use crate::{parser, runtime, verb_server};
@@ -76,5 +76,5 @@ pub fn build(module_name: &str) {
     let module = parsed.generate_module_proto(&module);
     let mut encoded = Vec::new();
     module.encode(&mut encoded).unwrap();
-    std::fs::write(&schema_path, &encoded).unwrap();
+    std::fs::write(schema_path, &encoded).unwrap();
 }

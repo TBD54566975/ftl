@@ -29,7 +29,7 @@ impl Config {
     }
 }
 
-pub async fn serve(config: Config, verb_client: VerbServiceClient<Channel>) -> () {
+pub async fn serve(config: Config, verb_client: VerbServiceClient<Channel>) {
     let addr = config.bind.parse().unwrap();
     let service = FtlService {
         config,
@@ -43,8 +43,6 @@ pub async fn serve(config: Config, verb_client: VerbServiceClient<Channel>) -> (
         .serve(addr)
         .await
         .unwrap();
-
-    ()
 }
 
 #[derive(Debug)]
@@ -63,7 +61,7 @@ type AcquireLeaseStream =
 impl VerbService for FtlService {
     async fn ping(
         &self,
-        request: Request<protos::ftl::PingRequest>,
+        _request: Request<protos::ftl::PingRequest>,
     ) -> Result<Response<protos::ftl::PingResponse>, Status> {
         Ok(Response::new(protos::ftl::PingResponse { not_ready: None }))
     }
@@ -72,7 +70,7 @@ impl VerbService for FtlService {
 
     async fn get_module_context(
         &self,
-        request: Request<protos::ftl::ModuleContextRequest>,
+        _request: Request<protos::ftl::ModuleContextRequest>,
     ) -> Result<Response<Self::GetModuleContextStream>, Status> {
         todo!()
     }
@@ -81,21 +79,21 @@ impl VerbService for FtlService {
 
     async fn acquire_lease(
         &self,
-        request: Request<Streaming<protos::ftl::AcquireLeaseRequest>>,
+        _request: Request<Streaming<protos::ftl::AcquireLeaseRequest>>,
     ) -> Result<Response<Self::AcquireLeaseStream>, Status> {
         todo!()
     }
 
     async fn send_fsm_event(
         &self,
-        request: Request<protos::ftl::SendFsmEventRequest>,
+        _request: Request<protos::ftl::SendFsmEventRequest>,
     ) -> Result<Response<protos::ftl::SendFsmEventResponse>, Status> {
         todo!()
     }
 
     async fn publish_event(
         &self,
-        request: Request<protos::ftl::PublishEventRequest>,
+        _request: Request<protos::ftl::PublishEventRequest>,
     ) -> Result<Response<protos::ftl::PublishEventResponse>, Status> {
         todo!()
     }
