@@ -26,10 +26,10 @@ type Configuration struct{}
 func (Configuration) String() string { return "configuration" }
 
 // Manager is a high-level configuration manager that abstracts the details of
-// the Resolver and Provider interfaces.
+// the Router and Provider interfaces.
 type Manager[R Role] struct {
 	providers map[string]Provider[R]
-	resolver  Resolver[R]
+	router    Router[R]
 }
 
 func ConfigFromEnvironment() []string {
@@ -42,7 +42,7 @@ func ConfigFromEnvironment() []string {
 // NewDefaultSecretsManagerFromConfig creates a new secrets manager from
 // the project config found in the config paths.
 func NewDefaultSecretsManagerFromConfig(ctx context.Context, config string, opVault string) (*Manager[Secrets], error) {
-	var cr Resolver[Secrets] = ProjectConfigResolver[Secrets]{Config: config}
+	var cr Router[Secrets] = ProjectConfigResolver[Secrets]{Config: config}
 	return NewSecretsManager(ctx, cr, opVault)
 }
 
@@ -54,25 +54,25 @@ func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config string
 }
 
 // New configuration manager.
-func New[R Role](ctx context.Context, resolver Resolver[R], providers []Provider[R]) (*Manager[R], error) {
+func New[R Role](ctx context.Context, router Router[R], providers []Provider[R]) (*Manager[R], error) {
 	m := &Manager[R]{
 		providers: map[string]Provider[R]{},
 	}
 	for _, p := range providers {
 		m.providers[p.Key()] = p
 	}
-	m.resolver = resolver
+	m.router = router
 	return m, nil
 }
 
 // getData returns a data value for a configuration from the active providers.
 // The data can be unmarshalled from JSON.
 func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
-	key, err := m.resolver.Get(ctx, ref)
+	key, err := m.router.Get(ctx, ref)
 	// Try again at the global scope if the value is not found in module scope.
 	if ref.Module.Ok() && errors.Is(err, ErrNotFound) {
 		ref.Module = optional.None[string]()
-		key, err = m.resolver.Get(ctx, ref)
+		key, err = m.router.Get(ctx, ref)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) e
 // SetJSON sets a configuration value using raw JSON data.
 func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value json.RawMessage) error {
 	if err := checkJSON(value); err != nil {
-		return fmt.Errorf("invalid value for %s, must be JSON: %w", m.resolver.Role(), err)
+		return fmt.Errorf("invalid value for %s, must be JSON: %w", m.router.Role(), err)
 	}
 	provider, ok := m.providers[pkey]
 	if !ok {
@@ -136,7 +136,7 @@ func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value js
 	if err != nil {
 		return err
 	}
-	return m.resolver.Set(ctx, ref, key)
+	return m.router.Set(ctx, ref, key)
 }
 
 // MapForModule combines all configuration values visible to the module. Local
@@ -180,11 +180,11 @@ func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref Ref) error {
 	if err := provider.Delete(ctx, ref); err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
-	return m.resolver.Unset(ctx, ref)
+	return m.router.Unset(ctx, ref)
 }
 
 func (m *Manager[R]) List(ctx context.Context) ([]Entry, error) {
-	return m.resolver.List(ctx)
+	return m.router.List(ctx)
 }
 
 func checkJSON(data []byte) error {

@@ -69,14 +69,14 @@ func (k *Ref) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// A Resolver resolves configuration names to keys that are then used to load
+// A Router resolves configuration names to keys that are then used to load
 // values from a Provider.
 //
 // This indirection allows for the storage of configuration values to be
 // abstracted from the configuration itself. For example, the ftl-project.toml
 // file contains per-module and global configuration maps, but the secrets
 // themselves may be stored in a separate secret store such as a system keychain.
-type Resolver[R Role] interface {
+type Router[R Role] interface {
 	Role() R
 	Get(ctx context.Context, ref Ref) (key *url.URL, err error)
 	Set(ctx context.Context, ref Ref, key *url.URL) error

@@ -24,10 +24,10 @@ type asmClient interface {
 	delete(ctx context.Context, ref Ref) error
 }
 
-// ASM implements Resolver and Provider for AWS Secrets Manager (ASM).
+// ASM implements Router and Provider for AWS Secrets Manager (ASM).
 // Only supports loading "string" secrets, not binary secrets.
 //
-// The resolver does a direct/proxy map from a Ref to a URL, module.name <-> asm://module.name and does not access ASM at all.
+// The router does a direct/proxy map from a Ref to a URL, module.name <-> asm://module.name and does not access ASM at all.
 //
 // One controller is elected as the leader and is responsible for syncing the cache of secrets from ASM (see asmLeader).
 // Others get secrets from the leader via AdminService (see asmFollower).
@@ -35,7 +35,7 @@ type ASM struct {
 	coordinator *leader.Coordinator[asmClient]
 }
 
-var _ Resolver[Secrets] = &ASM{}
+var _ Router[Secrets] = &ASM{}
 var _ Provider[Secrets] = &ASM{}
 
 func NewASM(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser) *ASM {

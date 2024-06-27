@@ -18,7 +18,7 @@ type DBConfigResolverDAL interface {
 }
 
 // DBConfigResolver should only be used for config, not secrets
-var _ Resolver[Configuration] = DBConfigResolver{}
+var _ Router[Configuration] = DBConfigResolver{}
 
 func NewDBConfigResolver(db DBConfigResolverDAL) DBConfigResolver {
 	return DBConfigResolver{dal: db}
