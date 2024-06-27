@@ -19,6 +19,7 @@ public struct DataMacro: ExtensionMacro {
       }
       
       var variableSetters = [String]()
+      var encoders = [String]()
       for m in structDecl.memberBlock.members {
          let member = MemberBlockItemSyntax(m)!
          if let decl = VariableDeclSyntax(member.decl) {
@@ -31,6 +32,7 @@ public struct DataMacro: ExtensionMacro {
                //                    variableSetters.append("\(typeAnnotation.syntaxNodeType)")
                
                variableSetters.append("self.\(binding.pattern) = try \(typeAnnotation.type.description).ftlDecode(jsonDict[\"\(binding.pattern)\"])")
+               encoders.append("\"\(binding.pattern)\": self.\(binding.pattern).ftlEncode(),")
             }
          }
       }
@@ -50,7 +52,9 @@ extension \(type.trimmed): FTLType {
     }
 
     public func ftlEncode() -> Any? {
-        return nil
+        return [
+                \(raw: encoders.joined(separator:"\n"))
+        ]
     }
 }
 """)

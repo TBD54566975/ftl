@@ -10,9 +10,9 @@ struct VerbServiceProviderError: Error {
    let message: String
 }
 
-typealias Verb<Req, Resp> = (Req) throws -> (Resp)
-typealias Source<Resp> = () throws -> (Resp)
-typealias Sink<Req> = (Req) throws -> ()
+typealias Verb<Req:FTLType, Resp:FTLType> = (Req) throws -> (Resp)
+typealias Source<Resp:FTLType> = () throws -> (Resp)
+typealias Sink<Req:FTLType> = (Req) throws -> ()
 typealias Empty = () throws -> ()
 
 protocol Handler {
@@ -21,25 +21,28 @@ protocol Handler {
    
    var name: String { get }
    func execute(_ req:Req) throws -> (Resp)
+   
+   var requestType: any FTLType.Type { get }
+   var responseType: any FTLType.Type { get }
 }
 
 func handlerFor<Req, Resp>(name:String, _ function: @escaping Verb<Req, Resp>) throws -> any Handler {
-   return VerbHandler(name: name, handler: function)
+   return VerbHandler<Req, Resp>(name: name, handler: function)
 }
 
 func handlerFor<Resp>(name:String, _ function: @escaping Source<Resp>) throws -> any Handler {
-   return SourceHandler(name: name, handler: function)
+   return SourceHandler<Resp>(name: name, handler: function)
 }
 
 func handlerFor<Req>(name:String, _ function: @escaping Sink<Req>) throws -> any Handler {
-   return SinkHandler(name: name, handler: function)
+   return SinkHandler<Req>(name: name, handler: function)
 }
 
 func handlerFor(name:String, _ function: @escaping Empty) throws -> any Handler {
    return EmptyHandler(name: name, handler: function)
 }
 
-struct VerbHandler<_Req, _Resp>: Handler {
+struct VerbHandler<_Req:FTLType, _Resp:FTLType>: Handler {
    typealias Req = _Req
    typealias Resp = _Resp
    
@@ -49,10 +52,18 @@ struct VerbHandler<_Req, _Resp>: Handler {
    func execute(_ req:Req) throws -> (Resp) {
       return try self.handler(req)
    }
+   
+   var requestType: any FTLType.Type {
+      return _Req.self
+   }
+   
+   var responseType: any FTLType.Type {
+      return _Resp.self
+   }
 }
 
-struct SourceHandler<_Resp>: Handler {
-   typealias Req = Any
+struct SourceHandler<_Resp:FTLType>: Handler {
+   typealias Req = FTL.Unit
    typealias Resp = _Resp
    
    let name: String
@@ -61,31 +72,55 @@ struct SourceHandler<_Resp>: Handler {
    func execute(_ req:Req) throws -> (Resp) {
       return try self.handler()
    }
+   
+   var requestType: any FTLType.Type {
+      return FTL.Unit.self
+   }
+   
+   var responseType: any FTLType.Type {
+      return _Resp.self
+   }
 }
 
-struct SinkHandler<_Req>: Handler {
+struct SinkHandler<_Req:FTLType>: Handler {
    typealias Req = _Req
-   typealias Resp = Any
+   typealias Resp = FTL.Unit
    
    let name: String
    let handler: Sink<Req>
    
    func execute(_ req:Req) throws -> (Resp) {
       try self.handler(req)
-      fatalError("Return unit")
+      return Unit()
+   }
+   
+   var requestType: any FTLType.Type {
+      return _Req.self
+   }
+   
+   var responseType: any FTLType.Type {
+      return FTL.Unit.self
    }
 }
 
 struct EmptyHandler: Handler {
-   typealias Req = Any
-   typealias Resp = Any
+   typealias Req = FTL.Unit
+   typealias Resp = FTL.Unit
    
    let name: String
    let handler: Empty
    
    func execute(_ req:Req) throws -> (Resp) {
       try self.handler()
-      fatalError("Return unit")
+      return Unit()
+   }
+   
+   var requestType: any FTLType.Type {
+      return FTL.Unit.self
+   }
+   
+   var responseType: any FTLType.Type {
+      return FTL.Unit.self
    }
 }
 
@@ -152,8 +187,24 @@ final class VerbServiceProvider: Xyz_Block_Ftl_V1_VerbServiceAsyncProvider {
       guard let handler = self.handlers[request.verb.name] else {
          throw VerbServiceProviderError(message: "no handler found for \(request.verb.name)")
       }
-      request.body
-      //        let resp = try handler.execute("need to parse req")
-      fatalError("Not implemented: calling handler")
+      let responseData = try executeCall(handler, requestData: request.body)
+      var response = Xyz_Block_Ftl_V1_CallResponse()
+      response.body = responseData
+      return response
+   }
+   
+   func executeCall<H: Handler>(_ handler:H, requestData:Data) throws -> Data {
+      let root = try JSONSerialization.jsonObject(with: requestData, options: [])
+      do {
+         let request = try handler.requestType.ftlDecode(root)
+         let response = try handler.execute(request as! H.Req)
+         guard let responseRoot = response.ftlEncode() else {
+            throw VerbServiceProviderError(message: "expected non-nil response body")
+         }
+         return try JSONSerialization.data(withJSONObject: responseRoot)
+      }
+      catch {
+         return try JSONSerialization.data(withJSONObject: ["error": "\(error)"], options: [])
+      }
    }
 }
