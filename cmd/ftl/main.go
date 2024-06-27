@@ -111,8 +111,8 @@ func main() {
 
 	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: configPath}
 	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: configPath}
-	kctx.BindTo(sr, (*cf.Resolver[cf.Secrets])(nil))
-	kctx.BindTo(cr, (*cf.Resolver[cf.Configuration])(nil))
+	kctx.BindTo(sr, (*cf.Router[cf.Secrets])(nil))
+	kctx.BindTo(cr, (*cf.Router[cf.Configuration])(nil))
 
 	// Add config manager to context.
 	cm, err := cf.NewConfigurationManager(ctx, cr)

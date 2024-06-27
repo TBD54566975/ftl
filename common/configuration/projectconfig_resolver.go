@@ -19,8 +19,8 @@ type ProjectConfigResolver[R Role] struct {
 	Config string `name:"config" short:"C" help:"Path to FTL project configuration file." env:"FTL_CONFIG" placeholder:"FILE" type:"existingfile"`
 }
 
-var _ Resolver[Configuration] = ProjectConfigResolver[Configuration]{}
-var _ Resolver[Secrets] = ProjectConfigResolver[Secrets]{}
+var _ Router[Configuration] = ProjectConfigResolver[Configuration]{}
+var _ Router[Secrets] = ProjectConfigResolver[Secrets]{}
 
 func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
 
