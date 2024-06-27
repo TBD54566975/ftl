@@ -11,23 +11,35 @@ import (
 
 var b = []byte(`""`)
 
-type mockDBConfigProviderDAL struct{}
+type mockDBProviderDAL struct{}
 
-func (mockDBConfigProviderDAL) GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
+func (mockDBProviderDAL) GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
 	return b, nil
 }
 
-func (mockDBConfigProviderDAL) SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error {
+func (mockDBProviderDAL) SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error {
 	return nil
 }
 
-func (mockDBConfigProviderDAL) UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error {
+func (mockDBProviderDAL) UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error {
+	return nil
+}
+
+func (mockDBProviderDAL) GetModuleSecret(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
+	return b, nil
+}
+
+func (mockDBProviderDAL) SetModuleSecret(ctx context.Context, module optional.Option[string], name string, value []byte) error {
+	return nil
+}
+
+func (mockDBProviderDAL) UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error {
 	return nil
 }
 
 func TestDBConfigProvider(t *testing.T) {
 	ctx := context.Background()
-	provider := NewDBConfigProvider(mockDBConfigProviderDAL{})
+	provider := NewDBProvider[Configuration](mockDBProviderDAL{})
 
 	gotBytes, err := provider.Load(ctx, Ref{
 		Module: optional.Some("module"),

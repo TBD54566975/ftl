@@ -143,6 +143,13 @@ export enum SecretProvider {
    * @generated from enum value: SECRET_ASM = 4;
    */
   SECRET_ASM = 4,
+
+  /**
+   * Use the database as a secret store.
+   *
+   * @generated from enum value: SECRET_DB = 5;
+   */
+  SECRET_DB = 5,
 }
 // Retrieve enum metadata with: proto3.getEnumType(SecretProvider)
 proto3.util.setEnumType(SecretProvider, "xyz.block.ftl.v1.SecretProvider", [
@@ -151,6 +158,7 @@ proto3.util.setEnumType(SecretProvider, "xyz.block.ftl.v1.SecretProvider", [
   { no: 2, name: "SECRET_KEYCHAIN" },
   { no: 3, name: "SECRET_OP" },
   { no: 4, name: "SECRET_ASM" },
+  { no: 5, name: "SECRET_DB" },
 ]);
 
 /**

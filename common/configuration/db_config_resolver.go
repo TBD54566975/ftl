@@ -2,58 +2,83 @@ package configuration
 
 import (
 	"context"
+	"errors"
 	"net/url"
 
 	"github.com/TBD54566975/ftl/common/configuration/sql"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-// DBConfigResolver loads values a project's configuration from the given database.
-type DBConfigResolver struct {
-	dal DBConfigResolverDAL
+// DBResolver loads values a project's configuration from the given database.
+type DBResolver[R Role] struct {
+	dal DBResolverDAL
 }
 
-type DBConfigResolverDAL interface {
+type DBResolverDAL interface {
 	ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfiguration, error)
+	ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error)
 }
 
-// DBConfigResolver should only be used for config, not secrets
-var _ Router[Configuration] = DBConfigResolver{}
+var _ Router[Configuration] = DBResolver[Configuration]{}
+var _ Router[Secrets] = DBResolver[Secrets]{}
 
-func NewDBConfigResolver(db DBConfigResolverDAL) DBConfigResolver {
-	return DBConfigResolver{dal: db}
+func NewDBResolver[R Role](db DBResolverDAL) DBResolver[R] {
+	return DBResolver[R]{dal: db}
 }
 
-func (d DBConfigResolver) Role() Configuration { return Configuration{} }
+func (DBResolver[R]) Role() R { var r R; return r }
 
-func (d DBConfigResolver) Get(ctx context.Context, ref Ref) (*url.URL, error) {
+func (d DBResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 	return urlPtr(), nil
 }
 
-func (d DBConfigResolver) List(ctx context.Context) ([]Entry, error) {
-	configs, err := d.dal.ListModuleConfiguration(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return slices.Map(configs, func(c sql.ModuleConfiguration) Entry {
-		return Entry{
-			Ref: Ref{
-				Module: c.Module,
-				Name:   c.Name,
-			},
-			Accessor: urlPtr(),
+func (d DBResolver[R]) List(ctx context.Context) ([]Entry, error) {
+	switch any(new(R)).(type) {
+	case *Configuration:
+		configs, err := d.dal.ListModuleConfiguration(ctx)
+		if err != nil {
+			return nil, err
 		}
-	}), nil
+		return slices.Map(configs, func(c sql.ModuleConfiguration) Entry {
+			return Entry{
+				Ref: Ref{
+					Module: c.Module,
+					Name:   c.Name,
+				},
+				Accessor: urlPtr(),
+			}
+		}), nil
+	case *Secrets:
+		secrets, err := d.dal.ListModuleSecrets(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return slices.Map(secrets, func(s sql.ModuleSecret) Entry {
+			return Entry{
+				Ref: Ref{
+					Module: s.Module,
+					Name:   s.Name,
+				},
+				Accessor: urlPtr(),
+			}
+		}), nil
+	default:
+		return nil, errors.New("unknown role")
+	}
 }
 
-func (d DBConfigResolver) Set(ctx context.Context, ref Ref, key *url.URL) error {
-	// Writing to the DB is performed by DBConfigProvider, so this function is a NOOP
+func (d DBResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
+	// Writing to the DB is performed by DBProvider, so this function is a NOOP
 	return nil
 }
 
-func (d DBConfigResolver) Unset(ctx context.Context, ref Ref) error {
-	// Writing to the DB is performed by DBConfigProvider, so this function is a NOOP
+func (d DBResolver[R]) Unset(ctx context.Context, ref Ref) error {
+	// Writing to the DB is performed by DBProvider, so this function is a NOOP
 	return nil
+}
+
+func (d DBResolver[R]) UseWithProvider(ctx context.Context, pkey string) bool {
+	return pkey == "db"
 }
 
 func urlPtr() *url.URL {

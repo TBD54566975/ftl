@@ -129,3 +129,7 @@ func (a *ASM) Delete(ctx context.Context, ref Ref) error {
 	}
 	return client.delete(ctx, ref)
 }
+
+func (a *ASM) UseWithProvider(ctx context.Context, pkey string) bool {
+	return pkey == a.Key()
+}

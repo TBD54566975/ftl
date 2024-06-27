@@ -136,7 +136,10 @@ func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value js
 	if err != nil {
 		return err
 	}
-	return m.router.Set(ctx, ref, key)
+	if m.router.UseWithProvider(ctx, pkey) {
+		return m.router.Set(ctx, ref, key)
+	}
+	return nil
 }
 
 // MapForModule combines all configuration values visible to the module. Local
@@ -180,10 +183,15 @@ func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref Ref) error {
 	if err := provider.Delete(ctx, ref); err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
-	return m.router.Unset(ctx, ref)
+	if m.router.UseWithProvider(ctx, pkey) {
+		return m.router.Unset(ctx, ref)
+	}
+	return nil
 }
 
 func (m *Manager[R]) List(ctx context.Context) ([]Entry, error) {
+	// TODO if the router differs from the provider, this list will be incorrect.
+	// See comment in common/configuration/api.go:Router
 	return m.router.List(ctx)
 }
 

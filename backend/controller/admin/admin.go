@@ -198,6 +198,8 @@ func secretProviderKey(p *ftlv1.SecretProvider) string {
 		return "op"
 	case ftlv1.SecretProvider_SECRET_ASM:
 		return "asm"
+	case ftlv1.SecretProvider_SECRET_DB:
+		return "db"
 	}
 	return ""
 }
