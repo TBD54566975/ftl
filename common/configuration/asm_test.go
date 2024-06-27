@@ -22,6 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 )
 
 func localstack(ctx context.Context, t *testing.T) (*ASM, *asmLeader, *secretsmanager.Client, *clock.Mock) {
@@ -208,6 +209,9 @@ func testClientSync(ctx context.Context,
 	_, err = sm.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(smRef.String()),
 		SecretString: aws.String(jsonString(t, "sm-first")),
+		Tags: []types.Tag{
+			{Key: aws.String("_ftl"), Value: aws.String(smRef.Module.Default("_"))},
+		},
 	})
 	assert.NoError(t, err, "failed to create secret via sm")
 	waitForUpdatesToProcess(cache)
@@ -233,6 +237,9 @@ func testClientSync(ctx context.Context,
 	_, err = sm.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(smClientRef.String()),
 		SecretString: aws.String(jsonString(t, "sm-client-first")),
+		Tags: []types.Tag{
+			{Key: aws.String("_ftl"), Value: aws.String(smClientRef.Module.Default("_"))},
+		},
 	})
 	assert.NoError(t, err, "failed to create secret via sm")
 	_, err = client.store(ctx, smClientRef, jsonBytes(t, "sm-client-second"))
