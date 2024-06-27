@@ -159,7 +159,6 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		if len(config.Watch) == 0 {
 			config.Watch = []string{"**/*.rs", "Cargo.toml", "Cargo.lock"}
 		}
-		fmt.Fprintf(os.Stderr, "RUST setConfigDeftaults\n")
 	}
 
 	// Do some validation.

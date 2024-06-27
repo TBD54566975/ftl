@@ -52,8 +52,7 @@ func extractDependencies(module Module) ([]string, error) {
 		return extractKotlinFTLImports(module.Config.Module, module.Config.Dir)
 
 	case "rust":
-		fmt.Fprintf(os.Stderr, "RUST TODO extractDependencies\n")
-		return nil, nil
+		return extractRustFTLImports(module.Config.Module, module.Config.Dir)
 
 	default:
 		return nil, fmt.Errorf("unsupported language: %s", module.Config.Language)
@@ -139,4 +138,10 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
 	return modules, nil
+}
+
+func extractRustFTLImports(self, dir string) ([]string, error) {
+	fmt.Fprintf(os.Stderr, "RUST TODO extractRustFTLImports\n")
+
+	return nil, nil
 }

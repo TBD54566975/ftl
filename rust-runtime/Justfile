@@ -1,3 +1,0 @@
-test:
-    cargo test
-    cargo run -- dump-module-schema ../examples/go/time/_ftl/schema.pb

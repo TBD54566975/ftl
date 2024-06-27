@@ -1,7 +1,6 @@
 use ftl::Context;
 use serde::{Deserialize, Serialize};
 use tracing::info;
-// use echo;
 
 mod echo {
     #[derive(Debug, ::serde::Serialize, ::serde::Deserialize)]
@@ -13,17 +12,6 @@ mod echo {
     pub struct EchoResponse {
         pub message: String,
     }
-
-    // scaffolding
-    // pub fn echo(_ctx: ftl::Context, _request: EchoRequest) -> EchoResponse {
-    //     panic!("Do not call this directly!")
-    // }
-
-    // impl VerbFn for echo {
-    //     fn module_and_verb() -> (String, String) {
-    //         ("echo".to_string(), "echo".to_string())
-    //     }
-    // }
 
     pub struct EchoVerb;
 
@@ -38,7 +26,6 @@ mod echo {
             "echo"
         }
     }
-
 }
 
 #[derive(Debug, Serialize, Deserialize)]
