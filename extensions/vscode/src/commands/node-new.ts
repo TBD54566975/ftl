@@ -62,7 +62,7 @@ const snippetForNodeType = async (nodeType: string, item: FtlTreeItem): Promise<
       return ingressSnippet(item)
 
     case 'enum':
-      return await enumSnippet()
+      return enumSnippet()
 
     case 'pubsub':
       return publisherSnippet()
@@ -213,7 +213,7 @@ const fsmSnippet = async () => {
   if (!name) {
     return undefined
   }
-  const message = await getTemplateArgument('What would you like to message type for this fsm?', `${snakeToPascal(name)}Message`)
+  const message = await getTemplateArgument('What would you like to name the message type for this fsm?', `${snakeToPascal(name)}Message`)
   if (!message) {
     return undefined
   }
