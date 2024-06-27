@@ -54,6 +54,9 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 		out, err := l.client.ListSecrets(ctx, &secretsmanager.ListSecretsInput{
 			MaxResults: aws.Int32(100),
 			NextToken:  nextToken.Ptr(),
+			Filters: []types.Filter{
+				{Key: types.FilterNameStringTypeTagKey, Values: []string{"_ftl"}},
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("unable to get list of secrets from ASM: %w", err)
@@ -100,7 +103,10 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 			}
 		}
 		out, err := l.client.BatchGetSecretValue(ctx, &secretsmanager.BatchGetSecretValueInput{
-			SecretIdList: secretIDs,
+			Filters: []types.Filter{
+				{Key: types.FilterNameStringTypeName, Values: secretIDs},
+				{Key: types.FilterNameStringTypeTagKey, Values: []string{"_ftl"}},
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("unable to get batch of secret values from ASM: %w", err)
@@ -149,6 +155,9 @@ func (l *asmLeader) store(ctx context.Context, ref Ref, value []byte) (*url.URL,
 	_, err := l.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(ref.String()),
 		SecretString: aws.String(string(value)),
+		Tags: []types.Tag{
+			{Key: aws.String("_ftl"), Value: aws.String(ref.Module.Default("_"))},
+		},
 	})
 
 	// https://github.com/aws/aws-sdk-go-v2/issues/1110#issuecomment-1054643716
