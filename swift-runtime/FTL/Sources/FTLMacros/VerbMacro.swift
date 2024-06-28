@@ -17,8 +17,9 @@ public struct VerbMacro: PeerMacro {
       }
       
       // check parameters
-      guard funcDecl.signature.parameterClause.parameters.count <= 1 else {
-         throw MacroError(message: "too many parameters")
+      let parameterCount = funcDecl.signature.parameterClause.parameters.count
+      guard parameterCount == 1 || parameterCount == 2 else {
+         throw MacroError(message: "there must be one or two parameters")
       }
       for parameter in funcDecl.signature.parameterClause.parameters {
          

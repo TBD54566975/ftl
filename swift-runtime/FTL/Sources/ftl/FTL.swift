@@ -1,15 +1,50 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
-
-/// Declares an FTL verb
-@attached(peer, names: overloaded)
-public macro FTLVerb() = #externalMacro(module: "FTLMacros", type: "VerbMacro")
-
-/// Declares an FTL data type
-@attached(extension, conformances: FTLType, names: arbitrary)
-public macro FTLData() = #externalMacro(module: "FTLMacros", type: "DataMacro")
-
 public protocol FTLType {
    static func ftlDecode(_ json:Any?) throws -> Self
    func ftlEncode() -> Any?
+}
+
+// Types of calls
+public typealias Verb<Req:FTLType, Resp:FTLType> = (Context, Req) async throws -> (Resp)
+public typealias Source<Resp:FTLType> = (Context) async throws -> (Resp)
+public typealias Sink<Req:FTLType> = (Context, Req) async throws -> ()
+public typealias Empty = (Context) async throws -> ()
+
+public class Context {
+   let client:FTLClient
+   
+   public init(client:FTLClient) {
+      self.client = client
+   }
+   
+   public func call<Req:FTLType, Resp:FTLType>(module:String,
+                                               name:String,
+                                               verb:Verb<Req, Resp>,
+                                               request:Req) throws -> Resp {
+      //      return try self.client.call(verb, request: request)
+      fatalError()
+   }
+   
+   public func call<Resp:FTLType>(module:String, name:String, source:Source<Resp>) async throws -> Resp {
+      return try self.call<Unit, Resp>(module:module, name:name, verb:{ ftl, _ in
+         return await try source(ftl)
+      }, request: Unit())
+   }
+   
+   public func call<Req:FTLType>(module:String, name:String, sink:Sink<Req>, request:Req) async throws {
+      let _ = try self.call(module:module, name:name, verb:{ ftl, req in
+         await try sink(ftl, req)
+         return Unit()
+      }, request: request)
+   }
+   
+   public func call(module:String, name:String, empty:Empty) async throws {
+      let _ = try self.call(module:module, name:name, verb:{ ftl, _ in
+         await try empty(ftl)
+         return Unit()
+      }, request: Unit())
+   }
+}
+
+public protocol FTLClient {
+   func call<Req:FTLType, Resp:FTLType>(module:String, verb:String, request:Req) async throws -> Resp
 }

@@ -1,9 +1,11 @@
 import Foundation
+
 import ArgumentParser
 import GRPC
 import NIOCore
 import NIOPosix
 import Stime
+import FTL
 
 struct MainError: Error {
    let message: String
@@ -11,25 +13,26 @@ struct MainError: Error {
 
 @main
 struct Main: ParsableCommand {
-   //    @Option(help: "socket to bind to")
-   //    var bind: String
-   
    mutating func run() throws {
       let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
       defer {
          try! group.syncShutdownGracefully()
       }
       
-      let provider = VerbServiceProvider(handlers: [
-         try handlerFor(name: "time", Stime.time)
-      ])
-      
       guard let bindURLString = ProcessInfo().environment["FTL_BIND"],
             let bindURL = URL(string:bindURLString),
             let host = bindURL.host,
             let port = bindURL.port else {
-         throw MainError(message: "could not parse host and port to bind to: \(ProcessInfo().environment["FTL_BIND"])")
+         throw MainError(message: "could not parse host and port to bind to: \(ProcessInfo().environment["FTL_BIND"] ?? "No envar value for FTL_BIND")")
       }
+      
+      let client = try Client(group: group, host:host, port:port)
+      let context = FTL.Context(client:client)
+      let provider = VerbServiceProvider(context, handlers: [
+         handlerFor(name: "time", Stime.time)
+      ])
+      
+      // TODO: reconsider plaintext transport
       let server = Server.insecure(group: group).withServiceProviders([provider]).bind(host: host, port: port)
       server.map {
          $0.channel.localAddress
@@ -42,8 +45,3 @@ struct Main: ParsableCommand {
       }.wait()
    }
 }
-
-func fakeVerb(_ req:String) throws -> (Int) {
-   return 0
-}
-

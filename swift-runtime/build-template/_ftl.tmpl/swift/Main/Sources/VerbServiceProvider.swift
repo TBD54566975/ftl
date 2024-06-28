@@ -10,35 +10,30 @@ struct VerbServiceProviderError: Error {
    let message: String
 }
 
-typealias Verb<Req:FTLType, Resp:FTLType> = (Req) throws -> (Resp)
-typealias Source<Resp:FTLType> = () throws -> (Resp)
-typealias Sink<Req:FTLType> = (Req) throws -> ()
-typealias Empty = () throws -> ()
-
 protocol Handler {
    associatedtype Req: FTLType
    associatedtype Resp: FTLType
    
    var name: String { get }
-   func execute(_ req:Req) throws -> (Resp)
+   func execute(_ context:FTL.Context, request:Req) async throws -> (Resp)
    
    var requestType: any FTLType.Type { get }
    var responseType: any FTLType.Type { get }
 }
 
-func handlerFor<Req, Resp>(name:String, _ function: @escaping Verb<Req, Resp>) throws -> any Handler {
+func handlerFor<Req, Resp>(name:String, _ function: @escaping Verb<Req, Resp>) -> any Handler {
    return VerbHandler<Req, Resp>(name: name, handler: function)
 }
 
-func handlerFor<Resp>(name:String, _ function: @escaping Source<Resp>) throws -> any Handler {
+func handlerFor<Resp>(name:String, _ function: @escaping Source<Resp>) -> any Handler {
    return SourceHandler<Resp>(name: name, handler: function)
 }
 
-func handlerFor<Req>(name:String, _ function: @escaping Sink<Req>) throws -> any Handler {
+func handlerFor<Req>(name:String, _ function: @escaping Sink<Req>) -> any Handler {
    return SinkHandler<Req>(name: name, handler: function)
 }
 
-func handlerFor(name:String, _ function: @escaping Empty) throws -> any Handler {
+func handlerFor(name:String, _ function: @escaping Empty) -> any Handler {
    return EmptyHandler(name: name, handler: function)
 }
 
@@ -49,8 +44,8 @@ struct VerbHandler<_Req:FTLType, _Resp:FTLType>: Handler {
    let name: String
    let handler: Verb<Req, Resp>
    
-   func execute(_ req:Req) throws -> (Resp) {
-      return try self.handler(req)
+   func execute(_ context:FTL.Context, request:Req) async throws -> (Resp) {
+      return try await self.handler(context, request)
    }
    
    var requestType: any FTLType.Type {
@@ -69,8 +64,8 @@ struct SourceHandler<_Resp:FTLType>: Handler {
    let name: String
    let handler: Source<Resp>
    
-   func execute(_ req:Req) throws -> (Resp) {
-      return try self.handler()
+   func execute(_ context:FTL.Context, request:Req) async throws -> (Resp) {
+      return try await self.handler(context)
    }
    
    var requestType: any FTLType.Type {
@@ -89,8 +84,8 @@ struct SinkHandler<_Req:FTLType>: Handler {
    let name: String
    let handler: Sink<Req>
    
-   func execute(_ req:Req) throws -> (Resp) {
-      try self.handler(req)
+   func execute(_ context:FTL.Context, request:Req) async throws -> (Resp) {
+      try await self.handler(context, request)
       return Unit()
    }
    
@@ -110,8 +105,8 @@ struct EmptyHandler: Handler {
    let name: String
    let handler: Empty
    
-   func execute(_ req:Req) throws -> (Resp) {
-      try self.handler()
+   func execute(_ context:FTL.Context, request:Req) async throws -> (Resp) {
+      try await self.handler(context)
       return Unit()
    }
    
@@ -125,14 +120,16 @@ struct EmptyHandler: Handler {
 }
 
 final class VerbServiceProvider: Xyz_Block_Ftl_V1_VerbServiceAsyncProvider {
+   private let context: FTL.Context
    private let handlers: [String:any Handler]
    
-   init(handlers: [any Handler]) {
+   init(_ context:FTL.Context, handlers: [any Handler]) {
       var mapping = [String: any Handler]()
       for handler in handlers {
          mapping[handler.name] = handler
       }
       self.handlers = mapping
+      self.context = context
    }
    
    /// Ping service for readiness.
@@ -187,17 +184,17 @@ final class VerbServiceProvider: Xyz_Block_Ftl_V1_VerbServiceAsyncProvider {
       guard let handler = self.handlers[request.verb.name] else {
          throw VerbServiceProviderError(message: "no handler found for \(request.verb.name)")
       }
-      let responseData = try executeCall(handler, requestData: request.body)
+      let responseData = try await executeCall(handler, requestData: request.body)
       var response = Xyz_Block_Ftl_V1_CallResponse()
       response.body = responseData
       return response
    }
    
-   func executeCall<H: Handler>(_ handler:H, requestData:Data) throws -> Data {
+   func executeCall<H: Handler>(_ handler:H, requestData:Data) async throws -> Data {
       let root = try JSONSerialization.jsonObject(with: requestData, options: [])
       do {
          let request = try handler.requestType.ftlDecode(root)
-         let response = try handler.execute(request as! H.Req)
+         let response = try await handler.execute(self.context, request:request as! H.Req)
          guard let responseRoot = response.ftlEncode() else {
             throw VerbServiceProviderError(message: "expected non-nil response body")
          }

@@ -8,5 +8,11 @@ struct MacroPlugin: CompilerPlugin {
    let providingMacros: [Macro.Type] = [
       VerbMacro.self,
       DataMacro.self,
+      CallVerbMacro.self,
+      CallSourceMacro.self,
+      CallSinkMacro.self,
+      CallEmptyMacro.self,
    ]
 }
+
+
