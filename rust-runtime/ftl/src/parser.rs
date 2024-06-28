@@ -116,6 +116,13 @@ fn ident_from_path(path: &syn::Path) -> Ident {
     path.get_ident().unwrap().clone()
 }
 
+fn generics_from_path(path: &syn::Path) -> Vec<Ident> {
+    path.segments
+        .iter()
+        .map(|segment| segment.ident.clone())
+        .collect()
+}
+
 pub fn ident_from_type(ty: &syn::Type) -> Ident {
     match ty {
         syn::Type::Path(path) => ident_from_path(&path.path),
@@ -322,7 +329,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_types() {
+    fn test_basic_types() {
         let mut parser = Parser::new();
         parser.add_module(
             &ModuleIdent::new("test"),
@@ -345,6 +352,51 @@ mod tests {
             #[ftl::verb]
             pub fn test_verb(ctx: Context, request: Request) -> Response {
                 println!("Hello, world!");
+            }
+        "#,
+        );
+        let parsed = parser.parse();
+
+        assert_eq!(parsed.modules_count(), 1);
+        assert_eq!(parsed.verb_count(), 1);
+        assert_eq!(parsed.types.len(), 3);
+
+        let user = parsed.generate_module_proto(&ModuleIdent::new("test"));
+        dbg!(user);
+    }
+
+    #[test]
+    fn generic_types() {
+        let mut parser = Parser::new();
+        parser.add_module(
+            &ModuleIdent::new("test"),
+            r#"
+            pub struct User<T, Y> {
+                pub name: String,
+                pub age: T,
+                pub score: Y,
+            }
+
+            pub struct Request<T, Y> {
+                pub name: String,
+                pub user: User<T, Y>,
+            }
+
+            pub struct Response<Y> {
+                pub message: String,
+                pub user: User<u32, Y>,
+            }
+
+            #[ftl::verb]
+            pub fn test_verb<T, Y>(ctx: Context, request: Request<T, Y>) -> Response<Y> {
+                let response = Response {
+                    message: "Hello, world!".to_string(),
+                    user: User {
+                        name: "Alice".to_string(),
+                        age: 42,
+                        score: 100f32,
+                    },
+                };
             }
         "#,
         );

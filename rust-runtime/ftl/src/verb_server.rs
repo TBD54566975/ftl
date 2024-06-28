@@ -108,6 +108,10 @@ impl VerbService for FtlService {
         let name = verb_ref.name.to_snake_case();
         let request_body: Vec<u8> = request.body;
         let request_body = String::from_utf8(request_body).unwrap();
+        println!(
+            "module: {}, name: {}, request_body: {}",
+            module, name, request_body
+        );
 
         let context = self.context.clone();
         let response = (self.config.call_immediate)(context, module, name, request_body).await;

@@ -5,3 +5,9 @@ use proc_macro::TokenStream;
 pub fn verb(_: TokenStream, token_stream: TokenStream) -> TokenStream {
     token_stream
 }
+
+/// ftl::ingress
+#[proc_macro_attribute]
+pub fn ingress(_: TokenStream, token_stream: TokenStream) -> TokenStream {
+    token_stream
+}
