@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 

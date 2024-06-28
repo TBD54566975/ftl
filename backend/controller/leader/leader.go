@@ -21,10 +21,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/leases"
-	"github.com/TBD54566975/ftl/db/dalerrs"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/backend/controller/leases"
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // LeaderFactory is a function that is called whenever a new leader is acquired.

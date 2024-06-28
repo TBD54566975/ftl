@@ -9,8 +9,8 @@ import (
 	"github.com/alecthomas/types/either"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

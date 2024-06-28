@@ -11,8 +11,8 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/db/dalerrs"
 )
 
 // StartFSMTransition sends an event to an executing instance of an FSM.
