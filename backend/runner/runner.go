@@ -198,7 +198,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 	response, err := deployment.plugin.Client.Call(ctx, req)
 	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeOf(err), err)
 	}
 	return connect.NewResponse(response.Msg), nil
 }
