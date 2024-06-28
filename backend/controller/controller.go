@@ -2,9 +2,11 @@ package controller
 
 import (
 	"context"
+	sha "crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"math/rand"
 	"net/http"
@@ -682,6 +684,8 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	lastChecksum := int64(-1)
 
 	for {
+		h := sha.New()
+
 		configs, err := cm.MapForModule(ctx, name)
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
@@ -695,9 +699,17 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
 		}
 
-		checksum := configurationMapChecksum(configs)
-		checksum = (checksum * 115163) + configurationMapChecksum(secrets)
-		checksum = (checksum * 454213) + configurationDatabaseChecksum(databases)
+		if err := hashConfigurationMap(h, configs); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on configs: %w", err))
+		}
+		if err := hashConfigurationMap(h, secrets); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on secrets: %w", err))
+		}
+		if err := hashDatabaseConfiguration(h, databases); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on databases: %w", err))
+		}
+
+		checksum := int64(binary.BigEndian.Uint64((h.Sum(nil))[0:8]))
 
 		if checksum != lastChecksum {
 			response := modulecontext.NewBuilder(name).AddConfigs(configs).AddSecrets(secrets).AddDatabases(databases).Build().ToProto()
@@ -717,29 +729,38 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	}
 }
 
-// configurationMapChecksum computes a checksum on the map that is order invariant.
-//
-// This operation is used to detect configuration change.
-func configurationMapChecksum(m map[string][]byte) int64 {
-	sum := int64(0)
-	for k, v := range m {
-		data := sha256.Sum(append([]byte(k), v...))
-		sum += int64(binary.BigEndian.Uint64(data[0:8]))
+// hashConfigurationMap computes an order invariant checksum on the configuration
+// settings supplied in the map.
+func hashConfigurationMap(h hash.Hash, m map[string][]byte) error {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
-	return sum
+	sort.Strings(keys)
+	for _, k := range keys {
+		_, err := h.Write(append([]byte(k), m[k]...))
+		if err != nil {
+			return fmt.Errorf("error hashing configuration: %w", err)
+		}
+	}
+	return nil
 }
 
-// configurationMapChecksum computes a checksum on the database map that is order invariant.
-//
-// This operation is used to detect configuration change.
-func configurationDatabaseChecksum(m map[string]modulecontext.Database) int64 {
-	sum := int64(0)
-	for k, v := range m {
-		// currently, only the DSN is treated as mutable configuration
-		data := sha256.Sum(append([]byte(k), []byte(v.DSN)...))
-		sum += int64(binary.BigEndian.Uint64(data[0:8]))
+// hashDatabaseConfiguration computes an order invariant checksum on the database
+// configuration settings supplied in the map.
+func hashDatabaseConfiguration(h hash.Hash, m map[string]modulecontext.Database) error {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
-	return sum
+	sort.Strings(keys)
+	for _, k := range keys {
+		_, err := h.Write(append([]byte(k), []byte(m[k].DSN)...))
+		if err != nil {
+			return fmt.Errorf("error hashing database configuration: %w", err)
+		}
+	}
+	return nil
 }
 
 // AcquireLease acquires a lease on behalf of a module.
