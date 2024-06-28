@@ -137,7 +137,7 @@ const FishBlock = ({ req, color, col, callVerb }: {
   const [showEditor, setShowEditor] = useState(false)
   const addLilFish = async () => {
     const key = `${Date.now()}`
-    setLilFish([...lilFish, <LilFish key={key} color={color} col={col} />])
+    //setLilFish([...lilFish, <LilFish key={key} color={color} col={col} />])
     await timeoutPromise(700)
     callVerb(req.req)
   }
@@ -210,6 +210,67 @@ const CatBlock = ({ poos }: { poos: React.ReactElement[] }) => {
   );
 }
 
+const Chart = ({ errs, goodResponses }: { errs: ErrLog[], goodResponses: number[] }) => {
+    if (goodResponses.length == 0) {
+        return []
+    }
+    const numBuckets = 20
+    const range = goodResponses[goodResponses.length - 1] - goodResponses[0]
+    const bucketSize = range / (numBuckets - 1)
+    const buckets = new Array(numBuckets).fill(0)
+    let bucketIdx = 0
+    goodResponses.forEach((r) => {
+        const threshold = goodResponses[0] + bucketSize * bucketIdx
+        if (r > threshold) {
+            while (r > goodResponses[0] + bucketSize * bucketIdx) {
+                bucketIdx ++
+            }
+        }
+        buckets[bucketIdx] ++
+    })
+    const errBuckets = new Array(numBuckets).fill(0)
+    bucketIdx = 0
+    errs.forEach((err) => {
+        const threshold = goodResponses[0] + bucketSize * bucketIdx
+        if (err.timestamp > threshold) {
+            while (err.timestamp > goodResponses[0] + bucketSize * bucketIdx && bucketIdx < numBuckets - 1) {
+                bucketIdx ++
+            }
+        }
+        errBuckets[bucketIdx] ++
+    })
+
+    const colSpread = 12
+    const chartHeight = 100
+    const chartWidth = 400
+    const totals = buckets.map((b, i) => b + errBuckets[i])
+    const heightCoeff = chartHeight / Math.max(...totals)
+    const svgShapes = [...buckets.map((b, i) => (
+        <rect key={`good${i}`}
+          x={i*colSpread}
+          y={chartHeight - (heightCoeff * b)}
+          width={colSpread - 2}
+          height={heightCoeff * b}
+        />
+    )), ...errBuckets.map((b, i) => (
+        <rect key={`err${i}`}
+          x={i*colSpread}
+          y={chartHeight - (heightCoeff * (b + buckets[i]))}
+          width={colSpread - 2}
+          height={heightCoeff * b}
+          fill='red'
+        />
+    ))]
+
+    return (
+        <div style={{fontFamily: 'Roboto Mono'}}>
+          <svg width={chartWidth} height={chartHeight} xmlns="http://www.w3.org/2000/svg" version="1.1">
+            {svgShapes}
+          </svg>
+        </div>
+    )
+}
+
 const ErrTable = ({ errs }: { errs: ErrLog[] }) => {
     const errRows = errs.reverse().map((err, i) => (
         <tr key={i} className='flex text-xs'>
@@ -228,7 +289,11 @@ const ErrTable = ({ errs }: { errs: ErrLog[] }) => {
     )
 }
 
-const DetailsPanel = ({ verbRef, errs }: { verbRef: string, errs: ErrLog[] }) => {
+const DetailsPanel = ({ verbRef, errs, goodResponses }: {
+    verbRef: string,
+    errs: ErrLog[],
+    goodResponses: number[]
+}) => {
   const navigate = useNavigate()
   const savedReqs: SavedReq[] = window.savedReqs ? (
     window.savedReqs[verbRef] ?
@@ -290,6 +355,7 @@ const DetailsPanel = ({ verbRef, errs }: { verbRef: string, errs: ErrLog[] }) =>
               {' '}for details)
             </span>
           </div>
+          <Chart errs={errs} goodResponses={goodResponses} />
           <ErrTable errs={errs} />
         </div>
       </div>
@@ -320,9 +386,10 @@ const Row = ({ verbRef, callVerb }: {
 
   const [poos, setPoos] = useState([] as React.ReactElement[])
   const [errs, setErrs] = useState([] as ErrLog[])
+  const [goodResponses, setGoodResponses] = useState([] as number[])
   const addPoo = (color: string) => {
     const key = `${Date.now()}`
-    setPoos([...poos, <Poo key={key} color={color} />])
+    //setPoos([...poos, <Poo key={key} color={color} />])
   }
   const addGoodPoo = () => addPoo(greens[Math.floor(Math.random() * greens.length)])
   const addBadPoo = () => addPoo('red')
@@ -331,6 +398,7 @@ const Row = ({ verbRef, callVerb }: {
     const maybeErr = await callVerb(verbRefPb, req)
     if (maybeErr === null) {
         addGoodPoo()
+        setGoodResponses([...goodResponses, Date.now()])
     } else {
         addBadPoo()
         setErrs([...errs, {
@@ -370,7 +438,7 @@ const Row = ({ verbRef, callVerb }: {
       </div>,
       ...fishes,
       <CatBlock poos={poos} />,
-      <DetailsPanel verbRef={verbRef} errs={errs} />
+      <DetailsPanel verbRef={verbRef} errs={errs} goodResponses={goodResponses} />
   ]
 }
 
@@ -378,14 +446,18 @@ export const LoadTestPage = () => {
   const savedReqs = window.savedReqs ? window.savedReqs : {}
 
   const client = useClient(VerbService)
-  const callVerb = async (verbRef: Ref, req: Uint8Array) => {
-    const response = await client.call({ verb: verbRef, body: req })
-    if (response.response.case === 'body') {
+    const callVerb = async (verbRef: Ref, req: Uint8Array) => {
+      try {
+        const response = await client.call({ verb: verbRef, body: req })
+        if (response.response.case === 'body') {
+          return null
+        } else if (response.response.case === 'error') {
+          return response.response.value.message
+        }
+      } catch (error) {
+        return String(error)
+      }
       return null
-    } else if (response.response.case === 'error') {
-      return response.response.value.message
-    }
-    return null
   }
 
   const rows = Object.keys(savedReqs).toSorted().map((ref: string) => (
