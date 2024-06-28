@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/alecthomas/types/optional"
+
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 )
 
 // DBConfigProvider is a configuration provider that stores configuration in its key.

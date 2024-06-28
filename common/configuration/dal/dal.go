@@ -7,8 +7,8 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/common/configuration/sql"
-	"github.com/TBD54566975/ftl/db/dalerrs"
 )
 
 type DAL struct {

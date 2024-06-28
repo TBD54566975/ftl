@@ -12,7 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
-	"github.com/TBD54566975/ftl/db/dalerrs"
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

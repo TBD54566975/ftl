@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
