@@ -21,20 +21,20 @@ export const nodeNewCommand = async (item: FtlTreeItem) => {
     return
   }
 
-  const nodeType = await vscode.window.showQuickPick(['verb', 'ingress:http', 'enum', 'pubsub', 'pubsub:subscription', 'fsm', 'database', 'config:string', 'config:struct', 'secret', 'cron'], {
+  const nodeType = await vscode.window.showQuickPick(['verb', 'ingress:http', 'enum', 'pubsub', 'fsm', 'database', 'config:value', 'config:struct', 'secret', 'cron'], {
     title: 'Which type of node would you like to add',
     placeHolder: 'Choose a node type',
     canPickMany: false,
     ignoreFocusOut: true
   })
 
-  if (nodeType === undefined) {
+  if (!nodeType) {
     return
   }
 
   const snippet = await snippetForNodeType(nodeType, item)
 
-  if (snippet === '') {
+  if (!snippet) {
     vscode.window.showErrorMessage(`No snippet available for node type ${nodeType}`)
     return
   }
@@ -62,43 +62,53 @@ const snippetForNodeType = async (nodeType: string, item: FtlTreeItem): Promise<
       return ingressSnippet(item)
 
     case 'enum':
-      return enumSnippet
+      return enumSnippet()
 
     case 'pubsub':
-      return publisherSnippet + '\n\n' + subscriberSnippet
-
-    case 'pubsub:subscription':
-      return subscriberSnippet
+      return publisherSnippet()
 
     case 'fsm':
-      return fsmSnippet
+      return fsmSnippet()
 
     case 'database':
       return databaseSnippet()
 
-    case 'config:string':
-      return `var sampleConfig = ftl.Config[string]("sample_config")`
+    case 'config:value':
+      return configValueSnippet()
 
     case 'config:struct':
-      return configStructSnippet
+      return configStructSnippet()
 
     case 'secret':
-      return `var sampleSecret = ftl.Secret[string]("sample_secret")`
+      return secretSnippet()
 
     case 'cron':
-      return cronSnippet
+      return cronSnippet()
   }
 
   return ''
 }
 
-const verbSnippet = async () => {
+const getTemplateArgument = async (prompt: string, placeHolder: string): Promise<string> => {
   const inputBoxOptions: vscode.InputBoxOptions = {
-    prompt: 'What would you like to name the verb?',
-    placeHolder: 'MyVerb',
+    prompt: prompt,
+    placeHolder: placeHolder,
   }
-  const name = await vscode.window.showInputBox(inputBoxOptions)
-  if (name === undefined) {
+
+  return await vscode.window.showInputBox(inputBoxOptions) || ''
+}
+
+const snakeToCamel = (snake: string): string => {
+  return snake.replace(/(_\w)/g, (m) => m[1].toUpperCase())
+}
+
+const snakeToPascal = (snake: string): string => {
+  return snake.charAt(0).toUpperCase() + snakeToCamel(snake).slice(1)
+}
+
+const verbSnippet = async () => {
+  const name = await getTemplateArgument('What would you like to name the verb?', 'MyVerb')
+  if (!name) {
     return undefined
   }
 
@@ -115,12 +125,8 @@ func ${name}(ctx context.Context, req ${name}Request) (${name}Response, error) {
 }
 
 const ingressSnippet = async (item: FtlTreeItem) => {
-  const inputBoxOptions: vscode.InputBoxOptions = {
-    prompt: 'What would you like to name the ingress?',
-    placeHolder: 'MyEndpoint',
-  }
-  const name = await vscode.window.showInputBox(inputBoxOptions)
-  if (name === undefined) {
+  const name = await getTemplateArgument('What would you like to name the ingress?', 'MyEndpoint')
+  if (!name) {
     return undefined
   }
 
@@ -131,7 +137,7 @@ const ingressSnippet = async (item: FtlTreeItem) => {
     ignoreFocusOut: true
   })
 
-  if (method === undefined) {
+  if (!method) {
     return undefined
   }
 
@@ -147,89 +153,165 @@ func ${name}(ctx context.Context, req builtin.HttpRequest[${name}Request]) (buil
 `
 }
 
-const enumSnippet = `//ftl:enum
-type SampleEnum string
-const (
-	FirstValue SampleEnum = "first"
-	SecondValue SampleEnum = "second"
-)`
-
-const publisherSnippet = `//ftl:export
-var sampleTopic = ftl.Topic[SamplePubSubEvent]("sample_topic")
-
-type SamplePubSubEvent struct {
-	Message string
-}`
-
-const subscriberSnippet = `var _ = ftl.Subscription(sampleTopic, "sample_subscription")
-
-//ftl:verb
-//ftl:subscribe sample_subscription
-func SampleSubscriber(ctx context.Context, event SamplePubSubEvent) error {
-	return nil
-}`
-
-const databaseSnippet = async () => {
-  const inputBoxOptions: vscode.InputBoxOptions = {
-    prompt: 'What would you like to name the database?',
-    placeHolder: 'my_db',
-  }
-  const name = await vscode.window.showInputBox(inputBoxOptions)
-  if (name === undefined) {
+const enumSnippet = async () => {
+  const name = await getTemplateArgument('What would you like to name the enum?', 'MyEnum')
+  if (!name) {
     return undefined
   }
 
-  return `var ${name.toLowerCase()}Database = ftl.PostgresDatabase("${name.toLowerCase()}")`
+  return `//ftl:enum
+type ${name} string
+const (
+	FirstValue ${name} = "first"
+	SecondValue ${name} = "second"
+)`
 }
 
-const fsmSnippet = `type SampleFSMMessage struct {
-	Instance string
+const publisherSnippet = async () => {
+  const topic = await getTemplateArgument('What would you like to name the topic?', 'my_topic')
+  const event = await getTemplateArgument('What would you like to name the event for this topic?', 'MyEvent')
+  if (!topic || !event) {
+    return undefined
+  }
+
+  const subscription = await getTemplateArgument('What would you like to name the subscription?', `${topic}_subscription`)
+  if (!subscription) {
+    return undefined
+  }
+  const subscriber = await getTemplateArgument('What would you like to name the subscriber?', `${snakeToPascal(topic)}Subscriber`)
+  if (!subscriber) {
+    return undefined
+  }
+
+  return `//ftl:export
+var ${snakeToCamel(topic)} = ftl.Topic[${event}]("${topic}")
+
+type ${event} struct {
 	Message string
 }
+  
+var _ = ftl.Subscription(${snakeToCamel(topic)}, "${subscription}")
 
-var sampleFsm = ftl.FSM("sample_fsm",
-	ftl.Start(SampleFSMState0),
-	ftl.Transition(SampleFSMState0, SampleFSMState1),
-	ftl.Transition(SampleFSMState1, SampleFSMState2),
+//ftl:verb
+//ftl:subscribe ${subscription}
+func ${subscriber}(ctx context.Context, event ${event}) error {
+	return nil
+}`
+}
+
+const databaseSnippet = async () => {
+  const name = await getTemplateArgument('What would you like to name the database?', 'my_db')
+  if (!name) {
+    return undefined
+  }
+
+  return `var ${snakeToCamel(name)}Database = ftl.PostgresDatabase("${name.toLowerCase()}")`
+}
+
+const fsmSnippet = async () => {
+  const name = await getTemplateArgument('What would you like to name the fsm?', 'my_fsm')
+  if (!name) {
+    return undefined
+  }
+  const message = await getTemplateArgument('What would you like to name the message type for this fsm?', `${snakeToPascal(name)}Message`)
+  if (!message) {
+    return undefined
+  }
+  const dispatcher = await getTemplateArgument('What would you like to name the message sender for this fsm?', `Send${snakeToPascal(name)}Message`)
+
+  return `type ${message} struct {
+	Instance string
+}
+
+var ${snakeToCamel(name)} = ftl.FSM("${name}",
+	ftl.Start(${snakeToPascal(name)}State0),
+	ftl.Transition(${snakeToPascal(name)}State0, ${snakeToPascal(name)}State1),
+	ftl.Transition( ${snakeToPascal(name)}State1,  ${snakeToPascal(name)}State2),
 )
 
 //ftl:verb
-func SampleFSMState0(ctx context.Context, in SampleFSMMessage) error {
-	logger := ftl.LoggerFromContext(ctx)
-	logger.Infof("message %q entering state 0", in.Message)
+func ${snakeToPascal(name)}State0(ctx context.Context, msg ${message}) error {
+	ftl.LoggerFromContext(ctx).Infof("%q entered state 0", msg.Instance)
 	return nil
 }
 
 //ftl:verb
-func SampleFSMState1(ctx context.Context, in SampleFSMMessage) error {
-	logger := ftl.LoggerFromContext(ctx)
-	logger.Infof("message %q entering state 1", in.Message)
+func ${snakeToPascal(name)}State1(ctx context.Context, msg ${message}) error {
+	ftl.LoggerFromContext(ctx).Infof("%q entered state 1", msg.Instance)
 	return nil
 }
 
 //ftl:verb
-func SampleFSMState2(ctx context.Context, in SampleFSMMessage) error {
-	logger := ftl.LoggerFromContext(ctx)
-	logger.Infof("message %q entering state 2", in.Message)
+func ${snakeToPascal(name)}State2(ctx context.Context, msg ${message}) error {
+	ftl.LoggerFromContext(ctx).Infof("%q entered state 2", msg.Instance)
 	return nil
 }
 
 //ftl:verb
-func SendSampleFSMMessage(ctx context.Context, in SampleFSMMessage) error {
-	return sampleFsm.Send(ctx, in.Instance, in)
+func ${dispatcher}(ctx context.Context, msg ${message}) error {
+	return  ${snakeToCamel(name)}.Send(ctx, msg.Instance, msg)
 }
 `
-
-const configStructSnippet = `type SampleConfig struct {
-	Field string
 }
 
-var sampleConfigValue = ftl.Config[SampleConfig]("sample_config")`
+const configValueSnippet = async () => {
+  const name = await getTemplateArgument('What would you like to name the setting for this config?', 'my_config')
+  const type = await vscode.window.showQuickPick(['string', 'bool', 'int'], {
+    title: 'What value type would you like to assign to this config?',
+    placeHolder: 'Choose a value type',
+    canPickMany: false,
+    ignoreFocusOut: true
+  })
 
-const cronSnippet = `// This cron job will run every 5 minutes
-//ftl:cron * /5 * * * * *
-func SampleCron(ctx context.Context) error {
-	logger := ftl.LoggerFromContext(ctx)
-	logger.Infof("sample cron job triggered")
+  if (!name || !type) {
+    return undefined
+  }
+
+  return `var ${snakeToCamel(name)} = ftl.Config[${type}]("${name}")`
+}
+
+const configStructSnippet = async() => {
+  const name = await getTemplateArgument('What would you like to name the setting for this config?', 'my_config')
+  if (!name) {
+    return undefined
+  }
+  const type = await getTemplateArgument('What would you like to name the struct for this config?', `${snakeToPascal(name)}Config`)
+  if (!type) {
+    return undefined
+  }
+
+  return `type ${type} struct {
+	Setting1 string
+}
+
+var ${snakeToCamel(name)} = ftl.Config[${type}]("${name}")`
+}
+
+const secretSnippet = async () => {
+  const name = await getTemplateArgument('What would you like to name the setting for this secret?', 'my_secret')
+  const type = await vscode.window.showQuickPick(['string', 'bool', 'int'], {
+    title: 'What value type would you like to assign to this secret?',
+    placeHolder: 'Choose a value type',
+    canPickMany: false,
+    ignoreFocusOut: true
+  })
+
+  if (!name || !type) {
+    return undefined
+  }
+
+  return `var ${snakeToCamel(name)} = ftl.Secret[${type}]("${name}")`
+}
+
+const cronSnippet = async() => {
+  const name = await getTemplateArgument('What would you like to name the cron task?', 'MyCronTask')
+  const schedule = await getTemplateArgument('What schedule would you like to set for this cron task?', '*/5 * * * *')
+  if (!name || !schedule) {
+    return undefined
+  }
+  return `//ftl:cron ${schedule}
+func ${name}(ctx context.Context) error {
+	ftl.LoggerFromContext(ctx).Infof("sample cron job triggered")
 	return nil
 }`
+}
