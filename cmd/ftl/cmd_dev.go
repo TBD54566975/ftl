@@ -8,6 +8,8 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
@@ -53,6 +55,8 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		return nil
 	}
 
+	// cmdServe will notify this channel when startup commands are complete and the controller is ready
+	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
 			err := d.ServeCmd.Run(ctx, projConfig)
@@ -65,14 +69,11 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return errors.New(ftlRunningErrorMsg)
 		}
 
-		g.Go(func() error { return d.ServeCmd.Run(ctx, projConfig) })
+		g.Go(func() error { return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady)) })
 	}
 
 	g.Go(func() error {
-		err := waitForControllerOnline(ctx, d.ServeCmd.StartupTimeout, client)
-		if err != nil {
-			return err
-		}
+		<-controllerReady
 
 		opts := []buildengine.Option{buildengine.Parallelism(d.Parallelism)}
 		if d.Lsp {
