@@ -73,7 +73,11 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	}
 
 	g.Go(func() error {
-		<-controllerReady
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-controllerReady:
+		}
 
 		opts := []buildengine.Option{buildengine.Parallelism(d.Parallelism)}
 		if d.Lsp {
