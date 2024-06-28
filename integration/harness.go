@@ -26,14 +26,14 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
-var integrationTestTimeout = func() time.Duration {
+func integrationTestTimeout() time.Duration {
 	timeout := optional.Zero(os.Getenv("FTL_INTEGRATION_TEST_TIMEOUT")).Default("5s")
 	d, err := time.ParseDuration(timeout)
 	if err != nil {
 		panic(err)
 	}
 	return d
-}()
+}
 
 func Infof(format string, args ...any) {
 	fmt.Printf("\033[32m\033[1mINFO: "+format+"\033[0m\n", args...)
@@ -106,7 +106,7 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 
 	ic := TestContext{
 		Context:  ctx,
-		rootDir:  rootDir,
+		RootDir:  rootDir,
 		testData: filepath.Join(cwd, "testdata", "go"),
 		workDir:  tmpDir,
 		binDir:   binDir,
@@ -135,7 +135,7 @@ type TestContext struct {
 	// Temporary directory the test is executing in.
 	workDir string
 	// Root of FTL repo.
-	rootDir string
+	RootDir string
 	// Path to testdata directory for the current language.
 	testData string
 	// Path to the "bin" directory.
@@ -150,7 +150,7 @@ func (i TestContext) WorkingDir() string { return i.workDir }
 
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
-	waitCtx, done := context.WithTimeout(i, integrationTestTimeout)
+	waitCtx, done := context.WithTimeout(i, integrationTestTimeout())
 	defer done()
 	for {
 		err := i.runAssertionOnce(t, assertion)

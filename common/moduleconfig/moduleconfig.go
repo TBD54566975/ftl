@@ -1,6 +1,7 @@
 package moduleconfig
 
 import (
+	"errors"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -169,6 +170,9 @@ func replacementWatches(moduleDir, deployDir string) ([]string, error) {
 	goModPath := filepath.Join(moduleDir, "go.mod")
 	goModBytes, err := os.ReadFile(goModPath)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("failed to read %s: %w", goModPath, err)
 	}
 	goModFile, err := modfile.Parse(goModPath, goModBytes, nil)

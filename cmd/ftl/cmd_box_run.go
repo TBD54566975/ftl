@@ -15,8 +15,10 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -75,6 +77,22 @@ func (b *boxRunCmd) Run(ctx context.Context) error {
 	engine, err := buildengine.New(ctx, client, []string{b.Dir})
 	if err != nil {
 		return fmt.Errorf("failed to create build engine: %w", err)
+	}
+
+	logger := log.FromContext(ctx)
+
+	// Manually import the schema for each module to get the dependency graph.
+	err = engine.Each(func(m buildengine.Module) error {
+		logger.Debugf("Loading schema for module %q", m.Config.Module)
+		mod, err := schema.ModuleFromProtoFile(m.Config.Abs().Schema)
+		if err != nil {
+			return fmt.Errorf("failed to read schema for module %q: %w", m.Config.Module, err)
+		}
+		engine.Import(ctx, mod)
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to load schemas: %w", err)
 	}
 
 	if err := engine.Deploy(ctx, 1, true); err != nil {
