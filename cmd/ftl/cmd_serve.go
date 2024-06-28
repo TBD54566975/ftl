@@ -15,6 +15,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sync/errgroup"
 
@@ -48,6 +49,10 @@ const ftlContainerName = "ftl-db-1"
 const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
 func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
+	return s.run(ctx, projConfig, optional.None[chan bool]())
+}
+
+func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool]) error {
 	logger := log.FromContext(ctx)
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
@@ -135,8 +140,9 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 		})
 	}
 
-	if err := wg.Wait(); err != nil {
-		return fmt.Errorf("serve failed: %w", err)
+	// Wait for controller to start, then run startup commands.
+	if err := waitForControllerOnline(ctx, time.Second*10, client); err != nil {
+		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
 	if len(projConfig.Commands.Startup) > 0 {
@@ -146,6 +152,14 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 				return fmt.Errorf("startup command failed: %w", err)
 			}
 		}
+	}
+
+	if ch, ok := initialised.Get(); ok {
+		ch <- true
+	}
+
+	if err := wg.Wait(); err != nil {
+		return fmt.Errorf("serve failed: %w", err)
 	}
 
 	return nil
