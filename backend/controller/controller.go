@@ -732,10 +732,7 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 // hashConfigurationMap computes an order invariant checksum on the configuration
 // settings supplied in the map.
 func hashConfigurationMap(h hash.Hash, m map[string][]byte) error {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
+	keys := maps.Keys(m)
 	sort.Strings(keys)
 	for _, k := range keys {
 		_, err := h.Write(append([]byte(k), m[k]...))
@@ -749,10 +746,7 @@ func hashConfigurationMap(h hash.Hash, m map[string][]byte) error {
 // hashDatabaseConfiguration computes an order invariant checksum on the database
 // configuration settings supplied in the map.
 func hashDatabaseConfiguration(h hash.Hash, m map[string]modulecontext.Database) error {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
+	keys := maps.Keys(m)
 	sort.Strings(keys)
 	for _, k := range keys {
 		_, err := h.Write(append([]byte(k), []byte(m[k].DSN)...))
