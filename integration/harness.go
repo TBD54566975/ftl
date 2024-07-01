@@ -17,6 +17,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
+	"github.com/otiai10/copy"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -77,7 +78,9 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 		// tmpDir. Otherwise we have a chicken and egg situation where the config
 		// can't be loaded until the module is copied over, and the config itself
 		// is used by FTL during startup.
-		t.Setenv("FTL_CONFIG", filepath.Join(cwd, "testdata", "go", ftlConfigPath))
+		projectPath := filepath.Join(tmpDir, "ftl-project.toml")
+		err = copy.Copy(ftlConfigPath, projectPath)
+		t.Setenv("FTL_CONFIG", projectPath)
 	} else {
 		err = os.WriteFile(filepath.Join(tmpDir, "ftl-project.toml"), []byte{}, 0644)
 		assert.NoError(t, err)
