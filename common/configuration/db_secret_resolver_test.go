@@ -37,7 +37,10 @@ func (d *mockDBSecretResolverDAL) ListModuleSecrets(ctx context.Context) ([]sql.
 }
 
 func (d *mockDBSecretResolverDAL) SetModuleSecretURL(ctx context.Context, module Option[string], name string, url string) error {
-	d.UnsetModuleSecret(ctx, module, name)
+	err := d.UnsetModuleSecret(ctx, module, name)
+	if err != nil {
+		return fmt.Errorf("could not unset secret %w", err)
+	}
 	d.entries = append(d.entries, sql.ModuleSecret{Module: module, Name: name, Url: url})
 	return nil
 }
@@ -55,16 +58,19 @@ func TestDBSecretResolverList(t *testing.T) {
 	resolver := NewDBSecretResolver(&mockDBSecretResolverDAL{})
 
 	rone := Ref{Module: Some("foo"), Name: "one"}
-	resolver.Set(ctx, rone, &url.URL{Scheme: "asm", Host: rone.String()})
+	err := resolver.Set(ctx, rone, &url.URL{Scheme: "asm", Host: rone.String()})
+	assert.NoError(t, err)
 
 	rtwo := Ref{Module: Some("foo"), Name: "two"}
-	resolver.Set(ctx, rtwo, &url.URL{Scheme: "asm", Host: rtwo.String()})
+	err = resolver.Set(ctx, rtwo, &url.URL{Scheme: "asm", Host: rtwo.String()})
+	assert.NoError(t, err)
 
 	entries, err := resolver.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, len(entries), 2)
 
-	resolver.Unset(ctx, rone)
+	err = resolver.Unset(ctx, rone)
+	assert.NoError(t, err)
 
 	entries, err = resolver.List(ctx)
 	assert.NoError(t, err)
