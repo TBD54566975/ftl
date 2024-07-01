@@ -20,8 +20,8 @@ VALUES ($1, $2, $3);
 DELETE FROM module_configuration
 WHERE module = @module AND name = @name;
 
--- name: GetModuleSecret :one
-SELECT value
+-- name: GetModuleSecretURL :one
+SELECT url
 FROM module_secrets
 WHERE
   (module IS NULL OR module = @module)
@@ -34,8 +34,8 @@ SELECT *
 FROM module_secrets
 ORDER BY module, name;
 
--- name: SetModuleSecret :exec
-INSERT INTO module_secrets (module, name, value)
+-- name: SetModuleSecretURL :exec
+INSERT INTO module_secrets (module, name, url)
 VALUES ($1, $2, $3);
 
 -- name: UnsetModuleSecret :exec

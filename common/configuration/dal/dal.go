@@ -46,16 +46,16 @@ func (d *DAL) ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfigur
 	return l, nil
 }
 
-func (d *DAL) GetModuleSecret(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
-	b, err := d.db.GetModuleSecret(ctx, module, name)
+func (d *DAL) GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error) {
+	b, err := d.db.GetModuleSecretURL(ctx, module, name)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return "", dalerrs.TranslatePGError(err)
 	}
 	return b, nil
 }
 
-func (d *DAL) SetModuleSecret(ctx context.Context, module optional.Option[string], name string, value []byte) error {
-	err := d.db.SetModuleSecret(ctx, module, name, value)
+func (d *DAL) SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error {
+	err := d.db.SetModuleSecretURL(ctx, module, name, url)
 	return dalerrs.TranslatePGError(err)
 }
 

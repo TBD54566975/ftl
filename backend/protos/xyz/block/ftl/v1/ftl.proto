@@ -458,9 +458,6 @@ enum SecretProvider {
 
   // Store a secret in the AWS Secrets Manager.
   SECRET_ASM = 4;
-
-  // Use the database as a secret store.
-  SECRET_DB = 5;
 }
 
 message ListSecretsRequest {

@@ -524,7 +524,7 @@ CREATE TABLE module_secrets
     created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     module     TEXT,  -- If NULL, configuration is global.
     name       TEXT   NOT NULL,
-    value      JSONB  NOT NULL,
+    url        TEXT   NOT NULL,
     UNIQUE (module, name)
 );
 

@@ -13,10 +13,12 @@ import (
 	"connectrpc.com/connect"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/common/configuration/sql"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/benbjohnson/clock"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 	. "github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -54,7 +56,8 @@ func TestASMWorkflow(t *testing.T) {
 	asm, leader, _, _ := localstack(ctx, t)
 	ref := Ref{Module: Some("foo"), Name: "bar"}
 	var mySecret = jsonBytes(t, "my secret")
-	manager, err := New(ctx, asm, []Provider[Secrets]{asm})
+	sr := NewDBSecretResolver(&fakeDBSecretResolverDAL{})
+	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
 	var gotSecret []byte
@@ -102,7 +105,8 @@ func TestASMWorkflow(t *testing.T) {
 func TestASMPagination(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm, leader, _, _ := localstack(ctx, t)
-	manager, err := New(ctx, asm, []Provider[Secrets]{asm})
+	sr := NewDBSecretResolver(&fakeDBSecretResolverDAL{})
+	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
 	// Create 210 secrets, so we paginate at least twice.
@@ -162,9 +166,10 @@ func TestFollowerSync(t *testing.T) {
 	// Test setting and getting values via the follower, which is connected to a leader, as well as directly with ASM
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm, _, sm, leaderClock := localstack(ctx, t)
+	sr := NewDBSecretResolver(&fakeDBSecretResolverDAL{})
 
 	// fakeRPCClient connects the follower to the leader
-	fakeRPCClient := &fakeAdminClient{asm: asm}
+	fakeRPCClient := &fakeAdminClient{asm: asm, sr: &sr}
 	followerClock := clock.NewMock()
 	follower := newASMFollower(ctx, fakeRPCClient, followerClock)
 
@@ -317,6 +322,7 @@ func jsonString(t *testing.T, value string) string {
 
 type fakeAdminClient struct {
 	asm *ASM
+	sr  *DBSecretResolver
 }
 
 func (c *fakeAdminClient) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -341,7 +347,7 @@ func (c *fakeAdminClient) ConfigUnset(ctx context.Context, req *connect.Request[
 }
 
 func (c *fakeAdminClient) SecretsList(ctx context.Context, req *connect.Request[ftlv1.ListSecretsRequest]) (*connect.Response[ftlv1.ListSecretsResponse], error) {
-	listing, err := c.asm.List(ctx)
+	listing, err := c.sr.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -396,4 +402,43 @@ func (c *fakeAdminClient) SecretUnset(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 	return connect.NewResponse(&ftlv1.UnsetSecretResponse{}), nil
+}
+
+type fakeDBSecretResolverDAL struct {
+	entries []sql.ModuleSecret
+}
+
+func (d *fakeDBSecretResolverDAL) findEntry(module Option[string], name string) (Option[sql.ModuleSecret], int) {
+	for i := range d.entries {
+		if d.entries[i].Module.Default("") == module.Default("") && d.entries[i].Name == name {
+			return optional.Some(d.entries[i]), i
+		}
+	}
+	return optional.None[sql.ModuleSecret](), -1
+}
+
+func (d *fakeDBSecretResolverDAL) GetModuleSecretURL(ctx context.Context, module Option[string], name string) (string, error) {
+	entry, _ := d.findEntry(module, name)
+	if e, ok := entry.Get(); ok {
+		return e.Url, nil
+	}
+	return "", fmt.Errorf("secret not found")
+}
+
+func (d *fakeDBSecretResolverDAL) ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error) {
+	return d.entries, nil
+}
+
+func (d *fakeDBSecretResolverDAL) SetModuleSecretURL(ctx context.Context, module Option[string], name string, url string) error {
+	d.UnsetModuleSecret(ctx, module, name)
+	d.entries = append(d.entries, sql.ModuleSecret{Module: module, Name: name, Url: url})
+	return nil
+}
+
+func (d *fakeDBSecretResolverDAL) UnsetModuleSecret(ctx context.Context, module Option[string], name string) error {
+	entry, i := d.findEntry(module, name)
+	if _, ok := entry.Get(); ok {
+		d.entries = append(d.entries[:i], d.entries[i+1:]...)
+	}
+	return nil
 }

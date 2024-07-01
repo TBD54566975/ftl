@@ -8,19 +8,15 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-type mockDBResolverDAL struct{}
+type mockDBConfigResolverDAL struct{}
 
-func (mockDBResolverDAL) ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfiguration, error) {
+func (mockDBConfigResolverDAL) ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfiguration, error) {
 	return []sql.ModuleConfiguration{}, nil
-}
-
-func (mockDBResolverDAL) ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error) {
-	return []sql.ModuleSecret{}, nil
 }
 
 func TestDBConfigResolverList(t *testing.T) {
 	ctx := context.Background()
-	resolver := NewDBResolver[Configuration](mockDBResolverDAL{})
+	resolver := NewDBConfigResolver(mockDBConfigResolverDAL{})
 	expected := []Entry{}
 
 	entries, err := resolver.List(ctx)
