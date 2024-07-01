@@ -24,7 +24,7 @@ testdata/**/go.work.sum
 **/examples/**/_ftl
 **/testdata/**/.ftl
 **/examples/**/.ftl
-.ftl
+/.ftl
 
 buildengine/.gitignore
 go.work*
