@@ -54,7 +54,7 @@ func CopyModule(module string) Action {
 	return Chain(
 		CopyDir(module, module),
 		func(t testing.TB, ic TestContext) {
-			err := ftlexec.Command(ic, log.Debug, filepath.Join(ic.workDir, module), "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.rootDir).RunBuffered(ic)
+			err := ftlexec.Command(ic, log.Debug, filepath.Join(ic.workDir, module), "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.RootDir).RunBuffered(ic)
 			assert.NoError(t, err)
 		},
 	)

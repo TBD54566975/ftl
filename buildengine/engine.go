@@ -23,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type CompilerBuildError struct {
@@ -205,13 +206,19 @@ func (e *Engine) buildGraph(moduleName string, out map[string][]string) error {
 	if _, ok := out[moduleName]; ok {
 		return nil
 	}
+	foundModule := false
 	if meta, ok := e.moduleMetas.Load(moduleName); ok {
+		foundModule = true
 		deps = meta.module.Dependencies
-	} else if sch, ok := e.controllerSchema.Load(moduleName); ok {
-		deps = sch.Imports()
-	} else {
+	}
+	if sch, ok := e.controllerSchema.Load(moduleName); ok {
+		foundModule = true
+		deps = append(deps, sch.Imports()...)
+	}
+	if !foundModule {
 		return fmt.Errorf("module %q not found", moduleName)
 	}
+	deps = slices.Unique(deps)
 	out[moduleName] = deps
 	for _, dep := range deps {
 		if err := e.buildGraph(dep, out); err != nil {
