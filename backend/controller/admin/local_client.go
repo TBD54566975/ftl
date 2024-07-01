@@ -37,11 +37,11 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 	}
 	projConfig, err := projectconfig.Load(ctx, path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load project config: %w", err)
 	}
 	modules, err := buildengine.DiscoverModules(ctx, projConfig.AbsModuleDirs())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not discover modules: %w", err)
 	}
 
 	var pbModules []*schemapb.Module
@@ -50,14 +50,18 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 		schemaPath := filepath.Join(deployDir, m.Config.Schema)
 		content, err := os.ReadFile(schemaPath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not read module schema: %w", err)
 		}
 		pbModule := &schemapb.Module{}
 		err = proto.Unmarshal(content, pbModule)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("could not unmarshall schema protobuf: %w", err)
 		}
 		pbModules = append(pbModules, pbModule)
 	}
-	return schema.FromProto(&schemapb.Schema{Modules: pbModules})
+	sch, err := schema.FromProto(&schemapb.Schema{Modules: pbModules})
+	if err != nil {
+		return nil, fmt.Errorf("could not convert from protobuf schema: %w", err)
+	}
+	return sch, nil
 }

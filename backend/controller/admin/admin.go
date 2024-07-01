@@ -229,7 +229,7 @@ func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftl
 func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool, ref cf.Ref, value json.RawMessage) error {
 	sch, err := s.schr.GetActiveSchema(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get active schema: %w", err)
 	}
 
 	r := schema.RefKey{Module: ref.Module.Default(""), Name: ref.Name}.ToRef()
@@ -262,12 +262,12 @@ func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool,
 	dec.DisallowUnknownFields()
 	err = dec.Decode(&v)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not decode JSON value: %w", err)
 	}
 
 	err = schema.ValidateJSONValue(fieldType, []string{ref.Name}, v, sch)
 	if err != nil {
-		return err
+		return fmt.Errorf("value validation against JSON schema failed: %w", err)
 	}
 
 	return nil
