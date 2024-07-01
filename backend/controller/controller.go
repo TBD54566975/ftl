@@ -124,7 +124,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	// Bring up the DB connection and DAL.
 	conn, err := pgxpool.New(ctx, config.DSN)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to bring up DB connection: %w", err)
 	}
 
 	svc, err := New(ctx, conn, config, runnerScaling)
@@ -219,7 +219,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 
 	db, err := dal.New(ctx, pool)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create DAL: %w", err)
 	}
 
 	svc := &Service{

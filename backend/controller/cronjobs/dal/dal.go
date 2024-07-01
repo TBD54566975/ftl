@@ -3,13 +3,14 @@ package dal
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
+	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/db/dalerrs"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -38,7 +39,7 @@ func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
 func (d *DAL) GetCronJobs(ctx context.Context) ([]model.CronJob, error) {
 	rows, err := d.db.GetCronJobs(ctx)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, fmt.Errorf("failed to get cron jobs: %w", dalerrs.TranslatePGError(err))
 	}
 	return slices.Map(rows, cronJobFromRow), nil
 }
@@ -56,7 +57,7 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attempte
 	}
 	rows, err := d.db.StartCronJobs(ctx, slices.Map(jobs, func(job model.CronJob) string { return job.Key.String() }))
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, fmt.Errorf("failed to start cron jobs: %w", dalerrs.TranslatePGError(err))
 	}
 
 	attemptedJobs = []AttemptedCronJob{}
@@ -84,7 +85,7 @@ func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attempte
 func (d *DAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time) (model.CronJob, error) {
 	row, err := d.db.EndCronJob(ctx, next, job.Key, job.StartTime)
 	if err != nil {
-		return model.CronJob{}, dalerrs.TranslatePGError(err)
+		return model.CronJob{}, fmt.Errorf("failed to end cron job: %w", dalerrs.TranslatePGError(err))
 	}
 	return cronJobFromRow(sql.GetCronJobsRow(row)), nil
 }
@@ -93,7 +94,7 @@ func (d *DAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time)
 func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]model.CronJob, error) {
 	rows, err := d.db.GetStaleCronJobs(ctx, duration)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, fmt.Errorf("failed to get stale cron jobs: %w", dalerrs.TranslatePGError(err))
 	}
 	return slices.Map(rows, func(row sql.GetStaleCronJobsRow) model.CronJob {
 		return cronJobFromRow(sql.GetCronJobsRow(row))
