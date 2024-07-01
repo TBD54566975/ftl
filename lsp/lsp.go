@@ -103,14 +103,18 @@ func (s *Server) post(err error) {
 
 	// Deduplicate and associate by filename.
 	for _, e := range ftlErrors.DeduplicateErrors(ftlErrors.UnwrapAll(err)) {
+		// CompilerBuildErrors are not innermost errors, so we need to check for them first.
+		var cbe buildengine.CompilerBuildError
+		if errors.As(e, &cbe) {
+			// CompilerBuildErrors should have emitted errors beforehand so don't alert the user again.
+			return
+		}
+
 		if !ftlErrors.Innermost(e) {
 			continue
 		}
 		var ce *schema.Error
-		if errors.Is(e, buildengine.CompilerBuildError{}) {
-			// CompilerBuildErrors have emitted errors beforehand so don't alert the user again.
-			continue
-		} else if errors.As(e, &ce) {
+		if errors.As(e, &ce) {
 			filename := ce.Pos.Filename
 			if _, exists := errByFilename[filename]; !exists {
 				errByFilename[filename] = errSet{}

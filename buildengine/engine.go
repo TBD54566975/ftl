@@ -33,10 +33,8 @@ func (e CompilerBuildError) Error() string {
 	return e.err.Error()
 }
 
-func (e CompilerBuildError) Is(target error) bool {
-	var compilerBuildError CompilerBuildError
-	ok := errors.As(target, &compilerBuildError)
-	return ok
+func (e CompilerBuildError) Unwrap() error {
+	return e.err
 }
 
 type schemaChange struct {
