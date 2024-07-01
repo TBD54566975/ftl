@@ -59,7 +59,7 @@
     "eslint-plugin-react": "7.34.3",
     "fast-glob": "3.3.2",
     "lint-staged": "15.2.7",
-    "postcss": "8.4.38",
+    "postcss": "8.4.39",
     "postcss-nesting": "12.1.5",
     "typed-css-modules": "0.9.1",
     "typescript": "5.5.2",
