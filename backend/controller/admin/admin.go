@@ -267,7 +267,7 @@ func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool,
 
 	err = schema.ValidateJSONValue(fieldType, []string{ref.Name}, v, sch)
 	if err != nil {
-		return fmt.Errorf("value validation against JSON schema failed: %w", err)
+		return fmt.Errorf("JSON validation failed: %w", err)
 	}
 
 	return nil

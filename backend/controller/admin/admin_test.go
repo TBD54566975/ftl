@@ -219,13 +219,13 @@ func TestAdminValidation(t *testing.T) {
 	assert.NotZero(t, admin)
 
 	testSetConfig(t, ctx, admin, "batmobile", "color", "Black", "")
-	testSetConfig(t, ctx, admin, "batmobile", "color", "Red", "Red is not a valid variant of enum batmobile.Color")
+	testSetConfig(t, ctx, admin, "batmobile", "color", "Red", "JSON validation failed: Red is not a valid variant of enum batmobile.Color")
 	testSetConfig(t, ctx, admin, "batmobile", "capacity", 2, "")
-	testSetConfig(t, ctx, admin, "batmobile", "capacity", 3, "%!s(float64=3) is not a valid variant of enum batmobile.Capacity")
+	testSetConfig(t, ctx, admin, "batmobile", "capacity", 3, "JSON validation failed: %!s(float64=3) is not a valid variant of enum batmobile.Capacity")
 	testSetSecret(t, ctx, admin, "batmobile", "owner", "Bruce Wayne", "")
-	testSetSecret(t, ctx, admin, "batmobile", "owner", 99, "owner has wrong type, expected String found float64")
+	testSetSecret(t, ctx, admin, "batmobile", "owner", 99, "JSON validation failed: owner has wrong type, expected String found float64")
 	testSetSecret(t, ctx, admin, "batmobile", "horsepower", 1000, "")
-	testSetSecret(t, ctx, admin, "batmobile", "horsepower", "thousand", "horsepower has wrong type, expected Int found string")
+	testSetSecret(t, ctx, admin, "batmobile", "horsepower", "thousand", "JSON validation failed: horsepower has wrong type, expected Int found string")
 
 }
 
