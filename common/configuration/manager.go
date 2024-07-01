@@ -127,16 +127,29 @@ func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value js
 	if err := checkJSON(value); err != nil {
 		return fmt.Errorf("invalid value for %s, must be JSON: %w", m.router.Role(), err)
 	}
-	provider, ok := m.providers[pkey]
-	if !ok {
-		pkeys := strings.Join(m.availableProviderKeys(), ", ")
-		return fmt.Errorf("no provider for key %q, specify one of: %s", pkey, pkeys)
+	provider, err := m.selectProvider(pkey)
+	if err != nil {
+		return err
 	}
 	key, err := provider.Store(ctx, ref, value)
 	if err != nil {
 		return err
 	}
 	return m.router.Set(ctx, ref, key)
+}
+
+// selectProvider selects the Provider using the supplied key or defaults to the sole provider
+// when no key is supplied and there exists exactly one provider.
+func (m *Manager[R]) selectProvider(key string) (Provider[R], error) {
+	if len(key) == 0 && len(m.availableProviderKeys()) == 1 {
+		key = m.availableProviderKeys()[0]
+	}
+	provider, ok := m.providers[key]
+	if !ok {
+		keys := strings.Join(m.availableProviderKeys(), ", ")
+		return nil, fmt.Errorf("no provider for key %q, specify one of: %s", key, keys)
+	}
+	return provider, nil
 }
 
 // MapForModule combines all configuration values visible to the module. Local
