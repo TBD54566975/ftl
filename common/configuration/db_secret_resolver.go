@@ -45,7 +45,7 @@ func (d DBSecretResolver) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 func (d DBSecretResolver) List(ctx context.Context) ([]Entry, error) {
 	secrets, err := d.dal.ListModuleSecrets(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not list module secrets: %w", err)
 	}
 	entries := make([]Entry, len(secrets))
 	for i, s := range secrets {
@@ -65,9 +65,17 @@ func (d DBSecretResolver) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (d DBSecretResolver) Set(ctx context.Context, ref Ref, key *url.URL) error {
-	return d.dal.SetModuleSecretURL(ctx, ref.Module, ref.Name, key.String())
+	err := d.dal.SetModuleSecretURL(ctx, ref.Module, ref.Name, key.String())
+	if err != nil {
+		return fmt.Errorf("failed to set secret URL: %w", err)
+	}
+	return nil
 }
 
 func (d DBSecretResolver) Unset(ctx context.Context, ref Ref) error {
-	return d.dal.UnsetModuleSecret(ctx, ref.Module, ref.Name)
+	err := d.dal.UnsetModuleSecret(ctx, ref.Module, ref.Name)
+	if err != nil {
+		return fmt.Errorf("failed to unset secret: %w", err)
+	}
+	return nil
 }
