@@ -78,7 +78,7 @@ build-frontend: npm-install
 
 # Rebuild VSCode extension
 build-extension: npm-install
-  @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && rm ftl-*.vsix && npm run compile"
+  @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && rm -f ftl-*.vsix && npm run compile"
 
 # Install development version of VSCode extension
 install-extension: build-extension
