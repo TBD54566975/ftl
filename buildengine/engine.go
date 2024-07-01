@@ -25,6 +25,18 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
+type CompilerBuildError struct {
+	err error
+}
+
+func (e CompilerBuildError) Error() string {
+	return e.err.Error()
+}
+
+func (e CompilerBuildError) Unwrap() error {
+	return e.err
+}
+
 type schemaChange struct {
 	ChangeType ftlv1.DeploymentChangeType
 	*schema.Module
