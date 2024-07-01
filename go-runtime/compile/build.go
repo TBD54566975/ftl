@@ -35,12 +35,15 @@ import (
 	"github.com/TBD54566975/ftl/internal/reflect"
 )
 
+type MainWorkContext struct {
+	GoVersion         string
+	SharedModulesPath string
+}
+
 type ExternalModuleContext struct {
-	ModuleDir string
 	*schema.Schema
 	GoVersion    string
 	FTLVersion   string
-	Main         string
 	Replacements []*modfile.Replace
 }
 
@@ -53,12 +56,13 @@ type goVerb struct {
 }
 
 type mainModuleContext struct {
-	GoVersion    string
-	FTLVersion   string
-	Name         string
-	Verbs        []goVerb
-	Replacements []*modfile.Replace
-	SumTypes     []goSumType
+	GoVersion         string
+	FTLVersion        string
+	Name              string
+	SharedModulesPath string
+	Verbs             []goVerb
+	Replacements      []*modfile.Replace
+	SumTypes          []goSumType
 }
 
 type goSumType struct {
@@ -78,25 +82,21 @@ type ModifyFilesTransaction interface {
 	End() error
 }
 
-func (b ExternalModuleContext) NonMainModules() []*schema.Module {
+func (b ExternalModuleContext) ExternalModules() []*schema.Module {
 	modules := make([]*schema.Module, 0, len(b.Modules))
-	for _, module := range b.Modules {
-		if module.Name == b.Main {
-			continue
-		}
-		modules = append(modules, module)
-	}
+	modules = append(modules, b.Modules...)
 	return modules
 }
 
-const buildDirName = "_ftl"
+const buildDirName = ".ftl"
+const DefaultGoModVersion = "1.21"
 
 func buildDir(moduleDir string) string {
 	return filepath.Join(moduleDir, buildDirName)
 }
 
 // Build the given module.
-func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction) (err error) {
+func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction) (err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return err
 	}
@@ -129,19 +129,19 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 
 	funcs := maps.Clone(scaffoldFuncs)
 
-	logger.Debugf("Generating external modules")
-	if err := generateExternalModules(ExternalModuleContext{
-		ModuleDir:    moduleDir,
-		GoVersion:    goModVersion,
-		FTLVersion:   ftlVersion,
-		Schema:       sch,
-		Main:         config.Module,
-		Replacements: replacements,
-	}); err != nil {
-		return fmt.Errorf("failed to generate external modules: %w", err)
+	buildDir := buildDir(moduleDir)
+	err = os.MkdirAll(buildDir, 0750)
+	if err != nil {
+		return fmt.Errorf("failed to create build directory: %w", err)
 	}
 
-	buildDir := buildDir(moduleDir)
+	if err := internal.ScaffoldZip(mainWorkTemplateFiles(), moduleDir, MainWorkContext{
+		GoVersion:         goModVersion,
+		SharedModulesPath: filepath.Join(projectRootDir, buildDirName, "go", "modules"),
+	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
+		return fmt.Errorf("failed to scaffold zip: %w", err)
+	}
+
 	logger.Debugf("Extracting schema")
 	result, err := ExtractModuleSchema(config.Dir, sch)
 	if err != nil {
@@ -185,12 +185,13 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		goVerbs = append(goVerbs, goverb)
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
-		GoVersion:    goModVersion,
-		FTLVersion:   ftlVersion,
-		Name:         result.Module.Name,
-		Verbs:        goVerbs,
-		Replacements: replacements,
-		SumTypes:     getSumTypes(result.Module, sch, result.NativeNames),
+		GoVersion:         goModVersion,
+		FTLVersion:        ftlVersion,
+		Name:              result.Module.Name,
+		SharedModulesPath: filepath.Join(projectRootDir, buildDirName, "go", "modules"),
+		Verbs:             goVerbs,
+		Replacements:      replacements,
+		SumTypes:          getSumTypes(result.Module, sch, result.NativeNames),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -198,7 +199,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	logger.Debugf("Tidying go.mod files")
 	wg, wgctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
-		if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+		if err := exec.Command(wgctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", moduleDir, err)
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(moduleDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
@@ -210,13 +211,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
-	modulesDir := filepath.Join(buildDir, "go", "modules")
-	wg.Go(func() error {
-		if err := exec.Command(wgctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
-			return fmt.Errorf("%s: failed to tidy go.mod: %w", modulesDir, err)
-		}
-		return filesTransaction.ModifiedFiles(filepath.Join(modulesDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
-	})
 	if err := wg.Wait(); err != nil {
 		return err
 	}
@@ -225,10 +219,15 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
-func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *schema.Schema) error {
-	goModFile, replacements, err := goModFileWithReplacements(filepath.Join(dir, "go.mod"))
+func GenerateStubsForModules(ctx context.Context, projectRoot string, sch *schema.Schema) error {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Generating stubs for modules")
+
+	sharedFtlDir := filepath.Join(projectRoot, buildDirName)
+	// Wipe the modules directory to ensure we don't have any stale modules.
+	err := os.RemoveAll(sharedFtlDir)
 	if err != nil {
-		return fmt.Errorf("failed to propagate replacements for library %q: %w", dir, err)
+		return fmt.Errorf("failed to remove %s: %w", sharedFtlDir, err)
 	}
 
 	ftlVersion := ""
@@ -236,24 +235,24 @@ func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *sc
 		ftlVersion = ftl.Version
 	}
 
-	return generateExternalModules(ExternalModuleContext{
-		ModuleDir:    dir,
-		GoVersion:    goModFile.Go.Version,
+	context := ExternalModuleContext{
+		GoVersion:    DefaultGoModVersion,
 		FTLVersion:   ftlVersion,
-		Schema:       schema,
-		Replacements: replacements,
-	})
-}
-
-func generateExternalModules(context ExternalModuleContext) error {
-	// Wipe the modules directory to ensure we don't have any stale modules.
-	err := os.RemoveAll(filepath.Join(buildDir(context.ModuleDir), "go", "modules"))
+		Schema:       sch,
+		Replacements: []*modfile.Replace{}, //TODO: Do we need this still, what files would I use for replacements??
+	}
+	funcs := maps.Clone(scaffoldFuncs)
+	err = internal.ScaffoldZip(externalModuleTemplateFiles(), projectRoot, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
 	if err != nil {
 		return err
 	}
 
-	funcs := maps.Clone(scaffoldFuncs)
-	return internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
+	modulesDir := filepath.Join(sharedFtlDir, "go", "modules")
+	if err := exec.Command(ctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+		return fmt.Errorf("failed to tidy go.mod: %w", err)
+	}
+
+	return nil
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{

@@ -133,7 +133,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 
 	case "go":
 		if config.DeployDir == "" {
-			config.DeployDir = "_ftl"
+			config.DeployDir = ".ftl"
 		}
 		if len(config.Deploy) == 0 {
 			config.Deploy = []string{"main"}
