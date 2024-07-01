@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -44,7 +43,6 @@ func TestObfuscator(t *testing.T) {
 				assert.EqualError(t, err, expectedError)
 				return
 			}
-			fmt.Printf("obfuscated: \n%s\n", obfuscated)
 			assert.NoError(t, err)
 			assert.HasPrefix(t, string(obfuscated), tt.obfuscatedPrefix)
 			revealed, err := o.Reveal(obfuscated)
