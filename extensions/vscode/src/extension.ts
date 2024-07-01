@@ -116,7 +116,7 @@ const promptStartClient = async (context: vscode.ExtensionContext) => {
     await startClient(context)
     return
   } else if (automaticallyStartServer === 'never') {
-     outputChannel.appendLine(`FTL development server not started ('${AUTOMATICALLY_START_SERVER_VAR}' set to 'never' in workspace settings.json)`)
+    outputChannel.appendLine(`FTL development server not started ('${AUTOMATICALLY_START_SERVER_VAR}' set to 'never' in workspace settings.json)`)
     return
   }
 
