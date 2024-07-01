@@ -13,12 +13,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/common/configuration/sql"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/benbjohnson/clock"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 	. "github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -56,7 +54,7 @@ func TestASMWorkflow(t *testing.T) {
 	asm, leader, _, _ := localstack(ctx, t)
 	ref := Ref{Module: Some("foo"), Name: "bar"}
 	var mySecret = jsonBytes(t, "my secret")
-	sr := NewDBSecretResolver(&fakeDBSecretResolverDAL{})
+	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
 	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
@@ -105,7 +103,7 @@ func TestASMWorkflow(t *testing.T) {
 func TestASMPagination(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm, leader, _, _ := localstack(ctx, t)
-	sr := NewDBSecretResolver(&fakeDBSecretResolverDAL{})
+	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
 	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
@@ -256,6 +254,7 @@ func testClientSync(ctx context.Context,
 	// give client a change to sync
 	progressByIntervalPercentage(1.0)
 	time.Sleep(time.Second * 5)
+
 	// confirm that all secrets are up to date
 	list, err := client.list(ctx)
 	assert.NoError(t, err)
@@ -403,43 +402,4 @@ func (c *fakeAdminClient) SecretUnset(ctx context.Context, req *connect.Request[
 		return nil, err
 	}
 	return connect.NewResponse(&ftlv1.UnsetSecretResponse{}), nil
-}
-
-type fakeDBSecretResolverDAL struct {
-	entries []sql.ModuleSecret
-}
-
-func (d *fakeDBSecretResolverDAL) findEntry(module Option[string], name string) (Option[sql.ModuleSecret], int) {
-	for i := range d.entries {
-		if d.entries[i].Module.Default("") == module.Default("") && d.entries[i].Name == name {
-			return optional.Some(d.entries[i]), i
-		}
-	}
-	return optional.None[sql.ModuleSecret](), -1
-}
-
-func (d *fakeDBSecretResolverDAL) GetModuleSecretURL(ctx context.Context, module Option[string], name string) (string, error) {
-	entry, _ := d.findEntry(module, name)
-	if e, ok := entry.Get(); ok {
-		return e.Url, nil
-	}
-	return "", fmt.Errorf("secret not found")
-}
-
-func (d *fakeDBSecretResolverDAL) ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error) {
-	return d.entries, nil
-}
-
-func (d *fakeDBSecretResolverDAL) SetModuleSecretURL(ctx context.Context, module Option[string], name string, url string) error {
-	d.UnsetModuleSecret(ctx, module, name)
-	d.entries = append(d.entries, sql.ModuleSecret{Module: module, Name: name, Url: url})
-	return nil
-}
-
-func (d *fakeDBSecretResolverDAL) UnsetModuleSecret(ctx context.Context, module Option[string], name string) error {
-	entry, i := d.findEntry(module, name)
-	if _, ok := entry.Get(); ok {
-		d.entries = append(d.entries[:i], d.entries[i+1:]...)
-	}
-	return nil
 }
