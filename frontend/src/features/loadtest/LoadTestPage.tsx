@@ -429,7 +429,7 @@ const Row = ({ verbRef, callVerb }: {
     fontSize: 12,
   }
   const maybeErrEl = errs.length == 0 ? [] : [
-    <span key='err' style={errStyle}>Last Error: {errs[errs.length - 1].msg}</span>
+    <span key={Date.now()} style={errStyle}>Last Error: {errs[errs.length - 1].msg}</span>
   ]
   return [
       <div style={titleStyle}>
