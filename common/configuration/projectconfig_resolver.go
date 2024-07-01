@@ -24,8 +24,6 @@ var _ Router[Secrets] = ProjectConfigResolver[Secrets]{}
 
 func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
 
-func (p ProjectConfigResolver[R]) UseWithProvider(ctx context.Context, pkey string) bool { return true }
-
 func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 	config, err := pc.Load(ctx, p.Config)
 	if err != nil {

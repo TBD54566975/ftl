@@ -483,7 +483,7 @@ type ModuleSecret struct {
 	CreatedAt time.Time
 	Module    optional.Option[string]
 	Name      string
-	Value     []byte
+	Url       string
 }
 
 type Request struct {

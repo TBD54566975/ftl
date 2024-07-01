@@ -82,17 +82,6 @@ type Router[R Role] interface {
 	Set(ctx context.Context, ref Ref, key *url.URL) error
 	Unset(ctx context.Context, ref Ref) error
 	List(ctx context.Context) ([]Entry, error)
-
-	// TODO: Routers and Providers have become conflated, and this method is a
-	// hack to allow mutation of values to occur in a Provider only if the
-	// Router is compatible with it.
-	//
-	// (i.e. all providers are compatible with the projectconfig_resolver, but
-	// only the asm provider is compatible with the asm_resolver)
-	//
-	// This should be refactored to use a single entity, and optionally also
-	// write to the projectconfig.
-	UseWithProvider(ctx context.Context, pkey string) bool
 }
 
 // Provider is a generic interface for storing and retrieving configuration and secrets.

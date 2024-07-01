@@ -28,8 +28,8 @@ func (q *Queries) GetModuleConfiguration(ctx context.Context, module optional.Op
 	return value, err
 }
 
-const getModuleSecret = `-- name: GetModuleSecret :one
-SELECT value
+const getModuleSecretURL = `-- name: GetModuleSecretURL :one
+SELECT url
 FROM module_secrets
 WHERE
   (module IS NULL OR module = $1)
@@ -38,11 +38,11 @@ ORDER BY module NULLS LAST
 LIMIT 1
 `
 
-func (q *Queries) GetModuleSecret(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
-	row := q.db.QueryRow(ctx, getModuleSecret, module, name)
-	var value []byte
-	err := row.Scan(&value)
-	return value, err
+func (q *Queries) GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error) {
+	row := q.db.QueryRow(ctx, getModuleSecretURL, module, name)
+	var url string
+	err := row.Scan(&url)
+	return url, err
 }
 
 const listModuleConfiguration = `-- name: ListModuleConfiguration :many
@@ -78,7 +78,7 @@ func (q *Queries) ListModuleConfiguration(ctx context.Context) ([]ModuleConfigur
 }
 
 const listModuleSecrets = `-- name: ListModuleSecrets :many
-SELECT id, created_at, module, name, value
+SELECT id, created_at, module, name, url
 FROM module_secrets
 ORDER BY module, name
 `
@@ -97,7 +97,7 @@ func (q *Queries) ListModuleSecrets(ctx context.Context) ([]ModuleSecret, error)
 			&i.CreatedAt,
 			&i.Module,
 			&i.Name,
-			&i.Value,
+			&i.Url,
 		); err != nil {
 			return nil, err
 		}
@@ -119,13 +119,13 @@ func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Op
 	return err
 }
 
-const setModuleSecret = `-- name: SetModuleSecret :exec
-INSERT INTO module_secrets (module, name, value)
+const setModuleSecretURL = `-- name: SetModuleSecretURL :exec
+INSERT INTO module_secrets (module, name, url)
 VALUES ($1, $2, $3)
 `
 
-func (q *Queries) SetModuleSecret(ctx context.Context, module optional.Option[string], name string, value []byte) error {
-	_, err := q.db.Exec(ctx, setModuleSecret, module, name, value)
+func (q *Queries) SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error {
+	_, err := q.db.Exec(ctx, setModuleSecretURL, module, name, url)
 	return err
 }
 
