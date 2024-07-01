@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Debug FTL" type="GoRemoteDebugConfigurationType" factoryName="Go Remote">
+    <remoteHost>127.0.0.1</remoteHost>
+    <remotePort>2345</remotePort>
+    <apiVersion>2</apiVersion>
+    <option name="disconnectOption" value="STOP" />
+    <disconnect value="STOP" />
+    <method v="2" />
+  </configuration>
+</component>
