@@ -65,12 +65,12 @@ func (o Obfuscator) Reveal(input []byte) ([]byte, error) {
 func (o Obfuscator) encode(input []byte) ([]byte, error) {
 	block, err := aes.NewCipher(o.key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create cypher for obfuscation: %w", err)
 	}
 	ciphertext := make([]byte, aes.BlockSize+len(input))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not generate IV for obfuscation: %w", err)
 	}
 	cfb := cipher.NewCFBEncrypter(block, iv)
 	cfb.XORKeyStream(ciphertext[aes.BlockSize:], input)
@@ -81,10 +81,10 @@ func (o Obfuscator) encode(input []byte) ([]byte, error) {
 func (o Obfuscator) decode(input []byte) ([]byte, error) {
 	block, err := aes.NewCipher(o.key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create cypher for decoding obfuscation: %w", err)
 	}
 	if len(input) < aes.BlockSize {
-		return nil, errors.New("ciphertext too short")
+		return nil, errors.New("obfuscated value too short to decode")
 	}
 	iv := input[:aes.BlockSize]
 	input = input[aes.BlockSize:]
