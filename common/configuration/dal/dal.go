@@ -3,6 +3,7 @@ package dal
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -49,25 +50,31 @@ func (d *DAL) ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfigur
 func (d *DAL) GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error) {
 	b, err := d.db.GetModuleSecretURL(ctx, module, name)
 	if err != nil {
-		return "", dalerrs.TranslatePGError(err)
+		return "", fmt.Errorf("could not get secret URL: %w", dalerrs.TranslatePGError(err))
 	}
 	return b, nil
 }
 
 func (d *DAL) SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error {
 	err := d.db.SetModuleSecretURL(ctx, module, name, url)
-	return dalerrs.TranslatePGError(err)
+	if err != nil {
+		return fmt.Errorf("could not set secret URL: %w", dalerrs.TranslatePGError(err))
+	}
+	return nil
 }
 
 func (d *DAL) UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error {
 	err := d.db.UnsetModuleSecret(ctx, module, name)
-	return dalerrs.TranslatePGError(err)
+	if err != nil {
+		return fmt.Errorf("could not unset secret: %w", dalerrs.TranslatePGError(err))
+	}
+	return nil
 }
 
 func (d *DAL) ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error) {
 	l, err := d.db.ListModuleSecrets(ctx)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, fmt.Errorf("could not list secrets: %w", dalerrs.TranslatePGError(err))
 	}
 	return l, nil
 }
