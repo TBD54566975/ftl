@@ -137,7 +137,7 @@ const FishBlock = ({ req, color, col, callVerb }: {
   const [showEditor, setShowEditor] = useState(false)
   const addLilFish = async () => {
     const key = `${Date.now()}`
-    //setLilFish([...lilFish, <LilFish key={key} color={color} col={col} />])
+    setLilFish([...lilFish, <LilFish key={key} color={color} col={col} />])
     await timeoutPromise(700)
     callVerb(req.req)
   }
@@ -389,7 +389,7 @@ const Row = ({ verbRef, callVerb }: {
   const [goodResponses, setGoodResponses] = useState([] as number[])
   const addPoo = (color: string) => {
     const key = `${Date.now()}`
-    //setPoos([...poos, <Poo key={key} color={color} />])
+    setPoos([...poos, <Poo key={key} color={color} />])
   }
   const addGoodPoo = () => addPoo(greens[Math.floor(Math.random() * greens.length)])
   const addBadPoo = () => addPoo('red')
