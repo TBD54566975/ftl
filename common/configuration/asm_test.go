@@ -166,10 +166,9 @@ func TestFollowerSync(t *testing.T) {
 	// Test setting and getting values via the follower, which is connected to a leader, as well as directly with ASM
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm, _, sm, leaderClock := localstack(ctx, t)
-	sr := NewDBSecretResolver(&fakeDBSecretResolverDAL{})
 
 	// fakeRPCClient connects the follower to the leader
-	fakeRPCClient := &fakeAdminClient{asm: asm, sr: &sr}
+	fakeRPCClient := &fakeAdminClient{asm: asm}
 	followerClock := clock.NewMock()
 	follower := newASMFollower(ctx, fakeRPCClient, followerClock)
 
@@ -257,7 +256,6 @@ func testClientSync(ctx context.Context,
 	// give client a change to sync
 	progressByIntervalPercentage(1.0)
 	time.Sleep(time.Second * 5)
-
 	// confirm that all secrets are up to date
 	list, err := client.list(ctx)
 	assert.NoError(t, err)
@@ -322,7 +320,6 @@ func jsonString(t *testing.T, value string) string {
 
 type fakeAdminClient struct {
 	asm *ASM
-	sr  *DBSecretResolver
 }
 
 func (c *fakeAdminClient) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -347,7 +344,11 @@ func (c *fakeAdminClient) ConfigUnset(ctx context.Context, req *connect.Request[
 }
 
 func (c *fakeAdminClient) SecretsList(ctx context.Context, req *connect.Request[ftlv1.ListSecretsRequest]) (*connect.Response[ftlv1.ListSecretsResponse], error) {
-	listing, err := c.sr.List(ctx)
+	client, err := c.asm.coordinator.Get()
+	if err != nil {
+		return nil, err
+	}
+	listing, err := client.list(ctx)
 	if err != nil {
 		return nil, err
 	}
