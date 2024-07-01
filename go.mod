@@ -41,6 +41,7 @@ require (
 	github.com/reugn/go-quartz v0.12.0
 	github.com/rs/cors v1.11.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/swaggest/jsonschema-go v0.3.72
 	github.com/titanous/json5 v1.0.0
 	github.com/tliron/commonlog v0.2.17
