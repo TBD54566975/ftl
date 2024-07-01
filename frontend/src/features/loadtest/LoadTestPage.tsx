@@ -272,12 +272,12 @@ const Chart = ({ errs, goodResponses }: { errs: ErrLog[], goodResponses: number[
 }
 
 const ErrTable = ({ errs }: { errs: ErrLog[] }) => {
-    const errRows = errs.reverse().map((err, i) => (
+    const errRows = errs.map((err, i) => (
         <tr key={i} className='flex text-xs'>
           <td className="p-1 w-20 items-center flex-none text-gray-400 dark:text-gray-400">{new Date(err.timestamp).toTimeString().split(' ')[0]}</td>
           <td className="items-center text-red-500 dark:text-red-400 flex-grow">{err.msg}</td>
         </tr>
-    ))
+    )).reverse()
     return (
         <table className='text-gray-600 dark:text-gray-300' style={{marginLeft: 4}}>
             <thead><tr className='flex text-xs'>
@@ -323,8 +323,8 @@ const DetailsPanel = ({ verbRef, errs, goodResponses }: {
         padding: 8,
         borderRadius: 8,
     }
-    const details = savedReqs.map((savedReq) => (
-        <div style={detailStyle}>
+    const details = savedReqs.map((savedReq, i) => (
+        <div key={i} style={detailStyle}>
           <div style={{fontFamily: 'Roboto Mono', display: 'block', marginBottom: 4}}>
             {savedReq.reqBodyText}
           </div>
