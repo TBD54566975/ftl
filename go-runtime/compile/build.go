@@ -41,11 +41,9 @@ type MainWorkContext struct {
 }
 
 type ExternalModuleContext struct {
-	ModuleDir string
 	*schema.Schema
 	GoVersion    string
 	FTLVersion   string
-	Main         string
 	Replacements []*modfile.Replace
 }
 
@@ -85,14 +83,9 @@ type ModifyFilesTransaction interface {
 	End() error
 }
 
-func (b ExternalModuleContext) NonMainModules() []*schema.Module {
+func (b ExternalModuleContext) ExternalModules() []*schema.Module {
 	modules := make([]*schema.Module, 0, len(b.Modules))
-	for _, module := range b.Modules {
-		if module.Name == b.Main {
-			continue
-		}
-		modules = append(modules, module)
-	}
+	modules = append(modules, b.Modules...)
 	return modules
 }
 
@@ -245,12 +238,10 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, sch *schem
 	}
 
 	context := ExternalModuleContext{
-		ModuleDir:    "",
 		GoVersion:    DefaultGoModVersion,
 		FTLVersion:   ftlVersion,
 		Schema:       sch,
-		Main:         "",
-		Replacements: []*modfile.Replace{},
+		Replacements: []*modfile.Replace{}, //TODO: Do we need this still, what files would I use for replacements??
 	}
 	funcs := maps.Clone(scaffoldFuncs)
 	err = internal.ScaffoldZip(externalModuleTemplateFiles(), projectRoot, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))

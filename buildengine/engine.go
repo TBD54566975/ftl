@@ -701,11 +701,10 @@ func (e *Engine) gatherGroupSchemas(
 		}
 
 		meta, ok := e.moduleMetas.Load(module)
-		if !ok {
-			return fmt.Errorf("module %q not found", module)
-		}
-		if err := e.gatherSchemas(moduleSchemas, meta.module, out); err != nil {
-			return err
+		if ok {
+			if err := e.gatherSchemas(moduleSchemas, meta.module, out); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
