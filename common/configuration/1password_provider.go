@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/kballard/go-shellquote"
 
@@ -21,23 +20,16 @@ import (
 // 1Password vaults via the "op" command line tool.
 type OnePasswordProvider struct {
 	Vault string
-
-	// When 1Password is locked we don't want to bring up multiple prompts.
-	// By coordinating with this lock we can ensure that only one prompt is shown.
-	lock sync.Mutex
 }
 
-func (*OnePasswordProvider) Role() Secrets { return Secrets{} }
-func (o *OnePasswordProvider) Key() string { return "op" }
-func (o *OnePasswordProvider) Delete(ctx context.Context, ref Ref) error {
+func (OnePasswordProvider) Role() Secrets { return Secrets{} }
+func (o OnePasswordProvider) Key() string { return "op" }
+func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error {
 	return nil
 }
 
 // Load returns the secret stored in 1password.
-func (o *OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-
+func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
@@ -69,10 +61,7 @@ var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 //
 // op does not support "create or update" as a single command. Neither does it support specifying an ID on create.
 // Because of this, we need check if the item exists before creating it, and update it if it does.
-func (o *OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-
+func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
 	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
