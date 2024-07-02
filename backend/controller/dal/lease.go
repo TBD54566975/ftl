@@ -119,3 +119,27 @@ func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.
 	go lease.renew(ctx, cancelCtx)
 	return lease, ctx
 }
+
+// GetLeaseInfo returns the metadata and expiry time for the lease with the given key.
+//
+// metadata should be a pointer to the type that metadata should be unmarshaled into.
+func (d *DAL) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (expiry time.Time, err error) {
+	l, err := d.db.GetLeaseInfo(ctx, key)
+	if err != nil {
+		return expiry, dalerrs.TranslatePGError(err)
+	}
+	if err := json.Unmarshal(l.Metadata, metadata); err != nil {
+		return expiry, fmt.Errorf("could not unmarshal lease metadata: %w", err)
+	}
+	return l.ExpiresAt, nil
+}
+
+// ExpireLeases expires (deletes) all leases that have expired.
+func (d *DAL) ExpireLeases(ctx context.Context) error {
+	count, err := d.db.ExpireLeases(ctx)
+	// TODO: Return and log the actual lease keys?
+	if count > 0 {
+		log.FromContext(ctx).Warnf("Expired %d leases", count)
+	}
+	return dalerrs.TranslatePGError(err)
+}

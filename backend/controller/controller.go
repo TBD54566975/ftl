@@ -825,7 +825,7 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	instance, err := tx.AcquireFSMInstance(ctx, fsmKey, msg.Instance, s.pool)
+	instance, err := tx.AcquireFSMInstance(ctx, fsmKey, msg.Instance)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("could not acquire fsm instance: %w", err))
 	}
@@ -1286,7 +1286,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	logger := log.FromContext(ctx)
 	logger.Tracef("Acquiring async call")
 
-	call, err := s.dal.AcquireAsyncCall(ctx, s.pool)
+	call, err := s.dal.AcquireAsyncCall(ctx)
 	if errors.Is(err, dalerrs.ErrNotFound) {
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
@@ -1357,7 +1357,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, origin dal.AsyncOriginFSM, failed bool) error {
 	logger := log.FromContext(ctx).Scope(origin.FSM.String())
 
-	instance, err := tx.AcquireFSMInstance(ctx, origin.FSM, origin.Key, s.pool)
+	instance, err := tx.AcquireFSMInstance(ctx, origin.FSM, origin.Key)
 	if err != nil {
 		return fmt.Errorf("could not acquire lock on FSM instance: %w", err)
 	}
