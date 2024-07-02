@@ -20,8 +20,6 @@ testdata/**/go.work
 testdata/**/go.work.sum
 **/testdata/**/_ftl
 **/examples/**/_ftl
-**/testdata/**/types.ftl.go
-**/examples/**/types.ftl.go
 buildengine/.gitignore
 go.work*
 junit*.xml

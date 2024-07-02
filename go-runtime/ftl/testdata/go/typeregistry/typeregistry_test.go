@@ -7,32 +7,28 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/ftltest"
-	"github.com/alecthomas/assert"
+	"github.com/alecthomas/assert/v2"
 )
 
-var testCases = []struct {
-	Name    string
-	Input   StringsTypeEnum
-	Encoded string
-}{
-	{
-		Name:    "List",
-		Input:   List([]string{"asdf", "qwerty"}),
-		Encoded: `{"input":{"name":"List","value":["asdf","qwerty"]}}`,
-	},
-	{
-		Name:    "Single",
-		Input:   Single("asdf"),
-		Encoded: `{"input":{"name":"Single","value":"asdf"}}`,
-	},
-	{
-		Name:    "Object",
-		Input:   Object{S: "asdf"},
-		Encoded: `{"input":{"name":"Object","value":{"s":"asdf"}}}`,
-	},
-}
-
 func TestIngress(t *testing.T) {
+	testCases := []struct {
+		Name  string
+		Input StringsTypeEnum
+	}{
+		{
+			Name:  "List",
+			Input: List([]string{"asdf", "qwerty"}),
+		},
+		{
+			Name:  "Single",
+			Input: Single("asdf"),
+		},
+		{
+			Name:  "Object",
+			Input: Object{S: "asdf"},
+		},
+	}
+
 	ctx := ftltest.Context(ftltest.WithCallsAllowedWithinModule())
 
 	for _, test := range testCases {
@@ -49,6 +45,28 @@ func TestIngress(t *testing.T) {
 }
 
 func TestEncoding(t *testing.T) {
+	testCases := []struct {
+		Name    string
+		Input   StringsTypeEnum
+		Encoded string
+	}{
+		{
+			Name:    "List",
+			Input:   List([]string{"asdf", "qwerty"}),
+			Encoded: `{"input":{"name":"List","value":["asdf","qwerty"]}}`,
+		},
+		{
+			Name:    "Single",
+			Input:   Single("asdf"),
+			Encoded: `{"input":{"name":"Single","value":"asdf"}}`,
+		},
+		{
+			Name:    "Object",
+			Input:   Object{S: "asdf"},
+			Encoded: `{"input":{"name":"Object","value":{"s":"asdf"}}}`,
+		},
+	}
+
 	type jsonObj struct {
 		Input StringsTypeEnum
 	}
