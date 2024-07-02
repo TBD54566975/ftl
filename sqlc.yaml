@@ -2,7 +2,9 @@ version: "2"
 sql:
   - &daldir
     engine: "postgresql"
-    queries: "backend/controller/sql/queries.sql"
+    queries:
+      - "backend/controller/sql/queries.sql"
+      - "backend/controller/cronjobs/shared/sql/queries.sql"
     schema: "backend/controller/sql/schema"
     database:
       uri: postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret
@@ -139,17 +141,13 @@ sql:
       # - postgresql-query-too-costly
       - postgresql-no-seq-scan
   - <<: *daldir
-    queries: "backend/controller/cronjobs/sql/queries.sql"
+    queries:
+      - "backend/controller/cronjobs/sql/queries.sql"
+      - "backend/controller/cronjobs/shared/sql/queries.sql"
     gen:
       go:
         <<: *gengo
         out: "backend/controller/cronjobs/sql"
-  - <<: *daldir
-    queries: "backend/controller/leases/sql/queries.sql"
-    gen:
-      go:
-        <<: *gengo
-        out: "backend/controller/leases/sql"
   - <<: *daldir
     queries: "common/configuration/sql/queries.sql"
     gen:

@@ -177,6 +177,41 @@ func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams
 	return id, err
 }
 
+const createCronJob = `-- name: CreateCronJob :exec
+INSERT INTO cron_jobs (key, deployment_id, module_name, verb, schedule, start_time, next_execution)
+  VALUES (
+    $1::cron_job_key,
+    (SELECT id FROM deployments WHERE key = $2::deployment_key LIMIT 1),
+    $3::TEXT,
+    $4::TEXT,
+    $5::TEXT,
+    $6::TIMESTAMPTZ,
+    $7::TIMESTAMPTZ)
+`
+
+type CreateCronJobParams struct {
+	Key           model.CronJobKey
+	DeploymentKey model.DeploymentKey
+	ModuleName    string
+	Verb          string
+	Schedule      string
+	StartTime     time.Time
+	NextExecution time.Time
+}
+
+func (q *Queries) CreateCronJob(ctx context.Context, arg CreateCronJobParams) error {
+	_, err := q.db.Exec(ctx, createCronJob,
+		arg.Key,
+		arg.DeploymentKey,
+		arg.ModuleName,
+		arg.Verb,
+		arg.Schedule,
+		arg.StartTime,
+		arg.NextExecution,
+	)
+	return err
+}
+
 const createDeployment = `-- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
 VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3::deployment_key)
@@ -1736,6 +1771,29 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 	return i, err
 }
 
+const newLease = `-- name: NewLease :one
+INSERT INTO leases (
+  idempotency_key,
+  key,
+  expires_at,
+  metadata
+)
+VALUES (
+  gen_random_uuid(),
+  $1::lease_key,
+  (NOW() AT TIME ZONE 'utc') + $2::interval,
+  $3::JSONB
+)
+RETURNING idempotency_key
+`
+
+func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata []byte) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, newLease, key, ttl, metadata)
+	var idempotency_key uuid.UUID
+	err := row.Scan(&idempotency_key)
+	return idempotency_key, err
+}
+
 const publishEventForTopic = `-- name: PublishEventForTopic :exec
 INSERT INTO topic_events (
     "key",
@@ -1770,6 +1828,33 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 		arg.Payload,
 	)
 	return err
+}
+
+const releaseLease = `-- name: ReleaseLease :one
+DELETE FROM leases
+WHERE idempotency_key = $1 AND key = $2::lease_key
+RETURNING true
+`
+
+func (q *Queries) ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
+	row := q.db.QueryRow(ctx, releaseLease, idempotencyKey, key)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const renewLease = `-- name: RenewLease :one
+UPDATE leases
+SET expires_at = (NOW() AT TIME ZONE 'utc') + $1::interval
+WHERE idempotency_key = $2 AND key = $3::lease_key
+RETURNING true
+`
+
+func (q *Queries) RenewLease(ctx context.Context, ttl time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
+	row := q.db.QueryRow(ctx, renewLease, ttl, idempotencyKey, key)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const replaceDeployment = `-- name: ReplaceDeployment :one

@@ -11,7 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	"github.com/TBD54566975/ftl/backend/controller/leases/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -102,11 +102,11 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 		}
 		return nil, nil, err
 	}
-	leaseCtx, lease := d.NewLease(ctx, key, idempotencyKey, ttl)
+	leaseCtx, lease := d.newLease(ctx, key, idempotencyKey, ttl)
 	return leaseCtx, lease, nil
 }
 
-func (d *DAL) NewLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) (*Lease, context.Context) {
+func (d *DAL) newLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) (*Lease, context.Context) {
 	ctx, cancelCtx := context.WithCancel(ctx)
 	lease := &Lease{
 		idempotencyKey: idempotencyKey,
@@ -118,28 +118,4 @@ func (d *DAL) NewLease(ctx context.Context, key leases.Key, idempotencyKey uuid.
 	}
 	go lease.renew(ctx, cancelCtx)
 	return lease, ctx
-}
-
-// GetLeaseInfo returns the metadata and expiry time for the lease with the given key.
-//
-// metadata should be a pointer to the type that metadata should be unmarshaled into.
-func (d *DAL) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (expiry time.Time, err error) {
-	l, err := d.db.GetLeaseInfo(ctx, key)
-	if err != nil {
-		return expiry, dalerrs.TranslatePGError(err)
-	}
-	if err := json.Unmarshal(l.Metadata, metadata); err != nil {
-		return expiry, fmt.Errorf("could not unmarshal lease metadata: %w", err)
-	}
-	return l.ExpiresAt, nil
-}
-
-// ExpireLeases expires (deletes) all leases that have expired.
-func (d *DAL) ExpireLeases(ctx context.Context) error {
-	count, err := d.db.ExpireLeases(ctx)
-	// TODO: Return and log the actual lease keys?
-	if count > 0 {
-		log.FromContext(ctx).Warnf("Expired %d leases", count)
-	}
-	return dalerrs.TranslatePGError(err)
 }
