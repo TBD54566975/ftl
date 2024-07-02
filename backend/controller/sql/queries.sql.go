@@ -302,6 +302,23 @@ func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (in
 	return count, err
 }
 
+const expireLeases = `-- name: ExpireLeases :one
+WITH expired AS (
+    DELETE FROM leases
+    WHERE expires_at < NOW() AT TIME ZONE 'utc'
+    RETURNING 1
+)
+SELECT COUNT(*)
+FROM expired
+`
+
+func (q *Queries) ExpireLeases(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, expireLeases)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const expireRunnerReservations = `-- name: ExpireRunnerReservations :one
 WITH rows AS (
     UPDATE runners
@@ -1059,6 +1076,22 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIng
 		return nil, err
 	}
 	return items, nil
+}
+
+const getLeaseInfo = `-- name: GetLeaseInfo :one
+SELECT expires_at, metadata FROM leases WHERE key = $1::lease_key
+`
+
+type GetLeaseInfoRow struct {
+	ExpiresAt time.Time
+	Metadata  []byte
+}
+
+func (q *Queries) GetLeaseInfo(ctx context.Context, key leases.Key) (GetLeaseInfoRow, error) {
+	row := q.db.QueryRow(ctx, getLeaseInfo, key)
+	var i GetLeaseInfoRow
+	err := row.Scan(&i.ExpiresAt, &i.Metadata)
+	return i, err
 }
 
 const getModulesByID = `-- name: GetModulesByID :many

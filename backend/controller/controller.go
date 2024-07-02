@@ -39,7 +39,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
@@ -223,7 +222,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 	}
 
 	svc := &Service{
-		tasks:                   scheduledtask.New(ctx, key, leasesdal.New(pool)),
+		tasks:                   scheduledtask.New(ctx, key, db),
 		pool:                    pool,
 		dal:                     db,
 		key:                     key,
@@ -788,7 +787,7 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
 		}
 		if lease == nil {
-			lease, _, err = leasesdal.New(s.pool).AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
+			lease, _, err = s.dal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
 			if err != nil {
 				if errors.Is(err, leases.ErrConflict) {
 					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))
@@ -1403,7 +1402,7 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, orig
 }
 
 func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {
-	err := leasesdal.New(s.pool).ExpireLeases(ctx)
+	err := s.dal.ExpireLeases(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to expire leases: %w", err)
 	}

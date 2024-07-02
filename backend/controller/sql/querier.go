@@ -32,6 +32,7 @@ type Querier interface {
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) error
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) error
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
+	ExpireLeases(ctx context.Context) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
@@ -60,6 +61,7 @@ type Querier interface {
 	GetIdleRunners(ctx context.Context, labels []byte, limit int64) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
+	GetLeaseInfo(ctx context.Context, key leases.Key) (GetLeaseInfoRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay time.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)

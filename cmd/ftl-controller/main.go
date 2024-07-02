@@ -15,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
-	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	cfdal "github.com/TBD54566975/ftl/common/configuration/dal"
@@ -49,7 +48,6 @@ func main() {
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
 	conn, err := pgxpool.New(ctx, cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
-	ldal := leasesdal.New(conn)
 	dal, err := dal.New(ctx, conn)
 	kctx.FatalIfErrorf(err)
 
@@ -65,7 +63,7 @@ func main() {
 	// The FTL controller currently only supports AWS Secrets Manager as a secrets provider.
 	awsConfig, err := config.LoadDefaultConfig(ctx)
 	kctx.FatalIfErrorf(err)
-	secretsResolver := cf.NewASM(ctx, secretsmanager.NewFromConfig(awsConfig), cli.ControllerConfig.Advertise, ldal)
+	secretsResolver := cf.NewASM(ctx, secretsmanager.NewFromConfig(awsConfig), cli.ControllerConfig.Advertise, dal)
 	secretsProviders := []cf.Provider[cf.Secrets]{secretsResolver}
 	sm, err := cf.New[cf.Secrets](ctx, secretsResolver, secretsProviders)
 	kctx.FatalIfErrorf(err)

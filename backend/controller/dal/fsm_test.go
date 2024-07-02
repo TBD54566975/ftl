@@ -8,7 +8,6 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/either"
 
-	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -21,7 +20,7 @@ func TestSendFSMEvent(t *testing.T) {
 	dal, err := New(ctx, conn)
 	assert.NoError(t, err)
 
-	_, err = dal.AcquireAsyncCall(ctx, conn)
+	_, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, dalerrs.ErrNotFound)
 
 	ref := schema.RefKey{Module: "module", Name: "verb"}
@@ -32,7 +31,7 @@ func TestSendFSMEvent(t *testing.T) {
 	assert.IsError(t, err, dalerrs.ErrConflict)
 	assert.EqualError(t, err, "transition already executing: conflict")
 
-	call, err := dal.AcquireAsyncCall(ctx, conn)
+	call, err := dal.AcquireAsyncCall(ctx)
 	assert.NoError(t, err)
 	t.Cleanup(func() {
 		err := call.Lease.Release()
@@ -49,12 +48,12 @@ func TestSendFSMEvent(t *testing.T) {
 		},
 		Request: []byte(`{}`),
 	}
-	assert.Equal(t, expectedCall, call, assert.Exclude[*leasesdal.Lease](), assert.Exclude[time.Time]())
+	assert.Equal(t, expectedCall, call, assert.Exclude[*Lease](), assert.Exclude[time.Time]())
 
 	err = dal.CompleteAsyncCall(ctx, call, either.LeftOf[string]([]byte(`{}`)), func(tx *Tx) error { return nil })
 	assert.NoError(t, err)
 
 	actual, err := dal.LoadAsyncCall(ctx, call.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, call, actual, assert.Exclude[*leasesdal.Lease](), assert.Exclude[time.Time]())
+	assert.Equal(t, call, actual, assert.Exclude[*Lease](), assert.Exclude[time.Time]())
 }
