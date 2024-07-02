@@ -28,6 +28,23 @@ func (q *Queries) GetModuleConfiguration(ctx context.Context, module optional.Op
 	return value, err
 }
 
+const getModuleSecretURL = `-- name: GetModuleSecretURL :one
+SELECT url
+FROM module_secrets
+WHERE
+  (module IS NULL OR module = $1)
+  AND name = $2
+ORDER BY module NULLS LAST
+LIMIT 1
+`
+
+func (q *Queries) GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error) {
+	row := q.db.QueryRow(ctx, getModuleSecretURL, module, name)
+	var url string
+	err := row.Scan(&url)
+	return url, err
+}
+
 const listModuleConfiguration = `-- name: ListModuleConfiguration :many
 SELECT id, created_at, module, name, value
 FROM module_configuration
@@ -60,6 +77,38 @@ func (q *Queries) ListModuleConfiguration(ctx context.Context) ([]ModuleConfigur
 	return items, nil
 }
 
+const listModuleSecrets = `-- name: ListModuleSecrets :many
+SELECT id, created_at, module, name, url
+FROM module_secrets
+ORDER BY module, name
+`
+
+func (q *Queries) ListModuleSecrets(ctx context.Context) ([]ModuleSecret, error) {
+	rows, err := q.db.Query(ctx, listModuleSecrets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ModuleSecret
+	for rows.Next() {
+		var i ModuleSecret
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.Module,
+			&i.Name,
+			&i.Url,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setModuleConfiguration = `-- name: SetModuleConfiguration :exec
 INSERT INTO module_configuration (module, name, value)
 VALUES ($1, $2, $3)
@@ -70,6 +119,16 @@ func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Op
 	return err
 }
 
+const setModuleSecretURL = `-- name: SetModuleSecretURL :exec
+INSERT INTO module_secrets (module, name, url)
+VALUES ($1, $2, $3)
+`
+
+func (q *Queries) SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error {
+	_, err := q.db.Exec(ctx, setModuleSecretURL, module, name, url)
+	return err
+}
+
 const unsetModuleConfiguration = `-- name: UnsetModuleConfiguration :exec
 DELETE FROM module_configuration
 WHERE module = $1 AND name = $2
@@ -77,5 +136,15 @@ WHERE module = $1 AND name = $2
 
 func (q *Queries) UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error {
 	_, err := q.db.Exec(ctx, unsetModuleConfiguration, module, name)
+	return err
+}
+
+const unsetModuleSecret = `-- name: UnsetModuleSecret :exec
+DELETE FROM module_secrets
+WHERE module = $1 AND name = $2
+`
+
+func (q *Queries) UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error {
+	_, err := q.db.Exec(ctx, unsetModuleSecret, module, name)
 	return err
 }

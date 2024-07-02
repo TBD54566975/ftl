@@ -12,9 +12,13 @@ import (
 
 type Querier interface {
 	GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error)
+	GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error)
 	ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error)
+	ListModuleSecrets(ctx context.Context) ([]ModuleSecret, error)
 	SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error
+	SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error
 	UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error
+	UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error
 }
 
 var _ Querier = (*Queries)(nil)
