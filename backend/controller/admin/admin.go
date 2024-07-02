@@ -12,6 +12,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type AdminService struct {
@@ -231,14 +232,18 @@ func refFromConfigRef(cr *ftlv1.ConfigRef) cf.Ref {
 }
 
 func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool, ref cf.Ref, value json.RawMessage) error {
+	logger := log.FromContext(ctx)
+
+	// Globals aren't in the module schemas, so we have nothing to validate against.
 	if !ref.Module.Ok() {
-		// Globals aren't in the module schemas, so we have nothing to validate against.
 		return nil
 	}
 
+	// If we can't retrieve an active schema, skip validation.
 	sch, err := s.schr.GetActiveSchema(ctx)
 	if err != nil {
-		return fmt.Errorf("could not get active schema: %w", err)
+		logger.Debugf("skipping validation; could not get the active schema: %v", err)
+		return nil
 	}
 
 	r := schema.RefKey{Module: ref.Module.Default(""), Name: ref.Name}.ToRef()

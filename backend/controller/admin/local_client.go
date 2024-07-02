@@ -3,16 +3,13 @@ package admin
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
-	"google.golang.org/protobuf/proto"
-
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/common/projectconfig"
+	"github.com/alecthomas/types/optional"
 )
 
 // localClient reads and writes to local projectconfig files without making any network
@@ -22,7 +19,10 @@ type localClient struct {
 	*AdminService
 }
 
-type diskSchemaRetriever struct{}
+type diskSchemaRetriever struct {
+	// Omit to use the project root as the deploy root.
+	deployRoot optional.Option[string]
+}
 
 func newLocalClient(ctx context.Context) *localClient {
 	cm := configuration.ConfigFromContext(ctx)
@@ -44,24 +44,18 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 		return nil, fmt.Errorf("could not discover modules: %w", err)
 	}
 
-	var pbModules []*schemapb.Module
+	sch := &schema.Schema{}
 	for _, m := range modules {
-		deployDir := m.Config.Abs().DeployDir
-		schemaPath := filepath.Join(deployDir, m.Config.Schema)
-		content, err := os.ReadFile(schemaPath)
-		if err != nil {
-			return nil, fmt.Errorf("could not read module schema: %w", err)
+		schemaPath := m.Config.Abs().Schema
+		if r, ok := s.deployRoot.Get(); ok {
+			schemaPath = filepath.Join(r, m.Config.Module, m.Config.DeployDir, m.Config.Schema)
 		}
-		pbModule := &schemapb.Module{}
-		err = proto.Unmarshal(content, pbModule)
+
+		module, err := schema.ModuleFromProtoFile(schemaPath)
 		if err != nil {
-			return nil, fmt.Errorf("could not unmarshall schema protobuf: %w", err)
+			return nil, fmt.Errorf("could not load module schema: %w", err)
 		}
-		pbModules = append(pbModules, pbModule)
-	}
-	sch, err := schema.FromProto(&schemapb.Schema{Modules: pbModules})
-	if err != nil {
-		return nil, fmt.Errorf("could not convert from protobuf schema: %w", err)
+		sch.Upsert(module)
 	}
 	return sch, nil
 }
