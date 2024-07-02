@@ -191,6 +191,10 @@ type Service struct {
 
 	increaseReplicaFailures map[string]int
 	asyncCallsLock          sync.Mutex
+
+	// This lock is used to serialize access to secrets when checking for updates.
+	// Without this, it is too common for multiple 1Password prompts to be shown to the user at once.
+	secretUpdatesLock sync.Mutex
 }
 
 func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
@@ -683,6 +687,9 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
 	lastChecksum := int64(-1)
 
+	// on first run we want to quickly get secrets to the module so it can complete set up
+	// on subsequent runs we want to limit how many simultaneous 1Password prompts can be shown to the user
+	shouldLockForSecrets := false
 	for {
 		h := sha.New()
 
@@ -690,10 +697,18 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
 		}
+
+		if shouldLockForSecrets {
+			s.secretUpdatesLock.Lock()
+		}
 		secrets, err := sm.MapForModule(ctx, name)
+		if shouldLockForSecrets {
+			s.secretUpdatesLock.Unlock()
+		}
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 		}
+
 		databases, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets)
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
@@ -725,6 +740,7 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		case <-ctx.Done():
 			return nil
 		case <-time.After(s.config.ModuleUpdateFrequency):
+			shouldLockForSecrets = sm.HasProviderForKey(cf.OnePasswordKey)
 		}
 	}
 }

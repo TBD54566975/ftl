@@ -9,6 +9,10 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/alecthomas/atomic"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/kballard/go-shellquote"
 
@@ -17,50 +21,85 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+const (
+	OnePasswordKey = "op"
+)
+
 // OnePasswordProvider is a configuration provider that reads passwords from
 // 1Password vaults via the "op" command line tool.
 type OnePasswordProvider struct {
 	Vault string
 
 	// When 1Password is locked we don't want to bring up multiple prompts.
-	// By coordinating with this lock we can ensure that only one prompt is shown.
-	lock sync.Mutex
+	// The following approach tries to balance throughput while minimizing multiple prompts:
+	// - If a successful call to 1Password was completed within the past 1 second, we allow concurrent calls to 1Password
+	// - Otherwise we make a single call to 1Password, coordinated via the lock.
+	lock          sync.Mutex
+	latestSuccess atomic.Value[optional.Option[time.Time]]
+}
+
+func NewOnePasswordProvider(vault string) *OnePasswordProvider {
+	return &OnePasswordProvider{
+		Vault: vault,
+		// concurrentModules: xsync.NewMapOf[string, bool](),
+	}
 }
 
 func (*OnePasswordProvider) Role() Secrets { return Secrets{} }
-func (o *OnePasswordProvider) Key() string { return "op" }
+func (o *OnePasswordProvider) Key() string { return OnePasswordKey }
 func (o *OnePasswordProvider) Delete(ctx context.Context, ref Ref) error {
 	return nil
 }
 
+func (o *OnePasswordProvider) canAccessWithoutLock() bool {
+	latestSuccess, ok := o.latestSuccess.Load().Get()
+	return ok && time.Since(latestSuccess) <= time.Second
+}
+
+func safeAccess[T any](o *OnePasswordProvider, f func() (T, error)) (result T, err error) {
+	if err := checkOpBinary(); err != nil {
+		return result, err
+	}
+	if !o.canAccessWithoutLock() {
+		o.lock.Lock()
+		if o.canAccessWithoutLock() {
+			// immediately unlock so other access can also proceed
+			o.lock.Unlock()
+		} else {
+			// exclusive access to 1Password
+			defer o.lock.Unlock()
+		}
+	}
+	result, err = f()
+	if err == nil {
+		o.latestSuccess.Store(optional.Some[time.Time](time.Now()))
+	}
+	return
+}
+
 // Load returns the secret stored in 1password.
 func (o *OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	o.lock.Lock()
-	defer o.lock.Unlock()
+	return safeAccess(o, func() ([]byte, error) {
+		vault := key.Host
+		full, err := getItem(ctx, vault, ref)
+		if err != nil {
+			return nil, fmt.Errorf("get item failed: %w", err)
+		}
 
-	if err := checkOpBinary(); err != nil {
-		return nil, err
-	}
+		secret, ok := full.password()
+		if !ok {
+			return nil, fmt.Errorf("password field not found in item %q", ref)
+		}
 
-	vault := key.Host
-	full, err := getItem(ctx, vault, ref)
-	if err != nil {
-		return nil, fmt.Errorf("get item failed: %w", err)
-	}
+		// Just to verify that it is JSON encoded.
+		var decoded interface{}
+		err = json.Unmarshal(secret, &decoded)
+		if err != nil {
+			return nil, fmt.Errorf("secret is not JSON encoded: %w", err)
+		}
 
-	secret, ok := full.password()
-	if !ok {
-		return nil, fmt.Errorf("password field not found in item %q", ref)
-	}
-
-	// Just to verify that it is JSON encoded.
-	var decoded interface{}
-	err = json.Unmarshal(secret, &decoded)
-	if err != nil {
-		return nil, fmt.Errorf("secret is not JSON encoded: %w", err)
-	}
-
-	return secret, nil
+		return secret, nil
+	})
 }
 
 var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
@@ -70,39 +109,35 @@ var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 // op does not support "create or update" as a single command. Neither does it support specifying an ID on create.
 // Because of this, we need check if the item exists before creating it, and update it if it does.
 func (o *OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	o.lock.Lock()
-	defer o.lock.Unlock()
-
-	if err := checkOpBinary(); err != nil {
-		return nil, err
-	}
-	if o.Vault == "" {
-		return nil, fmt.Errorf("vault missing, specify vault as a flag to the controller")
-	}
-	if !vaultRegex.MatchString(o.Vault) {
-		return nil, fmt.Errorf("vault name %q contains invalid characters. a-z A-Z 0-9 _ . - are valid", o.Vault)
-	}
-
-	url := &url.URL{Scheme: "op", Host: o.Vault}
-
-	_, err := getItem(ctx, o.Vault, ref)
-	if errors.As(err, new(itemNotFoundError)) {
-		err = createItem(ctx, o.Vault, ref, value)
-		if err != nil {
-			return nil, fmt.Errorf("create item failed: %w", err)
+	return safeAccess(o, func() (*url.URL, error) {
+		if o.Vault == "" {
+			return nil, fmt.Errorf("vault missing, specify vault as a flag to the controller")
 		}
+		if !vaultRegex.MatchString(o.Vault) {
+			return nil, fmt.Errorf("vault name %q contains invalid characters. a-z A-Z 0-9 _ . - are valid", o.Vault)
+		}
+
+		url := &url.URL{Scheme: "op", Host: o.Vault}
+
+		_, err := getItem(ctx, o.Vault, ref)
+		if errors.As(err, new(itemNotFoundError)) {
+			err = createItem(ctx, o.Vault, ref, value)
+			if err != nil {
+				return nil, fmt.Errorf("create item failed: %w", err)
+			}
+			return url, nil
+
+		} else if err != nil {
+			return nil, fmt.Errorf("get item failed: %w", err)
+		}
+
+		err = editItem(ctx, o.Vault, ref, value)
+		if err != nil {
+			return nil, fmt.Errorf("edit item failed: %w", err)
+		}
+
 		return url, nil
-
-	} else if err != nil {
-		return nil, fmt.Errorf("get item failed: %w", err)
-	}
-
-	err = editItem(ctx, o.Vault, ref, value)
-	if err != nil {
-		return nil, fmt.Errorf("edit item failed: %w", err)
-	}
-
-	return url, nil
+	})
 }
 
 func checkOpBinary() error {

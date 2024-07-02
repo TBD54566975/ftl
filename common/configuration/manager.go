@@ -105,6 +105,11 @@ func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
 	return nil
 }
 
+func (m *Manager[R]) HasProviderForKey(key string) bool {
+	_, ok := m.providers[key]
+	return ok
+}
+
 func (m *Manager[R]) availableProviderKeys() []string {
 	keys := make([]string, 0, len(m.providers))
 	for k := range m.providers {
