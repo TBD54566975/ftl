@@ -263,6 +263,27 @@ CREATE TABLE cron_jobs
 CREATE INDEX cron_jobs_executing_start_time_idx ON cron_jobs (start_time) WHERE state = 'executing';
 CREATE UNIQUE INDEX cron_jobs_key_idx ON cron_jobs (key);
 
+CREATE OR REPLACE FUNCTION create_cron_job(
+  k cron_job_key,
+  d_key deployment_key,
+  m_name TEXT,
+  v TEXT,
+  sch TEXT,
+  s_time TIMESTAMPTZ,
+  n_e TIMESTAMPTZ) RETURNS VOID AS $$
+BEGIN
+    INSERT INTO cron_jobs (key, deployment_id, module_name, verb, schedule, start_time, next_execution)
+    VALUES (
+        k,
+        (SELECT id FROM deployments WHERE key = d_key LIMIT 1),
+        m_name,
+        v,
+        sch,
+        s_time,
+        n_e);
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TYPE event_type AS ENUM (
     'call',
     'log',
