@@ -60,12 +60,14 @@
         "category": "FTL"
       },
       {
-        "command": "ftl.showPanel",
-        "title": "Show Panel"
+        "command": "ftl.showLogs",
+        "title": "Show Logs",
+        "category": "FTL"
       },
       {
         "command": "ftl.statusItemClicked",
-        "title": "FTL: Show Commands"
+        "title": "Show Commands",
+        "category": "FTL"
       }
     ]
   },
