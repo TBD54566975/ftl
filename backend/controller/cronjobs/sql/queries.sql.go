@@ -13,14 +13,15 @@ import (
 )
 
 const createCronJob = `-- name: CreateCronJob :exec
-SELECT create_cron_job(
-  $1::cron_job_key,
-  $2::deployment_key,
-  $3::TEXT,
-  $4::TEXT,
-  $5::TEXT,
-  $6::TIMESTAMPTZ,
-  $7::TIMESTAMPTZ)
+INSERT INTO cron_jobs (key, deployment_id, module_name, verb, schedule, start_time, next_execution)
+  VALUES (
+    $1::cron_job_key,
+    (SELECT id FROM deployments WHERE key = $2::deployment_key LIMIT 1),
+    $3::TEXT,
+    $4::TEXT,
+    $5::TEXT,
+    $6::TIMESTAMPTZ,
+    $7::TIMESTAMPTZ)
 `
 
 type CreateCronJobParams struct {

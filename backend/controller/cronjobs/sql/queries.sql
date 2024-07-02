@@ -1,13 +1,3 @@
--- name: CreateCronJob :exec
-SELECT create_cron_job(
-  sqlc.arg('key')::cron_job_key,
-  sqlc.arg('deployment_key')::deployment_key,
-  sqlc.arg('module_name')::TEXT,
-  sqlc.arg('verb')::TEXT,
-  sqlc.arg('schedule')::TEXT,
-  sqlc.arg('start_time')::TIMESTAMPTZ,
-  sqlc.arg('next_execution')::TIMESTAMPTZ);
-
 -- name: GetCronJobs :many
 SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
 FROM cron_jobs j

@@ -738,13 +738,3 @@ UPDATE topic_subscriptions
 SET state = 'idle'
 WHERE name = @name::TEXT
       AND module_id = (SELECT id FROM module);
-
--- name: CreateCronJob :exec
-SELECT create_cron_job(
-  sqlc.arg('key')::cron_job_key,
-  sqlc.arg('deployment_key')::deployment_key,
-  sqlc.arg('module_name')::TEXT,
-  sqlc.arg('verb')::TEXT,
-  sqlc.arg('schedule')::TEXT,
-  sqlc.arg('start_time')::TIMESTAMPTZ,
-  sqlc.arg('next_execution')::TIMESTAMPTZ);
