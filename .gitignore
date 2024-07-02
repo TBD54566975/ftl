@@ -1,7 +1,9 @@
 .hermit/
-.vscode/
+.vscode/*
 !/.vscode/settings.json
-.idea/
+!/.vscode/launch.json
+.idea/*
+!.idea/runConfigurations/
 *.iml
 target/
 build/
@@ -20,6 +22,7 @@ testdata/**/go.work
 testdata/**/go.work.sum
 **/testdata/**/_ftl
 **/examples/**/_ftl
+**/examples/**/types.ftl.go
 buildengine/.gitignore
 go.work*
 junit*.xml
