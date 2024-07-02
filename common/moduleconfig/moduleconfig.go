@@ -227,7 +227,7 @@ func replacementWatches(moduleDir, deployDir string) ([]string, error) {
 
 // findReplacedImports finds Go files with imports that are specified in the replacements.
 func findReplacedImports(moduleDir, deployDir string, replacements map[string]string) ([]string, error) {
-	var libPaths []string
+	libPaths := make(map[string]bool)
 
 	err := filepath.WalkDir(moduleDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -243,7 +243,7 @@ func findReplacedImports(moduleDir, deployDir string, replacements map[string]st
 				for oldPath, newPath := range replacements {
 					if strings.HasPrefix(imp, oldPath) {
 						resolvedPath := filepath.Join(newPath, strings.TrimPrefix(imp, oldPath))
-						libPaths = append(libPaths, resolvedPath)
+						libPaths[resolvedPath] = true
 						break // Only add the library path once for each import match
 					}
 				}
@@ -252,7 +252,26 @@ func findReplacedImports(moduleDir, deployDir string, replacements map[string]st
 		return nil
 	})
 
-	return libPaths, err
+	return deduplicateLibPaths(libPaths), err
+}
+
+func deduplicateLibPaths(libPaths map[string]bool) []string {
+	for maybeParentPath := range libPaths {
+		for path := range libPaths {
+			if maybeParentPath != path && strings.HasPrefix(path, maybeParentPath) {
+				libPaths[path] = false
+			}
+		}
+	}
+
+	paths := []string{}
+	for path, shouldReturn := range libPaths {
+		if shouldReturn {
+			paths = append(paths, path)
+		}
+	}
+
+	return paths
 }
 
 func parseImports(filePath string) ([]string, error) {
