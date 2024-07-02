@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -227,20 +226,25 @@ func TestAdminValidation(t *testing.T) {
 	testSetSecret(t, ctx, admin, "batmobile", "horsepower", 1000, "")
 	testSetSecret(t, ctx, admin, "batmobile", "horsepower", "thousand", "JSON validation failed: horsepower has wrong type, expected Int found string")
 
+	testSetConfig(t, ctx, admin, "", "city", "Gotham", "")
+	testSetSecret(t, ctx, admin, "", "universe", "DC", "")
 }
 
 // nolint
 func testSetConfig(t testing.TB, ctx context.Context, admin *AdminService, module string, name string, jsonVal any, expectedError string) {
 	t.Helper()
-	var buffer bytes.Buffer
-	enc := json.NewEncoder(&buffer)
-	err := enc.Encode(jsonVal)
+	buffer, err := json.Marshal(jsonVal)
 	assert.NoError(t, err)
+
+	configRef := &ftlv1.ConfigRef{Name: name}
+	if module != "" {
+		configRef.Module = &module
+	}
 
 	_, err = admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
 		Provider: ftlv1.ConfigProvider_CONFIG_INLINE.Enum(),
-		Ref:      &ftlv1.ConfigRef{Module: &module, Name: name},
-		Value:    buffer.Bytes(),
+		Ref:      configRef,
+		Value:    buffer,
 	}))
 	assert.EqualError(t, err, expectedError)
 }
@@ -248,15 +252,18 @@ func testSetConfig(t testing.TB, ctx context.Context, admin *AdminService, modul
 // nolint
 func testSetSecret(t testing.TB, ctx context.Context, admin *AdminService, module string, name string, jsonVal any, expectedError string) {
 	t.Helper()
-	var buffer bytes.Buffer
-	enc := json.NewEncoder(&buffer)
-	err := enc.Encode(jsonVal)
+	buffer, err := json.Marshal(jsonVal)
 	assert.NoError(t, err)
+
+	configRef := &ftlv1.ConfigRef{Name: name}
+	if module != "" {
+		configRef.Module = &module
+	}
 
 	_, err = admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
 		Provider: ftlv1.SecretProvider_SECRET_INLINE.Enum(),
-		Ref:      &ftlv1.ConfigRef{Module: &module, Name: name},
-		Value:    buffer.Bytes(),
+		Ref:      configRef,
+		Value:    buffer,
 	}))
 	assert.EqualError(t, err, expectedError)
 }
