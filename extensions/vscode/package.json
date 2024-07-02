@@ -10,7 +10,7 @@
     "url": "https://github.com/TBD54566975/ftl-vscode"
   },
   "engines": {
-    "vscode": "^1.87.0"
+    "vscode": "^1.90.2"
   },
   "categories": [
     "Other"
@@ -99,6 +99,6 @@
   "dependencies": {
     "lookpath": "^1.2.2",
     "semver": "^7.6.0",
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^10.0.0-next.8"
   }
 }
