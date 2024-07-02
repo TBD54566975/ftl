@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reugn/go-quartz/logger"
 	"time"
+
+	"github.com/reugn/go-quartz/logger"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
@@ -100,7 +101,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				v := decl.ToProto().(*schemapb.Verb)
 				verbSchema := schema.VerbFromProto(v)
 				var jsonRequestSchema string
-				if verbSchema.Request == nil {
+				if verbSchema.Request != nil {
 					if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
 						jsonSchema, err := schema.DataToJSONSchema(sch, *requestData)
 						if err != nil {
