@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	db "github.com/TBD54566975/ftl/backend/controller/dal"
+	db "github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
+	parentdb "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	in "github.com/TBD54566975/ftl/integration"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -24,7 +25,8 @@ func TestServiceWithRealDal(t *testing.T) {
 	t.Cleanup(cancel)
 
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := db.New(ctx, conn)
+	dal := db.New(conn)
+	parentDAL, err := parentdb.New(ctx, conn)
 	assert.NoError(t, err)
 
 	// Using a real clock because real db queries use db clock
@@ -36,7 +38,7 @@ func TestServiceWithRealDal(t *testing.T) {
 		time.Sleep(2*time.Second - time.Duration(clk.Now().Nanosecond())*time.Nanosecond)
 	}
 
-	testServiceWithDal(ctx, t, dal, clk)
+	testServiceWithDal(ctx, t, dal, parentDAL, clk)
 }
 
 func TestCron(t *testing.T) {
