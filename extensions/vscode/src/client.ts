@@ -42,7 +42,6 @@ export class FTLClient {
       },
     }
 
-
     const clientOptions: LanguageClientOptions = {
       documentSelector: [
         { scheme: 'file', language: 'kotlin' },
@@ -58,7 +57,7 @@ export class FTLClient {
       clientOptions
     )
 
-    let options = (this.client.isInDebugMode) ? serverOptions.debug : serverOptions.run
+    const options = (this.client.isInDebugMode) ? serverOptions.debug : serverOptions.run
     this.outputChannel.appendLine(`Running ${ftlPath} ${options.args?.join(' ')}`)
     console.log(options)
 
