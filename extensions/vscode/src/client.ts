@@ -3,6 +3,7 @@ import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
+  State,
 } from 'vscode-languageclient/node'
 import { FTLStatus } from './status'
 
@@ -14,6 +15,7 @@ export class FTLClient {
   private outputChannel: vscode.OutputChannel
   private client: LanguageClient | undefined
   private isClientStarting = false
+  private isExpectingStop = false
 
   constructor(statusBar: vscode.StatusBarItem, output: vscode.OutputChannel) {
     this.statusBarItem = statusBar
@@ -83,14 +85,41 @@ export class FTLClient {
     this.outputChannel.appendLine('Starting lsp client')
     try {
       await this.client.start()
-      this.outputChannel.appendLine('Client started')
       console.log(`${this.clientName} started`)
-      FTLStatus.buildOK(this.statusBarItem)
     } catch (error) {
       console.error(`Error starting ${this.clientName}: ${error}`)
       FTLStatus.ftlError(this.statusBarItem, `Error starting ${this.clientName}: ${error}`)
-      this.outputChannel.appendLine(`Error starting ${this.clientName}: ${error}`)
     }
+
+    this.client.onDidChangeState((event) => {
+      switch (event.newState) {
+        case State.Starting:
+          FTLStatus.ftlStarting(this.statusBarItem)
+          this.isClientStarting = true
+          break
+        case State.Running:
+          FTLStatus.buildRunning(this.statusBarItem)
+          this.isClientStarting = false
+          break
+        case State.Stopped:
+          if (this.isExpectingStop) {
+            FTLStatus.ftlStopped(this.statusBarItem)
+          } else {
+            FTLStatus.ftlError(this.statusBarItem, 'Client stopped unexpectedly')
+            this.client = undefined
+          }
+          this.isExpectingStop = false
+          this.isClientStarting = false
+          break
+        case State.StartFailed:
+          // TODO: This is new in vscode-languageclient v10.0.0 but is not being set for some reason.
+          // https://github.com/microsoft/vscode-languageserver-node/blob/539330136d84891d005e2d0d539932a05644ba54/client/src/common/client.ts#L1618
+          FTLStatus.ftlError(this.statusBarItem, 'Client start failed')
+          this.client = undefined
+          this.isClientStarting = false
+          break
+      }
+    })
 
     this.isClientStarting = false
   }
@@ -115,6 +144,7 @@ export class FTLClient {
 
     console.log('Stopping client')
     const serverProcess = this.client!['_serverProcess']
+    this.isExpectingStop = true
 
     try {
       await this.client!.stop()
@@ -150,7 +180,5 @@ export class FTLClient {
     } else if (serverProcess && serverProcess.killed) {
       console.log('Server process was already killed')
     }
-
-    FTLStatus.ftlStopped(this.statusBarItem)
   }
 }
