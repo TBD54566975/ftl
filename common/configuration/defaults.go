@@ -18,6 +18,6 @@ func NewSecretsManager(ctx context.Context, router Router[Secrets], opVault stri
 		InlineProvider[Secrets]{},
 		EnvarProvider[Secrets]{},
 		KeychainProvider{},
-		&OnePasswordProvider{Vault: opVault},
+		OnePasswordProvider{Vault: opVault},
 	})
 }
