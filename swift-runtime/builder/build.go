@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal"
@@ -24,19 +25,19 @@ type externalModuleContext struct {
 	// Replacements []*modfile.Replace
 }
 
-// type goVerb struct {
-// 	Name        string
-// 	Package     string
-// 	MustImport  string
-// 	HasRequest  bool
-// 	HasResponse bool
-// }
+type swiftVerb struct {
+	Name    string
+	Package string
+	// MustImport  string
+	// HasRequest  bool
+	// HasResponse bool
+}
 
 type mainModuleContext struct {
 	// GoVersion  string
 	// FTLVersion string
-	Name string
-	// Verbs        []goVerb
+	Name  string
+	Verbs []swiftVerb
 	// Replacements []*modfile.Replace
 	// SumTypes     []goSumType
 }
@@ -83,13 +84,40 @@ func Build(ctx context.Context, sch *schema.Schema, name, moduleDir, build, depl
 		return fmt.Errorf("failed to load module schema: %w", err)
 	}
 
+	swiftVerbs := make([]swiftVerb, 0, len(module.Decls))
+	for _, decl := range module.Decls {
+		verb, ok := decl.(*schema.Verb)
+		if !ok {
+			continue
+		}
+		// nativeName, ok := result.NativeNames[verb]
+		// if !ok {
+		// 	return fmt.Errorf("missing native name for verb %s", verb.Name)
+		// }
+
+		// goverb, err := goVerbFromQualifiedName(nativeName)
+		// if err != nil {
+		// 	return err
+		// }
+		// if _, ok := verb.Request.(*schema.Unit); !ok {
+		// 	goverb.HasRequest = true
+		// }
+		// if _, ok := verb.Response.(*schema.Unit); !ok {
+		// 	goverb.HasResponse = true
+		// }
+		swiftVerbs = append(swiftVerbs, swiftVerb{
+			Name:    verb.Name,
+			Package: strings.ToUpper(module.Name[:1]) + module.Name[1:],
+		})
+	}
+
 	// scaffold main package
 	funcs := maps.Clone(scaffoldFuncs)
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
 		// GoVersion:    goModVersion,
 		// FTLVersion:   ftlVersion,
-		Name: module.Name,
-		// Verbs:        goVerbs,
+		Name:  module.Name,
+		Verbs: swiftVerbs,
 		// Replacements: replacements,
 		// SumTypes:     getSumTypes(result.Module, sch, result.NativeNames),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {

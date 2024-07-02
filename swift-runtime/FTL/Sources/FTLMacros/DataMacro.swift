@@ -32,7 +32,7 @@ public struct DataMacro: ExtensionMacro {
                //                    variableSetters.append("\(typeAnnotation.syntaxNodeType)")
                
                variableSetters.append("self.\(binding.pattern) = try \(typeAnnotation.type.description).ftlDecode(jsonDict[\"\(binding.pattern)\"])")
-               encoders.append("\"\(binding.pattern)\": self.\(binding.pattern).ftlEncode(),")
+               encoders.append("output[\"\(binding.pattern)\"] = self.\(binding.pattern).ftlEncode()")
             }
          }
       }
@@ -46,15 +46,15 @@ extension \(type.trimmed): FTLType {
 
     private init(ftlJson:Any?) throws {
         guard let jsonDict = ftlJson as? [String:Any] else {
-            throw FTLError(message:"expected json object for \(Self.self)")
+            throw FTLError(message:"expected json object for \(Self.self) instead of \\(ftlJson)")
         }
         \(raw: variableSetters.joined(separator:"\n"))
     }
 
     public func ftlEncode() -> Any? {
-        return [
-                \(raw: encoders.joined(separator:"\n"))
-        ]
+        var output = [String:Any]()
+        \(raw: encoders.joined(separator:"\n"))
+        return output
     }
 }
 """)

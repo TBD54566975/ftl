@@ -181,27 +181,37 @@ final class VerbServiceProvider: Xyz_Block_Ftl_V1_VerbServiceAsyncProvider {
       request: Xyz_Block_Ftl_V1_CallRequest,
       context: GRPCAsyncServerCallContext
    ) async throws -> Xyz_Block_Ftl_V1_CallResponse {
-      guard let handler = self.handlers[request.verb.name] else {
-         throw VerbServiceProviderError(message: "no handler found for \(request.verb.name)")
+      do {
+         guard let handler = self.handlers[request.verb.name] else {
+            throw VerbServiceProviderError(message: "no handler found for \(request.verb.name)")
+         }
+         let responseData = try await executeCall(handler, requestData: request.body)
+         var response = Xyz_Block_Ftl_V1_CallResponse()
+         response.body = responseData
+         return response
       }
-      let responseData = try await executeCall(handler, requestData: request.body)
-      var response = Xyz_Block_Ftl_V1_CallResponse()
-      response.body = responseData
-      return response
+      catch {
+         var response = Xyz_Block_Ftl_V1_CallResponse()
+         response.body =  try! JSONSerialization.data(withJSONObject: ["error": "\(error)"], options: [.fragmentsAllowed])
+         return response
+      }
    }
    
    func executeCall<H: Handler>(_ handler:H, requestData:Data) async throws -> Data {
-      let root = try JSONSerialization.jsonObject(with: requestData, options: [])
+      let root = try JSONSerialization.jsonObject(with: requestData, options: [.fragmentsAllowed])
+      var request: any FTLType = Unit()
       do {
-         let request = try handler.requestType.ftlDecode(root)
-         let response = try await handler.execute(self.context, request:request as! H.Req)
-         guard let responseRoot = response.ftlEncode() else {
-            throw VerbServiceProviderError(message: "expected non-nil response body")
-         }
-         return try JSONSerialization.data(withJSONObject: responseRoot)
+         request = try handler.requestType.ftlDecode(root)
       }
-      catch {
-         return try JSONSerialization.data(withJSONObject: ["error": "\(error)"], options: [])
+      catch let error {
+         throw VerbServiceProviderError(message: "could not parse request: \(error)\n\(root)")
       }
+      let response = try await handler.execute(self.context, request:request as! H.Req)
+      if let responseRoot = response.ftlEncode() {
+         return try JSONSerialization.data(withJSONObject: responseRoot, options:[.fragmentsAllowed])
+      }
+      // TODO: come up with a proper way to handle this
+      return "null".data(using: .utf8)!
+      
    }
 }

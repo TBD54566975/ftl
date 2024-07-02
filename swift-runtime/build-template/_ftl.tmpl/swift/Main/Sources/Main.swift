@@ -29,7 +29,9 @@ struct Main: ParsableCommand {
       let client = try Client(group: group, host:host, port:port)
       let context = FTL.Context(client:client)
       let provider = VerbServiceProvider(context, handlers: [
-         handlerFor(name: "time", Stime.time)
+{{- range .Verbs}}
+handlerFor(name: "{{.Name}}", {{.Package}}.{{.Name}}),
+{{- end}}
       ])
       
       // TODO: reconsider plaintext transport

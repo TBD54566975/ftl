@@ -27,16 +27,28 @@ class Client: FTLClient {
       grpcRequest.verb.module = module
       grpcRequest.verb.name = verb
       
-      guard let requestRoot = request.ftlEncode() else {
-         throw FTLError(message:"expected request to have non-nil json")
-      }
-      let requestData = try JSONSerialization.data(withJSONObject: requestRoot, options: [])
+      let requestData = try {
+         if let requestRoot = request.ftlEncode() {
+            return try JSONSerialization.data(withJSONObject: requestRoot, options: [.fragmentsAllowed])
+         }
+         // TODO: come up with a proper way to handle this
+         return "null".data(using: .utf8)!
+      }()
+//      throw FTLError(message:"requestData: \(String(data: requestData, encoding: .utf8) ?? "nil")")
       grpcRequest.body = requestData
       let grpcResponse = try await self.grpcClient.call(grpcRequest)
       if grpcResponse.error.message.lengthOfBytes(using: .utf8) > 0 {
          throw FTLError(message:grpcResponse.error.message)
       }
-      let root = try JSONSerialization.jsonObject(with: grpcResponse.body, options:[])
-      return try Resp.ftlDecode(root)
+      if let response = Unit() as? Resp {
+         return response
+      }
+      do {
+         let root = try JSONSerialization.jsonObject(with: grpcResponse.body, options:[.fragmentsAllowed])
+         return try Resp.ftlDecode(root)
+      }
+      catch let error {
+         throw VerbServiceProviderError(message: "could not parse response: \(error)\n\(String(data:grpcResponse.body, encoding:.utf8))")
+      }
    }
 }

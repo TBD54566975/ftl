@@ -16,7 +16,7 @@ extension String: FTLType {
 extension Date: FTLType {
    public static func ftlDecode(_ json:Any?) throws -> Self {
       guard let raw = json as? String else {
-         throw FTLError(message:"expected date to be represented by a json string")
+         throw FTLError(message:"expected date to be represented by a json string instead of \(json)")
       }
       return try Date(raw, strategy:.iso8601)
    }
