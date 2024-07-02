@@ -42,9 +42,6 @@ export class FTLClient {
       },
     }
 
-    this.outputChannel.appendLine(`Running ${ftlPath} with flags: ${flags.join(' ')}`)
-    console.log(serverOptions.debug.args)
-
     const clientOptions: LanguageClientOptions = {
       documentSelector: [
         { scheme: 'file', language: 'kotlin' },
@@ -59,6 +56,11 @@ export class FTLClient {
       serverOptions,
       clientOptions
     )
+
+    const options = (this.client.isInDebugMode) ? serverOptions.debug : serverOptions.run
+    this.outputChannel.appendLine(`Running ${ftlPath} ${options.args?.join(' ')}`)
+    console.log(options)
+
     context.subscriptions.push(this.client)
 
     const buildStatus = this.client.onNotification('ftl/buildState', (message) => {
