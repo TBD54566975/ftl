@@ -40,6 +40,7 @@ COPY --from=builder /src/build/release/ftl-initdb .
 COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments
 
+EXPOSE 8891
 EXPOSE 8892
 
 ENV FTL_CONTROLLER_BIND="http://0.0.0.0:8892"
