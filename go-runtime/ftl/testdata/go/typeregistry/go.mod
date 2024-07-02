@@ -6,7 +6,7 @@ toolchain go1.22.4
 
 require (
 	github.com/TBD54566975/ftl v1.1.5
-	github.com/alecthomas/assert v1.0.0
+	github.com/alecthomas/assert/v2 v2.10.0
 )
 
 require (
@@ -16,7 +16,6 @@ require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/TBD54566975/scaffolder v1.0.0 // indirect
 	github.com/alecthomas/atomic v0.1.0-alpha2 // indirect
-	github.com/alecthomas/colour v0.1.0 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/repr v0.4.0 // indirect
@@ -33,6 +32,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
@@ -43,7 +43,6 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.2.0 // indirect
-	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/swaggest/jsonschema-go v0.3.72 // indirect
 	github.com/swaggest/refl v1.3.0 // indirect
 	github.com/zalando/go-keyring v0.2.5 // indirect
