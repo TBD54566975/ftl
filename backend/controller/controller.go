@@ -127,7 +127,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
 
-	admin := admin.NewAdminService(cm, sm)
+	admin := admin.NewAdminService(cm, sm, dal)
 	console := NewConsoleService(dal)
 
 	ingressHandler := http.Handler(svc)
@@ -281,7 +281,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sch, err := s.getActiveSchema(r.Context())
+	sch, err := s.dal.GetActiveSchema(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -904,7 +904,7 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
 
-	sch, err := s.getActiveSchema(ctx)
+	sch, err := s.dal.GetActiveSchema(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1655,18 +1655,6 @@ func (s *Service) syncSchema(ctx context.Context) {
 			retry.Reset()
 		}
 	}
-}
-
-func (s *Service) getActiveSchema(ctx context.Context) (*schema.Schema, error) {
-	deployments, err := s.dal.GetActiveDeployments(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return schema.ValidateSchema(&schema.Schema{
-		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
-			return d.Schema
-		}),
-	})
 }
 
 func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {

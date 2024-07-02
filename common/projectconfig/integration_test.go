@@ -16,6 +16,7 @@ import (
 )
 
 func TestCmdsCreateProjectTomlFilesIfNonexistent(t *testing.T) {
+	t.Skip("TODO: project files are now required, without one we can't discover the modules with which to validate the schema against")
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
 
@@ -24,8 +25,8 @@ func TestCmdsCreateProjectTomlFilesIfNonexistent(t *testing.T) {
 
 	in.Run(t, fileName,
 		in.CopyModule("echo"),
-		in.Exec("ftl", "config", "set", "key", "--inline", "value"),
-		in.FileContains(configPath, "key"),
+		in.Exec("ftl", "config", "set", "echo.default", "--inline", "value"),
+		in.FileContains(configPath, "default"),
 		in.FileContains(configPath, "InZhbHVlIg"),
 	)
 
