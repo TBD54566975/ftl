@@ -569,11 +569,16 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 	errCh := make(chan error, 1024)
 	for _, group := range topology {
 		groupSchemas := map[string]*schema.Module{}
-		err := e.gatherGroupSchemas(builtModules, group, groupSchemas)
+		metas, err := e.gatherGroupSchemas(builtModules, group, groupSchemas)
 		if err != nil {
 			return err
 		}
-		err = GenerateStubs(ctx, e.projectRoot, maps.Values(groupSchemas))
+
+		moduleDirs := make([]string, len(metas))
+		for i, meta := range metas {
+			moduleDirs[i] = meta.module.Config.Dir
+		}
+		err = GenerateStubs(ctx, e.projectRoot, maps.Values(groupSchemas), moduleDirs)
 		if err != nil {
 			return err
 		}
@@ -694,7 +699,8 @@ func (e *Engine) gatherGroupSchemas(
 	moduleSchemas map[string]*schema.Module,
 	group []string,
 	out map[string]*schema.Module,
-) error {
+) ([]moduleMeta, error) {
+	var metas []moduleMeta
 	for _, module := range group {
 		if module == "builtin" {
 			continue // Skip the builtin module
@@ -702,12 +708,13 @@ func (e *Engine) gatherGroupSchemas(
 
 		meta, ok := e.moduleMetas.Load(module)
 		if ok {
+			metas = append(metas, meta)
 			if err := e.gatherSchemas(moduleSchemas, meta.module, out); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	return metas, nil
 }
 
 // Construct a combined schema for a module and its transitive dependencies.

@@ -74,13 +74,25 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 	assert.True(t, ok)
 
 	if ftlConfigPath != "" {
-		// Use a path into the testdata directory instead of one relative to
-		// tmpDir. Otherwise we have a chicken and egg situation where the config
-		// can't be loaded until the module is copied over, and the config itself
-		// is used by FTL during startup.
+		// Copy the specified FTL config to the temporary directory.
 		projectPath := filepath.Join(tmpDir, "ftl-project.toml")
-		err = copy.Copy(ftlConfigPath, projectPath)
-		t.Setenv("FTL_CONFIG", projectPath)
+
+		absConfigPath, err := filepath.Abs(ftlConfigPath)
+
+		assert.NoError(t, err)
+		err = copy.Copy(absConfigPath, projectPath)
+		if err == nil {
+			t.Setenv("FTL_CONFIG", projectPath)
+		} else {
+			// Use a path into the testdata directory instead of one relative to
+			// tmpDir. Otherwise we have a chicken and egg situation where the config
+			// can't be loaded until the module is copied over, and the config itself
+			// is used by FTL during startup.
+			// Some tests still rely on this behavior, so we can't remove it entirely.
+			t.Logf("Failed to copy %s to %s: %s", ftlConfigPath, projectPath, err)
+			t.Setenv("FTL_CONFIG", filepath.Join(cwd, "testdata", "go", ftlConfigPath))
+		}
+
 	} else {
 		err = os.WriteFile(filepath.Join(tmpDir, "ftl-project.toml"), []byte{}, 0644)
 		assert.NoError(t, err)

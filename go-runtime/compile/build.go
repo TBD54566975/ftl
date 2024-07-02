@@ -3,7 +3,6 @@ package compile
 import (
 	"context"
 	"fmt"
-	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,7 +14,7 @@ import (
 	"unicode"
 
 	sets "github.com/deckarep/golang-set/v2"
-	gomaps "golang.org/x/exp/maps"
+	"golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -221,7 +220,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
-func GenerateStubsForModules(ctx context.Context, projectRoot string, sch *schema.Schema) error {
+func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleDirs []string, sch *schema.Schema) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Generating stubs for modules")
 
@@ -237,11 +236,26 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, sch *schem
 		ftlVersion = ftl.Version
 	}
 
+	allReplacements := map[string]*modfile.Replace{}
+	for _, moduleDir := range moduleDirs {
+		_, replacements, err := goModFileWithReplacements(filepath.Join(moduleDir, "go.mod"))
+		if err != nil {
+			fmt.Printf("failed to update %s: %v\n", moduleDir, err)
+			continue
+		}
+
+		for _, r := range replacements {
+			if _, exists := allReplacements[r.Old.Path]; !exists {
+				allReplacements[r.Old.Path] = r
+			}
+		}
+	}
+
 	context := ExternalModuleContext{
 		GoVersion:    DefaultGoModVersion,
 		FTLVersion:   ftlVersion,
 		Schema:       sch,
-		Replacements: []*modfile.Replace{}, //TODO: Do we need this still, what files would I use for replacements??
+		Replacements: maps.Values(allReplacements),
 	}
 	funcs := maps.Clone(scaffoldFuncs)
 	err = internal.ScaffoldZip(externalModuleTemplateFiles(), projectRoot, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
@@ -613,7 +627,7 @@ func getSumTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNa
 			Variants:      variants,
 		}
 	}
-	out := gomaps.Values(sumTypes)
+	out := maps.Values(sumTypes)
 	slices.SortFunc(out, func(a, b goSumType) int {
 		return strings.Compare(a.Discriminator, b.Discriminator)
 	})

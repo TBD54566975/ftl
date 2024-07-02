@@ -11,13 +11,13 @@ import (
 // GenerateStubs generates stubs for the given modules.
 //
 // Currently, only Go stubs are supported. Kotlin and other language stubs can be added in the future.
-func GenerateStubs(ctx context.Context, projectRoot string, modules []*schema.Module) error {
-	return generateGoStubs(ctx, projectRoot, modules)
+func GenerateStubs(ctx context.Context, projectRoot string, modules []*schema.Module, moduleDirs []string) error {
+	return generateGoStubs(ctx, projectRoot, modules, moduleDirs)
 }
 
-func generateGoStubs(ctx context.Context, projectRoot string, modules []*schema.Module) error {
+func generateGoStubs(ctx context.Context, projectRoot string, modules []*schema.Module, moduleDirs []string) error {
 	sch := &schema.Schema{Modules: modules}
-	err := compile.GenerateStubsForModules(ctx, projectRoot, sch)
+	err := compile.GenerateStubsForModules(ctx, projectRoot, moduleDirs, sch)
 	if err != nil {
 		return fmt.Errorf("failed to generate Go stubs: %w", err)
 	}

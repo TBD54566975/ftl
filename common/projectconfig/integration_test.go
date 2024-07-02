@@ -37,7 +37,7 @@ func TestCmdsCreateProjectTomlFilesIfNonexistent(t *testing.T) {
 }
 
 func TestDefaultToRootWhenModuleDirsMissing(t *testing.T) {
-	in.Run(t, "no-module-dirs-ftl-project.toml",
+	in.Run(t, "testdata/go/no-module-dirs-ftl-project.toml",
 		in.CopyModule("echo"),
 		in.Exec("ftl", "build"), // Needs to be `ftl build`, not `ftl build echo`
 		in.Deploy("echo"),
@@ -48,7 +48,7 @@ func TestDefaultToRootWhenModuleDirsMissing(t *testing.T) {
 }
 
 func TestConfigCmdWithoutController(t *testing.T) {
-	in.RunWithoutController(t, "configs-ftl-project.toml",
+	in.RunWithoutController(t, "testdata/go/configs-ftl-project.toml",
 		in.ExecWithExpectedOutput("\"value\"\n", "ftl", "config", "get", "key"),
 	)
 }

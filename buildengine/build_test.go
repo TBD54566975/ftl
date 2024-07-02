@@ -51,7 +51,7 @@ func testBuild(
 	projectRootDir := t.TempDir()
 
 	// generate stubs to create the shared modules directory
-	err = GenerateStubs(ctx, projectRootDir, bctx.sch.Modules)
+	err = GenerateStubs(ctx, projectRootDir, bctx.sch.Modules, []string{bctx.moduleDir})
 	assert.NoError(t, err)
 
 	err = Build(ctx, projectRootDir, bctx.sch, module, &mockModifyFilesTransaction{})
@@ -80,7 +80,7 @@ func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
 	projectRoot := t.TempDir()
 
 	// generate stubs to create the shared modules directory
-	err = GenerateStubs(ctx, projectRoot, bctx.sch.Modules)
+	err = GenerateStubs(ctx, projectRoot, bctx.sch.Modules, []string{bctx.moduleDir})
 	assert.NoError(t, err)
 
 	// build to generate the build directory

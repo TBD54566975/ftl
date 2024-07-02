@@ -74,7 +74,7 @@ func TestDeploy(t *testing.T) {
 	projectRootDir := t.TempDir()
 
 	// generate stubs to create the shared modules directory
-	err = GenerateStubs(ctx, projectRootDir, sch.Modules)
+	err = GenerateStubs(ctx, projectRootDir, sch.Modules, []string{})
 	assert.NoError(t, err)
 
 	// Build first to make sure the files are there.

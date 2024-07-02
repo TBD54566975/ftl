@@ -179,7 +179,7 @@ func init() {
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	projectRoot := t.TempDir()
-	err := GenerateStubs(ctx, projectRoot, modules)
+	err := GenerateStubs(ctx, projectRoot, modules, []string{})
 	assert.NoError(t, err)
 
 	generatedPath := filepath.Join(projectRoot, ".ftl/go/modules/other/external_module.go")
@@ -239,7 +239,7 @@ func Call(context.Context, Req) (Resp, error) {
 `
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	projectRoot := t.TempDir()
-	err := GenerateStubs(ctx, projectRoot, modules)
+	err := GenerateStubs(ctx, projectRoot, modules, []string{})
 	assert.NoError(t, err)
 
 	generatedPath := filepath.Join(projectRoot, ".ftl/go/modules/test/external_module.go")

@@ -4,7 +4,10 @@ go {{ .GoVersion }}
 
 {{ if ne .FTLVersion "" }}
 require github.com/TBD54566975/ftl v{{ .FTLVersion }}
+require ftl/{{ .Name }} v{{ .FTLVersion }}
 {{ end }}
+
+replace ftl/{{ .Name }} => ../../../../{{ .Name }}
 
 {{- range .Replacements }}
 replace {{ .Old }} => {{ .New }}
