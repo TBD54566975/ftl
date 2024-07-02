@@ -146,6 +146,20 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 			}
 			config.Watch = append(config.Watch, watches...)
 		}
+
+	case "rust":
+		if config.Build == "" {
+			config.Build = "cargo build"
+		}
+		if config.DeployDir == "" {
+			config.DeployDir = "_ftl/target/debug"
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main"}
+		}
+		if len(config.Watch) == 0 {
+			config.Watch = []string{"**/*.rs", "Cargo.toml", "Cargo.lock"}
+		}
 	}
 
 	// Do some validation.
