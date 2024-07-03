@@ -478,6 +478,14 @@ type ModuleConfiguration struct {
 	Value     []byte
 }
 
+type ModuleSecret struct {
+	ID        int64
+	CreatedAt time.Time
+	Module    optional.Option[string]
+	Name      string
+	Url       string
+}
+
 type Request struct {
 	ID         int64
 	Origin     Origin
