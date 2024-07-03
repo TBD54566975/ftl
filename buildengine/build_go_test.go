@@ -38,7 +38,7 @@ func TestExternalType(t *testing.T) {
 		buildDir:  ".ftl",
 		sch:       &schema.Schema{},
 	}
-	testBuild(t, bctx, "unsupported external type", []assertion{
+	testBuild(t, bctx, "", "unsupported external type", []assertion{
 		assertBuildProtoErrors(
 			"unsupported external type \"time.Month\"",
 			"unsupported type \"time.Month\" for field \"Month\"",
@@ -70,7 +70,7 @@ func TestGoModVersion(t *testing.T) {
 		buildDir:  ".ftl",
 		sch:       sch,
 	}
-	testBuild(t, bctx, fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version()[2:]), []assertion{})
+	testBuild(t, bctx, fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version()[2:]), "", []assertion{})
 }
 
 func TestGeneratedTypeRegistry(t *testing.T) {
@@ -113,7 +113,7 @@ func TestGeneratedTypeRegistry(t *testing.T) {
 		buildDir:  ".ftl",
 		sch:       sch,
 	}
-	testBuild(t, bctx, "", []assertion{
+	testBuild(t, bctx, "", "", []assertion{
 		assertGeneratedMain(string(expected)),
 	})
 }

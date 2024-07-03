@@ -10,6 +10,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
@@ -74,7 +75,7 @@ func TestDeploy(t *testing.T) {
 	projectRootDir := t.TempDir()
 
 	// generate stubs to create the shared modules directory
-	err = GenerateStubs(ctx, projectRootDir, sch.Modules, []string{})
+	err = GenerateStubs(ctx, projectRootDir, sch.Modules, []moduleconfig.ModuleConfig{module.Config})
 	assert.NoError(t, err)
 
 	// Build first to make sure the files are there.

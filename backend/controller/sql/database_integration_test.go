@@ -9,7 +9,7 @@ import (
 )
 
 func TestDatabase(t *testing.T) {
-	in.Run(t, "testdata/go/database/ftl-project.toml",
+	in.Run(t, "database/ftl-project.toml",
 		// deploy real module against "testdb"
 		in.CopyModule("database"),
 		in.CreateDBAction("database", "testdb", false),

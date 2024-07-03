@@ -21,6 +21,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -574,11 +575,11 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 			return err
 		}
 
-		moduleDirs := make([]string, len(metas))
+		moduleConfigs := make([]moduleconfig.ModuleConfig, len(metas))
 		for i, meta := range metas {
-			moduleDirs[i] = meta.module.Config.Dir
+			moduleConfigs[i] = meta.module.Config
 		}
-		err = GenerateStubs(ctx, e.projectRoot, maps.Values(groupSchemas), moduleDirs)
+		err = GenerateStubs(ctx, e.projectRoot, maps.Values(groupSchemas), moduleConfigs)
 		if err != nil {
 			return err
 		}

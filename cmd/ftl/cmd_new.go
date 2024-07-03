@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
@@ -18,7 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
-	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -61,7 +61,7 @@ func (i newGoCmd) Run(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating FTL Go module %q in %s", name, path)
 
-	i.GoVersion = compile.DefaultGoModVersion
+	i.GoVersion = runtime.Version()[2:]
 	if err := scaffold(ctx, config.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
 		return err
 	}

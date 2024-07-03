@@ -2,6 +2,8 @@ go {{ .GoVersion }}
 
 use (
 	.
-	{{ .SharedModulesPath }}
+{{- range .SharedModulesPaths }}
+    {{ . }}
+{{- end }}
 	.ftl/go/main
 )

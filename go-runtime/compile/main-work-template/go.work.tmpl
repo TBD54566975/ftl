@@ -2,5 +2,7 @@ go {{ .GoVersion }}
 
 use (
 	.
-	{{ .SharedModulesPath }}
+{{- range .SharedModulesPaths }}
+    {{ . }}
+{{- end }}
 )
