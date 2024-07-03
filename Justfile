@@ -50,7 +50,12 @@ build-generate:
 build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
-  for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
+
+  if [ "${FTL_DEBUG:-}" = "true" ]; then
+    for tool in $@; do go build -o "{{RELEASE}}/$tool" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
+  else
+    for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
+  fi
 
 # Build all backend binaries
 build-backend:
@@ -78,11 +83,10 @@ build-frontend: npm-install
 
 # Rebuild VSCode extension
 build-extension: npm-install
-  @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && npm run compile"
+  @mk {{EXTENSION_OUT}} : extensions/vscode/src extensions/vscode/package.json -- "cd extensions/vscode && rm -f ftl-*.vsix && npm run compile"
 
 # Install development version of VSCode extension
 install-extension: build-extension
-  @mk {{EXTENSION_OUT}} : extensions/vscode/src -- "cd extensions/vscode && npm run compile"
   @cd extensions/vscode && vsce package && code --install-extension ftl-*.vsix
 
 # Build and package the VSCode extension
@@ -149,3 +153,20 @@ docs:
 # Generate LSP hover help text
 lsp-generate:
   @mk lsp/hoveritems.go : lsp docs/content -- "scripts/ftl-gen-lsp"
+
+# Run `ftl dev` providing a Delve endpoint for attaching a debugger.
+debug *args:
+  #!/bin/bash
+  set -euo pipefail
+
+  cleanup() {
+    if [ -n "${dlv_pid:-}" ] && kill -0 "$dlv_pid" 2>/dev/null; then
+      kill "$dlv_pid"
+    fi
+  }
+  trap cleanup EXIT
+
+  FTL_DEBUG=true just build ftl
+  dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec "{{RELEASE}}/ftl" -- dev {{args}} &
+  dlv_pid=$!
+  wait "$dlv_pid"

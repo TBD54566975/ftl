@@ -57,7 +57,7 @@ Once FTL is installed, initialize an FTL project:
 ```
 mkdir myproject
 cd myproject
-ftl init . --hermit
+ftl init myproject . --hermit
 ```
 
 This will create an `ftl-project.toml` file, a git repository, and a `bin/` directory with Hermit tooling.

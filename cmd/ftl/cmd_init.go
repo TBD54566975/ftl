@@ -17,6 +17,7 @@ import (
 )
 
 type initCmd struct {
+	Name       string   `arg:"" help:"Name of the project."`
 	Hermit     bool     `help:"Include Hermit language-specific toolchain binaries." negatable:""`
 	Dir        string   `arg:"" help:"Directory to initialize the project in."`
 	ModuleDirs []string `help:"Child directories of existing modules."`
@@ -36,6 +37,7 @@ func (i initCmd) Run(ctx context.Context) error {
 	}
 
 	config := projectconfig.Config{
+		Name:          i.Name,
 		Hermit:        i.Hermit,
 		NoGit:         i.NoGit,
 		FTLMinVersion: ftl.Version,

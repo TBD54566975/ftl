@@ -95,7 +95,9 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 
 	// get values for new and updated secrets
 	for len(refsToLoad) > 0 {
-		batchSize := 20
+		// ASM returns an error when there are more than 10 filters
+		// A batch size of 9 + 1 tag filter keeps us within this limit
+		batchSize := 9
 		secretIDs := []string{}
 		for ref := range refsToLoad {
 			secretIDs = append(secretIDs, ref.String())

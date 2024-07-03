@@ -3,6 +3,7 @@
 **/build
 **/.gradle
 **/.idea
+!**/.idea/runConfigurations/
 /.vscode
 !.vscode/tasks.json
 **/*.sw*

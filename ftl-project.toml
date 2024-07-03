@@ -1,3 +1,4 @@
+name = "ftl"
 module-dirs = ["examples/go"]
 ftl-min-version = ""
 

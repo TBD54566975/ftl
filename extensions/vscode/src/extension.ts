@@ -99,10 +99,15 @@ const FTLPreflightCheck = async (ftlPath: string) => {
   return true
 }
 
+const AUTOMATICALLY_START_SERVER_VAR = 'automaticallyStartServer' as const
+const PROMPT_OPTIONS = ['Always', 'Yes', 'No', 'Never'] as const
+type PromptOption = typeof PROMPT_OPTIONS[number]
+type AutoStartOption = 'always' | 'never' | 'prompt'
+
 const promptStartClient = async (context: vscode.ExtensionContext) => {
   const configuration = vscode.workspace.getConfiguration('ftl')
   outputChannel.appendLine(`FTL configuration: ${JSON.stringify(configuration)}`)
-  const automaticallyStartServer = configuration.get<string>('automaticallyStartServer')
+  const automaticallyStartServer = configuration.get<AutoStartOption | undefined>(AUTOMATICALLY_START_SERVER_VAR)
 
   FTLStatus.ftlStopped(statusBarItem)
 
@@ -111,18 +116,17 @@ const promptStartClient = async (context: vscode.ExtensionContext) => {
     await startClient(context)
     return
   } else if (automaticallyStartServer === 'never') {
-    outputChannel.appendLine(`FTL development server not started ('automaticallyStartServer' set to 'never' in settings.json)`)
+    outputChannel.appendLine(`FTL development server not started ('${AUTOMATICALLY_START_SERVER_VAR}' set to 'never' in workspace settings.json)`)
     return
   }
 
-  const options = ['Always', 'Yes', 'No', 'Never']
   vscode.window.showInformationMessage(
-    'FTL project detected. Would you like to start the FTL development server?',
-    ...options
-  ).then(async (result) => {
+    'FTL project detected. Would you like to start the FTL development server for this workspace?',
+    ...PROMPT_OPTIONS
+  ).then(async (result: PromptOption | undefined) => {
     switch (result) {
       case 'Always':
-        configuration.update('automaticallyStartServer', 'always', vscode.ConfigurationTarget.Global)
+        configuration.update(AUTOMATICALLY_START_SERVER_VAR, 'always', vscode.ConfigurationTarget.Workspace)
         await startClient(context)
         break
       case 'Yes':
@@ -134,7 +138,7 @@ const promptStartClient = async (context: vscode.ExtensionContext) => {
         break
       case 'Never':
         outputChannel.appendLine('FTL development server set to never auto start')
-        configuration.update('automaticallyStartServer', 'never', vscode.ConfigurationTarget.Global)
+        configuration.update(AUTOMATICALLY_START_SERVER_VAR, 'never', vscode.ConfigurationTarget.Workspace)
         FTLStatus.ftlStopped(statusBarItem)
         break
     }

@@ -52,7 +52,7 @@ diff -u <(
 ```sh file=test.sh region=init
 mkdir myproject
 cd myproject
-ftl init .
+ftl init myproject .
 ftl new go . alice
 ```
 

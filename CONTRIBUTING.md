@@ -150,6 +150,35 @@ just publish-extension
 
 This will publish the extension to the FTL marketplace. This command will require you to have a Personal Access Token (PAT) with the `Marketplace` scope. You can create a PAT [here](https://dev.azure.com/ftl-org/_usersSettings/tokens).
 
+## Debugging with Delve
+
+### Building with Full Debug Information
+
+To build a binary with full debug information for Delve, use the following command:
+
+```sh
+FTL_DEBUG=true just build ftl
+```
+
+### Debugging a Running Process
+
+For an in-line replacement of `ftl dev <args>`, use the command:
+
+```sh
+just debug <args>
+```
+
+This command compiles a binary with debug information, runs `ftl dev <args>` using this binary, and provides an endpoint to attach a remote debugger at __127.0.0.1:2345__.
+You do not need to run `FTL_DEBUG=true just build ftl` separately when using this command.
+### Attaching a Debugger
+
+By running `just debug <args>` and then attaching a remote debugger, you can debug the FTL infrastructure while running your project.
+
+#### IntelliJ
+Run `Debug FTL` from the `Run/Debug Configurations` dropdown while in the FTL project.
+#### VSCode
+Run `Debug FTL` from the `Run and Debug` dropdown while in the FTL project.
+
 ## Useful links
 
 - [VSCode extension samples](https://github.com/microsoft/vscode-extension-samples)

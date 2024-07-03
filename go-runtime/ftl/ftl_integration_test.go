@@ -16,7 +16,7 @@ func TestLifecycle(t *testing.T) {
 	in.Run(t, "",
 		in.GitInit(),
 		in.Exec("rm", "ftl-project.toml"),
-		in.Exec("ftl", "init", "."),
+		in.Exec("ftl", "init", "test", "."),
 		in.Exec("ftl", "new", "go", ".", "echo"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", in.Obj{"name": "Bob"}, func(t testing.TB, response in.Obj) {
@@ -47,5 +47,13 @@ func TestSchemaGenerate(t *testing.T) {
 		in.Mkdir("build/schema-generate"),
 		in.Exec("ftl", "schema", "generate", "schema-generate", "build/schema-generate"),
 		in.FileContains("build/schema-generate/test.txt", "olleh"),
+	)
+}
+
+func TestTypeRegistryUnitTest(t *testing.T) {
+	in.Run(t, "",
+		in.CopyModule("typeregistry"),
+		in.Deploy("typeregistry"),
+		in.ExecModuleTest("typeregistry"),
 	)
 }
