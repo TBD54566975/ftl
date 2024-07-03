@@ -122,7 +122,7 @@ func main() {
 	ctx = cf.ContextWithConfig(ctx, cm)
 
 	// Add secrets manager to context.
-	sm, err := cf.NewSecretsManager(ctx, sr, cli.Vault)
+	sm, err := cf.NewSecretsManager(ctx, sr, cli.Vault, configPath)
 	if err != nil {
 		kctx.Fatalf(err.Error())
 	}
