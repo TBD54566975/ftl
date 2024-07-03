@@ -86,5 +86,6 @@ func TestInt64BuildError(t *testing.T) {
 
 	err = engine.Build(ctx)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "int64 is not a supported type; specify int instead")
+	assert.Contains(t, err.Error(), "unsupported type \"int64\" for field \"Input\"")
+	assert.Contains(t, err.Error(), "unsupported type \"int64\" for field \"Output\"")
 }

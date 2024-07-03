@@ -136,7 +136,7 @@ func ExtractType(pass *analysis.Pass, pos token.Pos, tnode types.Type) optional.
 		case types.String:
 			return optional.Some[schema.Type](&schema.String{Pos: GoPosToSchemaPos(fset, pos)})
 
-		case types.Int, types.Int64:
+		case types.Int:
 			return optional.Some[schema.Type](&schema.Int{Pos: GoPosToSchemaPos(fset, pos)})
 
 		case types.Bool:
