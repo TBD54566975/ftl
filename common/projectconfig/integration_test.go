@@ -3,8 +3,6 @@
 package projectconfig
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -14,28 +12,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 )
-
-func TestCmdsCreateProjectTomlFilesIfNonexistent(t *testing.T) {
-	t.Skip("TODO: project files are now required, without one we can't discover the modules with which to validate the schema against")
-	cwd, err := os.Getwd()
-	assert.NoError(t, err)
-
-	fileName := "ftl-project-nonexistent.toml"
-	configPath := filepath.Join(cwd, "testdata", "go", fileName)
-
-	in.Run(t, fileName,
-		in.CopyModule("echo"),
-		in.Exec("ftl", "config", "set", "echo.default", "--inline", "value"),
-		in.FileContains(configPath, "default"),
-		in.FileContains(configPath, "InZhbHVlIg"),
-	)
-
-	// The FTL config path is special-cased to use the testdata directory
-	// instead of tmpDir, so we need to clean it up manually.
-	fmt.Printf("Removing config file %s\n", configPath)
-	err = os.Remove(configPath)
-	assert.NoError(t, err)
-}
 
 func TestDefaultToRootWhenModuleDirsMissing(t *testing.T) {
 	in.Run(t, "no-module-dirs-ftl-project.toml",
