@@ -1288,10 +1288,6 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 		case types.Int:
 			return optional.Some[schema.Type](&schema.Int{Pos: goPosToSchemaPos(pos)})
 
-		case types.Int64:
-			pctx.errors.add(tokenErrorf(1234, underlying.Name(), "int is not a supported type; specify int instead %s", underlying.Name()))
-			return optional.None[schema.Type]()
-
 		case types.Bool:
 			return optional.Some[schema.Type](&schema.Bool{Pos: goPosToSchemaPos(pos)})
 
