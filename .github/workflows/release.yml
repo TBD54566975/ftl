@@ -161,7 +161,6 @@ jobs:
           git add ftl.hcl
           git commit -m "Auto-versioned"
           git push origin main
-  # Lives in extensions/vscode
   vscode-release:
     name: Release VSCode Extension
     runs-on: ubuntu-latest
