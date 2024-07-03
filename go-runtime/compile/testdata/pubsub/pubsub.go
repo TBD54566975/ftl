@@ -13,7 +13,7 @@ type PayinEvent struct {
 
 //ftl:verb
 func Payin(ctx context.Context) error {
-	if err := payinsVar.Publish(ctx, PayinEvent{Name: "Test"}); err != nil {
+	if err := Payins.Publish(ctx, PayinEvent{Name: "Test"}); err != nil {
 		return fmt.Errorf("failed to publish event: %w", err)
 	}
 	return nil
@@ -26,21 +26,21 @@ func ProcessPayin(ctx context.Context, event PayinEvent) error {
 	return nil
 }
 
-var _ = ftl.Subscription(payinsVar, "paymentProcessing")
+var _ = ftl.Subscription(Payins, "paymentProcessing")
 
-var payinsVar = ftl.Topic[PayinEvent]("payins")
+var Payins = ftl.Topic[PayinEvent]("payins")
 
-var _ = ftl.Subscription(broadcast, "broadcastSubscription")
+var _ = ftl.Subscription(PublicBroadcast, "broadcastSubscription")
 
 // publicBroadcast is a topic that broadcasts payin events to the public.
 // out of order with subscription registration to test ordering doesn't matter.
 //
 //ftl:export
-var broadcast = ftl.Topic[PayinEvent]("publicBroadcast")
+var PublicBroadcast = ftl.Topic[PayinEvent]("publicBroadcast")
 
 //ftl:verb export
 func Broadcast(ctx context.Context) error {
-	if err := broadcast.Publish(ctx, PayinEvent{Name: "Broadcast"}); err != nil {
+	if err := PublicBroadcast.Publish(ctx, PayinEvent{Name: "Broadcast"}); err != nil {
 		return fmt.Errorf("failed to publish broadcast event: %w", err)
 	}
 	return nil
