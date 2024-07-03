@@ -16,7 +16,7 @@ func TestLifecycle(t *testing.T) {
 	in.Run(t, "",
 		in.GitInit(),
 		in.Exec("rm", "ftl-project.toml"),
-		in.Exec("ftl", "init", "."),
+		in.Exec("ftl", "init", "test", "."),
 		in.Exec("ftl", "new", "go", ".", "echo"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", in.Obj{"name": "Bob"}, func(t testing.TB, response in.Obj) {
