@@ -37,10 +37,6 @@ func (b *boxRunCmd) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create database: %w", err)
 	}
-	//_, err = dal.New(ctx, conn)
-	/*if err != nil {
-		return fmt.Errorf("failed to create DAL: %w", err)
-	}*/
 	config := controller.Config{
 		Bind:        b.Bind,
 		IngressBind: b.IngressBind,
