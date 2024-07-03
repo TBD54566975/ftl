@@ -144,19 +144,6 @@ func Create(ctx context.Context, config Config, dir string) error {
 	return Save(config)
 }
 
-// LoadOrCreate loads or creates the given configuration file.
-func LoadOrCreate(ctx context.Context, target string) (Config, error) {
-	logger := log.FromContext(ctx)
-	if _, err := os.Stat(target); errors.Is(err, os.ErrNotExist) {
-		logger.Debugf("Creating a new project config file at %q", target)
-		config := Config{Path: target}
-		return config, Save(config)
-	}
-
-	log.FromContext(ctx).Tracef("Loading config from %s", target)
-	return Load(ctx, target)
-}
-
 // Load project config from a file.
 func Load(ctx context.Context, path string) (Config, error) {
 	if path == "" {
