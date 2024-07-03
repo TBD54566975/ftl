@@ -161,3 +161,23 @@ jobs:
           git add ftl.hcl
           git commit -m "Auto-versioned"
           git push origin main
+  vscode-release:
+    name: Release VSCode Extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Publish
+        run: |
+          set -euo pipefail
+          version="$(git describe --tags --abbrev=0)"
+          echo "Publishing version $version"
+          jq ".version = \"$version\"" extensions/vscode/package.json > extensions/vscode/package.json.tmp
+          mv extensions/vscode/package.json.tmp extensions/vscode/package.json
+          just publish-extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
