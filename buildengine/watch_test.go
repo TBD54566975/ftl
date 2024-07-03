@@ -34,7 +34,7 @@ func TestWatch(t *testing.T) {
 	// Initiate two modules
 	err := gitInit(dir)
 	assert.NoError(t, err)
-	err = ftl("init", dir)
+	err = ftl("init", "test", dir)
 	assert.NoError(t, err)
 	err = ftl("new", "go", dir, "one")
 	assert.NoError(t, err)
@@ -76,7 +76,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	// Initiate a module
 	err := gitInit(dir)
 	assert.NoError(t, err)
-	err = ftl("init", dir)
+	err = ftl("init", "test", dir)
 	assert.NoError(t, err)
 	err = ftl("new", "go", dir, "one")
 	assert.NoError(t, err)
@@ -113,7 +113,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	// Initiate a module
 	err := gitInit(dir)
 	assert.NoError(t, err)
-	err = ftl("init", dir)
+	err = ftl("init", "test", dir)
 	assert.NoError(t, err)
 	err = ftl("new", "go", dir, "one")
 	assert.NoError(t, err)

@@ -29,6 +29,7 @@ type Config struct {
 	// Path to the config file.
 	Path string `toml:"-"`
 
+	Name          string                      `toml:"name"`
 	Global        ConfigAndSecrets            `toml:"global"`
 	Modules       map[string]ConfigAndSecrets `toml:"modules"`
 	ModuleDirs    []string                    `toml:"module-dirs"`
