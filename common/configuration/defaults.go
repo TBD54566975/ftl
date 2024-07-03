@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/TBD54566975/ftl/common/projectconfig"
 )
@@ -18,7 +19,7 @@ func NewConfigurationManager(ctx context.Context, router Router[Configuration]) 
 func NewSecretsManager(ctx context.Context, router Router[Secrets], opVault string, config string) (*Manager[Secrets], error) {
 	projectConfig, err := projectconfig.Load(ctx, config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load project config for secrets manager: %w", err)
 	}
 	return New(ctx, router, []Provider[Secrets]{
 		InlineProvider[Secrets]{},
