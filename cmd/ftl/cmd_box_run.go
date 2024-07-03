@@ -12,6 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
+	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
@@ -32,6 +33,14 @@ type boxRunCmd struct {
 }
 
 func (b *boxRunCmd) Run(ctx context.Context) error {
+	_, err := databasetesting.CreateForDevel(ctx, b.DSN, b.Recreate)
+	if err != nil {
+		return fmt.Errorf("failed to create database: %w", err)
+	}
+	//_, err = dal.New(ctx, conn)
+	/*if err != nil {
+		return fmt.Errorf("failed to create DAL: %w", err)
+	}*/
 	config := controller.Config{
 		Bind:        b.Bind,
 		IngressBind: b.IngressBind,
