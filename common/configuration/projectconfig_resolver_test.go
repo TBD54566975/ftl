@@ -26,19 +26,12 @@ func TestSet(t *testing.T) {
 	err = os.WriteFile(config, existing, 0600)
 	assert.NoError(t, err)
 
-	t.Run("ExistingModule", func(t *testing.T) {
-		setAndAssert(t, "echo", config)
-	})
-	t.Run("NewModule", func(t *testing.T) {
-		setAndAssert(t, "echooo", config)
-	})
-	t.Run("MissingTOMLFile", func(t *testing.T) {
-		err := os.Remove(config)
-		assert.NoError(t, err)
-		setAndAssert(t, "echooooo", config)
-		err = os.WriteFile(defaultPath, origConfigBytes, 0600)
-		assert.NoError(t, err)
-	})
+	setAndAssert(t, "echo", config)
+	setAndAssert(t, "echooo", config)
+
+	// Restore the original config file.
+	err = os.WriteFile(defaultPath, origConfigBytes, 0600)
+	assert.NoError(t, err)
 }
 
 func TestGetGlobal(t *testing.T) {

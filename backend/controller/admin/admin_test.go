@@ -62,7 +62,7 @@ func tempConfigPath(t *testing.T, existingPath string, prefix string) string {
 	var existing []byte
 	var err error
 	if existingPath == "" {
-		existing = []byte{}
+		existing = []byte("name = \"generated\"")
 	} else {
 		existing, err = os.ReadFile(existingPath)
 		assert.NoError(t, err)

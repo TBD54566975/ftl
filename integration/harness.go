@@ -79,7 +79,7 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 		// is used by FTL during startup.
 		t.Setenv("FTL_CONFIG", filepath.Join(cwd, "testdata", "go", ftlConfigPath))
 	} else {
-		err = os.WriteFile(filepath.Join(tmpDir, "ftl-project.toml"), []byte{}, 0644)
+		err = os.WriteFile(filepath.Join(tmpDir, "ftl-project.toml"), []byte("name = \"integration\""), 0644)
 		assert.NoError(t, err)
 	}
 

@@ -14,6 +14,7 @@ func TestProjectConfig(t *testing.T) {
 	actual, err := Load(context.Background(), "testdata/ftl-project.toml")
 	assert.NoError(t, err)
 	expected := Config{
+		Name: "testdata",
 		Path: actual.Path,
 		Modules: map[string]ConfigAndSecrets{
 			"module": {
