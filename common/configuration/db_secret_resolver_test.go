@@ -6,22 +6,22 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/TBD54566975/ftl/common/configuration/sql"
+	"github.com/TBD54566975/ftl/common/configuration/dal"
 	"github.com/alecthomas/assert/v2"
 	. "github.com/alecthomas/types/optional"
 )
 
 type mockDBSecretResolverDAL struct {
-	entries []sql.ModuleSecret
+	entries []dal.ModuleSecret
 }
 
-func (d *mockDBSecretResolverDAL) findEntry(module Option[string], name string) (Option[sql.ModuleSecret], int) {
+func (d *mockDBSecretResolverDAL) findEntry(module Option[string], name string) (Option[dal.ModuleSecret], int) {
 	for i := range d.entries {
 		if d.entries[i].Module.Default("") == module.Default("") && d.entries[i].Name == name {
 			return Some(d.entries[i]), i
 		}
 	}
-	return None[sql.ModuleSecret](), -1
+	return None[dal.ModuleSecret](), -1
 }
 
 func (d *mockDBSecretResolverDAL) GetModuleSecretURL(ctx context.Context, module Option[string], name string) (string, error) {
@@ -32,7 +32,7 @@ func (d *mockDBSecretResolverDAL) GetModuleSecretURL(ctx context.Context, module
 	return "", fmt.Errorf("secret not found")
 }
 
-func (d *mockDBSecretResolverDAL) ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error) {
+func (d *mockDBSecretResolverDAL) ListModuleSecrets(ctx context.Context) ([]dal.ModuleSecret, error) {
 	return d.entries, nil
 }
 
@@ -41,7 +41,7 @@ func (d *mockDBSecretResolverDAL) SetModuleSecretURL(ctx context.Context, module
 	if err != nil {
 		return fmt.Errorf("could not unset secret %w", err)
 	}
-	d.entries = append(d.entries, sql.ModuleSecret{Module: module, Name: name, Url: url})
+	d.entries = append(d.entries, dal.ModuleSecret{Module: module, Name: name, Url: url})
 	return nil
 }
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/common/configuration/sql"
+	"github.com/TBD54566975/ftl/common/configuration/dal"
 	"github.com/alecthomas/types/optional"
 )
 
@@ -16,7 +16,7 @@ type DBSecretResolver struct {
 
 type DBSecretResolverDAL interface {
 	GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error)
-	ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error)
+	ListModuleSecrets(ctx context.Context) ([]dal.ModuleSecret, error)
 	SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error
 	UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error
 }

@@ -71,10 +71,19 @@ func (d *DAL) UnsetModuleSecret(ctx context.Context, module optional.Option[stri
 	return nil
 }
 
-func (d *DAL) ListModuleSecrets(ctx context.Context) ([]sql.ModuleSecret, error) {
+type ModuleSecret sql.ModuleSecret
+
+func (d *DAL) ListModuleSecrets(ctx context.Context) ([]ModuleSecret, error) {
 	l, err := d.db.ListModuleSecrets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not list secrets: %w", dalerrs.TranslatePGError(err))
 	}
-	return l, nil
+
+	// Convert []sql.ModuleSecret to []ModuleSecret
+	ms := make([]ModuleSecret, len(l))
+	for i, secret := range l {
+		ms[i] = ModuleSecret(secret)
+	}
+
+	return ms, nil
 }
