@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
@@ -21,6 +22,10 @@ type DAL struct {
 
 func New(pool *pgxpool.Pool) *DAL {
 	return &DAL{db: sql.NewDB(pool)}
+}
+
+func NewQTx(pool sql.ConnI, tx pgx.Tx) *sql.Queries {
+	return sql.New(pool).WithTx(tx)
 }
 
 func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
