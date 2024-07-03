@@ -74,13 +74,11 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 	assert.True(t, ok)
 
 	if ftlConfigPath != "" {
-		// Copy the specified FTL config to the temporary directory.
+		ftlConfigPath = filepath.Join(cwd, "testdata", "go", ftlConfigPath)
 		projectPath := filepath.Join(tmpDir, "ftl-project.toml")
 
-		absConfigPath, err := filepath.Abs(ftlConfigPath)
-
-		assert.NoError(t, err)
-		err = copy.Copy(absConfigPath, projectPath)
+		// Copy the specified FTL config to the temporary directory.
+		err = copy.Copy(ftlConfigPath, projectPath)
 		if err == nil {
 			t.Setenv("FTL_CONFIG", projectPath)
 		} else {
@@ -90,7 +88,7 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 			// is used by FTL during startup.
 			// Some tests still rely on this behavior, so we can't remove it entirely.
 			t.Logf("Failed to copy %s to %s: %s", ftlConfigPath, projectPath, err)
-			t.Setenv("FTL_CONFIG", filepath.Join(cwd, "testdata", "go", ftlConfigPath))
+			t.Setenv("FTL_CONFIG", ftlConfigPath)
 		}
 
 	} else {

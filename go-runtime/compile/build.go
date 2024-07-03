@@ -584,7 +584,7 @@ func getLocalSumTypes(module *schema.Module) []goSumType {
 			}
 		}
 	}
-	out := gomaps.Values(sumTypes)
+	out := maps.Values(sumTypes)
 	slices.SortFunc(out, func(a, b goSumType) int {
 		return strings.Compare(a.Discriminator, b.Discriminator)
 	})
