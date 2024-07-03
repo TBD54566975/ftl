@@ -39,13 +39,15 @@ export const simpleJsonSchema = (verb: Verb): any => {
   let schema = JSON.parse(verb.jsonRequestSchema)
 
   if (schema.properties && isHttpIngress(verb)) {
-    schema = {
-      ...schema,
-      type: schema.properties.body.type,
-      properties: {
-        body: schema.properties.body
-      },
-      required: schema.required.includes('body') ? ['body'] : []
+    const bodySchema = schema.properties.body
+    if (bodySchema) {
+      schema = {
+        ...bodySchema,
+        definitions: schema.definitions,
+        required: schema.required.includes('body') ? bodySchema.required : []
+      }
+    } else {
+      schema = {}
     }
   }
 
@@ -58,7 +60,6 @@ export const defaultRequest = (verb?: Verb): string => {
   }
 
   const schema = simpleJsonSchema(verb)
-
   JSONSchemaFaker.option({
     alwaysFakeOptionals: false,
     useDefaultValue: true,
@@ -138,15 +139,19 @@ export const createVerbRequest = (path: string, verb?: Verb,  editorText?: strin
     return new Uint8Array()
   }
 
-  const requestJson = JSON.parse(editorText)
+  let requestJson = JSON.parse(editorText)
 
   if (isHttpIngress(verb)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const newRequestJson: Record<string, any> = {}
     const httpIngress = ingress(verb)
     if (httpIngress) {
-      requestJson['method'] = httpIngress.method
-      requestJson['path'] = path.replace(basePath, '')
+      newRequestJson.method = httpIngress.method
+      newRequestJson.path = path.replace(basePath, '')
     }
-    requestJson.headers = JSON.parse(headers ?? '{}')
+    newRequestJson.headers = JSON.parse(headers ?? '{}')
+    newRequestJson.body = requestJson
+    requestJson = newRequestJson
   }
 
   const buffer = Buffer.from(JSON.stringify(requestJson))
