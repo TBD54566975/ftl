@@ -46,6 +46,8 @@ type Tx struct {
 
 func (t *Tx) Conn() ConnI { return t.tx }
 
+func (t *Tx) Tx() pgx.Tx { return t.tx }
+
 func (t *Tx) Begin(ctx context.Context) (*Tx, error) {
 	savepoint := fmt.Sprintf("savepoint_%d", len(t.savepoints))
 	t.savepoints = append(t.savepoints, savepoint)

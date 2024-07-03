@@ -177,41 +177,6 @@ func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams
 	return id, err
 }
 
-const createCronJob = `-- name: CreateCronJob :exec
-INSERT INTO cron_jobs (key, deployment_id, module_name, verb, schedule, start_time, next_execution)
-  VALUES (
-    $1::cron_job_key,
-    (SELECT id FROM deployments WHERE key = $2::deployment_key LIMIT 1),
-    $3::TEXT,
-    $4::TEXT,
-    $5::TEXT,
-    $6::TIMESTAMPTZ,
-    $7::TIMESTAMPTZ)
-`
-
-type CreateCronJobParams struct {
-	Key           model.CronJobKey
-	DeploymentKey model.DeploymentKey
-	ModuleName    string
-	Verb          string
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-}
-
-func (q *Queries) CreateCronJob(ctx context.Context, arg CreateCronJobParams) error {
-	_, err := q.db.Exec(ctx, createCronJob,
-		arg.Key,
-		arg.DeploymentKey,
-		arg.ModuleName,
-		arg.Verb,
-		arg.Schedule,
-		arg.StartTime,
-		arg.NextExecution,
-	)
-	return err
-}
-
 const createDeployment = `-- name: CreateDeployment :exec
 INSERT INTO deployments (module_id, "schema", "key")
 VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3::deployment_key)

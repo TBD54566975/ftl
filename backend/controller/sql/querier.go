@@ -25,7 +25,6 @@ type Querier interface {
 	// Create a new artefact and return the artefact ID.
 	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
-	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
