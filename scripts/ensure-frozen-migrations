@@ -26,7 +26,7 @@ main() {
     local changed_files
 
     # Get list of changed SQL files compared to main branch
-    changed_files=$(git diff --name-only main -- "$sql_dir"/*.sql)
+    changed_files=$(git diff --name-only origin/main -- "$sql_dir"/*.sql)
 
     if [ -z "$changed_files" ]; then
         echo "👍 No SQL files changed in $sql_dir compared to main branch"
@@ -38,16 +38,16 @@ main() {
             echo "$file no longer exists!"
             exit 1
         fi
-        if compare_sql_files "$file" <(git show "main:$file"); then
+        if compare_sql_files "$file" <(git show "origin/main:$file"); then
             : # Do nothing if files are the same
         else
             echo "❌ Migration files changes detected"
-            show_diff "$file" <(git show "main:$file")
+            show_diff "$file" <(git show "origin/main:$file")
             exit 1
         fi
     done <<< "$changed_files"
 
-    git diff --color=always main -- "$sql_dir"/*.sql | cat
+    git diff --color=always origin/main -- "$sql_dir"/*.sql | cat
     echo "👍 Only comments/new lines changed in SQL files"
 }
 
