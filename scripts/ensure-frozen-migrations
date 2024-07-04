@@ -5,7 +5,7 @@ set -euo pipefail
 # It ignores comments when comparing the files.
 
 remove_comments() {
-    sed 's/--.*$//g; s/\/\*.*\*\///g' "$1"
+    sed 's/--.*$//g' "$1"
 }
 
 compare_sql_files() {
