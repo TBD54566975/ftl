@@ -192,6 +192,7 @@ func (o OnePasswordProvider) storeSecret(ctx context.Context, vault string, ref 
 	args := []string{
 		"item", "edit", o.itemName(),
 		"--vault", vault,
+		fmt.Sprintf("username[text]=%s", defaultSecretModificationWarning),
 		fmt.Sprintf("%s\\.%s[password]=%s", module, ref.Name, string(secret)),
 	}
 	_, err := exec.Capture(ctx, ".", "op", args...)
