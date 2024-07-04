@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# echo
+set -x
+
 # This script checks if the SQL migration have been modified compared to the common ancestor with the main branch.
 # It ignores comments when comparing the files.
 
