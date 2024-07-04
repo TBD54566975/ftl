@@ -15,7 +15,7 @@ func TestComments(t *testing.T) {
 		{
 			input:   "test input can be anything",
 			comment: "This is a test",
-			output:  "# This is a test\n",
+			output:  "# This is a test\ntest input can be anything",
 		},
 		{
 			input:   "{\n  \"key\": \"value\"\n}",
