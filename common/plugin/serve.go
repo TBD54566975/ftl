@@ -21,6 +21,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -154,6 +155,7 @@ func Start[Impl any, Iface any, Config any](
 	reflector := grpcreflect.NewStaticReflector(servicePaths...)
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	ftlhttp.RegisterPprof(mux)
 
 	// Start the server.
 	http1Server := &http.Server{
