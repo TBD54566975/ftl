@@ -7,7 +7,7 @@
   "version": "0.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TBD54566975/ftl-vscode"
+    "url": "https://github.com/TBD54566975/ftl"
   },
   "engines": {
     "vscode": "^1.90.2"
