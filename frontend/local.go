@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"path"
 	"time"
 
 	"github.com/TBD54566975/ftl/internal"
@@ -33,7 +34,7 @@ func Server(ctx context.Context, timestamp time.Time, publicURL *url.URL, allowO
 		return nil, err
 	}
 
-	err = exec.Command(ctx, log.Debug, "frontend", "npm", "run", "dev").Start()
+	err = exec.Command(ctx, log.Debug, path.Join(gitRoot, "frontend"), "npm", "run", "dev").Start()
 	if err != nil {
 		return nil, err
 	}

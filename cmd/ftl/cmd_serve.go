@@ -142,7 +142,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	// Wait for controller to start, then run startup commands.
 	if err := waitForControllerOnline(ctx, time.Second*10, client); err != nil {
-		return fmt.Errorf("controller failed to start: %w", err)
+		return fmt.Errorf("controller failed to start: %w: %w", err, wg.Wait())
 	}
 
 	if len(projConfig.Commands.Startup) > 0 {
