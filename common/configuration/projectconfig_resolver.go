@@ -70,7 +70,7 @@ func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
 }
 
 func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
-	config, err := pc.LoadOrCreate(ctx, p.Config)
+	config, err := pc.Load(ctx, p.Config)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL
 }
 
 func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
-	config, err := pc.LoadOrCreate(ctx, p.Config)
+	config, err := pc.Load(ctx, p.Config)
 	if err != nil {
 		return err
 	}

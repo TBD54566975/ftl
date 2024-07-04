@@ -1,3 +1,4 @@
+name = "testdata"
 module-dirs = ["a/b/c", "d"]
 
 [modules.module.configuration]

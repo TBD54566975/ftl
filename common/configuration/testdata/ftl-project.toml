@@ -1,3 +1,5 @@
+name = "testdata"
+
 [global]
 [global.secrets]
 baz = "envar://baz"
