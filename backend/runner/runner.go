@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -108,6 +110,7 @@ func Start(ctx context.Context, config Config) error {
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
+		rpc.HTTP("/", svc),
 	)
 }
 
@@ -351,6 +354,17 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 		State:    ftlv1.RunnerState_RUNNER_IDLE,
 		Labels:   s.labels,
 	}), nil
+}
+
+func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	deployment, ok := s.deployment.Load().Get()
+	if !ok {
+		http.Error(w, "no deployment", http.StatusNotFound)
+		return
+	}
+	proxy := httputil.NewSingleHostReverseProxy(deployment.plugin.Endpoint)
+	proxy.ServeHTTP(w, r)
+
 }
 
 func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {

@@ -149,6 +149,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 			rpc.HTTP("/", consoleHandler),
+			rpc.PProf(),
 		)
 	})
 
