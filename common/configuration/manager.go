@@ -146,7 +146,7 @@ func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value js
 	var bytes []byte
 	if obfuscator, ok := m.obfuscator.Get(); ok {
 		var err error
-		bytes, err = obfuscator.Obfuscate(value, `This secret is managed by "ftl secret set", DO NOT MODIFY`)
+		bytes, err = obfuscator.Obfuscate(value)
 		if err != nil {
 			return fmt.Errorf("could not obfuscate: %w", err)
 		}

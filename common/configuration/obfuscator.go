@@ -8,9 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
-
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type ObfuscatorProvider interface {
@@ -31,38 +28,7 @@ type Obfuscator struct {
 }
 
 // Obfuscate takes a value and returns an obfuscated value (encoded in hex) with a comment
-func (o Obfuscator) Obfuscate(input []byte, comment string) ([]byte, error) {
-	encoded, err := o.encode(input)
-	if err != nil {
-		return nil, err
-	}
-	// build output by prepending comments
-	lines := []string{}
-	for _, line := range strings.Split(comment, "\n") {
-		lines = append(lines, "# "+line)
-	}
-	lines = append(lines, hex.EncodeToString(encoded))
-	return []byte(strings.Join(lines, "\n")), nil
-}
-
-// Reveal takes an obfuscated value, ignores any comments (lines starting with '#') and de-obfuscates the hex encoded value
-func (o Obfuscator) Reveal(input []byte) ([]byte, error) {
-	// find first line which is not a comment
-	hexEncoded, ok := slices.Find(strings.Split(string(input), "\n"), func(line string) bool {
-		return !strings.HasPrefix(line, "#")
-	})
-	if !ok {
-		return nil, fmt.Errorf("could not find obfuscated value")
-	}
-	obfuscated, err := hex.DecodeString(hexEncoded)
-	if err != nil {
-		return nil, fmt.Errorf("expected hexadecimal string: %w", err)
-	}
-	return o.decode(obfuscated)
-}
-
-// encode takes a byte slice and returns an obfuscated (XOR with AES key) byte slice
-func (o Obfuscator) encode(input []byte) ([]byte, error) {
+func (o Obfuscator) Obfuscate(input []byte) ([]byte, error) {
 	block, err := aes.NewCipher(o.key)
 	if err != nil {
 		return nil, fmt.Errorf("could not create cypher for obfuscation: %w", err)
@@ -74,7 +40,17 @@ func (o Obfuscator) encode(input []byte) ([]byte, error) {
 	}
 	cfb := cipher.NewCFBEncrypter(block, iv)
 	cfb.XORKeyStream(ciphertext[aes.BlockSize:], input)
-	return ciphertext, nil
+	return []byte(hex.EncodeToString(ciphertext)), nil
+}
+
+// Reveal takes an obfuscated value, ignores any comments (lines starting with '#') and de-obfuscates the hex encoded value
+func (o Obfuscator) Reveal(input []byte) ([]byte, error) {
+	// find first line which is not a comment
+	obfuscated, err := hex.DecodeString(string(input))
+	if err != nil {
+		return nil, fmt.Errorf("expected hexadecimal string: %w", err)
+	}
+	return o.decode(obfuscated)
 }
 
 // decode takes a obfuscated byte slice and decrypts
