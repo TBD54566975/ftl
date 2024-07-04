@@ -33,7 +33,7 @@ main() {
     merge_base=$(git merge-base HEAD origin/main)
 
     # Get list of changed SQL files compared to the merge base
-    changed_files=$(git diff --name-only $merge_base -- "$sql_dir"/*.sql)
+    changed_files=$(git diff --name-only "$merge_base" -- "$sql_dir"/*.sql)
 
     if [ -z "$changed_files" ]; then
         echo "👍 No SQL files changed in $sql_dir compared to the common ancestor with main branch"
@@ -54,7 +54,7 @@ main() {
         fi
     done <<< "$changed_files"
 
-    git diff --color=always $merge_base -- "$sql_dir"/*.sql | cat
+    git diff --color=always "$merge_base" -- "$sql_dir"/*.sql | cat
     echo "👍 Only comments/new lines changed in SQL files"
 }
 
