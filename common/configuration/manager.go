@@ -21,6 +21,12 @@ type Secrets struct{}
 
 func (Secrets) String() string { return "secrets" }
 
+func (Secrets) obfuscator() Obfuscator {
+	return Obfuscator{
+		key: []byte("obfuscatesecrets"), // 16 characters (AES-128), not meant to provide security
+	}
+}
+
 type Configuration struct{}
 
 func (Configuration) String() string { return "configuration" }
@@ -28,8 +34,9 @@ func (Configuration) String() string { return "configuration" }
 // Manager is a high-level configuration manager that abstracts the details of
 // the Router and Provider interfaces.
 type Manager[R Role] struct {
-	providers map[string]Provider[R]
-	router    Router[R]
+	providers  map[string]Provider[R]
+	router     Router[R]
+	obfuscator optional.Option[Obfuscator]
 }
 
 func ConfigFromEnvironment() []string {
@@ -61,6 +68,9 @@ func New[R Role](ctx context.Context, router Router[R], providers []Provider[R])
 	for _, p := range providers {
 		m.providers[p.Key()] = p
 	}
+	if provider, ok := any(new(R)).(ObfuscatorProvider); ok {
+		m.obfuscator = optional.Some(provider.obfuscator())
+	}
 	m.router = router
 	return m, nil
 }
@@ -86,6 +96,12 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	data, err := provider.Load(ctx, ref, key)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", ref, err)
+	}
+	if obfuscator, ok := m.obfuscator.Get(); ok {
+		data, err = obfuscator.Reveal(data)
+		if err != nil {
+			return nil, fmt.Errorf("could not reveal obfuscated value: %w", err)
+		}
 	}
 	return data, nil
 }
@@ -127,12 +143,23 @@ func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value js
 	if err := checkJSON(value); err != nil {
 		return fmt.Errorf("invalid value for %s, must be JSON: %w", m.router.Role(), err)
 	}
+	var bytes []byte
+	if obfuscator, ok := m.obfuscator.Get(); ok {
+		var err error
+		bytes, err = obfuscator.Obfuscate(value)
+		if err != nil {
+			return fmt.Errorf("could not obfuscate: %w", err)
+		}
+	} else {
+		bytes = value
+	}
+
 	provider, ok := m.providers[pkey]
 	if !ok {
 		pkeys := strings.Join(m.availableProviderKeys(), ", ")
 		return fmt.Errorf("no provider for key %q, specify one of: %s", pkey, pkeys)
 	}
-	key, err := provider.Store(ctx, ref, value)
+	key, err := provider.Store(ctx, ref, bytes)
 	if err != nil {
 		return err
 	}
