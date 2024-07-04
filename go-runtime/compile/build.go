@@ -3,7 +3,6 @@ package compile
 import (
 	"context"
 	"fmt"
-	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -15,7 +14,7 @@ import (
 	"unicode"
 
 	sets "github.com/deckarep/golang-set/v2"
-	gomaps "golang.org/x/exp/maps"
+	"golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
@@ -35,12 +34,16 @@ import (
 	"github.com/TBD54566975/ftl/internal/reflect"
 )
 
+type MainWorkContext struct {
+	GoVersion          string
+	SharedModulesPaths []string
+}
+
 type ExternalModuleContext struct {
-	ModuleDir string
 	*schema.Schema
 	GoVersion    string
 	FTLVersion   string
-	Main         string
+	Module       *schema.Module
 	Replacements []*modfile.Replace
 }
 
@@ -53,13 +56,14 @@ type goVerb struct {
 }
 
 type mainModuleContext struct {
-	GoVersion     string
-	FTLVersion    string
-	Name          string
-	Verbs         []goVerb
-	Replacements  []*modfile.Replace
-	SumTypes      []goSumType
-	LocalSumTypes []goSumType
+	GoVersion          string
+	FTLVersion         string
+	Name               string
+	SharedModulesPaths []string
+	Verbs              []goVerb
+	Replacements       []*modfile.Replace
+	SumTypes           []goSumType
+	LocalSumTypes      []goSumType
 }
 
 type goSumType struct {
@@ -79,25 +83,14 @@ type ModifyFilesTransaction interface {
 	End() error
 }
 
-func (b ExternalModuleContext) NonMainModules() []*schema.Module {
-	modules := make([]*schema.Module, 0, len(b.Modules))
-	for _, module := range b.Modules {
-		if module.Name == b.Main {
-			continue
-		}
-		modules = append(modules, module)
-	}
-	return modules
-}
-
-const buildDirName = "_ftl"
+const buildDirName = ".ftl"
 
 func buildDir(moduleDir string) string {
 	return filepath.Join(moduleDir, buildDirName)
 }
 
 // Build the given module.
-func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction) (err error) {
+func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction) (err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return err
 	}
@@ -130,19 +123,27 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 
 	funcs := maps.Clone(scaffoldFuncs)
 
-	logger.Debugf("Generating external modules")
-	if err := generateExternalModules(ExternalModuleContext{
-		ModuleDir:    moduleDir,
-		GoVersion:    goModVersion,
-		FTLVersion:   ftlVersion,
-		Schema:       sch,
-		Main:         config.Module,
-		Replacements: replacements,
-	}); err != nil {
-		return fmt.Errorf("failed to generate external modules: %w", err)
+	buildDir := buildDir(moduleDir)
+	err = os.MkdirAll(buildDir, 0750)
+	if err != nil {
+		return fmt.Errorf("failed to create build directory: %w", err)
 	}
 
-	buildDir := buildDir(moduleDir)
+	var sharedModulesPaths []string
+	for _, mod := range sch.Modules {
+		if mod.Name == config.Module {
+			continue
+		}
+		sharedModulesPaths = append(sharedModulesPaths, filepath.Join(projectRootDir, buildDirName, "go", "modules", mod.Name))
+	}
+
+	if err := internal.ScaffoldZip(mainWorkTemplateFiles(), moduleDir, MainWorkContext{
+		GoVersion:          goModVersion,
+		SharedModulesPaths: sharedModulesPaths,
+	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
+		return fmt.Errorf("failed to scaffold zip: %w", err)
+	}
+
 	logger.Debugf("Extracting schema")
 	result, err := ExtractModuleSchema(config.Dir, sch)
 	if err != nil {
@@ -186,13 +187,14 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		goVerbs = append(goVerbs, goverb)
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
-		GoVersion:     goModVersion,
-		FTLVersion:    ftlVersion,
-		Name:          result.Module.Name,
-		Verbs:         goVerbs,
-		Replacements:  replacements,
-		SumTypes:      getSumTypes(result.Module, sch, result.NativeNames),
-		LocalSumTypes: getLocalSumTypes(result.Module),
+		GoVersion:          goModVersion,
+		FTLVersion:         ftlVersion,
+		Name:               result.Module.Name,
+		SharedModulesPaths: sharedModulesPaths,
+		Verbs:              goVerbs,
+		Replacements:       replacements,
+		SumTypes:           getSumTypes(result.Module, sch, result.NativeNames),
+		LocalSumTypes:      getLocalSumTypes(result.Module),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -200,7 +202,7 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	logger.Debugf("Tidying go.mod files")
 	wg, wgctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
-		if err := exec.Command(ctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+		if err := exec.Command(wgctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", moduleDir, err)
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(moduleDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
@@ -212,13 +214,6 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
-	modulesDir := filepath.Join(buildDir, "go", "modules")
-	wg.Go(func() error {
-		if err := exec.Command(wgctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
-			return fmt.Errorf("%s: failed to tidy go.mod: %w", modulesDir, err)
-		}
-		return filesTransaction.ModifiedFiles(filepath.Join(modulesDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
-	})
 	if err := wg.Wait(); err != nil {
 		return err
 	}
@@ -227,10 +222,16 @@ func Build(ctx context.Context, moduleDir string, sch *schema.Schema, filesTrans
 	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
-func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *schema.Schema) error {
-	goModFile, replacements, err := goModFileWithReplacements(filepath.Join(dir, "go.mod"))
+func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConfigs []moduleconfig.ModuleConfig, sch *schema.Schema) error {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Generating stubs for modules")
+
+	sharedFtlDir := filepath.Join(projectRoot, buildDirName)
+
+	// Wipe the modules directory to ensure we don't have any stale modules.
+	err := os.RemoveAll(sharedFtlDir)
 	if err != nil {
-		return fmt.Errorf("failed to propagate replacements for library %q: %w", dir, err)
+		return fmt.Errorf("failed to remove %s: %w", sharedFtlDir, err)
 	}
 
 	ftlVersion := ""
@@ -238,24 +239,65 @@ func GenerateStubsForExternalLibrary(ctx context.Context, dir string, schema *sc
 		ftlVersion = ftl.Version
 	}
 
-	return generateExternalModules(ExternalModuleContext{
-		ModuleDir:    dir,
-		GoVersion:    goModFile.Go.Version,
-		FTLVersion:   ftlVersion,
-		Schema:       schema,
-		Replacements: replacements,
-	})
-}
+	for _, module := range sch.Modules {
+		var moduleConfig *moduleconfig.ModuleConfig
+		for _, mc := range moduleConfigs {
+			mcCopy := mc
+			if mc.Module == module.Name {
+				moduleConfig = &mcCopy
+				break
+			}
+		}
 
-func generateExternalModules(context ExternalModuleContext) error {
-	// Wipe the modules directory to ensure we don't have any stale modules.
-	err := os.RemoveAll(filepath.Join(buildDir(context.ModuleDir), "go", "modules"))
-	if err != nil {
-		return err
+		var goModVersion string
+		var replacements []*modfile.Replace
+
+		// If there's no module config, use the go.mod file for the first config we find.
+		if moduleConfig == nil {
+			if len(moduleConfigs) > 0 {
+				_, goModVersion, err = updateGoModule(filepath.Join(moduleConfigs[0].Dir, "go.mod"))
+				if err != nil {
+					return err
+				}
+			} else {
+				// The best we can do here if we don't have a module to read from is to use the current Go version.
+				goModVersion = runtime.Version()[2:]
+			}
+
+			replacements = []*modfile.Replace{}
+		} else {
+			replacements, goModVersion, err = updateGoModule(filepath.Join(moduleConfig.Dir, "go.mod"))
+			if err != nil {
+				return err
+			}
+		}
+
+		goVersion := runtime.Version()[2:]
+		if semver.Compare("v"+goVersion, "v"+goModVersion) < 0 {
+			return fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
+		}
+
+		context := ExternalModuleContext{
+			Schema:       sch,
+			GoVersion:    goModVersion,
+			FTLVersion:   ftlVersion,
+			Module:       module,
+			Replacements: replacements,
+		}
+
+		funcs := maps.Clone(scaffoldFuncs)
+		err = internal.ScaffoldZip(externalModuleTemplateFiles(), projectRoot, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
+		if err != nil {
+			return fmt.Errorf("failed to scaffold zip: %w", err)
+		}
+
+		modulesDir := filepath.Join(sharedFtlDir, "go", "modules", module.Name)
+		if err := exec.Command(ctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+			return fmt.Errorf("failed to tidy go.mod: %w", err)
+		}
 	}
 
-	funcs := maps.Clone(scaffoldFuncs)
-	return internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
+	return nil
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{
@@ -571,7 +613,7 @@ func getLocalSumTypes(module *schema.Module) []goSumType {
 			}
 		}
 	}
-	out := gomaps.Values(sumTypes)
+	out := maps.Values(sumTypes)
 	slices.SortFunc(out, func(a, b goSumType) int {
 		return strings.Compare(a.Discriminator, b.Discriminator)
 	})
@@ -614,7 +656,7 @@ func getSumTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNa
 			Variants:      variants,
 		}
 	}
-	out := gomaps.Values(sumTypes)
+	out := maps.Values(sumTypes)
 	slices.SortFunc(out, func(a, b goSumType) int {
 		return strings.Compare(a.Discriminator, b.Discriminator)
 	})

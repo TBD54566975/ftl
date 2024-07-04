@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
@@ -30,9 +31,10 @@ type newCmd struct {
 }
 
 type newGoCmd struct {
-	Replace map[string]string `short:"r" help:"Replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..." env:"FTL_INIT_GO_REPLACE"`
-	Dir     string            `arg:"" help:"Directory to initialize the module in."`
-	Name    string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+	Replace   map[string]string `short:"r" help:"Replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..." env:"FTL_INIT_GO_REPLACE"`
+	Dir       string            `arg:"" help:"Directory to initialize the module in."`
+	Name      string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+	GoVersion string
 }
 
 type newKotlinCmd struct {
@@ -58,6 +60,8 @@ func (i newGoCmd) Run(ctx context.Context) error {
 
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating FTL Go module %q in %s", name, path)
+
+	i.GoVersion = runtime.Version()[2:]
 	if err := scaffold(ctx, config.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
 		return err
 	}
