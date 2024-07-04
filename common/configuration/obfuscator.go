@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 )
 
 type ObfuscatorProvider interface {
@@ -40,6 +41,12 @@ func (o Obfuscator) Obfuscate(input []byte) ([]byte, error) {
 
 // Reveal takes an obfuscated value and de-obfuscates the base64 encoded value
 func (o Obfuscator) Reveal(input []byte) ([]byte, error) {
+	// check if the input looks like it was obfuscated
+	if !strings.ContainsRune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/=", rune(input[0])) {
+		// known issue: an unobfuscated value which is just a number will be considered obfuscated
+		return input, nil
+	}
+
 	obfuscated, err := base64.StdEncoding.DecodeString(string(input))
 	if err != nil {
 		return nil, fmt.Errorf("expected hexadecimal string: %w", err)
