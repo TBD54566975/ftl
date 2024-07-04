@@ -1,3 +1,4 @@
+name = "dr"
 ftl-min-version = "dev"
 hermit = false
 no-git = false
