@@ -102,8 +102,11 @@ func TestSingleLeader(t *testing.T) {
 	assert.NoError(t, err)
 
 	// replace original leading coordinator's advertising url to ensure the leader url changes
+	coordinators[leaderIdx].mutex.Lock()
 	coordinators[leaderIdx].advertise, err = url.Parse("http://localhost:9999")
 	assert.NoError(t, err)
+	coordinators[leaderIdx].mutex.Unlock()
+
 	time.Sleep(leaseTTL + time.Millisecond*500)
 
 	leaderIdx, finalLeaderStr := leaderFromCoordinators(t, coordinators)
