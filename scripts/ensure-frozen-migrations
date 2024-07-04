@@ -5,7 +5,7 @@ set -euo pipefail
 # It ignores comments when comparing the files.
 
 remove_comments() {
-    sed 's/--.*$//g' "$1"
+    sed 's/[[:space:]]*--.*$//g' "$1"
 }
 
 compare_sql_files() {
@@ -41,14 +41,14 @@ main() {
         if compare_sql_files "$file" <(git show "main:$file"); then
             : # Do nothing if files are the same
         else
-            echo "Migration files changes detected"
+            echo "❌ Migration files changes detected"
             show_diff "$file" <(git show "main:$file")
             exit 1
         fi
     done <<< "$changed_files"
 
-    echo "👍SQL files changed in $sql_dir but comments only:"
     git diff --color=always main -- "$sql_dir"/*.sql | cat
+    echo "👍 Only comments/new lines changed in SQL files"
 }
 
 # Run the main function
