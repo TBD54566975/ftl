@@ -22,6 +22,6 @@ func MakeDynamic(ctx context.Context, m modulecontext.ModuleContext) *modulecont
 	return result
 }
 
-func (smc SingleContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx modulecontext.ModuleContext)) {
+func (smc SingleContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx modulecontext.ModuleContext), _ func(error) bool) {
 	sink(ctx, smc.moduleCtx)
 }

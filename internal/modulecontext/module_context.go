@@ -1,9 +1,11 @@
 package modulecontext
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -180,7 +182,7 @@ func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBeha
 }
 
 type ModuleContextSupplier interface {
-	Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext))
+	Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext), errorRetryCallback func(err error) bool)
 }
 
 type grpcModuleContextSupplier struct {
@@ -191,7 +193,7 @@ func NewModuleContextSupplier(client ftlv1connect.VerbServiceClient) ModuleConte
 	return ModuleContextSupplier(grpcModuleContextSupplier{client})
 }
 
-func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext)) {
+func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName string, sink func(ctx context.Context, moduleContext ModuleContext), errorRetryCallback func(err error) bool) {
 	request := &ftlv1.ModuleContextRequest{Module: moduleName}
 	callback := func(_ context.Context, resp *ftlv1.ModuleContextResponse) error {
 		mc, err := FromProto(resp)
@@ -201,7 +203,7 @@ func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName str
 		sink(ctx, mc)
 		return nil
 	}
-	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{}, request, g.client.GetModuleContext, callback)
+	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{}, request, g.client.GetModuleContext, callback, errorRetryCallback)
 }
 
 // NewDynamicContext creates a new DynamicModuleContext. This operation blocks
@@ -217,22 +219,43 @@ func NewDynamicContext(ctx context.Context, supplier ModuleContextSupplier, modu
 	await.Add(1)
 	releaseOnce := sync.Once{}
 
-	// asynchronously consumes a subscription of ModuleContext changes and signals the arrival of the first
-	supplier.Subscribe(ctx, moduleName, func(ctx context.Context, moduleContext ModuleContext) {
-		result.current.Store(moduleContext)
-		releaseOnce.Do(func() {
-			await.Done()
-		})
-	})
-
-	deadline, cancellation := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithCancelCause(ctx)
+	deadline, timeoutCancel := context.WithTimeout(ctx, 5*time.Second)
 	g, _ := errgroup.WithContext(deadline)
-	defer cancellation()
+	defer timeoutCancel()
 
-	// wait for first ModuleContext to be made available (with the above timeout)
+	// asynchronously consumes a subscription of ModuleContext changes and signals the arrival of the first
+	supplier.Subscribe(
+		ctx,
+		moduleName,
+		func(ctx context.Context, moduleContext ModuleContext) {
+			result.current.Store(moduleContext)
+			releaseOnce.Do(func() {
+				await.Done()
+			})
+		},
+		func(err error) bool {
+			var connectErr *connect.Error
+
+			if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeInternal {
+				cancel(err)
+				await.Done()
+				return false
+			}
+
+			return true
+		})
+
+	// await the WaitGroup's completion which either signals the availability of the
+	// first ModuleContext or an error
 	g.Go(func() error {
 		await.Wait()
-		return nil
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			return nil
+		}
 	})
 
 	if err := g.Wait(); err != nil {
