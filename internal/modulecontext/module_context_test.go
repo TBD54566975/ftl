@@ -36,7 +36,7 @@ func TestDynamicContextUpdate(t *testing.T) {
 	assert.Equal(t, mc2, dynamic.CurrentContext())
 }
 
-func (mcs *manualContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx ModuleContext)) {
+func (mcs *manualContextSupplier) Subscribe(ctx context.Context, _ string, sink func(ctx context.Context, mCtx ModuleContext), _ func(error) bool) {
 	sink(ctx, mcs.initialCtx)
 	mcs.sink = sink
 }
