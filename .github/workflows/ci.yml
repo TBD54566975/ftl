@@ -52,6 +52,17 @@ jobs:
         run: just init-db
       - name: Vet SQL
         run: sqlc vet
+  ensure-frozen-migrations:
+    name: Ensure Frozen Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Freeze Migrations
+        run: just ensure-frozen-migrations
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

@@ -1,0 +1,55 @@
+#!/bin/bash
+set -euo pipefail
+
+# This script checks if the SQL migration have been modified compared to the main branch.
+# It ignores comments when comparing the files.
+
+remove_comments() {
+    sed 's/--.*$//g; s/\/\*.*\*\///g' "$1"
+}
+
+compare_sql_files() {
+    local file1="$1"
+    local file2="$2"
+    diff -q <(remove_comments "$file1" | sed '/^\s*$/d' | sort) \
+            <(remove_comments "$file2" | sed '/^\s*$/d' | sort) > /dev/null
+}
+
+show_diff() {
+    local file1="$1"
+    local file2="$2"
+    diff -u <(remove_comments "$file1") <(remove_comments "$file2")
+}
+
+main() {
+    local sql_dir="backend/controller/sql/schema"
+    local changed_files
+
+    # Get list of changed SQL files compared to main branch
+    changed_files=$(git diff --name-only main -- "$sql_dir"/*.sql)
+
+    if [ -z "$changed_files" ]; then
+        echo "👍 No SQL files changed in $sql_dir compared to main branch"
+        exit 0
+    fi
+
+    while IFS= read -r file; do
+        if [ ! -f "$file" ]; then
+            echo "$file no longer exists!"
+            exit 1
+        fi
+        if compare_sql_files "$file" <(git show "main:$file"); then
+            : # Do nothing if files are the same
+        else
+            echo "Migration files changes detected"
+            show_diff "$file" <(git show "main:$file")
+            exit 1
+        fi
+    done <<< "$changed_files"
+
+    echo "👍SQL files changed in $sql_dir but comments only:"
+    git diff --color=always main -- "$sql_dir"/*.sql | cat
+}
+
+# Run the main function
+main
