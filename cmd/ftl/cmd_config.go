@@ -17,10 +17,12 @@ import (
 )
 
 type configCmd struct {
-	List  configListCmd  `cmd:"" help:"List configuration."`
-	Get   configGetCmd   `cmd:"" help:"Get a configuration value."`
-	Set   configSetCmd   `cmd:"" help:"Set a configuration value."`
-	Unset configUnsetCmd `cmd:"" help:"Unset a configuration value."`
+	List   configListCmd   `cmd:"" help:"List configuration."`
+	Get    configGetCmd    `cmd:"" help:"Get a configuration value."`
+	Set    configSetCmd    `cmd:"" help:"Set a configuration value."`
+	Unset  configUnsetCmd  `cmd:"" help:"Unset a configuration value."`
+	Import configImportCmd `cmd:"" help:"Import configuration values."`
+	Export configExportCmd `cmd:"" help:"Export configuration values."`
 
 	Envar  bool `help:"Print configuration as environment variables." group:"Provider:" xor:"configwriter"`
 	Inline bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"configwriter"`
@@ -160,5 +162,87 @@ func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, adminClient a
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+type configImportCmd struct {
+	Input *os.File `arg:"" placeholder:"JSON" help:"JSON to import as configuration values (read from stdin if omitted). Format: {\"<module>.<name>\": <value>, ... }" optional:"" default:"-"`
+}
+
+func (s *configImportCmd) Help() string {
+	return `
+Imports configuration values from a JSON object.
+`
+}
+
+func (s *configImportCmd) Run(ctx context.Context, cmd *configCmd, adminClient admin.Client) error {
+	input, err := io.ReadAll(s.Input)
+	if err != nil {
+		return fmt.Errorf("failed to read input: %w", err)
+	}
+	var entries map[string]json.RawMessage
+	err = json.Unmarshal(input, &entries)
+	if err != nil {
+		return fmt.Errorf("could not parse JSON: %w", err)
+	}
+	for refPath, value := range entries {
+		ref, err := cf.ParseRef(refPath)
+		if err != nil {
+			return fmt.Errorf("could not parse ref %q: %w", refPath, err)
+		}
+		bytes, err := json.Marshal(value)
+		if err != nil {
+			return fmt.Errorf("could not marshal value for %q: %w", refPath, err)
+		}
+		req := &ftlv1.SetConfigRequest{
+			Ref:   configRefFromRef(ref),
+			Value: bytes,
+		}
+		if provider, ok := cmd.provider().Get(); ok {
+			req.Provider = &provider
+		}
+		_, err = adminClient.ConfigSet(ctx, connect.NewRequest(req))
+		if err != nil {
+			return fmt.Errorf("could not import config for %q: %w", refPath, err)
+		}
+	}
+	return nil
+}
+
+type configExportCmd struct {
+}
+
+func (s *configExportCmd) Help() string {
+	return `
+Outputs configuration values in a JSON object. A provider can be used to filter which values are included.
+`
+}
+
+func (s *configExportCmd) Run(ctx context.Context, cmd *configCmd, adminClient admin.Client) error {
+	req := &ftlv1.ListConfigRequest{
+		IncludeValues: optional.Some(true).Ptr(),
+	}
+	if provider, ok := cmd.provider().Get(); ok {
+		req.Provider = &provider
+	}
+	listResponse, err := adminClient.ConfigList(ctx, connect.NewRequest(req))
+	if err != nil {
+		return fmt.Errorf("could not retrieve configs: %w", err)
+	}
+	entries := make(map[string]json.RawMessage, 0)
+	for _, config := range listResponse.Msg.Configs {
+		var value json.RawMessage
+		err = json.Unmarshal(config.Value, &value)
+		if err != nil {
+			return fmt.Errorf("could not export %q: %w", config.RefPath, err)
+		}
+		entries[config.RefPath] = value
+	}
+
+	output, err := json.Marshal(entries)
+	if err != nil {
+		return fmt.Errorf("could not build output: %w", err)
+	}
+	fmt.Println(string(output))
 	return nil
 }

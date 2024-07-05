@@ -34,11 +34,21 @@ func TestBox(t *testing.T) {
 }
 
 func TestSecretImportExport(t *testing.T) {
+	testImportExport(t, "secret")
+}
+
+func TestConfigImportExport(t *testing.T) {
+	testImportExport(t, "config")
+}
+
+func testImportExport(t *testing.T, object string) {
+	t.Helper()
+
 	firstProjFile := "ftl-project.toml"
 	secondProjFile := "ftl-project-2.toml"
 	destinationFile := "exported.json"
 
-	importPath, err := filepath.Abs("testdata/secrets.json")
+	importPath, err := filepath.Abs("testdata/import.json")
 	assert.NoError(t, err)
 
 	// use a pointer to keep track of the exported json so that i can be modified from within actions
@@ -49,13 +59,13 @@ func TestSecretImportExport(t *testing.T) {
 		// duplicate project file in the temp directory
 		Exec("cp", firstProjFile, secondProjFile),
 		// import into first project file
-		Exec("ftl", "secret", "import", "--inline", "--config", firstProjFile, importPath),
+		Exec("ftl", object, "import", "--inline", "--config", firstProjFile, importPath),
 
 		// export from first project file
-		ExecWithOutput("ftl", []string{"secret", "export", "--config", firstProjFile}, func(output string) {
+		ExecWithOutput("ftl", []string{object, "export", "--config", firstProjFile}, func(output string) {
 			*exported = output
 
-			// make sure the exported json contains a secret (otherwise the test could pass with the first import doing nothing)
+			// make sure the exported json contains a value (otherwise the test could pass with the first import doing nothing)
 			assert.Contains(t, output, "test.one")
 		}),
 
@@ -63,11 +73,11 @@ func TestSecretImportExport(t *testing.T) {
 		// wrapped in a func to avoid capturing the initial valye of *exported
 		func(t testing.TB, ic TestContext) {
 			WriteFile(destinationFile, []byte(*exported))(t, ic)
-			Exec("ftl", "secret", "import", destinationFile, "--inline", "--config", secondProjFile)(t, ic)
+			Exec("ftl", object, "import", destinationFile, "--inline", "--config", secondProjFile)(t, ic)
 		},
 
 		// export from second project file
-		ExecWithOutput("ftl", []string{"secret", "export", "--config", secondProjFile}, func(output string) {
+		ExecWithOutput("ftl", []string{object, "export", "--config", secondProjFile}, func(output string) {
 			// check that both exported the same json
 			assert.Equal(t, *exported, output)
 		}),

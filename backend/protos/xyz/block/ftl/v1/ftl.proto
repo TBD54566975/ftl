@@ -414,6 +414,7 @@ enum ConfigProvider {
 message ListConfigRequest {
   optional string module = 1;
   optional bool include_values = 2;
+  optional ConfigProvider provider = 3;
 }
 message ListConfigResponse {
   message Config {

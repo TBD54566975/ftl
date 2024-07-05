@@ -40,7 +40,7 @@ func (s *AdminService) ConfigList(ctx context.Context, req *connect.Request[ftlv
 	configs := []*ftlv1.ListConfigResponse_Config{}
 	for _, config := range listing {
 		module, ok := config.Module.Get()
-		if *req.Msg.Module != "" && module != *req.Msg.Module {
+		if req.Msg.Module != nil && *req.Msg.Module != "" && module != *req.Msg.Module {
 			continue
 		}
 
