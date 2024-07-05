@@ -51,17 +51,20 @@ func TestSecretImportExport(t *testing.T) {
 			"test2.three": {"key":"value"}
 		}
 		`),
+
 		// export from first project file
 		ExecWithOutput("ftl", []string{"secret", "export", "--config", firstProjFile}, func(output string) {
 			*exported = output
 			// make sure the exported json contains a secret (otherwise the test could pass with the first import doing nothing)
 			assert.Contains(t, output, "test.one")
 		}),
+
 		// import into second project file
 		// wrapped in a func to avoid capturing the initial valye of *exported
 		func(t testing.TB, ic TestContext) {
 			Exec("ftl", "secret", "import", *exported, "--inline", "--config", secondProjFile)(t, ic)
 		},
+
 		// export from second project file
 		ExecWithOutput("ftl", []string{"secret", "export", "--config", secondProjFile}, func(output string) {
 			// check that both exported the same json
