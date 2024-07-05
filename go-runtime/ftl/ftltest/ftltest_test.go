@@ -15,7 +15,9 @@ func PanicsWithErr(t testing.TB, substr string, fn func()) {
 	t.Helper()
 	defer func() {
 		err := recover()
-assert.NoError(t, err)
+		if err == nil {
+			t.Fatal("Expected panic, but got nil")
+		}
 
 		errStr := fmt.Sprintf("%v", err)
 		assert.Contains(t, errStr, substr, "Expected panic message to contain %q, but got %q", substr, errStr)
