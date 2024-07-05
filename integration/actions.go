@@ -255,6 +255,19 @@ func FileContent(path, expected string) Action {
 	}
 }
 
+// WriteFile writes a file to the working directory.
+func WriteFile(path string, content []byte) Action {
+	return func(t testing.TB, ic TestContext) {
+		absPath := path
+		if !filepath.IsAbs(path) {
+			absPath = filepath.Join(ic.workDir, path)
+		}
+		Infof("Writing to %s", path)
+		err := os.WriteFile(absPath, content, 0600)
+		assert.NoError(t, err)
+	}
+}
+
 type Obj map[string]any
 
 // Call a verb.

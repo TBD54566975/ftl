@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -35,26 +36,25 @@ func TestBox(t *testing.T) {
 func TestSecretImportExport(t *testing.T) {
 	firstProjFile := "ftl-project.toml"
 	secondProjFile := "ftl-project-2.toml"
+	destinationFile := "exported.json"
+
+	importPath, err := filepath.Abs("testdata/secrets.json")
+	assert.NoError(t, err)
 
 	// use a pointer to keep track of the exported json so that i can be modified from within actions
 	blank := ""
 	exported := &blank
 
 	RunWithoutController(t, "",
-		// duplicate project file
+		// duplicate project file in the temp directory
 		Exec("cp", firstProjFile, secondProjFile),
 		// import into first project file
-		Exec("ftl", "secret", "import", "--inline", "--config", firstProjFile, `
-		{
-			"test.one": 1,
-			"test.two": "a string",
-			"test2.three": {"key":"value"}
-		}
-		`),
+		Exec("ftl", "secret", "import", "--inline", "--config", firstProjFile, importPath),
 
 		// export from first project file
 		ExecWithOutput("ftl", []string{"secret", "export", "--config", firstProjFile}, func(output string) {
 			*exported = output
+
 			// make sure the exported json contains a secret (otherwise the test could pass with the first import doing nothing)
 			assert.Contains(t, output, "test.one")
 		}),
@@ -62,7 +62,8 @@ func TestSecretImportExport(t *testing.T) {
 		// import into second project file
 		// wrapped in a func to avoid capturing the initial valye of *exported
 		func(t testing.TB, ic TestContext) {
-			Exec("ftl", "secret", "import", *exported, "--inline", "--config", secondProjFile)(t, ic)
+			WriteFile(destinationFile, []byte(*exported))(t, ic)
+			Exec("ftl", "secret", "import", destinationFile, "--inline", "--config", secondProjFile)(t, ic)
 		},
 
 		// export from second project file

@@ -173,7 +173,7 @@ func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient a
 }
 
 type secretImportCmd struct {
-	Input *string `arg:"" placeholder:"JSON" help:"JSON to import as secrets (read from stdin if omitted). Format: [{\"ref\":\"<module>.<name>\",\"value\": <secret>}, ...]" optional:""`
+	Input *os.File `arg:"" placeholder:"JSON" help:"JSON to import as secrets (read from stdin if omitted). Format: [{\"ref\":\"<module>.<name>\",\"value\": <secret>}, ...]" optional:"" default:"-"`
 }
 
 func (s *secretImportCmd) Help() string {
@@ -183,15 +183,9 @@ Imports secrets from a JSON array.
 }
 
 func (s *secretImportCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.Client) error {
-	var input []byte
-	var err error
-	if s.Input != nil {
-		input = []byte(*s.Input)
-	} else {
-		input, err = io.ReadAll(os.Stdin)
-		if err != nil {
-			return fmt.Errorf("failed to read config from stdin: %w", err)
-		}
+	input, err := io.ReadAll(s.Input)
+	if err != nil {
+		return fmt.Errorf("failed to read input: %w", err)
 	}
 	var entries map[string]json.RawMessage
 	err = json.Unmarshal(input, &entries)
