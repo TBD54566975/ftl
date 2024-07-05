@@ -147,7 +147,6 @@ func ExecWithExpectedError(want string, cmd string, args ...string) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
 		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
-		assert.NoError(t, err, "%s", string(output))
 		assert.Error(t, err)
 		assert.Contains(t, string(output), want)
 	}
