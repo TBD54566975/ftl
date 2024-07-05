@@ -76,7 +76,7 @@ func TestWrapped(t *testing.T) {
 			},
 			configValue:   "helloworld",
 			secretValue:   "shhhhh",
-			expectedError: ftl.Some("wrapped.inner: no mock found: provide a mock with ftltest.WhenVerb(Inner, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()"),
+			expectedError: ftl.Some("wrapped.inner: no fake found: provide a mock with ftltest.WhenVerb(Inner, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()"),
 		},
 		{
 			name: "AllowCallsWithinModule",
@@ -87,7 +87,7 @@ func TestWrapped(t *testing.T) {
 			},
 			configValue:   "helloworld",
 			secretValue:   "shhhhh",
-			expectedError: ftl.Some("wrapped.inner: time.time: no mock found: provide a mock with ftltest.WhenVerb(time.Time, ...)"),
+			expectedError: ftl.Some("wrapped.inner: time.time: no fake found: provide a mock with ftltest.WhenVerb(time.Time, ...)"),
 		},
 		{
 			name: "WithExternalVerbMock",

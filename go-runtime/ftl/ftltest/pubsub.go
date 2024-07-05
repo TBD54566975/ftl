@@ -6,17 +6,20 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
+	"testing"
 	"time"
+
+	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/pubsub"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/types/optional"
-	"github.com/alecthomas/types/pubsub"
 )
 
 type fakePubSub struct {
+	t testing.TB
 	// all pubsub events are processed through globalTopic
 	globalTopic *pubsub.Topic[pubSubEvent]
 	// publishWaitGroup can be used to wait for all events to be published
@@ -29,8 +32,10 @@ type fakePubSub struct {
 	subscribers   map[string][]subscriber
 }
 
-func newFakePubSub(ctx context.Context) *fakePubSub {
+func newFakePubSub(ctx context.Context, t testing.TB) *fakePubSub {
+	t.Helper()
 	f := &fakePubSub{
+		t:             t,
 		globalTopic:   pubsub.New[pubSubEvent](),
 		topics:        map[schema.RefKey][]any{},
 		subscriptions: map[string]*subscription{},
@@ -146,6 +151,7 @@ func (f *fakePubSub) watchPubSub(ctx context.Context) {
 }
 
 func (f *fakePubSub) handlePubSubEvent(ctx context.Context, e pubSubEvent) {
+	f.t.Helper()
 	f.pubSubLock.Lock()
 	defer f.pubSubLock.Unlock()
 
@@ -163,7 +169,7 @@ func (f *fakePubSub) handlePubSubEvent(ctx context.Context, e pubSubEvent) {
 	case subscriptionDidConsumeEvent:
 		sub, ok := f.subscriptions[event.subscription]
 		if !ok {
-			panic(fmt.Sprintf("subscription %q not found", event.subscription))
+			f.t.Fatalf("subscription %q not found", event.subscription)
 		}
 		if event.err != nil {
 			sub.errors[sub.cursor.MustGet()] = event.err

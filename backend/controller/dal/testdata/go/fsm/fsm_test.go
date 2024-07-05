@@ -9,7 +9,7 @@ import (
 )
 
 func TestFSM(t *testing.T) {
-	ctx := ftltest.Context()
+	ctx := ftltest.Context(t)
 
 	err := fsm.Send(ctx, "one", Two{Instance: "one"}) // No start transition on Two
 	assert.Error(t, err)

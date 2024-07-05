@@ -11,6 +11,7 @@ import (
 
 func TestDatabase(t *testing.T) {
 	ctx := ftltest.Context(
+		t,
 		ftltest.WithProjectFile("ftl-project.toml"),
 		ftltest.WithDatabase(db),
 	)
@@ -22,6 +23,7 @@ func TestDatabase(t *testing.T) {
 	assert.Equal(t, "unit test 1", list[0])
 
 	ctx = ftltest.Context(
+		t,
 		ftltest.WithProjectFile("ftl-project.toml"),
 		ftltest.WithDatabase(db),
 	)

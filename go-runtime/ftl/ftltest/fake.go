@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"testing"
+
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
-	"github.com/alecthomas/types/optional"
 )
 
 // pubSubEvent is a sum type for all events that can be published to the pubsub system.
@@ -50,6 +52,7 @@ type subscription struct {
 type subscriber func(context.Context, any) error
 
 type fakeFTL struct {
+	t   testing.TB
 	fsm *fakeFSMManager
 
 	mockMaps      map[uintptr]mapImpl
@@ -63,14 +66,16 @@ type fakeFTL struct {
 // type but is not constrained by input/output type like ftl.Map.
 type mapImpl func(context.Context) (any, error)
 
-func newFakeFTL(ctx context.Context) *fakeFTL {
+func newFakeFTL(ctx context.Context, t testing.TB) *fakeFTL {
+	t.Helper()
 	fake := &fakeFTL{
+		t:             t,
 		fsm:           newFakeFSMManager(),
 		mockMaps:      map[uintptr]mapImpl{},
 		allowMapCalls: false,
 		configValues:  map[string][]byte{},
 		secretValues:  map[string][]byte{},
-		pubSub:        newFakePubSub(ctx),
+		pubSub:        newFakePubSub(ctx, t),
 	}
 
 	return fake
@@ -90,7 +95,7 @@ func (f *fakeFTL) setConfig(name string, value any) error {
 func (f *fakeFTL) GetConfig(ctx context.Context, name string, dest any) error {
 	data, ok := f.configValues[name]
 	if !ok {
-		return fmt.Errorf("secret value %q not found, did you remember to ctx := ftltest.Context(ftltest.WithDefaultProjectFile()) ?: %w", name, configuration.ErrNotFound)
+		return fmt.Errorf("config value %q not found, did you remember to ctx := ftltest.Context(t, ftltest.WithDefaultProjectFile()) ?: %w", name, configuration.ErrNotFound)
 	}
 	return json.Unmarshal(data, dest)
 }
@@ -107,7 +112,7 @@ func (f *fakeFTL) setSecret(name string, value any) error {
 func (f *fakeFTL) GetSecret(ctx context.Context, name string, dest any) error {
 	data, ok := f.secretValues[name]
 	if !ok {
-		return fmt.Errorf("config value %q not found, did you remember to ctx := ftltest.Context(ftltest.WithDefaultProjectFile()) ?: %w", name, configuration.ErrNotFound)
+		return fmt.Errorf("secret value %q not found, did you remember to ctx := ftltest.Context(t, ftltest.WithDefaultProjectFile()) ?: %w", name, configuration.ErrNotFound)
 	}
 	return json.Unmarshal(data, dest)
 }
@@ -120,11 +125,15 @@ func (f *fakeFTL) FSMSend(ctx context.Context, fsm string, instance string, even
 //
 // mockMap provides the whole mock implemention, so it gets called in place of both `fn`
 // and `getter` in ftl.Map.
-func addMapMock[T, U any](f *fakeFTL, mapper *ftl.MapHandle[T, U], mockMap func(context.Context) (U, error)) {
-	key := makeMapKey(mapper)
+func addMapMock[T, U any](f *fakeFTL, mapper *ftl.MapHandle[T, U], mockMap func(context.Context) (U, error)) error {
+	key, err := makeMapKey(mapper)
+	if err != nil {
+		return err
+	}
 	f.mockMaps[key] = func(ctx context.Context) (any, error) {
 		return mockMap(ctx)
 	}
+	return nil
 }
 
 func (f *fakeFTL) startAllowingMapCalls() {
@@ -132,35 +141,48 @@ func (f *fakeFTL) startAllowingMapCalls() {
 }
 
 func (f *fakeFTL) CallMap(ctx context.Context, mapper any, value any, mapImpl func(context.Context) (any, error)) any {
-	key := makeMapKey(mapper)
+	f.t.Helper()
+	key, err := makeMapKey(mapper)
+	if err != nil {
+		f.t.Fatalf("failed to call map: %v", err)
+	}
 	mockMap, ok := f.mockMaps[key]
 	if ok {
-		return actuallyCallMap(ctx, mockMap)
+		value, err := actuallyCallMap(ctx, mockMap)
+		if err != nil {
+			f.t.Fatalf("failed to call fake map: %v", err)
+		}
+		return value
 	}
 	if f.allowMapCalls {
-		return actuallyCallMap(ctx, mapImpl)
+		value, err := actuallyCallMap(ctx, mapImpl)
+		if err != nil {
+			f.t.Fatalf("failed to call map: %v", err)
+		}
+		return value
 	}
-	panic("map calls not allowed in tests by default, ftltest.Context should be instantiated with either ftltest.WithMapsAllowed() or a mock for the specific map being called using ftltest.WhenMap(...)")
+	f.t.Fatalf("map calls not allowed in tests by default: ftltest.Context should be instantiated with either ftltest.WithMapsAllowed() or a mock for the specific map being called using ftltest.WhenMap(...)")
+	return nil
 }
 
-func makeMapKey(mapper any) uintptr {
+func makeMapKey(mapper any) (uintptr, error) {
 	v := reflect.ValueOf(mapper)
 	if v.Kind() != reflect.Pointer {
-		panic("fakeFTL received object that was not a pointer, expected *MapHandle")
+		return 0, fmt.Errorf("fakeFTL received object that was not a pointer, expected *MapHandle")
 	}
 	underlying := v.Elem().Type().Name()
 	if !strings.HasPrefix(underlying, "MapHandle[") {
-		panic(fmt.Sprintf("fakeFTL received *%s, expected *MapHandle", underlying))
+		return 0, fmt.Errorf("fakeFTL received *%s, expected *MapHandle", underlying)
 	}
-	return v.Pointer()
+	return v.Pointer(), nil
 }
 
-func actuallyCallMap(ctx context.Context, impl mapImpl) any {
+func actuallyCallMap(ctx context.Context, impl mapImpl) (any, error) {
 	out, err := impl(ctx)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return out
+	return out, nil
 }
 
 func (f *fakeFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any) error {

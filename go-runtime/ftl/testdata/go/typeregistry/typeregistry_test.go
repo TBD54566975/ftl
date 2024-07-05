@@ -4,10 +4,11 @@ import (
 	"ftl/builtin"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/ftltest"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestIngress(t *testing.T) {
@@ -29,7 +30,7 @@ func TestIngress(t *testing.T) {
 		},
 	}
 
-	ctx := ftltest.Context(ftltest.WithCallsAllowedWithinModule())
+	ctx := ftltest.Context(t, ftltest.WithCallsAllowedWithinModule())
 
 	for _, test := range testCases {
 		t.Run(test.Name, func(t *testing.T) {

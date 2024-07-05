@@ -1,7 +1,6 @@
 package modulecontext
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"connectrpc.com/connect"
 
 	"github.com/alecthomas/atomic"
 	"github.com/jpillora/backoff"
@@ -174,9 +175,9 @@ func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBeha
 		return optional.Some(VerbBehavior(DirectBehavior{})), nil
 	} else if m.isTesting {
 		if ref.Module == m.module {
-			return optional.None[VerbBehavior](), fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()", strings.ToUpper(ref.Name[:1])+ref.Name[1:])
+			return optional.None[VerbBehavior](), fmt.Errorf("no fake found: provide a fake with ftltest.WhenVerb(%s, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()", strings.ToUpper(ref.Name[:1])+ref.Name[1:])
 		}
-		return optional.None[VerbBehavior](), fmt.Errorf("no mock found: provide a mock with ftltest.WhenVerb(%s.%s, ...)", ref.Module, strings.ToUpper(ref.Name[:1])+ref.Name[1:])
+		return optional.None[VerbBehavior](), fmt.Errorf("no fake found: provide a fake with ftltest.WhenVerb(%s.%s, ...)", ref.Module, strings.ToUpper(ref.Name[:1])+ref.Name[1:])
 	}
 	return optional.None[VerbBehavior](), nil
 }

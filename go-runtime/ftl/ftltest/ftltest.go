@@ -10,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"testing"
 
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
@@ -33,20 +34,21 @@ type OptionsState struct {
 type Option func(context.Context, *OptionsState) error
 
 // Context suitable for use in testing FTL verbs with provided options
-func Context(options ...Option) context.Context {
+func Context(t testing.TB, options ...Option) context.Context {
+	t.Helper()
 	state := &OptionsState{
 		databases: make(map[string]modulecontext.Database),
 		mockVerbs: make(map[schema.RefKey]modulecontext.Verb),
 	}
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx = internal.WithContext(ctx, newFakeFTL(ctx))
+	ctx = internal.WithContext(ctx, newFakeFTL(ctx, t))
 	name := reflection.Module()
 
 	for _, option := range options {
 		err := option(ctx, state)
 		if err != nil {
-			panic(fmt.Sprintf("error applying option: %v", err))
+			t.Fatalf("error applying option: %v", err)
 		}
 	}
 
@@ -336,7 +338,11 @@ func WithCallsAllowedWithinModule() Option {
 func WhenMap[T, U any](mapper *ftl.MapHandle[T, U], fake func(context.Context) (U, error)) Option {
 	return func(ctx context.Context, state *OptionsState) error {
 		fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
-		addMapMock(fftl, mapper, fake)
+		fftl.t.Helper()
+		err := addMapMock(fftl, mapper, fake)
+		if err != nil {
+			fftl.t.Fatalf("failed to add map fake: %v", err)
+		}
 		return nil
 	}
 }

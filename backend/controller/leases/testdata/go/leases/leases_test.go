@@ -11,7 +11,7 @@ import (
 )
 
 func TestLease(t *testing.T) {
-	ctx := ftltest.Context()
+	ctx := ftltest.Context(t)
 	// test that we can acquire a lease in a test environment
 	wg := errgroup.Group{}
 	wg.Go(func() error {
