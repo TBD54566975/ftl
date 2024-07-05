@@ -173,12 +173,12 @@ func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient a
 }
 
 type secretImportCmd struct {
-	Input *os.File `arg:"" placeholder:"JSON" help:"JSON to import as secrets (read from stdin if omitted). Format: [{\"ref\":\"<module>.<name>\",\"value\": <secret>}, ...]" optional:"" default:"-"`
+	Input *os.File `arg:"" placeholder:"JSON" help:"JSON to import as secrets (read from stdin if omitted). Format: {\"<module>.<name>\": <secret>, ... }" optional:"" default:"-"`
 }
 
 func (s *secretImportCmd) Help() string {
 	return `
-Imports secrets from a JSON array.
+Imports secrets from a JSON object.
 `
 }
 
@@ -221,7 +221,7 @@ type secretExportCmd struct {
 
 func (s *secretExportCmd) Help() string {
 	return `
-Outputs secrets in a JSON array. A provider can be used to filter which secrets are included.
+Outputs secrets in a JSON object. A provider can be used to filter which secrets are included.
 `
 }
 
