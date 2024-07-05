@@ -76,7 +76,7 @@ func New[R Role](ctx context.Context, router Router[R], providers []Provider[R])
 	return m, nil
 }
 
-func (m *Manager[R]) ProviderKeyForAccessor(accessor *url.URL) string {
+func ProviderKeyForAccessor(accessor *url.URL) string {
 	return accessor.Scheme
 }
 
@@ -94,7 +94,7 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	provider, ok := m.providers[m.ProviderKeyForAccessor(key)]
+	provider, ok := m.providers[ProviderKeyForAccessor(key)]
 	if !ok {
 		return nil, fmt.Errorf("no provider for scheme %q", key.Scheme)
 	}
