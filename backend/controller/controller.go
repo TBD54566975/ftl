@@ -113,7 +113,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	} else {
 		consoleHandler, err = frontend.Server(ctx, config.ContentTime, config.Bind, config.ConsoleURL)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not start console: %w", err)
 		}
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
