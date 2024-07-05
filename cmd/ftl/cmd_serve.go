@@ -134,6 +134,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 		wg.Go(func() error {
 			if err := controller.Start(controllerCtx, config, runnerScaling, dal); err != nil {
+				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
 			return nil
@@ -142,7 +143,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	// Wait for controller to start, then run startup commands.
 	if err := waitForControllerOnline(ctx, time.Second*10, client); err != nil {
-		return fmt.Errorf("controller failed to start: %w: %w", err, wg.Wait())
+		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
 	if len(projConfig.Commands.Startup) > 0 {
