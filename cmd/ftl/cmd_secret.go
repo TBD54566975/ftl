@@ -193,7 +193,7 @@ func (s *secretImportCmd) Run(ctx context.Context, scmd *secretCmd, adminClient 
 			return fmt.Errorf("failed to read config from stdin: %w", err)
 		}
 	}
-	var entries map[string]any
+	var entries map[string]json.RawMessage
 	err = json.Unmarshal(input, &entries)
 	if err != nil {
 		return fmt.Errorf("could not parse JSON: %w", err)
@@ -242,9 +242,9 @@ func (s *secretExportCmd) Run(ctx context.Context, scmd *secretCmd, adminClient 
 	if err != nil {
 		return fmt.Errorf("could not retrieve secrets: %w", err)
 	}
-	entries := make(map[string]any, 0)
+	entries := make(map[string]json.RawMessage, 0)
 	for _, secret := range listResponse.Msg.Secrets {
-		var value any
+		var value json.RawMessage
 		err = json.Unmarshal(secret.Value, &value)
 		if err != nil {
 			return fmt.Errorf("could not export %q: %w", secret.RefPath, err)
