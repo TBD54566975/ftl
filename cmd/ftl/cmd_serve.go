@@ -143,7 +143,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	// Wait for controller to start, then run startup commands.
 	start := time.Now()
-	if err := waitForControllerOnline(ctx, time.Second*30, client); err != nil {
+	if err := waitForControllerOnline(ctx, s.StartupTimeout, client); err != nil {
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 	logger.Infof("Controller started in %s", time.Since(start))
