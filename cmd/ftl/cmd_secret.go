@@ -19,10 +19,12 @@ import (
 )
 
 type secretCmd struct {
-	List  secretListCmd  `cmd:"" help:"List secrets."`
-	Get   secretGetCmd   `cmd:"" help:"Get a secret."`
-	Set   secretSetCmd   `cmd:"" help:"Set a secret."`
-	Unset secretUnsetCmd `cmd:"" help:"Unset a secret."`
+	List   secretListCmd   `cmd:"" help:"List secrets."`
+	Get    secretGetCmd    `cmd:"" help:"Get a secret."`
+	Set    secretSetCmd    `cmd:"" help:"Set a secret."`
+	Unset  secretUnsetCmd  `cmd:"" help:"Unset a secret."`
+	Import secretImportCmd `cmd:"" help:"Import secrets."`
+	Export secretExportCmd `cmd:"" help:"Export secrets."`
 
 	Envar    bool `help:"Write configuration as environment variables." group:"Provider:" xor:"secretwriter"`
 	Inline   bool `help:"Write values inline in the configuration file." group:"Provider:" xor:"secretwriter"`
@@ -167,5 +169,93 @@ func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, adminClient a
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+type secretImportCmd struct {
+	Input *string `arg:"" placeholder:"JSON" help:"JSON to import as secrets (read from stdin if omitted). Format: [{\"ref\":\"<module>.<name>\",\"value\": <secret>}, ...]" optional:""`
+}
+
+func (s *secretImportCmd) Help() string {
+	return `
+Imports secrets from a JSON array.
+`
+}
+
+func (s *secretImportCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.Client) error {
+	var input []byte
+	var err error
+	if s.Input != nil {
+		input = []byte(*s.Input)
+	} else {
+		input, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("failed to read config from stdin: %w", err)
+		}
+	}
+	var entries map[string]any
+	err = json.Unmarshal(input, &entries)
+	if err != nil {
+		return fmt.Errorf("could not parse JSON: %w", err)
+	}
+	for refPath, value := range entries {
+		ref, err := cf.ParseRef(refPath)
+		if err != nil {
+			return fmt.Errorf("could not parse ref %q: %w", refPath, err)
+		}
+		bytes, err := json.Marshal(value)
+		if err != nil {
+			return fmt.Errorf("could not marshal value for %q: %w", refPath, err)
+		}
+		req := &ftlv1.SetSecretRequest{
+			Ref:   configRefFromRef(ref),
+			Value: bytes,
+		}
+		if provider, ok := scmd.provider().Get(); ok {
+			req.Provider = &provider
+		}
+		_, err = adminClient.SecretSet(ctx, connect.NewRequest(req))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type secretExportCmd struct {
+}
+
+func (s *secretExportCmd) Help() string {
+	return `
+Outputs secrets in a JSON array. A provider can be used to filter which secrets are included.
+`
+}
+
+func (s *secretExportCmd) Run(ctx context.Context, scmd *secretCmd, adminClient admin.Client) error {
+	req := &ftlv1.ListSecretsRequest{
+		IncludeValues: optional.Some(true).Ptr(),
+	}
+	if provider, ok := scmd.provider().Get(); ok {
+		req.Provider = &provider
+	}
+	listResponse, err := adminClient.SecretsList(ctx, connect.NewRequest(req))
+	if err != nil {
+		return fmt.Errorf("could not retreive secrets: %w", err)
+	}
+	entries := make(map[string]any, 0)
+	for _, secret := range listResponse.Msg.Secrets {
+		var value any
+		err = json.Unmarshal(secret.Value, &value)
+		if err != nil {
+			return fmt.Errorf("could not export %q: %w", secret.RefPath, err)
+		}
+		entries[secret.RefPath] = value
+	}
+
+	output, err := json.Marshal(entries)
+	if err != nil {
+		return fmt.Errorf("could not build output: %w", err)
+	}
+	fmt.Println(string(output))
 	return nil
 }

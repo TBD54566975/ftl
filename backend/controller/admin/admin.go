@@ -127,8 +127,12 @@ func (s *AdminService) SecretsList(ctx context.Context, req *connect.Request[ftl
 	}
 	secrets := []*ftlv1.ListSecretsResponse_Secret{}
 	for _, secret := range listing {
+		if req.Msg.Provider != nil && s.sm.ProviderKeyForAccessor(secret.Accessor) != secretProviderKey(req.Msg.Provider) {
+			// Skip secrets that don't match the provider in the request
+			continue
+		}
 		module, ok := secret.Module.Get()
-		if *req.Msg.Module != "" && module != *req.Msg.Module {
+		if req.Msg.Module != nil && *req.Msg.Module != "" && module != *req.Msg.Module {
 			continue
 		}
 		ref := secret.Name

@@ -141,13 +141,25 @@ func ExecWithExpectedOutput(want string, cmd string, args ...string) Action {
 	}
 }
 
-// ExecWithOutput runs a command from the test working directory.
-// The output is captured and is returned as part of the error.
-func ExecWithOutput(cmd string, args ...string) Action {
+// ExecWithExpectedError runs a command from the test working directory.
+// The expected string must be contained in the error output
+func ExecWithExpectedError(want string, cmd string, args ...string) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
 		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
 		assert.NoError(t, err, "%s", string(output))
+		assert.Error(t, err)
+		assert.Contains(t, string(output), want)
+	}
+}
+
+// ExecWithOutput runs a command from the test working directory and calls the capture func with the result.
+func ExecWithOutput(cmd string, args []string, capture func(output string)) Action {
+	return func(t testing.TB, ic TestContext) {
+		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
+		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
+		assert.NoError(t, err)
+		capture(string(output))
 	}
 }
 
