@@ -729,7 +729,10 @@ func (e *Engine) gatherSchemas(
 		latestModule = moduleMeta{module: module}
 	}
 	for _, dep := range latestModule.module.Dependencies {
-		out[dep] = moduleSchemas[dep]
+		if moduleSchemas[dep] != nil {
+			out[dep] = moduleSchemas[dep]
+		}
+
 		if dep != "builtin" {
 			depModule, ok := e.moduleMetas.Load(dep)
 			// TODO: should we be gathering schemas from dependencies without a module?
