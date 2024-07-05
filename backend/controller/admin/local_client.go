@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/common/projectconfig"
-	"github.com/alecthomas/types/optional"
 )
 
 // localClient reads and writes to local projectconfig files without making any network

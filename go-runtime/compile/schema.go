@@ -13,6 +13,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/TBD54566975/golang-tools/go/ast/astutil"
+	"github.com/TBD54566975/golang-tools/go/packages"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
@@ -20,8 +22,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal/goast"
-	"github.com/TBD54566975/golang-tools/go/ast/astutil"
-	"github.com/TBD54566975/golang-tools/go/packages"
 )
 
 var (

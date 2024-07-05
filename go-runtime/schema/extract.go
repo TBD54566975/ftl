@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"go/types"
 
+	"github.com/TBD54566975/golang-tools/go/analysis"
+	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
+	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
+	"github.com/TBD54566975/golang-tools/go/packages"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -15,10 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/transitive"
 	"github.com/TBD54566975/ftl/go-runtime/schema/typealias"
 	"github.com/TBD54566975/ftl/go-runtime/schema/verb"
-	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
-	"github.com/TBD54566975/golang-tools/go/packages"
 )
 
 // Extractors contains all schema extractors that will run.

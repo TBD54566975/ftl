@@ -9,9 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/alecthomas/types/optional"
 )
 
 // BuildRequestBody extracts the HttpRequest body from an HTTP request.

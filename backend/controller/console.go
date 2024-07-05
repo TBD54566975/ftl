@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reugn/go-quartz/logger"
-
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
+	"github.com/reugn/go-quartz/logger"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 

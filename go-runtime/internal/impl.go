@@ -8,7 +8,6 @@ import (
 	"reflect"
 
 	"connectrpc.com/connect"
-
 	"github.com/puzpuzpuz/xsync/v3"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"

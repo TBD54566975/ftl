@@ -1,7 +1,6 @@
 package modulecontext
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -11,19 +10,18 @@ import (
 	"sync"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
+	"github.com/alecthomas/types/optional"
+	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 	"github.com/jpillora/backoff"
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/rpc"
-
-	"github.com/alecthomas/types/optional"
-	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
-
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/reflect"
+	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 // Verb is a function that takes a request and returns a response but is not constrained by request/response type like ftl.Verb

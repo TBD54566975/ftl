@@ -6,11 +6,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/benbjohnson/clock"
 	"github.com/puzpuzpuz/xsync/v3"
+
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 const (

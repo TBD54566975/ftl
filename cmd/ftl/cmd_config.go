@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"connectrpc.com/connect"
-
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/admin"

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/TBD54566975/scaffolder"
 	sets "github.com/deckarep/golang-set/v2"
 	"golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
@@ -20,8 +21,6 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"

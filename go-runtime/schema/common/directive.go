@@ -8,10 +8,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/participle/v2"
+
+	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/cron"
 )
 
 // This file contains a parser for Go FTL directives.

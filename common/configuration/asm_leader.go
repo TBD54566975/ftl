@@ -7,15 +7,15 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/benbjohnson/clock"
-	"github.com/puzpuzpuz/xsync/v3"
-
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/smithy-go"
+	"github.com/benbjohnson/clock"
+	"github.com/puzpuzpuz/xsync/v3"
+
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const asmLeaderSyncInterval = time.Minute * 5
