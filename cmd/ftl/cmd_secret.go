@@ -216,7 +216,7 @@ func (s *secretImportCmd) Run(ctx context.Context, scmd *secretCmd, adminClient 
 		}
 		_, err = adminClient.SecretSet(ctx, connect.NewRequest(req))
 		if err != nil {
-			return err
+			return fmt.Errorf("could not import secret for %q: %w", refPath, err)
 		}
 	}
 	return nil
@@ -240,7 +240,7 @@ func (s *secretExportCmd) Run(ctx context.Context, scmd *secretCmd, adminClient 
 	}
 	listResponse, err := adminClient.SecretsList(ctx, connect.NewRequest(req))
 	if err != nil {
-		return fmt.Errorf("could not retreive secrets: %w", err)
+		return fmt.Errorf("could not retrieve secrets: %w", err)
 	}
 	entries := make(map[string]any, 0)
 	for _, secret := range listResponse.Msg.Secrets {
