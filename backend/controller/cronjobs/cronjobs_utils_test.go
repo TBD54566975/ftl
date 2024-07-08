@@ -14,7 +14,8 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
-	db "github.com/TBD54566975/ftl/backend/controller/dal"
+	cronjobsdb "github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
+	parentdb "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -23,9 +24,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-type ExtendedDAL interface {
-	DAL
-	CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []db.DeploymentArtefact, ingressRoutes []db.IngressRoutingEntry, cronJobs []model.CronJob) (key model.DeploymentKey, err error)
+type ParentDAL interface {
+	CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []parentdb.DeploymentArtefact, ingressRoutes []parentdb.IngressRoutingEntry, cronJobs []model.CronJob) (key model.DeploymentKey, err error)
 	ReplaceDeployment(ctx context.Context, newDeploymentKey model.DeploymentKey, minReplicas int) (err error)
 }
 
@@ -36,9 +36,10 @@ type mockDAL struct {
 	attemptCountMap map[string]int
 }
 
-var _ ExtendedDAL = &mockDAL{}
+var _ ParentDAL = &mockDAL{}
+var _ DAL = &mockDAL{}
 
-func (d *mockDAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []db.DeploymentArtefact, ingressRoutes []db.IngressRoutingEntry, cronJobs []model.CronJob) (key model.DeploymentKey, err error) {
+func (d *mockDAL) CreateDeployment(ctx context.Context, language string, moduleSchema *schema.Module, artefacts []parentdb.DeploymentArtefact, ingressRoutes []parentdb.IngressRoutingEntry, cronJobs []model.CronJob) (key model.DeploymentKey, err error) {
 	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
 	d.jobs = []model.CronJob{}
 	for _, job := range cronJobs {
@@ -68,11 +69,11 @@ func (d *mockDAL) indexForJob(job model.CronJob) (int, error) {
 	return -1, fmt.Errorf("job not found")
 }
 
-func (d *mockDAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attemptedJobs []db.AttemptedCronJob, err error) {
+func (d *mockDAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attemptedJobs []cronjobsdb.AttemptedCronJob, err error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	attemptedJobs = []db.AttemptedCronJob{}
+	attemptedJobs = []cronjobsdb.AttemptedCronJob{}
 	now := d.clock.Now()
 
 	for _, inputJob := range jobs {
@@ -85,13 +86,13 @@ func (d *mockDAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (atte
 			job.State = model.CronJobStateExecuting
 			job.StartTime = d.clock.Now()
 			d.jobs[i] = job
-			attemptedJobs = append(attemptedJobs, db.AttemptedCronJob{
+			attemptedJobs = append(attemptedJobs, cronjobsdb.AttemptedCronJob{
 				CronJob:           job,
 				DidStartExecution: true,
 				HasMinReplicas:    true,
 			})
 		} else {
-			attemptedJobs = append(attemptedJobs, db.AttemptedCronJob{
+			attemptedJobs = append(attemptedJobs, cronjobsdb.AttemptedCronJob{
 				CronJob:           job,
 				DidStartExecution: false,
 				HasMinReplicas:    true,
@@ -200,8 +201,8 @@ func newControllers(ctx context.Context, count int, dal DAL, clockFactory func()
 	for _, c := range controllers {
 		s := c.cronJobs
 		go func() {
-			s.UpdatedControllerList(ctx, slices.Map(controllers, func(ctrl *controller) db.Controller {
-				return db.Controller{
+			s.UpdatedControllerList(ctx, slices.Map(controllers, func(ctrl *controller) parentdb.Controller {
+				return parentdb.Controller{
 					Key: ctrl.key,
 				}
 			}))
@@ -215,7 +216,7 @@ func newControllers(ctx context.Context, count int, dal DAL, clockFactory func()
 }
 
 // should be called when clk is half way between cron job executions (ie on an odd second)
-func testServiceWithDal(ctx context.Context, t *testing.T, dal ExtendedDAL, clk clock.Clock) {
+func testServiceWithDal(ctx context.Context, t *testing.T, dal DAL, parentDAL ParentDAL, clk clock.Clock) {
 	t.Helper()
 
 	verbCallCount := map[string]int{}
@@ -224,12 +225,12 @@ func testServiceWithDal(ctx context.Context, t *testing.T, dal ExtendedDAL, clk 
 	moduleName := "initial"
 	jobsToCreate := newJobs(t, moduleName, "*/2 * * * * * *", clk, 20)
 
-	deploymentKey, err := dal.CreateDeployment(ctx, "go", &schema.Module{
+	deploymentKey, err := parentDAL.CreateDeployment(ctx, "go", &schema.Module{
 		Name: moduleName,
-	}, []db.DeploymentArtefact{}, []db.IngressRoutingEntry{}, jobsToCreate)
+	}, []parentdb.DeploymentArtefact{}, []parentdb.IngressRoutingEntry{}, jobsToCreate)
 	assert.NoError(t, err)
 
-	err = dal.ReplaceDeployment(ctx, deploymentKey, 1)
+	err = parentDAL.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
 
 	_ = newControllers(ctx, 5, dal, func() clock.Clock { return clk }, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {

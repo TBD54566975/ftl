@@ -23,6 +23,7 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
 	"golang.org/x/exp/maps"
@@ -97,7 +98,7 @@ func (c *Config) SetDefaults() {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, dal *dal.DAL) error {
+func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -118,7 +119,13 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, dal, config, runnerScaling)
+	// Bring up the DB connection and DAL.
+	conn, err := pgxpool.New(ctx, config.DSN)
+	if err != nil {
+		return fmt.Errorf("failed to bring up DB connection: %w", err)
+	}
+
+	svc, err := New(ctx, conn, config, runnerScaling)
 	if err != nil {
 		return err
 	}
@@ -128,7 +135,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	sm := cf.SecretsFromContext(ctx)
 
 	admin := admin.NewAdminService(cm, sm)
-	console := NewConsoleService(dal)
+	console := NewConsoleService(svc.dal)
 
 	ingressHandler := http.Handler(svc)
 	if len(config.AllowOrigins) > 0 {
@@ -171,6 +178,7 @@ type ControllerListListener interface {
 }
 
 type Service struct {
+	pool               *pgxpool.Pool
 	dal                *dal.DAL
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
@@ -194,7 +202,7 @@ type Service struct {
 	asyncCallsLock          sync.Mutex
 }
 
-func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
+func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -208,8 +216,14 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 		config.ControllerTimeout = time.Second * 5
 	}
 
+	db, err := dal.New(ctx, pool)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create DAL: %w", err)
+	}
+
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, db),
+		pool:                    pool,
 		dal:                     db,
 		key:                     key,
 		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
@@ -221,7 +235,7 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, db, svc.tasks, svc.callWithRequest)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, pool, svc.tasks, svc.callWithRequest)
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 

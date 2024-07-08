@@ -16,11 +16,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -89,14 +87,6 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 	if err != nil {
 		return err
 	}
-	conn, err := pgxpool.New(ctx, dsn)
-	if err != nil {
-		return err
-	}
-	dal, err := dal.New(ctx, conn)
-	if err != nil {
-		return err
-	}
 
 	wg, ctx := errgroup.WithContext(ctx)
 
@@ -133,7 +123,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling, dal); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}

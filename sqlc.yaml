@@ -139,6 +139,12 @@ sql:
       # - postgresql-query-too-costly
       - postgresql-no-seq-scan
   - <<: *daldir
+    queries: "backend/controller/cronjobs/sql/queries.sql"
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/cronjobs/sql"
+  - <<: *daldir
     queries: "common/configuration/sql/queries.sql"
     gen:
       go:
