@@ -2663,6 +2663,11 @@ export class ListConfigRequest extends Message<ListConfigRequest> {
    */
   includeValues?: boolean;
 
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.ConfigProvider provider = 3;
+   */
+  provider?: ConfigProvider;
+
   constructor(data?: PartialMessage<ListConfigRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2673,6 +2678,7 @@ export class ListConfigRequest extends Message<ListConfigRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "include_values", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 3, name: "provider", kind: "enum", T: proto3.getEnumType(ConfigProvider), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListConfigRequest {
@@ -3014,6 +3020,11 @@ export class ListSecretsRequest extends Message<ListSecretsRequest> {
    */
   includeValues?: boolean;
 
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.SecretProvider provider = 3;
+   */
+  provider?: SecretProvider;
+
   constructor(data?: PartialMessage<ListSecretsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3024,6 +3035,7 @@ export class ListSecretsRequest extends Message<ListSecretsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 2, name: "include_values", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 3, name: "provider", kind: "enum", T: proto3.getEnumType(SecretProvider), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListSecretsRequest {

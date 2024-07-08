@@ -142,12 +142,14 @@ func ExecWithExpectedOutput(want string, cmd string, args ...string) Action {
 }
 
 // ExecWithOutput runs a command from the test working directory.
-// The output is captured and is returned as part of the error.
-func ExecWithOutput(cmd string, args ...string) Action {
+// On success capture() is executed with the output
+// On error, an error with the output is returned.
+func ExecWithOutput(cmd string, args []string, capture func(output string)) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
 		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
 		assert.NoError(t, err, "%s", string(output))
+		capture(string(output))
 	}
 }
 
@@ -250,6 +252,19 @@ func FileContent(path, expected string) Action {
 		expected = strings.TrimSpace(expected)
 		actual := strings.TrimSpace(string(data))
 		assert.Equal(t, expected, actual)
+	}
+}
+
+// WriteFile writes a file to the working directory.
+func WriteFile(path string, content []byte) Action {
+	return func(t testing.TB, ic TestContext) {
+		absPath := path
+		if !filepath.IsAbs(path) {
+			absPath = filepath.Join(ic.workDir, path)
+		}
+		Infof("Writing to %s", path)
+		err := os.WriteFile(absPath, content, 0600)
+		assert.NoError(t, err)
 	}
 }
 
