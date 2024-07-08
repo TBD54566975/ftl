@@ -152,7 +152,7 @@ func (o OnePasswordProvider) getItem(ctx context.Context, vault string) (*item, 
 		"--format", "json",
 	}
 	output, err := exec.Capture(ctx, ".", "op", args...)
-	logger.Debugf("Getting item with args %s", shellquote.Join(args...))
+	logger.Tracef("Getting item with args %s", shellquote.Join(args...))
 	if err != nil {
 		// This is specifically not itemNotFoundError, to distinguish between vault not found and item not found.
 		if strings.Contains(string(output), "isn't a vault") {
