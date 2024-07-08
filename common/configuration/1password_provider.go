@@ -38,7 +38,7 @@ func (o OnePasswordProvider) itemName() string {
 }
 
 func (o OnePasswordProvider) SyncInterval() time.Duration {
-	return time.Second * 5
+	return time.Second * 10
 }
 
 func (o OnePasswordProvider) Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
