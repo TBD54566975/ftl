@@ -5,6 +5,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
@@ -15,9 +16,9 @@ type deployCmd struct {
 	NoWait      bool     `help:"Do not wait for deployment to complete." default:"false"`
 }
 
-func (d *deployCmd) Run(ctx context.Context) error {
+func (d *deployCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-	engine, err := buildengine.New(ctx, client, d.Dirs, buildengine.Parallelism(d.Parallelism))
+	engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Dirs, buildengine.Parallelism(d.Parallelism))
 	if err != nil {
 		return err
 	}

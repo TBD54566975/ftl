@@ -38,6 +38,7 @@ func (t *mockModifyFilesTransaction) End() error {
 func testBuild(
 	t *testing.T,
 	bctx buildContext,
+	expectedGeneratStubsErrMsg string, // emptystr if no error expected
 	expectedBuildErrMsg string, // emptystr if no error expected
 	assertions []assertion,
 ) {
@@ -47,12 +48,31 @@ func testBuild(
 	assert.NoError(t, err, "Error getting absolute path for module directory")
 	module, err := LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
-	if len(expectedBuildErrMsg) > 0 {
+
+	projectRootDir := t.TempDir()
+
+	configs := []moduleconfig.ModuleConfig{}
+	if bctx.moduleDir != "" {
+		config, err := moduleconfig.LoadModuleConfig(bctx.moduleDir)
+		assert.NoError(t, err, "Error loading project config")
+		configs = append(configs, config)
+	}
+
+	// generate stubs to create the shared modules directory
+	err = GenerateStubs(ctx, projectRootDir, bctx.sch.Modules, configs)
+	if len(expectedGeneratStubsErrMsg) > 0 {
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), expectedBuildErrMsg)
+		assert.Contains(t, err.Error(), expectedGeneratStubsErrMsg)
 	} else {
 		assert.NoError(t, err)
+
+		err = Build(ctx, projectRootDir, bctx.sch, module, &mockModifyFilesTransaction{})
+		if len(expectedBuildErrMsg) > 0 {
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), expectedBuildErrMsg)
+		} else {
+			assert.NoError(t, err)
+		}
 	}
 
 	for _, a := range assertions {
@@ -70,10 +90,16 @@ func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
 	abs, err := filepath.Abs(bctx.moduleDir)
 	assert.NoError(t, err, "Error getting absolute path for module directory")
 
+	projectRoot := t.TempDir()
+
+	// generate stubs to create the shared modules directory
+	err = GenerateStubs(ctx, projectRoot, bctx.sch.Modules, []moduleconfig.ModuleConfig{{Dir: bctx.moduleDir}})
+	assert.NoError(t, err)
+
 	// build to generate the build directory
 	module, err := LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	err = Build(ctx, projectRoot, bctx.sch, module, &mockModifyFilesTransaction{})
 	assert.NoError(t, err)
 
 	// create a temporary file in the build directory
@@ -85,7 +111,7 @@ func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
 	// build to clear the old build directory
 	module, err = LoadModule(abs)
 	assert.NoError(t, err)
-	err = Build(ctx, bctx.sch, module, &mockModifyFilesTransaction{})
+	err = Build(ctx, projectRoot, bctx.sch, module, &mockModifyFilesTransaction{})
 	assert.NoError(t, err)
 
 	// ensure the temporary file was removed
