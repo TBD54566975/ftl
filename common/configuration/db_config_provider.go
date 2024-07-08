@@ -14,7 +14,7 @@ type DBConfigProvider struct {
 	dal DBConfigProviderDAL
 }
 
-var _ OnDemandProvider[Configuration] = DBConfigProvider{}
+var _ SynchronousProvider[Configuration] = DBConfigProvider{}
 
 type DBConfigProviderDAL interface {
 	GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error)

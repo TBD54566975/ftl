@@ -97,17 +97,17 @@ type Provider[R Role] interface {
 	Delete(ctx context.Context, ref Ref) error
 }
 
-// SyncableProvider is an interface for providers that can load values on-demand.
+// SynchronousProvider is an interface for providers that can load values on-demand.
 // This is recommended if the provider allows inexpensive loading of values.
-type OnDemandProvider[R Role] interface {
+type SynchronousProvider[R Role] interface {
 	Provider[R]
 
 	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
 }
 
-// SyncableProvider is an interface for providers that support syncing values.
+// AsynchronousProvider is an interface for providers that support syncing values.
 // This is recommended if the provider allows batch access, or is expensive to load.
-type SyncableProvider[R Role] interface {
+type AsynchronousProvider[R Role] interface {
 	Provider[R]
 
 	SyncInterval() time.Duration

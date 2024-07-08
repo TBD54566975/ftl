@@ -10,7 +10,7 @@ import (
 // InlineProvider is a configuration provider that stores configuration in its key.
 type InlineProvider[R Role] struct{}
 
-var _ OnDemandProvider[Configuration] = InlineProvider[Configuration]{}
+var _ SynchronousProvider[Configuration] = InlineProvider[Configuration]{}
 
 func (InlineProvider[R]) Role() R     { var r R; return r }
 func (InlineProvider[R]) Key() string { return "inline" }

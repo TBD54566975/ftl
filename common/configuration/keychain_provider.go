@@ -12,7 +12,7 @@ import (
 
 type KeychainProvider struct{}
 
-var _ OnDemandProvider[Secrets] = KeychainProvider{}
+var _ SynchronousProvider[Secrets] = KeychainProvider{}
 
 func (KeychainProvider) Role() Secrets { return Secrets{} }
 func (k KeychainProvider) Key() string { return "keychain" }

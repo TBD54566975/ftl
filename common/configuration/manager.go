@@ -75,13 +75,13 @@ func New[R Role](ctx context.Context, router Router[R], providers []Provider[R])
 	}
 	m.router = router
 
-	syncableProviders := []SyncableProvider[R]{}
+	asyncProviders := []AsynchronousProvider[R]{}
 	for _, provider := range m.providers {
-		if sp, ok := any(provider).(SyncableProvider[R]); ok {
-			syncableProviders = append(syncableProviders, sp)
+		if sp, ok := any(provider).(AsynchronousProvider[R]); ok {
+			asyncProviders = append(asyncProviders, sp)
 		}
 	}
-	m.cache = newCache[R](ctx, syncableProviders)
+	m.cache = newCache[R](ctx, asyncProviders)
 
 	return m, nil
 }
@@ -110,12 +110,12 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	}
 	var data []byte
 	switch provider := provider.(type) {
-	case SyncableProvider[R]:
+	case AsynchronousProvider[R]:
 		data, err = m.cache.load(ctx, ref, key)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", ref, err)
 		}
-	case OnDemandProvider[R]:
+	case SynchronousProvider[R]:
 		data, err = provider.Load(ctx, ref, key)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", ref, err)

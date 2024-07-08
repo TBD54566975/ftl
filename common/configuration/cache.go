@@ -40,7 +40,7 @@ type cache[R Role] struct {
 	topicWaitGroup *sync.WaitGroup
 }
 
-func newCache[R Role](ctx context.Context, providers []SyncableProvider[R]) *cache[R] {
+func newCache[R Role](ctx context.Context, providers []AsynchronousProvider[R]) *cache[R] {
 	cacheProviders := make(map[string]*cacheProvider[R], len(providers))
 	for _, provider := range providers {
 		cacheProviders[provider.Key()] = &cacheProvider[R]{
@@ -104,7 +104,7 @@ func (c *cache[R]) deletedValue(ref Ref, pkey string) {
 	})
 }
 
-// sync periodically syncs all syncable providers.
+// sync periodically syncs all asynchronous providers.
 //
 // Blocks until the context is cancelled.
 // Errors returned by a provider cause retries with exponential backoff.
@@ -153,9 +153,9 @@ func (c *cache[R]) processEvent(e updateCacheEvent) {
 	c.topicWaitGroup.Done()
 }
 
-// cacheProvider wraps a syncable provider and caches its values.
+// cacheProvider wraps an asynchronous provider and caches its values.
 type cacheProvider[R Role] struct {
-	provider SyncableProvider[R]
+	provider AsynchronousProvider[R]
 	values   *xsync.MapOf[Ref, SyncedValue]
 
 	// closed when values have been synced for the first time

@@ -32,7 +32,7 @@ type ASM struct {
 	coordinator *leader.Coordinator[asmClient]
 }
 
-var _ SyncableProvider[Secrets] = &ASM{}
+var _ AsynchronousProvider[Secrets] = &ASM{}
 
 func NewASM(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser) *ASM {
 	leaderFactory := func(ctx context.Context) (asmClient, error) {

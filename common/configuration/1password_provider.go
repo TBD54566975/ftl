@@ -25,7 +25,7 @@ type OnePasswordProvider struct {
 	ProjectName string
 }
 
-var _ SyncableProvider[Secrets] = OnePasswordProvider{}
+var _ AsynchronousProvider[Secrets] = OnePasswordProvider{}
 
 func (OnePasswordProvider) Role() Secrets { return Secrets{} }
 func (o OnePasswordProvider) Key() string { return "op" }
