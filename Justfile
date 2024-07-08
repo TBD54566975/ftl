@@ -3,7 +3,7 @@ set shell := ["bash", "-c"]
 
 WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml"
 RELEASE := "build/release"
-VERSION := `git describe --tags --always --dirty | sed -e 's/^v//'`
+VERSION := `git describe --tags --always | sed -e 's/^v//'`
 KT_RUNTIME_OUT := "kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT.jar"
 KT_RUNTIME_RUNNER_TEMPLATE_OUT := "build/template/ftl/jars/ftl-runtime.jar"
 RUNNER_TEMPLATE_ZIP := "backend/controller/scaling/localscaling/template.zip"
@@ -50,6 +50,8 @@ build-generate:
 build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
+
+  git status
 
   if [ "${FTL_DEBUG:-}" = "true" ]; then
     for tool in $@; do go build -o "{{RELEASE}}/$tool" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
