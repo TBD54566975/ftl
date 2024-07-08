@@ -23,7 +23,7 @@ func TestSubscriberReturningErrors(t *testing.T) {
 	}
 	ftltest.WaitForSubscriptionsToComplete(ctx)
 	assert.Equal(t, count, len(ftltest.ErrorsForSubscription(ctx, subscription)))
-	assert.Equal(t, count, len(ftltest.EventsForTopic(ctx, topic)))
+	assert.Equal(t, count, len(ftltest.EventsForTopic(ctx, Topic)))
 }
 
 func TestMultipleMultipleFakeSubscribers(t *testing.T) {
@@ -50,6 +50,6 @@ func TestMultipleMultipleFakeSubscribers(t *testing.T) {
 	}
 	ftltest.WaitForSubscriptionsToComplete(ctx)
 	assert.Equal(t, 0, len(ftltest.ErrorsForSubscription(ctx, subscription)))
-	assert.Equal(t, count, len(ftltest.EventsForTopic(ctx, topic)))
+	assert.Equal(t, count, len(ftltest.EventsForTopic(ctx, Topic)))
 	assert.Equal(t, count, counter.Load())
 }
