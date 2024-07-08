@@ -1,8 +1,0 @@
-go {{ .GoVersion }}
-
-use (
-	.
-{{- range .SharedModulesPaths }}
-    {{ . }}
-{{- end }}
-)

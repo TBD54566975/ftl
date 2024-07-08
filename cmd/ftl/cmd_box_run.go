@@ -17,7 +17,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
-	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -34,7 +33,7 @@ type boxRunCmd struct {
 	ControllerTimeout time.Duration `help:"Timeout for Controller start." default:"30s"`
 }
 
-func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
+func (b *boxRunCmd) Run(ctx context.Context) error {
 	conn, err := databasetesting.CreateForDevel(ctx, b.DSN, b.Recreate)
 	if err != nil {
 		return fmt.Errorf("failed to create database: %w", err)
@@ -75,7 +74,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), []string{b.Dir})
+	engine, err := buildengine.New(ctx, client, []string{b.Dir})
 	if err != nil {
 		return fmt.Errorf("failed to create build engine: %w", err)
 	}

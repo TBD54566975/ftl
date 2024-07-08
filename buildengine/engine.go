@@ -21,7 +21,6 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -66,7 +65,6 @@ type Listener interface {
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
-	projectRoot      string
 	moduleDirs       []string
 	watcher          *Watcher
 	controllerSchema *xsync.MapOf[string, *schema.Module]
@@ -99,11 +97,10 @@ func WithListener(listener Listener) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, moduleDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
-		projectRoot:      projectRoot,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
 		watcher:          NewWatcher(),
@@ -569,21 +566,6 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 	}
 	errCh := make(chan error, 1024)
 	for _, group := range topology {
-		groupSchemas := map[string]*schema.Module{}
-		metas, err := e.gatherGroupSchemas(builtModules, group, groupSchemas)
-		if err != nil {
-			return err
-		}
-
-		moduleConfigs := make([]moduleconfig.ModuleConfig, len(metas))
-		for i, meta := range metas {
-			moduleConfigs[i] = meta.module.Config
-		}
-		err = GenerateStubs(ctx, e.projectRoot, maps.Values(groupSchemas), moduleConfigs)
-		if err != nil {
-			return err
-		}
-
 		// Collect schemas to be inserted into "built" map for subsequent groups.
 		schemas := make(chan *schema.Module, len(group))
 
@@ -682,7 +664,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if e.listener != nil {
 		e.listener.OnBuildStarted(meta.module)
 	}
-	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir))
+	err := Build(ctx, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir))
 	if err != nil {
 		return err
 	}
@@ -693,29 +675,6 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	}
 	schemas <- moduleSchema
 	return nil
-}
-
-// Construct a combined schema for a group of modules and their transitive dependencies.
-func (e *Engine) gatherGroupSchemas(
-	moduleSchemas map[string]*schema.Module,
-	group []string,
-	out map[string]*schema.Module,
-) ([]moduleMeta, error) {
-	var metas []moduleMeta
-	for _, module := range group {
-		if module == "builtin" {
-			continue // Skip the builtin module
-		}
-
-		meta, ok := e.moduleMetas.Load(module)
-		if ok {
-			metas = append(metas, meta)
-			if err := e.gatherSchemas(moduleSchemas, meta.module, out); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return metas, nil
 }
 
 // Construct a combined schema for a module and its transitive dependencies.

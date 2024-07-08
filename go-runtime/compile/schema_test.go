@@ -56,7 +56,7 @@ func TestExtractModuleSchema(t *testing.T) {
 	assert.NoError(t, err)
 	actual := schema.Normalise(r.Module)
 	expected := `module one {
-  config configValue one.Config 
+  config configValue one.Config
   secret secretValue String
 
   database postgres testDb
@@ -184,9 +184,6 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-
-	assert.NoError(t, prebuildTestModule(t, "testdata/two"))
-
 	r, err := ExtractModuleSchema("testdata/two", &schema.Schema{})
 	assert.NoError(t, err)
 	assert.Equal(t, r.Errors, nil)
@@ -368,9 +365,6 @@ func TestExtractModulePubSub(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-
-	assert.NoError(t, prebuildTestModule(t, "testdata/pubsub"))
-
 	r, err := ExtractModuleSchema("testdata/pubsub", &schema.Schema{})
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")

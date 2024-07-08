@@ -8,22 +8,11 @@ import (
 	_ "embed"
 )
 
-//go:embed main-work-template.zip
-var mainWorkTemplateBytes []byte
-
 //go:embed external-module-template.zip
 var externalModuleTemplateBytes []byte
 
 //go:embed build-template.zip
 var buildTemplateBytes []byte
-
-func mainWorkTemplateFiles() *zip.Reader {
-	zr, err := zip.NewReader(bytes.NewReader(mainWorkTemplateBytes), int64(len(mainWorkTemplateBytes)))
-	if err != nil {
-		panic(err)
-	}
-	return zr
-}
 
 func externalModuleTemplateFiles() *zip.Reader {
 	zr, err := zip.NewReader(bytes.NewReader(externalModuleTemplateBytes), int64(len(externalModuleTemplateBytes)))
