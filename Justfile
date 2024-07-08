@@ -52,6 +52,7 @@ build +tools: build-protos build-zips build-frontend
   shopt -s extglob
 
   git status
+  git diff
 
   if [ "${FTL_DEBUG:-}" = "true" ]; then
     for tool in $@; do go build -o "{{RELEASE}}/$tool" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
