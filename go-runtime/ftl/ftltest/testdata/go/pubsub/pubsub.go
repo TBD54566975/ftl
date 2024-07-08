@@ -10,8 +10,8 @@ import (
 )
 
 //ftl:export
-var topic = ftl.Topic[Event]("topic")
-var subscription = ftl.Subscription(topic, "subscription")
+var Topic = ftl.Topic[Event]("topic")
+var subscription = ftl.Subscription(Topic, "subscription")
 
 //ftl:data
 type Event struct {
@@ -20,7 +20,7 @@ type Event struct {
 
 //ftl:verb
 func PublishToTopicOne(ctx context.Context, event Event) error {
-	return topic.Publish(ctx, event)
+	return Topic.Publish(ctx, event)
 }
 
 //ftl:subscribe subscription
