@@ -49,7 +49,10 @@ func DataToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, error) {
 		case *Enum:
 			root.Definitions[r.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(n, refs)}
 
-		case *Config, *Database, *Secret, *Verb, *FSM, *TypeAlias, *Topic, *Subscription:
+		case *TypeAlias:
+			root.Definitions[r.String()] = jsonschema.SchemaOrBool{TypeObject: nodeToJSSchema(n.Type, refs)}
+
+		case *Config, *Database, *Secret, *Verb, *FSM, *Topic, *Subscription:
 			return nil, fmt.Errorf("reference to unsupported node type %T", decl)
 		}
 	}
@@ -183,11 +186,14 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 	case *TypeParameter:
 		return &jsonschema.Schema{}
 
+	case *TypeAlias:
+		return nodeToJSSchema(node.Type, refs)
+
 	case Decl, *Field, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataIngress,
 		*MetadataAlias, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Module,
 		*Schema, Type, *Database, *Verb, *EnumVariant, *MetadataCronJob, Value,
 		*StringValue, *IntValue, *TypeValue, *Config, *Secret, Symbol, Named,
-		*FSM, *FSMTransition, *TypeAlias, *MetadataRetry, *Topic, *Subscription, *MetadataSubscriber:
+		*FSM, *FSMTransition, *MetadataRetry, *Topic, *Subscription, *MetadataSubscriber:
 		panic(fmt.Sprintf("unsupported node type %T", node))
 
 	default:
