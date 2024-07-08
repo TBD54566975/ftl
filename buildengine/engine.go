@@ -119,6 +119,11 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, proje
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
 
+	err := CleanStubs(ctx, projectRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to clean stubs: %w", err)
+	}
+
 	modules, err := DiscoverModules(ctx, moduleDirs)
 	if err != nil {
 		return nil, fmt.Errorf("could not find modules: %w", err)

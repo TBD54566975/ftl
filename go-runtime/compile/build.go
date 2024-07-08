@@ -222,10 +222,10 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
 }
 
-func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConfigs []moduleconfig.ModuleConfig, sch *schema.Schema) error {
+// CleanStubs removes all generated stubs.
+func CleanStubs(ctx context.Context, projectRoot string) error {
 	logger := log.FromContext(ctx)
-	logger.Debugf("Generating stubs for modules")
-
+	logger.Debugf("Deleting all generated stubs")
 	sharedFtlDir := filepath.Join(projectRoot, buildDirName)
 
 	// Wipe the modules directory to ensure we don't have any stale modules.
@@ -233,6 +233,16 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConf
 	if err != nil {
 		return fmt.Errorf("failed to remove %s: %w", sharedFtlDir, err)
 	}
+
+	return nil
+}
+
+// GenerateStubsForModules generates stubs for all modules in the schema.
+func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConfigs []moduleconfig.ModuleConfig, sch *schema.Schema) error {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Generating module stubs")
+
+	sharedFtlDir := filepath.Join(projectRoot, buildDirName)
 
 	ftlVersion := ""
 	if ftl.IsRelease(ftl.Version) {
@@ -251,6 +261,7 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConf
 
 		var goModVersion string
 		var replacements []*modfile.Replace
+		var err error
 
 		// If there's no module config, use the go.mod file for the first config we find.
 		if moduleConfig == nil {
