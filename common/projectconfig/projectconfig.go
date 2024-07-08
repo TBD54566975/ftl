@@ -47,6 +47,26 @@ func (c Config) Root() string {
 	return filepath.Dir(c.Path)
 }
 
+// Validate checks that the configuration is valid.
+func (c Config) Validate() error {
+	if c.Name == "" {
+		return fmt.Errorf("project name is required: %s", c.Path)
+	}
+	if strings.Contains(c.Name, " ") {
+		return fmt.Errorf("project name %q includes spaces: %s", c.Name, c.Path)
+	}
+	if c.FTLMinVersion != "" && !ftl.IsVersionAtLeastMin(ftl.Version, c.FTLMinVersion) {
+		return fmt.Errorf("FTL version %q predates the minimum version %q", ftl.Version, c.FTLMinVersion)
+	}
+	for _, dir := range c.ModuleDirs {
+		absDir := filepath.Clean(filepath.Join(c.Root(), dir))
+		if !strings.HasPrefix(absDir, c.Root()) {
+			return fmt.Errorf("module-dirs path %q is not within the project root %q", dir, c.Root())
+		}
+	}
+	return nil
+}
+
 // AbsModuleDirs returns the absolute path for the module-dirs field from the ftl-project.toml, unless
 // that is not defined, in which case it defaults to the root directory.
 func (c Config) AbsModuleDirs() []string {
@@ -103,6 +123,9 @@ func DefaultConfigPath() optional.Option[string] {
 
 // Create creates the ftl-project.toml file with the given Config into dir.
 func Create(ctx context.Context, config Config, dir string) error {
+	if err := config.Validate(); err != nil {
+		return err
+	}
 	logger := log.FromContext(ctx)
 	path, err := filepath.Abs(dir)
 	if err != nil {
@@ -119,19 +142,6 @@ func Create(ctx context.Context, config Config, dir string) error {
 	logger.Debugf("Creating a new project config file at %q", path)
 	config.Path = path
 	return Save(config)
-}
-
-// LoadOrCreate loads or creates the given configuration file.
-func LoadOrCreate(ctx context.Context, target string) (Config, error) {
-	logger := log.FromContext(ctx)
-	if _, err := os.Stat(target); errors.Is(err, os.ErrNotExist) {
-		logger.Debugf("Creating a new project config file at %q", target)
-		config := Config{Path: target}
-		return config, Save(config)
-	}
-
-	log.FromContext(ctx).Tracef("Loading config from %s", target)
-	return Load(ctx, target)
 }
 
 // Load project config from a file.
@@ -159,19 +169,11 @@ func Load(ctx context.Context, path string) (Config, error) {
 		}
 		return Config{}, fmt.Errorf("unknown configuration keys: %s", strings.Join(keys, ", "))
 	}
-
-	if config.FTLMinVersion != "" && !ftl.IsVersionAtLeastMin(ftl.Version, config.FTLMinVersion) {
-		return config, fmt.Errorf("FTL version %q predates the minimum version %q", ftl.Version, config.FTLMinVersion)
-	}
 	config.Path = path
 
-	for _, dir := range config.ModuleDirs {
-		absDir := filepath.Clean(filepath.Join(config.Root(), dir))
-		if !strings.HasPrefix(absDir, config.Root()) {
-			return Config{}, fmt.Errorf("module-dirs path %q is not within the project root %q", dir, config.Root())
-		}
+	if err := config.Validate(); err != nil {
+		return Config{}, err
 	}
-
 	return config, nil
 }
 

@@ -132,7 +132,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, modul
 		return e, nil
 	}
 	schemaSync := e.startSchemaSync(ctx)
-	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync)
+	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync, rpc.AlwaysRetry())
 	return e, nil
 }
 
@@ -688,7 +688,10 @@ func (e *Engine) gatherSchemas(
 		latestModule = moduleMeta{module: module}
 	}
 	for _, dep := range latestModule.module.Dependencies {
-		out[dep] = moduleSchemas[dep]
+		if moduleSchemas[dep] != nil {
+			out[dep] = moduleSchemas[dep]
+		}
+
 		if dep != "builtin" {
 			depModule, ok := e.moduleMetas.Load(dep)
 			// TODO: should we be gathering schemas from dependencies without a module?

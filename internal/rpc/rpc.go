@@ -177,7 +177,7 @@ func RetryStreamingClientStream[Req, Resp any](
 		// We've hit an error.
 		_, closeErr := stream.CloseAndReceive()
 		if closeErr != nil {
-			logger.Logf(logLevel, "Failed to close stream: %s", closeErr)
+			logger.Logf(log.Debug, "Failed to close stream: %s", closeErr)
 		}
 
 		errored = true
@@ -195,6 +195,12 @@ func RetryStreamingClientStream[Req, Resp any](
 	}
 }
 
+// AlwaysRetry instructs RetryStreamingServerStream to always retry the errors it encounters when
+// supplied as the errorRetryCallback argument
+func AlwaysRetry() func(error) bool {
+	return func(err error) bool { return true }
+}
+
 // RetryStreamingServerStream will repeatedly call handler with responses from
 // the stream returned by "rpc" until handler returns an error or the context is
 // cancelled.
@@ -204,6 +210,7 @@ func RetryStreamingServerStream[Req, Resp any](
 	req *Req,
 	rpc func(context.Context, *connect.Request[Req]) (*connect.ServerStreamForClient[Resp], error),
 	handler func(ctx context.Context, resp *Resp) error,
+	errorRetryCallback func(err error) bool,
 ) {
 	logLevel := log.Debug
 	errored := false
@@ -211,36 +218,47 @@ func RetryStreamingServerStream[Req, Resp any](
 	for {
 		stream, err := rpc(ctx, connect.NewRequest(req))
 		if err == nil {
-			for stream.Receive() {
-				req := stream.Msg()
-				err = handler(ctx, req)
-				if err != nil {
+			for {
+				if stream.Receive() {
+					resp := stream.Msg()
+					err = handler(ctx, resp)
+
+					if err != nil {
+						break
+					}
+					if errored {
+						logger.Debugf("Server stream recovered")
+						errored = false
+					}
+					select {
+					case <-ctx.Done():
+						return
+					default:
+					}
+					retry.Reset()
+					logLevel = log.Warn
+				} else {
+					// Stream terminated; check if this was caused by an error
+					err = stream.Err()
+					logLevel = log.Warn
 					break
 				}
-				if errored {
-					logger.Debugf("Server stream recovered")
-					errored = false
-				}
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-				retry.Reset()
-				logLevel = log.Warn
 			}
 		}
 
-		if err != nil {
-			err = stream.Err()
-		}
 		errored = true
 		delay := retry.Duration()
 		if err != nil && !errors.Is(err, context.Canceled) {
+			if errorRetryCallback != nil && !errorRetryCallback(err) {
+				logger.Errorf(err, "Stream handler encountered a non-retryable error")
+				return
+			}
+
 			logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
 		} else if err == nil {
 			logger.Debugf("Stream finished, retrying in %s", delay)
 		}
+
 		select {
 		case <-ctx.Done():
 			return

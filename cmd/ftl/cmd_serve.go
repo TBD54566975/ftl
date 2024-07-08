@@ -124,6 +124,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 		wg.Go(func() error {
 			if err := controller.Start(controllerCtx, config, runnerScaling); err != nil {
+				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
 			return nil
@@ -131,9 +132,11 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 	}
 
 	// Wait for controller to start, then run startup commands.
-	if err := waitForControllerOnline(ctx, time.Second*10, client); err != nil {
+	start := time.Now()
+	if err := waitForControllerOnline(ctx, s.StartupTimeout, client); err != nil {
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
+	logger.Infof("Controller started in %s", time.Since(start))
 
 	if len(projConfig.Commands.Startup) > 0 {
 		for _, cmd := range projConfig.Commands.Startup {
@@ -333,6 +336,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 // waitForControllerOnline polls the controller service until it is online.
 func waitForControllerOnline(ctx context.Context, startupTimeout time.Duration, client ftlv1connect.ControllerServiceClient) error {
 	logger := log.FromContext(ctx)
+	logger.Debugf("Waiting %s for controller to be online", startupTimeout)
 
 	ctx, cancel := context.WithTimeout(ctx, startupTimeout)
 	defer cancel()

@@ -2,6 +2,7 @@ package ingress
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -83,7 +84,7 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 		return nil, err
 	}
 
-	err = schema.ValidateRequestMap(request, []string{request.String()}, requestMap, sch)
+	err = validateRequestMap(request, []string{request.String()}, requestMap, sch)
 	if err != nil {
 		return nil, err
 	}
@@ -232,6 +233,45 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, 
 	}
 
 	return requestMap, nil
+}
+
+func validateRequestMap(ref *schema.Ref, path path, request map[string]any, sch *schema.Schema) error {
+	data, err := sch.ResolveMonomorphised(ref)
+	if err != nil {
+		return err
+	}
+
+	var errs []error
+	for _, field := range data.Fields {
+		fieldPath := append(path, "."+field.Name) //nolint:gocritic
+
+		value, haveValue := request[field.Name]
+		if !haveValue && !allowMissingField(field) {
+			errs = append(errs, fmt.Errorf("%s is required", fieldPath))
+			continue
+		}
+
+		if haveValue {
+			err := validateValue(field.Type, fieldPath, value, sch)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+	}
+
+	return errors.Join(errs...)
+}
+
+// Fields of these types can be omitted from the JSON representation.
+func allowMissingField(field *schema.Field) bool {
+	switch field.Type.(type) {
+	case *schema.Optional, *schema.Any, *schema.Array, *schema.Map, *schema.Bytes, *schema.Unit:
+		return true
+
+	case *schema.Bool, *schema.Ref, *schema.Float, *schema.Int, *schema.String, *schema.Time:
+	}
+	return false
 }
 
 func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, error) {

@@ -41,6 +41,9 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 	}
 
 	logger.Infof("Building module")
+
+	startTime := time.Now()
+
 	switch module.Config.Language {
 	case "go":
 		err = buildGoModule(ctx, sch, module, filesTransaction)
@@ -69,6 +72,8 @@ func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTr
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
+
+	logger.Infof("Module built (%.2fs)", time.Since(startTime).Seconds())
 
 	return nil
 }

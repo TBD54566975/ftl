@@ -133,6 +133,10 @@ test-readme *args:
 tidy:
   find . -name go.mod -execdir go mod tidy \;
 
+# Check for changes in existing SQL migrations compared to main
+ensure-frozen-migrations:
+  scripts/ensure-frozen-migrations
+
 # Run backend tests
 test-backend:
   @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./...

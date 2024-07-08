@@ -114,7 +114,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	} else {
 		consoleHandler, err = frontend.Server(ctx, config.ContentTime, config.Bind, config.ConsoleURL)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not start console: %w", err)
 		}
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
@@ -134,7 +134,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
 
-	admin := admin.NewAdminService(cm, sm, svc.dal)
+	admin := admin.NewAdminService(cm, sm)
 	console := NewConsoleService(svc.dal)
 
 	ingressHandler := http.Handler(svc)
@@ -156,6 +156,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 			rpc.HTTP("/", consoleHandler),
+			rpc.PProf(),
 		)
 	})
 
@@ -295,7 +296,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sch, err := s.dal.GetActiveSchema(r.Context())
+	sch, err := s.getActiveSchema(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -918,7 +919,7 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
 
-	sch, err := s.dal.GetActiveSchema(ctx)
+	sch, err := s.getActiveSchema(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -1669,6 +1670,18 @@ func (s *Service) syncSchema(ctx context.Context) {
 			retry.Reset()
 		}
 	}
+}
+
+func (s *Service) getActiveSchema(ctx context.Context) (*schema.Schema, error) {
+	deployments, err := s.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return schema.ValidateSchema(&schema.Schema{
+		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
+			return d.Schema
+		}),
+	})
 }
 
 func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {

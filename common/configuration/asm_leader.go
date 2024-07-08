@@ -123,7 +123,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 			if s.SecretBinary != nil {
 				return fmt.Errorf("secret for %s in ASM is not a string", ref)
 			}
-			data := []byte(*s.SecretString)
+			data := unwrapComments([]byte(*s.SecretString))
 			secrets.Store(ref, cachedSecret{
 				value:        data,
 				versionToken: optional.Some[any](refsToLoad[ref]),
@@ -155,9 +155,10 @@ func (l *asmLeader) load(ctx context.Context, ref Ref, key *url.URL) ([]byte, er
 
 // store and if the secret already exists, update it.
 func (l *asmLeader) store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+	valueWithComments := aws.String(string(wrapWithComments(value, defaultSecretModificationWarning)))
 	_, err := l.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(ref.String()),
-		SecretString: aws.String(string(value)),
+		SecretString: valueWithComments,
 		Tags: []types.Tag{
 			{Key: aws.String(asmTagKey), Value: aws.String(ref.Module.Default(""))},
 		},
@@ -168,7 +169,7 @@ func (l *asmLeader) store(ctx context.Context, ref Ref, value []byte) (*url.URL,
 	if errors.As(err, &apiErr) && apiErr.ErrorCode() == "ResourceExistsException" {
 		_, err = l.client.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
 			SecretId:     aws.String(ref.String()),
-			SecretString: aws.String(string(value)),
+			SecretString: valueWithComments,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to update secret in ASM: %w", err)

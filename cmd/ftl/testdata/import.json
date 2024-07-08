@@ -1,0 +1,5 @@
+{
+    "test.one": 1,
+    "test.two": "a string",
+    "test2.three": {"key":"value"}
+}

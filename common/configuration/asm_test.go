@@ -54,7 +54,8 @@ func TestASMWorkflow(t *testing.T) {
 	asm, leader, _, _ := localstack(ctx, t)
 	ref := Ref{Module: Some("foo"), Name: "bar"}
 	var mySecret = jsonBytes(t, "my secret")
-	manager, err := New(ctx, asm, []Provider[Secrets]{asm})
+	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
+	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
 	var gotSecret []byte
@@ -102,7 +103,8 @@ func TestASMWorkflow(t *testing.T) {
 func TestASMPagination(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	asm, leader, _, _ := localstack(ctx, t)
-	manager, err := New(ctx, asm, []Provider[Secrets]{asm})
+	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
+	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
 	// Create 210 secrets, so we paginate at least twice.
@@ -341,7 +343,11 @@ func (c *fakeAdminClient) ConfigUnset(ctx context.Context, req *connect.Request[
 }
 
 func (c *fakeAdminClient) SecretsList(ctx context.Context, req *connect.Request[ftlv1.ListSecretsRequest]) (*connect.Response[ftlv1.ListSecretsResponse], error) {
-	listing, err := c.asm.List(ctx)
+	client, err := c.asm.coordinator.Get()
+	if err != nil {
+		return nil, err
+	}
+	listing, err := client.list(ctx)
 	if err != nil {
 		return nil, err
 	}

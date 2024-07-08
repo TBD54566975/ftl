@@ -251,11 +251,15 @@ func generateExternalModules(context ExternalModuleContext) error {
 	// Wipe the modules directory to ensure we don't have any stale modules.
 	err := os.RemoveAll(filepath.Join(buildDir(context.ModuleDir), "go", "modules"))
 	if err != nil {
-		return err
+		return fmt.Errorf("could not remove old external modules: %w", err)
 	}
 
 	funcs := maps.Clone(scaffoldFuncs)
-	return internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
+	err = internal.ScaffoldZip(externalModuleTemplateFiles(), context.ModuleDir, context, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs))
+	if err != nil {
+		return fmt.Errorf("failed to scaffold external modules: %w", err)
+	}
+	return nil
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{

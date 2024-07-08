@@ -174,9 +174,9 @@ jobs:
       - name: Publish
         run: |
           set -euo pipefail
-          version="$(git describe --tags --abbrev=0)"
+          version="$(git describe --tags --abbrev=0 | sed 's/^v//')"
           echo "Publishing version $version"
-          jq ".version = \"$version\"" extensions/vscode/package.json > extensions/vscode/package.json.tmp
+          jq --arg version "$version" '.version = $version' extensions/vscode/package.json > extensions/vscode/package.json.tmp
           mv extensions/vscode/package.json.tmp extensions/vscode/package.json
           just publish-extension
         env:

@@ -45,13 +45,6 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 		return nil, fmt.Errorf("password field not found in item %q", ref)
 	}
 
-	// Just to verify that it is JSON encoded.
-	var decoded interface{}
-	err = json.Unmarshal(secret, &decoded)
-	if err != nil {
-		return nil, fmt.Errorf("secret is not JSON encoded: %w", err)
-	}
-
 	return secret, nil
 }
 

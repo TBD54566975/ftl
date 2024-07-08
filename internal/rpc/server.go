@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	gaphttp "github.com/TBD54566975/ftl/internal/http"
+
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"github.com/alecthomas/concurrency"
@@ -37,6 +39,13 @@ func GRPC[Iface, Impl Pingable](constructor GRPCServerConstructor[Iface], impl I
 		path, handler := constructor(any(impl).(Iface), options...)
 		o.reflectionPaths = append(o.reflectionPaths, strings.Trim(path, "/"))
 		o.mux.Handle(path, handler)
+	}
+}
+
+// PProf adds /debug/pprof routes to the server.
+func PProf() Option {
+	return func(so *serverOptions) {
+		gaphttp.RegisterPprof(so.mux)
 	}
 }
 
