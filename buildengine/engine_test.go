@@ -79,7 +79,7 @@ func TestInt64BuildError(t *testing.T) {
 		t.SkipNow()
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, []string{"testdata/integer"})
+	engine, err := buildengine.New(ctx, nil, t.TempDir(), []string{"testdata/integer"})
 	assert.NoError(t, err)
 
 	defer engine.Close()

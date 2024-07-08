@@ -153,7 +153,7 @@ func TestDiscoverModules(t *testing.T) {
 				Realm:     "home",
 				Module:    "integer",
 				Deploy:    []string{"main"},
-				DeployDir: "_ftl",
+				DeployDir: ".ftl",
 				Schema:    "schema.pb",
 				Errors:    "errors.pb",
 				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
