@@ -148,6 +148,19 @@ func TestDiscoverModules(t *testing.T) {
 		},
 		{
 			Config: moduleconfig.ModuleConfig{
+				Dir:       "testdata/integer",
+				Language:  "go",
+				Realm:     "home",
+				Module:    "integer",
+				Deploy:    []string{"main"},
+				DeployDir: ".ftl",
+				Schema:    "schema.pb",
+				Errors:    "errors.pb",
+				Watch:     []string{"**/*.go", "go.mod", "go.sum"},
+			},
+		},
+		{
+			Config: moduleconfig.ModuleConfig{
 				Dir:       "testdata/other",
 				Language:  "go",
 				Realm:     "home",

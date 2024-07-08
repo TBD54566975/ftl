@@ -1240,13 +1240,14 @@ func visitConst(pctx *parseContext, cnode *types.Const) optional.Option[schema.V
 			}
 			return optional.Some[schema.Value](&schema.StringValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: value})
 
-		case types.Int, types.Int64:
+		case types.Int:
 			value, err := strconv.ParseInt(cnode.Val().String(), 10, 64)
 			if err != nil {
 				pctx.errors.add(tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported int constant"))
 				return optional.None[schema.Value]()
 			}
 			return optional.Some[schema.Value](&schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)})
+
 		default:
 			return optional.None[schema.Value]()
 		}
@@ -1284,7 +1285,7 @@ func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported b
 		case types.String:
 			return optional.Some[schema.Type](&schema.String{Pos: goPosToSchemaPos(pos)})
 
-		case types.Int, types.Int64:
+		case types.Int:
 			return optional.Some[schema.Type](&schema.Int{Pos: goPosToSchemaPos(pos)})
 
 		case types.Bool:

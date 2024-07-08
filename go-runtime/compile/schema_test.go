@@ -134,7 +134,6 @@ func TestExtractModuleSchema(t *testing.T) {
 
   export data Req {
     int Int
-    int64 Int
     float Float
     string String
     slice [String]

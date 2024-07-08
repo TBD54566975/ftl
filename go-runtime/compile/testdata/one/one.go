@@ -106,7 +106,6 @@ func (WithoutDirectiveStruct) privateEnum() {}
 
 type Req struct {
 	Int                  int
-	Int64                int64
 	Float                float64
 	String               string
 	Slice                []string

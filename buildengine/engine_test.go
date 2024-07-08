@@ -73,3 +73,19 @@ func TestCycleDetection(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "detected a module dependency cycle that impacts these modules:")
 }
+
+func TestInt64BuildError(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	engine, err := buildengine.New(ctx, nil, t.TempDir(), []string{"testdata/integer"})
+	assert.NoError(t, err)
+
+	defer engine.Close()
+
+	err = engine.Build(ctx)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `unsupported type "int64" for field "Input"`)
+	assert.Contains(t, err.Error(), `unsupported type "int64" for field "Output"`)
+}
