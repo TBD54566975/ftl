@@ -45,7 +45,7 @@ func localstack(ctx context.Context, t *testing.T) (*ASM, *asmLeader, *secretsma
 	return asm, leader, sm, mockClock
 }
 
-func waitForUpdatesToProcess(c *secretsCache) {
+func waitForUpdatesToProcess(c *cache) {
 	c.topicWaitGroup.Wait()
 }
 
@@ -185,13 +185,13 @@ func TestFollowerSync(t *testing.T) {
 func testClientSync(ctx context.Context,
 	t *testing.T,
 	client asmClient,
-	cache *secretsCache,
+	cache *cache,
 	sm *secretsmanager.Client,
 	progressByIntervalPercentage func(percentage float64)) {
 	t.Helper()
 
 	// wait for initial load
-	err := cache.waitForSecrets()
+	err := cache.waitForInitialSync()
 	assert.NoError(t, err)
 
 	// advance clock to half way between syncs

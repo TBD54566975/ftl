@@ -19,8 +19,10 @@ import (
 	"errors"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 // ErrNotFound is returned when a configuration entry is not found or cannot be resolved.
@@ -88,9 +90,38 @@ type Router[R Role] interface {
 type Provider[R Role] interface {
 	Role() R
 	Key() string
-	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
+
 	// Store a configuration value and return its key.
 	Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
 	// Delete a configuration value.
 	Delete(ctx context.Context, ref Ref) error
+}
+
+// SyncableProvider is an interface for providers that can load values on-demand.
+// This is recommended if the provider allows inexpensive loading of values.
+type OnDemandProvider[R Role] interface {
+	Provider[R]
+
+	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
+}
+
+// SyncableProvider is an interface for providers that support syncing values.
+// This is recommended if the provider allows batch access, or is expensive to load.
+type SyncableProvider[R Role] interface {
+	Provider[R]
+
+	SyncInterval() time.Duration
+	Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error
+}
+
+type VersionToken any
+
+type SyncedValue struct {
+	Value []byte
+
+	// VersionToken is a way of storing a version provided by the source of truth (eg: lastModified)
+	// it is nil when:
+	// - the owner of the cache is not using version tokens
+	// - the cache is updated after writing
+	VersionToken optional.Option[VersionToken]
 }

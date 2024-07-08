@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/benbjohnson/clock"
 	"github.com/puzpuzpuz/xsync/v3"
 
 	"connectrpc.com/connect"
@@ -19,23 +18,22 @@ const asmFollowerSyncInterval = time.Minute * 1
 // asmFollower uses AdminService to get/set secrets from the leader
 type asmFollower struct {
 	client ftlv1connect.AdminServiceClient
-	cache  *secretsCache
 }
 
 var _ asmClient = &asmFollower{}
 
-func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient, clock clock.Clock) *asmFollower {
+func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient) *asmFollower {
 	f := &asmFollower{
 		client: rpcClient,
-		cache:  newSecretsCache("asm-follower"),
 	}
-	go f.cache.sync(ctx, asmFollowerSyncInterval, func(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
-		return f.sync(ctx, secrets)
-	}, clock)
 	return f
 }
 
-func (f *asmFollower) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
+func (f *asmFollower) syncInterval() time.Duration {
+	return asmFollowerSyncInterval
+}
+
+func (f *asmFollower) sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
 	module := ""
 	includeValues := true
 	resp, err := f.client.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
@@ -52,37 +50,18 @@ func (f *asmFollower) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cached
 			return fmt.Errorf("invalid ref %q: %w", s.RefPath, err)
 		}
 		visited[ref] = true
-		secrets.Store(ref, cachedSecret{
-			value: s.Value,
+		values.Store(ref, SyncedValue{
+			Value: s.Value,
 		})
 	}
 	// delete old values
-	secrets.Range(func(ref Ref, _ cachedSecret) bool {
+	values.Range(func(ref Ref, _ SyncedValue) bool {
 		if !visited[ref] {
-			secrets.Delete(ref)
+			values.Delete(ref)
 		}
 		return true
 	})
 	return nil
-}
-
-// list all secrets in the account.
-func (f *asmFollower) list(ctx context.Context) ([]Entry, error) {
-	entries := []Entry{}
-	err := f.cache.iterate(func(ref Ref, _ []byte) {
-		entries = append(entries, Entry{
-			Ref:      ref,
-			Accessor: asmURLForRef(ref),
-		})
-	})
-	if err != nil {
-		return nil, err
-	}
-	return entries, nil
-}
-
-func (f *asmFollower) load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	return f.cache.getSecret(ref)
 }
 
 func (f *asmFollower) store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
@@ -98,7 +77,6 @@ func (f *asmFollower) store(ctx context.Context, ref Ref, value []byte) (*url.UR
 	if err != nil {
 		return nil, err
 	}
-	f.cache.updatedSecret(ref, value)
 	return asmURLForRef(ref), nil
 }
 
@@ -114,6 +92,5 @@ func (f *asmFollower) delete(ctx context.Context, ref Ref) error {
 	if err != nil {
 		return err
 	}
-	f.cache.deletedSecret(ref)
 	return nil
 }

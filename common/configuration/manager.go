@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -37,6 +38,7 @@ type Manager[R Role] struct {
 	providers  map[string]Provider[R]
 	router     Router[R]
 	obfuscator optional.Option[Obfuscator]
+	cache      *cache[R]
 }
 
 func ConfigFromEnvironment() []string {
@@ -72,7 +74,20 @@ func New[R Role](ctx context.Context, router Router[R], providers []Provider[R])
 		m.obfuscator = optional.Some(provider.obfuscator())
 	}
 	m.router = router
+
+	syncableProviders := []SyncableProvider[R]{}
+	for _, provider := range m.providers {
+		if sp, ok := any(provider).(SyncableProvider[R]); ok {
+			syncableProviders = append(syncableProviders, sp)
+		}
+	}
+	m.cache = newCache[R](ctx, syncableProviders)
+
 	return m, nil
+}
+
+func ProviderKeyForAccessor(accessor *url.URL) string {
+	return accessor.Scheme
 }
 
 // getData returns a data value for a configuration from the active providers.
@@ -93,9 +108,22 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("no provider for scheme %q", key.Scheme)
 	}
-	data, err := provider.Load(ctx, ref, key)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", ref, err)
+	var data []byte
+	switch provider := provider.(type) {
+	case SyncableProvider[R]:
+		data, err = m.cache.load(ctx, ref, key)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", ref, err)
+		}
+	case OnDemandProvider[R]:
+		data, err = provider.Load(ctx, ref, key)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", ref, err)
+		}
+	default:
+		if err != nil {
+			return nil, fmt.Errorf("provider for %s does not support on demand access or syncing", ref)
+		}
 	}
 	if obfuscator, ok := m.obfuscator.Get(); ok {
 		data, err = obfuscator.Reveal(data)
@@ -163,6 +191,7 @@ func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value js
 	if err != nil {
 		return err
 	}
+	m.cache.updatedValue(ref, bytes, key)
 	return m.router.Set(ctx, ref, key)
 }
 
@@ -207,6 +236,7 @@ func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref Ref) error {
 	if err := provider.Delete(ctx, ref); err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
+	m.cache.deletedValue(ref, pkey)
 	return m.router.Unset(ctx, ref)
 }
 
