@@ -188,9 +188,19 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 
 	r, err := ExtractModuleSchema("testdata/two", &schema.Schema{})
 	assert.NoError(t, err)
-	assert.Equal(t, r.Errors, nil)
+	for _, e := range r.Errors {
+		// only warns
+		assert.True(t, e.Level == schema.WARN)
+	}
 	actual := schema.Normalise(r.Module)
 	expected := `module two {
+		typealias ExternalAlias Any
+			+typemap kotlin "com.foo.bar.NonFTLType"
+			+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+		
+		typealias TransitiveAlias Any
+			+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+
 		export enum TwoEnum: String {
 		  Red = "Red"
 		  Blue = "Blue"
@@ -205,6 +215,11 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		}
 
 		export data Exported {
+		}
+
+		data NonFtlField {
+		  field two.ExternalAlias
+		  transitive two.TransitiveAlias
 		}
 
 		export data Payload<T> {
@@ -522,13 +537,14 @@ func TestErrorReporting(t *testing.T) {
 		return str
 	})
 	expected := []string{
-		// failing/child/child.go
-		`4:2-6: unsupported type "uint64" for field "Body"`,
-
-		// failing/failing.go
+		`6:2-6: unsupported type "uint64" for field "Body"`,
+		`11:2-2: unsupported external type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"`,
+		`11:2-7: unsupported type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.NonFTLType" for field "Field"`,
 		`13:13-34: expected string literal for argument at index 0`,
+		`16:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType`,
 		`16:18-52: duplicate config declaration at 15:18-52`,
 		`19:18-52: duplicate secret declaration at 18:18-52`,
+		`21:6-6: multiple Go type mappings found for "ftl/failing/child.MultipleMappings"`,
 		`22:14-44: duplicate database declaration at 21:14-44`,
 		`25:2-10: unsupported type "error" for field "BadParam"`,
 		`28:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
@@ -565,7 +581,6 @@ func TestErrorReporting(t *testing.T) {
 		`124:21-60: config and secret names must be valid identifiers`,
 		`130:1-1: schema declaration contains conflicting directives`,
 		`130:1-26: only one directive expected when directive "ftl:enum" is present, found multiple`,
-		`130:1-26: only one directive expected when directive "ftl:typealias" is present, found multiple`,
 		`146:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
 		`152:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
 		`155:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,

@@ -47,6 +47,10 @@ func encodeValue(v reflect.Value, w *bytes.Buffer) error {
 	t := v.Type()
 	// Special-cased types
 	switch {
+	case reflection.IsKnownExternalType(t):
+		// external types use the stdlib JSON encoding
+		fallthrough
+
 	case t == reflect.TypeFor[time.Time]():
 		data, err := json.Marshal(v.Interface())
 		if err != nil {
@@ -245,6 +249,10 @@ func decodeValue(d *json.Decoder, v reflect.Value) error {
 	t := v.Type()
 	// Special-case types
 	switch {
+	case reflection.IsKnownExternalType(t):
+		// external types use the stdlib JSON decoding
+		fallthrough
+
 	case t == reflect.TypeFor[time.Time]():
 		return d.Decode(v.Addr().Interface())
 

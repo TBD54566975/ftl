@@ -6,6 +6,7 @@ import (
 
 	"ftl/builtin"
 
+	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
@@ -177,4 +178,11 @@ func ArrayData(ctx context.Context, req builtin.HttpRequest[[]ArrayType]) (built
 //ftl:ingress http GET /typeenum
 func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType]) (builtin.HttpResponse[SumType, string], error) {
 	return builtin.HttpResponse[SumType, string]{Body: ftl.Some(req.Body)}, nil
+}
+
+type ExternalAlias lib.NonFTLType
+
+//ftl:ingress http GET /external
+func External(ctx context.Context, req builtin.HttpRequest[ExternalAlias]) (builtin.HttpResponse[ExternalAlias, string], error) {
+	return builtin.HttpResponse[ExternalAlias, string]{Body: ftl.Some(req.Body)}, nil
 }
