@@ -22,11 +22,11 @@ const BuildLockTimeout = time.Minute
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func Build(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
-	return buildModule(ctx, projectRootDir, sch, module, filesTransaction)
+func Build(ctx context.Context, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
+	return buildModule(ctx, sch, module, filesTransaction)
 }
 
-func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
+func buildModule(ctx context.Context, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction) error {
 	release, err := flock.Acquire(ctx, filepath.Join(module.Config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema,
 
 	switch module.Config.Language {
 	case "go":
-		err = buildGoModule(ctx, projectRootDir, sch, module, filesTransaction)
+		err = buildGoModule(ctx, sch, module, filesTransaction)
 	case "kotlin":
 		err = buildKotlinModule(ctx, sch, module)
 	case "rust":

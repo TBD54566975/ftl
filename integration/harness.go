@@ -17,7 +17,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
-	"github.com/otiai10/copy"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -74,23 +73,11 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 	assert.True(t, ok)
 
 	if ftlConfigPath != "" {
-		ftlConfigPath = filepath.Join(cwd, "testdata", "go", ftlConfigPath)
-		projectPath := filepath.Join(tmpDir, "ftl-project.toml")
-
-		// Copy the specified FTL config to the temporary directory.
-		err = copy.Copy(ftlConfigPath, projectPath)
-		if err == nil {
-			t.Setenv("FTL_CONFIG", projectPath)
-		} else {
-			// Use a path into the testdata directory instead of one relative to
-			// tmpDir. Otherwise we have a chicken and egg situation where the config
-			// can't be loaded until the module is copied over, and the config itself
-			// is used by FTL during startup.
-			// Some tests still rely on this behavior, so we can't remove it entirely.
-			t.Logf("Failed to copy %s to %s: %s", ftlConfigPath, projectPath, err)
-			t.Setenv("FTL_CONFIG", ftlConfigPath)
-		}
-
+		// Use a path into the testdata directory instead of one relative to
+		// tmpDir. Otherwise we have a chicken and egg situation where the config
+		// can't be loaded until the module is copied over, and the config itself
+		// is used by FTL during startup.
+		t.Setenv("FTL_CONFIG", filepath.Join(cwd, "testdata", "go", ftlConfigPath))
 	} else {
 		err = os.WriteFile(filepath.Join(tmpDir, "ftl-project.toml"), []byte(`name = "integration"`), 0644)
 		assert.NoError(t, err)
