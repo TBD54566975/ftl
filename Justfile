@@ -51,7 +51,6 @@ build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
 
-  git status
   git diff
 
   if [ "${FTL_DEBUG:-}" = "true" ]; then
@@ -68,25 +67,18 @@ export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=d
 
 # Explicitly initialise the database
 init-db:
-  git status
   dbmate drop || true
-  git status
   dbmate create
-  git status
   dbmate --migrations-dir backend/controller/sql/schema up
-  git status
 
 # Regenerate SQLC code (requires init-db to be run first)
 build-sqlc:
-  git status
   @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} backend/controller/{cronjobs}/sql/{db.go,models.go,querier.go,queries.sql.go} common/configuration/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/{cronjobs}/sql/queries.sql common/configuration/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- "just init-db && sqlc generate"
   git status
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips: build-kt-runtime
-  git status
   @for dir in {{ZIP_DIRS}}; do (cd $dir && mk ../$(basename ${dir}).zip : . -- "rm -f $(basename ${dir}.zip) && zip -q --symlinks -r ../$(basename ${dir}).zip ."); done
-  git status
 
 # Rebuild frontend
 build-frontend: npm-install
@@ -94,9 +86,7 @@ build-frontend: npm-install
 
 # Rebuild VSCode extension
 build-extension: npm-install
-  git status
   @mk {{EXTENSION_OUT}} : extensions/vscode/src extensions/vscode/package.json -- "cd extensions/vscode && rm -f ftl-*.vsix && npm run compile"
-  git status
 
 # Install development version of VSCode extension
 install-extension: build-extension
