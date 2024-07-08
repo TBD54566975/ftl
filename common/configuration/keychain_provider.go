@@ -12,6 +12,8 @@ import (
 
 type KeychainProvider struct{}
 
+var _ OnDemandProvider[Secrets] = KeychainProvider{}
+
 func (KeychainProvider) Role() Secrets { return Secrets{} }
 func (k KeychainProvider) Key() string { return "keychain" }
 

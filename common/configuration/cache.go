@@ -37,16 +37,17 @@ type cache[R Role] struct {
 
 	topic *pubsub.Topic[updateCacheEvent]
 	// used by tests to wait for events to be processed
-	topicWaitGroup sync.WaitGroup
+	topicWaitGroup *sync.WaitGroup
 }
 
 func newCache[R Role](ctx context.Context, providers []SyncableProvider[R]) *cache[R] {
 	cacheProviders := make(map[string]*cacheProvider[R], len(providers))
 	for _, provider := range providers {
 		cacheProviders[provider.Key()] = &cacheProvider[R]{
-			provider: provider,
-			values:   xsync.NewMapOf[Ref, SyncedValue](),
-			loaded:   make(chan bool),
+			provider:   provider,
+			values:     xsync.NewMapOf[Ref, SyncedValue](),
+			loaded:     make(chan bool),
+			loadedOnce: &sync.Once{},
 		}
 	}
 	cache := &cache[R]{
@@ -76,9 +77,14 @@ func (c *cache[R]) load(ctx context.Context, ref Ref, key *url.URL) ([]byte, err
 
 // updatedValue should be called when a value is updated in the provider
 func (c *cache[R]) updatedValue(ref Ref, value []byte, accessor *url.URL) {
+	key := ProviderKeyForAccessor(accessor)
+	if _, ok := c.providers[key]; !ok {
+		// not syncing this provider
+		return
+	}
 	c.topicWaitGroup.Add(1)
 	c.topic.Publish(updateCacheEvent{
-		key:   ProviderKeyForAccessor(accessor),
+		key:   key,
 		ref:   ref,
 		value: optional.Some(value),
 	})
@@ -86,6 +92,10 @@ func (c *cache[R]) updatedValue(ref Ref, value []byte, accessor *url.URL) {
 
 // deletedValue should be called when a value is deleted in the provider
 func (c *cache[R]) deletedValue(ref Ref, pkey string) {
+	if _, ok := c.providers[pkey]; !ok {
+		// not syncing this provider
+		return
+	}
 	c.topicWaitGroup.Add(1)
 	c.topic.Publish(updateCacheEvent{
 		key:   pkey,
@@ -101,6 +111,10 @@ func (c *cache[R]) deletedValue(ref Ref, pkey string) {
 //
 // Events are processed when all providers are not being synced
 func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
+	if len(c.providers) == 0 {
+		// nothing to sync
+		return
+	}
 	events := make(chan updateCacheEvent, 64)
 	c.topic.Subscribe(events)
 	defer c.topic.Unsubscribe(events)
@@ -115,7 +129,7 @@ func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
 
 		// Can not calculate next sync date for each provider as sync intervals can change (eg when follower becomes leader)
 		case <-clock.After(time.Second):
-			wg := sync.WaitGroup{}
+			wg := &sync.WaitGroup{}
 			for _, cp := range c.providers {
 				if !cp.needsSync(clock) {
 					continue
@@ -146,6 +160,7 @@ type cacheProvider[R Role] struct {
 
 	// closed when values have been synced for the first time
 	loaded          chan bool
+	loadedOnce      *sync.Once
 	lastSyncAttempt optional.Option[time.Time]
 	currentBackoff  optional.Option[time.Duration]
 }
@@ -155,10 +170,10 @@ type cacheProvider[R Role] struct {
 // If values have not yet been synced, this will wait until they are, returning an error if it takes too long.
 func (c *cacheProvider[R]) waitForInitialSync() error {
 	select {
-	case <-time.After(waitForCacheTimeout):
-		return fmt.Errorf("%s has not completed sync yet", c.provider.Key())
 	case <-c.loaded:
 		return nil
+	case <-time.After(waitForCacheTimeout):
+		return fmt.Errorf("%s has not completed sync yet", c.provider.Key())
 	}
 }
 
@@ -188,12 +203,9 @@ func (c *cacheProvider[R]) sync(ctx context.Context, clock clock.Clock) {
 		return
 	}
 	c.currentBackoff = optional.None[time.Duration]()
-	select {
-	case <-c.loaded:
-		break
-	default:
-		c.loaded <- true
-	}
+	c.loadedOnce.Do(func() {
+		close(c.loaded)
+	})
 }
 
 // processEvent updates the cache
