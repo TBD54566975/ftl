@@ -43,6 +43,9 @@ func (o OnePasswordProvider) SyncInterval() time.Duration {
 
 func (o OnePasswordProvider) Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
 	logger := log.FromContext(ctx)
+	if o.Vault == "" {
+		return fmt.Errorf("1Password vault not set: use --opvault flag to specify the vault")
+	}
 	if err := checkOpBinary(); err != nil {
 		return err
 	}

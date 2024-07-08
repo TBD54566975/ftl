@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/benbjohnson/clock"
@@ -19,6 +20,10 @@ const (
 	syncMaxBackoff      = time.Minute * 2
 	waitForCacheTimeout = time.Second * 5
 )
+
+type listProvider interface {
+	List(ctx context.Context) ([]Entry, error)
+}
 
 type updateCacheEvent struct {
 	key string
@@ -33,14 +38,15 @@ type updateCacheEvent struct {
 // Sync happens periodically.
 // Updates do not go through the cache, but the cache is notified after the update occurs.
 type cache[R Role] struct {
-	providers map[string]*cacheProvider[R]
+	providers    map[string]*cacheProvider[R]
+	listProvider listProvider
 
 	topic *pubsub.Topic[updateCacheEvent]
 	// used by tests to wait for events to be processed
 	topicWaitGroup *sync.WaitGroup
 }
 
-func newCache[R Role](ctx context.Context, providers []AsynchronousProvider[R]) *cache[R] {
+func newCache[R Role](ctx context.Context, providers []AsynchronousProvider[R], listProvider listProvider) *cache[R] {
 	cacheProviders := make(map[string]*cacheProvider[R], len(providers))
 	for _, provider := range providers {
 		cacheProviders[provider.Key()] = &cacheProvider[R]{
@@ -51,8 +57,9 @@ func newCache[R Role](ctx context.Context, providers []AsynchronousProvider[R]) 
 		}
 	}
 	cache := &cache[R]{
-		providers: cacheProviders,
-		topic:     pubsub.New[updateCacheEvent](),
+		providers:    cacheProviders,
+		listProvider: listProvider,
+		topic:        pubsub.New[updateCacheEvent](),
 	}
 	go cache.sync(ctx, clock.New())
 
@@ -115,6 +122,9 @@ func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
 		// nothing to sync
 		return
 	}
+
+	logger := log.FromContext(ctx)
+
 	events := make(chan updateCacheEvent, 64)
 	c.topic.Subscribe(events)
 	defer c.topic.Unsubscribe(events)
@@ -130,13 +140,28 @@ func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
 		// Can not calculate next sync date for each provider as sync intervals can change (eg when follower becomes leader)
 		case <-clock.After(time.Second):
 			wg := &sync.WaitGroup{}
+
+			providersToSync := []*cacheProvider[R]{}
 			for _, cp := range c.providers {
-				if !cp.needsSync(clock) {
-					continue
+				if cp.needsSync(clock) {
+					providersToSync = append(providersToSync, cp)
 				}
+			}
+			if len(providersToSync) == 0 {
+				continue
+			}
+			list, err := c.listProvider.List(ctx)
+			if err != nil {
+				logger.Warnf("could not sync %v: could not get list: %v", err)
+				continue
+			}
+			for _, cp := range providersToSync {
+				_, hasValues := slices.Find(list, func(e Entry) bool {
+					return ProviderKeyForAccessor(e.Accessor) == cp.provider.Key()
+				})
 				wg.Add(1)
 				go func(cp *cacheProvider[R]) {
-					cp.sync(ctx, clock)
+					cp.sync(ctx, clock, hasValues)
 					wg.Done()
 				}(cp)
 			}
@@ -157,6 +182,11 @@ func (c *cache[R]) processEvent(e updateCacheEvent) {
 type cacheProvider[R Role] struct {
 	provider AsynchronousProvider[R]
 	values   *xsync.MapOf[Ref, SyncedValue]
+
+	// isActive is the provider is used by any value
+	// When inactive, the provider will not be synced. This helps avoid accessing resources that are not needed, like 1Password.
+	// When the provider stops being used, we do one final sync to ensure the cache is up-to-date
+	isActive bool
 
 	// closed when values have been synced for the first time
 	loaded          chan bool
@@ -188,8 +218,13 @@ func (c *cacheProvider[R]) needsSync(clock clock.Clock) bool {
 	return clock.Now().After(lastSyncAttempt.Add(c.provider.SyncInterval()))
 }
 
-func (c *cacheProvider[R]) sync(ctx context.Context, clock clock.Clock) {
+func (c *cacheProvider[R]) sync(ctx context.Context, clock clock.Clock, hasValues bool) {
 	logger := log.FromContext(ctx)
+
+	if !hasValues && !c.isActive {
+		// skip
+		return
+	}
 
 	c.lastSyncAttempt = optional.Some(clock.Now())
 	err := c.provider.Sync(ctx, c.values)
@@ -206,6 +241,7 @@ func (c *cacheProvider[R]) sync(ctx context.Context, clock clock.Clock) {
 	c.loadedOnce.Do(func() {
 		close(c.loaded)
 	})
+	c.isActive = hasValues
 }
 
 // processEvent updates the cache

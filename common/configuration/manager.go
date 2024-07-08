@@ -81,7 +81,7 @@ func New[R Role](ctx context.Context, router Router[R], providers []Provider[R])
 			asyncProviders = append(asyncProviders, sp)
 		}
 	}
-	m.cache = newCache[R](ctx, asyncProviders)
+	m.cache = newCache[R](ctx, asyncProviders, m)
 
 	return m, nil
 }
