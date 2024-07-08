@@ -66,12 +66,18 @@ export const defaultRequest = (verb?: Verb): string => {
     requiredOnly: true
   })
 
-  let fake = JSONSchemaFaker.generate(schema)
-  if (fake) {
-    fake = processJsonValue(fake)
+  try {
+    let fake = JSONSchemaFaker.generate(schema)
+    if (fake) {
+      fake = processJsonValue(fake)
+    }
+
+    return JSON.stringify(fake, null, 2) ?? '{}'
+  } catch (error) {
+    console.error(error)
+    return '{}'
   }
 
-  return JSON.stringify(fake, null, 2) ?? '{}'
 }
 
 export const ingress = (verb?: Verb) => {
