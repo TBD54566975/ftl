@@ -73,6 +73,13 @@ type CommonConfig struct {
 	CronJobTimeout time.Duration `help:"Timeout for cron jobs." default:"5m"`
 }
 
+func (c *CommonConfig) Validate() error {
+	if len(c.AllowHeaders) > 0 && len(c.AllowOrigins) == 0 {
+		return fmt.Errorf("AllowOrigins must be set when AllowHeaders is used")
+	}
+	return nil
+}
+
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
 	IngressBind                  *url.URL            `help:"Socket to bind to for ingress." default:"http://localhost:8891" env:"FTL_CONTROLLER_INGRESS_BIND"`
