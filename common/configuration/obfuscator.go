@@ -49,7 +49,7 @@ func (o Obfuscator) Reveal(input []byte) ([]byte, error) {
 
 	obfuscated, err := base64.StdEncoding.DecodeString(string(input))
 	if err != nil {
-		return nil, fmt.Errorf("expected hexadecimal string: %w", err)
+		return nil, fmt.Errorf("expected base64 string: %w", err)
 	}
 	block, err := aes.NewCipher(o.key)
 	if err != nil {
