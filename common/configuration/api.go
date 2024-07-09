@@ -88,9 +88,42 @@ type Router[R Role] interface {
 type Provider[R Role] interface {
 	Role() R
 	Key() string
-	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
+	Load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error)
 	// Store a configuration value and return its key.
 	Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
 	// Delete a configuration value.
 	Delete(ctx context.Context, ref Ref) error
+}
+
+// WrappedValue wraps a secret or a configuration value, such that it can be unwrapped with an optional obfuscator.
+//
+//sumtype:decl
+type WrappedValue interface {
+	Unwrap(obfuscator optional.Option[Obfuscator]) ([]byte, error)
+	valueWrapper()
+}
+
+// PossiblyObfuscatedValue wraps a value and unobfuscates it if provided with an obfuscator
+type PossiblyObfuscatedValue struct {
+	raw []byte
+}
+
+func (v PossiblyObfuscatedValue) valueWrapper() {}
+func (v PossiblyObfuscatedValue) Unwrap(obfuscator optional.Option[Obfuscator]) ([]byte, error) {
+	o, ok := obfuscator.Get()
+	if !ok {
+		return v.raw, nil
+	}
+	return o.Reveal(v.raw)
+}
+
+// UnobfuscatedValue wraps a value and returns it without unobfuscating it again
+
+type UnobfuscatedValue struct {
+	raw []byte
+}
+
+func (v UnobfuscatedValue) valueWrapper() {}
+func (v UnobfuscatedValue) Unwrap(obfuscator optional.Option[Obfuscator]) ([]byte, error) {
+	return v.raw, nil
 }

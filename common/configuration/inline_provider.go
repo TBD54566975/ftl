@@ -13,12 +13,12 @@ type InlineProvider[R Role] struct{}
 func (InlineProvider[R]) Role() R     { var r R; return r }
 func (InlineProvider[R]) Key() string { return "inline" }
 
-func (InlineProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (InlineProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error) {
 	data, err := base64.RawURLEncoding.DecodeString(key.Host)
 	if err != nil {
 		return nil, fmt.Errorf("invalid base64 data in inline configuration: %w", err)
 	}
-	return data, nil
+	return PossiblyObfuscatedValue{raw: data}, nil
 }
 
 func (InlineProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {

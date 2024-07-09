@@ -98,15 +98,13 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("no provider for scheme %q", key.Scheme)
 	}
-	data, err := provider.Load(ctx, ref, key)
+	wrapped, err := provider.Load(ctx, ref, key)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", ref, err)
 	}
-	if obfuscator, ok := m.obfuscator.Get(); ok {
-		data, err = obfuscator.Reveal(data)
-		if err != nil {
-			return nil, fmt.Errorf("could not reveal obfuscated value: %w", err)
-		}
+	data, err := wrapped.Unwrap(m.obfuscator)
+	if err != nil {
+		return nil, fmt.Errorf("could not reveal obfuscated value: %w", err)
 	}
 	return data, nil
 }

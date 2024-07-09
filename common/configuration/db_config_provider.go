@@ -29,12 +29,12 @@ func NewDBConfigProvider(dal DBConfigProviderDAL) DBConfigProvider {
 func (DBConfigProvider) Role() Configuration { return Configuration{} }
 func (DBConfigProvider) Key() string         { return "db" }
 
-func (d DBConfigProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (d DBConfigProvider) Load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error) {
 	value, err := d.dal.GetModuleConfiguration(ctx, ref.Module, ref.Name)
 	if err != nil {
 		return nil, dalerrs.ErrNotFound
 	}
-	return value, nil
+	return PossiblyObfuscatedValue{raw: value}, nil
 }
 
 func (d DBConfigProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {

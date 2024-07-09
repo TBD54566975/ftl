@@ -81,8 +81,12 @@ func (f *asmFollower) list(ctx context.Context) ([]Entry, error) {
 	return entries, nil
 }
 
-func (f *asmFollower) load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	return f.cache.getSecret(ref)
+func (f *asmFollower) load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error) {
+	bytes, err := f.cache.getSecret(ref)
+	if err != nil {
+		return nil, err
+	}
+	return UnobfuscatedValue{raw: bytes}, nil
 }
 
 func (f *asmFollower) store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {

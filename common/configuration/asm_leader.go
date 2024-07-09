@@ -149,8 +149,12 @@ func (l *asmLeader) list(ctx context.Context) ([]Entry, error) {
 	return entries, nil
 }
 
-func (l *asmLeader) load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	return l.cache.getSecret(ref)
+func (l *asmLeader) load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error) {
+	bytes, err := l.cache.getSecret(ref)
+	if err != nil {
+		return nil, err
+	}
+	return PossiblyObfuscatedValue{raw: bytes}, nil
 }
 
 // store and if the secret already exists, update it.

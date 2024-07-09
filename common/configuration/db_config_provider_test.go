@@ -29,10 +29,12 @@ func TestDBConfigProvider(t *testing.T) {
 	ctx := context.Background()
 	provider := NewDBConfigProvider(mockDBConfigProviderDAL{})
 
-	gotBytes, err := provider.Load(ctx, Ref{
+	gotWrapper, err := provider.Load(ctx, Ref{
 		Module: optional.Some("module"),
 		Name:   "configname",
 	}, &url.URL{Scheme: "db"})
+	assert.NoError(t, err)
+	gotBytes, err := gotWrapper.Unwrap(optional.None[Obfuscator]())
 	assert.NoError(t, err)
 	assert.Equal(t, b, gotBytes)
 

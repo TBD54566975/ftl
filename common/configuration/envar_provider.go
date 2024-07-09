@@ -15,15 +15,19 @@ type EnvarProvider[R Role] struct{}
 func (EnvarProvider[R]) Role() R     { var r R; return r }
 func (EnvarProvider[R]) Key() string { return "envar" }
 
-func (e EnvarProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (e EnvarProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error) {
 	// FTL_<type>_[<module>]_<name> where <module> and <name> are base64 encoded.
 	envar := e.key(ref)
 
 	value, ok := os.LookupEnv(envar)
-	if ok {
-		return base64.RawURLEncoding.DecodeString(value)
+	if !ok {
+		return nil, fmt.Errorf("environment variable %q is not set: %w", envar, ErrNotFound)
 	}
-	return nil, fmt.Errorf("environment variable %q is not set: %w", envar, ErrNotFound)
+	bytes, err := base64.RawURLEncoding.DecodeString(value)
+	if err != nil {
+		return nil, err
+	}
+	return PossiblyObfuscatedValue{raw: bytes}, nil
 }
 
 func (e EnvarProvider[R]) Delete(ctx context.Context, ref Ref) error {

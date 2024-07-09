@@ -18,7 +18,7 @@ import (
 
 type asmClient interface {
 	list(ctx context.Context) ([]Entry, error)
-	load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
+	load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error)
 	store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
 	delete(ctx context.Context, ref Ref) error
 }
@@ -74,12 +74,16 @@ func (ASM) Key() string {
 	return "asm"
 }
 
-func (a *ASM) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (a *ASM) Load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error) {
 	client, err := a.coordinator.Get()
 	if err != nil {
 		return nil, err
 	}
-	return client.load(ctx, ref, key)
+	wrapped, err := client.load(ctx, ref, key)
+	if err != nil {
+		return nil, err
+	}
+	return wrapped, nil
 }
 
 // Store and if the secret already exists, update it.

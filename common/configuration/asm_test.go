@@ -202,7 +202,9 @@ func testClientSync(ctx context.Context,
 	_, err = client.store(ctx, clientRef, jsonBytes(t, "client-first"))
 	assert.NoError(t, err)
 	waitForUpdatesToProcess(cache)
-	value, err := client.load(ctx, clientRef, asmURLForRef(clientRef))
+	wrappedValue, err := client.load(ctx, clientRef, asmURLForRef(clientRef))
+	assert.NoError(t, err, "failed to load secret via asm")
+	value, err := wrappedValue.Unwrap(None[Obfuscator]())
 	assert.NoError(t, err, "failed to load secret via asm")
 	assert.Equal(t, value, jsonBytes(t, "client-first"), "unexpected secret value")
 
@@ -217,7 +219,7 @@ func testClientSync(ctx context.Context,
 	})
 	assert.NoError(t, err, "failed to create secret via sm")
 	waitForUpdatesToProcess(cache)
-	value, err = client.load(ctx, smRef, asmURLForRef(smRef))
+	wrappedValue, err = client.load(ctx, smRef, asmURLForRef(smRef))
 	assert.Error(t, err, "expected to fail because asm client has not synced secret yet")
 
 	// write a secret via client and then by sm directly
@@ -230,8 +232,10 @@ func testClientSync(ctx context.Context,
 	})
 	assert.NoError(t, err)
 	waitForUpdatesToProcess(cache)
-	value, err = client.load(ctx, clientSmRef, asmURLForRef(clientSmRef))
+	wrappedValue, err = client.load(ctx, clientSmRef, asmURLForRef(clientSmRef))
 	assert.NoError(t, err, "failed to load secret via asm")
+	value, err = wrappedValue.Unwrap(None[Obfuscator]())
+	assert.NoError(t, err, "failed to unwrap secret via asm")
 	assert.Equal(t, value, jsonBytes(t, "client-sm-first"), "expected initial value before client has a chance to sync newest value")
 
 	// write a secret via sm directly and then by client
@@ -247,8 +251,10 @@ func testClientSync(ctx context.Context,
 	_, err = client.store(ctx, smClientRef, jsonBytes(t, "sm-client-second"))
 	assert.NoError(t, err)
 	waitForUpdatesToProcess(cache)
-	value, err = client.load(ctx, smClientRef, asmURLForRef(smClientRef))
+	wrappedValue, err = client.load(ctx, smClientRef, asmURLForRef(smClientRef))
 	assert.NoError(t, err, "failed to load secret via asm")
+	value, err = wrappedValue.Unwrap(None[Obfuscator]())
+	assert.NoError(t, err, "failed to unwrap secret via asm")
 	assert.Equal(t, value, jsonBytes(t, "sm-client-second"), "unexpected secret value")
 
 	// give client a change to sync
@@ -260,8 +266,10 @@ func testClientSync(ctx context.Context,
 	assert.NoError(t, err)
 	assert.Equal(t, len(list), 4, "expected 4 secrets")
 	for _, entry := range list {
-		value, err = client.load(ctx, entry.Ref, asmURLForRef(entry.Ref))
+		wrappedValue, err = client.load(ctx, entry.Ref, asmURLForRef(entry.Ref))
 		assert.NoError(t, err, "failed to load secret via asm")
+		value, err = wrappedValue.Unwrap(None[Obfuscator]())
+		assert.NoError(t, err, "failed to unwrap secret via asm")
 		var expectedValue string
 		switch entry.Ref {
 		case clientRef:
@@ -363,7 +371,11 @@ func (c *fakeAdminClient) SecretsList(ctx context.Context, req *connect.Request[
 		}
 		var sv []byte
 		if *req.Msg.IncludeValues {
-			sv, err = c.asm.Load(ctx, secret.Ref, asmURLForRef(secret.Ref))
+			wrappedValue, err := c.asm.Load(ctx, secret.Ref, asmURLForRef(secret.Ref))
+			if err != nil {
+				return nil, err
+			}
+			sv, err = wrappedValue.Unwrap(None[Obfuscator]())
 			if err != nil {
 				return nil, err
 			}
@@ -379,11 +391,15 @@ func (c *fakeAdminClient) SecretsList(ctx context.Context, req *connect.Request[
 // SecretGet returns the secret value for a given ref string.
 func (c *fakeAdminClient) SecretGet(ctx context.Context, req *connect.Request[ftlv1.GetSecretRequest]) (*connect.Response[ftlv1.GetSecretResponse], error) {
 	ref := NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name)
-	vb, err := c.asm.Load(ctx, ref, asmURLForRef(ref))
+	wrappedValue, err := c.asm.Load(ctx, ref, asmURLForRef(ref))
 	if err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(&ftlv1.GetSecretResponse{Value: vb}), nil
+	value, err := wrappedValue.Unwrap(None[Obfuscator]())
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&ftlv1.GetSecretResponse{Value: value}), nil
 }
 
 // SecretSet sets the secret at the given ref to the provided value.

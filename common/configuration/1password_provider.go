@@ -29,7 +29,7 @@ func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error {
 }
 
 // Load returns the secret stored in 1password.
-func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error) {
 	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([
 		return nil, fmt.Errorf("password field not found in item %q", ref)
 	}
 
-	return secret, nil
+	return PossiblyObfuscatedValue{raw: secret}, nil
 }
 
 var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)

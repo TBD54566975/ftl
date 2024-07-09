@@ -15,7 +15,7 @@ type KeychainProvider struct{}
 func (KeychainProvider) Role() Secrets { return Secrets{} }
 func (k KeychainProvider) Key() string { return "keychain" }
 
-func (k KeychainProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (k KeychainProvider) Load(ctx context.Context, ref Ref, key *url.URL) (WrappedValue, error) {
 	value, err := keyring.Get(k.serviceName(ref), key.Host)
 	if err != nil {
 		if errors.Is(err, keyring.ErrNotFound) {
@@ -23,7 +23,7 @@ func (k KeychainProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]by
 		}
 		return nil, err
 	}
-	return []byte(value), nil
+	return PossiblyObfuscatedValue{raw: []byte(value)}, nil
 }
 
 func (k KeychainProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
