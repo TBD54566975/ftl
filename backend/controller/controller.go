@@ -66,6 +66,7 @@ import (
 // CommonConfig between the production controller and development server.
 type CommonConfig struct {
 	AllowOrigins   []*url.URL    `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
+	AllowHeaders   []string      `help:"Allow these headers in CORS requests. (Requires AllowOrigins)" env:"FTL_CONTROLLER_ALLOW_HEADERS"`
 	NoConsole      bool          `help:"Disable the console."`
 	IdleRunners    int           `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
 	WaitFor        []string      `help:"Wait for these modules to be deployed before becoming ready." placeholder:"MODULE"`
@@ -139,7 +140,11 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 
 	ingressHandler := http.Handler(svc)
 	if len(config.AllowOrigins) > 0 {
-		ingressHandler = cors.Middleware(slices.Map(config.AllowOrigins, func(u *url.URL) string { return u.String() }), ingressHandler)
+		ingressHandler = cors.Middleware(
+			slices.Map(config.AllowOrigins, func(u *url.URL) string { return u.String() }),
+			config.AllowHeaders,
+			ingressHandler,
+		)
 	}
 
 	g, ctx := errgroup.WithContext(ctx)

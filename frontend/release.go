@@ -47,7 +47,7 @@ func Server(ctx context.Context, timestamp time.Time, publicURL *url.URL, allowO
 		http.ServeContent(w, r, filePath, timestamp, f.(io.ReadSeeker))
 	})
 	if allowOrigin != nil {
-		handler = cors.Middleware([]string{allowOrigin.String()}, handler)
+		handler = cors.Middleware([]string{allowOrigin.String()}, nil, handler)
 	}
 	return handler, nil
 }

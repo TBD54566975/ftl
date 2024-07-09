@@ -43,5 +43,5 @@ func Server(ctx context.Context, timestamp time.Time, publicURL *url.URL, allowO
 		return proxy, nil
 	}
 
-	return cors.Middleware([]string{allowOrigin.String()}, proxy), nil
+	return cors.Middleware([]string{allowOrigin.String()}, nil, proxy), nil
 }
