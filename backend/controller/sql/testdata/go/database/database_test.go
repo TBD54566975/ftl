@@ -33,6 +33,19 @@ func TestDatabase(t *testing.T) {
 	assert.Equal(t, "unit test 2", list[0])
 }
 
+func TestOptionOrdering(t *testing.T) {
+	ctx := ftltest.Context(
+		ftltest.WithDatabase(db),                    // <--- consumes DSNs
+		ftltest.WithProjectFile("ftl-project.toml"), // <--- provides DSNs
+	)
+
+	Insert(ctx, InsertRequest{Data: "unit test 1"})
+	list, err := getAll(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(list))
+	assert.Equal(t, "unit test 1", list[0])
+}
+
 func getAll(ctx context.Context) ([]string, error) {
 	rows, err := db.Get(ctx).Query("SELECT data FROM requests ORDER BY created_at;")
 	if err != nil {
