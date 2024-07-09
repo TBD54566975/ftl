@@ -8,37 +8,6 @@ concurrency:
   group: ${{ github.ref }}-ci
   cancel-in-progress: true
 jobs:
-  fake-release:
-    name: Fake Release Go Binaries
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Show git status and diff
-        run: |
-          git status
-          git diff
-      - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
-      - name: Show git status and diff
-        run: |
-          git status
-          git diff
-      - name: Build Cache
-        uses: ./.github/actions/build-cache
-      - name: Show git status and diff
-        run: |
-          git status
-          git diff
-      - name: Build Console
-        run: just build-frontend
-      - name: Publish Go Binaries
-        run: |
-          just errtrace
-          just build ftl # Ensure all the prerequisites are built before we use goreleaser
-
   test:
     name: Test Go
     runs-on: ubuntu-latest
