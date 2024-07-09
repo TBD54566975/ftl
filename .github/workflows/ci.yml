@@ -9,13 +9,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   fake-release:
-    name: Release Go Binaries
+    name: Fake Release Go Binaries
     runs-on: ubuntu-latest
     steps:
-      - name: Show git status and diff
-        run: |
-          git status
-          git diff
       - name: Checkout code
         uses: actions/checkout@v4
         with:
