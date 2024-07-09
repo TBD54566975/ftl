@@ -240,7 +240,6 @@ func RetryStreamingServerStream[Req, Resp any](
 				} else {
 					// Stream terminated; check if this was caused by an error
 					err = stream.Err()
-					logLevel = log.Warn
 					break
 				}
 			}
