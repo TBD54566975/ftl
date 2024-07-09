@@ -403,7 +403,7 @@ func JsonData(t testing.TB, body interface{}) []byte {
 }
 
 // HttpCall makes an HTTP call to the running FTL ingress endpoint.
-func HttpCall(method string, path string, body []byte, onResponse func(t testing.TB, resp *HTTPResponse)) Action {
+func HttpCall(method string, path string, headers map[string][]string, body []byte, onResponse func(t testing.TB, resp *HTTPResponse)) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("HTTP %s %s", method, path)
 		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8891"))
@@ -415,6 +415,11 @@ func HttpCall(method string, path string, body []byte, onResponse func(t testing
 		assert.NoError(t, err)
 
 		r.Header.Add("Content-Type", "application/json")
+		for k, vs := range headers {
+			for _, v := range vs {
+				r.Header.Add(k, v)
+			}
+		}
 
 		client := http.Client{}
 		resp, err := client.Do(r)
