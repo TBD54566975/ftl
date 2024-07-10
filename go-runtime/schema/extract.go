@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/types"
 
+	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -91,6 +92,19 @@ func analyzersWithDependencies() []*analysis.Analyzer {
 	return as
 }
 
+type refResultType int
+
+const (
+	failed refResultType = iota
+	widened
+)
+
+type refResult struct {
+	typ    refResultType
+	obj    types.Object
+	fqName optional.Option[string]
+}
+
 // the run will produce finalizer results for all packages it executes on, so we need to aggregate the results into a
 // single schema
 func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics []analysis.SimpleDiagnostic) (Result, error) {
@@ -102,7 +116,7 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 		NativeNames: make(map[schema.Node]string),
 		Errors:      diagnosticsToSchemaErrors(diagnostics),
 	}
-	failedRefs := make(map[schema.RefKey]types.Object)
+	refResults := make(map[schema.RefKey]refResult)
 	extractedDecls := make(map[schema.Decl]types.Object)
 	for _, r := range fResults {
 		fr, ok := r.(finalize.Result)
@@ -119,19 +133,35 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 				combined.Module.Comments = fr.ModuleComments
 			}
 		}
-		maps.Copy(failedRefs, fr.Failed)
+		copyFailedRefs(refResults, fr.Failed)
 		maps.Copy(extractedDecls, fr.Extracted)
 	}
 
 	combined.Module.AddDecls(maps.Keys(extractedDecls))
 	for decl, obj := range extractedDecls {
+		if ta, ok := decl.(*schema.TypeAlias); ok && len(ta.Metadata) > 0 {
+			fqName, err := goQualifiedNameForWidenedType(obj, ta.Metadata)
+			if err != nil {
+				combined.Errors = append(combined.Errors, &schema.Error{Pos: ta.Position(), EndColumn: ta.Pos.Column,
+					Msg: err.Error(), Level: schema.ERROR})
+				continue
+			}
+			refResults[schema.RefKey{Module: combined.Module.Name, Name: ta.Name}] =
+				refResult{typ: widened, obj: obj, fqName: optional.Some(fqName)}
+		}
 		combined.NativeNames[decl] = common.GetNativeName(obj)
 	}
-	combined.Errors = append(combined.Errors, propagateTypeErrors(combined.Module, failedRefs)...)
+	combined.Errors = append(combined.Errors, propagateTypeErrors(combined.Module, refResults)...)
 	schema.SortErrorsByPosition(combined.Errors)
 	updateVisibility(combined.Module)
 	// TODO: validate schema once we have the full schema here
 	return combined, nil
+}
+
+func copyFailedRefs(parsedRefs map[schema.RefKey]refResult, failedRefs map[schema.RefKey]types.Object) {
+	for ref, obj := range failedRefs {
+		parsedRefs[ref] = refResult{typ: failed, obj: obj}
+	}
 }
 
 // updateVisibility traverses the module schema via refs and updates visibility as needed.
@@ -182,7 +212,10 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 
 // propagateTypeErrors propagates type errors to referencing nodes. This improves error messaging for the LSP client by
 // surfacing errors all the way up the schema chain.
-func propagateTypeErrors(module *schema.Module, failedRefs map[schema.RefKey]types.Object) []*schema.Error {
+func propagateTypeErrors(
+	module *schema.Module,
+	refResults map[schema.RefKey]refResult,
+) []*schema.Error {
 	var errs []*schema.Error
 	_ = schema.VisitWithParent(module, nil, func(n schema.Node, p schema.Node, next func() error) error { //nolint:errcheck
 		if p == nil {
@@ -192,8 +225,15 @@ func propagateTypeErrors(module *schema.Module, failedRefs map[schema.RefKey]typ
 		if !ok {
 			return next()
 		}
-		if obj, ok := failedRefs[ref.ToRefKey()]; ok {
-			refNativeName := common.GetNativeName(obj)
+
+		result, ok := refResults[ref.ToRefKey()]
+		if !ok {
+			return next()
+		}
+
+		switch result.typ {
+		case failed:
+			refNativeName := common.GetNativeName(result.obj)
 			switch pt := p.(type) {
 			case *schema.Verb:
 				if pt.Request == n {
@@ -211,7 +251,11 @@ func propagateTypeErrors(module *schema.Module, failedRefs map[schema.RefKey]typ
 				errs = append(errs, schema.Errorf(p.Position(), p.Position().Column, "unsupported type %q",
 					refNativeName))
 			}
+		case widened:
+			errs = append(errs, schema.Warnf(n.Position(), n.Position().Column, "external type %q will be "+
+				"widened to Any", result.fqName.MustGet()))
 		}
+
 		return next()
 	})
 	return errs
@@ -248,4 +292,21 @@ func simplePosToSchemaPos(pos analysis.SimplePosition) schema.Position {
 		Line:     pos.Line,
 		Column:   pos.Column,
 	}
+}
+
+func goQualifiedNameForWidenedType(obj types.Object, metadata []schema.Metadata) (string, error) {
+	var nativeName string
+	for _, m := range metadata {
+		if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
+			if nativeName != "" {
+				return "", fmt.Errorf("multiple Go type mappings found for %q", common.GetNativeName(obj))
+			}
+			nativeName = m.NativeName
+		}
+	}
+	if nativeName == "" {
+		return "", fmt.Errorf("missing Go native name in typemapped alias for %q",
+			common.GetNativeName(obj))
+	}
+	return nativeName, nil
 }
