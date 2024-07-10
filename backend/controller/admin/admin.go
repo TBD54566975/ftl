@@ -253,7 +253,8 @@ func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool,
 	r := schema.RefKey{Module: ref.Module.Default(""), Name: ref.Name}.ToRef()
 	decl, ok := sch.Resolve(r).Get()
 	if !ok {
-		return fmt.Errorf("declaration %q not found", ref.Name)
+		logger.Debugf("skipping validation; declaration %q not found", ref.Name)
+		return nil
 	}
 
 	var fieldType schema.Type

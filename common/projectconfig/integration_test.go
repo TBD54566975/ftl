@@ -59,3 +59,37 @@ func TestFindConfig(t *testing.T) {
 		checkConfig("."),
 	)
 }
+
+func TestConfigValidation(t *testing.T) {
+	in.Run(t, "./validateconfig/ftl-project.toml",
+		in.CopyModule("validateconfig"),
+
+		// Global sets never error.
+		in.Chdir("validateconfig", in.Exec("ftl", "config", "set", "key", "--inline", "valueTwo")),
+		in.Chdir("validateconfig", in.Exec("ftl", "config", "set", "key", "--inline", "2")),
+		in.ExecWithExpectedOutput("\"2\"\n", "ftl", "config", "get", "key"),
+
+		// No deploy yet; module sets don't error if decl isn't found.
+		in.Exec("ftl", "config", "set", "validateconfig.defaultName", "--inline", "somename"),
+		in.ExecWithExpectedOutput("\"somename\"\n", "ftl", "config", "get", "validateconfig.defaultName"),
+		in.Exec("ftl", "config", "set", "validateconfig.count", "--inline", "1"),
+		in.ExecWithExpectedOutput("\"1\"\n", "ftl", "config", "get", "validateconfig.count"),
+
+		// This is a mismatched type, but should pass without an active deployment.
+		in.Exec("ftl", "config", "set", "validateconfig.count", "--inline", "one"),
+
+		// Deploy; validation should now be run on config sets.
+		in.Deploy("validateconfig"),
+		in.Exec("ftl", "config", "set", "validateconfig.defaultName", "--inline", "somenametwo"),
+		in.ExecWithExpectedOutput("\"somenametwo\"\n", "ftl", "config", "get", "validateconfig.defaultName"),
+		in.Exec("ftl", "config", "set", "validateconfig.count", "--inline", "2"),
+		in.ExecWithExpectedOutput("\"2\"\n", "ftl", "config", "get", "validateconfig.count"),
+
+		// With a deploy, set should fail validation on bad data type.
+		in.ExecWithExpectedError("ftl: error: unknown: JSON validation failed: count has wrong type, expected Int found string",
+			"ftl", "config", "set", "validateconfig.count", "--inline", "three"),
+
+		in.ExecWithExpectedOutput("key = \"2\"\nvalidateconfig.count = \"2\"\nvalidateconfig.defaultName = \"somenametwo\"\n",
+			"ftl", "config", "list", "--values"),
+	)
+}

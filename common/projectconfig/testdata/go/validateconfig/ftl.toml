@@ -1,0 +1,2 @@
+module = "validateconfig"
+language = "go"
