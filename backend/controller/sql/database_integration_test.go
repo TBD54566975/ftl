@@ -3,7 +3,7 @@
 package sql_test
 
 import (
-	"os"
+	"fmt"
 	"testing"
 
 	in "github.com/TBD54566975/ftl/integration"
@@ -26,15 +26,17 @@ func TestDatabase(t *testing.T) {
 }
 
 func TestMigrate(t *testing.T) {
-	os.Setenv("DATABASE_URL", "postgres://postgres:secret@localhost:15432/ftl_test?sslmode=disable")
+	dbName := "ftl_test"
+	dbUri := fmt.Sprintf("postgres://postgres:secret@localhost:15432/%s?sslmode=disable", dbName)
 
 	q := func() in.Action {
-		return in.QueryRow("ftl_test", "SELECT version FROM schema_migrations WHERE version = '20240704103403'", "20240704103403")
+		return in.QueryRow(dbName, "SELECT version FROM schema_migrations WHERE version = '20240704103403'", "20240704103403")
 	}
 
 	in.RunWithoutController(t, "",
-		in.Fail(q(), "Should fail because the table does not exist."),
-		in.Exec("ftl", "migrate"),
+		in.DropDBAction(t, dbName),
+		in.Fail(q(), "Should fail because the database does not exist."),
+		in.Exec("ftl", "migrate", "--dsn", dbUri),
 		q(),
 	)
 }
