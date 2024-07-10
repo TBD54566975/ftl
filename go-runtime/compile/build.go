@@ -125,8 +125,8 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	if err != nil {
 		return fmt.Errorf("failed to load module config: %w", err)
 	}
-	logger := log.FromContext(ctx)
 
+	logger := log.FromContext(ctx)
 	funcs := maps.Clone(scaffoldFuncs)
 
 	buildDir := buildDir(moduleDir)
@@ -313,6 +313,33 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConf
 		modulesDir := filepath.Join(sharedFtlDir, "go", "modules", module.Name)
 		if err := exec.Command(ctx, log.Debug, modulesDir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
 			return fmt.Errorf("failed to tidy go.mod: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func SyncGeneratedStubReferences(ctx context.Context, projectRootDir string, stubbedModules []string, moduleConfigs []moduleconfig.ModuleConfig) error {
+	for _, moduleConfig := range moduleConfigs {
+		var sharedModulesPaths []string
+		for _, mod := range stubbedModules {
+			if mod == moduleConfig.Module {
+				continue
+			}
+			sharedModulesPaths = append(sharedModulesPaths, filepath.Join(projectRootDir, buildDirName, "go", "modules", mod))
+		}
+
+		_, goModVersion, err := updateGoModule(filepath.Join(moduleConfig.Dir, "go.mod"))
+		if err != nil {
+			return err
+		}
+
+		funcs := maps.Clone(scaffoldFuncs)
+		if err := internal.ScaffoldZip(mainWorkTemplateFiles(), moduleConfig.Dir, MainWorkContext{
+			GoVersion:          goModVersion,
+			SharedModulesPaths: sharedModulesPaths,
+		}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
+			return fmt.Errorf("failed to scaffold zip: %w", err)
 		}
 	}
 
