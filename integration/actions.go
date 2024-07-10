@@ -345,6 +345,17 @@ func CreateDBAction(module, dbName string, isTest bool) Action {
 	}
 }
 
+func terminateDanglingConnections(t testing.TB, db *sql.DB, dbName string) {
+	t.Helper()
+
+	_, err := db.Exec(`
+		SELECT pid, pg_terminate_backend(pid)
+		FROM pg_stat_activity
+		WHERE datname = $1 AND pid <> pg_backend_pid()`,
+		dbName)
+	assert.NoError(t, err)
+}
+
 func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
 	// insert test suffix if needed when actually setting up db
 	if isTestDb {
@@ -368,14 +379,30 @@ func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
 	assert.NoError(t, err, "failed to create database")
 
 	t.Cleanup(func() {
-		// Terminate any dangling connections.
-		_, err := db.Exec(`
-				SELECT pid, pg_terminate_backend(pid)
-				FROM pg_stat_activity
-				WHERE datname = $1 AND pid <> pg_backend_pid()`,
-			dbName)
-		assert.NoError(t, err)
+		terminateDanglingConnections(t, db, dbName)
 		_, err = db.Exec("DROP DATABASE " + dbName)
+		assert.NoError(t, err)
+	})
+}
+
+func DropDBAction(t testing.TB, dbName string) Action {
+	return func(t testing.TB, ic TestContext) {
+		DropDB(t, dbName)
+	}
+}
+
+func DropDB(t testing.TB, dbName string) {
+	Infof("Dropping database %s", dbName)
+	db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:15432/postgres?sslmode=disable")
+	assert.NoError(t, err, "failed to open database connection")
+
+	terminateDanglingConnections(t, db, dbName)
+
+	_, err = db.Exec("DROP DATABASE IF EXISTS " + dbName)
+	assert.NoError(t, err, "failed to delete existing database")
+
+	t.Cleanup(func() {
+		err := db.Close()
 		assert.NoError(t, err)
 	})
 }

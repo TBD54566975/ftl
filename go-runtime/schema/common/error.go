@@ -31,6 +31,10 @@ func (e DiagnosticCategory) ToErrorLevel() schema.ErrorLevel {
 	}
 }
 
+func NoEndColumnWarnf(pass *analysis.Pass, pos token.Pos, format string, args ...interface{}) {
+	pass.Report(analysis.Diagnostic{Pos: pos, End: pos, Message: fmt.Sprintf(format, args...), Category: string(Warn)})
+}
+
 func Errorf(pass *analysis.Pass, node ast.Node, format string, args ...interface{}) {
 	errorfAtPos(pass, node.Pos(), node.End(), format, args...)
 }

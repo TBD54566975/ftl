@@ -275,13 +275,38 @@ func (d *DirectiveExport) GetPosition() token.Pos {
 }
 func (*DirectiveExport) MustAnnotate() []ast.Node { return []ast.Node{&ast.GenDecl{}} }
 
+// DirectiveTypeMap is used to declare a native type to deserialize to in a given runtime.
+type DirectiveTypeMap struct {
+	Pos token.Pos
+
+	Runtime    string `parser:"'typemap' @('go' | 'kotlin')"`
+	NativeName string `parser:"@String"`
+}
+
+func (*DirectiveTypeMap) directive() {}
+
+func (d *DirectiveTypeMap) String() string {
+	return fmt.Sprintf("typemap %s %q", d.Runtime, d.NativeName)
+}
+func (*DirectiveTypeMap) GetTypeName() string { return "typemap" }
+func (d *DirectiveTypeMap) SetPosition(pos token.Pos) {
+	d.Pos = pos
+}
+func (d *DirectiveTypeMap) GetPosition() token.Pos {
+	return d.Pos
+}
+func (*DirectiveTypeMap) MustAnnotate() []ast.Node {
+	return []ast.Node{&ast.GenDecl{}}
+}
+
 var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
 	participle.Union[Directive](&DirectiveVerb{}, &DirectiveData{}, &DirectiveEnum{}, &DirectiveTypeAlias{},
-		&DirectiveIngress{}, &DirectiveCronJob{}, &DirectiveRetry{}, &DirectiveSubscriber{}, &DirectiveExport{}),
+		&DirectiveIngress{}, &DirectiveCronJob{}, &DirectiveRetry{}, &DirectiveSubscriber{}, &DirectiveExport{},
+		&DirectiveTypeMap{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 

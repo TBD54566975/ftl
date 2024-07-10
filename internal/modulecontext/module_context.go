@@ -1,7 +1,6 @@
 package modulecontext
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"connectrpc.com/connect"
 
 	"github.com/alecthomas/atomic"
 	"github.com/jpillora/backoff"
@@ -239,7 +240,9 @@ func NewDynamicContext(ctx context.Context, supplier ModuleContextSupplier, modu
 
 			if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeInternal {
 				cancel(err)
-				await.Done()
+				releaseOnce.Do(func() {
+					await.Done()
+				})
 				return false
 			}
 
