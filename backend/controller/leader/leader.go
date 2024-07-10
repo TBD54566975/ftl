@@ -112,7 +112,7 @@ func (c *Coordinator[P]) sync(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		}
-		next = time.Now().Add(c.leaseTTL / 2)
+		next = time.Now().Add(max(time.Second*5, c.leaseTTL/2))
 	}
 }
 
