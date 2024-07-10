@@ -47,6 +47,7 @@ type CLI struct {
 	Box      boxCmd      `cmd:"" help:"Build a self-contained Docker container for running a set of module."`
 	BoxRun   boxRunCmd   `cmd:"" hidden:"" help:"Run FTL inside an ftl-in-a-box container"`
 	Deploy   deployCmd   `cmd:"" help:"Build and deploy all modules found in the specified directories."`
+	Migrate  migrateCmd  `cmd:"" help:"Run a database migration, if required based on the migration table"`
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
