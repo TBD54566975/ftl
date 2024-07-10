@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
@@ -295,10 +296,9 @@ func RetryStreamingServerStream[Req, Resp any](
 	}
 }
 
-// useDebugErrorLevel indicates whether the specified error should be reported as a debug
-// level log.
+// logLevelForError indicates the log.Level to use for the specified error
 func logLevelForError(err error) log.Level {
-	if err != nil && strings.Contains(err.Error(), "connect: connection refused") {
+	if err != nil && errors.Is(err, syscall.ECONNREFUSED) {
 		return log.Debug
 	}
 	return log.Warn
