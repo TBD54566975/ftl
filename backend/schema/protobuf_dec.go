@@ -171,6 +171,13 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Name: s.Subscriber.Name,
 		}
 
+	case *schemapb.Metadata_TypeMap:
+		return &MetadataTypeMap{
+			Pos:        posFromProto(s.TypeMap.Pos),
+			Runtime:    s.TypeMap.Runtime,
+			NativeName: s.TypeMap.NativeName,
+		}
+
 	default:
 		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}

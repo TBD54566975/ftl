@@ -1226,6 +1226,12 @@ export class Metadata extends Message<Metadata> {
      */
     value: MetadataSubscriber;
     case: "subscriber";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataTypeMap typeMap = 8;
+     */
+    value: MetadataTypeMap;
+    case: "typeMap";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Metadata>) {
@@ -1243,6 +1249,7 @@ export class Metadata extends Message<Metadata> {
     { no: 5, name: "alias", kind: "message", T: MetadataAlias, oneof: "value" },
     { no: 6, name: "retry", kind: "message", T: MetadataRetry, oneof: "value" },
     { no: 7, name: "subscriber", kind: "message", T: MetadataSubscriber, oneof: "value" },
+    { no: 8, name: "typeMap", kind: "message", T: MetadataTypeMap, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Metadata {
@@ -1590,6 +1597,55 @@ export class MetadataSubscriber extends Message<MetadataSubscriber> {
 
   static equals(a: MetadataSubscriber | PlainMessage<MetadataSubscriber> | undefined, b: MetadataSubscriber | PlainMessage<MetadataSubscriber> | undefined): boolean {
     return proto3.util.equals(MetadataSubscriber, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataTypeMap
+ */
+export class MetadataTypeMap extends Message<MetadataTypeMap> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string runtime = 2;
+   */
+  runtime = "";
+
+  /**
+   * @generated from field: string nativeName = 3;
+   */
+  nativeName = "";
+
+  constructor(data?: PartialMessage<MetadataTypeMap>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataTypeMap";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "runtime", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "nativeName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataTypeMap {
+    return new MetadataTypeMap().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataTypeMap {
+    return new MetadataTypeMap().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataTypeMap {
+    return new MetadataTypeMap().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataTypeMap | PlainMessage<MetadataTypeMap> | undefined, b: MetadataTypeMap | PlainMessage<MetadataTypeMap> | undefined): boolean {
+    return proto3.util.equals(MetadataTypeMap, a, b);
   }
 }
 
@@ -2287,6 +2343,11 @@ export class TypeAlias extends Message<TypeAlias> {
    */
   type?: Type;
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 6;
+   */
+  metadata: Metadata[] = [];
+
   constructor(data?: PartialMessage<TypeAlias>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2300,6 +2361,7 @@ export class TypeAlias extends Message<TypeAlias> {
     { no: 3, name: "export", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "type", kind: "message", T: Type },
+    { no: 6, name: "metadata", kind: "message", T: Metadata, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeAlias {

@@ -15,8 +15,14 @@ func NewLogSink(server *Server) *LogSink {
 }
 
 func (l *LogSink) Log(entry log.Entry) error {
-	if entry.Level == log.Error {
+	switch entry.Level {
+	case log.Error:
 		l.server.post(entry.Error)
+	case log.Warn:
+		if entry.Error != nil {
+			l.server.post(entry.Error)
+		}
+	default:
 	}
 	return nil
 }
