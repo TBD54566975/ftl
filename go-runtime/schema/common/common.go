@@ -344,7 +344,7 @@ func extractRef(pass *analysis.Pass, pos token.Pos, named *types.Named) optional
 	if isLocalRef(pass, ref) {
 		// mark this local reference to ensure its underlying schema type is hydrated by the appropriate extractor and
 		// included in the schema
-		markNeedsExtraction(pass, named.Obj())
+		MarkNeedsExtraction(pass, named.Obj())
 	}
 
 	return optional.Some[schema.Type](ref)
@@ -395,7 +395,7 @@ func ExtractTypeForNode(pass *analysis.Pass, obj types.Object, node ast.Node, in
 			if im.Name() != ident.Name {
 				continue
 			}
-			switch im.Path() /*"." + typ.Sel.Name */ {
+			switch im.Path() + "." + typ.Sel.Name {
 			case "time.Time":
 				return optional.Some[schema.Type](&schema.Time{})
 			case FtlUnitTypePath:
@@ -404,7 +404,14 @@ func ExtractTypeForNode(pass *analysis.Pass, obj types.Object, node ast.Node, in
 				if index == nil {
 					return optional.None[schema.Type]()
 				}
-				return ExtractType(pass, node.Pos(), index)
+				if underlying, ok := ExtractType(pass, node.Pos(), index).Get(); ok {
+					return optional.Some[schema.Type](&schema.Optional{
+						Pos:  GoPosToSchemaPos(pass.Fset, node.Pos()),
+						Type: underlying,
+					})
+				}
+				return optional.None[schema.Type]()
+
 			default: // Data ref
 				if strings.HasPrefix(im.Path(), pass.Pkg.Path()) {
 					// subpackage, same module
@@ -435,11 +442,11 @@ func ExtractTypeForNode(pass *analysis.Pass, obj types.Object, node ast.Node, in
 		}
 
 	default:
-		variantNode := GetTypeInfoForNode(node, pass.TypesInfo)
-		if _, ok := variantNode.(*types.Struct); ok {
-			variantNode = obj.Type()
+		tnode := GetTypeInfoForNode(node, pass.TypesInfo)
+		if _, ok := tnode.(*types.Struct); ok {
+			tnode = obj.Type()
 		}
-		return ExtractType(pass, node.Pos(), variantNode)
+		return ExtractType(pass, node.Pos(), tnode)
 	}
 
 	return optional.None[schema.Type]()
@@ -457,14 +464,6 @@ func IsSelfReference(pass *analysis.Pass, obj types.Object, t schema.Type) bool 
 	return ref.Module == moduleName && strcase.ToUpperCamel(obj.Name()) == ref.Name
 }
 
-func isLocalRef(pass *analysis.Pass, ref *schema.Ref) bool {
-	moduleName, err := FtlModuleFromGoPackage(pass.Pkg.Path())
-	if err != nil {
-		return false
-	}
-	return ref.Module == "" || ref.Module == moduleName
-}
-
 func GetNativeName(obj types.Object) string {
 	fqName := obj.Pkg().Path()
 	if parts := strings.Split(obj.Pkg().Path(), "/"); parts[len(parts)-1] != obj.Pkg().Name() {
@@ -475,4 +474,21 @@ func GetNativeName(obj types.Object) string {
 
 func IsExternalType(obj types.Object) bool {
 	return !strings.HasPrefix(obj.Pkg().Path(), "ftl/")
+}
+
+func GetDeclTypeName(d schema.Decl) string {
+	typeStr := reflect.TypeOf(d).String()
+	lastDotIndex := strings.LastIndex(typeStr, ".")
+	if lastDotIndex == -1 {
+		return typeStr
+	}
+	return typeStr[lastDotIndex+1:]
+}
+
+func isLocalRef(pass *analysis.Pass, ref *schema.Ref) bool {
+	moduleName, err := FtlModuleFromGoPackage(pass.Pkg.Path())
+	if err != nil {
+		return false
+	}
+	return ref.Module == "" || ref.Module == moduleName
 }

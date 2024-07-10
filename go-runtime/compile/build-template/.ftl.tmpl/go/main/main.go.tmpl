@@ -26,7 +26,7 @@ func init() {
 {{- range .SumTypes}}
 		reflection.SumType[{{.Discriminator}}](
 			{{- range .Variants}}
-			*new({{.Type}}),
+			*new({{.Name}}),
 			{{- end}}
 		),
 {{- end}}

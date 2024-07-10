@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"go/types"
 
+	"github.com/TBD54566975/ftl/go-runtime/schema/enum"
+	"github.com/TBD54566975/ftl/go-runtime/schema/typeenum"
+	"github.com/TBD54566975/ftl/go-runtime/schema/typeenumvariant"
+	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
@@ -36,9 +40,21 @@ var Extractors = [][]*analysis.Analyzer{
 		metadata.Extractor,
 	},
 	{
+		// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
+		// interfaces and typeenumvariant.Extractor determines any types that implement these
+		typeenum.Extractor,
+	},
+	{
 		typealias.Extractor,
 		verb.Extractor,
 		data.Extractor,
+		valueenumvariant.Extractor,
+		typeenumvariant.Extractor,
+	},
+	{
+		// must run after valueenumvariant.Extractor and typeenumvariant.Extractor;
+		// visits a node and aggregates its enum variants if present
+		enum.Extractor,
 	},
 	{
 		transitive.Extractor,
@@ -118,6 +134,8 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 	}
 	refResults := make(map[schema.RefKey]refResult)
 	extractedDecls := make(map[schema.Decl]types.Object)
+	// for identifying duplicates
+	declKeys := make(map[string]types.Object)
 	for _, r := range fResults {
 		fr, ok := r.(finalize.Result)
 		if !ok {
@@ -134,7 +152,18 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 			}
 		}
 		copyFailedRefs(refResults, fr.Failed)
-		maps.Copy(extractedDecls, fr.Extracted)
+		for decl, obj := range fr.Extracted {
+			if existing, ok := declKeys[decl.String()]; ok && existing != obj {
+				// decls redeclared in subpackage
+				combined.Errors = append(combined.Errors, schema.Errorf(decl.Position(), decl.Position().Column,
+					"duplicate %s declaration for %q in %q; already declared in %q", common.GetDeclTypeName(decl),
+					combined.Module.Name+"."+decl.GetName(), obj.Pkg().Path(), existing.Pkg().Path()))
+				continue
+			}
+			declKeys[decl.String()] = obj
+			extractedDecls[decl] = obj
+		}
+		maps.Copy(combined.NativeNames, fr.NativeNames)
 	}
 
 	combined.Module.AddDecls(maps.Keys(extractedDecls))

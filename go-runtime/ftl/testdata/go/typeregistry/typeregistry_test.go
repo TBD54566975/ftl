@@ -2,6 +2,7 @@ package typeregistry
 
 import (
 	"ftl/builtin"
+	"ftl/typeregistry/subpackage"
 	"testing"
 
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
@@ -13,19 +14,19 @@ import (
 func TestIngress(t *testing.T) {
 	testCases := []struct {
 		Name  string
-		Input StringsTypeEnum
+		Input subpackage.StringsTypeEnum
 	}{
 		{
 			Name:  "List",
-			Input: List([]string{"asdf", "qwerty"}),
+			Input: subpackage.List([]string{"asdf", "qwerty"}),
 		},
 		{
 			Name:  "Single",
-			Input: Single("asdf"),
+			Input: subpackage.Single("asdf"),
 		},
 		{
 			Name:  "Object",
-			Input: Object{S: "asdf"},
+			Input: subpackage.Object{S: "asdf"},
 		},
 	}
 
@@ -47,28 +48,28 @@ func TestIngress(t *testing.T) {
 func TestEncoding(t *testing.T) {
 	testCases := []struct {
 		Name    string
-		Input   StringsTypeEnum
+		Input   subpackage.StringsTypeEnum
 		Encoded string
 	}{
 		{
 			Name:    "List",
-			Input:   List([]string{"asdf", "qwerty"}),
+			Input:   subpackage.List([]string{"asdf", "qwerty"}),
 			Encoded: `{"input":{"name":"List","value":["asdf","qwerty"]}}`,
 		},
 		{
 			Name:    "Single",
-			Input:   Single("asdf"),
+			Input:   subpackage.Single("asdf"),
 			Encoded: `{"input":{"name":"Single","value":"asdf"}}`,
 		},
 		{
 			Name:    "Object",
-			Input:   Object{S: "asdf"},
+			Input:   subpackage.Object{S: "asdf"},
 			Encoded: `{"input":{"name":"Object","value":{"s":"asdf"}}}`,
 		},
 	}
 
 	type jsonObj struct {
-		Input StringsTypeEnum
+		Input subpackage.StringsTypeEnum
 	}
 
 	for _, test := range testCases {

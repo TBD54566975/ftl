@@ -19,3 +19,14 @@ type WrongMappingExternal lib.NonFTLType
 //ftl:typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
 //ftl:typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
 type MultipleMappings lib.NonFTLType
+
+//ftl:data
+type Redeclared struct {
+}
+
+//ftl:enum
+type EnumVariantConflictChild int
+
+const (
+	SameVariant EnumVariantConflictChild = iota
+)
