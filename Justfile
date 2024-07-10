@@ -174,3 +174,21 @@ debug *args:
   dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec "{{RELEASE}}/ftl" -- dev {{args}} &
   dlv_pid=$!
   wait "$dlv_pid"
+
+# Run otel collector in a docker container to stream local (i.e. from ftl dev) signals to
+# the terminal tab where this is running. To stop the stream, run `just otel-stop` in a
+# second terminal window.
+otel-stream:
+  docker run \
+    -p 4317:4317 \
+    -p 55679:55679 \
+    otel/opentelemetry-collector:0.104.0
+
+otelContainerID := `docker ps -f ancestor=otel/opentelemetry-collector:0.104.0 | tail -1 | cut -d " " -f1`
+otel-stop:
+  docker stop "{{otelContainerID}}"
+
+# Run `ftl dev` with the given args after setting the necessary envar
+otel-dev *args:
+  export OTEL_EXPORTER_OTLP_ENDPOINT=localhost:4317
+  ftl dev {{args}}
