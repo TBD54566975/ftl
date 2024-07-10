@@ -16,5 +16,8 @@ func (c *migrateCmd) Run(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 	logger.Infof("Migrating database")
 	err := sql.Migrate(ctx, c.DSN)
-	return fmt.Errorf("failed to migrate database: %w", err)
+	if err != nil {
+		return fmt.Errorf("failed to migrate database: %w", err)
+	}
+	return nil
 }
