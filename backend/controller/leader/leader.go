@@ -91,11 +91,29 @@ func NewCoordinator[P any](ctx context.Context,
 		leaderFactory:   leaderFactory,
 		followerFactory: followerFactory,
 	}
-	// Attempt to coordinate proactively without blocking
-	go func() {
-		_, _ = coordinator.Get() //nolint:errcheck
-	}()
+	go coordinator.sync(ctx)
 	return coordinator
+}
+
+// sync proactively tries and coordinate
+//
+// This allows the coordinator to maintain a leader or follower even when Get() is not called.
+// Otherwise we can have stale followers attempting to communicate with a leader that no longer exists, until an external component called Get()
+func (c *Coordinator[P]) sync(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	next := time.Now()
+	for {
+		select {
+		case <-time.After(time.Until(next)):
+			_, err := c.Get()
+			if err != nil {
+				logger.Errorf(err, "could not proactively coordinate leader for %s", c.key)
+			}
+		case <-ctx.Done():
+			return
+		}
+		next = time.Now().Add(c.leaseTTL / 2)
+	}
 }
 
 // Get returns either a leader or follower
@@ -133,7 +151,7 @@ func (c *Coordinator[P]) Get() (leaderOrFollower P, err error) {
 		go func() {
 			c.watchForLeaderExpiration(leaderCtx)
 		}()
-		logger.Tracef("new leader for %s: %s", c.key, c.advertise)
+		logger.Debugf("new leader for %s: %s", c.key, c.advertise)
 		return l, nil
 	}
 	if !errors.Is(leaseErr, leases.ErrConflict) {
