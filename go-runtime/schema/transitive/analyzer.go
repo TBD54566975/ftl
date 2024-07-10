@@ -29,7 +29,12 @@ type Fact = common.DefaultFact[Tag]
 // common.NeedsExtraction. This allows us to identify objects for extraction that are not explicitly
 // annotated with an FTL directive.
 func Extract(pass *analysis.Pass) (interface{}, error) {
-	needsExtraction := getNeedsExtraction(common.MergeAllFacts(pass))
+	needsExtraction := sets.NewSet[types.Object]()
+	for obj, fact := range common.MergeAllFacts(pass) {
+		if _, ok := fact.Get().(*common.NeedsExtraction); ok {
+			needsExtraction.Add(obj)
+		}
+	}
 	for !needsExtraction.IsEmpty() {
 		extractTransitive(pass, needsExtraction)
 		needsExtraction = refreshNeedsExtraction(pass)
@@ -38,25 +43,17 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 }
 
 func refreshNeedsExtraction(pass *analysis.Pass) sets.Set[types.Object] {
-	facts := make(map[types.Object]common.SchemaFact)
+	facts := sets.NewSet[types.Object]()
 	for _, fact := range pass.AllObjectFacts() {
 		f, ok := fact.Fact.(common.SchemaFact)
 		if !ok {
 			continue
 		}
-		facts[fact.Object] = f
-	}
-	return getNeedsExtraction(facts)
-}
-
-func getNeedsExtraction(facts map[types.Object]common.SchemaFact) sets.Set[types.Object] {
-	needsExtraction := sets.NewSet[types.Object]()
-	for obj, fact := range facts {
-		if _, ok := fact.Get().(*common.NeedsExtraction); ok && !common.IsExternalType(obj) {
-			needsExtraction.Add(obj)
+		if _, ok := f.Get().(*common.NeedsExtraction); ok && fact.Object.Pkg().Path() == pass.Pkg.Path() {
+			facts.Add(fact.Object)
 		}
 	}
-	return needsExtraction
+	return facts
 }
 
 func extractTransitive(pass *analysis.Pass, needsExtraction sets.Set[types.Object]) {

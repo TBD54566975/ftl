@@ -168,7 +168,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 						}
 						ingress[key] = n
 
-					case *MetadataCronJob, *MetadataRetry, *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap:
+					case *MetadataCronJob, *MetadataRetry, *MetadataCalls, *MetadataDatabases, *MetadataAlias:
 					}
 				}
 
@@ -224,7 +224,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema, *TypeAlias,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
-				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap:
+				*MetadataSubscriber, *Subscription, *Topic:
 			}
 			return next()
 		})
@@ -352,19 +352,12 @@ func ValidateModule(module *Module) error {
 				merr = append(merr, errorf(n, "invalid name: must consist of only letters, numbers and underscores, and start with a letter."))
 			}
 
-		case *TypeAlias:
-			for _, md := range n.Metadata {
-				if _, ok := md.(*MetadataTypeMap); !ok {
-					merr = append(merr, errorf(md, "metadata %q is not valid on type aliases", strings.TrimSpace(md.String())))
-				}
-			}
-
 		case *Array, *Bool, *Database, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*FSM, *Config, *FSMTransition, *Secret, *MetadataRetry, *MetadataSubscriber, *MetadataTypeMap:
+			*FSM, *Config, *FSMTransition, *Secret, *TypeAlias, *MetadataRetry, *MetadataSubscriber:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -596,7 +589,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 		case *MetadataSubscriber:
 			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
 			merr = append(merr, subErrs...)
-		case *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap:
+		case *MetadataCalls, *MetadataDatabases, *MetadataAlias:
 		}
 	}
 	return
@@ -639,31 +632,17 @@ func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, re
 		return
 	}
 	body = bodySym.Symbol
-	err = validatePayloadType(bodySym.Symbol, r, n, reqOrResp)
-	if err != nil {
-		merr = append(merr, err)
-	}
-	return
-}
-
-func validatePayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
-	switch t := n.(type) {
+	switch t := bodySym.Symbol.(type) {
 	case *Bytes, *String, *Data, *Unit, *Float, *Int, *Bool, *Map, *Array: // Valid HTTP response payload types.
-	case *TypeAlias:
-		// allow aliases of external types
-		if len(t.Metadata) > 0 {
-			return nil
-		}
-		return validatePayloadType(t.Type, r, v, reqOrResp)
 	case *Enum:
 		// Type enums are valid but value enums are not.
 		if t.IsValueEnum() {
-			return errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not enum %s", v.Name, reqOrResp, r, t.Name)
+			merr = append(merr, errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not enum %s", n.Name, reqOrResp, r, t.Name))
 		}
 	default:
-		return errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not %s", v.Name, reqOrResp, r, n)
+		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not %s", n.Name, reqOrResp, r, bodySym.Symbol))
 	}
-	return nil
+	return
 }
 
 func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, scopes Scopes, schema optional.Option[*Schema]) (merr []error) {

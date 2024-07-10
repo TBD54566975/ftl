@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
@@ -48,7 +47,7 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 				extracted[f.Decl] = obj
 			}
 		case *common.FailedExtraction:
-			failed[schema.RefKey{Module: moduleName, Name: strcase.ToUpperCamel(obj.Name())}] = obj
+			failed[schema.RefKey{Module: moduleName, Name: obj.Name()}] = obj
 		}
 	}
 	return Result{

@@ -260,7 +260,7 @@ func GetObjectForNode(typesInfo *types.Info, node ast.Node) optional.Option[type
 	return optional.Some(obj)
 }
 
-func GetTypeInfoForNode(node ast.Node, info *types.Info) types.Type {
+func GetTypeForNode(node ast.Node, info *types.Info) types.Type {
 	switch n := node.(type) {
 	case *ast.Ident:
 		if obj := info.ObjectOf(n); obj != nil {
@@ -290,7 +290,7 @@ func GetTypeInfoForNode(node ast.Node, info *types.Info) types.Type {
 		}
 	case *ast.GenDecl:
 		for _, spec := range n.Specs {
-			if t := GetTypeInfoForNode(spec, info); t != nil {
+			if t := GetTypeForNode(spec, info); t != nil {
 				return t
 			}
 		}
@@ -306,9 +306,8 @@ func extractRef(pass *analysis.Pass, pos token.Pos, named *types.Named) optional
 	}
 
 	nodePath := named.Obj().Pkg().Path()
-	if !IsPathInPkg(pass.Pkg, nodePath) && IsExternalType(named.Obj()) {
-		//TODO: link to external type docs
-		NoEndColumnErrorf(pass, pos, "unsupported external type %q", GetNativeName(named.Obj()))
+	if !IsPathInPkg(pass.Pkg, nodePath) && !strings.HasPrefix(named.Obj().Pkg().Path(), "ftl/") {
+		NoEndColumnErrorf(pass, pos, "unsupported external type %q", named.Obj().Pkg().Path()+"."+named.Obj().Name())
 		return optional.None[schema.Type]()
 	}
 
@@ -323,7 +322,6 @@ func extractRef(pass *analysis.Pass, pos token.Pos, named *types.Named) optional
 		Module: moduleName,
 		Name:   strcase.ToUpperCamel(named.Obj().Name()),
 	}
-
 	for i := range named.TypeArgs().Len() {
 		typeArg, ok := ExtractType(pass, pos, named.TypeArgs().At(i)).Get()
 		if !ok {
@@ -406,17 +404,6 @@ func ExtractTypeForNode(pass *analysis.Pass, obj types.Object, node ast.Node, in
 				}
 				return ExtractType(pass, node.Pos(), index)
 			default: // Data ref
-				if strings.HasPrefix(im.Path(), pass.Pkg.Path()) {
-					// subpackage, same module
-					return ExtractType(pass, node.Pos(), pass.TypesInfo.TypeOf(typ.Sel))
-				}
-
-				if !IsPathInPkg(pass.Pkg, im.Path()) && !strings.HasPrefix(im.Path(), "ftl/") {
-					// Non-FTL
-					return optional.Some[schema.Type](&schema.Any{})
-				}
-
-				// FTL, different module
 				externalModuleName, err := FtlModuleFromGoPackage(im.Path())
 				if err != nil {
 					return optional.None[schema.Type]()
@@ -435,7 +422,7 @@ func ExtractTypeForNode(pass *analysis.Pass, obj types.Object, node ast.Node, in
 		}
 
 	default:
-		variantNode := GetTypeInfoForNode(node, pass.TypesInfo)
+		variantNode := GetTypeForNode(node, pass.TypesInfo)
 		if _, ok := variantNode.(*types.Struct); ok {
 			variantNode = obj.Type()
 		}
@@ -466,13 +453,5 @@ func isLocalRef(pass *analysis.Pass, ref *schema.Ref) bool {
 }
 
 func GetNativeName(obj types.Object) string {
-	fqName := obj.Pkg().Path()
-	if parts := strings.Split(obj.Pkg().Path(), "/"); parts[len(parts)-1] != obj.Pkg().Name() {
-		fqName = fqName + "." + obj.Pkg().Name()
-	}
-	return fqName + "." + obj.Name()
-}
-
-func IsExternalType(obj types.Object) bool {
-	return !strings.HasPrefix(obj.Pkg().Path(), "ftl/")
+	return obj.Pkg().Path() + "." + obj.Name()
 }

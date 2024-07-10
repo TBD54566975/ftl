@@ -99,9 +99,6 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataSubscriber:
 			v = &schemapb.Metadata_Subscriber{Subscriber: n.ToProto().(*schemapb.MetadataSubscriber)}
 
-		case *MetadataTypeMap:
-			v = &schemapb.Metadata_TypeMap{TypeMap: n.ToProto().(*schemapb.MetadataTypeMap)}
-
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}

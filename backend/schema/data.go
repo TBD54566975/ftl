@@ -123,7 +123,7 @@ func (d *Data) Monomorphise(ref *Ref) (*Data, error) {
 			*MetadataIngress, *MetadataCronJob, *MetadataAlias, *Module,
 			*Schema, *String, *Time, Type, *TypeParameter, *Unit, *Verb, *Enum,
 			*EnumVariant, Value, *IntValue, *StringValue, *TypeValue, Symbol,
-			Named, *FSM, *FSMTransition, *TypeAlias, *Topic, *Subscription, *MetadataSubscriber, *MetadataTypeMap:
+			Named, *FSM, *FSMTransition, *TypeAlias, *Topic, *Subscription, *MetadataSubscriber:
 		}
 		return next()
 	})
@@ -137,7 +137,7 @@ func (d *Data) Position() Position { return d.Pos }
 func (*Data) schemaDecl()          {}
 func (*Data) schemaSymbol()        {}
 func (d *Data) schemaChildren() []Node {
-	children := make([]Node, 0, len(d.Fields)+len(d.Metadata)+len(d.TypeParameters))
+	children := make([]Node, 0, len(d.Fields)+len(d.Metadata))
 	for _, t := range d.TypeParameters {
 		children = append(children, t)
 	}
@@ -188,7 +188,6 @@ func (d *Data) ToProto() proto.Message {
 		TypeParameters: nodeListToProto[*schemapb.TypeParameter](d.TypeParameters),
 		Fields:         nodeListToProto[*schemapb.Field](d.Fields),
 		Comments:       d.Comments,
-		Metadata:       metadataListToProto(d.Metadata),
 	}
 }
 
@@ -201,7 +200,6 @@ func DataFromProto(s *schemapb.Data) *Data {
 		TypeParameters: typeParametersToSchema(s.TypeParameters),
 		Fields:         fieldListToSchema(s.Fields),
 		Comments:       s.Comments,
-		Metadata:       metadataListToSchema(s.Metadata),
 	}
 }
 

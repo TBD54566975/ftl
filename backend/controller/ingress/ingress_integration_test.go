@@ -134,11 +134,6 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, nil, resp.Headers["Access-Control-Allow-Methods"])
 			assert.Equal(t, nil, resp.Headers["Access-Control-Allow-Headers"])
 		}),
-		in.HttpCall(http.MethodGet, "/external", nil, in.JsonData(t, in.Obj{"message": "hello"}), func(t testing.TB, resp *in.HTTPResponse) {
-			assert.Equal(t, 200, resp.Status)
-			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
-			assert.Equal(t, in.JsonData(t, in.Obj{"message": "hello"}), resp.BodyBytes)
-		}),
 	)
 }
 
