@@ -240,9 +240,7 @@ func RetryStreamingServerStream[Req, Resp any](
 				} else {
 					// Stream terminated; check if this was caused by an error
 					err = stream.Err()
-					if !useDebugErrorLevel(err) {
-						logLevel = log.Warn
-					}
+					logLevel = logLevelForError(err)
 					break
 				}
 			}
@@ -273,6 +271,9 @@ func RetryStreamingServerStream[Req, Resp any](
 
 // useDebugErrorLevel indicates whether the specified error should be reported as a debug
 // level log.
-func useDebugErrorLevel(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "connect: connection refused")
+func logLevelForError(err error) log.Level {
+	if err != nil && strings.Contains(err.Error(), "connect: connection refused") {
+		return log.Debug
+	}
+	return log.Warn
 }
