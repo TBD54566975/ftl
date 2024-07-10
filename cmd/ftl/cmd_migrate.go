@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/log"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type migrateCmd struct {
