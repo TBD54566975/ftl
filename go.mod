@@ -11,6 +11,7 @@ require (
 	github.com/TBD54566975/scaffolder v1.0.0
 	github.com/alecthomas/assert/v2 v2.10.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
+	github.com/alecthomas/chroma/v2 v2.14.0
 	github.com/alecthomas/concurrency v0.0.2
 	github.com/alecthomas/kong v0.9.0
 	github.com/alecthomas/kong-toml v0.2.0
@@ -121,7 +122,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/pprof v0.0.0-20240409012703-83162a5b38cd // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
-	github.com/hexops/gotextdiff v1.0.3 // indirect
+	github.com/hexops/gotextdiff v1.0.3
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
