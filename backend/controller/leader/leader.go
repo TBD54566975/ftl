@@ -95,10 +95,10 @@ func NewCoordinator[P any](ctx context.Context,
 	return coordinator
 }
 
-// sync proactively tries and coordinate
+// sync proactively tries to coordinate between leader and followers
 //
 // This allows the coordinator to maintain a leader or follower even when Get() is not called.
-// Otherwise we can have stale followers attempting to communicate with a leader that no longer exists, until an external component called Get()
+// Otherwise we can have stale followers attempting to communicate with a leader that no longer exists, until a call to Get() comes in
 func (c *Coordinator[P]) sync(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	next := time.Now()
