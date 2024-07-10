@@ -40,9 +40,9 @@ func TestExternalType(t *testing.T) {
 	}
 	testBuild(t, bctx, "", "unsupported external type", []assertion{
 		assertBuildProtoErrors(
-			"unsupported external type \"time.Month\"",
-			"unsupported type \"time.Month\" for field \"Month\"",
-			"unsupported response type \"ftl/external.ExternalResponse\"",
+			`unsupported external type "time.Month"`,
+			`unsupported type "time.Month" for field "Month"`,
+			`unsupported response type "ftl/external.ExternalResponse"`,
 		),
 	})
 }

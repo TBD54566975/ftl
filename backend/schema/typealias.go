@@ -12,10 +12,11 @@ import (
 type TypeAlias struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Export   bool     `parser:"@'export'?" protobuf:"3"`
-	Name     string   `parser:"'typealias' @Ident" protobuf:"4"`
-	Type     Type     `parser:"@@" protobuf:"5"`
+	Comments []string   `parser:"@Comment*" protobuf:"2"`
+	Export   bool       `parser:"@'export'?" protobuf:"3"`
+	Name     string     `parser:"'typealias' @Ident" protobuf:"4"`
+	Type     Type       `parser:"@@" protobuf:"5"`
+	Metadata []Metadata `parser:"@@*" protobuf:"6"`
 }
 
 var _ Decl = (*TypeAlias)(nil)
@@ -30,17 +31,20 @@ func (t *TypeAlias) String() string {
 		fmt.Fprint(w, "export ")
 	}
 	fmt.Fprintf(w, "typealias %s %s", t.Name, t.Type)
+	fmt.Fprint(w, indent(encodeMetadata(t.Metadata)))
 	return w.String()
 }
 func (*TypeAlias) schemaDecl()   {}
 func (*TypeAlias) schemaSymbol() {}
 func (t *TypeAlias) schemaChildren() []Node {
-	if t.Type == nil {
-		return []Node{}
+	children := make([]Node, 0, len(t.Metadata)+1)
+	for _, m := range t.Metadata {
+		children = append(children, m)
 	}
-	return []Node{
-		t.Type,
+	if t.Type != nil {
+		children = append(children, t.Type)
 	}
+	return children
 }
 func (t *TypeAlias) ToProto() proto.Message {
 	return &schemapb.TypeAlias{
@@ -49,6 +53,7 @@ func (t *TypeAlias) ToProto() proto.Message {
 		Name:     t.Name,
 		Export:   t.Export,
 		Type:     TypeToProto(t.Type),
+		Metadata: metadataListToProto(t.Metadata),
 	}
 }
 
@@ -62,5 +67,6 @@ func TypeAliasFromProto(s *schemapb.TypeAlias) *TypeAlias {
 		Export:   s.Export,
 		Comments: s.Comments,
 		Type:     TypeFromProto(s.Type),
+		Metadata: metadataListToSchema(s.Metadata),
 	}
 }

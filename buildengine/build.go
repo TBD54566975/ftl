@@ -66,6 +66,10 @@ func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema,
 	}
 	schema.SortErrorsByPosition(errorList.Errors)
 	for _, e := range errorList.Errors {
+		if e.Level == schema.WARN {
+			logger.Log(log.Entry{Level: log.Warn, Message: e.Error(), Error: e})
+			continue
+		}
 		errs = append(errs, e)
 	}
 

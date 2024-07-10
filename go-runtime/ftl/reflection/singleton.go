@@ -48,3 +48,8 @@ func GetDiscriminatorByVariant(variant reflect.Type) optional.Option[reflect.Typ
 func IsSumTypeDiscriminator(discriminator reflect.Type) bool {
 	return singletonTypeRegistry.isSumTypeDiscriminator(discriminator)
 }
+
+func IsKnownExternalType(t reflect.Type) bool {
+	_, ok := singletonTypeRegistry.externalTypes[t]
+	return ok
+}
