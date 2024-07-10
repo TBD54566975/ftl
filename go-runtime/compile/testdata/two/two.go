@@ -3,7 +3,6 @@ package two
 import (
 	"context"
 
-	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
@@ -67,15 +66,3 @@ func ReturnsUser(ctx context.Context) (UserResponse, error) {
 		},
 	}, nil
 }
-
-//ftl:data
-type NonFTLField struct {
-	Field      ExternalAlias
-	Transitive TransitiveAlias
-}
-
-//ftl:typealias
-//ftl:typemap kotlin "com.foo.bar.NonFTLType"
-type ExternalAlias lib.NonFTLType
-
-type TransitiveAlias lib.NonFTLType

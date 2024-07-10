@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/alecthomas/types/optional"
+	sets "github.com/deckarep/golang-set/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/golang-tools/go/analysis"
@@ -40,6 +41,11 @@ type SchemaFactValue interface {
 // ExtractedDecl is a fact for associating an object with an extracted schema decl.
 type ExtractedDecl struct {
 	Decl schema.Decl
+	// ShouldInclude is true if the object should be included in the schema.
+	// We extract all objects by default, but some objects may not actually be referenced in the schema.
+	ShouldInclude bool
+	// Refs is a list of objects that the object references.
+	Refs sets.Set[types.Object]
 }
 
 func (*ExtractedDecl) schemaFactValue() {}
@@ -67,7 +73,7 @@ func (*FailedExtraction) schemaFactValue() {}
 // MarkSchemaDecl marks the given object as having been extracted to the given schema node.
 func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	fact := newFact(pass)
-	fact.Set(&ExtractedDecl{Decl: decl})
+	fact.Set(&ExtractedDecl{Decl: decl, Refs: sets.NewSet[types.Object]()})
 	pass.ExportObjectFact(obj, fact)
 }
 

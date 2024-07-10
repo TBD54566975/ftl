@@ -121,12 +121,6 @@ module payments {
 
   verb paid(payments.OnlinePaymentPaid) Unit
 }
-
-module typealias {
-  typealias NonFtlType Any
-      +typemap go "github.com/foo/bar.Type"
-      +typemap kotlin "com.foo.bar.Type"
-}
 `
 	assert.Equal(t, normaliseString(expected), normaliseString(testSchema.String()))
 }
@@ -1018,19 +1012,6 @@ var testSchema = MustValidate(&Schema{
 				},
 			},
 		},
-		{
-			Name: "typealias",
-			Decls: []Decl{
-				&TypeAlias{
-					Name: "NonFtlType",
-					Type: &Any{},
-					Metadata: []Metadata{
-						&MetadataTypeMap{Runtime: "go", NativeName: "github.com/foo/bar.Type"},
-						&MetadataTypeMap{Runtime: "kotlin", NativeName: "com.foo.bar.Type"},
-					},
-				},
-			},
-		},
 	},
 })
 
@@ -1049,18 +1030,4 @@ func TestRetryParsing(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, time.Second*time.Duration(tt.seconds), duration)
 	}
-}
-
-func TestParseTypeMap(t *testing.T) {
-	input := `
-	module typealias {
-	 typealias NonFtlType Any
-      +typemap go "github.com/foo/bar.Type"
-      +typemap kotlin "com.foo.bar.Type"
-	}
-	`
-	actual, err := ParseModuleString("", input)
-	assert.NoError(t, err)
-	actual = Normalise(actual)
-	assert.Equal(t, testSchema.Modules[4], actual, assert.Exclude[Position]())
 }

@@ -24,7 +24,7 @@ testdata/**/go.work.sum
 # Leaving old _ftl for now to avoid old stuff getting checked in
 **/testdata/**/_ftl
 **/examples/**/_ftl
-**/types.ftl.go
+**/examples/**/types.ftl.go
 **/testdata/**/.ftl
 **/examples/**/.ftl
 /.ftl

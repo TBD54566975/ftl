@@ -64,7 +64,6 @@ type mainModuleContext struct {
 	Replacements       []*modfile.Replace
 	SumTypes           []goSumType
 	LocalSumTypes      []goSumType
-	ExternalGoTypes    []goExternalType
 }
 
 type goSumType struct {
@@ -76,11 +75,6 @@ type goSumTypeVariant struct {
 	Name       string
 	Type       string
 	SchemaType schema.Type
-}
-
-type goExternalType struct {
-	Import string
-	Types  []string
 }
 
 type ModifyFilesTransaction interface {
@@ -192,7 +186,6 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		}
 		goVerbs = append(goVerbs, goverb)
 	}
-	sumTypes, goExternalTypes := getRegisteredTypes(result.Module, sch, result.NativeNames)
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
 		GoVersion:          goModVersion,
 		FTLVersion:         ftlVersion,
@@ -200,9 +193,8 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		SharedModulesPaths: sharedModulesPaths,
 		Verbs:              goVerbs,
 		Replacements:       replacements,
-		SumTypes:           sumTypes,
+		SumTypes:           getSumTypes(result.Module, sch, result.NativeNames),
 		LocalSumTypes:      getLocalSumTypes(result.Module),
-		ExternalGoTypes:    goExternalTypes,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -639,17 +631,12 @@ func getLocalSumTypes(module *schema.Module) []goSumType {
 	return out
 }
 
-func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNames) ([]goSumType, []goExternalType) {
+func getSumTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNames) []goSumType {
 	sumTypes := make(map[string]goSumType)
-	goExternalTypes := make(map[string][]string)
 	for _, d := range module.Decls {
-		switch d := d.(type) {
-		case *schema.Enum:
-			if d.IsValueEnum() {
-				continue
-			}
-			variants := make([]goSumTypeVariant, 0, len(d.Variants))
-			for _, v := range d.Variants {
+		if e, ok := d.(*schema.Enum); ok && !e.IsValueEnum() {
+			variants := make([]goSumTypeVariant, 0, len(e.Variants))
+			for _, v := range e.Variants {
 				variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
 					Name:       v.Name,
 					Type:       nativeNames[v],
@@ -661,22 +648,6 @@ func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames N
 				Discriminator: nativeNames[d],
 				Variants:      variants,
 			}
-		case *schema.TypeAlias:
-			var fqName string
-			for _, m := range d.Metadata {
-				if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
-					fqName = m.NativeName
-				}
-			}
-			if fqName == "" {
-				continue
-			}
-			im, typ := getGoExternalType(fqName)
-			if _, ok := goExternalTypes[im]; !ok {
-				goExternalTypes[im] = []string{}
-			}
-			goExternalTypes[im] = append(goExternalTypes[im], typ)
-		default:
 		}
 	}
 
@@ -700,43 +671,7 @@ func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames N
 	slices.SortFunc(out, func(a, b goSumType) int {
 		return strings.Compare(a.Discriminator, b.Discriminator)
 	})
-
-	var externalTypes []goExternalType
-	for im, types := range goExternalTypes {
-		externalTypes = append(externalTypes, goExternalType{
-			Import: im,
-			Types:  types,
-		})
-	}
-	return out, externalTypes
-}
-
-func getGoExternalType(fqName string) (_import string, _type string) {
-	// package and directory names are the same (dir=bar, pkg=bar): "github.com/foo/bar.A"
-	// package and directory names differ (dir=bar, pkg=baz): "github.com/foo/bar.baz.A"
-	parts := strings.Split(fqName, "/")
-	lastPart := parts[len(parts)-1]
-	pkgParts := strings.Split(lastPart, ".")
-	if len(pkgParts) < 2 {
-		panic("unexpected Go qualified name format: " + fqName)
-	}
-
-	dirName := pkgParts[0]
-	typeName := pkgParts[len(pkgParts)-1]
-	pkg := pkgParts[len(pkgParts)-2]
-
-	// translate the fqName to a valid import
-	// e.g.:
-	// "github.com/foo/bar.A" -> "github.com/foo/bar"
-	// "github.com/foo/bar.baz.A" -> "baz github.com/foo/bar" (aliased because package and directory path differ)
-	dirPath := strings.TrimSuffix(fqName, lastPart) + dirName
-	im := fmt.Sprintf("%q", dirPath)
-	if len(pkgParts) > 2 {
-		// import has an alias with the real package name: `import baz "github.com/foo/bar"`
-		im = fmt.Sprintf("%s %s", pkg, im)
-	}
-
-	return im, fmt.Sprintf("%s.%s", pkg, typeName)
+	return out
 }
 
 type externalEnum struct {

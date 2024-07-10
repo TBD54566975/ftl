@@ -3,8 +3,9 @@ package reflection
 import (
 	"reflect"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 // TypeRegistry is used for dynamic type resolution at runtime. It stores associations between sum type discriminators
@@ -15,7 +16,6 @@ type TypeRegistry struct {
 	sumTypes                 map[reflect.Type][]sumTypeVariant
 	variantsToDiscriminators map[reflect.Type]reflect.Type
 	fsm                      map[string]ReflectedFSM
-	externalTypes            map[reflect.Type]struct{}
 }
 
 type sumTypeVariant struct {
@@ -54,14 +54,6 @@ func FSM(name string, transitions ...Transition) Registree {
 	return func(t *TypeRegistry) { t.registerFSM(name, transitions) }
 }
 
-// ExternalType adds a non-FTL type to the type registry.
-func ExternalType(goType any) Registree {
-	return func(t *TypeRegistry) {
-		typ := reflect.TypeOf(goType)
-		t.externalTypes[typ] = struct{}{}
-	}
-}
-
 // newTypeRegistry creates a new [TypeRegistry] for instantiating types by their qualified
 // name at runtime.
 func newTypeRegistry(options ...Registree) *TypeRegistry {
@@ -69,7 +61,6 @@ func newTypeRegistry(options ...Registree) *TypeRegistry {
 		sumTypes:                 map[reflect.Type][]sumTypeVariant{},
 		variantsToDiscriminators: map[reflect.Type]reflect.Type{},
 		fsm:                      map[string]ReflectedFSM{},
-		externalTypes:            map[reflect.Type]struct{}{},
 	}
 	for _, o := range options {
 		o(t)
@@ -149,5 +140,10 @@ func (t *TypeRegistry) getVariantByType(discriminator reflect.Type, variantType 
 }
 
 func (t *TypeRegistry) getSumTypeVariants(discriminator reflect.Type) optional.Option[[]sumTypeVariant] {
-	return optional.Zero(t.sumTypes[discriminator])
+	variants, ok := t.sumTypes[discriminator]
+	if !ok {
+		return optional.None[[]sumTypeVariant]()
+	}
+
+	return optional.Some(variants)
 }

@@ -166,7 +166,6 @@ message Metadata {
     MetadataAlias alias = 5;
     MetadataRetry retry = 6;
     MetadataSubscriber subscriber = 7;
-    MetadataTypeMap typeMap = 8;
   }
 }
 
@@ -208,12 +207,6 @@ message MetadataRetry {
 message MetadataSubscriber {
   optional Position pos = 1;
   string name = 2;
-}
-
-message MetadataTypeMap {
-  optional Position pos = 1;
-  string runtime = 2;
-  string nativeName = 3;
 }
 
 message Module {
@@ -307,7 +300,6 @@ message TypeAlias {
   bool export = 3;
   string name = 4;
   Type type = 5;
-  repeated Metadata metadata = 6;
 }
 
 message TypeParameter {

@@ -263,34 +263,13 @@ func (d *directiveExport) String() string {
 	return "ftl:export"
 }
 
-// DirectiveTypeMap is used to declare a native type to deserialize to in a given runtime.
-type directiveTypeMap struct {
-	Pos schema.Position
-
-	Runtime    string `parser:"'typemap' @('go' | 'kotlin')"`
-	NativeName string `parser:"@String"`
-}
-
-func (*directiveTypeMap) directive() {}
-
-func (d *directiveTypeMap) String() string {
-	return fmt.Sprintf("typemap %s %q", d.Runtime, d.NativeName)
-}
-func (d *directiveTypeMap) SetPosition(pos schema.Position) {
-	d.Pos = pos
-}
-func (d *directiveTypeMap) GetPosition() schema.Position {
-	return d.Pos
-}
-
 var directiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
 	participle.UseLookahead(2),
 	participle.Union[directive](&directiveVerb{}, &directiveData{}, &directiveEnum{}, &directiveTypeAlias{},
-		&directiveIngress{}, &directiveCronJob{}, &directiveRetry{}, &directiveSubscriber{}, &directiveExport{},
-		&directiveTypeMap{}),
+		&directiveIngress{}, &directiveCronJob{}, &directiveRetry{}, &directiveSubscriber{}, &directiveExport{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 

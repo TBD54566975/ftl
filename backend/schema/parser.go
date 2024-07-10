@@ -21,7 +21,7 @@ var (
 		&Ref{},
 	}
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
-	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataCronJob{}, &MetadataDatabases{}, &MetadataAlias{}, &MetadataRetry{}, &MetadataSubscriber{}, &MetadataTypeMap{}}
+	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataCronJob{}, &MetadataDatabases{}, &MetadataAlias{}, &MetadataRetry{}, &MetadataSubscriber{}}
 	ingressUnion  = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
 	valueUnion    = []Value{&StringValue{}, &IntValue{}, &TypeValue{}}
 

@@ -69,7 +69,7 @@ func extractMetadata(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) 
 	var metadata []schema.Metadata
 	for _, dir := range directives {
 		var newSchType schema.Decl
-		if found.Contains(dir.GetTypeName()) && !canRepeatDirective(dir) {
+		if found.Contains(dir.GetTypeName()) {
 			common.Errorf(pass, node, `expected exactly one "ftl:%s" directive but found multiple`,
 				dir.GetTypeName())
 			continue
@@ -125,13 +125,6 @@ func extractMetadata(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) 
 				Pos:  common.GoPosToSchemaPos(pass.Fset, dt.Pos),
 				Name: dt.Name,
 			})
-		case *common.DirectiveTypeMap:
-			newSchType = &schema.TypeAlias{}
-			metadata = append(metadata, &schema.MetadataTypeMap{
-				Pos:        common.GoPosToSchemaPos(pass.Fset, dt.GetPosition()),
-				Runtime:    dt.Runtime,
-				NativeName: dt.NativeName,
-			})
 		case *common.DirectiveVerb:
 			newSchType = &schema.Verb{}
 		case *common.DirectiveData:
@@ -140,10 +133,11 @@ func extractMetadata(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) 
 		case *common.DirectiveEnum:
 			requireOnlyDirective(pass, node, directives, dt.GetTypeName())
 			newSchType = &schema.Enum{}
+		case *common.DirectiveTypeAlias:
+			requireOnlyDirective(pass, node, directives, dt.GetTypeName())
+			newSchType = &schema.TypeAlias{}
 		case *common.DirectiveExport:
 			requireOnlyDirective(pass, node, directives, dt.GetTypeName())
-		case *common.DirectiveTypeAlias:
-			newSchType = &schema.TypeAlias{}
 		}
 		declType = updateDeclType(pass, node.Pos(), declType, newSchType)
 	}
@@ -192,11 +186,6 @@ func isAnnotatingValidGoNode(dir common.Directive, node ast.Node) bool {
 		}
 	}
 	return false
-}
-
-func canRepeatDirective(dir common.Directive) bool {
-	_, ok := dir.(*common.DirectiveTypeMap)
-	return ok
 }
 
 // TODO: fix - this doesn't work for member functions.
