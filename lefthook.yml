@@ -16,3 +16,5 @@ pre-push:
       run: just lint-frontend
     ensure-frozen-migrations:
       run: just ensure-frozen-migrations
+    ensure-build-sqlc:
+      run: just ensure-build-sqlc

@@ -71,7 +71,11 @@ init-db:
 
 # Regenerate SQLC code (requires init-db to be run first)
 build-sqlc:
-  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} backend/controller/{cronjobs}/sql/{db.go,models.go,querier.go,queries.sql.go} common/configuration/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/{cronjobs}/sql/queries.sql common/configuration/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- "just init-db && sqlc generate"
+  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} backend/controller/cronjobs/sql/{db.go,models.go,querier.go,queries.sql.go} common/configuration/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/cronjobs/sql/queries.sql common/configuration/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- "just init-db && sqlc generate"
+
+# Verify there isn't SQLC code that needs to be generated
+ensure-build-sqlc:
+  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} backend/controller/cronjobs/sql/{db.go,models.go,querier.go,queries.sql.go} common/configuration/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/cronjobs/sql/queries.sql common/configuration/sql/queries.sql backend/controller/sql/schema sqlc.yaml || (>&2 echo "Run 'just build-sqlc' to regenerate SQLC" && exit 1)
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips: build-kt-runtime
