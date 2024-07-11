@@ -168,7 +168,7 @@ func TestFollowerSync(t *testing.T) {
 	// fakeRPCClient connects the follower to the leader
 	fakeRPCClient := &fakeAdminClient{asm: asm}
 	followerClock := clock.NewMock()
-	follower := newASMFollower(ctx, fakeRPCClient, followerClock)
+	follower := newASMFollower(ctx, fakeRPCClient, "fake", followerClock)
 
 	testClientSync(ctx, t, follower, follower.cache, sm, func(percentage float64) {
 		// sync leader

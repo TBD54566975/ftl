@@ -31,7 +31,7 @@ var _ asmClient = &asmLeader{}
 func newASMLeader(ctx context.Context, client *secretsmanager.Client, clock clock.Clock) *asmLeader {
 	l := &asmLeader{
 		client: client,
-		cache:  newSecretsCache("asm-leader"),
+		cache:  newSecretsCache("asm/leader"),
 	}
 	go l.cache.sync(ctx, asmLeaderSyncInterval, func(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
 		return l.sync(ctx, secrets)
