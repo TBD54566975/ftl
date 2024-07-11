@@ -690,11 +690,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		return fmt.Errorf("module %q not found", moduleName)
 	}
 
-	combined := map[string]*schema.Module{}
-	if err := e.gatherSchemas(builtModules, combined); err != nil {
-		return err
-	}
-	sch := &schema.Schema{Modules: maps.Values(combined)}
+	sch := &schema.Schema{Modules: maps.Values(builtModules)}
 
 	if e.listener != nil {
 		e.listener.OnBuildStarted(meta.module)
