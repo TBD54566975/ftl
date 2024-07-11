@@ -27,10 +27,10 @@ type asmFollower struct {
 
 var _ asmClient = &asmFollower{}
 
-func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient, clock clock.Clock) *asmFollower {
+func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient, leaderName string, clock clock.Clock) *asmFollower {
 	f := &asmFollower{
 		client: rpcClient,
-		cache:  newSecretsCache("asm-follower"),
+		cache:  newSecretsCache(fmt.Sprintf("asm/follower/%s", leaderName)),
 	}
 	go f.cache.sync(ctx, asmFollowerSyncInterval, func(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
 		return f.sync(ctx, secrets)

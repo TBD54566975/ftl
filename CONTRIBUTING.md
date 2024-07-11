@@ -120,17 +120,25 @@ switch t := t.(type) {
 
 Then when a new case is added to the sum type, `go-check-sumtype` will detect the missing case statically.
 
+### Database and SQL changes
+
+If you make any changes to the `sqlc` inputs, i.e. all the `sql/queries.sql` files, the contents of `backend/controller/sql/schema`, or `sqlc.yaml`, then you will need to update the Go code that `sqlc` generates from those inputs:
+
+```bash
+just build-sqlc
+```
+
 ## VSCode extension
 
 The preferred way to develop the FTL VSCode extension is to open a VSCode instance in the `extensions/vscode` directory. This will load the extension in a new VSCode window. From there, the `launch.json` and `tasks.json` files are configured to run the extension in a new window.
 
-## Building the extension
+### Building the extension
 
 ```bash
 just build-extension
 ```
 
-## Packaging the extension
+### Packaging the extension
 
 To package the extension, run:
 
@@ -140,7 +148,7 @@ just package-extension
 
 This will create a `.vsix` file in the `extensions/vscode` directory.
 
-## Publishing the extension
+### Publishing the extension
 
 To publish the extension, run:
 

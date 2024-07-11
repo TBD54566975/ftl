@@ -574,17 +574,18 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 	}
 	errCh := make(chan error, 1024)
 	for _, group := range topology {
-		groupSchemas := map[string]*schema.Module{}
-		metas, err := e.gatherGroupSchemas(builtModules, group, groupSchemas)
+		knownSchemas := map[string]*schema.Module{}
+		err := e.gatherSchemas(builtModules, knownSchemas)
 		if err != nil {
 			return err
 		}
 
+		metas := e.allModuleMetas()
 		moduleConfigs := make([]moduleconfig.ModuleConfig, len(metas))
 		for i, meta := range metas {
 			moduleConfigs[i] = meta.module.Config
 		}
-		err = GenerateStubs(ctx, e.projectRoot, maps.Values(groupSchemas), moduleConfigs)
+		err = GenerateStubs(ctx, e.projectRoot, maps.Values(knownSchemas), moduleConfigs)
 		if err != nil {
 			return err
 		}
@@ -615,6 +616,17 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		close(schemas)
 		for sch := range schemas {
 			builtModules[sch.Name] = sch
+		}
+
+		moduleNames := []string{}
+		for _, module := range knownSchemas {
+			moduleNames = append(moduleNames, module.Name)
+		}
+
+		// Sync references to stubs if needed by the runtime
+		err = SyncStubReferences(ctx, e.projectRoot, moduleNames, moduleConfigs)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -678,15 +690,12 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		return fmt.Errorf("module %q not found", moduleName)
 	}
 
-	combined := map[string]*schema.Module{}
-	if err := e.gatherSchemas(builtModules, meta.module, combined); err != nil {
-		return err
-	}
-	sch := &schema.Schema{Modules: maps.Values(combined)}
+	sch := &schema.Schema{Modules: maps.Values(builtModules)}
 
 	if e.listener != nil {
 		e.listener.OnBuildStarted(meta.module)
 	}
+
 	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir))
 	if err != nil {
 		return err
@@ -700,54 +709,31 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	return nil
 }
 
-// Construct a combined schema for a group of modules and their transitive dependencies.
-func (e *Engine) gatherGroupSchemas(
-	moduleSchemas map[string]*schema.Module,
-	group []string,
-	out map[string]*schema.Module,
-) ([]moduleMeta, error) {
-	var metas []moduleMeta
-	for _, module := range group {
-		if module == "builtin" {
-			continue // Skip the builtin module
-		}
-
-		meta, ok := e.moduleMetas.Load(module)
-		if ok {
-			metas = append(metas, meta)
-			if err := e.gatherSchemas(moduleSchemas, meta.module, out); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return metas, nil
+func (e *Engine) allModuleMetas() []moduleMeta {
+	var out []moduleMeta
+	e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
+		out = append(out, meta)
+		return true
+	})
+	return out
 }
 
 // Construct a combined schema for a module and its transitive dependencies.
 func (e *Engine) gatherSchemas(
 	moduleSchemas map[string]*schema.Module,
-	module Module,
 	out map[string]*schema.Module,
 ) error {
-	latestModule, ok := e.moduleMetas.Load(module.Config.Module)
-	if !ok {
-		latestModule = moduleMeta{module: module}
-	}
-	for _, dep := range latestModule.module.Dependencies {
-		if moduleSchemas[dep] != nil {
-			out[dep] = moduleSchemas[dep]
-		}
+	e.controllerSchema.Range(func(name string, sch *schema.Module) bool {
+		out[name] = sch
+		return true
+	})
 
-		if dep != "builtin" {
-			depModule, ok := e.moduleMetas.Load(dep)
-			// TODO: should we be gathering schemas from dependencies without a module?
-			// This can happen if the schema is loaded from the controller
-			if ok {
-				if err := e.gatherSchemas(moduleSchemas, depModule.module, out); err != nil {
-					return err
-				}
-			}
+	e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
+		if _, ok := moduleSchemas[name]; ok {
+			out[name] = moduleSchemas[name]
 		}
-	}
+		return true
+	})
+
 	return nil
 }
