@@ -67,19 +67,19 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   export enum Color: String {
-    Red = "Red"
     Blue = "Blue"
     Green = "Green"
+    Red = "Red"
     Yellow = "Yellow"
   }
 
   // Comments about ColorInt.
   enum ColorInt: Int {
-    // RedInt is a color.
-    RedInt = 0
     BlueInt = 1
     // GreenInt is also a color.
     GreenInt = 2
+    // RedInt is a color.
+    RedInt = 0
     YellowInt = 3
   }
 
@@ -96,15 +96,15 @@ func TestExtractModuleSchema(t *testing.T) {
   }
 
   enum SimpleIota: Int {
-    Zero = 0
     One = 1
     Two = 2
+    Zero = 0
   }
 
   enum TypeEnum {
-    Option String?
-    InlineStruct one.InlineStruct
     AliasedStruct one.UnderlyingStruct
+    InlineStruct one.InlineStruct
+    Option String?
     ValueEnum one.ColorInt
   }
 
@@ -202,15 +202,15 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 			+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
 
 		export enum TwoEnum: String {
-		  Red = "Red"
 		  Blue = "Blue"
 		  Green = "Green"
+		  Red = "Red"
         }
 
         export enum TypeEnum {
-		  Scalar String
-		  List [String]
 		  Exported two.Exported
+		  List [String]
+		  Scalar String
 		  WithoutDirective two.WithoutDirective
 		}
 
@@ -321,17 +321,18 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 
 		// UserSource, testing that defining an enum after struct works
 		export enum UserSource: String {
-			Magazine = "magazine"
-			Friend = "friend"
 			Ad = "ad"
+			Friend = "friend"
+			Magazine = "magazine"
 		}
 
 		// UserState, testing that defining an enum before struct works
 		export enum UserState: String {
-			Onboarded = "onboarded"
-			Registered = "registered"
 			Active = "active"
 			Inactive = "inactive"
+			// Out of order
+			Onboarded = "onboarded"
+			Registered = "registered"
 		}
 
 		export data User {
@@ -363,8 +364,21 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 	expected := `module parent {
 		export typealias ChildAlias String
 
+		export enum ChildTypeEnum {
+			List [String]
+			Scalar String
+		}
+
+		export enum ChildValueEnum: Int {
+			A = 0
+			B = 1
+			C = 2
+		}
+
 		export data ChildStruct {
 			name parent.ChildAlias?
+			valueEnum parent.ChildValueEnum
+			typeEnum parent.ChildTypeEnum
 		}
 
 		data Resp {
@@ -548,6 +562,7 @@ func TestErrorReporting(t *testing.T) {
 		`22:14-44: duplicate database declaration at 21:14-44`,
 		`25:2-10: unsupported type "error" for field "BadParam"`,
 		`28:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
+		`31:2-13: enum variant "SameVariant" conflicts with existing enum variant of "EnumVariantConflictParent" at "196:2"`,
 		`31:3-3: unexpected directive "ftl:export" attached for verb, did you mean to use '//ftl:verb export' instead?`,
 		`37:36-36: unsupported request type "ftl/failing.Request"`,
 		`37:50-50: unsupported response type "ftl/failing.Response"`,
@@ -576,19 +591,19 @@ func TestErrorReporting(t *testing.T) {
 		`79:63-63: second result must not be ftl.Unit`,
 		// `86:1-2: duplicate declaration of "WrongResponse" at 79:6`,  TODO: fix this
 		`90:3-3: unexpected directive "ftl:verb"`,
-		`104:2-24: cannot attach enum value to BadValueEnum because it is a variant of type enum TypeEnum, not a value enum`,
-		`111:2-41: cannot attach enum value to BadValueEnumOrderDoesntMatter because it is a variant of type enum TypeEnum, not a value enum`,
+		`99:6-18: "BadValueEnum" is a value enum and cannot be tagged as a variant of type enum "TypeEnum" directly`,
+		`108:6-35: "BadValueEnumOrderDoesntMatter" is a value enum and cannot be tagged as a variant of type enum "TypeEnum" directly`,
 		`124:21-60: config and secret names must be valid identifiers`,
 		`130:1-1: schema declaration contains conflicting directives`,
 		`130:1-26: only one directive expected when directive "ftl:enum" is present, found multiple`,
-		`146:1-35: type can not be a variant of more than 1 type enums (TypeEnum1, TypeEnum2)`,
-		`152:27-27: enum discriminator "TypeEnum3" cannot contain exported methods`,
-		`155:1-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
+		`152:6-45: enum discriminator "TypeEnum3" cannot contain exported methods`,
+		`155:6-35: enum discriminator "NoMethodsTypeEnum" must define at least one method`,
 		`167:3-14: unexpected token "d"`,
 		`174:2-62: can not publish directly to topics in other modules`,
 		`175:9-26: can not call verbs in other modules directly: use ftl.Call(…) instead`,
 		`180:2-12: struct field unexported must be exported by starting with an uppercase letter`,
 		`184:6-6: unsupported type "ftl/failing/child.BadChildStruct" for field "child"`,
+		`189:6-6: duplicate Data declaration for "failing.Redeclared" in "ftl/failing"; already declared in "ftl/failing/child"`,
 	}
 	assert.Equal(t, expected, actual)
 }

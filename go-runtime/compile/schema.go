@@ -7,7 +7,6 @@ import (
 	"go/types"
 	"path"
 	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -35,8 +34,6 @@ var (
 	ftlConfigFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
 	ftlSecretFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
 	ftlPostgresDBFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
-	ftlUnitTypePath         = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
-	ftlOptionTypePath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
 	ftlTopicFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.Topic"
 	ftlSubscriptionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Subscription"
 	ftlTopicHandleTypeName  = "TopicHandle"
@@ -45,9 +42,6 @@ var (
 
 // NativeNames is a map of top-level declarations to their native Go names.
 type NativeNames map[schema.Node]string
-
-// enumInterfaces is a map of type enum names to the interface that variants must conform to.
-type enumInterfaces map[string]*types.Interface
 
 func noEndColumnErrorf(pos token.Pos, format string, args ...interface{}) *schema.Error {
 	return tokenErrorf(pos, "", format, args...)
@@ -122,9 +116,6 @@ func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *extract.Resu
 				case *ast.CallExpr:
 					visitCallExpr(pctx, node, stack)
 
-				case *ast.GenDecl:
-					visitGenDecl(pctx, node)
-
 				default:
 				}
 				return next()
@@ -140,24 +131,14 @@ func legacyExtractModuleSchema(dir string, sch *schema.Schema, out *extract.Resu
 	return nil
 }
 
-// extractInitialDecls traverses the package's AST and extracts declarations needed up front (type aliases, enums and topics)
+// extractInitialDecls traverses the package's AST and extracts declarations needed up front (topics)
 //
-// This allows us to know if a type is a type alias or an enum regardless of ordering when visiting each ast node.
-// - The decls get added to the pctx's module, nativeNames and enumInterfaces.
-// - We only want to do a simple pass, so we do not resolve references to other types. This means the TypeAlias and Enum decls have Type = nil
-//   - This get's filled in with the next pass
-//
-// It also helps with topics because we need to know the stack when visiting a topic decl, but the subscription may occur first.
+// We need to know the stack when visiting a topic decl, but the subscription may occur first.
 // In this case there is no way for the subscription to make the topic exported.
 func extractInitialDecls(pctx *parseContext) error {
 	for _, file := range pctx.pkg.Syntax {
 		err := goast.Visit(file, func(stack []ast.Node, next func() error) (err error) {
 			switch node := stack[len(stack)-1].(type) {
-			case *ast.GenDecl:
-				if node.Tok == token.TYPE {
-					extractTypeDecl(pctx, node)
-				}
-
 			case *ast.CallExpr:
 				_, fn := deref[*types.Func](pctx.pkg, node.Fun)
 				if fn != nil && fn.FullName() == ftlTopicFuncPath {
@@ -172,75 +153,6 @@ func extractInitialDecls(pctx *parseContext) error {
 		}
 	}
 	return nil
-}
-
-func extractTypeDecl(pctx *parseContext, node *ast.GenDecl) {
-	directives, parseErr := parseDirectives(node, fset, node.Doc)
-	if parseErr != nil {
-		// errors collected when visiting all nodes in the next pass
-		return
-	}
-
-	for _, dir := range directives {
-		if len(node.Specs) != 1 {
-			// errors handled on next pass
-			continue
-		}
-		t, ok := node.Specs[0].(*ast.TypeSpec)
-		if !ok {
-			continue
-		}
-
-		aType := pctx.pkg.Types.Scope().Lookup(t.Name.Name)
-		nativeName := aType.Pkg().Name() + "." + aType.Name()
-
-		if ed, ok := dir.(*directiveEnum); ok {
-			typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
-			switch underlying := typ.Underlying().(type) {
-			case *types.Basic:
-				enum := &schema.Enum{
-					Pos:      goPosToSchemaPos(node.Pos()),
-					Comments: parseComments(node.Doc),
-					Name:     strcase.ToUpperCamel(t.Name.Name),
-					Type:     nil, // nil until next pass, when we can visit the full type graph
-					Export:   ed.IsExported(),
-				}
-				pctx.module.Decls = append(pctx.module.Decls, enum)
-				pctx.nativeNames[enum] = nativeName
-			case *types.Interface:
-				if underlying.NumMethods() == 0 {
-					pctx.errors.add(errorf(node, "enum discriminator %q must define at least one method", t.Name.Name))
-					break
-				}
-
-				hasExportedMethod := false
-				for i, n := 0, underlying.NumMethods(); i < n; i++ {
-					if underlying.Method(i).Exported() {
-						pctx.errors.add(noEndColumnErrorf(underlying.Method(i).Pos(), "enum discriminator %q cannot "+
-							"contain exported methods", t.Name.Name))
-						hasExportedMethod = true
-					}
-				}
-				if hasExportedMethod {
-					break
-				}
-
-				enum := &schema.Enum{
-					Pos:      goPosToSchemaPos(node.Pos()),
-					Comments: parseComments(node.Doc),
-					Name:     strcase.ToUpperCamel(t.Name.Name),
-					Export:   ed.IsExported(),
-				}
-				if iTyp, ok := typ.(*types.Interface); ok {
-					pctx.nativeNames[enum] = nativeName
-					pctx.module.Decls = append(pctx.module.Decls, enum)
-					pctx.enumInterfaces[t.Name.Name] = iTyp
-				} else {
-					pctx.errors.add(errorf(node, "expected interface for type enum but got %q", typ))
-				}
-			}
-		}
-	}
 }
 
 func extractStringLiteralArg(node *ast.CallExpr, argIndex int) (string, *schema.Error) {
@@ -766,315 +678,6 @@ func goNodePosToSchemaPos(node ast.Node) (schema.Position, int) {
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}, fset.Position(node.End()).Column
 }
 
-func visitGenDecl(pctx *parseContext, node *ast.GenDecl) {
-	switch node.Tok {
-	case token.TYPE:
-		directives, err := parseDirectives(node, fset, node.Doc)
-		if err != nil {
-			pctx.errors.add(err)
-		}
-		maybeVisitTypeEnumVariant(pctx, node, directives)
-
-		if node.Doc == nil {
-			return
-		}
-
-		for _, dir := range directives {
-			if _, ok := dir.(*directiveEnum); ok {
-				if len(node.Specs) != 1 {
-					pctx.errors.add(errorf(node, "error parsing ftl directive: expected "+
-						"exactly one type declaration"))
-					return
-				}
-				if pctx.module.Name == "" {
-					pctx.module.Name = pctx.pkg.Name
-				} else if pctx.module.Name != pctx.pkg.Name && strings.TrimPrefix(pctx.pkg.Name, "ftl/") != pctx.module.Name {
-					pctx.errors.add(errorf(node, "ftl directive must be in the module package"))
-					return
-				}
-				if t, ok := node.Specs[0].(*ast.TypeSpec); ok {
-					isExported := false
-					if exportableDir, ok := dir.(exportable); ok {
-						isExported = exportableDir.IsExported()
-					}
-					// We have already collected enum and type alias declarations in extractTypeDecls
-					// On this second pass we can visit deeper and pull out the type information
-					typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
-					if _, ok := dir.(*directiveEnum); ok {
-						enumOption, enumInterface := pctx.getEnumForTypeName(t.Name.Name)
-						enum, ok := enumOption.Get()
-						if !ok {
-							// This case can be reached if a type is both an enum and a typealias.
-							// Error is already reported in extractTypeDecls
-							return
-						}
-						switch typ.Underlying().(type) {
-						case *types.Basic:
-							if sType, ok := visitType(pctx, node.Pos(), typ, isExported).Get(); ok {
-								enum.Type = sType
-							} else {
-								pctx.errors.add(errorf(node, "unsupported type %q for value enum",
-									pctx.pkg.TypesInfo.TypeOf(t.Type).Underlying()))
-							}
-						case *types.Interface:
-							if !enumInterface.Ok() {
-								pctx.errors.add(errorf(node, "could not find interface for type enum"))
-							}
-						}
-					} else {
-						visitType(pctx, node.Pos(), pctx.pkg.TypesInfo.Defs[t.Name].Type(), isExported)
-					}
-				}
-			}
-		}
-		return
-
-	case token.CONST:
-		var typ ast.Expr
-		for i, s := range node.Specs {
-			v, ok := s.(*ast.ValueSpec)
-			if !ok {
-				continue
-			}
-			// In an iota enum, only the first value has a type.
-			// Hydrate this to subsequent values so we can associate them with the enum.
-			if i == 0 && isIotaEnum(v) {
-				typ = v.Type
-			} else if v.Type == nil {
-				v.Type = typ
-			}
-			visitValueSpec(pctx, v)
-		}
-		return
-
-	default:
-		return
-	}
-}
-
-func maybeVisitTypeEnumVariant(pctx *parseContext, node *ast.GenDecl, directives []directive) {
-	if len(node.Specs) != 1 {
-		return
-	}
-	// `type NAME TYPE` e.g. type Scalar string
-	t, ok := node.Specs[0].(*ast.TypeSpec)
-	if !ok {
-		return
-	}
-	typ := pctx.pkg.TypesInfo.TypeOf(t.Type)
-	if _, ok := typ.Underlying().(*types.Interface); ok {
-		// Type enums should not count as variants of themselves
-		return
-	}
-
-	enumVariant := &schema.EnumVariant{
-		Pos:      goPosToSchemaPos(node.Pos()),
-		Comments: parseComments(node.Doc),
-		Name:     strcase.ToUpperCamel(t.Name.Name),
-	}
-
-	matchedEnumNames := []string{}
-
-	// iterate in a predictable way to make sure we are not flipflopping between builds of which type enum counts as first
-	allEnumNames := maps.Keys(pctx.enumInterfaces)
-	slices.Sort(allEnumNames)
-	for _, enumName := range allEnumNames {
-		interfaceNode := pctx.enumInterfaces[enumName]
-
-		// If the type declared is an enum variant, then it must implement
-		// the interface of a type enum
-		named, ok := pctx.pkg.Types.Scope().Lookup(t.Name.Name).Type().(*types.Named)
-		if !ok {
-			continue
-		}
-		if !types.Implements(named, interfaceNode) {
-			continue
-		}
-
-		enumOption, _ := pctx.getEnumForTypeName(enumName)
-		enum, ok := enumOption.Get()
-		if !ok {
-			pctx.errors.add(errorf(node, "could not find enum called %s", enumName))
-			continue
-		}
-
-		matchedEnumNames = append(matchedEnumNames, enumName)
-		if len(matchedEnumNames) > 1 {
-			continue
-		}
-
-		if enum.VariantForName(enumVariant.Name).Ok() {
-			continue
-		}
-
-		// If any directives on this node are exported, then the
-		// enum variant node is considered exported. Also, if the
-		// parent enum itself is exported, then all its variants
-		// should transitively also be exported.
-		isExported := enum.IsExported()
-		for _, dir := range directives {
-			if exportableDir, ok := dir.(exportable); ok {
-				isExported = exportableDir.IsExported() || isExported
-			}
-		}
-		vType, ok := visitTypeValue(pctx, named, t.Type, nil, isExported).Get()
-		if !ok {
-			pctx.errors.add(errorf(node, "unsupported type %q for type enum variant", named))
-			continue
-		}
-		enumVariant.Value = vType
-		enum.Variants = append(enum.Variants, enumVariant)
-		pctx.nativeNames[enumVariant] = named.Obj().Pkg().Name() + "." + named.Obj().Name()
-	}
-	if len(matchedEnumNames) > 1 {
-		slices.Sort(matchedEnumNames)
-		pctx.errors.add(errorf(node, "type can not be a variant of more than 1 type enums (%s)", strings.Join(matchedEnumNames, ", ")))
-	}
-}
-
-func visitTypeValue(pctx *parseContext, named *types.Named, tnode ast.Expr, index types.Type, isExported bool) optional.Option[*schema.TypeValue] {
-	switch typ := tnode.(type) {
-	// Selector expression e.g. ftl.Unit, ftl.Option, foo.Bar
-	case *ast.SelectorExpr:
-		var ident *ast.Ident
-		var ok bool
-		if ident, ok = typ.X.(*ast.Ident); !ok {
-			return optional.None[*schema.TypeValue]()
-		}
-
-		for _, im := range maps.Values(pctx.pkg.Imports) {
-			if im.Name != ident.Name {
-				continue
-			}
-			switch im.ID + "." + typ.Sel.Name {
-			case "time.Time":
-				return optional.Some(&schema.TypeValue{
-					Pos:   goPosToSchemaPos(tnode.Pos()),
-					Value: &schema.Time{},
-				})
-			case ftlUnitTypePath:
-				return optional.Some(&schema.TypeValue{
-					Pos:   goPosToSchemaPos(tnode.Pos()),
-					Value: &schema.Unit{},
-				})
-			case ftlOptionTypePath:
-				if index == nil {
-					return optional.None[*schema.TypeValue]()
-				}
-
-				if vt, ok := visitType(pctx, tnode.Pos(), index, isExported).Get(); ok {
-					return optional.Some(&schema.TypeValue{
-						Pos: goPosToSchemaPos(tnode.Pos()),
-						Value: &schema.Optional{
-							Pos:  goPosToSchemaPos(tnode.Pos()),
-							Type: vt,
-						},
-					})
-				}
-			default: // Data ref
-				externalModuleName, ok := ftlModuleFromGoModule(im.ID).Get()
-				if !ok {
-					pctx.errors.add(errorf(tnode, "package %q is not in the ftl namespace", im.ID))
-					return optional.None[*schema.TypeValue]()
-				}
-				return optional.Some(&schema.TypeValue{
-					Pos: goPosToSchemaPos(tnode.Pos()),
-					Value: &schema.Ref{
-						Pos:    goPosToSchemaPos(tnode.Pos()),
-						Module: externalModuleName,
-						Name:   typ.Sel.Name,
-					},
-				})
-			}
-		}
-
-	case *ast.IndexExpr: // Generic type, e.g. ftl.Option[string]
-		if se, ok := typ.X.(*ast.SelectorExpr); ok {
-			return visitTypeValue(pctx, named, se, pctx.pkg.TypesInfo.TypeOf(typ.Index), isExported)
-		}
-
-	default:
-		variantNode := pctx.pkg.TypesInfo.TypeOf(tnode)
-		if _, ok := variantNode.(*types.Struct); ok {
-			variantNode = named
-		}
-		if typ, ok := visitType(pctx, tnode.Pos(), variantNode, isExported).Get(); ok {
-			return optional.Some(&schema.TypeValue{Value: typ})
-		} else {
-			pctx.errors.add(errorf(tnode, "unsupported type %q for type enum variant", named))
-		}
-	}
-
-	return optional.None[*schema.TypeValue]()
-}
-
-func visitValueSpec(pctx *parseContext, node *ast.ValueSpec) {
-	var enum *schema.Enum
-	i, ok := node.Type.(*ast.Ident)
-	if !ok {
-		return
-	}
-	enumOption, enumInterface := pctx.getEnumForTypeName(i.Name)
-	enum, ok = enumOption.Get()
-	if !ok {
-		return
-	}
-	if enumInterface.Ok() {
-		pctx.errors.add(errorf(node, "cannot attach enum value to %s because it a type enum", enum.Name))
-		return
-	}
-	maybeErrorOnInvalidEnumMixing(pctx, node, enum.Name)
-
-	c, ok := pctx.pkg.TypesInfo.Defs[node.Names[0]].(*types.Const)
-	if !ok {
-		pctx.errors.add(errorf(node, "could not extract enum %s: expected exactly one variant name", enum.Name))
-		return
-	}
-
-	if value, ok := visitConst(pctx, c).Get(); ok {
-		variant := &schema.EnumVariant{
-			Pos:      goPosToSchemaPos(c.Pos()),
-			Comments: parseComments(node.Doc),
-			Name:     strcase.ToUpperCamel(c.Id()),
-			Value:    value,
-		}
-		enum.Variants = append(enum.Variants, variant)
-	} else {
-		pctx.errors.add(errorf(node, "unsupported type %q for enum variant %q", c.Type(), c.Name()))
-	}
-}
-
-// maybeErrorOnInvalidEnumMixing ensures value enums are not set as variants of type enums.
-// How this gets parsed:
-//
-// //ftl:enum
-// type TypeEnum interface { typeEnum() }
-//
-// type BadValueEnum int
-//
-// // This line causes BadValueEnum to be parsed as a TypeEnum variant. At this point, we
-// // cannot determine if BadValueEnum is intended to be a value enum, so we must treat it
-// // as any other type enum variant.
-// func (BadValueEnum) typeEnum() {}
-//
-// // This line will error because this is where we find out that BadValueEnum is intended
-// // to be a value enum, but value enums cannot be variants of type enums. BadValueEnum
-// // is not in pctx.enums.
-// const A BadValueEnum = 1
-func maybeErrorOnInvalidEnumMixing(pctx *parseContext, node *ast.ValueSpec, enumName string) {
-	for _, decl := range pctx.module.Decls {
-		enum, ok := decl.(*schema.Enum)
-		if !ok {
-			continue
-		}
-		for _, variant := range enum.Variants {
-			if variant.Name == enumName {
-				pctx.errors.add(errorf(node, "cannot attach enum value to %s because it is a variant of type enum %s, not a value enum", enumName, enum.Name))
-			}
-		}
-	}
-}
-
 func parseComments(doc *ast.CommentGroup) []string {
 	comments := []string{}
 	if doc := doc.Text(); doc != "" {
@@ -1457,14 +1060,13 @@ func deref[T types.Object](pkg *packages.Package, node ast.Expr) (string, T) {
 }
 
 type parseContext struct {
-	pkg            *packages.Package
-	pkgs           []*packages.Package
-	module         *schema.Module
-	nativeNames    NativeNames
-	enumInterfaces enumInterfaces
-	errors         errorSet
-	schema         *schema.Schema
-	topicsByPos    map[schema.Position]*schema.Topic
+	pkg         *packages.Package
+	pkgs        []*packages.Package
+	module      *schema.Module
+	nativeNames NativeNames
+	errors      errorSet
+	schema      *schema.Schema
+	topicsByPos map[schema.Position]*schema.Topic
 }
 
 func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schema.Schema, out *extract.Result) *parseContext {
@@ -1472,14 +1074,13 @@ func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schem
 		out.NativeNames = NativeNames{}
 	}
 	return &parseContext{
-		pkg:            pkg,
-		pkgs:           pkgs,
-		module:         out.Module,
-		nativeNames:    out.NativeNames,
-		enumInterfaces: enumInterfaces{},
-		errors:         errorSet{},
-		schema:         sch,
-		topicsByPos:    map[schema.Position]*schema.Topic{},
+		pkg:         pkg,
+		pkgs:        pkgs,
+		module:      out.Module,
+		nativeNames: out.NativeNames,
+		errors:      errorSet{},
+		schema:      sch,
+		topicsByPos: map[schema.Position]*schema.Topic{},
 	}
 }
 
@@ -1514,27 +1115,6 @@ func (p *parseContext) isPathInPkg(path string) bool {
 		return true
 	}
 	return strings.HasPrefix(path, p.pkg.PkgPath+"/")
-}
-
-// getEnumForTypeName returns the enum and interface for a given type name.
-func (p *parseContext) getEnumForTypeName(name string) (optional.Option[*schema.Enum], optional.Option[*types.Interface]) {
-	aDecl, ok := p.getDeclForTypeName(name).Get()
-	if !ok {
-		return optional.None[*schema.Enum](), optional.None[*types.Interface]()
-	}
-	decl, ok := aDecl.(*schema.Enum)
-	if !ok {
-		return optional.None[*schema.Enum](), optional.None[*types.Interface]()
-	}
-	nativeName, ok := p.nativeNames[decl]
-	if !ok {
-		return optional.None[*schema.Enum](), optional.None[*types.Interface]()
-	}
-	enumInterface, isTypeEnum := p.enumInterfaces[strings.Split(nativeName, ".")[1]]
-	if isTypeEnum {
-		return optional.Some(decl), optional.Some(enumInterface)
-	}
-	return optional.Some(decl), optional.None[*types.Interface]()
 }
 
 func (p *parseContext) getDeclForTypeName(name string) optional.Option[schema.Decl] {
@@ -1599,20 +1179,4 @@ func tokenFileContainsPos(f *token.File, pos token.Pos) bool {
 	p := int(pos)
 	base := f.Base()
 	return base <= p && p < base+f.Size()
-}
-
-func isIotaEnum(node ast.Node) bool {
-	switch t := node.(type) {
-	case *ast.ValueSpec:
-		if len(t.Values) != 1 {
-			return false
-		}
-		return isIotaEnum(t.Values[0])
-	case *ast.Ident:
-		return t.Name == "iota"
-	case *ast.BinaryExpr:
-		return isIotaEnum(t.X) || isIotaEnum(t.Y)
-	default:
-		return false
-	}
 }

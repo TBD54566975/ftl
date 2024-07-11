@@ -25,12 +25,16 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 	in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
 	nodeFilter := []ast.Node{
 		(*ast.GenDecl)(nil),
+		(*ast.TypeSpec)(nil),
+		(*ast.ValueSpec)(nil),
 		(*ast.FuncDecl)(nil),
 	}
 	in.Preorder(nodeFilter, func(n ast.Node) {
 		var doc *ast.CommentGroup
 		switch n := n.(type) {
 		case *ast.TypeSpec:
+			doc = n.Doc
+		case *ast.ValueSpec:
 			doc = n.Doc
 		case *ast.GenDecl:
 			doc = n.Doc
@@ -202,8 +206,8 @@ func canRepeatDirective(dir common.Directive) bool {
 // TODO: fix - this doesn't work for member functions.
 //
 // func getDuplicate(pass *analysis.Pass, name string, newMd *common.ExtractedMetadata) optional.Option[types.Object] {
-// 	for obj, md := range common.GetFacts[*common.ExtractedMetadata](pass) {
-// 		if reflect.TypeOf(md.Type) == reflect.TypeOf(newMd.Type) && obj.Name() == name {
+// 	for obj, md := range common.GetAllFacts[*common.ExtractedMetadata](pass) {
+// 		if reflect.TypeOf(md.Type) == reflect.TypeOf(newMd.Type) && obj.Ref() == name {
 // 			return optional.Some(obj)
 // 		}
 // 	}

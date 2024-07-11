@@ -32,6 +32,8 @@ type Result struct {
 	Extracted map[schema.Decl]types.Object
 	// Failed contains all objects that failed extraction.
 	Failed map[schema.RefKey]types.Object
+	// Native names that can't be derived outside of the analysis pass.
+	NativeNames map[schema.Node]string
 }
 
 func Run(pass *analysis.Pass) (interface{}, error) {
@@ -41,21 +43,34 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 	}
 	extracted := make(map[schema.Decl]types.Object)
 	failed := make(map[schema.RefKey]types.Object)
-	for obj, fact := range common.MergeAllFacts(pass) {
-		switch f := fact.Get().(type) {
+	// for identifying duplicates
+	declKeys := make(map[string]types.Object)
+	for obj, fact := range common.GetAllFactsExtractionStatus(pass) {
+		switch f := fact.(type) {
 		case *common.ExtractedDecl:
-			if f.Decl != nil {
+			if existing, ok := declKeys[f.Decl.String()]; ok && existing != obj && obj.Pkg().Path() == pass.Pkg.Path() {
+				common.NoEndColumnErrorf(pass, obj.Pos(), "duplicate %s declaration for %q; already declared at %q",
+					common.GetDeclTypeName(f.Decl), moduleName+"."+f.Decl.GetName(), common.GoPosToSchemaPos(pass.Fset, existing.Pos()))
+				continue
+			}
+			if f.Decl != nil && pass.Pkg.Path() == obj.Pkg().Path() {
 				extracted[f.Decl] = obj
+				declKeys[f.Decl.String()] = obj
 			}
 		case *common.FailedExtraction:
 			failed[schema.RefKey{Module: moduleName, Name: strcase.ToUpperCamel(obj.Name())}] = obj
 		}
+	}
+	nativeNames := make(map[schema.Node]string)
+	for obj, fact := range common.GetAllFacts[*common.MaybeTypeEnumVariant](pass) {
+		nativeNames[fact.Variant] = common.GetNativeName(obj)
 	}
 	return Result{
 		ModuleName:     moduleName,
 		ModuleComments: extractModuleComments(pass),
 		Extracted:      extracted,
 		Failed:         failed,
+		NativeNames:    nativeNames,
 	}, nil
 }
 

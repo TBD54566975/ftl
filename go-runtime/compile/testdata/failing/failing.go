@@ -184,3 +184,14 @@ type UnexportedFieldStruct struct {
 type BadChildField struct {
 	Child child.BadChildStruct
 }
+
+//ftl:data
+type Redeclared struct {
+}
+
+//ftl:enum
+type EnumVariantConflictParent int
+
+const (
+	SameVariant EnumVariantConflictParent = iota
+)

@@ -30,27 +30,29 @@ type Fact = common.DefaultFact[Tag]
 // annotated with an FTL directive.
 func Extract(pass *analysis.Pass) (interface{}, error) {
 	needsExtraction := sets.NewSet[types.Object]()
-	for obj, fact := range common.MergeAllFacts(pass) {
-		if _, ok := fact.Get().(*common.NeedsExtraction); ok {
+	for obj, fact := range common.GetAllFactsExtractionStatus(pass) {
+		if _, ok := fact.(*common.NeedsExtraction); ok {
 			needsExtraction.Add(obj)
 		}
 	}
+
+	visited := sets.NewSet[types.Object]()
 	for !needsExtraction.IsEmpty() {
 		extractTransitive(pass, needsExtraction)
-		needsExtraction = refreshNeedsExtraction(pass)
+		visited.Append(needsExtraction.ToSlice()...)
+		needsExtraction = refreshNeedsExtraction(pass, visited)
 	}
 	return common.NewExtractorResult(pass), nil
 }
 
-func refreshNeedsExtraction(pass *analysis.Pass) sets.Set[types.Object] {
+func refreshNeedsExtraction(pass *analysis.Pass, visited sets.Set[types.Object]) sets.Set[types.Object] {
 	facts := sets.NewSet[types.Object]()
-	for _, fact := range pass.AllObjectFacts() {
-		f, ok := fact.Fact.(common.SchemaFact)
-		if !ok {
+	for obj := range common.GetCurrentPassFacts[*common.NeedsExtraction](pass) {
+		if visited.Contains(obj) {
 			continue
 		}
-		if _, ok := f.Get().(*common.NeedsExtraction); ok && fact.Object.Pkg().Path() == pass.Pkg.Path() {
-			facts.Add(fact.Object)
+		if obj.Pkg().Path() == pass.Pkg.Path() {
+			facts.Add(obj)
 		}
 	}
 	return facts
@@ -109,6 +111,12 @@ func inferDeclType(pass *analysis.Pass, node ast.Node, obj types.Object) optiona
 		return optional.None[schema.Decl]()
 	}
 	if !common.IsSelfReference(pass, obj, t) {
+		// if this is a type alias and it has enum variants, infer to be a value enum
+		for o := range common.GetAllFacts[*common.MaybeValueEnumVariant](pass) {
+			if o.Type() == obj.Type() {
+				return optional.Some[schema.Decl](&schema.Enum{})
+			}
+		}
 		return optional.Some[schema.Decl](&schema.TypeAlias{})
 	}
 	return optional.Some[schema.Decl](&schema.Data{})
