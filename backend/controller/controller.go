@@ -1000,9 +1000,10 @@ func (s *Service) callWithRequest(
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 
 	response, err := client.verb.Call(ctx, req)
-	resp := connect.NewResponse(response.Msg)
+	var resp *connect.Response[ftlv1.CallResponse]
 	var maybeResponse optional.Option[*ftlv1.CallResponse]
-	if resp != nil {
+	if err == nil {
+		resp = connect.NewResponse(response.Msg)
 		maybeResponse = optional.Some(resp.Msg)
 	}
 	s.recordCall(ctx, &Call{
