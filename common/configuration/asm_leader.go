@@ -26,7 +26,7 @@ type asmLeader struct {
 
 var _ asmClient = &asmLeader{}
 
-func newASMLeader(ctx context.Context, client *secretsmanager.Client) *asmLeader {
+func newASMLeader(client *secretsmanager.Client) *asmLeader {
 	l := &asmLeader{
 		client: client,
 	}
@@ -34,7 +34,7 @@ func newASMLeader(ctx context.Context, client *secretsmanager.Client) *asmLeader
 }
 
 func (l *asmLeader) name() string {
-	return fmt.Sprintf("asm/leader")
+	return "asm/leader"
 }
 
 func (l *asmLeader) syncInterval() time.Duration {

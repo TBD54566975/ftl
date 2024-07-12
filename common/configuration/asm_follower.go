@@ -25,7 +25,7 @@ type asmFollower struct {
 
 var _ asmClient = &asmFollower{}
 
-func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient, leaderName string) *asmFollower {
+func newASMFollower(rpcClient ftlv1connect.AdminServiceClient, leaderName string) *asmFollower {
 	f := &asmFollower{
 		leaderName: leaderName,
 		client:     rpcClient,

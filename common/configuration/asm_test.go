@@ -170,7 +170,7 @@ func TestASMPagination(t *testing.T) {
 func TestLeaderSync(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	sm, _, _, externalClient, clock, _ := setUp(ctx, t)
-	testClientSync(ctx, t, sm, externalClient, func(percentage float64) {
+	testClientSync(ctx, t, sm, externalClient, true, func(percentage float64) {
 		clock.Add(time.Duration(percentage) * asmLeaderSyncInterval)
 		if percentage == 1.0 {
 			time.Sleep(time.Second * 2)
@@ -186,7 +186,7 @@ func TestFollowerSync(t *testing.T) {
 	// fakeRPCClient connects the follower to the leader
 	fakeRPCClient := &fakeAdminClient{sm: leaderManager}
 	followerClock := clock.NewMock()
-	follower := newASMFollower(ctx, fakeRPCClient)
+	follower := newASMFollower(fakeRPCClient, "fake")
 
 	followerASM := newASMForTesting(ctx, externalClient, URL("http://localhost:1235"), leaser, optional.Some[asmClient](follower))
 	asmClient, err := followerASM.coordinator.Get()
@@ -197,7 +197,7 @@ func TestFollowerSync(t *testing.T) {
 	sm, err := newForTesting(ctx, leaderManager.router, []Provider[Secrets]{followerASM}, followerClock)
 	assert.NoError(t, err)
 
-	testClientSync(ctx, t, sm, externalClient, func(percentage float64) {
+	testClientSync(ctx, t, sm, externalClient, false, func(percentage float64) {
 		// sync leader
 		leaderClock.Add(time.Duration(percentage) * asmLeaderSyncInterval)
 		if percentage == 1.0 {
@@ -217,6 +217,7 @@ func testClientSync(ctx context.Context,
 	t *testing.T,
 	sm *Manager[Secrets],
 	externalClient *secretsmanager.Client,
+	isLeader bool,
 	progressByIntervalPercentage func(percentage float64)) {
 	t.Helper()
 
@@ -293,6 +294,12 @@ func testClientSync(ctx context.Context,
 		assert.Equal(t, expectedValue, string(value), "unexpected secret value for %s", entry.Ref)
 	}
 
+	if !isLeader {
+		// only test deleting secrets causing errors in ASM Leader.
+		// when leader starts returning errors for list, follower will not get updates
+		return
+	}
+
 	// delete 2 secrets without client knowing
 	tr := true
 	_, err = externalClient.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
@@ -308,17 +315,11 @@ func testClientSync(ctx context.Context,
 
 	// give client a change to sync
 	progressByIntervalPercentage(1.0)
-	time.Sleep(time.Second * 5)
 
-	if _, hadSyncError := sm.cache.providers["asm"].currentBackoff.Get(); hadSyncError {
-		// expect follower to have a sync error because leader can't return list of secret values
-	} else {
-		// otherwise confirm secrets were deleted
-		_, err = sm.getData(ctx, smRef)
-		assert.Error(t, err, "expected to fail because secret was deleted")
-		_, err = sm.getData(ctx, smClientRef)
-		assert.Error(t, err, "expected to fail because secret was deleted")
-	}
+	_, err = sm.getData(ctx, smRef)
+	assert.Error(t, err, "expected to fail because secret was deleted")
+	_, err = sm.getData(ctx, smClientRef)
+	assert.Error(t, err, "expected to fail because secret was deleted")
 }
 
 func storeUnobfuscatedValueInASM(ctx context.Context, sm *Manager[Secrets], externalClient *secretsmanager.Client, ref Ref, value []byte, isNew bool) error {

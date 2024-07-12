@@ -46,14 +46,14 @@ func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client,
 		if override, ok := override.Get(); ok {
 			return override, nil
 		}
-		return newASMLeader(ctx, secretsClient), nil
+		return newASMLeader(secretsClient), nil
 	}
 	followerFactory := func(ctx context.Context, url *url.URL) (client asmClient, err error) {
 		if override, ok := override.Get(); ok {
 			return override, nil
 		}
 		rpcClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, url.String(), log.Error)
-		return newASMFollower(ctx, rpcClient, url.String()), nil
+		return newASMFollower(rpcClient, url.String()), nil
 	}
 	return &ASM{
 		coordinator: leader.NewCoordinator[asmClient](
