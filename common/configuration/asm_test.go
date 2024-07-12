@@ -30,15 +30,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 )
 
-func setUp(ctx context.Context, t *testing.T) (*Manager[Secrets], *ASM, *asmLeader, *secretsmanager.Client, *clock.Mock, *leases.FakeLeaser) {
+func setUp(ctx context.Context, t *testing.T, router optional.Option[Router[Secrets]]) (*Manager[Secrets], *ASM, *asmLeader, *secretsmanager.Client, *clock.Mock, *leases.FakeLeaser) {
 	t.Helper()
 
 	mockClock := clock.NewMock()
 
-	dir := t.TempDir()
-	projectPath := path.Join(dir, "ftl-project.toml")
-	os.WriteFile(projectPath, []byte(`name = "asmtest"`), 0600)
-	router := ProjectConfigResolver[Secrets]{Config: projectPath}
+	if _, ok := router.Get(); !ok {
+		dir := t.TempDir()
+		projectPath := path.Join(dir, "ftl-project.toml")
+		os.WriteFile(projectPath, []byte(`name = "asmtest"`), 0600)
+		router = optional.Some[Router[Secrets]](ProjectConfigResolver[Secrets]{Config: projectPath})
+	}
 
 	cc := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider("test", "test", ""))
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(cc), config.WithRegion("us-west-2"))
@@ -50,7 +52,7 @@ func setUp(ctx context.Context, t *testing.T) (*Manager[Secrets], *ASM, *asmLead
 	leaser := leases.NewFakeLeaser()
 	asm := NewASM(ctx, externalClient, URL("http://localhost:1234"), leaser)
 
-	sm := newForTesting(ctx, router, []Provider[Secrets]{asm}, mockClock)
+	sm := newForTesting(ctx, router.MustGet(), []Provider[Secrets]{asm}, mockClock)
 
 	leaderOrFollower, err := asm.coordinator.Get()
 	assert.NoError(t, err)
@@ -65,58 +67,60 @@ func waitForUpdatesToProcess(c *cache[Secrets]) {
 
 func TestASMWorkflow(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	sm, asm, _, _, _, _ := setUp(ctx, t)
+	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
+	sm, _, _, _, _, _ := setUp(ctx, t, Some[Router[Secrets]](sr))
 	ref := Ref{Module: Some("foo"), Name: "bar"}
 	var mySecret = jsonBytes(t, "my secret")
-	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
-	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
+
+	// wait for initial sync to complete
+	err := sm.cache.providers["asm"].waitForInitialSync()
 	assert.NoError(t, err)
 
 	var gotSecret []byte
-	err = manager.Get(ctx, ref, &gotSecret)
+	err = sm.Get(ctx, ref, &gotSecret)
 	assert.Error(t, err)
 
-	items, err := manager.List(ctx)
+	items, err := sm.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, items, []Entry{})
 
-	err = manager.Set(ctx, "asm", ref, mySecret)
+	err = sm.Set(ctx, "asm", ref, mySecret)
 	waitForUpdatesToProcess(sm.cache)
 	assert.NoError(t, err)
 
-	items, err = manager.List(ctx)
+	items, err = sm.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, items, []Entry{{Ref: ref, Accessor: URL("asm://foo.bar")}})
 
-	err = manager.Get(ctx, ref, &gotSecret)
+	err = sm.Get(ctx, ref, &gotSecret)
 	assert.NoError(t, err)
 
 	// Set again to make sure it updates.
 	mySecret = jsonBytes(t, "hunter1")
-	err = manager.Set(ctx, "asm", ref, mySecret)
+	err = sm.Set(ctx, "asm", ref, mySecret)
 	waitForUpdatesToProcess(sm.cache)
 	assert.NoError(t, err)
 
-	err = manager.Get(ctx, ref, &gotSecret)
+	err = sm.Get(ctx, ref, &gotSecret)
 	assert.NoError(t, err)
 	assert.Equal(t, gotSecret, mySecret)
 
-	err = manager.Unset(ctx, "asm", ref)
+	err = sm.Unset(ctx, "asm", ref)
 	waitForUpdatesToProcess(sm.cache)
 	assert.NoError(t, err)
 
-	items, err = manager.List(ctx)
+	items, err = sm.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, items, []Entry{})
 
-	err = manager.Get(ctx, ref, &gotSecret)
+	err = sm.Get(ctx, ref, &gotSecret)
 	assert.Error(t, err)
 }
 
 // Suggest not running this against a real AWS account (especially in CI) due to the cost. Maybe costs a few $.
 func TestASMPagination(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	sm, asm, _, _, _, _ := setUp(ctx, t)
+	sm, asm, _, _, _, _ := setUp(ctx, t, None[Router[Secrets]]())
 	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
 	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
@@ -168,7 +172,7 @@ func TestASMPagination(t *testing.T) {
 // TestLeaderSync sets and gets values via the leader, as well as directly with ASM
 func TestLeaderSync(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	sm, _, _, externalClient, clock, _ := setUp(ctx, t)
+	sm, _, _, externalClient, clock, _ := setUp(ctx, t, None[Router[Secrets]]())
 	testClientSync(ctx, t, sm, externalClient, true, func(percentage float64) {
 		clock.Add(time.Duration(percentage) * asmLeaderSyncInterval)
 		if percentage == 1.0 {
@@ -180,7 +184,7 @@ func TestLeaderSync(t *testing.T) {
 // TestFollowerSync tests setting and getting values from a follower to the leader to ASM, and vice versa
 func TestFollowerSync(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	leaderManager, _, _, externalClient, leaderClock, leaser := setUp(ctx, t)
+	leaderManager, _, _, externalClient, leaderClock, leaser := setUp(ctx, t, None[Router[Secrets]]())
 
 	// fakeRPCClient connects the follower to the leader
 	fakeRPCClient := &fakeAdminClient{sm: leaderManager}
