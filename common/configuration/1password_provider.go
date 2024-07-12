@@ -8,8 +8,10 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -23,6 +25,8 @@ type OnePasswordProvider struct {
 	ProjectName string
 }
 
+var _ AsynchronousProvider[Secrets] = OnePasswordProvider{}
+
 func (OnePasswordProvider) Role() Secrets { return Secrets{} }
 func (o OnePasswordProvider) Key() string { return "op" }
 func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error {
@@ -33,24 +37,44 @@ func (o OnePasswordProvider) itemName() string {
 	return o.ProjectName + ".secrets"
 }
 
-// Load returns the secret stored in 1password.
-func (o OnePasswordProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (o OnePasswordProvider) SyncInterval() time.Duration {
+	return time.Second * 10
+}
+
+func (o OnePasswordProvider) Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
+	logger := log.FromContext(ctx)
+	if o.Vault == "" {
+		return fmt.Errorf("1Password vault not set: use --opvault flag to specify the vault")
+	}
 	if err := checkOpBinary(); err != nil {
-		return nil, err
+		return err
 	}
-
-	vault := key.Host
-	full, err := o.getItem(ctx, vault)
+	full, err := o.getItem(ctx, o.Vault)
 	if err != nil {
-		return nil, fmt.Errorf("get item failed: %w", err)
+		return fmt.Errorf("get item failed: %w", err)
 	}
 
-	secret, ok := full.value(ref)
-	if !ok {
-		return nil, fmt.Errorf("field %q not found in 1Password item %q: %v", ref, o.itemName(), full.Fields)
+	for _, field := range full.Fields {
+		ref, err := ParseRef(field.Label)
+		if err != nil {
+			logger.Warnf("invalid field label found in 1Password: %q", field.Label)
+			continue
+		}
+		values.Store(ref, SyncedValue{
+			Value: []byte(field.Value),
+		})
 	}
 
-	return secret, nil
+	// delete old values
+	values.Range(func(ref Ref, _ SyncedValue) bool {
+		if _, ok := slices.Find(full.Fields, func(item entry) bool {
+			return item.Label == ref.String()
+		}); !ok {
+			values.Delete(ref)
+		}
+		return true
+	})
+	return nil
 }
 
 var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
@@ -118,13 +142,6 @@ type entry struct {
 	Value string `json:"value"`
 }
 
-func (i item) value(ref Ref) ([]byte, bool) {
-	secret, ok := slices.Find(i.Fields, func(item entry) bool {
-		return item.Label == ref.String()
-	})
-	return []byte(secret.Value), ok
-}
-
 // getItem gets the single 1Password item for all project secrets
 // op --format json item get --vault Personal "projectname.secrets"
 func (o OnePasswordProvider) getItem(ctx context.Context, vault string) (*item, error) {
@@ -135,7 +152,7 @@ func (o OnePasswordProvider) getItem(ctx context.Context, vault string) (*item, 
 		"--format", "json",
 	}
 	output, err := exec.Capture(ctx, ".", "op", args...)
-	logger.Debugf("Getting item with args %s", shellquote.Join(args...))
+	logger.Tracef("Getting item with args %s", shellquote.Join(args...))
 	if err != nil {
 		// This is specifically not itemNotFoundError, to distinguish between vault not found and item not found.
 		if strings.Contains(string(output), "isn't a vault") {

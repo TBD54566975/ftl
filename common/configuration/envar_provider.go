@@ -12,6 +12,8 @@ import (
 // from environment variables.
 type EnvarProvider[R Role] struct{}
 
+var _ SynchronousProvider[Configuration] = EnvarProvider[Configuration]{}
+
 func (EnvarProvider[R]) Role() R     { var r R; return r }
 func (EnvarProvider[R]) Key() string { return "envar" }
 

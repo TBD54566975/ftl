@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/benbjohnson/clock"
+	"github.com/alecthomas/types/optional"
+	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/backend/controller/leader"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
@@ -17,8 +18,8 @@ import (
 )
 
 type asmClient interface {
-	list(ctx context.Context) ([]Entry, error)
-	load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
+	syncInterval() time.Duration
+	sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error
 	store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
 	delete(ctx context.Context, ref Ref) error
 }
@@ -32,19 +33,25 @@ type ASM struct {
 	coordinator *leader.Coordinator[asmClient]
 }
 
-var _ Provider[Secrets] = &ASM{}
+var _ AsynchronousProvider[Secrets] = &ASM{}
 
 func NewASM(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser) *ASM {
-	return newASMForTesting(ctx, secretsClient, advertise, leaser, clock.New())
+	return newASMForTesting(ctx, secretsClient, advertise, leaser, optional.None[asmClient]())
 }
 
-func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser, clock clock.Clock) *ASM {
+func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser, override optional.Option[asmClient]) *ASM {
 	leaderFactory := func(ctx context.Context) (asmClient, error) {
-		return newASMLeader(ctx, secretsClient, clock), nil
+		if override, ok := override.Get(); ok {
+			return override, nil
+		}
+		return newASMLeader(ctx, secretsClient), nil
 	}
 	followerFactory := func(ctx context.Context, url *url.URL) (client asmClient, err error) {
+		if override, ok := override.Get(); ok {
+			return override, nil
+		}
 		rpcClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, url.String(), log.Error)
-		return newASMFollower(ctx, rpcClient, url.String(), clock), nil
+		return newASMFollower(ctx, rpcClient), nil
 	}
 	return &ASM{
 		coordinator: leader.NewCoordinator[asmClient](
@@ -74,12 +81,21 @@ func (ASM) Key() string {
 	return "asm"
 }
 
-func (a *ASM) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (a *ASM) SyncInterval() time.Duration {
 	client, err := a.coordinator.Get()
 	if err != nil {
-		return nil, err
+		// Could not coordinate, try again soon
+		return time.Second * 5
 	}
-	return client.load(ctx, ref, key)
+	return client.syncInterval()
+}
+
+func (a *ASM) Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
+	client, err := a.coordinator.Get()
+	if err != nil {
+		return err
+	}
+	return client.sync(ctx, values)
 }
 
 // Store and if the secret already exists, update it.
