@@ -196,5 +196,5 @@ otel-dev *args:
   #!/bin/bash
 
   gprcPort=$(cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //')
-  export OTEL_EXPORTER_OTLP_ENDPOINT="localhost:${gprcPort}"
+  export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${gprcPort}"
   ftl dev {{args}}
