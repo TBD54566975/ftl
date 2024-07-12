@@ -86,6 +86,34 @@ func TestUpperCamelCase(t *testing.T) {
 	}
 }
 
+func TestUpperStrippedCamel(t *testing.T) {
+	for _, tt := range []struct {
+		input    string
+		expected string
+	}{
+		{"lowercase", "Lowercase"},
+		{"Class", "Class"},
+		{"MyClass", "MyClass"},
+		{"MyC", "MyC"},
+		{"HTML", "Html"},
+		{"PDFLoader", "PdfLoader"},
+		{"AString", "AString"},
+		{"SimpleXMLParser", "SimpleXmlParser"},
+		{"vimRPCPlugin", "VimRpcPlugin"},
+		{"GL11Version", "Gl11Version"},
+		{"99Bottles", "99Bottles"},
+		{"May5", "May5"},
+		{"BFG9000", "Bfg9000"},
+		{"BöseÜberraschung", "BöseÜberraschung"},
+		{"snake_case", "SnakeCase"},
+		{"snake_Case_Caps", "SnakeCaseCaps"},
+		{"kebab-numbers99", "KebabNumbers99"},
+	} {
+		actual := ToUpperStrippedCamel(tt.input)
+		assert.Equal(t, tt.expected, actual, "UpperStrippedCamel(%q) = %v; want %v", tt.input, actual, tt.expected)
+	}
+}
+
 func TestLowerSnake(t *testing.T) {
 	for _, tt := range []struct {
 		input    string

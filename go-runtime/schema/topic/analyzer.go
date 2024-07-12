@@ -5,6 +5,7 @@ import (
 	"go/types"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
@@ -47,7 +48,7 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 	return common.NewExtractorResult(pass), nil
 }
 
-// expects: _ = ftl.Topic[EventType]("name_literal")
+// expects: var NameLiteral = ftl.Topic[EventType]("name_literal")
 func extractTopic(pass *analysis.Pass, node *ast.GenDecl, callExpr *ast.CallExpr, obj types.Object) optional.Option[*schema.Topic] {
 	indexExpr, ok := callExpr.Fun.(*ast.IndexExpr)
 	if !ok {
@@ -60,9 +61,22 @@ func extractTopic(pass *analysis.Pass, node *ast.GenDecl, callExpr *ast.CallExpr
 		return optional.None[*schema.Topic]()
 	}
 
+	topicName := common.ExtractStringLiteralArg(pass, callExpr, 0)
+
+	if len(node.Specs) > 0 {
+		if t, ok := node.Specs[0].(*ast.ValueSpec); ok {
+			varName := t.Names[0].Name
+			expVarName := strcase.ToUpperStrippedCamel(topicName)
+			if varName != expVarName {
+				common.Errorf(pass, node, "unexpected topic variable name %q, did you mean %q?", varName, expVarName)
+				return optional.None[*schema.Topic]()
+			}
+		}
+	}
+
 	topic := &schema.Topic{
 		Pos:   common.GoPosToSchemaPos(pass.Fset, node.Pos()),
-		Name:  common.ExtractStringLiteralArg(pass, callExpr, 0),
+		Name:  topicName,
 		Event: typeParamType,
 	}
 	common.ApplyMetadata[*schema.Subscription](pass, obj, func(md *common.ExtractedMetadata) {
