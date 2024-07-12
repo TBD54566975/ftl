@@ -34,4 +34,3 @@ services:
     environment:
       SERVICES: secretsmanager
       DEBUG: 1
-      
