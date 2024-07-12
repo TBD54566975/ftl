@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 )
 
 type asmClient interface {
+	name() string
 	syncInterval() time.Duration
 	sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error
 	store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
@@ -51,7 +53,7 @@ func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client,
 			return override, nil
 		}
 		rpcClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, url.String(), log.Error)
-		return newASMFollower(ctx, rpcClient), nil
+		return newASMFollower(ctx, rpcClient, url.String()), nil
 	}
 	return &ASM{
 		coordinator: leader.NewCoordinator[asmClient](
@@ -95,7 +97,11 @@ func (a *ASM) Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) e
 	if err != nil {
 		return err
 	}
-	return client.sync(ctx, values)
+	err = client.sync(ctx, values)
+	if err != nil {
+		return fmt.Errorf("%s: %w", client.name(), err)
+	}
+	return nil
 }
 
 // Store and if the secret already exists, update it.
@@ -104,7 +110,11 @@ func (a *ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error
 	if err != nil {
 		return nil, err
 	}
-	return client.store(ctx, ref, value)
+	url, err := client.store(ctx, ref, value)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", client.name(), err)
+	}
+	return url, nil
 }
 
 func (a *ASM) Delete(ctx context.Context, ref Ref) error {
@@ -112,5 +122,9 @@ func (a *ASM) Delete(ctx context.Context, ref Ref) error {
 	if err != nil {
 		return err
 	}
-	return client.delete(ctx, ref)
+	err = client.delete(ctx, ref)
+	if err != nil {
+		return fmt.Errorf("%s: %w", client.name(), err)
+	}
+	return nil
 }

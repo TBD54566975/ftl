@@ -33,6 +33,10 @@ func newASMLeader(ctx context.Context, client *secretsmanager.Client) *asmLeader
 	return l
 }
 
+func (l *asmLeader) name() string {
+	return fmt.Sprintf("asm/leader")
+}
+
 func (l *asmLeader) syncInterval() time.Duration {
 	return asmLeaderSyncInterval
 }

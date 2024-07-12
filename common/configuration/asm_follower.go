@@ -17,17 +17,24 @@ const asmFollowerSyncInterval = time.Minute * 1
 
 // asmFollower uses AdminService to get/set secrets from the leader
 type asmFollower struct {
+	leaderName string
+
 	// client requests/responses use unobfuscated values
 	client ftlv1connect.AdminServiceClient
 }
 
 var _ asmClient = &asmFollower{}
 
-func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient) *asmFollower {
+func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient, leaderName string) *asmFollower {
 	f := &asmFollower{
-		client: rpcClient,
+		leaderName: leaderName,
+		client:     rpcClient,
 	}
 	return f
+}
+
+func (f *asmFollower) name() string {
+	return fmt.Sprintf("asm/follower/%s", f.leaderName)
 }
 
 func (f *asmFollower) syncInterval() time.Duration {
