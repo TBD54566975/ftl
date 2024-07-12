@@ -577,11 +577,12 @@ func TestErrorReporting(t *testing.T) {
 	// failing/child/child.go
 	expectedChild := []string{
 		`9:2-6: unsupported type "uint64" for field "Body"`,
-		`14:2-2: unsupported external type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"`,
+		`14:2-2: unsupported external type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"; see FTL docs on using external types: tbd54566975.github.io/ftl/docs/reference/externaltypes/`,
 		`14:2-7: unsupported type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.NonFTLType" for field "Field"`,
 		`19:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType`,
 		`24:6-6: multiple Go type mappings found for "ftl/failing/child.MultipleMappings"`,
 		`34:2-13: enum variant "SameVariant" conflicts with existing enum variant of "EnumVariantConflictParent" at "196:2"`,
+		`37:18-18: schema declaration with name "FTL_ENDPOINT" already exists for module "failing"; previously declared at "38:18"`,
 	}
 	assert.Equal(t, expectedParent, actualParent)
 	assert.Equal(t, expectedChild, actualChild)

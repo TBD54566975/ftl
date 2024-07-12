@@ -3,6 +3,7 @@ package verb
 import (
 	"go/ast"
 	"go/types"
+	"unicode"
 
 	"github.com/alecthomas/types/optional"
 
@@ -63,9 +64,12 @@ func Extract(pass *analysis.Pass, root *ast.FuncDecl, obj types.Object) optional
 }
 
 func checkSignature(pass *analysis.Pass, node *ast.FuncDecl, sig *types.Signature) (req, resp optional.Option[*types.Var]) {
-	if expVerbName := strcase.ToUpperCamel(node.Name.Name); node.Name.Name != expVerbName {
-		common.Errorf(pass, node, "unexpected verb name %q, did you mean to use %q instead?", node.Name.Name,
-			expVerbName)
+	if node.Name.Name == "" {
+		common.Errorf(pass, node, "verb function must be named")
+		return optional.None[*types.Var](), optional.None[*types.Var]()
+	}
+	if !unicode.IsUpper(rune(node.Name.Name[0])) {
+		common.Errorf(pass, node, "verb name must be exported")
 		return optional.None[*types.Var](), optional.None[*types.Var]()
 	}
 

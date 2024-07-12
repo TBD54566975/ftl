@@ -40,7 +40,7 @@ func TestExternalType(t *testing.T) {
 	}
 	testBuild(t, bctx, "", "unsupported external type", []assertion{
 		assertBuildProtoErrors(
-			`unsupported external type "time.Month"`,
+			`unsupported external type "time.Month"; see FTL docs on using external types: tbd54566975.github.io/ftl/docs/reference/externaltypes/`,
 			`unsupported type "time.Month" for field "Month"`,
 			`unsupported response type "ftl/external.ExternalResponse"`,
 		),

@@ -41,7 +41,7 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 func extractData(pass *analysis.Pass, pos token.Pos, named *types.Named) optional.Option[*schema.Data] {
 	fset := pass.Fset
 	nodePath := named.Obj().Pkg().Path()
-	if !common.IsPathInPkg(pass.Pkg, nodePath) {
+	if !common.IsPathInModule(pass.Pkg, nodePath) {
 		return optional.None[*schema.Data]()
 	}
 

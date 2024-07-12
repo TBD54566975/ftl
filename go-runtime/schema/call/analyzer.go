@@ -63,8 +63,9 @@ func validateCallExpr(pass *analysis.Pass, node *ast.CallExpr) {
 	} else {
 		lhsPkgPath = lhsObject.Pkg().Path()
 	}
+
 	var lhsIsExternal bool
-	if !common.IsPathInPkg(pass.Pkg, lhsPkgPath) {
+	if !common.IsPathInModule(pass.Pkg, lhsPkgPath) {
 		lhsIsExternal = true
 	}
 

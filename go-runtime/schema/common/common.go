@@ -96,7 +96,7 @@ func runExtractDeclsFunc[T schema.Decl, N ast.Node](extractFunc ExtractDeclFunc[
 			if !ok {
 				return
 			}
-			if obj != nil && !IsPathInPkg(pass.Pkg, obj.Pkg().Path()) {
+			if obj != nil && !IsPathInModule(pass.Pkg, obj.Pkg().Path()) {
 				return
 			}
 			md, ok := GetFactForObject[*ExtractedMetadata](pass, obj).Get()
@@ -239,12 +239,16 @@ func IsType[T types.Type](t types.Type) bool {
 	return ok
 }
 
-// IsPathInPkg returns true if the given path is in the package.
-func IsPathInPkg(pkg *types.Package, path string) bool {
+// IsPathInModule returns true if the given path is in the module.
+func IsPathInModule(pkg *types.Package, path string) bool {
 	if path == pkg.Path() {
 		return true
 	}
-	return strings.HasPrefix(path, pkg.Path()+"/")
+	moduleName, err := FtlModuleFromGoPackage(pkg.Path())
+	if err != nil {
+		return false
+	}
+	return strings.HasPrefix(path, "ftl/"+moduleName)
 }
 
 // GetObjectForNode returns the types.Object for the given node.
@@ -324,9 +328,9 @@ func extractRef(pass *analysis.Pass, pos token.Pos, named *types.Named) optional
 	}
 
 	nodePath := named.Obj().Pkg().Path()
-	if !IsPathInPkg(pass.Pkg, nodePath) && IsExternalType(named.Obj()) {
-		//TODO: link to external type docs
-		NoEndColumnErrorf(pass, pos, "unsupported external type %q", GetNativeName(named.Obj()))
+	if !IsPathInModule(pass.Pkg, nodePath) && IsExternalType(named.Obj()) {
+		NoEndColumnErrorf(pass, pos, "unsupported external type %q; see FTL docs on using external types: %s",
+			GetNativeName(named.Obj()), "tbd54566975.github.io/ftl/docs/reference/externaltypes/")
 		return optional.None[schema.Type]()
 	}
 
@@ -437,7 +441,7 @@ func ExtractTypeForNode(pass *analysis.Pass, obj types.Object, node ast.Node, in
 					return ExtractType(pass, node.Pos(), pass.TypesInfo.TypeOf(typ.Sel))
 				}
 
-				if !IsPathInPkg(pass.Pkg, im.Path()) && !strings.HasPrefix(im.Path(), "ftl/") {
+				if !IsPathInModule(pass.Pkg, im.Path()) && !strings.HasPrefix(im.Path(), "ftl/") {
 					// Non-FTL
 					return optional.Some[schema.Type](&schema.Any{})
 				}
