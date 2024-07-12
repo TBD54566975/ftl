@@ -65,10 +65,10 @@ func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config string
 
 // New configuration manager.
 func New[R Role](ctx context.Context, router Router[R], providers []Provider[R]) (*Manager[R], error) {
-	return newForTesting(ctx, router, providers, clock.New())
+	return newForTesting(ctx, router, providers, clock.New()), nil
 }
 
-func newForTesting[R Role](ctx context.Context, router Router[R], providers []Provider[R], clock clock.Clock) (*Manager[R], error) {
+func newForTesting[R Role](ctx context.Context, router Router[R], providers []Provider[R], clock clock.Clock) *Manager[R] {
 	m := &Manager[R]{
 		providers: map[string]Provider[R]{},
 	}
@@ -88,7 +88,7 @@ func newForTesting[R Role](ctx context.Context, router Router[R], providers []Pr
 	}
 	m.cache = newCache[R](ctx, asyncProviders, m, clock)
 
-	return m, nil
+	return m
 }
 
 func ProviderKeyForAccessor(accessor *url.URL) string {
