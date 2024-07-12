@@ -50,8 +50,7 @@ func setUp(ctx context.Context, t *testing.T) (*Manager[Secrets], *ASM, *asmLead
 	leaser := leases.NewFakeLeaser()
 	asm := NewASM(ctx, externalClient, URL("http://localhost:1234"), leaser)
 
-	sm, err := newForTesting(ctx, router, []Provider[Secrets]{asm}, mockClock)
-	assert.NoError(t, err)
+	sm := newForTesting(ctx, router, []Provider[Secrets]{asm}, mockClock)
 
 	leaderOrFollower, err := asm.coordinator.Get()
 	assert.NoError(t, err)
@@ -194,7 +193,7 @@ func TestFollowerSync(t *testing.T) {
 	_, ok := asmClient.(*asmFollower)
 	assert.True(t, ok, "expected test to get an asm follower not a leader")
 
-	sm, err := newForTesting(ctx, leaderManager.router, []Provider[Secrets]{followerASM}, followerClock)
+	sm := newForTesting(ctx, leaderManager.router, []Provider[Secrets]{followerASM}, followerClock)
 	assert.NoError(t, err)
 
 	testClientSync(ctx, t, sm, externalClient, false, func(percentage float64) {
