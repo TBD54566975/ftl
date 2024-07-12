@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sync"
 	"testing"
 
 	"github.com/TBD54566975/ftl/common/configuration/dal"
@@ -12,6 +13,7 @@ import (
 )
 
 type mockDBSecretResolverDAL struct {
+	lock    sync.Mutex
 	entries []dal.ModuleSecret
 }
 
@@ -25,6 +27,9 @@ func (d *mockDBSecretResolverDAL) findEntry(module Option[string], name string) 
 }
 
 func (d *mockDBSecretResolverDAL) GetModuleSecretURL(ctx context.Context, module Option[string], name string) (string, error) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
 	entry, _ := d.findEntry(module, name)
 	if e, ok := entry.Get(); ok {
 		return e.Url, nil
@@ -33,24 +38,34 @@ func (d *mockDBSecretResolverDAL) GetModuleSecretURL(ctx context.Context, module
 }
 
 func (d *mockDBSecretResolverDAL) ListModuleSecrets(ctx context.Context) ([]dal.ModuleSecret, error) {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
 	return d.entries, nil
 }
 
 func (d *mockDBSecretResolverDAL) SetModuleSecretURL(ctx context.Context, module Option[string], name string, url string) error {
-	err := d.UnsetModuleSecret(ctx, module, name)
-	if err != nil {
-		return fmt.Errorf("could not unset secret %w", err)
-	}
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	d.remove(module, name)
 	d.entries = append(d.entries, dal.ModuleSecret{Module: module, Name: name, Url: url})
 	return nil
 }
 
 func (d *mockDBSecretResolverDAL) UnsetModuleSecret(ctx context.Context, module Option[string], name string) error {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	d.remove(module, name)
+	return nil
+}
+
+func (d *mockDBSecretResolverDAL) remove(module Option[string], name string) {
 	entry, i := d.findEntry(module, name)
 	if _, ok := entry.Get(); ok {
 		d.entries = append(d.entries[:i], d.entries[i+1:]...)
 	}
-	return nil
 }
 
 func TestDBSecretResolverList(t *testing.T) {

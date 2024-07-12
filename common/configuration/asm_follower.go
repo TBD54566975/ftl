@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/benbjohnson/clock"
 	"github.com/puzpuzpuz/xsync/v3"
 
 	"connectrpc.com/connect"
@@ -18,27 +17,32 @@ const asmFollowerSyncInterval = time.Minute * 1
 
 // asmFollower uses AdminService to get/set secrets from the leader
 type asmFollower struct {
+	leaderName string
+
 	// client requests/responses use unobfuscated values
 	client ftlv1connect.AdminServiceClient
-
-	// cache stores obfuscated values
-	cache *secretsCache
 }
 
 var _ asmClient = &asmFollower{}
 
-func newASMFollower(ctx context.Context, rpcClient ftlv1connect.AdminServiceClient, leaderName string, clock clock.Clock) *asmFollower {
+func newASMFollower(rpcClient ftlv1connect.AdminServiceClient, leaderName string) *asmFollower {
 	f := &asmFollower{
-		client: rpcClient,
-		cache:  newSecretsCache(fmt.Sprintf("asm/follower/%s", leaderName)),
+		leaderName: leaderName,
+		client:     rpcClient,
 	}
-	go f.cache.sync(ctx, asmFollowerSyncInterval, func(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
-		return f.sync(ctx, secrets)
-	}, clock)
 	return f
 }
 
-func (f *asmFollower) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
+func (f *asmFollower) name() string {
+	return fmt.Sprintf("asm/follower/%s", f.leaderName)
+}
+
+func (f *asmFollower) syncInterval() time.Duration {
+	return asmFollowerSyncInterval
+}
+
+func (f *asmFollower) sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
+	// values must store obfuscated values, but f.client gives unobfuscated values
 	obfuscator := Secrets{}.obfuscator()
 	module := ""
 	includeValues := true
@@ -60,37 +64,18 @@ func (f *asmFollower) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cached
 			return fmt.Errorf("asm follower could not obfuscate value for ref %q: %w", s.RefPath, err)
 		}
 		visited[ref] = true
-		secrets.Store(ref, cachedSecret{
-			value: obfuscatedValue,
+		values.Store(ref, SyncedValue{
+			Value: obfuscatedValue,
 		})
 	}
 	// delete old values
-	secrets.Range(func(ref Ref, _ cachedSecret) bool {
+	values.Range(func(ref Ref, _ SyncedValue) bool {
 		if !visited[ref] {
-			secrets.Delete(ref)
+			values.Delete(ref)
 		}
 		return true
 	})
 	return nil
-}
-
-// list all secrets in the account.
-func (f *asmFollower) list(ctx context.Context) ([]Entry, error) {
-	entries := []Entry{}
-	err := f.cache.iterate(func(ref Ref, _ []byte) {
-		entries = append(entries, Entry{
-			Ref:      ref,
-			Accessor: asmURLForRef(ref),
-		})
-	})
-	if err != nil {
-		return nil, err
-	}
-	return entries, nil
-}
-
-func (f *asmFollower) load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	return f.cache.getSecret(ref)
 }
 
 func (f *asmFollower) store(ctx context.Context, ref Ref, obfuscatedValue []byte) (*url.URL, error) {
@@ -111,7 +96,6 @@ func (f *asmFollower) store(ctx context.Context, ref Ref, obfuscatedValue []byte
 	if err != nil {
 		return nil, err
 	}
-	f.cache.updatedSecret(ref, obfuscatedValue)
 	return asmURLForRef(ref), nil
 }
 
@@ -127,6 +111,5 @@ func (f *asmFollower) delete(ctx context.Context, ref Ref) error {
 	if err != nil {
 		return err
 	}
-	f.cache.deletedSecret(ref)
 	return nil
 }

@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/benbjohnson/clock"
 	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -23,26 +22,29 @@ const asmTagKey = "ftl"
 
 type asmLeader struct {
 	client *secretsmanager.Client
-	cache  *secretsCache
 }
 
 var _ asmClient = &asmLeader{}
 
-func newASMLeader(ctx context.Context, client *secretsmanager.Client, clock clock.Clock) *asmLeader {
+func newASMLeader(client *secretsmanager.Client) *asmLeader {
 	l := &asmLeader{
 		client: client,
-		cache:  newSecretsCache("asm/leader"),
 	}
-	go l.cache.sync(ctx, asmLeaderSyncInterval, func(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
-		return l.sync(ctx, secrets)
-	}, clock)
 	return l
 }
 
+func (l *asmLeader) name() string {
+	return "asm/leader"
+}
+
+func (l *asmLeader) syncInterval() time.Duration {
+	return asmLeaderSyncInterval
+}
+
 // sync retrieves all secrets from ASM and updates the cache
-func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSecret]) error {
-	previous := map[Ref]cachedSecret{}
-	secrets.Range(func(ref Ref, value cachedSecret) bool {
+func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
+	previous := map[Ref]SyncedValue{}
+	values.Range(func(ref Ref, value SyncedValue) bool {
 		previous[ref] = value
 		return true
 	})
@@ -62,7 +64,6 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 		if err != nil {
 			return fmt.Errorf("unable to get list of secrets from ASM: %w", err)
 		}
-
 		var activeSecrets = slices.Filter(out.SecretList, func(s types.SecretListEntry) bool {
 			return s.DeletedDate == nil
 		})
@@ -74,7 +75,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 			seen[ref] = true
 
 			// check if we already have the value from previous sync
-			if pValue, ok := previous[ref]; ok && pValue.versionToken == optional.Some[any](*s.LastChangedDate) {
+			if pValue, ok := previous[ref]; ok && pValue.VersionToken == optional.Some[VersionToken](*s.LastChangedDate) {
 				continue
 			}
 			refsToLoad[ref] = *s.LastChangedDate
@@ -89,7 +90,7 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 	// remove secrets not found in ASM
 	for ref := range previous {
 		if _, ok := seen[ref]; !ok {
-			secrets.Delete(ref)
+			values.Delete(ref)
 		}
 	}
 
@@ -124,33 +125,14 @@ func (l *asmLeader) sync(ctx context.Context, secrets *xsync.MapOf[Ref, cachedSe
 				return fmt.Errorf("secret for %s in ASM is not a string", ref)
 			}
 			data := unwrapComments([]byte(*s.SecretString))
-			secrets.Store(ref, cachedSecret{
-				value:        data,
-				versionToken: optional.Some[any](refsToLoad[ref]),
+			values.Store(ref, SyncedValue{
+				Value:        data,
+				VersionToken: optional.Some[VersionToken](refsToLoad[ref]),
 			})
 			delete(refsToLoad, ref)
 		}
 	}
 	return nil
-}
-
-// list all secrets in the account.
-func (l *asmLeader) list(ctx context.Context) ([]Entry, error) {
-	entries := []Entry{}
-	err := l.cache.iterate(func(ref Ref, _ []byte) {
-		entries = append(entries, Entry{
-			Ref:      ref,
-			Accessor: asmURLForRef(ref),
-		})
-	})
-	if err != nil {
-		return nil, err
-	}
-	return entries, nil
-}
-
-func (l *asmLeader) load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
-	return l.cache.getSecret(ref)
 }
 
 // store and if the secret already exists, update it.
@@ -178,7 +160,6 @@ func (l *asmLeader) store(ctx context.Context, ref Ref, value []byte) (*url.URL,
 	} else if err != nil {
 		return nil, fmt.Errorf("unable to store secret in ASM: %w", err)
 	}
-	l.cache.updatedSecret(ref, value)
 	return asmURLForRef(ref), nil
 }
 
@@ -191,6 +172,5 @@ func (l *asmLeader) delete(ctx context.Context, ref Ref) error {
 	if err != nil {
 		return fmt.Errorf("unable to delete secret from ASM: %w", err)
 	}
-	l.cache.deletedSecret(ref)
 	return nil
 }

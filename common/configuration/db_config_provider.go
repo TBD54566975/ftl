@@ -14,6 +14,8 @@ type DBConfigProvider struct {
 	dal DBConfigProviderDAL
 }
 
+var _ SynchronousProvider[Configuration] = DBConfigProvider{}
+
 type DBConfigProviderDAL interface {
 	GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error)
 	SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error

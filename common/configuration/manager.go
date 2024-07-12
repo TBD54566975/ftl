@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/benbjohnson/clock"
 )
 
 // Role of [Manager], either Secrets or Configuration.
@@ -38,6 +39,7 @@ type Manager[R Role] struct {
 	providers  map[string]Provider[R]
 	router     Router[R]
 	obfuscator optional.Option[Obfuscator]
+	cache      *cache[R]
 }
 
 func ConfigFromEnvironment() []string {
@@ -63,6 +65,10 @@ func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config string
 
 // New configuration manager.
 func New[R Role](ctx context.Context, router Router[R], providers []Provider[R]) (*Manager[R], error) {
+	return newForTesting(ctx, router, providers, clock.New()), nil
+}
+
+func newForTesting[R Role](ctx context.Context, router Router[R], providers []Provider[R], clock clock.Clock) *Manager[R] {
 	m := &Manager[R]{
 		providers: map[string]Provider[R]{},
 	}
@@ -73,7 +79,16 @@ func New[R Role](ctx context.Context, router Router[R], providers []Provider[R])
 		m.obfuscator = optional.Some(provider.obfuscator())
 	}
 	m.router = router
-	return m, nil
+
+	asyncProviders := []AsynchronousProvider[R]{}
+	for _, provider := range m.providers {
+		if sp, ok := any(provider).(AsynchronousProvider[R]); ok {
+			asyncProviders = append(asyncProviders, sp)
+		}
+	}
+	m.cache = newCache[R](ctx, asyncProviders, m, clock)
+
+	return m
 }
 
 func ProviderKeyForAccessor(accessor *url.URL) string {
@@ -98,9 +113,22 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("no provider for scheme %q", key.Scheme)
 	}
-	data, err := provider.Load(ctx, ref, key)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", ref, err)
+	var data []byte
+	switch provider := provider.(type) {
+	case AsynchronousProvider[R]:
+		data, err = m.cache.load(ref, key)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", ref, err)
+		}
+	case SynchronousProvider[R]:
+		data, err = provider.Load(ctx, ref, key)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", ref, err)
+		}
+	default:
+		if err != nil {
+			return nil, fmt.Errorf("provider for %s does not support on demand access or syncing", ref)
+		}
 	}
 	if obfuscator, ok := m.obfuscator.Get(); ok {
 		data, err = obfuscator.Reveal(data)
@@ -168,6 +196,7 @@ func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value js
 	if err != nil {
 		return err
 	}
+	m.cache.updatedValue(ref, bytes, key)
 	return m.router.Set(ctx, ref, key)
 }
 
@@ -212,6 +241,7 @@ func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref Ref) error {
 	if err := provider.Delete(ctx, ref); err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
+	m.cache.deletedValue(ref, pkey)
 	return m.router.Unset(ctx, ref)
 }
 

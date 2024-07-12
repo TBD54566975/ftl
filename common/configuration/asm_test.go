@@ -6,6 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"os"
+	"path"
 	"sort"
 	"testing"
 	"time"
@@ -14,9 +17,11 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/benbjohnson/clock"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 	. "github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -25,33 +30,42 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 )
 
-func localstack(ctx context.Context, t *testing.T) (*ASM, *asmLeader, *secretsmanager.Client, *clock.Mock) {
+func setUp(ctx context.Context, t *testing.T) (*Manager[Secrets], *ASM, *asmLeader, *secretsmanager.Client, *clock.Mock, *leases.FakeLeaser) {
 	t.Helper()
+
 	mockClock := clock.NewMock()
+
+	dir := t.TempDir()
+	projectPath := path.Join(dir, "ftl-project.toml")
+	os.WriteFile(projectPath, []byte(`name = "asmtest"`), 0600)
+	router := ProjectConfigResolver[Secrets]{Config: projectPath}
+
 	cc := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider("test", "test", ""))
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(cc), config.WithRegion("us-west-2"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	sm := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
+	assert.NoError(t, err)
+
+	externalClient := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
 		o.BaseEndpoint = aws.String("http://localhost:4566")
 	})
-	asm := newASMForTesting(ctx, sm, URL("http://localhost:1234"), leases.NewFakeLeaser(), mockClock)
+	leaser := leases.NewFakeLeaser()
+	asm := NewASM(ctx, externalClient, URL("http://localhost:1234"), leaser)
+
+	sm := newForTesting(ctx, router, []Provider[Secrets]{asm}, mockClock)
 
 	leaderOrFollower, err := asm.coordinator.Get()
 	assert.NoError(t, err)
 	leader, ok := leaderOrFollower.(*asmLeader)
 	assert.True(t, ok, "expected test to get an asm leader not a follower")
-	return asm, leader, sm, mockClock
+	return sm, asm, leader, externalClient, mockClock, leaser
 }
 
-func waitForUpdatesToProcess(c *secretsCache) {
+func waitForUpdatesToProcess(c *cache[Secrets]) {
 	c.topicWaitGroup.Wait()
 }
 
 func TestASMWorkflow(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	asm, leader, _, _ := localstack(ctx, t)
+	sm, asm, _, _, _, _ := setUp(ctx, t)
 	ref := Ref{Module: Some("foo"), Name: "bar"}
 	var mySecret = jsonBytes(t, "my secret")
 	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
@@ -67,7 +81,7 @@ func TestASMWorkflow(t *testing.T) {
 	assert.Equal(t, items, []Entry{})
 
 	err = manager.Set(ctx, "asm", ref, mySecret)
-	waitForUpdatesToProcess(leader.cache)
+	waitForUpdatesToProcess(sm.cache)
 	assert.NoError(t, err)
 
 	items, err = manager.List(ctx)
@@ -80,7 +94,7 @@ func TestASMWorkflow(t *testing.T) {
 	// Set again to make sure it updates.
 	mySecret = jsonBytes(t, "hunter1")
 	err = manager.Set(ctx, "asm", ref, mySecret)
-	waitForUpdatesToProcess(leader.cache)
+	waitForUpdatesToProcess(sm.cache)
 	assert.NoError(t, err)
 
 	err = manager.Get(ctx, ref, &gotSecret)
@@ -88,7 +102,7 @@ func TestASMWorkflow(t *testing.T) {
 	assert.Equal(t, gotSecret, mySecret)
 
 	err = manager.Unset(ctx, "asm", ref)
-	waitForUpdatesToProcess(leader.cache)
+	waitForUpdatesToProcess(sm.cache)
 	assert.NoError(t, err)
 
 	items, err = manager.List(ctx)
@@ -102,7 +116,7 @@ func TestASMWorkflow(t *testing.T) {
 // Suggest not running this against a real AWS account (especially in CI) due to the cost. Maybe costs a few $.
 func TestASMPagination(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	asm, leader, _, _ := localstack(ctx, t)
+	sm, asm, _, _, _, _ := setUp(ctx, t)
 	sr := NewDBSecretResolver(&mockDBSecretResolverDAL{})
 	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
@@ -114,7 +128,7 @@ func TestASMPagination(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	waitForUpdatesToProcess(leader.cache)
+	waitForUpdatesToProcess(sm.cache)
 
 	items, err := manager.List(ctx)
 	assert.NoError(t, err)
@@ -143,7 +157,7 @@ func TestASMPagination(t *testing.T) {
 		err := manager.Unset(ctx, "asm", ref)
 		assert.NoError(t, err)
 	}
-	waitForUpdatesToProcess(leader.cache)
+	waitForUpdatesToProcess(sm.cache)
 
 	// Make sure they are all gone
 	items, err = manager.List(ctx)
@@ -151,101 +165,117 @@ func TestASMPagination(t *testing.T) {
 	assert.Equal(t, len(items), 0)
 }
 
+// TestLeaderSync sets and gets values via the leader, as well as directly with ASM
 func TestLeaderSync(t *testing.T) {
-	// test setting and getting values via the leader, as well as directly with ASM
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	_, leader, sm, clock := localstack(ctx, t)
-	testClientSync(ctx, t, leader, leader.cache, sm, func(percentage float64) {
+	sm, _, _, externalClient, clock, _ := setUp(ctx, t)
+	testClientSync(ctx, t, sm, externalClient, true, func(percentage float64) {
 		clock.Add(time.Duration(percentage) * asmLeaderSyncInterval)
+		if percentage == 1.0 {
+			time.Sleep(time.Second * 2)
+		}
 	})
 }
 
+// TestFollowerSync tests setting and getting values from a follower to the leader to ASM, and vice versa
 func TestFollowerSync(t *testing.T) {
-	// Test setting and getting values via the follower, which is connected to a leader, as well as directly with ASM
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	asm, _, sm, leaderClock := localstack(ctx, t)
+	leaderManager, _, _, externalClient, leaderClock, leaser := setUp(ctx, t)
 
 	// fakeRPCClient connects the follower to the leader
-	fakeRPCClient := &fakeAdminClient{asm: asm}
+	fakeRPCClient := &fakeAdminClient{sm: leaderManager}
 	followerClock := clock.NewMock()
-	follower := newASMFollower(ctx, fakeRPCClient, "fake", followerClock)
+	follower := newASMFollower(fakeRPCClient, "fake")
 
-	testClientSync(ctx, t, follower, follower.cache, sm, func(percentage float64) {
+	followerASM := newASMForTesting(ctx, externalClient, URL("http://localhost:1235"), leaser, optional.Some[asmClient](follower))
+	asmClient, err := followerASM.coordinator.Get()
+	assert.NoError(t, err)
+	_, ok := asmClient.(*asmFollower)
+	assert.True(t, ok, "expected test to get an asm follower not a leader")
+
+	sm := newForTesting(ctx, leaderManager.router, []Provider[Secrets]{followerASM}, followerClock)
+	assert.NoError(t, err)
+
+	testClientSync(ctx, t, sm, externalClient, false, func(percentage float64) {
 		// sync leader
 		leaderClock.Add(time.Duration(percentage) * asmLeaderSyncInterval)
 		if percentage == 1.0 {
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 2)
 		}
 
 		// then sync follower
 		followerClock.Add(time.Duration(percentage) * asmFollowerSyncInterval)
+		if percentage == 1.0 {
+			time.Sleep(time.Second * 2)
+		}
 	})
 }
 
+// testClientSync uses a Manager and a secretsmanager.Client to test setting and getting secrets
 func testClientSync(ctx context.Context,
 	t *testing.T,
-	client asmClient,
-	cache *secretsCache,
+	sm *Manager[Secrets],
 	externalClient *secretsmanager.Client,
+	isLeader bool,
 	progressByIntervalPercentage func(percentage float64)) {
 	t.Helper()
-
-	// wait for initial load
-	err := cache.waitForSecrets()
-	assert.NoError(t, err)
 
 	// advance clock to half way between syncs
 	progressByIntervalPercentage(0.5)
 
+	// wait for initial load
+	err := sm.cache.providers["asm"].waitForInitialSync()
+	assert.NoError(t, err)
+
 	// write a secret via asmClient
 	clientRef := Ref{Module: Some("sync"), Name: "set-by-client"}
-	err = storeUnobfuscatedValue(ctx, client, clientRef, jsonBytes(t, "client-first"))
+	err = sm.Set(ctx, "asm", clientRef, "client-first")
 	assert.NoError(t, err)
-	waitForUpdatesToProcess(cache)
-	value, err := getUnobfuscatedValue(ctx, client, clientRef)
+	waitForUpdatesToProcess(sm.cache)
+	value, err := sm.getData(ctx, clientRef)
 	assert.NoError(t, err, "failed to load secret via asm")
 	assert.Equal(t, value, jsonBytes(t, "client-first"), "unexpected secret value")
 
 	// write another secret via sm directly
 	smRef := Ref{Module: Some("sync"), Name: "set-by-sm"}
-	err = storeUnobfuscatedValueInASM(ctx, externalClient, smRef, []byte(jsonString(t, "sm-first")), true)
+	err = storeUnobfuscatedValueInASM(ctx, sm, externalClient, smRef, []byte(jsonString(t, "sm-first")), true)
 	assert.NoError(t, err, "failed to create secret via sm")
-	waitForUpdatesToProcess(cache)
-	value, err = getUnobfuscatedValue(ctx, client, smRef)
+	waitForUpdatesToProcess(sm.cache)
+	value, err = sm.getData(ctx, smRef)
 	assert.Error(t, err, "expected to fail because asm client has not synced secret yet")
 
 	// write a secret via client and then by sm directly
 	clientSmRef := Ref{Module: Some("sync"), Name: "set-by-client-then-sm"}
-	err = storeUnobfuscatedValue(ctx, client, clientSmRef, jsonBytes(t, "client-sm-first"))
+	err = sm.Set(ctx, "asm", clientSmRef, "client-sm-first")
 	assert.NoError(t, err)
-	err = storeUnobfuscatedValueInASM(ctx, externalClient, clientSmRef, []byte(jsonString(t, "client-sm-second")), false)
+	err = storeUnobfuscatedValueInASM(ctx, sm, externalClient, clientSmRef, []byte(jsonString(t, "client-sm-second")), false)
 	assert.NoError(t, err)
-	waitForUpdatesToProcess(cache)
-	value, err = getUnobfuscatedValue(ctx, client, clientSmRef)
+	waitForUpdatesToProcess(sm.cache)
+	value, err = sm.getData(ctx, clientSmRef)
 	assert.NoError(t, err, "failed to load secret via asm")
 	assert.Equal(t, value, jsonBytes(t, "client-sm-first"), "expected initial value before client has a chance to sync newest value")
 
 	// write a secret via sm directly and then by client
 	smClientRef := Ref{Module: Some("sync"), Name: "set-by-sm-then-client"}
-	err = storeUnobfuscatedValueInASM(ctx, externalClient, smClientRef, []byte(jsonString(t, "sm-client-first")), true)
+	err = storeUnobfuscatedValueInASM(ctx, sm, externalClient, smClientRef, []byte(jsonString(t, "sm-client-first")), true)
 	assert.NoError(t, err, "failed to create secret via sm")
-	err = storeUnobfuscatedValue(ctx, client, smClientRef, jsonBytes(t, "sm-client-second"))
+	err = sm.Set(ctx, "asm", smClientRef, "sm-client-second")
 	assert.NoError(t, err)
-	waitForUpdatesToProcess(cache)
-	value, err = getUnobfuscatedValue(ctx, client, smClientRef)
+	waitForUpdatesToProcess(sm.cache)
+	value, err = sm.getData(ctx, smClientRef)
 	assert.NoError(t, err, "failed to load secret via asm")
 	assert.Equal(t, value, jsonBytes(t, "sm-client-second"), "unexpected secret value")
 
 	// give client a change to sync
 	progressByIntervalPercentage(1.0)
-	time.Sleep(time.Second * 5)
 
 	// confirm that all secrets are up to date
-	list, err := client.list(ctx)
+	list, err := sm.List(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, len(list), 4, "expected 4 secrets")
+	assert.Equal(t, slices.Sort(slices.Map(list, func(e Entry) string { return e.Ref.String() })),
+		[]string{"sync.set-by-client", "sync.set-by-client-then-sm", "sync.set-by-sm", "sync.set-by-sm-then-client"})
 	for _, entry := range list {
-		value, err = getUnobfuscatedValue(ctx, client, entry.Ref)
+		value, err = sm.getData(ctx, entry.Ref)
 		assert.NoError(t, err, "failed to load secret via asm")
 		var expectedValue string
 		switch entry.Ref {
@@ -263,6 +293,12 @@ func testClientSync(ctx context.Context,
 		assert.Equal(t, expectedValue, string(value), "unexpected secret value for %s", entry.Ref)
 	}
 
+	if !isLeader {
+		// only test deleting secrets causing errors in ASM Leader.
+		// when leader starts returning errors for list, follower will not get updates
+		return
+	}
+
 	// delete 2 secrets without client knowing
 	tr := true
 	_, err = externalClient.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
@@ -278,42 +314,14 @@ func testClientSync(ctx context.Context,
 
 	// give client a change to sync
 	progressByIntervalPercentage(1.0)
-	time.Sleep(time.Second * 5)
 
-	// confirm secrets were deleted
-	list, err = client.list(ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, len(list), 2, "expected 2 secrets")
-	_, err = getUnobfuscatedValue(ctx, client, smRef)
+	_, err = sm.getData(ctx, smRef)
 	assert.Error(t, err, "expected to fail because secret was deleted")
-	_, err = getUnobfuscatedValue(ctx, client, smClientRef)
+	_, err = sm.getData(ctx, smClientRef)
 	assert.Error(t, err, "expected to fail because secret was deleted")
 }
 
-func storeUnobfuscatedValue(ctx context.Context, client asmClient, ref Ref, value []byte) error {
-	obfuscator := Secrets{}.obfuscator()
-	obfuscatedValue, err := obfuscator.Obfuscate(value)
-	if err != nil {
-		return err
-	}
-	_, err = client.store(ctx, ref, obfuscatedValue)
-	return err
-}
-
-func getUnobfuscatedValue(ctx context.Context, client asmClient, ref Ref) ([]byte, error) {
-	obfuscator := Secrets{}.obfuscator()
-	obfuscatedValue, err := client.load(ctx, ref, asmURLForRef(ref))
-	if err != nil {
-		return nil, err
-	}
-	unobfuscatedValue, err := obfuscator.Reveal(obfuscatedValue)
-	if err != nil {
-		return nil, err
-	}
-	return unobfuscatedValue, nil
-}
-
-func storeUnobfuscatedValueInASM(ctx context.Context, externalClient *secretsmanager.Client, ref Ref, value []byte, isNew bool) error {
+func storeUnobfuscatedValueInASM(ctx context.Context, sm *Manager[Secrets], externalClient *secretsmanager.Client, ref Ref, value []byte, isNew bool) error {
 	obfuscator := Secrets{}.obfuscator()
 	obfuscatedValue, err := obfuscator.Obfuscate(value)
 	if err != nil {
@@ -333,9 +341,19 @@ func storeUnobfuscatedValueInASM(ctx context.Context, externalClient *secretsman
 			SecretString: aws.String(string(obfuscatedValue)),
 		})
 	}
-	return err
+	if err != nil {
+		return err
+	}
+
+	// update router so ref is in list. This simulates another controller added the ref
+	url, err := url.Parse("asm://set-directly-through-asm")
+	if err != nil {
+		return err
+	}
+	return sm.router.Set(ctx, ref, url)
 }
 
+// jsonBytes is a helper to take a string value and convert it into json bytes
 func jsonBytes(t *testing.T, value string) []byte {
 	t.Helper()
 	json, err := json.Marshal(value)
@@ -343,13 +361,15 @@ func jsonBytes(t *testing.T, value string) []byte {
 	return []byte(string(json))
 }
 
+// jsonString is a helper to take a string value and convert it into a json string
 func jsonString(t *testing.T, value string) string {
 	t.Helper()
 	return string(jsonBytes(t, value))
 }
 
+// fakeAdminClient is a fake implementation of the AdminClient interface to allow tests to connect an Manager with an ASM Follower to a Manager with an ASM Leader
 type fakeAdminClient struct {
-	asm *ASM
+	sm *Manager[Secrets]
 }
 
 func (c *fakeAdminClient) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -374,12 +394,7 @@ func (c *fakeAdminClient) ConfigUnset(ctx context.Context, req *connect.Request[
 }
 
 func (c *fakeAdminClient) SecretsList(ctx context.Context, req *connect.Request[ftlv1.ListSecretsRequest]) (*connect.Response[ftlv1.ListSecretsResponse], error) {
-	obfuscator := Secrets{}.obfuscator()
-	client, err := c.asm.coordinator.Get()
-	if err != nil {
-		return nil, err
-	}
-	listing, err := client.list(ctx)
+	listing, err := c.sm.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -395,11 +410,7 @@ func (c *fakeAdminClient) SecretsList(ctx context.Context, req *connect.Request[
 		}
 		var sv []byte
 		if *req.Msg.IncludeValues {
-			obfuscatedValue, err := c.asm.Load(ctx, secret.Ref, asmURLForRef(secret.Ref))
-			if err != nil {
-				return nil, err
-			}
-			sv, err = obfuscator.Reveal(obfuscatedValue)
+			sv, err = c.sm.getData(ctx, secret.Ref)
 			if err != nil {
 				return nil, err
 			}
@@ -414,24 +425,17 @@ func (c *fakeAdminClient) SecretsList(ctx context.Context, req *connect.Request[
 
 // SecretGet returns the secret value for a given ref string.
 func (c *fakeAdminClient) SecretGet(ctx context.Context, req *connect.Request[ftlv1.GetSecretRequest]) (*connect.Response[ftlv1.GetSecretResponse], error) {
-	obfuscator := Secrets{}.obfuscator()
 	ref := NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name)
-	obfuscatedValue, err := c.asm.Load(ctx, ref, asmURLForRef(ref))
+	v, err := c.sm.getData(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
-	vb, err := obfuscator.Reveal(obfuscatedValue)
-	return connect.NewResponse(&ftlv1.GetSecretResponse{Value: vb}), nil
+	return connect.NewResponse(&ftlv1.GetSecretResponse{Value: v}), nil
 }
 
 // SecretSet sets the secret at the given ref to the provided value.
 func (c *fakeAdminClient) SecretSet(ctx context.Context, req *connect.Request[ftlv1.SetSecretRequest]) (*connect.Response[ftlv1.SetSecretResponse], error) {
-	obfuscator := Secrets{}.obfuscator()
-	obfuscatedValue, err := obfuscator.Obfuscate(req.Msg.Value)
-	if err != nil {
-		return nil, err
-	}
-	_, err = c.asm.Store(ctx, NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), obfuscatedValue)
+	err := c.sm.SetJSON(ctx, "asm", NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name), req.Msg.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +444,7 @@ func (c *fakeAdminClient) SecretSet(ctx context.Context, req *connect.Request[ft
 
 // SecretUnset unsets the secret value at the given ref.
 func (c *fakeAdminClient) SecretUnset(ctx context.Context, req *connect.Request[ftlv1.UnsetSecretRequest]) (*connect.Response[ftlv1.UnsetSecretResponse], error) {
-	err := c.asm.Delete(ctx, NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name))
+	err := c.sm.Unset(ctx, "asm", NewRef(*req.Msg.Ref.Module, req.Msg.Ref.Name))
 	if err != nil {
 		return nil, err
 	}
