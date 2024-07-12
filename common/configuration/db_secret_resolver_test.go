@@ -48,7 +48,7 @@ func (d *mockDBSecretResolverDAL) SetModuleSecretURL(ctx context.Context, module
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	err := d.remove(ctx, module, name)
+	err := d.remove(module, name)
 	if err != nil {
 		return fmt.Errorf("could not unset secret %w", err)
 	}
@@ -60,10 +60,10 @@ func (d *mockDBSecretResolverDAL) UnsetModuleSecret(ctx context.Context, module 
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	return d.remove(ctx, module, name)
+	return d.remove(module, name)
 }
 
-func (d *mockDBSecretResolverDAL) remove(ctx context.Context, module Option[string], name string) error {
+func (d *mockDBSecretResolverDAL) remove(module Option[string], name string) error {
 	entry, i := d.findEntry(module, name)
 	if _, ok := entry.Get(); ok {
 		d.entries = append(d.entries[:i], d.entries[i+1:]...)
