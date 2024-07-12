@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"sync"
 	"testing"
 
@@ -41,7 +42,7 @@ func (d *mockDBSecretResolverDAL) ListModuleSecrets(ctx context.Context) ([]dal.
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
-	return d.entries, nil
+	return slices.Clone(d.entries), nil
 }
 
 func (d *mockDBSecretResolverDAL) SetModuleSecretURL(ctx context.Context, module Option[string], name string, url string) error {

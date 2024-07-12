@@ -72,6 +72,10 @@ func TestASMWorkflow(t *testing.T) {
 	manager, err := New(ctx, sr, []Provider[Secrets]{asm})
 	assert.NoError(t, err)
 
+	// wait for initial sync to complete
+	err = sm.cache.providers["asm"].waitForInitialSync()
+	assert.NoError(t, err)
+
 	var gotSecret []byte
 	err = manager.Get(ctx, ref, &gotSecret)
 	assert.Error(t, err)
