@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"go/types"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/alecthomas/types/optional"
@@ -482,7 +483,54 @@ func GetDeclTypeName(d schema.Decl) string {
 	if lastDotIndex == -1 {
 		return typeStr
 	}
-	return typeStr[lastDotIndex+1:]
+	return strcase.ToLowerCamel(typeStr[lastDotIndex+1:])
+}
+
+func Deref[T types.Object](pass *analysis.Pass, node ast.Expr) (string, T) {
+	var obj T
+	switch node := node.(type) {
+	case *ast.Ident:
+		obj, _ = pass.TypesInfo.Uses[node].(T)
+		return "", obj
+
+	case *ast.SelectorExpr:
+		x, ok := node.X.(*ast.Ident)
+		if !ok {
+			return "", obj
+		}
+		obj, _ = pass.TypesInfo.Uses[node.Sel].(T)
+		return x.Name, obj
+
+	case *ast.IndexExpr:
+		return Deref[T](pass, node.X)
+
+	default:
+		return "", obj
+	}
+}
+
+func ExtractStringLiteralArg(pass *analysis.Pass, node *ast.CallExpr, argIndex int) string {
+	if argIndex >= len(node.Args) {
+		Errorf(pass, node, "expected string argument at index %d", argIndex)
+		return ""
+	}
+
+	literal, ok := node.Args[argIndex].(*ast.BasicLit)
+	if !ok || literal.Kind != token.STRING {
+		Errorf(pass, node, "expected string literal for argument at index %d", argIndex)
+		return ""
+	}
+
+	s, err := strconv.Unquote(literal.Value)
+	if err != nil {
+		Wrapf(pass, node, err, "")
+		return ""
+	}
+	if s == "" {
+		Errorf(pass, node, "expected non-empty string literal for argument at index %d", argIndex)
+		return ""
+	}
+	return s
 }
 
 func isLocalRef(pass *analysis.Pass, ref *schema.Ref) bool {

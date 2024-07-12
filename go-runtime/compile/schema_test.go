@@ -543,26 +543,28 @@ func TestErrorReporting(t *testing.T) {
 	r, err := ExtractModuleSchema("testdata/failing", &schema.Schema{})
 	assert.NoError(t, err)
 
+	var actualParent []string
+	var actualChild []string
 	filename := filepath.Join(pwd, `testdata/failing/failing.go`)
 	subFilename := filepath.Join(pwd, `testdata/failing/child/child.go`)
-	actual := slices.Map(r.Errors, func(e *schema.Error) string {
-		str := strings.ReplaceAll(e.Error(), filename+":", "")
-		str = strings.ReplaceAll(str, subFilename+":", "")
-		return str
-	})
-	expected := []string{
-		`6:2-6: unsupported type "uint64" for field "Body"`,
-		`11:2-2: unsupported external type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"`,
-		`11:2-7: unsupported type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.NonFTLType" for field "Field"`,
+	for _, e := range r.Errors {
+		str := strings.ReplaceAll(e.Error(), subFilename+":", "")
+		str = strings.ReplaceAll(str, filename+":", "")
+		if e.Pos.Filename == filename {
+			actualParent = append(actualParent, str)
+		} else {
+			actualChild = append(actualChild, str)
+		}
+	}
+
+	// failing/failing.go
+	expectedParent := []string{
 		`13:13-34: expected string literal for argument at index 0`,
-		`16:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType`,
-		`16:18-52: duplicate config declaration at 15:18-52`,
-		`19:18-52: duplicate secret declaration at 18:18-52`,
-		`21:6-6: multiple Go type mappings found for "ftl/failing/child.MultipleMappings"`,
+		`16:18-18: duplicate config declaration for "failing.FTL_ENDPOINT"; already declared at "37:18"`,
+		`19:18-18: duplicate secret declaration for "failing.FTL_ENDPOINT"; already declared at "38:18"`,
 		`22:14-44: duplicate database declaration at 21:14-44`,
 		`25:2-10: unsupported type "error" for field "BadParam"`,
 		`28:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
-		`31:2-13: enum variant "SameVariant" conflicts with existing enum variant of "EnumVariantConflictParent" at "196:2"`,
 		`31:3-3: unexpected directive "ftl:export" attached for verb, did you mean to use '//ftl:verb export' instead?`,
 		`37:36-36: unsupported request type "ftl/failing.Request"`,
 		`37:50-50: unsupported response type "ftl/failing.Response"`,
@@ -593,7 +595,7 @@ func TestErrorReporting(t *testing.T) {
 		`90:3-3: unexpected directive "ftl:verb"`,
 		`99:6-18: "BadValueEnum" is a value enum and cannot be tagged as a variant of type enum "TypeEnum" directly`,
 		`108:6-35: "BadValueEnumOrderDoesntMatter" is a value enum and cannot be tagged as a variant of type enum "TypeEnum" directly`,
-		`124:21-60: config and secret names must be valid identifiers`,
+		`124:21-60: config names must be valid identifiers`,
 		`130:1-1: schema declaration contains conflicting directives`,
 		`130:1-26: only one directive expected when directive "ftl:enum" is present, found multiple`,
 		`152:6-45: enum discriminator "TypeEnum3" cannot contain exported methods`,
@@ -603,9 +605,20 @@ func TestErrorReporting(t *testing.T) {
 		`175:9-26: can not call verbs in other modules directly: use ftl.Call(…) instead`,
 		`180:2-12: struct field unexported must be exported by starting with an uppercase letter`,
 		`184:6-6: unsupported type "ftl/failing/child.BadChildStruct" for field "child"`,
-		`189:6-6: duplicate Data declaration for "failing.Redeclared" in "ftl/failing"; already declared in "ftl/failing/child"`,
+		`189:6-6: duplicate data declaration for "failing.Redeclared"; already declared at "27:6"`,
 	}
-	assert.Equal(t, expected, actual)
+
+	// failing/child/child.go
+	expectedChild := []string{
+		`9:2-6: unsupported type "uint64" for field "Body"`,
+		`14:2-2: unsupported external type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"`,
+		`14:2-7: unsupported type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.NonFTLType" for field "Field"`,
+		`19:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType`,
+		`24:6-6: multiple Go type mappings found for "ftl/failing/child.MultipleMappings"`,
+		`34:2-13: enum variant "SameVariant" conflicts with existing enum variant of "EnumVariantConflictParent" at "196:2"`,
+	}
+	assert.Equal(t, expectedParent, actualParent)
+	assert.Equal(t, expectedChild, actualChild)
 }
 
 // Where parsing is correct but validation of the schema fails

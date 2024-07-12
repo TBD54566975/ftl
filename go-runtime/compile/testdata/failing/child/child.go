@@ -1,6 +1,9 @@
 package child
 
-import lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
+import (
+	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
+)
 
 type BadChildStruct struct {
 	Body uint64
@@ -30,3 +33,6 @@ type EnumVariantConflictChild int
 const (
 	SameVariant EnumVariantConflictChild = iota
 )
+
+var duplConfig = ftl.Config[string]("FTL_ENDPOINT")
+var duplSecret = ftl.Secret[string]("FTL_ENDPOINT")

@@ -26,17 +26,13 @@ import (
 var (
 	fset = token.NewFileSet()
 
-	ftlPkgPath              = "github.com/TBD54566975/ftl/go-runtime/ftl"
 	ftlCallFuncPath         = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
 	ftlFSMFuncPath          = "github.com/TBD54566975/ftl/go-runtime/ftl.FSM"
 	ftlTransitionFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Transition"
 	ftlStartFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.Start"
-	ftlConfigFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
-	ftlSecretFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
 	ftlPostgresDBFuncPath   = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
 	ftlTopicFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.Topic"
 	ftlSubscriptionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Subscription"
-	ftlTopicHandleTypeName  = "TopicHandle"
 	aliasFieldTag           = "json"
 )
 
@@ -63,15 +59,6 @@ func tokenErrorf(pos token.Pos, tokenText string, format string, args ...interfa
 func errorf(node ast.Node, format string, args ...interface{}) *schema.Error {
 	pos, endCol := goNodePosToSchemaPos(node)
 	return schema.Errorf(pos, endCol, format, args...)
-}
-
-func tokenWrapf(pos token.Pos, tokenText string, err error, format string, args ...interface{}) *schema.Error {
-	goPos := goPosToSchemaPos(pos)
-	endColumn := goPos.Column
-	if len(tokenText) > 0 {
-		endColumn += utf8.RuneCountInString(tokenText)
-	}
-	return schema.Wrapf(goPos, endColumn, err, format, args...)
 }
 
 //nolint:unparam
@@ -225,8 +212,6 @@ func extractTopicDecl(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) 
 }
 
 func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
-	validateCallExpr(pctx, node)
-
 	_, fn := deref[*types.Func](pctx.pkg, node.Fun)
 	if fn == nil {
 		return
@@ -234,10 +219,6 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	switch fn.FullName() {
 	case ftlCallFuncPath:
 		parseCall(pctx, node, stack)
-
-	case ftlConfigFuncPath, ftlSecretFuncPath:
-		// Secret/config declaration: ftl.Config[<type>](<name>)
-		parseConfigDecl(pctx, node, fn)
 
 	case ftlFSMFuncPath:
 		parseFSMDecl(pctx, node, stack)
@@ -250,56 +231,6 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 
 	case ftlSubscriptionFuncPath:
 		parseSubscriptionDecl(pctx, node)
-	}
-}
-
-// validateCallExpr validates all function calls
-// checks if the function call is:
-// - a direct verb call to an external module
-// - a direct publish call on an external module's topic
-func validateCallExpr(pctx *parseContext, node *ast.CallExpr) {
-	selExpr, ok := node.Fun.(*ast.SelectorExpr)
-	if !ok {
-		return
-	}
-	var lhsIdent *ast.Ident
-	if expr, ok := selExpr.X.(*ast.SelectorExpr); ok {
-		lhsIdent = expr.Sel
-	} else if ident, ok := selExpr.X.(*ast.Ident); ok {
-		lhsIdent = ident
-	} else {
-		return
-	}
-	lhsObject := pctx.pkg.TypesInfo.ObjectOf(lhsIdent)
-	if lhsObject == nil {
-		return
-	}
-	var lhsPkgPath string
-	if pkgName, ok := lhsObject.(*types.PkgName); ok {
-		lhsPkgPath = pkgName.Imported().Path()
-	} else {
-		lhsPkgPath = lhsObject.Pkg().Path()
-	}
-	var lhsIsExternal bool
-	if !pctx.isPathInPkg(lhsPkgPath) {
-		lhsIsExternal = true
-	}
-
-	if lhsType, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.X).(*types.Named); ok && lhsType.Obj().Pkg() != nil && lhsType.Obj().Pkg().Path() == ftlPkgPath {
-		// Calling a function on an FTL type
-		if lhsType.Obj().Name() == ftlTopicHandleTypeName && selExpr.Sel.Name == "Publish" {
-			if lhsIsExternal {
-				pctx.errors.add(errorf(node, "can not publish directly to topics in other modules"))
-			}
-		}
-		return
-	}
-
-	if lhsIsExternal && strings.HasPrefix(lhsPkgPath, "ftl/") {
-		if sig, ok := pctx.pkg.TypesInfo.TypeOf(selExpr.Sel).(*types.Signature); ok && sig.Recv() == nil {
-			// can not call functions in external modules directly
-			pctx.errors.add(errorf(node, "can not call verbs in other modules directly: use ftl.Call(…) instead"))
-		}
 	}
 }
 
@@ -463,65 +394,6 @@ func parseFSMTransition(pctx *parseContext, node *ast.CallExpr, fn *types.Func, 
 	default:
 		pctx.errors.add(errorf(node, "expected call to Start or Transition"))
 	}
-}
-
-func parseConfigDecl(pctx *parseContext, node *ast.CallExpr, fn *types.Func) {
-	name, schemaErr := extractStringLiteralArg(node, 0)
-	if schemaErr != nil {
-		pctx.errors.add(schemaErr)
-		return
-	}
-	if !schema.ValidateName(name) {
-		pctx.errors.add(errorf(node, "config and secret names must be valid identifiers"))
-	}
-
-	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert
-
-	// Type parameter
-	tp := pctx.pkg.TypesInfo.Types[index.Index].Type
-	st, ok := visitType(pctx, index.Index.Pos(), tp, false).Get()
-	if !ok {
-		pctx.errors.add(errorf(index.Index, "unsupported type %q", tp))
-		return
-	}
-
-	// Add the declaration to the module.
-	var decl schema.Decl
-	if fn.FullName() == ftlConfigFuncPath {
-		decl = &schema.Config{
-			Pos:  goPosToSchemaPos(node.Pos()),
-			Name: name,
-			Type: st,
-		}
-	} else {
-		decl = &schema.Secret{
-			Pos:  goPosToSchemaPos(node.Pos()),
-			Name: name,
-			Type: st,
-		}
-	}
-
-	// Check for duplicates
-	_, endCol := goNodePosToSchemaPos(node)
-	for _, d := range pctx.module.Decls {
-		switch fn.FullName() {
-		case ftlConfigFuncPath:
-			c, ok := d.(*schema.Config)
-			if ok && c.Name == name && c.Type.String() == st.String() {
-				pctx.errors.add(errorf(node, "duplicate config declaration at %d:%d-%d", c.Pos.Line, c.Pos.Column, endCol))
-				return
-			}
-		case ftlSecretFuncPath:
-			s, ok := d.(*schema.Secret)
-			if ok && s.Name == name && s.Type.String() == st.String() {
-				pctx.errors.add(errorf(node, "duplicate secret declaration at %d:%d-%d", s.Pos.Line, s.Pos.Column, endCol))
-				return
-			}
-		default:
-		}
-	}
-
-	pctx.module.Decls = append(pctx.module.Decls, decl)
 }
 
 func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
@@ -830,32 +702,6 @@ func visitStruct(pctx *parseContext, pos token.Pos, tnode types.Type, isExported
 
 	pctx.module.AddData(out)
 	return optional.Some[*schema.Ref](dataRef)
-}
-
-func visitConst(pctx *parseContext, cnode *types.Const) optional.Option[schema.Value] {
-	if b, ok := cnode.Type().Underlying().(*types.Basic); ok {
-		switch b.Kind() {
-		case types.String:
-			value, err := strconv.Unquote(cnode.Val().String())
-			if err != nil {
-				pctx.errors.add(tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported string constant"))
-				return optional.None[schema.Value]()
-			}
-			return optional.Some[schema.Value](&schema.StringValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: value})
-
-		case types.Int:
-			value, err := strconv.ParseInt(cnode.Val().String(), 10, 64)
-			if err != nil {
-				pctx.errors.add(tokenWrapf(cnode.Pos(), cnode.Val().String(), err, "unsupported int constant"))
-				return optional.None[schema.Value]()
-			}
-			return optional.Some[schema.Value](&schema.IntValue{Pos: goPosToSchemaPos(cnode.Pos()), Value: int(value)})
-
-		default:
-			return optional.None[schema.Value]()
-		}
-	}
-	return optional.None[schema.Value]()
 }
 
 func visitType(pctx *parseContext, pos token.Pos, tnode types.Type, isExported bool) optional.Option[schema.Type] {

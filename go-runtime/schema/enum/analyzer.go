@@ -81,6 +81,9 @@ func findValueEnumVariants(pass *analysis.Pass, obj types.Object) []*schema.Enum
 
 func validateVariant(pass *analysis.Pass, obj types.Object, variant *schema.EnumVariant) bool {
 	for _, fact := range common.GetAllFacts[*common.ExtractedDecl](pass) {
+		if fact.Decl == nil {
+			continue
+		}
 		existingEnum, ok := fact.Decl.(*schema.Enum)
 		if !ok {
 			continue
