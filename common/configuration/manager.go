@@ -51,7 +51,7 @@ func ConfigFromEnvironment() []string {
 // the project config found in the config paths.
 func NewDefaultSecretsManagerFromConfig(ctx context.Context, config string, opVault string) (*Manager[Secrets], error) {
 	var cr Router[Secrets] = ProjectConfigResolver[Secrets]{Config: config}
-	return NewSecretsManager(ctx, cr, opVault)
+	return NewSecretsManager(ctx, cr, opVault, config)
 }
 
 // NewDefaultConfigurationManagerFromConfig creates a new configuration manager from
