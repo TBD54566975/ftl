@@ -111,6 +111,14 @@ type AsynchronousProvider[R Role] interface {
 	Provider[R]
 
 	SyncInterval() time.Duration
+
+	// Sync is called periodically to update the cache with the latest values.
+	//
+	// SyncInterval() provides the expected time between syncs.
+	// If Sync() returns an error, sync will be retried with an exponential backoff.
+	//
+	// Sync is only called if the Router has keys referring to this provider.
+	// If the Router did have keys for this provider but removed them, one more round of sync is executed until Sync() will stop being called
 	Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error
 }
 
