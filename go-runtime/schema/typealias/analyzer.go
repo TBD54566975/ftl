@@ -27,7 +27,7 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 		Name: strcase.ToUpperCamel(obj.Name()),
 		Type: schType,
 	}
-	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
+	if common.ApplyMetadata[*schema.TypeAlias](pass, obj, func(md *common.ExtractedMetadata) {
 		alias.Comments = md.Comments
 		alias.Export = md.IsExported
 		alias.Metadata = md.Metadata
@@ -36,7 +36,7 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 			hasGoTypeMap := false
 			nativeName := qualifiedNameFromSelectorExpr(pass, node.Type)
 			if nativeName == "" {
-				return optional.None[*schema.TypeAlias]()
+				return
 			}
 			for _, m := range md.Metadata {
 				if mt, ok := m.(*schema.MetadataTypeMap); ok {
@@ -46,7 +46,7 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 					if nativeName != mt.NativeName {
 						common.Errorf(pass, node, "declared type %s in typemap does not match native type %s",
 							mt.NativeName, nativeName)
-						return optional.None[*schema.TypeAlias]()
+						return
 					}
 					hasGoTypeMap = true
 				} else {
@@ -63,8 +63,9 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 				})
 			}
 			alias.Type = &schema.Any{}
-			return optional.Some(alias)
 		}
+	}) {
+		return optional.Some(alias)
 	} else if _, ok := alias.Type.(*schema.Any); ok &&
 		!strings.HasPrefix(qualifiedNameFromSelectorExpr(pass, node.Type), "ftl") {
 		alias.Metadata = append(alias.Metadata, &schema.MetadataTypeMap{
