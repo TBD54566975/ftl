@@ -95,7 +95,7 @@ func (a *ASM) SyncInterval() time.Duration {
 func (a *ASM) Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
 	client, err := a.coordinator.Get()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not coordinate ASM: %w", err)
 	}
 	err = client.sync(ctx, values)
 	if err != nil {
