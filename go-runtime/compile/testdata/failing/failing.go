@@ -12,11 +12,11 @@ import (
 
 var empty = ftl.Config[string](1)
 
+// var duplConfig = ftl.Config[string]("FTL_ENDPOINT")
 var goodConfig = ftl.Config[string]("FTL_ENDPOINT")
-var duplConfig = ftl.Config[string]("FTL_ENDPOINT")
 
+// var duplSecret = ftl.Secret[string]("FTL_ENDPOINT")
 var goodSecret = ftl.Secret[string]("FTL_ENDPOINT")
-var duplSecret = ftl.Secret[string]("FTL_ENDPOINT")
 
 var goodDB = ftl.PostgresDatabase("testDb")
 var duplDB = ftl.PostgresDatabase("testDb")

@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"go/types"
 
+	"github.com/TBD54566975/ftl/go-runtime/schema/call"
+	"github.com/TBD54566975/ftl/go-runtime/schema/configsecret"
 	"github.com/TBD54566975/ftl/go-runtime/schema/enum"
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenum"
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
 	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/tuple"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -38,6 +41,7 @@ var Extractors = [][]*analysis.Analyzer{
 	},
 	{
 		metadata.Extractor,
+		call.Extractor,
 	},
 	{
 		// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
@@ -48,6 +52,7 @@ var Extractors = [][]*analysis.Analyzer{
 		typealias.Extractor,
 		verb.Extractor,
 		data.Extractor,
+		configsecret.Extractor,
 		valueenumvariant.Extractor,
 		typeenumvariant.Extractor,
 	},
@@ -135,7 +140,7 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 	refResults := make(map[schema.RefKey]refResult)
 	extractedDecls := make(map[schema.Decl]types.Object)
 	// for identifying duplicates
-	declKeys := make(map[string]types.Object)
+	declKeys := make(map[string]tuple.Pair[types.Object, schema.Position])
 	for _, r := range fResults {
 		fr, ok := r.(finalize.Result)
 		if !ok {
@@ -153,14 +158,24 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 		}
 		copyFailedRefs(refResults, fr.Failed)
 		for decl, obj := range fr.Extracted {
-			if existing, ok := declKeys[decl.String()]; ok && existing != obj {
+			typename := common.GetDeclTypeName(decl)
+			var key string
+			switch d := decl.(type) {
+			case *schema.Config:
+				key = typename + d.Name + ":" + d.Type.String()
+			case *schema.Secret:
+				key = typename + d.Name + ":" + d.Type.String()
+			default:
+				key = typename + d.GetName()
+			}
+			if value, ok := declKeys[key]; ok && value.A != obj {
 				// decls redeclared in subpackage
 				combined.Errors = append(combined.Errors, schema.Errorf(decl.Position(), decl.Position().Column,
-					"duplicate %s declaration for %q in %q; already declared in %q", common.GetDeclTypeName(decl),
-					combined.Module.Name+"."+decl.GetName(), obj.Pkg().Path(), existing.Pkg().Path()))
+					"duplicate %s declaration for %q; already declared at %q", typename,
+					combined.Module.Name+"."+decl.GetName(), value.B))
 				continue
 			}
-			declKeys[decl.String()] = obj
+			declKeys[key] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
 			extractedDecls[decl] = obj
 		}
 		maps.Copy(combined.NativeNames, fr.NativeNames)
