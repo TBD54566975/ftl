@@ -274,6 +274,9 @@ func (d *DirectiveExport) GetPosition() token.Pos {
 	return d.Pos
 }
 func (*DirectiveExport) MustAnnotate() []ast.Node { return []ast.Node{&ast.GenDecl{}} }
+func (d *DirectiveExport) IsExported() bool {
+	return d.Export
+}
 
 // DirectiveTypeMap is used to declare a native type to deserialize to in a given runtime.
 type DirectiveTypeMap struct {

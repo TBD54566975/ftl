@@ -49,14 +49,10 @@ func extractData(pass *analysis.Pass, pos token.Pos, named *types.Named) optiona
 		Pos:  common.GoPosToSchemaPos(fset, pos),
 		Name: strcase.ToUpperCamel(named.Obj().Name()),
 	}
-	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, named.Obj()).Get(); ok {
-		if _, ok = md.Type.(*schema.Data); !ok && md.Type != nil {
-			return optional.None[*schema.Data]()
-		}
+	common.ApplyMetadata[*schema.Data](pass, named.Obj(), func(md *common.ExtractedMetadata) {
 		out.Comments = md.Comments
 		out.Export = md.IsExported
-	}
-
+	})
 	for i := range named.TypeParams().Len() {
 		param := named.TypeParams().At(i)
 		out.TypeParameters = append(out.TypeParameters, &schema.TypeParameter{

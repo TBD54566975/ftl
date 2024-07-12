@@ -27,18 +27,15 @@ type Fact = common.DefaultFact[Tag]
 func Extract(pass *analysis.Pass) (interface{}, error) {
 	in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
 	nodeFilter := []ast.Node{
-		(*ast.ValueSpec)(nil),
+		(*ast.GenDecl)(nil),
 	}
 	in.Preorder(nodeFilter, func(n ast.Node) {
-		node := n.(*ast.ValueSpec) //nolint:forcetypeassert
-		obj, ok := common.GetObjectForNode(pass.TypesInfo, node).Get()
+		node := n.(*ast.GenDecl) //nolint:forcetypeassert
+		callExpr, ok := common.CallExprFromVar(node).Get()
 		if !ok {
 			return
 		}
-		if len(node.Values) != 1 {
-			return
-		}
-		callExpr, ok := node.Values[0].(*ast.CallExpr)
+		obj, ok := common.GetObjectForNode(pass.TypesInfo, node).Get()
 		if !ok {
 			return
 		}

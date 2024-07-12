@@ -21,12 +21,14 @@ import (
 
 var (
 	// FtlUnitTypePath is the path to the FTL unit type.
-	FtlUnitTypePath   = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
+	FtlUnitTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
+	// FtlOptionTypePath is the path to the FTL option type.
 	FtlOptionTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
 
 	extractorRegistery = xsync.NewMapOf[reflect.Type, ExtractDeclFunc[schema.Decl, ast.Node]]()
 )
 
+// NewExtractor creates a new schema element extractor.
 func NewExtractor(name string, factType analysis.Fact, run func(*analysis.Pass) (interface{}, error)) *analysis.Analyzer {
 	if !reflect.TypeOf(factType).Implements(reflect.TypeOf((*SchemaFact)(nil)).Elem()) {
 		panic(fmt.Sprintf("factType %T does not implement SchemaFact", factType))
@@ -41,8 +43,13 @@ func NewExtractor(name string, factType analysis.Fact, run func(*analysis.Pass) 
 	}
 }
 
+// ExtractDeclFunc extracts a schema declaration from the given node.
 type ExtractDeclFunc[T schema.Decl, N ast.Node] func(pass *analysis.Pass, node N, object types.Object) optional.Option[T]
 
+// NewDeclExtractor creates a new schema declaration extractor and registers its extraction function with
+// the common extractor registry.
+// The registry provides functions for extracting schema declarations by type and is used to extract
+// transitive declarations in a separate pass from the decl extraction pass.
 func NewDeclExtractor[T schema.Decl, N ast.Node](name string, extractFunc ExtractDeclFunc[T, N]) *analysis.Analyzer {
 	type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
 	dType := reflect.TypeFor[T]()
@@ -60,10 +67,12 @@ func NewDeclExtractor[T schema.Decl, N ast.Node](name string, extractFunc Extrac
 	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractDeclsFunc[T, N](extractFunc))
 }
 
+// ExtractorResult contains the results of an extraction pass.
 type ExtractorResult struct {
 	Facts []analysis.ObjectFact
 }
 
+// NewExtractorResult creates a new ExtractorResult with all object facts from this pass.
 func NewExtractorResult(pass *analysis.Pass) ExtractorResult {
 	return ExtractorResult{Facts: pass.AllObjectFacts()}
 }
@@ -107,6 +116,7 @@ func runExtractDeclsFunc[T schema.Decl, N ast.Node](extractFunc ExtractDeclFunc[
 	}
 }
 
+// ExtractComments extracts the comments from the given comment group.
 func ExtractComments(doc *ast.CommentGroup) []string {
 	if doc == nil {
 		return nil
@@ -118,6 +128,7 @@ func ExtractComments(doc *ast.CommentGroup) []string {
 	return comments
 }
 
+// ExtractType extracts the schema type for the given Go type.
 func ExtractType(pass *analysis.Pass, pos token.Pos, tnode types.Type) optional.Option[schema.Type] {
 	if tnode == nil {
 		return optional.None[schema.Type]()
@@ -196,6 +207,7 @@ func ExtractType(pass *analysis.Pass, pos token.Pos, tnode types.Type) optional.
 	}
 }
 
+// ExtractFuncForDecl returns the registered extraction function for the given declaration type.
 func ExtractFuncForDecl(t schema.Decl) (ExtractDeclFunc[schema.Decl, ast.Node], error) {
 	if f, ok := extractorRegistery.Load(reflect.TypeOf(t)); ok {
 		return f, nil
@@ -203,11 +215,13 @@ func ExtractFuncForDecl(t schema.Decl) (ExtractDeclFunc[schema.Decl, ast.Node], 
 	return nil, fmt.Errorf("no extractor registered for %T", t)
 }
 
+// GoPosToSchemaPos converts a Go token.Pos to a schema.Position.
 func GoPosToSchemaPos(fset *token.FileSet, pos token.Pos) schema.Position {
 	p := fset.Position(pos)
 	return schema.Position{Filename: p.Filename, Line: p.Line, Column: p.Column, Offset: p.Offset}
 }
 
+// FtlModuleFromGoPackage returns the FTL module name from the given Go package path.
 func FtlModuleFromGoPackage(pkgPath string) (string, error) {
 	parts := strings.Split(pkgPath, "/")
 	if parts[0] != "ftl" {
@@ -216,6 +230,7 @@ func FtlModuleFromGoPackage(pkgPath string) (string, error) {
 	return strings.TrimSuffix(parts[1], "_test"), nil
 }
 
+// IsType returns true if the given type is of the specified type.
 func IsType[T types.Type](t types.Type) bool {
 	if _, ok := t.(*types.Named); ok {
 		t = t.Underlying()
@@ -224,6 +239,7 @@ func IsType[T types.Type](t types.Type) bool {
 	return ok
 }
 
+// IsPathInPkg returns true if the given path is in the package.
 func IsPathInPkg(pkg *types.Package, path string) bool {
 	if path == pkg.Path() {
 		return true
@@ -231,6 +247,7 @@ func IsPathInPkg(pkg *types.Package, path string) bool {
 	return strings.HasPrefix(path, pkg.Path()+"/")
 }
 
+// GetObjectForNode returns the types.Object for the given node.
 func GetObjectForNode(typesInfo *types.Info, node ast.Node) optional.Option[types.Object] {
 	var obj types.Object
 	switch n := node.(type) {
@@ -382,6 +399,7 @@ func extractSlice(pass *analysis.Pass, pos token.Pos, tnode *types.Slice) option
 	})
 }
 
+// ExtractTypeForNode extracts the schema type for the given node.
 func ExtractTypeForNode(pass *analysis.Pass, obj types.Object, node ast.Node, index types.Type) optional.Option[schema.Type] {
 	switch typ := node.(type) {
 	// Selector expression e.g. ftl.Unit, ftl.Option, foo.Bar
@@ -453,6 +471,7 @@ func ExtractTypeForNode(pass *analysis.Pass, obj types.Object, node ast.Node, in
 	return optional.None[schema.Type]()
 }
 
+// IsSelfReference returns true if the schema reference refers to this object itself.
 func IsSelfReference(pass *analysis.Pass, obj types.Object, t schema.Type) bool {
 	ref, ok := t.(*schema.Ref)
 	if !ok {
@@ -465,6 +484,7 @@ func IsSelfReference(pass *analysis.Pass, obj types.Object, t schema.Type) bool 
 	return ref.Module == moduleName && strcase.ToUpperCamel(obj.Name()) == ref.Name
 }
 
+// GetNativeName returns the fully qualified name of the object, e.g. "github.com/TBD54566975/ftl/go-runtime/ftl.Unit".
 func GetNativeName(obj types.Object) string {
 	fqName := obj.Pkg().Path()
 	if parts := strings.Split(obj.Pkg().Path(), "/"); parts[len(parts)-1] != obj.Pkg().Name() {
@@ -473,10 +493,12 @@ func GetNativeName(obj types.Object) string {
 	return fqName + "." + obj.Name()
 }
 
+// IsExternalType returns true if the object is from an external package.
 func IsExternalType(obj types.Object) bool {
 	return !strings.HasPrefix(obj.Pkg().Path(), "ftl/")
 }
 
+// GetDeclTypeName returns the name of the declaration type, e.g. "verb" for *schema.Verb.
 func GetDeclTypeName(d schema.Decl) string {
 	typeStr := reflect.TypeOf(d).String()
 	lastDotIndex := strings.LastIndex(typeStr, ".")
@@ -509,6 +531,55 @@ func Deref[T types.Object](pass *analysis.Pass, node ast.Expr) (string, T) {
 	}
 }
 
+// CallExprFromVar extracts a call expression from a variable declaration, if present.
+func CallExprFromVar(node *ast.GenDecl) optional.Option[*ast.CallExpr] {
+	if node.Tok != token.VAR {
+		return optional.None[*ast.CallExpr]()
+	}
+	if len(node.Specs) != 1 {
+		return optional.None[*ast.CallExpr]()
+	}
+	vs, ok := node.Specs[0].(*ast.ValueSpec)
+	if !ok {
+		return optional.None[*ast.CallExpr]()
+	}
+	if len(vs.Values) != 1 {
+		return optional.None[*ast.CallExpr]()
+	}
+	callExpr, ok := vs.Values[0].(*ast.CallExpr)
+	if !ok {
+		return optional.None[*ast.CallExpr]()
+	}
+	return optional.Some(callExpr)
+}
+
+// FuncPathEquals checks if the function call expression is a call to the given path.
+func FuncPathEquals(pass *analysis.Pass, callExpr *ast.CallExpr, path string) bool {
+	_, fn := Deref[*types.Func](pass, callExpr.Fun)
+	if fn == nil {
+		return false
+	}
+	if fn.FullName() != path {
+		return false
+	}
+	return fn.FullName() == path
+}
+
+// ApplyMetadata applies the extracted metadata to the object, if present. Returns true if metadata was found and
+// applied.
+func ApplyMetadata[T schema.Decl](pass *analysis.Pass, obj types.Object, apply func(md *ExtractedMetadata)) bool {
+	if md, ok := GetFactForObject[*ExtractedMetadata](pass, obj).Get(); ok {
+		if _, ok = md.Type.(T); !ok && md.Type != nil {
+			NoEndColumnErrorf(pass, obj.Pos(), "schema declaration contains conflicting directives")
+			return false
+		}
+		apply(md)
+		return true
+	}
+	return false
+}
+
+// ExtractStringLiteralArg extracts a string literal argument from a call expression at the given index.
 func ExtractStringLiteralArg(pass *analysis.Pass, node *ast.CallExpr, argIndex int) string {
 	if argIndex >= len(node.Args) {
 		Errorf(pass, node, "expected string argument at index %d", argIndex)

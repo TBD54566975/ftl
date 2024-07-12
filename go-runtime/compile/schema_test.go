@@ -3,8 +3,6 @@ package compile
 import (
 	"context"
 	"fmt"
-	"go/token"
-	"go/types"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,10 +11,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 
-	"github.com/TBD54566975/golang-tools/go/packages"
-
 	"github.com/TBD54566975/ftl/backend/schema"
-	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -491,35 +486,6 @@ func TestParsedirectives(t *testing.T) {
 			got, err := directiveParser.ParseString("", tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, got.Directive, assert.Exclude[lexer.Position](), assert.Exclude[schema.Position]())
-		})
-	}
-}
-
-func TestParseTypesTime(t *testing.T) {
-	timeRef := mustLoadRef("time", "Time").Type()
-	pctx := newParseContext(nil, []*packages.Package{}, &schema.Schema{}, &extract.Result{Module: &schema.Module{}})
-	parsed, ok := visitType(pctx, token.NoPos, timeRef, false).Get()
-	assert.True(t, ok)
-	_, ok = parsed.(*schema.Time)
-	assert.True(t, ok)
-}
-
-func TestParseBasicTypes(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    types.Type
-		expected schema.Type
-	}{
-		{name: "String", input: types.Typ[types.String], expected: &schema.String{}},
-		{name: "Int", input: types.Typ[types.Int], expected: &schema.Int{}},
-		{name: "Bool", input: types.Typ[types.Bool], expected: &schema.Bool{}},
-		{name: "Float64", input: types.Typ[types.Float64], expected: &schema.Float{}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parsed, ok := visitType(nil, token.NoPos, tt.input, false).Get()
-			assert.True(t, ok)
-			assert.Equal(t, tt.expected, parsed)
 		})
 	}
 }

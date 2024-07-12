@@ -57,11 +57,10 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 		Variants: valueVariants,
 		Type:     typ,
 	}
-	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
+	common.ApplyMetadata[*schema.Enum](pass, obj, func(md *common.ExtractedMetadata) {
 		e.Comments = md.Comments
 		e.Export = md.IsExported
-	}
-
+	})
 	return optional.Some(e)
 
 }

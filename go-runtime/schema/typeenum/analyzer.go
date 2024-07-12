@@ -43,7 +43,7 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 			Pos:  common.GoPosToSchemaPos(pass.Fset, node.Pos()),
 			Name: strcase.ToUpperCamel(node.Name.Name),
 		}
-		if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
+		common.ApplyMetadata[*schema.Enum](pass, obj, func(md *common.ExtractedMetadata) {
 			enum.Comments = md.Comments
 			enum.Export = md.IsExported
 
@@ -62,7 +62,7 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 				}
 				common.MarkNeedsExtraction(pass, obj)
 			}
-		}
+		})
 		if iType.NumMethods() > 0 {
 			common.MarkMaybeTypeEnum(pass, obj, enum)
 		}

@@ -17,17 +17,16 @@ import (
 var Extractor = common.NewDeclExtractor[*schema.Verb, *ast.FuncDecl]("verb", Extract)
 
 func Extract(pass *analysis.Pass, root *ast.FuncDecl, obj types.Object) optional.Option[*schema.Verb] {
-	md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get()
-	if !ok {
-		return optional.None[*schema.Verb]()
-	}
-
 	verb := &schema.Verb{
-		Pos:      common.GoPosToSchemaPos(pass.Fset, root.Pos()),
-		Name:     strcase.ToLowerCamel(root.Name.Name),
-		Comments: md.Comments,
-		Export:   md.IsExported,
-		Metadata: md.Metadata,
+		Pos:  common.GoPosToSchemaPos(pass.Fset, root.Pos()),
+		Name: strcase.ToLowerCamel(root.Name.Name),
+	}
+	if !common.ApplyMetadata[*schema.Verb](pass, obj, func(md *common.ExtractedMetadata) {
+		verb.Comments = md.Comments
+		verb.Export = md.IsExported
+		verb.Metadata = md.Metadata
+	}) {
+		return optional.None[*schema.Verb]()
 	}
 
 	fnt := obj.(*types.Func)             //nolint:forcetypeassert
@@ -64,9 +63,14 @@ func Extract(pass *analysis.Pass, root *ast.FuncDecl, obj types.Object) optional
 }
 
 func checkSignature(pass *analysis.Pass, node *ast.FuncDecl, sig *types.Signature) (req, resp optional.Option[*types.Var]) {
+	if expVerbName := strcase.ToUpperCamel(node.Name.Name); node.Name.Name != expVerbName {
+		common.Errorf(pass, node, "unexpected verb name %q, did you mean to use %q instead?", node.Name.Name,
+			expVerbName)
+		return optional.None[*types.Var](), optional.None[*types.Var]()
+	}
+
 	params := sig.Params()
 	results := sig.Results()
-
 	if params.Len() > 2 {
 		common.Errorf(pass, node, "must have at most two parameters (context.Context, struct)")
 	}

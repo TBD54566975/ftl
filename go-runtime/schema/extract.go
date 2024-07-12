@@ -6,7 +6,10 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/schema/call"
 	"github.com/TBD54566975/ftl/go-runtime/schema/configsecret"
+	"github.com/TBD54566975/ftl/go-runtime/schema/data"
 	"github.com/TBD54566975/ftl/go-runtime/schema/enum"
+	"github.com/TBD54566975/ftl/go-runtime/schema/subscription"
+	"github.com/TBD54566975/ftl/go-runtime/schema/topic"
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenum"
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
@@ -16,7 +19,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
-	"github.com/TBD54566975/ftl/go-runtime/schema/data"
 	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 	"github.com/TBD54566975/ftl/go-runtime/schema/initialize"
 	"github.com/TBD54566975/ftl/go-runtime/schema/metadata"
@@ -40,8 +42,8 @@ var Extractors = [][]*analysis.Analyzer{
 		inspect.Analyzer,
 	},
 	{
-		metadata.Extractor,
 		call.Extractor,
+		metadata.Extractor,
 	},
 	{
 		// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
@@ -49,17 +51,20 @@ var Extractors = [][]*analysis.Analyzer{
 		typeenum.Extractor,
 	},
 	{
-		typealias.Extractor,
-		verb.Extractor,
-		data.Extractor,
 		configsecret.Extractor,
-		valueenumvariant.Extractor,
+		data.Extractor,
+		topic.Extractor,
+		typealias.Extractor,
 		typeenumvariant.Extractor,
+		valueenumvariant.Extractor,
+		verb.Extractor,
 	},
 	{
 		// must run after valueenumvariant.Extractor and typeenumvariant.Extractor;
 		// visits a node and aggregates its enum variants if present
 		enum.Extractor,
+		// must run after topic.Extractor
+		subscription.Extractor,
 	},
 	{
 		transitive.Extractor,
@@ -158,20 +163,11 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 		}
 		copyFailedRefs(refResults, fr.Failed)
 		for decl, obj := range fr.Extracted {
-			typename := common.GetDeclTypeName(decl)
-			var key string
-			switch d := decl.(type) {
-			case *schema.Config:
-				key = typename + d.Name + ":" + d.Type.String()
-			case *schema.Secret:
-				key = typename + d.Name + ":" + d.Type.String()
-			default:
-				key = typename + d.GetName()
-			}
+			key := getDeclKey(decl)
 			if value, ok := declKeys[key]; ok && value.A != obj {
 				// decls redeclared in subpackage
 				combined.Errors = append(combined.Errors, schema.Errorf(decl.Position(), decl.Position().Column,
-					"duplicate %s declaration for %q; already declared at %q", typename,
+					"duplicate %s declaration for %q; already declared at %q", common.GetDeclTypeName(decl),
 					combined.Module.Name+"."+decl.GetName(), value.B))
 				continue
 			}
@@ -353,4 +349,20 @@ func goQualifiedNameForWidenedType(obj types.Object, metadata []schema.Metadata)
 			common.GetNativeName(obj))
 	}
 	return nativeName, nil
+}
+
+// criteria for uniqueness within a given decl type
+// used for detecting duplicate declarations
+func getDeclKey(decl schema.Decl) string {
+	typename := common.GetDeclTypeName(decl)
+	switch d := decl.(type) {
+	case *schema.Config:
+		return fmt.Sprintf("%s-%s-%s", typename, d.Name, d.Type)
+	case *schema.Secret:
+		return fmt.Sprintf("%s-%s-%s", typename, d.Name, d.Type)
+	case *schema.Topic:
+		return fmt.Sprintf("%s-%s-%s", typename, d.Name, d.Event)
+	default:
+		return fmt.Sprintf("%s-%s", typename, d.GetName())
+	}
 }
