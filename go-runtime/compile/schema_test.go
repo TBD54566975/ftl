@@ -526,8 +526,8 @@ func TestErrorReporting(t *testing.T) {
 	// failing/failing.go
 	expectedParent := []string{
 		`13:13-34: expected string literal for argument at index 0`,
-		`16:18-18: duplicate config declaration for "failing.FTL_ENDPOINT"; already declared at "37:18"`,
-		`19:18-18: duplicate secret declaration for "failing.FTL_ENDPOINT"; already declared at "38:18"`,
+		`16:18-18: duplicate config declaration for "failing.FTL_CONFIG_ENDPOINT"; already declared at "37:18"`,
+		`19:18-18: duplicate secret declaration for "failing.FTL_SECRET_ENDPOINT"; already declared at "38:18"`,
 		`22:14-44: duplicate database declaration at 21:14-44`,
 		`25:2-10: unsupported type "error" for field "BadParam"`,
 		`28:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
@@ -561,6 +561,7 @@ func TestErrorReporting(t *testing.T) {
 		`90:3-3: unexpected directive "ftl:verb"`,
 		`99:6-18: "BadValueEnum" is a value enum and cannot be tagged as a variant of type enum "TypeEnum" directly`,
 		`108:6-35: "BadValueEnumOrderDoesntMatter" is a value enum and cannot be tagged as a variant of type enum "TypeEnum" directly`,
+		`120:6-6: schema declaration with name "PrivateData" already exists for module "failing"; previously declared at "40:25"`,
 		`124:21-60: config names must be valid identifiers`,
 		`130:1-1: schema declaration contains conflicting directives`,
 		`130:1-26: only one directive expected when directive "ftl:enum" is present, found multiple`,
@@ -582,7 +583,6 @@ func TestErrorReporting(t *testing.T) {
 		`19:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType`,
 		`24:6-6: multiple Go type mappings found for "ftl/failing/child.MultipleMappings"`,
 		`34:2-13: enum variant "SameVariant" conflicts with existing enum variant of "EnumVariantConflictParent" at "196:2"`,
-		`37:18-18: schema declaration with name "FTL_ENDPOINT" already exists for module "failing"; previously declared at "38:18"`,
 	}
 	assert.Equal(t, expectedParent, actualParent)
 	assert.Equal(t, expectedChild, actualChild)
