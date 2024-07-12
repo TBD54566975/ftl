@@ -126,7 +126,7 @@ func (i item) value(ref Ref) ([]byte, bool) {
 }
 
 // getItem gets the single 1Password item for all project secrets
-// op --format json item get --vault Personal "ftl.projectname.secrets"
+// op --format json item get --vault Personal "projectname.secrets"
 func (o OnePasswordProvider) getItem(ctx context.Context, vault string) (*item, error) {
 	logger := log.FromContext(ctx)
 	args := []string{
@@ -161,7 +161,7 @@ func (o OnePasswordProvider) getItem(ctx context.Context, vault string) (*item, 
 }
 
 // createItem creates an empty item in the vault based on the project name
-// op item create --category Password --vault FTL --title ftl.projectname.secrets
+// op item create --category Password --vault FTL --title projectname.secrets
 func (o OnePasswordProvider) createItem(ctx context.Context, vault string) error {
 	args := []string{
 		"item", "create",
@@ -176,7 +176,7 @@ func (o OnePasswordProvider) createItem(ctx context.Context, vault string) error
 	return nil
 }
 
-// op item edit 'ftl.projectname.secrets' 'module.secretname[password]=value with space'
+// op item edit 'projectname.secrets' 'module.secretname[password]=value with space'
 func (o OnePasswordProvider) storeSecret(ctx context.Context, vault string, ref Ref, secret []byte) error {
 	module, ok := ref.Module.Get()
 	if !ok {
