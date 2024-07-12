@@ -34,5 +34,7 @@ const (
 	SameVariant EnumVariantConflictChild = iota
 )
 
-var duplConfig = ftl.Config[string]("FTL_ENDPOINT")
-var duplSecret = ftl.Secret[string]("FTL_ENDPOINT")
+var duplConfig = ftl.Config[string]("FTL_CONFIG_ENDPOINT")
+var duplSecret = ftl.Secret[string]("FTL_SECRET_ENDPOINT")
+
+var duplicateDeclName = ftl.Config[string]("PrivateData")
