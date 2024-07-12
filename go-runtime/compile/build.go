@@ -793,10 +793,19 @@ func getGoExternalType(fqName string) (_import string, _type string, err error) 
 	if err != nil {
 		return "", "", err
 	}
-	pkg := im[strings.LastIndex(im, "/")+1:]
+
+	var pkg string
 	if i := strings.LastIndex(im, " "); i != -1 {
 		// import has an alias and this will be the package
 		pkg = im[:i]
+		im = im[i+1:]
+	}
+	unquoted, err := strconv.Unquote(im)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to unquote import %q: %w", im, err)
+	}
+	if pkg == "" {
+		pkg = unquoted[strings.LastIndex(unquoted, "/")+1:]
 	}
 	typeName := fqName[strings.LastIndex(fqName, ".")+1:]
 	return im, fmt.Sprintf("%s.%s", pkg, typeName), nil

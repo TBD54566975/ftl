@@ -145,7 +145,8 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 	refResults := make(map[schema.RefKey]refResult)
 	extractedDecls := make(map[schema.Decl]types.Object)
 	// for identifying duplicates
-	declKeys := make(map[string]tuple.Pair[types.Object, schema.Position])
+	typeUniqueness := make(map[string]tuple.Pair[types.Object, schema.Position])
+	globalUniqueness := make(map[string]tuple.Pair[types.Object, schema.Position])
 	for _, r := range fResults {
 		fr, ok := r.(finalize.Result)
 		if !ok {
@@ -163,15 +164,23 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 		}
 		copyFailedRefs(refResults, fr.Failed)
 		for decl, obj := range fr.Extracted {
-			key := getDeclKey(decl)
-			if value, ok := declKeys[key]; ok && value.A != obj {
+			// check for duplicates and add the Decl to the module schema
+			typename := common.GetDeclTypeName(decl)
+			typeKey := fmt.Sprintf("%s-%s", typename, decl.GetName())
+			if value, ok := typeUniqueness[typeKey]; ok && value.A != obj {
 				// decls redeclared in subpackage
 				combined.Errors = append(combined.Errors, schema.Errorf(decl.Position(), decl.Position().Column,
-					"duplicate %s declaration for %q; already declared at %q", common.GetDeclTypeName(decl),
+					"duplicate %s declaration for %q; already declared at %q", typename,
 					combined.Module.Name+"."+decl.GetName(), value.B))
 				continue
 			}
-			declKeys[key] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
+			if value, ok := globalUniqueness[decl.GetName()]; ok && value.A != obj {
+				combined.Errors = append(combined.Errors, schema.Errorf(decl.Position(), decl.Position().Column,
+					"schema declaration with name %q already exists for module %q; previously declared at %q",
+					decl.GetName(), combined.Module.Name, value.B))
+			}
+			typeUniqueness[typeKey] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
+			globalUniqueness[decl.GetName()] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
 			extractedDecls[decl] = obj
 		}
 		maps.Copy(combined.NativeNames, fr.NativeNames)
@@ -349,20 +358,4 @@ func goQualifiedNameForWidenedType(obj types.Object, metadata []schema.Metadata)
 			common.GetNativeName(obj))
 	}
 	return nativeName, nil
-}
-
-// criteria for uniqueness within a given decl type
-// used for detecting duplicate declarations
-func getDeclKey(decl schema.Decl) string {
-	typename := common.GetDeclTypeName(decl)
-	switch d := decl.(type) {
-	case *schema.Config:
-		return fmt.Sprintf("%s-%s-%s", typename, d.Name, d.Type)
-	case *schema.Secret:
-		return fmt.Sprintf("%s-%s-%s", typename, d.Name, d.Type)
-	case *schema.Topic:
-		return fmt.Sprintf("%s-%s-%s", typename, d.Name, d.Event)
-	default:
-		return fmt.Sprintf("%s-%s", typename, d.GetName())
-	}
 }
