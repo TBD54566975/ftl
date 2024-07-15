@@ -15,7 +15,7 @@ func TestDatabase(t *testing.T) {
 		in.CopyModule("database"),
 		in.CreateDBAction("database", "testdb", false),
 		in.Deploy("database"),
-		in.Call("database", "insert", in.Obj{"data": "hello"}, nil),
+		in.Call[in.Obj, in.Obj]("database", "insert", in.Obj{"data": "hello"}, nil),
 		in.QueryRow("testdb", "SELECT data FROM requests", "hello"),
 
 		// run tests which should only affect "testdb_test"

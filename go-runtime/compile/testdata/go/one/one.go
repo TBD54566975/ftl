@@ -182,3 +182,21 @@ type NonFTLStruct struct {
 }
 
 func (NonFTLStruct) NonFTLInterface() {}
+
+//ftl:verb
+func StringToTime(ctx context.Context, input string) (time.Time, error) {
+	return time.Parse(time.RFC3339, input)
+}
+
+//ftl:verb
+func BatchStringToTime(ctx context.Context, input []string) ([]time.Time, error) {
+	var output = []time.Time{}
+	for _, s := range input {
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			return nil, err
+		}
+		output = append(output, t)
+	}
+	return output, nil
+}

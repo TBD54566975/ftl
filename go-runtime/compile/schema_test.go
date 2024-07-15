@@ -45,9 +45,9 @@ func TestExtractModuleSchema(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	assert.NoError(t, prebuildTestModule(t, "testdata/one", "testdata/two"))
+	assert.NoError(t, prebuildTestModule(t, "testdata/go/one", "testdata/go/two"))
 
-	r, err := ExtractModuleSchema("testdata/one", &schema.Schema{})
+	r, err := ExtractModuleSchema("testdata/go/one", &schema.Schema{})
 	assert.NoError(t, err)
 	actual := schema.Normalise(r.Module)
 	expected := `module one {
@@ -159,6 +159,8 @@ func TestExtractModuleSchema(t *testing.T) {
   data WithoutDirectiveStruct {
   }
 
+  verb batchStringToTime([String]) [Time]
+  
   export verb http(builtin.HttpRequest<one.Req>) builtin.HttpResponse<one.Resp, Unit>
     +ingress http GET /get
 
@@ -167,6 +169,8 @@ func TestExtractModuleSchema(t *testing.T) {
   verb sink(one.SinkReq) Unit
 
   verb source(Unit) one.SourceResp
+
+  verb stringToTime(String) Time
 
   verb verb(one.Req) one.Resp
 }
@@ -179,9 +183,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		t.SkipNow()
 	}
 
-	assert.NoError(t, prebuildTestModule(t, "testdata/two"))
+	assert.NoError(t, prebuildTestModule(t, "testdata/go/two"))
 
-	r, err := ExtractModuleSchema("testdata/two", &schema.Schema{})
+	r, err := ExtractModuleSchema("testdata/go/two", &schema.Schema{})
 	assert.NoError(t, err)
 	for _, e := range r.Errors {
 		// only warns
@@ -541,7 +545,6 @@ func TestErrorReporting(t *testing.T) {
 		`45:1-2: must have at most two parameters (context.Context, struct)`,
 		`45:69-69: unsupported response type "ftl/failing.Response"`,
 		`50:22-27: first parameter must be of type context.Context but is ftl/failing.Request`,
-		`50:37-43: second parameter must be a struct but is string`,
 		`50:53-53: unsupported response type "ftl/failing.Response"`,
 		`55:43-47: second parameter must not be ftl.Unit`,
 		`55:59-59: unsupported response type "ftl/failing.Response"`,
@@ -554,7 +557,6 @@ func TestErrorReporting(t *testing.T) {
 		`74:35-35: unsupported request type "ftl/failing.Request"`,
 		`74:48-48: must return an error but is ftl/failing.Response`,
 		`79:41-41: unsupported request type "ftl/failing.Request"`,
-		`79:55-55: first result must be a struct but is string`,
 		`79:63-63: must return an error but is string`,
 		`79:63-63: second result must not be ftl.Unit`,
 		// `86:1-2: duplicate declaration of "WrongResponse" at 79:6`,  TODO: fix this
