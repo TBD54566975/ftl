@@ -1,0 +1,27 @@
+StartTimestamp: 2024-07-15 18:35:28.374 +0000 UTC
+Timestamp: 2024-07-15 18:36:08.374 +0000 UTC
+Value: 18720272.000000
+Metric #16
+Descriptor:
+     -> Name: otelcol_process_runtime_total_sys_memory_bytes
+     -> Description: Total bytes of memory obtained from the OS (see 'go doc runtime.MemStats.Sys')
+     -> Unit: 
+     -> DataType: Gauge
+NumberDataPoints #0
+Data point attributes:
+     -> service_instance_id: Str(3a58f71f-fe6a-43d0-9cc4-58eeac12dca4)
+     -> service_name: Str(otelcol)
+     -> service_version: Str(0.104.0)
+StartTimestamp: 1970-01-01 00:00:00 +0000 UTC
+Timestamp: 2024-07-15 18:36:08.374 +0000 UTC
+Value: 27874568.000000
+Metric #17
+Descriptor:
+     -> Name: otelcol_exporter_sent_metric_points
+     -> Descript
+asdf
+Bucket #0 asdfasdfasdf
+blah
+Bucket #1 qpwerq
+qwer
+zdxf
