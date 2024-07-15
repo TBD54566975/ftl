@@ -175,9 +175,8 @@ debug *args:
   dlv_pid=$!
   wait "$dlv_pid"
 
-# grpcPort is used for observing the system via otel.
 # otel is short for OpenTelemetry.
-grpcPort := `cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //'`
+otelGrpcPort := `cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //'`
 
 # Run otel collector behind a webapp to stream local (i.e. from ftl dev) signals to your
 # browser. Ctrl+C to stop. To start FTL, open another terminal tab and run `just otel-dev`
@@ -195,7 +194,7 @@ otel-ui:
     echo "Installing otel-desktop-viewer..."
     go install github.com/CtrlSpice/otel-desktop-viewer@latest
   fi
-  otel-desktop-viewer --grpc {{grpcPort}}
+  otel-desktop-viewer --grpc {{otelGrpcPort}}
 
 # Run otel collector in a docker container to stream local (i.e. from ftl dev) signals to
 # the terminal tab where this is running. To start FTL, opepn another terminal tab and run
@@ -203,7 +202,7 @@ otel-ui:
 # `just otel-stop` in a third terminal tab.
 otel-stream:
   docker run \
-    -p {{grpcPort}}:{{grpcPort}} \
+    -p {{otelGrpcPort}}:{{otelGrpcPort}} \
     -p 55679:55679 \
     otel/opentelemetry-collector:0.104.0
 
