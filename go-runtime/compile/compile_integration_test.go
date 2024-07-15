@@ -4,6 +4,7 @@ package compile_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 
@@ -44,6 +45,18 @@ func TestNonFTLTypes(t *testing.T) {
 		in.Deploy("external"),
 		in.Call("external", "echo", in.Obj{"message": "hello"}, func(t testing.TB, response in.Obj) {
 			assert.Equal(t, "hello", response["message"])
+		}),
+	)
+}
+
+func TestNonStructRequestResponse(t *testing.T) {
+	in.Run(t, "",
+		in.CopyModule("two"),
+		in.Deploy("two"),
+		in.CopyModule("one"),
+		in.Deploy("one"),
+		in.Call("one", "stringToTime", "1985-04-12T23:20:50.52Z", func(t testing.TB, response time.Time) {
+			assert.Equal(t, time.Date(1985, 04, 12, 23, 20, 50, 520_000_000, time.UTC), response)
 		}),
 	)
 }

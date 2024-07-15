@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
@@ -284,9 +285,10 @@ type Obj map[string]any
 // Call a verb.
 //
 // "check" may be nil
-func Call(module, verb string, request Obj, check func(t testing.TB, response Obj)) Action {
+func Call[Req any, Resp any](module, verb string, request Req, check func(t testing.TB, response Resp)) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Calling %s.%s", module, verb)
+		assert.False(t, unicode.IsUpper([]rune(verb)[0]), "verb %q must start with an lowercase letter", verb)
 		data, err := json.Marshal(request)
 		assert.NoError(t, err)
 		resp, err := ic.Verbs.Call(ic, connect.NewRequest(&ftlv1.CallRequest{
@@ -294,7 +296,7 @@ func Call(module, verb string, request Obj, check func(t testing.TB, response Ob
 			Body: data,
 		}))
 		assert.NoError(t, err)
-		var response Obj
+		var response Resp
 		assert.Zero(t, resp.Msg.GetError(), "verb failed: %s", resp.Msg.GetError().GetMessage())
 		err = json.Unmarshal(resp.Msg.GetBody(), &response)
 		assert.NoError(t, err)

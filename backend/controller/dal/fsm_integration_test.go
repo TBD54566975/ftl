@@ -26,34 +26,34 @@ func TestFSM(t *testing.T) {
 		in.CopyModule("fsm"),
 		in.Deploy("fsm"),
 
-		in.Call("fsm", "sendOne", in.Obj{"instance": "1"}, nil),
-		in.Call("fsm", "sendOne", in.Obj{"instance": "2"}, nil),
+		in.Call[in.Obj, in.Obj]("fsm", "sendOne", in.Obj{"instance": "1"}, nil),
+		in.Call[in.Obj, in.Obj]("fsm", "sendOne", in.Obj{"instance": "2"}, nil),
 		in.FileContains(logFilePath, "start 1"),
 		in.FileContains(logFilePath, "start 2"),
 		fsmInState("1", "running", "fsm.start"),
 		fsmInState("2", "running", "fsm.start"),
 
-		in.Call("fsm", "sendOne", in.Obj{"instance": "1"}, nil),
+		in.Call[in.Obj, in.Obj]("fsm", "sendOne", in.Obj{"instance": "1"}, nil),
 		in.FileContains(logFilePath, "middle 1"),
 		fsmInState("1", "running", "fsm.middle"),
 
-		in.Call("fsm", "sendOne", in.Obj{"instance": "1"}, nil),
+		in.Call[in.Obj, in.Obj]("fsm", "sendOne", in.Obj{"instance": "1"}, nil),
 		in.FileContains(logFilePath, "end 1"),
 		fsmInState("1", "completed", "fsm.end"),
 
-		in.Fail(in.Call("fsm", "sendOne", in.Obj{"instance": "1"}, nil),
+		in.Fail(in.Call[in.Obj, in.Obj]("fsm", "sendOne", in.Obj{"instance": "1"}, nil),
 			"FSM instance 1 is already in state fsm.end"),
 
 		// Invalid state transition
-		in.Fail(in.Call("fsm", "sendTwo", in.Obj{"instance": "2"}, nil),
+		in.Fail(in.Call[in.Obj, in.Obj]("fsm", "sendTwo", in.Obj{"instance": "2"}, nil),
 			"invalid state transition"),
 
-		in.Call("fsm", "sendOne", in.Obj{"instance": "2"}, nil),
+		in.Call[in.Obj, in.Obj]("fsm", "sendOne", in.Obj{"instance": "2"}, nil),
 		in.FileContains(logFilePath, "middle 2"),
 		fsmInState("2", "running", "fsm.middle"),
 
 		// Invalid state transition
-		in.Fail(in.Call("fsm", "sendTwo", in.Obj{"instance": "2"}, nil),
+		in.Fail(in.Call[in.Obj, in.Obj]("fsm", "sendTwo", in.Obj{"instance": "2"}, nil),
 			"invalid state transition"),
 	)
 }
@@ -86,14 +86,14 @@ func TestFSMRetry(t *testing.T) {
 		in.Build("fsmretry"),
 		in.Deploy("fsmretry"),
 		// start 2 FSM instances
-		in.Call("fsmretry", "start", in.Obj{"id": "1"}, func(t testing.TB, response in.Obj) {}),
-		in.Call("fsmretry", "start", in.Obj{"id": "2"}, func(t testing.TB, response in.Obj) {}),
+		in.Call("fsmretry", "start", in.Obj{"id": "1"}, func(t testing.TB, response any) {}),
+		in.Call("fsmretry", "start", in.Obj{"id": "2"}, func(t testing.TB, response any) {}),
 
 		in.Sleep(2*time.Second),
 
 		// transition the FSM, should fail each time.
-		in.Call("fsmretry", "startTransitionToTwo", in.Obj{"id": "1"}, func(t testing.TB, response in.Obj) {}),
-		in.Call("fsmretry", "startTransitionToThree", in.Obj{"id": "2"}, func(t testing.TB, response in.Obj) {}),
+		in.Call("fsmretry", "startTransitionToTwo", in.Obj{"id": "1"}, func(t testing.TB, response any) {}),
+		in.Call("fsmretry", "startTransitionToThree", in.Obj{"id": "2"}, func(t testing.TB, response any) {}),
 
 		in.Sleep(8*time.Second), //5s is longest run of retries
 

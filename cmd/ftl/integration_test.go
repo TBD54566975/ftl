@@ -28,7 +28,7 @@ func TestBox(t *testing.T) {
 		CopyModule("echo"),
 		Exec("ftl", "box", "echo", "--compose=echo-compose.yml"),
 		Exec("docker", "compose", "-f", "echo-compose.yml", "up", "--wait"),
-		Call("echo", "echo", Obj{"name": "Alice"}, nil),
+		Call[Obj, Obj]("echo", "echo", Obj{"name": "Alice"}, nil),
 		Exec("docker", "compose", "-f", "echo-compose.yml", "down", "--rmi", "local"),
 	)
 }

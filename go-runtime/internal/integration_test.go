@@ -20,7 +20,7 @@ func TestRealMap(t *testing.T) {
 		Call("mapper", "get", Obj{}, func(t testing.TB, response Obj) {
 			assert.Equal(t, Obj{"underlyingCounter": 2.0, "mapCounter": 1.0, "mapped": "0"}, response)
 		}),
-		Call("mapper", "inc", Obj{}, nil),
+		Call[Obj, Obj]("mapper", "inc", Obj{}, nil),
 		Call("mapper", "get", Obj{}, func(t testing.TB, response Obj) {
 			assert.Equal(t, Obj{"underlyingCounter": 3.0, "mapCounter": 2.0, "mapped": "1"}, response)
 		}),

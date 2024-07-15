@@ -45,9 +45,9 @@ func TestExtractModuleSchema(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	assert.NoError(t, prebuildTestModule(t, "testdata/one", "testdata/two"))
+	assert.NoError(t, prebuildTestModule(t, "testdata/go/one", "testdata/go/two"))
 
-	r, err := ExtractModuleSchema("testdata/one", &schema.Schema{})
+	r, err := ExtractModuleSchema("testdata/go/one", &schema.Schema{})
 	assert.NoError(t, err)
 	actual := schema.Normalise(r.Module)
 	expected := `module one {
@@ -183,9 +183,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		t.SkipNow()
 	}
 
-	assert.NoError(t, prebuildTestModule(t, "testdata/two"))
+	assert.NoError(t, prebuildTestModule(t, "testdata/go/two"))
 
-	r, err := ExtractModuleSchema("testdata/two", &schema.Schema{})
+	r, err := ExtractModuleSchema("testdata/go/two", &schema.Schema{})
 	assert.NoError(t, err)
 	for _, e := range r.Errors {
 		// only warns

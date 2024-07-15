@@ -2,7 +2,6 @@ package one
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"ftl/builtin"
@@ -186,10 +185,18 @@ func (NonFTLStruct) NonFTLInterface() {}
 
 //ftl:verb
 func StringToTime(ctx context.Context, input string) (time.Time, error) {
-	return time.Time{}, errors.New("not implemented")
+	return time.Parse(time.RFC3339, input)
 }
 
 //ftl:verb
 func BatchStringToTime(ctx context.Context, input []string) ([]time.Time, error) {
-	return nil, errors.New("not implemented")
+	var output = []time.Time{}
+	for _, s := range input {
+		t, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			return nil, err
+		}
+		output = append(output, t)
+	}
+	return output, nil
 }
