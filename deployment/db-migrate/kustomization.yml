@@ -3,4 +3,5 @@ resources:
 configMapGenerator:
 - name: ftl-db-migrate-config
   files:
-    - schema/001_init.sql
+    - schema/20231103205514_init.sql
+    - schema/20240704103403_create_module_secrets.sql

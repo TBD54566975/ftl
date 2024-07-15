@@ -1,0 +1,32 @@
+_help:
+  @just -l
+
+deploy:
+  kubectl kustomize --load-restrictor=LoadRestrictionsNone | kubectl apply -f -
+
+delete:
+  kubectl kustomize --load-restrictor=LoadRestrictionsNone | kubectl delete -f -
+
+delete-db:
+  kubectl delete pvc postgres-db-ftl-pg-cluster-1-0
+
+events:
+  kubectl get events -w
+
+ps:
+  kubectl get deployment,pod,statefulset,svc,configmap,pv,pvc,ingress -o wide
+
+logs *args:
+  kubectl logs -f {{args}}
+
+exec pod *args:
+  kubectl exec -t {{pod}} -- {{args}}
+
+enter pod *args="bash":
+  kubectl exec -it {{pod}} -- {{args}}
+
+psql:
+  just enter statefulset.apps/ftl-pg-cluster-1 env PGPASSWORD=secret psql -U postgres ftl
+
+ftl-status:
+  just exec deployment/ftl-controller ./ftl status

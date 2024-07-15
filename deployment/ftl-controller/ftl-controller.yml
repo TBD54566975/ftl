@@ -24,11 +24,14 @@ spec:
                   fieldPath: status.podIP
             - name: FTL_CONTROLLER_DSN
               value: "postgres://ftl-pg-cluster/ftl?sslmode=disable&user=postgres&password=secret"
+            - name: FTL_CONTROLLER_INGRESS_BIND
+              value: "http://$(MY_POD_IP):8891"
             - name: FTL_CONTROLLER_BIND
               value: "http://$(MY_POD_IP):8892"
             - name: FTL_CONTROLLER_ADVERTISE
               value: ""
           ports:
+            - containerPort: 8891
             - containerPort: 8892
           readinessProbe:
             httpGet:
@@ -48,9 +51,13 @@ metadata:
   name: ftl-controller
 spec:
   ports:
-    - name: 80-8892
-      port: 80
+    - name: ingress
       protocol: TCP
+      port: 8891
+      targetPort: 8891
+    - name: controller
+      protocol: TCP
+      port: 8892
       targetPort: 8892
   selector:
     app: ftl-controller
@@ -67,21 +74,21 @@ spec:
 #    name: ftl-controller
 #  minReplicas: 1
 #  maxReplicas: 10
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: ftl-controller
-  annotations:
-    ingress.kubernetes.io/ssl-redirect: "false"
-spec:
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: ftl-controller
-                port:
-                  number: 80
+#---
+#apiVersion: networking.k8s.io/v1
+#kind: Ingress
+#metadata:
+#  name: ftl-controller
+#  annotations:
+#    ingress.kubernetes.io/ssl-redirect: "false"
+#spec:
+#  rules:
+#    - http:
+#        paths:
+#          - path: /
+#            pathType: Prefix
+#            backend:
+#              service:
+#                name: ftl-controller
+#                port:
+#                  number: 8892
