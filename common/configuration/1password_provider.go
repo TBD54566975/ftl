@@ -15,7 +15,6 @@ import (
 
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // OnePasswordProvider is a configuration provider that reads passwords from
@@ -41,35 +40,46 @@ func (o OnePasswordProvider) SyncInterval() time.Duration {
 	return time.Second * 10
 }
 
-func (o OnePasswordProvider) Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
+// Sync will fetch all secrets from the 1Password vault and store them in the values map.
+// Do not just sync the o.Vault, instead find all vaults found in entries and sync them.
+// If there are no entries, we should not attempt any access of 1Password.
+func (o OnePasswordProvider) Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref, SyncedValue]) error {
 	logger := log.FromContext(ctx)
-	if o.Vault == "" {
-		return fmt.Errorf("1Password vault not set: use --opvault flag to specify the vault")
-	}
 	if err := checkOpBinary(); err != nil {
 		return err
 	}
-	full, err := o.getItem(ctx, o.Vault)
-	if err != nil {
-		return fmt.Errorf("get item failed: %w", err)
-	}
-
-	for _, field := range full.Fields {
-		ref, err := ParseRef(field.Label)
-		if err != nil {
-			logger.Warnf("invalid field label found in 1Password: %q", field.Label)
+	// find vaults
+	vaults := map[string]bool{}
+	for _, e := range entries {
+		vault := e.Accessor.Host
+		if vault == "" {
+			logger.Warnf("empty vault name for %s", e.Ref)
 			continue
 		}
-		values.Store(ref, SyncedValue{
-			Value: []byte(field.Value),
-		})
+		vaults[e.Accessor.Host] = true
 	}
-
+	// get all secrets from all vaults
+	refs := map[Ref]bool{}
+	for vault := range vaults {
+		full, err := o.getItem(ctx, vault)
+		if err != nil {
+			return fmt.Errorf("get item failed: %w", err)
+		}
+		for _, field := range full.Fields {
+			ref, err := ParseRef(field.Label)
+			if err != nil {
+				logger.Warnf("invalid field label found in 1Password: %q", field.Label)
+				continue
+			}
+			refs[ref] = true
+			values.Store(ref, SyncedValue{
+				Value: []byte(field.Value),
+			})
+		}
+	}
 	// delete old values
 	values.Range(func(ref Ref, _ SyncedValue) bool {
-		if _, ok := slices.Find(full.Fields, func(item entry) bool {
-			return item.Label == ref.String()
-		}); !ok {
+		if _, ok := refs[ref]; !ok {
 			values.Delete(ref)
 		}
 		return true
