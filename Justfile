@@ -18,6 +18,9 @@ PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/pro
 _help:
   @just -l
 
+k8s command="_help" *args="":
+  just deployment/{{command}} {{args}}
+
 # Run errtrace on Go files to add stacks
 errtrace:
   git ls-files -z -- '*.go' | grep -zv /_ | xargs -0 errtrace -w && go mod tidy

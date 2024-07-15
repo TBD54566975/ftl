@@ -46,26 +46,6 @@ info: Listening on http://0.0.0.0:8892
 info: Starting DB listener
 ```
 
-## To deploy a local ftl-controller or ftl-runner image
-
-Build the image locally:
-
-```
-make docker-controller
-```
-
-Tag the image for the local registry:
-
-```
-docker tag ftl0/ftl-controller:latest localhost:5000/ftl-controller
-```
-
-Push the image to the local registry:
-
-```
-docker push localhost:5000/ftl-controller
-```
-
 ## Debugging
 
 To exec into the k3d node:
