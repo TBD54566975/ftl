@@ -32,10 +32,6 @@ type directive interface {
 	GetPosition() schema.Position
 }
 
-type exportable interface {
-	IsExported() bool
-}
-
 type directiveVerb struct {
 	Pos schema.Position
 

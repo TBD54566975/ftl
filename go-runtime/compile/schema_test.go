@@ -532,7 +532,7 @@ func TestErrorReporting(t *testing.T) {
 		`13:13-34: expected string literal for argument at index 0`,
 		`16:18-18: duplicate config declaration for "failing.FTL_CONFIG_ENDPOINT"; already declared at "37:18"`,
 		`19:18-18: duplicate secret declaration for "failing.FTL_SECRET_ENDPOINT"; already declared at "38:18"`,
-		`22:14-44: duplicate database declaration at 21:14-44`,
+		`22:14-14: duplicate database declaration for "failing.testDb"; already declared at "41:14"`,
 		`25:2-10: unsupported type "error" for field "BadParam"`,
 		`28:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
 		`31:3-3: unexpected directive "ftl:export" attached for verb, did you mean to use '//ftl:verb export' instead?`,

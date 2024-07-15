@@ -15,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal/goast"
-	"github.com/TBD54566975/golang-tools/go/ast/astutil"
 	"github.com/TBD54566975/golang-tools/go/packages"
 )
 
@@ -26,7 +25,6 @@ var (
 	ftlFSMFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.FSM"
 	ftlTransitionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Transition"
 	ftlStartFuncPath      = "github.com/TBD54566975/ftl/go-runtime/ftl.Start"
-	ftlPostgresDBFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
 )
 
 // NativeNames is a map of top-level declarations to their native Go names.
@@ -125,9 +123,6 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 
 	case ftlFSMFuncPath:
 		parseFSMDecl(pctx, node, stack)
-
-	case ftlPostgresDBFuncPath:
-		parseDatabaseDecl(pctx, node, schema.PostgresDatabaseType)
 	}
 }
 
@@ -293,31 +288,6 @@ func parseFSMTransition(pctx *parseContext, node *ast.CallExpr, fn *types.Func, 
 	}
 }
 
-func parseDatabaseDecl(pctx *parseContext, node *ast.CallExpr, dbType string) {
-	name, schemaErr := extractStringLiteralArg(node, 0)
-	if schemaErr != nil {
-		pctx.errors.add(schemaErr)
-		return
-	}
-
-	// Check for duplicates
-	_, endCol := goNodePosToSchemaPos(node)
-	for _, d := range pctx.module.Decls {
-		db, ok := d.(*schema.Database)
-		if ok && db.Name == name {
-			pctx.errors.add(errorf(node, "duplicate database declaration at %d:%d-%d", db.Pos.Line, db.Pos.Column, endCol))
-			return
-		}
-	}
-
-	decl := &schema.Database{
-		Pos:  goPosToSchemaPos(node.Pos()),
-		Name: name,
-		Type: dbType,
-	}
-	pctx.module.Decls = append(pctx.module.Decls, decl)
-}
-
 // varDeclForCall finds the variable being set in the stack
 func varDeclForStack(stack []ast.Node) (varDecl *ast.GenDecl, ok bool) {
 	for i := len(stack) - 1; i >= 0; i-- {
@@ -412,101 +382,4 @@ func newParseContext(pkg *packages.Package, pkgs []*packages.Package, sch *schem
 		schema:      sch,
 		topicsByPos: map[schema.Position]*schema.Topic{},
 	}
-}
-
-// pathEnclosingInterval returns the PackageInfo and ast.Node that
-// contain source interval [start, end), and all the node's ancestors
-// up to the AST root.  It searches all ast.Files of all packages in prog.
-// exact is defined as for astutil.PathEnclosingInterval.
-//
-// The zero value is returned if not found.
-func (p *parseContext) pathEnclosingInterval(start, end token.Pos) (pkg *packages.Package, path []ast.Node, exact bool) {
-	for _, info := range p.pkgs {
-		for _, f := range info.Syntax {
-			if f.Pos() == token.NoPos {
-				// This can happen if the parser saw
-				// too many errors and bailed out.
-				// (Use parser.AllErrors to prevent that.)
-				continue
-			}
-			if !tokenFileContainsPos(fset.File(f.Pos()), start) {
-				continue
-			}
-			if path, exact := astutil.PathEnclosingInterval(f, start, end); path != nil {
-				return info, path, exact
-			}
-		}
-	}
-	return nil, nil, false
-}
-
-func (p *parseContext) isPathInPkg(path string) bool {
-	if path == p.pkg.PkgPath {
-		return true
-	}
-	return strings.HasPrefix(path, p.pkg.PkgPath+"/")
-}
-
-func (p *parseContext) getDeclForTypeName(name string) optional.Option[schema.Decl] {
-	for _, decl := range p.module.Decls {
-		nativeName, ok := p.nativeNames[decl]
-		if !ok {
-			continue
-		}
-		if nativeName != p.pkg.Name+"."+name {
-			continue
-		}
-		return optional.Some(decl)
-	}
-	return optional.None[schema.Decl]()
-}
-
-func (p *parseContext) markAsExported(node schema.Node) {
-	_ = schema.Visit(node, func(n schema.Node, next func() error) error { //nolint:errcheck
-		if decl, ok := n.(schema.Decl); ok {
-			switch decl := decl.(type) {
-			case *schema.Enum:
-				decl.Export = true
-			case *schema.TypeAlias:
-				decl.Export = true
-			case *schema.Data:
-				decl.Export = true
-			case *schema.Verb:
-				decl.Export = true
-			case *schema.Topic:
-				decl.Export = true
-			case *schema.Config, *schema.Secret, *schema.Database, *schema.FSM, *schema.Subscription:
-				return next()
-			}
-		} else if r, ok := n.(*schema.Ref); ok {
-			if r.Module != "" && r.Module != p.module.Name {
-				return next()
-			}
-			for _, d := range p.module.Decls {
-				switch d := d.(type) {
-				case *schema.Enum, *schema.TypeAlias, *schema.Data, *schema.Topic, *schema.Subscription:
-					if named, ok := d.(schema.Named); !ok || named.GetName() != r.Name {
-						continue
-					}
-				case *schema.Verb, *schema.Config, *schema.Secret, *schema.Database, *schema.FSM:
-					// does not support implicit exporting
-					continue
-				default:
-					panic("unexpected decl type")
-				}
-				if exportableDecl, ok := d.(exportable); ok {
-					if !exportableDecl.IsExported() {
-						p.markAsExported(d)
-					}
-				}
-			}
-		}
-		return next()
-	})
-}
-
-func tokenFileContainsPos(f *token.File, pos token.Pos) bool {
-	p := int(pos)
-	base := f.Base()
-	return base <= p && p < base+f.Size()
 }
