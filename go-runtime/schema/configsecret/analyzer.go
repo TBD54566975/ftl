@@ -73,6 +73,7 @@ func extractConfigSecret[T schema.Decl](
 	var t T
 	if !schema.ValidateName(name) {
 		common.Errorf(pass, node, "%s names must be valid identifiers", common.GetDeclTypeName(t))
+		return optional.None[schema.Decl]()
 	}
 
 	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert

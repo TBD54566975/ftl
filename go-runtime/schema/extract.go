@@ -7,6 +7,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/call"
 	"github.com/TBD54566975/ftl/go-runtime/schema/configsecret"
 	"github.com/TBD54566975/ftl/go-runtime/schema/data"
+	"github.com/TBD54566975/ftl/go-runtime/schema/database"
 	"github.com/TBD54566975/ftl/go-runtime/schema/enum"
 	"github.com/TBD54566975/ftl/go-runtime/schema/subscription"
 	"github.com/TBD54566975/ftl/go-runtime/schema/topic"
@@ -53,6 +54,7 @@ var Extractors = [][]*analysis.Analyzer{
 	{
 		configsecret.Extractor,
 		data.Extractor,
+		database.Extractor,
 		topic.Extractor,
 		typealias.Extractor,
 		typeenumvariant.Extractor,
