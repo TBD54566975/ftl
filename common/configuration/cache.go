@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/benbjohnson/clock"
@@ -157,18 +156,22 @@ func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
 			if len(providersToSync) == 0 {
 				continue
 			}
-			list, err := c.listProvider.List(ctx)
+			entries, err := c.listProvider.List(ctx)
 			if err != nil {
 				logger.Warnf("could not sync: could not get list: %v", err)
 				continue
 			}
 			for _, cp := range providersToSync {
-				_, hasValues := slices.Find(list, func(e Entry) bool {
-					return ProviderKeyForAccessor(e.Accessor) == cp.provider.Key()
-				})
+				entriesForProvider := []Entry{}
+				for _, e := range entries {
+					if ProviderKeyForAccessor(e.Accessor) != cp.provider.Key() {
+						continue
+					}
+					entriesForProvider = append(entriesForProvider, e)
+				}
 				wg.Add(1)
 				go func(cp *cacheProvider[R]) {
-					cp.sync(ctx, clock, hasValues)
+					cp.sync(ctx, entriesForProvider, clock)
 					wg.Done()
 				}(cp)
 			}
@@ -190,11 +193,6 @@ func (c *cache[R]) processEvent(e updateCacheEvent) {
 type cacheProvider[R Role] struct {
 	provider AsynchronousProvider[R]
 	values   *xsync.MapOf[Ref, SyncedValue]
-
-	// isActive is the provider is used by any value
-	// When inactive, the provider will not be synced. This helps avoid accessing resources that are not needed, like 1Password.
-	// When the provider stops being used, we do one final sync to ensure the cache is up-to-date
-	isActive bool
 
 	loaded     chan bool  // closed when values have been synced for the first time
 	loadedOnce *sync.Once // ensures we close the loaded channel only once
@@ -228,20 +226,11 @@ func (c *cacheProvider[R]) needsSync(clock clock.Clock) bool {
 }
 
 // sync executes sync on the provider and updates the cacheProvider sync state
-func (c *cacheProvider[R]) sync(ctx context.Context, clock clock.Clock, hasValues bool) {
+func (c *cacheProvider[R]) sync(ctx context.Context, entries []Entry, clock clock.Clock) {
 	logger := log.FromContext(ctx)
 
-	if !hasValues && !c.isActive {
-		// skip
-		c.loadedOnce.Do(func() {
-			// treat this as a successful initial sync, so we don't ever block trying to access this provider
-			close(c.loaded)
-		})
-		return
-	}
-
 	c.lastSyncAttempt = optional.Some(clock.Now())
-	err := c.provider.Sync(ctx, c.values)
+	err := c.provider.Sync(ctx, entries, c.values)
 	if err != nil {
 		logger.Errorf(err, "Error syncing %s", c.provider.Key())
 		if backoff, ok := c.currentBackoff.Get(); ok {
@@ -256,7 +245,6 @@ func (c *cacheProvider[R]) sync(ctx context.Context, clock clock.Clock, hasValue
 	c.loadedOnce.Do(func() {
 		close(c.loaded)
 	})
-	c.isActive = hasValues
 }
 
 // processEvent updates the cache after a value was set or deleted

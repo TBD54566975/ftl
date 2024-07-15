@@ -117,9 +117,9 @@ type AsynchronousProvider[R Role] interface {
 	// SyncInterval() provides the expected time between syncs.
 	// If Sync() returns an error, sync will be retried with an exponential backoff.
 	//
-	// Sync is only called if the Router has keys referring to this provider.
-	// If the Router did have keys for this provider but removed them, one more round of sync is executed until Sync() will stop being called
-	Sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error
+	// Values should be updated by Sync().
+	// An array of known entries from the router is provided in case it is helpful, but the provider can store any values it wants.
+	Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref, SyncedValue]) error
 }
 
 type VersionToken any
