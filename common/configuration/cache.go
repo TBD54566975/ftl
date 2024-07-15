@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/benbjohnson/clock"
@@ -162,13 +163,9 @@ func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
 				continue
 			}
 			for _, cp := range providersToSync {
-				entriesForProvider := []Entry{}
-				for _, e := range entries {
-					if ProviderKeyForAccessor(e.Accessor) != cp.provider.Key() {
-						continue
-					}
-					entriesForProvider = append(entriesForProvider, e)
-				}
+				entriesForProvider := slices.Filter(entries, func(e Entry) bool {
+					return ProviderKeyForAccessor(e.Accessor) == cp.provider.Key()
+				})
 				wg.Add(1)
 				go func(cp *cacheProvider[R]) {
 					cp.sync(ctx, entriesForProvider, clock)

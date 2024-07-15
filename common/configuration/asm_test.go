@@ -174,9 +174,9 @@ func TestLeaderSync(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	sm, _, _, externalClient, clock, _ := setUp(ctx, t, None[Router[Secrets]]())
 	testClientSync(ctx, t, sm, externalClient, true, func(percentage float64) {
-		clock.Add(time.Duration(percentage) * asmLeaderSyncInterval)
+		clock.Add(time.Second * (time.Duration(asmLeaderSyncInterval.Seconds()*percentage) + 1.0))
 		if percentage == 1.0 {
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Second * 4)
 		}
 	})
 }
@@ -202,15 +202,15 @@ func TestFollowerSync(t *testing.T) {
 
 	testClientSync(ctx, t, sm, externalClient, false, func(percentage float64) {
 		// sync leader
-		leaderClock.Add(time.Duration(percentage) * asmLeaderSyncInterval)
+		leaderClock.Add(time.Second * (time.Duration(asmLeaderSyncInterval.Seconds()*percentage) + 1.0))
 		if percentage == 1.0 {
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Second * 4)
 		}
 
 		// then sync follower
-		followerClock.Add(time.Duration(percentage) * asmFollowerSyncInterval)
+		followerClock.Add(time.Second * (time.Duration(asmFollowerSyncInterval.Seconds()*percentage) + 1.0))
 		if percentage == 1.0 {
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Second * 4)
 		}
 	})
 }
