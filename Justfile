@@ -210,7 +210,7 @@ otel-stream:
   docker run \
     -p {{otelGrpcPort}}:{{otelGrpcPort}} \
     -p 55679:55679 \
-    otel/opentelemetry-collector:0.104.0 | sed 's/\([A-Z].* \)/\
+    otel/opentelemetry-collector:0.104.0 2>&1 | sed 's/\([A-Z].* #\)/\
   \1/g'
 
 # Stop the docker container running otel.
