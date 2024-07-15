@@ -178,14 +178,34 @@ debug *args:
   dlv_pid=$!
   wait "$dlv_pid"
 
+# otel is short for OpenTelemetry.
+otelGrpcPort := `cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //'`
+
+# Run otel collector behind a webapp to stream local (i.e. from ftl dev) signals to your
+# browser. Ctrl+C to stop. To start FTL, open another terminal tab and run `just otel-dev`
+# with any args you would pass to `ftl dev`.
+#
+# CAUTION: The version of otel-desktop-viewer we are running with only has support for
+# traces, NOT metrics or logs. If you want to view metrics or logs, you will need to use
+# `just otel-stream` below. The latest version of otel-desktop-viewer has support for
+# metrics and logs, but it is not available to be installed yet. Refer to issue:
+#     https://github.com/CtrlSpice/otel-desktop-viewer/issues/146
+otel-ui:
+  #!/bin/bash
+
+  if ! test -f $(git rev-parse --show-toplevel)/.hermit/go/bin/otel-desktop-viewer ; then
+    echo "Installing otel-desktop-viewer..."
+    go install github.com/CtrlSpice/otel-desktop-viewer@latest
+  fi
+  otel-desktop-viewer --grpc {{otelGrpcPort}}
+
 # Run otel collector in a docker container to stream local (i.e. from ftl dev) signals to
 # the terminal tab where this is running. To start FTL, opepn another terminal tab and run
 # `just otel-dev` with any args you would pass to `ftl dev`. To stop the otel stream, run
 # `just otel-stop` in a third terminal tab.
-grpcPort := `cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //'`
 otel-stream:
   docker run \
-    -p {{grpcPort}}:{{grpcPort}} \
+    -p {{otelGrpcPort}}:{{otelGrpcPort}} \
     -p 55679:55679 \
     otel/opentelemetry-collector:0.104.0
 
