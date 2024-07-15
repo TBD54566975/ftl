@@ -99,6 +99,22 @@ type ExternalType struct{}
 
 func (*ExternalType) schemaFactValue() {}
 
+// FunctionCall is a fact for marking an outbound function call on a function.
+type FunctionCall struct {
+	// The function being called.
+	Callee types.Object
+}
+
+func (*FunctionCall) schemaFactValue() {}
+
+// VerbCall is a fact for marking a call to an FTL verb on a function.
+type VerbCall struct {
+	// The verb being called.
+	VerbRef *schema.Ref
+}
+
+func (*VerbCall) schemaFactValue() {}
+
 // MarkSchemaDecl marks the given object as having been extracted to the given schema decl.
 func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	fact := newFact(pass, obj)
@@ -145,6 +161,20 @@ func MarkMaybeValueEnumVariant(pass *analysis.Pass, obj types.Object, variant *s
 func MarkMaybeTypeEnum(pass *analysis.Pass, obj types.Object, enum *schema.Enum) {
 	fact := newFact(pass, obj)
 	fact.Add(&MaybeTypeEnum{Enum: enum})
+	pass.ExportObjectFact(obj, fact)
+}
+
+// MarkFunctionCall marks the given object as having an outbound function call.
+func MarkFunctionCall(pass *analysis.Pass, obj types.Object, callee types.Object) {
+	fact := newFact(pass, obj)
+	fact.Add(&FunctionCall{Callee: callee})
+	pass.ExportObjectFact(obj, fact)
+}
+
+// MarkVerbCall marks the given object as having a call to an FTL verb.
+func MarkVerbCall(pass *analysis.Pass, obj types.Object, verbRef *schema.Ref) {
+	fact := newFact(pass, obj)
+	fact.Add(&VerbCall{VerbRef: verbRef})
 	pass.ExportObjectFact(obj, fact)
 }
 
@@ -197,9 +227,9 @@ func GetAllFactsExtractionStatus(pass *analysis.Pass) map[types.Object]SchemaFac
 	return facts
 }
 
-// GetAllFacts returns all facts of the provided type marked on objects, across the current pass and results from
+// GetAllFactsOfType returns all facts of the provided type marked on objects, across the current pass and results from
 // prior passes. If multiple of the same fact type are marked on a single object, the first fact is returned.
-func GetAllFacts[T SchemaFactValue](pass *analysis.Pass) map[types.Object]T {
+func GetAllFactsOfType[T SchemaFactValue](pass *analysis.Pass) map[types.Object]T {
 	return getFactsScoped[T](allFacts(pass))
 }
 
@@ -261,6 +291,18 @@ func GetFactsForObject[T SchemaFactValue](pass *analysis.Pass, obj types.Object)
 				facts = append(facts, f)
 			}
 		}
+	}
+	return facts
+}
+
+func GetAllFacts(pass *analysis.Pass) map[types.Object][]SchemaFactValue {
+	facts := make(map[types.Object][]SchemaFactValue)
+	for _, fact := range allFacts(pass) {
+		sf, ok := fact.Fact.(SchemaFact)
+		if !ok {
+			continue
+		}
+		facts[fact.Object] = sf.Get()
 	}
 	return facts
 }

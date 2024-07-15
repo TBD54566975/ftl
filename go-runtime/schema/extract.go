@@ -3,6 +3,8 @@ package schema
 import (
 	"fmt"
 	"go/types"
+	"slices"
+	"strings"
 
 	"github.com/TBD54566975/ftl/go-runtime/schema/call"
 	"github.com/TBD54566975/ftl/go-runtime/schema/configsecret"
@@ -14,6 +16,8 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenum"
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
+	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
+	"github.com/TBD54566975/golang-tools/go/packages"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/tuple"
 	sets "github.com/deckarep/golang-set/v2"
@@ -29,8 +33,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/verb"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
-	"github.com/TBD54566975/golang-tools/go/packages"
 )
 
 // Extractors contains all schema extractors that will run.
@@ -44,7 +46,6 @@ var Extractors = [][]*analysis.Analyzer{
 		inspect.Analyzer,
 	},
 	{
-		call.Extractor,
 		metadata.Extractor,
 	},
 	{
@@ -63,10 +64,10 @@ var Extractors = [][]*analysis.Analyzer{
 		verb.Extractor,
 	},
 	{
+		call.Extractor,
 		// must run after valueenumvariant.Extractor and typeenumvariant.Extractor;
 		// visits a node and aggregates its enum variants if present
 		enum.Extractor,
-		// must run after topic.Extractor
 		subscription.Extractor,
 	},
 	{
@@ -105,6 +106,173 @@ func Extract(moduleDir string) (Result, error) {
 	return combineAllPackageResults(results, diagnostics)
 }
 
+type refResultType int
+
+const (
+	failed refResultType = iota
+	widened
+)
+
+type refResult struct {
+	typ    refResultType
+	obj    types.Object
+	fqName optional.Option[string]
+}
+
+type combinedData struct {
+	module *schema.Module
+	errs   []*schema.Error
+
+	nativeNames         map[schema.Node]string
+	functionCalls       map[types.Object]sets.Set[types.Object]
+	verbCalls           map[types.Object]sets.Set[*schema.Ref]
+	refResults          map[schema.RefKey]refResult
+	extractedDecls      map[schema.Decl]types.Object
+	externalTypeAliases sets.Set[*schema.TypeAlias]
+	// for detecting duplicates
+	typeUniqueness   map[string]tuple.Pair[types.Object, schema.Position]
+	globalUniqueness map[string]tuple.Pair[types.Object, schema.Position]
+}
+
+func newCombinedData(diagnostics []analysis.SimpleDiagnostic) *combinedData {
+	return &combinedData{
+		errs:                diagnosticsToSchemaErrors(diagnostics),
+		nativeNames:         make(map[schema.Node]string),
+		functionCalls:       make(map[types.Object]sets.Set[types.Object]),
+		verbCalls:           make(map[types.Object]sets.Set[*schema.Ref]),
+		refResults:          make(map[schema.RefKey]refResult),
+		extractedDecls:      make(map[schema.Decl]types.Object),
+		externalTypeAliases: sets.NewSet[*schema.TypeAlias](),
+		typeUniqueness:      make(map[string]tuple.Pair[types.Object, schema.Position]),
+		globalUniqueness:    make(map[string]tuple.Pair[types.Object, schema.Position]),
+	}
+}
+
+func (cd *combinedData) error(err *schema.Error) {
+	cd.errs = append(cd.errs, err)
+}
+
+func (cd *combinedData) update(fr finalize.Result) {
+	for decl, obj := range fr.Extracted {
+		cd.validateDecl(decl, obj)
+		cd.extractedDecls[decl] = obj
+	}
+	copyFailedRefs(cd.refResults, fr.Failed)
+	maps.Copy(cd.nativeNames, fr.NativeNames)
+	maps.Copy(cd.functionCalls, fr.FunctionCalls)
+	maps.Copy(cd.verbCalls, fr.VerbCalls)
+}
+
+func (cd *combinedData) toResult() Result {
+	cd.module.AddDecls(maps.Keys(cd.extractedDecls))
+	cd.updateDeclVisibility()
+	cd.propagateTypeErrors()
+	schema.SortErrorsByPosition(cd.errs)
+	return Result{
+		Module:      cd.module,
+		NativeNames: cd.nativeNames,
+		Errors:      cd.errs,
+	}
+}
+
+func (cd *combinedData) updateModule(fr finalize.Result) error {
+	if cd.module == nil {
+		cd.module = &schema.Module{Name: fr.ModuleName, Comments: fr.ModuleComments}
+	} else {
+		if cd.module.Name != fr.ModuleName {
+			return fmt.Errorf("unexpected schema extraction result module name: %s", fr.ModuleName)
+		}
+		if len(cd.module.Comments) == 0 {
+			cd.module.Comments = fr.ModuleComments
+		}
+	}
+	return nil
+}
+
+func (cd *combinedData) validateDecl(decl schema.Decl, obj types.Object) {
+	typename := common.GetDeclTypeName(decl)
+	typeKey := fmt.Sprintf("%s-%s", typename, decl.GetName())
+	if value, ok := cd.typeUniqueness[typeKey]; ok && value.A != obj {
+		cd.error(schema.Errorf(decl.Position(), decl.Position().Column,
+			"duplicate %s declaration for %q; already declared at %q", typename,
+			cd.module.Name+"."+decl.GetName(), value.B))
+	} else if value, ok := cd.globalUniqueness[decl.GetName()]; ok && value.A != obj {
+		cd.error(schema.Errorf(decl.Position(), decl.Position().Column,
+			"schema declaration with name %q already exists for module %q; previously declared at %q",
+			decl.GetName(), cd.module.Name, value.B))
+	}
+	cd.typeUniqueness[typeKey] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
+	cd.globalUniqueness[decl.GetName()] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
+}
+
+func (cd *combinedData) getVerbCalls(obj types.Object) sets.Set[*schema.Ref] {
+	calls := sets.NewSet[*schema.Ref]()
+	if cls, ok := cd.verbCalls[obj]; ok {
+		calls.Append(cls.ToSlice()...)
+	}
+	if fnCall, ok := cd.functionCalls[obj]; ok {
+		for _, calleeObj := range fnCall.ToSlice() {
+			calls.Append(cd.getVerbCalls(calleeObj).ToSlice()...)
+		}
+	}
+	return calls
+}
+
+// updateDeclVisibility traverses the module schema via refs and updates visibility as needed.
+func (cd *combinedData) updateDeclVisibility() {
+	for _, d := range cd.module.Decls {
+		if d.IsExported() {
+			updateTransitiveVisibility(d, cd.module)
+		}
+	}
+}
+
+// propagateTypeErrors propagates type errors to referencing nodes. This improves error messaging for the LSP client by
+// surfacing errors all the way up the schema chain.
+func (cd *combinedData) propagateTypeErrors() {
+	_ = schema.VisitWithParent(cd.module, nil, func(n schema.Node, p schema.Node, next func() error) error { //nolint:errcheck
+		if p == nil {
+			return next()
+		}
+		ref, ok := n.(*schema.Ref)
+		if !ok {
+			return next()
+		}
+
+		result, ok := cd.refResults[ref.ToRefKey()]
+		if !ok {
+			return next()
+		}
+
+		switch result.typ {
+		case failed:
+			refNativeName := common.GetNativeName(result.obj)
+			switch pt := p.(type) {
+			case *schema.Verb:
+				if pt.Request == n {
+					cd.error(schema.Errorf(pt.Request.Position(), pt.Request.Position().Column,
+						"unsupported request type %q", refNativeName))
+				}
+				if pt.Response == n {
+					cd.error(schema.Errorf(pt.Response.Position(), pt.Response.Position().Column,
+						"unsupported response type %q", refNativeName))
+				}
+			case *schema.Field:
+				cd.error(schema.Errorf(pt.Position(), pt.Position().Column, "unsupported type %q for "+
+					"field %q", refNativeName, pt.Name))
+			default:
+				cd.error(schema.Errorf(p.Position(), p.Position().Column, "unsupported type %q",
+					refNativeName))
+			}
+		case widened:
+			cd.error(schema.Warnf(n.Position(), n.Position().Column, "external type %q will be "+
+				"widened to Any", result.fqName.MustGet()))
+		}
+
+		return next()
+	})
+}
+
 func analyzersWithDependencies() []*analysis.Analyzer {
 	var as []*analysis.Analyzer
 	// observes dependencies as specified by tiered list ordering in Extractors and applies the dependency
@@ -121,110 +289,63 @@ func analyzersWithDependencies() []*analysis.Analyzer {
 	return as
 }
 
-type refResultType int
-
-const (
-	failed refResultType = iota
-	widened
-)
-
-type refResult struct {
-	typ    refResultType
-	obj    types.Object
-	fqName optional.Option[string]
+func dependenciesBeforeIndex(idx int) []*analysis.Analyzer {
+	var deps []*analysis.Analyzer
+	for i := range idx {
+		deps = append(deps, Extractors[i]...)
+	}
+	return deps
 }
 
-// the run will produce finalizer results for all packages it executes on, so we need to aggregate the results into a
-// single schema
 func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics []analysis.SimpleDiagnostic) (Result, error) {
+	cd := newCombinedData(diagnostics)
+
 	fResults, ok := results[finalize.Analyzer]
 	if !ok {
 		return Result{}, fmt.Errorf("schema extraction finalizer result not found")
 	}
-	combined := Result{
-		NativeNames: make(map[schema.Node]string),
-		Errors:      diagnosticsToSchemaErrors(diagnostics),
-	}
-	refResults := make(map[schema.RefKey]refResult)
-	extractedDecls := make(map[schema.Decl]types.Object)
-	// for identifying duplicates
-	typeUniqueness := make(map[string]tuple.Pair[types.Object, schema.Position])
-	globalUniqueness := make(map[string]tuple.Pair[types.Object, schema.Position])
 	for _, r := range fResults {
 		fr, ok := r.(finalize.Result)
 		if !ok {
 			return Result{}, fmt.Errorf("unexpected schema extraction result type: %T", r)
 		}
-		if combined.Module == nil {
-			combined.Module = &schema.Module{Name: fr.ModuleName, Comments: fr.ModuleComments}
-		} else {
-			if combined.Module.Name != fr.ModuleName {
-				return Result{}, fmt.Errorf("unexpected schema extraction result module name: %s", fr.ModuleName)
-			}
-			if len(combined.Module.Comments) == 0 {
-				combined.Module.Comments = fr.ModuleComments
-			}
+		if err := cd.updateModule(fr); err != nil {
+			return Result{}, err
 		}
-		copyFailedRefs(refResults, fr.Failed)
-		for decl, obj := range fr.Extracted {
-			// check for duplicates and add the Decl to the module schema
-			typename := common.GetDeclTypeName(decl)
-			typeKey := fmt.Sprintf("%s-%s", typename, decl.GetName())
-			if value, ok := typeUniqueness[typeKey]; ok && value.A != obj {
-				// decls redeclared in subpackage
-				combined.Errors = append(combined.Errors, schema.Errorf(decl.Position(), decl.Position().Column,
-					"duplicate %s declaration for %q; already declared at %q", typename,
-					combined.Module.Name+"."+decl.GetName(), value.B))
-				continue
-			}
-			if value, ok := globalUniqueness[decl.GetName()]; ok && value.A != obj {
-				combined.Errors = append(combined.Errors, schema.Errorf(decl.Position(), decl.Position().Column,
-					"schema declaration with name %q already exists for module %q; previously declared at %q",
-					decl.GetName(), combined.Module.Name, value.B))
-			}
-			typeUniqueness[typeKey] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
-			globalUniqueness[decl.GetName()] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
-			extractedDecls[decl] = obj
-		}
-		maps.Copy(combined.NativeNames, fr.NativeNames)
+		cd.update(fr)
 	}
 
-	combined.Module.AddDecls(maps.Keys(extractedDecls))
-	externalTypeAliases := sets.NewSet[*schema.TypeAlias]()
-	for decl, obj := range extractedDecls {
-		if ta, ok := decl.(*schema.TypeAlias); ok && len(ta.Metadata) > 0 {
-			fqName, err := goQualifiedNameForWidenedType(obj, ta.Metadata)
-			if err != nil {
-				combined.Errors = append(combined.Errors, &schema.Error{Pos: ta.Position(), EndColumn: ta.Pos.Column,
-					Msg: err.Error(), Level: schema.ERROR})
-				continue
+	for decl, obj := range cd.extractedDecls {
+		moduleName := cd.module.Name
+		switch d := decl.(type) {
+		case *schema.TypeAlias:
+			if len(d.Metadata) > 0 {
+				fqName, err := goQualifiedNameForWidenedType(obj, d.Metadata)
+				if err != nil {
+					cd.error(&schema.Error{Pos: d.Position(), EndColumn: d.Pos.Column,
+						Msg: err.Error(), Level: schema.ERROR})
+				}
+				cd.refResults[schema.RefKey{Module: moduleName, Name: d.Name}] = refResult{typ: widened, obj: obj,
+					fqName: optional.Some(fqName)}
+				cd.externalTypeAliases.Add(d)
+				cd.nativeNames[d] = common.GetNativeName(obj)
 			}
-			refResults[schema.RefKey{Module: combined.Module.Name, Name: ta.Name}] =
-				refResult{typ: widened, obj: obj, fqName: optional.Some(fqName)}
-			externalTypeAliases.Add(ta)
-		}
-		combined.NativeNames[decl] = common.GetNativeName(obj)
-	}
-	combined.Errors = append(combined.Errors, propagateTypeErrors(combined.Module, refResults)...)
-	schema.SortErrorsByPosition(combined.Errors)
-	updateVisibility(combined.Module)
-	// TODO: validate schema once we have the full schema here
-	return combined, nil
-}
-
-func copyFailedRefs(parsedRefs map[schema.RefKey]refResult, failedRefs map[schema.RefKey]types.Object) {
-	for ref, obj := range failedRefs {
-		parsedRefs[ref] = refResult{typ: failed, obj: obj}
-	}
-}
-
-// updateVisibility traverses the module schema via refs and updates visibility as needed.
-func updateVisibility(module *schema.Module) {
-	for _, d := range module.Decls {
-		if d.IsExported() {
-			updateTransitiveVisibility(d, module)
+		case *schema.Verb:
+			calls := cd.getVerbCalls(obj).ToSlice()
+			slices.SortFunc(calls, func(i, j *schema.Ref) int {
+				if i.Module != j.Module {
+					return strings.Compare(i.Module, j.Module)
+				}
+				return strings.Compare(i.Name, j.Name)
+			})
+			if len(calls) > 0 {
+				d.Metadata = append(d.Metadata, &schema.MetadataCalls{Calls: calls})
+			}
+		default:
 		}
 	}
+
+	return cd.toResult(), nil
 }
 
 // updateTransitiveVisibility updates any decls that are transitively visible from d.
@@ -264,57 +385,6 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 	})
 }
 
-// propagateTypeErrors propagates type errors to referencing nodes. This improves error messaging for the LSP client by
-// surfacing errors all the way up the schema chain.
-func propagateTypeErrors(
-	module *schema.Module,
-	refResults map[schema.RefKey]refResult,
-) []*schema.Error {
-	var errs []*schema.Error
-	_ = schema.VisitWithParent(module, nil, func(n schema.Node, p schema.Node, next func() error) error { //nolint:errcheck
-		if p == nil {
-			return next()
-		}
-		ref, ok := n.(*schema.Ref)
-		if !ok {
-			return next()
-		}
-
-		result, ok := refResults[ref.ToRefKey()]
-		if !ok {
-			return next()
-		}
-
-		switch result.typ {
-		case failed:
-			refNativeName := common.GetNativeName(result.obj)
-			switch pt := p.(type) {
-			case *schema.Verb:
-				if pt.Request == n {
-					errs = append(errs, schema.Errorf(pt.Request.Position(), pt.Request.Position().Column,
-						"unsupported request type %q", refNativeName))
-				}
-				if pt.Response == n {
-					errs = append(errs, schema.Errorf(pt.Response.Position(), pt.Response.Position().Column,
-						"unsupported response type %q", refNativeName))
-				}
-			case *schema.Field:
-				errs = append(errs, schema.Errorf(pt.Position(), pt.Position().Column, "unsupported type %q for "+
-					"field %q", refNativeName, pt.Name))
-			default:
-				errs = append(errs, schema.Errorf(p.Position(), p.Position().Column, "unsupported type %q",
-					refNativeName))
-			}
-		case widened:
-			errs = append(errs, schema.Warnf(n.Position(), n.Position().Column, "external type %q will be "+
-				"widened to Any", result.fqName.MustGet()))
-		}
-
-		return next()
-	})
-	return errs
-}
-
 func diagnosticsToSchemaErrors(diagnostics []analysis.SimpleDiagnostic) []*schema.Error {
 	if len(diagnostics) == 0 {
 		return nil
@@ -331,20 +401,9 @@ func diagnosticsToSchemaErrors(diagnostics []analysis.SimpleDiagnostic) []*schem
 	return errors
 }
 
-func dependenciesBeforeIndex(idx int) []*analysis.Analyzer {
-	var deps []*analysis.Analyzer
-	for i := range idx {
-		deps = append(deps, Extractors[i]...)
-	}
-	return deps
-}
-
-func simplePosToSchemaPos(pos analysis.SimplePosition) schema.Position {
-	return schema.Position{
-		Filename: pos.Filename,
-		Offset:   pos.Offset,
-		Line:     pos.Line,
-		Column:   pos.Column,
+func copyFailedRefs(parsedRefs map[schema.RefKey]refResult, failedRefs map[schema.RefKey]types.Object) {
+	for ref, obj := range failedRefs {
+		parsedRefs[ref] = refResult{typ: failed, obj: obj}
 	}
 }
 
@@ -363,4 +422,13 @@ func goQualifiedNameForWidenedType(obj types.Object, metadata []schema.Metadata)
 			common.GetNativeName(obj))
 	}
 	return nativeName, nil
+}
+
+func simplePosToSchemaPos(pos analysis.SimplePosition) schema.Position {
+	return schema.Position{
+		Filename: pos.Filename,
+		Offset:   pos.Offset,
+		Line:     pos.Line,
+		Column:   pos.Column,
+	}
 }

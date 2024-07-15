@@ -55,8 +55,19 @@ func Two(ctx context.Context, req Payload[string]) (Payload[string], error) {
 }
 
 //ftl:verb export
+func Three(ctx context.Context, req Payload[string]) (Payload[string], error) {
+	return Payload[string]{}, nil
+}
+
+//ftl:verb export
 func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
 	return ftl.Call(ctx, Two, req)
+}
+
+//ftl:verb export
+func CallsTwoAndThree(ctx context.Context, req Payload[string]) (Payload[string], error) {
+	err := transitiveVerbCall(ctx, req)
+	return Payload[string]{}, err
 }
 
 //ftl:verb export
@@ -87,3 +98,19 @@ type ExplicitAliasAlias = lib.NonFTLType
 type TransitiveAliasType lib.NonFTLType
 
 type TransitiveAliasAlias = lib.NonFTLType
+
+type TransitiveAlias lib.NonFTLType
+
+func transitiveVerbCall(ctx context.Context, req Payload[string]) error {
+	_, err := ftl.Call(ctx, Two, req)
+	if err != nil {
+		return err
+	}
+	err = superTransitiveVerbCall(ctx, req)
+	return err
+}
+
+func superTransitiveVerbCall(ctx context.Context, req Payload[string]) error {
+	_, err := ftl.Call(ctx, Three, req)
+	return err
+}
