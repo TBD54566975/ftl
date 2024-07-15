@@ -50,13 +50,12 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 }
 
 func ValidateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error {
-	var requestMap map[string]any
-	err := json.Unmarshal(body, &requestMap)
+	var root any
+	err := json.Unmarshal(body, &root)
 	if err != nil {
-		return fmt.Errorf("HTTP request body is not valid JSON: %w", err)
+		return fmt.Errorf("request body is not valid JSON: %w", err)
 	}
-
-	err = schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, requestMap, sch)
+	err = schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, root, sch)
 	if err != nil {
 		return fmt.Errorf("could not validate HTTP request body: %w", err)
 	}

@@ -2,6 +2,7 @@ package one
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"ftl/builtin"
@@ -182,3 +183,13 @@ type NonFTLStruct struct {
 }
 
 func (NonFTLStruct) NonFTLInterface() {}
+
+//ftl:verb
+func StringToTime(ctx context.Context, input string) (time.Time, error) {
+	return time.Time{}, errors.New("not implemented")
+}
+
+//ftl:verb
+func BatchStringToTime(ctx context.Context, input []string) ([]time.Time, error) {
+	return nil, errors.New("not implemented")
+}

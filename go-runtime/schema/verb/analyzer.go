@@ -87,9 +87,6 @@ func checkSignature(pass *analysis.Pass, node *ast.FuncDecl, sig *types.Signatur
 	}
 
 	if params.Len() == 2 {
-		if !common.IsType[*types.Struct](params.At(1).Type()) {
-			common.TokenErrorf(pass, params.At(1).Pos(), params.At(1).Name(), "second parameter must be a struct but is %s", params.At(1).Type())
-		}
 		if params.At(1).Type().String() == common.FtlUnitTypePath {
 			common.TokenErrorf(pass, params.At(1).Pos(), params.At(1).Name(), "second parameter must not be ftl.Unit")
 		}
@@ -106,9 +103,6 @@ func checkSignature(pass *analysis.Pass, node *ast.FuncDecl, sig *types.Signatur
 		common.TokenErrorf(pass, results.At(results.Len()-1).Pos(), results.At(results.Len()-1).Name(), "must return an error but is %s", results.At(0).Type())
 	}
 	if results.Len() == 2 {
-		if !common.IsType[*types.Struct](results.At(0).Type()) {
-			common.TokenErrorf(pass, results.At(0).Pos(), results.At(0).Name(), "first result must be a struct but is %s", results.At(0).Type())
-		}
 		if results.At(1).Type().String() == common.FtlUnitTypePath {
 			common.TokenErrorf(pass, results.At(1).Pos(), results.At(1).Name(), "second result must not be ftl.Unit")
 		}
