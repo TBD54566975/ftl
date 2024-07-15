@@ -189,6 +189,12 @@ grpcPort := `cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 
 # metrics and logs, but it is not available to be installed yet. Refer to issue:
 #     https://github.com/CtrlSpice/otel-desktop-viewer/issues/146
 otel-ui:
+  #!/bin/bash
+
+  if ! test -f $(git rev-parse --show-toplevel)/.hermit/go/bin/otel-desktop-viewer ; then
+    echo "Installing otel-desktop-viewer..."
+    go install github.com/CtrlSpice/otel-desktop-viewer@latest
+  fi
   otel-desktop-viewer --grpc {{grpcPort}}
 
 # Run otel collector in a docker container to stream local (i.e. from ftl dev) signals to
