@@ -96,8 +96,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 	row, err := tx.db.AcquireAsyncCall(ctx, ttl)
 	if err != nil {
 		err = dalerrs.TranslatePGError(err)
-		// We get a NULL constraint violation if there are no async calls to acquire, so translate it to ErrNotFound.
-		if errors.Is(err, dalerrs.ErrConstraint) {
+		if errors.Is(err, dalerrs.ErrNotFound) {
 			return nil, fmt.Errorf("no pending async calls: %w", dalerrs.ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to acquire async call: %w", err)

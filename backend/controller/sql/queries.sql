@@ -456,7 +456,8 @@ WITH async_call AS (
   FOR UPDATE SKIP LOCKED
 ), lease AS (
   INSERT INTO leases (idempotency_key, key, expires_at)
-  VALUES (gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + @ttl::interval)
+  SELECT gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + @ttl::interval
+  WHERE (SELECT id FROM async_call) IS NOT NULL
   RETURNING *
 )
 UPDATE async_calls
