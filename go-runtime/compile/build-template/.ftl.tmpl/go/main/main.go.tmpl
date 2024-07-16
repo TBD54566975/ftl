@@ -4,14 +4,14 @@ package main
 import (
 	"context"
 
-{{- range .ExternalGoTypes }}
+{{- range .ExternalTypes }}
 
 	{{.Import}}
 {{- end}}
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/plugin"
-{{- if or .SumTypes .ExternalGoTypes }}
+{{- if or .SumTypes .ExternalTypes }}
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 {{- end }}
 	"github.com/TBD54566975/ftl/go-runtime/server"
@@ -19,7 +19,7 @@ import (
 	"ftl/{{.}}"
 {{- end}}
 )
-{{- if or .SumTypes .ExternalGoTypes }}
+{{- if or .SumTypes .ExternalTypes }}
 
 func init() {
 	reflection.Register(
@@ -30,7 +30,7 @@ func init() {
 			{{- end}}
 		),
 {{- end}}
-{{- range .ExternalGoTypes}}
+{{- range .ExternalTypes}}
         {{- range .Types}}
 		reflection.ExternalType(*new({{.}})),
 		{{- end}}

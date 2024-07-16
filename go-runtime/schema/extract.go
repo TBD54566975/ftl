@@ -355,7 +355,7 @@ func goQualifiedNameForWidenedType(obj types.Object, metadata []schema.Metadata)
 			nativeName = m.NativeName
 		}
 	}
-	if nativeName == "" {
+	if len(metadata) > 0 && nativeName == "" {
 		return "", fmt.Errorf("missing Go native name in typemapped alias for %q",
 			common.GetNativeName(obj))
 	}

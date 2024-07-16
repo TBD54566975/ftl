@@ -574,7 +574,6 @@ func FuncPathEquals(pass *analysis.Pass, callExpr *ast.CallExpr, path string) bo
 func ApplyMetadata[T schema.Decl](pass *analysis.Pass, obj types.Object, apply func(md *ExtractedMetadata)) bool {
 	if md, ok := GetFactForObject[*ExtractedMetadata](pass, obj).Get(); ok {
 		if _, ok = md.Type.(T); !ok && md.Type != nil {
-			NoEndColumnErrorf(pass, obj.Pos(), "schema declaration contains conflicting directives")
 			return false
 		}
 		apply(md)
