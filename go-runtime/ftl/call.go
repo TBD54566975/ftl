@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"connectrpc.com/connect"
+	"go.opentelemetry.io/otel"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -17,6 +18,17 @@ import (
 )
 
 func call[Req, Resp any](ctx context.Context, callee reflection.Ref, req Req, inline Verb[Req, Resp]) (resp Resp, err error) {
+	// This is a test metric to make sure we actually propogate everything through the
+	// observability path correctly. In the future, errors should be tracked through
+	// otel logs instead of being swallowed as they are here. Error is swallowed to
+	// guarantee no impact to customers.
+	counter, err := otel.GetMeterProvider().Meter("ftl_verb").Int64Counter("verb_call")
+	if err != nil {
+		// log it
+	} else {
+		counter.Add(ctx, 1)
+	}
+
 	moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
 	override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: callee.Module, Name: callee.Name})
 	if err != nil {
