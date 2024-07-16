@@ -204,10 +204,13 @@ otel-ui:
 # `just otel-dev` with any args you would pass to `ftl dev`. To stop the otel stream, run
 # `just otel-stop` in a third terminal tab.
 otel-stream:
+  #!/bin/bash
+
   docker run \
     -p {{otelGrpcPort}}:{{otelGrpcPort}} \
     -p 55679:55679 \
-    otel/opentelemetry-collector:0.104.0
+    otel/opentelemetry-collector:0.104.0 2>&1 | sed 's/\([A-Z].* #\)/\
+  \1/g'
 
 # Stop the docker container running otel.
 otelContainerID := `docker ps -f ancestor=otel/opentelemetry-collector:0.104.0 | tail -1 | cut -d " " -f1`
@@ -218,6 +221,6 @@ otel-stop:
 otel-dev *args:
   #!/bin/bash
 
-  gprcPort=$(cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //')
-  export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${gprcPort}"
+  grpcPort=$(cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //')
+  export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${grpcPort}"
   ftl dev {{args}}
