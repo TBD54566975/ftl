@@ -540,6 +540,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 
 func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStream[ftlv1.RegisterRunnerRequest]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
 	initialised := false
+	deferredDeregistration := false
 
 	logger := log.FromContext(ctx)
 	for stream.Receive() {
@@ -560,13 +561,6 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		logger.Tracef("Heartbeat received from runner %s", runnerStr)
 
 		if !initialised {
-			// Deregister the runner if the Runner disconnects.
-			defer func() {
-				err := s.dal.DeregisterRunner(context.Background(), runnerKey)
-				if err != nil {
-					logger.Errorf(err, "Could not deregister runner %s", runnerStr)
-				}
-			}()
 			err = s.pingRunner(ctx, endpoint)
 			if err != nil {
 				return nil, fmt.Errorf("runner callback failed: %w", err)
@@ -589,6 +583,16 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		} else if err != nil {
 			return nil, err
+		}
+		if !deferredDeregistration {
+			// Deregister the runner if the Runner disconnects.
+			defer func() {
+				err := s.dal.DeregisterRunner(context.Background(), runnerKey)
+				if err != nil {
+					logger.Errorf(err, "Could not deregister runner %s", runnerStr)
+				}
+			}()
+			deferredDeregistration = true
 		}
 
 		routes, err := s.dal.GetRoutingTable(ctx, nil)
