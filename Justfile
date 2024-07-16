@@ -206,7 +206,6 @@ otel-ui:
 otel-stream:
   #!/bin/bash
 
-  grpcPort=$(cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //')
   docker run \
     -p {{otelGrpcPort}}:{{otelGrpcPort}} \
     -p 55679:55679 \
