@@ -45,7 +45,7 @@ func ({{.Name|title}}) {{$enumInterfaceFuncName}}() {}
 {{- end}}
 {{- else if is "TypeAlias" .}}
 //ftl:typealias
-type {{.Name|title}} {{type $.Module .Type}}
+type {{.Name|title}} {{typeAliasType $.Module .}}
 {{- else if is "Data" .}}
 type {{.Name|title}}
 {{- if .TypeParameters}}[

@@ -27,13 +27,13 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 		Name: strcase.ToUpperCamel(obj.Name()),
 		Type: schType,
 	}
-	if common.ApplyMetadata[*schema.TypeAlias](pass, obj, func(md *common.ExtractedMetadata) {
+	var hasGoTypeMapping bool
+	common.ApplyMetadata[*schema.TypeAlias](pass, obj, func(md *common.ExtractedMetadata) {
 		alias.Comments = md.Comments
 		alias.Export = md.IsExported
 		alias.Metadata = md.Metadata
 
 		if len(md.Metadata) > 0 {
-			hasGoTypeMap := false
 			nativeName := qualifiedNameFromSelectorExpr(pass, node.Type)
 			if nativeName == "" {
 				return
@@ -43,31 +43,23 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 					if mt.Runtime != "go" {
 						continue
 					}
+					hasGoTypeMapping = true
 					if nativeName != mt.NativeName {
 						common.Errorf(pass, node, "declared type %s in typemap does not match native type %s",
 							mt.NativeName, nativeName)
 						return
 					}
-					hasGoTypeMap = true
 				} else {
 					common.Errorf(pass, node, "unexpected directive on typealias %s", m)
 				}
 			}
-
-			// if this alias contains any type mappings, implicitly add a Go type mapping if not already present
-			if !hasGoTypeMap {
-				alias.Metadata = append(alias.Metadata, &schema.MetadataTypeMap{
-					Pos:        common.GoPosToSchemaPos(pass.Fset, obj.Pos()),
-					Runtime:    "go",
-					NativeName: nativeName,
-				})
-			}
-			alias.Type = &schema.Any{}
 		}
-	}) {
-		return optional.Some(alias)
-	} else if _, ok := alias.Type.(*schema.Any); ok &&
-		!strings.HasPrefix(qualifiedNameFromSelectorExpr(pass, node.Type), "ftl") {
+	})
+
+	// if widening an external type, implicitly add a Go type mapping if one does not exist
+	if _, ok := alias.Type.(*schema.Any); ok &&
+		!strings.HasPrefix(qualifiedNameFromSelectorExpr(pass, node.Type), "ftl/") &&
+		!hasGoTypeMapping {
 		alias.Metadata = append(alias.Metadata, &schema.MetadataTypeMap{
 			Pos:        common.GoPosToSchemaPos(pass.Fset, obj.Pos()),
 			Runtime:    "go",

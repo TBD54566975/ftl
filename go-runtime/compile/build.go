@@ -65,7 +65,8 @@ type mainModuleContext struct {
 	Replacements       []*modfile.Replace
 	SumTypes           []goSumType
 	LocalSumTypes      []goSumType
-	ExternalGoTypes    []goExternalType
+	ExternalTypes      []goExternalType
+	LocalExternalTypes []goExternalType
 }
 
 type goSumType struct {
@@ -194,10 +195,11 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		}
 		goVerbs = append(goVerbs, goverb)
 	}
-	allSumTypes, goExternalTypes, err := getRegisteredTypes(result.Module, sch, result.NativeNames)
+	localExternalTypes, err := getLocalExternalTypes(result.Module)
 	if err != nil {
 		return err
 	}
+	allSumTypes, allExternalTypes, err := getRegisteredTypes(result.Module, sch, result.NativeNames)
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
 		GoVersion:          goModVersion,
 		FTLVersion:         ftlVersion,
@@ -207,7 +209,8 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		Replacements:       replacements,
 		SumTypes:           allSumTypes,
 		LocalSumTypes:      getLocalSumTypes(result.Module, result.NativeNames),
-		ExternalGoTypes:    goExternalTypes,
+		ExternalTypes:      allExternalTypes,
+		LocalExternalTypes: localExternalTypes,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
@@ -387,6 +390,17 @@ var scaffoldFuncs = scaffolder.FuncMap{
 				if n.IsExported() {
 					imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
 				}
+
+			case *schema.TypeAlias:
+				if n.IsExported() {
+					if im, _ := getGoExternalTypeForWidenedType(n); im != "" {
+						unquoted, err := strconv.Unquote(im)
+						if err != nil {
+							panic(err)
+						}
+						imports[unquoted] = ""
+					}
+				}
 			default:
 			}
 			return next()
@@ -508,6 +522,32 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		return str
 	},
+	"typeAliasType": func(m *schema.Module, t *schema.TypeAlias) string {
+		if _, goType := getGoExternalTypeForWidenedType(t); goType != "" {
+			return goType
+		}
+		return genType(m, t.Type)
+	},
+}
+
+func getGoExternalTypeForWidenedType(t *schema.TypeAlias) (_import string, _type string) {
+	var goType string
+	var im string
+	for _, md := range t.Metadata {
+		md, ok := md.(*schema.MetadataTypeMap)
+		if !ok {
+			continue
+		}
+
+		if md.Runtime == "go" {
+			var err error
+			im, goType, err = getGoExternalType(md.NativeName)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+	return im, goType
 }
 
 func schemaType(t schema.Type) string {
@@ -698,20 +738,10 @@ func getLocalSumTypes(module *schema.Module, nativeNames NativeNames) []goSumTyp
 	return maps.Values(sumTypes)
 }
 
-func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNames) ([]goSumType, []goExternalType, error) {
-	sumTypes := make(map[string]goSumType)
-	goExternalTypes := make(map[string][]string)
+func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
+	types := make(map[string][]string)
 	for _, d := range module.Decls {
 		switch d := d.(type) {
-		case *schema.Enum:
-			if d.IsValueEnum() {
-				continue
-
-			}
-			if st, ok := getGoSumType(d, nativeNames).Get(); ok {
-				enumFqName := nativeNames[d]
-				sumTypes[enumFqName] = st
-			}
 		case *schema.TypeAlias:
 			var fqName string
 			for _, m := range d.Metadata {
@@ -724,45 +754,91 @@ func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames N
 			}
 			im, typ, err := getGoExternalType(fqName)
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
-			if _, ok := goExternalTypes[im]; !ok {
-				goExternalTypes[im] = []string{}
+			if _, ok := types[im]; !ok {
+				types[im] = []string{}
 			}
-			goExternalTypes[im] = append(goExternalTypes[im], typ)
+			types[im] = append(types[im], typ)
 		default:
 		}
 	}
-
-	// register sum types from other modules
-	for _, e := range getExternalTypeEnums(module, sch) {
-		variants := make([]goSumTypeVariant, 0, len(e.resolved.Variants))
-		for _, v := range e.resolved.Variants {
-			variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
-				Name:       v.Name,
-				Type:       e.ref.Module + "." + v.Name,
-				SchemaType: v.Value.(*schema.TypeValue).Value,
-			})
-		}
-		stFqName := e.ref.Module + "." + e.ref.Name
-		sumTypes[e.ref.ToRefKey().String()] = goSumType{
-			Discriminator: stFqName,
-			Variants:      variants,
-		}
-	}
-	out := maps.Values(sumTypes)
-	slices.SortFunc(out, func(a, b goSumType) int {
-		return strings.Compare(a.Discriminator, b.Discriminator)
-	})
-
-	var externalTypes []goExternalType
-	for im, types := range goExternalTypes {
-		externalTypes = append(externalTypes, goExternalType{
+	var out []goExternalType
+	for im, types := range types {
+		out = append(out, goExternalType{
 			Import: im,
 			Types:  types,
 		})
 	}
-	return out, externalTypes, nil
+	return out, nil
+}
+
+// getRegisteredTypesExternalToModule returns all sum types and external types that are not defined in the given module.
+// These are the types that must be registered in the main module.
+func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNames) ([]goSumType, []goExternalType, error) {
+	sumTypes := make(map[string]goSumType)
+	externalTypes := make(map[string]sets.Set[string])
+	// register sum types from other modules
+	for _, decl := range getRegisteredTypesExternalToModule(module, sch) {
+		switch d := decl.resolved.(type) {
+		case *schema.Enum:
+			variants := make([]goSumTypeVariant, 0, len(d.Variants))
+			for _, v := range d.Variants {
+				variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+					Name:       decl.ref.Module + "." + v.Name,
+					Type:       "ftl/" + decl.ref.Module + "." + v.Name,
+					SchemaType: v.Value.(*schema.TypeValue).Value,
+				})
+			}
+			stFqName := decl.ref.Module + "." + decl.ref.Name
+			sumTypes[decl.ref.ToRefKey().String()] = goSumType{
+				Discriminator: stFqName,
+				Variants:      variants,
+			}
+		case *schema.TypeAlias:
+			for _, m := range d.Metadata {
+				if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
+					im, typ, err := getGoExternalType(m.NativeName)
+					if err != nil {
+						return nil, nil, err
+					}
+					if _, ok := externalTypes[im]; !ok {
+						externalTypes[im] = sets.NewSet[string]()
+					}
+					externalTypes[im].Add(typ)
+				}
+			}
+		default:
+		}
+	}
+	for _, d := range getLocalSumTypes(module, nativeNames) {
+		sumTypes[d.fqName] = d
+	}
+	stOut := maps.Values(sumTypes)
+	slices.SortFunc(stOut, func(a, b goSumType) int {
+		return strings.Compare(a.Discriminator, b.Discriminator)
+	})
+
+	localExternalTypes, err := getLocalExternalTypes(module)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, et := range localExternalTypes {
+		if _, ok := externalTypes[et.Import]; !ok {
+			externalTypes[et.Import] = sets.NewSet[string]()
+		}
+		externalTypes[et.Import].Append(et.Types...)
+	}
+
+	var etOut []goExternalType
+	for im, types := range externalTypes {
+		etOut = append(etOut, goExternalType{
+			Import: im,
+			Types:  types.ToSlice(),
+		})
+	}
+
+	return stOut, etOut, nil
 }
 
 func getGoSumType(enum *schema.Enum, nativeNames NativeNames) optional.Option[goSumType] {
@@ -811,23 +887,21 @@ func getGoExternalType(fqName string) (_import string, _type string, err error) 
 	return im, fmt.Sprintf("%s.%s", pkg, typeName), nil
 }
 
-type externalEnum struct {
+type externalDecl struct {
 	ref      *schema.Ref
-	resolved *schema.Enum
+	resolved schema.Decl
 }
 
-// getExternalTypeEnums resolve all type enum references in the full schema
-func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalEnum {
+// getRegisteredTypesExternalToModule returns all sum types and external types that are not defined in the given module.
+// These types must be registered in the main module.
+func getRegisteredTypesExternalToModule(module *schema.Module, sch *schema.Schema) []externalDecl {
 	combinedSch := schema.Schema{
 		Modules: append(sch.Modules, module),
 	}
-	var externalTypeEnums []externalEnum
+	var externalTypes []externalDecl
 	err := schema.Visit(&combinedSch, func(n schema.Node, next func() error) error {
 		ref, ok := n.(*schema.Ref)
 		if !ok {
-			return next()
-		}
-		if ref.Module != "" && ref.Module != module.Name {
 			return next()
 		}
 
@@ -835,18 +909,34 @@ func getExternalTypeEnums(module *schema.Module, sch *schema.Schema) []externalE
 		if !ok {
 			return next()
 		}
-		if e, ok := decl.(*schema.Enum); ok && !e.IsValueEnum() {
-			externalTypeEnums = append(externalTypeEnums, externalEnum{
+		switch d := decl.(type) {
+		case *schema.Enum:
+			if ref.Module != "" && ref.Module != module.Name {
+				return next()
+			}
+			if d.IsValueEnum() {
+				return next()
+			}
+			externalTypes = append(externalTypes, externalDecl{
 				ref:      ref,
-				resolved: e,
+				resolved: d,
 			})
+		case *schema.TypeAlias:
+			if len(d.Metadata) == 0 {
+				return next()
+			}
+			externalTypes = append(externalTypes, externalDecl{
+				ref:      ref,
+				resolved: d,
+			})
+		default:
 		}
 		return next()
 	})
 	if err != nil {
-		panic(fmt.Sprintf("failed to resolve external type enums schema: %v", err))
+		panic(fmt.Sprintf("failed to resolve external types and sum types external to the module schema: %v", err))
 	}
-	return externalTypeEnums
+	return externalTypes
 }
 
 // ExtractModuleSchema statically parses Go FTL module source into a schema.Module
