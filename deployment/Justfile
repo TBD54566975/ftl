@@ -14,8 +14,9 @@ mirrors := '''
         - "http://''' + registry_full + '''"
 '''
 
-smoke-test:
-  just setup
+smoke-test: setup smoke-test-deploy
+
+smoke-test-deploy:
   just build-controller
   just build-runner
   just deploy
@@ -25,19 +26,23 @@ smoke-test:
 
   ftl --endpoint http://localhost:8892 status
 
-#  just teardown
-
-# Create a k3d cluster for FTL including a local registry.
-setup:
+setup-registry:
   k3d registry create {{registry_short}} --port 5000
+
+setup-cluster:
   k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" --agents 2 \
       --registry-use {{registry_full}} \
       --registry-config '{{mirrors}}'
 
-# Delete the FTL k3d cluster and registry.
-teardown:
-  k3d cluster delete ftl
+setup: setup-registry setup-cluster
+
+teardown-registry:
   k3d registry delete {{registry_short}}
+
+teardown-cluster:
+  k3d cluster delete ftl
+
+teardown: teardown-cluster teardown-registry
 
 deploy:
   kubectl kustomize --load-restrictor=LoadRestrictionsNone overlays/dev | kubectl apply -f -
