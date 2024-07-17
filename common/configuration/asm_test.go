@@ -11,14 +11,12 @@ import (
 	"path"
 	"sort"
 	"testing"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/benbjohnson/clock"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
@@ -30,10 +28,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 )
 
-func setUp(ctx context.Context, t *testing.T, router optional.Option[Router[Secrets]]) (*Manager[Secrets], *ASM, *asmLeader, *secretsmanager.Client, *clock.Mock, *leases.FakeLeaser) {
+func setUp(ctx context.Context, t *testing.T, router optional.Option[Router[Secrets]]) (*Manager[Secrets], *ASM, *asmLeader, *secretsmanager.Client, *ManualSyncProvider[Secrets], *leases.FakeLeaser) {
 	t.Helper()
-
-	mockClock := clock.NewMock()
 
 	if _, ok := router.Get(); !ok {
 		dir := t.TempDir()
@@ -51,14 +47,16 @@ func setUp(ctx context.Context, t *testing.T, router optional.Option[Router[Secr
 	})
 	leaser := leases.NewFakeLeaser()
 	asm := NewASM(ctx, externalClient, URL("http://localhost:1234"), leaser)
+	manualSyncProvider := NewManualSyncProvider[Secrets](asm)
 
-	sm := newForTesting(ctx, router.MustGet(), []Provider[Secrets]{asm}, mockClock)
+	sm, err := New(ctx, router.MustGet(), []Provider[Secrets]{manualSyncProvider})
+	assert.NoError(t, err)
 
 	leaderOrFollower, err := asm.coordinator.Get()
 	assert.NoError(t, err)
 	leader, ok := leaderOrFollower.(*asmLeader)
 	assert.True(t, ok, "expected test to get an asm leader not a follower")
-	return sm, asm, leader, externalClient, mockClock, leaser
+	return sm, asm, leader, externalClient, manualSyncProvider, leaser
 }
 
 func waitForUpdatesToProcess(c *cache[Secrets]) {
@@ -172,23 +170,17 @@ func TestASMPagination(t *testing.T) {
 // TestLeaderSync sets and gets values via the leader, as well as directly with ASM
 func TestLeaderSync(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	sm, _, _, externalClient, clock, _ := setUp(ctx, t, None[Router[Secrets]]())
-	testClientSync(ctx, t, sm, externalClient, true, func(percentage float64) {
-		clock.Add(time.Second * (time.Duration(asmLeaderSyncInterval.Seconds()*percentage) + 1.0))
-		if percentage == 1.0 {
-			time.Sleep(time.Second * 4)
-		}
-	})
+	sm, _, _, externalClient, manualSync, _ := setUp(ctx, t, None[Router[Secrets]]())
+	testClientSync(ctx, t, sm, externalClient, true, []*ManualSyncProvider[Secrets]{manualSync})
 }
 
 // TestFollowerSync tests setting and getting values from a follower to the leader to ASM, and vice versa
 func TestFollowerSync(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	leaderManager, _, _, externalClient, leaderClock, leaser := setUp(ctx, t, None[Router[Secrets]]())
+	leaderManager, _, _, externalClient, leaderManualSync, leaser := setUp(ctx, t, None[Router[Secrets]]())
 
 	// fakeRPCClient connects the follower to the leader
 	fakeRPCClient := &fakeAdminClient{sm: leaderManager}
-	followerClock := clock.NewMock()
 	follower := newASMFollower(fakeRPCClient, "fake")
 
 	followerASM := newASMForTesting(ctx, externalClient, URL("http://localhost:1235"), leaser, optional.Some[asmClient](follower))
@@ -197,22 +189,12 @@ func TestFollowerSync(t *testing.T) {
 	_, ok := asmClient.(*asmFollower)
 	assert.True(t, ok, "expected test to get an asm follower not a leader")
 
-	sm := newForTesting(ctx, leaderManager.router, []Provider[Secrets]{followerASM}, followerClock)
+	followerManualSync := NewManualSyncProvider(followerASM)
+
+	sm, err := New(ctx, leaderManager.router, []Provider[Secrets]{followerManualSync})
 	assert.NoError(t, err)
 
-	testClientSync(ctx, t, sm, externalClient, false, func(percentage float64) {
-		// sync leader
-		leaderClock.Add(time.Second * (time.Duration(asmLeaderSyncInterval.Seconds()*percentage) + 1.0))
-		if percentage == 1.0 {
-			time.Sleep(time.Second * 4)
-		}
-
-		// then sync follower
-		followerClock.Add(time.Second * (time.Duration(asmFollowerSyncInterval.Seconds()*percentage) + 1.0))
-		if percentage == 1.0 {
-			time.Sleep(time.Second * 4)
-		}
-	})
+	testClientSync(ctx, t, sm, externalClient, false, []*ManualSyncProvider[Secrets]{leaderManualSync, followerManualSync})
 }
 
 // testClientSync uses a Manager and a secretsmanager.Client to test setting and getting secrets
@@ -221,19 +203,14 @@ func testClientSync(ctx context.Context,
 	sm *Manager[Secrets],
 	externalClient *secretsmanager.Client,
 	isLeader bool,
-	progressByIntervalPercentage func(percentage float64)) {
+	manualSyncProviders []*ManualSyncProvider[Secrets]) {
 	t.Helper()
 
-	// advance clock to half way between syncs
-	progressByIntervalPercentage(0.5)
-
-	// wait for initial load
-	err := sm.cache.providers["asm"].waitForInitialSync()
-	assert.NoError(t, err)
+	waitForManualSync(t, manualSyncProviders)
 
 	// write a secret via asmClient
 	clientRef := Ref{Module: Some("sync"), Name: "set-by-client"}
-	err = sm.Set(ctx, "asm", clientRef, "client-first")
+	err := sm.Set(ctx, "asm", clientRef, "client-first")
 	assert.NoError(t, err)
 	waitForUpdatesToProcess(sm.cache)
 	value, err := sm.getData(ctx, clientRef)
@@ -270,8 +247,7 @@ func testClientSync(ctx context.Context,
 	assert.NoError(t, err, "failed to load secret via asm")
 	assert.Equal(t, value, jsonBytes(t, "sm-client-second"), "unexpected secret value")
 
-	// give client a change to sync
-	progressByIntervalPercentage(1.0)
+	waitForManualSync(t, manualSyncProviders)
 
 	// confirm that all secrets are up to date
 	list, err := sm.List(ctx)
@@ -316,13 +292,25 @@ func testClientSync(ctx context.Context,
 	})
 	assert.NoError(t, err)
 
-	// give client a change to sync
-	progressByIntervalPercentage(1.0)
+	waitForManualSync(t, manualSyncProviders)
 
 	_, err = sm.getData(ctx, smRef)
 	assert.Error(t, err, "expected to fail because secret was deleted")
 	_, err = sm.getData(ctx, smClientRef)
 	assert.Error(t, err, "expected to fail because secret was deleted")
+}
+
+// waitForManualSync syncs each provider in order
+func waitForManualSync[R Role](t *testing.T, providers []*ManualSyncProvider[R]) {
+	t.Helper()
+
+	for _, provider := range providers {
+		err := provider.SyncAndWait()
+		if err != nil {
+			fmt.Printf("aaa\n")
+		}
+		assert.NoError(t, err)
+	}
 }
 
 func storeUnobfuscatedValueInASM(ctx context.Context, sm *Manager[Secrets], externalClient *secretsmanager.Client, ref Ref, value []byte, isNew bool) error {

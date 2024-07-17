@@ -93,6 +93,14 @@ func (a *ASM) SyncInterval() time.Duration {
 }
 
 func (a *ASM) Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref, SyncedValue]) error {
+	refs := []Ref{}
+	values.Range(func(key Ref, value SyncedValue) bool {
+		refs = append(refs, key)
+		return true
+	})
+
+	c, _ := a.coordinator.Get()
+	fmt.Printf("before %T sync: %v\n", c, refs)
 	client, err := a.coordinator.Get()
 	if err != nil {
 		return fmt.Errorf("could not coordinate ASM: %w", err)
@@ -101,6 +109,12 @@ func (a *ASM) Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref
 	if err != nil {
 		return fmt.Errorf("%s: %w", client.name(), err)
 	}
+	refs = []Ref{}
+	values.Range(func(key Ref, value SyncedValue) bool {
+		refs = append(refs, key)
+		return true
+	})
+	fmt.Printf("after %T sync: %v\n", c, refs)
 	return nil
 }
 

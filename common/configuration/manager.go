@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/types/optional"
-	"github.com/benbjohnson/clock"
 )
 
 // Role of [Manager], either Secrets or Configuration.
@@ -65,10 +64,6 @@ func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config string
 
 // New configuration manager.
 func New[R Role](ctx context.Context, router Router[R], providers []Provider[R]) (*Manager[R], error) {
-	return newForTesting(ctx, router, providers, clock.New()), nil
-}
-
-func newForTesting[R Role](ctx context.Context, router Router[R], providers []Provider[R], clock clock.Clock) *Manager[R] {
 	m := &Manager[R]{
 		providers: map[string]Provider[R]{},
 	}
@@ -86,9 +81,9 @@ func newForTesting[R Role](ctx context.Context, router Router[R], providers []Pr
 			asyncProviders = append(asyncProviders, sp)
 		}
 	}
-	m.cache = newCache[R](ctx, asyncProviders, m, clock)
+	m.cache = newCache[R](ctx, asyncProviders, m)
 
-	return m
+	return m, nil
 }
 
 func ProviderKeyForAccessor(accessor *url.URL) string {
