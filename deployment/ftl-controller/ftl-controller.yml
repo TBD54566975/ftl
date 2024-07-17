@@ -30,6 +30,14 @@ spec:
               value: "http://$(MY_POD_IP):8892"
             - name: FTL_CONTROLLER_ADVERTISE
               value: ""
+            - name: AWS_REGION
+              value: "us-west-2"
+            - name: AWS_ACCESS_KEY_ID
+              value: "test"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "test"
+            - name: AWS_ENDPOINT_URL
+              value: "http://localstack:4566"
           ports:
             - containerPort: 8891
             - containerPort: 8892

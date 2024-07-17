@@ -3,6 +3,7 @@ resources:
   - db-migrate
   - ftl-controller
   - ftl-runner
+  - localstack
 images:
   - name: ftl0/ftl-controller
     newName: ftl0/ftl-controller
