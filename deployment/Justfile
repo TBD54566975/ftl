@@ -1,6 +1,25 @@
 _help:
   @just -l
 
+mirrors := '''
+  mirrors:
+    "localhost:5000":
+      endpoint:
+        - http://k3d-ftl:5000
+'''
+
+# Create a k3d cluster for FTL including a local registry.
+setup:
+  k3d registry create ftl --port 5000
+  k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" --agents 2 \
+      --registry-use k3d-ftl:5000 \
+      --registry-config '{{mirrors}}'
+
+# Delete the FTL k3d cluster and registry.
+teardown:
+  k3d cluster delete ftl
+  k3d registry delete ftl
+
 deploy:
   kubectl kustomize --load-restrictor=LoadRestrictionsNone | kubectl apply -f -
 
