@@ -42,8 +42,13 @@ func (o OnePasswordProvider) SyncInterval() time.Duration {
 
 // Sync will fetch all secrets from the 1Password vault and store them in the values map.
 // Do not just sync the o.Vault, instead find all vaults found in entries and sync them.
-// If there are no entries, we should not attempt any access of 1Password.
 func (o OnePasswordProvider) Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref, SyncedValue]) error {
+	if len(entries) == 0 {
+		// Do not check for 1Password binary or call 1Password's CLI at all.
+		// Those checks can log unnecessary errors or prompt the user to unlock 1Password.
+		values.Clear()
+		return nil
+	}
 	logger := log.FromContext(ctx)
 	if err := checkOpBinary(); err != nil {
 		return err
