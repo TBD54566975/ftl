@@ -29,7 +29,7 @@ spec:
             - name: FTL_RUNNER_BIND
               value: "http://$(MY_POD_IP):8893"
             - name: FTL_RUNNER_ADVERTISE
-              value: ""
+              value: "http://$(MY_POD_IP):8893"
           ports:
             - containerPort: 8893
           readinessProbe:

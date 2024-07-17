@@ -31,7 +31,7 @@ spec:
             - name: FTL_CONTROLLER_BIND
               value: "http://$(MY_POD_IP):8892"
             - name: FTL_CONTROLLER_ADVERTISE
-              value: ""
+              value: "http://$(MY_POD_IP):8892"
             - name: AWS_REGION
               value: "us-west-2"
             - name: AWS_ACCESS_KEY_ID
