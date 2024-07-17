@@ -14,9 +14,8 @@ import (
 	kongtoml "github.com/alecthomas/kong-toml"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	cf "github.com/TBD54566975/ftl/common/configuration"
+
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
@@ -110,25 +109,6 @@ func main() {
 	}
 	kctx.Bind(config)
 
-	sr := cf.ProjectConfigResolver[cf.Secrets]{Config: configPath}
-	cr := cf.ProjectConfigResolver[cf.Configuration]{Config: configPath}
-	kctx.BindTo(sr, (*cf.Router[cf.Secrets])(nil))
-	kctx.BindTo(cr, (*cf.Router[cf.Configuration])(nil))
-
-	// Add config manager to context.
-	cm, err := cf.NewConfigurationManager(ctx, cr)
-	if err != nil {
-		kctx.Fatalf(err.Error())
-	}
-	ctx = cf.ContextWithConfig(ctx, cm)
-
-	// Add secrets manager to context.
-	sm, err := cf.NewSecretsManager(ctx, sr, cli.Vault, configPath)
-	if err != nil {
-		kctx.Fatalf(err.Error())
-	}
-	ctx = cf.ContextWithSecrets(ctx, sm)
-
 	// Handle signals.
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
@@ -139,12 +119,6 @@ func main() {
 		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert,errcheck // best effort
 		os.Exit(0)
 	}()
-
-	adminServiceClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.Endpoint.String(), log.Error)
-	ctx = rpc.ContextWithClient(ctx, adminServiceClient)
-	adminClient, err := admin.NewClient(ctx, adminServiceClient, cli.Endpoint)
-	kctx.FatalIfErrorf(err)
-	kctx.BindTo(adminClient, (*admin.Client)(nil))
 
 	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)

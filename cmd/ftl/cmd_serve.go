@@ -23,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/container"
@@ -121,6 +122,22 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 		scope := fmt.Sprintf("controller%d", i)
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
+
+		// create config manager for controller
+		cr := cf.ProjectConfigResolver[cf.Configuration]{Config: projConfig.Path}
+		cm, err := cf.NewConfigurationManager(controllerCtx, cr)
+		if err != nil {
+			return err
+		}
+		controllerCtx = cf.ContextWithConfig(controllerCtx, cm)
+
+		// create secrets manager for controller
+		sr := cf.ProjectConfigResolver[cf.Secrets]{Config: projConfig.Path}
+		sm, err := cf.NewSecretsManager(controllerCtx, sr, cli.Vault, projConfig.Path)
+		if err != nil {
+			return err
+		}
+		controllerCtx = cf.ContextWithSecrets(controllerCtx, sm)
 
 		wg.Go(func() error {
 			if err := controller.Start(controllerCtx, config, runnerScaling); err != nil {

@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/url"
 
@@ -41,22 +42,22 @@ type Client interface {
 	SecretUnset(ctx context.Context, req *connect.Request[ftlv1.UnsetSecretRequest]) (*connect.Response[ftlv1.UnsetSecretResponse], error)
 }
 
-// NewClient takes the service client and endpoint flag received by the cmd interface
-// and returns an appropriate interface for the cmd library to use.
+// ShouldUseLocalClient returns whether a local admin client should be used based on the admin service client and the endpoint.
 //
-// If the controller is not present AND endpoint is local, then inject a purely-local
-// implementation of the interface so that the user does not need to spin up a controller
-// just to run the `ftl config/secret` commands. Otherwise, return back the gRPC client.
-func NewClient(ctx context.Context, adminClient ftlv1connect.AdminServiceClient, endpoint *url.URL) (Client, error) {
+// If the controller is not present AND endpoint is local, then a local client should be used
+// so that the user does not need to spin up a controller just to run the `ftl config/secret` commands.
+//
+// If true is returned, use NewLocalClient() to create a local client after setting up config and secret managers for the context.
+func ShouldUseLocalClient(ctx context.Context, adminClient ftlv1connect.AdminServiceClient, endpoint *url.URL) (bool, error) {
 	isLocal, err := isEndpointLocal(endpoint)
 	if err != nil {
-		return adminClient, err
+		return false, err
 	}
 	_, err = adminClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
 	if isConnectUnavailableError(err) && isLocal {
-		return newLocalClient(ctx), nil
+		return true, nil
 	}
-	return adminClient, nil
+	return false, nil
 }
 
 func isConnectUnavailableError(err error) bool {
@@ -71,7 +72,7 @@ func isEndpointLocal(endpoint *url.URL) (bool, error) {
 	h := endpoint.Hostname()
 	ips, err := net.LookupIP(h)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to look up own IP: %w", err)
 	}
 	for _, netip := range ips {
 		if netip.IsLoopback() {
