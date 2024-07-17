@@ -72,7 +72,7 @@ func deploymentStateFromDeployment(deployment Deployment) (deploymentState, erro
 	}, nil
 }
 
-func (d *DAL) pollDeployments(ctx context.Context) {
+func (d *DAL) PollDeployments(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	retry := backoff.Backoff{}
 

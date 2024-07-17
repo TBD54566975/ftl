@@ -1552,6 +1552,8 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	s.dal.DeploymentChanges.Subscribe(deploymentChanges)
 	defer s.dal.DeploymentChanges.Unsubscribe(deploymentChanges)
 
+	go s.dal.PollDeployments(ctx)
+
 	for {
 		select {
 		case <-ctx.Done():
