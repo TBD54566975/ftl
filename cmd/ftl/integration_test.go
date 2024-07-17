@@ -33,6 +33,66 @@ func TestBox(t *testing.T) {
 	)
 }
 
+func TestConfigsWithController(t *testing.T) {
+	Run(t, "", configActions(t)...)
+}
+
+func TestConfigsWithoutController(t *testing.T) {
+	RunWithoutController(t, "", configActions(t)...)
+}
+
+func configActions(t *testing.T) []Action {
+	t.Helper()
+
+	return []Action{
+		// test setting value without --json flag
+		Exec("ftl", "config", "set", "test.one", "hello world", "--inline"),
+		ExecWithExpectedOutput("\"hello world\"\n", "ftl", "config", "get", "test.one"),
+		// test updating value with --json flag
+		Exec("ftl", "config", "set", "test.one", `"hello world 2"`, "--json", "--inline"),
+		ExecWithExpectedOutput("\"hello world 2\"\n", "ftl", "config", "get", "test.one"),
+		// test deleting value
+		Exec("ftl", "config", "unset", "test.one", "--inline"),
+		ExpectError(
+			ExecWithOutput("ftl", []string{"config", "get", "test.one"}, func(output string) {}),
+			"failed to get from config manager: not found",
+		),
+	}
+}
+
+func TestSecretsWithController(t *testing.T) {
+	Run(t, "", secretActions(t)...)
+}
+
+func TestSecretsWithoutController(t *testing.T) {
+	RunWithoutController(t, "", secretActions(t)...)
+}
+
+func secretActions(t *testing.T) []Action {
+	t.Helper()
+
+	// can not easily use Exec() to enter secure text, using secret import instead
+	secretsPath1, err := filepath.Abs("testdata/secrets1.json")
+	assert.NoError(t, err)
+	secretsPath2, err := filepath.Abs("testdata/secrets2.json")
+	assert.NoError(t, err)
+
+	return []Action{
+		// test setting secret without --json flag
+		Exec("ftl", "secret", "import", "--inline", secretsPath1),
+		ExecWithExpectedOutput("\"hello world\"\n", "ftl", "secret", "get", "test.one"),
+		// test updating secret
+		Exec("ftl", "secret", "import", "--inline", secretsPath2),
+		ExecWithExpectedOutput("\"hello world 2\"\n", "ftl", "secret", "get", "test.one"),
+		// test deleting secret
+		Exec("ftl", "secret", "unset", "test.one", "--inline"),
+		ExpectError(
+			ExecWithOutput("ftl", []string{"secret", "get", "test.one"}, func(output string) {}),
+			"failed to get from secret manager: not found",
+		),
+	}
+}
+
 func TestSecretImportExport(t *testing.T) {
 	testImportExport(t, "secret")
 }
