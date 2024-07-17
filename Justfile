@@ -121,12 +121,6 @@ build-protos-unconditionally: npm-install
   ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint
   cd backend/protos && buf generate
 
-build-docker-controller:
-  docker build --platform linux/amd64 -t ftl0/ftl-controller:"$(git rev-parse HEAD)" -t ftl0/ftl-controller:latest -f Dockerfile.controller .
-
-build-docker-runner:
-  docker build --platform linux/amd64 -t ftl0/ftl-runner:"$(git rev-parse HEAD)" -t ftl0/ftl-runner:latest -f Dockerfile.runner .
-
 # Run integration test(s)
 integration-tests *test:
   #!/bin/bash

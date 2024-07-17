@@ -82,21 +82,21 @@ spec:
 #    name: ftl-controller
 #  minReplicas: 1
 #  maxReplicas: 10
-#---
-#apiVersion: networking.k8s.io/v1
-#kind: Ingress
-#metadata:
-#  name: ftl-controller
-#  annotations:
-#    ingress.kubernetes.io/ssl-redirect: "false"
-#spec:
-#  rules:
-#    - http:
-#        paths:
-#          - path: /
-#            pathType: Prefix
-#            backend:
-#              service:
-#                name: ftl-controller
-#                port:
-#                  number: 8892
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ftl-controller
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ftl-controller
+                port:
+                  number: 8892

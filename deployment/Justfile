@@ -1,24 +1,41 @@
 _help:
   @just -l
 
+registry_full := "k3d-ftl-registry.localhost:5000"
+registry_short := "ftl-registry.localhost"
+registry_full_nolocal := "k3d-ftl-registry:5000"
+registry_local := "localhost:5000"
+git_tag_hash := `git rev-parse --short HEAD`
+
 mirrors := '''
   mirrors:
     "localhost:5000":
       endpoint:
-        - http://k3d-ftl:5000
+        - http://''' + registry_full_nolocal + '''
 '''
+
+smoke-test:
+  just setup
+  just deploy
+  kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m
+  kubectl wait --for=condition=available deployment/ftl-runner --timeout=5m
+  kubectl wait --for=condition=ready pod/ftl-pg-cluster-1-0 --timeout=5m
+
+  ftl --endpoint http://localhost:8892 status
+
+  just teardown
 
 # Create a k3d cluster for FTL including a local registry.
 setup:
-  k3d registry create ftl --port 5000
+  k3d registry create {{registry_short}} --port 5000
   k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" --agents 2 \
-      --registry-use k3d-ftl:5000 \
+      --registry-use {{registry_full}} \
       --registry-config '{{mirrors}}'
 
 # Delete the FTL k3d cluster and registry.
 teardown:
   k3d cluster delete ftl
-  k3d registry delete ftl
+  k3d registry delete {{registry_short}}
 
 deploy:
   kubectl kustomize --load-restrictor=LoadRestrictionsNone | kubectl apply -f -
@@ -49,3 +66,18 @@ psql:
 
 ftl-status:
   just exec deployment/ftl-controller ./ftl status
+
+build-controller:
+  docker tag ftl0/ftl-controller:latest {{registry_local}}/ftl-controller:latest
+  docker tag ftl0/ftl-controller:latest {{registry_local}}/ftl-controller:{{git_tag_hash}}
+  docker push {{registry_local}}/ftl-controller:latest
+  docker push {{registry_local}}/ftl-controller:{{git_tag_hash}}
+
+#  cd .. && docker build --platform linux/amd64 -t ftl0/ftl-controller:latest -f Dockerfile.controller .
+
+build-runner:
+  cd .. && docker build --platform linux/amd64 -t ftl0/ftl-runner:latest -f Dockerfile.runner .
+  docker tag ftl0/ftl-runner:latest {{registry_full}}/ftl-runner:latest
+  docker tag ftl0/ftl-runner:latest {{registry_full}}/ftl-runner:{{git_tag_hash}}
+  docker push {{registry_full}}/ftl-runner:latest
+  docker push {{registry_full}}/ftl-runner:{{git_tag_hash}}
