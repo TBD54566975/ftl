@@ -1,11 +1,9 @@
-package ingress
+package schema
 
 import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-
-	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestTransformFromAliasedFields(t *testing.T) {
@@ -31,9 +29,9 @@ func TestTransformFromAliasedFields(t *testing.T) {
 		}
 		`
 
-	sch, err := schema.ParseString("test", schemaText)
+	sch, err := ParseString("test", schemaText)
 	assert.NoError(t, err)
-	actual, err := transformFromAliasedFields(&schema.Ref{Module: "test", Name: "Test"}, sch, map[string]any{
+	actual, err := TransformFromAliasedFields(&Ref{Module: "test", Name: "Test"}, sch, map[string]any{
 		"bar": "value",
 		"inner": map[string]any{
 			"foo": "value",
@@ -106,9 +104,9 @@ func TestTransformToAliasedFields(t *testing.T) {
 		}
 		`
 
-	sch, err := schema.ParseString("test", schemaText)
+	sch, err := ParseString("test", schemaText)
 	assert.NoError(t, err)
-	actual, err := transformToAliasedFields(&schema.Ref{Module: "test", Name: "Test"}, sch, map[string]any{
+	actual, err := TransformToAliasedFields(&Ref{Module: "test", Name: "Test"}, sch, map[string]any{
 		"scalar": "value",
 		"inner": map[string]any{
 			"waz": "value",

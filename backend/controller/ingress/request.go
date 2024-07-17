@@ -78,7 +78,7 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 		}
 	}
 
-	requestMap, err = transformFromAliasedFields(request, sch, requestMap)
+	requestMap, err = schema.TransformFromAliasedFields(request, sch, requestMap)
 	if err != nil {
 		return nil, err
 	}
