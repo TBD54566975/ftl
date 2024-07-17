@@ -79,7 +79,7 @@ func bodyForType(typ schema.Type, sch *schema.Schema, data []byte) ([]byte, erro
 			return nil, fmt.Errorf("HTTP response body is not valid JSON: %w", err)
 		}
 
-		err = transformAliasedFields(sch, t, response, func(obj map[string]any, field *schema.Field) string {
+		err = schema.TransformAliasedFields(sch, t, response, func(obj map[string]any, field *schema.Field) string {
 			if jsonAlias, ok := field.Alias(schema.AliasKindJSON).Get(); ok && field.Name != jsonAlias {
 				obj[jsonAlias] = obj[field.Name]
 				delete(obj, field.Name)

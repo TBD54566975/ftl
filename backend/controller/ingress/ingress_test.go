@@ -401,9 +401,9 @@ func TestEnumValidation(t *testing.T) {
 		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": obj{"name": "Invalid", "value": 0}},
 			"\"Invalid\" is not a valid variant of enum test.TypeEnum"},
 		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": obj{"name": 0, "value": 0}},
-			`invalid type for enum "test.TypeEnum"; name field must be a string, was int`},
+			`failed to transform aliased fields: 0:0: expected 'name' field to be a string, got int`},
 		{&schema.Ref{Name: "TypeEnumRequest", Module: "test"}, obj{"message": "Hello"},
-			`malformed enum type test.TypeEnumRequest.message: expected structure is {"name": "<variant name>", "value": <variant value>}`},
+			`failed to transform aliased fields: 0:0: expected map, got string`},
 	}
 
 	for _, test := range tests {
