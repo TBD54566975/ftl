@@ -7,7 +7,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/buildengine"
-	"github.com/TBD54566975/ftl/common/configuration"
+	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/alecthomas/types/optional"
 )
@@ -24,9 +24,8 @@ type diskSchemaRetriever struct {
 	deployRoot optional.Option[string]
 }
 
-func newLocalClient(ctx context.Context) *localClient {
-	cm := configuration.ConfigFromContext(ctx)
-	sm := configuration.SecretsFromContext(ctx)
+// NewLocalClient creates a admin client that reads and writes from the provided config and secret managers
+func NewLocalClient(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets]) Client {
 	return &localClient{NewAdminService(cm, sm, &diskSchemaRetriever{})}
 }
 
