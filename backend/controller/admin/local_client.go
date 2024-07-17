@@ -25,7 +25,7 @@ type diskSchemaRetriever struct {
 }
 
 // NewLocalClient creates a admin client that reads and writes from the provided config and secret managers
-func NewLocalClient(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets]) *localClient {
+func NewLocalClient(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets]) Client {
 	return &localClient{NewAdminService(cm, sm, &diskSchemaRetriever{})}
 }
 
