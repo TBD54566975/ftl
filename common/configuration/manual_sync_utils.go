@@ -41,7 +41,7 @@ func (a *ManualSyncProvider[R]) SyncAndWait() error {
 	a.syncRequested.Store(optional.Some(block))
 	err := <-block.sync
 	if err, hasErr := err.Get(); hasErr {
-		return err
+		return err //nolint:wrapcheck
 	}
 	return nil
 }
@@ -55,11 +55,11 @@ func (a *ManualSyncProvider[R]) Key() string {
 }
 
 func (a *ManualSyncProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
-	return a.provider.Store(ctx, ref, value)
+	return a.provider.Store(ctx, ref, value) //nolint:wrapcheck
 }
 
 func (a *ManualSyncProvider[R]) Delete(ctx context.Context, ref Ref) error {
-	return a.provider.Delete(ctx, ref)
+	return a.provider.Delete(ctx, ref) //nolint:wrapcheck
 }
 
 func (a *ManualSyncProvider[R]) SyncInterval() time.Duration {
@@ -82,5 +82,5 @@ func (a *ManualSyncProvider[R]) Sync(ctx context.Context, entries []Entry, value
 			block.sync <- optional.Some(err)
 		}
 	}
-	return err
+	return err //nolint:wrapcheck
 }

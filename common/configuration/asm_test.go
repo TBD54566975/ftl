@@ -306,9 +306,6 @@ func waitForManualSync[R Role](t *testing.T, providers []*ManualSyncProvider[R])
 
 	for _, provider := range providers {
 		err := provider.SyncAndWait()
-		if err != nil {
-			fmt.Printf("aaa\n")
-		}
 		assert.NoError(t, err)
 	}
 }

@@ -150,7 +150,6 @@ func (c *cache[R]) sync(ctx context.Context) {
 			providersToSync := []*cacheProvider[R]{}
 			for _, cp := range c.providers {
 				if cp.needsSync() {
-					fmt.Print("needs sync!\n")
 					providersToSync = append(providersToSync, cp)
 				}
 			}
