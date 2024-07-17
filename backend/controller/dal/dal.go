@@ -212,15 +212,15 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 }
 
 func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
-	conn, err := pool.Acquire(ctx)
+	_, err := pool.Acquire(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to acquire PG PubSub connection: %w", err)
+		return nil, fmt.Errorf("could not acquire connection: %w", err)
 	}
 	dal := &DAL{
 		db:                sql.NewDB(pool),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
 	}
-	go dal.runListener(ctx, conn.Hijack())
+
 	return dal, nil
 }
 
@@ -233,7 +233,6 @@ type DAL struct {
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
-	// RouteChanges is a Topic that receives changes to the routing table.
 }
 
 // Tx is DAL within a transaction.

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"context"
 	sha "crypto/sha256"
 	"encoding/binary"
@@ -1516,7 +1517,7 @@ func (s *Service) updateControllersList(ctx context.Context) (time.Duration, err
 func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(response *ftlv1.PullSchemaResponse) error) error {
 	logger := log.FromContext(ctx)
 	type moduleStateEntry struct {
-		hash        sha256.SHA256
+		hash        []byte
 		minReplicas int
 	}
 	moduleState := map[string]moduleStateEntry{}
@@ -1551,6 +1552,8 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	s.dal.DeploymentChanges.Subscribe(deploymentChanges)
 	defer s.dal.DeploymentChanges.Unsubscribe(deploymentChanges)
 
+	go s.dal.PollDeployments(ctx)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -1575,16 +1578,19 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 					CreateTime:  timestamppb.New(message.CreatedAt),
 					MinReplicas: int32(message.MinReplicas),
 				}
-				moduleSchemaBytes, err := proto.Marshal(moduleSchema)
-				if err != nil {
+
+				hasher := sha.New()
+				data := []byte(moduleSchema.String())
+				if _, err := hasher.Write(data); err != nil {
 					return err
 				}
+
 				newState := moduleStateEntry{
-					hash:        sha256.FromBytes(moduleSchemaBytes),
+					hash:        hasher.Sum(nil),
 					minReplicas: message.MinReplicas,
 				}
 				if current, ok := moduleState[message.Schema.Name]; ok {
-					if current != newState {
+					if !bytes.Equal(current.hash, newState.hash) || current.minReplicas != newState.minReplicas {
 						changeType := ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED
 						// A deployment is considered removed if its minReplicas is set to 0.
 						if current.minReplicas > 0 && message.MinReplicas == 0 {
