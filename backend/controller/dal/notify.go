@@ -1,7 +1,9 @@
 package dal
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding"
 	"encoding/json"
 	"fmt"
@@ -49,6 +51,88 @@ type event struct {
 	Old    string `json:"old,omitempty"`
 	// Optional field for conveying deletion metadata.
 	Deleted json.RawMessage `json:"deleted,omitempty"`
+}
+
+type deploymentState struct {
+	Key         model.DeploymentKey
+	schemaHash  []byte
+	minReplicas int
+}
+
+func deploymentStateFromDeployment(deployment Deployment) (deploymentState, error) {
+	hasher := sha256.New()
+	data := []byte(deployment.Schema.String())
+	if _, err := hasher.Write(data); err != nil {
+		return deploymentState{}, fmt.Errorf("failed to hash schema: %w", err)
+	}
+
+	return deploymentState{
+		schemaHash:  hasher.Sum(nil),
+		minReplicas: deployment.MinReplicas,
+	}, nil
+}
+
+func (d *DAL) pollDeployments(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	retry := backoff.Backoff{}
+
+	previousDeployments := make(map[string]deploymentState)
+
+	for {
+		delay := time.Millisecond * 500
+		currentDeployments := make(map[string]deploymentState)
+
+		deployments, err := d.GetDeploymentsWithMinReplicas(ctx)
+		if err != nil {
+			logger.Errorf(err, "failed to get deployments")
+			time.Sleep(retry.Duration())
+			continue
+		}
+
+		// Check for new or updated deployments
+		for _, deployment := range deployments {
+			name := deployment.Schema.Name
+			state, err := deploymentStateFromDeployment(deployment)
+			if err != nil {
+				logger.Errorf(err, "failed to compute deployment state")
+				continue
+			}
+
+			currentDeployments[name] = state
+
+			previousState, exists := previousDeployments[name]
+			if !exists {
+				logger.Tracef("New deployment: %s", name)
+				d.DeploymentChanges.Publish(DeploymentNotification{
+					Message: optional.Some(deployment),
+				})
+			} else if !bytes.Equal(previousState.schemaHash, state.schemaHash) || previousState.minReplicas != state.minReplicas {
+				logger.Tracef("Changed deployment: %s", name)
+				d.DeploymentChanges.Publish(DeploymentNotification{
+					Message: optional.Some(deployment),
+				})
+			}
+		}
+
+		// Check for removed deployments
+		for name := range previousDeployments {
+			if _, exists := currentDeployments[name]; !exists {
+				logger.Tracef("Removed deployment: %s", name)
+				d.DeploymentChanges.Publish(DeploymentNotification{
+					Deleted: optional.Some(previousDeployments[name].Key),
+				})
+			}
+		}
+
+		previousDeployments = currentDeployments
+		retry.Reset()
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(delay):
+		}
+	}
 }
 
 func (d *DAL) runListener(ctx context.Context, conn *pgx.Conn) {

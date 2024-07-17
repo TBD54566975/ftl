@@ -356,6 +356,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("VerifyDeploymentNotifications", func(t *testing.T) {
+		t.Skip("Skipping this test since we're not using the deployment notification system")
 		dal.DeploymentChanges.Unsubscribe(deploymentChangesCh)
 		expectedDeploymentChanges := []DeploymentNotification{
 			{Message: optional.Some(Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},

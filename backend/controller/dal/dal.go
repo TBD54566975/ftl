@@ -212,7 +212,7 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 }
 
 func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
-	conn, err := pool.Acquire(ctx)
+	_, err := pool.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire PG PubSub connection: %w", err)
 	}
@@ -220,7 +220,7 @@ func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
 		db:                sql.NewDB(pool),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
 	}
-	go dal.runListener(ctx, conn.Hijack())
+	go dal.pollDeployments(ctx)
 	return dal, nil
 }
 
