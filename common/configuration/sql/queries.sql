@@ -36,7 +36,8 @@ ORDER BY module, name;
 
 -- name: SetModuleSecretURL :exec
 INSERT INTO module_secrets (module, name, url)
-VALUES ($1, $2, $3);
+VALUES ($1, $2, $3)
+ON CONFLICT (module, name) DO UPDATE SET url = $3;
 
 -- name: UnsetModuleSecret :exec
 DELETE FROM module_secrets

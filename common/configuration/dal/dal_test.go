@@ -101,3 +101,16 @@ func TestModuleConfiguration(t *testing.T) {
 		}
 	})
 }
+
+func TestModuleSecrets(t *testing.T) {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	conn := sqltest.OpenForTesting(ctx, t)
+	dal, err := New(ctx, conn)
+	assert.NoError(t, err)
+	assert.NotZero(t, dal)
+
+	err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "asm://echo.my_secret")
+	assert.NoError(t, err)
+	err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "asm://echo.my_secret")
+	assert.NoError(t, err)
+}

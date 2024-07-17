@@ -122,6 +122,7 @@ func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Op
 const setModuleSecretURL = `-- name: SetModuleSecretURL :exec
 INSERT INTO module_secrets (module, name, url)
 VALUES ($1, $2, $3)
+ON CONFLICT (module, name) DO UPDATE SET url = $3
 `
 
 func (q *Queries) SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error {
