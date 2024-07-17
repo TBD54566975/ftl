@@ -62,6 +62,11 @@ func extractTopic(pass *analysis.Pass, node *ast.GenDecl, callExpr *ast.CallExpr
 	}
 
 	topicName := common.ExtractStringLiteralArg(pass, callExpr, 0)
+	expTopicName := strcase.ToLowerSnake(topicName)
+	if topicName != expTopicName {
+		common.Errorf(pass, node, "unsupported topic name %q, did you mean to use %q?", topicName, expTopicName)
+		return optional.None[*schema.Topic]()
+	}
 
 	if len(node.Specs) > 0 {
 		if t, ok := node.Specs[0].(*ast.ValueSpec); ok {

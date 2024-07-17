@@ -38,12 +38,12 @@ func PublishOne(ctx context.Context) error {
 }
 
 //ftl:export
-var Topic2 = ftl.Topic[PubSubEvent]("topic2")
+var Topic2 = ftl.Topic[PubSubEvent]("topic_2")
 
 //ftl:verb
 func PublishOneToTopic2(ctx context.Context) error {
 	logger := ftl.LoggerFromContext(ctx)
 	t := time.Now()
-	logger.Infof("Publishing to topic2 %v", t)
+	logger.Infof("Publishing to topic_2 %v", t)
 	return Topic2.Publish(ctx, PubSubEvent{Time: t})
 }
