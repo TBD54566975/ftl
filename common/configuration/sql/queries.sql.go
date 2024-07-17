@@ -112,6 +112,7 @@ func (q *Queries) ListModuleSecrets(ctx context.Context) ([]ModuleSecret, error)
 const setModuleConfiguration = `-- name: SetModuleConfiguration :exec
 INSERT INTO module_configuration (module, name, value)
 VALUES ($1, $2, $3)
+ON CONFLICT (module, name) DO UPDATE SET value = $3
 `
 
 func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error {

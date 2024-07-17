@@ -100,6 +100,13 @@ func TestModuleConfiguration(t *testing.T) {
 			assert.Equal(t, sortedList[i].Name, gotList[i].Name)
 		}
 	})
+
+	t.Run("HandlesConflicts", func(t *testing.T) {
+		err := dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
+		assert.NoError(t, err)
+		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
+		assert.NoError(t, err)
+	})
 }
 
 func TestModuleSecrets(t *testing.T) {
