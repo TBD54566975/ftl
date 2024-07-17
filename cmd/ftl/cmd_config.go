@@ -75,14 +75,14 @@ func setUpAdminClient(ctx context.Context, config projectconfig.Config) (ctxOut 
 		cr := cf.ProjectConfigResolver[cf.Configuration]{Config: config.Path}
 		cm, err := cf.NewConfigurationManager(ctx, cr)
 		if err != nil {
-			return ctx, client, err
+			return ctx, client, fmt.Errorf("could not create config manager: %w", err)
 		}
 		ctx = cf.ContextWithConfig(ctx, cm)
 
 		sr := cf.ProjectConfigResolver[cf.Secrets]{Config: config.Path}
 		sm, err := cf.NewSecretsManager(ctx, sr, cli.Vault, config.Path)
 		if err != nil {
-			return ctx, client, err
+			return ctx, client, fmt.Errorf("could not create secrets manager: %w", err)
 		}
 		ctx = cf.ContextWithSecrets(ctx, sm)
 

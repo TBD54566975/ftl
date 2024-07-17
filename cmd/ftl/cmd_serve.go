@@ -127,7 +127,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		cr := cf.ProjectConfigResolver[cf.Configuration]{Config: projConfig.Path}
 		cm, err := cf.NewConfigurationManager(controllerCtx, cr)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create config manager: %w", err)
 		}
 		controllerCtx = cf.ContextWithConfig(controllerCtx, cm)
 
@@ -135,7 +135,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		sr := cf.ProjectConfigResolver[cf.Secrets]{Config: projConfig.Path}
 		sm, err := cf.NewSecretsManager(controllerCtx, sr, cli.Vault, projConfig.Path)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create secrets manager: %w", err)
 		}
 		controllerCtx = cf.ContextWithSecrets(controllerCtx, sm)
 
