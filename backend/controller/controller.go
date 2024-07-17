@@ -27,6 +27,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
@@ -821,6 +823,19 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+	logger := log.FromContext(ctx)
+
+	requestCounter, err := otel.GetMeterProvider().Meter("ftl_call").Int64Counter(
+		"verb_call",
+		metric.WithDescription("Count of FTL verb calls via the controller"),
+		metric.WithUnit("requests"))
+	if err != nil {
+		logger.Errorf(err, "Failed to instrument otel metric `ftl.call.request`")
+	} else {
+		logger.Debugf("Adding to `ftl.call.request`")
+		requestCounter.Add(ctx, 1)
+	}
+
 	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), "")
 }
 
