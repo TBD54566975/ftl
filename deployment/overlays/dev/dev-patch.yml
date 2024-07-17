@@ -1,0 +1,12 @@
+# This yaml is a patchesStrategicMerge that will set the deployment image to ftl-controller-dev
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftl-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          image: ftl-controller-dev

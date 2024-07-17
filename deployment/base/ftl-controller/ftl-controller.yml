@@ -22,6 +22,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: LOG_LEVEL
+              value: "debug"
             - name: FTL_CONTROLLER_DSN
               value: "postgres://ftl-pg-cluster/ftl?sslmode=disable&user=postgres&password=secret"
             - name: FTL_CONTROLLER_INGRESS_BIND
