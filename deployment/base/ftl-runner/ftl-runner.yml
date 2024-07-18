@@ -25,11 +25,13 @@ spec:
             - name: LOG_LEVEL
               value: "debug"
             - name: FTL_ENDPOINT
-              value: http://ftl-controller
+              value: "http://ftl-controller:8892"
             - name: FTL_RUNNER_BIND
               value: "http://$(MY_POD_IP):8893"
             - name: FTL_RUNNER_ADVERTISE
               value: "http://$(MY_POD_IP):8893"
+            - name: FTL_LANGUAGE
+              value: "go,kotlin"
           ports:
             - containerPort: 8893
           readinessProbe:
