@@ -26,7 +26,7 @@ full-deploy:
   kubectl wait --for=condition=available deployment/ftl-runner --timeout=5m
   kubectl wait --for=condition=ready pod/ftl-pg-cluster-1-0 --timeout=5m
 
-  ftl --endpoint http://localhost:8892 status
+  ftl status
 
 setup-registry:
   k3d registry create {{registry_short}} --port 5000
