@@ -14,9 +14,11 @@ mirrors := '''
         - "http://''' + registry_full + '''"
 '''
 
-smoke-test: setup smoke-test-deploy
+start: setup full-deploy
 
-smoke-test-deploy:
+rm: teardown
+
+full-deploy:
   just build-controller
   just build-runner
   just deploy
@@ -83,3 +85,5 @@ build-runner:
   cd .. && docker build --platform linux/amd64 -t ftl-runner:latest -f Dockerfile.runner .
   docker tag ftl0/ftl-runner:latest {{registry_local}}/ftl-runner:latest
   docker push {{registry_local}}/ftl-runner:latest
+
+build: build-controller build-runner
