@@ -1453,13 +1453,14 @@ func (s *Service) terminateRandomRunner(ctx context.Context, key model.Deploymen
 func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error {
 	client, err := s.reserveRunner(ctx, reconcile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to reserve runner for %s: %w", reconcile.Key, err)
 	}
 
 	_, err = client.runner.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{DeploymentKey: reconcile.Key.String()}))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to request deploy %s: %w", reconcile.Key, err)
 	}
+
 	return nil
 }
 
@@ -1477,8 +1478,13 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 	err = dal.WithReservation(reservationCtx, claim, func() error {
 		client = s.clientsForEndpoint(claim.Runner().Endpoint)
 		_, err = client.runner.Reserve(reservationCtx, connect.NewRequest(&ftlv1.ReserveRequest{DeploymentKey: reconcile.Key.String()}))
-		return err
+		if err != nil {
+			return fmt.Errorf("failed request to reserve a runner for %s at %s: %w", reconcile.Key, claim.Runner().Endpoint, err)
+		}
+
+		return nil
 	})
+
 	return
 }
 
