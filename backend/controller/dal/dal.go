@@ -724,24 +724,28 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	return nil
 }
 
+var ErrReplaceDeploymentAlreadyActive = errors.New("deployment already active")
+
 // ReplaceDeployment replaces an old deployment of a module with a new deployment.
+//
+// returns ErrReplaceDeploymentAlreadyActive if the new deployment is already active.
 func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.DeploymentKey, minReplicas int) (err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return fmt.Errorf("replace deployment failed to begin transaction for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
 	}
 
 	defer tx.CommitOrRollback(ctx, &err)
 	newDeployment, err := tx.GetDeployment(ctx, newDeploymentKey)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return fmt.Errorf("replace deployment failed to get deployment for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
 	}
 
 	// must be called before deploymentWillDeactivate for the old deployment
 	err = d.deploymentWillActivate(ctx, tx, newDeploymentKey)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return fmt.Errorf("replace deployment failed willActivate trigger for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
 	}
 
 	// If there's an existing deployment, set its desired replicas to 0
@@ -750,23 +754,23 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	if err == nil {
 		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Key, newDeploymentKey, int32(minReplicas))
 		if err != nil {
-			return dalerrs.TranslatePGError(err)
+			return fmt.Errorf("replace deployment failed replace min replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
 		}
 		if count == 1 {
-			return fmt.Errorf("deployment already exists: %w", dalerrs.ErrConflict)
+			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
 		}
 		err = d.deploymentWillDeactivate(ctx, tx, oldDeployment.Key)
 		if err != nil {
-			return dalerrs.TranslatePGError(err)
+			return fmt.Errorf("replace deployment failed willDeactivate trigger from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !dalerrs.IsNotFound(err) {
-		return dalerrs.TranslatePGError(err)
+		return fmt.Errorf("replace deployment failed to get existing deployment for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
 	} else {
 		// Set the desired replicas for the new deployment
 		err = tx.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
 		if err != nil {
-			return dalerrs.TranslatePGError(err)
+			return fmt.Errorf("replace deployment failed to set replicas for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
 		}
 	}
 
@@ -778,7 +782,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		Replaced:      replacedDeploymentKey,
 	})
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return fmt.Errorf("replace deployment failed to create event: %w", dalerrs.TranslatePGError(err))
 	}
 
 	return nil
