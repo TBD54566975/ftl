@@ -1856,26 +1856,6 @@ func (q *Queries) RenewLease(ctx context.Context, ttl time.Duration, idempotency
 	return column_1, err
 }
 
-const replaceDeployment = `-- name: ReplaceDeployment :one
-WITH update_container AS (
-    UPDATE deployments AS d
-        SET min_replicas = update_deployments.min_replicas
-        FROM (VALUES ($1::deployment_key, 0),
-                     ($2::deployment_key, $3::INT))
-            AS update_deployments(key, min_replicas)
-        WHERE d.key = update_deployments.key
-        RETURNING 1)
-SELECT COUNT(*)
-FROM update_container
-`
-
-func (q *Queries) ReplaceDeployment(ctx context.Context, oldDeployment model.DeploymentKey, newDeployment model.DeploymentKey, minReplicas int32) (int64, error) {
-	row := q.db.QueryRow(ctx, replaceDeployment, oldDeployment, newDeployment, minReplicas)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const reserveRunner = `-- name: ReserveRunner :one
 UPDATE runners
 SET state               = 'reserved',

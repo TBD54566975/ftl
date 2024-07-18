@@ -752,12 +752,13 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
 	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
 	if err == nil {
-		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Key, newDeploymentKey, int32(minReplicas))
+		err = tx.SetDeploymentDesiredReplicas(ctx, oldDeployment.Key, 0)
 		if err != nil {
-			return fmt.Errorf("replace deployment failed to replace min replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
+			return fmt.Errorf("replace deployment failed to set old deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
 		}
-		if count == 1 {
-			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
+		err = tx.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
+		if err != nil {
+			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
 		}
 		err = d.deploymentWillDeactivate(ctx, tx, oldDeployment.Key)
 		if err != nil {
@@ -765,6 +766,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !dalerrs.IsNotFound(err) {
+		// any error other than not found
 		return fmt.Errorf("replace deployment failed to get existing deployment for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
 	} else {
 		// Set the desired replicas for the new deployment
