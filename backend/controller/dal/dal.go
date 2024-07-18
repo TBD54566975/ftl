@@ -766,6 +766,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
 	} else if !dalerrs.IsNotFound(err) {
+		// any error other than not found
 		return fmt.Errorf("replace deployment failed to get existing deployment for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
 	} else {
 		// Set the desired replicas for the new deployment
