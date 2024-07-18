@@ -100,6 +100,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 		if err != nil {
 			return err
 		}
+		logger.Debugf("Deployment %s became ready", resp.Msg.DeploymentKey)
 	}
 
 	return nil
