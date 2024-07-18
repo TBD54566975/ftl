@@ -754,7 +754,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	if err == nil {
 		count, err := tx.ReplaceDeployment(ctx, oldDeployment.Key, newDeploymentKey, int32(minReplicas))
 		if err != nil {
-			return fmt.Errorf("replace deployment failed replace min replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
+			return fmt.Errorf("replace deployment failed to replace min replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
 		}
 		if count == 1 {
 			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
