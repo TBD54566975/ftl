@@ -11,7 +11,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
-	"github.com/benbjohnson/clock"
 	"github.com/puzpuzpuz/xsync/v3"
 )
 
@@ -48,7 +47,7 @@ type cache[R Role] struct {
 	topicWaitGroup *sync.WaitGroup
 }
 
-func newCache[R Role](ctx context.Context, providers []AsynchronousProvider[R], listProvider listProvider, clock clock.Clock) *cache[R] {
+func newCache[R Role](ctx context.Context, providers []AsynchronousProvider[R], listProvider listProvider) *cache[R] {
 	cacheProviders := make(map[string]*cacheProvider[R], len(providers))
 	for _, provider := range providers {
 		cacheProviders[provider.Key()] = &cacheProvider[R]{
@@ -64,7 +63,7 @@ func newCache[R Role](ctx context.Context, providers []AsynchronousProvider[R], 
 		topic:          pubsub.New[updateCacheEvent](),
 		topicWaitGroup: &sync.WaitGroup{},
 	}
-	go cache.sync(ctx, clock)
+	go cache.sync(ctx)
 
 	return cache
 }
@@ -121,7 +120,7 @@ func (c *cache[R]) deletedValue(ref Ref, pkey string) {
 // Errors returned by a provider cause retries with exponential backoff.
 //
 // Events are processed when all providers are not being synced
-func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
+func (c *cache[R]) sync(ctx context.Context) {
 	if len(c.providers) == 0 {
 		// nothing to sync
 		return
@@ -134,7 +133,7 @@ func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
 	defer c.topic.Unsubscribe(events)
 
 	// start syncing immediately
-	next := clock.Now()
+	next := time.Now()
 
 	for {
 		select {
@@ -145,12 +144,12 @@ func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
 			c.processEvent(e)
 
 		// Can not calculate next sync date for each provider as sync intervals can change (eg when follower becomes leader)
-		case <-clock.After(next.Sub(clock.Now())):
+		case <-time.After(time.Until(next)):
 			wg := &sync.WaitGroup{}
 
 			providersToSync := []*cacheProvider[R]{}
 			for _, cp := range c.providers {
-				if cp.needsSync(clock) {
+				if cp.needsSync() {
 					providersToSync = append(providersToSync, cp)
 				}
 			}
@@ -168,12 +167,12 @@ func (c *cache[R]) sync(ctx context.Context, clock clock.Clock) {
 				})
 				wg.Add(1)
 				go func(cp *cacheProvider[R]) {
-					cp.sync(ctx, entriesForProvider, clock)
+					cp.sync(ctx, entriesForProvider)
 					wg.Done()
 				}(cp)
 			}
 			wg.Wait()
-			next = clock.Now().Add(time.Second)
+			next = time.Now().Add(time.Second)
 		}
 	}
 }
@@ -211,22 +210,22 @@ func (c *cacheProvider[R]) waitForInitialSync() error {
 }
 
 // needsSync returns true if the provider needs to be synced.
-func (c *cacheProvider[R]) needsSync(clock clock.Clock) bool {
+func (c *cacheProvider[R]) needsSync() bool {
 	lastSyncAttempt, ok := c.lastSyncAttempt.Get()
 	if !ok {
 		return true
 	}
 	if currentBackoff, ok := c.currentBackoff.Get(); ok {
-		return clock.Now().After(lastSyncAttempt.Add(currentBackoff))
+		return time.Now().After(lastSyncAttempt.Add(currentBackoff))
 	}
-	return clock.Now().After(lastSyncAttempt.Add(c.provider.SyncInterval()))
+	return time.Now().After(lastSyncAttempt.Add(c.provider.SyncInterval()))
 }
 
 // sync executes sync on the provider and updates the cacheProvider sync state
-func (c *cacheProvider[R]) sync(ctx context.Context, entries []Entry, clock clock.Clock) {
+func (c *cacheProvider[R]) sync(ctx context.Context, entries []Entry) {
 	logger := log.FromContext(ctx)
 
-	c.lastSyncAttempt = optional.Some(clock.Now())
+	c.lastSyncAttempt = optional.Some(time.Now())
 	err := c.provider.Sync(ctx, entries, c.values)
 	if err != nil {
 		logger.Errorf(err, "Error syncing %s", c.provider.Key())
