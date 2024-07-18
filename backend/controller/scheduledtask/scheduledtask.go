@@ -129,12 +129,13 @@ func (s *Scheduler) run(ctx context.Context) {
 				}
 				// If the job is singly homed, see if we can acquire the lease.
 				if job.singlyHomed && job.lease == nil {
-					lease, _, err := s.leaser.AcquireLease(ctx, leases.SystemKey("scheduledtask", job.name), time.Second*10, optional.None[any]())
+					key := leases.SystemKey("scheduledtask", job.name)
+					lease, _, err := s.leaser.AcquireLease(ctx, key, time.Second*10, optional.None[any]())
 					if err != nil {
 						if errors.Is(err, leases.ErrConflict) {
-							logger.Scope(job.name).Tracef("Lease is held by another controller, will try again shortly.")
+							logger.Scope(job.name).Tracef("Scheduled task lease is held by another controller, will try again shortly: %v", key)
 						} else {
-							logger.Scope(job.name).Debugf("Failed to acquire lease: %s", err)
+							logger.Scope(job.name).Debugf("Failed to acquire scheduled task lease %v: %s", key, err)
 						}
 						job.next = s.clock.Now().Add(job.retry.Duration())
 						continue
