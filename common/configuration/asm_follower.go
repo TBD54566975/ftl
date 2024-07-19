@@ -13,7 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-const asmFollowerSyncInterval = time.Minute * 1
+const asmFollowerSyncInterval = time.Second * 10
 
 // asmFollower uses AdminService to get/set secrets from the leader
 type asmFollower struct {
