@@ -3,9 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"net/url"
 	"runtime/debug"
 
@@ -23,13 +20,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
-)
-
-const name = "ftl.xyz/ftl/go/runner"
-
-var (
-	meter           = otel.Meter(name)
-	instanceCounter metric.Int64UpDownCounter
 )
 
 type UserVerbConfig struct {
@@ -60,18 +50,6 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		if err != nil {
 			return nil, nil, err
 		}
-
-		instanceCounter, err = meter.Int64UpDownCounter("ftl.sys.runner.instance",
-			metric.WithDescription("number of runner instances"),
-			metric.WithUnit("{count}"))
-
-		if err != nil {
-			panic(err)
-		}
-
-		moduleNameAttribute := attribute.String("ftl.module.name", moduleName)
-
-		instanceCounter.Add(ctx, 1, metric.WithAttributes(moduleNameAttribute))
 
 		hmap := maps.FromSlice(handlers, func(h Handler) (reflection.Ref, Handler) { return h.ref, h })
 		return ctx, &moduleServer{handlers: hmap}, nil

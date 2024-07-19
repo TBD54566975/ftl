@@ -6,6 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"math/rand"
 	"net/http"
 	"net/http/httputil"
@@ -37,6 +40,13 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/unstoppable"
+)
+
+const name = "ftl.xyz/ftl/go/runner"
+
+var (
+	meter           = otel.Meter(name)
+	instanceCounter metric.Int64UpDownCounter
 )
 
 type Config struct {
@@ -106,6 +116,18 @@ func Start(ctx context.Context, config Config) error {
 
 	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
 	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
+
+	instanceCounter, err = meter.Int64UpDownCounter("ftl.sys.runner.instance",
+		metric.WithDescription("number of runner instances"),
+		metric.WithUnit("{count}"))
+
+	if err != nil {
+		panic(err)
+	}
+
+	moduleNameAttribute := attribute.String("ftl.module.name", "unknown-module")
+
+	instanceCounter.Add(ctx, 1, metric.WithAttributes(moduleNameAttribute))
 
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),

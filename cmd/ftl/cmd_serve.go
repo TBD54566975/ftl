@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/internal/observability"
 	"net"
 	"net/url"
 	"os"
@@ -82,6 +84,10 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	if s.isRunning(ctx, client) {
 		return errors.New(ftlRunningErrorMsg)
+	}
+
+	if err := observability.Init(ctx, "ftl-dev", ftl.Version, s.ObservabilityConfig); err != nil {
+		return fmt.Errorf("failed to initialize observability: %w", err)
 	}
 
 	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
