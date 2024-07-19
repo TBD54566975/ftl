@@ -319,8 +319,7 @@ func decodeStruct(d *json.Decoder, v reflect.Value) error {
 			return strcase.ToLowerCamel(s) == key
 		})
 		if !field.IsValid() {
-			// Issue #2117: ignore unknown fields
-			// return fmt.Errorf("no field corresponding to key %s", key)
+			// Issue #2117 #2119: ignore unknown fields
 			continue
 		}
 		fieldTypeStr := field.Type().String()
