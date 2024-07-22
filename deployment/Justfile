@@ -3,9 +3,7 @@ _help:
 
 registry_full := "k3d-ftl-registry.localhost:5000"
 registry_short := "ftl-registry.localhost"
-registry_full_nolocal := "k3d-ftl-registry:5000"
 registry_local := "localhost:5000"
-git_tag_hash := `git rev-parse --short HEAD`
 
 mirrors := '''
   mirrors:
@@ -14,29 +12,32 @@ mirrors := '''
         - "http://''' + registry_full + '''"
 '''
 
-start: setup full-deploy
+# Set up a Docker registry and a k3s cluster for local development. Only need to run once or after a `just teardown`.
+setup: setup-registry setup-cluster
 
-rm: teardown
+# Tear down the Docker registry and k3s cluster, cleaning up the local development environment.
+teardown: teardown-cluster teardown-registry
 
-full-deploy:
+# Build the controller and runner images, push them to the local registry, and apply the manifests to the k3s cluster.
+# Run this after making changes to the controller or runner.
+install:
   just build-controller
   just build-runner
-  just deploy
+  just apply
   kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-runner --timeout=5m
   kubectl wait --for=condition=ready pod/ftl-pg-cluster-1-0 --timeout=5m
-
   ftl status
 
+# Initializes a local Docker registry for k3s
 setup-registry:
   k3d registry create {{registry_short}} --port 5000
 
+# Initializes a k3s cluster, referring to the local Docker registry set up in `setup-registry`.
 setup-cluster:
   k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" --agents 2 \
       --registry-use {{registry_full}} \
       --registry-config '{{mirrors}}'
-
-setup: setup-registry setup-cluster
 
 teardown-registry:
   k3d registry delete {{registry_short}}
@@ -44,9 +45,7 @@ teardown-registry:
 teardown-cluster:
   k3d cluster delete ftl
 
-teardown: teardown-cluster teardown-registry
-
-deploy:
+apply:
   kubectl kustomize --load-restrictor=LoadRestrictionsNone overlays/dev | kubectl apply -f -
 
 delete:
@@ -83,7 +82,18 @@ build-controller:
 
 build-runner:
   cd .. && docker build --platform linux/amd64 -t ftl-runner:latest -f Dockerfile.runner .
-  docker tag ftl0/ftl-runner:latest {{registry_local}}/ftl-runner:latest
+  docker tag ftl-runner:latest {{registry_local}}/ftl-runner:latest
   docker push {{registry_local}}/ftl-runner:latest
 
 build: build-controller build-runner
+
+# We reuse ftl-controller to zip and copy the specified directory to a ftl-container pod.
+# Then we extract it and the run `ftl deploy` command.
+# The files we zip has to be in the same structure as this repository and but only include ftl-project.toml in the root
+# and the directory specified in the `dir` argument.
+deploy dir:
+  cd .. && zip -r /tmp/ftl.zip ftl-project.toml {{dir}}
+  kubectl cp /tmp/ftl.zip ftl-controller:/tmp/ftl.zip
+  kubectl exec deployment/ftl-controller unzip /tmp/ftl.zip -d /tmp/ftl
+  kubectl exec deployment/ftl-controller ./ftl deploy /tmp/ftl/{{dir}}
+

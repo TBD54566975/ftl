@@ -6,18 +6,17 @@ The [Justfile](Justfile) contains the commands to spin up a cluster and set up e
 
 ## Setup
 
-`just start` will:
+`just setup` will create a k3s cluster and registry under Docker. You should only run this once, or after running `just teardown`.
 
-- Create a k3s cluster and registry under Docker.
+`just install` will then set up FTL in the Kubernetes cluster:
+- Build and install the FTL controller and runner
 - Run postgres DB
-- Run ftl-controller
-- Run ftl-runner
 - Run localstack for AWS Secrets Manager
 - Run FTL migrations
 
-You can use this from the root of the project with `just k8s start`, or within the `deployment` directory with `just start`.
+You can use these commands from the root of the project with `just k8s install`, or within the `deployment` directory with `just install`.
 
-`just rm` will remove the cluster and all resources, including the registry and database.
+`just teardown` will remove the cluster and all resources, including the registry and database.
 
 Show all processes:
 
@@ -34,9 +33,9 @@ pod/ftl-controller-7f8b5f5785-wnj74   0/1     CrashLoopBackOff
 
 ## Redeploying FTL
 
-When creating changes to the kubernetes resources, or want to re-deploy resouces that are deleted, you can `just deploy`.
+When creating changes to the kubernetes resources, or want to re-deploy resources that are deleted, you can `just apply`.
 
-However if you changed FTL and want to deploy, use `just build deploy` which will build the docker images and deploy them.
+However if you changed FTL and want to deploy, use `just install` which will build the docker images and reapply kubernetes resources.
 
 ## FTL
 
@@ -44,7 +43,7 @@ The web console should be available at `http://localhost:8892`.
 
 You can connect to the FTL controller using the `ftl` CLI that you have on your machine.
 
-By default the endpoint should be pointing to `http://localhost:8892`, so the `--endpoint` doesn't need to be specified.
+By default, the endpoint should be pointing to `http://localhost:8892`, so the `--endpoint` doesn't need to be specified.
 
 ```
 ftl status
@@ -68,7 +67,7 @@ ftl status
 Deploy some modules:
 
 ```
-ftl deploy ../examples/go
+ftl deploy ./examples/go
 ```
 
 ## Debugging
