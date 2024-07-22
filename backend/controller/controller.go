@@ -202,7 +202,7 @@ type Service struct {
 	pubSub                  *pubsub.Manager
 	controllerListListeners []ControllerListListener
 
-	// Map from endpoint to client.
+	// Map from runnerKey.String() to client.
 	clients *ttlcache.Cache[string, clients]
 
 	// Complete schema synchronised from the database.
@@ -963,7 +963,7 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
 	}
 	route := routes[rand.Intn(len(routes))] //nolint:gosec
-	client := s.clientsForEndpoint(route.Endpoint)
+	client := s.clientsForRunner(route.Runner, route.Endpoint)
 
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
@@ -1134,9 +1134,9 @@ func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deploym
 	return deployment, nil
 }
 
-// Return or create the RunnerService and VerbService clients for a Runner endpoint.
-func (s *Service) clientsForEndpoint(endpoint string) clients {
-	clientItem := s.clients.Get(endpoint)
+// Return or create the RunnerService and VerbService clients for a Runner.
+func (s *Service) clientsForRunner(key model.RunnerKey, endpoint string) clients {
+	clientItem := s.clients.Get(key.String())
 	if clientItem != nil {
 		return clientItem.Value()
 	}
@@ -1144,7 +1144,7 @@ func (s *Service) clientsForEndpoint(endpoint string) clients {
 		runner: rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
 		verb:   rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
 	}
-	s.clients.Set(endpoint, client, time.Minute)
+	s.clients.Set(key.String(), client, time.Minute)
 	return client
 }
 
@@ -1437,7 +1437,7 @@ func (s *Service) terminateRandomRunner(ctx context.Context, key model.Deploymen
 		return false, nil
 	}
 	runner := runners[rand.Intn(len(runners))] //nolint:gosec
-	client := s.clientsForEndpoint(runner.Endpoint)
+	client := s.clientsForRunner(runner.Key, runner.Endpoint)
 	resp, err := client.runner.Terminate(ctx, connect.NewRequest(&ftlv1.TerminateRequest{DeploymentKey: key.String()}))
 	if err != nil {
 		return false, err
@@ -1477,7 +1477,8 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 	}
 
 	err = dal.WithReservation(reservationCtx, claim, func() error {
-		client = s.clientsForEndpoint(claim.Runner().Endpoint)
+		runner := claim.Runner()
+		client = s.clientsForRunner(runner.Key, runner.Endpoint)
 		_, err = client.runner.Reserve(reservationCtx, connect.NewRequest(&ftlv1.ReserveRequest{DeploymentKey: reconcile.Key.String()}))
 		if err != nil {
 			return fmt.Errorf("failed request to reserve a runner for %s at %s: %w", reconcile.Key, claim.Runner().Endpoint, err)
