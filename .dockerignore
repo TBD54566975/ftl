@@ -9,3 +9,4 @@
 **/*.sw*
 frontend/dist
 **/.DS_Store
+**/target

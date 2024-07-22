@@ -139,6 +139,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		return err
 	}
 	logger.Debugf("Listening on %s", config.Bind)
+	logger.Debugf("Advertising as %s", config.Advertise)
 
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
