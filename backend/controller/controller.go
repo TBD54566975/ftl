@@ -832,7 +832,6 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	if err != nil {
 		logger.Errorf(err, "Failed to instrument otel metric `ftl.call.request`")
 	} else {
-		logger.Debugf("Adding to `ftl.call.request`")
 		requestCounter.Add(ctx, 1)
 	}
 

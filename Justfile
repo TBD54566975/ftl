@@ -223,5 +223,6 @@ otel-dev *args:
 
   grpcPort=$(cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //')
   export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${grpcPort}"
-  export FTL_O11Y_LOG_LEVEL="debug"
-  ftl dev --otel {{args}}
+  # Uncomment this line for much richer debug logs
+  # export FTL_O11Y_LOG_LEVEL="debug"
+  ftl dev {{args}}

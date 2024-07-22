@@ -55,13 +55,6 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 }
 
 func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool]) error {
-	if s.Otel {
-		err := observability.Init(ctx, "ftl-local", ftl.Version, observability.Config{})
-		if err != nil {
-			return err
-		}
-	}
-
 	logger := log.FromContext(ctx)
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
