@@ -13,7 +13,6 @@ import (
 )
 
 func TestLifecycle(t *testing.T) {
-	t.Skip("ftl init is currently broken due to requirement of project toml existing")
 	in.Run(t, "",
 		in.GitInit(),
 		in.Exec("rm", "ftl-project.toml"),
