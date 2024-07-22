@@ -84,7 +84,11 @@ func (d *DAL) PollDeployments(ctx context.Context) {
 
 		deployments, err := d.GetDeploymentsWithMinReplicas(ctx)
 		if err != nil {
-			logger.Errorf(err, "failed to get deployments")
+			if ctx.Err() == context.Canceled {
+				logger.Debugf("Polling stopped: %v", ctx.Err())
+				return
+			}
+			logger.Errorf(err, "failed to get deployments when polling")
 			time.Sleep(retry.Duration())
 			continue
 		}
