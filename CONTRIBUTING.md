@@ -28,6 +28,12 @@ $ . ./bin/activate-hermit
 
 > **Tip:** Install Hermit's [shell hooks](https://cashapp.github.io/hermit/usage/shell/) to automatically activate Hermit environments when you `cd` into them.
 
+Once Hermit has been activated you need to install all required dependencies. To do this run:
+
+```
+$ hermit install
+```
+
 If using an IDEA IDE we highly recommend installing
 the Hermit [IDEA plugin](https://plugins.jetbrains.com/plugin/16882-hermit).
 For most other editors, starting your editor from within a terminal in an
