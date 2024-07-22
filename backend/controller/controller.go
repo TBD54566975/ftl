@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"hash"
 	"io"
 	"math/rand"
@@ -1020,6 +1021,11 @@ func (s *Service) callWithRequest(
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 
+	observability.RecordCallBegin(ctx, &observability.CallBegin{
+		DestVerb: verbRef,
+		Callers:  callers,
+	})
+
 	response, err := client.verb.Call(ctx, req)
 	var resp *connect.Response[ftlv1.CallResponse]
 	var maybeResponse optional.Option[*ftlv1.CallResponse]
@@ -1027,15 +1033,15 @@ func (s *Service) callWithRequest(
 		resp = connect.NewResponse(response.Msg)
 		maybeResponse = optional.Some(resp.Msg)
 	}
-	s.recordCall(ctx, &Call{
-		deploymentKey: route.Deployment,
-		requestKey:    requestKey,
-		startTime:     start,
-		destVerb:      verbRef,
-		callers:       callers,
-		callError:     optional.Nil(err),
-		request:       req.Msg,
-		response:      maybeResponse,
+	observability.RecordCallEnd(ctx, s.dal, &observability.CallEnd{
+		DeploymentKey: route.Deployment,
+		RequestKey:    requestKey,
+		StartTime:     start,
+		DestVerb:      verbRef,
+		Callers:       callers,
+		CallError:     optional.Nil(err),
+		Request:       req.Msg,
+		Response:      maybeResponse,
 	})
 	return resp, err
 }

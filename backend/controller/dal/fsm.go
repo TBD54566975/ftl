@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -57,11 +58,15 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 		}
 		return fmt.Errorf("failed to start FSM transition: %w", err)
 	}
+
+	observability.RecordFsmTransitionBegin(ctx, fsm)
+
 	return nil
 }
 
 func (d *DAL) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.FinishFSMTransition(ctx, fsm, instanceKey)
+	observability.RecordFsmTransitionSuccess(ctx, fsm)
 	return dalerrs.TranslatePGError(err)
 }
 
