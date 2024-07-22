@@ -28,6 +28,7 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
@@ -831,7 +832,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	if err != nil {
 		logger.Errorf(err, "Failed to instrument otel metric `ftl.call.request`")
 	} else {
-		requestCounter.Add(ctx, 1)
+		requestCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("ftl.module.name", req.Msg.Verb.Module), attribute.String("ftl.verb.name", req.Msg.Verb.Name)))
 	}
 
 	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), "")
