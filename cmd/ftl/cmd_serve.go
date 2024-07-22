@@ -94,7 +94,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	err = observability.Init(ctx, "ftl-serve", ftl.Version, s.ObservabilityConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("observability init failed: %w", err)
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
