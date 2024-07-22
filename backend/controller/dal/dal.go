@@ -252,7 +252,7 @@ type Tx struct {
 func (t *Tx) CommitOrRollback(ctx context.Context, err *error) {
 	tx, ok := t.db.(*sql.Tx)
 	if !ok {
-		panic("inconcievable")
+		panic("inconceivable")
 	}
 	tx.CommitOrRollback(ctx, err)
 }
