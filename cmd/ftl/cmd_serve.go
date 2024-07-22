@@ -18,6 +18,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
@@ -30,17 +31,19 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type serveCmd struct {
-	Bind           *url.URL      `help:"Starting endpoint to bind to and advertise to. Each controller, ingress and runner will increment the port by 1" default:"http://localhost:8891"`
-	DBPort         int           `help:"Port to use for the database." default:"15432"`
-	Recreate       bool          `help:"Recreate the database even if it already exists." default:"false"`
-	Controllers    int           `short:"c" help:"Number of controllers to start." default:"1"`
-	Background     bool          `help:"Run in the background." default:"false"`
-	Stop           bool          `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
-	StartupTimeout time.Duration `help:"Timeout for the server to start up." default:"1m"`
+	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress and runner will increment the port by 1" default:"http://localhost:8891"`
+	DBPort              int                  `help:"Port to use for the database." default:"15432"`
+	Recreate            bool                 `help:"Recreate the database even if it already exists." default:"false"`
+	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
+	Background          bool                 `help:"Run in the background." default:"false"`
+	Stop                bool                 `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
+	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"1m"`
+	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	controller.CommonConfig
 }
 
@@ -87,6 +90,11 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 	dsn, err := s.setupDB(ctx)
 	if err != nil {
 		return err
+	}
+
+	err = observability.Init(ctx, "ftl-serve", ftl.Version, s.ObservabilityConfig)
+	if err != nil {
+		return fmt.Errorf("observability init failed: %w", err)
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
