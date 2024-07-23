@@ -5,16 +5,15 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+// ModuleNameAttribute identifies the name of the module that the associated
+// metric originates from.
+func ModuleNameAttribute(name string) attribute.KeyValue {
+	return attribute.String("ftl.module.name", name)
+}
+
 // FeatureNameAttribute identifies the feature (e.g. verb) that the associated
 // metric originates from. The entire module qualified name is used:
 // e.g. {module.verb}
 func FeatureNameAttribute(ref schema.Ref) attribute.KeyValue {
-	return attribute.String("ftl.feature.name", ref.Name)
-}
-
-// DestinationVerbAttribute identifies the target verb associated metric. This
-// attribute is relevant for metrics involving verb invocations. The entire
-// module qualified name is used: e.g. {module.verb}
-func DestinationVerbAttribute(ref schema.Ref) attribute.KeyValue {
-	return attribute.String("ftl.dest.verb", ref.Name)
+	return attribute.String("ftl.feature.ref", ref.Name)
 }
