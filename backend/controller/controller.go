@@ -27,6 +27,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
@@ -930,6 +933,18 @@ func (s *Service) callWithRequest(
 	sourceAddress string,
 ) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
+
+	logger := log.FromContext(ctx)
+
+	requestCounter, err := otel.GetMeterProvider().Meter("ftl.call").Int64Counter(
+		"requests",
+		metric.WithDescription("Count of FTL verb calls via the controller"))
+	if err != nil {
+		logger.Errorf(err, "Failed to instrument otel metric `ftl.call.requests`")
+	} else {
+		requestCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("ftl.module.name", req.Msg.Verb.Module), attribute.String("ftl.verb.name", req.Msg.Verb.Name)))
+	}
+
 	if req.Msg.Verb == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("verb is required"))
 	}
