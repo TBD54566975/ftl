@@ -184,8 +184,9 @@ var _ ftlv1connect.ControllerServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 
 type clients struct {
-	verb   ftlv1connect.VerbServiceClient
-	runner ftlv1connect.RunnerServiceClient
+	verb       ftlv1connect.VerbServiceClient
+	runner     ftlv1connect.RunnerServiceClient
+	created_at time.Time
 }
 
 // ControllerListListener is regularly notified of the current list of controllers
@@ -978,7 +979,7 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
 	}
 	route := routes[rand.Intn(len(routes))] //nolint:gosec
-	client := s.clientsForRunner(route.Runner, route.Endpoint)
+	client := s.clientsForRunner(ctx, route.Runner, route.Endpoint)
 
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
@@ -1150,14 +1151,16 @@ func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deploym
 }
 
 // Return or create the RunnerService and VerbService clients for a Runner.
-func (s *Service) clientsForRunner(key model.RunnerKey, endpoint string) clients {
+func (s *Service) clientsForRunner(ctx context.Context, key model.RunnerKey, endpoint string) clients {
 	clientItem := s.clients.Get(key.String())
-	if clientItem != nil {
+	if clientItem != nil && clientItem.Value().created_at.Add(time.Minute*5).After(time.Now()) {
 		return clientItem.Value()
 	}
+	log.FromContext(ctx).Tracef("Creating new grpc clients for %s at %s", key, endpoint)
 	client := clients{
-		runner: rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
-		verb:   rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
+		runner:     rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
+		verb:       rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
+		created_at: time.Now(),
 	}
 	s.clients.Set(key.String(), client, time.Minute)
 	return client
@@ -1452,7 +1455,7 @@ func (s *Service) terminateRandomRunner(ctx context.Context, key model.Deploymen
 		return false, nil
 	}
 	runner := runners[rand.Intn(len(runners))] //nolint:gosec
-	client := s.clientsForRunner(runner.Key, runner.Endpoint)
+	client := s.clientsForRunner(ctx, runner.Key, runner.Endpoint)
 	resp, err := client.runner.Terminate(ctx, connect.NewRequest(&ftlv1.TerminateRequest{DeploymentKey: key.String()}))
 	if err != nil {
 		return false, err
@@ -1493,7 +1496,7 @@ func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment)
 
 	err = dal.WithReservation(reservationCtx, claim, func() error {
 		runner := claim.Runner()
-		client = s.clientsForRunner(runner.Key, runner.Endpoint)
+		client = s.clientsForRunner(ctx, runner.Key, runner.Endpoint)
 		_, err = client.runner.Reserve(reservationCtx, connect.NewRequest(&ftlv1.ReserveRequest{DeploymentKey: reconcile.Key.String()}))
 		if err != nil {
 			return fmt.Errorf("failed request to reserve a runner for %s at %s: %w", reconcile.Key, claim.Runner().Endpoint, err)
