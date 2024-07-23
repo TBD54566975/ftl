@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -104,8 +105,21 @@ func Start(ctx context.Context, config Config) error {
 	}
 	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
 
-	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
-	go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
+	go func() {
+		// In some environments we may want a delay before registering the runner
+		// We have seen istio race conditions that we think this will help
+		startDelay := os.Getenv("FTL_RUNNER_START_DELAY")
+		if startDelay != "" {
+			delay, err := strconv.Atoi(startDelay)
+			if err != nil {
+				logger.Errorf(err, "could not parse RUNNER_START_DELAY")
+			} else {
+				time.Sleep(time.Second * time.Duration(delay))
+			}
+		}
+		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
+		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
+	}()
 
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
