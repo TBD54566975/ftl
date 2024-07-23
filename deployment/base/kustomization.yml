@@ -1,6 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+- https://raw.githubusercontent.com/reactive-tech/kubegres/v1.18/kubegres.yaml
 - db-create
 - db-migrate
 - ftl-controller

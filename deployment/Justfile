@@ -5,7 +5,6 @@ registry_full := "k3d-ftl-registry.localhost:5000"
 registry_short := "ftl-registry.localhost"
 registry_full_nolocal := "k3d-ftl-registry:5000"
 registry_local := "localhost:5000"
-git_tag_hash := `git rev-parse --short HEAD`
 
 mirrors := '''
   mirrors:
@@ -21,7 +20,7 @@ rm: teardown
 full-deploy:
   just build-controller
   just build-runner
-  just deploy
+  just apply
   kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-runner --timeout=5m
   kubectl wait --for=condition=ready pod/ftl-pg-cluster-1-0 --timeout=5m
@@ -46,7 +45,7 @@ teardown-cluster:
 
 teardown: teardown-cluster teardown-registry
 
-deploy:
+apply:
   kubectl kustomize --load-restrictor=LoadRestrictionsNone overlays/dev | kubectl apply -f -
 
 delete:
@@ -83,7 +82,28 @@ build-controller:
 
 build-runner:
   cd .. && docker build --platform linux/amd64 -t ftl-runner:latest -f Dockerfile.runner .
-  docker tag ftl0/ftl-runner:latest {{registry_local}}/ftl-runner:latest
+  docker tag ftl-runner:latest {{registry_local}}/ftl-runner:latest
   docker push {{registry_local}}/ftl-runner:latest
 
 build: build-controller build-runner
+
+deploy path:
+	#!/usr/bin/env bash
+	set -euxo pipefail
+	rm -f ftl.tar.gz
+	COPYFILE_DISABLE=1 tar -cf ftl.tar -C .. .
+	export POD=$(kubectl get pods -l app=ftl-controller --no-headers | tail -1 | awk '{print $1}')
+	kubectl exec -it ${POD} -- rm -rf /tmp/ftl/
+	kubectl exec -it ${POD} -- mkdir -p /tmp/ftl/
+	kubectl cp ftl.tar ${POD}:/tmp/ftl/ftl.tar
+	kubectl exec -it ${POD} -- tar --warning=no-unknown-keyword -tf /tmp/ftl/ftl.tar
+	kubectl exec -it ${POD} -- tar -xf /tmp/ftl/ftl.tar -C /tmp/ftl/
+	kubectl exec -it ${POD} -- bash -c "cd /tmp/ftl && FTL_ENDPOINT=http://ftl-controller:8892 /root/ftl deploy {{path}}"
+	rm -f ftl.tar.gz
+
+ftl *args:
+	#!/usr/bin/env bash
+	set -euxo pipefail
+	export POD=$(kubectl get pods -l app=ftl-controller --no-headers | tail -1 | awk '{print $1}')
+	kubectl exec -it ${POD} -- bash -c "FTL_ENDPOINT=http://ftl-controller:8892 /root/ftl {{args}}"
+
