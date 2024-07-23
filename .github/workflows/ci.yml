@@ -207,6 +207,13 @@ jobs:
     name: Integration Success
     needs: [integration-run]
     runs-on: ubuntu-latest
+    if: ${{ always() }}
     steps:
-      - name: Ok
-        run: echo "Integration tests passed"
+      - name: Check integration tests result
+        run: |
+          if [[ "${{ needs.integration-run.result }}" == "failure" ]]; then
+            echo "Integration tests failed"
+            exit 1
+          else
+            echo "Integration tests passed"
+          fi
