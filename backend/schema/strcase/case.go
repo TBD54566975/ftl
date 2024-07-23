@@ -33,6 +33,18 @@ func ToUpperCamel(s string) string {
 	return strings.Join(parts, "")
 }
 
+func ToUpperStrippedCamel(s string) string {
+	parts := split(s)
+	out := make([]string, 0, len(parts)*2)
+	for i := range parts {
+		if parts[i] == "-" || parts[i] == "_" {
+			continue
+		}
+		out = append(out, title(parts[i]))
+	}
+	return strings.Join(out, "")
+}
+
 func ToLowerSnake(s string) string {
 	parts := split(s)
 	out := make([]string, 0, len(parts)*2)

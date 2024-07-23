@@ -9,7 +9,7 @@ import (
 )
 
 //ftl:export
-var topic = ftl.Topic[PubSubEvent]("test_topic")
+var TestTopic = ftl.Topic[PubSubEvent]("test_topic")
 
 type PubSubEvent struct {
 	Time time.Time
@@ -21,7 +21,7 @@ func PublishTen(ctx context.Context) error {
 	for i := 0; i < 10; i++ {
 		t := time.Now()
 		logger.Infof("Publishing %v", t)
-		err := topic.Publish(ctx, PubSubEvent{Time: t})
+		err := TestTopic.Publish(ctx, PubSubEvent{Time: t})
 		if err != nil {
 			return err
 		}
@@ -34,16 +34,16 @@ func PublishOne(ctx context.Context) error {
 	logger := ftl.LoggerFromContext(ctx)
 	t := time.Now()
 	logger.Infof("Publishing %v", t)
-	return topic.Publish(ctx, PubSubEvent{Time: t})
+	return TestTopic.Publish(ctx, PubSubEvent{Time: t})
 }
 
 //ftl:export
-var topic2 = ftl.Topic[PubSubEvent]("topic2")
+var Topic2 = ftl.Topic[PubSubEvent]("topic_2")
 
 //ftl:verb
 func PublishOneToTopic2(ctx context.Context) error {
 	logger := ftl.LoggerFromContext(ctx)
 	t := time.Now()
-	logger.Infof("Publishing to topic2 %v", t)
-	return topic2.Publish(ctx, PubSubEvent{Time: t})
+	logger.Infof("Publishing to topic_2 %v", t)
+	return Topic2.Publish(ctx, PubSubEvent{Time: t})
 }

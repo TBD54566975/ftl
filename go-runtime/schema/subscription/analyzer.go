@@ -3,9 +3,9 @@ package subscription
 import (
 	"go/ast"
 	"go/types"
-	"strings"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
@@ -91,10 +91,7 @@ func extractSubscription(pass *analysis.Pass, obj types.Object, node *ast.CallEx
 			common.Errorf(pass, node, "subscription registration must have a topic")
 			return optional.None[*schema.Subscription]()
 		}
-		name := strings.ToLower(string(varName[0]))
-		if len(varName) > 1 {
-			name += varName[1:]
-		}
+		name := strcase.ToLowerSnake(varName)
 		topicRef = &schema.Ref{
 			Module: moduleIdent.Name,
 			Name:   name,

@@ -18,13 +18,13 @@ FTL has first-class support for PubSub, modelled on the concepts of topics (wher
 First, declare a new topic:
 
 ```go
-var invoicesTopic = ftl.Topic[Invoice]("invoices")
+var Invoices = ftl.Topic[Invoice]("invoices")
 ```
 
 Then declare each subscription on the topic:
 
 ```go
-var _ = ftl.Subscription(invoicesTopic, "emailInvoices")
+var _ = ftl.Subscription(Invoices, "emailInvoices")
 ```
 
 And finally define a Sink to consume from the subscription:
@@ -39,7 +39,7 @@ func SendInvoiceEmail(ctx context.Context, in Invoice) error {
 Events can be published to a topic like so:
 
 ```go
-invoicesTopic.Publish(ctx, Invoice{...})
+Invoices.Publish(ctx, Invoice{...})
 ```
 
 > **NOTE!**

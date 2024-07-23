@@ -30,6 +30,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	"screamingSnake": strcase.ToUpperSnake,
 	"camel":          strcase.ToUpperCamel,
 	"lowerCamel":     strcase.ToLowerCamel,
+	"strippedCamel":  strcase.ToUpperStrippedCamel,
 	"kebab":          strcase.ToLowerKebab,
 	"screamingKebab": strcase.ToUpperKebab,
 	"upper":          strings.ToUpper,

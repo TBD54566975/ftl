@@ -1,7 +1,7 @@
 Declare a PubSub topic.
 
 ```go
-var invoicesTopic = ftl.Topic[Invoice]("invoices")
+var Invoices = ftl.Topic[Invoice]("invoices")
 ```
 
 See https://tbd54566975.github.io/ftl/docs/reference/pubsub/
