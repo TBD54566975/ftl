@@ -93,6 +93,7 @@ deploy path:
 	rm -f ftl.tar.gz
 	COPYFILE_DISABLE=1 tar -cf ftl.tar -C .. .
 	export POD=$(kubectl get pods -l app=ftl-controller --no-headers | tail -1 | awk '{print $1}')
+	kubectl exec -it ${POD} -- apt install -y golang
 	kubectl exec -it ${POD} -- rm -rf /tmp/ftl/
 	kubectl exec -it ${POD} -- mkdir -p /tmp/ftl/
 	kubectl cp ftl.tar ${POD}:/tmp/ftl/ftl.tar
