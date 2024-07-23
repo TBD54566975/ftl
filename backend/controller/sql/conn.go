@@ -51,6 +51,9 @@ func (t *Tx) Tx() pgx.Tx { return t.tx }
 func (t *Tx) Begin(ctx context.Context) (*Tx, error) {
 	savepoint := fmt.Sprintf("savepoint_%d", len(t.savepoints))
 	t.savepoints = append(t.savepoints, savepoint)
+	if len(t.savepoints) > 1 {
+		panic("checking if this is used")
+	}
 	_, err := t.tx.Exec(ctx, `SAVEPOINT `+savepoint)
 	if err != nil {
 		return nil, err
