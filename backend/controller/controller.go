@@ -824,17 +824,6 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
-	logger := log.FromContext(ctx)
-
-	requestCounter, err := otel.GetMeterProvider().Meter("ftl.verb").Int64Counter(
-		"requests",
-		metric.WithDescription("Count of FTL verb calls via the controller"))
-	if err != nil {
-		logger.Errorf(err, "Failed to instrument otel metric `ftl.call.request`")
-	} else {
-		requestCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("ftl.module.name", req.Msg.Verb.Module), attribute.String("ftl.verb.name", req.Msg.Verb.Name)))
-	}
-
 	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), "")
 }
 
@@ -944,6 +933,18 @@ func (s *Service) callWithRequest(
 	sourceAddress string,
 ) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
+
+	logger := log.FromContext(ctx)
+
+	requestCounter, err := otel.GetMeterProvider().Meter("ftl.call").Int64Counter(
+		"requests",
+		metric.WithDescription("Count of FTL verb calls via the controller"))
+	if err != nil {
+		logger.Errorf(err, "Failed to instrument otel metric `ftl.call.requests`")
+	} else {
+		requestCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("ftl.module.name", req.Msg.Verb.Module), attribute.String("ftl.verb.name", req.Msg.Verb.Name)))
+	}
+
 	if req.Msg.Verb == nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("verb is required"))
 	}
