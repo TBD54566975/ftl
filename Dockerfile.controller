@@ -19,9 +19,9 @@ RUN go mod download -x
 
 # Build
 COPY . /src/
-# RUN just errtrace
+RUN just errtrace
 # Reset timestamps so that the build state is reset
-# RUN git ls-files -z | xargs -0 touch -r go.mod
+RUN git ls-files -z | xargs -0 touch -r go.mod
 RUN just build ftl-controller
 RUN just build ftl-initdb
 RUN just build ftl
