@@ -70,12 +70,20 @@ func ReturnsUser(ctx context.Context) (UserResponse, error) {
 
 //ftl:data
 type NonFTLField struct {
-	Field      ExternalAlias
-	Transitive TransitiveAlias
+	ExplicitType    ExplicitAliasType
+	ExplicitAlias   ExplicitAliasAlias
+	TransitiveType  TransitiveAliasType
+	TransitiveAlias TransitiveAliasAlias
 }
 
 //ftl:typealias
 //ftl:typemap kotlin "com.foo.bar.NonFTLType"
-type ExternalAlias lib.NonFTLType
+type ExplicitAliasType lib.NonFTLType
 
-type TransitiveAlias lib.NonFTLType
+//ftl:typealias
+//ftl:typemap kotlin "com.foo.bar.NonFTLType"
+type ExplicitAliasAlias = lib.NonFTLType
+
+type TransitiveAliasType lib.NonFTLType
+
+type TransitiveAliasAlias = lib.NonFTLType
