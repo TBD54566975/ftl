@@ -16,8 +16,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
-const name = "ftl.xyz/ftl/runner"
-
 type metricAttributeBuilders struct {
 	moduleName      func(name string) attribute.KeyValue
 	featureName     func(name string) attribute.KeyValue
@@ -25,6 +23,7 @@ type metricAttributeBuilders struct {
 }
 
 type callMetrics struct {
+	meter    metric.Meter
 	requests metric.Int64Counter
 	failures metric.Int64Counter
 	active   metric.Int64UpDownCounter
@@ -32,13 +31,12 @@ type callMetrics struct {
 }
 
 type fsmMetrics struct {
+	meter       metric.Meter
 	active      metric.Int64UpDownCounter
 	transitions metric.Int64Counter
-	failures    metric.Int64Counter
 }
 
 type observableMetrics struct {
-	meter      metric.Meter
 	attributes metricAttributeBuilders
 	calls      *callMetrics
 	fsm        *fsmMetrics
@@ -46,7 +44,6 @@ type observableMetrics struct {
 
 var (
 	metrics = observableMetrics{
-		meter: otel.Meter(name),
 		// TODO: move to a initialization method
 		attributes: metricAttributeBuilders{
 			moduleName: func(name string) attribute.KeyValue {
@@ -59,8 +56,12 @@ var (
 				return attribute.String("ftl.verb.dest", name)
 			},
 		},
-		calls: &callMetrics{},
-		fsm:   &fsmMetrics{},
+		calls: &callMetrics{
+			meter: otel.Meter("ftl.call"),
+		},
+		fsm: &fsmMetrics{
+			meter: otel.Meter("ftl.fsm"),
+		},
 	}
 )
 
@@ -81,34 +82,29 @@ type CallEnd struct {
 }
 
 func init() {
-	metrics.calls.requests, _ = metrics.meter.Int64Counter("ftl.call.requests",
+	metrics.calls.requests, _ = metrics.calls.meter.Int64Counter("ftl.call.requests",
 		metric.WithDescription("number of verb calls"),
 		metric.WithUnit("{count}"))
 
-	metrics.calls.failures, _ = metrics.meter.Int64Counter("ftl.call.failures",
+	metrics.calls.failures, _ = metrics.calls.meter.Int64Counter("ftl.call.failures",
 		metric.WithDescription("number of verb call failures"),
 		metric.WithUnit("{count}"))
 
-	metrics.calls.active, _ = metrics.meter.Int64UpDownCounter("ftl.call.active",
+	metrics.calls.active, _ = metrics.calls.meter.Int64UpDownCounter("ftl.call.active",
 		metric.WithDescription("number of in flight calls"),
 		metric.WithUnit("{count}"))
 
-	metrics.calls.latency, _ = metrics.meter.Int64Histogram("ftl.call.latency",
+	metrics.calls.latency, _ = metrics.calls.meter.Int64Histogram("ftl.call.latency",
 		metric.WithDescription("verb call latency"),
 		metric.WithUnit("{ms}"))
 
-	metrics.fsm.active, _ = metrics.meter.Int64UpDownCounter("ftl.fsm.active",
+	metrics.fsm.active, _ = metrics.fsm.meter.Int64UpDownCounter("ftl.fsm.active",
 		metric.WithDescription("number of in flight fsm transitions"),
 		metric.WithUnit("{count}"))
 
-	metrics.fsm.transitions, _ = metrics.meter.Int64Counter("ftl.fsm.transitions",
+	metrics.fsm.transitions, _ = metrics.fsm.meter.Int64Counter("ftl.fsm.transitions",
 		metric.WithDescription("number of attempted transitions"),
 		metric.WithUnit("{count}"))
-
-	metrics.fsm.failures, _ = metrics.meter.Int64Counter("ftl.fsm.failures",
-		metric.WithDescription("number of fsm transition failures"),
-		metric.WithUnit("{count}"))
-
 }
 
 func RecordFsmTransitionBegin(ctx context.Context, fsm schema.RefKey) {
@@ -124,14 +120,6 @@ func RecordFsmTransitionSuccess(ctx context.Context, fsm schema.RefKey) {
 	featureAttr := metrics.attributes.featureName(fsm.Name)
 
 	metrics.fsm.active.Add(ctx, -1, metric.WithAttributes(moduleAttr, featureAttr))
-}
-
-func recordFsmTransitionFailure(ctx context.Context, fsm schema.RefKey) {
-	moduleAttr := metrics.attributes.moduleName(fsm.Module)
-	featureAttr := metrics.attributes.featureName(fsm.Name)
-
-	metrics.fsm.active.Add(ctx, -1, metric.WithAttributes(moduleAttr, featureAttr))
-	metrics.fsm.failures.Add(ctx, 1, metric.WithAttributes(moduleAttr, featureAttr))
 }
 
 func RecordCallBegin(ctx context.Context, call *CallBegin) {
