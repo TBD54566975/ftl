@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/tuple"
+	sets "github.com/deckarep/golang-set/v2"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -189,6 +190,7 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 	}
 
 	combined.Module.AddDecls(maps.Keys(extractedDecls))
+	externalTypeAliases := sets.NewSet[*schema.TypeAlias]()
 	for decl, obj := range extractedDecls {
 		if ta, ok := decl.(*schema.TypeAlias); ok && len(ta.Metadata) > 0 {
 			fqName, err := goQualifiedNameForWidenedType(obj, ta.Metadata)
@@ -199,6 +201,7 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 			}
 			refResults[schema.RefKey{Module: combined.Module.Name, Name: ta.Name}] =
 				refResult{typ: widened, obj: obj, fqName: optional.Some(fqName)}
+			externalTypeAliases.Add(ta)
 		}
 		combined.NativeNames[decl] = common.GetNativeName(obj)
 	}

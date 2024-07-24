@@ -55,7 +55,7 @@ func extractTopic(pass *analysis.Pass, node *ast.GenDecl, callExpr *ast.CallExpr
 		common.Errorf(pass, node, "must have an event type as a type parameter")
 		return optional.None[*schema.Topic]()
 	}
-	typeParamType, ok := common.ExtractType(pass, node.Pos(), pass.TypesInfo.TypeOf(indexExpr.Index)).Get()
+	typeParamType, ok := common.ExtractType(pass, indexExpr.Index).Get()
 	if !ok {
 		common.Errorf(pass, node, "unsupported event type")
 		return optional.None[*schema.Topic]()
