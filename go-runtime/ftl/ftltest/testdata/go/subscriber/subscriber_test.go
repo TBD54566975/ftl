@@ -1,4 +1,4 @@
-package subscriber
+package subscriber_test
 
 import (
 	"ftl/pubsub"
