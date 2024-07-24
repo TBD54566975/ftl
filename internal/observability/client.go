@@ -3,7 +3,6 @@ package observability
 import (
 	"context"
 	"fmt"
-	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"os"
 	"strings"
 
@@ -64,8 +63,6 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 
 	meterProvider := metric.NewMeterProvider(metric.WithReader(metric.NewPeriodicReader(otelMetricExporter)), metric.WithResource(res))
 	otel.SetMeterProvider(meterProvider)
-
-	observability.Init()
 
 	otelTraceExporter, err := otlptracegrpc.New(ctx)
 	if err != nil {

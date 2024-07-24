@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"hash"
 	"io"
 	"math/rand"
@@ -225,6 +226,10 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
 	}
 	config.SetDefaults()
+
+	if err := observability.InitControllerObservability(); err != nil {
+		log.FromContext(ctx).Warnf("failed to initialize controller observability: %v", err)
+	}
 
 	// Override some defaults during development mode.
 	_, devel := runnerScaling.(*localscaling.LocalScaling)
