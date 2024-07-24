@@ -180,9 +180,18 @@ func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType]) (builtin.Ht
 	return builtin.HttpResponse[SumType, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-type ExternalAlias lib.NonFTLType
+// tests both supported patterns for aliasing an external type
+
+type NewTypeAlias lib.NonFTLType
 
 //ftl:ingress http GET /external
-func External(ctx context.Context, req builtin.HttpRequest[ExternalAlias]) (builtin.HttpResponse[ExternalAlias, string], error) {
-	return builtin.HttpResponse[ExternalAlias, string]{Body: ftl.Some(req.Body)}, nil
+func External(ctx context.Context, req builtin.HttpRequest[NewTypeAlias]) (builtin.HttpResponse[NewTypeAlias, string], error) {
+	return builtin.HttpResponse[NewTypeAlias, string]{Body: ftl.Some(req.Body)}, nil
+}
+
+type DirectTypeAlias = lib.NonFTLType
+
+//ftl:ingress http GET /external2
+func External2(ctx context.Context, req builtin.HttpRequest[DirectTypeAlias]) (builtin.HttpResponse[DirectTypeAlias, string], error) {
+	return builtin.HttpResponse[DirectTypeAlias, string]{Body: ftl.Some(req.Body)}, nil
 }
