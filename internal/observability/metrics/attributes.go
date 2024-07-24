@@ -11,9 +11,8 @@ func ModuleNameAttribute(name string) attribute.KeyValue {
 	return attribute.String("ftl.module.name", name)
 }
 
-// FeatureNameAttribute identifies the feature (e.g. verb) that the associated
-// metric originates from. The entire module qualified name is used:
-// e.g. {module.verb}
-func FeatureNameAttribute(ref schema.Ref) attribute.KeyValue {
-	return attribute.String("ftl.feature.ref", ref.Name)
+// VerbRefAttribute identifies the verb that the associated metric originates
+// from. The entire module qualified name is used: e.g. {module.verb}
+func VerbRefAttribute(ref schema.Ref) attribute.KeyValue {
+	return attribute.String("ftl.verb.ref", ref.Name)
 }

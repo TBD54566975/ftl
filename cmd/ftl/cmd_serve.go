@@ -84,10 +84,6 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		return errors.New(ftlRunningErrorMsg)
 	}
 
-	if err := observability.Init(ctx, "ftl-dev", ftl.Version, s.ObservabilityConfig); err != nil {
-		return fmt.Errorf("failed to initialize observability: %w", err)
-	}
-
 	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
 
 	// Bring up the DB and DAL.
