@@ -61,7 +61,7 @@ func extractEnumVariant(pass *analysis.Pass, node *ast.TypeSpec, obj types.Objec
 		// valueFunc is only executed if this potential variant actually makes it to the schema.
 		// Executing may result in transitive schema extraction, so we only execute if necessary.
 		valueFunc := func(p *analysis.Pass) optional.Option[*schema.TypeValue] {
-			value, ok := common.ExtractType(p, node).Get()
+			value, ok := common.ExtractTypeForNode(p, obj, node.Type, nil).Get()
 			if !ok {
 				return optional.None[*schema.TypeValue]()
 			}

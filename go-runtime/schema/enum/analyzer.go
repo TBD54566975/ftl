@@ -46,7 +46,7 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 		return optional.None[*schema.Enum]()
 	}
 
-	typ, ok := common.ExtractType(pass, node).Get()
+	typ, ok := common.ExtractType(pass, node.Pos(), pass.TypesInfo.TypeOf(node.Type)).Get()
 	if !ok {
 		return optional.None[*schema.Enum]()
 	}
@@ -112,7 +112,6 @@ func findTypeValueVariants(pass *analysis.Pass, obj types.Object) []*schema.Enum
 		value, ok := fact.GetValue(pass).Get()
 		if !ok {
 			common.NoEndColumnErrorf(pass, vObj.Pos(), "invalid type for enum variant %q", fact.Variant.Name)
-			continue
 		}
 		fact.Variant.Value = value
 		variants = append(variants, fact.Variant)

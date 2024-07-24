@@ -17,9 +17,15 @@ import (
 var Extractor = common.NewDeclExtractor[*schema.TypeAlias, *ast.TypeSpec]("typealias", Extract)
 
 func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional.Option[*schema.TypeAlias] {
+	schType, ok := common.ExtractTypeForNode(pass, obj, node.Type, nil).Get()
+	if !ok {
+		return optional.None[*schema.TypeAlias]()
+	}
+
 	alias := &schema.TypeAlias{
 		Pos:  common.GoPosToSchemaPos(pass.Fset, node.Pos()),
 		Name: strcase.ToUpperCamel(obj.Name()),
+		Type: schType,
 	}
 	var hasGoTypeMapping bool
 	common.ApplyMetadata[*schema.TypeAlias](pass, obj, func(md *common.ExtractedMetadata) {
@@ -51,23 +57,16 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 	})
 
 	// if widening an external type, implicitly add a Go type mapping if one does not exist
-	if nn := qualifiedNameFromSelectorExpr(pass, node.Type); nn != "" && common.IsExternalType(nn) {
-		alias.Type = &schema.Any{}
-		if !hasGoTypeMapping {
-			alias.Metadata = append(alias.Metadata, &schema.MetadataTypeMap{
-				Pos:        common.GoPosToSchemaPos(pass.Fset, obj.Pos()),
-				Runtime:    "go",
-				NativeName: nn,
-			})
-		}
+	if _, ok := alias.Type.(*schema.Any); ok &&
+		!strings.HasPrefix(qualifiedNameFromSelectorExpr(pass, node.Type), "ftl/") &&
+		!hasGoTypeMapping {
+		alias.Metadata = append(alias.Metadata, &schema.MetadataTypeMap{
+			Pos:        common.GoPosToSchemaPos(pass.Fset, obj.Pos()),
+			Runtime:    "go",
+			NativeName: qualifiedNameFromSelectorExpr(pass, node.Type),
+		})
 		return optional.Some(alias)
 	}
-
-	schType, ok := common.ExtractType(pass, node.Type).Get()
-	if !ok {
-		return optional.None[*schema.TypeAlias]()
-	}
-	alias.Type = schType
 
 	// type aliases must have an underlying type, and the type cannot be a reference to the alias itself.
 	if common.IsSelfReference(pass, obj, schType) {

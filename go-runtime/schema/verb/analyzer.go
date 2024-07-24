@@ -17,10 +17,10 @@ import (
 // Extractor extracts verbs to the module schema.
 var Extractor = common.NewDeclExtractor[*schema.Verb, *ast.FuncDecl]("verb", Extract)
 
-func Extract(pass *analysis.Pass, node *ast.FuncDecl, obj types.Object) optional.Option[*schema.Verb] {
+func Extract(pass *analysis.Pass, root *ast.FuncDecl, obj types.Object) optional.Option[*schema.Verb] {
 	verb := &schema.Verb{
-		Pos:  common.GoPosToSchemaPos(pass.Fset, node.Pos()),
-		Name: strcase.ToLowerCamel(node.Name.Name),
+		Pos:  common.GoPosToSchemaPos(pass.Fset, root.Pos()),
+		Name: strcase.ToLowerCamel(root.Name.Name),
 	}
 	if !common.ApplyMetadata[*schema.Verb](pass, obj, func(md *common.ExtractedMetadata) {
 		verb.Comments = md.Comments
@@ -33,29 +33,29 @@ func Extract(pass *analysis.Pass, node *ast.FuncDecl, obj types.Object) optional
 	fnt := obj.(*types.Func)             //nolint:forcetypeassert
 	sig := fnt.Type().(*types.Signature) //nolint:forcetypeassert
 	if sig.Recv() != nil {
-		common.Errorf(pass, node, "ftl:verb cannot be a method")
+		common.Errorf(pass, root, "ftl:verb cannot be a method")
 		return optional.None[*schema.Verb]()
 	}
-
-	reqt, respt := checkSignature(pass, node, sig)
+	params := sig.Params()
+	results := sig.Results()
+	reqt, respt := checkSignature(pass, root, sig)
 	req := optional.Some[schema.Type](&schema.Unit{})
 	if reqt.Ok() {
-		req = common.ExtractType(pass, node.Type.Params.List[1])
+		req = common.ExtractType(pass, params.At(1).Pos(), params.At(1).Type())
 	}
 	resp := optional.Some[schema.Type](&schema.Unit{})
 	if respt.Ok() {
-		resp = common.ExtractType(pass, node.Type.Results.List[0])
+		resp = common.ExtractType(pass, results.At(0).Pos(), results.At(0).Type())
 	}
-
-	params := sig.Params()
-	results := sig.Results()
 	reqV, ok := req.Get()
 	if !ok {
-		common.Errorf(pass, node.Type.Params.List[1], "unsupported request type %q", params.At(1).Type())
+		common.TokenErrorf(pass, params.At(1).Pos(), params.At(1).Name(),
+			"unsupported request type %q", params.At(1).Type())
 	}
 	resV, ok := resp.Get()
 	if !ok {
-		common.Errorf(pass, node.Type.Results.List[0], "unsupported response type %q", results.At(0).Type())
+		common.TokenErrorf(pass, results.At(0).Pos(), results.At(0).Name(),
+			"unsupported response type %q", results.At(0).Type())
 	}
 	verb.Request = reqV
 	verb.Response = resV

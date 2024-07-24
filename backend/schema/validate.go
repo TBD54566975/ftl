@@ -372,12 +372,6 @@ func ValidateModule(module *Module) error {
 	})
 
 	merr = cleanErrors(merr)
-	SortModuleDecls(module)
-	return errors.Join(merr...)
-}
-
-// SortModuleDecls sorts the declarations in a module.
-func SortModuleDecls(module *Module) {
 	sort.SliceStable(module.Decls, func(i, j int) bool {
 		iDecl := module.Decls[i]
 		jDecl := module.Decls[j]
@@ -388,6 +382,7 @@ func SortModuleDecls(module *Module) {
 		}
 		return iPriority < jPriority
 	})
+	return errors.Join(merr...)
 }
 
 // getDeclSortingPriority (used for schema sorting) is pulled out into it's own switch so the Go sumtype check will fail
