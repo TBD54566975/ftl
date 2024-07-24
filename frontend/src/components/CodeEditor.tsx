@@ -1,52 +1,4 @@
-import { EditorState, Extension } from '@codemirror/state'
-import {
-  gutter,
-  EditorView,
-  hoverTooltip,
-  lineNumbers,
-  drawSelection,
-  keymap,
-  highlightActiveLineGutter,
-} from '@codemirror/view'
-
-import { lintGutter } from '@codemirror/lint'
-import { lintKeymap } from '@codemirror/lint'
-import { linter } from '@codemirror/lint'
-import {
-  indentOnInput,
-  bracketMatching,
-  foldGutter,
-  foldKeymap,
-} from '@codemirror/language'
-
-import { githubLight } from '@uiw/codemirror-theme-github'
-import { atomone } from '@uiw/codemirror-theme-atomone'
-import {
-  autocompletion,
-  closeBrackets,
-  closeBracketsKeymap,
-} from '@codemirror/autocomplete'
-
-import { useRef, useEffect, useCallback } from 'react'
-import { json5, json5ParseLinter } from 'codemirror-json5'
-import { jsonSchemaLinter, jsonSchemaHover, stateExtensions, handleRefresh } from 'codemirror-json-schema'
-import { useDarkMode } from '../providers/dark-mode-provider'
-import { defaultKeymap } from '@codemirror/commands'
-
-const commonExtensions = [
-  gutter({ class: 'CodeMirror-lint-markers' }),
-  bracketMatching(),
-  highlightActiveLineGutter(),
-  closeBrackets(),
-  keymap.of([
-    ...closeBracketsKeymap,
-    ...foldKeymap,
-    ...lintKeymap,
-    ...defaultKeymap
-  ]),
-  EditorView.lineWrapping,
-  EditorState.tabSize.of(2),
-]
+import {useEffect, useState} from 'react'
 
 export interface InitialState {
   initialText: string
@@ -58,65 +10,25 @@ export const CodeEditor = (
   { initialState, onTextChanged }:
     { initialState: InitialState, onTextChanged?: (text: string) => void }
 ) => {
-  const { isDarkMode } = useDarkMode()
-  const editorContainerRef = useRef(null)
-  const editorViewRef = useRef<EditorView | null>(null)
-
-  const handleEditorTextChange = useCallback((state: EditorState) => {
-    const currentText = state.doc.toString()
-    onTextChanged && onTextChanged(currentText)
-  }, [onTextChanged])
+  const [editorText, setEditorText] = useState(initialState.initialText)
 
   useEffect(() => {
-    if (editorContainerRef.current) {
-      const sch = initialState.schema ? JSON.parse(initialState.schema) : null
+    setEditorText(initialState.initialText)
+  }, [initialState])
 
-      const editingExtensions: Extension[] = initialState.readonly || false ? [
-        EditorState.readOnly.of(true)
-      ] : [
-        autocompletion(),
-        lineNumbers(),
-        lintGutter(),
-        indentOnInput(),
-        drawSelection(),
-        foldGutter(),
-        linter(json5ParseLinter(), {
-          delay: 300
-        }),
-        linter(jsonSchemaLinter(), {
-          needsRefresh: handleRefresh,
-        }),
-        hoverTooltip(jsonSchemaHover()),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            handleEditorTextChange(update.state)
-          }
-        }),
-        stateExtensions(sch),
-      ]
-
-      const state = EditorState.create({
-        doc: initialState.initialText,
-        extensions: [
-          commonExtensions,
-          isDarkMode ? atomone : githubLight,
-          json5(),
-          editingExtensions
-        ],
-      })
-
-      const view = new EditorView({
-        state,
-        parent: editorContainerRef.current,
-      })
-
-      editorViewRef.current = view
-
-      return () => {
-        view.destroy()
-      }
+  const handleChange = (text: string) => {
+    setEditorText(text)
+    if (onTextChanged) {
+      onTextChanged(text)
     }
-  }, [initialState, isDarkMode])
+  }
 
-  return <div ref={editorContainerRef} />
+  return (
+    <textarea
+      value={editorText}
+      readOnly={initialState.readonly}
+      onChange={(e) => handleChange(e.target.value)}
+      style={{ width: '100%',fontFamily: 'monospace' }}
+    />
+  )
 }
