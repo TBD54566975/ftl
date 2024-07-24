@@ -20,6 +20,7 @@ examples/**/go.work
 examples/**/go.work.sum
 testdata/**/go.work
 testdata/**/go.work.sum
+go-runtime/schema/testdata/test/test.go
 
 # Leaving old _ftl for now to avoid old stuff getting checked in
 **/testdata/**/_ftl

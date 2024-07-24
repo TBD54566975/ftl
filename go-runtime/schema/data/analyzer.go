@@ -1,19 +1,19 @@
 package data
 
 import (
+	"fmt"
 	"go/ast"
-	"go/token"
 	"go/types"
 	"reflect"
+	"strconv"
 	"strings"
 	"unicode"
-
-	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
+	"github.com/alecthomas/types/optional"
 )
 
 var (
@@ -31,23 +31,17 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 	if _, ok := named.Underlying().(*types.Struct); !ok {
 		return optional.None[*schema.Data]()
 	}
-	decl, ok := extractData(pass, node.Pos(), named).Get()
+	decl, ok := extractData(pass, node, named).Get()
 	if !ok {
 		return optional.None[*schema.Data]()
 	}
 	return optional.Some(decl)
 }
 
-func extractData(pass *analysis.Pass, pos token.Pos, named *types.Named) optional.Option[*schema.Data] {
-	fset := pass.Fset
-	nodePath := named.Obj().Pkg().Path()
-	if !common.IsPathInModule(pass.Pkg, nodePath) {
-		return optional.None[*schema.Data]()
-	}
-
+func extractData(pass *analysis.Pass, node *ast.TypeSpec, named *types.Named) optional.Option[*schema.Data] {
 	out := &schema.Data{
-		Pos:  common.GoPosToSchemaPos(fset, pos),
-		Name: strcase.ToUpperCamel(named.Obj().Name()),
+		Pos:  common.GoPosToSchemaPos(pass.Fset, node.Pos()),
+		Name: strcase.ToUpperCamel(node.Name.Name),
 	}
 	common.ApplyMetadata[*schema.Data](pass, named.Obj(), func(md *common.ExtractedMetadata) {
 		out.Comments = md.Comments
@@ -56,57 +50,62 @@ func extractData(pass *analysis.Pass, pos token.Pos, named *types.Named) optiona
 	for i := range named.TypeParams().Len() {
 		param := named.TypeParams().At(i)
 		out.TypeParameters = append(out.TypeParameters, &schema.TypeParameter{
-			Pos:  common.GoPosToSchemaPos(fset, pos),
+			Pos:  common.GoPosToSchemaPos(pass.Fset, node.Pos()),
 			Name: param.Obj().Name(),
 		})
 	}
 
-	// If the struct is generic, we need to use the origin type to get the
-	// fields.
-	if named.TypeParams().Len() > 0 {
-		named = named.Origin()
-	}
-
-	s, ok := named.Underlying().(*types.Struct)
+	structType, ok := node.Type.(*ast.StructType)
 	if !ok {
 		return optional.None[*schema.Data]()
 	}
 
 	fieldErrors := false
-	for i := range s.NumFields() {
-		f := s.Field(i)
-		if ft, ok := common.ExtractType(pass, f.Pos(), f.Type()).Get(); ok {
+	for i := range structType.Fields.List {
+		f := structType.Fields.List[i]
+		var name string
+		if len(f.Names) > 0 && len(f.Names[0].Name) > 0 {
+			name = f.Names[0].Name
+		}
+		if name == "" {
+			common.Errorf(pass, f, "anonymous fields are not supported")
+			fieldErrors = true
+			continue
+		}
+		if ft, ok := common.ExtractType(pass, f.Type).Get(); ok {
 			// Check if field is exported
-			if len(f.Name()) > 0 && unicode.IsLower(rune(f.Name()[0])) {
-				common.TokenErrorf(pass, f.Pos(), f.Name(),
-					"struct field %s must be exported by starting with an uppercase letter", f.Name())
+			if unicode.IsLower(rune(name[0])) {
+				name = f.Names[0].Name
+				common.TokenErrorf(pass, f.Pos(), name, "struct field %s must be exported by starting with an "+
+					"uppercase letter", name)
 				fieldErrors = true
 			}
 
 			// Extract the JSON tag and split it to get just the field name
-			tagContent := reflect.StructTag(s.Tag(i)).Get(aliasFieldTag)
-			tagParts := strings.Split(tagContent, ",")
-			jsonFieldName := ""
-			if len(tagParts) > 0 {
-				jsonFieldName = tagParts[0]
-			}
-
 			var metadata []schema.Metadata
-			if jsonFieldName != "" {
-				metadata = append(metadata, &schema.MetadataAlias{
-					Pos:   common.GoPosToSchemaPos(pass.Fset, pos),
-					Kind:  schema.AliasKindJSON,
-					Alias: jsonFieldName,
-				})
+			if tag := f.Tag; tag != nil {
+				jsonFieldName, err := parseTag(pass, f, tag, aliasFieldTag)
+				if err != nil {
+					fieldErrors = true
+					continue
+				}
+
+				if jsonFieldName != "" {
+					metadata = append(metadata, &schema.MetadataAlias{
+						Pos:   common.GoPosToSchemaPos(pass.Fset, node.Pos()),
+						Kind:  schema.AliasKindJSON,
+						Alias: jsonFieldName,
+					})
+				}
 			}
 			out.Fields = append(out.Fields, &schema.Field{
-				Pos:      common.GoPosToSchemaPos(pass.Fset, pos),
-				Name:     strcase.ToLowerCamel(f.Name()),
+				Pos:      common.GoPosToSchemaPos(pass.Fset, node.Pos()),
+				Name:     strcase.ToLowerCamel(name),
 				Type:     ft,
 				Metadata: metadata,
 			})
 		} else {
-			common.TokenErrorf(pass, f.Pos(), f.Name(), "unsupported type %q for field %q", f.Type(), f.Name())
+			common.TokenErrorf(pass, f.Pos(), name, "unsupported type %q for field %q", pass.TypesInfo.TypeOf(f.Type), name)
 			fieldErrors = true
 		}
 	}
@@ -114,4 +113,19 @@ func extractData(pass *analysis.Pass, pos token.Pos, named *types.Named) optiona
 		return optional.None[*schema.Data]()
 	}
 	return optional.Some(out)
+}
+
+func parseTag(pass *analysis.Pass, f *ast.Field, tag *ast.BasicLit, fieldTag string) (string, error) {
+	unquoted, err := strconv.Unquote(tag.Value)
+	if err != nil {
+		common.Wrapf(pass, f, err, "failed to unquote tag value %q", tag.Value)
+		return "", fmt.Errorf("failed to unquote tag value: %w", err)
+	}
+	tagContent := reflect.StructTag(unquoted).Get(fieldTag)
+	tagParts := strings.Split(tagContent, ",")
+	jsonFieldName := ""
+	if len(tagParts) > 0 {
+		jsonFieldName = tagParts[0]
+	}
+	return jsonFieldName, nil
 }

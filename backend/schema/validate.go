@@ -372,6 +372,12 @@ func ValidateModule(module *Module) error {
 	})
 
 	merr = cleanErrors(merr)
+	SortModuleDecls(module)
+	return errors.Join(merr...)
+}
+
+// SortModuleDecls sorts the declarations in a module.
+func SortModuleDecls(module *Module) {
 	sort.SliceStable(module.Decls, func(i, j int) bool {
 		iDecl := module.Decls[i]
 		jDecl := module.Decls[j]
@@ -382,7 +388,6 @@ func ValidateModule(module *Module) error {
 		}
 		return iPriority < jPriority
 	})
-	return errors.Join(merr...)
 }
 
 // getDeclSortingPriority (used for schema sorting) is pulled out into it's own switch so the Go sumtype check will fail
@@ -603,21 +608,14 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 }
 
 func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, reqOrResp string, r Type) (fieldType Type, body Symbol, merr []error) {
-	rref, _ := r.(*Ref)
-	resp, sym := ResolveTypeAs[*Data](scopes, r)
-	invalid := sym == nil
-	if !invalid {
-		m, _ := sym.Module.Get()
-		invalid = m == nil || m.Name != "builtin" || resp.Name != "Http"+strings.Title(reqOrResp)
-	}
-	if invalid {
-		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpRequest", n.Name, reqOrResp, r))
-		return
-	}
-
-	resp, err := resp.Monomorphise(rref) //nolint:govet
+	data, err := resolveValidIngressReqResp(scopes, reqOrResp, optional.None[*ModuleDecl](), r, nil)
 	if err != nil {
 		merr = append(merr, errorf(r, "ingress verb %s: %s type %s: %v", n.Name, reqOrResp, r, err))
+		return
+	}
+	resp, ok := data.Get()
+	if !ok {
+		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpRequest", n.Name, reqOrResp, r))
 		return
 	}
 
@@ -644,6 +642,45 @@ func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, re
 		merr = append(merr, err)
 	}
 	return
+}
+
+func resolveValidIngressReqResp(scopes Scopes, reqOrResp string, moduleDecl optional.Option[*ModuleDecl], n Node, parent Node) (optional.Option[*Data], error) {
+	switch t := n.(type) {
+	case *Ref:
+		m := scopes.Resolve(*t)
+		sym := m.Symbol
+		return resolveValidIngressReqResp(scopes, reqOrResp, optional.Some(m), sym, n)
+	case *Data:
+		md, ok := moduleDecl.Get()
+		if !ok {
+			return optional.None[*Data](), nil
+		}
+
+		m, ok := md.Module.Get()
+		if !ok {
+			return optional.None[*Data](), nil
+		}
+
+		if parent == nil || m.Name != "builtin" || t.Name != "Http"+strings.Title(reqOrResp) {
+			return optional.None[*Data](), nil
+		}
+
+		ref, ok := parent.(*Ref)
+		if !ok {
+			return optional.None[*Data](), nil
+		}
+
+		result, err := t.Monomorphise(ref)
+		if err != nil {
+			return optional.None[*Data](), err
+		}
+
+		return optional.Some(result), nil
+	case *TypeAlias:
+		return resolveValidIngressReqResp(scopes, reqOrResp, moduleDecl, t.Type, t)
+	default:
+		return optional.None[*Data](), nil
+	}
 }
 
 func validatePayloadType(n Node, r Type, v *Verb, reqOrResp string) error {

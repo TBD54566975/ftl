@@ -139,6 +139,11 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, in.JsonData(t, in.Obj{"message": "hello"}), resp.BodyBytes)
 		}),
+		in.HttpCall(http.MethodGet, "/external2", nil, in.JsonData(t, in.Obj{"message": "hello"}), func(t testing.TB, resp *in.HTTPResponse) {
+			assert.Equal(t, 200, resp.Status)
+			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
+			assert.Equal(t, in.JsonData(t, in.Obj{"Message": "hello"}), resp.BodyBytes)
+		}),
 	)
 }
 
