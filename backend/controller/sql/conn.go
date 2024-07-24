@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/jackc/pgx/v5"
 )
 
@@ -39,8 +38,7 @@ func (d *DB) Begin(ctx context.Context) (*Tx, error) {
 }
 
 type Tx struct {
-	tx         pgx.Tx
-	savepoints []string
+	tx pgx.Tx
 	*Queries
 }
 
@@ -49,33 +47,29 @@ func (t *Tx) Conn() ConnI { return t.tx }
 func (t *Tx) Tx() pgx.Tx { return t.tx }
 
 func (t *Tx) Begin(ctx context.Context) (*Tx, error) {
-	savepoint := fmt.Sprintf("savepoint_%d", len(t.savepoints))
-	t.savepoints = append(t.savepoints, savepoint)
-	_, err := t.tx.Exec(ctx, `SAVEPOINT `+savepoint)
+	_, err := t.tx.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
-	return &Tx{tx: t.tx, savepoints: t.savepoints, Queries: t.Queries}, nil
+	return &Tx{tx: t.tx, Queries: t.Queries}, nil
 }
 
 func (t *Tx) Commit(ctx context.Context) error {
-	if len(t.savepoints) == 0 {
-		return t.tx.Commit(ctx)
+	err := t.tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("committing transaction: %w", err)
 	}
-	savepoint := t.savepoints[len(t.savepoints)-1]
-	t.savepoints = t.savepoints[:len(t.savepoints)-1]
-	_, err := t.tx.Exec(ctx, `RELEASE SAVEPOINT `+savepoint)
-	return err
+
+	return nil
 }
 
 func (t *Tx) Rollback(ctx context.Context) error {
-	if len(t.savepoints) == 0 {
-		return t.tx.Rollback(ctx)
+	err := t.tx.Rollback(ctx)
+	if err != nil {
+		return fmt.Errorf("rolling back transaction: %w", err)
 	}
-	savepoint := t.savepoints[len(t.savepoints)-1]
-	t.savepoints = t.savepoints[:len(t.savepoints)-1]
-	_, err := t.tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+savepoint)
-	return err
+
+	return nil
 }
 
 // CommitOrRollback can be used in a defer statement to commit or rollback a
