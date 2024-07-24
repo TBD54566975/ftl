@@ -193,66 +193,57 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	}
 	actual := schema.Normalise(r.Module)
 	expected := `module two {
-			typealias ExplicitAliasAlias Any
-				+typemap kotlin "com.foo.bar.NonFTLType"
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+		typealias ExternalAlias Any
+			+typemap kotlin "com.foo.bar.NonFTLType"
+			+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+		
+		typealias TransitiveAlias Any
+			+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
 
-			typealias ExplicitAliasType Any
-				+typemap kotlin "com.foo.bar.NonFTLType"
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+		export enum TwoEnum: String {
+		  Blue = "Blue"
+		  Green = "Green"
+		  Red = "Red"
+        }
 
-			typealias TransitiveAliasAlias Any
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+        export enum TypeEnum {
+		  Exported two.Exported
+		  List [String]
+		  Scalar String
+		  WithoutDirective two.WithoutDirective
+		}
 
-			typealias TransitiveAliasType Any
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+		export data Exported {
+		}
 
-			export enum TwoEnum: String {
-			  Blue = "Blue"
-			  Green = "Green"
-			  Red = "Red"
-	        }
+		data NonFtlField {
+		  field two.ExternalAlias
+		  transitive two.TransitiveAlias
+		}
 
-	        export enum TypeEnum {
-			  Exported two.Exported
-			  List [String]
-			  Scalar String
-			  WithoutDirective two.WithoutDirective
-			}
+		export data Payload<T> {
+		  body T
+		}
 
-			export data Exported {
-			}
+		export data User {
+		  name String
+		}
 
-			data NonFtlField {
-			  explicitType two.ExplicitAliasType
-			  explicitAlias two.ExplicitAliasAlias
-			  transitiveType two.TransitiveAliasType
-			  transitiveAlias two.TransitiveAliasAlias
-			}
+		export data UserResponse {
+		  user two.User
+		}
 
-			export data Payload<T> {
-			  body T
-			}
+		export data WithoutDirective {
+		}
 
-			export data User {
-			  name String
-			}
+		export verb callsTwo(two.Payload<String>) two.Payload<String>
+			+calls two.two
 
-			export data UserResponse {
-			  user two.User
-			}
+		export verb returnsUser(Unit) two.UserResponse
 
-			export data WithoutDirective {
-			}
-
-			export verb callsTwo(two.Payload<String>) two.Payload<String>
-				+calls two.two
-
-			export verb returnsUser(Unit) two.UserResponse
-
-			export verb two(two.Payload<String>) two.Payload<String>
-		  }
-	`
+		export verb two(two.Payload<String>) two.Payload<String>
+	  }
+`
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
@@ -545,7 +536,7 @@ func TestErrorReporting(t *testing.T) {
 		`25:2-10: unsupported type "error" for field "BadParam"`,
 		`28:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
 		`31:3-3: unexpected directive "ftl:export" attached for verb, did you mean to use '//ftl:verb export' instead?`,
-		`37:40-40: unsupported request type "ftl/failing.Request"`,
+		`37:36-36: unsupported request type "ftl/failing.Request"`,
 		`37:50-50: unsupported response type "ftl/failing.Response"`,
 		`38:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc`,
 		`38:16-29: call first argument must be a function in an ftl module`,
@@ -560,12 +551,12 @@ func TestErrorReporting(t *testing.T) {
 		`60:1-2: first parameter must be context.Context`,
 		`60:18-18: unsupported response type "ftl/failing.Response"`,
 		`65:1-2: must have at most two results (<type>, error)`,
-		`65:45-45: unsupported request type "ftl/failing.Request"`,
+		`65:41-41: unsupported request type "ftl/failing.Request"`,
 		`70:1-2: must at least return an error`,
-		`70:40-40: unsupported request type "ftl/failing.Request"`,
-		`74:39-39: unsupported request type "ftl/failing.Request"`,
+		`70:36-36: unsupported request type "ftl/failing.Request"`,
+		`74:35-35: unsupported request type "ftl/failing.Request"`,
 		`74:48-48: must return an error but is ftl/failing.Response`,
-		`79:45-45: unsupported request type "ftl/failing.Request"`,
+		`79:41-41: unsupported request type "ftl/failing.Request"`,
 		`79:63-63: must return an error but is string`,
 		`79:63-63: second result must not be ftl.Unit`,
 		// `86:1-2: duplicate declaration of "WrongResponse" at 79:6`,  TODO: fix this
@@ -589,8 +580,8 @@ func TestErrorReporting(t *testing.T) {
 	// failing/child/child.go
 	expectedChild := []string{
 		`9:2-6: unsupported type "uint64" for field "Body"`,
+		`14:2-2: unsupported external type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"; see FTL docs on using external types: tbd54566975.github.io/ftl/docs/reference/externaltypes/`,
 		`14:2-7: unsupported type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.NonFTLType" for field "Field"`,
-		`14:8-8: unsupported external type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.NonFTLType"; see FTL docs on using external types: tbd54566975.github.io/ftl/docs/reference/externaltypes/`,
 		`19:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType`,
 		`24:6-6: multiple Go type mappings found for "ftl/failing/child.MultipleMappings"`,
 		`34:2-13: enum variant "SameVariant" conflicts with existing enum variant of "EnumVariantConflictParent" at "196:2"`,

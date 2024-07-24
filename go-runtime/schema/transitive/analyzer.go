@@ -106,11 +106,7 @@ func inferDeclType(pass *analysis.Pass, node ast.Node, obj types.Object) optiona
 	if _, ok := ts.Type.(*ast.InterfaceType); ok {
 		return optional.Some[schema.Decl](&schema.Enum{})
 	}
-	// underlying type is external, try to extract as a type alias
-	if o, ok := common.GetObjectForNode(pass.TypesInfo, ts.Type).Get(); ok && o.Pkg() != nil && common.IsExternalType(o.Pkg().Path()) {
-		return optional.Some[schema.Decl](&schema.TypeAlias{})
-	}
-	t, ok := common.ExtractType(pass, ts.Type).Get()
+	t, ok := common.ExtractTypeForNode(pass, obj, ts.Type, nil).Get()
 	if !ok {
 		return optional.None[schema.Decl]()
 	}

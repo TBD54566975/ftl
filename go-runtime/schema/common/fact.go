@@ -94,11 +94,6 @@ type FailedExtraction struct{}
 
 func (*FailedExtraction) schemaFactValue() {}
 
-// ExternalType is a fact for marking an external type.
-type ExternalType struct{}
-
-func (*ExternalType) schemaFactValue() {}
-
 // MarkSchemaDecl marks the given object as having been extracted to the given schema decl.
 func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	fact := newFact(pass, obj)

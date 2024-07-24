@@ -78,9 +78,10 @@ func extractConfigSecret[T schema.Decl](
 
 	index := node.Fun.(*ast.IndexExpr) //nolint:forcetypeassert
 	// Type parameter
-	st, ok := common.ExtractType(pass, index.Index).Get()
+	tp := pass.TypesInfo.Types[index.Index].Type
+	st, ok := common.ExtractType(pass, index.Index.Pos(), tp).Get()
 	if !ok {
-		common.Errorf(pass, index.Index, "config is unsupported type")
+		common.Errorf(pass, index.Index, "config is unsupported type %q", tp)
 		return optional.None[schema.Decl]()
 	}
 
