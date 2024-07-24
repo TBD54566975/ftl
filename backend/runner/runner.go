@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -52,6 +51,7 @@ type Config struct {
 	Language              []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust"`
 	HeartbeatPeriod       time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter       time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
+	RunnerStartDelay      time.Duration   `help:"Time in seconds for a runner to wait before contacting the controller. This can be needed in istio environments to work around initialization races." env:"FTL_RUNNER_START_DELAY" default:"0s"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -108,14 +108,8 @@ func Start(ctx context.Context, config Config) error {
 	go func() {
 		// In some environments we may want a delay before registering the runner
 		// We have seen istio race conditions that we think this will help
-		startDelay := os.Getenv("FTL_RUNNER_START_DELAY")
-		if startDelay != "" {
-			delay, err := strconv.Atoi(startDelay)
-			if err != nil {
-				logger.Errorf(err, "could not parse RUNNER_START_DELAY")
-			} else {
-				time.Sleep(time.Second * time.Duration(delay))
-			}
+		if config.RunnerStartDelay > 0 {
+			time.Sleep(config.RunnerStartDelay)
 		}
 		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
 		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
