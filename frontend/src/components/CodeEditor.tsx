@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react'
+import {useDarkMode} from '../providers/dark-mode-provider.tsx'
 
 export interface InitialState {
   initialText: string
@@ -11,6 +12,7 @@ export const CodeEditor = (
     { initialState: InitialState, onTextChanged?: (text: string) => void }
 ) => {
   const [editorText, setEditorText] = useState(initialState.initialText)
+  const { isDarkMode } = useDarkMode()
 
   useEffect(() => {
     setEditorText(initialState.initialText)
@@ -23,12 +25,14 @@ export const CodeEditor = (
     }
   }
 
+  const extraClass = (isDarkMode) ? 'bg-gray-800 text-white' : 'bg-gray-100 text-black'
+
   return (
     <textarea
       value={editorText}
       readOnly={initialState.readonly}
       onChange={(e) => handleChange(e.target.value)}
-      style={{ width: '100%',fontFamily: 'monospace' }}
+      className={`w-full h-full p-2 text-sm font-mono ${extraClass}`}
     />
   )
 }
