@@ -143,7 +143,7 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	}()
 	handler, ok := m.handlers[reflection.RefFromProto(req.Msg.Verb)]
 	if !ok {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %q not found", req.Msg.Verb))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %s.%s not found", req.Msg.Verb.Module, req.Msg.Verb.Name))
 	}
 
 	respdata, err := handler.fn(ctx, req.Msg.Body)
