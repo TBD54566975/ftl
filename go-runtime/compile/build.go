@@ -442,9 +442,6 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"mainImports": func(ctx mainModuleContext) []string {
 		imports := sets.NewSet[string]()
-		if len(ctx.Verbs) > 0 {
-			imports.Add(ctx.Name)
-		}
 		for _, v := range ctx.Verbs {
 			imports.Add(strings.TrimPrefix(v.MustImport, "ftl/"))
 		}
