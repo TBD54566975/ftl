@@ -7,57 +7,24 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	"github.com/TBD54566975/golang-tools/go/ast/inspector"
 	"github.com/alecthomas/types/optional"
 )
 
 const ftlPostgresDBFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
 
 // Extractor extracts databases to the module schema.
-var Extractor = common.NewExtractor("database", (*Fact)(nil), Extract)
+var Extractor = common.NewCallDeclExtractor[*schema.Database]("database", Extract, ftlPostgresDBFuncPath)
 
-type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
-type Fact = common.DefaultFact[Tag]
-
-func Extract(pass *analysis.Pass) (interface{}, error) {
-	in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
-	nodeFilter := []ast.Node{
-		(*ast.GenDecl)(nil),
+func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr *ast.CallExpr,
+	callPath string) optional.Option[*schema.Database] {
+	var comments []string
+	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
+		comments = md.Comments
 	}
-	in.Preorder(nodeFilter, func(n ast.Node) {
-		node := n.(*ast.GenDecl) //nolint:forcetypeassert
-		callExpr, ok := common.CallExprFromVar(node).Get()
-		if !ok {
-			return
-		}
-
-		_, fn := common.Deref[*types.Func](pass, callExpr.Fun)
-		if fn == nil {
-			return
-		}
-
-		obj, ok := common.GetObjectForNode(pass.TypesInfo, node).Get()
-		if !ok {
-			return
-		}
-
-		var comments []string
-		if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
-			comments = md.Comments
-		}
-
-		var decl optional.Option[*schema.Database]
-		if fn.FullName() == ftlPostgresDBFuncPath {
-			decl = extractDatabase(pass, callExpr, schema.PostgresDatabaseType, comments)
-		}
-
-		if d, ok := decl.Get(); ok {
-			common.MarkSchemaDecl(pass, obj, d)
-		}
-	})
-
-	return common.NewExtractorResult(pass), nil
+	if callPath == ftlPostgresDBFuncPath {
+		return extractDatabase(pass, callExpr, schema.PostgresDatabaseType, comments)
+	}
+	return optional.None[*schema.Database]()
 }
 
 func extractDatabase(

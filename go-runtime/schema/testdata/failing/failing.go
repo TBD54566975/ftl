@@ -3,8 +3,8 @@ package failing
 import (
 	"context"
 
-	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 
 	"ftl/failing/child"
 	ps "ftl/pubsub"

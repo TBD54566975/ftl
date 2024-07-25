@@ -154,7 +154,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	}
 
 	logger.Debugf("Extracting schema")
-	result, err := ExtractModuleSchema(config.Dir, sch)
+	result, err := extract.Extract(config.Dir)
 	if err != nil {
 		return err
 	}
@@ -717,7 +717,7 @@ func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error)
 	return os.WriteFile(config.Abs().Errors, elBytes, 0600)
 }
 
-func getLocalSumTypes(module *schema.Module, nativeNames NativeNames) []goSumType {
+func getLocalSumTypes(module *schema.Module, nativeNames extract.NativeNames) []goSumType {
 	sumTypes := make(map[string]goSumType)
 	for _, d := range module.Decls {
 		e, ok := d.(*schema.Enum)
@@ -772,7 +772,7 @@ func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
 
 // getRegisteredTypesExternalToModule returns all sum types and external types that are not defined in the given module.
 // These are the types that must be registered in the main module.
-func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames NativeNames) ([]goSumType, []goExternalType, error) {
+func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames extract.NativeNames) ([]goSumType, []goExternalType, error) {
 	sumTypes := make(map[string]goSumType)
 	externalTypes := make(map[string]sets.Set[string])
 	// register sum types from other modules
@@ -838,7 +838,7 @@ func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames N
 	return stOut, etOut, nil
 }
 
-func getGoSumType(enum *schema.Enum, nativeNames NativeNames) optional.Option[goSumType] {
+func getGoSumType(enum *schema.Enum, nativeNames extract.NativeNames) optional.Option[goSumType] {
 	if enum.IsValueEnum() {
 		return optional.None[goSumType]()
 	}
@@ -934,79 +934,6 @@ func getRegisteredTypesExternalToModule(module *schema.Module, sch *schema.Schem
 		panic(fmt.Sprintf("failed to resolve external types and sum types external to the module schema: %v", err))
 	}
 	return externalTypes
-}
-
-// ExtractModuleSchema statically parses Go FTL module source into a schema.Module
-//
-// TODO: once migrated off of the legacy extractor, we can inline `extract.Extract(dir)` and delete this
-// function
-func ExtractModuleSchema(dir string, sch *schema.Schema) (extract.Result, error) {
-	result, err := extract.Extract(dir)
-	if err != nil {
-		return extract.Result{}, err
-	}
-
-	// merge with legacy results for now
-	if err = legacyExtractModuleSchema(dir, sch, &result); err != nil {
-		return extract.Result{}, err
-	}
-
-	schema.SortErrorsByPosition(result.Errors)
-	if schema.ContainsTerminalError(result.Errors) {
-		return result, nil
-	}
-	err = schema.ValidateModule(result.Module)
-	if err != nil {
-		return extract.Result{}, err
-	}
-	updateVisibility(result.Module)
-	return result, nil
-}
-
-// TODO: delete all of this once it's handled by the finalizer
-func updateVisibility(module *schema.Module) {
-	for _, d := range module.Decls {
-		if d.IsExported() {
-			updateTransitiveVisibility(d, module)
-		}
-	}
-}
-
-// TODO: delete
-func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
-	if !d.IsExported() {
-		return
-	}
-
-	_ = schema.Visit(d, func(n schema.Node, next func() error) error { //nolint:errcheck
-		ref, ok := n.(*schema.Ref)
-		if !ok {
-			return next()
-		}
-
-		resolved := module.Resolve(*ref)
-		if resolved == nil || resolved.Symbol == nil {
-			return next()
-		}
-
-		if decl, ok := resolved.Symbol.(schema.Decl); ok {
-			switch t := decl.(type) {
-			case *schema.Data:
-				t.Export = true
-			case *schema.Enum:
-				t.Export = true
-			case *schema.TypeAlias:
-				t.Export = true
-			case *schema.Topic:
-				t.Export = true
-			case *schema.Verb:
-				t.Export = true
-			case *schema.Database, *schema.Config, *schema.FSM, *schema.Secret, *schema.Subscription:
-			}
-			updateTransitiveVisibility(decl, module)
-		}
-		return next()
-	})
 }
 
 func goVerbFromQualifiedName(qualifiedName string) (goVerb, error) {

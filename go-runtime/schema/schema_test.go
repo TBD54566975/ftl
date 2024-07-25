@@ -1,4 +1,4 @@
-package compile
+package schema
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 
@@ -45,9 +46,9 @@ func TestExtractModuleSchema(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	assert.NoError(t, prebuildTestModule(t, "testdata/go/one", "testdata/go/two"))
+	assert.NoError(t, prebuildTestModule(t, "testdata/one", "testdata/two"))
 
-	r, err := ExtractModuleSchema("testdata/go/one", &schema.Schema{})
+	r, err := Extract("testdata/one")
 	assert.NoError(t, err)
 	actual := schema.Normalise(r.Module)
 	expected := `module one {
@@ -183,9 +184,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 		t.SkipNow()
 	}
 
-	assert.NoError(t, prebuildTestModule(t, "testdata/go/two"))
+	assert.NoError(t, prebuildTestModule(t, "testdata/two"))
 
-	r, err := ExtractModuleSchema("testdata/go/two", &schema.Schema{})
+	r, err := Extract("testdata/two")
 	assert.NoError(t, err)
 	for _, e := range r.Errors {
 		// only warns
@@ -195,17 +196,17 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	expected := `module two {
 			typealias ExplicitAliasAlias Any
 				+typemap kotlin "com.foo.bar.NonFTLType"
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 
 			typealias ExplicitAliasType Any
 				+typemap kotlin "com.foo.bar.NonFTLType"
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 
 			typealias TransitiveAliasAlias Any
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 
 			typealias TransitiveAliasType Any
-				+typemap go "github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType"
+				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 
 			export enum TwoEnum: String {
 			  Blue = "Blue"
@@ -265,7 +266,7 @@ func TestExtractModuleSchemaFSM(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	r, err := ExtractModuleSchema("testdata/fsm", &schema.Schema{})
+	r, err := Extract("testdata/fsm")
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
@@ -317,7 +318,7 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 		t.SkipNow()
 	}
 	assert.NoError(t, prebuildTestModule(t, "testdata/named", "testdata/namedext"))
-	r, err := ExtractModuleSchema("testdata/named", &schema.Schema{})
+	r, err := Extract("testdata/named")
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
@@ -370,7 +371,7 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 		t.SkipNow()
 	}
 	assert.NoError(t, prebuildTestModule(t, "testdata/parent"))
-	r, err := ExtractModuleSchema("testdata/parent", &schema.Schema{})
+	r, err := Extract("testdata/parent")
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
@@ -412,7 +413,7 @@ func TestExtractModulePubSub(t *testing.T) {
 
 	assert.NoError(t, prebuildTestModule(t, "testdata/pubsub"))
 
-	r, err := ExtractModuleSchema("testdata/pubsub", &schema.Schema{})
+	r, err := Extract("testdata/pubsub")
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
@@ -448,7 +449,7 @@ func TestExtractModuleSubscriber(t *testing.T) {
 		t.SkipNow()
 	}
 	assert.NoError(t, prebuildTestModule(t, "testdata/pubsub", "testdata/subscriber"))
-	r, err := ExtractModuleSchema("testdata/subscriber", &schema.Schema{})
+	r, err := Extract("testdata/subscriber")
 	assert.NoError(t, err)
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
@@ -466,17 +467,17 @@ func TestParsedirectives(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		expected directive
+		expected common.Directive
 	}{
-		{name: "Verb", input: "ftl:verb", expected: &directiveVerb{Verb: true}},
-		{name: "Verb export", input: "ftl:verb export", expected: &directiveVerb{Verb: true, Export: true}},
-		{name: "Data", input: "ftl:data", expected: &directiveData{Data: true}},
-		{name: "Data export", input: "ftl:data export", expected: &directiveData{Data: true, Export: true}},
-		{name: "Enum", input: "ftl:enum", expected: &directiveEnum{Enum: true}},
-		{name: "Enum export", input: "ftl:enum export", expected: &directiveEnum{Enum: true, Export: true}},
-		{name: "TypeAlias", input: "ftl:typealias", expected: &directiveTypeAlias{TypeAlias: true}},
-		{name: "TypeAlias export", input: "ftl:typealias export", expected: &directiveTypeAlias{TypeAlias: true, Export: true}},
-		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &directiveIngress{
+		{name: "Verb", input: "ftl:verb", expected: &common.DirectiveVerb{Verb: true}},
+		{name: "Verb export", input: "ftl:verb export", expected: &common.DirectiveVerb{Verb: true, Export: true}},
+		{name: "Data", input: "ftl:data", expected: &common.DirectiveData{Data: true}},
+		{name: "Data export", input: "ftl:data export", expected: &common.DirectiveData{Data: true, Export: true}},
+		{name: "Enum", input: "ftl:enum", expected: &common.DirectiveEnum{Enum: true}},
+		{name: "Enum export", input: "ftl:enum export", expected: &common.DirectiveEnum{Enum: true, Export: true}},
+		{name: "TypeAlias", input: "ftl:typealias", expected: &common.DirectiveTypeAlias{TypeAlias: true}},
+		{name: "TypeAlias export", input: "ftl:typealias export", expected: &common.DirectiveTypeAlias{TypeAlias: true, Export: true}},
+		{name: "Ingress", input: `ftl:ingress GET /foo`, expected: &common.DirectiveIngress{
 			Method: "GET",
 			Path: []schema.IngressPathComponent{
 				&schema.IngressPathLiteral{
@@ -484,7 +485,7 @@ func TestParsedirectives(t *testing.T) {
 				},
 			},
 		}},
-		{name: "Ingress", input: `ftl:ingress GET /test_path/{something}/987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz`, expected: &directiveIngress{
+		{name: "Ingress", input: `ftl:ingress GET /test_path/{something}/987-Your_File.txt%7E%21Misc%2A%28path%29info%40abc%3Fxyz`, expected: &common.DirectiveIngress{
 			Method: "GET",
 			Path: []schema.IngressPathComponent{
 				&schema.IngressPathLiteral{
@@ -501,7 +502,7 @@ func TestParsedirectives(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := directiveParser.ParseString("", tt.input)
+			got, err := common.DirectiveParser.ParseString("", tt.input)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, got.Directive, assert.Exclude[lexer.Position](), assert.Exclude[schema.Position]())
 		})
@@ -524,7 +525,7 @@ func TestErrorReporting(t *testing.T) {
 	assert.NoError(t, err)
 	err = exec.Command(ctx, log.Debug, "testdata/failing", "go", "mod", "tidy").RunBuffered(ctx)
 	assert.NoError(t, err)
-	r, err := ExtractModuleSchema("testdata/failing", &schema.Schema{})
+	r, err := Extract("testdata/failing")
 	assert.NoError(t, err)
 
 	var actualParent []string
@@ -594,9 +595,9 @@ func TestErrorReporting(t *testing.T) {
 	// failing/child/child.go
 	expectedChild := []string{
 		`9:2-6: unsupported type "uint64" for field "Body"`,
-		`14:2-7: unsupported type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.NonFTLType" for field "Field"`,
-		`14:8-8: unsupported external type "github.com/TBD54566975/ftl/go-runtime/compile/testdata.NonFTLType"; see FTL docs on using external types: tbd54566975.github.io/ftl/docs/reference/externaltypes/`,
-		`19:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/compile/testdata.lib.NonFTLType`,
+		`14:2-7: unsupported type "github.com/TBD54566975/ftl/go-runtime/schema/testdata.NonFTLType" for field "Field"`,
+		`14:8-8: unsupported external type "github.com/TBD54566975/ftl/go-runtime/schema/testdata.NonFTLType"; see FTL docs on using external types: tbd54566975.github.io/ftl/docs/reference/externaltypes/`,
+		`19:6-41: declared type github.com/blah.lib.NonFTLType in typemap does not match native type github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType`,
 		`24:6-6: multiple Go type mappings found for "ftl/failing/child.MultipleMappings"`,
 		`34:2-13: enum variant "SameVariant" conflicts with existing enum variant of "EnumVariantConflictParent" at "196:2"`,
 	}
@@ -614,7 +615,7 @@ func TestValidationFailures(t *testing.T) {
 	assert.NoError(t, err)
 	err = exec.Command(ctx, log.Debug, "testdata/validation", "go", "mod", "tidy").RunBuffered(ctx)
 	assert.NoError(t, err)
-	_, err = ExtractModuleSchema("testdata/validation", &schema.Schema{})
+	_, err = Extract("testdata/validation")
 	assert.Error(t, err)
 	errs := errors.UnwrapAll(err)
 

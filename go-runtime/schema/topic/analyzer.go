@@ -8,8 +8,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	"github.com/TBD54566975/golang-tools/go/ast/inspector"
 	"github.com/alecthomas/types/optional"
 )
 
@@ -18,38 +16,11 @@ const (
 )
 
 // Extractor extracts topics.
-var Extractor = common.NewExtractor("topic", (*Fact)(nil), Extract)
-
-type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
-type Fact = common.DefaultFact[Tag]
-
-func Extract(pass *analysis.Pass) (interface{}, error) {
-	in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
-	nodeFilter := []ast.Node{
-		(*ast.GenDecl)(nil),
-	}
-	in.Preorder(nodeFilter, func(n ast.Node) {
-		node := n.(*ast.GenDecl) //nolint:forcetypeassert
-		callExpr, ok := common.CallExprFromVar(node).Get()
-		if !ok {
-			return
-		}
-		if !common.FuncPathEquals(pass, callExpr, ftlTopicFuncPath) {
-			return
-		}
-		obj, ok := common.GetObjectForNode(pass.TypesInfo, node).Get()
-		if !ok {
-			return
-		}
-		if topic, ok := extractTopic(pass, node, callExpr, obj).Get(); ok {
-			common.MarkSchemaDecl(pass, obj, topic)
-		}
-	})
-	return common.NewExtractorResult(pass), nil
-}
+var Extractor = common.NewCallDeclExtractor[*schema.Topic]("topic", Extract, ftlTopicFuncPath)
 
 // expects: var NameLiteral = ftl.Topic[EventType]("name_literal")
-func extractTopic(pass *analysis.Pass, node *ast.GenDecl, callExpr *ast.CallExpr, obj types.Object) optional.Option[*schema.Topic] {
+func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr *ast.CallExpr,
+	callPath string) optional.Option[*schema.Topic] {
 	indexExpr, ok := callExpr.Fun.(*ast.IndexExpr)
 	if !ok {
 		common.Errorf(pass, node, "must have an event type as a type parameter")

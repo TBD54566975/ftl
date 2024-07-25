@@ -10,7 +10,6 @@ import (
 	"text/template"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/assert/v2"
 )
 
@@ -364,8 +363,4 @@ module test {
 	}
 
 	return result.String()
-}
-
-func normaliseString(s string) string {
-	return strings.TrimSpace(strings.Join(slices.Map(strings.Split(s, "\n"), strings.TrimSpace), "\n"))
 }
