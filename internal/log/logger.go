@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/benbjohnson/clock"
 	"golang.org/x/exp/maps"
 )
 
@@ -29,6 +30,7 @@ type Logger struct {
 	level      Level
 	attributes map[string]string
 	sink       Sink
+	clock      clock.Clock
 }
 
 // New returns a new logger.
@@ -37,6 +39,7 @@ func New(level Level, sink Sink) *Logger {
 		level:      level,
 		attributes: map[string]string{},
 		sink:       sink,
+		clock:      clock.New(),
 	}
 }
 
@@ -72,11 +75,11 @@ func (l *Logger) Log(entry Entry) {
 		return
 	}
 	if entry.Time.IsZero() {
-		entry.Time = time.Now()
+		// Use UTC now
+		entry.Time = l.clock.Now().UTC()
 	}
 
-	// merge logger and entry attributes
-	mergedAttributes := make(map[string]string)
+	mergedAttributes := make(map[string]string, len(l.attributes)+len(entry.Attributes))
 	maps.Copy(mergedAttributes, l.attributes)
 	maps.Copy(mergedAttributes, entry.Attributes)
 	entry.Attributes = mergedAttributes
