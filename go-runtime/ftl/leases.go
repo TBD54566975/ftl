@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -18,7 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/alecthomas/types/optional"
 )
 
 // ErrLeaseHeld is returned when an attempt is made to acquire a lease that is

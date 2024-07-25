@@ -6,12 +6,12 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
-	"github.com/TBD54566975/golang-tools/go/analysis"
 )
 
 // Extractor extracts type aliases to the module schema.

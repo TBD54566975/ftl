@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/atomic"
-
 	"github.com/alecthomas/types/optional"
 	"github.com/puzpuzpuz/xsync/v3"
 )

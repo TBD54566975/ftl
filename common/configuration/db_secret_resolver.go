@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/common/configuration/dal"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/common/configuration/dal"
 )
 
 // DBSecretResolver loads values a project's secrets from the given database.
