@@ -1,0 +1,12 @@
+name = "testdata"
+module-dirs = ["a/b/c", "d"]
+
+[modules.module.configuration]
+  githubAccessToken = "keychain://githubAccessToken"
+
+[modules.module.secrets]
+  encryptionKey = "inline://notASensitiveSecret"
+  companyApiKey = "op://devel/yj3jfj2vzsbiwqabprflnl27lm/companyApiKey"
+
+[commands]
+  startup = ["echo 'Executing global pre-build command'"]

@@ -1,0 +1,32 @@
+#!/bin/bash
+set -euo pipefail
+
+# Run go mod tidy on all modules
+find . -name 'go.mod' ! -path '*/_*/*' ! -path '*/.ftl/*' ! -path '*/scaffolding/*' ! -path '*/testdata/*' -print0 | xargs -0 dirname | while read -r dir; do (echo "Tidying Go module in '$dir'..."; cd "$dir" && go mod tidy); done
+
+echo "Formatting Go..."
+# shellcheck disable=SC2207
+GO_FILES=($(go list -f '{{range .GoFiles}}{{$.Dir}}/{{.}}
+{{end}}' ./... | xargs -n1 grep -L '// Code generated.*DO NOT EDIT' || true))
+# gofmt -w -s
+gofmt -w -s "${GO_FILES[@]}"
+
+# gosimports
+# shellcheck disable=SC2046
+gosimports -w --local github.com/TBD54566975/ftl "${GO_FILES[@]}"
+
+echo "Formatting protobufs..."
+# Format .proto files
+buf format -w
+
+# Revert changes to generated files.
+find backend/protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xargs -0 -r git checkout > /dev/null
+
+(cd frontend && npm install)
+
+(cd backend/protos && buf generate)
+
+echo "Formatting TypeScript..."
+(cd frontend && npm run lint:fix)
+
+git diff

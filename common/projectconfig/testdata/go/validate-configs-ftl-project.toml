@@ -1,0 +1,5 @@
+name = "testdata"
+
+[global]
+  [global.configuration]
+    key = "inline://InZhbHVlIg"

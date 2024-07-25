@@ -1,0 +1,18 @@
+[package]
+name = "ftl_protos"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pbjson = { workspace = true }
+pbjson-types = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true }
+tonic = { workspace = true }
+prost-types = { workspace = true }
+
+[build-dependencies]
+pbjson-build = { workspace = true }
+prost-build = { workspace = true }
+prost = { workspace = true }
+tonic-build = { workspace = true }

@@ -1,0 +1,110 @@
+_help:
+  @just -l
+
+registry_full := "k3d-ftl-registry.localhost:5000"
+registry_short := "ftl-registry.localhost"
+registry_full_nolocal := "k3d-ftl-registry:5000"
+registry_local := "localhost:5000"
+
+mirrors := '''
+  mirrors:
+    "ftl:5000":
+      endpoint:
+        - "http://''' + registry_full + '''"
+'''
+
+start: setup full-deploy
+
+rm: teardown
+
+full-deploy:
+  just build-controller
+  just build-runner
+  just apply
+  kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m
+  kubectl wait --for=condition=available deployment/ftl-runner --timeout=5m
+  kubectl wait --for=condition=ready pod/ftl-pg-cluster-1-0 --timeout=5m
+
+  ftl status
+
+setup-registry:
+  k3d registry create {{registry_short}} --port 5000
+
+setup-cluster:
+  k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" --agents 2 \
+      --registry-use {{registry_full}} \
+      --registry-config '{{mirrors}}'
+
+setup: setup-registry setup-cluster
+
+teardown-registry:
+  k3d registry delete {{registry_short}}
+
+teardown-cluster:
+  k3d cluster delete ftl
+
+teardown: teardown-cluster teardown-registry
+
+apply:
+  kubectl kustomize --load-restrictor=LoadRestrictionsNone overlays/dev | kubectl apply -f -
+
+delete:
+  kubectl kustomize --load-restrictor=LoadRestrictionsNone overlays/dev | kubectl delete -f -
+
+delete-db:
+  kubectl delete pvc postgres-db-ftl-pg-cluster-1-0
+
+events:
+  kubectl get events -w
+
+ps:
+  kubectl get deployment,pod,statefulset,svc,configmap,pv,pvc,ingress -o wide
+
+logs *args:
+  kubectl logs -f {{args}}
+
+exec pod *args:
+  kubectl exec -t {{pod}} -- {{args}}
+
+enter pod *args="bash":
+  kubectl exec -it {{pod}} -- {{args}}
+
+psql:
+  just enter statefulset.apps/ftl-pg-cluster-1 env PGPASSWORD=secret psql -U postgres ftl
+
+ftl-status:
+  just exec deployment/ftl-controller ./ftl status
+
+build-controller:
+  cd .. && docker build --platform linux/amd64 -t ftl-controller:latest -f Dockerfile.controller .
+  docker tag ftl-controller:latest {{registry_local}}/ftl-controller:latest
+  docker push {{registry_local}}/ftl-controller:latest
+
+build-runner:
+  cd .. && docker build --platform linux/amd64 -t ftl-runner:latest -f Dockerfile.runner .
+  docker tag ftl-runner:latest {{registry_local}}/ftl-runner:latest
+  docker push {{registry_local}}/ftl-runner:latest
+
+build: build-controller build-runner
+
+deploy path:
+	#!/usr/bin/env bash
+	set -euxo pipefail
+	rm -f ftl.tar.gz
+	COPYFILE_DISABLE=1 tar -cf ftl.tar -C .. .
+	export POD=$(kubectl get pods -l app=ftl-controller --no-headers | tail -1 | awk '{print $1}')
+	kubectl exec -it ${POD} -- apt install -y golang
+	kubectl exec -it ${POD} -- rm -rf /tmp/ftl/
+	kubectl exec -it ${POD} -- mkdir -p /tmp/ftl/
+	kubectl cp ftl.tar ${POD}:/tmp/ftl/ftl.tar
+	kubectl exec -it ${POD} -- tar --warning=no-unknown-keyword -tf /tmp/ftl/ftl.tar
+	kubectl exec -it ${POD} -- tar -xf /tmp/ftl/ftl.tar -C /tmp/ftl/
+	kubectl exec -it ${POD} -- bash -c "cd /tmp/ftl && FTL_ENDPOINT=http://ftl-controller:8892 /root/ftl deploy {{path}}"
+	rm -f ftl.tar.gz
+
+ftl *args:
+	#!/usr/bin/env bash
+	set -euxo pipefail
+	export POD=$(kubectl get pods -l app=ftl-controller --no-headers | tail -1 | awk '{print $1}')
+	kubectl exec -it ${POD} -- bash -c "FTL_ENDPOINT=http://ftl-controller:8892 /root/ftl {{args}}"
+

@@ -1,0 +1,136 @@
+run:
+  tests: true
+  timeout: 5m
+
+output:
+  print-issued-lines: false
+
+linters:
+  enable-all: true
+  disable:
+    - mnd # So annoying
+    - execinquery
+    - lll
+    - typecheck # `go build` catches this, and it doesn't currently work with Go 1.11 modules
+    - goimports # horrendously slow with go modules :(
+    - dupl # has never been actually useful
+    - gochecknoglobals
+    - gochecknoinits
+    - funlen
+    - whitespace
+    - godox
+    - wsl
+    - dogsled
+    - gomnd
+    - gocognit
+    - gocyclo
+    - godot
+    - nestif
+    - testpackage
+    - gci
+    - gofumpt
+    - nlreturn
+    - forbidigo
+    - cyclop
+    - paralleltest
+    - tagliatelle
+    - gomoddirectives
+    - err113
+    - varnamelen
+    - ireturn
+    - containedctx
+    - nilnil
+    - contextcheck
+    - nonamedreturns
+    - exhaustruct
+    - nosprintfhostport
+    - nilerr
+    - goconst
+    - prealloc
+    - rowserrcheck # doesn't support generics
+    - wastedassign # doesn't support generics
+    - goprintffuncname
+    - dupword
+    - errchkjson
+    - musttag
+    - gofmt # autofmt
+    - interfacebloat
+    - tagalign
+    - nolintlint
+    - protogetter
+
+linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true
+  govet:
+    enable:
+      - 'shadow'
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 8
+    min-occurrences: 3
+  gocyclo:
+    min-complexity: 20
+  gocritic:
+    disabled-checks:
+      - ifElseChain
+  errcheck:
+    check-blank: true
+  depguard:
+    rules:
+      main:
+        deny:
+          - pkg: github.com/pkg/errors
+            desc: "use fmt.Errorf or errors.New"
+          - pkg: github.com/stretchr/testify
+            desc: "use github.com/alecthomas/assert/v2"
+          - pkg: github.com/alecthomas/errors
+            desc: "use fmt.Errorf or errors.New"
+          - pkg: braces.dev/errtrace
+            desc: "use fmt.Errorf or errors.New"
+          - pkg: os/exec
+            desc: "use github.com/TBD54566975/ftl/internal/exec"
+          - pkg: golang.design/x/reflect
+            desc: "use github.com/TBD54566975/ftl/internal/reflect"
+  # wrapcheck:
+  #   ignorePackageGlobs:
+  #     - github.com/TBD54566975/ftl/*
+
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0
+  exclude-dirs:
+    - resources
+    - old
+  exclude-files:
+    - cmd/protopkg/main.go
+  exclude-use-default: false
+  exclude:
+    # Captured by errcheck.
+    - "^(G104|G204):"
+    # Very commonly not checked.
+    - 'Error return value of .(.*\.Help|.*\.MarkFlagRequired|(os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*Print(f|ln|)|os\.(Un)?Setenv). is not checked'
+    # Weird error only seen on Kochiku...
+    - "internal error: no range for"
+    - 'exported method `.*\.(MarshalJSON|UnmarshalJSON|URN|Payload|GoString|Close|Provides|Requires|ExcludeFromHash|MarshalText|UnmarshalText|Description|Check|Poll|Severity)` should have comment or be unexported'
+    - "composite literal uses unkeyed fields"
+    - 'declaration of "err" shadows declaration'
+    - "by other packages, and that stutters"
+    - "Potential file inclusion via variable"
+    - "at least one file in a package should have a package comment"
+    - "bad syntax for struct tag pair"
+    - "should have comment or be unexported"
+    - "package-comments"
+    - "parameter testing.TB should have name tb"
+    - "blank-imports"
+    - 'should have comment \(or a comment on this block\) or be unexported'
+    - caseOrder
+    - unused-parameter
+    - "^loopclosure:"
+    - 'shadow: declaration of "ctx" shadows declaration at'
+    - 'shadow: declaration of "ok" shadows declaration'
+    - "^dot-imports:"
+    - "fmt.Errorf can be replaced with errors.New"
+    - "fmt.Sprintf can be replaced with string concatenation"
+    - "strings.Title has been deprecated"

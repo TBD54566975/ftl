@@ -1,0 +1,159 @@
+version: "2"
+sql:
+  - &daldir
+    engine: "postgresql"
+    queries: "backend/controller/sql/queries.sql"
+    schema: "backend/controller/sql/schema"
+    database:
+      uri: postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret
+    gen:
+      go: &gengo
+        package: "sql"
+        sql_package: "pgx/v5"
+        out: "backend/controller/sql"
+        emit_interface: true
+        query_parameter_limit: 3
+        overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              type: "optional.Option[uuid.UUID]"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.interval"
+            go_type: "time.Duration"
+          - db_type: "pg_catalog.interval"
+            nullable: true
+            go_type:
+              type: "optional.Option[time.Duration]"
+          - db_type: "module_schema_pb"
+            go_type: "*github.com/TBD54566975/ftl/backend/schema.Module"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              type: "optional.Option[time.Time]"
+          - db_type: "pg_catalog.varchar"
+            nullable: true
+            go_type: "github.com/alecthomas/types/optional.Option[string]"
+          - db_type: "runner_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.RunnerKey"
+          - db_type: "runner_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[model.RunnerKey]"
+          - db_type: "schema_ref"
+            go_type: "github.com/TBD54566975/ftl/backend/schema.RefKey"
+          - db_type: "schema_ref"
+            nullable: true
+            go_type:
+              type: "optional.Option[schema.RefKey]"
+          - db_type: "schema_type"
+            go_type:
+              type: "Type"
+          - db_type: "schema_type"
+            nullable: true
+            go_type:
+              type: "optional.Option[Type]"
+          - db_type: "cron_job_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.CronJobKey"
+          - db_type: "cron_job_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[model.CronJobKey]"
+          - db_type: "lease_key"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/leases.Key"
+          - db_type: "lease_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[leases.Key]"
+          - db_type: "deployment_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
+          - db_type: "deployment_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[model.DeploymentKey]"
+          - db_type: "cron_job_state"
+            go_type: "github.com/TBD54566975/ftl/internal/model.CronJobState"
+          - db_type: "controller_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
+          - db_type: "request_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.RequestKey"
+          - db_type: "request_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[model.RequestKey]"
+          - db_type: "topic_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.TopicKey"
+          - db_type: "topic_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[model.TopicKey]"
+          - db_type: "subscription_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.SubscriptionKey"
+          - db_type: "subscription_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[model.SubscriptionKey]"
+          - db_type: "subscriber_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.SubscriberKey"
+          - db_type: "subscriber_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[model.SubscriberKey]"
+          - db_type: "topic_event_key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.TopicEventKey"
+          - db_type: "topic_event_key"
+            nullable: true
+            go_type:
+              type: "optional.Option[model.TopicEventKey]"
+          - db_type: "text"
+            go_type: "string"
+          - db_type: "text"
+            nullable: true
+            go_type: "github.com/alecthomas/types/optional.Option[string]"
+          - db_type: "bytes"
+            nullable: true
+            go_type: "github.com/alecthomas/types/optional.Option[[]byte]"
+          - db_type: "pg_catalog.int8"
+            nullable: true
+            go_type: "github.com/alecthomas/types/optional.Option[int64]"
+          - db_type: "bigint"
+            nullable: true
+            go_type: "github.com/alecthomas/types/optional.Option[int64]"
+          - db_type: "int"
+            nullable: true
+            go_type: "github.com/alecthomas/types/optional.Option[int32]"
+          - db_type: "bool"
+            nullable: true
+            go_type: "github.com/alecthomas/types/optional.Option[bool]"
+          - column: "controller.key"
+            go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
+          - column: "deployments.name"
+            go_type: "github.com/TBD54566975/ftl/internal/model.DeploymentKey"
+          - column: "events.payload"
+            go_type: "encoding/json.RawMessage"
+    rules:
+      - sqlc/db-prepare
+      # - postgresql-query-too-costly
+      - postgresql-no-seq-scan
+  - <<: *daldir
+    queries: "backend/controller/cronjobs/sql/queries.sql"
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/cronjobs/sql"
+  - <<: *daldir
+    queries: "common/configuration/sql/queries.sql"
+    gen:
+      go:
+        <<: *gengo
+        out: "common/configuration/sql"
+rules:
+  - name: postgresql-query-too-costly
+    message: "Query cost estimate is too high"
+    rule: "postgresql.explain.plan.total_cost > 500.0"
+  - name: postgresql-no-seq-scan
+    message: "Query plan results in a sequential scan"
+    rule: "postgresql.explain.plan.node_type == 'Seq Scan'"

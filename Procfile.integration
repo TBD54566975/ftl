@@ -1,0 +1,4 @@
+controller: build/release/ftl-controller --key C01H5BRT09Y07547SETZ4HWRA09 --bind http://localhost:8892
+runner0: build/release/ftl-runner --key R01H5BTS6ABP1EHGZSAGJMBV50A --language go --language kotlin --bind http://localhost:8894 --template-dir build/template --deployment-dir build/runner0
+runner1: build/release/ftl-runner --key R01H5BTSGKQ8AZ9S22N9N1SM9HV --language go --language kotlin --bind http://localhost:8895 --template-dir build/template --deployment-dir build/runner1
+runner2: build/release/ftl-runner --key R01H8DD0Z5GRT3QP1MBARC4TW08 --language go --language kotlin --bind http://localhost:8896 --template-dir build/template --deployment-dir build/runner2

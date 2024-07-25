@@ -1,0 +1,46 @@
+builds:
+  - id: ftl
+    main: ./cmd/ftl
+    binary: ftl
+    env:
+      - CGO_ENABLED=0
+    goarch:
+      - amd64
+      - arm64
+    goos:
+      - linux
+      - darwin
+    flags: -trimpath
+    ldflags: -s -w -buildid= -X github.com/TBD54566975/ftl.Version={{.Version}} -X  github.com/TBD54566975/ftl.Timestamp={{ .CommitTimestamp }}
+    tags: [release]
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}-{{ .Version }}.{{- .Os }}-{{ .Arch }}"
+    format_overrides:
+    - goos: windows
+      format: zip
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+brews:
+  - name: ftl
+    homepage: https://github.com/TBD54566975/ftl
+    description: "FTL - Towards a 𝝺-calculus for large-scale systems"
+    repository:
+      owner: TBD54566975
+      name: homebrew-ftl
+      token: "{{ .Env.FTL_HOMEBREW_TOKEN }}"
+
+# The lines beneath this are called `modelines`. See `:help modeline`
+# Feel free to remove those if you don't want/use them.
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj

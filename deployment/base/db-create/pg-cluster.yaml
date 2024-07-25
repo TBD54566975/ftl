@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pg-secret
+  namespace: default
+type: Opaque
+stringData:
+  superUserPassword: "secret"
+  replicationUserPassword: "postgresReplicaPsw"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ftl-pg-cluster-conf
+  namespace: default
+
+data:
+
+  primary_init_script.sh: |
+    #!/bin/bash
+    set -e
+
+    echo "Running init script the 1st time Primary PostgreSql container is created...";
+    echo "Running: psql -v ON_ERROR_STOP=1 --username $POSTGRES_USER --dbname $POSTGRES_DB ...";
+
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE DATABASE ftl;
+    CREATE USER ftl WITH PASSWORD 'secret';
+    GRANT ALL PRIVILEGES ON DATABASE "ftl" to ftl;
+    EOSQL
+
+    echo "Init script is completed";
+---
+apiVersion: kubegres.reactive-tech.io/v1
+kind: Kubegres
+metadata:
+  name: ftl-pg-cluster
+  namespace: default
+spec:
+   replicas: 1
+   image: postgres:14.1
+
+   database:
+      size: 200Mi
+
+   customConfig: ftl-pg-cluster-conf
+
+   env:
+      - name: POSTGRES_PASSWORD
+        valueFrom:
+           secretKeyRef:
+              name: pg-secret
+              key: superUserPassword
+
+      - name: POSTGRES_REPLICATION_PASSWORD
+        valueFrom:
+           secretKeyRef:
+              name: pg-secret
+              key: replicationUserPassword

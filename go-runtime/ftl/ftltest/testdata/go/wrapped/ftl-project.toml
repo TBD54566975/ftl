@@ -1,0 +1,10 @@
+name = "testdata"
+ftl-min-version = ""
+
+[global]
+  [global.configuration]
+    config = "inline://ImJhemJheiI"
+  [global.secrets]
+    secret = "inline://ImJhemJheiI"
+
+[commands]

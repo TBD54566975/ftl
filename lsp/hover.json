@@ -1,0 +1,32 @@
+[
+  {
+    "match": "//ftl:verb",
+    "source": "reference/verbs.md"
+  },
+  {
+    "match": "//ftl:typealias",
+    "source": "reference/types.md",
+    "select": ["## Type aliases"]
+  },
+  {
+    "match": "//ftl:enum",
+    "source": "reference/types.md",
+    "select": ["## Type enums (sum types)", "## Value enums"]
+  },
+  {
+    "match": "//ftl:cron",
+    "source": "reference/cron.md"
+  },
+  {
+    "match": "//ftl:ingress",
+    "source": "reference/ingress.md"
+  },
+  {
+    "match": "//ftl:subscribe",
+    "source": "reference/pubsub.md"
+  },
+  {
+    "match": "//ftl:retry",
+    "source": "reference/retries.md"
+  }
+]

@@ -1,0 +1,15 @@
+name = "ftl"
+module-dirs = ["examples/go"]
+ftl-min-version = ""
+
+[global]
+  [global.configuration]
+    key = "inline://InZhbHVlIg"
+
+[modules]
+  [modules.echo]
+    [modules.echo.configuration]
+      default = "inline://ImFub255bW91cyI"
+
+[commands]
+  startup = ["echo 'FTL startup command ⚡️'"]

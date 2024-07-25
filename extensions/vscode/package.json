@@ -1,0 +1,107 @@
+{
+  "name": "ftl",
+  "displayName": "FTL",
+  "publisher": "ftl",
+  "description": "VSCode extension for FTL",
+  "icon": "images/icon.png",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TBD54566975/ftl"
+  },
+  "engines": {
+    "vscode": "^1.90.2"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/ftl-project.toml",
+    "workspaceContains:**/ftl.toml"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "FTL",
+      "properties": {
+        "ftl.executablePath": {
+          "type": "string",
+          "description": "Path to the FTL executable. Leave as 'ftl' to use the system PATH."
+        },
+        "ftl.devCommandFlags": {
+          "type": "array",
+          "default": [
+            "--recreate"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Flags to pass to the FTL executable when starting ftl dev"
+        },
+        "ftl.automaticallyStartServer": {
+          "type": "string",
+          "enum": [
+            "always",
+            "never"
+          ],
+          "default": null,
+          "description": "Control if and when to automatically start the FTL dev server."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "ftl.restart",
+        "title": "Restart Service",
+        "category": "FTL"
+      },
+      {
+        "command": "ftl.stop",
+        "title": "Stop Service",
+        "category": "FTL"
+      },
+      {
+        "command": "ftl.showLogs",
+        "title": "Show Logs",
+        "category": "FTL"
+      },
+      {
+        "command": "ftl.statusItemClicked",
+        "title": "Show Commands",
+        "category": "FTL"
+      }
+    ]
+  },
+  "main": "./dist/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "webpack",
+    "watch": "webpack --watch",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "20.x",
+    "@types/semver": "^7.5.8",
+    "@types/vscode": "^1.87.0",
+    "@typescript-eslint/eslint-plugin": "^7.5.0",
+    "@typescript-eslint/parser": "^7.5.0",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/test-electron": "^2.3.9",
+    "eslint": "^8.57.0",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "@vscode/vsce": "^2.29.0",
+    "webpack": "^5.90.3",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "lookpath": "^1.2.2",
+    "semver": "^7.6.0",
+    "vscode-languageclient": "^10.0.0-next.8"
+  }
+}

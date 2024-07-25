@@ -1,0 +1,50 @@
+FROM ubuntu:24.04 AS builder
+RUN apt-get update
+RUN apt-get install -y curl git zip
+
+# Copy Hermit bin stubs and install all packages. This is done
+# separately so that Docker will cache the tools correctly.
+COPY ./bin /src/bin
+ENV PATH="/src/bin:$PATH"
+WORKDIR /src
+
+# Seed some of the most common tools - this will be cached
+RUN go version
+RUN mvn -f kotlin-runtime/ftl-runtime -B --version
+RUN node --version
+
+# Download Go dependencies separately so Docker will cache them
+COPY go.mod go.sum ./
+RUN go mod download -x
+
+# Build
+COPY . /src/
+RUN just errtrace
+# Reset timestamps so that the build state is reset
+RUN git ls-files -z | xargs -0 touch -r go.mod
+RUN just build ftl-controller
+RUN just build ftl-initdb
+RUN just build ftl
+
+# Finally create the runtime image.
+FROM ubuntu:24.04
+
+RUN apt-get update
+RUN apt-get install -y curl postgresql-client iputils-ping vim
+
+WORKDIR /root/
+
+COPY --from=builder /src/build/release/ftl-controller .
+COPY --from=builder /src/build/release/ftl-initdb .
+COPY --from=builder /src/build/release/ftl .
+RUN mkdir deployments
+
+EXPOSE 8891
+EXPOSE 8892
+
+ENV FTL_CONTROLLER_BIND="http://0.0.0.0:8892"
+ENV FTL_CONTROLLER_ADVERTISE="http://127.0.0.1:8892"
+ENV FTL_CONTROLLER_CONSOLE_URL="*"
+ENV FTL_CONTROLLER_DSN="postgres://host.docker.internal/ftl?sslmode=disable&user=postgres&password=secret"
+
+CMD ["/root/ftl-controller"]

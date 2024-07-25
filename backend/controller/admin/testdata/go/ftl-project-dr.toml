@@ -1,0 +1,9 @@
+name = "dr"
+ftl-min-version = "dev"
+hermit = false
+no-git = false
+
+[global]
+
+[commands]
+  startup = ["echo disk retreiver"]

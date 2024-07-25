@@ -1,0 +1,23 @@
+#!/bin/bash
+set -euo pipefail
+
+# This is convoluted because Go's -json output is basically just a JSON struct
+# per line of output, and gotestsum doesn't include structured line output in
+# the junit.xml file. So we parse the XML, extracting the failure messages and
+# then match lines containing lines that look like error messages.
+
+fail=0
+if ! gotestsum --format-hide-empty-pkg --junitfile junit-go.xml --junitfile-hide-empty-pkg -- -race -fullpath ./...; then
+  fail=1
+fi
+
+dir="$(pwd)"
+yq -oj '.. | select(has("failure")) | .failure["+content"]' junit-go.xml | while read -r failure; do
+  line="$(echo "$failure" | jq -r | grep -E "$dir/.*\.go:[0-9]+" | sed -e "s,^[ ]*$dir/,,")"
+  file_path=$(echo "$line" | cut -d':' -f1)
+  line_number=$(echo "$line" | cut -d':' -f2)
+  # Output the warning message in the format expected by GitHub Actions
+  echo "::error file=$file_path,line=$line_number::$(echo "$failure" | jq -r . | sed -e "s,$dir/,," | sed -e 's,$,%0A,g' | tr -d '\n')"
+done
+
+exit "$fail"

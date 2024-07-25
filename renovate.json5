@@ -1,0 +1,41 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)",
+    ":semanticCommitScope(deps)",
+    "group:allNonMajor",
+    "schedule:earlyMondays",
+  ],
+  packageRules: [
+    {
+      matchUpdateTypes: ["minor", "patch"],
+      automerge: true,
+    },
+    {
+      matchPackageNames: [
+        "jbr",
+        "ktfmt",
+        "golangci-lint",
+        "svu",
+        "lefthook", // Everything after 1.6.14 is broken
+      ],
+      matchManagers: ["hermit"],
+      enabled: false,
+    },
+    {
+      matchFileNames: ["**/testdata/**/go.mod"],
+      enabled: false,
+    },
+    {
+      matchPackageNames: ["eslint", "codemirror"],
+      enabled: false,
+      paths: ["frontend/**", "extensions/**"],
+    },
+    {
+      matchPackageNames: ["connectrpc.com/connect"],
+      enabled: false,
+    },
+  ],
+}

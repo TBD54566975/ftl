@@ -1,0 +1,527 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "xyz/block/ftl/v1/schema/schema.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1";
+option java_multiple_files = true;
+
+message PingRequest {}
+message PingResponse {
+  // If present, the service is not ready to accept requests and this is the
+  // reason.
+  optional string not_ready = 1;
+}
+
+message ModuleContextRequest {
+  string module = 1;
+}
+
+message ModuleContextResponse {
+  message Ref {
+    optional string module = 1;
+    string name = 2;
+  }
+
+  enum DBType {
+    POSTGRES = 0;
+  }
+
+  message DSN {
+    string name = 1;
+    DBType type = 2;
+    string dsn = 3;
+  }
+
+  string module = 1;
+  map<string, bytes> configs = 2;
+  map<string, bytes> secrets = 3;
+  repeated DSN databases = 4;
+}
+
+message Metadata {
+  message Pair {
+    string key = 1;
+    string value = 2;
+  }
+  repeated Pair values = 1;
+}
+
+message CallRequest {
+  Metadata metadata = 1;
+
+  schema.Ref verb = 2;
+  bytes body = 3;
+}
+
+message CallResponse {
+  message Error {
+    string message = 1;
+    optional string stack = 2;
+    // TODO: Richer error type.
+  }
+
+  oneof response {
+    bytes body = 1;
+    Error error = 2;
+  }
+}
+
+message AcquireLeaseRequest {
+  string module = 1;
+  repeated string key = 2;
+  google.protobuf.Duration ttl = 3;
+}
+
+message AcquireLeaseResponse {}
+
+message SendFSMEventRequest {
+  schema.Ref fsm = 1;
+  string instance = 2;
+  schema.Type event = 3;
+  bytes body = 4;
+}
+
+message SendFSMEventResponse {}
+
+message PublishEventRequest {
+  schema.Ref topic = 1;
+  bytes body = 2;
+}
+
+message PublishEventResponse {}
+
+// VerbService is a common interface shared by multiple services for calling Verbs.
+service VerbService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Get configuration state for the module
+  rpc GetModuleContext(ModuleContextRequest) returns (stream ModuleContextResponse);
+
+  // Acquire (and renew) a lease for a deployment.
+  //
+  // Returns ResourceExhausted if the lease is held.
+  rpc AcquireLease(stream AcquireLeaseRequest) returns (stream AcquireLeaseResponse);
+
+  // Send an event to an FSM.
+  rpc SendFSMEvent(SendFSMEventRequest) returns (SendFSMEventResponse);
+
+  // Publish an event to a topic.
+  rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
+
+  // Issue a synchronous call to a Verb.
+  rpc Call(CallRequest) returns (CallResponse);
+}
+
+enum DeploymentChangeType {
+  DEPLOYMENT_ADDED = 0;
+  DEPLOYMENT_REMOVED = 1;
+  DEPLOYMENT_CHANGED = 2;
+}
+
+message GetSchemaRequest {}
+message GetSchemaResponse {
+  schema.Schema schema = 1;
+}
+
+message PullSchemaRequest {}
+message PullSchemaResponse {
+  string deployment_key = 1;
+  string module_name = 2;
+  // For deletes this will not be present.
+  optional schema.Module schema = 4;
+  // If true there are more schema changes immediately following this one as part of the initial batch.
+  // If false this is the last schema change in the initial batch, but others may follow later.
+  bool more = 3;
+  DeploymentChangeType change_type = 5;
+}
+
+message GetArtefactDiffsRequest {
+  repeated string client_digests = 1;
+}
+message GetArtefactDiffsResponse {
+  repeated string missing_digests = 1;
+  // Artefacts that the client already has, and their path+executable status.
+  repeated DeploymentArtefact client_artefacts = 2;
+}
+
+message UploadArtefactRequest {
+  bytes content = 1;
+}
+message UploadArtefactResponse {
+  bytes digest = 2;
+}
+
+message DeploymentArtefact {
+  string digest = 1;
+  string path = 2;
+  bool executable = 3;
+}
+
+message CreateDeploymentRequest {
+  schema.Module schema = 1;
+  repeated DeploymentArtefact artefacts = 2;
+  // Runner labels required to run this deployment.
+  optional google.protobuf.Struct labels = 3;
+}
+message CreateDeploymentResponse {
+  string deployment_key = 1;
+  // Currently active deployment for this module, if any.
+  optional string active_deployment_key = 2;
+}
+
+message GetDeploymentArtefactsRequest {
+  string deployment_key = 1;
+  repeated DeploymentArtefact have_artefacts = 2;
+}
+message GetDeploymentArtefactsResponse {
+  DeploymentArtefact artefact = 1;
+  bytes chunk = 2;
+}
+
+message GetDeploymentRequest {
+  string deployment_key = 1;
+}
+message GetDeploymentResponse {
+  schema.Module schema = 1;
+  repeated DeploymentArtefact artefacts = 2;
+}
+
+enum RunnerState {
+  // The Runner is waiting for a deployment.
+  RUNNER_IDLE = 0;
+  // The Runner and Controller have agreed that the Runner is reserved.
+  RUNNER_RESERVED = 1;
+  // The Runner is assigned to a deployment.
+  RUNNER_ASSIGNED = 2;
+  // The Runner is dead.
+  RUNNER_DEAD = 3;
+}
+
+message RegisterRunnerRequest {
+  string key = 1;
+  string endpoint = 2;
+  optional string deployment = 3;
+  RunnerState state = 4;
+  google.protobuf.Struct labels = 5;
+
+  // If present, the reason the Runner is transitioning from ASSIGNED to IDLE.
+  optional string error = 7;
+}
+
+message RegisterRunnerResponse {}
+
+message UpdateDeployRequest {
+  string deployment_key = 1;
+  int32 min_replicas = 2;
+}
+message UpdateDeployResponse {}
+
+message ReplaceDeployRequest {
+  string deployment_key = 1;
+  int32 min_replicas = 2;
+}
+message ReplaceDeployResponse {}
+
+message StreamDeploymentLogsRequest {
+  string deployment_key = 1;
+  optional string request_key = 2;
+  google.protobuf.Timestamp time_stamp = 3;
+  int32 log_level = 4;
+  map<string, string> attributes = 5;
+  string message = 6;
+  optional string error = 7;
+}
+message StreamDeploymentLogsResponse {}
+
+message StatusRequest {}
+message StatusResponse {
+  message Controller {
+    string key = 1;
+    string endpoint = 2;
+    string version = 3;
+  }
+  repeated Controller controllers = 1;
+
+  message Runner {
+    string key = 1;
+    repeated string languages = 2;
+    string endpoint = 3;
+    RunnerState state = 4;
+    optional string deployment = 5;
+    google.protobuf.Struct labels = 6;
+  }
+  repeated Runner runners = 2;
+
+  message Deployment {
+    string key = 1;
+    string language = 2;
+    string name = 3;
+    int32 min_replicas = 4;
+    int32 replicas = 7;
+    google.protobuf.Struct labels = 5;
+    schema.Module schema = 6;
+  }
+  repeated Deployment deployments = 3;
+
+  message IngressRoute {
+    string deployment_key = 1;
+    schema.Ref verb = 2;
+    string method = 3;
+    string path = 4;
+  }
+  repeated IngressRoute ingress_routes = 4;
+
+  message Route {
+    string module = 1;
+    string runner = 2;
+    string deployment = 3;
+    string endpoint = 4;
+  }
+  repeated Route routes = 5;
+}
+
+message ProcessListRequest {}
+message ProcessListResponse {
+  message ProcessRunner {
+    string key = 1;
+    string endpoint = 2;
+    google.protobuf.Struct labels = 3;
+  }
+  message Process {
+    string deployment = 1;
+    int32 min_replicas = 2;
+    google.protobuf.Struct labels = 3;
+    optional ProcessRunner runner = 4;
+  }
+  repeated Process processes = 1;
+}
+
+service ControllerService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // List "processes" running on the cluster.
+  rpc ProcessList(ProcessListRequest) returns (ProcessListResponse);
+
+  rpc Status(StatusRequest) returns (StatusResponse);
+
+  // Get list of artefacts that differ between the server and client.
+  rpc GetArtefactDiffs(GetArtefactDiffsRequest) returns (GetArtefactDiffsResponse);
+
+  // Upload an artefact to the server.
+  rpc UploadArtefact(UploadArtefactRequest) returns (UploadArtefactResponse);
+
+  // Create a deployment.
+  rpc CreateDeployment(CreateDeploymentRequest) returns (CreateDeploymentResponse);
+
+  // Get the schema and artefact metadata for a deployment.
+  rpc GetDeployment(GetDeploymentRequest) returns (GetDeploymentResponse);
+
+  // Stream deployment artefacts from the server.
+  //
+  // Each artefact is streamed one after the other as a sequence of max 1MB
+  // chunks.
+  rpc GetDeploymentArtefacts(GetDeploymentArtefactsRequest) returns (stream GetDeploymentArtefactsResponse);
+
+  // Register a Runner with the Controller.
+  //
+  // Each runner issue a RegisterRunnerRequest to the ControllerService
+  // every 10 seconds to maintain its heartbeat.
+  rpc RegisterRunner(stream RegisterRunnerRequest) returns (RegisterRunnerResponse);
+
+  // Update an existing deployment.
+  rpc UpdateDeploy(UpdateDeployRequest) returns (UpdateDeployResponse);
+
+  // Gradually replace an existing deployment with a new one.
+  //
+  // If a deployment already exists for the module of the new deployment,
+  // it will be scaled down and replaced by the new one.
+  rpc ReplaceDeploy(ReplaceDeployRequest) returns (ReplaceDeployResponse);
+
+  // Stream logs from a deployment
+  rpc StreamDeploymentLogs(stream StreamDeploymentLogsRequest) returns (StreamDeploymentLogsResponse);
+
+  // Get the full schema.
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+
+  // Pull schema changes from the Controller.
+  //
+  // Note that if there are no deployments this will block indefinitely, making it unsuitable for
+  // just retrieving the schema. Use GetSchema for that.
+  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
+}
+
+message DeployRequest {
+  string deployment_key = 1;
+}
+message DeployResponse {}
+
+message TerminateRequest {
+  string deployment_key = 1;
+}
+
+message ReserveRequest {
+  string deployment_key = 1;
+}
+message ReserveResponse {}
+
+// RunnerService is the service that executes Deployments.
+//
+// The Controller will scale the Runner horizontally as required. The Runner will
+// register itself automatically with the ControllerService, which will then
+// assign modules to it.
+service RunnerService {
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Reserve synchronously reserves a Runner for a deployment but does nothing else.
+  rpc Reserve(ReserveRequest) returns (ReserveResponse);
+
+  // Initiate a deployment on this Runner.
+  rpc Deploy(DeployRequest) returns (DeployResponse);
+
+  // Terminate the deployment on this Runner.
+  rpc Terminate(TerminateRequest) returns (RegisterRunnerRequest);
+}
+
+message ConfigRef {
+  optional string module = 1;
+  string name = 2;
+}
+
+enum ConfigProvider {
+  // Write values inline in the configuration file.
+  CONFIG_INLINE = 0;
+
+  // Print configuration as environment variables.
+  CONFIG_ENVAR = 1;
+
+  // Use the database as a configuration store.
+  CONFIG_DB = 2;
+}
+
+message ListConfigRequest {
+  optional string module = 1;
+  optional bool include_values = 2;
+  optional ConfigProvider provider = 3;
+}
+message ListConfigResponse {
+  message Config {
+    string refPath = 1;
+    optional bytes value = 2;
+  }
+  repeated Config configs = 1;
+}
+
+message GetConfigRequest {
+  ConfigRef ref = 1;
+}
+message GetConfigResponse {
+  bytes value = 1;
+}
+
+message SetConfigRequest {
+  optional ConfigProvider provider = 1;
+  ConfigRef ref = 2;
+  bytes value = 3;
+}
+message SetConfigResponse {}
+
+message UnsetConfigRequest {
+  optional ConfigProvider provider = 1;
+  ConfigRef ref = 2;
+}
+message UnsetConfigResponse {}
+
+enum SecretProvider {
+  // Write values inline in the configuration file.
+  SECRET_INLINE = 0;
+
+  // Print configuration as environment variables.
+  SECRET_ENVAR = 1;
+
+  // Write to the system keychain.
+  SECRET_KEYCHAIN = 2;
+
+  // Store a secret in the 1Password vault.
+  SECRET_OP = 3;
+
+  // Store a secret in the AWS Secrets Manager.
+  SECRET_ASM = 4;
+}
+
+message ListSecretsRequest {
+  optional string module = 1;
+  optional bool include_values = 2;
+  optional SecretProvider provider = 3;
+}
+message ListSecretsResponse {
+  message Secret {
+    string refPath = 1;
+    optional bytes value = 2;
+  }
+  repeated Secret secrets = 1;
+}
+
+message GetSecretRequest {
+  ConfigRef ref = 1;
+}
+message GetSecretResponse {
+  bytes value = 1;
+}
+
+message SetSecretRequest {
+  optional SecretProvider provider = 1;
+  ConfigRef ref = 2;
+  bytes value = 3;
+}
+message SetSecretResponse {}
+
+message UnsetSecretRequest {
+  optional SecretProvider provider = 1;
+  ConfigRef ref = 2;
+}
+message UnsetSecretResponse {}
+
+// AdminService is the service that provides and updates admin data. For example,
+// it is used to encapsulate configuration and secrets.
+service AdminService {
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // List configuration.
+  rpc ConfigList(ListConfigRequest) returns (ListConfigResponse);
+
+  // Get a config value.
+  rpc ConfigGet(GetConfigRequest) returns (GetConfigResponse);
+
+  // Set a config value.
+  rpc ConfigSet(SetConfigRequest) returns (SetConfigResponse);
+
+  // Unset a config value.
+  rpc ConfigUnset(UnsetConfigRequest) returns (UnsetConfigResponse);
+
+  // List secrets.
+  rpc SecretsList(ListSecretsRequest) returns (ListSecretsResponse);
+
+  // Get a secret.
+  rpc SecretGet(GetSecretRequest) returns (GetSecretResponse);
+
+  // Set a secret.
+  rpc SecretSet(SetSecretRequest) returns (SetSecretResponse);
+
+  // Unset a secret.
+  rpc SecretUnset(UnsetSecretRequest) returns (UnsetSecretResponse);
+}

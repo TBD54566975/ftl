@@ -1,0 +1,17 @@
+# This name needs to be kept in sync with the workflow_run event in workflow-roadmap.yml
+name: Add triage label to new issues
+on:
+  issues:
+    types:
+      - opened
+jobs:
+  label-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - run: test "$(gh issue view "$NUMBER" --json assignees --jq '.assignees | length')" = 0 && gh issue edit "$NUMBER" --add-label triage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
