@@ -11,6 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/data"
 	"github.com/TBD54566975/ftl/go-runtime/schema/database"
 	"github.com/TBD54566975/ftl/go-runtime/schema/enum"
+	"github.com/TBD54566975/ftl/go-runtime/schema/fsm"
 	"github.com/TBD54566975/ftl/go-runtime/schema/subscription"
 	"github.com/TBD54566975/ftl/go-runtime/schema/topic"
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenum"
@@ -57,6 +58,7 @@ var Extractors = [][]*analysis.Analyzer{
 		configsecret.Extractor,
 		data.Extractor,
 		database.Extractor,
+		fsm.Extractor,
 		topic.Extractor,
 		typealias.Extractor,
 		typeenumvariant.Extractor,
@@ -78,12 +80,15 @@ var Extractors = [][]*analysis.Analyzer{
 	},
 }
 
+// NativeNames is a map of top-level declarations to their native Go names.
+type NativeNames map[schema.Node]string
+
 // Result contains the final schema extraction result.
 type Result struct {
 	// Module is the extracted module schema.
 	Module *schema.Module
 	// NativeNames maps schema nodes to their native Go names.
-	NativeNames map[schema.Node]string
+	NativeNames NativeNames
 	// Errors is a list of errors encountered during schema extraction.
 	Errors []*schema.Error
 }
@@ -123,7 +128,7 @@ type combinedData struct {
 	module *schema.Module
 	errs   []*schema.Error
 
-	nativeNames         map[schema.Node]string
+	nativeNames         NativeNames
 	functionCalls       map[types.Object]sets.Set[types.Object]
 	verbCalls           map[types.Object]sets.Set[*schema.Ref]
 	refResults          map[schema.RefKey]refResult
@@ -137,7 +142,7 @@ type combinedData struct {
 func newCombinedData(diagnostics []analysis.SimpleDiagnostic) *combinedData {
 	return &combinedData{
 		errs:                diagnosticsToSchemaErrors(diagnostics),
-		nativeNames:         make(map[schema.Node]string),
+		nativeNames:         make(NativeNames),
 		functionCalls:       make(map[types.Object]sets.Set[types.Object]),
 		verbCalls:           make(map[types.Object]sets.Set[*schema.Ref]),
 		refResults:          make(map[schema.RefKey]refResult),
@@ -345,7 +350,11 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 		}
 	}
 
-	return cd.toResult(), nil
+	result := cd.toResult()
+	if schema.ContainsTerminalError(result.Errors) {
+		return result, nil
+	}
+	return result, schema.ValidateModule(result.Module) //nolint:wrapcheck
 }
 
 // updateTransitiveVisibility updates any decls that are transitively visible from d.

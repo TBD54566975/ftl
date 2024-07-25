@@ -67,6 +67,15 @@ func NewDeclExtractor[T schema.Decl, N ast.Node](name string, extractFunc Extrac
 	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractDeclsFunc[T, N](extractFunc))
 }
 
+// ExtractCallDeclFunc extracts a schema declaration from the given node.
+type ExtractCallDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.GenDecl, callExpr *ast.CallExpr, callPath string) optional.Option[T]
+
+// NewCallDeclExtractor extracts declarations from call expressions, e.g. `ftl.Subscription("name")`.
+func NewCallDeclExtractor[T schema.Decl](name string, extractFunc ExtractCallDeclFunc[T], callPaths ...string) *analysis.Analyzer {
+	type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
+	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractCallDeclsFunc[T](extractFunc, callPaths...))
+}
+
 // ExtractorResult contains the results of an extraction pass.
 type ExtractorResult struct {
 	Facts []analysis.ObjectFact
@@ -110,6 +119,45 @@ func runExtractDeclsFunc[T schema.Decl, N ast.Node](extractFunc ExtractDeclFunc[
 				MarkSchemaDecl(pass, obj, decl)
 			} else {
 				MarkFailedExtraction(pass, obj)
+			}
+		})
+		return NewExtractorResult(pass), nil
+	}
+}
+
+func runExtractCallDeclsFunc[T schema.Decl](extractFunc ExtractCallDeclFunc[T], callPaths ...string) func(pass *analysis.Pass) (interface{}, error) {
+	return func(pass *analysis.Pass) (interface{}, error) {
+		in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
+		nodeFilter := []ast.Node{
+			(*ast.GenDecl)(nil),
+		}
+		in.Preorder(nodeFilter, func(n ast.Node) {
+			node := n.(*ast.GenDecl) //nolint:forcetypeassert
+			callExpr, ok := CallExprFromVar(node).Get()
+			if !ok {
+				return
+			}
+			obj, ok := GetObjectForNode(pass.TypesInfo, node).Get()
+			if !ok {
+				return
+			}
+			_, fn := Deref[*types.Func](pass, callExpr.Fun)
+			if fn == nil {
+				return
+			}
+			callPath := fn.FullName()
+			var matchesPath bool
+			for _, path := range callPaths {
+				if callPath == path {
+					matchesPath = true
+				}
+			}
+			if !matchesPath {
+				return
+			}
+			decl := extractFunc(pass, obj, node, callExpr, callPath)
+			if d, ok := decl.Get(); ok {
+				MarkSchemaDecl(pass, obj, d)
 			}
 		})
 		return NewExtractorResult(pass), nil

@@ -116,7 +116,6 @@ func extractMetadata(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) 
 				Cron: dt.Cron.String(),
 			})
 		case *common.DirectiveRetry:
-			newSchType = &schema.Verb{}
 			metadata = append(metadata, &schema.MetadataRetry{
 				Pos:        common.GoPosToSchemaPos(pass.Fset, dt.Pos),
 				Count:      dt.Count,

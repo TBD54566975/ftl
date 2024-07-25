@@ -6,8 +6,8 @@ import (
 
 	"ftl/builtin"
 
-	lib "github.com/TBD54566975/ftl/go-runtime/compile/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 )
 
 type GetRequest struct {

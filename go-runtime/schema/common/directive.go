@@ -302,7 +302,7 @@ func (*DirectiveTypeMap) MustAnnotate() []ast.Node {
 	return []ast.Node{&ast.GenDecl{}}
 }
 
-var directiveParser = participle.MustBuild[directiveWrapper](
+var DirectiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
 	participle.Unquote(),
@@ -324,7 +324,7 @@ func ParseDirectives(pass *analysis.Pass, node ast.Node, docs *ast.CommentGroup)
 		}
 		pos := pass.Fset.Position(line.Pos())
 		// TODO: We need to adjust position information embedded in the schema.
-		directive, err := directiveParser.ParseString(pos.Filename, line.Text[2:])
+		directive, err := DirectiveParser.ParseString(pos.Filename, line.Text[2:])
 		file := pass.Fset.File(node.Pos())
 		startPos := file.Pos(file.Offset(line.Pos()) + 2)
 		if err != nil {
