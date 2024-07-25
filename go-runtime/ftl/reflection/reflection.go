@@ -67,12 +67,31 @@ func TypeFromValue[T any, TP interface{ *T }](v TP) schema.Type {
 
 var AllowAnyPackageForTesting = false
 
+// goRefToFTLRef converts a Go reference path to an FTL reference.
+//
+// examples:
+// ftl/modulename.Verb
+// ftl/modulename/subpackage.Verb
 func goRefToFTLRef(ref string) Ref {
 	if !AllowAnyPackageForTesting && !strings.HasPrefix(ref, "ftl/") {
 		panic(fmt.Sprintf("invalid reference %q, must start with ftl/ ", ref))
 	}
-	parts := strings.Split(ref[strings.LastIndex(ref, "/")+1:], ".")
-	return Ref{parts[len(parts)-2], strcase.ToLowerCamel(parts[len(parts)-1])}
+	parts := strings.Split(ref, "/")
+
+	moduleIdx := 1
+	if AllowAnyPackageForTesting && parts[0] != "ftl" {
+		moduleIdx = 0
+	}
+
+	// module is at idx 1 after "ftl", unless we're allowing any package
+	module := strings.Split(parts[moduleIdx], ".")[0]
+
+	// verb is always in last part, after the last "."
+	// subpackage is not included in returned ref
+	finalPackageComponents := strings.Split(parts[len(parts)-1], ".")
+	verb := strcase.ToLowerCamel(finalPackageComponents[len(finalPackageComponents)-1])
+
+	return Ref{Module: module, Name: verb}
 }
 
 // ReflectTypeToSchemaType returns the FTL schema for a Go reflect.Type.
