@@ -74,7 +74,13 @@ func (l *Logger) Log(entry Entry) {
 	if entry.Time.IsZero() {
 		entry.Time = time.Now()
 	}
-	entry.Attributes = l.attributes
+
+	// merge logger and entry attributes
+	mergedAttributes := make(map[string]string)
+	maps.Copy(mergedAttributes, l.attributes)
+	maps.Copy(mergedAttributes, entry.Attributes)
+	entry.Attributes = mergedAttributes
+
 	if err := l.sink.Log(entry); err != nil {
 		fmt.Fprintf(os.Stderr, "ftl:log: failed to log entry: %v", err)
 	}
