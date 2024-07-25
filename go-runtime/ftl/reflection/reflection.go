@@ -28,6 +28,9 @@ func Module() string {
 		debug.PrintStack()
 		panic("must be called from an FTL module")
 	}
+	if strings.HasSuffix(module, "_test") {
+		return module[:len(module)-len("_test")]
+	}
 	return module
 }
 
