@@ -50,14 +50,28 @@ func (s *Schema) Hash() [sha256.Size]byte {
 // ResolveMonomorphised resolves a reference to a monomorphised Data type.
 // If a Ref is not found, returns ErrNotFound.
 func (s *Schema) ResolveMonomorphised(ref *Ref) (*Data, error) {
-	out := &Data{}
+	return s.resolveToDataMonomorphised(ref, nil)
+}
 
-	err := s.ResolveToType(ref, out)
-	if err != nil {
-		// If a ref is not found, returns ErrNotFound
-		return nil, err
+func (s *Schema) resolveToDataMonomorphised(n Node, parent Node) (*Data, error) {
+	switch typ := n.(type) {
+	case *Ref:
+		resolved, ok := s.Resolve(typ).Get()
+		if !ok {
+			return nil, fmt.Errorf("unknown ref %s", typ)
+		}
+		return s.resolveToDataMonomorphised(resolved, typ)
+	case *Data:
+		p, ok := parent.(*Ref)
+		if !ok {
+			return nil, fmt.Errorf("expected data node parent to be a ref, got %T", p)
+		}
+		return typ.Monomorphise(p)
+	case *TypeAlias:
+		return s.resolveToDataMonomorphised(typ.Type, typ)
+	default:
+		return nil, fmt.Errorf("expected data or type alias of data, got %T", typ)
 	}
-	return out.Monomorphise(ref)
 }
 
 // Resolve a reference to a declaration.
