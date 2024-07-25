@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+dir="$(pwd)"
+sed -e "s,$dir/,," | while read -r line; do
+  file_path=$(echo "$line" | cut -d':' -f1)
+  line_number=$(echo "$line" | cut -d':' -f2)
+  column_number=$(echo "$line" | cut -d':' -f3)
+  line=$(echo "$line" | cut -d':' -f4-)
+  echo "::error file=$file_path,line=$line_number,col=$column_number::$line"
+done

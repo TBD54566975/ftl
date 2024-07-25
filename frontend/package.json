@@ -1,0 +1,68 @@
+{
+  "name": "console",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc && vite build",
+    "build:css-types": "tcm --c -p  'src/**/*.css' .",
+    "copy:css": "node ./scripts/copy-css.cjs",
+    "dev": "vite",
+    "lint": "eslint . --ext .ts,.tsx,.js,.cjs",
+    "lint:fix": "npm run lint -- --fix --quiet"
+  },
+  "lint-staged": {
+    "*.(js|cjs|tsx|ts)": [
+      "npm run lint:fix"
+    ]
+  },
+  "browserslist": [
+    "> 2%"
+  ],
+  "source": "index.html",
+  "dependencies": {
+    "@bufbuild/protoc-gen-es": "1.10.0",
+    "@codemirror/commands": "^6.5.0",
+    "@codemirror/language": "^6.10.1",
+    "@codemirror/state": "^6.4.1",
+    "@codemirror/view": "^6.26.3",
+    "@connectrpc/connect": "^1.1.2",
+    "@connectrpc/connect-web": "^1.1.2",
+    "@connectrpc/protoc-gen-connect-es": "^1.4.0",
+    "@headlessui/react": "2.1.2",
+    "@heroicons/react": "2.1.4",
+    "@tailwindcss/forms": "^0.5.6",
+    "@uiw/codemirror-theme-atomone": "^4.22.0",
+    "@uiw/codemirror-theme-github": "^4.22.0",
+    "@vitejs/plugin-react": "^4.0.4",
+    "codemirror-json-schema": "^0.7.1",
+    "codemirror-json5": "^1.0.3",
+    "fnv1a": "^1.1.1",
+    "highlight.js": "^11.8.0",
+    "json-schema-faker": "0.5.6",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.24.1",
+    "react-use": "^17.5.0",
+    "reactflow": "11.11.4",
+    "tailwindcss": "^3.3.3",
+    "type-fest": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.4.0",
+    "@typescript-eslint/parser": "^7.4.0",
+    "buffer": "^6.0.3",
+    "chokidar": "3.6.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "7.34.3",
+    "fast-glob": "3.3.2",
+    "lint-staged": "15.2.7",
+    "postcss": "8.4.39",
+    "postcss-nesting": "12.1.5",
+    "typed-css-modules": "0.9.1",
+    "typescript": "5.5.3",
+    "vite": "^4.4.9"
+  }
+}

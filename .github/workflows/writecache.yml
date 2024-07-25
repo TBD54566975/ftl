@@ -1,0 +1,40 @@
+on:
+  push:
+    branches:
+      - main
+concurrency:
+  group: ${{ github.ref }}-writecache
+  cancel-in-progress: true
+name: Write Cache
+jobs:
+  write-cache:
+    name: Write Cache
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Init DB
+        run: just init-db
+      - name: Rebuild All
+        run: just build-all
+      - name: Download Go Dependencies
+        run: go mod download -x
+      - id: find-go-build-cache
+        shell: bash
+        run: echo "cache=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ${{ steps.find-go-build-cache.outputs.cache }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+      - name: Save Maven Modules Cache
+        id: cache-maven
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}

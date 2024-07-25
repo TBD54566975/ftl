@@ -1,0 +1,183 @@
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+name: Release
+jobs:
+  build-runner:
+    name: Build Runner Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build
+        run: |
+          docker build -t ftl0/ftl-runner:"$GITHUB_SHA" -t ftl0/ftl-runner:latest -f Dockerfile.runner .
+          mkdir -p artifacts/ftl-runner
+          docker save -o artifacts/ftl-runner/ftl-runner.tar ftl0/ftl-runner:latest
+      - name: Temporarily save Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-runner-artifact
+          path: artifacts/ftl-runner/ftl-runner.tar
+          retention-days: 1
+  build-controller:
+    name: Build Controller Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build
+        run: |
+          docker build -t ftl0/ftl-controller:"$GITHUB_SHA" -t ftl0/ftl-controller:latest -f Dockerfile.controller .
+          mkdir -p artifacts/ftl-controller
+          docker save -o artifacts/ftl-controller/ftl-controller.tar ftl0/ftl-controller:latest
+      - name: Temporarily save Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-controller-artifact
+          path: artifacts/ftl-controller
+          retention-days: 1
+  build-box:
+    name: Build FTL-in-a-box Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build
+        run: |
+          docker build -t ftl0/ftl-box:"$GITHUB_SHA" -t ftl0/ftl-box:latest -f Dockerfile.box .
+          mkdir -p artifacts/ftl-box
+          docker save -o artifacts/ftl-box/ftl-box.tar ftl0/ftl-box:latest
+      - name: Temporarily save Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-box-artifact
+          path: artifacts/ftl-box
+          retention-days: 1
+  release-docker:
+    name: Release Assets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    needs: [build-runner, build-controller, build-box]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Retrieve Runner Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-runner-artifact
+          path: artifacts/ftl-runner
+      - name: Retrieve Controller Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-controller-artifact
+          path: artifacts/ftl-controller
+      - name: Retrieve FTL-in-a-box Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-box-artifact
+          path: artifacts/ftl-box
+      - name: Load Runner Docker image
+        run: docker load -i artifacts/ftl-runner/ftl-runner.tar
+      - name: Load Controller Docker image
+        run: docker load -i artifacts/ftl-controller/ftl-controller.tar
+      - name: Load FTL-in-a-box Docker image
+        run: docker load -i artifacts/ftl-box/ftl-box.tar
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          username: ftl0
+          password: ${{ secrets.FTL_DOCKER_PUSH_TOKEN }}
+      - name: Push Docker Images
+        run: |
+          version="$(git describe --tags --abbrev=0)"
+          docker tag ftl0/ftl-runner:latest ftl0/ftl-runner:"$GITHUB_SHA"
+          docker tag ftl0/ftl-runner:latest ftl0/ftl-runner:"$version"
+          docker push -a ftl0/ftl-runner
+          docker tag ftl0/ftl-controller:latest ftl0/ftl-controller:"$GITHUB_SHA"
+          docker tag ftl0/ftl-controller:latest ftl0/ftl-controller:"$version"
+          docker push -a ftl0/ftl-controller
+          docker tag ftl0/ftl-box:latest ftl0/ftl-box:"$GITHUB_SHA"
+          docker tag ftl0/ftl-box:latest ftl0/ftl-box:"$version"
+          docker push -a ftl0/ftl-box
+  create-release:
+    name: Release Go Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Build Console
+        run: just build-frontend
+      - name: Publish Go Binaries
+        run: |
+          just errtrace
+          just build ftl # Ensure all the prerequisites are built before we use goreleaser
+          goreleaser release --skip=validate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          FTL_HOMEBREW_TOKEN: ${{ secrets.FTL_HOMEBREW_TOKEN }}
+  hermit-release:
+    name: Release Hermit
+    runs-on: ubuntu-latest
+    needs: [create-release]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          repository: TBD54566975/hermit-ftl
+          ref: "main"
+          token: ${{ secrets.FTL_HERMIT_AUTOVERSION }}
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Setup Git Config
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+      - name: Auto-version
+        run: |
+          hermit manifest auto-version ftl.hcl --update-digests
+      - name: Commit and Push
+        run: |
+          git add ftl.hcl
+          git commit -m "Auto-versioned"
+          git push origin main
+  vscode-release:
+    name: Release VSCode Extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Publish
+        run: |
+          set -euo pipefail
+          version="$(git describe --tags --abbrev=0 | sed 's/^v//')"
+          echo "Publishing version $version"
+          jq --arg version "$version" '.version = $version' extensions/vscode/package.json > extensions/vscode/package.json.tmp
+          mv extensions/vscode/package.json.tmp extensions/vscode/package.json
+          just publish-extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}

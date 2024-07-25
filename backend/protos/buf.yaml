@@ -1,0 +1,10 @@
+version: v1
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - BASIC
+  ignore_only:
+    FIELD_LOWER_SNAKE_CASE:
+      - xyz/block/ftl/v1

@@ -1,0 +1,24 @@
+on:
+  pull_request:
+name: Auto-format Pull Request
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.FTL_AUTOFMT_TOKEN }}
+      - name: Init Hermit
+        run: ./bin/hermit env -r >> "$GITHUB_ENV"
+      - name: Auto format
+        run: autofmt
+      - name: Check for modified files
+        id: git-check
+        run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> "$GITHUB_OUTPUT"
+      - name: Push changes
+        if: steps.git-check.outputs.modified == 'true'
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git commit -a --amend --no-edit
+          git push origin HEAD:${{ github.head_ref }} --force

@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftl-controller
+  labels:
+    app: ftl-controller
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ftl-controller
+  template:
+    metadata:
+      labels:
+        app: ftl-controller
+    spec:
+      containers:
+        - name: app
+          image: ftl0/ftl-controller
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: LOG_LEVEL
+              value: "debug"
+            - name: FTL_CONTROLLER_DSN
+              value: "postgres://ftl-pg-cluster/ftl?sslmode=disable&user=postgres&password=secret"
+            - name: FTL_CONTROLLER_INGRESS_BIND
+              value: "http://$(MY_POD_IP):8891"
+            - name: FTL_CONTROLLER_BIND
+              value: "http://$(MY_POD_IP):8892"
+            - name: FTL_CONTROLLER_ADVERTISE
+              value: "http://$(MY_POD_IP):8892"
+            - name: AWS_REGION
+              value: "us-west-2"
+            - name: AWS_ACCESS_KEY_ID
+              value: "test"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "test"
+            - name: AWS_ENDPOINT_URL
+              value: "http://localstack:4566"
+          ports:
+            - containerPort: 8891
+            - containerPort: 8892
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8892
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ftl-controller
+  name: ftl-controller
+spec:
+  ports:
+    - name: ingress
+      protocol: TCP
+      port: 8891
+      targetPort: 8891
+    - name: controller
+      protocol: TCP
+      port: 8892
+      targetPort: 8892
+  selector:
+    app: ftl-controller
+  type: ClusterIP
+#---
+#apiVersion: autoscaling/v2
+#kind: HorizontalPodAutoscaler
+#metadata:
+#  name: ftl-controller
+#spec:
+#  scaleTargetRef:
+#    apiVersion: apps/v1
+#    kind: Deployment
+#    name: ftl-controller
+#  minReplicas: 1
+#  maxReplicas: 10
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ftl-controller
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ftl-controller
+                port:
+                  number: 8892

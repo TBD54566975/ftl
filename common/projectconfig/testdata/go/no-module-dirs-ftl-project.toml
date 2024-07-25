@@ -1,0 +1,4 @@
+name = "testdata"
+
+[commands]
+  startup = ["echo 'Executing global pre-build command'"]

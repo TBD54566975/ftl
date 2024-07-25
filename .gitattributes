@@ -1,0 +1,3 @@
+/frontend/src/protos/**/* linguist-generated=true
+go.sum linguist-generated=true
+go.work.sum linguist-generated=true

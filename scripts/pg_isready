@@ -1,0 +1,10 @@
+#!/bin/bash
+
+flags="-i"
+
+if [ -t 0 ]; then
+  flags="$flags -t"
+fi
+
+# shellcheck disable=SC2086
+docker exec ${flags} ftl-db-1 pg_isready "$@"

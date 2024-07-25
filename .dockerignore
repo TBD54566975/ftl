@@ -1,0 +1,12 @@
+.hermit
+**/node_modules
+**/build
+**/.gradle
+**/.idea
+!**/.idea/runConfigurations/
+/.vscode
+!.vscode/tasks.json
+**/*.sw*
+frontend/dist
+**/.DS_Store
+**/target

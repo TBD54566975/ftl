@@ -1,0 +1,219 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+name: CI
+concurrency:
+  group: ${{ github.ref }}-ci
+  cancel-in-progress: true
+jobs:
+  test:
+    name: Test Go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Test
+        run: go-test-annotate
+  test-readme:
+    name: Test README
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Test README
+        run: just test-readme
+  sql:
+    name: SQL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Initialise database
+        run: just init-db
+      - name: Vet SQL
+        run: sqlc vet
+  ensure-frozen-migrations:
+    name: Ensure Frozen Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Freeze Migrations
+        run: just ensure-frozen-migrations
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: golangci-lint
+        run: golangci-lint run --new-from-rev="$(git merge-base origin/main HEAD)" --out-format github-actions ./...
+      - name: go-check-sumtype
+        shell: bash
+        run: go-check-sumtype ./... 2>&1 | to-annotation
+      - name: actionlint
+        shell: bash
+        run: actionlint --oneline | to-annotation
+      # Too annoying to disable individual warnings
+      # - name: staticcheck
+      #   run: staticcheck ./...
+      - name: shellcheck
+        shell: bash
+        run: shellcheck -f gcc -e SC2016 scripts/* | to-annotation
+  proto-breaking:
+    name: Proto Breaking Change Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Proto Breaking Change Check
+        shell: bash
+        run: buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation || true
+  console:
+    name: Console
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Console NPM Install
+        run: just npm-install
+      - name: Console Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Console Build
+        run: just build-frontend
+  extension:
+    name: VSCode Extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: VSCode Extension NPM Install
+        run: just npm-install
+      - name: VSCode Extension Lint
+        working-directory: extensions/vscode
+        run: npm run lint
+      - name: VSCode Extension NPM Build
+        run: just build-extension
+  build-all:
+    name: Rebuild All
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Init DB
+        run: just init-db
+      - name: Rebuild All
+        run: just build-all
+  docs:
+    name: Build Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: cashapp/activate-hermit@v1
+      - run: cd docs && zola build
+  integration-shard:
+    name: Shard Integration Tests
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.extract-tests.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Extract test cases
+        id: extract-tests
+        run: |
+          # shellcheck disable=SC2046
+          echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build integration' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
+  integration-run:
+    name: Integration Test
+    needs: integration-shard
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.integration-shard.outputs.matrix)}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+        with:
+          cache: true
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Create DB
+        run: just init-db
+      - name: Download Go Modules
+        run: go mod download
+      - name: Run ${{ matrix.test }}
+        run: |
+          # shellcheck disable=SC2046
+          go test -v -race -tags integration -run ${{ matrix.test }} $(git grep -l '^//go:build integration' | xargs -I {} dirname './{}' | sort | uniq)
+  integration-success:
+    name: Integration Success
+    needs: [integration-run]
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Check integration tests result
+        run: |
+          if [[ "${{ needs.integration-run.result }}" == "failure" ]]; then
+            echo "Integration tests failed"
+            exit 1
+          else
+            echo "Integration tests passed"
+          fi

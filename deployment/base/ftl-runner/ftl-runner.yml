@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftl-runner
+  labels:
+    app: ftl-runner
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: ftl-runner
+  template:
+    metadata:
+      labels:
+        app: ftl-runner
+    spec:
+      containers:
+        - name: app
+          image: ftl0/ftl-runner
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: LOG_LEVEL
+              value: "debug"
+            - name: FTL_ENDPOINT
+              value: "http://ftl-controller:8892"
+            - name: FTL_RUNNER_BIND
+              value: "http://$(MY_POD_IP):8893"
+            - name: FTL_RUNNER_ADVERTISE
+              value: "http://$(MY_POD_IP):8893"
+            - name: FTL_LANGUAGE
+              value: "go,kotlin"
+          ports:
+            - containerPort: 8893
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8893
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15

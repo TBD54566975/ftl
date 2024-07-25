@@ -1,0 +1,40 @@
+name: Update roadmap issue #728
+on:
+  issues:
+    types:
+      - assigned
+      - labeled
+      - closed
+      - deleted
+  pull_request:
+    types:
+      - opened
+      - closed
+      - reopened
+  workflow_dispatch:
+  # We need to separately trigger when one of the other workflows completes
+  # because GHA won't trigger another workflow based only on changes from
+  # another workflow, such as updating labels.
+  workflow_run:
+    workflows:
+      - Add triage label to new issues
+      - Clear workflow labels once an issue is assigned
+      - Clear triage label when moved to next
+    types: [completed]
+concurrency:
+  group: ${{ github.ref }}-workflow-roadmap
+  cancel-in-progress: true
+jobs:
+  update-workflow-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: cashapp/activate-hermit@v1
+      - run: update-workflow-issue
+        env:
+          GH_TOKEN: ${{ secrets.FTL_WORKFLOW_TOKEN }}
+          GH_REPO: ${{ github.repository }}

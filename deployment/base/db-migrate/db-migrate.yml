@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ftl-db-migrate
+spec:
+  template:
+    spec:
+      containers:
+      - name: ftl-db-migrate
+        image: "ghcr.io/amacneil/dbmate:latest"
+        command: ["dbmate", "up"]
+        env:
+        - name: DATABASE_URL
+          value: "postgres://postgres:secret@ftl-pg-cluster/ftl?sslmode=disable"
+        - name: DBMATE_MIGRATIONS_DIR
+          value: /etc/ftl-migrations
+        volumeMounts:
+        - name: ftl-db-migrate-config
+          mountPath: /etc/ftl-migrations
+      restartPolicy: OnFailure
+      volumes:
+        - name: ftl-db-migrate-config
+          configMap:
+            name: ftl-db-migrate-config
+  parallelism: 1
+  backoffLimit: 1000
+  ttlSecondsAfterFinished: 300

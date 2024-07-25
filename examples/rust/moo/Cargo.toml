@@ -1,0 +1,10 @@
+[package]
+name = "moo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ftl = { path = "../../../rust-runtime/ftl" }
+serde = { version = "1.0.203", features = ["derive"] }
+tracing = "0.1.40"
+tokio = "1.38.0"

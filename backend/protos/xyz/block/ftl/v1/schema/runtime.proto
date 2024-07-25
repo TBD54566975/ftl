@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1.schema;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb";
+option java_multiple_files = true;
+
+enum Status {
+  OFFLINE = 0;
+  STARTING = 1;
+  ONLINE = 2;
+  STOPPING = 3;
+  STOPPED = 4;
+  ERRORED = 5;
+}
+
+message ModuleRuntime {
+  google.protobuf.Timestamp create_time = 1;
+  string language = 2;
+  int32 min_replicas = 3;
+  // OS the module was built for. If empty, the module is OS-agnostic.
+  optional string os = 4;
+  // CPU architecture the module was built for. If empty, the module is CPU-agnostic.
+  optional string arch = 5;
+}
+
+message VerbRuntime {
+  google.protobuf.Timestamp create_time = 1;
+  google.protobuf.Timestamp start_time = 2;
+  Status status = 3;
+}

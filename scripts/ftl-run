@@ -1,0 +1,14 @@
+#!/bin/bash
+set -euo pipefail
+
+top="$(git rev-parse --show-toplevel)"
+cd "${top}"
+
+
+build() {
+  just build ftl-controller ftl-runner
+}
+
+build
+
+goreman -logtime=false -f Procfile.nowatch start

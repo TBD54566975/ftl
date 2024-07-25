@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localstack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: localstack
+  template:
+    metadata:
+      labels:
+        app: localstack
+    spec:
+      containers:
+        - name: localstack
+          image: localstack/localstack
+          ports:
+            - containerPort: 4566
+          env:
+            - name: DEBUG
+              value: "1"
+            - name: SERVICES
+              value: "secretsmanager"
+          volumeMounts:
+            - name: localstack-data
+              mountPath: /var/lib/localstack
+      volumes:
+        - name: localstack-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack
+spec:
+  selector:
+    app: localstack
+  type: ClusterIP
+  ports:
+    - name: localstack
+      port: 4566
+      targetPort: 4566
