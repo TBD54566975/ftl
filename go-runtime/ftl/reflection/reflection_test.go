@@ -74,3 +74,53 @@ func TestReflectTypeFromValue(t *testing.T) {
 		})
 	})
 }
+
+func TestGoRefToFTLRef(t *testing.T) {
+	tests := []struct {
+		input        string
+		expected     Ref
+		expectsError bool
+	}{
+		{
+			input:    "ftl/echo/inner.Verb",
+			expected: Ref{Module: "echo", Name: "verb"},
+		},
+		{
+			input:    "ftl/echo/inner/subpackage.TestName",
+			expected: Ref{Module: "echo", Name: "testName"},
+		},
+		{
+			input:    "ftl/echo/inner/subpackage1/subpackage2.A_Name",
+			expected: Ref{Module: "echo", Name: "a_Name"},
+		},
+		{
+			input:    "ftl/echo/inner/subpackage1/subpackage2.Verb",
+			expected: Ref{Module: "echo", Name: "verb"},
+		},
+		{
+			input:        "echo/inner.Verb",
+			expectsError: true,
+		},
+		{
+			input:        "echo/inner.Verb",
+			expectsError: true,
+		},
+		{
+			input:        "inner.Verb",
+			expectsError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if tt.expectsError {
+				assert.Panics(t, func() {
+					goRefToFTLRef(tt.input)
+				})
+				return
+			}
+			output := goRefToFTLRef(tt.input)
+			assert.Equal(t, tt.expected, output)
+		})
+	}
+
+}
