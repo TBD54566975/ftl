@@ -46,7 +46,7 @@ func (l LeaseHandle) Err() error {
 	l.state.mutex.Lock()
 	defer l.state.mutex.Unlock()
 	if err, ok := l.state.err.Get(); ok {
-		return err
+		return err //nolint:wrapcheck
 	}
 	return nil
 }
