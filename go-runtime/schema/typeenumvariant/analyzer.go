@@ -48,7 +48,7 @@ func extractEnumVariant(pass *analysis.Pass, node *ast.TypeSpec, obj types.Objec
 	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
 		variant.Comments = md.Comments
 	}
-	for o := range common.GetAllFacts[*common.MaybeTypeEnum](pass) {
+	for o := range common.GetAllFactsOfType[*common.MaybeTypeEnum](pass) {
 		named, ok := pass.TypesInfo.TypeOf(node.Name).(*types.Named)
 		if !ok {
 			continue

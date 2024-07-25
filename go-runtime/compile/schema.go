@@ -21,7 +21,6 @@ import (
 var (
 	fset = token.NewFileSet()
 
-	ftlCallFuncPath       = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
 	ftlFSMFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.FSM"
 	ftlTransitionFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.Transition"
 	ftlStartFuncPath      = "github.com/TBD54566975/ftl/go-runtime/ftl.Start"
@@ -117,74 +116,9 @@ func visitCallExpr(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
 	if fn == nil {
 		return
 	}
-	switch fn.FullName() {
-	case ftlCallFuncPath:
-		parseCall(pctx, node, stack)
-
-	case ftlFSMFuncPath:
+	if fn.FullName() == ftlFSMFuncPath {
 		parseFSMDecl(pctx, node, stack)
 	}
-}
-
-func parseCall(pctx *parseContext, node *ast.CallExpr, stack []ast.Node) {
-	var activeFuncDecl *ast.FuncDecl
-	for i := len(stack) - 1; i >= 0; i-- {
-		if found, ok := stack[i].(*ast.FuncDecl); ok {
-			activeFuncDecl = found
-			break
-		}
-		// use element
-	}
-	if activeFuncDecl == nil {
-		return
-	}
-	expectedVerbName := strcase.ToLowerCamel(activeFuncDecl.Name.Name)
-	var activeVerb *schema.Verb
-	for _, decl := range pctx.module.Decls {
-		if aVerb, ok := decl.(*schema.Verb); ok && aVerb.Name == expectedVerbName {
-			activeVerb = aVerb
-			break
-		}
-	}
-	if activeVerb == nil {
-		return
-	}
-	if len(node.Args) != 3 {
-		pctx.errors.add(errorf(node, "call must have exactly three arguments"))
-		return
-	}
-	ref := parseVerbRef(pctx, node.Args[1])
-	if ref == nil {
-		var suffix string
-		var ok bool
-		ref, ok = parseSelectorRef(node.Args[1])
-		if ok && pctx.schema.Resolve(ref).Ok() {
-			suffix = ", does it need to be exported?"
-		}
-		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
-			pctx.errors.add(errorf(node.Args[1], "call first argument must be a function but is an unresolved reference to %s.%s%s", sel.X, sel.Sel, suffix))
-		}
-		pctx.errors.add(errorf(node.Args[1], "call first argument must be a function in an ftl module%s", suffix))
-		return
-	}
-	activeVerb.AddCall(ref)
-}
-
-func parseSelectorRef(node ast.Expr) (*schema.Ref, bool) {
-	sel, ok := node.(*ast.SelectorExpr)
-	if !ok {
-		return nil, false
-	}
-	ident, ok := sel.X.(*ast.Ident)
-	if !ok {
-		return nil, false
-	}
-	return &schema.Ref{
-		Pos:    goPosToSchemaPos(node.Pos()),
-		Module: ident.Name,
-		Name:   strcase.ToLowerCamel(sel.Sel.Name),
-	}, true
-
 }
 
 func parseVerbRef(pctx *parseContext, node ast.Expr) *schema.Ref {

@@ -5,6 +5,8 @@ import (
 	"go/types"
 	"strings"
 
+	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
@@ -12,6 +14,7 @@ import (
 )
 
 const (
+	ftlCallFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
 	ftlPkgPath             = "github.com/TBD54566975/ftl/go-runtime/ftl"
 	ftlTopicHandleTypeName = "TopicHandle"
 )
@@ -23,17 +26,71 @@ type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
 type Fact = common.DefaultFact[Tag]
 
 func Extract(pass *analysis.Pass) (interface{}, error) {
-	//TODO: implement call metadata extraction (for now this just validates all calls)
-
 	in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
 	nodeFilter := []ast.Node{
+		(*ast.FuncDecl)(nil),
 		(*ast.CallExpr)(nil),
 	}
+	var currentFunc *ast.FuncDecl
 	in.Preorder(nodeFilter, func(n ast.Node) {
-		node := n.(*ast.CallExpr) //nolint:forcetypeassert
-		validateCallExpr(pass, node)
+		switch node := n.(type) {
+		case *ast.FuncDecl:
+			currentFunc = node
+		case *ast.CallExpr:
+			validateCallExpr(pass, node)
+			if currentFunc == nil {
+				return
+			}
+			parentFuncObj, ok := common.GetObjectForNode(pass.TypesInfo, currentFunc).Get()
+			if !ok {
+				return
+			}
+			_, fn := common.Deref[*types.Func](pass, node.Fun)
+			if fn == nil {
+				return
+			}
+			if fn.FullName() == ftlCallFuncPath {
+				extractVerbCall(pass, parentFuncObj, node)
+				return
+			}
+			common.MarkFunctionCall(pass, parentFuncObj, fn)
+		}
 	})
 	return common.NewExtractorResult(pass), nil
+}
+
+func extractVerbCall(pass *analysis.Pass, parentFuncObj types.Object, node *ast.CallExpr) {
+	if len(node.Args) != 3 {
+		common.Errorf(pass, node, "call must have exactly three arguments")
+		return
+	}
+	ref := parseVerbRef(pass, node.Args[1])
+	if ref == nil {
+		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
+			common.Errorf(pass, node.Args[1], "call first argument must be a function but is an unresolved "+
+				"reference to %s.%s, does it need to be exported?", sel.X, sel.Sel)
+		}
+		common.Errorf(pass, node.Args[1], "call first argument must be a function in an ftl module, does "+
+			"it need to be exported?")
+		return
+	}
+	common.MarkVerbCall(pass, parentFuncObj, ref)
+}
+
+func parseVerbRef(pass *analysis.Pass, node ast.Expr) *schema.Ref {
+	_, verbFn := common.Deref[*types.Func](pass, node)
+	if verbFn == nil {
+		return nil
+	}
+	moduleName, err := common.FtlModuleFromGoPackage(verbFn.Pkg().Path())
+	if err != nil {
+		return nil
+	}
+	return &schema.Ref{
+		Pos:    common.GoPosToSchemaPos(pass.Fset, node.Pos()),
+		Module: moduleName,
+		Name:   strcase.ToLowerCamel(verbFn.Name()),
+	}
 }
 
 // validateCallExpr validates all function calls

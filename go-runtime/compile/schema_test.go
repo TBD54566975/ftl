@@ -248,7 +248,12 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 			export verb callsTwo(two.Payload<String>) two.Payload<String>
 				+calls two.two
 
+			export verb callsTwoAndThree(two.Payload<String>) two.Payload<String>
+				+calls two.three, two.two
+
 			export verb returnsUser(Unit) two.UserResponse
+
+			export verb three(two.Payload<String>) two.Payload<String>
 
 			export verb two(two.Payload<String>) two.Payload<String>
 		  }
@@ -547,10 +552,10 @@ func TestErrorReporting(t *testing.T) {
 		`31:3-3: unexpected directive "ftl:export" attached for verb, did you mean to use '//ftl:verb export' instead?`,
 		`37:40-40: unsupported request type "ftl/failing.Request"`,
 		`37:50-50: unsupported response type "ftl/failing.Response"`,
-		`38:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc`,
-		`38:16-29: call first argument must be a function in an ftl module`,
+		`38:16-29: call first argument must be a function but is an unresolved reference to lib.OtherFunc, does it need to be exported?`,
+		`38:16-29: call first argument must be a function in an ftl module, does it need to be exported?`,
 		`39:2-46: call must have exactly three arguments`,
-		`40:16-25: call first argument must be a function in an ftl module`,
+		`40:16-25: call first argument must be a function in an ftl module, does it need to be exported?`,
 		`45:1-2: must have at most two parameters (context.Context, struct)`,
 		`45:69-69: unsupported response type "ftl/failing.Response"`,
 		`50:22-27: first parameter must be of type context.Context but is ftl/failing.Request`,

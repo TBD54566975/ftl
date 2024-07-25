@@ -206,7 +206,7 @@ func canRepeatDirective(dir common.Directive) bool {
 // TODO: fix - this doesn't work for member functions.
 //
 // func getDuplicate(pass *analysis.Pass, name string, newMd *common.ExtractedMetadata) optional.Option[types.Object] {
-// 	for obj, md := range common.GetAllFacts[*common.ExtractedMetadata](pass) {
+// 	for obj, md := range common.GetAllFactsOfType[*common.ExtractedMetadata](pass) {
 // 		if reflect.TypeOf(md.Type) == reflect.TypeOf(newMd.Type) && obj.Ref() == name {
 // 			return optional.Some(obj)
 // 		}

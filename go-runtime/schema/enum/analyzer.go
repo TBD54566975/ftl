@@ -67,7 +67,7 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 
 func findValueEnumVariants(pass *analysis.Pass, obj types.Object) []*schema.EnumVariant {
 	var variants []*schema.EnumVariant
-	for o, fact := range common.GetAllFacts[*common.MaybeValueEnumVariant](pass) {
+	for o, fact := range common.GetAllFactsOfType[*common.MaybeValueEnumVariant](pass) {
 		if o.Type() == obj.Type() && validateVariant(pass, o, fact.Variant) {
 			variants = append(variants, fact.Variant)
 		}
@@ -79,7 +79,7 @@ func findValueEnumVariants(pass *analysis.Pass, obj types.Object) []*schema.Enum
 }
 
 func validateVariant(pass *analysis.Pass, obj types.Object, variant *schema.EnumVariant) bool {
-	for _, fact := range common.GetAllFacts[*common.ExtractedDecl](pass) {
+	for _, fact := range common.GetAllFactsOfType[*common.ExtractedDecl](pass) {
 		if fact.Decl == nil {
 			continue
 		}
@@ -100,7 +100,7 @@ func validateVariant(pass *analysis.Pass, obj types.Object, variant *schema.Enum
 
 func findTypeValueVariants(pass *analysis.Pass, obj types.Object) []*schema.EnumVariant {
 	var variants []*schema.EnumVariant
-	for vObj, fact := range common.GetAllFacts[*common.MaybeTypeEnumVariant](pass) {
+	for vObj, fact := range common.GetAllFactsOfType[*common.MaybeTypeEnumVariant](pass) {
 		if fact.Parent != obj {
 			continue
 		}
