@@ -2,14 +2,18 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -28,6 +32,12 @@ func OtelInterceptor() connect.Interceptor {
 }
 
 type otelInterceptor struct{}
+
+var instruments instrumentation
+
+func init() {
+	instruments = createInstruments(otel.GetMeterProvider().Meter("ftl.rpc.unary"))
+}
 
 func getAttributes(ctx context.Context, rpcSystemKey string) []attribute.KeyValue {
 	logger := log.FromContext(ctx)
@@ -84,10 +94,12 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 				semconv.MessageUncompressedSizeKey.Int(requestSize),
 			),
 		)
-		statusCode := attribute.Int64("rpc.grpc.status_code", 0)
+
+		statusCodeKey := fmt.Sprintf("rpc.%s.status_code", request.Peer().Protocol)
+		statusCode := attribute.Int64(statusCodeKey, 0)
 		response, err := next(ctx, request)
 		if err != nil {
-			statusCode = attribute.Int64(string(statusCode.Key), int64(connect.CodeOf(err)))
+			statusCode = attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
 		}
 		attributes = append(attributes, statusCode)
 		var responseSize int
@@ -105,20 +117,58 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		)
 		span.SetAttributes(attributes...)
 
-		instrumentation, err := createInstruments(otel.GetMeterProvider().Meter("ftl.rpc.unary"))
-		if err != nil {
-			return nil, fmt.Errorf("failed to create instruments: %w", err)
-		}
-		instrumentation.duration.Record(ctx, time.Since(requestStartTime).Milliseconds(), metric.WithAttributes(attributes...))
-		instrumentation.requestSize.Record(ctx, int64(requestSize), metric.WithAttributes(attributes...))
-		instrumentation.responseSize.Record(ctx, int64(responseSize), metric.WithAttributes(attributes...))
+		instruments.duration.Record(ctx, time.Since(requestStartTime).Milliseconds(), metric.WithAttributes(attributes...))
+		instruments.requestSize.Record(ctx, int64(requestSize), metric.WithAttributes(attributes...))
+		instruments.requestsPerRPC.Record(ctx, 1, metric.WithAttributes(attributes...))
+		instruments.responseSize.Record(ctx, int64(responseSize), metric.WithAttributes(attributes...))
+		instruments.responsesPerRPC.Record(ctx, 1, metric.WithAttributes(attributes...))
 		return response, err
 	}
 }
 
 func (i *otelInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
 	return func(ctx context.Context, spec connect.Spec) connect.StreamingClientConn {
-		return next(ctx, spec)
+		requestStartTime := time.Now()
+		name := strings.TrimLeft(spec.Procedure, "/")
+
+		attributes := getAttributes(ctx, "grpc")
+		traceOpts := []trace.SpanStartOption{
+			trace.WithAttributes(attributes...),
+			trace.WithSpanKind(trace.SpanKindClient),
+		}
+		tracer := otel.GetTracerProvider().Tracer(spec.Procedure)
+		ctx, span := tracer.Start(ctx, name, traceOpts...) // nolint:spancheck
+		conn := next(ctx, spec)
+
+		// TODO: add conn.RequestHeader() to span.SetAttributes(...)
+		state := &streamingState{
+			spec:        spec,
+			protocol:    conn.Peer().Protocol,
+			attributes:  attributes,
+			receiveSize: instruments.responseSize,
+			sendSize:    instruments.requestSize,
+		}
+
+		return &streamingClientInterceptor{ // nolint:spancheck
+			StreamingClientConn: conn,
+			ctx:                 ctx,
+			state:               state,
+			onClose: func() {
+				statusCodeKey := fmt.Sprintf("rpc.%s.status_code", conn.Peer().Protocol)
+				statusCode := attribute.Int64(statusCodeKey, 0)
+				if state.error != nil {
+					statusCode = attribute.Int64(statusCodeKey, int64(connect.CodeOf(state.error)))
+					span.SetStatus(codes.Error, state.error.Error())
+				}
+				// TODO: add header attributes
+				state.attributes = append(state.attributes, statusCode)
+				span.SetAttributes(state.attributes...)
+				span.End()
+				instruments.requestsPerRPC.Record(ctx, state.sentCounter, metric.WithAttributes(state.attributes...))
+				instruments.responsesPerRPC.Record(ctx, state.receivedCounter, metric.WithAttributes(state.attributes...))
+				instruments.duration.Record(ctx, time.Since(requestStartTime).Milliseconds(), metric.WithAttributes(state.attributes...))
+			},
+		}
 	}
 }
 
@@ -128,28 +178,123 @@ func (i *otelInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 	}
 }
 
-type instruments struct {
-	duration     metric.Int64Histogram
-	requestSize  metric.Int64Histogram
-	responseSize metric.Int64Histogram
+type instrumentation struct {
+	duration        metric.Int64Histogram
+	requestSize     metric.Int64Histogram
+	responseSize    metric.Int64Histogram
+	requestsPerRPC  metric.Int64Histogram
+	responsesPerRPC metric.Int64Histogram
 }
 
-func createInstruments(meter metric.Meter) (instruments, error) {
+func createInstruments(meter metric.Meter) instrumentation {
 	duration, err := meter.Int64Histogram("duration", metric.WithUnit("ms"))
 	if err != nil {
-		return instruments{}, fmt.Errorf("failed to create duration metric: %w", err)
+		panic(fmt.Errorf("failed to create duration metric: %w", err))
 	}
 	requestSize, err := meter.Int64Histogram("request.size", metric.WithUnit("By"))
 	if err != nil {
-		return instruments{}, fmt.Errorf("failed to create request size metric: %w", err)
+		panic(fmt.Errorf("failed to create request size metric: %w", err))
 	}
 	responseSize, err := meter.Int64Histogram("response.size", metric.WithUnit("By"))
 	if err != nil {
-		return instruments{}, fmt.Errorf("failed to create response size metric: %w", err)
+		panic(fmt.Errorf("failed to create response size metric: %w", err))
 	}
-	return instruments{
-		duration:     duration,
-		requestSize:  requestSize,
-		responseSize: responseSize,
-	}, nil
+	requestsPerRPC, err := meter.Int64Histogram("requests_per_rpc", metric.WithUnit("1"))
+	if err != nil {
+		panic(fmt.Errorf("failed to create requests per rpc metric: %w", err))
+	}
+	responsesPerRPC, err := meter.Int64Histogram("responses_per_rpc", metric.WithUnit("1"))
+	if err != nil {
+		panic(fmt.Errorf("failed to create responses per rpc metric: %w", err))
+	}
+	return instrumentation{
+		duration:        duration,
+		requestSize:     requestSize,
+		responseSize:    responseSize,
+		requestsPerRPC:  requestsPerRPC,
+		responsesPerRPC: responsesPerRPC,
+	}
+}
+
+type streamingState struct {
+	spec            connect.Spec
+	protocol        string
+	attributes      []attribute.KeyValue
+	error           error
+	sentCounter     int64
+	receivedCounter int64
+	receiveSize     metric.Int64Histogram
+	sendSize        metric.Int64Histogram
+}
+
+type streamingClientInterceptor struct {
+	connect.StreamingClientConn
+	mu      sync.Mutex
+	ctx     context.Context
+	state   *streamingState
+	onClose func()
+}
+
+func (s *streamingClientInterceptor) Receive(msg any) error {
+	err := s.StreamingClientConn.Receive(msg)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if errors.Is(err, io.EOF) {
+		return err // nolint:wrapcheck
+	}
+	s.state.receivedCounter++
+	if err != nil {
+		s.state.error = err
+		statusCodeKey := fmt.Sprintf("rpc.%s.status_code", s.Peer().Protocol)
+		statusCode := attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
+		s.state.attributes = append(s.state.attributes, statusCode)
+	}
+	attrs := append(s.state.attributes, []attribute.KeyValue{ // nolint:gocritic
+		semconv.MessageTypeReceived,
+		semconv.MessageIDKey.Int64(s.state.receivedCounter),
+	}...)
+	if protomsg, ok := msg.(proto.Message); ok {
+		size := proto.Size(protomsg)
+		attrs = append(attrs, semconv.MessageUncompressedSizeKey.Int(size))
+		s.state.receiveSize.Record(s.ctx, int64(size), metric.WithAttributes(attrs...))
+	}
+
+	span := trace.SpanFromContext(s.ctx)
+	span.AddEvent(otelFtlEventName, trace.WithAttributes(attrs...))
+	return err // nolint:wrapcheck
+}
+
+func (s *streamingClientInterceptor) Send(msg any) error {
+	err := s.StreamingClientConn.Send(msg)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if errors.Is(err, io.EOF) {
+		return err // nolint:wrapcheck
+	}
+	s.state.sentCounter++
+	if err != nil {
+		s.state.error = err
+		statusCodeKey := fmt.Sprintf("rpc.%s.status_code", s.Peer().Protocol)
+		statusCode := attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
+		s.state.attributes = append(s.state.attributes, statusCode)
+	}
+	attrs := append(s.state.attributes, []attribute.KeyValue{ // nolint:gocritic
+		semconv.MessageTypeSent,
+		semconv.MessageIDKey.Int64(s.state.sentCounter),
+	}...)
+	if protomsg, ok := msg.(proto.Message); ok {
+		size := proto.Size(protomsg)
+		attrs = append(attrs, semconv.MessageUncompressedSizeKey.Int(size))
+		s.state.sendSize.Record(s.ctx, int64(size), metric.WithAttributes(attrs...))
+	}
+
+	span := trace.SpanFromContext(s.ctx)
+	span.AddEvent(otelFtlEventName, trace.WithAttributes(attrs...))
+	return err // nolint:wrapcheck
+}
+
+func (s *streamingClientInterceptor) Close() error {
+	err := s.StreamingClientConn.CloseResponse()
+	s.onClose()
+	return err // nolint:wrapcheck
 }
