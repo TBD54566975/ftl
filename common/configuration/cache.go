@@ -146,6 +146,7 @@ func (c *cache[R]) sync(ctx context.Context) {
 
 		// Can not calculate next sync date for each provider as sync intervals can change (eg when follower becomes leader)
 		case <-time.After(time.Until(next)):
+			next = time.Now().Add(time.Second)
 			wg := &sync.WaitGroup{}
 
 			providersToSync := []*cacheProvider[R]{}
@@ -173,7 +174,6 @@ func (c *cache[R]) sync(ctx context.Context) {
 				}(cp)
 			}
 			wg.Wait()
-			next = time.Now().Add(time.Second)
 		}
 	}
 }
