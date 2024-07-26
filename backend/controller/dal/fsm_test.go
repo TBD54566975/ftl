@@ -2,6 +2,7 @@ package dal
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"testing"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 )
 
 func TestSendFSMEvent(t *testing.T) {
+	_ = observability.InitControllerObservability()
+
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal, err := New(ctx, conn)
