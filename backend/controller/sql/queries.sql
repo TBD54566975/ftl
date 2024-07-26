@@ -520,7 +520,8 @@ INSERT INTO fsm_instances (
 ON CONFLICT(fsm, key) DO
 UPDATE SET
   destination_state = @destination_state::schema_ref,
-  async_call_id = @async_call_id::BIGINT
+  async_call_id = @async_call_id::BIGINT,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm_instances.async_call_id IS NULL
   AND fsm_instances.destination_state IS NULL
@@ -532,7 +533,8 @@ UPDATE fsm_instances
 SET
   current_state = destination_state,
   destination_state = NULL,
-  async_call_id = NULL
+  async_call_id = NULL,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
@@ -543,7 +545,8 @@ SET
   current_state = destination_state,
   destination_state = NULL,
   async_call_id = NULL,
-  status = 'completed'::fsm_status
+  status = 'completed'::fsm_status,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
@@ -553,7 +556,8 @@ UPDATE fsm_instances
 SET
   current_state = NULL,
   async_call_id = NULL,
-  status = 'failed'::fsm_status
+  status = 'failed'::fsm_status,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
