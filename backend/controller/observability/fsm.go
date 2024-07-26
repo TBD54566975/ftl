@@ -49,6 +49,14 @@ func InitFSMMetrics() (*FSMMetrics, error) {
 		result.transitionsActive = noop.Int64UpDownCounter{}
 	}
 
+	counter = fmt.Sprintf("%s.transitions.attempts", fsmMeterName)
+	if result.transitionAttempts, err = result.meter.Int64Counter(
+		counter,
+		metric.WithDescription("counts the number of attempted FSM transitions")); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
+		result.transitionAttempts = noop.Int64Counter{}
+	}
+
 	return result, errs
 }
 
