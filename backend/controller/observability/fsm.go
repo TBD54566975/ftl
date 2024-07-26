@@ -25,7 +25,7 @@ type FSMMetrics struct {
 	transitionAttempts metric.Int64Counter
 }
 
-func InitFSMMetrics() (*FSMMetrics, error) {
+func initFSMMetrics() (*FSMMetrics, error) {
 	result := &FSMMetrics{}
 
 	var errs error

@@ -1,23 +1,19 @@
 package observability
 
-import "fmt"
-
-var (
-	fsm *FSMMetrics
+import (
+	"fmt"
 )
 
-func InitControllerObservability() error {
+var (
+	FSM *FSMMetrics
+)
+
+func init() {
 	var err error
 
-	fsm, err = InitFSMMetrics()
+	FSM, err = initFSMMetrics()
 
 	if err != nil {
-		return fmt.Errorf("could not initialize controller metrics: %w", err)
+		panic(fmt.Errorf("could not initialize controller metrics: %w\n", err))
 	}
-
-	return nil
-}
-
-func FSM() *FSMMetrics {
-	return fsm
 }
