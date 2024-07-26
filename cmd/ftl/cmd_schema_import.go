@@ -136,7 +136,7 @@ func query(ctx context.Context, prompt string) error {
 func (s *schemaImportCmd) setup(ctx context.Context) error {
 	logger := log.FromContext(ctx)
 
-	exists, err := container.DoesExist(ctx, ollamaContainerName)
+	exists, err := container.DoesExist(ctx, ollamaContainerName, optional.None[string]())
 	if err != nil {
 		return err
 	}

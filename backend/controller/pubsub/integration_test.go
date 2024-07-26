@@ -65,13 +65,13 @@ func TestConsumptionDelay(t *testing.T) {
 				SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
 				FROM (
 				select * from topic_events order by created_at
-				)
+				) AS sub_event_times
 			),
 			async_call_times AS (
 				SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
 				FROM (
 				select * from async_calls ac order by created_at
-				)
+				) AS sub_async_calls
 			)
 			SELECT COUNT(*)
 			FROM event_times

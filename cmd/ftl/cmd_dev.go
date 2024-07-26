@@ -47,7 +47,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 	}
 
 	if d.InitDB {
-		dsn, err := d.ServeCmd.setupDB(ctx)
+		dsn, err := d.ServeCmd.setupDB(ctx, d.ServeCmd.DatabaseImage)
 		if err != nil {
 			return fmt.Errorf("failed to setup database: %w", err)
 		}
