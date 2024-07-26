@@ -8,12 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/pubsub"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/types/optional"
-	"github.com/alecthomas/types/pubsub"
 )
 
 type fakePubSub struct {

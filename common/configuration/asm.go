@@ -6,16 +6,15 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/alecthomas/types/optional"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/backend/controller/leader"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
-
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type asmClient interface {

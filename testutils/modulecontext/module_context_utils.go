@@ -4,6 +4,7 @@ package modulecontext
 
 import (
 	"context"
+
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
