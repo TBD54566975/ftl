@@ -307,7 +307,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 		now := s.clock.Now()
 		next := now.Add(time.Hour) // should never be reached, expect a different signal long beforehand
 		for _, j := range state.jobs {
-			if possibleNext, err := s.nextAttemptForJob(j, state, false); err == nil && possibleNext.Before(next) {
+			if possibleNext, err := s.nextAttemptForJob(j, state, now,false); err == nil && possibleNext.Before(next) {
 				next = possibleNext
 			}
 		}
@@ -329,8 +329,11 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 			return
 		case <-s.clock.After(next.Sub(now)):
 			// Try starting jobs in db
+			// note that we use next here are the current time
+			// as if there is a pause of over a second we could miss jobs if we use the current time
+			// this is very unlikely to happen, but if it did it would be hard to diagnose
 			jobsToAttempt := slices.Filter(state.jobs, func(j model.CronJob) bool {
-				if n, err := s.nextAttemptForJob(j, state, true); err == nil {
+				if n, err := s.nextAttemptForJob(j, state, next,true); err == nil {
 					return !n.After(s.clock.Now().UTC())
 				}
 				return false
@@ -386,7 +389,8 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 	}
 }
 
-func (s *Service) nextAttemptForJob(job model.CronJob, state *state, allowsNow bool) (time.Time, error) {
+func (s *Service) nextAttemptForJob(job model.CronJob, state *state, currentTime time.Time, allowsNow bool) (time.Time, error) {
+	currentTime = currentTime.UTC()
 	if !s.isResponsibleForJob(job, state) {
 		return s.clock.Now(), fmt.Errorf("controller is not responsible for job")
 	}
@@ -401,7 +405,7 @@ func (s *Service) nextAttemptForJob(job model.CronJob, state *state, allowsNow b
 		if err != nil {
 			return s.clock.Now(), fmt.Errorf("failed to parse cron schedule %q", job.Schedule)
 		}
-		next, err := cron.NextAfter(pattern, s.clock.Now().UTC(), allowsNow)
+		next, err := cron.NextAfter(pattern, currentTime, allowsNow)
 		if err == nil {
 			return next, nil
 		}
