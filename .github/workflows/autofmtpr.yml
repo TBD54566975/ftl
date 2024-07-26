@@ -1,16 +1,13 @@
 on:
-  schedule:
-    # Run daily
-    - cron: "0 22 * * *"
-name: Auto-format
+  pull_request:
+name: Auto-format Pull Request
 jobs:
   format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
-          fetch-depth: 0
+          ref: ${{ github.head_ref }}
           token: ${{ secrets.FTL_AUTOFMT_TOKEN }}
       - name: Init Hermit
         run: ./bin/hermit env -r >> "$GITHUB_ENV"
@@ -20,9 +17,11 @@ jobs:
         id: git-check
         run: echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> "$GITHUB_OUTPUT"
       - name: Push changes
+        env:
+          HEAD: ${{ github.head_ref }}
         if: steps.git-check.outputs.modified == 'true'
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           git commit -am "chore(autofmt): Automated formatting"
-          git push
+          git push origin "$HEAD"

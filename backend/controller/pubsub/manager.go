@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/jpillora/backoff"
+
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/jpillora/backoff"
 )
 
 const (

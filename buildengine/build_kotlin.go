@@ -9,11 +9,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/beevik/etree"
 	sets "github.com/deckarep/golang-set/v2"
 	"golang.org/x/exp/maps"
-
-	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"

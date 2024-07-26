@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"connectrpc.com/connect"
-
 	"github.com/alecthomas/types/optional"
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
