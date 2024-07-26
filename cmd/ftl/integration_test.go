@@ -143,3 +143,30 @@ func testImportExport(t *testing.T, object string) {
 		}),
 	)
 }
+
+func TestLocalSchemaDiff(t *testing.T) {
+	newVerb := `
+//ftl:verb
+func NewFunction(ctx context.Context, req TimeRequest) (TimeResponse, error) {
+	return TimeResponse{Time: time.Now()}, nil
+}
+`
+	Run(t, "",
+		CopyModule("time"),
+		Deploy("time"),
+		ExecWithOutput("ftl", []string{"schema", "diff"}, func(output string) {
+			assert.Equal(t, "", output)
+		}),
+		EditFile("time", func(bytes []byte) []byte {
+			s := string(bytes)
+			s += newVerb
+			return []byte(s)
+		}, "time.go"),
+		Build("time"),
+		// We exit with code 1 when there is a difference
+		ExpectError(
+			ExecWithOutput("ftl", []string{"schema", "diff"}, func(output string) {
+				assert.Contains(t, output, "-  verb newFunction(time.TimeRequest) time.TimeResponse")
+			}), "exit status 1"),
+	)
+}
