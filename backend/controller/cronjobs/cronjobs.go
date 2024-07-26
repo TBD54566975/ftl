@@ -307,7 +307,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 		now := s.clock.Now()
 		next := now.Add(time.Hour) // should never be reached, expect a different signal long beforehand
 		for _, j := range state.jobs {
-			if possibleNext, err := s.nextAttemptForJob(j, state, now,false); err == nil && possibleNext.Before(next) {
+			if possibleNext, err := s.nextAttemptForJob(j, state, now, false); err == nil && possibleNext.Before(next) {
 				next = possibleNext
 			}
 		}
@@ -333,7 +333,7 @@ func (s *Service) watchForUpdates(ctx context.Context) {
 			// as if there is a pause of over a second we could miss jobs if we use the current time
 			// this is very unlikely to happen, but if it did it would be hard to diagnose
 			jobsToAttempt := slices.Filter(state.jobs, func(j model.CronJob) bool {
-				if n, err := s.nextAttemptForJob(j, state, next,true); err == nil {
+				if n, err := s.nextAttemptForJob(j, state, next, true); err == nil {
 					return !n.After(s.clock.Now().UTC())
 				}
 				return false
