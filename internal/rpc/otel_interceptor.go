@@ -54,19 +54,18 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		isClient := request.Spec().IsClient
 		name := strings.TrimLeft(request.Spec().Procedure, "/")
 
-		attributes := getAttributes(ctx, request.Peer().Protocol)
 		spanKind := trace.SpanKindClient
 		requestSpan, responseSpan := semconv.MessageTypeSent, semconv.MessageTypeReceived
-		traceOpts := []trace.SpanStartOption{
-			trace.WithAttributes(attributes...),
-		}
-
 		if !isClient {
 			spanKind = trace.SpanKindServer
 			requestSpan, responseSpan = semconv.MessageTypeReceived, semconv.MessageTypeSent
 		}
 
-		traceOpts = append(traceOpts, trace.WithSpanKind(spanKind))
+		attributes := getAttributes(ctx, request.Peer().Protocol)
+		traceOpts := []trace.SpanStartOption{
+			trace.WithAttributes(attributes...),
+			trace.WithSpanKind(spanKind),
+		}
 		tracer := otel.GetTracerProvider().Tracer(request.Spec().Procedure)
 		ctx, span := tracer.Start(ctx, name, traceOpts...)
 		defer span.End()

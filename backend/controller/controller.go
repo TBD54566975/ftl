@@ -1018,19 +1018,6 @@ func (s *Service) callWithRequest(
 	}
 
 	ctx = rpc.WithRequestName(ctx, requestKey)
-
-	// TODO: this is duplicated in otel_interceptor.go; need to choose where to
-	//   instrument FTL verb calls
-	//
-	// tracer := otel.Tracer("call")
-	// ctx, span := tracer.Start(ctx, verbRef.String())
-	// defer span.End()
-	// span.SetAttributes(
-	// 	attribute.String("requestKey", requestKey.String()),
-	// 	attribute.String("module", verbRef.Module),
-	// 	attribute.String("verb", verbRef.Name),
-	// )
-
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 

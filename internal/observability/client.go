@@ -2,27 +2,20 @@ package observability
 
 import (
 	"context"
-	crand "crypto/rand"
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"fmt"
-	"math/rand"
 	"os"
 	"strings"
-	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 const schemaURL = semconv.SchemaURL
@@ -80,57 +73,9 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 	traceProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(otelTraceExporter),
 		sdktrace.WithResource(res),
-		sdktrace.WithIDGenerator(newTraceIDGenerator()),
 	)
 	otel.SetTracerProvider(traceProvider)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return nil
-}
-
-type traceIDGenerator struct {
-	sync.Mutex
-	randSource *rand.Rand
-}
-
-var _ sdktrace.IDGenerator = &traceIDGenerator{}
-
-func (t *traceIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
-	logger := log.FromContext(ctx)
-	t.Lock()
-	defer t.Unlock()
-
-	var tid trace.TraceID
-	if rk, err := rpc.RequestKeyFromContext(ctx); err == nil {
-		if k, ok := rk.Get(); ok {
-			hash := sha256.Sum256([]byte(k.Payload.Key))
-			copy(tid[:], hash[:16])
-			logger.Debugf("Mapping requestKey to traceId %v --> %s", rk, hex.EncodeToString(hash[:16]))
-		}
-	}
-	if !tid.IsValid() {
-		tid = trace.TraceID{}
-		_, _ = t.randSource.Read(tid[:])
-	}
-	sid := trace.SpanID{}
-	_, _ = t.randSource.Read(sid[:])
-	return tid, sid
-}
-
-func (t *traceIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
-	t.Lock()
-	defer t.Unlock()
-	sid := trace.SpanID{}
-	_, _ = t.randSource.Read(sid[:])
-	return sid
-}
-
-func newTraceIDGenerator() sdktrace.IDGenerator {
-	tig := &traceIDGenerator{}
-	var rngSeed int64
-	err := binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
-	if err != nil {
-		panic("failed to seed TraceID generator:" + err.Error())
-	}
-	tig.randSource = rand.New(rand.NewSource(rngSeed)) //nolint:gosec
-	return tig
 }
