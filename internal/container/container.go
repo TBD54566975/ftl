@@ -24,8 +24,9 @@ var dockerClient = once.Once(func(ctx context.Context) (*client.Client, error) {
 	return client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 })
 
-func DoesExist(ctx context.Context, name string) (bool, error) {
+func DoesExist(ctx context.Context, name string, image optional.Option[string]) (bool, error) {
 	cli, err := dockerClient.Get(ctx)
+	logger := log.FromContext(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -37,8 +38,20 @@ func DoesExist(ctx context.Context, name string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("failed to list containers: %w", err)
 	}
-
-	return len(containers) > 0, nil
+	if len(containers) == 0 {
+		return false, nil
+	}
+	imageName, ok := image.Get()
+	if !ok {
+		return true, nil
+	}
+	for _, c := range containers {
+		if c.Image != imageName {
+			logger.Infof("possible database version mismatch, expecting to use container image %s for container with name %s, bit it was already running with image %s", image, name, c.Image)
+			break
+		}
+	}
+	return true, nil
 }
 
 // Pull pulls the given image.
@@ -105,28 +118,26 @@ func Run(ctx context.Context, image, name string, hostPort, containerPort int, v
 }
 
 // RunDB runs a new detached postgres container with the given name and exposed port.
-func RunDB(ctx context.Context, name string, port int) error {
+func RunDB(ctx context.Context, name string, port int, image string) error {
 	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
 	}
 
-	const containerName = "postgres"
-
-	exists, err := DoesExist(ctx, containerName)
+	exists, err := DoesExist(ctx, name, optional.Some(image))
 	if err != nil {
 		return err
 	}
 
 	if !exists {
-		err = Pull(ctx, "postgres:latest")
+		err = Pull(ctx, image)
 		if err != nil {
 			return err
 		}
 	}
 
 	config := container.Config{
-		Image: "postgres:latest",
+		Image: image,
 		Env:   []string{"POSTGRES_PASSWORD=secret"},
 		User:  "postgres",
 		Cmd:   []string{"postgres"},

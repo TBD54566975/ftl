@@ -93,6 +93,8 @@ linters-settings:
             desc: "use github.com/TBD54566975/ftl/internal/exec"
           - pkg: golang.design/x/reflect
             desc: "use github.com/TBD54566975/ftl/internal/reflect"
+          - pkg: "github.com/reugn/go-quartz/logger"
+            desc: "use github.com/TBD54566975/ftl/internal/log"
   # wrapcheck:
   #   ignorePackageGlobs:
   #     - github.com/TBD54566975/ftl/*

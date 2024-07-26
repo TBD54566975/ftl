@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/chroma/v2/quick"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
@@ -18,7 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/alecthomas/chroma/v2/quick"
 )
 
 type schemaDiffCmd struct {

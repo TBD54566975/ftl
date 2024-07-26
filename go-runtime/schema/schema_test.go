@@ -624,8 +624,8 @@ func TestValidationFailures(t *testing.T) {
 		return strings.TrimPrefix(e.Error(), filename+":")
 	})
 	expected := []string{
-		`11:3-3: verb badYear: invalid cron expression "* * * * * 9999": value 9999 out of allowed year range of 0-3000`,
-		`16:3-3: verb allZeroes: invalid cron expression "0 0 0 0 0": value 0 out of allowed day of month range of 1-31`,
+		`11:3-3: verb badYear: invalid cron expression "* * * * * 9999": failed to parse cron expression syntax error in year field: '9999'`,
+		`16:3-3: verb allZeroes: invalid cron expression "0 0 0 0 0": failed to parse cron expression syntax error in day-of-month field: '0'`,
 	}
 	assert.Equal(t, expected, actual)
 }

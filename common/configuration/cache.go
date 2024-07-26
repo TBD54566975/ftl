@@ -7,11 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/puzpuzpuz/xsync/v3"
+
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const (
@@ -145,6 +146,7 @@ func (c *cache[R]) sync(ctx context.Context) {
 
 		// Can not calculate next sync date for each provider as sync intervals can change (eg when follower becomes leader)
 		case <-time.After(time.Until(next)):
+			next = time.Now().Add(time.Second)
 			wg := &sync.WaitGroup{}
 
 			providersToSync := []*cacheProvider[R]{}
@@ -172,7 +174,6 @@ func (c *cache[R]) sync(ctx context.Context) {
 				}(cp)
 			}
 			wg.Wait()
-			next = time.Now().Add(time.Second)
 		}
 	}
 }

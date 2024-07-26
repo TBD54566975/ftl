@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+	"github.com/hashicorp/cronexpr"
 
 	"github.com/TBD54566975/ftl/internal/duration"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -41,6 +42,7 @@ type Pattern struct {
 	Duration   *string     `parser:"@(Number ('s' | 'm' | 'h'))"`
 	DayOfWeek  *DayOfWeek  `parser:"| @('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun')"`
 	Components []Component `parser:"| @@+"`
+	expression *cronexpr.Expression
 }
 
 func (p Pattern) String() string {
@@ -221,6 +223,22 @@ func Parse(text string) (Pattern, error) {
 	if err != nil {
 		return Pattern{}, err
 	}
+	components, err := pattern.standardizedComponents()
+	if err != nil {
+		return Pattern{}, err
+	}
+	cron := ""
+	for _, comp := range components {
+		if cron != "" {
+			cron += " "
+		}
+		cron += comp.String()
+	}
+	parsed, err := cronexpr.Parse(cron)
+	if err != nil {
+		return Pattern{}, fmt.Errorf("failed to parse cron expression %w", err)
+	}
+	pattern.expression = parsed
 	// Validate to make sure that a pattern has no mistakes in the cron format, and that there is a valid next value from a set point in time
 	_, err = NextAfter(*pattern, time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC), true)
 	if err != nil {

@@ -30,6 +30,7 @@ require (
 	github.com/docker/go-connections v0.5.0
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
+	github.com/hashicorp/cronexpr v1.1.2
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/jellydator/ttlcache/v3 v3.2.0
@@ -39,7 +40,6 @@ require (
 	github.com/multiformats/go-base36 v0.2.0
 	github.com/otiai10/copy v1.14.0
 	github.com/radovskyb/watcher v1.0.7
-	github.com/reugn/go-quartz v0.12.0
 	github.com/rs/cors v1.11.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/swaggest/jsonschema-go v0.3.72
@@ -55,7 +55,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
-	go.opentelemetry.io/otel/trace v1.28.0
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	golang.org/x/mod v0.19.0
@@ -102,6 +101,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.52.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.26.0 // indirect
+	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	golang.org/x/tools v0.22.0 // indirect
 	gotest.tools/v3 v3.5.1 // indirect

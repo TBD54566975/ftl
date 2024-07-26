@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/reugn/go-quartz/logger"
-
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -165,7 +163,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 
 	sorted, err := buildengine.TopologicalSort(graph(sch))
 	if err != nil {
-		logger.Debugf(err.Error())
+		return nil, fmt.Errorf("failed to sort modules: %w", err)
 	}
 	topology := &pbconsole.Topology{
 		Levels: make([]*pbconsole.TopologyGroup, len(sorted)),

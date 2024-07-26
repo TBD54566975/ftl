@@ -44,6 +44,7 @@ type serveCmd struct {
 	Stop                bool                 `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
 	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"1m"`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
+	DatabaseImage       string               `help:"The container image to start for the database" default:"postgres:15.4" env:"FTL_DATABASE_IMAGE" hidden:""`
 	controller.CommonConfig
 }
 
@@ -87,7 +88,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
 
 	// Bring up the DB and DAL.
-	dsn, err := s.setupDB(ctx)
+	dsn, err := s.setupDB(ctx, s.DatabaseImage)
 	if err != nil {
 		return err
 	}
@@ -299,13 +300,13 @@ func isServeRunning(logger *log.Logger) (bool, error) {
 	return true, nil
 }
 
-func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
+func (s *serveCmd) setupDB(ctx context.Context, image string) (string, error) {
 	logger := log.FromContext(ctx)
 
 	recreate := s.Recreate
 	port := s.DBPort
 
-	exists, err := container.DoesExist(ctx, ftlContainerName)
+	exists, err := container.DoesExist(ctx, ftlContainerName, optional.Some(image))
 	if err != nil {
 		return "", err
 	}
@@ -320,7 +321,7 @@ func (s *serveCmd) setupDB(ctx context.Context) (string, error) {
 			return "", fmt.Errorf("failed to close listener: %w", err)
 		}
 
-		err = container.RunDB(ctx, ftlContainerName, s.DBPort)
+		err = container.RunDB(ctx, ftlContainerName, s.DBPort, image)
 		if err != nil {
 			return "", err
 		}
