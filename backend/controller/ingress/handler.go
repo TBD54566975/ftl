@@ -35,12 +35,15 @@ func Handle(
 			http.NotFound(w, r)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Errorf(err, "failed to resolve route for %s %s", r.Method, r.URL.Path)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
 	body, err := BuildRequestBody(route, r, sch)
 	if err != nil {
+		// Only log at debug, as this is a client side error
+		logger.Debugf("bad request: %s", err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -53,10 +56,12 @@ func Handle(
 
 	resp, err := call(r.Context(), creq, optional.Some(requestKey), r.RemoteAddr)
 	if err != nil {
+		logger.Errorf(err, "failed to call verb %s", route.Verb)
 		if connectErr := new(connect.Error); errors.As(err, &connectErr) {
-			http.Error(w, err.Error(), connectCodeToHTTP(connectErr.Code()))
+			httpCode := connectCodeToHTTP(connectErr.Code())
+			http.Error(w, http.StatusText(httpCode), httpCode)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 		return
 	}
@@ -65,7 +70,8 @@ func Handle(
 		verb := &schema.Verb{}
 		err = sch.ResolveToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			logger.Errorf(err, "could not resolve schema type for verb %s", route.Verb)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 		var responseBody []byte
@@ -73,14 +79,16 @@ func Handle(
 		if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
 			var response HTTPResponse
 			if err := json.Unmarshal(msg.Body, &response); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				logger.Errorf(err, "could not unmarhal response for verb %s", verb)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
 
 			var responseHeaders http.Header
 			responseBody, responseHeaders, err = ResponseForVerb(sch, verb, response)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				logger.Errorf(err, "could not create response for verb %s", verb)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
 
@@ -102,7 +110,7 @@ func Handle(
 		}
 
 	case *ftlv1.CallResponse_Error_:
-		http.Error(w, msg.Error.Message, http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }
 
