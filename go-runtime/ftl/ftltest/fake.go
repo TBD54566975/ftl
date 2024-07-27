@@ -64,17 +64,17 @@ type fakeFTL struct {
 // type but is not constrained by input/output type like ftl.Map.
 type mapImpl func(context.Context) (any, error)
 
-func newFakeFTL(ctx context.Context) *fakeFTL {
+func contextWithFakeFTL(ctx context.Context) context.Context {
 	fake := &fakeFTL{
 		fsm:           newFakeFSMManager(),
 		mockMaps:      map[uintptr]mapImpl{},
 		allowMapCalls: false,
 		configValues:  map[string][]byte{},
 		secretValues:  map[string][]byte{},
-		pubSub:        newFakePubSub(ctx),
 	}
-
-	return fake
+	ctx = internal.WithContext(ctx, fake)
+	fake.pubSub = newFakePubSub(ctx)
+	return ctx
 }
 
 var _ internal.FTL = &fakeFTL{}

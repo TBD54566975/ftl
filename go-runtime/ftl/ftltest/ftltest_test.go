@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/assert/v2"
 )
@@ -27,7 +26,7 @@ func PanicsWithErr(t testing.TB, substr string, fn func()) {
 
 func TestFtlTestProjectNotLoadedInContext(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx = internal.WithContext(ctx, newFakeFTL(ctx))
+	ctx = contextWithFakeFTL(ctx)
 
 	// This should panic suggesting to use ftltest.WithDefaultProjectFile()
 	PanicsWithErr(t, "ftltest.WithDefaultProjectFile()", func() {
