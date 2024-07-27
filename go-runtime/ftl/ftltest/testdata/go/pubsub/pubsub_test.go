@@ -53,3 +53,16 @@ func TestMultipleMultipleFakeSubscribers(t *testing.T) {
 	assert.Equal(t, count, len(ftltest.EventsForTopic(ctx, Topic)))
 	assert.Equal(t, count, counter.Load())
 }
+
+func TestCallVerbThatPublishes(t *testing.T) {
+	ctx := ftltest.Context(
+		ftltest.WithDefaultProjectFile(),
+		ftltest.WithSubscriber(subscription, func(ctx context.Context, event Event) error {
+			ftl.LoggerFromContext(ctx).Infof("consumed event")
+			return nil
+		}),
+	)
+	err := PublishToTopicOne(ctx, Event{Value: "test"})
+	assert.NoError(t, err)
+	ftltest.WaitForSubscriptionsToComplete(ctx)
+}
