@@ -26,7 +26,7 @@ func PanicsWithErr(t testing.TB, substr string, fn func()) {
 
 func TestFtlTestProjectNotLoadedInContext(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx, _ = newFakeFTL(ctx)
+	ctx = contextWithFakeFTL(ctx)
 
 	// This should panic suggesting to use ftltest.WithDefaultProjectFile()
 	PanicsWithErr(t, "ftltest.WithDefaultProjectFile()", func() {
