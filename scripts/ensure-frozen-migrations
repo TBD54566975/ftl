@@ -39,6 +39,10 @@ main() {
 
     # Get list of changed SQL files compared to the merge base
     changed_files=$(git diff --name-only "$merge_base" -- "$sql_dir"/*.sql)
+    if [ -z "$changed_files" ]; then
+        echo "✅ No schema changes detected"
+        exit 0
+    fi
 
     while IFS= read -r file; do
         if [ ! -f "$file" ]; then
