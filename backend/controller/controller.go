@@ -1017,6 +1017,7 @@ func (s *Service) callWithRequest(
 		}
 	}
 
+	ctx = rpc.WithRequestKey(ctx, requestKey)
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 

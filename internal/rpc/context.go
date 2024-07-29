@@ -7,7 +7,6 @@ import (
 	"runtime/debug"
 
 	"connectrpc.com/connect"
-	"connectrpc.com/otelconnect"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/mod/semver"
 
@@ -74,13 +73,13 @@ func RequestKeyFromContext(ctx context.Context) (optional.Option[model.RequestKe
 	return optional.Some(key), nil
 }
 
-// WithRequestName adds the request key to the context.
-func WithRequestName(ctx context.Context, key model.RequestKey) context.Context {
+// WithRequestKey adds the request key to the context.
+func WithRequestKey(ctx context.Context, key model.RequestKey) context.Context {
 	return context.WithValue(ctx, requestIDKey{}, key.String())
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
-	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), otelInterceptor()}
+	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), OtelInterceptor()}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
@@ -91,19 +90,11 @@ func DefaultClientOptions(level log.Level) []connect.ClientOption {
 }
 
 func DefaultHandlerOptions() []connect.HandlerOption {
-	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), otelInterceptor()}
+	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), OtelInterceptor()}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
 	return []connect.HandlerOption{connect.WithInterceptors(interceptors...)}
-}
-
-func otelInterceptor() connect.Interceptor {
-	otel, err := otelconnect.NewInterceptor(otelconnect.WithTrustRemote(), otelconnect.WithoutServerPeerAttributes())
-	if err != nil {
-		panic(err)
-	}
-	return otel
 }
 
 // PanicInterceptor intercepts panics and logs them.
@@ -255,7 +246,7 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if key, ok, err := headers.GetRequestKey(header); err != nil {
 			return nil, err
 		} else if ok {
-			ctx = WithRequestName(ctx, key)
+			ctx = WithRequestKey(ctx, key)
 		}
 	}
 	return ctx, nil
