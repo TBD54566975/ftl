@@ -11,9 +11,9 @@ require (
 )
 
 require (
-	connectrpc.com/connect v1.16.1 // indirect
+	connectrpc.com/connect v1.16.2 // indirect
 	connectrpc.com/grpcreflect v1.2.0 // indirect
-	connectrpc.com/otelconnect v0.7.0 // indirect
+	connectrpc.com/otelconnect v0.7.1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/TBD54566975/scaffolder v1.0.0 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
@@ -21,11 +21,12 @@ require (
 	github.com/alecthomas/repr v0.4.0 // indirect
 	github.com/alecthomas/types v0.16.0 // indirect
 	github.com/alessio/shellescape v1.4.2 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.30.1 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.13 // indirect
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.1 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.30.3 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.15 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.15 // indirect
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.4 // indirect
 	github.com/aws/smithy-go v1.20.3 // indirect
+	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -42,7 +43,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
-	github.com/puzpuzpuz/xsync/v3 v3.3.1 // indirect
+	github.com/puzpuzpuz/xsync/v3 v3.4.0 // indirect
 	github.com/swaggest/jsonschema-go v0.3.72 // indirect
 	github.com/swaggest/refl v1.3.0 // indirect
 	github.com/zalando/go-keyring v0.2.5 // indirect
@@ -50,7 +51,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
+	golang.org/x/exp v0.0.0-20240707233637-46b078467d37 // indirect
 	golang.org/x/mod v0.19.0 // indirect
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
