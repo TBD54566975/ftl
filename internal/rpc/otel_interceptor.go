@@ -124,7 +124,10 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		)
 		span.SetAttributes(attributes...)
 		instruments := getInstruments(isClient)
-		instruments.duration.Record(ctx, time.Since(requestStartTime).Milliseconds(), metric.WithAttributes(attributes...))
+		instruments.duration.Record(
+			ctx,
+			time.Since(requestStartTime).Milliseconds(),
+			metric.WithAttributes(attributes...))
 		instruments.requestSize.Record(ctx, int64(requestSize), metric.WithAttributes(attributes...))
 		instruments.requestsPerRPC.Record(ctx, 1, metric.WithAttributes(attributes...))
 		instruments.responseSize.Record(ctx, int64(responseSize), metric.WithAttributes(attributes...))
@@ -165,7 +168,9 @@ func (i *otelInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 				return state.send(ctx, msg, conn)
 			},
 			onClose: func() {
-				state.attributes = append(state.attributes, statusCodeAttribute(conn.Peer().Protocol, state.error))
+				state.attributes = append(
+					state.attributes,
+					statusCodeAttribute(conn.Peer().Protocol, state.error))
 				span.SetAttributes(state.attributes...)
 				if state.error != nil {
 					span.SetStatus(codes.Error, state.error.Error())
@@ -220,7 +225,9 @@ func (i *otelInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 			},
 		}
 		err := next(ctx, streamingHandler)
-		state.attributes = append(state.attributes, statusCodeAttribute(conn.Peer().Protocol, err))
+		state.attributes = append(
+			state.attributes,
+			statusCodeAttribute(conn.Peer().Protocol, err))
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 		}
@@ -287,6 +294,16 @@ func createInstruments(meter metric.Meter) instrumentation {
 	}
 }
 
+func statusCodeAttribute(protocol string, err error) attribute.KeyValue {
+	statusCodeKey := fmt.Sprintf("rpc.%s.status_code", protocol)
+	statusCode := attribute.Int64(statusCodeKey, 0)
+	if err != nil {
+		statusCode = attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
+	}
+	return statusCode
+}
+
+// streamingState stores the ongoing metrics for streaming interceptors.
 type streamingState struct {
 	mu              sync.Mutex
 	spec            connect.Spec
@@ -299,12 +316,13 @@ type streamingState struct {
 	sendSize        metric.Int64Histogram
 }
 
-type sendReceiver interface {
+// streamingSenderReceiver encapsulates either a StreamingClientConn or a StreamingHandlerConn.
+type streamingSenderReceiver interface {
 	Receive(msg any) error
 	Send(msg any) error
 }
 
-func (s *streamingState) receive(ctx context.Context, msg any, conn sendReceiver) error {
+func (s *streamingState) receive(ctx context.Context, msg any, conn streamingSenderReceiver) error {
 	err := conn.Receive(msg)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -331,7 +349,7 @@ func (s *streamingState) receive(ctx context.Context, msg any, conn sendReceiver
 	return err // nolint:wrapcheck
 }
 
-func (s *streamingState) send(ctx context.Context, msg any, conn sendReceiver) error {
+func (s *streamingState) send(ctx context.Context, msg any, conn streamingSenderReceiver) error {
 	err := conn.Send(msg)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -391,13 +409,4 @@ func (s *streamingHandlerInterceptor) Receive(msg any) error {
 
 func (s *streamingHandlerInterceptor) Send(msg any) error {
 	return s.send(msg, s.StreamingHandlerConn)
-}
-
-func statusCodeAttribute(protocol string, err error) attribute.KeyValue {
-	statusCodeKey := fmt.Sprintf("rpc.%s.status_code", protocol)
-	statusCode := attribute.Int64(statusCodeKey, 0)
-	if err != nil {
-		statusCode = attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
-	}
-	return statusCode
 }
