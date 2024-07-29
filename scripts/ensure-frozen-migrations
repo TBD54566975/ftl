@@ -21,6 +21,11 @@ show_diff() {
     diff -u <(remove_comments "$file1") <(remove_comments "$file2")
 }
 
+fail() {
+    echo "❌ Existing migrations changed. Please make sure only comments are changed in existing migration files."
+    exit 1
+}
+
 main() {
     local sql_dir="backend/controller/sql/schema"
     local changed_files
@@ -52,7 +57,7 @@ main() {
         else
             echo "❌ Migration files changes detected"
             show_diff "$file" <(git show "$merge_base:$file")
-            exit 1
+            fail
         fi
     done <<< "$changed_files"
 
@@ -60,8 +65,7 @@ main() {
     while IFS= read -r file; do
         if ! git show "$merge_base:$file" &> /dev/null; then
             echo "🔥 Deleted: $file"
-            echo "❌ Migration files changes detected"
-            exit 1
+            fail
         fi
     done < <(git diff --name-only "$merge_base" -- "$sql_dir"/*.sql)
 
