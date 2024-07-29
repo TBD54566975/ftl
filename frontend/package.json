@@ -35,7 +35,7 @@
     "@uiw/codemirror-theme-atomone": "^4.22.0",
     "@uiw/codemirror-theme-github": "^4.22.0",
     "@vitejs/plugin-react": "^4.0.4",
-    "codemirror-json-schema": "^0.7.1",
+    "codemirror-json-schema": "0.7.0",
     "codemirror-json5": "^1.0.3",
     "fnv1a": "^1.1.1",
     "highlight.js": "^11.8.0",
