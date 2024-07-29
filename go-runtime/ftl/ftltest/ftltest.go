@@ -51,7 +51,7 @@ func Context(options ...Option) context.Context {
 	}
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx = internal.WithContext(ctx, newFakeFTL(ctx))
+	ctx = contextWithFakeFTL(ctx)
 	name := reflection.Module()
 
 	sort.Slice(options, func(i, j int) bool {
