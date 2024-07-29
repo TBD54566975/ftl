@@ -33,13 +33,13 @@ func initFSMMetrics() (*FSMMetrics, error) {
 	var errs error
 	var err error
 
-	result.meter = otel.Meter("ftl.fsm")
+	result.meter = otel.Meter(fsmMeterName)
 
 	counter := fmt.Sprintf("%s.instances.active", fsmMeterName)
 	if result.instancesActive, err = result.meter.Int64UpDownCounter(
 		counter,
 		metric.WithDescription("counts the number of active FSM instances")); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
+		errs = joinInitErrors(counter, err, errs)
 		result.instancesActive = noop.Int64UpDownCounter{}
 	}
 
@@ -47,7 +47,7 @@ func initFSMMetrics() (*FSMMetrics, error) {
 	if result.transitionsActive, err = result.meter.Int64UpDownCounter(
 		counter,
 		metric.WithDescription("counts the number of active FSM transitions")); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
+		errs = joinInitErrors(counter, err, errs)
 		result.transitionsActive = noop.Int64UpDownCounter{}
 	}
 
@@ -55,7 +55,7 @@ func initFSMMetrics() (*FSMMetrics, error) {
 	if result.transitionAttempts, err = result.meter.Int64Counter(
 		counter,
 		metric.WithDescription("counts the number of attempted FSM transitions")); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
+		errs = joinInitErrors(counter, err, errs)
 		result.transitionAttempts = noop.Int64Counter{}
 	}
 
@@ -89,4 +89,8 @@ func (m *FSMMetrics) TransitionCompleted(ctx context.Context, fsm schema.RefKey)
 	m.transitionsActive.Add(ctx, -1, metric.WithAttributes(
 		attribute.String(observability.ModuleNameAttribute, fsm.Module),
 		attribute.String(fsmRefAttribute, fsm.String())))
+}
+
+func joinInitErrors(counter string, err error, errs error) error {
+	return errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
 }
