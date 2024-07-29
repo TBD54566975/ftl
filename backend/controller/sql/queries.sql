@@ -669,6 +669,7 @@ SELECT
   subs.key::subscription_key as key,
   curser.key as cursor,
   topics.key::topic_key as topic,
+  subs.module_id,
   subs.name
 FROM topic_subscriptions subs
 LEFT JOIN topics ON subs.topic_id = topics.id
@@ -731,3 +732,9 @@ UPDATE topic_subscriptions
 SET state = 'idle'
 WHERE name = @name::TEXT
       AND module_id = (SELECT id FROM module);
+
+-- name: GetTopicByKey :one
+SELECT *
+FROM topics
+WHERE "key" = sqlc.arg('key')::topic_key
+LIMIT 1;

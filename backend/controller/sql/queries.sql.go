@@ -1414,6 +1414,7 @@ SELECT
   subs.key::subscription_key as key,
   curser.key as cursor,
   topics.key::topic_key as topic,
+  subs.module_id,
   subs.name
 FROM topic_subscriptions subs
 LEFT JOIN topics ON subs.topic_id = topics.id
@@ -1426,10 +1427,11 @@ FOR UPDATE OF subs SKIP LOCKED
 `
 
 type GetSubscriptionsNeedingUpdateRow struct {
-	Key    model.SubscriptionKey
-	Cursor optional.Option[model.TopicEventKey]
-	Topic  model.TopicKey
-	Name   string
+	Key      model.SubscriptionKey
+	Cursor   optional.Option[model.TopicEventKey]
+	Topic    model.TopicKey
+	ModuleID int64
+	Name     string
 }
 
 // Results may not be ready to be scheduled yet due to event consumption delay
@@ -1448,6 +1450,7 @@ func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubsc
 			&i.Key,
 			&i.Cursor,
 			&i.Topic,
+			&i.ModuleID,
 			&i.Name,
 		); err != nil {
 			return nil, err
@@ -1458,6 +1461,28 @@ func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubsc
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTopicByKey = `-- name: GetTopicByKey :one
+SELECT id, key, created_at, module_id, name, type, head
+FROM topics
+WHERE "key" = $1::topic_key
+LIMIT 1
+`
+
+func (q *Queries) GetTopicByKey(ctx context.Context, key model.TopicKey) (Topic, error) {
+	row := q.db.QueryRow(ctx, getTopicByKey, key)
+	var i Topic
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.CreatedAt,
+		&i.ModuleID,
+		&i.Name,
+		&i.Type,
+		&i.Head,
+	)
+	return i, err
 }
 
 const insertCallEvent = `-- name: InsertCallEvent :exec

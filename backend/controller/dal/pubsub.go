@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -23,6 +24,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, pa
 	if err != nil {
 		return dalerrs.TranslatePGError(err)
 	}
+	observability.PubSub.Published(ctx, module, topic)
 	return nil
 }
 
@@ -100,9 +102,32 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		if err != nil {
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
 		}
+
+		err = d.recordSubscriberCalled(ctx, subscription, subscriber.Sink)
+		if err != nil {
+			logger.Errorf(err, "failed to record subscriber call")
+		}
+
 		successful++
 	}
 	return successful, nil
+}
+
+func (d *DAL) recordSubscriberCalled(ctx context.Context, subscription sql.GetSubscriptionsNeedingUpdateRow, sinkRef schema.RefKey) error {
+	topic, err := d.db.GetTopicByKey(ctx, subscription.Topic)
+	if err != nil {
+		return dalerrs.TranslatePGError(err)
+	}
+
+	// GetModulesByID can take multiple IDs, so it returns a list of rows. This call
+	// should always return exactly one row, since we pass in one ID.
+	modules, err := d.db.GetModulesByID(ctx, []int64{subscription.ModuleID})
+	if err != nil {
+		return dalerrs.TranslatePGError(err)
+	}
+
+	observability.PubSub.SubscriberCalled(ctx, topic.Name, schema.RefKey{Module: modules[0].Name, Name: subscription.Name}, sinkRef)
+	return nil
 }
 
 func (d *DAL) CompleteEventForSubscription(ctx context.Context, module, name string) error {
