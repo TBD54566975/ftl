@@ -127,6 +127,47 @@ func (d *DAL) CompleteEventForSubscription(ctx context.Context, module, name str
 	return nil
 }
 
+// ResetSubscription resets the subscription cursor to the topic's head.
+func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err error) {
+	tx, err := d.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("could not start transaction: %w", err)
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+
+	qtx := NewQTx(d.db.Conn(), tx.Tx())
+
+	subscription, err := qtx.GetSubscription(ctx, name, module)
+	if err != nil {
+		if dalerrs.IsNotFound(err) {
+			return fmt.Errorf("subscription %s.%s not found", module, name)
+		}
+		return fmt.Errorf("could not fetch subscription: %w", dalerrs.TranslatePGError(err))
+	}
+
+	topic, err := qtx.GetTopic(ctx, subscription.TopicID)
+	if err != nil {
+		return fmt.Errorf("could not fetch topic: %w", dalerrs.TranslatePGError(err))
+	}
+
+	headEventID, ok := topic.Head.Get()
+	if !ok {
+		return fmt.Errorf("no events published to topic %s", topic.Name)
+	}
+
+	headEvent, err := qtx.GetTopicEvent(ctx, headEventID)
+	if err != nil {
+		return fmt.Errorf("could not fetch topic head: %w", dalerrs.TranslatePGError(err))
+	}
+
+	err = qtx.SetSubscriptionCursor(ctx, subscription.Key, headEvent.Key)
+	if err != nil {
+		return fmt.Errorf("failed to reset subscription: %w", dalerrs.TranslatePGError(err))
+	}
+
+	return nil
+}
+
 func (d *DAL) createSubscriptions(ctx context.Context, tx *sql.Tx, key model.DeploymentKey, module *schema.Module) error {
 	for _, decl := range module.Decls {
 		s, ok := decl.(*schema.Subscription)

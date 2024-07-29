@@ -1409,6 +1409,35 @@ func (q *Queries) GetSchemaForDeployment(ctx context.Context, key model.Deployme
 	return schema, err
 }
 
+const getSubscription = `-- name: GetSubscription :one
+WITH module AS (
+  SELECT id
+  FROM modules
+  WHERE name = $2::TEXT
+)
+SELECT id, key, created_at, topic_id, module_id, deployment_id, name, cursor, state
+FROM topic_subscriptions
+WHERE name = $1::TEXT
+      AND module_id = (SELECT id FROM module)
+`
+
+func (q *Queries) GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error) {
+	row := q.db.QueryRow(ctx, getSubscription, column1, column2)
+	var i TopicSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.CreatedAt,
+		&i.TopicID,
+		&i.ModuleID,
+		&i.DeploymentID,
+		&i.Name,
+		&i.Cursor,
+		&i.State,
+	)
+	return i, err
+}
+
 const getSubscriptionsNeedingUpdate = `-- name: GetSubscriptionsNeedingUpdate :many
 SELECT
   subs.key::subscription_key as key,
@@ -1458,6 +1487,46 @@ func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubsc
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTopic = `-- name: GetTopic :one
+SELECT id, key, created_at, module_id, name, type, head
+FROM topics
+WHERE id = $1::BIGINT
+`
+
+func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
+	row := q.db.QueryRow(ctx, getTopic, dollar_1)
+	var i Topic
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.CreatedAt,
+		&i.ModuleID,
+		&i.Name,
+		&i.Type,
+		&i.Head,
+	)
+	return i, err
+}
+
+const getTopicEvent = `-- name: GetTopicEvent :one
+SELECT id, created_at, key, topic_id, payload
+FROM topic_events
+WHERE id = $1::BIGINT
+`
+
+func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error) {
+	row := q.db.QueryRow(ctx, getTopicEvent, dollar_1)
+	var i TopicEvent
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Key,
+		&i.TopicID,
+		&i.Payload,
+	)
+	return i, err
 }
 
 const insertCallEvent = `-- name: InsertCallEvent :exec
@@ -1905,6 +1974,23 @@ RETURNING 1
 
 func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error {
 	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
+	return err
+}
+
+const setSubscriptionCursor = `-- name: SetSubscriptionCursor :exec
+WITH event AS (
+  SELECT id, created_at, key, topic_id, payload
+  FROM topic_events
+  WHERE "key" = $2::topic_event_key
+)
+UPDATE topic_subscriptions
+SET state = 'idle',
+    cursor = (SELECT id FROM event)
+WHERE key = $1::subscription_key
+`
+
+func (q *Queries) SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error {
+	_, err := q.db.Exec(ctx, setSubscriptionCursor, column1, column2)
 	return err
 }
 

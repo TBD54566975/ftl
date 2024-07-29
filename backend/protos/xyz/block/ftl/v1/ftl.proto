@@ -304,6 +304,11 @@ message ProcessListResponse {
   repeated Process processes = 1;
 }
 
+message ResetSubscriptionRequest {
+  schema.Ref subscription = 1;
+}
+message ResetSubscriptionResponse {}
+
 service ControllerService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -359,6 +364,9 @@ service ControllerService {
   // Note that if there are no deployments this will block indefinitely, making it unsuitable for
   // just retrieving the schema. Use GetSchema for that.
   rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
+
+  // Reset the cursor for a subscription to the head of its topic.
+  rpc ResetSubscription(ResetSubscriptionRequest) returns (ResetSubscriptionResponse);
 }
 
 message DeployRequest {

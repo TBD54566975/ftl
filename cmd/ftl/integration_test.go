@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -168,5 +169,50 @@ func NewFunction(ctx context.Context, req TimeRequest) (TimeResponse, error) {
 			ExecWithOutput("ftl", []string{"schema", "diff"}, func(output string) {
 				assert.Contains(t, output, "-  verb newFunction(time.TimeRequest) time.TimeResponse")
 			}), "exit status 1"),
+	)
+}
+
+func TestResetSubscription(t *testing.T) {
+	topicHeadAt := func(module, topic string, head int) Action {
+		return QueryRow("ftl", fmt.Sprintf(`
+			WITH module AS (
+				SELECT id
+				FROM modules
+				WHERE name = '%s'
+			)
+			SELECT head
+			FROM topics
+			WHERE name = '%s' AND module_id = (SELECT id FROM module)
+		`, module, topic), head)
+	}
+
+	subscriptionCursorAt := func(module, subscription string, cursor int) Action {
+		return QueryRow("ftl", fmt.Sprintf(`
+			WITH module AS (
+				SELECT id
+				FROM modules
+				WHERE name = '%s'
+			)
+			SELECT cursor
+			FROM topic_subscriptions
+			WHERE name = '%s' AND module_id = (SELECT id FROM module)
+		`, module, subscription), cursor)
+	}
+
+	Run(t, "",
+		CopyModule("time"),
+		CopyModule("echo"),
+		Deploy("time"),
+		Deploy("echo"),
+		Call[Obj, Obj]("time", "publishInvoice", Obj{"amount": 50}, nil),
+		topicHeadAt("time", "invoices", 1),
+		subscriptionCursorAt("echo", "emailInvoices", 1),
+		Call[Obj, Obj]("time", "publishInvoice", Obj{"amount": 10}, nil),
+		topicHeadAt("time", "invoices", 2),
+		// stuck at 1 because 10 is a failing amount
+		subscriptionCursorAt("echo", "emailInvoices", 1),
+		Exec("ftl", "pubsub", "subscription", "reset", "echo.emailInvoices"),
+		topicHeadAt("time", "invoices", 2),
+		subscriptionCursorAt("echo", "emailInvoices", 2),
 	)
 }
