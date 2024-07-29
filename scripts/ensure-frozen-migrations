@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# echo
-set -x
-
 # This script checks if the SQL migration have been modified compared to the common ancestor with the main branch.
 # It ignores comments when comparing the files.
 
@@ -32,19 +29,24 @@ main() {
     # Find the merge base commit
     merge_base=$(git merge-base HEAD origin/main)
 
+    # Show the diff of the SQL files compared to the merge base
+    git diff --color=always "$merge_base" -- "$sql_dir"/*.sql | cat
+
     # Get list of changed SQL files compared to the merge base
     changed_files=$(git diff --name-only "$merge_base" -- "$sql_dir"/*.sql)
-
-    if [ -z "$changed_files" ]; then
-        echo "👍 No SQL files changed in $sql_dir compared to the common ancestor with main branch"
-        exit 0
-    fi
 
     while IFS= read -r file; do
         if [ ! -f "$file" ]; then
             echo "$file no longer exists!"
             exit 1
         fi
+
+        # Does the file exist in the merge base?
+        if ! git show "$merge_base:$file" &> /dev/null; then
+            echo "✅ New: $file"
+            continue
+        fi
+
         if compare_sql_files "$file" <(git show "$merge_base:$file"); then
             : # Do nothing if files are the same
         else
@@ -54,9 +56,16 @@ main() {
         fi
     done <<< "$changed_files"
 
-    git diff --color=always "$merge_base" -- "$sql_dir"/*.sql | cat
-    echo "👍 Only comments/new lines changed in SQL files"
+    # We should also check if there were any deleted files
+    while IFS= read -r file; do
+        if ! git show "$merge_base:$file" &> /dev/null; then
+            echo "🔥 Deleted: $file"
+            echo "❌ Migration files changes detected"
+            exit 1
+        fi
+    done < <(git diff --name-only "$merge_base" -- "$sql_dir"/*.sql)
+
+    echo "✅ No schema changes detected for existing migration files"
 }
 
-# Run the main function
 main
