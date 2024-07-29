@@ -16,19 +16,12 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>4.27.2</version>
+        </dependency>
 
-        <dependency>
-            <groupId>com.squareup.wire</groupId>
-            <artifactId>wire-runtime-jvm</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.squareup.wire</groupId>
-            <artifactId>wire-grpc-server</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.squareup.wire</groupId>
-            <artifactId>wire-grpc-client-jvm</artifactId>
-        </dependency>
 
         <!-- GRPC dependencies -->
         <dependency>
@@ -43,9 +36,20 @@
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
         </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.6.0</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>io.quarkus</groupId>
@@ -88,109 +92,32 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>${project.basedir}/target/generated-sources/wire</source>
+                                <source>${project.basedir}/target/generated-sources/protoc</source>
                             </sources>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-            <!-- Download the Wire compiler. -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.7.1</version>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>0.6.1</version>
                 <executions>
                     <execution>
-                        <phase>initialize</phase>
                         <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>com.squareup.wire</groupId>
-                                    <artifactId>wire-compiler</artifactId>
-                                    <version>${wire.version}</version>
-                                    <classifier>jar-with-dependencies</classifier>
-                                    <destFileName>wire-compiler.jar</destFileName>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <!-- Run the Wire compiler -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.3.0</version>
-                <executions>
-                    <execution>
-                        <id>wire-client</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>java</executable>
-                            <arguments>
-                                <argument>-jar</argument>
-                                <argument>target/dependency/wire-compiler.jar</argument>
-                                <argument>--proto_path=${rootDir}/backend/protos</argument>
-                                <argument>
-                                    --java_out=${project.build.directory}/generated-sources/wire
-                                </argument>
-                                <argument>--java_rpc_role=client</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>wire-server</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>java</executable>
-                            <arguments>
-                                <argument>-jar</argument>
-                                <argument>target/dependency/wire-compiler.jar</argument>
-                                <argument>--proto_path=${rootDir}/backend/protos</argument>
-                                <argument>--java_out=target/generated-sources/wire</argument>
-                                <argument>--java_rpc_role=server</argument>
-                                <argument>--java_rpc_call_style=blocking</argument>
-                                <argument>--java_grpc_server_compatible</argument>
-                                <argument>--includes=xyz.block.ftl.v1.VerbService</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.6.0</version>
-                <executions>
-                    <execution>
-                        <id>flatten</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>flatten</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>flatten.clean</id>
-                        <phase>clean</phase>
-                        <goals>
-                            <goal>clean</goal>
+                            <goal>compile</goal>
+                            <goal>compile-custom</goal>
+                            <goal>test-compile</goal>
+                            <goal>test-compile-custom</goal>
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <protocArtifact>com.google.protobuf:protoc:3.25.4:exe:${os.detected.classifier}</protocArtifact>
+                    <protoSourceRoot>${rootDir}/backend/protos</protoSourceRoot>
+                    <pluginId>grpc-java</pluginId>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.65.1:exe:${os.detected.classifier}</pluginArtifact>
+                </configuration>
             </plugin>
         </plugins>
     </build>
