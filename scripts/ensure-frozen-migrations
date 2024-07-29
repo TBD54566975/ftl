@@ -45,7 +45,7 @@ main() {
     fi
 
     # Track new files added
-    local new_files
+    local new_files=""
     while IFS= read -r file; do
         if [ ! -f "$file" ]; then
             echo "$file no longer exists!"
