@@ -14,6 +14,6 @@ func init() {
 	FSM, err = initFSMMetrics()
 
 	if err != nil {
-		panic(fmt.Errorf("could not initialize controller metrics: %w\n", err))
+		panic(fmt.Errorf("could not initialize controller metrics: %w", err))
 	}
 }
