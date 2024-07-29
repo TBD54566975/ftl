@@ -6,7 +6,7 @@ CREATE
 CREATE OR REPLACE FUNCTION notify_event() RETURNS TRIGGER AS
 $$
 DECLARE
-    topic TEXT;
+    topic INT;
     payload JSONB;
 BEGIN
    topic := CASE TG_TABLE_NAME
