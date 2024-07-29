@@ -1,9 +1,9 @@
-package xyz.block.ftl.java.runtime.deployment;
+package xyz.block.ftl.deployment;
 
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 
-class FtlJavaRuntimeProcessor {
+class FtlProcessor {
 
     private static final String FEATURE = "ftl-java-runtime";
 
