@@ -2,53 +2,95 @@ package observability
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/observability"
 )
 
 const (
-	fsmMeterName    = "ftl.fsm"
-	fsmRefAttribute = "ftl.fsm.ref"
+	fsmMeterName             = "ftl.fsm"
+	fsmRefAttribute          = "ftl.fsm.ref"
+	fsmDestStateRefAttribute = "ftl.fsm.dest.state.ref"
 )
 
-var fsmMeter = otel.Meter("ftl.fsm")
+type FSMMetrics struct {
+	meter              metric.Meter
+	instancesActive    metric.Int64UpDownCounter
+	transitionsActive  metric.Int64UpDownCounter
+	transitionAttempts metric.Int64Counter
+}
 
-var fsmCounters = struct {
-	instancesActive metric.Int64UpDownCounter
-}{}
+func initFSMMetrics() (*FSMMetrics, error) {
+	result := &FSMMetrics{}
 
-func InitFSMMetrics() error {
+	var errs error
 	var err error
 
-	fsmCounters.instancesActive, err = fsmMeter.Int64UpDownCounter(
-		fmt.Sprintf("%s.instances.active", fsmMeterName),
-		metric.WithDescription("counts the number of active FSM instances"))
+	result.meter = otel.Meter(fsmMeterName)
 
-	if err != nil {
-		return fmt.Errorf("could not initialize fsm metrics: %w", err)
+	counter := fmt.Sprintf("%s.instances.active", fsmMeterName)
+	if result.instancesActive, err = result.meter.Int64UpDownCounter(
+		counter,
+		metric.WithDescription("counts the number of active FSM instances")); err != nil {
+		errs = joinInitErrors(counter, err, errs)
+		result.instancesActive = noop.Int64UpDownCounter{}
 	}
 
-	return nil
+	counter = fmt.Sprintf("%s.transitions.active", fsmMeterName)
+	if result.transitionsActive, err = result.meter.Int64UpDownCounter(
+		counter,
+		metric.WithDescription("counts the number of active FSM transitions")); err != nil {
+		errs = joinInitErrors(counter, err, errs)
+		result.transitionsActive = noop.Int64UpDownCounter{}
+	}
+
+	counter = fmt.Sprintf("%s.transitions.attempts", fsmMeterName)
+	if result.transitionAttempts, err = result.meter.Int64Counter(
+		counter,
+		metric.WithDescription("counts the number of attempted FSM transitions")); err != nil {
+		errs = joinInitErrors(counter, err, errs)
+		result.transitionAttempts = noop.Int64Counter{}
+	}
+
+	return result, errs
 }
 
-func FSMInstanceCreated(ctx context.Context, fsm schema.RefKey) {
-	if fsmCounters.instancesActive != nil {
-		fsmCounters.instancesActive.Add(ctx, 1, metric.WithAttributes(
-			attribute.String(observability.ModuleNameAttribute, fsm.Module),
-			attribute.String(fsmRefAttribute, fsm.String())))
-	}
+func (m *FSMMetrics) InstanceCreated(ctx context.Context, fsm schema.RefKey) {
+	m.instancesActive.Add(ctx, 1, metric.WithAttributes(
+		attribute.String(observability.ModuleNameAttribute, fsm.Module),
+		attribute.String(fsmRefAttribute, fsm.String())))
 }
 
-func FSMInstanceCompleted(ctx context.Context, fsm schema.RefKey) {
-	if fsmCounters.instancesActive != nil {
-		fsmCounters.instancesActive.Add(ctx, -1, metric.WithAttributes(
-			attribute.String(observability.ModuleNameAttribute, fsm.Module),
-			attribute.String(fsmRefAttribute, fsm.String())))
-	}
+func (m *FSMMetrics) InstanceCompleted(ctx context.Context, fsm schema.RefKey) {
+	m.instancesActive.Add(ctx, -1, metric.WithAttributes(
+		attribute.String(observability.ModuleNameAttribute, fsm.Module),
+		attribute.String(fsmRefAttribute, fsm.String())))
+}
+
+func (m *FSMMetrics) TransitionStarted(ctx context.Context, fsm schema.RefKey, destState schema.RefKey) {
+	m.transitionsActive.Add(ctx, 1, metric.WithAttributes(
+		attribute.String(observability.ModuleNameAttribute, fsm.Module),
+		attribute.String(fsmRefAttribute, fsm.String()),
+		attribute.String(fsmDestStateRefAttribute, destState.String())))
+
+	m.transitionAttempts.Add(ctx, 1, metric.WithAttributes(
+		attribute.String(observability.ModuleNameAttribute, fsm.Module),
+		attribute.String(fsmRefAttribute, fsm.String())))
+}
+
+func (m *FSMMetrics) TransitionCompleted(ctx context.Context, fsm schema.RefKey) {
+	m.transitionsActive.Add(ctx, -1, metric.WithAttributes(
+		attribute.String(observability.ModuleNameAttribute, fsm.Module),
+		attribute.String(fsmRefAttribute, fsm.String())))
+}
+
+func joinInitErrors(counter string, err error, errs error) error {
+	return errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
 }

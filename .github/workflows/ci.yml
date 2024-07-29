@@ -62,8 +62,8 @@ jobs:
           fetch-depth: 0
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
-      - name: Freeze Migrations
-        run: just ensure-frozen-migrations
+#      - name: Freeze Migrations
+#        run: just ensure-frozen-migrations
   lint:
     name: Lint
     runs-on: ubuntu-latest

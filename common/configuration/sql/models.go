@@ -445,6 +445,7 @@ type FsmInstance struct {
 	CurrentState     optional.Option[schema.RefKey]
 	DestinationState optional.Option[schema.RefKey]
 	AsyncCallID      optional.Option[int64]
+	UpdatedAt        time.Time
 }
 
 type IngressRoute struct {

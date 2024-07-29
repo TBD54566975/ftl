@@ -363,7 +363,8 @@ UPDATE fsm_instances
 SET
   current_state = NULL,
   async_call_id = NULL,
-  status = 'failed'::fsm_status
+  status = 'failed'::fsm_status,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = $1::schema_ref AND key = $2::TEXT
 RETURNING true
@@ -381,7 +382,8 @@ UPDATE fsm_instances
 SET
   current_state = destination_state,
   destination_state = NULL,
-  async_call_id = NULL
+  async_call_id = NULL,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = $1::schema_ref AND key = $2::TEXT
 RETURNING true
@@ -938,7 +940,7 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 }
 
 const getFSMInstance = `-- name: GetFSMInstance :one
-SELECT id, created_at, fsm, key, status, current_state, destination_state, async_call_id
+SELECT id, created_at, fsm, key, status, current_state, destination_state, async_call_id, updated_at
 FROM fsm_instances
 WHERE fsm = $1::schema_ref AND key = $2
 `
@@ -955,6 +957,7 @@ func (q *Queries) GetFSMInstance(ctx context.Context, fsm schema.RefKey, key str
 		&i.CurrentState,
 		&i.DestinationState,
 		&i.AsyncCallID,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -1920,11 +1923,12 @@ INSERT INTO fsm_instances (
 ON CONFLICT(fsm, key) DO
 UPDATE SET
   destination_state = $3::schema_ref,
-  async_call_id = $4::BIGINT
+  async_call_id = $4::BIGINT,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm_instances.async_call_id IS NULL
   AND fsm_instances.destination_state IS NULL
-RETURNING id, created_at, fsm, key, status, current_state, destination_state, async_call_id
+RETURNING id, created_at, fsm, key, status, current_state, destination_state, async_call_id, updated_at
 `
 
 type StartFSMTransitionParams struct {
@@ -1954,6 +1958,7 @@ func (q *Queries) StartFSMTransition(ctx context.Context, arg StartFSMTransition
 		&i.CurrentState,
 		&i.DestinationState,
 		&i.AsyncCallID,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -1980,7 +1985,8 @@ SET
   current_state = destination_state,
   destination_state = NULL,
   async_call_id = NULL,
-  status = 'completed'::fsm_status
+  status = 'completed'::fsm_status,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = $1::schema_ref AND key = $2::TEXT
 RETURNING true
