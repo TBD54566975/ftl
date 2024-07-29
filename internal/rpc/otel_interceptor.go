@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/proto"
@@ -33,10 +35,19 @@ func OtelInterceptor() connect.Interceptor {
 
 type otelInterceptor struct{}
 
-var instruments instrumentation
+var clientInstruments instrumentation
+var serverInstruments instrumentation
 
 func init() {
-	instruments = createInstruments(otel.GetMeterProvider().Meter("ftl.rpc.unary"))
+	clientInstruments = createInstruments(otel.GetMeterProvider().Meter("ftl.rpc.client"))
+	serverInstruments = createInstruments(otel.GetMeterProvider().Meter("ftl.rpc.server"))
+}
+
+func getInstruments(isClient bool) instrumentation {
+	if isClient {
+		return clientInstruments
+	}
+	return serverInstruments
 }
 
 func getAttributes(ctx context.Context, rpcSystemKey string) []attribute.KeyValue {
@@ -60,6 +71,7 @@ func getAttributes(ctx context.Context, rpcSystemKey string) []attribute.KeyValu
 
 func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, request connect.AnyRequest) (connect.AnyResponse, error) {
+		ctx = propagateOtelHeaders(ctx, request.Spec().IsClient, request.Header())
 		requestStartTime := time.Now()
 		isClient := request.Spec().IsClient
 		name := strings.TrimLeft(request.Spec().Procedure, "/")
@@ -95,13 +107,8 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			),
 		)
 
-		statusCodeKey := fmt.Sprintf("rpc.%s.status_code", request.Peer().Protocol)
-		statusCode := attribute.Int64(statusCodeKey, 0)
 		response, err := next(ctx, request)
-		if err != nil {
-			statusCode = attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
-		}
-		attributes = append(attributes, statusCode)
+		attributes = append(attributes, statusCodeAttribute(request.Peer().Protocol, err))
 		var responseSize int
 		if err == nil {
 			if msg, ok := response.Any().(proto.Message); ok {
@@ -116,7 +123,7 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			),
 		)
 		span.SetAttributes(attributes...)
-
+		instruments := getInstruments(isClient)
 		instruments.duration.Record(ctx, time.Since(requestStartTime).Milliseconds(), metric.WithAttributes(attributes...))
 		instruments.requestSize.Record(ctx, int64(requestSize), metric.WithAttributes(attributes...))
 		instruments.requestsPerRPC.Record(ctx, 1, metric.WithAttributes(attributes...))
@@ -140,7 +147,7 @@ func (i *otelInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 		ctx, span := tracer.Start(ctx, name, traceOpts...) // nolint:spancheck
 		conn := next(ctx, spec)
 
-		// TODO: add conn.RequestHeader() to span.SetAttributes(...)
+		instruments := getInstruments(spec.IsClient)
 		state := &streamingState{
 			spec:        spec,
 			protocol:    conn.Peer().Protocol,
@@ -151,22 +158,30 @@ func (i *otelInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 
 		return &streamingClientInterceptor{ // nolint:spancheck
 			StreamingClientConn: conn,
-			ctx:                 ctx,
-			state:               state,
+			receive: func(msg any, conn connect.StreamingClientConn) error {
+				return state.receive(ctx, msg, conn)
+			},
+			send: func(msg any, conn connect.StreamingClientConn) error {
+				return state.send(ctx, msg, conn)
+			},
 			onClose: func() {
-				statusCodeKey := fmt.Sprintf("rpc.%s.status_code", conn.Peer().Protocol)
-				statusCode := attribute.Int64(statusCodeKey, 0)
+				state.attributes = append(state.attributes, statusCodeAttribute(conn.Peer().Protocol, state.error))
+				span.SetAttributes(state.attributes...)
 				if state.error != nil {
-					statusCode = attribute.Int64(statusCodeKey, int64(connect.CodeOf(state.error)))
 					span.SetStatus(codes.Error, state.error.Error())
 				}
-				// TODO: add header attributes
-				state.attributes = append(state.attributes, statusCode)
-				span.SetAttributes(state.attributes...)
 				span.End()
-				instruments.requestsPerRPC.Record(ctx, state.sentCounter, metric.WithAttributes(state.attributes...))
-				instruments.responsesPerRPC.Record(ctx, state.receivedCounter, metric.WithAttributes(state.attributes...))
-				instruments.duration.Record(ctx, time.Since(requestStartTime).Milliseconds(), metric.WithAttributes(state.attributes...))
+				instruments.requestsPerRPC.Record(
+					ctx,
+					state.sentCounter,
+					metric.WithAttributes(state.attributes...))
+				instruments.responsesPerRPC.Record(
+					ctx,
+					state.receivedCounter,
+					metric.WithAttributes(state.attributes...))
+				instruments.duration.Record(ctx,
+					time.Since(requestStartTime).Milliseconds(),
+					metric.WithAttributes(state.attributes...))
 			},
 		}
 	}
@@ -174,8 +189,64 @@ func (i *otelInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 
 func (i *otelInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
-		return next(ctx, conn)
+		ctx = propagateOtelHeaders(ctx, conn.Spec().IsClient, conn.RequestHeader())
+		requestStartTime := time.Now()
+		name := strings.TrimLeft(conn.Spec().Procedure, "/")
+
+		attributes := getAttributes(ctx, "grpc")
+		traceOpts := []trace.SpanStartOption{
+			trace.WithAttributes(attributes...),
+			trace.WithSpanKind(trace.SpanKindServer),
+		}
+		tracer := otel.GetTracerProvider().Tracer(conn.Spec().Procedure)
+		ctx, span := tracer.Start(ctx, name, traceOpts...)
+		defer span.End()
+
+		instruments := getInstruments(conn.Spec().IsClient)
+		state := &streamingState{
+			spec:        conn.Spec(),
+			protocol:    conn.Peer().Protocol,
+			attributes:  attributes,
+			receiveSize: instruments.responseSize,
+			sendSize:    instruments.requestSize,
+		}
+		streamingHandler := &streamingHandlerInterceptor{
+			StreamingHandlerConn: conn,
+			receive: func(msg any, conn connect.StreamingHandlerConn) error {
+				return state.receive(ctx, msg, conn)
+			},
+			send: func(msg any, conn connect.StreamingHandlerConn) error {
+				return state.send(ctx, msg, conn)
+			},
+		}
+		err := next(ctx, streamingHandler)
+		state.attributes = append(state.attributes, statusCodeAttribute(conn.Peer().Protocol, err))
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.SetAttributes(state.attributes...)
+		instruments.requestsPerRPC.Record(
+			ctx,
+			state.receivedCounter,
+			metric.WithAttributes(state.attributes...))
+		instruments.responsesPerRPC.Record(
+			ctx,
+			state.sentCounter,
+			metric.WithAttributes(state.attributes...))
+		instruments.duration.Record(ctx,
+			time.Since(requestStartTime).Milliseconds(),
+			metric.WithAttributes(state.attributes...))
+		return err
 	}
+}
+
+func propagateOtelHeaders(ctx context.Context, isClient bool, header http.Header) context.Context {
+	if isClient {
+		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(header))
+	} else {
+		ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(header))
+	}
+	return ctx
 }
 
 type instrumentation struct {
@@ -217,6 +288,7 @@ func createInstruments(meter metric.Meter) instrumentation {
 }
 
 type streamingState struct {
+	mu              sync.Mutex
 	spec            connect.Spec
 	protocol        string
 	attributes      []attribute.KeyValue
@@ -227,74 +299,105 @@ type streamingState struct {
 	sendSize        metric.Int64Histogram
 }
 
+type sendReceiver interface {
+	Receive(msg any) error
+	Send(msg any) error
+}
+
+func (s *streamingState) receive(ctx context.Context, msg any, conn sendReceiver) error {
+	err := conn.Receive(msg)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if errors.Is(err, io.EOF) {
+		return err // nolint:wrapcheck
+	}
+	s.receivedCounter++
+	if err != nil {
+		s.error = err
+		s.attributes = append(s.attributes, statusCodeAttribute(s.protocol, err))
+	}
+	attrs := append(s.attributes, []attribute.KeyValue{ // nolint:gocritic
+		semconv.MessageTypeReceived,
+		semconv.MessageIDKey.Int64(s.receivedCounter),
+	}...)
+	if protomsg, ok := msg.(proto.Message); ok {
+		size := proto.Size(protomsg)
+		attrs = append(attrs, semconv.MessageUncompressedSizeKey.Int(size))
+		s.receiveSize.Record(ctx, int64(size), metric.WithAttributes(attrs...))
+	}
+
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(otelFtlEventName, trace.WithAttributes(attrs...))
+	return err // nolint:wrapcheck
+}
+
+func (s *streamingState) send(ctx context.Context, msg any, conn sendReceiver) error {
+	err := conn.Send(msg)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if errors.Is(err, io.EOF) {
+		return err // nolint:wrapcheck
+	}
+	s.sentCounter++
+	if err != nil {
+		s.error = err
+		s.attributes = append(s.attributes, statusCodeAttribute(s.protocol, err))
+	}
+	attrs := append(s.attributes, []attribute.KeyValue{ // nolint:gocritic
+		semconv.MessageTypeSent,
+		semconv.MessageIDKey.Int64(s.sentCounter),
+	}...)
+	if protomsg, ok := msg.(proto.Message); ok {
+		size := proto.Size(protomsg)
+		attrs = append(attrs, semconv.MessageUncompressedSizeKey.Int(size))
+		s.sendSize.Record(ctx, int64(size), metric.WithAttributes(attrs...))
+	}
+
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(otelFtlEventName, trace.WithAttributes(attrs...))
+	return err // nolint:wrapcheck
+}
+
 type streamingClientInterceptor struct {
 	connect.StreamingClientConn
-	mu      sync.Mutex
-	ctx     context.Context
-	state   *streamingState
+	receive func(msg any, conn connect.StreamingClientConn) error
+	send    func(any, connect.StreamingClientConn) error
 	onClose func()
 }
 
 func (s *streamingClientInterceptor) Receive(msg any) error {
-	err := s.StreamingClientConn.Receive(msg)
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if errors.Is(err, io.EOF) {
-		return err // nolint:wrapcheck
-	}
-	s.state.receivedCounter++
-	if err != nil {
-		s.state.error = err
-		statusCodeKey := fmt.Sprintf("rpc.%s.status_code", s.Peer().Protocol)
-		statusCode := attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
-		s.state.attributes = append(s.state.attributes, statusCode)
-	}
-	attrs := append(s.state.attributes, []attribute.KeyValue{ // nolint:gocritic
-		semconv.MessageTypeReceived,
-		semconv.MessageIDKey.Int64(s.state.receivedCounter),
-	}...)
-	if protomsg, ok := msg.(proto.Message); ok {
-		size := proto.Size(protomsg)
-		attrs = append(attrs, semconv.MessageUncompressedSizeKey.Int(size))
-		s.state.receiveSize.Record(s.ctx, int64(size), metric.WithAttributes(attrs...))
-	}
-
-	span := trace.SpanFromContext(s.ctx)
-	span.AddEvent(otelFtlEventName, trace.WithAttributes(attrs...))
-	return err // nolint:wrapcheck
+	return s.receive(msg, s.StreamingClientConn)
 }
 
 func (s *streamingClientInterceptor) Send(msg any) error {
-	err := s.StreamingClientConn.Send(msg)
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if errors.Is(err, io.EOF) {
-		return err // nolint:wrapcheck
-	}
-	s.state.sentCounter++
-	if err != nil {
-		s.state.error = err
-		statusCodeKey := fmt.Sprintf("rpc.%s.status_code", s.Peer().Protocol)
-		statusCode := attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
-		s.state.attributes = append(s.state.attributes, statusCode)
-	}
-	attrs := append(s.state.attributes, []attribute.KeyValue{ // nolint:gocritic
-		semconv.MessageTypeSent,
-		semconv.MessageIDKey.Int64(s.state.sentCounter),
-	}...)
-	if protomsg, ok := msg.(proto.Message); ok {
-		size := proto.Size(protomsg)
-		attrs = append(attrs, semconv.MessageUncompressedSizeKey.Int(size))
-		s.state.sendSize.Record(s.ctx, int64(size), metric.WithAttributes(attrs...))
-	}
-
-	span := trace.SpanFromContext(s.ctx)
-	span.AddEvent(otelFtlEventName, trace.WithAttributes(attrs...))
-	return err // nolint:wrapcheck
+	return s.send(msg, s.StreamingClientConn)
 }
 
 func (s *streamingClientInterceptor) Close() error {
 	err := s.StreamingClientConn.CloseResponse()
 	s.onClose()
 	return err // nolint:wrapcheck
+}
+
+type streamingHandlerInterceptor struct {
+	connect.StreamingHandlerConn
+	receive func(any, connect.StreamingHandlerConn) error
+	send    func(any, connect.StreamingHandlerConn) error
+}
+
+func (s *streamingHandlerInterceptor) Receive(msg any) error {
+	return s.receive(msg, s.StreamingHandlerConn)
+}
+
+func (s *streamingHandlerInterceptor) Send(msg any) error {
+	return s.send(msg, s.StreamingHandlerConn)
+}
+
+func statusCodeAttribute(protocol string, err error) attribute.KeyValue {
+	statusCodeKey := fmt.Sprintf("rpc.%s.status_code", protocol)
+	statusCode := attribute.Int64(statusCodeKey, 0)
+	if err != nil {
+		statusCode = attribute.Int64(statusCodeKey, int64(connect.CodeOf(err)))
+	}
+	return statusCode
 }

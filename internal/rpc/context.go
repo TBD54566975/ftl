@@ -8,8 +8,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 	"golang.org/x/mod/semver"
 
 	"github.com/TBD54566975/ftl"
@@ -236,7 +234,6 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		} else if key, ok := key.Get(); ok {
 			headers.SetRequestKey(header, key)
 		}
-		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(header))
 	} else {
 		if headers.IsDirectRouted(header) {
 			ctx = WithDirectRouting(ctx)
@@ -251,7 +248,6 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		} else if ok {
 			ctx = WithRequestName(ctx, key)
 		}
-		ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(header))
 	}
 	return ctx, nil
 }
