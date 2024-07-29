@@ -44,10 +44,7 @@ type serveCmd struct {
 	Stop                bool                 `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
 	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"1m"`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
-<<<<<<< HEAD
 	DatabaseImage       string               `help:"The container image to start for the database" default:"postgres:15.4" env:"FTL_DATABASE_IMAGE" hidden:""`
-=======
->>>>>>> 31713171 (fix: init observability client in cmd_serve)
 	controller.CommonConfig
 }
 

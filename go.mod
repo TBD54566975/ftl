@@ -5,7 +5,6 @@ go 1.22.2
 require (
 	connectrpc.com/connect v1.16.2
 	connectrpc.com/grpcreflect v1.2.0
-	connectrpc.com/otelconnect v0.7.1
 	github.com/BurntSushi/toml v1.4.0
 	github.com/TBD54566975/golang-tools v0.2.1
 	github.com/TBD54566975/scaffolder v1.0.0
@@ -55,6 +54,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/sdk/metric v1.28.0
+	go.opentelemetry.io/otel/trace v1.28.0
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/exp v0.0.0-20240707233637-46b078467d37
 	golang.org/x/mod v0.19.0
@@ -101,7 +101,6 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.26.0 // indirect
-	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	golang.org/x/tools v0.23.0 // indirect
 	gotest.tools/v3 v3.5.1 // indirect

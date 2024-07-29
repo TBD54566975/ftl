@@ -17,16 +17,21 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/proto"
 )
 
 const (
-	otelFtlRequestKey = "ftl.requestKey"
-	otelFtlVerbRef    = "ftl.verb.ref"
-	otelFtlVerbModule = "ftl.verb.module"
-	otelFtlEventName  = "ftl.message"
+	otelFtlRequestKey       = "ftl.requestKey"
+	otelFtlVerbRef          = "ftl.verb.ref"
+	otelFtlVerbModule       = "ftl.verb.module"
+	otelMessageEvent        = "message"
+	otelMessageIDKey        = attribute.Key("message.id")
+	otelMessageSizeKey      = attribute.Key("message.uncompressed_size")
+	otelMessageTypeKey      = attribute.Key("message.type")
+	otelMessageTypeSent     = "SENT"
+	otelMessageTypeReceived = "RECEIVED"
 )
 
 func OtelInterceptor() connect.Interceptor {
@@ -77,10 +82,12 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		name := strings.TrimLeft(request.Spec().Procedure, "/")
 
 		spanKind := trace.SpanKindClient
-		requestSpan, responseSpan := semconv.MessageTypeSent, semconv.MessageTypeReceived
+		requestSpan := otelMessageTypeKey.String(otelMessageTypeSent)
+		responseSpan := otelMessageTypeKey.String(otelMessageTypeReceived)
 		if !isClient {
 			spanKind = trace.SpanKindServer
-			requestSpan, responseSpan = semconv.MessageTypeReceived, semconv.MessageTypeSent
+			requestSpan = otelMessageTypeKey.String(otelMessageTypeReceived)
+			responseSpan = otelMessageTypeKey.String(otelMessageTypeSent)
 		}
 
 		attributes := getAttributes(ctx, request.Peer().Protocol)
@@ -99,11 +106,11 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			}
 		}
 
-		span.AddEvent(otelFtlEventName,
+		span.AddEvent(otelMessageEvent,
 			trace.WithAttributes(
 				requestSpan,
-				semconv.MessageIDKey.Int(1),
-				semconv.MessageUncompressedSizeKey.Int(requestSize),
+				otelMessageIDKey.Int(1),
+				otelMessageSizeKey.Int(requestSize),
 			),
 		)
 
@@ -115,11 +122,11 @@ func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 				responseSize = proto.Size(msg)
 			}
 		}
-		span.AddEvent(otelFtlEventName,
+		span.AddEvent(otelMessageEvent,
 			trace.WithAttributes(
 				responseSpan,
-				semconv.MessageIDKey.Int(1),
-				semconv.MessageUncompressedSizeKey.Int(responseSize),
+				otelMessageIDKey.Int(1),
+				otelMessageSizeKey.Int(responseSize),
 			),
 		)
 		span.SetAttributes(attributes...)
@@ -335,17 +342,17 @@ func (s *streamingState) receive(ctx context.Context, msg any, conn streamingSen
 		s.attributes = append(s.attributes, statusCodeAttribute(s.protocol, err))
 	}
 	attrs := append(s.attributes, []attribute.KeyValue{ // nolint:gocritic
-		semconv.MessageTypeReceived,
-		semconv.MessageIDKey.Int64(s.receivedCounter),
+		otelMessageTypeKey.String(otelMessageTypeReceived),
+		otelMessageIDKey.Int64(s.receivedCounter),
 	}...)
 	if protomsg, ok := msg.(proto.Message); ok {
 		size := proto.Size(protomsg)
-		attrs = append(attrs, semconv.MessageUncompressedSizeKey.Int(size))
+		attrs = append(attrs, otelMessageSizeKey.Int(size))
 		s.receiveSize.Record(ctx, int64(size), metric.WithAttributes(attrs...))
 	}
 
 	span := trace.SpanFromContext(ctx)
-	span.AddEvent(otelFtlEventName, trace.WithAttributes(attrs...))
+	span.AddEvent(otelMessageEvent, trace.WithAttributes(attrs...))
 	return err // nolint:wrapcheck
 }
 
@@ -362,17 +369,17 @@ func (s *streamingState) send(ctx context.Context, msg any, conn streamingSender
 		s.attributes = append(s.attributes, statusCodeAttribute(s.protocol, err))
 	}
 	attrs := append(s.attributes, []attribute.KeyValue{ // nolint:gocritic
-		semconv.MessageTypeSent,
-		semconv.MessageIDKey.Int64(s.sentCounter),
+		otelMessageTypeKey.String(otelMessageTypeSent),
+		otelMessageIDKey.Int64(s.sentCounter),
 	}...)
 	if protomsg, ok := msg.(proto.Message); ok {
 		size := proto.Size(protomsg)
-		attrs = append(attrs, semconv.MessageUncompressedSizeKey.Int(size))
+		attrs = append(attrs, otelMessageSizeKey.Int(size))
 		s.sendSize.Record(ctx, int64(size), metric.WithAttributes(attrs...))
 	}
 
 	span := trace.SpanFromContext(ctx)
-	span.AddEvent(otelFtlEventName, trace.WithAttributes(attrs...))
+	span.AddEvent(otelMessageEvent, trace.WithAttributes(attrs...))
 	return err // nolint:wrapcheck
 }
 
