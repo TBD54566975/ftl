@@ -44,6 +44,8 @@ main() {
         exit 0
     fi
 
+    # Track new files added
+    local new_files
     while IFS= read -r file; do
         if [ ! -f "$file" ]; then
             echo "$file no longer exists!"
@@ -53,6 +55,7 @@ main() {
         # Does the file exist in the merge base?
         if ! git show "$merge_base:$file" &> /dev/null; then
             echo "✅ New: $file"
+            new_files="$new_files $file"
             continue
         fi
 
@@ -65,8 +68,13 @@ main() {
         fi
     done <<< "$changed_files"
 
-    # We should also check if there were any deleted files
+    # We should also check if there were any deleted files, ignoring new files
     while IFS= read -r file; do
+        # A new file won't exist in the merge base, so ignore them.
+        if [[ $new_files == *"$file"* ]]; then
+            continue
+        fi
+
         if ! git show "$merge_base:$file" &> /dev/null; then
             echo "🔥 Deleted: $file"
             fail
