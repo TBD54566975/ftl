@@ -73,8 +73,8 @@ func RequestKeyFromContext(ctx context.Context) (optional.Option[model.RequestKe
 	return optional.Some(key), nil
 }
 
-// WithRequestName adds the request key to the context.
-func WithRequestName(ctx context.Context, key model.RequestKey) context.Context {
+// WithRequestKey adds the request key to the context.
+func WithRequestKey(ctx context.Context, key model.RequestKey) context.Context {
 	return context.WithValue(ctx, requestIDKey{}, key.String())
 }
 
@@ -246,7 +246,7 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		if key, ok, err := headers.GetRequestKey(header); err != nil {
 			return nil, err
 		} else if ok {
-			ctx = WithRequestName(ctx, key)
+			ctx = WithRequestKey(ctx, key)
 		}
 	}
 	return ctx, nil
