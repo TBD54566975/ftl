@@ -217,7 +217,7 @@ func IsPathInModule(pkg *types.Package, path string) bool {
 	if err != nil {
 		return false
 	}
-	return strings.HasPrefix(path, "ftl/"+moduleName)
+	return pkg.Path() == path || strings.HasPrefix(path, "ftl/"+moduleName+"/")
 }
 
 // ExtractType extracts the schema type for the given node.
