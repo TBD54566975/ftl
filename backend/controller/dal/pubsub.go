@@ -9,10 +9,10 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/alecthomas/types/optional"
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, payload []byte) error {
@@ -64,12 +64,12 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	for _, subscription := range subs {
 		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, eventConsumptionDelay, subscription.Topic, subscription.Cursor)
 		if err != nil {
-			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload.Name, subscriptionRef(subscription), ftl.None[schema.RefKey]())
+			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload.Name, subscriptionRef(subscription), optional.None[schema.RefKey]())
 			return 0, fmt.Errorf("failed to get next cursor: %w", dalerrs.TranslatePGError(err))
 		}
 		nextCursorKey, ok := nextCursor.Event.Get()
 		if !ok {
-			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Event.Get", subscription.Topic.Payload.Name, subscriptionRef(subscription), ftl.None[schema.RefKey]())
+			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Event.Get", subscription.Topic.Payload.Name, subscriptionRef(subscription), optional.None[schema.RefKey]())
 			return 0, fmt.Errorf("could not find event to progress subscription: %w", dalerrs.TranslatePGError(err))
 		}
 		if !nextCursor.Ready {
@@ -85,7 +85,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 		err = tx.db.BeginConsumingTopicEvent(ctx, subscription.Key, nextCursorKey)
 		if err != nil {
-			observability.PubSub.PropagationFailed(ctx, "BeginConsumingTopicEvent", subscription.Topic.Payload.Name, subscriptionRef(subscription), ftl.Some(subscriber.Sink))
+			observability.PubSub.PropagationFailed(ctx, "BeginConsumingTopicEvent", subscription.Topic.Payload.Name, subscriptionRef(subscription), optional.Some(subscriber.Sink))
 			return 0, fmt.Errorf("failed to progress subscription: %w", dalerrs.TranslatePGError(err))
 		}
 
@@ -104,7 +104,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			MaxBackoff:        subscriber.MaxBackoff,
 		})
 		if err != nil {
-			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload.Name, subscriptionRef(subscription), ftl.Some(subscriber.Sink))
+			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload.Name, subscriptionRef(subscription), optional.Some(subscriber.Sink))
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
 		}
 

@@ -11,8 +11,8 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/alecthomas/types/optional"
 )
 
 const (
@@ -81,7 +81,7 @@ func (m *PubSubMetrics) Published(ctx context.Context, module, topic string, suc
 	))
 }
 
-func (m *PubSubMetrics) PropagationFailed(ctx context.Context, failedOp, topic string, subscription schema.RefKey, sink ftl.Option[schema.RefKey]) {
+func (m *PubSubMetrics) PropagationFailed(ctx context.Context, failedOp, topic string, subscription schema.RefKey, sink optional.Option[schema.RefKey]) {
 	attrs := []attribute.KeyValue{
 		attribute.String(pubsubFailedOperationAttr, failedOp),
 		attribute.String(pubsubTopicNameAttr, topic),
