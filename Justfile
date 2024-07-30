@@ -145,7 +145,9 @@ test-backend:
   @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./...
 
 test-scripts:
-	@scripts/tests/test-ensure-frozen-migrations.sh
+  GIT_AUTHOR_NAME="CI" \
+    GIT_AUTHOR_EMAIL="no-reply@tbd.email" \
+    scripts/tests/test-ensure-frozen-migrations.sh
 
 # Lint the frontend
 lint-frontend: build-frontend
