@@ -24,20 +24,18 @@ import (
 )
 
 const (
-	otelFtlRequestKeyAttr        = attribute.Key("ftl.request_key")
-	otelFtlVerbRefAttr           = attribute.Key("ftl.verb.ref")
-	otelFtlVerbModuleAttr        = attribute.Key("ftl.verb.module")
-	otelMessageEventName         = "message"
-	otelMessageEventIDAttr       = attribute.Key("message.id")
-	otelMessageEventSizeAttr     = attribute.Key("message.uncompressed_size")
-	otelMessageEventTypeAttr     = attribute.Key("message.type")
-	otelMessageEventTypeSent     = "SENT"
-	otelMessageEventTypeReceived = "RECEIVED"
-	otelMessageSentSizesAttr     = attribute.Key("rpc.message.sent.sizes_bytes")
-	otelMessageReceivedSizesAttr = attribute.Key("rpc.message.received.sizes_bytes")
-)
-
-const (
+	otelFtlRequestKeyAttr            = attribute.Key("ftl.request_key")
+	otelFtlVerbChainAttr             = attribute.Key("ftl.verb_chain")
+	otelFtlVerbRefAttr               = attribute.Key("ftl.verb.ref")
+	otelFtlVerbModuleAttr            = attribute.Key("ftl.verb.module")
+	otelMessageEventName             = "message"
+	otelMessageEventIDAttr           = attribute.Key("message.id")
+	otelMessageEventSizeAttr         = attribute.Key("message.uncompressed_size")
+	otelMessageEventTypeAttr         = attribute.Key("message.type")
+	otelMessageEventTypeSent         = "SENT"
+	otelMessageEventTypeReceived     = "RECEIVED"
+	otelMessageSentSizesAttr         = attribute.Key("rpc.message.sent.sizes_bytes")
+	otelMessageReceivedSizesAttr     = attribute.Key("rpc.message.received.sizes_bytes")
 	otelRPCDurationMetricName        = "rpc.duration_ms"
 	otelRPCRequestSizeMetricName     = "rpc.request.size_bytes"
 	otelRPCRequestsPerRPCMetricName  = "rpc.request.count_per_rpc"
@@ -81,6 +79,13 @@ func getAttributes(ctx context.Context, rpcSystemKey string) []attribute.KeyValu
 	if verb, ok := VerbFromContext(ctx); ok {
 		attributes = append(attributes, otelFtlVerbRefAttr.String(verb.String()))
 		attributes = append(attributes, otelFtlVerbModuleAttr.String(verb.Module))
+	}
+	if verbs, ok := VerbsFromContext(ctx); ok {
+		verbStrings := make([]string, len(verbs))
+		for i, v := range verbs {
+			verbStrings[i] = v.String()
+		}
+		attributes = append(attributes, otelFtlVerbChainAttr.StringSlice(verbStrings))
 	}
 	return attributes
 }
