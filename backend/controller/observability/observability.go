@@ -6,14 +6,17 @@ import (
 )
 
 var (
-	FSM    *FSMMetrics
-	PubSub *PubSubMetrics
+	AsyncCalls *AsyncCallMetrics
+	FSM        *FSMMetrics
+	PubSub     *PubSubMetrics
 )
 
 func init() {
 	var errs error
 	var err error
 
+	AsyncCalls, err = initAsyncCallMetrics()
+	errs = errors.Join(errs, err)
 	FSM, err = initFSMMetrics()
 	errs = errors.Join(errs, err)
 	PubSub, err = initPubSubMetrics()
