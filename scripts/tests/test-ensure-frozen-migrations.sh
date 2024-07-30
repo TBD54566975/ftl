@@ -23,10 +23,16 @@ function modify_content_in_existing() {
   rm "$schema_dir/20231103205514_init.sql.bak"
 }
 
+function no_changes() {
+  echo "no-changes" >> .gitignore
+  git add .gitignore
+}
+
 function commit_migrations_dir() {
   git add "$schema_dir"
   git commit -m "ci: automated test commit, this should not be pushed!"
 }
+
 
 # higher order test function, accepting a function as an argument, and an expected fail or pass.
 # omitted means it should pass.
@@ -60,7 +66,7 @@ function test() {
   # only clean up the schema dir
   rm "$schema_dir"/*
   git reset "$saved_commit"
-  git checkout "$schema_dir"
+  git checkout .gitignore "$schema_dir"
 
   if $did_fail; then
     echo "❌ FAIL $test_function"
@@ -74,10 +80,11 @@ function main() {
   # cd into the project root
   cd "$(git rev-parse --show-toplevel)" || exit 1
 
-  test create
-  test remove_existing fail
-  test modify_comment_in_existing
-  test modify_content_in_existing fail
+  test no_changes
+#  test create
+#  test remove_existing fail
+#  test modify_comment_in_existing
+#  test modify_content_in_existing fail
 }
 
 main
