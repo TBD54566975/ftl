@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -23,6 +24,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, pa
 	if err != nil {
 		return dalerrs.TranslatePGError(err)
 	}
+	observability.PubSub.Published(ctx, module, topic)
 	return nil
 }
 
@@ -100,6 +102,8 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		if err != nil {
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
 		}
+
+		observability.PubSub.SubscriberCalled(ctx, subscription.Topic.Payload.Name, schema.RefKey{Module: subscription.Key.Payload.Module, Name: subscription.Name}, subscriber.Sink)
 		successful++
 	}
 	return successful, nil
