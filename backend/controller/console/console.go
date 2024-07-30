@@ -1,4 +1,4 @@
-package controller
+package console
 
 import (
 	"context"
@@ -30,7 +30,7 @@ type ConsoleService struct {
 
 var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
 
-func NewConsoleService(dal *dal.DAL) *ConsoleService {
+func NewService(dal *dal.DAL) *ConsoleService {
 	return &ConsoleService{
 		dal: dal,
 	}
