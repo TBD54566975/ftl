@@ -81,10 +81,10 @@ function main() {
   cd "$(git rev-parse --show-toplevel)" || exit 1
 
   test no_changes
-#  test create
-#  test remove_existing fail
-#  test modify_comment_in_existing
-#  test modify_content_in_existing fail
+  test create
+  test remove_existing fail
+  test modify_comment_in_existing
+  test modify_content_in_existing fail
 }
 
 main
