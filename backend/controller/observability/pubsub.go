@@ -26,10 +26,10 @@ const (
 )
 
 type PubSubMetrics struct {
-	meter              metric.Meter
-	published          metric.Int64Counter
-	propagationFailure metric.Int64Counter
-	subscriberCalled   metric.Int64Counter
+	meter             metric.Meter
+	published         metric.Int64Counter
+	propagationFailed metric.Int64Counter
+	subscriberCalled  metric.Int64Counter
 }
 
 func initPubSubMetrics() (*PubSubMetrics, error) {
@@ -48,13 +48,13 @@ func initPubSubMetrics() (*PubSubMetrics, error) {
 		result.published = noop.Int64Counter{}
 	}
 
-	counterName = fmt.Sprintf("%s.propagation.failure", pubsubMeterName)
-	if result.propagationFailure, err = result.meter.Int64Counter(
+	counterName = fmt.Sprintf("%s.propagation.failed", pubsubMeterName)
+	if result.propagationFailed, err = result.meter.Int64Counter(
 		counterName,
 		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that subscriptions fail to progress")); err != nil {
 		errs = handleInitCounterError(errs, err, counterName)
-		result.propagationFailure = noop.Int64Counter{}
+		result.propagationFailed = noop.Int64Counter{}
 	}
 
 	counterName = fmt.Sprintf("%s.subscriber.called", pubsubMeterName)
@@ -94,7 +94,7 @@ func (m *PubSubMetrics) PropagationFailed(ctx context.Context, failedOp, topic s
 		attrs = append(attrs, attribute.String(pubsubSubscriberModuleAttr, sinkRef.Module))
 	}
 
-	m.propagationFailure.Add(ctx, 1, metric.WithAttributes(attrs...))
+	m.propagationFailed.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
 func (m *PubSubMetrics) SubscriberCalled(ctx context.Context, topic string, subscription, sink schema.RefKey) {
