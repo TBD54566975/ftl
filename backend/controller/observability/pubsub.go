@@ -37,21 +37,23 @@ func initPubSubMetrics() (*PubSubMetrics, error) {
 	if result.published, err = result.meter.Int64Counter(
 		counterName,
 		metric.WithDescription("the number of times that an event is published to a topic")); err != nil {
-		result.published, errs = handleInitCounterError(errs, err, counterName)
+		errs = handleInitCounterError(errs, err, counterName)
+		result.published = noop.Int64Counter{}
 	}
 
 	counterName = fmt.Sprintf("%s.subscriber.called", pubsubMeterName)
 	if result.subscriberCalled, err = result.meter.Int64Counter(
 		counterName,
 		metric.WithDescription("the number of times that a pubsub event has been enqueued to asynchronously send to a subscriber")); err != nil {
-		result.subscriberCalled, errs = handleInitCounterError(errs, err, counterName)
+		errs = handleInitCounterError(errs, err, counterName)
+		result.subscriberCalled = noop.Int64Counter{}
 	}
 
-	return result, nil
+	return result, errs
 }
 
-func handleInitCounterError(errs error, err error, counterName string) (metric.Int64Counter, error) {
-	return noop.Int64Counter{}, errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counterName, err))
+func handleInitCounterError(errs error, err error, counterName string) error {
+	return errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counterName, err))
 }
 
 func (m *PubSubMetrics) Published(ctx context.Context, module, topic string) {

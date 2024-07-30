@@ -116,14 +116,14 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 func (d *DAL) recordSubscriberCalled(ctx context.Context, subscription sql.GetSubscriptionsNeedingUpdateRow, sinkRef schema.RefKey) error {
 	topic, err := d.db.GetTopicByKey(ctx, subscription.Topic)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return fmt.Errorf("failed to look up topic by key: %w", dalerrs.TranslatePGError(err))
 	}
 
 	// GetModulesByID can take multiple IDs, so it returns a list of rows. This call
 	// should always return exactly one row, since we pass in one ID.
 	modules, err := d.db.GetModulesByID(ctx, []int64{subscription.ModuleID})
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return fmt.Errorf("failed to look up module by ID: %w", dalerrs.TranslatePGError(err))
 	}
 
 	observability.PubSub.SubscriberCalled(ctx, topic.Name, schema.RefKey{Module: modules[0].Name, Name: subscription.Name}, sinkRef)
