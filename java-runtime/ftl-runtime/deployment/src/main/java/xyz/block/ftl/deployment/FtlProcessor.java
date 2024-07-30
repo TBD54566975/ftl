@@ -1,17 +1,16 @@
 package xyz.block.ftl.deployment;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.runtime.AdditionalBean;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
+import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
-import org.checkerframework.checker.units.qual.A;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
@@ -20,14 +19,17 @@ import xyz.block.ftl.Verb;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
-import xyz.block.ftl.v1.schema.*;
 import xyz.block.ftl.v1.schema.Float;
 import xyz.block.ftl.v1.schema.Module;
+import xyz.block.ftl.v1.schema.*;
 
 import java.io.IOException;
 import java.lang.String;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -63,14 +65,15 @@ class FtlProcessor {
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    public  void registerVerbs(CombinedIndexBuildItem index,
-                               FTLRecorder recorder,
-                               BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItemBuildProducer,
-                               OutputTargetBuildItem outputTargetBuildItem,
-                               RecorderContext recorderContext) throws IOException {
+    public void registerVerbs(CombinedIndexBuildItem index,
+                              FTLRecorder recorder,
+                              ApplicationInfoBuildItem applicationInfoBuildItem,
+                              BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItemBuildProducer,
+                              OutputTargetBuildItem outputTargetBuildItem,
+                              RecorderContext recorderContext) throws IOException {
         Module.Builder moduleBuilder = Module.newBuilder()
-            .setName("testmodule")
-            .setBuiltin(false);
+                .setName(applicationInfoBuildItem.getName())
+                .setBuiltin(false);
         Map<String, Ref> dataElements = new HashMap<>();
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
         for (var verb : index.getIndex().getAnnotations(DotName.createSimple(Verb.class))) {
@@ -84,16 +87,16 @@ class FtlProcessor {
                 methodParamType = VoidType.VOID;
             } else if (method.parametersCount() == 1) {
                 methodParamType = method.parameters().get(0).type();
-            } else  {
+            } else {
                 throw new RuntimeException("@Verb methods must only have a single parameter: " + method.declaringClass().name() + "." + method.name());
             }
             recorder.registerVerb(HACK_MODULE_NAME, method.name(), recorderContext.classProxy(methodParamType.toString()), method.name(), recorderContext.classProxy(className));
             moduleBuilder
                     .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
-                            .setName(method.name())
-                            .setExport(exported)
-                            .setRequest(buildType(index.getComputingIndex(), methodParamType, dataElements, moduleBuilder))
-                            .setRequest(buildType(index.getComputingIndex(), method.returnType(), dataElements, moduleBuilder)))
+                                    .setName(method.name())
+                                    .setExport(exported)
+                                    .setRequest(buildType(index.getComputingIndex(), methodParamType, dataElements, moduleBuilder))
+                                    .setResponse(buildType(index.getComputingIndex(), method.returnType(), dataElements, moduleBuilder)))
                             .build());
         }
         additionalBeanBuildItemBuildProducer.produce(beans.build());
@@ -102,6 +105,17 @@ class FtlProcessor {
             moduleBuilder.build().writeTo(out);
         }
 
+        output = outputTargetBuildItem.getOutputDirectory().resolve("main");
+        try (var out = Files.newOutputStream(output)) {
+            out.write("""
+                    #!/bin/bash
+                    exec java -jar quarkus-app/quarkus-run.jar""".getBytes(StandardCharsets.UTF_8));
+        }
+        var perms = Files.getPosixFilePermissions(output);
+        EnumSet<PosixFilePermission> newPerms = EnumSet.copyOf(perms);
+        newPerms.add(PosixFilePermission.GROUP_EXECUTE);
+        newPerms.add(PosixFilePermission.OWNER_EXECUTE);
+        Files.setPosixFilePermissions(output, newPerms);
     }
 
     private Type buildType(IndexView index, org.jboss.jandex.Type type, Map<String, Ref> dataElements, Module.Builder moduleBuilder) {
@@ -109,7 +123,7 @@ class FtlProcessor {
             case PRIMITIVE -> {
                 var prim = type.asPrimitiveType();
                 switch (prim.primitive()) {
-                    case INT, LONG , BYTE, SHORT-> {
+                    case INT, LONG, BYTE, SHORT -> {
                         return Type.newBuilder().setInt(Int.newBuilder().build()).build();
                     }
                     case FLOAT, DOUBLE -> {
