@@ -22,7 +22,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, pa
 		Topic:   topic,
 		Payload: payload,
 	})
-	observability.PubSub.Published(ctx, module, topic, err == nil)
+	observability.PubSub.Published(ctx, module, topic, err)
 	if err != nil {
 		return dalerrs.TranslatePGError(err)
 	}
@@ -108,7 +108,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
 		}
 
-		observability.PubSub.SubscriberCalled(ctx, subscription.Topic.Payload.Name, subscriptionRef(subscription), subscriber.Sink)
+		observability.PubSub.SinkCalled(ctx, subscription.Topic.Payload.Name, subscriptionRef(subscription), subscriber.Sink)
 		successful++
 	}
 	return successful, nil
