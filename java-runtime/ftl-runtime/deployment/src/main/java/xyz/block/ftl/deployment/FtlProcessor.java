@@ -5,12 +5,11 @@ import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
-import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
-import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
-import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.*;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
+import io.quarkus.kubernetes.spi.ConfigurationSupplierBuildItem;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
@@ -37,7 +36,6 @@ class FtlProcessor {
 
     private static final String SCHEMA_OUT = "schema.pb";
     private static final String FEATURE = "ftl-java-runtime";
-    public static final String HACK_MODULE_NAME = "demomodule";
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -90,7 +88,7 @@ class FtlProcessor {
             } else {
                 throw new RuntimeException("@Verb methods must only have a single parameter: " + method.declaringClass().name() + "." + method.name());
             }
-            recorder.registerVerb(HACK_MODULE_NAME, method.name(), recorderContext.classProxy(methodParamType.toString()), method.name(), recorderContext.classProxy(className));
+            recorder.registerVerb(applicationInfoBuildItem.getName(), method.name(), recorderContext.classProxy(methodParamType.toString()), method.name(), recorderContext.classProxy(className));
             moduleBuilder
                     .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
                                     .setName(method.name())
@@ -109,7 +107,7 @@ class FtlProcessor {
         try (var out = Files.newOutputStream(output)) {
             out.write("""
                     #!/bin/bash
-                    exec java -jar quarkus-app/quarkus-run.jar""".getBytes(StandardCharsets.UTF_8));
+                    exec java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -jar quarkus-app/quarkus-run.jar""".getBytes(StandardCharsets.UTF_8));
         }
         var perms = Files.getPosixFilePermissions(output);
         EnumSet<PosixFilePermission> newPerms = EnumSet.copyOf(perms);
