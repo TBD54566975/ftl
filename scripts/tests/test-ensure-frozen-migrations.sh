@@ -59,7 +59,8 @@ function test() {
 
   # only clean up the schema dir
   rm "$schema_dir"/*
-  git checkout "$saved_commit" -- "$schema_dir"
+  git reset "$saved_commit"
+  git checkout "$schema_dir"
 
   if $did_fail; then
     echo "❌ FAIL $test_function"
