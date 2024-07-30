@@ -36,6 +36,16 @@ jobs:
         run: docker compose up -d --wait
       - name: Test README
         run: just test-readme
+  test-scripts:
+    name: Test Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Test Scripts
+        run: just test-scripts
   sql:
     name: SQL
     runs-on: ubuntu-latest
