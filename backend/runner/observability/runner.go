@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"strings"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-	"strings"
+
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 )
 
 const (

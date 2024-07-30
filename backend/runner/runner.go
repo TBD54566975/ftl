@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/TBD54566975/ftl/backend/runner/observability"
 	"math/rand"
 	"net/http"
 	"net/http/httputil"
@@ -30,6 +29,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/runner/observability"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
