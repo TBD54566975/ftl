@@ -2,7 +2,6 @@ package xyz.block.ftl.runtime;
 
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Singleton;
 import xyz.block.ftl.v1.*;
 
@@ -18,7 +17,9 @@ public class VerbHandler extends VerbServiceGrpc.VerbServiceImplBase {
 
     @Override
     public void call(CallRequest request, StreamObserver<CallResponse> responseObserver) {
-var response = registry.invoke(request);
+        var response = registry.invoke(request);
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
@@ -43,6 +44,7 @@ var response = registry.invoke(request);
 
     @Override
     public void ping(PingRequest request, StreamObserver<PingResponse> responseObserver) {
-        super.ping(request, responseObserver);
+        responseObserver.onNext(PingResponse.newBuilder().build());
+        responseObserver.onCompleted();
     }
 }
