@@ -17,11 +17,13 @@
 package xyz.block.ftl.java.runtime.it;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import xyz.block.ftl.Verb;
 
 @ApplicationScoped
 public class FtlJavaRuntimeResource {
     // add some rest methods here
 
+    @Verb
     public String hello() {
         return "Hello ftl-java-runtime";
     }

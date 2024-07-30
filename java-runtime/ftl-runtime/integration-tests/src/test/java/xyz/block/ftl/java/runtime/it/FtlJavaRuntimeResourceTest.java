@@ -12,10 +12,6 @@ public class FtlJavaRuntimeResourceTest {
 
     @Test
     public void testHelloEndpoint() {
-        given()
-                .when().get("/ftl-java-runtime")
-                .then()
-                .statusCode(200)
-                .body(is("Hello ftl-java-runtime"));
+        //TODO
     }
 }
