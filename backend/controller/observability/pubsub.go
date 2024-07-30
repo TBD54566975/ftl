@@ -36,6 +36,7 @@ func initPubSubMetrics() (*PubSubMetrics, error) {
 	counterName := fmt.Sprintf("%s.published", pubsubMeterName)
 	if result.published, err = result.meter.Int64Counter(
 		counterName,
+		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that an event is published to a topic")); err != nil {
 		errs = handleInitCounterError(errs, err, counterName)
 		result.published = noop.Int64Counter{}
@@ -44,6 +45,7 @@ func initPubSubMetrics() (*PubSubMetrics, error) {
 	counterName = fmt.Sprintf("%s.subscriber.called", pubsubMeterName)
 	if result.subscriberCalled, err = result.meter.Int64Counter(
 		counterName,
+		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that a pubsub event has been enqueued to asynchronously send to a subscriber")); err != nil {
 		errs = handleInitCounterError(errs, err, counterName)
 		result.subscriberCalled = noop.Int64Counter{}

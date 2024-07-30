@@ -76,7 +76,6 @@ type Querier interface {
 	// Sorting ensures that brand new events (that may not be ready for consumption)
 	// don't prevent older events from being consumed
 	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error)
-	GetTopicByKey(ctx context.Context, key model.TopicKey) (Topic, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
 	InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error
 	InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error
