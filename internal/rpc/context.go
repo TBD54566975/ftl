@@ -7,6 +7,7 @@ import (
 	"runtime/debug"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/mod/semver"
 
@@ -79,7 +80,12 @@ func WithRequestKey(ctx context.Context, key model.RequestKey) context.Context {
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
-	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), OtelInterceptor()}
+	interceptors := []connect.Interceptor{
+		PanicInterceptor(),
+		MetadataInterceptor(log.Debug),
+		connectOtelInterceptor(),
+		CustomOtelInterceptor(),
+	}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
@@ -90,11 +96,24 @@ func DefaultClientOptions(level log.Level) []connect.ClientOption {
 }
 
 func DefaultHandlerOptions() []connect.HandlerOption {
-	interceptors := []connect.Interceptor{PanicInterceptor(), MetadataInterceptor(log.Debug), OtelInterceptor()}
+	interceptors := []connect.Interceptor{
+		PanicInterceptor(),
+		MetadataInterceptor(log.Debug),
+		connectOtelInterceptor(),
+		CustomOtelInterceptor(),
+	}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
 	}
 	return []connect.HandlerOption{connect.WithInterceptors(interceptors...)}
+}
+
+func connectOtelInterceptor() connect.Interceptor {
+	otel, err := otelconnect.NewInterceptor(otelconnect.WithTrustRemote(), otelconnect.WithoutServerPeerAttributes())
+	if err != nil {
+		panic(err)
+	}
+	return otel
 }
 
 // PanicInterceptor intercepts panics and logs them.
