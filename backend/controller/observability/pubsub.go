@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/internal/observability"
 )
 
@@ -19,12 +20,14 @@ const (
 	pubsubTopicNameAttribute       = "ftl.pubsub.topic.name"
 	pubsubSubscriptionRefAttribute = "ftl.pubsub.subscription.ref"
 	pubsubSubscriberRefAttribute   = "ftl.pubsub.subscriber.sink.ref"
+	pubsubFailedOperationAttribute = "ftl.pubsub.propagation.failed_operation"
 )
 
 type PubSubMetrics struct {
-	meter            metric.Meter
-	published        metric.Int64Counter
-	subscriberCalled metric.Int64Counter
+	meter              metric.Meter
+	published          metric.Int64Counter
+	propagationFailure metric.Int64Counter
+	subscriberCalled   metric.Int64Counter
 }
 
 func initPubSubMetrics() (*PubSubMetrics, error) {
@@ -43,6 +46,15 @@ func initPubSubMetrics() (*PubSubMetrics, error) {
 		result.published = noop.Int64Counter{}
 	}
 
+	counterName = fmt.Sprintf("%s.propagation.failure", pubsubMeterName)
+	if result.propagationFailure, err = result.meter.Int64Counter(
+		counterName,
+		metric.WithUnit("1"),
+		metric.WithDescription("the number of times that subscriptions fail to progress")); err != nil {
+		errs = handleInitCounterError(errs, err, counterName)
+		result.propagationFailure = noop.Int64Counter{}
+	}
+
 	counterName = fmt.Sprintf("%s.subscriber.called", pubsubMeterName)
 	if result.subscriberCalled, err = result.meter.Int64Counter(
 		counterName,
@@ -59,16 +71,30 @@ func handleInitCounterError(errs error, err error, counterName string) error {
 	return errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counterName, err))
 }
 
-func (m *PubSubMetrics) Published(ctx context.Context, module, topic string) {
+func (m *PubSubMetrics) Published(ctx context.Context, module, topic string, succeeded bool) {
 	m.published.Add(ctx, 1, metric.WithAttributes(
 		attribute.String(observability.ModuleNameAttribute, module),
 		attribute.String(pubsubTopicNameAttribute, topic),
+		attribute.Bool(observability.StatusSucceededAttribute, succeeded),
 	))
+}
+
+func (m *PubSubMetrics) PropagationFailed(ctx context.Context, failedOp, topic string, subscription schema.RefKey, sink ftl.Option[schema.RefKey]) {
+	attrs := []attribute.KeyValue{
+		attribute.String(pubsubFailedOperationAttribute, failedOp),
+		attribute.String(pubsubTopicNameAttribute, topic),
+		attribute.String(pubsubSubscriptionRefAttribute, subscription.String()),
+	}
+
+	if sinkRef, ok := sink.Get(); ok {
+		attrs = append(attrs, attribute.String(pubsubSubscriberRefAttribute, sinkRef.String()))
+	}
+
+	m.propagationFailure.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
 func (m *PubSubMetrics) SubscriberCalled(ctx context.Context, topic string, subscription, sink schema.RefKey) {
 	m.subscriberCalled.Add(ctx, 1, metric.WithAttributes(
-		attribute.String(observability.ModuleNameAttribute, sink.Module),
 		attribute.String(pubsubTopicNameAttribute, topic),
 		attribute.String(pubsubSubscriptionRefAttribute, subscription.String()),
 		attribute.String(pubsubSubscriberRefAttribute, sink.String()),
