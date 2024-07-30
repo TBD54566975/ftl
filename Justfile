@@ -147,6 +147,8 @@ test-backend:
 test-scripts:
   GIT_COMMITTER_NAME="CI" \
     GIT_COMMITTER_EMAIL="no-reply@tbd.email" \
+    GIT_AUTHOR_NAME="CI" \
+    GIT_AUTHOR_EMAIL="no-reply@tbd.email" \
     scripts/tests/test-ensure-frozen-migrations.sh
 
 # Lint the frontend
