@@ -7,21 +7,21 @@ import (
 	"github.com/swaggest/jsonschema-go"
 )
 
-// DataToJSONSchema converts the schema for a Data object to a JSON Schema.
+// RequestResponseToJSONSchema converts the schema for a Verb request or response object to a JSON Schema.
 //
 // It takes in the full schema in order to resolve and define references.
-func DataToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, error) {
-	data, err := sch.ResolveMonomorphised(&ref)
+func RequestResponseToJSONSchema(sch *Schema, ref Ref) (*jsonschema.Schema, error) {
+	symbol, err := sch.ResolveRequestResponseType(&ref)
 	if err != nil {
 		return nil, err
 	}
-	if data == nil {
-		return nil, fmt.Errorf("unknown data type %s", ref)
+	if symbol == nil {
+		return nil, fmt.Errorf("unknown request/response reference %s", ref)
 	}
 
 	// Encode root, and collect all data types reachable from the root.
 	refs := map[RefKey]*Ref{}
-	root := nodeToJSSchema(data, refs)
+	root := nodeToJSSchema(symbol, refs)
 	if len(refs) == 0 {
 		return root, nil
 	}
