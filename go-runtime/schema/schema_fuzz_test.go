@@ -2,6 +2,7 @@ package schema
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,7 +10,12 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/otiai10/copy"
+
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/assert/v2"
 )
 
@@ -240,18 +246,34 @@ func FuzzExtract(f *testing.F) {
 	}
 	typenames := generateSymbolTypeStrings(allSymbols)
 
+	tmpDir, err := os.MkdirTemp("", "fuzz_test")
+	assert.NoError(f, err)
+	defer os.RemoveAll(tmpDir)
+
+	err = copy.Copy("testdata/fuzz", tmpDir)
+	assert.NoError(f, err)
+
+	first := true
 	f.Fuzz(func(t *testing.T, symbolType string) {
 		code := generateSourceCode(symbolType)
 
-		moduleDir := "testdata/test"
-		abs, err := filepath.Abs(moduleDir)
-		assert.NoError(t, err)
-		filePath := filepath.Join(abs, "test.go")
+		filePath := filepath.Join(tmpDir, "fuzz.go")
 		err = os.WriteFile(filePath, []byte(code), 0600)
 		assert.NoError(t, err)
-		defer os.Remove(abs)
 
-		r, err := Extract(abs)
+		if first {
+			ctx := log.ContextWithNewDefaultLogger(context.Background())
+			rootDir, ok := internal.GitRoot("").Get()
+			assert.True(f, ok)
+			err = exec.Command(ctx, log.Debug, tmpDir, "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+rootDir).RunBuffered(ctx)
+			assert.NoError(f, err, "go mod edit failed")
+			err = exec.Command(ctx, log.Debug, tmpDir, "go", "mod", "tidy").RunBuffered(ctx)
+			assert.NoError(t, err, "go mod tidy failed")
+			// don't run this for all the permutations
+			first = false
+		}
+
+		r, err := Extract(tmpDir)
 		assert.NoError(t, err)
 		expected := tmpl(symbolType, typenames[symbolType])
 
