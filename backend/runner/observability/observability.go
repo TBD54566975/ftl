@@ -5,15 +5,15 @@ import (
 )
 
 var (
-	RUNNER *FSMMetrics
+	Runner *RunnerMetrics
 )
 
 func init() {
 	var err error
 
-	FSM, err = initFSMMetrics()
+	Runner, err = initRunnerMetrics()
 
 	if err != nil {
-		panic(fmt.Errorf("could not initialize controller metrics: %w\n", err))
+		panic(fmt.Errorf("could not initialize runner metrics: %w", err))
 	}
 }

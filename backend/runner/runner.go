@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/backend/runner/observability"
 	"math/rand"
 	"net/http"
 	"net/http/httputil"
@@ -60,6 +61,7 @@ func Start(ctx context.Context, config Config) error {
 	}
 	hostname, err := os.Hostname()
 	if err != nil {
+		observability.Runner.StartupFailed(ctx)
 		return fmt.Errorf("failed to get hostname: %w", err)
 	}
 	pid := os.Getpid()
@@ -72,6 +74,7 @@ func Start(ctx context.Context, config Config) error {
 
 	err = manageDeploymentDirectory(logger, config)
 	if err != nil {
+		observability.Runner.StartupFailed(ctx)
 		return err
 	}
 
@@ -92,6 +95,7 @@ func Start(ctx context.Context, config Config) error {
 		"languages": slices.Map(config.Language, func(t string) any { return t }),
 	})
 	if err != nil {
+		observability.Runner.StartupFailed(ctx)
 		return fmt.Errorf("failed to marshal labels: %w", err)
 	}
 
@@ -420,6 +424,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	})
 	if err != nil {
 		s.registrationFailure.Store(optional.Some(err))
+		observability.Runner.RegistrationFailure(ctx, deploymentKey, state)
 		return fmt.Errorf("failed to register with Controller: %w", err)
 	}
 	s.registrationFailure.Store(optional.None[error]())
@@ -427,10 +432,12 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	// Wait for the next heartbeat.
 	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
 	logger.Tracef("Registered with Controller, next heartbeat in %s", delay)
+	observability.Runner.Registered(ctx, deploymentKey, state)
 	select {
 	case <-ctx.Done():
 		err = context.Cause(ctx)
 		s.registrationFailure.Store(optional.Some(err))
+		observability.Runner.RegistrationFailure(ctx, deploymentKey, state)
 		return err
 
 	case <-s.forceUpdate:
