@@ -16,10 +16,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-resteasy-reactive</artifactId>
-        </dependency>
-        <dependency>
             <groupId>xyz.block</groupId>
             <artifactId>ftl-java-runtime</artifactId>
             <version>${project.version}</version>

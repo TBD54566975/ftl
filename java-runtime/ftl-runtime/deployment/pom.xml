@@ -16,6 +16,14 @@
             <artifactId>quarkus-arc-deployment</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-grpc-deployment</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-jackson-deployment</artifactId>
+        </dependency>
+        <dependency>
             <groupId>xyz.block</groupId>
             <artifactId>ftl-java-runtime</artifactId>
             <version>${project.version}</version>

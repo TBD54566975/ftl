@@ -17,15 +17,11 @@
 package xyz.block.ftl.java.runtime.it;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
 
-@Path("/ftl-java-runtime")
 @ApplicationScoped
 public class FtlJavaRuntimeResource {
     // add some rest methods here
 
-    @GET
     public String hello() {
         return "Hello ftl-java-runtime";
     }
