@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
@@ -12,7 +14,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/types/optional"
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, payload []byte) error {
