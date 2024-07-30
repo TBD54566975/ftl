@@ -193,6 +193,8 @@ func (i *otelInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 			attributes:        attributes,
 			receiveSizeMetric: instruments.responseSize,
 			sendSizeMetric:    instruments.requestSize,
+			receiveSizes:      []int64{},
+			sendSizes:         []int64{},
 		}
 
 		return &streamingClientInterceptor{ // nolint:spancheck
@@ -249,6 +251,8 @@ func (i *otelInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 			attributes:        attributes,
 			receiveSizeMetric: instruments.requestSize,
 			sendSizeMetric:    instruments.responseSize,
+			receiveSizes:      []int64{},
+			sendSizes:         []int64{},
 		}
 		streamingHandler := &streamingHandlerInterceptor{
 			StreamingHandlerConn: conn,
@@ -299,23 +303,23 @@ type instrumentation struct {
 }
 
 func createInstruments(meter metric.Meter) instrumentation {
-	duration, err := meter.Int64Histogram(otelRPCDurationMetricName, metric.WithUnit("ms"))
+	duration, err := meter.Int64Histogram(otelRPCDurationMetricName, metric.WithUnit("ms"), metric.WithDescription("Duration of the RPC call"))
 	if err != nil {
 		panic(fmt.Errorf("failed to create duration metric: %w", err))
 	}
-	requestSize, err := meter.Int64Histogram(otelRPCRequestSizeMetricName, metric.WithUnit("By"))
+	requestSize, err := meter.Int64Histogram(otelRPCRequestSizeMetricName, metric.WithUnit("By"), metric.WithDescription("Size of the request payload"))
 	if err != nil {
 		panic(fmt.Errorf("failed to create request size metric: %w", err))
 	}
-	responseSize, err := meter.Int64Histogram(otelRPCResponseSizeMetricName, metric.WithUnit("By"))
+	responseSize, err := meter.Int64Histogram(otelRPCResponseSizeMetricName, metric.WithUnit("By"), metric.WithDescription("Size of the response payload"))
 	if err != nil {
 		panic(fmt.Errorf("failed to create response size metric: %w", err))
 	}
-	requestsPerRPC, err := meter.Int64Histogram(otelRPCRequestsPerRPCMetricName, metric.WithUnit("1"))
+	requestsPerRPC, err := meter.Int64Histogram(otelRPCRequestsPerRPCMetricName, metric.WithUnit("1"), metric.WithDescription("Number of requests made in the RPC call"))
 	if err != nil {
 		panic(fmt.Errorf("failed to create requests per rpc metric: %w", err))
 	}
-	responsesPerRPC, err := meter.Int64Histogram(otelRPCResponsesPerRPCMetricName, metric.WithUnit("1"))
+	responsesPerRPC, err := meter.Int64Histogram(otelRPCResponsesPerRPCMetricName, metric.WithUnit("1"), metric.WithDescription("Number of responses received in the RPC call"))
 	if err != nil {
 		panic(fmt.Errorf("failed to create responses per rpc metric: %w", err))
 	}
