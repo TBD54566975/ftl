@@ -33,7 +33,7 @@ const (
 	otelRPCResponsesPerRPCMetricName = "ftl.rpc.response.count_per_rpc"
 )
 
-func OtelInterceptor() connect.Interceptor {
+func CustomOtelInterceptor() connect.Interceptor {
 	return &otelInterceptor{}
 }
 

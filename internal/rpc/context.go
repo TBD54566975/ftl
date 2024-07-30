@@ -84,7 +84,7 @@ func DefaultClientOptions(level log.Level) []connect.ClientOption {
 		PanicInterceptor(),
 		MetadataInterceptor(log.Debug),
 		connectOtelInterceptor(),
-		OtelInterceptor(),
+		CustomOtelInterceptor(),
 	}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
@@ -100,7 +100,7 @@ func DefaultHandlerOptions() []connect.HandlerOption {
 		PanicInterceptor(),
 		MetadataInterceptor(log.Debug),
 		connectOtelInterceptor(),
-		OtelInterceptor(),
+		CustomOtelInterceptor(),
 	}
 	if ftl.Version != "dev" {
 		interceptors = append(interceptors, versionInterceptor{})
