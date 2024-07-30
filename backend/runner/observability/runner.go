@@ -33,7 +33,7 @@ func initRunnerMetrics() (*RunnerMetrics, error) {
 
 	result.meter = otel.Meter(runnerMeterName)
 
-	counter := fmt.Sprintf("%s.startup.Failures", runnerMeterName)
+	counter := fmt.Sprintf("%s.startup.failures", runnerMeterName)
 	if result.startupFailures, err = result.meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of runner startup failures")); err != nil {
