@@ -99,9 +99,8 @@ jobs:
       # Too annoying to disable individual warnings
       # - name: staticcheck
       #   run: staticcheck ./...
-      - name: shellcheck
-        shell: bash
-        run: shellcheck -f gcc -e SC2016 scripts/* | to-annotation
+      - name: lint-scripts
+        run: just lint-scripts
   proto-breaking:
     name: Proto Breaking Change Check
     runs-on: ubuntu-latest
