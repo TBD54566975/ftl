@@ -38,6 +38,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
+	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
@@ -148,7 +149,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	sm := cf.SecretsFromContext(ctx)
 
 	admin := admin.NewAdminService(cm, sm, svc.dal)
-	console := NewConsoleService(svc.dal)
+	console := console.NewService(svc.dal)
 
 	ingressHandler := http.Handler(svc)
 	if len(config.AllowOrigins) > 0 {
