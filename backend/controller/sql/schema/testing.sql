@@ -1,0 +1,1 @@
+CREATE TABLE testing (id SERIAL PRIMARY KEY);
