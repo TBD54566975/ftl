@@ -6,6 +6,8 @@ pre-push:
   commands:
     test-backend:
       run: just test-backend
+    test-scripts:
+      run: just test-scripts
     lint-backend:
       run: just lint-backend
     build-frontend:
