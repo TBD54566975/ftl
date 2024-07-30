@@ -25,7 +25,6 @@ const (
 	pubsubSinkRefAttr            = "ftl.pubsub.sink.ref"
 	pubsubSinkModuleAttr         = "ftl.pubsub.sink.module.name"
 	pubsubFailedOperationAttr    = "ftl.pubsub.propagation.failed_operation"
-	pubsubFailedToPublishErrAttr = "ftl.pubsub.publish.error.message"
 )
 
 type PubSubMetrics struct {
@@ -81,10 +80,6 @@ func (m *PubSubMetrics) Published(ctx context.Context, module, topic string, may
 		attribute.String(observability.ModuleNameAttribute, module),
 		attribute.String(pubsubTopicNameAttr, topic),
 		attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil),
-	}
-
-	if maybeErr != nil {
-		attrs = append(attrs, attribute.String(pubsubFailedToPublishErrAttr, maybeErr.Error()))
 	}
 
 	m.published.Add(ctx, 1, metric.WithAttributes(attrs...))
