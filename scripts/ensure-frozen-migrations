@@ -29,57 +29,51 @@ fail() {
 main() {
     local sql_dir="backend/controller/sql/schema"
     local changed_files
-    local merge_base
+    local all_old_files
+    local new_files=( )
 
-    # Find the merge base commit
-    merge_base=$(git merge-base HEAD origin/main)
+    head_sha=$(git merge-base HEAD origin/main)
+    changed_files=$(git diff --name-only "$head_sha" -- "$sql_dir"/*.sql)
+    all_old_files=$(git diff --name-only origin/main -- "$sql_dir")
 
-    # Show the diff of the SQL files compared to the merge base
-    git diff --color=always "$merge_base" -- "$sql_dir"/*.sql | cat
+    # Show the diff of the SQL files compared to HEAD to the user
+    git diff --color=always "$head_sha" -- "$sql_dir"/*.sql | cat
 
-    # Get list of changed SQL files compared to the merge base
-    changed_files=$(git diff --name-only "$merge_base" -- "$sql_dir"/*.sql)
+    # Track new files added or changed
     if [ -z "$changed_files" ]; then
-        echo "✅ No schema changes detected"
-        exit 0
+        echo "✅ No schema changes detected for existing migration files"
+    else
+        while IFS= read -r file; do
+            echo "--------- Checking for new $file"
+            if [ ! -f "$file" ]; then
+                echo "$file no longer exists!"
+                exit 1
+            fi
+
+            # Does the file exist in the merge base?
+            if ! git show "$head_sha:$file" &> /dev/null; then
+                echo "✅ New: $file"
+                new_files+=( "$file" )
+                continue
+            fi
+
+            if compare_sql_files "$file" <(git show "$head_sha:$file"); then
+                : # Do nothing if files are the same
+            else
+                echo "❌ Migration files changes detected"
+                show_diff "$file" <(git show "$head_sha:$file")
+                fail
+            fi
+        done <<< "$changed_files"
     fi
-
-    # Track new files added
-    local new_files=""
-    while IFS= read -r file; do
-        if [ ! -f "$file" ]; then
-            echo "$file no longer exists!"
-            exit 1
-        fi
-
-        # Does the file exist in the merge base?
-        if ! git show "$merge_base:$file" &> /dev/null; then
-            echo "✅ New: $file"
-            new_files="$new_files $file"
-            continue
-        fi
-
-        if compare_sql_files "$file" <(git show "$merge_base:$file"); then
-            : # Do nothing if files are the same
-        else
-            echo "❌ Migration files changes detected"
-            show_diff "$file" <(git show "$merge_base:$file")
-            fail
-        fi
-    done <<< "$changed_files"
 
     # We should also check if there were any deleted files, ignoring new files
     while IFS= read -r file; do
-        # A new file won't exist in the merge base, so ignore them.
-        if [[ $new_files == *"$file"* ]]; then
-            continue
+        if [ ! -f "$file" ]; then
+            echo "❌ $file existed in origin/main but has been deleted in HEAD"
+            exit 1
         fi
-
-        if ! git show "$merge_base:$file" &> /dev/null; then
-            echo "🔥 Deleted: $file"
-            fail
-        fi
-    done < <(git diff --name-only "$merge_base" -- "$sql_dir"/*.sql)
+    done <<< "$all_old_files"
 
     echo "✅ No schema changes detected for existing migration files"
 }
