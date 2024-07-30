@@ -44,13 +44,12 @@ main() {
         echo "✅ No schema changes detected for existing migration files"
     else
         while IFS= read -r file; do
-            echo "--------- Checking for new $file"
             if [ ! -f "$file" ]; then
                 echo "$file no longer exists!"
                 exit 1
             fi
 
-            # Does the file exist in the merge base?
+            # Does the file exist in HEAD?
             if ! git show "$head_sha:$file" &> /dev/null; then
                 echo "✅ New: $file"
                 new_files+=( "$file" )
