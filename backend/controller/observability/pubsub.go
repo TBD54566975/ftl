@@ -16,11 +16,13 @@ import (
 )
 
 const (
-	pubsubMeterName                = "ftl.pubsub"
-	pubsubTopicNameAttribute       = "ftl.pubsub.topic.name"
-	pubsubSubscriptionRefAttribute = "ftl.pubsub.subscription.ref"
-	pubsubSubscriberRefAttribute   = "ftl.pubsub.subscriber.sink.ref"
-	pubsubFailedOperationAttribute = "ftl.pubsub.propagation.failed_operation"
+	pubsubMeterName              = "ftl.pubsub"
+	pubsubTopicNameAttr          = "ftl.pubsub.topic.name"
+	pubsubSubscriptionRefAttr    = "ftl.pubsub.subscription.ref"
+	pubsubSubscriptionModuleAttr = "ftl.pubsub.subscription.module.name"
+	pubsubSubscriberRefAttr      = "ftl.pubsub.subscriber.sink.ref"
+	pubsubSubscriberModuleAttr   = "ftl.pubsub.subscriber.sink.module.name"
+	pubsubFailedOperationAttr    = "ftl.pubsub.propagation.failed_operation"
 )
 
 type PubSubMetrics struct {
@@ -74,20 +76,22 @@ func handleInitCounterError(errs error, err error, counterName string) error {
 func (m *PubSubMetrics) Published(ctx context.Context, module, topic string, succeeded bool) {
 	m.published.Add(ctx, 1, metric.WithAttributes(
 		attribute.String(observability.ModuleNameAttribute, module),
-		attribute.String(pubsubTopicNameAttribute, topic),
+		attribute.String(pubsubTopicNameAttr, topic),
 		attribute.Bool(observability.StatusSucceededAttribute, succeeded),
 	))
 }
 
 func (m *PubSubMetrics) PropagationFailed(ctx context.Context, failedOp, topic string, subscription schema.RefKey, sink ftl.Option[schema.RefKey]) {
 	attrs := []attribute.KeyValue{
-		attribute.String(pubsubFailedOperationAttribute, failedOp),
-		attribute.String(pubsubTopicNameAttribute, topic),
-		attribute.String(pubsubSubscriptionRefAttribute, subscription.String()),
+		attribute.String(pubsubFailedOperationAttr, failedOp),
+		attribute.String(pubsubTopicNameAttr, topic),
+		attribute.String(pubsubSubscriptionRefAttr, subscription.String()),
+		attribute.String(pubsubSubscriptionModuleAttr, subscription.Module),
 	}
 
 	if sinkRef, ok := sink.Get(); ok {
-		attrs = append(attrs, attribute.String(pubsubSubscriberRefAttribute, sinkRef.String()))
+		attrs = append(attrs, attribute.String(pubsubSubscriberRefAttr, sinkRef.String()))
+		attrs = append(attrs, attribute.String(pubsubSubscriberModuleAttr, sinkRef.Module))
 	}
 
 	m.propagationFailure.Add(ctx, 1, metric.WithAttributes(attrs...))
@@ -95,8 +99,10 @@ func (m *PubSubMetrics) PropagationFailed(ctx context.Context, failedOp, topic s
 
 func (m *PubSubMetrics) SubscriberCalled(ctx context.Context, topic string, subscription, sink schema.RefKey) {
 	m.subscriberCalled.Add(ctx, 1, metric.WithAttributes(
-		attribute.String(pubsubTopicNameAttribute, topic),
-		attribute.String(pubsubSubscriptionRefAttribute, subscription.String()),
-		attribute.String(pubsubSubscriberRefAttribute, sink.String()),
+		attribute.String(pubsubTopicNameAttr, topic),
+		attribute.String(pubsubSubscriptionRefAttr, subscription.String()),
+		attribute.String(pubsubSubscriptionModuleAttr, subscription.Module),
+		attribute.String(pubsubSubscriberRefAttr, sink.String()),
+		attribute.String(pubsubSubscriberModuleAttr, sink.Module),
 	))
 }
