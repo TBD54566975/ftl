@@ -731,3 +731,35 @@ UPDATE topic_subscriptions
 SET state = 'idle'
 WHERE name = @name::TEXT
       AND module_id = (SELECT id FROM module);
+
+-- name: GetSubscription :one
+WITH module AS (
+  SELECT id
+  FROM modules
+  WHERE name = $2::TEXT
+)
+SELECT *
+FROM topic_subscriptions
+WHERE name = $1::TEXT
+      AND module_id = (SELECT id FROM module);
+
+-- name: SetSubscriptionCursor :exec
+WITH event AS (
+  SELECT id, created_at, key, topic_id, payload
+  FROM topic_events
+  WHERE "key" = $2::topic_event_key
+)
+UPDATE topic_subscriptions
+SET state = 'idle',
+    cursor = (SELECT id FROM event)
+WHERE key = $1::subscription_key;
+
+-- name: GetTopic :one
+SELECT *
+FROM topics
+WHERE id = $1::BIGINT;
+
+-- name: GetTopicEvent :one
+SELECT *
+FROM topic_events
+WHERE id = $1::BIGINT;

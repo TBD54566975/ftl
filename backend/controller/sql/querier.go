@@ -72,10 +72,13 @@ type Querier interface {
 	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
 	GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error)
+	GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error)
 	// Results may not be ready to be scheduled yet due to event consumption delay
 	// Sorting ensures that brand new events (that may not be ready for consumption)
 	// don't prevent older events from being consumed
 	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error)
+	GetTopic(ctx context.Context, dollar_1 int64) (Topic, error)
+	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)
 	InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error
 	InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error
 	InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error
@@ -93,6 +96,7 @@ type Querier interface {
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
+	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
 	// Start a new FSM transition, populating the destination state and async call ID.
 	//
 	// "key" is the unique identifier for the FSM execution.
