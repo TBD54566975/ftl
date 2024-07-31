@@ -3,11 +3,13 @@ package observability
 import (
 	"context"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/observability"
+
 	"github.com/alecthomas/types/optional"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+
+	"github.com/TBD54566975/ftl/internal/observability"
 )
 
 const (

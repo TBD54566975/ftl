@@ -3,6 +3,7 @@ package observability
 import (
 	"errors"
 	"fmt"
+
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 )
