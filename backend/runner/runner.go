@@ -424,7 +424,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	})
 	if err != nil {
 		s.registrationFailure.Store(optional.Some(err))
-		observability.Runner.RegistrationFailure(ctx, deploymentKey, state)
+		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey), state)
 		return fmt.Errorf("failed to register with Controller: %w", err)
 	}
 	s.registrationFailure.Store(optional.None[error]())
@@ -432,12 +432,12 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	// Wait for the next heartbeat.
 	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
 	logger.Tracef("Registered with Controller, next heartbeat in %s", delay)
-	observability.Runner.Registered(ctx, deploymentKey, state)
+	observability.Runner.Registered(ctx, optional.Ptr(deploymentKey), state)
 	select {
 	case <-ctx.Done():
 		err = context.Cause(ctx)
 		s.registrationFailure.Store(optional.Some(err))
-		observability.Runner.RegistrationFailure(ctx, deploymentKey, state)
+		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey), state)
 		return err
 
 	case <-s.forceUpdate:
