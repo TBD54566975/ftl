@@ -20,6 +20,7 @@ import (
 const (
 	pubsubMeterName              = "ftl.pubsub"
 	pubsubTopicNameAttr          = "ftl.pubsub.topic.name"
+	pubsubCallerVerbNameAttr     = "ftl.pubsub.publish.caller.verb.name"
 	pubsubSubscriptionRefAttr    = "ftl.pubsub.subscription.ref"
 	pubsubSubscriptionModuleAttr = "ftl.pubsub.subscription.module.name"
 	pubsubSinkRefAttr            = "ftl.pubsub.sink.ref"
@@ -75,10 +76,11 @@ func handleInitCounterError(errs error, err error, counterName string) error {
 	return errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counterName, err))
 }
 
-func (m *PubSubMetrics) Published(ctx context.Context, module, topic string, maybeErr error) {
+func (m *PubSubMetrics) Published(ctx context.Context, module, topic, caller string, maybeErr error) {
 	attrs := []attribute.KeyValue{
 		attribute.String(observability.ModuleNameAttribute, module),
 		attribute.String(pubsubTopicNameAttr, topic),
+		attribute.String(pubsubCallerVerbNameAttr, caller),
 		attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil),
 	}
 
