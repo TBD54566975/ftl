@@ -3,6 +3,7 @@ package observability
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 var (
@@ -25,4 +26,8 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("could not initialize controller metrics: %w", errs))
 	}
+}
+
+func timeSinceMS(start time.Time) int64 {
+	return time.Since(start).Milliseconds()
 }
