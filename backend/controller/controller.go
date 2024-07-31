@@ -1377,7 +1377,6 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		}
 	})
 	if err != nil {
-		// failed
 		observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
