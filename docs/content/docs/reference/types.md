@@ -67,14 +67,21 @@ A type alias is an alternate name for an existing type. It can be declared like 
 //ftl:typealias
 type Alias Target
 ```
+or
+```go
+//ftl:typealias
+type Alias = Target
+```
 
 eg.
 
 ```go
 //ftl:typealias
 type UserID string
+
+//ftl:typealias
+type UserToken = string
 ```
 
 ---
 
-[^1]: Note that until [type widening](https://github.com/TBD54566975/ftl/issues/1296) is implemented, external types are not supported.

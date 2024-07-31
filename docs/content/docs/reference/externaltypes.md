@@ -20,6 +20,9 @@ To use an external type in your FTL module schema, declare a type alias over the
 ```go
 //ftl:typealias
 type FtlType external.OtherType
+
+//ftl:typealias
+type FtlType2 = external.OtherType
 ```
 
 The external type is widened to `Any` in the FTL schema, and the corresponding type alias will include metadata 
@@ -31,7 +34,7 @@ typealias FtlType Any
 ```
 
 Users can achieve functionally equivalent behavior to using the external type directly by using the declared 
-alias (`FtlType`) throughout their code. Direct usage of the external type in schema declarations is not supported; 
+alias (`FtlType`) in place of the external type in any other schema declarations (e.g. as the type of a Verb request). Direct usage of the external type in schema declarations is not supported; 
 instead, the type alias must be used.
 
 FTL will automatically serialize and deserialize the external type to the strong type indicated by the mapping.
