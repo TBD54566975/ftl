@@ -14,14 +14,22 @@ import (
 
 // Module returns the FTL module currently being executed.
 func Module() string {
+	return CallingVerb().Module
+}
+
+func CallingVerb() schema.RefKey {
 	// Look through the stack for the outermost FTL module.
 	pcs := make([]uintptr, 1024)
 	pcs = pcs[:runtime.Callers(1, pcs)]
 	var module string
+	var verb string
 	for _, pc := range pcs {
-		pkg := strings.Split(runtime.FuncForPC(pc).Name(), ".")[0]
+		splitName := strings.Split(runtime.FuncForPC(pc).Name(), ".")
+		pkg := splitName[0]
+		fnName := splitName[1]
 		if strings.HasPrefix(pkg, "ftl/") {
 			module = strings.Split(pkg, "/")[1]
+			verb = fnName
 		}
 	}
 	if module == "" {
@@ -29,9 +37,9 @@ func Module() string {
 		panic("must be called from an FTL module")
 	}
 	if strings.HasSuffix(module, "_test") {
-		return module[:len(module)-len("_test")]
+		return schema.RefKey{Module: module[:len(module)-len("_test")], Name: verb}
 	}
-	return module
+	return schema.RefKey{Module: module, Name: verb}
 }
 
 // TypeRef returns the Ref for a Go type.

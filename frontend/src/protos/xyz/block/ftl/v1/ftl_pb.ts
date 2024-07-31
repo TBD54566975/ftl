@@ -826,6 +826,13 @@ export class PublishEventRequest extends Message<PublishEventRequest> {
    */
   body = new Uint8Array(0);
 
+  /**
+   * Only verb name is included because this verb will be in the same module as topic
+   *
+   * @generated from field: string caller = 3;
+   */
+  caller = "";
+
   constructor(data?: PartialMessage<PublishEventRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -836,6 +843,7 @@ export class PublishEventRequest extends Message<PublishEventRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "topic", kind: "message", T: Ref },
     { no: 2, name: "body", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 3, name: "caller", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PublishEventRequest {

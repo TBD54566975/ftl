@@ -16,14 +16,14 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic string, payload []byte) error {
+func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
 	err := d.db.PublishEventForTopic(ctx, sql.PublishEventForTopicParams{
 		Key:     model.NewTopicEventKey(module, topic),
 		Module:  module,
 		Topic:   topic,
 		Payload: payload,
 	})
-	observability.PubSub.Published(ctx, module, topic, err)
+	observability.PubSub.Published(ctx, module, topic, caller, err)
 	if err != nil {
 		return dalerrs.TranslatePGError(err)
 	}
