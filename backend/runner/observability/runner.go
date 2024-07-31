@@ -77,7 +77,7 @@ func (m *RunnerMetrics) StartupFailed(ctx context.Context) {
 	m.startupFailures.Add(ctx, 1)
 }
 
-//nolint:unparam to suppress noop.Int64Counter{} false complaint
+//nolint:unparam
 func handleInitErrors(counter string, err error, errs error) (metric.Int64Counter, error) {
 	return noop.Int64Counter{}, errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
 }
