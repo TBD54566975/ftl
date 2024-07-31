@@ -337,6 +337,7 @@ CREATE TABLE topic_events (
 
     "key" topic_event_key UNIQUE NOT NULL,
     topic_id BIGINT NOT NULL REFERENCES topics(id) ON DELETE CASCADE,
+    caller TEXT NOT NULL,
     payload BYTEA NOT NULL
 );
 

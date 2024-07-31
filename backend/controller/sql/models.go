@@ -522,6 +522,7 @@ type TopicEvent struct {
 	CreatedAt time.Time
 	Key       model.TopicEventKey
 	TopicID   int64
+	Caller    string
 	Payload   []byte
 }
 

@@ -103,7 +103,7 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-  SELECT id, created_at, key, topic_id, payload
+  SELECT id, created_at, key, topic_id, caller, payload
   FROM topic_events
   WHERE "key" = $2::topic_event_key
 )
@@ -1100,6 +1100,7 @@ WITH cursor AS (
 SELECT events."key" as event,
         events.payload,
         events.created_at,
+        events.caller,
         NOW() - events.created_at >= $1::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
@@ -1113,6 +1114,7 @@ type GetNextEventForSubscriptionRow struct {
 	Event     optional.Option[model.TopicEventKey]
 	Payload   []byte
 	CreatedAt optional.Option[time.Time]
+	Caller    optional.Option[string]
 	Ready     bool
 }
 
@@ -1123,6 +1125,7 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 		&i.Event,
 		&i.Payload,
 		&i.CreatedAt,
+		&i.Caller,
 		&i.Ready,
 	)
 	return i, err
@@ -1511,7 +1514,7 @@ func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
 }
 
 const getTopicEvent = `-- name: GetTopicEvent :one
-SELECT id, created_at, key, topic_id, payload
+SELECT id, created_at, key, topic_id, caller, payload
 FROM topic_events
 WHERE id = $1::BIGINT
 `
@@ -1524,6 +1527,7 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 		&i.CreatedAt,
 		&i.Key,
 		&i.TopicID,
+		&i.Caller,
 		&i.Payload,
 	)
 	return i, err
@@ -1869,6 +1873,7 @@ const publishEventForTopic = `-- name: PublishEventForTopic :exec
 INSERT INTO topic_events (
     "key",
     topic_id,
+    caller,
     payload
   )
 VALUES (
@@ -1880,7 +1885,8 @@ VALUES (
     WHERE modules.name = $2::TEXT
       AND topics.name = $3::TEXT
   ),
-  $4
+  $4,
+  $5
 )
 `
 
@@ -1888,6 +1894,7 @@ type PublishEventForTopicParams struct {
 	Key     model.TopicEventKey
 	Module  string
 	Topic   string
+	Caller  string
 	Payload []byte
 }
 
@@ -1896,6 +1903,7 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 		arg.Key,
 		arg.Module,
 		arg.Topic,
+		arg.Caller,
 		arg.Payload,
 	)
 	return err
