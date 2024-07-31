@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -24,10 +25,11 @@ const (
 )
 
 type AsyncCallMetrics struct {
-	meter     metric.Meter
-	acquired  metric.Int64Counter
-	executed  metric.Int64Counter
-	completed metric.Int64Counter
+	meter        metric.Meter
+	acquired     metric.Int64Counter
+	executed     metric.Int64Counter
+	completed    metric.Int64Counter
+	msToComplete metric.Int64Histogram
 }
 
 func initAsyncCallMetrics() (*AsyncCallMetrics, error) {
@@ -64,11 +66,22 @@ func initAsyncCallMetrics() (*AsyncCallMetrics, error) {
 		result.completed = noop.Int64Counter{}
 	}
 
+	counterName = fmt.Sprintf("%s.ms_to_complete", asyncCallMeterName)
+	if result.msToComplete, err = result.meter.Int64Histogram(
+		counterName,
+		metric.WithUnit("ms"),
+		metric.WithDescription("duration in ms to complete an async call, from the earliest time it was scheduled to execute")); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("%q histogram init failed; falling back to noop: %w", counterName, err))
+		result.msToComplete = noop.Int64Histogram{}
+	}
+
 	return result, errs
 }
 
 func (m *AsyncCallMetrics) Acquired(ctx context.Context, verb schema.RefKey, origin string, scheduledAt time.Time, maybeErr error) {
-	m.acquired.Add(ctx, 1, metric.WithAttributes(extractAsyncCallAndMaybeErrAttrs(verb, origin, scheduledAt, maybeErr)...))
+	attrs := extractAsyncCallAttrs(verb, origin, scheduledAt)
+	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+	m.acquired.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
 func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, origin string, scheduledAt time.Time, maybeFailureMode optional.Option[string]) {
@@ -84,19 +97,28 @@ func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, ori
 }
 
 func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, origin string, scheduledAt time.Time, maybeErr error) {
-	m.completed.Add(ctx, 1, metric.WithAttributes(extractAsyncCallAndMaybeErrAttrs(verb, origin, scheduledAt, maybeErr)...))
-}
+	msToComplete := timeSince(scheduledAt)
 
-func extractAsyncCallAndMaybeErrAttrs(verb schema.RefKey, origin string, scheduledAt time.Time, maybeErr error) []attribute.KeyValue {
-	attrs := extractAsyncCallAttrs(verb, origin, scheduledAt)
-	return append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+	attrs := extractRefAttrs(verb, origin)
+	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
+
+	attrs = append(attrs, attribute.Int64(asyncCallTimeSinceScheduledAtAttr, msToComplete))
+	m.completed.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
 func extractAsyncCallAttrs(verb schema.RefKey, origin string, scheduledAt time.Time) []attribute.KeyValue {
+	return append(extractRefAttrs(verb, origin), attribute.Int64(asyncCallTimeSinceScheduledAtAttr, timeSince(scheduledAt)))
+}
+
+func extractRefAttrs(verb schema.RefKey, origin string) []attribute.KeyValue {
 	return []attribute.KeyValue{
 		attribute.String(observability.ModuleNameAttribute, verb.Module),
 		attribute.String(asyncCallVerbRefAttr, verb.String()),
 		attribute.String(asyncCallOriginAttr, origin),
-		attribute.Int64(asyncCallTimeSinceScheduledAtAttr, time.Since(scheduledAt).Milliseconds()),
 	}
+}
+
+func timeSince(start time.Time) int64 {
+	return time.Since(start).Milliseconds()
 }
