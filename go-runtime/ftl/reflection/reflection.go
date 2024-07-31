@@ -21,15 +21,24 @@ func CallingVerb() schema.RefKey {
 	// Look through the stack for the outermost FTL module.
 	pcs := make([]uintptr, 1024)
 	pcs = pcs[:runtime.Callers(1, pcs)]
+	frames := runtime.CallersFrames(pcs)
+
 	var module string
 	var verb string
-	for _, pc := range pcs {
-		splitName := strings.Split(runtime.FuncForPC(pc).Name(), ".")
+	for {
+		frame, more := frames.Next()
+		if frame.Func.Name() == "" {
+			continue
+		}
+		splitName := strings.Split(frame.Func.Name(), ".")
 		pkg := splitName[0]
 		fnName := splitName[1]
 		if strings.HasPrefix(pkg, "ftl/") {
 			module = strings.Split(pkg, "/")[1]
 			verb = fnName
+		}
+		if !more {
+			break
 		}
 	}
 	if module == "" {
