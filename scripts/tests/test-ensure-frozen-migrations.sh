@@ -85,6 +85,8 @@ function main() {
   test remove_existing fail
   test modify_comment_in_existing
   test modify_content_in_existing fail
+
+  echo "✅ All tests passed 🎉"
 }
 
 main
