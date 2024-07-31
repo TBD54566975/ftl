@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/alecthomas/types/optional"
 	"strings"
 
 	"go.opentelemetry.io/otel"
@@ -15,13 +17,11 @@ import (
 )
 
 const (
-	runnerMeterName              = "ftl.runner"
-	runnerDeploymentKeyAttribute = "ftl.deployment.key"
-	runnerStateNameAttribute     = "ftl.runner.state.name"
+	runnerMeterName          = "ftl.runner"
+	runnerStateNameAttribute = "ftl.runner.state.name"
 )
 
 type RunnerMetrics struct {
-	meter                  metric.Meter
 	startupFailures        metric.Int64Counter
 	registrationHeartbeats metric.Int64Counter
 	registrationFailures   metric.Int64Counter
@@ -33,50 +33,42 @@ func initRunnerMetrics() (*RunnerMetrics, error) {
 	var errs error
 	var err error
 
-	result.meter = otel.Meter(runnerMeterName)
+	meter := otel.Meter(runnerMeterName)
 
 	counter := fmt.Sprintf("%s.startup.failures", runnerMeterName)
-	if result.startupFailures, err = result.meter.Int64Counter(
+	if result.startupFailures, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of runner startup failures")); err != nil {
 		result.startupFailures, errs = handleInitErrors(counter, err, errs)
 	}
 
 	counter = fmt.Sprintf("%s.registration.heartbeats", runnerMeterName)
-	if result.registrationHeartbeats, err = result.meter.Int64Counter(
+	if result.registrationHeartbeats, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of successful runner (re-)registrations")); err != nil {
 		result.registrationHeartbeats, errs = handleInitErrors(counter, err, errs)
 	}
 
 	counter = fmt.Sprintf("%s.registration.failures", runnerMeterName)
-	if result.registrationFailures, err = result.meter.Int64Counter(
+	if result.registrationFailures, err = meter.Int64Counter(
 		counter,
-		metric.WithDescription("the number of failures encounter while attempting to runner registration")); err != nil {
+		metric.WithDescription("the number of failures encountered while attempting to register a runner")); err != nil {
 		result.registrationFailures, errs = handleInitErrors(counter, err, errs)
 	}
 
 	return result, errs
 }
 
-func (m *RunnerMetrics) Registered(ctx context.Context, key *string, state ftlv1.RunnerState) {
-	keyAttr := "unknown"
-	if key != nil {
-		keyAttr = *key
-	}
+func (m *RunnerMetrics) Registered(ctx context.Context, key optional.Option[string], state ftlv1.RunnerState) {
 	m.registrationHeartbeats.Add(ctx, 1, metric.WithAttributes(
-		attribute.String(runnerDeploymentKeyAttribute, keyAttr),
+		attribute.String(observability.RunnerDeploymentKeyAttribute, key.Default("unknown")),
 		attribute.String(runnerStateNameAttribute, runnerStateToString(state)),
 	))
 }
 
-func (m *RunnerMetrics) RegistrationFailure(ctx context.Context, key *string, state ftlv1.RunnerState) {
-	keyAttr := "unknown"
-	if key != nil {
-		keyAttr = *key
-	}
+func (m *RunnerMetrics) RegistrationFailure(ctx context.Context, key optional.Option[string], state ftlv1.RunnerState) {
 	m.registrationFailures.Add(ctx, 1, metric.WithAttributes(
-		attribute.String(runnerDeploymentKeyAttribute, keyAttr),
+		attribute.String(observability.RunnerDeploymentKeyAttribute, key.Default("unknown")),
 		attribute.String(runnerStateNameAttribute, runnerStateToString(state)),
 	))
 }
