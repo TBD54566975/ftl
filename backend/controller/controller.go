@@ -43,6 +43,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
@@ -1335,8 +1336,10 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
 	} else if err != nil {
+		observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
 		return 0, err
 	}
+	observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
 	defer call.Release() //nolint:errcheck
 
 	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb))
@@ -1351,15 +1354,18 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	failed := false
 	if err != nil {
 		logger.Warnf("Async call could not be called: %v", err)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.Some("async call could not be called"))
 		callResult = either.RightOf[[]byte](err.Error())
 		failed = true
 	} else if perr := resp.Msg.GetError(); perr != nil {
 		logger.Warnf("Async call failed: %s", perr.Message)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.Some("async call failed"))
 		callResult = either.RightOf[[]byte](perr.Message)
 		failed = true
 	} else {
 		logger.Debugf("Async call succeeded")
 		callResult = either.LeftOf[string](resp.Msg.GetBody())
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.None[string]())
 	}
 	err = s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx) error {
 		if failed && call.RemainingAttempts > 0 {
@@ -1379,8 +1385,10 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		}
 	})
 	if err != nil {
+		observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
+	observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
 	go func() {
 		// Post-commit notification based on origin
 		switch origin := call.Origin.(type) {
