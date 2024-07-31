@@ -219,9 +219,11 @@ func (e *Engine) buildGraph(moduleName string, out map[string][]string) error {
 		foundModule = true
 		deps = meta.module.Dependencies
 	}
-	if sch, ok := e.controllerSchema.Load(moduleName); ok {
-		foundModule = true
-		deps = append(deps, sch.Imports()...)
+	if !foundModule {
+		if sch, ok := e.controllerSchema.Load(moduleName); ok {
+			foundModule = true
+			deps = append(deps, sch.Imports()...)
+		}
 	}
 	if !foundModule {
 		return fmt.Errorf("module %q not found", moduleName)
@@ -731,6 +733,9 @@ func (e *Engine) gatherSchemas(
 	e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
 		if _, ok := moduleSchemas[name]; ok {
 			out[name] = moduleSchemas[name]
+		} else {
+			// We don't want to use a remote schema if we have it locally
+			delete(out, name)
 		}
 		return true
 	})
