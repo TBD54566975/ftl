@@ -19,31 +19,44 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
   const [error, setError] = useState<string | null>(null)
 
   const editorTextKey = `${module?.name}-${verb?.verb?.name}-editor-text`
+  const headersTextKey = `${module?.name}-${verb?.verb?.name}-headers-text`
 
   useEffect(() => {
     if (verb) {
-      const savedValue = localStorage.getItem(editorTextKey)
-      let value: string
-      if (savedValue != null && savedValue !== '') {
-        value = savedValue
+      const savedEditorValue = localStorage.getItem(editorTextKey)
+      let editorValue: string
+      if (savedEditorValue != null && savedEditorValue !== '') {
+        editorValue = savedEditorValue
       } else {
-        value = defaultRequest(verb)
+        editorValue = defaultRequest(verb)
       }
 
       const schemaString = JSON.stringify(simpleJsonSchema(verb))
-      setInitialEditorText({ initialText: value, schema: schemaString })
-      localStorage.setItem(editorTextKey, value)
-      handleEditorTextChanged(value)
+      setInitialEditorText({ initialText: editorValue, schema: schemaString })
+      localStorage.setItem(editorTextKey, editorValue)
+      handleEditorTextChanged(editorValue)
 
-      const headerText = '{\n  "console": ["example"]\n}'
-      setInitialHeadersText({ initialText: headerText })
-      setHeadersText(headerText)
+      const savedHeadersValue = localStorage.getItem(headersTextKey)
+      let headerValue: string
+      if (savedHeadersValue != null && savedHeadersValue !== '') {
+        headerValue = savedHeadersValue
+      } else {
+        headerValue = '{\n  "console": ["example"]\n}'
+      }
+      setInitialHeadersText({ initialText: headerValue })
+      setHeadersText(headerValue)
+      localStorage.setItem(headersTextKey, headerValue)
     }
   }, [verb, activeTabId])
 
   const handleEditorTextChanged = (text: string) => {
     setEditorText(text)
     localStorage.setItem(editorTextKey, text)
+  }
+
+  const handleHeadersTextChanged = (text: string) => {
+    setHeadersText(text)
+    localStorage.setItem(headersTextKey, text)
   }
 
   const handleTabClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>, id: string) => {
@@ -130,7 +143,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
             <CodeEditor initialState={{ initialText: verb?.jsonRequestSchema ?? '', readonly: true }} />
           )}
           {activeTabId === 'headers' && (
-            <CodeEditor initialState={initialHeadersState} onTextChanged={setHeadersText} />
+            <CodeEditor initialState={initialHeadersState} onTextChanged={handleHeadersTextChanged} />
           )}
         </div>
 
@@ -141,5 +154,4 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       </div>
     </div >
   )
-
 }
