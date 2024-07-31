@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-# echo
-set -x
-
 # This script checks if the SQL migration have been modified compared to the common ancestor with the main branch.
 # It ignores comments when comparing the files.
 
@@ -24,39 +21,49 @@ show_diff() {
     diff -u <(remove_comments "$file1") <(remove_comments "$file2")
 }
 
+fail() {
+    echo "❌ Existing migrations changed. Please make sure only comments are changed in existing migration files."
+    exit 1
+}
+
 main() {
     local sql_dir="backend/controller/sql/schema"
     local changed_files
-    local merge_base
 
-    # Find the merge base commit
-    merge_base=$(git merge-base HEAD origin/main)
+    merge_base_sha=$(git merge-base HEAD origin/main)
+    changed_files=$(git diff --name-only "$merge_base_sha" -- "$sql_dir")
 
-    # Get list of changed SQL files compared to the merge base
-    changed_files=$(git diff --name-only "$merge_base" -- "$sql_dir"/*.sql)
+    # Show the diff of the SQL files compared to HEAD to the user
+    git diff --color=always "$merge_base_sha" -- "$sql_dir"/*.sql | cat
 
+    # Track new files added or changed
     if [ -z "$changed_files" ]; then
-        echo "👍 No SQL files changed in $sql_dir compared to the common ancestor with main branch"
+        echo "✅ No files changed in schema directory"
         exit 0
     fi
 
     while IFS= read -r file; do
         if [ ! -f "$file" ]; then
-            echo "$file no longer exists!"
+            echo "❌ $file existed in merge-base of HEAD and main ($merge_base_sha), but has been deleted in head"
             exit 1
         fi
-        if compare_sql_files "$file" <(git show "$merge_base:$file"); then
+
+        # Does the file exist in HEAD?
+        if ! git show "$merge_base_sha:$file" &> /dev/null; then
+            echo "✅ New: $file"
+            continue
+        fi
+
+        if compare_sql_files "$file" <(git show "$merge_base_sha:$file"); then
             : # Do nothing if files are the same
         else
             echo "❌ Migration files changes detected"
-            show_diff "$file" <(git show "$merge_base:$file")
-            exit 1
+            show_diff "$file" <(git show "$merge_base_sha:$file")
+            fail
         fi
     done <<< "$changed_files"
 
-    git diff --color=always "$merge_base" -- "$sql_dir"/*.sql | cat
-    echo "👍 Only comments/new lines changed in SQL files"
+    echo "✅ No schema changes detected for existing migration files"
 }
 
-# Run the main function
 main
