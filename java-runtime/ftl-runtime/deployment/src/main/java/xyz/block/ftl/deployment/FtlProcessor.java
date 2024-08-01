@@ -1,19 +1,19 @@
 package xyz.block.ftl.deployment;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
-import io.quarkus.deployment.builditem.*;
+import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
+import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
+import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
-import io.quarkus.kubernetes.spi.ConfigurationSupplierBuildItem;
-import org.jboss.jandex.AnnotationValue;
-import org.jboss.jandex.DotName;
-import org.jboss.jandex.IndexView;
-import org.jboss.jandex.VoidType;
+import org.jboss.jandex.*;
+import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.VerbHandler;
@@ -21,7 +21,9 @@ import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.v1.schema.Float;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.*;
+import xyz.block.ftl.v1.schema.Type;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.String;
 import java.nio.charset.StandardCharsets;
@@ -30,12 +32,15 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class FtlProcessor {
 
     private static final String SCHEMA_OUT = "schema.pb";
     private static final String FEATURE = "ftl-java-runtime";
+    public static final DotName EXPORT = DotName.createSimple(Export.class);
+    public static final DotName VERB = DotName.createSimple(Verb.class);
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -74,9 +79,8 @@ class FtlProcessor {
                 .setBuiltin(false);
         Map<String, Ref> dataElements = new HashMap<>();
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
-        for (var verb : index.getIndex().getAnnotations(DotName.createSimple(Verb.class))) {
-            AnnotationValue exportedValue = verb.value("exported");
-            boolean exported = exportedValue != null && exportedValue.asBoolean();
+        for (var verb : index.getIndex().getAnnotations(VERB)) {
+            boolean exported = verb.target().hasAnnotation(EXPORT);
             var method = verb.target().asMethod();
             String className = method.declaringClass().name().toString();
             beans.addBeanClass(className);
@@ -147,10 +151,49 @@ class FtlProcessor {
                 if (clazz.name().equals(DotName.STRING_NAME)) {
                     return Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
                 }
+                var existing = dataElements.get(clazz.name().toString());
+                if (existing != null) {
+                    return Type.newBuilder().setRef(existing).build();
+                }
+                Data.Builder data = Data.newBuilder();
+                data.setName(clazz.name().local());
+                data.setExport(type.hasAnnotation(EXPORT));
+                buildDataElement(data, index, clazz.name(), dataElements, moduleBuilder);
+                moduleBuilder.addDecls(Decl.newBuilder().setData(data).build());
+                Ref ref = Ref.newBuilder().setName(data.getName()).setModule(moduleBuilder.getName()).build();
+                dataElements.put(clazz.name().toString(), ref);
+                return Type.newBuilder().setRef(ref).build();
             }
-
+            case PARAMETERIZED_TYPE -> {
+                var paramType = type.asParameterizedType();
+                if (paramType.name().equals(DotName.createSimple(List.class))) {
+                    return Type.newBuilder().setArray(Array.newBuilder().setElement(buildType(index, paramType.arguments().get(0), dataElements, moduleBuilder))).build();
+                } else if (paramType.name().equals(DotName.createSimple(Map.class))) {
+                    return Type.newBuilder().setMap(xyz.block.ftl.v1.schema.Map.newBuilder()
+                                    .setKey(buildType(index, paramType.arguments().get(0), dataElements, moduleBuilder))
+                                    .setValue(buildType(index, paramType.arguments().get(0), dataElements, moduleBuilder)))
+                            .build();
+                } else if (paramType.name().equals(DotNames.OPTIONAL)) {
+                    return Type.newBuilder().setOptional(Optional.newBuilder().setType(buildType(index, paramType.arguments().get(0), dataElements, moduleBuilder))).build();
+                }
+            }
         }
 
         throw new RuntimeException("NOT YET IMPLEMENTED");
+    }
+
+    private void buildDataElement(Data.Builder data, IndexView index, DotName className, Map<String, Ref> dataElements, Module.Builder moduleBuilder) {
+        if (className == null || className.equals(DotName.OBJECT_NAME)) {
+            return;
+        }
+        var clazz = index.getClassByName(className);
+        if (clazz == null) {
+            return;
+        }
+        //TODO: handle getters and setters properly, also Jackson annotations etc
+        for (var field : clazz.fields()) {
+            data.addFields(Field.newBuilder().setName(field.name()).setType(buildType(index, field.type(), dataElements, moduleBuilder)).build());
+        }
+        buildDataElement(data, index, clazz.superName(), dataElements, moduleBuilder);
     }
 }
