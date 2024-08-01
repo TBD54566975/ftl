@@ -3,6 +3,7 @@ package dal
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -276,16 +277,16 @@ func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, tx *sql.Tx,
 	if err != nil {
 		return fmt.Errorf("could not delete old subscribers: %w", dalerrs.TranslatePGError(err))
 	}
-	for _, s := range subscribers {
-		logger.Debugf("Deleted subscriber %s for %s", s, key)
+	if len(subscribers) > 0 {
+		logger.Debugf("Deleted subscribers for %s: %s", key, strings.Join(slices.Map(subscribers, func(key model.SubscriberKey) string { return key.String() }), ", "))
 	}
 
 	subscriptions, err := tx.DeleteSubscriptions(ctx, key)
 	if err != nil {
 		return fmt.Errorf("could not delete old subscriptions: %w", dalerrs.TranslatePGError(err))
 	}
-	for _, s := range subscriptions {
-		logger.Debugf("Deleted subscription %s for %s", s, key)
+	if len(subscriptions) > 0 {
+		logger.Debugf("Deleted subscriptions for %s: %s", key, strings.Join(slices.Map(subscriptions, func(key model.SubscriptionKey) string { return key.String() }), ", "))
 	}
 
 	return nil
