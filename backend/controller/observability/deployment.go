@@ -18,8 +18,8 @@ const (
 type DeploymentMetrics struct {
 	reconciliationFailures metric.Int64Counter
 	reconciliationsActive  metric.Int64UpDownCounter
-	replicasAdded          metric.Int64UpDownCounter
-	replicasRemoved        metric.Int64UpDownCounter
+	replicasAdded          metric.Int64Counter
+	replicasRemoved        metric.Int64Counter
 }
 
 func initDeploymentMetrics() (*DeploymentMetrics, error) {
@@ -45,17 +45,17 @@ func initDeploymentMetrics() (*DeploymentMetrics, error) {
 	}
 
 	counter = fmt.Sprintf("%s.replicas.added", deploymentMeterName)
-	if result.replicasAdded, err = meter.Int64UpDownCounter(
+	if result.replicasAdded, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of runner replicas added by the deployment reconciliation tasks")); err != nil {
-		result.replicasAdded, errs = handleInt64UpDownCounterError(counter, err, errs)
+		result.replicasAdded, errs = handleInt64CounterError(counter, err, errs)
 	}
 
 	counter = fmt.Sprintf("%s.replicas.removed", deploymentMeterName)
-	if result.replicasRemoved, err = meter.Int64UpDownCounter(
+	if result.replicasRemoved, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of runner replicas removed by the deployment reconciliation tasks")); err != nil {
-		result.replicasRemoved, errs = handleInt64UpDownCounterError(counter, err, errs)
+		result.replicasRemoved, errs = handleInt64CounterError(counter, err, errs)
 	}
 
 	return result, errs
