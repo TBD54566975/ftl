@@ -113,7 +113,9 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Proto Breaking Change Check
         shell: bash
-        run: buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation || true
+        run: |
+          set -o pipefail
+          buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation
   console:
     name: Console
     runs-on: ubuntu-latest
