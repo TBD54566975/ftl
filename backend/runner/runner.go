@@ -338,8 +338,6 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 
 	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
 
-	deploymentLogger.Infof("DEBUGGING DEPLOY FINISHED")
-
 	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
 }
 
