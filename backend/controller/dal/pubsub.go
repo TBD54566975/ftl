@@ -3,6 +3,7 @@ package dal
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -169,6 +170,8 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 }
 
 func (d *DAL) createSubscriptions(ctx context.Context, tx *sql.Tx, key model.DeploymentKey, module *schema.Module) error {
+	logger := log.FromContext(ctx)
+
 	for _, decl := range module.Decls {
 		s, ok := decl.(*schema.Subscription)
 		if !ok {
@@ -180,17 +183,25 @@ func (d *DAL) createSubscriptions(ctx context.Context, tx *sql.Tx, key model.Dep
 			// https://github.com/TBD54566975/ftl/issues/1685
 			//
 			// It does mean that a subscription will reset to the topic's head if all subscribers are removed and then later re-added
+			logger.Debugf("Skipping upsert of subscription %s for %s due to lack of subscribers", s.Name, key)
 			continue
 		}
-		if err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
-			Key:         model.NewSubscriptionKey(module.Name, s.Name),
+		subscriptionKey := model.NewSubscriptionKey(module.Name, s.Name)
+		result, err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
+			Key:         subscriptionKey,
 			Module:      module.Name,
 			Deployment:  key,
 			TopicModule: s.Topic.Module,
 			TopicName:   s.Topic.Name,
 			Name:        s.Name,
-		}); err != nil {
+		})
+		if err != nil {
 			return fmt.Errorf("could not insert subscription: %w", dalerrs.TranslatePGError(err))
+		}
+		if result.Inserted {
+			logger.Debugf("Inserted subscription %s for %s", subscriptionKey, key)
+		} else {
+			logger.Debugf("Updated subscription %s to %s", subscriptionKey, key)
 		}
 	}
 	return nil
@@ -216,6 +227,7 @@ func hasSubscribers(subscription *schema.Subscription, decls []schema.Decl) bool
 }
 
 func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.DeploymentKey, module *schema.Module) error {
+	logger := log.FromContext(ctx)
 	for _, decl := range module.Decls {
 		v, ok := decl.(*schema.Verb)
 		if !ok {
@@ -238,8 +250,9 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 					return fmt.Errorf("could not parse retry parameters for %q: %w", v.Name, err)
 				}
 			}
+			subscriberKey := model.NewSubscriberKey(module.Name, s.Name, v.Name)
 			err = tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
-				Key:              model.NewSubscriberKey(module.Name, s.Name, v.Name),
+				Key:              subscriberKey,
 				Module:           module.Name,
 				SubscriptionName: s.Name,
 				Deployment:       key,
@@ -251,17 +264,30 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 			if err != nil {
 				return fmt.Errorf("could not insert subscriber: %w", dalerrs.TranslatePGError(err))
 			}
+			logger.Debugf("Inserted subscriber %s for %s", subscriberKey, key)
 		}
 	}
 	return nil
 }
 
 func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
-	if err := tx.DeleteSubscriptions(ctx, key); err != nil {
-		return fmt.Errorf("could not delete old subscriptions: %w", dalerrs.TranslatePGError(err))
-	}
-	if err := tx.DeleteSubscribers(ctx, key); err != nil {
+	logger := log.FromContext(ctx)
+
+	subscribers, err := tx.DeleteSubscribers(ctx, key)
+	if err != nil {
 		return fmt.Errorf("could not delete old subscribers: %w", dalerrs.TranslatePGError(err))
 	}
+	if len(subscribers) > 0 {
+		logger.Debugf("Deleted subscribers for %s: %s", key, strings.Join(slices.Map(subscribers, func(key model.SubscriberKey) string { return key.String() }), ", "))
+	}
+
+	subscriptions, err := tx.DeleteSubscriptions(ctx, key)
+	if err != nil {
+		return fmt.Errorf("could not delete old subscriptions: %w", dalerrs.TranslatePGError(err))
+	}
+	if len(subscriptions) > 0 {
+		logger.Debugf("Deleted subscriptions for %s: %s", key, strings.Join(slices.Map(subscriptions, func(key model.SubscriptionKey) string { return key.String() }), ", "))
+	}
+
 	return nil
 }
