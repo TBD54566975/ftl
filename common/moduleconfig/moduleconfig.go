@@ -119,7 +119,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	switch config.Language {
 	case "kotlin":
 		if config.Build == "" {
-			config.Build = "mvn -B package"
+			config.Build = "mvn -B -e package"
 		}
 		if config.DeployDir == "" {
 			config.DeployDir = "target"

@@ -24,6 +24,7 @@
         <surefire-plugin.version>3.2.5</surefire-plugin.version>
         <rootDir>${basedir}/../../..</rootDir>
         <grpc.version>1.65.1</grpc.version>
+        <javapoet.version>1.13.0</javapoet.version>
     </properties>
 
     <dependencyManagement>
@@ -41,6 +42,12 @@
                 <version>${grpc.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.squareup</groupId>
+                <artifactId>javapoet</artifactId>
+                <version>${javapoet.version}</version>
             </dependency>
 
             <dependency>
