@@ -28,7 +28,6 @@ var (
 )
 
 func IsNotFound(err error) bool {
-
 	return errors.Is(err, stdsql.ErrNoRows) || errors.Is(err, pgx.ErrNoRows)
 }
 
