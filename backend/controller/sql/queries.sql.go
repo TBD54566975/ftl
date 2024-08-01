@@ -103,7 +103,7 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-  SELECT id, created_at, key, topic_id, payload
+  SELECT id, created_at, key, topic_id, payload, caller
   FROM topic_events
   WHERE "key" = $2::topic_event_key
 )
@@ -222,32 +222,64 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
-const deleteSubscribers = `-- name: DeleteSubscribers :exec
+const deleteSubscribers = `-- name: DeleteSubscribers :many
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
   WHERE deployments.key = $1::deployment_key
 )
+RETURNING topic_subscribers.key
 `
 
-func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) error {
-	_, err := q.db.Exec(ctx, deleteSubscribers, deployment)
-	return err
+func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error) {
+	rows, err := q.db.Query(ctx, deleteSubscribers, deployment)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []model.SubscriberKey
+	for rows.Next() {
+		var key model.SubscriberKey
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		items = append(items, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-const deleteSubscriptions = `-- name: DeleteSubscriptions :exec
+const deleteSubscriptions = `-- name: DeleteSubscriptions :many
 DELETE FROM topic_subscriptions
 WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
   WHERE deployments.key = $1::deployment_key
 )
+RETURNING topic_subscriptions.key
 `
 
-func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) error {
-	_, err := q.db.Exec(ctx, deleteSubscriptions, deployment)
-	return err
+func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error) {
+	rows, err := q.db.Query(ctx, deleteSubscriptions, deployment)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []model.SubscriptionKey
+	for rows.Next() {
+		var key model.SubscriptionKey
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		items = append(items, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const deregisterRunner = `-- name: DeregisterRunner :one
@@ -1100,6 +1132,7 @@ WITH cursor AS (
 SELECT events."key" as event,
         events.payload,
         events.created_at,
+        events.caller,
         NOW() - events.created_at >= $1::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
@@ -1113,6 +1146,7 @@ type GetNextEventForSubscriptionRow struct {
 	Event     optional.Option[model.TopicEventKey]
 	Payload   []byte
 	CreatedAt optional.Option[time.Time]
+	Caller    optional.Option[string]
 	Ready     bool
 }
 
@@ -1123,6 +1157,7 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 		&i.Event,
 		&i.Payload,
 		&i.CreatedAt,
+		&i.Caller,
 		&i.Ready,
 	)
 	return i, err
@@ -1511,7 +1546,7 @@ func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
 }
 
 const getTopicEvent = `-- name: GetTopicEvent :one
-SELECT id, created_at, key, topic_id, payload
+SELECT id, created_at, key, topic_id, payload, caller
 FROM topic_events
 WHERE id = $1::BIGINT
 `
@@ -1525,6 +1560,7 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 		&i.Key,
 		&i.TopicID,
 		&i.Payload,
+		&i.Caller,
 	)
 	return i, err
 }
@@ -1869,6 +1905,7 @@ const publishEventForTopic = `-- name: PublishEventForTopic :exec
 INSERT INTO topic_events (
     "key",
     topic_id,
+    caller,
     payload
   )
 VALUES (
@@ -1880,7 +1917,8 @@ VALUES (
     WHERE modules.name = $2::TEXT
       AND topics.name = $3::TEXT
   ),
-  $4
+  $4,
+  $5
 )
 `
 
@@ -1888,6 +1926,7 @@ type PublishEventForTopicParams struct {
 	Key     model.TopicEventKey
 	Module  string
 	Topic   string
+	Caller  string
 	Payload []byte
 }
 
@@ -1896,6 +1935,7 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 		arg.Key,
 		arg.Module,
 		arg.Topic,
+		arg.Caller,
 		arg.Payload,
 	)
 	return err
@@ -2166,7 +2206,7 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (opt
 	return deployment_id, err
 }
 
-const upsertSubscription = `-- name: UpsertSubscription :exec
+const upsertSubscription = `-- name: UpsertSubscription :one
 INSERT INTO topic_subscriptions (
   key,
   topic_id,
@@ -2190,7 +2230,12 @@ ON CONFLICT (name, module_id) DO
 UPDATE SET 
   topic_id = excluded.topic_id,
   deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
-RETURNING id
+RETURNING 
+  id,
+  CASE 
+    WHEN xmax = 0 THEN true
+    ELSE false
+  END AS inserted
 `
 
 type UpsertSubscriptionParams struct {
@@ -2202,8 +2247,13 @@ type UpsertSubscriptionParams struct {
 	Name        string
 }
 
-func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error {
-	_, err := q.db.Exec(ctx, upsertSubscription,
+type UpsertSubscriptionRow struct {
+	ID       int64
+	Inserted bool
+}
+
+func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error) {
+	row := q.db.QueryRow(ctx, upsertSubscription,
 		arg.Key,
 		arg.TopicModule,
 		arg.TopicName,
@@ -2211,7 +2261,9 @@ func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscription
 		arg.Deployment,
 		arg.Name,
 	)
-	return err
+	var i UpsertSubscriptionRow
+	err := row.Scan(&i.ID, &i.Inserted)
+	return i, err
 }
 
 const upsertTopic = `-- name: UpsertTopic :exec

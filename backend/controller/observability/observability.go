@@ -6,6 +6,8 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+
+	"time"
 )
 
 var (
@@ -33,6 +35,7 @@ func init() {
 	}
 }
 
+
 //nolint:unparam
 func handleInt64CounterError(counter string, err error, errs error) (metric.Int64Counter, error) {
 	return noop.Int64Counter{}, errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
@@ -41,4 +44,8 @@ func handleInt64CounterError(counter string, err error, errs error) (metric.Int6
 //nolint:unparam
 func handleInt64UpDownCounterError(counter string, err error, errs error) (metric.Int64UpDownCounter, error) {
 	return noop.Int64UpDownCounter{}, errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
+}
+
+func timeSinceMS(start time.Time) int64 {
+	return time.Since(start).Milliseconds()
 }

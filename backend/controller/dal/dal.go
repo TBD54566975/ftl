@@ -752,6 +752,9 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
 	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
 	if err == nil {
+		if oldDeployment.Key.String() == newDeploymentKey.String() {
+			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
+		}
 		err = tx.SetDeploymentDesiredReplicas(ctx, oldDeployment.Key, 0)
 		if err != nil {
 			return fmt.Errorf("replace deployment failed to set old deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))

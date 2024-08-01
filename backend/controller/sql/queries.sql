@@ -575,7 +575,7 @@ UPDATE SET
   type = sqlc.arg('event_type')::TEXT
 RETURNING id;
 
--- name: UpsertSubscription :exec
+-- name: UpsertSubscription :one
 INSERT INTO topic_subscriptions (
   key,
   topic_id,
@@ -599,23 +599,30 @@ ON CONFLICT (name, module_id) DO
 UPDATE SET 
   topic_id = excluded.topic_id,
   deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key)
-RETURNING id;
+RETURNING 
+  id,
+  CASE 
+    WHEN xmax = 0 THEN true
+    ELSE false
+  END AS inserted;
 
--- name: DeleteSubscriptions :exec
+-- name: DeleteSubscriptions :many
 DELETE FROM topic_subscriptions
 WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
   WHERE deployments.key = sqlc.arg('deployment')::deployment_key
-);
+)
+RETURNING topic_subscriptions.key;
 
--- name: DeleteSubscribers :exec
+-- name: DeleteSubscribers :many
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
   WHERE deployments.key = sqlc.arg('deployment')::deployment_key
-);
+)
+RETURNING topic_subscribers.key;
 
 -- name: InsertSubscriber :exec
 INSERT INTO topic_subscribers (
@@ -647,6 +654,7 @@ VALUES (
 INSERT INTO topic_events (
     "key",
     topic_id,
+    caller,
     payload
   )
 VALUES (
@@ -658,6 +666,7 @@ VALUES (
     WHERE modules.name = sqlc.arg('module')::TEXT
       AND topics.name = sqlc.arg('topic')::TEXT
   ),
+  sqlc.arg('caller'),
   sqlc.arg('payload')
 );
 
@@ -690,6 +699,7 @@ WITH cursor AS (
 SELECT events."key" as event,
         events.payload,
         events.created_at,
+        events.caller,
         NOW() - events.created_at >= sqlc.arg('consumption_delay')::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id

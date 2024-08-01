@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/alecthomas/kong"
 	"github.com/jpillora/backoff"
 	"golang.org/x/sync/errgroup"
 
@@ -44,9 +43,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 		Key:         model.NewLocalControllerKey(0),
 		DSN:         b.DSN,
 	}
-	if err := kong.ApplyDefaults(&config); err != nil {
-		return err
-	}
+	config.SetDefaults()
 
 	// Start the controller.
 	runnerPortAllocator, err := bind.NewBindAllocator(b.RunnerBase)

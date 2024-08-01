@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
@@ -124,9 +123,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
 		}
-		if err := kong.ApplyDefaults(&config); err != nil {
-			return err
-		}
+		config.SetDefaults()
 		config.ModuleUpdateFrequency = time.Second * 1
 
 		scope := fmt.Sprintf("controller%d", i)
