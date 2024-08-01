@@ -49,3 +49,32 @@ func TestDBConfigProvider(t *testing.T) {
 	})
 	assert.NoError(t, err)
 }
+
+func TestDBConfigProvider_Global(t *testing.T) {
+	t.Run("works", func(t *testing.T) {
+		ctx := context.Background()
+		provider := NewDBConfigProvider(mockDBConfigProviderDAL{})
+
+		gotBytes, err := provider.Load(ctx, Ref{
+			Module: optional.None[string](),
+			Name:   "configname",
+		}, &url.URL{Scheme: "db"})
+		assert.NoError(t, err)
+		assert.Equal(t, b, gotBytes)
+
+		gotURL, err := provider.Store(ctx, Ref{
+			Module: optional.None[string](),
+			Name:   "configname",
+		}, b)
+		assert.NoError(t, err)
+		assert.Equal(t, &url.URL{Scheme: "db"}, gotURL)
+
+		err = provider.Delete(ctx, Ref{
+			Module: optional.None[string](),
+			Name:   "configname",
+		})
+		assert.NoError(t, err)
+	})
+
+	// TODO: maybe add a unit test to assert failure to create same global config twice. not sure how to wire up the mocks for this
+}

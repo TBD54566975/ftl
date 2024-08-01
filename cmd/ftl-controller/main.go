@@ -56,7 +56,7 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	configProviders := []cf.Provider[cf.Configuration]{cf.NewDBConfigProvider(configDal)}
 	configResolver := cf.NewDBConfigResolver(configDal)
-	cm, err := cf.New[cf.Configuration](ctx, configResolver, configProviders)
+	cm, err := cf.New(ctx, configResolver, configProviders)
 	kctx.FatalIfErrorf(err)
 
 	ctx = cf.ContextWithConfig(ctx, cm)

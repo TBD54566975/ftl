@@ -15,11 +15,11 @@ ORDER BY module, name;
 -- name: SetModuleConfiguration :exec
 INSERT INTO module_configuration (module, name, value)
 VALUES ($1, $2, $3)
-ON CONFLICT (module, name) DO UPDATE SET value = $3;
+ON CONFLICT ((COALESCE(module, '')), name) DO UPDATE SET value = $3;
 
 -- name: UnsetModuleConfiguration :exec
 DELETE FROM module_configuration
-WHERE module = @module AND name = @name;
+WHERE COALESCE(module, '') = COALESCE(@module, '') AND name = @name;
 
 -- name: GetModuleSecretURL :one
 SELECT url
@@ -38,8 +38,8 @@ ORDER BY module, name;
 -- name: SetModuleSecretURL :exec
 INSERT INTO module_secrets (module, name, url)
 VALUES ($1, $2, $3)
-ON CONFLICT (module, name) DO UPDATE SET url = $3;
+ON CONFLICT ((COALESCE(module, '')), name) DO UPDATE SET url = $3;
 
 -- name: UnsetModuleSecret :exec
 DELETE FROM module_secrets
-WHERE module = @module AND name = @name;
+WHERE COALESCE(module, '') = COALESCE(@module, '') AND name = @name;
