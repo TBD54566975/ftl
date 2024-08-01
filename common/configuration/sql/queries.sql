@@ -15,7 +15,7 @@ ORDER BY module, name;
 -- name: SetModuleConfiguration :exec
 INSERT INTO module_configuration (module, name, value)
 VALUES ($1, $2, $3)
-ON CONFLICT (module, name) DO UPDATE SET value = $3;
+ON CONFLICT ((COALESCE(module, '')), name) DO UPDATE SET value = $3;
 
 -- name: UnsetModuleConfiguration :exec
 DELETE FROM module_configuration
