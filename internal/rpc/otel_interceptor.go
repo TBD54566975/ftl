@@ -169,15 +169,13 @@ func statusCodeAttribute(protocol string, err error) attribute.KeyValue {
 
 // streamingState stores the ongoing metrics for streaming interceptors.
 type streamingState struct {
-	mu              sync.Mutex
-	spec            connect.Spec
-	protocol        string
-	attributes      []attribute.KeyValue
-	error           error
-	sentCounter     int64
-	receivedCounter int64
-	receiveSizes    []int64
-	sendSizes       []int64
+	mu           sync.Mutex
+	spec         connect.Spec
+	protocol     string
+	attributes   []attribute.KeyValue
+	error        error
+	receiveSizes []int64
+	sendSizes    []int64
 }
 
 // streamingSenderReceiver encapsulates either a StreamingClientConn or a StreamingHandlerConn.
@@ -197,7 +195,6 @@ func (s *streamingState) receive(msg any, conn streamingSenderReceiver) error {
 		s.error = err
 		s.attributes = append(s.attributes, statusCodeAttribute(s.protocol, err))
 	}
-	s.receivedCounter++
 	if protomsg, ok := msg.(proto.Message); ok {
 		size := proto.Size(protomsg)
 		s.receiveSizes = append(s.receiveSizes, int64(size))
@@ -212,7 +209,6 @@ func (s *streamingState) send(msg any, conn streamingSenderReceiver) error {
 	if errors.Is(err, io.EOF) {
 		return err // nolint:wrapcheck
 	}
-	s.sentCounter++
 	if err != nil {
 		s.error = err
 		s.attributes = append(s.attributes, statusCodeAttribute(s.protocol, err))
