@@ -123,7 +123,7 @@ func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Op
 const setModuleSecretURL = `-- name: SetModuleSecretURL :exec
 INSERT INTO module_secrets (module, name, url)
 VALUES ($1, $2, $3)
-ON CONFLICT (module, name) DO UPDATE SET url = $3
+ON CONFLICT ((COALESCE(module, '')), name) DO UPDATE SET url = $3
 `
 
 func (q *Queries) SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error {
@@ -133,7 +133,7 @@ func (q *Queries) SetModuleSecretURL(ctx context.Context, module optional.Option
 
 const unsetModuleConfiguration = `-- name: UnsetModuleConfiguration :exec
 DELETE FROM module_configuration
-WHERE module = $1 AND name = $2
+WHERE COALESCE(module, '') = COALESCE($1, '') AND name = $2
 `
 
 func (q *Queries) UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error {
@@ -143,7 +143,7 @@ func (q *Queries) UnsetModuleConfiguration(ctx context.Context, module optional.
 
 const unsetModuleSecret = `-- name: UnsetModuleSecret :exec
 DELETE FROM module_secrets
-WHERE module = $1 AND name = $2
+WHERE COALESCE(module, '') = COALESCE($1, '') AND name = $2
 `
 
 func (q *Queries) UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error {
