@@ -24,14 +24,10 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 		Caller:  caller,
 		Payload: payload,
 	})
-	//panic(fmt.Sprintf("persisting caller: %q", caller)) // prints "Echo"
 	observability.PubSub.Published(ctx, module, topic, caller, err)
 	if err != nil {
 		return dalerrs.TranslatePGError(err)
 	}
-	// confirmed this part works
-	//rows, err := d.db.GetTopicEvents(ctx)
-	//panic(fmt.Sprintf("GetTopicEvents: %v", rows[0].Caller))
 	return nil
 }
 
