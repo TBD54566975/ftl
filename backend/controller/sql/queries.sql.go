@@ -18,11 +18,14 @@ import (
 )
 
 const acquireAsyncCall = `-- name: AcquireAsyncCall :one
-WITH async_call AS (
+WITH pending_calls AS (
   SELECT id
   FROM async_calls
   WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
   ORDER BY created_at
+), async_call AS (
+  SELECT id
+  FROM pending_calls
   LIMIT 1
   FOR UPDATE SKIP LOCKED
 ), lease AS (
@@ -38,6 +41,7 @@ RETURNING
   id AS async_call_id,
   (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
   (SELECT key FROM lease) AS lease_key,
+  (SELECT count(*) FROM pending_calls) AS queue_depth,
   origin,
   verb,
   request,
@@ -51,6 +55,7 @@ type AcquireAsyncCallRow struct {
 	AsyncCallID         int64
 	LeaseIdempotencyKey uuid.UUID
 	LeaseKey            leases.Key
+	QueueDepth          int64
 	Origin              string
 	Verb                schema.RefKey
 	Request             []byte
@@ -61,7 +66,7 @@ type AcquireAsyncCallRow struct {
 }
 
 // Reserve a pending async call for execution, returning the associated lease
-// reservation key.
+// reservation key and accompanying metadata.
 func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error) {
 	row := q.db.QueryRow(ctx, acquireAsyncCall, ttl)
 	var i AcquireAsyncCallRow
@@ -69,6 +74,7 @@ func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (Acqu
 		&i.AsyncCallID,
 		&i.LeaseIdempotencyKey,
 		&i.LeaseKey,
+		&i.QueueDepth,
 		&i.Origin,
 		&i.Verb,
 		&i.Request,
@@ -100,6 +106,19 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 		arg.Path,
 	)
 	return err
+}
+
+const asyncCallQueueDepth = `-- name: AsyncCallQueueDepth :one
+SELECT count(*)
+FROM async_calls
+WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
+`
+
+func (q *Queries) AsyncCallQueueDepth(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, asyncCallQueueDepth)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec

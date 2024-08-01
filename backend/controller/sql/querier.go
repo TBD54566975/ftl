@@ -17,9 +17,10 @@ import (
 
 type Querier interface {
 	// Reserve a pending async call for execution, returning the associated lease
-	// reservation key.
+	// reservation key and accompanying metadata.
 	AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error)
 	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
+	AsyncCallQueueDepth(ctx context.Context) (int64, error)
 	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
 	// Create a new artefact and return the artefact ID.

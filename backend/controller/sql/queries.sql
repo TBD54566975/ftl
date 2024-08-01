@@ -458,14 +458,22 @@ INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max
 VALUES (@verb, @origin, @request, @remaining_attempts, @backoff::interval, @max_backoff::interval)
 RETURNING id;
 
+-- name: AsyncCallQueueDepth :one
+SELECT count(*)
+FROM async_calls
+WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc');
+
 -- name: AcquireAsyncCall :one
 -- Reserve a pending async call for execution, returning the associated lease
--- reservation key.
-WITH async_call AS (
+-- reservation key and accompanying metadata.
+WITH pending_calls AS (
   SELECT id
   FROM async_calls
   WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
   ORDER BY created_at
+), async_call AS (
+  SELECT id
+  FROM pending_calls
   LIMIT 1
   FOR UPDATE SKIP LOCKED
 ), lease AS (
@@ -481,6 +489,7 @@ RETURNING
   id AS async_call_id,
   (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
   (SELECT key FROM lease) AS lease_key,
+  (SELECT count(*) FROM pending_calls) AS queue_depth,
   origin,
   verb,
   request,

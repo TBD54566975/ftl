@@ -112,6 +112,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,
 		})
+		observability.AsyncCalls.Created(ctx, subscriber.Sink, origin.String(), int64(subscriber.RetryAttempts), err)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
@@ -119,6 +120,12 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 		observability.PubSub.SinkCalled(ctx, subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), subscriber.Sink)
 		successful++
+	}
+	queueDepth, err := tx.db.AsyncCallQueueDepth(ctx)
+	if err == nil && queueDepth > 0 {
+		// Don't error out of progressing subscriptions just over a queue depth
+		// retrieval error because this is only used for an observability gauge.
+		observability.AsyncCalls.RecordQueueDepth(ctx, queueDepth)
 	}
 	return successful, nil
 }
