@@ -29,7 +29,7 @@ func initDeploymentMetrics() (*DeploymentMetrics, error) {
 
 	meter := otel.Meter(deploymentMeterName)
 
-	counter := fmt.Sprintf("%s.reconciliation.failure", deploymentMeterName)
+	counter := fmt.Sprintf("%s.reconciliation.failures", deploymentMeterName)
 	if result.reconciliationFailures, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of failed runner deployment reconciliation tasks")); err != nil {
