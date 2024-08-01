@@ -2,122 +2,229 @@ package dal
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	libdal "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
-
-	"github.com/TBD54566975/ftl/backend/controller/sql"
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func TestModuleConfiguration(t *testing.T) {
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
-	assert.NoError(t, err)
-	assert.NotZero(t, dal)
-
-	tests := []struct {
-		TestName     string
-		ModuleSet    optional.Option[string]
-		ModuleGet    optional.Option[string]
-		PresetGlobal bool
-	}{
-		{
-			"SetModuleGetModule",
-			optional.Some("echo"),
-			optional.Some("echo"),
-			false,
-		},
-		{
-			"SetGlobalGetGlobal",
-			optional.None[string](),
-			optional.None[string](),
-			false,
-		},
-		{
-			"SetGlobalGetModule",
-			optional.None[string](),
-			optional.Some("echo"),
-			false,
-		},
-		{
-			"SetModuleOverridesGlobal",
-			optional.Some("echo"),
-			optional.Some("echo"),
-			true,
-		},
-	}
-
-	b := []byte(`"asdf"`)
-	for _, test := range tests {
-		t.Run(test.TestName, func(t *testing.T) {
-			if test.PresetGlobal {
-				err := dal.SetModuleConfiguration(ctx, optional.None[string](), "configname", []byte(`"qwerty"`))
-				assert.NoError(t, err)
-			}
-			err := dal.SetModuleConfiguration(ctx, test.ModuleSet, "configname", b)
-			assert.NoError(t, err)
-			gotBytes, err := dal.GetModuleConfiguration(ctx, test.ModuleGet, "configname")
-			assert.NoError(t, err)
-			assert.Equal(t, b, gotBytes)
-			err = dal.UnsetModuleConfiguration(ctx, test.ModuleGet, "configname")
-			assert.NoError(t, err)
-		})
-	}
-
-	t.Run("List", func(t *testing.T) {
-		sortedList := []sql.ModuleConfiguration{
-			{
-				Module: optional.Some("echo"),
-				Name:   "a",
-			},
-			{
-				Module: optional.Some("echo"),
-				Name:   "b",
-			},
-			{
-				Module: optional.None[string](),
-				Name:   "a",
-			},
-		}
-
-		// Insert entries in a separate order from how they should be returned to
-		// test sorting logic in the SQL query
-		err := dal.SetModuleConfiguration(ctx, sortedList[1].Module, sortedList[1].Name, []byte(`""`))
+func TestDALConfiguration(t *testing.T) {
+	t.Run("ModuleConfiguration", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
 		assert.NoError(t, err)
-		err = dal.SetModuleConfiguration(ctx, sortedList[2].Module, sortedList[2].Name, []byte(`""`))
-		assert.NoError(t, err)
-		err = dal.SetModuleConfiguration(ctx, sortedList[0].Module, sortedList[0].Name, []byte(`""`))
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
 		assert.NoError(t, err)
 
-		gotList, err := dal.ListModuleConfiguration(ctx)
+		value, err := dal.GetModuleConfiguration(ctx, optional.Some("echo"), "my_config")
 		assert.NoError(t, err)
-		for i := range sortedList {
-			assert.Equal(t, sortedList[i].Module, gotList[i].Module)
-			assert.Equal(t, sortedList[i].Name, gotList[i].Name)
-		}
+		assert.Equal(t, []byte(`""`), value)
+
+		err = dal.UnsetModuleConfiguration(ctx, optional.Some("echo"), "my_config")
+		assert.NoError(t, err)
+
+		value, err = dal.GetModuleConfiguration(ctx, optional.Some("echo"), "my_config")
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, libdal.ErrNotFound))
+		assert.Zero(t, value)
+	})
+
+	t.Run("GlobalConfiguration", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleConfiguration(ctx, optional.None[string](), "my_config")
+		assert.NoError(t, err)
+		assert.Equal(t, []byte(`""`), value)
+
+		err = dal.UnsetModuleConfiguration(ctx, optional.None[string](), "my_config")
+		assert.NoError(t, err)
+
+		value, err = dal.GetModuleConfiguration(ctx, optional.None[string](), "my_config")
+		fmt.Printf("value: %v\n", value)
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, libdal.ErrNotFound))
+		assert.Zero(t, value)
+	})
+
+	t.Run("SetSameGlobalConfigTwice", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
+		assert.NoError(t, err)
+
+		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`"hehe"`))
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleConfiguration(ctx, optional.None[string](), "my_config")
+		assert.NoError(t, err)
+		assert.Equal(t, []byte(`"hehe"`), value)
+	})
+
+	t.Run("SetModuleOverridesGlobal", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
+		assert.NoError(t, err)
+		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`"hehe"`))
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleConfiguration(ctx, optional.Some("echo"), "my_config")
+		assert.NoError(t, err)
+		assert.Equal(t, []byte(`"hehe"`), value)
 	})
 
 	t.Run("HandlesConflicts", func(t *testing.T) {
-		err := dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
 		assert.NoError(t, err)
 		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
 		assert.NoError(t, err)
+
+		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
+		assert.NoError(t, err)
+		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`"hehe"`))
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleConfiguration(ctx, optional.None[string](), "my_config")
+		assert.NoError(t, err)
+		assert.Equal(t, []byte(`"hehe"`), value)
 	})
 }
 
-func TestModuleSecrets(t *testing.T) {
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
-	assert.NoError(t, err)
-	assert.NotZero(t, dal)
+func TestDALSecrets(t *testing.T) {
+	t.Run("ModuleSecret", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
 
-	err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "asm://echo.my_secret")
-	assert.NoError(t, err)
-	err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "asm://echo.my_secret")
-	assert.NoError(t, err)
+		err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example.com")
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleSecretURL(ctx, optional.Some("echo"), "my_secret")
+		assert.NoError(t, err)
+		assert.Equal(t, "http://example.com", value)
+
+		err = dal.UnsetModuleSecret(ctx, optional.Some("echo"), "my_secret")
+		assert.NoError(t, err)
+
+		value, err = dal.GetModuleSecretURL(ctx, optional.Some("echo"), "my_secret")
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, libdal.ErrNotFound))
+		assert.Zero(t, value)
+	})
+
+	t.Run("GlobalSecret", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleSecretURL(ctx, optional.None[string](), "my_secret")
+		assert.NoError(t, err)
+		assert.Equal(t, "http://example.com", value)
+
+		err = dal.UnsetModuleSecret(ctx, optional.None[string](), "my_secret")
+		assert.NoError(t, err)
+
+		value, err = dal.GetModuleSecretURL(ctx, optional.None[string](), "my_secret")
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, libdal.ErrNotFound))
+		assert.Zero(t, value)
+	})
+
+	t.Run("SetSameGlobalSecretTwice", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
+		assert.NoError(t, err)
+
+		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example2.com")
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleSecretURL(ctx, optional.None[string](), "my_secret")
+		assert.NoError(t, err)
+		assert.Equal(t, "http://example2.com", value)
+	})
+
+	t.Run("SetModuleOverridesGlobal", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
+		assert.NoError(t, err)
+		err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example2.com")
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleSecretURL(ctx, optional.Some("echo"), "my_secret")
+		assert.NoError(t, err)
+		assert.Equal(t, "http://example2.com", value)
+	})
+
+	t.Run("HandlesConflicts", func(t *testing.T) {
+		ctx := log.ContextWithNewDefaultLogger(context.Background())
+		conn := sqltest.OpenForTesting(ctx, t)
+		dal, err := New(ctx, conn)
+		assert.NoError(t, err)
+		assert.NotZero(t, dal)
+
+		err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example.com")
+		assert.NoError(t, err)
+		err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example2.com")
+		assert.NoError(t, err)
+
+		value, err := dal.GetModuleSecretURL(ctx, optional.Some("echo"), "my_secret")
+		assert.NoError(t, err)
+		assert.Equal(t, "http://example2.com", value)
+
+		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
+		assert.NoError(t, err)
+		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example2.com")
+		assert.NoError(t, err)
+
+		value, err = dal.GetModuleSecretURL(ctx, optional.None[string](), "my_secret")
+		assert.NoError(t, err)
+		assert.Equal(t, "http://example2.com", value)
+	})
+
 }
