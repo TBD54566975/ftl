@@ -22,6 +22,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 		Key:     model.NewTopicEventKey(module, topic),
 		Module:  module,
 		Topic:   topic,
+		Caller:  caller,
 		Payload: payload,
 	})
 	observability.PubSub.Published(ctx, module, topic, caller, err)
@@ -66,12 +67,12 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	for _, subscription := range subs {
 		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, eventConsumptionDelay, subscription.Topic, subscription.Cursor)
 		if err != nil {
-			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload.Name, subscriptionRef(subscription), optional.None[schema.RefKey]())
+			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
 			return 0, fmt.Errorf("failed to get next cursor: %w", dalerrs.TranslatePGError(err))
 		}
 		nextCursorKey, ok := nextCursor.Event.Get()
 		if !ok {
-			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Event.Get", subscription.Topic.Payload.Name, subscriptionRef(subscription), optional.None[schema.RefKey]())
+			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Event.Get", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
 			return 0, fmt.Errorf("could not find event to progress subscription: %w", dalerrs.TranslatePGError(err))
 		}
 		if !nextCursor.Ready {
@@ -87,7 +88,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 		err = tx.db.BeginConsumingTopicEvent(ctx, subscription.Key, nextCursorKey)
 		if err != nil {
-			observability.PubSub.PropagationFailed(ctx, "BeginConsumingTopicEvent", subscription.Topic.Payload.Name, subscriptionRef(subscription), optional.Some(subscriber.Sink))
+			observability.PubSub.PropagationFailed(ctx, "BeginConsumingTopicEvent", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
 			return 0, fmt.Errorf("failed to progress subscription: %w", dalerrs.TranslatePGError(err))
 		}
 
@@ -106,11 +107,11 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			MaxBackoff:        subscriber.MaxBackoff,
 		})
 		if err != nil {
-			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload.Name, subscriptionRef(subscription), optional.Some(subscriber.Sink))
+			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
 		}
 
-		observability.PubSub.SinkCalled(ctx, subscription.Topic.Payload.Name, subscriptionRef(subscription), subscriber.Sink)
+		observability.PubSub.SinkCalled(ctx, subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), subscriber.Sink)
 		successful++
 	}
 	return successful, nil

@@ -654,6 +654,7 @@ VALUES (
 INSERT INTO topic_events (
     "key",
     topic_id,
+    caller,
     payload
   )
 VALUES (
@@ -665,6 +666,7 @@ VALUES (
     WHERE modules.name = sqlc.arg('module')::TEXT
       AND topics.name = sqlc.arg('topic')::TEXT
   ),
+  sqlc.arg('caller'),
   sqlc.arg('payload')
 );
 
@@ -697,6 +699,7 @@ WITH cursor AS (
 SELECT events."key" as event,
         events.payload,
         events.created_at,
+        events.caller,
         NOW() - events.created_at >= sqlc.arg('consumption_delay')::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
