@@ -1,7 +1,7 @@
 -- migrate:up
 
-ALTER TABLE module_configuration
-    ALTER COLUMN module SET DEFAULT '';
+CREATE UNIQUE INDEX module_name_unique
+    ON module_configuration ((COALESCE(module, '')), name);
 
 -- migrate:down
 
