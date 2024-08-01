@@ -3,11 +3,10 @@ package observability
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-
-	"time"
 )
 
 var (
@@ -34,7 +33,6 @@ func init() {
 		panic(fmt.Errorf("could not initialize controller metrics: %w", errs))
 	}
 }
-
 
 //nolint:unparam
 func handleInt64CounterError(counter string, err error, errs error) (metric.Int64Counter, error) {
