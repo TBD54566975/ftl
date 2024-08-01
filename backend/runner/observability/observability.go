@@ -22,7 +22,7 @@ func init() {
 	Deployment, err = initDeploymentMetrics()
 	errs = errors.Join(errs, err)
 
-	if err != nil {
+	if errs != nil {
 		panic(fmt.Errorf("could not initialize runner metrics: %w", err))
 	}
 }
