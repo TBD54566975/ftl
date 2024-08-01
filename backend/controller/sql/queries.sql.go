@@ -103,7 +103,7 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-  SELECT id, created_at, key, topic_id, caller, payload
+  SELECT id, created_at, key, topic_id, payload, caller
   FROM topic_events
   WHERE "key" = $2::topic_event_key
 )
@@ -1514,7 +1514,7 @@ func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
 }
 
 const getTopicEvent = `-- name: GetTopicEvent :one
-SELECT id, created_at, key, topic_id, caller, payload
+SELECT id, created_at, key, topic_id, payload, caller
 FROM topic_events
 WHERE id = $1::BIGINT
 `
@@ -1527,8 +1527,8 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 		&i.CreatedAt,
 		&i.Key,
 		&i.TopicID,
-		&i.Caller,
 		&i.Payload,
+		&i.Caller,
 	)
 	return i, err
 }
