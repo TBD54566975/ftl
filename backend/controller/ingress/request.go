@@ -217,18 +217,20 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, 
 			requestMap[k] = v
 		}
 	default:
-		data, err := sch.ResolveMonomorphised(ref)
+		symbol, err := sch.ResolveRequestResponseType(ref)
 		if err != nil {
 			return nil, err
 		}
 
-		queryMap, err := parseQueryParams(r.URL.Query(), data)
-		if err != nil {
-			return nil, fmt.Errorf("HTTP query params are not valid: %w", err)
-		}
+		if data, ok := symbol.(*schema.Data); ok {
+			queryMap, err := parseQueryParams(r.URL.Query(), data)
+			if err != nil {
+				return nil, fmt.Errorf("HTTP query params are not valid: %w", err)
+			}
 
-		for key, value := range queryMap {
-			requestMap[key] = value
+			for key, value := range queryMap {
+				requestMap[key] = value
+			}
 		}
 	}
 

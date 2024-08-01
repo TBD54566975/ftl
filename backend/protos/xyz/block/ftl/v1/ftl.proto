@@ -91,6 +91,8 @@ message SendFSMEventResponse {}
 message PublishEventRequest {
   schema.Ref topic = 1;
   bytes body = 2;
+  // Only verb name is included because this verb will be in the same module as topic
+  string caller = 3;
 }
 
 message PublishEventResponse {}
@@ -304,6 +306,11 @@ message ProcessListResponse {
   repeated Process processes = 1;
 }
 
+message ResetSubscriptionRequest {
+  schema.Ref subscription = 1;
+}
+message ResetSubscriptionResponse {}
+
 service ControllerService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -359,6 +366,9 @@ service ControllerService {
   // Note that if there are no deployments this will block indefinitely, making it unsuitable for
   // just retrieving the schema. Use GetSchema for that.
   rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
+
+  // Reset the cursor for a subscription to the head of its topic.
+  rpc ResetSubscription(ResetSubscriptionRequest) returns (ResetSubscriptionResponse);
 }
 
 message DeployRequest {

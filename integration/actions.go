@@ -23,11 +23,12 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/otiai10/copy"
 
+	"github.com/TBD54566975/scaffolder"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/scaffolder"
 )
 
 // Scaffold a directory relative to the testdata directory to a directory relative to the working directory.
@@ -276,6 +277,21 @@ func WriteFile(path string, content []byte) Action {
 		}
 		Infof("Writing to %s", path)
 		err := os.WriteFile(absPath, content, 0600)
+		assert.NoError(t, err)
+	}
+}
+
+// EditFile edits a file in a module
+func EditFile(module string, editFunc func([]byte) []byte, path ...string) Action {
+	return func(t testing.TB, ic TestContext) {
+		parts := []string{ic.workDir, module}
+		parts = append(parts, path...)
+		file := filepath.Join(parts...)
+		Infof("Editing %s", file)
+		contents, err := os.ReadFile(file)
+		assert.NoError(t, err)
+		contents = editFunc(contents)
+		err = os.WriteFile(file, contents, os.FileMode(0))
 		assert.NoError(t, err)
 	}
 }

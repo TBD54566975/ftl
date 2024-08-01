@@ -18,6 +18,21 @@ list_issues_and_prs() {
   (gh pr list -A "$user" "$@" --json number,labels,mergedAt | jq '[.[] | .["closedAt"] = .mergedAt | del(.mergedAt)]'; gh issue list -a "$user" "$@" --json number,labels,closedAt) | jq '.[]' | jq -rs 'sort_by(.closedAt) | reverse' | jq -r "$(map_to_markdown)"
 }
 
+list_prioritized_issues() {
+  gh issue list "$@" --json number,labels | jq '.[]' | jq -s '
+    map(
+      . as $issue |
+      ($issue.labels | map(select(.name == "P0")) | length > 0) as $p0 |
+      ($issue.labels | map(select(.name == "P1")) | length > 0) as $p1 |
+      ($issue.labels | map(select(.name == "P2")) | length > 0) as $p2 |
+      ($issue.labels | map(select(.name == "P3")) | length > 0) as $p3 |
+      $issue + {priority: (if $p0 then 0 elif $p1 then 1 elif $p2 then 2 elif $p3 then 3 else 4 end)}
+    ) |
+    sort_by(.priority) |
+    map(del(.priority))
+  ' | jq -r "$(map_to_markdown)"
+}
+
 update() {
   if test -z "$NOOP"; then
     gh issue edit -F - 728
@@ -71,7 +86,7 @@ $(
 ### https://github.com/TBD54566975/ftl/labels/next
 
 $(
-  issues="$(list_issues --label next)"
+  issues="$(list_prioritized_issues --label next)"
   if test -z "$issues"; then
     echo "> [!WARNING]"
     echo "> There are no issues labelled for upcoming work."

@@ -218,28 +218,29 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 
 // ValidateRequestMap validates a given JSON map against the provided schema.
 func ValidateRequestMap(ref *Ref, path path, request map[string]any, sch *Schema) error {
-	data, err := sch.ResolveMonomorphised(ref)
+	symbol, err := sch.ResolveRequestResponseType(ref)
 	if err != nil {
 		return err
 	}
 
 	var errs []error
-	for _, field := range data.Fields {
-		fieldPath := append(path, "."+field.Name) //nolint:gocritic
+	if data, ok := symbol.(*Data); ok {
+		for _, field := range data.Fields {
+			fieldPath := append(path, "."+field.Name) //nolint:gocritic
 
-		value, haveValue := request[field.Name]
-		if !haveValue && !allowMissingField(field) {
-			errs = append(errs, fmt.Errorf("%s is required", fieldPath))
-			continue
-		}
+			value, haveValue := request[field.Name]
+			if !haveValue && !allowMissingField(field) {
+				errs = append(errs, fmt.Errorf("%s is required", fieldPath))
+				continue
+			}
 
-		if haveValue {
-			err := ValidateJSONValue(field.Type, fieldPath, value, sch)
-			if err != nil {
-				errs = append(errs, err)
+			if haveValue {
+				err := ValidateJSONValue(field.Type, fieldPath, value, sch)
+				if err != nil {
+					errs = append(errs, err)
+				}
 			}
 		}
-
 	}
 
 	return errors.Join(errs...)

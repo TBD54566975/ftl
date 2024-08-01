@@ -20,6 +20,7 @@ import (
 	"github.com/otiai10/copy"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
@@ -110,8 +111,10 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 	verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
 	var controller ftlv1connect.ControllerServiceClient
+	var console pbconsoleconnect.ConsoleServiceClient
 	if startController {
 		controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
+		console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
 
 		Infof("Starting ftl cluster")
 		ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
@@ -128,6 +131,7 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 
 	if startController {
 		ic.Controller = controller
+		ic.Console = console
 
 		Infof("Waiting for controller to be ready")
 		ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
@@ -155,6 +159,7 @@ type TestContext struct {
 	binDir string
 
 	Controller ftlv1connect.ControllerServiceClient
+	Console    pbconsoleconnect.ConsoleServiceClient
 	Verbs      ftlv1connect.VerbServiceClient
 }
 

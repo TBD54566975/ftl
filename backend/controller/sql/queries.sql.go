@@ -103,7 +103,7 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-  SELECT id, created_at, key, topic_id, payload
+  SELECT id, created_at, key, topic_id, payload, caller
   FROM topic_events
   WHERE "key" = $2::topic_event_key
 )
@@ -222,32 +222,64 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
-const deleteSubscribers = `-- name: DeleteSubscribers :exec
+const deleteSubscribers = `-- name: DeleteSubscribers :many
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
   WHERE deployments.key = $1::deployment_key
 )
+RETURNING topic_subscribers.key
 `
 
-func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) error {
-	_, err := q.db.Exec(ctx, deleteSubscribers, deployment)
-	return err
+func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error) {
+	rows, err := q.db.Query(ctx, deleteSubscribers, deployment)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []model.SubscriberKey
+	for rows.Next() {
+		var key model.SubscriberKey
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		items = append(items, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
-const deleteSubscriptions = `-- name: DeleteSubscriptions :exec
+const deleteSubscriptions = `-- name: DeleteSubscriptions :many
 DELETE FROM topic_subscriptions
 WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
   WHERE deployments.key = $1::deployment_key
 )
+RETURNING topic_subscriptions.key
 `
 
-func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) error {
-	_, err := q.db.Exec(ctx, deleteSubscriptions, deployment)
-	return err
+func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error) {
+	rows, err := q.db.Query(ctx, deleteSubscriptions, deployment)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []model.SubscriptionKey
+	for rows.Next() {
+		var key model.SubscriptionKey
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		items = append(items, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const deregisterRunner = `-- name: DeregisterRunner :one
@@ -363,7 +395,8 @@ UPDATE fsm_instances
 SET
   current_state = NULL,
   async_call_id = NULL,
-  status = 'failed'::fsm_status
+  status = 'failed'::fsm_status,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = $1::schema_ref AND key = $2::TEXT
 RETURNING true
@@ -381,7 +414,8 @@ UPDATE fsm_instances
 SET
   current_state = destination_state,
   destination_state = NULL,
-  async_call_id = NULL
+  async_call_id = NULL,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = $1::schema_ref AND key = $2::TEXT
 RETURNING true
@@ -938,7 +972,7 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 }
 
 const getFSMInstance = `-- name: GetFSMInstance :one
-SELECT id, created_at, fsm, key, status, current_state, destination_state, async_call_id
+SELECT id, created_at, fsm, key, status, current_state, destination_state, async_call_id, updated_at
 FROM fsm_instances
 WHERE fsm = $1::schema_ref AND key = $2
 `
@@ -955,6 +989,7 @@ func (q *Queries) GetFSMInstance(ctx context.Context, fsm schema.RefKey, key str
 		&i.CurrentState,
 		&i.DestinationState,
 		&i.AsyncCallID,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -1097,6 +1132,7 @@ WITH cursor AS (
 SELECT events."key" as event,
         events.payload,
         events.created_at,
+        events.caller,
         NOW() - events.created_at >= $1::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
@@ -1110,6 +1146,7 @@ type GetNextEventForSubscriptionRow struct {
 	Event     optional.Option[model.TopicEventKey]
 	Payload   []byte
 	CreatedAt optional.Option[time.Time]
+	Caller    optional.Option[string]
 	Ready     bool
 }
 
@@ -1120,6 +1157,7 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 		&i.Event,
 		&i.Payload,
 		&i.CreatedAt,
+		&i.Caller,
 		&i.Ready,
 	)
 	return i, err
@@ -1406,6 +1444,35 @@ func (q *Queries) GetSchemaForDeployment(ctx context.Context, key model.Deployme
 	return schema, err
 }
 
+const getSubscription = `-- name: GetSubscription :one
+WITH module AS (
+  SELECT id
+  FROM modules
+  WHERE name = $2::TEXT
+)
+SELECT id, key, created_at, topic_id, module_id, deployment_id, name, cursor, state
+FROM topic_subscriptions
+WHERE name = $1::TEXT
+      AND module_id = (SELECT id FROM module)
+`
+
+func (q *Queries) GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error) {
+	row := q.db.QueryRow(ctx, getSubscription, column1, column2)
+	var i TopicSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.CreatedAt,
+		&i.TopicID,
+		&i.ModuleID,
+		&i.DeploymentID,
+		&i.Name,
+		&i.Cursor,
+		&i.State,
+	)
+	return i, err
+}
+
 const getSubscriptionsNeedingUpdate = `-- name: GetSubscriptionsNeedingUpdate :many
 SELECT
   subs.key::subscription_key as key,
@@ -1455,6 +1522,47 @@ func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubsc
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTopic = `-- name: GetTopic :one
+SELECT id, key, created_at, module_id, name, type, head
+FROM topics
+WHERE id = $1::BIGINT
+`
+
+func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
+	row := q.db.QueryRow(ctx, getTopic, dollar_1)
+	var i Topic
+	err := row.Scan(
+		&i.ID,
+		&i.Key,
+		&i.CreatedAt,
+		&i.ModuleID,
+		&i.Name,
+		&i.Type,
+		&i.Head,
+	)
+	return i, err
+}
+
+const getTopicEvent = `-- name: GetTopicEvent :one
+SELECT id, created_at, key, topic_id, payload, caller
+FROM topic_events
+WHERE id = $1::BIGINT
+`
+
+func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error) {
+	row := q.db.QueryRow(ctx, getTopicEvent, dollar_1)
+	var i TopicEvent
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Key,
+		&i.TopicID,
+		&i.Payload,
+		&i.Caller,
+	)
+	return i, err
 }
 
 const insertCallEvent = `-- name: InsertCallEvent :exec
@@ -1797,6 +1905,7 @@ const publishEventForTopic = `-- name: PublishEventForTopic :exec
 INSERT INTO topic_events (
     "key",
     topic_id,
+    caller,
     payload
   )
 VALUES (
@@ -1808,7 +1917,8 @@ VALUES (
     WHERE modules.name = $2::TEXT
       AND topics.name = $3::TEXT
   ),
-  $4
+  $4,
+  $5
 )
 `
 
@@ -1816,6 +1926,7 @@ type PublishEventForTopicParams struct {
 	Key     model.TopicEventKey
 	Module  string
 	Topic   string
+	Caller  string
 	Payload []byte
 }
 
@@ -1824,6 +1935,7 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 		arg.Key,
 		arg.Module,
 		arg.Topic,
+		arg.Caller,
 		arg.Payload,
 	)
 	return err
@@ -1905,6 +2017,23 @@ func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.De
 	return err
 }
 
+const setSubscriptionCursor = `-- name: SetSubscriptionCursor :exec
+WITH event AS (
+  SELECT id, created_at, key, topic_id, payload
+  FROM topic_events
+  WHERE "key" = $2::topic_event_key
+)
+UPDATE topic_subscriptions
+SET state = 'idle',
+    cursor = (SELECT id FROM event)
+WHERE key = $1::subscription_key
+`
+
+func (q *Queries) SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error {
+	_, err := q.db.Exec(ctx, setSubscriptionCursor, column1, column2)
+	return err
+}
+
 const startFSMTransition = `-- name: StartFSMTransition :one
 INSERT INTO fsm_instances (
   fsm,
@@ -1920,11 +2049,12 @@ INSERT INTO fsm_instances (
 ON CONFLICT(fsm, key) DO
 UPDATE SET
   destination_state = $3::schema_ref,
-  async_call_id = $4::BIGINT
+  async_call_id = $4::BIGINT,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm_instances.async_call_id IS NULL
   AND fsm_instances.destination_state IS NULL
-RETURNING id, created_at, fsm, key, status, current_state, destination_state, async_call_id
+RETURNING id, created_at, fsm, key, status, current_state, destination_state, async_call_id, updated_at
 `
 
 type StartFSMTransitionParams struct {
@@ -1954,6 +2084,7 @@ func (q *Queries) StartFSMTransition(ctx context.Context, arg StartFSMTransition
 		&i.CurrentState,
 		&i.DestinationState,
 		&i.AsyncCallID,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -1980,7 +2111,8 @@ SET
   current_state = destination_state,
   destination_state = NULL,
   async_call_id = NULL,
-  status = 'completed'::fsm_status
+  status = 'completed'::fsm_status,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = $1::schema_ref AND key = $2::TEXT
 RETURNING true
@@ -2074,7 +2206,7 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (opt
 	return deployment_id, err
 }
 
-const upsertSubscription = `-- name: UpsertSubscription :exec
+const upsertSubscription = `-- name: UpsertSubscription :one
 INSERT INTO topic_subscriptions (
   key,
   topic_id,
@@ -2098,7 +2230,12 @@ ON CONFLICT (name, module_id) DO
 UPDATE SET 
   topic_id = excluded.topic_id,
   deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
-RETURNING id
+RETURNING 
+  id,
+  CASE 
+    WHEN xmax = 0 THEN true
+    ELSE false
+  END AS inserted
 `
 
 type UpsertSubscriptionParams struct {
@@ -2110,8 +2247,13 @@ type UpsertSubscriptionParams struct {
 	Name        string
 }
 
-func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) error {
-	_, err := q.db.Exec(ctx, upsertSubscription,
+type UpsertSubscriptionRow struct {
+	ID       int64
+	Inserted bool
+}
+
+func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error) {
+	row := q.db.QueryRow(ctx, upsertSubscription,
 		arg.Key,
 		arg.TopicModule,
 		arg.TopicName,
@@ -2119,7 +2261,9 @@ func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscription
 		arg.Deployment,
 		arg.Name,
 	)
-	return err
+	var i UpsertSubscriptionRow
+	err := row.Scan(&i.ID, &i.Inserted)
+	return i, err
 }
 
 const upsertTopic = `-- name: UpsertTopic :exec

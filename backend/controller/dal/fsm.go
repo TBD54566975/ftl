@@ -45,7 +45,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 	}
 
 	// Start a transition.
-	_, err = d.db.StartFSMTransition(ctx, sql.StartFSMTransitionParams{
+	instance, err := d.db.StartFSMTransition(ctx, sql.StartFSMTransitionParams{
 		Fsm:              fsm,
 		Key:              executionKey,
 		DestinationState: destinationState,
@@ -58,24 +58,29 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 		}
 		return fmt.Errorf("failed to start FSM transition: %w", err)
 	}
-	observability.FSMInstanceCreated(ctx, fsm)
+	if instance.CreatedAt.Equal(instance.UpdatedAt) {
+		observability.FSM.InstanceCreated(ctx, fsm)
+	}
+	observability.FSM.TransitionStarted(ctx, fsm, destinationState)
 	return nil
 }
 
 func (d *DAL) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.FinishFSMTransition(ctx, fsm, instanceKey)
+	observability.FSM.TransitionCompleted(ctx, fsm)
+
 	return dalerrs.TranslatePGError(err)
 }
 
 func (d *DAL) FailFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.FailFSMInstance(ctx, fsm, instanceKey)
-	observability.FSMInstanceCompleted(ctx, fsm)
+	observability.FSM.InstanceCompleted(ctx, fsm)
 	return dalerrs.TranslatePGError(err)
 }
 
 func (d *DAL) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.SucceedFSMInstance(ctx, fsm, instanceKey)
-	observability.FSMInstanceCompleted(ctx, fsm)
+	observability.FSM.InstanceCompleted(ctx, fsm)
 	return dalerrs.TranslatePGError(err)
 }
 

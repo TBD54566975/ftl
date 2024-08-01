@@ -96,6 +96,9 @@ const (
 	// ControllerServicePullSchemaProcedure is the fully-qualified name of the ControllerService's
 	// PullSchema RPC.
 	ControllerServicePullSchemaProcedure = "/xyz.block.ftl.v1.ControllerService/PullSchema"
+	// ControllerServiceResetSubscriptionProcedure is the fully-qualified name of the
+	// ControllerService's ResetSubscription RPC.
+	ControllerServiceResetSubscriptionProcedure = "/xyz.block.ftl.v1.ControllerService/ResetSubscription"
 	// RunnerServicePingProcedure is the fully-qualified name of the RunnerService's Ping RPC.
 	RunnerServicePingProcedure = "/xyz.block.ftl.v1.RunnerService/Ping"
 	// RunnerServiceReserveProcedure is the fully-qualified name of the RunnerService's Reserve RPC.
@@ -372,6 +375,8 @@ type ControllerServiceClient interface {
 	// Note that if there are no deployments this will block indefinitely, making it unsuitable for
 	// just retrieving the schema. Use GetSchema for that.
 	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest]) (*connect.ServerStreamForClient[v1.PullSchemaResponse], error)
+	// Reset the cursor for a subscription to the head of its topic.
+	ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error)
 }
 
 // NewControllerServiceClient constructs a client for the xyz.block.ftl.v1.ControllerService
@@ -455,6 +460,11 @@ func NewControllerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			baseURL+ControllerServicePullSchemaProcedure,
 			opts...,
 		),
+		resetSubscription: connect.NewClient[v1.ResetSubscriptionRequest, v1.ResetSubscriptionResponse](
+			httpClient,
+			baseURL+ControllerServiceResetSubscriptionProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -474,6 +484,7 @@ type controllerServiceClient struct {
 	streamDeploymentLogs   *connect.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
 	getSchema              *connect.Client[v1.GetSchemaRequest, v1.GetSchemaResponse]
 	pullSchema             *connect.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
+	resetSubscription      *connect.Client[v1.ResetSubscriptionRequest, v1.ResetSubscriptionResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.ControllerService.Ping.
@@ -546,6 +557,11 @@ func (c *controllerServiceClient) PullSchema(ctx context.Context, req *connect.R
 	return c.pullSchema.CallServerStream(ctx, req)
 }
 
+// ResetSubscription calls xyz.block.ftl.v1.ControllerService.ResetSubscription.
+func (c *controllerServiceClient) ResetSubscription(ctx context.Context, req *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error) {
+	return c.resetSubscription.CallUnary(ctx, req)
+}
+
 // ControllerServiceHandler is an implementation of the xyz.block.ftl.v1.ControllerService service.
 type ControllerServiceHandler interface {
 	// Ping service for readiness.
@@ -587,6 +603,8 @@ type ControllerServiceHandler interface {
 	// Note that if there are no deployments this will block indefinitely, making it unsuitable for
 	// just retrieving the schema. Use GetSchema for that.
 	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error
+	// Reset the cursor for a subscription to the head of its topic.
+	ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error)
 }
 
 // NewControllerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -666,6 +684,11 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 		svc.PullSchema,
 		opts...,
 	)
+	controllerServiceResetSubscriptionHandler := connect.NewUnaryHandler(
+		ControllerServiceResetSubscriptionProcedure,
+		svc.ResetSubscription,
+		opts...,
+	)
 	return "/xyz.block.ftl.v1.ControllerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ControllerServicePingProcedure:
@@ -696,6 +719,8 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 			controllerServiceGetSchemaHandler.ServeHTTP(w, r)
 		case ControllerServicePullSchemaProcedure:
 			controllerServicePullSchemaHandler.ServeHTTP(w, r)
+		case ControllerServiceResetSubscriptionProcedure:
+			controllerServiceResetSubscriptionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -759,6 +784,10 @@ func (UnimplementedControllerServiceHandler) GetSchema(context.Context, *connect
 
 func (UnimplementedControllerServiceHandler) PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.PullSchema is not implemented"))
+}
+
+func (UnimplementedControllerServiceHandler) ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.ResetSubscription is not implemented"))
 }
 
 // RunnerServiceClient is a client for the xyz.block.ftl.v1.RunnerService service.

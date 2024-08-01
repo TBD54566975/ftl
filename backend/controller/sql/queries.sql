@@ -520,7 +520,8 @@ INSERT INTO fsm_instances (
 ON CONFLICT(fsm, key) DO
 UPDATE SET
   destination_state = @destination_state::schema_ref,
-  async_call_id = @async_call_id::BIGINT
+  async_call_id = @async_call_id::BIGINT,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm_instances.async_call_id IS NULL
   AND fsm_instances.destination_state IS NULL
@@ -532,7 +533,8 @@ UPDATE fsm_instances
 SET
   current_state = destination_state,
   destination_state = NULL,
-  async_call_id = NULL
+  async_call_id = NULL,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
@@ -543,7 +545,8 @@ SET
   current_state = destination_state,
   destination_state = NULL,
   async_call_id = NULL,
-  status = 'completed'::fsm_status
+  status = 'completed'::fsm_status,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
@@ -553,7 +556,8 @@ UPDATE fsm_instances
 SET
   current_state = NULL,
   async_call_id = NULL,
-  status = 'failed'::fsm_status
+  status = 'failed'::fsm_status,
+  updated_at = NOW() AT TIME ZONE 'utc'
 WHERE
   fsm = @fsm::schema_ref AND key = @key::TEXT
 RETURNING true;
@@ -571,7 +575,7 @@ UPDATE SET
   type = sqlc.arg('event_type')::TEXT
 RETURNING id;
 
--- name: UpsertSubscription :exec
+-- name: UpsertSubscription :one
 INSERT INTO topic_subscriptions (
   key,
   topic_id,
@@ -595,23 +599,30 @@ ON CONFLICT (name, module_id) DO
 UPDATE SET 
   topic_id = excluded.topic_id,
   deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key)
-RETURNING id;
+RETURNING 
+  id,
+  CASE 
+    WHEN xmax = 0 THEN true
+    ELSE false
+  END AS inserted;
 
--- name: DeleteSubscriptions :exec
+-- name: DeleteSubscriptions :many
 DELETE FROM topic_subscriptions
 WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
   WHERE deployments.key = sqlc.arg('deployment')::deployment_key
-);
+)
+RETURNING topic_subscriptions.key;
 
--- name: DeleteSubscribers :exec
+-- name: DeleteSubscribers :many
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
   SELECT deployments.id
   FROM deployments
   WHERE deployments.key = sqlc.arg('deployment')::deployment_key
-);
+)
+RETURNING topic_subscribers.key;
 
 -- name: InsertSubscriber :exec
 INSERT INTO topic_subscribers (
@@ -643,6 +654,7 @@ VALUES (
 INSERT INTO topic_events (
     "key",
     topic_id,
+    caller,
     payload
   )
 VALUES (
@@ -654,6 +666,7 @@ VALUES (
     WHERE modules.name = sqlc.arg('module')::TEXT
       AND topics.name = sqlc.arg('topic')::TEXT
   ),
+  sqlc.arg('caller'),
   sqlc.arg('payload')
 );
 
@@ -686,6 +699,7 @@ WITH cursor AS (
 SELECT events."key" as event,
         events.payload,
         events.created_at,
+        events.caller,
         NOW() - events.created_at >= sqlc.arg('consumption_delay')::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
@@ -727,3 +741,35 @@ UPDATE topic_subscriptions
 SET state = 'idle'
 WHERE name = @name::TEXT
       AND module_id = (SELECT id FROM module);
+
+-- name: GetSubscription :one
+WITH module AS (
+  SELECT id
+  FROM modules
+  WHERE name = $2::TEXT
+)
+SELECT *
+FROM topic_subscriptions
+WHERE name = $1::TEXT
+      AND module_id = (SELECT id FROM module);
+
+-- name: SetSubscriptionCursor :exec
+WITH event AS (
+  SELECT id, created_at, key, topic_id, payload
+  FROM topic_events
+  WHERE "key" = $2::topic_event_key
+)
+UPDATE topic_subscriptions
+SET state = 'idle',
+    cursor = (SELECT id FROM event)
+WHERE key = $1::subscription_key;
+
+-- name: GetTopic :one
+SELECT *
+FROM topics
+WHERE id = $1::BIGINT;
+
+-- name: GetTopicEvent :one
+SELECT *
+FROM topic_events
+WHERE id = $1::BIGINT;

@@ -47,7 +47,26 @@ func (s *Schema) Hash() [sha256.Size]byte {
 	return sha256.Sum256([]byte(s.String()))
 }
 
+// ResolveRequestResponseType resolves a reference to a supported request/response type, which can be a Data or an Any,
+// or a TypeAlias over either supported type.
+func (s *Schema) ResolveRequestResponseType(ref *Ref) (Symbol, error) {
+	decl, ok := s.Resolve(ref).Get()
+	if !ok {
+		return nil, fmt.Errorf("unknown ref %s", ref)
+	}
+
+	if ta, ok := decl.(*TypeAlias); ok {
+		if typ, ok := ta.Type.(*Any); ok {
+			return typ, nil
+		}
+	}
+
+	return s.resolveToDataMonomorphised(ref, nil)
+}
+
 // ResolveMonomorphised resolves a reference to a monomorphised Data type.
+// Also supports resolving the monomorphised Data type underlying a TypeAlias, where applicable.
+//
 // If a Ref is not found, returns ErrNotFound.
 func (s *Schema) ResolveMonomorphised(ref *Ref) (*Data, error) {
 	return s.resolveToDataMonomorphised(ref, nil)

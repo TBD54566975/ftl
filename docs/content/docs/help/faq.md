@@ -14,7 +14,7 @@ toc = true
 top = false
 +++
 
-## Why does FTL not allow external types?
+## Why does FTL not allow external types directly?
 
 Because of the nature of writing FTL verbs and data types, it's easy to think of it as just writing standard native code. Through that lens it is then somewhat surprising when FTL disallows the use of arbitrary external data types.
 
@@ -27,7 +27,8 @@ There are also secondary reasons, such as:
 - External types often perform custom marshalling to/from JSON. This is not representable cross-language.
 - Cleaner separation of abstraction layers - the ability to mix in abitrary external types is convenient, but can easily lead to mixing of concerns between internal and external data representations.
 
-So what to do? While there are good reasons to disallow external types, it's also very irritating to have to manually transcribe types, or translate between JSON "blobs" in FTL and strong internal types. We're not sure how, but we definitely want to improve this experience. There is a draft [design document](/S8iS08PFT4SdnXzs4BIt8A) enumerating some options, please add your thoughts.
+So what to do? See the [external types](https://tbd54566975.github.io/ftl/docs/reference/externaltypes/) documentation 
+for how to work around this limitation.
 
 ## What is a "module"?
 

@@ -49,6 +49,7 @@ type CLI struct {
 	Download downloadCmd `cmd:"" help:"Download a deployment."`
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
+	Pubsub   pubsubCmd   `cmd:"" help:"Manage pub/sub."`
 
 	// Specify the 1Password vault to access secrets from.
 	Vault string `name:"opvault" help:"1Password vault to be used for secrets. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." placeholder:"VAULT"`

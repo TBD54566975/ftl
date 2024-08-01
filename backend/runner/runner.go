@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -30,6 +29,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/runner/observability"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
@@ -52,6 +52,7 @@ type Config struct {
 	Language              []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust"`
 	HeartbeatPeriod       time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter       time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
+	RunnerStartDelay      time.Duration   `help:"Time in seconds for a runner to wait before contacting the controller. This can be needed in istio environments to work around initialization races." env:"FTL_RUNNER_START_DELAY" default:"0s"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -60,6 +61,7 @@ func Start(ctx context.Context, config Config) error {
 	}
 	hostname, err := os.Hostname()
 	if err != nil {
+		observability.Runner.StartupFailed(ctx)
 		return fmt.Errorf("failed to get hostname: %w", err)
 	}
 	pid := os.Getpid()
@@ -72,6 +74,7 @@ func Start(ctx context.Context, config Config) error {
 
 	err = manageDeploymentDirectory(logger, config)
 	if err != nil {
+		observability.Runner.StartupFailed(ctx)
 		return err
 	}
 
@@ -92,6 +95,7 @@ func Start(ctx context.Context, config Config) error {
 		"languages": slices.Map(config.Language, func(t string) any { return t }),
 	})
 	if err != nil {
+		observability.Runner.StartupFailed(ctx)
 		return fmt.Errorf("failed to marshal labels: %w", err)
 	}
 
@@ -108,14 +112,8 @@ func Start(ctx context.Context, config Config) error {
 	go func() {
 		// In some environments we may want a delay before registering the runner
 		// We have seen istio race conditions that we think this will help
-		startDelay := os.Getenv("FTL_RUNNER_START_DELAY")
-		if startDelay != "" {
-			delay, err := strconv.Atoi(startDelay)
-			if err != nil {
-				logger.Errorf(err, "could not parse RUNNER_START_DELAY")
-			} else {
-				time.Sleep(time.Second * time.Duration(delay))
-			}
+		if config.RunnerStartDelay > 0 {
+			time.Sleep(config.RunnerStartDelay)
 		}
 		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
 		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
@@ -426,6 +424,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	})
 	if err != nil {
 		s.registrationFailure.Store(optional.Some(err))
+		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey), state)
 		return fmt.Errorf("failed to register with Controller: %w", err)
 	}
 	s.registrationFailure.Store(optional.None[error]())
@@ -433,10 +432,12 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	// Wait for the next heartbeat.
 	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
 	logger.Tracef("Registered with Controller, next heartbeat in %s", delay)
+	observability.Runner.Registered(ctx, optional.Ptr(deploymentKey), state)
 	select {
 	case <-ctx.Done():
 		err = context.Cause(ctx)
 		s.registrationFailure.Store(optional.Some(err))
+		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey), state)
 		return err
 
 	case <-s.forceUpdate:

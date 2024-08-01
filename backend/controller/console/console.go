@@ -1,4 +1,4 @@
-package controller
+package console
 
 import (
 	"context"
@@ -30,7 +30,7 @@ type ConsoleService struct {
 
 var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
 
-func NewConsoleService(dal *dal.DAL) *ConsoleService {
+func NewService(dal *dal.DAL) *ConsoleService {
 	return &ConsoleService{
 		dal: dal,
 	}
@@ -101,7 +101,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 				var jsonRequestSchema string
 				if verbSchema.Request != nil {
 					if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
-						jsonSchema, err := schema.DataToJSONSchema(sch, *requestData)
+						jsonSchema, err := schema.RequestResponseToJSONSchema(sch, *requestData)
 						if err != nil {
 							return nil, err
 						}

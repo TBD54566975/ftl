@@ -38,6 +38,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
+	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
@@ -149,7 +150,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	sm := cf.SecretsFromContext(ctx)
 
 	admin := admin.NewAdminService(cm, sm, svc.dal)
-	console := NewConsoleService(svc.dal)
+	console := console.NewService(svc.dal)
 
 	ingressHandler := http.Handler(svc)
 	if len(config.AllowOrigins) > 0 {
@@ -226,10 +227,6 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
 	}
 	config.SetDefaults()
-
-	if err := observability.InitControllerObservability(); err != nil {
-		log.FromContext(ctx).Warnf("failed to initialize controller observability: %v", err)
-	}
 
 	// Override some defaults during development mode.
 	_, devel := runnerScaling.(*localscaling.LocalScaling)
@@ -924,7 +921,7 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 
 func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
 	// Publish the event.
-	err := s.dal.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Body)
+	err := s.dal.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
 	}
@@ -1022,6 +1019,7 @@ func (s *Service) callWithRequest(
 		}
 	}
 
+	ctx = rpc.WithRequestKey(ctx, requestKey)
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 
@@ -1119,6 +1117,14 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	deploymentLogger := s.getDeploymentLogger(ctx, dkey)
 	deploymentLogger.Debugf("Created deployment %s", dkey)
 	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{DeploymentKey: dkey.String()}), nil
+}
+
+func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ftlv1.ResetSubscriptionRequest]) (*connect.Response[ftlv1.ResetSubscriptionResponse], error) {
+	err := s.dal.ResetSubscription(ctx, req.Msg.Subscription.Module, req.Msg.Subscription.Name)
+	if err != nil {
+		return nil, fmt.Errorf("could not reset subscription: %w", err)
+	}
+	return connect.NewResponse(&ftlv1.ResetSubscriptionResponse{}), nil
 }
 
 // Load schemas for existing modules, combine with our new one, and validate the new module in the context
@@ -1330,8 +1336,10 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
 	} else if err != nil {
+		observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
 		return 0, err
 	}
+	observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
 	defer call.Release() //nolint:errcheck
 
 	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb))
@@ -1346,15 +1354,18 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	failed := false
 	if err != nil {
 		logger.Warnf("Async call could not be called: %v", err)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.Some("async call could not be called"))
 		callResult = either.RightOf[[]byte](err.Error())
 		failed = true
 	} else if perr := resp.Msg.GetError(); perr != nil {
 		logger.Warnf("Async call failed: %s", perr.Message)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.Some("async call failed"))
 		callResult = either.RightOf[[]byte](perr.Message)
 		failed = true
 	} else {
 		logger.Debugf("Async call succeeded")
 		callResult = either.LeftOf[string](resp.Msg.GetBody())
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.None[string]())
 	}
 	err = s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx) error {
 		if failed && call.RemainingAttempts > 0 {
@@ -1374,8 +1385,10 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		}
 	})
 	if err != nil {
+		observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
+	observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
 	go func() {
 		// Post-commit notification based on origin
 		switch origin := call.Origin.(type) {

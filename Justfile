@@ -138,11 +138,18 @@ tidy:
 
 # Check for changes in existing SQL migrations compared to main
 ensure-frozen-migrations:
-  scripts/ensure-frozen-migrations
+  @scripts/ensure-frozen-migrations
 
 # Run backend tests
 test-backend:
   @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./...
+
+test-scripts:
+  GIT_COMMITTER_NAME="CI" \
+    GIT_COMMITTER_EMAIL="no-reply@tbd.email" \
+    GIT_AUTHOR_NAME="CI" \
+    GIT_AUTHOR_EMAIL="no-reply@tbd.email" \
+    scripts/tests/test-ensure-frozen-migrations.sh
 
 # Lint the frontend
 lint-frontend: build-frontend
@@ -151,6 +158,9 @@ lint-frontend: build-frontend
 # Lint the backend
 lint-backend:
   @golangci-lint run --new-from-rev=$(git merge-base origin/main HEAD) ./...
+
+lint-scripts:
+	@shellcheck -f gcc -e SC2016 $(find scripts -type f -not -path scripts/tests) | to-annotation
 
 # Run live docs server
 docs:

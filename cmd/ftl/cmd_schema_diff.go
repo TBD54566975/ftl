@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -17,23 +18,47 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type schemaDiffCmd struct {
-	OtherEndpoint url.URL `arg:"" help:"Other endpoint URL to compare against."`
+	OtherEndpoint url.URL `arg:"" help:"Other endpoint URL to compare against. If this is not specified then ftl will perform a diff against the local schema." optional:""`
 	Color         bool    `help:"Enable colored output regardless of TTY."`
 }
 
-func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL) error {
-	other, err := schemaForURL(ctx, d.OtherEndpoint)
+func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig projectconfig.Config) error {
+	var other *schema.Schema
+	var err error
+	sameModulesOnly := false
+	if d.OtherEndpoint.String() == "" {
+		sameModulesOnly = true
+		other, err = localSchema(ctx, projConfig)
+	} else {
+		other, err = schemaForURL(ctx, d.OtherEndpoint)
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to get other schema: %w", err)
 	}
 	current, err := schemaForURL(ctx, *currentURL)
 	if err != nil {
 		return fmt.Errorf("failed to get current schema: %w", err)
+	}
+	if sameModulesOnly {
+		tempModules := current.Modules
+		current.Modules = []*schema.Module{}
+		moduleMap := map[string]*schema.Module{}
+		for _, i := range tempModules {
+			moduleMap[i.Name] = i
+		}
+		for _, i := range other.Modules {
+			if mod, ok := moduleMap[i.Name]; ok {
+				current.Modules = append(current.Modules, mod)
+			}
+		}
 	}
 
 	edits := myers.ComputeEdits(span.URIFromPath(""), other.String(), current.String())
@@ -55,6 +80,30 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL) error {
 	}
 
 	return nil
+}
+
+func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*schema.Schema, error) {
+	pb := &schema.Schema{}
+	found := false
+	tried := ""
+	modules, err := buildengine.DiscoverModules(ctx, projectConfig.AbsModuleDirs())
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover modules %w", err)
+	}
+	for _, moduleSettings := range modules {
+		mod, err := schema.ModuleFromProtoFile(moduleSettings.Config.Abs().Schema)
+		if err != nil {
+			tried += fmt.Sprintf(" failed to read schema file %s; did you run ftl build?", moduleSettings.Config.Abs().Schema)
+		} else {
+			found = true
+			pb.Modules = append(pb.Modules, mod)
+		}
+
+	}
+	if !found {
+		return nil, errors.New(tried)
+	}
+	return pb, nil
 }
 
 func schemaForURL(ctx context.Context, url url.URL) (*schema.Schema, error) {

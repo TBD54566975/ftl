@@ -9,9 +9,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/TBD54566975/ftl/internal/log"
@@ -68,8 +69,13 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 	if err != nil {
 		return fmt.Errorf("failed to create OTEL trace exporter: %w", err)
 	}
-	traceProvider := trace.NewTracerProvider(trace.WithBatcher(otelTraceExporter), trace.WithResource(res))
+
+	traceProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(otelTraceExporter),
+		sdktrace.WithResource(res),
+	)
 	otel.SetTracerProvider(traceProvider)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return nil
 }

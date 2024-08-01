@@ -77,7 +77,7 @@ var jsonSchemaSample = &Schema{
 }
 
 func TestDataToJSONSchema(t *testing.T) {
-	schema, err := DataToJSONSchema(jsonSchemaSample, Ref{Module: "foo", Name: "Foo"})
+	schema, err := RequestResponseToJSONSchema(jsonSchemaSample, Ref{Module: "foo", Name: "Foo"})
 	assert.NoError(t, err)
 	actual, err := json.MarshalIndent(schema, "", "  ")
 	assert.NoError(t, err)
@@ -317,7 +317,7 @@ func TestJSONSchemaValidation(t *testing.T) {
   }
    `
 
-	schema, err := DataToJSONSchema(jsonSchemaSample, Ref{Module: "foo", Name: "Foo"})
+	schema, err := RequestResponseToJSONSchema(jsonSchemaSample, Ref{Module: "foo", Name: "Foo"})
 	assert.NoError(t, err)
 	schemaJSON, err := json.MarshalIndent(schema, "", "  ")
 	assert.NoError(t, err)
@@ -355,7 +355,7 @@ func TestInvalidEnumValidation(t *testing.T) {
   }
    `
 
-	schema, err := DataToJSONSchema(jsonSchemaSample, Ref{Module: "foo", Name: "Foo"})
+	schema, err := RequestResponseToJSONSchema(jsonSchemaSample, Ref{Module: "foo", Name: "Foo"})
 	assert.NoError(t, err)
 	schemaJSON, err := json.MarshalIndent(schema, "", "  ")
 	assert.NoError(t, err)

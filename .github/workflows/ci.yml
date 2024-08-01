@@ -36,6 +36,18 @@ jobs:
         run: docker compose up -d --wait
       - name: Test README
         run: just test-readme
+  test-scripts:
+    name: Test Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Test Scripts
+        run: just test-scripts
   sql:
     name: SQL
     runs-on: ubuntu-latest
@@ -87,9 +99,8 @@ jobs:
       # Too annoying to disable individual warnings
       # - name: staticcheck
       #   run: staticcheck ./...
-      - name: shellcheck
-        shell: bash
-        run: shellcheck -f gcc -e SC2016 scripts/* | to-annotation
+      - name: lint-scripts
+        run: just lint-scripts
   proto-breaking:
     name: Proto Breaking Change Check
     runs-on: ubuntu-latest
@@ -102,7 +113,9 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Proto Breaking Change Check
         shell: bash
-        run: buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation || true
+        run: |
+          set -o pipefail
+          buf breaking --against 'https://github.com/TBD54566975/ftl.git#branch=main' | to-annotation
   console:
     name: Console
     runs-on: ubuntu-latest
