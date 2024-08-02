@@ -92,7 +92,7 @@ type EncryptionKeys struct {
 	Async string `help:"Key for sensitive async call data in internal FTL tables." env:"FTL_ASYNC_ENCRYPTION_KEY"`
 }
 
-func (e EncryptionKeys) Encryptors() (*dal.Encryptors, error) {
+func (e EncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
 	encryptors := dal.Encryptors{}
 	if e.Logs != "" {
 		enc, err := encryption.NewForKeyOrUri(e.Logs)
@@ -100,6 +100,8 @@ func (e EncryptionKeys) Encryptors() (*dal.Encryptors, error) {
 			return nil, fmt.Errorf("could not create log encryptor: %w", err)
 		}
 		encryptors.Logs = enc
+	} else if required {
+		return nil, fmt.Errorf("FTL_LOG_ENCRYPTION_KEY is required")
 	} else {
 		encryptors.Logs = encryption.NoOpEncryptor{}
 	}
@@ -110,6 +112,8 @@ func (e EncryptionKeys) Encryptors() (*dal.Encryptors, error) {
 			return nil, fmt.Errorf("could not create async calls encryptor: %w", err)
 		}
 		encryptors.Async = enc
+	} else if required {
+		return nil, fmt.Errorf("FTL_ASYNC_ENCRYPTION_KEY is required")
 	} else {
 		encryptors.Async = encryption.NoOpEncryptor{}
 	}

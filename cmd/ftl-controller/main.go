@@ -43,7 +43,7 @@ func main() {
 	)
 	cli.ControllerConfig.SetDefaults()
 
-	encryptors, err := cli.ControllerConfig.EncryptionKeys.Encryptors()
+	encryptors, err := cli.ControllerConfig.EncryptionKeys.Encryptors(true)
 	kctx.FatalIfErrorf(err, "failed to create encryptors")
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
@@ -53,7 +53,7 @@ func main() {
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
 	conn, err := pgxpool.New(ctx, cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
-	dal, err := dal.New(ctx, conn, *encryptors)
+	dal, err := dal.New(ctx, conn, encryptors)
 	kctx.FatalIfErrorf(err)
 
 	configDal, err := cfdal.New(ctx, conn)

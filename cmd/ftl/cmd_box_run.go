@@ -62,7 +62,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	if err != nil {
 		return fmt.Errorf("failed to bring up DB connection: %w", err)
 	}
-	encryptors, err := config.EncryptionKeys.Encryptors()
+	encryptors, err := config.EncryptionKeys.Encryptors(false)
 	if err != nil {
 		return fmt.Errorf("failed to create encryptors: %w", err)
 	}
