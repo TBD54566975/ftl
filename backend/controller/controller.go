@@ -99,7 +99,7 @@ type Config struct {
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	EncryptionKey                []byte              `help:"Encryption key for the controller." env:"FTL_ENCRYPTION_KEY"`
+	EncryptionKey                []byte              `help:"Encryption key for sensitive data in internal FTL tables." env:"FTL_ENCRYPTION_KEY"`
 	CommonConfig
 }
 
