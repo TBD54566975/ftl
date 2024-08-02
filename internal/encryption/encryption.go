@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/tink-crypto/tink-go/v2/insecurecleartextkeyset"
 	"github.com/tink-crypto/tink-go/v2/keyset"
@@ -17,25 +18,24 @@ type Encryptable interface {
 	DecryptJSON(input json.RawMessage, output any) error
 }
 
-func NewForKey(key string) (Encryptable, error) {
-	if len(key) == 0 {
+func NewForKeyOrUri(keyOrUri string) (Encryptable, error) {
+	if len(keyOrUri) == 0 {
 		return NoOpEncryptor{}, nil
 	}
 
-	keySetHandle, err := insecurecleartextkeyset.Read(
-		keyset.NewJSONReader(bytes.NewBufferString(key)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read keyset: %w", err)
+	// If keyOrUri is a JSON string, it is a clear text key set.
+	if strings.TrimSpace(keyOrUri)[0] == '{' {
+		return NewClearTextEncryptor(keyOrUri)
+	} else if strings.HasPrefix(keyOrUri, "aws-kms://") {
+		// Otherwise should be a URI for KMS.
+		// aws-kms://arn:aws:kms:[region]:[account-id]:key/[key-id]
+		return NewAwsKmsEncryptor(keyOrUri)
+	} else {
+		return nil, fmt.Errorf("unsupported key or uri: %s", keyOrUri)
 	}
-
-	encryptor, err := NewEncryptor(*keySetHandle)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create encryptor: %w", err)
-	}
-
-	return encryptor, nil
 }
 
+// NoOpEncryptor does not encrypt and just passes the input as is.
 type NoOpEncryptor struct {
 }
 
@@ -55,6 +55,43 @@ func (n NoOpEncryptor) DecryptJSON(input json.RawMessage, output any) error {
 	}
 
 	return nil
+}
+
+func NewClearTextEncryptor(key string) (Encryptable, error) {
+	keySetHandle, err := insecurecleartextkeyset.Read(
+		keyset.NewJSONReader(bytes.NewBufferString(key)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read clear text keyset: %w", err)
+	}
+
+	encryptor, err := NewEncryptor(*keySetHandle)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create clear text encryptor: %w", err)
+	}
+
+	return encryptor, nil
+}
+
+// NewAwsKmsEncryptor must have the following uri: 'aws-kms://arn:<partition>:kms:<region>:[:path]'.
+func NewAwsKmsEncryptor(uri string) (Encryptable, error) {
+	keySet, err := keyset.NewHandle(streamingaead.AES256GCMHKDF1MBKeyTemplate())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create keySet: %w", err)
+	}
+
+	// Get the AEAD primitive from the KMS.
+	primitive, err := streamingaead.New(keySet)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get AEAD primitive: %w", err)
+	}
+
+	// Create the encryptor.
+	encryptor := Encryptor{
+		keySetHandle: *keySet,
+		primitive:    primitive,
+	}
+
+	return encryptor, nil
 }
 
 // NewEncryptor encrypts and decrypts JSON payloads using the provided key set.
