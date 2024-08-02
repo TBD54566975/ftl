@@ -17,8 +17,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/encryption"
-
 	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/concurrency"
@@ -59,6 +57,7 @@ import (
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	frontend "github.com/TBD54566975/ftl/frontend"
 	"github.com/TBD54566975/ftl/internal/cors"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
