@@ -440,6 +440,7 @@ WITH async_call AS (
   SELECT id
   FROM async_calls
   WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
+  ORDER BY created_at
   LIMIT 1
   FOR UPDATE SKIP LOCKED
 ), lease AS (
