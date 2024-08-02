@@ -88,8 +88,8 @@ func (c *CommonConfig) Validate() error {
 }
 
 type EncryptionKeys struct {
-	Logs  string `help:"Key for sensitive log data in internal FTL tables." env:"FTL_LOG_ENCRYPTION_KEY"`
-	Async string `help:"Key for sensitive async call data in internal FTL tables." env:"FTL_ASYNC_ENCRYPTION_KEY"`
+	Logs  string `name:"log-key" help:"Key for sensitive log data in internal FTL tables." env:"FTL_LOG_ENCRYPTION_KEY"`
+	Async string `name:"async-key" help:"Key for sensitive async call data in internal FTL tables." env:"FTL_ASYNC_ENCRYPTION_KEY"`
 }
 
 func (e EncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
