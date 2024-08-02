@@ -1041,10 +1041,6 @@ func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 }
 
 func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
-	attributes, err := json.Marshal(log.Attributes)
-	if err != nil {
-		return err
-	}
 	var requestKey optional.Option[string]
 	if name, ok := log.RequestKey.Get(); ok {
 		requestKey = optional.Some(name.String())
@@ -1052,7 +1048,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 
 	payload := map[string]any{
 		"message":    log.Message,
-		"attributes": attributes,
+		"attributes": log.Attributes,
 		"error":      log.Error,
 		"stack":      log.Stack,
 	}
