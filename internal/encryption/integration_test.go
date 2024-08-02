@@ -14,7 +14,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestLogs(t *testing.T) {
+func TestEncryptionForLogs(t *testing.T) {
 	in.RunWithEncryption(t, "",
 		in.CopyModule("encryption"),
 		in.Deploy("encryption"),
@@ -51,7 +51,7 @@ func TestLogs(t *testing.T) {
 	)
 }
 
-func TestPubSub(t *testing.T) {
+func TestEncryptionForubSub(t *testing.T) {
 	in.RunWithEncryption(t, "",
 		in.CopyModule("encryption"),
 		in.Deploy("encryption"),
@@ -72,7 +72,7 @@ func TestPubSub(t *testing.T) {
 	)
 }
 
-func TestFSM(t *testing.T) {
+func TestEncryptionForFSM(t *testing.T) {
 	in.RunWithEncryption(t, "",
 		in.CopyModule("encryption"),
 		in.Deploy("encryption"),
