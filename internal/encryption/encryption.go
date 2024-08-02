@@ -18,21 +18,20 @@ type Encryptable interface {
 	DecryptJSON(input json.RawMessage, output any) error
 }
 
-func NewForKeyOrUri(keyOrUri string) (Encryptable, error) {
-	if len(keyOrUri) == 0 {
+func NewForKeyOrURI(keyOrURI string) (Encryptable, error) {
+	if len(keyOrURI) == 0 {
 		return NoOpEncryptor{}, nil
 	}
 
 	// If keyOrUri is a JSON string, it is a clear text key set.
-	if strings.TrimSpace(keyOrUri)[0] == '{' {
-		return NewClearTextEncryptor(keyOrUri)
+	if strings.TrimSpace(keyOrURI)[0] == '{' {
+		return NewClearTextEncryptor(keyOrURI)
 		// Otherwise should be a URI for KMS.
 		// aws-kms://arn:aws:kms:[region]:[account-id]:key/[key-id]
-	} else if strings.HasPrefix(keyOrUri, "aws-kms://") {
+	} else if strings.HasPrefix(keyOrURI, "aws-kms://") {
 		return nil, fmt.Errorf("AWS KMS is not supported yet")
-	} else {
-		return nil, fmt.Errorf("unsupported key or uri: %s", keyOrUri)
 	}
+	return nil, fmt.Errorf("unsupported key or uri: %s", keyOrURI)
 }
 
 // NoOpEncryptor does not encrypt and just passes the input as is.
@@ -112,7 +111,11 @@ func (e Encryptor) EncryptJSON(input any) (json.RawMessage, error) {
 		return nil, fmt.Errorf("failed to close encrypted writer: %w", err)
 	}
 
-	return json.Marshal(EncryptedPayload{Encrypted: encryptedBuffer.Bytes()})
+	out, err := json.Marshal(EncryptedPayload{Encrypted: encryptedBuffer.Bytes()})
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal encrypted data: %w", err)
+	}
+	return out, nil
 }
 
 func (e Encryptor) DecryptJSON(input json.RawMessage, output any) error {

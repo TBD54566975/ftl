@@ -25,7 +25,7 @@ const key = `{
 func TestNewEncryptor(t *testing.T) {
 	jsonInput := "\"hello\""
 
-	encryptor, err := NewForKeyOrUri(key)
+	encryptor, err := NewForKeyOrURI(key)
 	assert.NoError(t, err)
 
 	encrypted, err := encryptor.EncryptJSON(jsonInput)

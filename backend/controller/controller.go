@@ -95,7 +95,7 @@ type EncryptionKeys struct {
 func (e EncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
 	encryptors := dal.Encryptors{}
 	if e.Logs != "" {
-		enc, err := encryption.NewForKeyOrUri(e.Logs)
+		enc, err := encryption.NewForKeyOrURI(e.Logs)
 		if err != nil {
 			return nil, fmt.Errorf("could not create log encryptor: %w", err)
 		}
@@ -107,7 +107,7 @@ func (e EncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
 	}
 
 	if e.Async != "" {
-		enc, err := encryption.NewForKeyOrUri(e.Async)
+		enc, err := encryption.NewForKeyOrURI(e.Async)
 		if err != nil {
 			return nil, fmt.Errorf("could not create async calls encryptor: %w", err)
 		}
