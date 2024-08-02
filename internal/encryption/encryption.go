@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+
 	"github.com/tink-crypto/tink-go/v2/insecurecleartextkeyset"
 	"github.com/tink-crypto/tink-go/v2/keyset"
 	"github.com/tink-crypto/tink-go/v2/streamingaead"
 	"github.com/tink-crypto/tink-go/v2/tink"
-	"io"
 )
 
 type Encryptable interface {

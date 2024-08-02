@@ -7,7 +7,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"hash"
 	"io"
 	"math/rand"
@@ -17,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/TBD54566975/ftl/internal/encryption"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
@@ -88,35 +89,26 @@ func (c *CommonConfig) Validate() error {
 }
 
 type EncryptionKeys struct {
-	GeneralKey string `help:"General key for sensitive data in internal FTL tables." env:"FTL_ENCRYPTION_KEY"`
-	PubSubKey  string `help:"PubSub key for sensitive data in internal FTL tables." env:"FTL_PUBSUB_KEY"`
-	RpcKey     string `help:"RPC key for sensitive data in internal FTL tables." env:"FTL_RPC_KEY"`
+	Logs  string `help:"Key for sensitive log data in internal FTL tables." env:"FTL_LOG_ENCRYPTION_KEY"`
+	Async string `help:"Key for sensitive async call data in internal FTL tables." env:"FTL_ASYNC_ENCRYPTION_KEY"`
 }
 
 func (e EncryptionKeys) Encryptors() (*dal.Encryptors, error) {
 	encryptors := dal.Encryptors{}
-	if e.GeneralKey != "" {
-		enc, err := encryption.NewForKey(e.GeneralKey)
+	if e.Logs != "" {
+		enc, err := encryption.NewForKey(e.Logs)
 		if err != nil {
-			return nil, fmt.Errorf("could not create general encryptor: %w", err)
+			return nil, fmt.Errorf("could not create log encryptor: %w", err)
 		}
-		encryptors.General = enc
+		encryptors.Logs = enc
 	}
 
-	if e.PubSubKey != "" {
-		enc, err := encryption.NewForKey(e.PubSubKey)
+	if e.Async != "" {
+		enc, err := encryption.NewForKey(e.Async)
 		if err != nil {
-			return nil, fmt.Errorf("could not create pubsub encryptor: %w", err)
+			return nil, fmt.Errorf("could not create async calls encryptor: %w", err)
 		}
-		encryptors.PubSub = enc
-	}
-
-	if e.RpcKey != "" {
-		enc, err := encryption.NewForKey(e.RpcKey)
-		if err != nil {
-			return nil, fmt.Errorf("could not create rpc encryptor: %w", err)
-		}
-		encryptors.RPC = enc
+		encryptors.Async = enc
 	}
 
 	return &encryptors, nil
