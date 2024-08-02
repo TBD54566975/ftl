@@ -104,10 +104,6 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			},
 		}
 
-		panic("todo: implement encryption")
-		if err != nil {
-			return 0, fmt.Errorf("failed to decrypt topic event payload: %w", err)
-		}
 		_, err = tx.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
 			Verb:              subscriber.Sink,
 			Origin:            origin.String(),
