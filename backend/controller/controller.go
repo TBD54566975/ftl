@@ -1226,6 +1226,9 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 		if require > 0 {
 			deploymentLogger.Debugf("Need %d more runners for %s", require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
+				observability.Deployment.ReconciliationStart(ctx, reconcile.Module, reconcile.Deployment.String())
+				defer observability.Deployment.ReconciliationComplete(ctx, reconcile.Module, reconcile.Deployment.String())
+
 				if err := s.deploy(ctx, deployment); err != nil {
 					lock.Lock()
 					failureCount := s.increaseReplicaFailures[deployment.Key.String()] + 1
@@ -1237,6 +1240,7 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 					} else {
 						deploymentLogger.Debugf("Failed to increase deployment replicas (%d): %s", failureCount, err)
 					}
+					observability.Deployment.ReconciliationFailure(ctx, reconcile.Module, reconcile.Deployment.String())
 				} else {
 					lock.Lock()
 					delete(s.increaseReplicaFailures, deployment.Key.String())
@@ -1246,22 +1250,29 @@ func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, erro
 					if reconcile.AssignedReplicas+1 == reconcile.RequiredReplicas {
 						deploymentLogger.Infof("Deployed %s", reconcile.Deployment)
 					}
+					observability.Deployment.ReplicasUpdated(ctx, reconcile.Module, reconcile.Deployment.String(), require)
 				}
 				return nil
 			})
 		} else if require < 0 {
+			observability.Deployment.ReconciliationStart(ctx, reconcile.Module, reconcile.Deployment.String())
+			defer observability.Deployment.ReconciliationComplete(ctx, reconcile.Module, reconcile.Deployment.String())
+
 			deploymentLogger.Debugf("Need %d less runners for %s", -require, reconcile.Deployment)
 			wg.Go(func(ctx context.Context) error {
 				ok, err := s.terminateRandomRunner(ctx, deployment.Key)
 				if err != nil {
 					deploymentLogger.Warnf("Failed to terminate runner: %s", err)
+					observability.Deployment.ReconciliationFailure(ctx, reconcile.Module, reconcile.Deployment.String())
 				} else if ok {
 					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas-1, reconcile.RequiredReplicas)
 					if reconcile.AssignedReplicas-1 == reconcile.RequiredReplicas {
 						deploymentLogger.Infof("Stopped %s", reconcile.Deployment)
 					}
+					observability.Deployment.ReplicasUpdated(ctx, reconcile.Module, reconcile.Deployment.String(), require)
 				} else {
 					deploymentLogger.Warnf("Failed to terminate runner: no runners found")
+					observability.Deployment.ReconciliationFailure(ctx, reconcile.Module, reconcile.Deployment.String())
 				}
 				return nil
 			})

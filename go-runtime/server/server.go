@@ -47,7 +47,7 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 
 		err = observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("could not initialize metrics: %w", err)
 		}
 		hmap := maps.FromSlice(handlers, func(h Handler) (reflection.Ref, Handler) { return h.ref, h })
 		return ctx, &moduleServer{handlers: hmap}, nil
