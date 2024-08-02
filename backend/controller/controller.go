@@ -100,6 +100,8 @@ func (e EncryptionKeys) Encryptors() (*dal.Encryptors, error) {
 			return nil, fmt.Errorf("could not create log encryptor: %w", err)
 		}
 		encryptors.Logs = enc
+	} else {
+		encryptors.Logs = encryption.NoOpEncryptor{}
 	}
 
 	if e.Async != "" {
@@ -108,6 +110,8 @@ func (e EncryptionKeys) Encryptors() (*dal.Encryptors, error) {
 			return nil, fmt.Errorf("could not create async calls encryptor: %w", err)
 		}
 		encryptors.Async = enc
+	} else {
+		encryptors.Async = encryption.NoOpEncryptor{}
 	}
 
 	return &encryptors, nil
@@ -268,7 +272,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 		return nil, fmt.Errorf("could not create encryptors: %w", err)
 	}
 
-	db, err := dal.New(ctx, pool, *encryptors)
+	db, err := dal.New(ctx, pool, encryptors)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create DAL: %w", err)
 	}

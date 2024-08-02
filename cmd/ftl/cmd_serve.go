@@ -156,7 +156,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		if err != nil {
 			return fmt.Errorf("failed to create encryptors: %w", err)
 		}
-		db, err := dal.New(ctx, pool, *encryptors)
+		db, err := dal.New(ctx, pool, encryptors)
 		if err != nil {
 			return fmt.Errorf("failed to create DAL: %w", err)
 		}

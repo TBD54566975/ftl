@@ -3,6 +3,7 @@
 package encryption
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -67,15 +68,32 @@ func TestPubSub(t *testing.T) {
 			assert.Contains(t, string(payload), "encrypted", "raw request string should not be stored in the table")
 			assert.NotContains(t, string(payload), "AliceInWonderland", "raw request string should not be stored in the table")
 		},
-
-		// check that the async call was published with an encrypted request
-		in.QueryRow("ftl", "SELECT COUNT(*) FROM async_calls WHERE verb = 'encryption.consume' AND state = 'success'", int64(1)),
-		func(t testing.TB, ic in.TestContext) {
-			values := in.GetRow(t, ic, "ftl", "SELECT request FROM async_calls WHERE verb = 'encryption.consume' AND state = 'success'", 1)
-			request, ok := values[0].([]byte)
-			assert.True(t, ok, "could not convert payload to string")
-			assert.Contains(t, string(request), "encrypted", "raw request string should not be stored in the table")
-			assert.NotContains(t, string(request), "AliceInWonderland", "raw request string should not be stored in the table")
-		},
+		validateAsyncCall("consume", "AliceInWonderland"),
 	)
+}
+
+func TestFSM(t *testing.T) {
+	in.RunWithEncryption(t, "",
+		in.CopyModule("encryption"),
+		in.Deploy("encryption"),
+		in.Call[map[string]interface{}, any]("encryption", "beginFsm", map[string]interface{}{"name": "Rosebud"}, nil),
+		in.Sleep(3*time.Second),
+		in.Call[map[string]interface{}, any]("encryption", "transitionFsm", map[string]interface{}{"name": "Rosebud"}, nil),
+		in.Sleep(3*time.Second),
+
+		validateAsyncCall("created", "Rosebud"),
+		validateAsyncCall("paid", "Rosebud"),
+	)
+}
+
+func validateAsyncCall(verb string, sensitive string) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE verb = 'encryption.%s' AND state = 'success'", verb), int64(1))(t, ic)
+
+		values := in.GetRow(t, ic, "ftl", fmt.Sprintf("SELECT request FROM async_calls WHERE verb = 'encryption.%s' AND state = 'success'", verb), 1)
+		request, ok := values[0].([]byte)
+		assert.True(t, ok, "could not convert payload to string")
+		assert.Contains(t, string(request), "encrypted", "raw request string should not be stored in the table")
+		assert.NotContains(t, string(request), sensitive, "raw request string should not be stored in the table")
+	}
 }

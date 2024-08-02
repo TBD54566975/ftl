@@ -66,7 +66,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	if err != nil {
 		return fmt.Errorf("failed to create encryptors: %w", err)
 	}
-	db, err := dal.New(ctx, pool, *encryptors)
+	db, err := dal.New(ctx, pool, encryptors)
 	if err != nil {
 		return fmt.Errorf("failed to create DAL: %w", err)
 	}

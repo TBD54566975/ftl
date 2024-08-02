@@ -209,7 +209,7 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool, encryptors Encryptors) (*DAL, error) {
+func New(ctx context.Context, pool *pgxpool.Pool, encryptors *Encryptors) (*DAL, error) {
 	_, err := pool.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire connection: %w", err)
@@ -225,7 +225,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, encryptors Encryptors) (*DAL, 
 
 type DAL struct {
 	db         sql.DBI
-	encryptors Encryptors
+	encryptors *Encryptors
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
@@ -237,8 +237,8 @@ type Encryptors struct {
 }
 
 // NoOpEncryptors do not encrypt potentially sensitive data.
-func NoOpEncryptors() Encryptors {
-	return Encryptors{
+func NoOpEncryptors() *Encryptors {
+	return &Encryptors{
 		Logs:  encryption.NoOpEncryptor{},
 		Async: encryption.NoOpEncryptor{},
 	}
@@ -290,6 +290,7 @@ func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
 	return &Tx{&DAL{
 		db:                tx,
 		DeploymentChanges: d.DeploymentChanges,
+		encryptors:        d.encryptors,
 	}}, nil
 }
 
