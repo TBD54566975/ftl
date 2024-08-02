@@ -111,7 +111,7 @@ type Encryptor struct {
 }
 
 type EncryptedPayload struct {
-	Encrypted []byte
+	Encrypted []byte `json:"encrypted"`
 }
 
 func (e Encryptor) EncryptJSON(input any) (json.RawMessage, error) {

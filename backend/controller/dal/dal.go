@@ -717,10 +717,16 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return dalerrs.TranslatePGError(err)
 		}
 	}
+	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
+		"prev_min_replicas": deployment.MinReplicas,
+		"min_replicas":      minReplicas,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to encrypt payload for InsertDeploymentUpdatedEvent: %w", err)
+	}
 	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
-		DeploymentKey:   key,
-		MinReplicas:     int32(minReplicas),
-		PrevMinReplicas: deployment.MinReplicas,
+		DeploymentKey: key,
+		Payload:       payload,
 	})
 	if err != nil {
 		return dalerrs.TranslatePGError(err)
@@ -784,12 +790,19 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
+	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
+		"min_replicas": int32(minReplicas),
+		"replaced":     replacedDeploymentKey,
+	})
+	if err != nil {
+		return fmt.Errorf("replace deployment failed to encrypt payload: %w", err)
+	}
+
 	err = tx.InsertDeploymentCreatedEvent(ctx, sql.InsertDeploymentCreatedEventParams{
 		DeploymentKey: newDeploymentKey,
 		Language:      newDeployment.Language,
 		ModuleName:    newDeployment.ModuleName,
-		MinReplicas:   int32(minReplicas),
-		Replaced:      replacedDeploymentKey,
+		Payload:       payload,
 	})
 	if err != nil {
 		return fmt.Errorf("replace deployment failed to create event: %w", dalerrs.TranslatePGError(err))
@@ -1128,6 +1141,16 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if rn, ok := call.RequestKey.Get(); ok {
 		requestKey = optional.Some(rn.String())
 	}
+	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
+		"duration_ms": call.Duration.Milliseconds(),
+		"request":     call.Request,
+		"response":    call.Response,
+		"error":       call.Error,
+		"stack":       call.Stack,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to encrypt call payload: %w", err)
+	}
 	return dalerrs.TranslatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
 		DeploymentKey: call.DeploymentKey,
 		RequestKey:    requestKey,
@@ -1136,11 +1159,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 		SourceVerb:    sourceVerb,
 		DestModule:    call.DestVerb.Module,
 		DestVerb:      call.DestVerb.Name,
-		DurationMs:    call.Duration.Milliseconds(),
-		Request:       call.Request,
-		Response:      call.Response,
-		Error:         call.Error,
-		Stack:         call.Stack,
+		Payload:       payload,
 	}))
 }
 

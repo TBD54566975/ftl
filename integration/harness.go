@@ -80,8 +80,8 @@ func RunWithEncryption(t *testing.T, ftlConfigPath string, actions ...Action) {
     }]
         }`
 
-	t.Setenv("FTL_ENCRYPTION_LOG_KEY", testKeySet)
-	t.Setenv("FTL_ENCRYPTION_ASYNC_KEY", testKeySet)
+	t.Setenv("FTL_LOG_ENCRYPTION_KEY", testKeySet)
+	t.Setenv("FTL_ASYNC_ENCRYPTION_KEY", testKeySet)
 
 	run(t, ftlConfigPath, true, actions...)
 }

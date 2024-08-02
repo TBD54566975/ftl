@@ -58,8 +58,8 @@ type CallEvent struct {
 	SourceVerb    optional.Option[schema.Ref]
 	DestVerb      schema.Ref
 	Duration      time.Duration
-	Request       []byte
-	Response      []byte
+	Request       json.RawMessage
+	Response      json.RawMessage
 	Error         optional.Option[string]
 	Stack         optional.Option[string]
 }
