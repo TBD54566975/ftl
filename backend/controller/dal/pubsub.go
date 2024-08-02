@@ -19,7 +19,7 @@ import (
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
-	encryptedPayload, err := d.encryptor.EncryptJSON(json.RawMessage(payload))
+	encryptedPayload, err := d.encryptors.Async.EncryptJSON(json.RawMessage(payload))
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload: %w", err)
 	}
@@ -104,6 +104,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			},
 		}
 
+		panic("todo: implement encryption")
 		if err != nil {
 			return 0, fmt.Errorf("failed to decrypt topic event payload: %w", err)
 		}

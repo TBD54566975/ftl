@@ -34,7 +34,7 @@ func (o Obfuscator) Obfuscate(input []byte) ([]byte, error) {
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		return nil, fmt.Errorf("could not generate IV for obfuscation: %w", err)
 	}
-	cfb := cipher.NewCFBEncryptor(block, iv)
+	cfb := cipher.NewCFBEncrypter(block, iv)
 	cfb.XORKeyStream(ciphertext[aes.BlockSize:], input)
 	return []byte(base64.StdEncoding.EncodeToString(ciphertext)), nil
 }

@@ -232,17 +232,15 @@ type DAL struct {
 }
 
 type Encryptors struct {
-	General encryption.Encryptable
-	PubSub  encryption.Encryptable
-	RPC     encryption.Encryptable
+	Logs  encryption.Encryptable
+	Async encryption.Encryptable
 }
 
 // NoOpEncryptors do not encrypt potentially sensitive data.
 func NoOpEncryptors() Encryptors {
 	return Encryptors{
-		General: encryption.NoOpEncryptor{},
-		PubSub:  encryption.NoOpEncryptor{},
-		RPC:     encryption.NoOpEncryptor{},
+		Logs:  encryption.NoOpEncryptor{},
+		Async: encryption.NoOpEncryptor{},
 	}
 }
 
@@ -1058,7 +1056,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		"error":      log.Error,
 		"stack":      log.Stack,
 	}
-	encryptedPayload, err := d.encryptor.EncryptJSON(payload)
+	encryptedPayload, err := d.encryptors.Logs.EncryptJSON(payload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
 	}

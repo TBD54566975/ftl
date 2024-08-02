@@ -107,7 +107,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 	}
 
 	var decryptedRequest json.RawMessage
-	err = d.encryptor.DecryptJSON(row.Request, &decryptedRequest)
+	err = d.encryptors.Async.DecryptJSON(row.Request, &decryptedRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}

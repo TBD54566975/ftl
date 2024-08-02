@@ -346,10 +346,10 @@ func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
-
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, err
+			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt log event: %w", err)
 			}
+
 			level, err := strconv.ParseInt(row.CustomKey1.MustGet(), 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("invalid log level: %q: %w", row.CustomKey1.MustGet(), err)
@@ -368,8 +368,8 @@ func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := d.encryptor.DecryptJSON(row.Payload, &jsonPayload); err != nil {
-				return nil, err
+			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			var sourceVerb optional.Option[schema.Ref]
 			sourceModule, smok := row.CustomKey1.Get()
@@ -393,8 +393,8 @@ func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey
 
 		case sql.EventTypeDeploymentCreated:
 			var jsonPayload eventDeploymentCreatedJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, err
+			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentCreatedEvent{
 				ID:                 row.ID,
@@ -408,8 +408,8 @@ func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey
 
 		case sql.EventTypeDeploymentUpdated:
 			var jsonPayload eventDeploymentUpdatedJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, err
+			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentUpdatedEvent{
 				ID:              row.ID,

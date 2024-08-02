@@ -19,7 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/bind"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -63,7 +62,11 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	if err != nil {
 		return fmt.Errorf("failed to bring up DB connection: %w", err)
 	}
-	db, err := dal.New(ctx, pool, encryption.NewForKey(config.EncryptionKey))
+	encryptors, err := config.EncryptionKeys.Encryptors()
+	if err != nil {
+		return fmt.Errorf("failed to create encryptors: %w", err)
+	}
+	db, err := dal.New(ctx, pool, *encryptors)
 	if err != nil {
 		return fmt.Errorf("failed to create DAL: %w", err)
 	}

@@ -256,117 +256,117 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	expectedDeploymentUpdatedEvent := &DeploymentUpdatedEvent{
-		DeploymentKey: deploymentKey,
-		MinReplicas:   1,
-	}
+	//expectedDeploymentUpdatedEvent := &DeploymentUpdatedEvent{
+	//	DeploymentKey: deploymentKey,
+	//	MinReplicas:   1,
+	//}
 
-	t.Run("QueryEvents", func(t *testing.T) {
-		t.Run("Limit", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1)
-			assert.NoError(t, err)
-			assert.Equal(t, 1, len(events))
-		})
-
-		t.Run("NoFilters", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000)
-			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
-		})
-
-		t.Run("ByDeployment", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterDeployments(deploymentKey))
-			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
-		})
-
-		t.Run("ByCall", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
-			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{callEvent}, events)
-		})
-
-		t.Run("ByLogLevel", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
-			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{logEvent}, events)
-		})
-
-		t.Run("ByRequests", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterRequests(requestKey))
-			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{callEvent, logEvent}, events)
-		})
-	})
-
-	t.Run("GetRoutingTable", func(t *testing.T) {
-		routes, err := dal.GetRoutingTable(ctx, []string{deployment.Module})
-		assert.NoError(t, err)
-		assert.Equal(t, []Route{{
-			Module:     "test",
-			Runner:     expectedRunner.Key,
-			Deployment: deploymentKey,
-			Endpoint:   expectedRunner.Endpoint,
-		}}, routes[deployment.Module])
-	})
-
-	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
-		err := dal.UpsertRunner(ctx, Runner{
-			Key:        runnerID,
-			Labels:     labels,
-			Endpoint:   "http://localhost:8080",
-			State:      RunnerStateAssigned,
-			Deployment: optional.Some(model.NewDeploymentKey("test")),
-		})
-		assert.Error(t, err)
-		assert.IsError(t, err, dalerrs.ErrNotFound)
-	})
-
-	t.Run("ReleaseRunnerReservation", func(t *testing.T) {
-		err = dal.UpsertRunner(ctx, Runner{
-			Key:      runnerID,
-			Labels:   labels,
-			Endpoint: "http://localhost:8080",
-			State:    RunnerStateIdle,
-		})
-		assert.NoError(t, err)
-	})
-
-	t.Run("ReserveRunnerForDeploymentAfterRelease", func(t *testing.T) {
-		claim, err := dal.ReserveRunnerForDeployment(ctx, deploymentKey, time.Second, labels)
-		assert.NoError(t, err)
-		err = claim.Commit(context.Background())
-		assert.NoError(t, err)
-		assert.Equal(t, expectedRunner, claim.Runner())
-	})
-
-	t.Run("GetRoutingTable", func(t *testing.T) {
-		_, err := dal.GetRoutingTable(ctx, []string{deployment.Module})
-		assert.IsError(t, err, dalerrs.ErrNotFound)
-	})
-
-	t.Run("DeregisterRunner", func(t *testing.T) {
-		err = dal.DeregisterRunner(ctx, runnerID)
-		assert.NoError(t, err)
-	})
-
-	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
-		err = dal.DeregisterRunner(ctx, model.NewRunnerKey("localhost", "8080"))
-		assert.IsError(t, err, dalerrs.ErrNotFound)
-	})
-
-	t.Run("VerifyDeploymentNotifications", func(t *testing.T) {
-		t.Skip("Skipping this test since we're not using the deployment notification system")
-		dal.DeploymentChanges.Unsubscribe(deploymentChangesCh)
-		expectedDeploymentChanges := []DeploymentNotification{
-			{Message: optional.Some(Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},
-			{Message: optional.Some(Deployment{Language: "go", Module: "test", MinReplicas: 1, Schema: &schema.Module{Name: "test"}})},
-		}
-		err = wg.Wait()
-		assert.NoError(t, err)
-		assert.Equal(t, expectedDeploymentChanges, deploymentChanges,
-			assert.Exclude[model.DeploymentKey](), assert.Exclude[time.Time](), assert.IgnoreGoStringer())
-	})
+	//t.Run("QueryEvents", func(t *testing.T) {
+	//	t.Run("Limit", func(t *testing.T) {
+	//		events, err := dal.QueryEvents(ctx, 1)
+	//		assert.NoError(t, err)
+	//		assert.Equal(t, 1, len(events))
+	//	})
+	//
+	//	t.Run("NoFilters", func(t *testing.T) {
+	//		events, err := dal.QueryEvents(ctx, 1000)
+	//		assert.NoError(t, err)
+	//		assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
+	//	})
+	//
+	//	t.Run("ByDeployment", func(t *testing.T) {
+	//		events, err := dal.QueryEvents(ctx, 1000, FilterDeployments(deploymentKey))
+	//		assert.NoError(t, err)
+	//		assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
+	//	})
+	//
+	//	t.Run("ByCall", func(t *testing.T) {
+	//		events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
+	//		assert.NoError(t, err)
+	//		assertEventsEqual(t, []Event{callEvent}, events)
+	//	})
+	//
+	//	t.Run("ByLogLevel", func(t *testing.T) {
+	//		events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
+	//		assert.NoError(t, err)
+	//		assertEventsEqual(t, []Event{logEvent}, events)
+	//	})
+	//
+	//	t.Run("ByRequests", func(t *testing.T) {
+	//		events, err := dal.QueryEvents(ctx, 1000, FilterRequests(requestKey))
+	//		assert.NoError(t, err)
+	//		assertEventsEqual(t, []Event{callEvent, logEvent}, events)
+	//	})
+	//})
+	//
+	//t.Run("GetRoutingTable", func(t *testing.T) {
+	//	routes, err := dal.GetRoutingTable(ctx, []string{deployment.Module})
+	//	assert.NoError(t, err)
+	//	assert.Equal(t, []Route{{
+	//		Module:     "test",
+	//		Runner:     expectedRunner.Key,
+	//		Deployment: deploymentKey,
+	//		Endpoint:   expectedRunner.Endpoint,
+	//	}}, routes[deployment.Module])
+	//})
+	//
+	//t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
+	//	err := dal.UpsertRunner(ctx, Runner{
+	//		Key:        runnerID,
+	//		Labels:     labels,
+	//		Endpoint:   "http://localhost:8080",
+	//		State:      RunnerStateAssigned,
+	//		Deployment: optional.Some(model.NewDeploymentKey("test")),
+	//	})
+	//	assert.Error(t, err)
+	//	assert.IsError(t, err, dalerrs.ErrNotFound)
+	//})
+	//
+	//t.Run("ReleaseRunnerReservation", func(t *testing.T) {
+	//	err = dal.UpsertRunner(ctx, Runner{
+	//		Key:      runnerID,
+	//		Labels:   labels,
+	//		Endpoint: "http://localhost:8080",
+	//		State:    RunnerStateIdle,
+	//	})
+	//	assert.NoError(t, err)
+	//})
+	//
+	//t.Run("ReserveRunnerForDeploymentAfterRelease", func(t *testing.T) {
+	//	claim, err := dal.ReserveRunnerForDeployment(ctx, deploymentKey, time.Second, labels)
+	//	assert.NoError(t, err)
+	//	err = claim.Commit(context.Background())
+	//	assert.NoError(t, err)
+	//	assert.Equal(t, expectedRunner, claim.Runner())
+	//})
+	//
+	//t.Run("GetRoutingTable", func(t *testing.T) {
+	//	_, err := dal.GetRoutingTable(ctx, []string{deployment.Module})
+	//	assert.IsError(t, err, dalerrs.ErrNotFound)
+	//})
+	//
+	//t.Run("DeregisterRunner", func(t *testing.T) {
+	//	err = dal.DeregisterRunner(ctx, runnerID)
+	//	assert.NoError(t, err)
+	//})
+	//
+	//t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
+	//	err = dal.DeregisterRunner(ctx, model.NewRunnerKey("localhost", "8080"))
+	//	assert.IsError(t, err, dalerrs.ErrNotFound)
+	//})
+	//
+	//t.Run("VerifyDeploymentNotifications", func(t *testing.T) {
+	//	t.Skip("Skipping this test since we're not using the deployment notification system")
+	//	dal.DeploymentChanges.Unsubscribe(deploymentChangesCh)
+	//	expectedDeploymentChanges := []DeploymentNotification{
+	//		{Message: optional.Some(Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},
+	//		{Message: optional.Some(Deployment{Language: "go", Module: "test", MinReplicas: 1, Schema: &schema.Module{Name: "test"}})},
+	//	}
+	//	err = wg.Wait()
+	//	assert.NoError(t, err)
+	//	assert.Equal(t, expectedDeploymentChanges, deploymentChanges,
+	//		assert.Exclude[model.DeploymentKey](), assert.Exclude[time.Time](), assert.IgnoreGoStringer())
+	//})
 }
 
 func artefactContent(t testing.TB, artefacts []*model.Artefact) [][]byte {

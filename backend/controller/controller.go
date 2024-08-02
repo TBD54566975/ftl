@@ -93,7 +93,7 @@ type EncryptionKeys struct {
 	RpcKey     string `help:"RPC key for sensitive data in internal FTL tables." env:"FTL_RPC_KEY"`
 }
 
-func (e EncryptionKeys) Encryptors(kctx *kong.Context) (*dal.Encryptors, error) {
+func (e EncryptionKeys) Encryptors() (*dal.Encryptors, error) {
 	encryptors := dal.Encryptors{}
 	if e.GeneralKey != "" {
 		enc, err := encryption.NewForKey(e.GeneralKey)
@@ -170,7 +170,13 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, db, config, runnerScaling)
+	// Bring up the DB connection and DAL.
+	pool, err := pgxpool.New(ctx, config.DSN)
+	if err != nil {
+		return fmt.Errorf("failed to bring up DB connection: %w", err)
+	}
+
+	svc, err := New(ctx, pool, config, runnerScaling)
 	if err != nil {
 		return err
 	}
@@ -252,7 +258,7 @@ type Service struct {
 	asyncCallsLock          sync.Mutex
 }
 
-func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
+func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -266,10 +272,20 @@ func New(ctx context.Context, db *dal.DAL, config Config, runnerScaling scaling.
 		config.ControllerTimeout = time.Second * 5
 	}
 
+	encryptors, err := config.EncryptionKeys.Encryptors()
+	if err != nil {
+		return nil, fmt.Errorf("could not create encryptors: %w", err)
+	}
+
+	db, err := dal.New(ctx, pool, *encryptors)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create DAL: %w", err)
+	}
+
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, db),
-		pool:                    pool,
 		dal:                     db,
+		pool:                    pool,
 		key:                     key,
 		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
