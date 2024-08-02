@@ -99,8 +99,14 @@ type Config struct {
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	EncryptionKey                []byte              `help:"Encryption key for sensitive data in internal FTL tables." env:"FTL_ENCRYPTION_KEY"`
+	EncryptionKeys
 	CommonConfig
+}
+
+type EncryptionKeys struct {
+	PubSubKey  string `help:"PubSub key for sensitive data in internal FTL tables." env:"FTL_PUBSUB_KEY"`
+	RpcKey     string `help:"RPC key for sensitive data in internal FTL tables." env:"FTL_RPC_KEY"`
+	GeneralKey string `help:"General key for sensitive data in internal FTL tables." env:"FTL_ENCRYPTION_KEY"`
 }
 
 func (c *Config) SetDefaults() {

@@ -1,6 +1,7 @@
 package encryption
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/alecthomas/assert/v2"
 	"testing"
@@ -21,15 +22,24 @@ const key = `{
         }`
 
 func TestNewEncrypter(t *testing.T) {
-	encrpyter, err := NewForKey(key)
+	jsonInput := "\"hello\""
+
+	encrypter, err := NewForKey(key)
 	assert.NoError(t, err)
 
-	encrypted, err := encrpyter.EncryptJSON("\"hello\"")
+	encrypted, err := encrypter.EncryptJSON(jsonInput)
 	assert.NoError(t, err)
-
 	fmt.Printf("Encrypted: %s\n", encrypted)
 
-	var decrypted string
-	err = encrpyter.DecryptJSON(encrypted, &decrypted)
+	var decrypted json.RawMessage
+	err = encrypter.DecryptJSON(encrypted, &decrypted)
 	assert.NoError(t, err)
+	fmt.Printf("Decrypted: %s\n", decrypted)
+
+	var decryptedString string
+	err = json.Unmarshal(decrypted, &decryptedString)
+	assert.NoError(t, err)
+	fmt.Printf("Decrypted string: %s\n", decryptedString)
+
+	assert.Equal(t, jsonInput, decryptedString)
 }

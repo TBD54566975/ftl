@@ -27,7 +27,12 @@ func NewForKey(key string) (Encryptable, error) {
 		return nil, fmt.Errorf("failed to read keyset: %w", err)
 	}
 
-	return NewEncrypter(*keySetHandle), nil
+	encrypter, err := NewEncrypter(*keySetHandle)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create encrypter: %w", err)
+	}
+
+	return encrypter, nil
 }
 
 type NoOpEncrypter struct {
@@ -51,7 +56,8 @@ func (n NoOpEncrypter) DecryptJSON(input json.RawMessage, output any) error {
 	return nil
 }
 
-// NewEncrypter encrypts fields using AES256_GCM_HKDF_1MB
+// NewEncrypter encrypts and decrypts JSON payloads using the provided key set.
+// The key set must contain a primary key that is a streaming AEAD primitive.
 func NewEncrypter(keySet keyset.Handle) (Encryptable, error) {
 	primitive, err := streamingaead.New(&keySet)
 	if err != nil {
@@ -71,8 +77,6 @@ type EncryptedPayload struct {
 }
 
 func (e Encrypter) EncryptJSON(input any) (json.RawMessage, error) {
-	// Retrieve the StreamingAEAD primitive we want to use from the keyset handle.
-
 	msg, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal input: %w", err)
@@ -80,7 +84,7 @@ func (e Encrypter) EncryptJSON(input any) (json.RawMessage, error) {
 
 	encryptedBuffer := &bytes.Buffer{}
 	msgBuffer := bytes.NewBuffer(msg)
-	writer, err := primitive.NewEncryptingWriter(encryptedBuffer, nil)
+	writer, err := e.primitive.NewEncryptingWriter(encryptedBuffer, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encrypting writer: %w", err)
 	}
@@ -96,5 +100,25 @@ func (e Encrypter) EncryptJSON(input any) (json.RawMessage, error) {
 }
 
 func (e Encrypter) DecryptJSON(input json.RawMessage, output any) error {
+	var payload EncryptedPayload
+	if err := json.Unmarshal(input, &payload); err != nil {
+		return fmt.Errorf("failed to unmarshal encrypted payload: %w", err)
+	}
 
+	inputBytesReader := bytes.NewReader(payload.Encrypted)
+	reader, err := e.primitive.NewDecryptingReader(inputBytesReader, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create decrypting reader: %w", err)
+	}
+
+	decryptedBuffer := &bytes.Buffer{}
+	if _, err := io.Copy(decryptedBuffer, reader); err != nil {
+		return fmt.Errorf("failed to copy decrypted data: %w", err)
+	}
+
+	if err := json.Unmarshal(decryptedBuffer.Bytes(), output); err != nil {
+		return fmt.Errorf("failed to unmarshal decrypted data: %w", err)
+	}
+
+	return nil
 }
