@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -36,7 +37,7 @@ func TestLease(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
+	dal, err := New(ctx, conn, encryption.NewForKey([]byte{}))
 	assert.NoError(t, err)
 
 	// TTL is too short, expect an error
@@ -71,7 +72,7 @@ func TestExpireLeases(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
+	dal, err := New(ctx, conn, encryption.NewForKey([]byte{}))
 	assert.NoError(t, err)
 
 	leasei, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())

@@ -20,6 +20,7 @@ import (
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -208,7 +209,7 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
+func New(ctx context.Context, pool *pgxpool.Pool, encryptor encryption.Encryptable) (*DAL, error) {
 	_, err := pool.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire connection: %w", err)
@@ -216,13 +217,15 @@ func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
 	dal := &DAL{
 		db:                sql.NewDB(pool),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
+		encryptor:         encryptor,
 	}
 
 	return dal, nil
 }
 
 type DAL struct {
-	db sql.DBI
+	db        sql.DBI
+	encryptor encryption.Encryptable
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]

@@ -6,10 +6,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -17,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -54,9 +57,20 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	if err != nil {
 		return fmt.Errorf("failed to create runner autoscaler: %w", err)
 	}
+
+	// Bring up the DB connection and DAL.
+	pool, err := pgxpool.New(ctx, config.DSN)
+	if err != nil {
+		return fmt.Errorf("failed to bring up DB connection: %w", err)
+	}
+	db, err := dal.New(ctx, pool, encryption.NewForKey(config.EncryptionKey))
+	if err != nil {
+		return fmt.Errorf("failed to create DAL: %w", err)
+	}
+
 	wg := errgroup.Group{}
 	wg.Go(func() error {
-		return controller.Start(ctx, config, runnerScaling)
+		return controller.Start(ctx, config, runnerScaling, db)
 	})
 
 	// Wait for the controller to come up.

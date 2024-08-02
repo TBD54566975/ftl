@@ -15,10 +15,12 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -27,6 +29,7 @@ import (
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/container"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -145,8 +148,18 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		}
 		controllerCtx = cf.ContextWithSecrets(controllerCtx, sm)
 
+		// Bring up the DB connection and DAL.
+		pool, err := pgxpool.New(ctx, config.DSN)
+		if err != nil {
+			return fmt.Errorf("failed to bring up DB connection: %w", err)
+		}
+		db, err := dal.New(ctx, pool, encryption.NewForKey(config.EncryptionKey))
+		if err != nil {
+			return fmt.Errorf("failed to create DAL: %w", err)
+		}
+
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling, db); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}

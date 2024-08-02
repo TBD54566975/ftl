@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -37,7 +38,7 @@ func TestServiceWithMockDal(t *testing.T) {
 		attemptCountMap: map[string]int{},
 	}
 	conn := sqltest.OpenForTesting(ctx, t)
-	parentDAL, err := db.New(ctx, conn)
+	parentDAL, err := db.New(ctx, conn, encryption.NewForKey([]byte{}))
 	assert.NoError(t, err)
 
 	testServiceWithDal(ctx, t, mockDal, parentDAL, clk)
