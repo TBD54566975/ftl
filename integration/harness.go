@@ -65,6 +65,16 @@ func RunWithoutController(t *testing.T, ftlConfigPath string, actions ...Action)
 	run(t, ftlConfigPath, false, actions...)
 }
 
+func RunWithEncryption(t *testing.T, ftlConfigPath string, actions ...Action) {
+	logKey := `{"primaryKeyId":1467957621,"key":[{"keyData":{"typeUrl":"type.googleapis.com/google.crypto.tink.AesCtrHmacStreamingKey","value":"Eg4IgIBAECAYAyIECAMQIBog7t16YRvohzTJBKt0D4WcqFpoeWH0C20Hr09v+AxbOOE=","keyMaterialType":"SYMMETRIC"},"status":"ENABLED","keyId":1467957621,"outputPrefixType":"RAW"}]}`
+	asyncKey := `{"primaryKeyId":2710864232,"key":[{"keyData":{"typeUrl":"type.googleapis.com/google.crypto.tink.AesCtrHmacStreamingKey","value":"Eg4IgIBAECAYAyIECAMQIBogTFCSLcJGRRazu74LrehNGL82J0sicjnjG5uNZcDyjGE=","keyMaterialType":"SYMMETRIC"},"status":"ENABLED","keyId":2710864232,"outputPrefixType":"RAW"}]}`
+
+	t.Setenv("FTL_LOG_ENCRYPTION_KEY", logKey)
+	t.Setenv("FTL_ASYNC_ENCRYPTION_KEY", asyncKey)
+
+	run(t, ftlConfigPath, true, actions...)
+}
+
 func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Action) {
 	tmpDir := t.TempDir()
 

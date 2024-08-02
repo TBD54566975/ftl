@@ -26,7 +26,7 @@ func TestServiceWithRealDal(t *testing.T) {
 
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal := db.New(conn)
-	parentDAL, err := parentdb.New(ctx, conn)
+	parentDAL, err := parentdb.New(ctx, conn, parentdb.NoOpEncryptors())
 	assert.NoError(t, err)
 
 	// Using a real clock because real db queries use db clock

@@ -58,8 +58,8 @@ type CallEvent struct {
 	SourceVerb    optional.Option[schema.Ref]
 	DestVerb      schema.Ref
 	Duration      time.Duration
-	Request       []byte
-	Response      []byte
+	Request       json.RawMessage
+	Response      json.RawMessage
 	Error         optional.Option[string]
 	Stack         optional.Option[string]
 }
@@ -320,14 +320,14 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 	defer rows.Close()
 
-	events, err := transformRowsToEvents(deploymentKeys, rows)
+	events, err := d.transformRowsToEvents(deploymentKeys, rows)
 	if err != nil {
 		return nil, err
 	}
 	return events, nil
 }
 
-func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pgx.Rows) ([]Event, error) {
+func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pgx.Rows) ([]Event, error) {
 	var out []Event
 	for rows.Next() {
 		row := eventRow{}
@@ -346,9 +346,10 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, err
+			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt log event: %w", err)
 			}
+
 			level, err := strconv.ParseInt(row.CustomKey1.MustGet(), 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("invalid log level: %q: %w", row.CustomKey1.MustGet(), err)
@@ -367,8 +368,8 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, err
+			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			var sourceVerb optional.Option[schema.Ref]
 			sourceModule, smok := row.CustomKey1.Get()
@@ -392,8 +393,8 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 
 		case sql.EventTypeDeploymentCreated:
 			var jsonPayload eventDeploymentCreatedJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, err
+			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentCreatedEvent{
 				ID:                 row.ID,
@@ -407,8 +408,8 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 
 		case sql.EventTypeDeploymentUpdated:
 			var jsonPayload eventDeploymentUpdatedJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
-				return nil, err
+			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentUpdatedEvent{
 				ID:              row.ID,

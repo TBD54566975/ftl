@@ -42,6 +42,10 @@ func main() {
 		kong.Vars{"version": ftl.Version, "timestamp": time.Unix(t, 0).Format(time.RFC3339)},
 	)
 	cli.ControllerConfig.SetDefaults()
+
+	encryptors, err := cli.ControllerConfig.EncryptionKeys.Encryptors(true)
+	kctx.FatalIfErrorf(err, "failed to create encryptors")
+
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
 	err = observability.Init(ctx, "ftl-controller", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
@@ -49,7 +53,7 @@ func main() {
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
 	conn, err := pgxpool.New(ctx, cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
-	dal, err := dal.New(ctx, conn)
+	dal, err := dal.New(ctx, conn, encryptors)
 	kctx.FatalIfErrorf(err)
 
 	configDal, err := cfdal.New(ctx, conn)
@@ -70,6 +74,6 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	ctx = cf.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling())
+	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), conn, encryptors)
 	kctx.FatalIfErrorf(err)
 }

@@ -105,12 +105,19 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
+
+	var decryptedRequest json.RawMessage
+	err = d.encryptors.Async.DecryptJSON(row.Request, &decryptedRequest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
+	}
+
 	lease, _ := d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
 	return &AsyncCall{
 		ID:                row.AsyncCallID,
 		Verb:              row.Verb,
 		Origin:            origin,
-		Request:           row.Request,
+		Request:           decryptedRequest,
 		Lease:             lease,
 		ScheduledAt:       row.ScheduledAt,
 		RemainingAttempts: row.RemainingAttempts,

@@ -271,69 +271,94 @@ SELECT COUNT(*)
 FROM rows;
 
 -- name: InsertLogEvent :exec
-INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
-VALUES ((SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
-        (CASE
-             WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
-             ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT LIMIT 1)
-            END),
-        sqlc.arg('time_stamp')::TIMESTAMPTZ,
-        sqlc.arg('level')::INT,
-        'log',
-        jsonb_build_object(
-                'message', sqlc.arg('message')::TEXT,
-                'attributes', sqlc.arg('attributes')::JSONB,
-                'error', sqlc.narg('error')::TEXT,
-                'stack', sqlc.narg('stack')::TEXT
-            ));
+INSERT INTO events (
+  deployment_id,
+  request_id,
+  time_stamp,
+  custom_key_1,
+  type,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
+  (
+    CASE
+      WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT LIMIT 1)
+    END
+  ),
+  sqlc.arg('time_stamp')::TIMESTAMPTZ,
+  sqlc.arg('level')::INT,
+  'log',
+  sqlc.arg('payload')
+);
 
 -- name: InsertDeploymentCreatedEvent :exec
-INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
-VALUES ((SELECT id
-         FROM deployments
-         WHERE deployments.key = sqlc.arg('deployment_key')::deployment_key),
-        'deployment_created',
-        sqlc.arg('language')::TEXT,
-        sqlc.arg('module_name')::TEXT,
-        jsonb_build_object(
-                'min_replicas', sqlc.arg('min_replicas')::INT,
-                'replaced', sqlc.narg('replaced')::deployment_key
-            ));
+INSERT INTO events (
+  deployment_id,
+  type,
+  custom_key_1,
+  custom_key_2,
+  payload
+)
+VALUES (
+  ( 
+    SELECT id
+    FROM deployments
+    WHERE deployments.key = sqlc.arg('deployment_key')::deployment_key
+  ),
+  'deployment_created',
+  sqlc.arg('language')::TEXT,
+  sqlc.arg('module_name')::TEXT,
+  sqlc.arg('payload')
+);
 
 -- name: InsertDeploymentUpdatedEvent :exec
-INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)
-VALUES ((SELECT id
-         FROM deployments
-         WHERE deployments.key = sqlc.arg('deployment_key')::deployment_key),
-        'deployment_updated',
-        sqlc.arg('language')::TEXT,
-        sqlc.arg('module_name')::TEXT,
-        jsonb_build_object(
-                'prev_min_replicas', sqlc.arg('prev_min_replicas')::INT,
-                'min_replicas', sqlc.arg('min_replicas')::INT
-            ));
+INSERT INTO events (
+  deployment_id,
+  type,
+  custom_key_1,
+  custom_key_2,
+  payload
+)
+VALUES (
+  (
+    SELECT id
+    FROM deployments
+    WHERE deployments.key = sqlc.arg('deployment_key')::deployment_key
+  ),
+  'deployment_updated',
+  sqlc.arg('language')::TEXT,
+  sqlc.arg('module_name')::TEXT,
+  sqlc.arg('payload')
+);
 
 -- name: InsertCallEvent :exec
-INSERT INTO events (deployment_id, request_id, time_stamp, type,
-                    custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload)
-VALUES ((SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment_key')::deployment_key),
-        (CASE
-             WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
-             ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT)
-            END),
-        sqlc.arg('time_stamp')::TIMESTAMPTZ,
-        'call',
-        sqlc.narg('source_module')::TEXT,
-        sqlc.narg('source_verb')::TEXT,
-        sqlc.arg('dest_module')::TEXT,
-        sqlc.arg('dest_verb')::TEXT,
-        jsonb_build_object(
-                'duration_ms', sqlc.arg('duration_ms')::BIGINT,
-                'request', sqlc.arg('request')::JSONB,
-                'response', sqlc.arg('response')::JSONB,
-                'error', sqlc.narg('error')::TEXT,
-                'stack', sqlc.narg('stack')::TEXT
-            ));
+INSERT INTO events (
+  deployment_id,
+  request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  custom_key_3,
+  custom_key_4,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments WHERE deployments.key = sqlc.arg('deployment_key')::deployment_key),
+  (CASE
+      WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT)
+    END),
+  sqlc.arg('time_stamp')::TIMESTAMPTZ,
+  'call',
+  sqlc.narg('source_module')::TEXT,
+  sqlc.narg('source_verb')::TEXT,
+  sqlc.arg('dest_module')::TEXT,
+  sqlc.arg('dest_verb')::TEXT,
+  sqlc.arg('payload')
+);
 
 -- name: CreateRequest :exec
 INSERT INTO requests (origin, "key", source_addr)
@@ -667,7 +692,7 @@ VALUES (
     WHERE modules.name = sqlc.arg('module')::TEXT
       AND topics.name = sqlc.arg('topic')::TEXT
   ),
-  sqlc.arg('caller'),
+  sqlc.arg('caller')::TEXT,
   sqlc.arg('payload')
 );
 

@@ -25,7 +25,7 @@ import (
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
+	dal, err := New(ctx, conn, NoOpEncryptors())
 	assert.NoError(t, err)
 	assert.NotZero(t, dal)
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)

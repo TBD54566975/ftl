@@ -37,7 +37,7 @@ func TestServiceWithMockDal(t *testing.T) {
 		attemptCountMap: map[string]int{},
 	}
 	conn := sqltest.OpenForTesting(ctx, t)
-	parentDAL, err := db.New(ctx, conn)
+	parentDAL, err := db.New(ctx, conn, db.NoOpEncryptors())
 	assert.NoError(t, err)
 
 	testServiceWithDal(ctx, t, mockDal, parentDAL, clk)

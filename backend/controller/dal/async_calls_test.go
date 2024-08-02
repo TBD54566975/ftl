@@ -13,7 +13,7 @@ import (
 func TestNoCallToAcquire(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn)
+	dal, err := New(ctx, conn, NoOpEncryptors())
 	assert.NoError(t, err)
 
 	_, err = dal.AcquireAsyncCall(ctx)
