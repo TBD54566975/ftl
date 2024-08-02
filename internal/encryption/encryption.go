@@ -18,7 +18,7 @@ type Encryptable interface {
 
 func NewForKey(key string) (Encryptable, error) {
 	if len(key) == 0 {
-		return NoOpEncrypter{}, nil
+		return NoOpEncryptor{}, nil
 	}
 
 	keySetHandle, err := insecurecleartextkeyset.Read(
@@ -27,18 +27,18 @@ func NewForKey(key string) (Encryptable, error) {
 		return nil, fmt.Errorf("failed to read keyset: %w", err)
 	}
 
-	encrypter, err := NewEncrypter(*keySetHandle)
+	encryptor, err := NewEncryptor(*keySetHandle)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create encrypter: %w", err)
+		return nil, fmt.Errorf("failed to create encryptor: %w", err)
 	}
 
-	return encrypter, nil
+	return encryptor, nil
 }
 
-type NoOpEncrypter struct {
+type NoOpEncryptor struct {
 }
 
-func (n NoOpEncrypter) EncryptJSON(input any) (json.RawMessage, error) {
+func (n NoOpEncryptor) EncryptJSON(input any) (json.RawMessage, error) {
 	msg, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal input: %w", err)
@@ -47,7 +47,7 @@ func (n NoOpEncrypter) EncryptJSON(input any) (json.RawMessage, error) {
 	return msg, nil
 }
 
-func (n NoOpEncrypter) DecryptJSON(input json.RawMessage, output any) error {
+func (n NoOpEncryptor) DecryptJSON(input json.RawMessage, output any) error {
 	err := json.Unmarshal(input, output)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal input: %w", err)
@@ -56,18 +56,18 @@ func (n NoOpEncrypter) DecryptJSON(input json.RawMessage, output any) error {
 	return nil
 }
 
-// NewEncrypter encrypts and decrypts JSON payloads using the provided key set.
+// NewEncryptor encrypts and decrypts JSON payloads using the provided key set.
 // The key set must contain a primary key that is a streaming AEAD primitive.
-func NewEncrypter(keySet keyset.Handle) (Encryptable, error) {
+func NewEncryptor(keySet keyset.Handle) (Encryptable, error) {
 	primitive, err := streamingaead.New(&keySet)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create primitive during encryption: %w", err)
 	}
 
-	return Encrypter{keySetHandle: keySet, primitive: primitive}, nil
+	return Encryptor{keySetHandle: keySet, primitive: primitive}, nil
 }
 
-type Encrypter struct {
+type Encryptor struct {
 	keySetHandle keyset.Handle
 	primitive    tink.StreamingAEAD
 }
@@ -76,7 +76,7 @@ type EncryptedPayload struct {
 	Encrypted []byte
 }
 
-func (e Encrypter) EncryptJSON(input any) (json.RawMessage, error) {
+func (e Encryptor) EncryptJSON(input any) (json.RawMessage, error) {
 	msg, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal input: %w", err)
@@ -99,7 +99,7 @@ func (e Encrypter) EncryptJSON(input any) (json.RawMessage, error) {
 	return json.Marshal(EncryptedPayload{Encrypted: encryptedBuffer.Bytes()})
 }
 
-func (e Encrypter) DecryptJSON(input json.RawMessage, output any) error {
+func (e Encryptor) DecryptJSON(input json.RawMessage, output any) error {
 	var payload EncryptedPayload
 	if err := json.Unmarshal(input, &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal encrypted payload: %w", err)

@@ -19,7 +19,6 @@ import (
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	cfdal "github.com/TBD54566975/ftl/common/configuration/dal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
 )
@@ -44,10 +43,7 @@ func main() {
 	)
 	cli.ControllerConfig.SetDefaults()
 
-	if len(cli.ControllerConfig.EncryptionKey) == 0 {
-		kctx.Fatalf("missing required encryption key")
-	}
-	encyptor := encryption.NewForKey(cli.ControllerConfig.EncryptionKey)
+	encryptors := cli.ControllerConfig.EncryptionKeys.Encryptors(kctx)
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
 	err = observability.Init(ctx, "ftl-controller", ftl.Version, cli.ObservabilityConfig)
@@ -56,7 +52,7 @@ func main() {
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
 	conn, err := pgxpool.New(ctx, cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
-	dal, err := dal.New(ctx, conn, encyptor)
+	dal, err := dal.New(ctx, conn, encyptors)
 	kctx.FatalIfErrorf(err)
 
 	configDal, err := cfdal.New(ctx, conn)

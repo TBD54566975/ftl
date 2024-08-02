@@ -209,7 +209,7 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool, encryptor encryption.Encryptable) (*DAL, error) {
+func New(ctx context.Context, pool *pgxpool.Pool, encryptors Encryptors) (*DAL, error) {
 	_, err := pool.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire connection: %w", err)
@@ -217,18 +217,33 @@ func New(ctx context.Context, pool *pgxpool.Pool, encryptor encryption.Encryptab
 	dal := &DAL{
 		db:                sql.NewDB(pool),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
-		encryptor:         encryptor,
+		encryptors:        encryptors,
 	}
 
 	return dal, nil
 }
 
 type DAL struct {
-	db        sql.DBI
-	encryptor encryption.Encryptable
+	db         sql.DBI
+	encryptors Encryptors
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
+}
+
+type Encryptors struct {
+	General encryption.Encryptable
+	PubSub  encryption.Encryptable
+	RPC     encryption.Encryptable
+}
+
+// NoOpEncryptors do not encrypt potentially sensitive data.
+func NoOpEncryptors() Encryptors {
+	return Encryptors{
+		General: encryption.NoOpEncryptor{},
+		PubSub:  encryption.NoOpEncryptor{},
+		RPC:     encryption.NoOpEncryptor{},
+	}
 }
 
 // Tx is DAL within a transaction.

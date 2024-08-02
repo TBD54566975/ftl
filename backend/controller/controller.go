@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"hash"
 	"io"
 	"math/rand"
@@ -86,6 +87,41 @@ func (c *CommonConfig) Validate() error {
 	return nil
 }
 
+type EncryptionKeys struct {
+	GeneralKey string `help:"General key for sensitive data in internal FTL tables." env:"FTL_ENCRYPTION_KEY"`
+	PubSubKey  string `help:"PubSub key for sensitive data in internal FTL tables." env:"FTL_PUBSUB_KEY"`
+	RpcKey     string `help:"RPC key for sensitive data in internal FTL tables." env:"FTL_RPC_KEY"`
+}
+
+func (e EncryptionKeys) Encryptors(kctx *kong.Context) (*dal.Encryptors, error) {
+	encryptors := dal.Encryptors{}
+	if e.GeneralKey != "" {
+		enc, err := encryption.NewForKey(e.GeneralKey)
+		if err != nil {
+			return nil, fmt.Errorf("could not create general encryptor: %w", err)
+		}
+		encryptors.General = enc
+	}
+
+	if e.PubSubKey != "" {
+		enc, err := encryption.NewForKey(e.PubSubKey)
+		if err != nil {
+			return nil, fmt.Errorf("could not create pubsub encryptor: %w", err)
+		}
+		encryptors.PubSub = enc
+	}
+
+	if e.RpcKey != "" {
+		enc, err := encryption.NewForKey(e.RpcKey)
+		if err != nil {
+			return nil, fmt.Errorf("could not create rpc encryptor: %w", err)
+		}
+		encryptors.RPC = enc
+	}
+
+	return &encryptors, nil
+}
+
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://localhost:8892" env:"FTL_CONTROLLER_BIND"`
 	IngressBind                  *url.URL            `help:"Socket to bind to for ingress." default:"http://localhost:8891" env:"FTL_CONTROLLER_INGRESS_BIND"`
@@ -101,12 +137,6 @@ type Config struct {
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	EncryptionKeys
 	CommonConfig
-}
-
-type EncryptionKeys struct {
-	PubSubKey  string `help:"PubSub key for sensitive data in internal FTL tables." env:"FTL_PUBSUB_KEY"`
-	RpcKey     string `help:"RPC key for sensitive data in internal FTL tables." env:"FTL_RPC_KEY"`
-	GeneralKey string `help:"General key for sensitive data in internal FTL tables." env:"FTL_ENCRYPTION_KEY"`
 }
 
 func (c *Config) SetDefaults() {

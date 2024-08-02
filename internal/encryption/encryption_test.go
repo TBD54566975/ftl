@@ -3,8 +3,9 @@ package encryption
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/alecthomas/assert/v2"
 	"testing"
+
+	"github.com/alecthomas/assert/v2"
 )
 
 const key = `{
@@ -21,18 +22,18 @@ const key = `{
     }]
         }`
 
-func TestNewEncrypter(t *testing.T) {
+func TestNewEncryptor(t *testing.T) {
 	jsonInput := "\"hello\""
 
-	encrypter, err := NewForKey(key)
+	encryptor, err := NewForKey(key)
 	assert.NoError(t, err)
 
-	encrypted, err := encrypter.EncryptJSON(jsonInput)
+	encrypted, err := encryptor.EncryptJSON(jsonInput)
 	assert.NoError(t, err)
 	fmt.Printf("Encrypted: %s\n", encrypted)
 
 	var decrypted json.RawMessage
-	err = encrypter.DecryptJSON(encrypted, &decrypted)
+	err = encryptor.DecryptJSON(encrypted, &decrypted)
 	assert.NoError(t, err)
 	fmt.Printf("Decrypted: %s\n", decrypted)
 
