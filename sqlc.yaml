@@ -2,7 +2,10 @@ version: "2"
 sql:
   - &daldir
     engine: "postgresql"
-    queries: "backend/controller/sql/queries.sql"
+    queries:
+      - backend/controller/sql/queries.sql
+      # FIXME: Until we fully decouple cron from the controller, we need to include the cron queries here
+      - backend/controller/cronjobs/sql/queries.sql
     schema: "backend/controller/sql/schema"
     database:
       uri: postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret
