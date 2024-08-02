@@ -137,9 +137,7 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	qtx := NewQTx(d.db.Conn(), tx.Tx())
-
-	subscription, err := qtx.GetSubscription(ctx, name, module)
+	subscription, err := tx.GetSubscription(ctx, name, module)
 	if err != nil {
 		if dalerrs.IsNotFound(err) {
 			return fmt.Errorf("subscription %s.%s not found", module, name)
@@ -147,7 +145,7 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 		return fmt.Errorf("could not fetch subscription: %w", dalerrs.TranslatePGError(err))
 	}
 
-	topic, err := qtx.GetTopic(ctx, subscription.TopicID)
+	topic, err := tx.GetTopic(ctx, subscription.TopicID)
 	if err != nil {
 		return fmt.Errorf("could not fetch topic: %w", dalerrs.TranslatePGError(err))
 	}
@@ -157,12 +155,12 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 		return fmt.Errorf("no events published to topic %s", topic.Name)
 	}
 
-	headEvent, err := qtx.GetTopicEvent(ctx, headEventID)
+	headEvent, err := tx.GetTopicEvent(ctx, headEventID)
 	if err != nil {
 		return fmt.Errorf("could not fetch topic head: %w", dalerrs.TranslatePGError(err))
 	}
 
-	err = qtx.SetSubscriptionCursor(ctx, subscription.Key, headEvent.Key)
+	err = tx.SetSubscriptionCursor(ctx, subscription.Key, headEvent.Key)
 	if err != nil {
 		return fmt.Errorf("failed to reset subscription: %w", dalerrs.TranslatePGError(err))
 	}
