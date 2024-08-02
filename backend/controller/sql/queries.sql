@@ -673,7 +673,7 @@ VALUES (
     WHERE modules.name = sqlc.arg('module')::TEXT
       AND topics.name = sqlc.arg('topic')::TEXT
   ),
-  sqlc.arg('caller'),
+  sqlc.arg('caller')::TEXT,
   sqlc.arg('payload')
 );
 

@@ -2091,7 +2091,7 @@ VALUES (
     WHERE modules.name = $2::TEXT
       AND topics.name = $3::TEXT
   ),
-  $4,
+  $4::TEXT,
   $5
 )
 `
@@ -2100,7 +2100,7 @@ type PublishEventForTopicParams struct {
 	Key     model.TopicEventKey
 	Module  string
 	Topic   string
-	Caller  optional.Option[string]
+	Caller  string
 	Payload []byte
 }
 

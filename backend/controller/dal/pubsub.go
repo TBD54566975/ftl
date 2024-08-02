@@ -2,6 +2,7 @@ package dal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -18,7 +19,7 @@ import (
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
-	encryptedPayload, err := d.encryptor.Encrypt(payload)
+	encryptedPayload, err := d.encryptor.EncryptJSON(json.RawMessage(payload))
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload: %w", err)
 	}
@@ -103,14 +104,13 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			},
 		}
 
-		decryptedPayload, err := d.encryptor.Decrypt(nextCursor.Payload)
 		if err != nil {
 			return 0, fmt.Errorf("failed to decrypt topic event payload: %w", err)
 		}
 		_, err = tx.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
 			Verb:              subscriber.Sink,
 			Origin:            origin.String(),
-			Request:           decryptedPayload,
+			Request:           nextCursor.Payload, // already encrypted
 			RemainingAttempts: subscriber.RetryAttempts,
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,
