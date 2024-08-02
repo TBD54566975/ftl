@@ -43,6 +43,7 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/swaggest/jsonschema-go v0.3.72
+	github.com/tink-crypto/tink-go/v2 v2.2.0
 	github.com/titanous/json5 v1.0.0
 	github.com/tliron/commonlog v0.2.17
 	github.com/tliron/glsp v0.2.2
