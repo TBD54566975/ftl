@@ -7,6 +7,10 @@ runs:
     - id: find-go-build-cache
       shell: bash
       run: echo "cache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+    - name: Cache Docker Images
+      uses: ScribeMD/docker-cache@0.5.0
+      with:
+        key: docker-${{ runner.os }}-${{ hashFiles('docker-compose.yaml') }}
     - name: Restore Go Modules Cache
       id: cache-go-modules
       uses: actions/cache/restore@v4
