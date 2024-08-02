@@ -26,9 +26,9 @@ func NewForKeyOrUri(keyOrUri string) (Encryptable, error) {
 	// If keyOrUri is a JSON string, it is a clear text key set.
 	if strings.TrimSpace(keyOrUri)[0] == '{' {
 		return NewClearTextEncryptor(keyOrUri)
-	} else if strings.HasPrefix(keyOrUri, "aws-kms://") {
 		// Otherwise should be a URI for KMS.
 		// aws-kms://arn:aws:kms:[region]:[account-id]:key/[key-id]
+	} else if strings.HasPrefix(keyOrUri, "aws-kms://") {
 		return NewAwsKmsEncryptor(keyOrUri)
 	} else {
 		return nil, fmt.Errorf("unsupported key or uri: %s", keyOrUri)

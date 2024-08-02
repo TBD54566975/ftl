@@ -66,19 +66,8 @@ func RunWithoutController(t *testing.T, ftlConfigPath string, actions ...Action)
 }
 
 func RunWithEncryption(t *testing.T, ftlConfigPath string, actions ...Action) {
-	testKeySet := `{
-    "primaryKeyId": 1720777699,
-    "key": [{
-        "keyData": {
-            "typeUrl": "type.googleapis.com/google.crypto.tink.AesCtrHmacStreamingKey",
-            "keyMaterialType": "SYMMETRIC",
-            "value": "Eg0IgCAQIBgDIgQIAxAgGiDtesd/4gCnQdTrh+AXodwpm2b6BFJkp043n+8mqx0YGw=="
-        },
-        "outputPrefixType": "RAW",
-        "keyId": 1720777699,
-        "status": "ENABLED"
-    }]
-        }`
+	logKey := `{"primaryKeyId":1467957621,"key":[{"keyData":{"typeUrl":"type.googleapis.com/google.crypto.tink.AesCtrHmacStreamingKey","value":"Eg4IgIBAECAYAyIECAMQIBog7t16YRvohzTJBKt0D4WcqFpoeWH0C20Hr09v+AxbOOE=","keyMaterialType":"SYMMETRIC"},"status":"ENABLED","keyId":1467957621,"outputPrefixType":"RAW"}]}`
+	asyncKey := `{"primaryKeyId":2710864232,"key":[{"keyData":{"typeUrl":"type.googleapis.com/google.crypto.tink.AesCtrHmacStreamingKey","value":"Eg4IgIBAECAYAyIECAMQIBogTFCSLcJGRRazu74LrehNGL82J0sicjnjG5uNZcDyjGE=","keyMaterialType":"SYMMETRIC"},"status":"ENABLED","keyId":2710864232,"outputPrefixType":"RAW"}]}`
 
 	t.Setenv("FTL_LOG_ENCRYPTION_KEY", testKeySet)
 	t.Setenv("FTL_ASYNC_ENCRYPTION_KEY", testKeySet)
