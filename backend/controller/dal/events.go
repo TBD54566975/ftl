@@ -320,14 +320,14 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	}
 	defer rows.Close()
 
-	events, err := transformRowsToEvents(deploymentKeys, rows)
+	events, err := d.transformRowsToEvents(deploymentKeys, rows)
 	if err != nil {
 		return nil, err
 	}
 	return events, nil
 }
 
-func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pgx.Rows) ([]Event, error) {
+func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pgx.Rows) ([]Event, error) {
 	var out []Event
 	for rows.Next() {
 		row := eventRow{}
@@ -346,6 +346,7 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
+
 			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
 				return nil, err
 			}
@@ -367,7 +368,7 @@ func transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pg
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := json.Unmarshal(row.Payload, &jsonPayload); err != nil {
+			if err := d.encryptor.DecryptJSON(row.Payload, &jsonPayload); err != nil {
 				return nil, err
 			}
 			var sourceVerb optional.Option[schema.Ref]

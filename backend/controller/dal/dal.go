@@ -1036,15 +1036,23 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	if name, ok := log.RequestKey.Get(); ok {
 		requestKey = optional.Some(name.String())
 	}
+
+	payload := map[string]any{
+		"message":    log.Message,
+		"attributes": attributes,
+		"error":      log.Error,
+		"stack":      log.Stack,
+	}
+	encryptedPayload, err := d.encryptor.EncryptJSON(payload)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt log payload: %w", err)
+	}
 	return dalerrs.TranslatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
 		DeploymentKey: log.DeploymentKey,
 		RequestKey:    requestKey,
 		TimeStamp:     log.Time,
 		Level:         log.Level,
-		Attributes:    attributes,
-		Message:       log.Message,
-		Error:         log.Error,
-		Stack:         log.Stack,
+		Payload:       encryptedPayload,
 	}))
 }
 

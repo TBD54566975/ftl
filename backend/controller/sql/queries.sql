@@ -271,21 +271,27 @@ SELECT COUNT(*)
 FROM rows;
 
 -- name: InsertLogEvent :exec
-INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
-VALUES ((SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
-        (CASE
-             WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
-             ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT LIMIT 1)
-            END),
-        sqlc.arg('time_stamp')::TIMESTAMPTZ,
-        sqlc.arg('level')::INT,
-        'log',
-        jsonb_build_object(
-                'message', sqlc.arg('message')::TEXT,
-                'attributes', sqlc.arg('attributes')::JSONB,
-                'error', sqlc.narg('error')::TEXT,
-                'stack', sqlc.narg('stack')::TEXT
-            ));
+INSERT INTO events (
+  deployment_id,
+  request_id,
+  time_stamp,
+  custom_key_1,
+  type,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
+  (
+    CASE
+      WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT LIMIT 1)
+    END
+  ),
+  sqlc.arg('time_stamp')::TIMESTAMPTZ,
+  sqlc.arg('level')::INT,
+  'log',
+  sqlc.arg('payload')
+);
 
 -- name: InsertDeploymentCreatedEvent :exec
 INSERT INTO events (deployment_id, type, custom_key_1, custom_key_2, payload)

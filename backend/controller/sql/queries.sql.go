@@ -1895,21 +1895,27 @@ func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error 
 }
 
 const insertLogEvent = `-- name: InsertLogEvent :exec
-INSERT INTO events (deployment_id, request_id, time_stamp, custom_key_1, type, payload)
-VALUES ((SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
-        (CASE
-             WHEN $2::TEXT IS NULL THEN NULL
-             ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT LIMIT 1)
-            END),
-        $3::TIMESTAMPTZ,
-        $4::INT,
-        'log',
-        jsonb_build_object(
-                'message', $5::TEXT,
-                'attributes', $6::JSONB,
-                'error', $7::TEXT,
-                'stack', $8::TEXT
-            ))
+INSERT INTO events (
+  deployment_id,
+  request_id,
+  time_stamp,
+  custom_key_1,
+  type,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
+  (
+    CASE
+      WHEN $2::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT LIMIT 1)
+    END
+  ),
+  $3::TIMESTAMPTZ,
+  $4::INT,
+  'log',
+  $5
+)
 `
 
 type InsertLogEventParams struct {
@@ -1917,10 +1923,7 @@ type InsertLogEventParams struct {
 	RequestKey    optional.Option[string]
 	TimeStamp     time.Time
 	Level         int32
-	Message       string
-	Attributes    []byte
-	Error         optional.Option[string]
-	Stack         optional.Option[string]
+	Payload       json.RawMessage
 }
 
 func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
@@ -1929,10 +1932,7 @@ func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) 
 		arg.RequestKey,
 		arg.TimeStamp,
 		arg.Level,
-		arg.Message,
-		arg.Attributes,
-		arg.Error,
-		arg.Stack,
+		arg.Payload,
 	)
 	return err
 }
@@ -2100,7 +2100,7 @@ type PublishEventForTopicParams struct {
 	Key     model.TopicEventKey
 	Module  string
 	Topic   string
-	Caller  string
+	Caller  optional.Option[string]
 	Payload []byte
 }
 

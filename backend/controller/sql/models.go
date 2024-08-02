@@ -523,7 +523,7 @@ type TopicEvent struct {
 	Key       model.TopicEventKey
 	TopicID   int64
 	Payload   []byte
-	Caller    string
+	Caller    optional.Option[string]
 }
 
 type TopicSubscriber struct {
