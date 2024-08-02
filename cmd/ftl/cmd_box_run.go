@@ -11,7 +11,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -66,14 +65,10 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	if err != nil {
 		return fmt.Errorf("failed to create encryptors: %w", err)
 	}
-	db, err := dal.New(ctx, pool, encryptors)
-	if err != nil {
-		return fmt.Errorf("failed to create DAL: %w", err)
-	}
 
 	wg := errgroup.Group{}
 	wg.Go(func() error {
-		return controller.Start(ctx, config, runnerScaling, db)
+		return controller.Start(ctx, config, runnerScaling, pool, encryptors)
 	})
 
 	// Wait for the controller to come up.

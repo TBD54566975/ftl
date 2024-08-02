@@ -148,7 +148,7 @@ func (c *Config) SetDefaults() {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, db *dal.DAL) error {
+func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, pool *pgxpool.Pool, encryptors *dal.Encryptors) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -169,13 +169,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	// Bring up the DB connection and DAL.
-	pool, err := pgxpool.New(ctx, config.DSN)
-	if err != nil {
-		return fmt.Errorf("failed to bring up DB connection: %w", err)
-	}
-
-	svc, err := New(ctx, pool, config, runnerScaling)
+	svc, err := New(ctx, pool, config, runnerScaling, encryptors)
 	if err != nil {
 		return err
 	}
@@ -257,7 +251,7 @@ type Service struct {
 	asyncCallsLock          sync.Mutex
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
+func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling scaling.RunnerScaling, encryptors *dal.Encryptors) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -269,11 +263,6 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 	if devel {
 		config.RunnerTimeout = time.Second * 5
 		config.ControllerTimeout = time.Second * 5
-	}
-
-	encryptors, err := config.EncryptionKeys.Encryptors()
-	if err != nil {
-		return nil, fmt.Errorf("could not create encryptors: %w", err)
 	}
 
 	db, err := dal.New(ctx, pool, encryptors)

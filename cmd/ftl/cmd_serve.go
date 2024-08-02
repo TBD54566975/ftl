@@ -20,7 +20,6 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -156,13 +155,9 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		if err != nil {
 			return fmt.Errorf("failed to create encryptors: %w", err)
 		}
-		db, err := dal.New(ctx, pool, encryptors)
-		if err != nil {
-			return fmt.Errorf("failed to create DAL: %w", err)
-		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling, db); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling, pool, encryptors); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}
