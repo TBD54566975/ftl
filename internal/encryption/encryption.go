@@ -29,7 +29,7 @@ func NewForKeyOrUri(keyOrUri string) (Encryptable, error) {
 		// Otherwise should be a URI for KMS.
 		// aws-kms://arn:aws:kms:[region]:[account-id]:key/[key-id]
 	} else if strings.HasPrefix(keyOrUri, "aws-kms://") {
-		return NewAwsKmsEncryptor(keyOrUri)
+		return nil, fmt.Errorf("AWS KMS is not supported yet")
 	} else {
 		return nil, fmt.Errorf("unsupported key or uri: %s", keyOrUri)
 	}
@@ -67,28 +67,6 @@ func NewClearTextEncryptor(key string) (Encryptable, error) {
 	encryptor, err := NewEncryptor(*keySetHandle)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create clear text encryptor: %w", err)
-	}
-
-	return encryptor, nil
-}
-
-// NewAwsKmsEncryptor must have the following uri: 'aws-kms://arn:<partition>:kms:<region>:[:path]'.
-func NewAwsKmsEncryptor(uri string) (Encryptable, error) {
-	keySet, err := keyset.NewHandle(streamingaead.AES256GCMHKDF1MBKeyTemplate())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create keySet: %w", err)
-	}
-
-	// Get the AEAD primitive from the KMS.
-	primitive, err := streamingaead.New(keySet)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get AEAD primitive: %w", err)
-	}
-
-	// Create the encryptor.
-	encryptor := Encryptor{
-		keySetHandle: *keySet,
-		primitive:    primitive,
 	}
 
 	return encryptor, nil
