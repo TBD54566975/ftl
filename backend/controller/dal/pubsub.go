@@ -18,12 +18,16 @@ import (
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
-	err := d.db.PublishEventForTopic(ctx, sql.PublishEventForTopicParams{
+	encryptedPayload, err := d.encryptor.Encrypt(payload)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt payload: %w", err)
+	}
+	err = d.db.PublishEventForTopic(ctx, sql.PublishEventForTopicParams{
 		Key:     model.NewTopicEventKey(module, topic),
 		Module:  module,
 		Topic:   topic,
 		Caller:  caller,
-		Payload: payload,
+		Payload: encryptedPayload,
 	})
 	observability.PubSub.Published(ctx, module, topic, caller, err)
 	if err != nil {
@@ -98,10 +102,15 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 				Name:   subscription.Key.Payload.Name,
 			},
 		}
+
+		decryptedPayload, err := d.encryptor.Decrypt(nextCursor.Payload)
+		if err != nil {
+			return 0, fmt.Errorf("failed to decrypt topic event payload: %w", err)
+		}
 		_, err = tx.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
 			Verb:              subscriber.Sink,
 			Origin:            origin.String(),
-			Request:           nextCursor.Payload,
+			Request:           decryptedPayload,
 			RemainingAttempts: subscriber.RetryAttempts,
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,
