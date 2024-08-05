@@ -14,6 +14,7 @@ var (
 	Deployment *DeploymentMetrics
 	FSM        *FSMMetrics
 	PubSub     *PubSubMetrics
+	Cron       *CronMetrics
 )
 
 func init() {
@@ -27,6 +28,8 @@ func init() {
 	FSM, err = initFSMMetrics()
 	errs = errors.Join(errs, err)
 	PubSub, err = initPubSubMetrics()
+	errs = errors.Join(errs, err)
+	Cron, err = initCronMetrics()
 	errs = errors.Join(errs, err)
 
 	if err != nil {
@@ -42,6 +45,11 @@ func handleInt64CounterError(counter string, err error, errs error) (metric.Int6
 //nolint:unparam
 func handleInt64UpDownCounterError(counter string, err error, errs error) (metric.Int64UpDownCounter, error) {
 	return noop.Int64UpDownCounter{}, errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
+}
+
+//nolint:unparam
+func handleInt64HistogramCounterError(counter string, err error, errs error) (metric.Int64Histogram, error) {
+	return noop.Int64Histogram{}, errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
 }
 
 func timeSinceMS(start time.Time) int64 {

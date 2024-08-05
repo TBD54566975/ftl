@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"time"
 
 	"connectrpc.com/connect"
@@ -202,6 +203,7 @@ func (s *Service) executeJob(ctx context.Context, job model.CronJob) {
 	requestJSON, err := json.Marshal(requestBody)
 	if err != nil {
 		logger.Errorf(err, "could not build body for cron job: %v", job.Key)
+		observability.Cron.JobFailed(ctx, job.Key, job.DeploymentKey)
 		return
 	}
 
@@ -214,26 +216,34 @@ func (s *Service) executeJob(ctx context.Context, job model.CronJob) {
 
 	callCtx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
+
+	observability.Cron.JobExecutionStarted(ctx, job.Key, job.DeploymentKey)
 	_, err = s.call(callCtx, req, optional.Some(requestKey), s.requestSource)
+	observability.Cron.JobExecutionCompleted(ctx, job.Key, job.DeploymentKey, job.NextExecution)
+
 	if err != nil {
 		logger.Errorf(err, "failed to execute cron job %v", job.Key)
+		observability.Cron.JobFailed(ctx, job.Key, job.DeploymentKey)
 		// Do not return, continue to end the job and schedule the next execution
 	}
 
 	schedule, err := cron.Parse(job.Schedule)
 	if err != nil {
 		logger.Errorf(err, "failed to parse cron schedule %q", job.Schedule)
+		observability.Cron.JobFailed(ctx, job.Key, job.DeploymentKey)
 		return
 	}
 	next, err := cron.NextAfter(schedule, s.clock.Now().UTC(), false)
 	if err != nil {
 		logger.Errorf(err, "failed to calculate next execution for cron job %v with schedule %q", job.Key, job.Schedule)
+		observability.Cron.JobFailed(ctx, job.Key, job.DeploymentKey)
 		return
 	}
 
 	updatedJob, err := s.dal.EndCronJob(ctx, job, next)
 	if err != nil {
 		logger.Errorf(err, "failed to end cron job %v", job.Key)
+		observability.Cron.JobFailed(ctx, job.Key, job.DeploymentKey)
 	} else {
 		s.events.Publish(endedJobsEvent{
 			jobs: []model.CronJob{updatedJob},
@@ -260,20 +270,24 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 		pattern, err := cron.Parse(stale.Schedule)
 		if err != nil {
 			logger.Errorf(err, "Could not kill stale cron job %q because schedule could not be parsed: %q", stale.Key, stale.Schedule)
+			observability.Cron.JobFailed(ctx, stale.Key, stale.DeploymentKey)
 			continue
 		}
 		next, err := cron.NextAfter(pattern, start, false)
 		if err != nil {
 			logger.Errorf(err, "Could not kill stale cron job %q because next date could not be calculated: %q", stale.Key, stale.Schedule)
+			observability.Cron.JobFailed(ctx, stale.Key, stale.DeploymentKey)
 			continue
 		}
 
 		updated, err := s.dal.EndCronJob(ctx, stale, next)
 		if err != nil {
 			logger.Errorf(err, "Could not kill stale cron job %s because: %v", stale.Key, err)
+			observability.Cron.JobFailed(ctx, stale.Key, stale.DeploymentKey)
 			continue
 		}
 		logger.Warnf("Killed stale cron job %s", stale.Key)
+		observability.Cron.JobKilled(ctx, stale.Key, stale.DeploymentKey)
 		updatedJobs = append(updatedJobs, updated)
 	}
 
