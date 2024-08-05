@@ -121,12 +121,18 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		observability.PubSub.SinkCalled(ctx, subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), subscriber.Sink)
 		successful++
 	}
-	queueDepth, err := tx.db.AsyncCallQueueDepth(ctx)
-	if err == nil && queueDepth > 0 {
-		// Don't error out of progressing subscriptions just over a queue depth
-		// retrieval error because this is only used for an observability gauge.
-		observability.AsyncCalls.RecordQueueDepth(ctx, queueDepth)
+
+	if successful > 0 {
+		// If no async calls were successfully created, then there is no need to
+		// potentially increment the queue depth gauge.
+		queueDepth, err := tx.db.AsyncCallQueueDepth(ctx)
+		if err == nil {
+			// Don't error out of progressing subscriptions just over a queue depth
+			// retrieval error because this is only used for an observability gauge.
+			observability.AsyncCalls.RecordQueueDepth(ctx, queueDepth)
+		}
 	}
+
 	return successful, nil
 }
 
