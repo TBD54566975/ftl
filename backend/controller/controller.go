@@ -1383,6 +1383,11 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
 	defer call.Release() //nolint:errcheck
 
+	// Queue depth is queried at acquisition time, which means it includes the async
+	// call that was just executed, but it will be recorded at completion time, so
+	// decrement the value accordingly.
+	queueDepth := call.QueueDepth - 1
+
 	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb))
 
 	logger.Tracef("Executing async call")
@@ -1410,6 +1415,11 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	}
 	err = s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx) error {
 		if failed && call.RemainingAttempts > 0 {
+			// If the call failed and there are attempts remaining, then
+			// CompleteAsyncCall would enqueue another call, so increment
+			// queue depth accordingly.
+			queueDepth++
+
 			// Will retry, do not propagate failure yet.
 			return nil
 		}
@@ -1426,10 +1436,17 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		}
 	})
 	if err != nil {
-		observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
+		if failed && call.RemainingAttempts > 0 {
+			// If the call failed and we had more remaining attempts, then we
+			// would have incremented queue depth to account for the retry,
+			// but if CompleteAsyncCall failed, then we failed to enqueue that
+			// retry, so queue depth needs to be decremented back accordingly.
+			queueDepth--
+		}
+		observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, queueDepth, err)
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
-	observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
+	observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, queueDepth, nil)
 	go func() {
 		// Post-commit notification based on origin
 		switch origin := call.Origin.(type) {
