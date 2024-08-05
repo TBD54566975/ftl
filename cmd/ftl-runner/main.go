@@ -44,7 +44,7 @@ and route to user code.
 	})
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx := log.ContextWithLogger(context.Background(), logger)
-	err = observability.Init(ctx, "ftl-runner", ftl.Version, cli.ObservabilityConfig)
+	err = observability.Init(ctx, false, "", "ftl-runner", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 	err = runner.Start(ctx, cli.RunnerConfig)
 	kctx.FatalIfErrorf(err)

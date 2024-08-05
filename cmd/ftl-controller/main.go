@@ -47,7 +47,7 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to create encryptors")
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
-	err = observability.Init(ctx, "ftl-controller", ftl.Version, cli.ObservabilityConfig)
+	err = observability.Init(ctx, false, "", "ftl-controller", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	// The FTL controller currently only supports DB as a configuration provider/resolver.

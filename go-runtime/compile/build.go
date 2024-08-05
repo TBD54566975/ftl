@@ -27,6 +27,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
+	"github.com/TBD54566975/ftl/common/projectconfig"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -59,6 +60,7 @@ type mainModuleContext struct {
 	GoVersion          string
 	FTLVersion         string
 	Name               string
+	ProjectName        string
 	SharedModulesPaths []string
 	Verbs              []goVerb
 	Replacements       []*modfile.Replace
@@ -121,6 +123,15 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	ftlVersion := ""
 	if ftl.IsRelease(ftl.Version) {
 		ftlVersion = ftl.Version
+	}
+
+	projectName := ""
+	if pcpath, ok := projectconfig.DefaultConfigPath().Get(); ok {
+		pc, err := projectconfig.Load(ctx, pcpath)
+		if err != nil {
+			return fmt.Errorf("failed to load project config: %w", err)
+		}
+		projectName = pc.Name
 	}
 
 	config, err := moduleconfig.LoadModuleConfig(moduleDir)
@@ -203,6 +214,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		GoVersion:          goModVersion,
 		FTLVersion:         ftlVersion,
 		Name:               result.Module.Name,
+		ProjectName:        projectName,
 		SharedModulesPaths: sharedModulesPaths,
 		Verbs:              goVerbs,
 		Replacements:       replacements,
