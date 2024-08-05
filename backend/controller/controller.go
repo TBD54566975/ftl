@@ -1383,6 +1383,11 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
 	defer call.Release() //nolint:errcheck
 
+	// Queue depth is queried at acquisition time, which means it includes the async
+	// call that was just executed, but it will be recorded at completion time, so
+	// decrement the value accordingly.
+	queueDepth := call.QueueDepth - 1
+
 	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb))
 
 	logger.Tracef("Executing async call")
@@ -1393,9 +1398,6 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), s.config.Advertise.String())
 	var callResult either.Either[[]byte, string]
 	failed := false
-	// Queue depth is queried at acquisition time, which means it includes the async
-	// call that was just executed, so decrement the value accordingly.
-	queueDepth := call.QueueDepth - 1
 	if err != nil {
 		logger.Warnf("Async call could not be called: %v", err)
 		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.Some("async call could not be called"))
