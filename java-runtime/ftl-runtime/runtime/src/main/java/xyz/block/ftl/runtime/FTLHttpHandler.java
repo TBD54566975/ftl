@@ -1,6 +1,7 @@
 package xyz.block.ftl.runtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.protobuf.ByteString;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -12,10 +13,12 @@ import io.quarkus.netty.runtime.virtual.VirtualResponseHandler;
 import io.quarkus.vertx.http.runtime.QuarkusHttpHeaders;
 import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
 import jakarta.inject.Singleton;
+import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
 
+import javax.annotation.PostConstruct;
 import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
@@ -28,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 @Singleton
 public class FTLHttpHandler implements VerbInvoker{
 
+    public static final String CONTENT_TYPE = "Content-Type";
     final ObjectMapper mapper;
     private static final Logger log = Logger.getLogger("quarkus.amazon.lambda.http");
 
@@ -129,7 +133,16 @@ public class FTLHttpHandler implements VerbInvoker{
                 }
                 if (msg instanceof LastHttpContent) {
                     if (baos != null) {
-                        responseBuilder.setBody(baos.toString(StandardCharsets.UTF_8));
+                        List<String> ct = responseBuilder.getHeaders().get(CONTENT_TYPE);
+                        if (ct == null || ct.isEmpty()) {
+                            //TODO: how to handle this
+                            responseBuilder.setBody(baos.toString(StandardCharsets.UTF_8));
+                        } else if (ct.get(0).contains(MediaType.TEXT_PLAIN)){
+                            // need to encode as JSON string
+                            responseBuilder.setBody(mapper.writer().writeValueAsString(baos.toString(StandardCharsets.UTF_8)));
+                        } else {
+                            responseBuilder.setBody(baos.toString(StandardCharsets.UTF_8));
+                        }
                     }
                     future.complete(responseBuilder);
                 }
@@ -184,6 +197,7 @@ public class FTLHttpHandler implements VerbInvoker{
                 }
             }
         }
+        nettyRequest.headers().add(CONTENT_TYPE, MediaType.APPLICATION_JSON);
 
         if (!nettyRequest.headers().contains(HttpHeaderNames.HOST)) {
             nettyRequest.headers().add(HttpHeaderNames.HOST, "localhost");
@@ -193,7 +207,7 @@ public class FTLHttpHandler implements VerbInvoker{
         if (request.getBody() != null) {
             // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.3
             nettyRequest.headers().add(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
-            ByteBuf body = Unpooled.copiedBuffer(request.getBody(), StandardCharsets.UTF_8); //TODO: do we need to look at the request encoding?
+            ByteBuf body = Unpooled.copiedBuffer(request.getBody().toString(), StandardCharsets.UTF_8); //TODO: do we need to look at the request encoding?
             requestContent = new DefaultLastHttpContent(body);
         }
         NettyResponseHandler handler = new NettyResponseHandler(request);

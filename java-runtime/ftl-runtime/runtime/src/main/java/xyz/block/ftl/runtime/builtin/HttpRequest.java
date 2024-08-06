@@ -1,5 +1,7 @@
 package xyz.block.ftl.runtime.builtin;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.util.List;
 import java.util.Map;
 
@@ -12,7 +14,7 @@ public class HttpRequest {
     private Map<String, String> pathParameters;
     private Map<String, List<String>>    query;
     private Map<String, List<String>>    headers;
-    private String body;
+    private JsonNode body;
 
     public String getMethod() {
         return method;
@@ -54,11 +56,11 @@ public class HttpRequest {
         this.headers = headers;
     }
 
-    public String getBody() {
+    public JsonNode getBody() {
         return body;
     }
 
-    public void setBody(String body) {
+    public void setBody(JsonNode body) {
         this.body = body;
     }
 }

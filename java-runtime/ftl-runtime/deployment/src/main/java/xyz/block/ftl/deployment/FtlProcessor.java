@@ -2,17 +2,31 @@ package xyz.block.ftl.deployment;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.processor.DotNames;
+import io.quarkus.deployment.Capabilities;
+import io.quarkus.deployment.Capability;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
+import io.quarkus.deployment.builditem.ApplicationStartBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.LaunchModeBuildItem;
+import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
+import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
+import io.quarkus.netty.runtime.virtual.VirtualServerChannel;
 import io.quarkus.resteasy.reactive.server.deployment.ResteasyReactiveResourceMethodEntriesBuildItem;
+import io.quarkus.runtime.LaunchMode;
+import io.quarkus.vertx.core.deployment.CoreVertxBuildItem;
+import io.quarkus.vertx.core.deployment.EventLoopCountBuildItem;
+import io.quarkus.vertx.http.deployment.RequireVirtualHttpBuildItem;
+import io.quarkus.vertx.http.deployment.WebsocketSubProtocolsBuildItem;
+import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
+import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.VoidType;
@@ -55,6 +69,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 class FtlProcessor {
 
@@ -168,9 +183,12 @@ class FtlProcessor {
                 if (i.type == URITemplate.Type.CUSTOM_REGEX) {
                     throw new RuntimeException("Invalid path " + path + " on HTTP endpoint: " + endpoint.getActualClassInfo().name() + "." + endpoint.getMethodInfo().name() + " FTL does not support custom regular expressions");
                 } else if (i.type == URITemplate.Type.LITERAL) {
-                    pathComponents.add(IngressPathComponent.newBuilder().setIngressPathLiteral(IngressPathLiteral.newBuilder().setText(i.literalText)).build());
+                    if (i.literalText.equals("/")) {
+                        continue;
+                    }
+                    pathComponents.add(IngressPathComponent.newBuilder().setIngressPathLiteral(IngressPathLiteral.newBuilder().setText(i.literalText.replace("/", ""))).build());
                 } else {
-                    pathComponents.add(IngressPathComponent.newBuilder().setIngressPathParameter(IngressPathParameter.newBuilder().setName(i.name)).build());
+                    pathComponents.add(IngressPathComponent.newBuilder().setIngressPathParameter(IngressPathParameter.newBuilder().setName(i.name.replace("/", ""))).build());
                 }
             }
 
@@ -214,6 +232,33 @@ class FtlProcessor {
         Files.setPosixFilePermissions(output, newPerms);
     }
 
+    /**
+     * This is a huge hack that is needed until Quarkus supports both virtual and socket based HTTP
+     */
+    @Record(ExecutionTime.RUNTIME_INIT)
+    @BuildStep
+    void openSocket(ApplicationStartBuildItem start,
+                    LaunchModeBuildItem launchMode,
+                    CoreVertxBuildItem vertx,
+                    ShutdownContextBuildItem shutdown,
+                    BuildProducer<ReflectiveClassBuildItem> reflectiveClass,
+                    HttpBuildTimeConfig httpBuildTimeConfig,
+                    java.util.Optional<RequireVirtualHttpBuildItem> requireVirtual,
+                    EventLoopCountBuildItem eventLoopCount,
+                    List<WebsocketSubProtocolsBuildItem> websocketSubProtocols,
+                    Capabilities capabilities,
+                    VertxHttpRecorder recorder) throws IOException {
+            reflectiveClass
+                    .produce(ReflectiveClassBuildItem.builder(VirtualServerChannel.class)
+                            .build());
+        recorder.startServer(vertx.getVertx(), shutdown,
+                launchMode.getLaunchMode(), true, false,
+                eventLoopCount.getEventLoopCount(),
+                websocketSubProtocols.stream().map(bi -> bi.getWebsocketSubProtocols())
+                        .collect(Collectors.toList()),
+                launchMode.isAuxiliaryApplication(), !capabilities.isPresent(Capability.VERTX_WEBSOCKETS));
+    }
+
     private Type buildType(IndexView index, org.jboss.jandex.Type type, Map<TypeKey, Ref> dataElements, Module.Builder moduleBuilder) {
         switch (type.kind()) {
             case PRIMITIVE -> {
@@ -245,7 +290,7 @@ class FtlProcessor {
                 if (clazz.name().equals(DotName.STRING_NAME)) {
                     return Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
                 }
-                var existing = dataElements.get(new TypeKey(clazz.name().toString()));
+                var existing = dataElements.get(new TypeKey(clazz.name().toString(), List.of()));
                 if (existing != null) {
                     return Type.newBuilder().setRef(existing).build();
                 }
@@ -255,7 +300,7 @@ class FtlProcessor {
                 buildDataElement(data, index, clazz.name(), dataElements, moduleBuilder);
                 moduleBuilder.addDecls(Decl.newBuilder().setData(data).build());
                 Ref ref = Ref.newBuilder().setName(data.getName()).setModule(moduleBuilder.getName()).build();
-                dataElements.put(new TypeKey(clazz.name().toString()), ref);
+                dataElements.put(new TypeKey(clazz.name().toString(), List.of()), ref);
                 return Type.newBuilder().setRef(ref).build();
             }
             case PARAMETERIZED_TYPE -> {
@@ -295,7 +340,7 @@ class FtlProcessor {
         buildDataElement(data, index, clazz.superName(), dataElements, moduleBuilder);
     }
 
-    private record TypeKey(String name, String... typeParams) {
+    private record TypeKey(String name, List<String> typeParams) {
 
     }
 }
