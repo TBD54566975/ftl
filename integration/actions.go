@@ -500,5 +500,5 @@ func HttpCall(method string, path string, headers map[string][]string, body []by
 
 // Run "go test" in the given module.
 func ExecModuleTest(module string) Action {
-	return Chdir(module, Exec("go", "test", "./..."))
+	return Chdir(module, Exec("go", "test", "./...", "--race"))
 }
