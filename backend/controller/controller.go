@@ -130,7 +130,7 @@ type Config struct {
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
-	EventLogRetention            time.Duration       `help:"Event log retention."`
+	EventLogRetention            time.Duration       `help:"Delete call logs after this time period." env:"FTL_EVENT_LOG_RETENTION"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	EncryptionKeys
 	CommonConfig
