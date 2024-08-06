@@ -29,7 +29,7 @@
       enabled: false,
     },
     {
-      matchPackageNames: ["eslint", "codemirror"],
+      matchPackageNames: ["eslint", "codemirror", "codemirror-json-schema"],
       enabled: false,
       paths: ["frontend/**", "extensions/**"],
     },
