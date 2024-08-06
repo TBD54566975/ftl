@@ -236,3 +236,7 @@ otel-dev *args:
   # Uncomment this line for much richer debug logs
   # export FTL_O11Y_LOG_LEVEL="debug"
   ftl dev {{args}}
+
+storybook:
+  #!/bin/bash
+  cd frontend && npm run storybook
