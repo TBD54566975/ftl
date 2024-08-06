@@ -277,6 +277,24 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
+const deleteOldEvents = `-- name: DeleteOldEvents :one
+WITH deleted AS (
+    DELETE FROM events
+    WHERE time_stamp < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+      AND type = $2
+    RETURNING 1
+)
+SELECT COUNT(*)
+FROM deleted
+`
+
+func (q *Queries) DeleteOldEvents(ctx context.Context, timeout time.Duration, type_ EventType) (int64, error) {
+	row := q.db.QueryRow(ctx, deleteOldEvents, timeout, type_)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteSubscribers = `-- name: DeleteSubscribers :many
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
