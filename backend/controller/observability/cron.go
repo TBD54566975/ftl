@@ -3,9 +3,9 @@ package observability
 import (
 	"context"
 	"fmt"
-	"github.com/alecthomas/types/optional"
 	"time"
 
+	"github.com/alecthomas/types/optional"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
