@@ -27,9 +27,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
@@ -966,26 +963,18 @@ func (s *Service) callWithRequest(
 ) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
 
-	logger := log.FromContext(ctx)
-
-	requestCounter, err := otel.GetMeterProvider().Meter("ftl.call").Int64Counter(
-		"requests",
-		metric.WithDescription("Count of FTL verb calls via the controller"))
-	if err != nil {
-		logger.Errorf(err, "Failed to instrument otel metric `ftl.call.requests`")
-	} else {
-		requestCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("ftl.module.name", req.Msg.Verb.Module), attribute.String("ftl.verb.name", req.Msg.Verb.Name)))
-	}
-
 	if req.Msg.Verb == nil {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: missing verb"))
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("verb is required"))
 	}
 	if req.Msg.Body == nil {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: missing body"))
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
 
 	sch, err := s.dal.GetActiveSchema(ctx)
 	if err != nil {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("schema retrieval failed"))
 		return nil, err
 	}
 
@@ -994,19 +983,23 @@ func (s *Service) callWithRequest(
 
 	if err = sch.ResolveToType(verbRef, verb); err != nil {
 		if errors.Is(err, schema.ErrNotFound) {
+			observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb not found"))
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb resolution failed"))
 		return nil, err
 	}
 
 	err = ingress.ValidateCallBody(req.Msg.Body, verb, sch)
 	if err != nil {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
 		return nil, err
 	}
 
 	module := verbRef.Module
 	routes, ok := s.routes.Load()[module]
 	if !ok {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
 	}
 	route := routes[rand.Intn(len(routes))] //nolint:gosec
@@ -1014,12 +1007,14 @@ func (s *Service) callWithRequest(
 
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to get callers"))
 		return nil, err
 	}
 
 	if !verb.IsExported() {
 		for _, caller := range callers {
 			if caller.Module != module {
+				observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
 				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
 			}
 		}
@@ -1033,6 +1028,7 @@ func (s *Service) callWithRequest(
 	} else {
 		k, ok, err := headers.GetRequestKey(req.Header())
 		if err != nil {
+			observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to get request key"))
 			return nil, err
 		} else if !ok {
 			requestKey = model.NewRequestKey(model.OriginIngress, "grpc")
@@ -1045,6 +1041,7 @@ func (s *Service) callWithRequest(
 	if isNewRequestKey {
 		headers.SetRequestKey(req.Header(), requestKey)
 		if err = s.dal.CreateRequest(ctx, requestKey, sourceAddress); err != nil {
+			observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to create request"))
 			return nil, err
 		}
 	}
@@ -1059,6 +1056,9 @@ func (s *Service) callWithRequest(
 	if err == nil {
 		resp = connect.NewResponse(response.Msg)
 		maybeResponse = optional.Some(resp.Msg)
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.None[string]())
+	} else {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 	}
 	s.recordCall(ctx, &Call{
 		deploymentKey: route.Deployment,
