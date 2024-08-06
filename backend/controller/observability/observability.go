@@ -12,6 +12,7 @@ import (
 
 var (
 	AsyncCalls *AsyncCallMetrics
+	Calls      *CallMetrics
 	Deployment *DeploymentMetrics
 	FSM        *FSMMetrics
 	PubSub     *PubSubMetrics
@@ -22,6 +23,8 @@ func init() {
 	var err error
 
 	AsyncCalls, err = initAsyncCallMetrics()
+	errs = errors.Join(errs, err)
+	Calls, err = initCallMetrics()
 	errs = errors.Join(errs, err)
 	Deployment, err = initDeploymentMetrics()
 	errs = errors.Join(errs, err)
