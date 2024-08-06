@@ -43,7 +43,7 @@ func initCallMetrics() (*CallMetrics, error) {
 		return nil, wrapErr(signalName, err)
 	}
 
-	signalName = fmt.Sprintf("%s.ms_to_complete", asyncCallMeterName)
+	signalName = fmt.Sprintf("%s.ms_to_complete", callMeterName)
 	if result.msToComplete, err = meter.Int64Histogram(signalName, metric.WithUnit("ms"),
 		metric.WithDescription("duration in ms to complete a verb call")); err != nil {
 		return nil, wrapErr(signalName, err)
