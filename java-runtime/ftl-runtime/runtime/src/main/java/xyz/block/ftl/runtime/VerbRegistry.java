@@ -18,18 +18,22 @@ public class VerbRegistry {
     final ObjectMapper mapper;
 
 
-    private final Map<Key, Handler> verbs = new ConcurrentHashMap<>();
+    private final Map<Key, VerbInvoker> verbs = new ConcurrentHashMap<>();
 
     public VerbRegistry(ObjectMapper mapper) {
         this.mapper = mapper;
     }
 
     public void register(String module, String name, InstanceHandle<?> verbHandlerClass, Method method, Class<?> parameterClass) {
-        verbs.put(new Key(module, name), new Handler(verbHandlerClass, method, parameterClass));
+        verbs.put(new Key(module, name), new AnnotatedEndpointHandler(verbHandlerClass, method, parameterClass));
+    }
+
+    public void register(String module, String name, VerbInvoker verbInvoker) {
+        verbs.put(new Key(module, name), verbInvoker);
     }
 
     public CallResponse invoke( CallRequest request) {
-        Handler handler = verbs.get(new Key(request.getVerb().getModule(), request.getVerb().getName()));
+        VerbInvoker handler = verbs.get(new Key(request.getVerb().getModule(), request.getVerb().getName()));
         if (handler == null) {
             return CallResponse.newBuilder().setError(CallResponse.Error.newBuilder().setMessage("Verb not found").build()).build();
         }
@@ -41,12 +45,13 @@ public class VerbRegistry {
 
     }
 
-    private class Handler {
+
+    private class AnnotatedEndpointHandler implements VerbInvoker {
         final InstanceHandle<?> verbHandlerClass;
         final Method method;
         final Class<?> inputClass;
 
-        private Handler(InstanceHandle<?> verbHandlerClass, Method method, Class<?> inputClass) {
+        private AnnotatedEndpointHandler(InstanceHandle<?> verbHandlerClass, Method method, Class<?> inputClass) {
             this.verbHandlerClass = verbHandlerClass;
             this.method = method;
             this.inputClass = inputClass;

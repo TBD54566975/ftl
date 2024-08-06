@@ -12,24 +12,45 @@ import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
-import org.jboss.jandex.*;
+import io.quarkus.resteasy.reactive.server.deployment.ResteasyReactiveResourceMethodEntriesBuildItem;
+import org.jboss.jandex.DotName;
+import org.jboss.jandex.IndexView;
+import org.jboss.jandex.VoidType;
+import org.jboss.resteasy.reactive.common.model.MethodParameter;
+import org.jboss.resteasy.reactive.common.model.ParameterType;
+import org.jboss.resteasy.reactive.server.mapping.URITemplate;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
+import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
+import xyz.block.ftl.runtime.builtin.HttpRequest;
+import xyz.block.ftl.runtime.builtin.HttpResponse;
+import xyz.block.ftl.v1.schema.Array;
+import xyz.block.ftl.v1.schema.Bool;
+import xyz.block.ftl.v1.schema.Data;
+import xyz.block.ftl.v1.schema.Decl;
+import xyz.block.ftl.v1.schema.Field;
 import xyz.block.ftl.v1.schema.Float;
+import xyz.block.ftl.v1.schema.IngressPathComponent;
+import xyz.block.ftl.v1.schema.IngressPathLiteral;
+import xyz.block.ftl.v1.schema.IngressPathParameter;
+import xyz.block.ftl.v1.schema.Int;
+import xyz.block.ftl.v1.schema.Metadata;
+import xyz.block.ftl.v1.schema.MetadataIngress;
 import xyz.block.ftl.v1.schema.Module;
-import xyz.block.ftl.v1.schema.*;
+import xyz.block.ftl.v1.schema.Optional;
+import xyz.block.ftl.v1.schema.Ref;
 import xyz.block.ftl.v1.schema.Type;
+import xyz.block.ftl.v1.schema.Unit;
 
-import java.io.File;
 import java.io.IOException;
-import java.lang.String;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +62,7 @@ class FtlProcessor {
     private static final String FEATURE = "ftl-java-runtime";
     public static final DotName EXPORT = DotName.createSimple(Export.class);
     public static final DotName VERB = DotName.createSimple(Verb.class);
+    public static final String BUILTIN = "builtin";
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -62,8 +84,18 @@ class FtlProcessor {
     @BuildStep
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(VerbHandler.class, VerbRegistry.class)
+                .addBeanClasses(VerbHandler.class, VerbRegistry.class, FTLHttpHandler.class)
                 .setUnremovable().build();
+    }
+
+    @BuildStep
+    AdditionalBeanBuildItem verbBeans(CombinedIndexBuildItem index) {
+
+        var beans = AdditionalBeanBuildItem.builder().setUnremovable();
+        for (var verb : index.getIndex().getAnnotations(VERB)) {
+            beans.addBeanClasses(verb.target().asMethod().declaringClass().name().toString());
+        }
+        return beans.build();
     }
 
     @BuildStep
@@ -71,13 +103,13 @@ class FtlProcessor {
     public void registerVerbs(CombinedIndexBuildItem index,
                               FTLRecorder recorder,
                               ApplicationInfoBuildItem applicationInfoBuildItem,
-                              BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItemBuildProducer,
                               OutputTargetBuildItem outputTargetBuildItem,
-                              RecorderContext recorderContext) throws IOException {
+                              RecorderContext recorderContext,
+                              ResteasyReactiveResourceMethodEntriesBuildItem restEndpoints) throws IOException {
         Module.Builder moduleBuilder = Module.newBuilder()
                 .setName(applicationInfoBuildItem.getName())
                 .setBuiltin(false);
-        Map<String, Ref> dataElements = new HashMap<>();
+        Map<TypeKey, Ref> dataElements = new HashMap<>();
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
         for (var verb : index.getIndex().getAnnotations(VERB)) {
             boolean exported = verb.target().hasAnnotation(EXPORT);
@@ -101,7 +133,69 @@ class FtlProcessor {
                                     .setResponse(buildType(index.getComputingIndex(), method.returnType(), dataElements, moduleBuilder)))
                             .build());
         }
-        additionalBeanBuildItemBuildProducer.produce(beans.build());
+
+        //TODO: make this composable so it is not just one big method, build items should contribute to the schema
+        for (var endpoint : restEndpoints.getEntries()) {
+            //TODO: naming
+            var verbName = endpoint.getMethodInfo().name();
+            recorder.registerHttpIngress(applicationInfoBuildItem.getName(), verbName);
+
+            //TODO: handle type parameters properly
+            org.jboss.jandex.Type bodyParamType = VoidType.VOID;
+            MethodParameter[] parameters = endpoint.getResourceMethod().getParameters();
+            for (int i = 0, parametersLength = parameters.length; i < parametersLength; i++) {
+                var param = parameters[i];
+                if (param.parameterType.equals(ParameterType.BODY)) {
+                    bodyParamType = endpoint.getMethodInfo().parameterType(i);
+                    break;
+                }
+            }
+
+            StringBuilder pathBuilder = new StringBuilder();
+            if (endpoint.getBasicResourceClassInfo().getPath() != null) {
+                pathBuilder.append(endpoint.getBasicResourceClassInfo().getPath());
+            }
+            if (endpoint.getResourceMethod().getPath() != null && !endpoint.getResourceMethod().getPath().isEmpty()) {
+                if (pathBuilder.charAt(pathBuilder.length() - 1) != '/' && !endpoint.getResourceMethod().getPath().startsWith("/")) {
+                    pathBuilder.append('/');
+                }
+                pathBuilder.append(endpoint.getResourceMethod().getPath());
+            }
+            String path = pathBuilder.toString();
+            URITemplate template = new URITemplate(path, false);
+            List<IngressPathComponent> pathComponents = new ArrayList<>();
+            for (var i : template.components) {
+                if (i.type == URITemplate.Type.CUSTOM_REGEX) {
+                    throw new RuntimeException("Invalid path " + path + " on HTTP endpoint: " + endpoint.getActualClassInfo().name() + "." + endpoint.getMethodInfo().name() + " FTL does not support custom regular expressions");
+                } else if (i.type == URITemplate.Type.LITERAL) {
+                    pathComponents.add(IngressPathComponent.newBuilder().setIngressPathLiteral(IngressPathLiteral.newBuilder().setText(i.literalText)).build());
+                } else {
+                    pathComponents.add(IngressPathComponent.newBuilder().setIngressPathParameter(IngressPathParameter.newBuilder().setName(i.name)).build());
+                }
+            }
+
+            //TODO: process path properly
+            MetadataIngress.Builder ingressBuilder = MetadataIngress.newBuilder()
+                    .setMethod(endpoint.getResourceMethod().getHttpMethod());
+            for (var i : pathComponents) {
+                ingressBuilder.addPath(i);
+            }
+            Metadata ingressMetadata = Metadata.newBuilder()
+                    .setIngress(ingressBuilder
+                            .build())
+                    .build();
+            Type requestTypeParam = buildType(index.getComputingIndex(), bodyParamType, dataElements, moduleBuilder);
+            Type responseTypeParam = buildType(index.getComputingIndex(), endpoint.getMethodInfo().returnType(), dataElements, moduleBuilder);
+            moduleBuilder
+                    .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
+                                    .addMetadata(ingressMetadata)
+                                    .setName(verbName)
+                                    .setExport(true)
+                                    .setRequest(Type.newBuilder().setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpRequest.class.getSimpleName()).addTypeParameters(requestTypeParam)).build())
+                                    .setResponse(Type.newBuilder().setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpResponse.class.getSimpleName()).addTypeParameters(responseTypeParam).addTypeParameters(Type.newBuilder().setUnit(Unit.newBuilder()))).build()))
+                            .build());
+        }
+
         Path output = outputTargetBuildItem.getOutputDirectory().resolve(SCHEMA_OUT);
         try (var out = Files.newOutputStream(output)) {
             moduleBuilder.build().writeTo(out);
@@ -120,7 +214,7 @@ class FtlProcessor {
         Files.setPosixFilePermissions(output, newPerms);
     }
 
-    private Type buildType(IndexView index, org.jboss.jandex.Type type, Map<String, Ref> dataElements, Module.Builder moduleBuilder) {
+    private Type buildType(IndexView index, org.jboss.jandex.Type type, Map<TypeKey, Ref> dataElements, Module.Builder moduleBuilder) {
         switch (type.kind()) {
             case PRIMITIVE -> {
                 var prim = type.asPrimitiveType();
@@ -151,7 +245,7 @@ class FtlProcessor {
                 if (clazz.name().equals(DotName.STRING_NAME)) {
                     return Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
                 }
-                var existing = dataElements.get(clazz.name().toString());
+                var existing = dataElements.get(new TypeKey(clazz.name().toString()));
                 if (existing != null) {
                     return Type.newBuilder().setRef(existing).build();
                 }
@@ -161,7 +255,7 @@ class FtlProcessor {
                 buildDataElement(data, index, clazz.name(), dataElements, moduleBuilder);
                 moduleBuilder.addDecls(Decl.newBuilder().setData(data).build());
                 Ref ref = Ref.newBuilder().setName(data.getName()).setModule(moduleBuilder.getName()).build();
-                dataElements.put(clazz.name().toString(), ref);
+                dataElements.put(new TypeKey(clazz.name().toString()), ref);
                 return Type.newBuilder().setRef(ref).build();
             }
             case PARAMETERIZED_TYPE -> {
@@ -175,6 +269,10 @@ class FtlProcessor {
                             .build();
                 } else if (paramType.name().equals(DotNames.OPTIONAL)) {
                     return Type.newBuilder().setOptional(Optional.newBuilder().setType(buildType(index, paramType.arguments().get(0), dataElements, moduleBuilder))).build();
+                } else if (paramType.name().equals(DotName.createSimple(HttpRequest.class))) {
+                    return Type.newBuilder().setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpRequest.class.getSimpleName()).addTypeParameters(buildType(index, paramType.arguments().get(0), dataElements, moduleBuilder))).build();
+                } else if (paramType.name().equals(DotName.createSimple(HttpResponse.class))) {
+                    return Type.newBuilder().setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpResponse.class.getSimpleName()).addTypeParameters(buildType(index, paramType.arguments().get(0), dataElements, moduleBuilder)).addTypeParameters(Type.newBuilder().setUnit(Unit.newBuilder().build()))).build();
                 }
             }
         }
@@ -182,7 +280,7 @@ class FtlProcessor {
         throw new RuntimeException("NOT YET IMPLEMENTED");
     }
 
-    private void buildDataElement(Data.Builder data, IndexView index, DotName className, Map<String, Ref> dataElements, Module.Builder moduleBuilder) {
+    private void buildDataElement(Data.Builder data, IndexView index, DotName className, Map<TypeKey, Ref> dataElements, Module.Builder moduleBuilder) {
         if (className == null || className.equals(DotName.OBJECT_NAME)) {
             return;
         }
@@ -195,5 +293,9 @@ class FtlProcessor {
             data.addFields(Field.newBuilder().setName(field.name()).setType(buildType(index, field.type(), dataElements, moduleBuilder)).build());
         }
         buildDataElement(data, index, clazz.superName(), dataElements, moduleBuilder);
+    }
+
+    private record TypeKey(String name, String... typeParams) {
+
     }
 }

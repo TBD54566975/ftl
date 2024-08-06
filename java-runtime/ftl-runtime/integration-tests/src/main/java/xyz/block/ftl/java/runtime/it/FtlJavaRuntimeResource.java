@@ -17,11 +17,20 @@
 package xyz.block.ftl.java.runtime.it;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.core.MediaType;
 import xyz.block.ftl.Verb;
 
 @ApplicationScoped
 public class FtlJavaRuntimeResource {
     // add some rest methods here
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    public String post(Person person) {
+        return "Hello " + person.getFirst() + " " + person.getLast();
+    }
 
     @Verb
     public String hello() {

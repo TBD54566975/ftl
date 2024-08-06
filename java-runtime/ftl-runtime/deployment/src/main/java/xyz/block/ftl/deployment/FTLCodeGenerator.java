@@ -9,6 +9,7 @@ import io.quarkus.bootstrap.prebuild.CodeGenException;
 import io.quarkus.deployment.CodeGenContext;
 import io.quarkus.deployment.CodeGenProvider;
 import org.eclipse.microprofile.config.Config;
+import org.jboss.logging.Logger;
 import xyz.block.ftl.v1.ControllerServiceGrpc;
 import xyz.block.ftl.v1.GetSchemaRequest;
 
@@ -19,6 +20,8 @@ import java.nio.file.Path;
 import java.util.Map;
 
 public class FTLCodeGenerator implements CodeGenProvider {
+
+    private static final Logger log= Logger.getLogger(FTLCodeGenerator.class);
 
     public static final String CLIENT = "Client";
     String moduleName;
@@ -41,7 +44,15 @@ public class FTLCodeGenerator implements CodeGenProvider {
 
     @Override
     public boolean trigger(CodeGenContext context) throws CodeGenException {
+        try {
+            runCodeGeneration(context.outDir());
+        } catch (Exception e) {
+            log.error("Failed to generate FTL code", e);
+        }
+        return true;
+    }
 
+    static void runCodeGeneration(Path outdir) {
         String endpoint = System.getenv("FTL_ENDPOINT");
         if (endpoint == null) {
             endpoint = "http://localhost:8892";
@@ -76,7 +87,7 @@ public class FTLCodeGenerator implements CodeGenProvider {
                         JavaFile javaFile = JavaFile.builder(module.getName(), helloWorld)
                                 .build();
 
-                        javaFile.writeTo(context.outDir());
+                        javaFile.writeTo(outdir);
 
                     } catch (IOException e) {
                         throw new RuntimeException(e);
@@ -84,8 +95,6 @@ public class FTLCodeGenerator implements CodeGenProvider {
                 }
             }
         }
-
-        return true;
     }
 
     @Override
@@ -94,7 +103,7 @@ public class FTLCodeGenerator implements CodeGenProvider {
     }
 
 
-    String className(String in ) {
+    static String className(String in ) {
         return Character.toUpperCase(in.charAt(0)) + in.substring(1);
     }
 }
