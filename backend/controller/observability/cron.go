@@ -3,6 +3,7 @@ package observability
 import (
 	"context"
 	"fmt"
+	"github.com/alecthomas/types/optional"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -14,15 +15,17 @@ import (
 )
 
 const (
-	cronMeterName       = "ftl.cron"
-	cronJobRefAttribute = "ftl.cron.job.ref"
+	cronMeterName            = "ftl.cron"
+	cronJobFullNameAttribute = "ftl.cron.job.full_name"
+
+	cronJobKilledStatus      = "killed"
+	cronJobFailedStartStatus = "failed_start"
 )
 
 type CronMetrics struct {
-	jobFailures metric.Int64Counter
-	jobsKilled  metric.Int64Counter
-	jobsActive  metric.Int64UpDownCounter
-	jobLatency  metric.Int64Histogram
+	jobsActive    metric.Int64UpDownCounter
+	jobsCompleted metric.Int64Counter
+	jobLatency    metric.Int64Histogram
 }
 
 func initCronMetrics() (*CronMetrics, error) {
@@ -34,17 +37,10 @@ func initCronMetrics() (*CronMetrics, error) {
 	meter := otel.Meter(deploymentMeterName)
 
 	counter := fmt.Sprintf("%s.job.failures", cronMeterName)
-	if result.jobFailures, err = meter.Int64Counter(
+	if result.jobsCompleted, err = meter.Int64Counter(
 		counter,
-		metric.WithDescription("the number of failures encountered while performing activities associated with starting or ending a cron job")); err != nil {
-		result.jobFailures, errs = handleInt64CounterError(counter, err, errs)
-	}
-
-	counter = fmt.Sprintf("%s.jobs.kills", cronMeterName)
-	if result.jobsKilled, err = meter.Int64Counter(
-		counter,
-		metric.WithDescription("the number cron jobs killed by the controller")); err != nil {
-		result.jobsKilled, errs = handleInt64CounterError(counter, err, errs)
+		metric.WithDescription("the number of cron jobs completed; successful or otherwise")); err != nil {
+		result.jobsCompleted, errs = handleInt64CounterError(counter, err, errs)
 	}
 
 	counter = fmt.Sprintf("%s.jobs.active", cronMeterName)
@@ -57,7 +53,7 @@ func initCronMetrics() (*CronMetrics, error) {
 	counter = fmt.Sprintf("%s.job.latency", cronMeterName)
 	if result.jobLatency, err = meter.Int64Histogram(
 		counter,
-		metric.WithDescription("the latency between the scheduled execution time and completion of a cron job"),
+		metric.WithDescription("the latency between the scheduled execution time of a cron job"),
 		metric.WithUnit("ms")); err != nil {
 		result.jobLatency, errs = handleInt64HistogramCounterError(counter, err, errs)
 	}
@@ -65,42 +61,48 @@ func initCronMetrics() (*CronMetrics, error) {
 	return result, errs
 }
 
-func (m *CronMetrics) JobExecutionStarted(ctx context.Context, job model.CronJobKey, deployment model.DeploymentKey) {
-	m.jobsActive.Add(ctx, 1, metric.WithAttributes(
-		attribute.String(observability.ModuleNameAttribute, job.Payload.Module),
-		attribute.String(cronJobRefAttribute, job.String()),
-		attribute.String(observability.RunnerDeploymentKeyAttribute, deployment.String()),
-	))
+func (m *CronMetrics) JobStarted(ctx context.Context, job model.CronJob) {
+	m.jobsActive.Add(ctx, 1, cronAttributes(job, optional.None[string]()))
 }
 
-func (m *CronMetrics) JobExecutionCompleted(ctx context.Context, job model.CronJobKey, deployment model.DeploymentKey, scheduled time.Time) {
-	elapsed := time.Since(scheduled)
-
-	m.jobsActive.Add(ctx, -1, metric.WithAttributes(
-		attribute.String(observability.ModuleNameAttribute, job.Payload.Module),
-		attribute.String(cronJobRefAttribute, job.String()),
-		attribute.String(observability.RunnerDeploymentKeyAttribute, deployment.String()),
-	))
-
-	m.jobLatency.Record(ctx, elapsed.Milliseconds(), metric.WithAttributes(
-		attribute.String(observability.ModuleNameAttribute, job.Payload.Module),
-		attribute.String(cronJobRefAttribute, job.String()),
-		attribute.String(observability.RunnerDeploymentKeyAttribute, deployment.String()),
-	))
+func (m *CronMetrics) JobSuccess(ctx context.Context, job model.CronJob) {
+	m.jobCompleted(ctx, job, observability.SuccessStatus)
 }
 
-func (m *CronMetrics) JobKilled(ctx context.Context, job model.CronJobKey, deployment model.DeploymentKey) {
-	m.jobsActive.Add(ctx, -1, metric.WithAttributes(
-		attribute.String(observability.ModuleNameAttribute, job.Payload.Module),
-		attribute.String(cronJobRefAttribute, job.String()),
-		attribute.String(observability.RunnerDeploymentKeyAttribute, deployment.String()),
-	))
+func (m *CronMetrics) JobKilled(ctx context.Context, job model.CronJob) {
+	m.jobCompleted(ctx, job, cronJobKilledStatus)
 }
 
-func (m *CronMetrics) JobFailed(ctx context.Context, job model.CronJobKey, deployment model.DeploymentKey) {
-	m.jobFailures.Add(ctx, 1, metric.WithAttributes(
-		attribute.String(observability.ModuleNameAttribute, job.Payload.Module),
-		attribute.String(cronJobRefAttribute, job.String()),
-		attribute.String(observability.RunnerDeploymentKeyAttribute, deployment.String()),
-	))
+func (m *CronMetrics) JobFailedStart(ctx context.Context, job model.CronJob) {
+	completionAttributes := cronAttributes(job, optional.Some(cronJobFailedStartStatus))
+
+	elapsed := time.Since(job.NextExecution)
+	m.jobLatency.Record(ctx, elapsed.Milliseconds(), completionAttributes)
+	m.jobsCompleted.Add(ctx, 1, completionAttributes)
+}
+
+func (m *CronMetrics) JobFailed(ctx context.Context, job model.CronJob) {
+	m.jobCompleted(ctx, job, observability.FailureStatus)
+}
+
+func (m *CronMetrics) jobCompleted(ctx context.Context, job model.CronJob, status string) {
+	elapsed := time.Since(job.NextExecution)
+
+	m.jobsActive.Add(ctx, -1, cronAttributes(job, optional.None[string]()))
+
+	completionAttributes := cronAttributes(job, optional.Some(status))
+	m.jobLatency.Record(ctx, elapsed.Milliseconds(), completionAttributes)
+	m.jobsCompleted.Add(ctx, 1, completionAttributes)
+}
+
+func cronAttributes(job model.CronJob, maybeStatus optional.Option[string]) metric.MeasurementOption {
+	attributes := []attribute.KeyValue{
+		attribute.String(observability.ModuleNameAttribute, job.Key.Payload.Module),
+		attribute.String(cronJobFullNameAttribute, job.Key.String()),
+		attribute.String(observability.RunnerDeploymentKeyAttribute, job.DeploymentKey.String()),
+	}
+	if status, ok := maybeStatus.Get(); ok {
+		attributes = append(attributes, attribute.String(observability.OutcomeStatusNameAttribute, status))
+	}
+	return metric.WithAttributes(attributes...)
 }

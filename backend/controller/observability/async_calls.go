@@ -74,7 +74,7 @@ func wrapErr(signalName string, err error) error {
 
 func (m *AsyncCallMetrics) Acquired(ctx context.Context, verb schema.RefKey, origin string, scheduledAt time.Time, maybeErr error) {
 	attrs := extractAsyncCallAttrs(verb, origin, scheduledAt)
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+	attrs = append(attrs, attribute.String(observability.OutcomeStatusNameAttribute, observability.SuccessOrFailureStatus(maybeErr == nil)))
 	m.acquired.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
@@ -82,7 +82,7 @@ func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, ori
 	attrs := extractAsyncCallAttrs(verb, origin, scheduledAt)
 
 	failureMode, ok := maybeFailureMode.Get()
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, !ok))
+	attrs = append(attrs, attribute.String(observability.OutcomeStatusNameAttribute, observability.SuccessOrFailureStatus(!ok)))
 	if ok {
 		attrs = append(attrs, attribute.String(asyncCallExecFailureModeAttr, failureMode))
 	}
@@ -94,7 +94,7 @@ func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, or
 	msToComplete := timeSinceMS(scheduledAt)
 
 	attrs := extractRefAttrs(verb, origin)
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+	attrs = append(attrs, attribute.String(observability.OutcomeStatusNameAttribute, observability.SuccessOrFailureStatus(maybeErr == nil)))
 	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
 
 	attrs = append(attrs, attribute.Int64(asyncCallTimeSinceScheduledAtAttr, msToComplete))
