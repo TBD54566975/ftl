@@ -46,7 +46,8 @@ func TestSendFSMEvent(t *testing.T) {
 			FSM: schema.RefKey{Module: "test", Name: "test"},
 			Key: "invoiceID",
 		},
-		Request: []byte(`{}`),
+		Request:    []byte(`{}`),
+		QueueDepth: 2,
 	}
 	assert.Equal(t, expectedCall, call, assert.Exclude[*Lease](), assert.Exclude[time.Time]())
 
@@ -55,5 +56,6 @@ func TestSendFSMEvent(t *testing.T) {
 
 	actual, err := dal.LoadAsyncCall(ctx, call.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, call, actual, assert.Exclude[*Lease](), assert.Exclude[time.Time]())
+	assert.Equal(t, call, actual, assert.Exclude[*Lease](), assert.Exclude[time.Time](), assert.Exclude[int64]())
+	assert.Equal(t, call.ID, actual.ID)
 }

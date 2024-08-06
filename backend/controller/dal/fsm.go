@@ -45,8 +45,15 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 		Backoff:           retryParams.MinBackoff,
 		MaxBackoff:        retryParams.MaxBackoff,
 	})
+	observability.AsyncCalls.Created(ctx, destinationState, origin.String(), int64(retryParams.Count), err)
 	if err != nil {
 		return fmt.Errorf("failed to create FSM async call: %w", dalerrs.TranslatePGError(err))
+	}
+	queueDepth, err := d.db.AsyncCallQueueDepth(ctx)
+	if err == nil {
+		// Don't error out of an FSM transition just over a queue depth retrieval
+		// error because this is only used for an observability gauge.
+		observability.AsyncCalls.RecordQueueDepth(ctx, queueDepth)
 	}
 
 	// Start a transition.

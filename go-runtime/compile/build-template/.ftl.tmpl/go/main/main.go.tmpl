@@ -40,7 +40,7 @@ func init() {
 {{- end}}
 
 func main() {
-	verbConstructor := server.NewUserVerbServer("{{.Name}}",
+	verbConstructor := server.NewUserVerbServer("{{.ProjectName}}", "{{.Name}}",
 {{- range .Verbs}}
 	{{- if and .HasRequest .HasResponse}}
 		server.HandleCall({{.Package}}.{{.Name}}),

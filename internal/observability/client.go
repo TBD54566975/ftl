@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
@@ -34,7 +35,7 @@ type Config struct {
 	ExportOTEL ExportOTELFlag `help:"Export observability data to OTEL." env:"OTEL_EXPORTER_OTLP_ENDPOINT"`
 }
 
-func Init(ctx context.Context, serviceName, serviceVersion string, config Config) error {
+func Init(ctx context.Context, isUserService bool, projectName, serviceName, serviceVersion string, config Config) error {
 	logger := log.FromContext(ctx)
 	if !config.ExportOTEL {
 		logger.Tracef("OTEL export is disabled, set OTEL_EXPORTER_OTLP_ENDPOINT to enable")
@@ -52,6 +53,8 @@ func Init(ctx context.Context, serviceName, serviceVersion string, config Config
 			schemaURL,
 			semconv.ServiceName(serviceName),
 			semconv.ServiceVersion(serviceVersion),
+			attribute.Bool("ftl.is_user_service", isUserService),
+			attribute.String("ftl.project_name", projectName),
 		))
 	if err != nil {
 		return fmt.Errorf("failed to create OTEL resource: %w", err)

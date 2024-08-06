@@ -31,7 +31,7 @@ type UserVerbConfig struct {
 // NewUserVerbServer starts a new code-generated drive for user Verbs.
 //
 // This function is intended to be used by the code generator.
-func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
+func NewUserVerbServer(projectName string, moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
@@ -45,7 +45,7 @@ func NewUserVerbServer(moduleName string, handlers ...Handler) plugin.Constructo
 		ctx = dynamicCtx.ApplyToContext(ctx)
 		ctx = internal.WithContext(ctx, internal.New(dynamicCtx))
 
-		err = observability.Init(ctx, moduleName, "HEAD", uc.ObservabilityConfig)
+		err = observability.Init(ctx, true, projectName, moduleName, "HEAD", uc.ObservabilityConfig)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not initialize metrics: %w", err)
 		}
