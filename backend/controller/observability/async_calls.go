@@ -16,12 +16,12 @@ import (
 )
 
 const (
-	asyncCallMeterName                = "ftl.async_call"
-	asyncCallOriginAttr               = "ftl.async_call.origin"
-	asyncCallVerbRefAttr              = "ftl.async_call.verb.ref"
-	asyncCallTimeSinceScheduledAtAttr = "ftl.async_call.time_since_scheduled_at_ms"
-	asyncCallRemainingAttemptsAttr    = "ftl.async_call.remaining_attempts"
-	asyncCallExecFailureModeAttr      = "ftl.async_call.execution.failure_mode"
+	asyncCallMeterName                      = "ftl.async_call"
+	asyncCallOriginAttr                     = "ftl.async_call.origin"
+	asyncCallVerbRefAttr                    = "ftl.async_call.verb.ref"
+	asyncCallTimeSinceScheduledAtBucketAttr = "ftl.async_call.time_since_scheduled_at_ms.bucket"
+	asyncCallRemainingAttemptsAttr          = "ftl.async_call.remaining_attempts"
+	asyncCallExecFailureModeAttr            = "ftl.async_call.execution.failure_mode"
 )
 
 type AsyncCallMetrics struct {
@@ -126,14 +126,14 @@ func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, or
 	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
 	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
 
-	attrs = append(attrs, attribute.Int64(asyncCallTimeSinceScheduledAtAttr, msToComplete))
+	attrs = append(attrs, attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, msToComplete)))
 	m.completed.Add(ctx, 1, metric.WithAttributes(attrs...))
 
 	m.queueDepth.Record(ctx, queueDepth)
 }
 
 func extractAsyncCallAttrs(verb schema.RefKey, origin string, scheduledAt time.Time) []attribute.KeyValue {
-	return append(extractRefAttrs(verb, origin), attribute.Int64(asyncCallTimeSinceScheduledAtAttr, timeSinceMS(scheduledAt)))
+	return append(extractRefAttrs(verb, origin), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, timeSinceMS(scheduledAt))))
 }
 
 func extractRefAttrs(verb schema.RefKey, origin string) []attribute.KeyValue {
