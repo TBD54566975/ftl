@@ -50,7 +50,7 @@ func timeSinceMS(start time.Time) int64 {
 }
 
 // logBucket returns a string bucket label for a given positive number bucketed into
-// powers of some arbitary base. For base 8, for example, we would have buckets:
+// powers of some arbitrary base. For base 8, for example, we would have buckets:
 //
 //	<1, [1-8), [8-64), [64-512), etc.
 //
@@ -61,7 +61,7 @@ func logBucket(base int, num int64) string {
 		return "<1"
 	}
 	b := float64(base)
-	log_b := math.Log(float64(num)) / math.Log(b)
-	bucketExpLo := math.Floor(log_b)
+	logB := math.Log(float64(num)) / math.Log(b)
+	bucketExpLo := math.Floor(logB)
 	return fmt.Sprintf("[%d,%d)", int(math.Pow(b, bucketExpLo)), int(math.Pow(b, bucketExpLo+1)))
 }
