@@ -91,7 +91,7 @@ func wrapErr(signalName string, err error) error {
 
 func (m *AsyncCallMetrics) Created(ctx context.Context, verb schema.RefKey, origin string, remainingAttempts int64, maybeErr error) {
 	attrs := extractRefAttrs(verb, origin)
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+	attrs = append(attrs, attribute.String(observability.OutcomeStatusNameAttribute, observability.SuccessOrFailureStatus(maybeErr == nil)))
 	attrs = append(attrs, attribute.Int64(asyncCallRemainingAttemptsAttr, remainingAttempts))
 
 	m.created.Add(ctx, 1, metric.WithAttributes(attrs...))
