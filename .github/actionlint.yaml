@@ -1,0 +1,5 @@
+# This is a bit of a hack to get actionlint to accept larger github runners
+# see https://github.com/rhysd/actionlint/issues/337#issuecomment-1722949069
+self-hosted-runner:
+  labels:
+    - ubuntu-22-04-32-core
