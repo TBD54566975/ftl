@@ -11,18 +11,15 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 const (
-	otelFtlRequestKeyAttr        = attribute.Key("ftl.request_key")
-	otelFtlVerbChainAttr         = attribute.Key("ftl.verb_chain")
-	otelFtlVerbRefAttr           = attribute.Key("ftl.verb.ref")
-	otelFtlVerbModuleAttr        = attribute.Key("ftl.verb.module")
-	otelMessageSentSizesAttr     = attribute.Key("ftl.rpc.message.sent.sizes_bytes")
-	otelMessageReceivedSizesAttr = attribute.Key("ftl.rpc.message.received.sizes_bytes")
+	otelFtlRequestKeyAttr = attribute.Key("ftl.request_key")
+	otelFtlVerbChainAttr  = attribute.Key("ftl.verb_chain")
+	otelFtlVerbRefAttr    = attribute.Key("ftl.verb.ref")
+	otelFtlVerbModuleAttr = attribute.Key("ftl.verb.module")
 )
 
 func CustomOtelInterceptor() connect.Interceptor {
@@ -57,37 +54,10 @@ func getAttributes(ctx context.Context) []attribute.KeyValue {
 
 func (i *otelInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, request connect.AnyRequest) (connect.AnyResponse, error) {
-		isClient := request.Spec().IsClient
-
-		requestSizesAttr := otelMessageSentSizesAttr
-		responseSizesAttr := otelMessageReceivedSizesAttr
-		if !isClient {
-			requestSizesAttr = otelMessageReceivedSizesAttr
-			responseSizesAttr = otelMessageSentSizesAttr
-		}
-
 		attributes := getAttributes(ctx)
-		requestSize := 0
-		if request != nil {
-			if msg, ok := request.Any().(proto.Message); ok {
-				requestSize = proto.Size(msg)
-			}
-		}
-
-		response, err := next(ctx, request)
-		responseSize := 0
-		if err == nil {
-			if msg, ok := response.Any().(proto.Message); ok {
-				responseSize = proto.Size(msg)
-			}
-		}
-
 		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(append(attributes,
-			requestSizesAttr.Int64Slice([]int64{int64(requestSize)}),
-			responseSizesAttr.Int64Slice([]int64{int64(responseSize)}),
-		)...)
-		return response, err
+		span.SetAttributes(attributes...)
+		return next(ctx, request)
 	}
 }
 
@@ -97,11 +67,9 @@ func (i *otelInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 		conn := next(ctx, spec)
 
 		state := &streamingState{
-			spec:         spec,
-			protocol:     conn.Peer().Protocol,
-			attributes:   attributes,
-			receiveSizes: []int64{},
-			sendSizes:    []int64{},
+			spec:       spec,
+			protocol:   conn.Peer().Protocol,
+			attributes: attributes,
 		}
 
 		span := trace.SpanFromContext(ctx)
@@ -114,10 +82,7 @@ func (i *otelInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 				return state.send(msg, conn)
 			},
 			onClose: func() {
-				span.SetAttributes(append(state.attributes,
-					otelMessageSentSizesAttr.Int64Slice(state.sendSizes),
-					otelMessageReceivedSizesAttr.Int64Slice(state.receiveSizes),
-				)...)
+				span.SetAttributes(state.attributes...)
 				if state.error != nil {
 					span.SetStatus(codes.Error, state.error.Error())
 				}
@@ -130,11 +95,9 @@ func (i *otelInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		attributes := getAttributes(ctx)
 		state := &streamingState{
-			spec:         conn.Spec(),
-			protocol:     conn.Peer().Protocol,
-			attributes:   attributes,
-			receiveSizes: []int64{},
-			sendSizes:    []int64{},
+			spec:       conn.Spec(),
+			protocol:   conn.Peer().Protocol,
+			attributes: attributes,
 		}
 		streamingHandler := &streamingHandlerInterceptor{
 			StreamingHandlerConn: conn,
@@ -150,10 +113,7 @@ func (i *otelInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 			state.attributes,
 			statusCodeAttribute(conn.Peer().Protocol, err))
 		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(append(state.attributes,
-			otelMessageSentSizesAttr.Int64Slice(state.sendSizes),
-			otelMessageReceivedSizesAttr.Int64Slice(state.receiveSizes),
-		)...)
+		span.SetAttributes(state.attributes...)
 		return err
 	}
 }
@@ -169,13 +129,11 @@ func statusCodeAttribute(protocol string, err error) attribute.KeyValue {
 
 // streamingState stores the ongoing metrics for streaming interceptors.
 type streamingState struct {
-	mu           sync.Mutex
-	spec         connect.Spec
-	protocol     string
-	attributes   []attribute.KeyValue
-	error        error
-	receiveSizes []int64
-	sendSizes    []int64
+	mu         sync.Mutex
+	spec       connect.Spec
+	protocol   string
+	attributes []attribute.KeyValue
+	error      error
 }
 
 // streamingSenderReceiver encapsulates either a StreamingClientConn or a StreamingHandlerConn.
@@ -195,10 +153,6 @@ func (s *streamingState) receive(msg any, conn streamingSenderReceiver) error {
 		s.error = err
 		s.attributes = append(s.attributes, statusCodeAttribute(s.protocol, err))
 	}
-	if protomsg, ok := msg.(proto.Message); ok {
-		size := proto.Size(protomsg)
-		s.receiveSizes = append(s.receiveSizes, int64(size))
-	}
 	return err // nolint:wrapcheck
 }
 
@@ -212,10 +166,6 @@ func (s *streamingState) send(msg any, conn streamingSenderReceiver) error {
 	if err != nil {
 		s.error = err
 		s.attributes = append(s.attributes, statusCodeAttribute(s.protocol, err))
-	}
-	if protomsg, ok := msg.(proto.Message); ok {
-		size := proto.Size(protomsg)
-		s.sendSizes = append(s.sendSizes, int64(size))
 	}
 	return err // nolint:wrapcheck
 }
