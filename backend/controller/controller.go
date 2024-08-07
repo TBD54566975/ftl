@@ -130,7 +130,7 @@ type Config struct {
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
-	EventLogRetention            time.Duration       `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
+	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	EncryptionKeys
 	CommonConfig
@@ -1798,12 +1798,13 @@ func (s *Service) syncSchema(ctx context.Context) {
 
 func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
 	logger := log.FromContext(ctx)
-	if s.config.EventLogRetention == 0 {
+
+	if s.config.EventLogRetention == nil {
 		logger.Tracef("Event log retention is disabled, will not prune.")
 		return time.Hour, nil
 	}
 
-	removed, err := s.dal.DeleteOldEvents(ctx, dal.EventTypeCall, s.config.EventLogRetention)
+	removed, err := s.dal.DeleteOldEvents(ctx, dal.EventTypeCall, *s.config.EventLogRetention)
 	if err != nil {
 		return 0, fmt.Errorf("failed to prune call events: %w", err)
 	}
@@ -1812,7 +1813,7 @@ func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
 	}
 
 	// Prune every 5% of the retention period.
-	return s.config.EventLogRetention / 20, nil
+	return *s.config.EventLogRetention / 20, nil
 }
 
 func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {
