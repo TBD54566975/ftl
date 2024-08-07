@@ -29,6 +29,8 @@ services:
       - 4318:4318 # OTLP http receiver
   localstack:
     image: localstack/localstack
+    profiles:
+      - integration
     ports:
       - 4566:4566
     environment:
