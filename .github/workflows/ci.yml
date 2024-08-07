@@ -1,8 +1,6 @@
 on:
-  push:
-    branches:
-      - main
   pull_request:
+  merge_group:
 name: CI
 concurrency:
   group: ${{ github.ref }}-ci
@@ -21,7 +19,8 @@ jobs:
       - name: Docker Compose
         run: docker compose up -d --wait
       - name: Test
-        run: go-test-annotate
+        run: |
+          go-test-annotate ${{ (github.event_name == 'pull_request' && github.event.action != 'enqueued') && '-short' || '' }}
   test-readme:
     name: Test README
     runs-on: ubuntu-latest
@@ -152,6 +151,7 @@ jobs:
         run: just build-extension
   build-all:
     name: Rebuild All
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -177,6 +177,7 @@ jobs:
       - run: cd docs && zola build
   integration-shard:
     name: Shard Integration Tests
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.extract-tests.outputs.matrix }}
@@ -192,6 +193,7 @@ jobs:
           echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build integration' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
   integration-run:
     name: Integration Test
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued'
     needs: integration-shard
     runs-on: ubuntu-latest
     strategy:
@@ -207,7 +209,7 @@ jobs:
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Docker Compose
-        run: docker compose up -d --wait
+        run: docker compose --profile integration up -d --wait
       - name: Create DB
         run: just init-db
       - name: Download Go Modules
@@ -215,7 +217,7 @@ jobs:
       - name: Run ${{ matrix.test }}
         run: |
           # shellcheck disable=SC2046
-          go test -v -race -tags integration -run ${{ matrix.test }} $(git grep -l '^//go:build integration' | xargs -I {} dirname './{}' | sort | uniq)
+          go test -v -race -tags integration -run ${{ matrix.test }} $(git grep -l '^//go:build integration' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
   integration-success:
     name: Integration Success
     needs: [integration-run]
