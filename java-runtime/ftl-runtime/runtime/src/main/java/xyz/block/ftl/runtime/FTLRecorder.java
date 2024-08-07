@@ -1,26 +1,24 @@
 package xyz.block.ftl.runtime;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.annotations.Recorder;
 import org.checkerframework.checker.units.qual.C;
+import xyz.block.ftl.v1.CallRequest;
 
 import java.lang.reflect.Type;
+import java.util.List;
+import java.util.function.BiFunction;
 
 @Recorder
 public class FTLRecorder {
 
-    public void registerVerb(String module, String verbName, Class<?> inputType, String methodName, Class<?> verbHandlerClass) {
+    public void registerVerb(String module, String verbName, String methodName, List<Class<?>> parameterTypes, Class<?> verbHandlerClass,  List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers) {
         //TODO: this sucks
         try {
-            Class[] parameterTypes;
-            if (inputType == void.class) {
-                parameterTypes = new Class[0];
-            } else {
-                parameterTypes = new Class[]{inputType};
-            }
-            var method = verbHandlerClass.getDeclaredMethod(methodName, parameterTypes);
+            var method = verbHandlerClass.getDeclaredMethod(methodName, parameterTypes.toArray(new Class[0]));
             var handlerInstance = Arc.container().instance(verbHandlerClass);
-            Arc.container().instance(VerbRegistry.class).get().register(module, verbName, handlerInstance, method, inputType);
+            Arc.container().instance(VerbRegistry.class).get().register(module, verbName, handlerInstance, method, paramMappers);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

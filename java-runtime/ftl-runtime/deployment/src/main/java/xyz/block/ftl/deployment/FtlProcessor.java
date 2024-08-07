@@ -1,5 +1,6 @@
 package xyz.block.ftl.deployment;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.Capabilities;
@@ -14,13 +15,13 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
+import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
 import io.quarkus.netty.runtime.virtual.VirtualServerChannel;
 import io.quarkus.resteasy.reactive.server.deployment.ResteasyReactiveResourceMethodEntriesBuildItem;
-import io.quarkus.runtime.LaunchMode;
 import io.quarkus.vertx.core.deployment.CoreVertxBuildItem;
 import io.quarkus.vertx.core.deployment.EventLoopCountBuildItem;
 import io.quarkus.vertx.http.deployment.RequireVirtualHttpBuildItem;
@@ -29,12 +30,14 @@ import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
 import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
+import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.VoidType;
 import org.jboss.resteasy.reactive.common.model.MethodParameter;
 import org.jboss.resteasy.reactive.common.model.ParameterType;
 import org.jboss.resteasy.reactive.server.mapping.URITemplate;
 import xyz.block.ftl.Cron;
 import xyz.block.ftl.Export;
+import xyz.block.ftl.Secret;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
@@ -42,6 +45,7 @@ import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
+import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
 import xyz.block.ftl.v1.schema.Data;
@@ -71,6 +75,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 class FtlProcessor {
@@ -117,39 +122,32 @@ class FtlProcessor {
     }
 
     @BuildStep
+    public SystemPropertyBuildItem moduleNameConfig(ApplicationInfoBuildItem applicationInfoBuildItem) {
+        return new SystemPropertyBuildItem("ftl.module.name", applicationInfoBuildItem.getName());
+    }
+
+
+    @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     public void registerVerbs(CombinedIndexBuildItem index,
                               FTLRecorder recorder,
                               ApplicationInfoBuildItem applicationInfoBuildItem,
                               OutputTargetBuildItem outputTargetBuildItem,
-                              RecorderContext recorderContext,
-                              ResteasyReactiveResourceMethodEntriesBuildItem restEndpoints) throws IOException {
+                              ResteasyReactiveResourceMethodEntriesBuildItem restEndpoints) throws Exception {
+        String moduleName = applicationInfoBuildItem.getName();
         Module.Builder moduleBuilder = Module.newBuilder()
-                .setName(applicationInfoBuildItem.getName())
+                .setName(moduleName)
                 .setBuiltin(false);
         Map<TypeKey, Ref> dataElements = new HashMap<>();
+        ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements);
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
         for (var verb : index.getIndex().getAnnotations(VERB)) {
             boolean exported = verb.target().hasAnnotation(EXPORT);
             var method = verb.target().asMethod();
             String className = method.declaringClass().name().toString();
             beans.addBeanClass(className);
-            org.jboss.jandex.Type methodParamType;
-            if (method.parametersCount() == 0) {
-                methodParamType = VoidType.VOID;
-            } else if (method.parametersCount() == 1) {
-                methodParamType = method.parameters().get(0).type();
-            } else {
-                throw new RuntimeException("@Verb methods must only have a single parameter: " + method.declaringClass().name() + "." + method.name());
-            }
-            recorder.registerVerb(applicationInfoBuildItem.getName(), method.name(), recorderContext.classProxy(methodParamType.toString()), method.name(), recorderContext.classProxy(className));
-            moduleBuilder
-                    .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
-                                    .setName(method.name())
-                                    .setExport(exported)
-                                    .setRequest(buildType(index.getComputingIndex(), methodParamType, dataElements, moduleBuilder))
-                                    .setResponse(buildType(index.getComputingIndex(), method.returnType(), dataElements, moduleBuilder)))
-                            .build());
+
+            handleVerbMethod(extractionContext, method, className, exported, true);
         }
         for (var cron : index.getIndex().getAnnotations(CRON)) {
             var method = cron.target().asMethod();
@@ -161,7 +159,7 @@ class FtlProcessor {
             } else {
                 throw new RuntimeException("@Cron methods must not have any parameters: " + method.declaringClass().name() + "." + method.name());
             }
-            recorder.registerVerb(applicationInfoBuildItem.getName(), method.name(), recorderContext.classProxy(methodParamType.toString()), method.name(), recorderContext.classProxy(className));
+            recorder.registerVerb(moduleName, method.name(), method.name(), List.of(), Class.forName(className, false, Thread.currentThread().getContextClassLoader()), List.of());
             moduleBuilder
                     .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
                                     .setName(method.name())
@@ -175,7 +173,7 @@ class FtlProcessor {
         for (var endpoint : restEndpoints.getEntries()) {
             //TODO: naming
             var verbName = endpoint.getMethodInfo().name();
-            recorder.registerHttpIngress(applicationInfoBuildItem.getName(), verbName);
+            recorder.registerHttpIngress(moduleName, verbName);
 
             //TODO: handle type parameters properly
             org.jboss.jandex.Type bodyParamType = VoidType.VOID;
@@ -254,6 +252,42 @@ class FtlProcessor {
         Files.setPosixFilePermissions(output, newPerms);
     }
 
+    private void handleVerbMethod(ExtractionContext context, MethodInfo method, String className, boolean exported, boolean allowBody) {
+        try {
+            List<Class<?>> parameterTypes = new ArrayList<>();
+            List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
+            org.jboss.jandex.Type bodyParamType = null;
+            for (var param : method.parameters()) {
+                if (param.hasAnnotation(Secret.class)) {
+                    throw new RuntimeException("Secret not implemented yet");
+                } else if (allowBody && bodyParamType == null) {
+                    bodyParamType = param.type();
+                    Class<?> paramType = Class.forName(param.type().toString(), false, Thread.currentThread().getContextClassLoader());
+                    parameterTypes.add(paramType);
+                    paramMappers.add(new VerbRegistry.BodySupplier(paramType));
+                } else {
+                    throw new RuntimeException("Unknown parameter type on FTL method: " + method.declaringClass().name() + "." + method.name());
+                }
+            }
+            if (bodyParamType == null) {
+                bodyParamType = VoidType.VOID;
+            }
+
+
+            context.recorder.registerVerb(context.moduleName(), method.name(), method.name(),parameterTypes, Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers);
+            context.moduleBuilder
+                    .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
+                                    .setName(method.name())
+                                    .setExport(exported)
+                                    .setRequest(buildType(context.index.getComputingIndex(), bodyParamType, context.dataElements, context.moduleBuilder))
+                                    .setResponse(buildType(context.index.getComputingIndex(), method.returnType(), context.dataElements, context.moduleBuilder)))
+                            .build());
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to process FTL method " + method.declaringClass().name() + "." + method.name(), e);
+        }
+    }
+
     /**
      * This is a huge hack that is needed until Quarkus supports both virtual and socket based HTTP
      */
@@ -270,9 +304,9 @@ class FtlProcessor {
                     List<WebsocketSubProtocolsBuildItem> websocketSubProtocols,
                     Capabilities capabilities,
                     VertxHttpRecorder recorder) throws IOException {
-            reflectiveClass
-                    .produce(ReflectiveClassBuildItem.builder(VirtualServerChannel.class)
-                            .build());
+        reflectiveClass
+                .produce(ReflectiveClassBuildItem.builder(VirtualServerChannel.class)
+                        .build());
         recorder.startServer(vertx.getVertx(), shutdown,
                 launchMode.getLaunchMode(), true, false,
                 eventLoopCount.getEventLoopCount(),
@@ -364,5 +398,9 @@ class FtlProcessor {
 
     private record TypeKey(String name, List<String> typeParams) {
 
+    }
+
+    record ExtractionContext(String moduleName, CombinedIndexBuildItem index, FTLRecorder recorder, Module.Builder moduleBuilder,
+                             Map<TypeKey, Ref> dataElements) {
     }
 }

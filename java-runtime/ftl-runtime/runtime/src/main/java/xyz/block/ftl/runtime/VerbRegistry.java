@@ -8,9 +8,13 @@ import jakarta.inject.Singleton;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 @Singleton
 public class VerbRegistry {
@@ -20,19 +24,20 @@ public class VerbRegistry {
 
     private final Map<Key, VerbInvoker> verbs = new ConcurrentHashMap<>();
 
+
     public VerbRegistry(ObjectMapper mapper) {
         this.mapper = mapper;
     }
 
-    public void register(String module, String name, InstanceHandle<?> verbHandlerClass, Method method, Class<?> parameterClass) {
-        verbs.put(new Key(module, name), new AnnotatedEndpointHandler(verbHandlerClass, method, parameterClass));
+    public void register(String module, String name, InstanceHandle<?> verbHandlerClass, Method method, List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers) {
+        verbs.put(new Key(module, name), new AnnotatedEndpointHandler(verbHandlerClass, method, paramMappers));
     }
 
     public void register(String module, String name, VerbInvoker verbInvoker) {
         verbs.put(new Key(module, name), verbInvoker);
     }
 
-    public CallResponse invoke( CallRequest request) {
+    public CallResponse invoke(CallRequest request) {
         VerbInvoker handler = verbs.get(new Key(request.getVerb().getModule(), request.getVerb().getName()));
         if (handler == null) {
             return CallResponse.newBuilder().setError(CallResponse.Error.newBuilder().setMessage("Verb not found").build()).build();
@@ -49,23 +54,22 @@ public class VerbRegistry {
     private class AnnotatedEndpointHandler implements VerbInvoker {
         final InstanceHandle<?> verbHandlerClass;
         final Method method;
-        final Class<?> inputClass;
+        final List<BiFunction<ObjectMapper, CallRequest, Object>> parameterSuppliers;
 
-        private AnnotatedEndpointHandler(InstanceHandle<?> verbHandlerClass, Method method, Class<?> inputClass) {
+        private AnnotatedEndpointHandler(InstanceHandle<?> verbHandlerClass, Method method, List<BiFunction<ObjectMapper, CallRequest, Object>> parameterSuppliers) {
             this.verbHandlerClass = verbHandlerClass;
             this.method = method;
-            this.inputClass = inputClass;
+            this.parameterSuppliers = parameterSuppliers;
         }
 
         public CallResponse handle(CallRequest in) {
             try {
-                Object ret;
-                if (method.getParameters().length == 0) {
-                    ret = method.invoke(verbHandlerClass.get());
-                } else {
-                    var body = mapper.createParser(in.getBody().newInput()).readValueAs(inputClass);
-                    ret = method.invoke(verbHandlerClass.get(), body);
+                Object[] params = new Object[parameterSuppliers.size()];
+                for (int i = 0; i < parameterSuppliers.size(); i++) {
+                    params[i] = parameterSuppliers.get(i).apply(mapper, in);
                 }
+                Object ret;
+                ret = method.invoke(verbHandlerClass.get(), params);
                 var mappedResponse = mapper.writer().writeValueAsBytes(ret);
                 return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
             } catch (Exception e) {
@@ -73,4 +77,18 @@ public class VerbRegistry {
             }
         }
     }
+
+
+    public record BodySupplier(Class<?> inputClass) implements BiFunction<ObjectMapper, CallRequest, Object> {
+
+        @Override
+        public Object apply(ObjectMapper mapper, CallRequest in) {
+            try {
+                return mapper.createParser(in.getBody().newInput()).readValueAs(inputClass);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
 }
