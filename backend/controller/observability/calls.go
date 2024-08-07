@@ -59,7 +59,7 @@ func (m *CallMetrics) Request(ctx context.Context, verb *schemapb.Ref, startTime
 	}
 
 	failureMode, ok := maybeFailureMode.Get()
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, !ok))
+	attrs = append(attrs, observability.SuccessOrFailureStatusAttr(!ok))
 	if ok {
 		attrs = append(attrs, attribute.String(callFailureModeAttr, failureMode))
 	}
