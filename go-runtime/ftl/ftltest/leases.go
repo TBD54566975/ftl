@@ -75,8 +75,3 @@ func (c *fakeLeaseClient) Release(ctx context.Context, key []string) error {
 	}
 	return fmt.Errorf("could not release lease: no active lease found")
 }
-
-func (c *fakeLeaseClient) Close(ctx context.Context, key []string) error {
-	k := keyForKeys(key)
-	return fmt.Errorf("lease %s was not released properly", k)
-}

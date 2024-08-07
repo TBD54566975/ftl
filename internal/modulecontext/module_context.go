@@ -153,11 +153,7 @@ type LeaseClient interface {
 	// Returns ResourceExhausted if the lease is held.
 	Acquire(ctx context.Context, module string, key []string, ttl time.Duration) error
 	Heartbeat(ctx context.Context, module string, key []string, ttl time.Duration) error
-
-	// Release is called when the lease is cleanly released
 	Release(ctx context.Context, key []string) error
-	// Close is called when the lease has ended without being released
-	Close(ctx context.Context, key []string) error
 }
 
 // MockLeaseClient provides a mock lease client when testing
