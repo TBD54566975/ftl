@@ -140,6 +140,21 @@ If you make any changes to the `sqlc` inputs, i.e. all the `sql/queries.sql` fil
 just build-sqlc
 ```
 
+We use [dbmate](https://github.com/amacneil/dbmate) to manage migrations, so please install that if
+you don't have it already:
+```
+brew install dbmate
+```
+
+To create a migration file, run `dbmate new` with the name of your migration. Example:
+```
+dbmate new create_users_table
+```
+
+This will automatically create a migration file in `backend/controller/sql/schema/`. You can refer to any of the existing files in there as examples while writing your own migration.
+
+[This section](https://github.com/amacneil/dbmate?tab=readme-ov-file#creating-migrations) of the dbmate docs explains how to create a migration if you'd like to learn more.
+
 ## VSCode extension
 
 The preferred way to develop the FTL VSCode extension is to open a VSCode instance in the `extensions/vscode` directory. This will load the extension in a new VSCode window. From there, the `launch.json` and `tasks.json` files are configured to run the extension in a new window.
