@@ -17,6 +17,12 @@ brew install orbstack
 ```
 or [OrbStack Website](https://orbstack.dev/)
 
+We use [dbmate](https://github.com/amacneil/dbmate) to manage migrations, so please install that if
+you don't have it already:
+```
+brew install dbmate
+```
+
 The tools used by this project are managed by
 [Hermit](https://cashapp.github.io/hermit/), a self-bootstrapping package
 installer. To activate the Hermit environment, cd into the source directory and
