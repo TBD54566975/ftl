@@ -91,7 +91,7 @@ func wrapErr(signalName string, err error) error {
 
 func (m *AsyncCallMetrics) Created(ctx context.Context, verb schema.RefKey, origin string, remainingAttempts int64, maybeErr error) {
 	attrs := extractRefAttrs(verb, origin)
-	attrs = append(attrs, attribute.String(observability.OutcomeStatusNameAttribute, observability.SuccessOrFailureStatus(maybeErr == nil)))
+	attrs = append(attrs, observability.SuccessOrFailureStatus(maybeErr == nil))
 	attrs = append(attrs, attribute.Int64(asyncCallRemainingAttemptsAttr, remainingAttempts))
 
 	m.created.Add(ctx, 1, metric.WithAttributes(attrs...))
@@ -103,7 +103,7 @@ func (m *AsyncCallMetrics) RecordQueueDepth(ctx context.Context, queueDepth int6
 
 func (m *AsyncCallMetrics) Acquired(ctx context.Context, verb schema.RefKey, origin string, scheduledAt time.Time, maybeErr error) {
 	attrs := extractAsyncCallAttrs(verb, origin, scheduledAt)
-	attrs = append(attrs, attribute.String(observability.OutcomeStatusNameAttribute, observability.SuccessOrFailureStatus(maybeErr == nil)))
+	attrs = append(attrs, observability.SuccessOrFailureStatus(maybeErr == nil))
 	m.acquired.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
@@ -111,7 +111,7 @@ func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, ori
 	attrs := extractAsyncCallAttrs(verb, origin, scheduledAt)
 
 	failureMode, ok := maybeFailureMode.Get()
-	attrs = append(attrs, attribute.String(observability.OutcomeStatusNameAttribute, observability.SuccessOrFailureStatus(!ok)))
+	attrs = append(attrs, observability.SuccessOrFailureStatus(!ok))
 	if ok {
 		attrs = append(attrs, attribute.String(asyncCallExecFailureModeAttr, failureMode))
 	}
@@ -123,7 +123,7 @@ func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, or
 	msToComplete := timeSinceMS(scheduledAt)
 
 	attrs := extractRefAttrs(verb, origin)
-	attrs = append(attrs, attribute.String(observability.OutcomeStatusNameAttribute, observability.SuccessOrFailureStatus(maybeErr == nil)))
+	attrs = append(attrs, observability.SuccessOrFailureStatus(maybeErr == nil))
 	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
 
 	attrs = append(attrs, attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, msToComplete)))

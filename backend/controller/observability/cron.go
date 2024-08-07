@@ -3,8 +3,6 @@ package observability
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/alecthomas/types/optional"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,7 +34,7 @@ func initCronMetrics() (*CronMetrics, error) {
 
 	meter := otel.Meter(deploymentMeterName)
 
-	counter := fmt.Sprintf("%s.job.failures", cronMeterName)
+	counter := fmt.Sprintf("%s.job.completed", cronMeterName)
 	if result.jobsCompleted, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of cron jobs completed; successful or otherwise")); err != nil {
@@ -76,8 +74,8 @@ func (m *CronMetrics) JobKilled(ctx context.Context, job model.CronJob) {
 func (m *CronMetrics) JobFailedStart(ctx context.Context, job model.CronJob) {
 	completionAttributes := cronAttributes(job, optional.Some(cronJobFailedStartStatus))
 
-	elapsed := time.Since(job.NextExecution)
-	m.jobLatency.Record(ctx, elapsed.Milliseconds(), completionAttributes)
+	elapsed := timeSinceMS(job.NextExecution)
+	m.jobLatency.Record(ctx, elapsed, completionAttributes)
 	m.jobsCompleted.Add(ctx, 1, completionAttributes)
 }
 
@@ -86,12 +84,12 @@ func (m *CronMetrics) JobFailed(ctx context.Context, job model.CronJob) {
 }
 
 func (m *CronMetrics) jobCompleted(ctx context.Context, job model.CronJob, status string) {
-	elapsed := time.Since(job.NextExecution)
+	elapsed := timeSinceMS(job.NextExecution)
 
 	m.jobsActive.Add(ctx, -1, cronAttributes(job, optional.None[string]()))
 
 	completionAttributes := cronAttributes(job, optional.Some(status))
-	m.jobLatency.Record(ctx, elapsed.Milliseconds(), completionAttributes)
+	m.jobLatency.Record(ctx, elapsed, completionAttributes)
 	m.jobsCompleted.Add(ctx, 1, completionAttributes)
 }
 

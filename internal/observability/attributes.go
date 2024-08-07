@@ -1,5 +1,7 @@
 package observability
 
+import "go.opentelemetry.io/otel/attribute"
+
 const (
 	ModuleNameAttribute          = "ftl.module.name"
 	OutcomeStatusNameAttribute   = "ftl.outcome.status"
@@ -9,9 +11,9 @@ const (
 	FailureStatus = "failure"
 )
 
-func SuccessOrFailureStatus(succeeded bool) string {
+func SuccessOrFailureStatus(succeeded bool) attribute.KeyValue {
 	if succeeded {
-		return SuccessStatus
+		return attribute.String(OutcomeStatusNameAttribute, SuccessStatus)
 	}
-	return FailureStatus
+	return attribute.String(OutcomeStatusNameAttribute, FailureStatus)
 }
