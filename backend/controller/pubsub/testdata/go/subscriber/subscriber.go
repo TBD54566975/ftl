@@ -3,13 +3,18 @@ package subscriber
 import (
 	"context"
 	"fmt"
+	"ftl/builtin"
 	"ftl/publisher"
+	"strings"
 	"time"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	"github.com/alecthomas/atomic"
 )
 
 var _ = ftl.Subscription(publisher.TestTopic, "test_subscription")
+
+var catchCount atomic.Value[int]
 
 //ftl:verb
 //ftl:subscribe test_subscription
@@ -22,7 +27,7 @@ var _ = ftl.Subscription(publisher.Topic2, "doomed_subscription")
 
 //ftl:verb
 //ftl:subscribe doomed_subscription
-//ftl:retry 2 1s 1s
+//ftl:retry 2 1s 1s catch catch
 func ConsumeButFailAndRetry(ctx context.Context, req publisher.PubSubEvent) error {
 	return fmt.Errorf("always error: event %v", req.Time)
 }
@@ -32,4 +37,21 @@ func PublishToExternalModule(ctx context.Context) error {
 	// Get around compile-time checks
 	var topic = publisher.TestTopic
 	return topic.Publish(ctx, publisher.PubSubEvent{Time: time.Now()})
+}
+
+//ftl:verb
+func Catch(ctx context.Context, req builtin.CatchRequest[publisher.PubSubEvent]) error {
+	if !strings.Contains(req.Error, "always error: event") {
+		return fmt.Errorf("unexpected error: %v", req.Error)
+	}
+	count := catchCount.Load() + 1
+	catchCount.Store(count)
+
+	// fail once
+	if count == 1 {
+		return fmt.Errorf("catching error")
+	}
+
+	// succeed after that
+	return nil
 }

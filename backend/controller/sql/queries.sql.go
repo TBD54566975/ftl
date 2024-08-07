@@ -44,11 +44,14 @@ RETURNING
   (SELECT count(*) FROM pending_calls) AS queue_depth,
   origin,
   verb,
+  catch_verb,
   request,
   scheduled_at,
   remaining_attempts,
+  error,
   backoff,
-  max_backoff
+  max_backoff,
+  catching
 `
 
 type AcquireAsyncCallRow struct {
@@ -58,11 +61,14 @@ type AcquireAsyncCallRow struct {
 	QueueDepth          int64
 	Origin              string
 	Verb                schema.RefKey
+	CatchVerb           optional.Option[schema.RefKey]
 	Request             []byte
 	ScheduledAt         time.Time
 	RemainingAttempts   int32
+	Error               optional.Option[string]
 	Backoff             time.Duration
 	MaxBackoff          time.Duration
+	Catching            bool
 }
 
 // Reserve a pending async call for execution, returning the associated lease
@@ -77,11 +83,14 @@ func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (Acqu
 		&i.QueueDepth,
 		&i.Origin,
 		&i.Verb,
+		&i.CatchVerb,
 		&i.Request,
 		&i.ScheduledAt,
 		&i.RemainingAttempts,
+		&i.Error,
 		&i.Backoff,
 		&i.MaxBackoff,
+		&i.Catching,
 	)
 	return i, err
 }
@@ -170,8 +179,24 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 }
 
 const createAsyncCall = `-- name: CreateAsyncCall :one
-INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff)
-VALUES ($1, $2, $3, $4, $5::interval, $6::interval)
+INSERT INTO async_calls (
+  verb,
+  origin,
+  request,
+  remaining_attempts,
+  backoff,
+  max_backoff,
+  catch_verb
+)
+VALUES (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5::interval,
+  $6::interval,
+  $7
+)
 RETURNING id
 `
 
@@ -182,6 +207,7 @@ type CreateAsyncCallParams struct {
 	RemainingAttempts int32
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
+	CatchVerb         optional.Option[schema.RefKey]
 }
 
 func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error) {
@@ -192,6 +218,7 @@ func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams
 		arg.RemainingAttempts,
 		arg.Backoff,
 		arg.MaxBackoff,
+		arg.CatchVerb,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -473,14 +500,35 @@ const failAsyncCallWithRetry = `-- name: FailAsyncCallWithRetry :one
 WITH updated AS (
   UPDATE async_calls
   SET state = 'error'::async_call_state,
-      error = $5::TEXT
-  WHERE id = $6::BIGINT
-  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff
+      error = $7::TEXT
+  WHERE id = $8::BIGINT
+  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching
 )
-INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, scheduled_at)
-SELECT updated.verb, updated.origin, updated.request, $1, $2::interval, $3::interval, $4::TIMESTAMPTZ
-  FROM updated
-  RETURNING true
+INSERT INTO async_calls (
+  verb,
+  origin,
+  request,
+  catch_verb,
+  remaining_attempts,
+  backoff,
+  max_backoff,
+  scheduled_at,
+  catching,
+  error
+)
+SELECT
+  updated.verb,
+  updated.origin,
+  updated.request,
+  updated.catch_verb,
+  $1,
+  $2::interval,
+  $3::interval,
+  $4::TIMESTAMPTZ,
+  $5::bool,
+  $6
+FROM updated
+RETURNING true
 `
 
 type FailAsyncCallWithRetryParams struct {
@@ -488,6 +536,8 @@ type FailAsyncCallWithRetryParams struct {
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
 	ScheduledAt       time.Time
+	Catching          bool
+	OriginalError     optional.Option[string]
 	Error             string
 	ID                int64
 }
@@ -498,6 +548,8 @@ func (q *Queries) FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallW
 		arg.Backoff,
 		arg.MaxBackoff,
 		arg.ScheduledAt,
+		arg.Catching,
+		arg.OriginalError,
 		arg.Error,
 		arg.ID,
 	)
@@ -1380,7 +1432,8 @@ SELECT
   subscribers.sink as sink,
   subscribers.retry_attempts as retry_attempts,
   subscribers.backoff as backoff,
-  subscribers.max_backoff as max_backoff
+  subscribers.max_backoff as max_backoff,
+  subscribers.catch_verb as catch_verb
 FROM topic_subscribers as subscribers
 JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
 WHERE topic_subscriptions.key = $1::subscription_key
@@ -1393,6 +1446,7 @@ type GetRandomSubscriberRow struct {
 	RetryAttempts int32
 	Backoff       time.Duration
 	MaxBackoff    time.Duration
+	CatchVerb     optional.Option[schema.RefKey]
 }
 
 func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error) {
@@ -1403,6 +1457,7 @@ func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.Subscriptio
 		&i.RetryAttempts,
 		&i.Backoff,
 		&i.MaxBackoff,
+		&i.CatchVerb,
 	)
 	return i, err
 }
@@ -1989,7 +2044,8 @@ INSERT INTO topic_subscribers (
   sink,
   retry_attempts,
   backoff,
-  max_backoff
+  max_backoff,
+  catch_verb
 )
 VALUES (
   $1::subscriber_key,
@@ -2004,7 +2060,8 @@ VALUES (
   $5,
   $6,
   $7::interval,
-  $8::interval
+  $8::interval,
+  $9
 )
 `
 
@@ -2017,6 +2074,7 @@ type InsertSubscriberParams struct {
 	RetryAttempts    int32
 	Backoff          time.Duration
 	MaxBackoff       time.Duration
+	CatchVerb        optional.Option[schema.RefKey]
 }
 
 func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error {
@@ -2029,6 +2087,7 @@ func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberPara
 		arg.RetryAttempts,
 		arg.Backoff,
 		arg.MaxBackoff,
+		arg.CatchVerb,
 	)
 	return err
 }
@@ -2070,7 +2129,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching
 FROM async_calls
 WHERE id = $1
 `
@@ -2092,6 +2151,8 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.RemainingAttempts,
 		&i.Backoff,
 		&i.MaxBackoff,
+		&i.CatchVerb,
+		&i.Catching,
 	)
 	return i, err
 }
@@ -2377,7 +2438,8 @@ const succeedAsyncCall = `-- name: SucceedAsyncCall :one
 UPDATE async_calls
 SET
   state = 'success'::async_call_state,
-  response = $1::JSONB
+  response = $1::JSONB,
+  error = null
 WHERE id = $2
 RETURNING true
 `

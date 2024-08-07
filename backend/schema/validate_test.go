@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -308,8 +309,8 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`4:7-7: verb A: retries can only be added to subscribers or FSM transitions`,
-				`6:7-7: verb B: retries can only be added to subscribers or FSM transitions`,
+				`4:7-7: retries can only be added to subscribers or FSM transitions`,
+				`6:7-7: retries can only be added to subscribers or FSM transitions`,
 			},
 		},
 		{name: "InvalidRetryDurations",
@@ -339,7 +340,11 @@ func TestValidate(t *testing.T) {
 					verb K(Empty) Unit
 						+retry 0 5s
 
-					fsm FSM {
+					verb catchFSM(builtin.CatchRequest<Unit>) Unit
+
+					fsm FSM
+						+retry 0 5s catch catchFSM
+					{
 						start one.A
 						transition one.A to one.B
 						transition one.A to one.C
@@ -355,17 +360,19 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`10:7-7: verb D: retry must have a minimum backoff`,
-				`12:7-7: verb E: retry must have a minimum backoff`,
-				`14:7-7: verb F: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
+				`10:7-7: retry must have a minimum backoff`,
+				`12:7-7: retry must have a minimum backoff`,
+				`14:7-7: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
 				`17:7-7: verb can not have multiple instances of retry`,
-				`19:7-7: verb H: could not parse min backoff duration: could not parse retry duration: duration has unknown unit "mins" - use 'd', 'h', 'm' or 's', eg '1d' or '30s'`,
-				`21:7-7: verb I: max backoff duration (1s) needs to be at least as long as initial backoff (1m)`,
-				`23:7-7: verb J: could not parse min backoff duration: retry backoff can not be larger than 1d`,
-				`25:7-7: verb K: retry count must be at least 1`,
-				`4:7-7: verb A: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
-				`6:7-7: verb B: could not parse min backoff duration: could not parse retry duration: duration has unit "d" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
-				`8:7-7: verb C: could not parse min backoff duration: retry must have a minimum backoff of 1s`,
+				`19:7-7: could not parse min backoff duration: could not parse retry duration: duration has unknown unit "mins" - use 'd', 'h', 'm' or 's', eg '1d' or '30s'`,
+				`21:7-7: max backoff duration (1s) needs to be at least as long as initial backoff (1m)`,
+				`23:7-7: could not parse min backoff duration: retry backoff can not be larger than 1d`,
+				`25:7-7: retry count must be at least 1`,
+				`30:7-7: catch can only be defined on verbs`,
+				`30:7-7: retry count must be at least 1`,
+				`4:7-7: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
+				`6:7-7: could not parse min backoff duration: could not parse retry duration: duration has unit "d" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
+				`8:7-7: could not parse min backoff duration: retry must have a minimum backoff of 1s`,
 			},
 		},
 		{name: "InvalidRetryInvalidSpace",
@@ -416,6 +423,68 @@ func TestValidate(t *testing.T) {
 				`7:5-5: invalid name: must consist of only letters, numbers and underscores, and start with a lowercase letter.`,
 			},
 		},
+		{
+			name: "PubSubCatch",
+			schema: `
+		module test {
+			// pub sub basic set up
+
+			data EventA {}
+			data EventB {}
+
+			topic topicA test.EventA
+			topic topicB test.EventB
+
+			subscription subA test.topicA
+			subscription subB test.topicB
+
+			// catch verbs
+
+			verb catchA(builtin.CatchRequest<test.EventA>) Unit	
+			verb catchB(builtin.CatchRequest<test.EventB>) Unit
+			verb catchAWithResponse(builtin.CatchRequest<test.EventA>) test.EventA
+			verb catchUnit(Unit) Unit
+			verb catchBWithEventType(test.EventB) Unit
+
+			// subscribers
+
+			verb correctSubA(test.EventA) Unit
+				+subscribe subA
+				+retry 1 1s catch test.catchA
+
+			verb correctSubB(test.EventB) Unit
+				+subscribe subB
+				+retry 1 1s catch test.catchB
+
+			verb incorrectSubAWithCatchB(test.EventA) Unit
+				+subscribe subA
+				+retry 1 1s catch test.catchB
+
+			verb incorrectSubAWithCatchWithResponse(test.EventA) Unit
+				+subscribe subA
+				+retry 1 1s catch test.catchAWithResponse
+
+			verb incorrectSubBWithCatchUnit(test.EventB) Unit
+				+subscribe subB
+				+retry 1 1s catch test.catchUnit
+
+			verb incorrectSubBWithCatchEvent(test.EventB) Unit
+				+subscribe subB
+				+retry 1 1s catch test.catchBWithEventType
+
+			verb incorrectSubBWithCatchNotAVerb(test.EventB) Unit
+				+subscribe subB
+				+retry 1 1s catch test.EventB
+		}
+		`,
+			errs: []string{
+				"34:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventA> but found builtin.CatchRequest<test.EventB>",
+				"38:5-5: catch verb must not have a response type but found test.EventA",
+				"42:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventB> but found Unit",
+				"46:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventB> but found test.EventB",
+				"50:5-5: expected catch to be a verb",
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -424,7 +493,7 @@ func TestValidate(t *testing.T) {
 			if test.errs == nil {
 				assert.NoError(t, err)
 			} else {
-				assert.Error(t, err)
+				assert.Error(t, err, "expected errors:\n%v", strings.Join(test.errs, "\n"))
 				errs := slices.Map(errors.UnwrapAll(err), func(e error) string { return e.Error() })
 				assert.Equal(t, test.errs, errs)
 			}

@@ -51,7 +51,7 @@ func TestSendFSMEvent(t *testing.T) {
 	}
 	assert.Equal(t, expectedCall, call, assert.Exclude[*Lease](), assert.Exclude[time.Time]())
 
-	err = dal.CompleteAsyncCall(ctx, call, either.LeftOf[string]([]byte(`{}`)), func(tx *Tx) error { return nil })
+	err = dal.CompleteAsyncCall(ctx, call, either.LeftOf[string]([]byte(`{}`)), func(tx *Tx, isFinalResult bool) error { return nil })
 	assert.NoError(t, err)
 
 	actual, err := dal.LoadAsyncCall(ctx, call.ID)

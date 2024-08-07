@@ -712,19 +712,19 @@ export class FSM extends Message<FSM> {
   name = "";
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref start = 4;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 4;
+   */
+  metadata: Metadata[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref start = 5;
    */
   start: Ref[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.FSMTransition transitions = 5;
+   * @generated from field: repeated xyz.block.ftl.v1.schema.FSMTransition transitions = 6;
    */
   transitions: FSMTransition[] = [];
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 6;
-   */
-  metadata: Metadata[] = [];
 
   constructor(data?: PartialMessage<FSM>) {
     super();
@@ -737,9 +737,9 @@ export class FSM extends Message<FSM> {
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "start", kind: "message", T: Ref, repeated: true },
-    { no: 5, name: "transitions", kind: "message", T: FSMTransition, repeated: true },
-    { no: 6, name: "metadata", kind: "message", T: Metadata, repeated: true },
+    { no: 4, name: "metadata", kind: "message", T: Metadata, repeated: true },
+    { no: 5, name: "start", kind: "message", T: Ref, repeated: true },
+    { no: 6, name: "transitions", kind: "message", T: FSMTransition, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FSM {
@@ -1526,6 +1526,11 @@ export class MetadataRetry extends Message<MetadataRetry> {
    */
   maxBackoff = "";
 
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Ref catch = 5;
+   */
+  catch?: Ref;
+
   constructor(data?: PartialMessage<MetadataRetry>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1538,6 +1543,7 @@ export class MetadataRetry extends Message<MetadataRetry> {
     { no: 2, name: "count", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 3, name: "minBackoff", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "maxBackoff", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "catch", kind: "message", T: Ref, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataRetry {

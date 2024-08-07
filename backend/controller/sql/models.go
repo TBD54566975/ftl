@@ -382,6 +382,8 @@ type AsyncCall struct {
 	RemainingAttempts int32
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
+	CatchVerb         optional.Option[schema.RefKey]
+	Catching          bool
 }
 
 type Controller struct {
@@ -536,6 +538,7 @@ type TopicSubscriber struct {
 	RetryAttempts        int32
 	Backoff              time.Duration
 	MaxBackoff           time.Duration
+	CatchVerb            optional.Option[schema.RefKey]
 }
 
 type TopicSubscription struct {

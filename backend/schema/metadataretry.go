@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -27,13 +28,21 @@ type MetadataRetry struct {
 	Count      *int   `parser:"'+' 'retry' (@Number Whitespace)?" protobuf:"2,optional"`
 	MinBackoff string `parser:"@(Number (?! Whitespace) Ident)?" protobuf:"3"`
 	MaxBackoff string `parser:"@(Number (?! Whitespace) Ident)?" protobuf:"4"`
+	Catch      *Ref   `parser:"('catch' @@)?" protobuf:"5,optional"`
 }
 
 var _ Metadata = (*MetadataRetry)(nil)
 
-func (*MetadataRetry) schemaMetadata()          {}
-func (m *MetadataRetry) schemaChildren() []Node { return nil }
-func (m *MetadataRetry) Position() Position     { return m.Pos }
+func (*MetadataRetry) schemaMetadata()      {}
+func (m *MetadataRetry) Position() Position { return m.Pos }
+
+func (m *MetadataRetry) schemaChildren() []Node {
+	if m.Catch == nil {
+		return nil
+	}
+	return []Node{m.Catch}
+}
+
 func (m *MetadataRetry) String() string {
 	components := []string{"+retry"}
 	if m.Count != nil {
@@ -43,6 +52,9 @@ func (m *MetadataRetry) String() string {
 	if len(m.MaxBackoff) > 0 {
 		components = append(components, m.MaxBackoff)
 	}
+	if m.Catch != nil {
+		components = append(components, fmt.Sprintf("catch %v", m.Catch))
+	}
 	return strings.Join(components, " ")
 }
 
@@ -51,11 +63,16 @@ func (m *MetadataRetry) ToProto() proto.Message {
 	if m.Count != nil {
 		count = proto.Int64(int64(*m.Count))
 	}
+	var catch *schemapb.Ref
+	if m.Catch != nil {
+		catch = m.Catch.ToProto().(*schemapb.Ref) //nolint: forcetypeassert
+	}
 	return &schemapb.MetadataRetry{
 		Pos:        posToProto(m.Pos),
 		Count:      count,
 		MinBackoff: m.MinBackoff,
 		MaxBackoff: m.MaxBackoff,
+		Catch:      catch,
 	}
 }
 
@@ -77,6 +94,7 @@ type RetryParams struct {
 	Count      int
 	MinBackoff time.Duration
 	MaxBackoff time.Duration
+	Catch      optional.Option[RefKey]
 }
 
 func (m *MetadataRetry) RetryParams() (RetryParams, error) {
@@ -107,6 +125,9 @@ func (m *MetadataRetry) RetryParams() (RetryParams, error) {
 			return RetryParams{}, fmt.Errorf("could not parse max backoff duration: %w", err)
 		}
 		params.MaxBackoff = maxBackoff
+	}
+	if m.Catch != nil {
+		params.Catch = optional.Some(m.Catch.ToRefKey())
 	}
 	return params, nil
 }

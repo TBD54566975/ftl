@@ -26,6 +26,12 @@ builtin module builtin {
   }
 
   export data Empty {}
+
+  // CatchRequest is a request structure for catch verbs.
+  export data CatchRequest<Req> {
+    request Req
+    error String
+  }
 }
 `
 

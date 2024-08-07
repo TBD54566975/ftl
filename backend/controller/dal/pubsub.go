@@ -111,6 +111,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			RemainingAttempts: subscriber.RetryAttempts,
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,
+			CatchVerb:         subscriber.CatchVerb,
 		})
 		observability.AsyncCalls.Created(ctx, subscriber.Sink, origin.String(), int64(subscriber.RetryAttempts), err)
 		if err != nil {
@@ -278,6 +279,7 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 				RetryAttempts:    int32(retryParams.Count),
 				Backoff:          retryParams.MinBackoff,
 				MaxBackoff:       retryParams.MaxBackoff,
+				CatchVerb:        retryParams.Catch,
 			})
 			if err != nil {
 				return fmt.Errorf("could not insert subscriber: %w", dalerrs.TranslatePGError(err))

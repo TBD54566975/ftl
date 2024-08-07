@@ -121,6 +121,7 @@ func extractMetadata(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) 
 				Count:      dt.Count,
 				MinBackoff: dt.MinBackoff,
 				MaxBackoff: dt.MaxBackoff,
+				Catch:      dt.Catch().Ptr(),
 			})
 		case *common.DirectiveSubscriber:
 			newSchType = &schema.Verb{}

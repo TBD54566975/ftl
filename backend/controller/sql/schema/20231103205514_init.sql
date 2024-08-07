@@ -475,7 +475,10 @@ CREATE TABLE async_calls (
     request JSONB NOT NULL,
     -- Populated on success.
     response JSONB,
-    -- Populated on error.
+
+    -- Error is set in these cases:
+    -- * When the row is inserted and catching is true, the error is set to the error we are trying to catch
+    -- * When state is set to 'error', the error is set to the error message.
     error TEXT,
 
     -- retry state

@@ -44,6 +44,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 		RemainingAttempts: int32(retryParams.Count),
 		Backoff:           retryParams.MinBackoff,
 		MaxBackoff:        retryParams.MaxBackoff,
+		CatchVerb:         retryParams.Catch,
 	})
 	observability.AsyncCalls.Created(ctx, destinationState, origin.String(), int64(retryParams.Count), err)
 	if err != nil {

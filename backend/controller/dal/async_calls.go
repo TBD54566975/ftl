@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
@@ -74,13 +75,17 @@ type AsyncCall struct {
 	ID          int64
 	Origin      AsyncOrigin
 	Verb        schema.RefKey
+	CatchVerb   optional.Option[schema.RefKey]
 	Request     json.RawMessage
 	ScheduledAt time.Time
 	QueueDepth  int64
 
+	Error optional.Option[string]
+
 	RemainingAttempts int32
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
+	Catching          bool
 }
 
 // AcquireAsyncCall acquires a pending async call to execute.
@@ -118,13 +123,16 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		ID:                row.AsyncCallID,
 		Verb:              row.Verb,
 		Origin:            origin,
+		CatchVerb:         row.CatchVerb,
 		Request:           decryptedRequest,
 		Lease:             lease,
 		ScheduledAt:       row.ScheduledAt,
 		QueueDepth:        row.QueueDepth,
 		RemainingAttempts: row.RemainingAttempts,
+		Error:             row.Error,
 		Backoff:           row.Backoff,
 		MaxBackoff:        row.MaxBackoff,
+		Catching:          row.Catching,
 	}, nil
 }
 
@@ -132,18 +140,23 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 //
 // "result" is either a []byte representing the successful response, or a string
 // representing a failure message.
-func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result either.Either[[]byte, string], finalise func(tx *Tx) error) (err error) {
+func (d *DAL) CompleteAsyncCall(ctx context.Context,
+	call *AsyncCall,
+	result either.Either[[]byte, string],
+	finalise func(tx *Tx, isFinalResult bool) error) (didScheduleAnotherCall bool, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
+	isFinalResult := true
+	didScheduleAnotherCall = false
 	switch result := result.(type) {
 	case either.Left[[]byte, string]: // Successful response.
 		_, err = tx.db.SucceedAsyncCall(ctx, result.Get(), call.ID)
 		if err != nil {
-			return dalerrs.TranslatePGError(err)
+			return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
 		}
 
 	case either.Right[[]byte, string]: // Failure message.
@@ -157,17 +170,39 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context, call *AsyncCall, result eit
 				ScheduledAt:       time.Now().Add(call.Backoff),
 			})
 			if err != nil {
-				return dalerrs.TranslatePGError(err)
+				return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
 			}
+			isFinalResult = false
+			didScheduleAnotherCall = true
+		} else if call.RemainingAttempts == 0 && call.CatchVerb.Ok() {
+			// original error is the last error that occurred before we started to catch
+			originalError := call.Error.Default(result.Get())
+			_, err = d.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
+				ID:                call.ID,
+				Error:             result.Get(),
+				RemainingAttempts: 0,
+				Backoff:           call.Backoff, // maintain backoff
+				MaxBackoff:        call.MaxBackoff,
+				ScheduledAt:       time.Now().Add(call.Backoff),
+				Catching:          true,
+				OriginalError:     optional.Some(originalError),
+			})
+			if err != nil {
+				return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
+			}
+			isFinalResult = false
+			didScheduleAnotherCall = true
 		} else {
 			_, err = tx.db.FailAsyncCall(ctx, result.Get(), call.ID)
 			if err != nil {
-				return dalerrs.TranslatePGError(err)
+				return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
 			}
 		}
 	}
-
-	return finalise(tx)
+	if err := finalise(tx, isFinalResult); err != nil {
+		return false, err
+	}
+	return didScheduleAnotherCall, nil
 }
 
 func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
