@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/TBD54566975/ftl/internal/observability"
 )
@@ -22,28 +23,29 @@ type DeploymentMetrics struct {
 }
 
 func initDeploymentMetrics() (*DeploymentMetrics, error) {
-	result := &DeploymentMetrics{}
+	result := &DeploymentMetrics{
+		failure: noop.Int64Counter{},
+		active:  noop.Int64UpDownCounter{},
+	}
 
-	var errs error
 	var err error
-
 	meter := otel.Meter(deploymentMeterName)
 
 	counter := fmt.Sprintf("%s.failures", deploymentMeterName)
 	if result.failure, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of deployment failures")); err != nil {
-		result.failure, errs = handleInt64CounterError(counter, err, errs)
+		return nil, wrapErr(counter, err)
 	}
 
 	counter = fmt.Sprintf("%s.active", deploymentMeterName)
 	if result.active, err = meter.Int64UpDownCounter(
 		counter,
 		metric.WithDescription("the number of active deployments")); err != nil {
-		result.active, errs = handleInt64UpDownCounterError(counter, err, errs)
+		return nil, wrapErr(counter, err)
 	}
 
-	return result, errs
+	return result, nil
 }
 
 func (m *DeploymentMetrics) Failure(ctx context.Context, key optional.Option[string]) {
