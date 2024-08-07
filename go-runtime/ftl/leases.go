@@ -129,6 +129,9 @@ func Lease(ctx context.Context, ttl time.Duration, key ...string) (LeaseHandle, 
 			}
 			// Notify the handle.
 			logger.Warnf("Lease heartbeat terminated for %s: %s", leaseKeyForLogs(module, key), err)
+			if err := lease.client.Release(ctx, key); err != nil {
+				logger.Warnf("Could not close lease %s: %s", leaseKeyForLogs(module, key), err)
+			}
 			lease.state.open = false
 			lease.state.err = optional.Some(err)
 			return
