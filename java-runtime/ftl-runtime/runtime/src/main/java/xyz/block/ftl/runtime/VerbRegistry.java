@@ -1,6 +1,7 @@
 package xyz.block.ftl.runtime;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
 import io.quarkus.arc.Arc;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 @Singleton
 public class VerbRegistry {
@@ -129,6 +131,7 @@ public class VerbRegistry {
             return inputClass;
         }
     }
+
     public static class ConfigSupplier implements BiFunction<ObjectMapper, CallRequest, Object> {
 
         final String name;
@@ -160,6 +163,45 @@ public class VerbRegistry {
 
         public String getName() {
             return name;
+        }
+    }
+
+    public static class TopicSupplier implements BiFunction<ObjectMapper, CallRequest, Object> {
+
+        final String name;
+        final String callingVerb;
+
+        volatile FTLController ftlController;
+
+        public TopicSupplier(String name, String callingVerb) {
+            this.name = name;
+            this.callingVerb = callingVerb;
+        }
+
+        @Override
+        public Object apply(ObjectMapper mapper, CallRequest in) {
+            if (ftlController == null) {
+                ftlController = Arc.container().instance(FTLController.class).get();
+            }
+            return new Consumer<Object>() {
+                @Override
+                public void accept(Object o) {
+
+                    try {
+                        ftlController.publishEvent(name, callingVerb, mapper.writeValueAsBytes(o));
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            };
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getCallingVerb() {
+            return callingVerb;
         }
     }
 

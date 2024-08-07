@@ -1,18 +1,22 @@
 package xyz.block.ftl.runtime;
 
+import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import io.quarkus.logging.Log;
 import io.quarkus.runtime.Startup;
-import io.quarkus.runtime.annotations.ConfigItem;
 import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import xyz.block.ftl.v1.ModuleContextRequest;
 import xyz.block.ftl.v1.ModuleContextResponse;
+import xyz.block.ftl.v1.PublishEventRequest;
+import xyz.block.ftl.v1.PublishEventResponse;
 import xyz.block.ftl.v1.VerbServiceGrpc;
+import xyz.block.ftl.v1.schema.Ref;
 
 import java.net.URI;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 @Singleton
 @Startup
@@ -66,6 +70,7 @@ public class FTLController {
         var channel = channelBuilder.build();
         verbService = VerbServiceGrpc.newStub(channel);
         verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+
     }
 
     public byte[] getSecret(String secretName) {
@@ -75,12 +80,40 @@ public class FTLController {
         }
         throw new RuntimeException("Secret not found: " + secretName);
     }
+
     public byte[] getConfig(String secretName) {
         var context = getModuleContext();
         if (context.containsConfigs(secretName)) {
             return context.getConfigsMap().get(secretName).toByteArray();
         }
         throw new RuntimeException("Config not found: " + secretName);
+    }
+
+    public void publishEvent(String topic, String callingVerbName, byte[] event) {
+        CompletableFuture<?> cf = new CompletableFuture<>();
+        verbService.publishEvent(PublishEventRequest.newBuilder()
+                .setCaller(callingVerbName).setBody(ByteString.copyFrom(event))
+                .setTopic(Ref.newBuilder().setModule(moduleName).setName(topic).build()).build(), new StreamObserver<PublishEventResponse>() {
+            @Override
+            public void onNext(PublishEventResponse publishEventResponse) {
+                cf.complete(null);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                cf.completeExceptionally(throwable);
+            }
+
+            @Override
+            public void onCompleted() {
+                cf.complete(null);
+            }
+        });
+        try {
+            cf.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private ModuleContextResponse getModuleContext() {
