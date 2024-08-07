@@ -382,6 +382,7 @@ type AsyncCall struct {
 	RemainingAttempts int32
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
+	OtelContext       []byte
 }
 
 type Controller struct {
@@ -518,12 +519,13 @@ type Topic struct {
 }
 
 type TopicEvent struct {
-	ID        int64
-	CreatedAt time.Time
-	Key       model.TopicEventKey
-	TopicID   int64
-	Payload   []byte
-	Caller    optional.Option[string]
+	ID          int64
+	CreatedAt   time.Time
+	Key         model.TopicEventKey
+	TopicID     int64
+	Payload     []byte
+	Caller      optional.Option[string]
+	OtelContext []byte
 }
 
 type TopicSubscriber struct {

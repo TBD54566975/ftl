@@ -77,6 +77,7 @@ type AsyncCall struct {
 	Request     json.RawMessage
 	ScheduledAt time.Time
 	QueueDepth  int64
+	OtelContext []byte
 
 	RemainingAttempts int32
 	Backoff           time.Duration
@@ -122,6 +123,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		Lease:             lease,
 		ScheduledAt:       row.ScheduledAt,
 		QueueDepth:        row.QueueDepth,
+		OtelContext:       row.OtelContext,
 		RemainingAttempts: row.RemainingAttempts,
 		Backoff:           row.Backoff,
 		MaxBackoff:        row.MaxBackoff,

@@ -48,7 +48,8 @@ RETURNING
   scheduled_at,
   remaining_attempts,
   backoff,
-  max_backoff
+  max_backoff,
+  otel_context
 `
 
 type AcquireAsyncCallRow struct {
@@ -63,6 +64,7 @@ type AcquireAsyncCallRow struct {
 	RemainingAttempts   int32
 	Backoff             time.Duration
 	MaxBackoff          time.Duration
+	OtelContext         []byte
 }
 
 // Reserve a pending async call for execution, returning the associated lease
@@ -82,6 +84,7 @@ func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (Acqu
 		&i.RemainingAttempts,
 		&i.Backoff,
 		&i.MaxBackoff,
+		&i.OtelContext,
 	)
 	return i, err
 }
@@ -123,7 +126,7 @@ func (q *Queries) AsyncCallQueueDepth(ctx context.Context) (int64, error) {
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-  SELECT id, created_at, key, topic_id, payload, caller
+  SELECT id, created_at, key, topic_id, payload, caller, otel_context
   FROM topic_events
   WHERE "key" = $2::topic_event_key
 )
@@ -170,8 +173,8 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 }
 
 const createAsyncCall = `-- name: CreateAsyncCall :one
-INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff)
-VALUES ($1, $2, $3, $4, $5::interval, $6::interval)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, otel_context)
+VALUES ($1, $2, $3, $4, $5::interval, $6::interval, $7::jsonb)
 RETURNING id
 `
 
@@ -182,6 +185,7 @@ type CreateAsyncCallParams struct {
 	RemainingAttempts int32
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
+	OtelContext       []byte
 }
 
 func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error) {
@@ -192,6 +196,7 @@ func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams
 		arg.RemainingAttempts,
 		arg.Backoff,
 		arg.MaxBackoff,
+		arg.OtelContext,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -475,7 +480,7 @@ WITH updated AS (
   SET state = 'error'::async_call_state,
       error = $5::TEXT
   WHERE id = $6::BIGINT
-  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff
+  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, otel_context
 )
 INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, scheduled_at)
 SELECT updated.verb, updated.origin, updated.request, $1, $2::interval, $3::interval, $4::TIMESTAMPTZ
@@ -1296,6 +1301,7 @@ SELECT events."key" as event,
         events.payload,
         events.created_at,
         events.caller,
+        events.otel_context,
         NOW() - events.created_at >= $1::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
@@ -1306,11 +1312,12 @@ LIMIT 1
 `
 
 type GetNextEventForSubscriptionRow struct {
-	Event     optional.Option[model.TopicEventKey]
-	Payload   []byte
-	CreatedAt optional.Option[time.Time]
-	Caller    optional.Option[string]
-	Ready     bool
+	Event       optional.Option[model.TopicEventKey]
+	Payload     []byte
+	CreatedAt   optional.Option[time.Time]
+	Caller      optional.Option[string]
+	OtelContext []byte
+	Ready       bool
 }
 
 func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDelay time.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
@@ -1321,6 +1328,7 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 		&i.Payload,
 		&i.CreatedAt,
 		&i.Caller,
+		&i.OtelContext,
 		&i.Ready,
 	)
 	return i, err
@@ -1757,7 +1765,7 @@ func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
 }
 
 const getTopicEvent = `-- name: GetTopicEvent :one
-SELECT id, created_at, key, topic_id, payload, caller
+SELECT id, created_at, key, topic_id, payload, caller, otel_context
 FROM topic_events
 WHERE id = $1::BIGINT
 `
@@ -1772,6 +1780,7 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 		&i.TopicID,
 		&i.Payload,
 		&i.Caller,
+		&i.OtelContext,
 	)
 	return i, err
 }
@@ -2070,7 +2079,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, otel_context
 FROM async_calls
 WHERE id = $1
 `
@@ -2092,6 +2101,7 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.RemainingAttempts,
 		&i.Backoff,
 		&i.MaxBackoff,
+		&i.OtelContext,
 	)
 	return i, err
 }
@@ -2124,7 +2134,8 @@ INSERT INTO topic_events (
     "key",
     topic_id,
     caller,
-    payload
+    payload,
+    otel_context
   )
 VALUES (
   $1::topic_event_key,
@@ -2136,16 +2147,18 @@ VALUES (
       AND topics.name = $3::TEXT
   ),
   $4::TEXT,
-  $5
+  $5,
+  $6::jsonb
 )
 `
 
 type PublishEventForTopicParams struct {
-	Key     model.TopicEventKey
-	Module  string
-	Topic   string
-	Caller  string
-	Payload []byte
+	Key         model.TopicEventKey
+	Module      string
+	Topic       string
+	Caller      string
+	Payload     []byte
+	OtelContext []byte
 }
 
 func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error {
@@ -2155,6 +2168,7 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 		arg.Topic,
 		arg.Caller,
 		arg.Payload,
+		arg.OtelContext,
 	)
 	return err
 }

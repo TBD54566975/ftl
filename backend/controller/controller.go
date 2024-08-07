@@ -5,6 +5,7 @@ import (
 	"context"
 	sha "crypto/sha256"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
@@ -27,6 +28,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
@@ -1382,6 +1385,15 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
 		return 0, err
 	}
+
+	var oc propagation.MapCarrier
+	err = json.Unmarshal(call.OtelContext, &oc)
+	if err != nil {
+		observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
+		return 0, fmt.Errorf("failed to unmarshal otel context: %w", err)
+	}
+	ctx = otel.GetTextMapPropagator().Extract(ctx, oc)
+
 	observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
 	defer call.Release() //nolint:errcheck
 

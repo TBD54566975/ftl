@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
@@ -23,12 +25,22 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload: %w", err)
 	}
+
+	// store the current otel context with the event
+	oc := propagation.MapCarrier(make(map[string]string))
+	otel.GetTextMapPropagator().Inject(ctx, oc)
+	jsonOc, err := json.Marshal(oc)
+	if err != nil {
+		return fmt.Errorf("failed to marshal otel context: %w", err)
+	}
+
 	err = d.db.PublishEventForTopic(ctx, sql.PublishEventForTopicParams{
-		Key:     model.NewTopicEventKey(module, topic),
-		Module:  module,
-		Topic:   topic,
-		Caller:  caller,
-		Payload: encryptedPayload,
+		Key:         model.NewTopicEventKey(module, topic),
+		Module:      module,
+		Topic:       topic,
+		Caller:      caller,
+		Payload:     encryptedPayload,
+		OtelContext: jsonOc,
 	})
 	observability.PubSub.Published(ctx, module, topic, caller, err)
 	if err != nil {
@@ -111,6 +123,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			RemainingAttempts: subscriber.RetryAttempts,
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,
+			OtelContext:       nextCursor.OtelContext,
 		})
 		observability.AsyncCalls.Created(ctx, subscriber.Sink, origin.String(), int64(subscriber.RetryAttempts), err)
 		if err != nil {
