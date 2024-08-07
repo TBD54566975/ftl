@@ -37,6 +37,7 @@ import xyz.block.ftl.Config;
 import xyz.block.ftl.Cron;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Secret;
+import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Topic;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.runtime.FTLController;
@@ -60,6 +61,7 @@ import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataCronJob;
 import xyz.block.ftl.v1.schema.MetadataIngress;
+import xyz.block.ftl.v1.schema.MetadataSubscriber;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Optional;
 import xyz.block.ftl.v1.schema.Ref;
@@ -89,6 +91,7 @@ class FtlProcessor {
     public static final DotName EXPORT = DotName.createSimple(Export.class);
     public static final DotName VERB = DotName.createSimple(Verb.class);
     public static final DotName CRON = DotName.createSimple(Cron.class);
+    public static final DotName SUBSCRIPTION = DotName.createSimple(Subscription.class);
     public static final String BUILTIN = "builtin";
     public static final DotName CONSUMER = DotName.createSimple(Consumer.class);
 
@@ -152,14 +155,27 @@ class FtlProcessor {
             String className = method.declaringClass().name().toString();
             beans.addBeanClass(className);
 
-            handleVerbMethod(extractionContext, method, className, exported, true, null);
+            handleVerbMethod(extractionContext, method, className, exported, BodyType.ALLOWED, null);
         }
         for (var cron : index.getIndex().getAnnotations(CRON)) {
             var method = cron.target().asMethod();
             String className = method.declaringClass().name().toString();
             beans.addBeanClass(className);
-            handleVerbMethod(extractionContext, method, className, false, false, (builder -> {
+            handleVerbMethod(extractionContext, method, className, false, BodyType.DISALLOWED, (builder -> {
                 builder.addMetadata(Metadata.newBuilder().setCronJob(MetadataCronJob.newBuilder().setCron(cron.value().asString())).build());
+            }));
+        }
+        for (var subscription : index.getIndex().getAnnotations(SUBSCRIPTION)) {
+            var method = subscription.target().asMethod();
+            String className = method.declaringClass().name().toString();
+            String name = subscription.value("name").asString();
+            String module = subscription.value("module") == null ? moduleName : subscription.value("module").asString();
+            String topic = subscription.value("topic").asString();
+            beans.addBeanClass(className);
+            moduleBuilder.addDecls(Decl.newBuilder().setSubscription(xyz.block.ftl.v1.schema.Subscription.newBuilder()
+                    .setName(name).setTopic(Ref.newBuilder().setName(topic).setModule(module).build())).build());
+            handleVerbMethod(extractionContext, method, className, false, BodyType.REQUIRED, (builder -> {
+                builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder().setName(name)));
             }));
         }
 
@@ -246,7 +262,7 @@ class FtlProcessor {
         Files.setPosixFilePermissions(output, newPerms);
     }
 
-    private void handleVerbMethod(ExtractionContext context, MethodInfo method, String className, boolean exported, boolean allowBody, Consumer<xyz.block.ftl.v1.schema.Verb.Builder> metadataCallback) {
+    private void handleVerbMethod(ExtractionContext context, MethodInfo method, String className, boolean exported, BodyType bodyType, Consumer<xyz.block.ftl.v1.schema.Verb.Builder> metadataCallback) {
         try {
             List<Class<?>> parameterTypes = new ArrayList<>();
             List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
@@ -294,7 +310,7 @@ class FtlProcessor {
                                 .setEvent(buildType(context, topicType)).build()));
                         context.knownTopics.put(name, param.type());
                     }
-                } else if (allowBody && bodyParamType == null) {
+                } else if (bodyType != BodyType.DISALLOWED && bodyParamType == null) {
                     bodyParamType = param.type();
                     Class<?> paramType = loadClass(param.type());
                     parameterTypes.add(paramType);
@@ -304,6 +320,9 @@ class FtlProcessor {
                 }
             }
             if (bodyParamType == null) {
+                if (bodyType == BodyType.REQUIRED) {
+                    throw new RuntimeException("Missing required payload parameter");
+                }
                 bodyParamType = VoidType.VOID;
             }
 
@@ -474,5 +493,11 @@ class FtlProcessor {
                              Module.Builder moduleBuilder,
                              Map<TypeKey, Ref> dataElements, Set<String> knownSecrets, Set<String> knownConfig,
                              Map<String, org.jboss.jandex.Type> knownTopics) {
+    }
+
+    enum BodyType {
+        DISALLOWED,
+        ALLOWED,
+        REQUIRED
     }
 }
