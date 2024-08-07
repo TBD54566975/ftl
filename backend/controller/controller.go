@@ -327,7 +327,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 	// Singleton tasks use leases to only run on a single controller.
 	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleControllers, time.Second*2, time.Second*20, time.Second*20))
 	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleRunners, time.Second*2, time.Second, time.Second*10))
-	svc.tasks.Singleton(maybeDevelTask(svc.reapCallEvents, time.Second*2, time.Second, time.Second*10))
+	svc.tasks.Singleton(maybeDevelTask(svc.reapCallEvents, time.Minute*5, time.Minute, time.Minute*30))
 	svc.tasks.Singleton(maybeDevelTask(svc.releaseExpiredReservations, time.Second*2, time.Second, time.Second*20))
 	svc.tasks.Singleton(maybeDevelTask(svc.reconcileDeployments, time.Second*2, time.Second, time.Second*5))
 	svc.tasks.Singleton(maybeDevelTask(svc.reconcileRunners, time.Second*2, time.Second, time.Second*5))
