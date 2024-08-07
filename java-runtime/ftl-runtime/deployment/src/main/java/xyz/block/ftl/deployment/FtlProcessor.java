@@ -74,8 +74,10 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -141,7 +143,7 @@ class FtlProcessor {
                 .setName(moduleName)
                 .setBuiltin(false);
         Map<TypeKey, Ref> dataElements = new HashMap<>();
-        ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements);
+        ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements, new HashSet<>(), new HashSet<>());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
         for (var verb : index.getIndex().getAnnotations(VERB)) {
             boolean exported = verb.target().hasAnnotation(EXPORT);
@@ -254,12 +256,21 @@ class FtlProcessor {
 
                     Class<?> paramType = Class.forName(param.type().toString(), false, Thread.currentThread().getContextClassLoader());
                     parameterTypes.add(paramType);
-                    paramMappers.add(new VerbRegistry.SecretSupplier(param.annotation(Secret.class).value().asString(), paramType));
-
+                    String name = param.annotation(Secret.class).value().asString();
+                    paramMappers.add(new VerbRegistry.SecretSupplier(name, paramType));
+                    if (!context.knownSecrets.contains(name)) {
+                        context.moduleBuilder.addDecls(Decl.newBuilder().setSecret(xyz.block.ftl.v1.schema.Secret.newBuilder().setName(name)));
+                        context.knownSecrets.add(name);
+                    }
                 } else if (param.hasAnnotation(Config.class)) {
                     Class<?> paramType = Class.forName(param.type().toString(), false, Thread.currentThread().getContextClassLoader());
                     parameterTypes.add(paramType);
-                    paramMappers.add(new VerbRegistry.ConfigSupplier(param.annotation(Config.class).value().asString(), paramType));
+                    String name = param.annotation(Config.class).value().asString();
+                    paramMappers.add(new VerbRegistry.ConfigSupplier(name, paramType));
+                    if (!context.knownConfig.contains(name)) {
+                        context.moduleBuilder.addDecls(Decl.newBuilder().setSecret(xyz.block.ftl.v1.schema.Secret.newBuilder().setName(name)));
+                        context.knownConfig.add(name);
+                    }
                 } else if (allowBody && bodyParamType == null) {
                     bodyParamType = param.type();
                     Class<?> paramType = Class.forName(param.type().toString(), false, Thread.currentThread().getContextClassLoader());
@@ -274,7 +285,7 @@ class FtlProcessor {
             }
 
 
-            context.recorder.registerVerb(context.moduleName(), method.name(), method.name(),parameterTypes, Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers);
+            context.recorder.registerVerb(context.moduleName(), method.name(), method.name(), parameterTypes, Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers);
             verbBuilder
                     .setName(method.name())
                     .setExport(exported)
@@ -405,7 +416,8 @@ class FtlProcessor {
 
     }
 
-    record ExtractionContext(String moduleName, CombinedIndexBuildItem index, FTLRecorder recorder, Module.Builder moduleBuilder,
-                             Map<TypeKey, Ref> dataElements) {
+    record ExtractionContext(String moduleName, CombinedIndexBuildItem index, FTLRecorder recorder,
+                             Module.Builder moduleBuilder,
+                             Map<TypeKey, Ref> dataElements, Set<String> knownSecrets, Set<String> knownConfig) {
     }
 }
