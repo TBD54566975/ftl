@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -28,36 +29,38 @@ type CronMetrics struct {
 }
 
 func initCronMetrics() (*CronMetrics, error) {
-	result := &CronMetrics{}
+	result := &CronMetrics{
+		jobsActive:    noop.Int64UpDownCounter{},
+		jobsCompleted: noop.Int64Counter{},
+		jobLatency:    noop.Int64Histogram{},
+	}
 
-	var errs error
 	var err error
-
 	meter := otel.Meter(deploymentMeterName)
 
-	counter := fmt.Sprintf("%s.jobs.completed", cronMeterName)
+	signalName := fmt.Sprintf("%s.jobs.completed", cronMeterName)
 	if result.jobsCompleted, err = meter.Int64Counter(
-		counter,
+		signalName,
 		metric.WithDescription("the number of cron jobs completed; successful or otherwise")); err != nil {
-		result.jobsCompleted, errs = handleInt64CounterError(counter, err, errs)
+		return nil, wrapErr(signalName, err)
 	}
 
-	counter = fmt.Sprintf("%s.jobs.active", cronMeterName)
+	signalName = fmt.Sprintf("%s.jobs.active", cronMeterName)
 	if result.jobsActive, err = meter.Int64UpDownCounter(
-		counter,
+		signalName,
 		metric.WithDescription("the number of actively executing cron jobs")); err != nil {
-		result.jobsActive, errs = handleInt64UpDownCounterError(counter, err, errs)
+		return nil, wrapErr(signalName, err)
 	}
 
-	counter = fmt.Sprintf("%s.job.latency", cronMeterName)
+	signalName = fmt.Sprintf("%s.job.latency", cronMeterName)
 	if result.jobLatency, err = meter.Int64Histogram(
-		counter,
+		signalName,
 		metric.WithDescription("the latency between the scheduled execution time of a cron job"),
 		metric.WithUnit("ms")); err != nil {
-		result.jobLatency, errs = handleInt64HistogramCounterError(counter, err, errs)
+		return nil, wrapErr(signalName, err)
 	}
 
-	return result, errs
+	return result, nil
 }
 
 func (m *CronMetrics) JobStarted(ctx context.Context, job model.CronJob) {
