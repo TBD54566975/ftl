@@ -3,8 +3,10 @@ package xyz.block.ftl.runtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
+import io.quarkus.arc.Arc;
 import io.quarkus.arc.InstanceHandle;
 import jakarta.inject.Singleton;
+import org.jboss.logging.Logger;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
 
@@ -14,10 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 @Singleton
 public class VerbRegistry {
+
+    private static final Logger log = Logger.getLogger(VerbRegistry.class);
+
 
     final ObjectMapper mapper;
 
@@ -73,6 +77,7 @@ public class VerbRegistry {
                 var mappedResponse = mapper.writer().writeValueAsBytes(ret);
                 return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
             } catch (Exception e) {
+                log.errorf(e, "Failed to invoke verb %s.%s", in.getVerb().getModule(), in.getVerb().getName());
                 return CallResponse.newBuilder().setError(CallResponse.Error.newBuilder().setMessage(e.getMessage()).build()).build();
             }
         }
@@ -88,6 +93,73 @@ public class VerbRegistry {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+    }
+
+    public static class SecretSupplier implements BiFunction<ObjectMapper, CallRequest, Object> {
+
+        final String name;
+        final Class<?> inputClass;
+
+        volatile FTLController ftlController;
+
+        public SecretSupplier(String name, Class<?> inputClass) {
+            this.name = name;
+            this.inputClass = inputClass;
+        }
+
+        @Override
+        public Object apply(ObjectMapper mapper, CallRequest in) {
+            if (ftlController == null) {
+                ftlController = Arc.container().instance(FTLController.class).get();
+            }
+            var secret = ftlController.getSecret(name);
+            try {
+                return mapper.createParser(secret).readValueAs(inputClass);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public Class<?> getInputClass() {
+            return inputClass;
+        }
+    }
+    public static class ConfigSupplier implements BiFunction<ObjectMapper, CallRequest, Object> {
+
+        final String name;
+        final Class<?> inputClass;
+
+        volatile FTLController ftlController;
+
+        public ConfigSupplier(String name, Class<?> inputClass) {
+            this.name = name;
+            this.inputClass = inputClass;
+        }
+
+        @Override
+        public Object apply(ObjectMapper mapper, CallRequest in) {
+            if (ftlController == null) {
+                ftlController = Arc.container().instance(FTLController.class).get();
+            }
+            var secret = ftlController.getConfig(name);
+            try {
+                return mapper.createParser(secret).readValueAs(inputClass);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        public Class<?> getInputClass() {
+            return inputClass;
+        }
+
+        public String getName() {
+            return name;
         }
     }
 

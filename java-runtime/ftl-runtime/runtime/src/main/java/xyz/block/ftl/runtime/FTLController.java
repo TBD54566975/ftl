@@ -1,6 +1,5 @@
 package xyz.block.ftl.runtime;
 
-import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import io.quarkus.logging.Log;
@@ -8,6 +7,7 @@ import io.quarkus.runtime.Startup;
 import io.quarkus.runtime.annotations.ConfigItem;
 import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
 import xyz.block.ftl.v1.ModuleContextRequest;
 import xyz.block.ftl.v1.ModuleContextResponse;
 import xyz.block.ftl.v1.VerbServiceGrpc;
@@ -16,7 +16,8 @@ import java.net.URI;
 
 @Singleton
 @Startup
-public class FTL {
+public class FTLController {
+    private static final Logger log = Logger.getLogger(FTLController.class);
     final String moduleName;
 
     private Throwable currentError;
@@ -29,7 +30,7 @@ public class FTL {
         public void onNext(ModuleContextResponse moduleContextResponse) {
             synchronized (this) {
                 currentError = null;
-                FTL.this.moduleContextResponse = moduleContextResponse;
+                FTLController.this.moduleContextResponse = moduleContextResponse;
                 if (waiters) {
                     this.notifyAll();
                     waiters = false;
@@ -40,7 +41,7 @@ public class FTL {
 
         @Override
         public void onError(Throwable throwable) {
-            Log.error("GRPC connection error", throwable);
+            log.error("GRPC connection error", throwable);
             synchronized (this) {
                 currentError = throwable;
                 if (waiters) {
@@ -56,7 +57,7 @@ public class FTL {
         }
     };
 
-    public FTL(@ConfigProperty(name = "ftl.endpoint", defaultValue = "http://localhost:8892") URI uri, @ConfigItem(name = "ftl.module.name") String moduleName) {
+    public FTLController(@ConfigProperty(name = "ftl.endpoint", defaultValue = "http://localhost:8892") URI uri, @ConfigProperty(name = "ftl.module.name") String moduleName) {
         this.moduleName = moduleName;
         var channelBuilder = ManagedChannelBuilder.forAddress(uri.getHost(), uri.getPort());
         if (uri.getScheme().equals("http")) {
@@ -73,6 +74,13 @@ public class FTL {
             return context.getSecretsMap().get(secretName).toByteArray();
         }
         throw new RuntimeException("Secret not found: " + secretName);
+    }
+    public byte[] getConfig(String secretName) {
+        var context = getModuleContext();
+        if (context.containsConfigs(secretName)) {
+            return context.getConfigsMap().get(secretName).toByteArray();
+        }
+        throw new RuntimeException("Config not found: " + secretName);
     }
 
     private ModuleContextResponse getModuleContext() {

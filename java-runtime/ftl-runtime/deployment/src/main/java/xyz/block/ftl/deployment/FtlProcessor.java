@@ -18,7 +18,6 @@ import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
-import io.quarkus.deployment.recording.RecorderContext;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
 import io.quarkus.netty.runtime.virtual.VirtualServerChannel;
 import io.quarkus.resteasy.reactive.server.deployment.ResteasyReactiveResourceMethodEntriesBuildItem;
@@ -35,10 +34,12 @@ import org.jboss.jandex.VoidType;
 import org.jboss.resteasy.reactive.common.model.MethodParameter;
 import org.jboss.resteasy.reactive.common.model.ParameterType;
 import org.jboss.resteasy.reactive.server.mapping.URITemplate;
+import xyz.block.ftl.Config;
 import xyz.block.ftl.Cron;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.Verb;
+import xyz.block.ftl.runtime.FTLController;
 import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.VerbHandler;
@@ -76,6 +77,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 class FtlProcessor {
@@ -107,7 +109,7 @@ class FtlProcessor {
     @BuildStep
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(VerbHandler.class, VerbRegistry.class, FTLHttpHandler.class)
+                .addBeanClasses(VerbHandler.class, VerbRegistry.class, FTLHttpHandler.class, FTLController.class)
                 .setUnremovable().build();
     }
 
@@ -147,26 +149,15 @@ class FtlProcessor {
             String className = method.declaringClass().name().toString();
             beans.addBeanClass(className);
 
-            handleVerbMethod(extractionContext, method, className, exported, true);
+            handleVerbMethod(extractionContext, method, className, exported, true, null);
         }
         for (var cron : index.getIndex().getAnnotations(CRON)) {
             var method = cron.target().asMethod();
             String className = method.declaringClass().name().toString();
             beans.addBeanClass(className);
-            org.jboss.jandex.Type methodParamType;
-            if (method.parametersCount() == 0) {
-                methodParamType = VoidType.VOID;
-            } else {
-                throw new RuntimeException("@Cron methods must not have any parameters: " + method.declaringClass().name() + "." + method.name());
-            }
-            recorder.registerVerb(moduleName, method.name(), method.name(), List.of(), Class.forName(className, false, Thread.currentThread().getContextClassLoader()), List.of());
-            moduleBuilder
-                    .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
-                                    .setName(method.name())
-                                    .addMetadata(Metadata.newBuilder().setCronJob(MetadataCronJob.newBuilder().setCron(cron.value().asString())).build())
-                                    .setRequest(buildType(index.getComputingIndex(), methodParamType, dataElements, moduleBuilder))
-                                    .setResponse(buildType(index.getComputingIndex(), method.returnType(), dataElements, moduleBuilder)))
-                            .build());
+            handleVerbMethod(extractionContext, method, className, false, false, (builder -> {
+                builder.addMetadata(Metadata.newBuilder().setCronJob(MetadataCronJob.newBuilder().setCron(cron.value().asString())).build());
+            }));
         }
 
         //TODO: make this composable so it is not just one big method, build items should contribute to the schema
@@ -252,14 +243,23 @@ class FtlProcessor {
         Files.setPosixFilePermissions(output, newPerms);
     }
 
-    private void handleVerbMethod(ExtractionContext context, MethodInfo method, String className, boolean exported, boolean allowBody) {
+    private void handleVerbMethod(ExtractionContext context, MethodInfo method, String className, boolean exported, boolean allowBody, Consumer<xyz.block.ftl.v1.schema.Verb.Builder> metadataCallback) {
         try {
             List<Class<?>> parameterTypes = new ArrayList<>();
             List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
             org.jboss.jandex.Type bodyParamType = null;
+            xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
             for (var param : method.parameters()) {
                 if (param.hasAnnotation(Secret.class)) {
-                    throw new RuntimeException("Secret not implemented yet");
+
+                    Class<?> paramType = Class.forName(param.type().toString(), false, Thread.currentThread().getContextClassLoader());
+                    parameterTypes.add(paramType);
+                    paramMappers.add(new VerbRegistry.SecretSupplier(param.annotation(Secret.class).value().asString(), paramType));
+
+                } else if (param.hasAnnotation(Config.class)) {
+                    Class<?> paramType = Class.forName(param.type().toString(), false, Thread.currentThread().getContextClassLoader());
+                    parameterTypes.add(paramType);
+                    paramMappers.add(new VerbRegistry.ConfigSupplier(param.annotation(Config.class).value().asString(), paramType));
                 } else if (allowBody && bodyParamType == null) {
                     bodyParamType = param.type();
                     Class<?> paramType = Class.forName(param.type().toString(), false, Thread.currentThread().getContextClassLoader());
@@ -275,12 +275,17 @@ class FtlProcessor {
 
 
             context.recorder.registerVerb(context.moduleName(), method.name(), method.name(),parameterTypes, Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers);
+            verbBuilder
+                    .setName(method.name())
+                    .setExport(exported)
+                    .setRequest(buildType(context.index.getComputingIndex(), bodyParamType, context.dataElements, context.moduleBuilder))
+                    .setResponse(buildType(context.index.getComputingIndex(), method.returnType(), context.dataElements, context.moduleBuilder));
+
+            if (metadataCallback != null) {
+                metadataCallback.accept(verbBuilder);
+            }
             context.moduleBuilder
-                    .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
-                                    .setName(method.name())
-                                    .setExport(exported)
-                                    .setRequest(buildType(context.index.getComputingIndex(), bodyParamType, context.dataElements, context.moduleBuilder))
-                                    .setResponse(buildType(context.index.getComputingIndex(), method.returnType(), context.dataElements, context.moduleBuilder)))
+                    .addDecls(Decl.newBuilder().setVerb(verbBuilder)
                             .build());
 
         } catch (Exception e) {
