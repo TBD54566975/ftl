@@ -11,7 +11,7 @@ const (
 	FailureStatus = "failure"
 )
 
-func SuccessOrFailureStatus(succeeded bool) attribute.KeyValue {
+func SuccessOrFailureStatusAttr(succeeded bool) attribute.KeyValue {
 	if succeeded {
 		return attribute.String(OutcomeStatusNameAttribute, SuccessStatus)
 	}

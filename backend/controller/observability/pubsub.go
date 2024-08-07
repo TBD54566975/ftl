@@ -83,7 +83,7 @@ func (m *PubSubMetrics) Published(ctx context.Context, module, topic, caller str
 		attribute.String(observability.ModuleNameAttribute, module),
 		attribute.String(pubsubTopicRefAttr, schema.RefKey{Module: module, Name: topic}.String()),
 		attribute.String(pubsubCallerVerbRefAttr, schema.RefKey{Module: module, Name: caller}.String()),
-		observability.SuccessOrFailureStatus(maybeErr == nil),
+		observability.SuccessOrFailureStatusAttr(maybeErr == nil),
 	}
 
 	m.published.Add(ctx, 1, metric.WithAttributes(attrs...))
