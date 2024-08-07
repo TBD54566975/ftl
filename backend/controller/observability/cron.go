@@ -35,7 +35,7 @@ func initCronMetrics() (*CronMetrics, error) {
 
 	meter := otel.Meter(deploymentMeterName)
 
-	counter := fmt.Sprintf("%s.job.completed", cronMeterName)
+	counter := fmt.Sprintf("%s.jobs.completed", cronMeterName)
 	if result.jobsCompleted, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of cron jobs completed; successful or otherwise")); err != nil {
