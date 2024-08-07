@@ -33,6 +33,7 @@ import org.jboss.jandex.VoidType;
 import org.jboss.resteasy.reactive.common.model.MethodParameter;
 import org.jboss.resteasy.reactive.common.model.ParameterType;
 import org.jboss.resteasy.reactive.server.mapping.URITemplate;
+import xyz.block.ftl.Cron;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.runtime.FTLHttpHandler;
@@ -52,6 +53,7 @@ import xyz.block.ftl.v1.schema.IngressPathLiteral;
 import xyz.block.ftl.v1.schema.IngressPathParameter;
 import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
+import xyz.block.ftl.v1.schema.MetadataCronJob;
 import xyz.block.ftl.v1.schema.MetadataIngress;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Optional;
@@ -77,6 +79,7 @@ class FtlProcessor {
     private static final String FEATURE = "ftl-java-runtime";
     public static final DotName EXPORT = DotName.createSimple(Export.class);
     public static final DotName VERB = DotName.createSimple(Verb.class);
+    public static final DotName CRON = DotName.createSimple(Cron.class);
     public static final String BUILTIN = "builtin";
 
     @BuildStep
@@ -144,6 +147,25 @@ class FtlProcessor {
                     .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
                                     .setName(method.name())
                                     .setExport(exported)
+                                    .setRequest(buildType(index.getComputingIndex(), methodParamType, dataElements, moduleBuilder))
+                                    .setResponse(buildType(index.getComputingIndex(), method.returnType(), dataElements, moduleBuilder)))
+                            .build());
+        }
+        for (var cron : index.getIndex().getAnnotations(CRON)) {
+            var method = cron.target().asMethod();
+            String className = method.declaringClass().name().toString();
+            beans.addBeanClass(className);
+            org.jboss.jandex.Type methodParamType;
+            if (method.parametersCount() == 0) {
+                methodParamType = VoidType.VOID;
+            } else {
+                throw new RuntimeException("@Cron methods must not have any parameters: " + method.declaringClass().name() + "." + method.name());
+            }
+            recorder.registerVerb(applicationInfoBuildItem.getName(), method.name(), recorderContext.classProxy(methodParamType.toString()), method.name(), recorderContext.classProxy(className));
+            moduleBuilder
+                    .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
+                                    .setName(method.name())
+                                    .addMetadata(Metadata.newBuilder().setCronJob(MetadataCronJob.newBuilder().setCron(cron.value().asString())).build())
                                     .setRequest(buildType(index.getComputingIndex(), methodParamType, dataElements, moduleBuilder))
                                     .setResponse(buildType(index.getComputingIndex(), method.returnType(), dataElements, moduleBuilder)))
                             .build());

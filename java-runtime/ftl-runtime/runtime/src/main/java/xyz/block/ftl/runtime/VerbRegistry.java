@@ -59,8 +59,13 @@ public class VerbRegistry {
 
         public CallResponse handle(CallRequest in) {
             try {
-                var body = mapper.createParser(in.getBody().newInput()).readValueAs(inputClass);
-                var ret = method.invoke(verbHandlerClass.get(), body);
+                Object ret;
+                if (method.getParameters().length == 0) {
+                    ret = method.invoke(verbHandlerClass.get());
+                } else {
+                    var body = mapper.createParser(in.getBody().newInput()).readValueAs(inputClass);
+                    ret = method.invoke(verbHandlerClass.get(), body);
+                }
                 var mappedResponse = mapper.writer().writeValueAsBytes(ret);
                 return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
             } catch (Exception e) {
