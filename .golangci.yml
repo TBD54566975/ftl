@@ -136,3 +136,4 @@ issues:
     - "fmt.Errorf can be replaced with errors.New"
     - "fmt.Sprintf can be replaced with string concatenation"
     - "strings.Title has been deprecated"
+    - "error returned from external package is unwrapped.*TranslatePGError"

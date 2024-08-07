@@ -1164,6 +1164,11 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	}))
 }
 
+func (d *DAL) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
+	count, err := d.db.DeleteOldEvents(ctx, age, eventType)
+	return count, dalerrs.TranslatePGError(err)
+}
+
 func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
 	rows, err := d.db.GetActiveRunners(ctx)
 	if err != nil {

@@ -130,6 +130,7 @@ type Config struct {
 	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
 	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
+	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	EncryptionKeys
 	CommonConfig
@@ -326,6 +327,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 	// Singleton tasks use leases to only run on a single controller.
 	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleControllers, time.Second*2, time.Second*20, time.Second*20))
 	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleRunners, time.Second*2, time.Second, time.Second*10))
+	svc.tasks.Singleton(maybeDevelTask(svc.reapCallEvents, time.Second*2, time.Second, time.Second*10))
 	svc.tasks.Singleton(maybeDevelTask(svc.releaseExpiredReservations, time.Second*2, time.Second, time.Second*20))
 	svc.tasks.Singleton(maybeDevelTask(svc.reconcileDeployments, time.Second*2, time.Second, time.Second*5))
 	svc.tasks.Singleton(maybeDevelTask(svc.reconcileRunners, time.Second*2, time.Second, time.Second*5))
@@ -1792,6 +1794,26 @@ func (s *Service) syncSchema(ctx context.Context) {
 			retry.Reset()
 		}
 	}
+}
+
+func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
+	logger := log.FromContext(ctx)
+
+	if s.config.EventLogRetention == nil {
+		logger.Tracef("Event log retention is disabled, will not prune.")
+		return time.Hour, nil
+	}
+
+	removed, err := s.dal.DeleteOldEvents(ctx, dal.EventTypeCall, *s.config.EventLogRetention)
+	if err != nil {
+		return 0, fmt.Errorf("failed to prune call events: %w", err)
+	}
+	if removed > 0 {
+		logger.Debugf("Pruned %d call events older than %s", removed, s.config.EventLogRetention)
+	}
+
+	// Prune every 5% of the retention period.
+	return *s.config.EventLogRetention / 20, nil
 }
 
 func extractIngressRoutingEntries(req *ftlv1.CreateDeploymentRequest) []dal.IngressRoutingEntry {

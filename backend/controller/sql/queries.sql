@@ -360,6 +360,16 @@ VALUES (
   sqlc.arg('payload')
 );
 
+-- name: DeleteOldEvents :one
+WITH deleted AS (
+    DELETE FROM events
+    WHERE time_stamp < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
+      AND type = sqlc.arg('type')
+    RETURNING 1
+)
+SELECT COUNT(*)
+FROM deleted;
+
 -- name: CreateRequest :exec
 INSERT INTO requests (origin, "key", source_addr)
 VALUES ($1, $2, $3);

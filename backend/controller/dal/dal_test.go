@@ -403,3 +403,98 @@ func assertEventsEqual(t *testing.T, expected, actual []Event) {
 	t.Helper()
 	assert.Equal(t, normaliseEvents(expected), normaliseEvents(actual))
 }
+
+func TestDeleteOldEvents(t *testing.T) {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	conn := sqltest.OpenForTesting(ctx, t)
+	dal, err := New(ctx, conn, NoOpEncryptors())
+	assert.NoError(t, err)
+
+	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
+	var testSha sha256.SHA256
+
+	t.Run("CreateArtefact", func(t *testing.T) {
+		testSha, err = dal.CreateArtefact(ctx, testContent)
+		assert.NoError(t, err)
+	})
+
+	module := &schema.Module{Name: "test"}
+	var deploymentKey model.DeploymentKey
+	t.Run("CreateDeployment", func(t *testing.T) {
+		deploymentKey, err = dal.CreateDeployment(ctx, "go", module, []DeploymentArtefact{{
+			Digest:     testSha,
+			Executable: true,
+			Path:       "dir/filename",
+		}}, nil, nil)
+		assert.NoError(t, err)
+	})
+
+	requestKey := model.NewRequestKey(model.OriginIngress, "GET /test")
+	// week old event
+	callEvent := &CallEvent{
+		Time:          time.Now().Add(-24 * 7 * time.Hour).Round(time.Millisecond),
+		DeploymentKey: deploymentKey,
+		RequestKey:    optional.Some(requestKey),
+		Request:       []byte("{}"),
+		Response:      []byte(`{"time": "now"}`),
+		DestVerb:      schema.Ref{Module: "time", Name: "time"},
+	}
+	t.Run("InsertCallEvent", func(t *testing.T) {
+		err = dal.InsertCallEvent(ctx, callEvent)
+		assert.NoError(t, err)
+	})
+	// hour old event
+	callEvent = &CallEvent{
+		Time:          time.Now().Add(-1 * time.Hour).Round(time.Millisecond),
+		DeploymentKey: deploymentKey,
+		RequestKey:    optional.Some(requestKey),
+		Request:       []byte("{}"),
+		Response:      []byte(`{"time": "now"}`),
+		DestVerb:      schema.Ref{Module: "time", Name: "time"},
+	}
+	t.Run("InsertCallEvent", func(t *testing.T) {
+		err = dal.InsertCallEvent(ctx, callEvent)
+		assert.NoError(t, err)
+	})
+
+	// week old event
+	logEvent := &LogEvent{
+		Time:          time.Now().Add(-24 * 7 * time.Hour).Round(time.Millisecond),
+		DeploymentKey: deploymentKey,
+		RequestKey:    optional.Some(requestKey),
+		Level:         int32(log.Warn),
+		Attributes:    map[string]string{"attr": "value"},
+		Message:       "A log entry",
+	}
+	t.Run("InsertLogEntry", func(t *testing.T) {
+		err = dal.InsertLogEvent(ctx, logEvent)
+		assert.NoError(t, err)
+	})
+	// hour old event
+	logEvent = &LogEvent{
+		Time:          time.Now().Add(-1 * time.Hour).Round(time.Millisecond),
+		DeploymentKey: deploymentKey,
+		RequestKey:    optional.Some(requestKey),
+		Level:         int32(log.Warn),
+		Attributes:    map[string]string{"attr": "value"},
+		Message:       "A log entry",
+	}
+	t.Run("InsertLogEntry", func(t *testing.T) {
+		err = dal.InsertLogEvent(ctx, logEvent)
+		assert.NoError(t, err)
+	})
+
+	t.Run("DeleteOldEvents", func(t *testing.T) {
+		count, err := dal.DeleteOldEvents(ctx, EventTypeCall, 2*24*time.Hour)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), count)
+
+		count, err = dal.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(2), count)
+
+		count, err = dal.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(0), count)
+	})
+}
