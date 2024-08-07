@@ -28,33 +28,31 @@ type RunnerMetrics struct {
 func initRunnerMetrics() (*RunnerMetrics, error) {
 	result := &RunnerMetrics{}
 
-	var errs error
 	var err error
-
 	meter := otel.Meter(runnerMeterName)
 
 	counter := fmt.Sprintf("%s.startup.failures", runnerMeterName)
 	if result.startupFailures, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of runner startup failures")); err != nil {
-		result.startupFailures, errs = handleInt64CounterError(counter, err, errs)
+		return nil, wrapErr(counter, err)
 	}
 
 	counter = fmt.Sprintf("%s.registration.heartbeats", runnerMeterName)
 	if result.registrationHeartbeats, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of successful runner (re-)registrations")); err != nil {
-		result.registrationHeartbeats, errs = handleInt64CounterError(counter, err, errs)
+		return nil, wrapErr(counter, err)
 	}
 
 	counter = fmt.Sprintf("%s.registration.failures", runnerMeterName)
 	if result.registrationFailures, err = meter.Int64Counter(
 		counter,
 		metric.WithDescription("the number of failures encountered while attempting to register a runner")); err != nil {
-		result.registrationFailures, errs = handleInt64CounterError(counter, err, errs)
+		return nil, wrapErr(counter, err)
 	}
 
-	return result, errs
+	return result, nil
 }
 
 func (m *RunnerMetrics) Registered(ctx context.Context, key optional.Option[string], state ftlv1.RunnerState) {

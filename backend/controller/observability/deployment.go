@@ -7,6 +7,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 
 	"github.com/TBD54566975/ftl/internal/observability"
 )
@@ -23,42 +24,45 @@ type DeploymentMetrics struct {
 }
 
 func initDeploymentMetrics() (*DeploymentMetrics, error) {
-	result := &DeploymentMetrics{}
+	result := &DeploymentMetrics{
+		reconciliationFailures: noop.Int64Counter{},
+		reconciliationsActive:  noop.Int64UpDownCounter{},
+		replicasAdded:          noop.Int64Counter{},
+		replicasRemoved:        noop.Int64Counter{},
+	}
 
-	var errs error
 	var err error
-
 	meter := otel.Meter(deploymentMeterName)
 
-	counter := fmt.Sprintf("%s.reconciliation.failures", deploymentMeterName)
+	signalName := fmt.Sprintf("%s.reconciliation.failures", deploymentMeterName)
 	if result.reconciliationFailures, err = meter.Int64Counter(
-		counter,
+		signalName,
 		metric.WithDescription("the number of failed runner deployment reconciliation tasks")); err != nil {
-		result.reconciliationFailures, errs = handleInt64CounterError(counter, err, errs)
+		return nil, wrapErr(signalName, err)
 	}
 
-	counter = fmt.Sprintf("%s.reconciliations.active", deploymentMeterName)
+	signalName = fmt.Sprintf("%s.reconciliations.active", deploymentMeterName)
 	if result.reconciliationsActive, err = meter.Int64UpDownCounter(
-		counter,
+		signalName,
 		metric.WithDescription("the number of active deployment reconciliation tasks")); err != nil {
-		result.reconciliationsActive, errs = handleInt64UpDownCounterError(counter, err, errs)
+		return nil, wrapErr(signalName, err)
 	}
 
-	counter = fmt.Sprintf("%s.replicas.added", deploymentMeterName)
+	signalName = fmt.Sprintf("%s.replicas.added", deploymentMeterName)
 	if result.replicasAdded, err = meter.Int64Counter(
-		counter,
+		signalName,
 		metric.WithDescription("the number of runner replicas added by the deployment reconciliation tasks")); err != nil {
-		result.replicasAdded, errs = handleInt64CounterError(counter, err, errs)
+		return nil, wrapErr(signalName, err)
 	}
 
-	counter = fmt.Sprintf("%s.replicas.removed", deploymentMeterName)
+	signalName = fmt.Sprintf("%s.replicas.removed", deploymentMeterName)
 	if result.replicasRemoved, err = meter.Int64Counter(
-		counter,
+		signalName,
 		metric.WithDescription("the number of runner replicas removed by the deployment reconciliation tasks")); err != nil {
-		result.replicasRemoved, errs = handleInt64CounterError(counter, err, errs)
+		return nil, wrapErr(signalName, err)
 	}
 
-	return result, errs
+	return result, nil
 }
 
 func (m *DeploymentMetrics) ReconciliationFailure(ctx context.Context, module string, key string) {

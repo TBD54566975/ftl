@@ -85,10 +85,6 @@ func initAsyncCallMetrics() (*AsyncCallMetrics, error) {
 	return result, nil
 }
 
-func wrapErr(signalName string, err error) error {
-	return fmt.Errorf("failed to create %q signal: %w", signalName, err)
-}
-
 func (m *AsyncCallMetrics) Created(ctx context.Context, verb schema.RefKey, origin string, remainingAttempts int64, maybeErr error) {
 	attrs := extractRefAttrs(verb, origin)
 	attrs = append(attrs, observability.SuccessOrFailureStatusAttr(maybeErr == nil))
