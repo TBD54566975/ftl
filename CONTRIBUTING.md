@@ -17,12 +17,6 @@ brew install orbstack
 ```
 or [OrbStack Website](https://orbstack.dev/)
 
-We use [dbmate](https://github.com/amacneil/dbmate) to manage migrations, so please install that if
-you don't have it already:
-```
-brew install dbmate
-```
-
 The tools used by this project are managed by
 [Hermit](https://cashapp.github.io/hermit/), a self-bootstrapping package
 installer. To activate the Hermit environment, cd into the source directory and
@@ -140,13 +134,7 @@ If you make any changes to the `sqlc` inputs, i.e. all the `sql/queries.sql` fil
 just build-sqlc
 ```
 
-We use [dbmate](https://github.com/amacneil/dbmate) to manage migrations, so please install that if
-you don't have it already:
-```
-brew install dbmate
-```
-
-To create a migration file, run `dbmate new` with the name of your migration. Example:
+We use [dbmate](https://github.com/amacneil/dbmate) to manage migrations. To create a migration file, run `dbmate new` with the name of your migration. Example:
 ```
 dbmate new create_users_table
 ```
