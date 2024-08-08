@@ -82,7 +82,9 @@ func extractEnumVariant(pass *analysis.Pass, node *ast.ValueSpec) {
 	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
 		variant.Comments = md.Comments
 	}
-	common.MarkMaybeValueEnumVariant(pass, obj, variant)
+	if typ, ok := common.GetObjectForNode(pass.TypesInfo, node.Type).Get(); ok {
+		common.MarkMaybeValueEnumVariant(pass, obj, variant, typ)
+	}
 }
 
 func extractValue(pass *analysis.Pass, cnode *types.Const) optional.Option[schema.Value] {

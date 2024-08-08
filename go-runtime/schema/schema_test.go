@@ -202,11 +202,21 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 				+typemap kotlin "com.foo.bar.NonFTLType"
 				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 
+			typealias PaymentState String
+
 			typealias TransitiveAliasAlias Any
 				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 
 			typealias TransitiveAliasType Any
 				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
+
+			enum PayinState: two.PaymentState {
+			  PayinPending = "PAYIN_PENDING"
+			}
+
+			enum PayoutState: two.PaymentState {
+			  PayoutPending = "PAYOUT_PENDING"
+			}
 
 			export enum TwoEnum: String {
 			  Blue = "Blue"
@@ -233,6 +243,11 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 
 			export data Payload<T> {
 			  body T
+			}
+
+			data Payment {
+			  in two.PayinState
+			  out two.PayoutState
 			}
 
 			export data User {

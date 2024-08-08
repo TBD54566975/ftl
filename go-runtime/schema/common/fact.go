@@ -71,6 +71,8 @@ func (*MaybeTypeEnumVariant) schemaFactValue() {}
 type MaybeValueEnumVariant struct {
 	// this variant
 	Variant *schema.EnumVariant
+	// type of the variant
+	Type types.Object
 }
 
 func (*MaybeValueEnumVariant) schemaFactValue() {}
@@ -152,9 +154,9 @@ func MarkMaybeTypeEnumVariant(pass *analysis.Pass, obj types.Object, variant *sc
 }
 
 // MarkMaybeValueEnumVariant marks the given object as a possible value enum variant.
-func MarkMaybeValueEnumVariant(pass *analysis.Pass, obj types.Object, variant *schema.EnumVariant) {
+func MarkMaybeValueEnumVariant(pass *analysis.Pass, obj types.Object, variant *schema.EnumVariant, typ types.Object) {
 	fact := newFact(pass, obj)
-	fact.Add(&MaybeValueEnumVariant{Variant: variant})
+	fact.Add(&MaybeValueEnumVariant{Variant: variant, Type: typ})
 	pass.ExportObjectFact(obj, fact)
 }
 
