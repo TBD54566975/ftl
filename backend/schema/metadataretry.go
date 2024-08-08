@@ -18,6 +18,7 @@ const (
 	DefaultRetryCount  = 10
 	MinBackoffLimitStr = "1s"
 	MinBackoffLimit    = 1 * time.Second
+	DefaultMaxBackoff  = 1 * time.Hour
 	MaxBackoffLimitStr = "1d"
 	MaxBackoffLimit    = 24 * time.Hour
 )
@@ -118,7 +119,7 @@ func (m *MetadataRetry) RetryParams() (RetryParams, error) {
 
 	// max backoff
 	if m.MaxBackoff == "" {
-		params.MaxBackoff = MaxBackoffLimit
+		params.MaxBackoff = max(minBackoff, DefaultMaxBackoff)
 	} else {
 		maxBackoff, err := parseRetryDuration(m.MaxBackoff)
 		if err != nil {
