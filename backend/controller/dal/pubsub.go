@@ -113,7 +113,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			MaxBackoff:        subscriber.MaxBackoff,
 			CatchVerb:         subscriber.CatchVerb,
 		})
-		observability.AsyncCalls.Created(ctx, subscriber.Sink, origin.String(), int64(subscriber.RetryAttempts), err)
+		observability.AsyncCalls.Created(ctx, subscriber.Sink, subscriber.CatchVerb, origin.String(), int64(subscriber.RetryAttempts), err)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))

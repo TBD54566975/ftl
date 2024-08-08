@@ -177,13 +177,18 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 		} else if call.RemainingAttempts == 0 && call.CatchVerb.Ok() {
 			// original error is the last error that occurred before we started to catch
 			originalError := call.Error.Default(result.Get())
+			//scheduledAt should be immediate if this is our first catch attempt, otherwise we should use backoff
+			scheduledAt := time.Now()
+			if call.Catching {
+				scheduledAt = scheduledAt.Add(call.Backoff)
+			}
 			_, err = d.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
 				ID:                call.ID,
 				Error:             result.Get(),
 				RemainingAttempts: 0,
 				Backoff:           call.Backoff, // maintain backoff
 				MaxBackoff:        call.MaxBackoff,
-				ScheduledAt:       time.Now().Add(call.Backoff),
+				ScheduledAt:       scheduledAt,
 				Catching:          true,
 				OriginalError:     optional.Some(originalError),
 			})

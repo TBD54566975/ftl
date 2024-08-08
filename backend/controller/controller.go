@@ -1380,11 +1380,11 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
 	} else if err != nil {
-		observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
+		observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
 		return 0, err
 	}
 
-	observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
+	observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, nil)
 
 	defer func() {
 		if returnErr == nil {
@@ -1414,7 +1414,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	if call.Catching {
 		// Retries have been exhausted but catch verb has previously failed
 		// We need to try again to catch the async call
-		return 0, s.catchAsyncCall(ctx, logger, call)
+		return 0, s.catchAsyncCall(ctx, logger, call, queueDepth)
 	}
 
 	logger.Tracef("Executing async call")
@@ -1426,34 +1426,34 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	var callResult either.Either[[]byte, string]
 	if err != nil {
 		logger.Warnf("Async call could not be called: %v", err)
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.Some("async call could not be called"))
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.Some("async call could not be called"))
 		callResult = either.RightOf[[]byte](err.Error())
 	} else if perr := resp.Msg.GetError(); perr != nil {
 		logger.Warnf("Async call failed: %s", perr.Message)
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.Some("async call failed"))
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.Some("async call failed"))
 		callResult = either.RightOf[[]byte](perr.Message)
 	} else {
 		logger.Debugf("Async call succeeded")
 		callResult = either.LeftOf[string](resp.Msg.GetBody())
-		observability.AsyncCalls.Executed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, optional.None[string]())
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.None[string]())
 	}
 
 	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx, isFinalResult bool) error {
 		return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
 	})
 	if err != nil {
-		observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, queueDepth, err)
+		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, err)
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
 	if didScheduleAnotherCall {
 		// Increment queue depth to model the next scheduled attempt
 		queueDepth++
 	}
-	observability.AsyncCalls.Completed(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, queueDepth, nil)
+	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, nil)
 	return 0, nil
 }
 
-func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *dal.AsyncCall) error {
+func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *dal.AsyncCall, queueDepth int64) error {
 	catchVerb, ok := call.CatchVerb.Get()
 	if !ok {
 		logger.Warnf("Async call %s could not catch, missing catch verb", call.Verb)
@@ -1479,17 +1479,19 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 		Body: body,
 	}
 	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), s.config.Advertise.String())
-	// TODO: add telemetry
 	var catchResult either.Either[[]byte, string]
 	if err != nil {
 		// Could not call catch verb
 		logger.Warnf("Async call %s could not call catch verb %s: %s", call.Verb, catchVerb, err)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call could not be called"))
 		catchResult = either.RightOf[[]byte](err.Error())
 	} else if perr := resp.Msg.GetError(); perr != nil {
 		// Catch verb failed
 		logger.Warnf("Async call %s had an error while catching (%s): %s", call.Verb, catchVerb, perr.Message)
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call failed"))
 		catchResult = either.RightOf[[]byte](perr.Message)
 	} else {
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.None[string]())
 		catchResult = either.LeftOf[string](resp.Msg.GetBody())
 	}
 	_, err = s.dal.CompleteAsyncCall(ctx, call, catchResult, func(tx *dal.Tx, isFinalResult bool) error {
@@ -1498,11 +1500,11 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	})
 	if err != nil {
 		logger.Errorf(err, "Async call %s could not complete after catching (%s)", call.Verb, catchVerb)
-		// TODO: add telemetry
+		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, err)
 		return fmt.Errorf("async call %s could not complete after catching (%s): %w", call.Verb, catchVerb, err)
 	}
-	// TODO: add telemetry
 	logger.Debugf("Caught async call %s with %s", call.Verb, catchVerb)
+	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, nil)
 	return nil
 }
 
