@@ -1,12 +1,12 @@
 package xyz.block.ftl;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+/**
+ * A concrete definition of a topic. Extend this interface and annotate with {@code @TopicDefinition} to define a topic,
+ * then inject this into verb methods to publish to the topic.
+ *
+ * @param <T>
+ */
+public interface Topic<T> {
 
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.PARAMETER)
-public @interface Topic {
-    String value();
+    <T> void publish(T object);
 }

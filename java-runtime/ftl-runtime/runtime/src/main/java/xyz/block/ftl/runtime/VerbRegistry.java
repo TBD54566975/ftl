@@ -8,6 +8,7 @@ import io.quarkus.arc.Arc;
 import io.quarkus.arc.InstanceHandle;
 import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
+import xyz.block.ftl.Topic;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
 
@@ -166,43 +167,5 @@ public class VerbRegistry {
         }
     }
 
-    public static class TopicSupplier implements BiFunction<ObjectMapper, CallRequest, Object> {
-
-        final String name;
-        final String callingVerb;
-
-        volatile FTLController ftlController;
-
-        public TopicSupplier(String name, String callingVerb) {
-            this.name = name;
-            this.callingVerb = callingVerb;
-        }
-
-        @Override
-        public Object apply(ObjectMapper mapper, CallRequest in) {
-            if (ftlController == null) {
-                ftlController = Arc.container().instance(FTLController.class).get();
-            }
-            return new Consumer<Object>() {
-                @Override
-                public void accept(Object o) {
-
-                    try {
-                        ftlController.publishEvent(name, callingVerb, mapper.writeValueAsBytes(o));
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            };
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getCallingVerb() {
-            return callingVerb;
-        }
-    }
 
 }

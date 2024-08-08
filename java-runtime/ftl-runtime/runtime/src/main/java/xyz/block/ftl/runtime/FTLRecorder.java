@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.annotations.Recorder;
 import org.checkerframework.checker.units.qual.C;
+import xyz.block.ftl.Topic;
 import xyz.block.ftl.v1.CallRequest;
 
 import java.lang.reflect.Type;
@@ -28,6 +29,21 @@ public class FTLRecorder {
     public void registerHttpIngress(String module, String verbName) {
         try {
             Arc.container().instance(VerbRegistry.class).get().register(module, verbName, Arc.container().instance(FTLHttpHandler.class).get());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public BiFunction<ObjectMapper, CallRequest, Object> topicSupplier(String className, String callingVerb) {
+        try {
+            var cls = Thread.currentThread().getContextClassLoader().loadClass(className.replace("/", "."));
+            var topic = (Topic<?>) cls.getDeclaredConstructor(String.class).newInstance(callingVerb);
+            return new BiFunction<ObjectMapper, CallRequest, Object>() {
+                @Override
+                public Object apply(ObjectMapper mapper, CallRequest callRequest) {
+                    return topic;
+                }
+            };
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

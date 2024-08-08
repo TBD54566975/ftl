@@ -38,11 +38,12 @@ import xyz.block.ftl.Cron;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.Subscription;
-import xyz.block.ftl.Topic;
+import xyz.block.ftl.TopicDefinition;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.runtime.FTLController;
 import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
+import xyz.block.ftl.runtime.TopicHelper;
 import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
@@ -92,6 +93,8 @@ class FtlProcessor {
     public static final DotName VERB = DotName.createSimple(Verb.class);
     public static final DotName CRON = DotName.createSimple(Cron.class);
     public static final DotName SUBSCRIPTION = DotName.createSimple(Subscription.class);
+    public static final DotName TPOIC = DotName.createSimple(Subscription.class);
+    public static final DotName TPOIC_DEFINITION = DotName.createSimple(TopicDefinition.class);
     public static final String BUILTIN = "builtin";
     public static final DotName CONSUMER = DotName.createSimple(Consumer.class);
 
@@ -115,7 +118,7 @@ class FtlProcessor {
     @BuildStep
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(VerbHandler.class, VerbRegistry.class, FTLHttpHandler.class, FTLController.class)
+                .addBeanClasses(VerbHandler.class, VerbRegistry.class, FTLHttpHandler.class, FTLController.class, TopicHelper.class)
                 .setUnremovable().build();
     }
 
@@ -141,14 +144,25 @@ class FtlProcessor {
                               FTLRecorder recorder,
                               ApplicationInfoBuildItem applicationInfoBuildItem,
                               OutputTargetBuildItem outputTargetBuildItem,
-                              ResteasyReactiveResourceMethodEntriesBuildItem restEndpoints) throws Exception {
+                              ResteasyReactiveResourceMethodEntriesBuildItem restEndpoints,
+                              TopicsBuildItem topics) throws Exception {
         String moduleName = applicationInfoBuildItem.getName();
         Module.Builder moduleBuilder = Module.newBuilder()
                 .setName(moduleName)
                 .setBuiltin(false);
         Map<TypeKey, Ref> dataElements = new HashMap<>();
-        ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements, new HashSet<>(), new HashSet<>(), new HashMap<>());
+        ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements, new HashSet<>(), new HashSet<>(), topics.getTopics());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
+
+        //register all the topics we are defining in the module definition
+
+        for (var topic : topics.getTopics().values()) {
+                extractionContext.moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
+                        .setExport(topic.exported())
+                        .setName(topic.topicName())
+                        .setEvent(buildType(extractionContext, topic.eventType())).build()));
+        }
+
         for (var verb : index.getIndex().getAnnotations(VERB)) {
             boolean exported = verb.target().hasAnnotation(EXPORT);
             var method = verb.target().asMethod();
@@ -289,34 +303,18 @@ class FtlProcessor {
                         context.moduleBuilder.addDecls(Decl.newBuilder().setSecret(xyz.block.ftl.v1.schema.Secret.newBuilder().setType(buildType(context, param.type())).setName(name)));
                         context.knownConfig.add(name);
                     }
-                } else if (param.hasAnnotation(Topic.class)) {
-                    if (!param.type().name().equals(CONSUMER)) {
-                        throw new RuntimeException("@Topic declarations must be of type " + CONSUMER);
-                    }
-                    var topicType = param.type().asParameterizedType().arguments().get(0);
+                } else if (context.knownTopics.containsKey(param.type().name())) {
+                   var topic =  context.knownTopics.get(param.type().name());
                     Class<?> paramType = loadClass(param.type());
                     parameterTypes.add(paramType);
-                    String name = param.annotation(Topic.class).value().asString();
-                    paramMappers.add(new VerbRegistry.TopicSupplier(name, verbName));
-                    org.jboss.jandex.Type existing = context.knownTopics.get(name);
-                    if (existing != null) {
-                        if (!existing.equals(param.type())) {
-                            throw new RuntimeException("Conflicting topic declarations for " + name);
-                        }
-                    } else {
-                        context.moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
-                                .setExport(param.hasAnnotation(Export.class))
-                                .setName(name)
-                                .setEvent(buildType(context, topicType)).build()));
-                        context.knownTopics.put(name, param.type());
-                    }
+                    paramMappers.add(context.recorder().topicSupplier(topic.generatedProducer().toString(), verbName));
                 } else if (bodyType != BodyType.DISALLOWED && bodyParamType == null) {
                     bodyParamType = param.type();
                     Class<?> paramType = loadClass(param.type());
                     parameterTypes.add(paramType);
                     paramMappers.add(new VerbRegistry.BodySupplier(paramType));
                 } else {
-                    throw new RuntimeException("Unknown parameter type on FTL method: " + method.declaringClass().name() + "." + method.name());
+                    throw new RuntimeException("Unknown parameter type " + param.type() +" on FTL method: " + method.declaringClass().name() + "." + method.name());
                 }
             }
             if (bodyParamType == null) {
@@ -470,6 +468,8 @@ class FtlProcessor {
         throw new RuntimeException("NOT YET IMPLEMENTED");
     }
 
+
+
     private void buildDataElement(ExtractionContext context, Data.Builder data, DotName className) {
         if (className == null || className.equals(DotName.OBJECT_NAME)) {
             return;
@@ -492,7 +492,7 @@ class FtlProcessor {
     record ExtractionContext(String moduleName, CombinedIndexBuildItem index, FTLRecorder recorder,
                              Module.Builder moduleBuilder,
                              Map<TypeKey, Ref> dataElements, Set<String> knownSecrets, Set<String> knownConfig,
-                             Map<String, org.jboss.jandex.Type> knownTopics) {
+                             Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics) {
     }
 
     enum BodyType {
