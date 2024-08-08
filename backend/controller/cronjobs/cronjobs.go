@@ -18,6 +18,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -202,6 +203,7 @@ func (s *Service) executeJob(ctx context.Context, job model.CronJob) {
 	requestJSON, err := json.Marshal(requestBody)
 	if err != nil {
 		logger.Errorf(err, "could not build body for cron job: %v", job.Key)
+		observability.Cron.JobFailedStart(ctx, job)
 		return
 	}
 
@@ -214,10 +216,16 @@ func (s *Service) executeJob(ctx context.Context, job model.CronJob) {
 
 	callCtx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
+	observability.Cron.JobStarted(ctx, job)
 	_, err = s.call(callCtx, req, optional.Some(requestKey), optional.None[model.RequestKey](), s.requestSource)
+
+	// Record execution success/failure metric now and leave post job-execution-action observability to logging
 	if err != nil {
 		logger.Errorf(err, "failed to execute cron job %v", job.Key)
+		observability.Cron.JobFailed(ctx, job)
 		// Do not return, continue to end the job and schedule the next execution
+	} else {
+		observability.Cron.JobSuccess(ctx, job)
 	}
 
 	schedule, err := cron.Parse(job.Schedule)
@@ -274,6 +282,7 @@ func (s *Service) killOldJobs(ctx context.Context) (time.Duration, error) {
 			continue
 		}
 		logger.Warnf("Killed stale cron job %s", stale.Key)
+		observability.Cron.JobKilled(ctx, stale)
 		updatedJobs = append(updatedJobs, updated)
 	}
 

@@ -158,11 +158,16 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			countValue := int(*s.Retry.Count)
 			count = &countValue
 		}
+		var catch *Ref
+		if s.Retry.Catch != nil {
+			catch = RefFromProto(s.Retry.Catch)
+		}
 		return &MetadataRetry{
 			Pos:        posFromProto(s.Retry.Pos),
 			Count:      count,
 			MinBackoff: s.Retry.MinBackoff,
 			MaxBackoff: s.Retry.MaxBackoff,
+			Catch:      catch,
 		}
 
 	case *schemapb.Metadata_Subscriber:

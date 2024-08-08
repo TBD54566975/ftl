@@ -21,6 +21,8 @@ const (
 	asyncCallMeterName                      = "ftl.async_call"
 	asyncCallOriginAttr                     = "ftl.async_call.origin"
 	asyncCallVerbRefAttr                    = "ftl.async_call.verb.ref"
+	asyncCallCatchVerbRefAttr               = "ftl.async_call.catch_verb.ref"
+	asyncCallIsCatchingAttr                 = "ftl.async_call.catching"
 	asyncCallTimeSinceScheduledAtBucketAttr = "ftl.async_call.time_since_scheduled_at_ms.bucket"
 	asyncCallRemainingAttemptsAttr          = "ftl.async_call.remaining_attempts"
 	asyncCallExecFailureModeAttr            = "ftl.async_call.execution.failure_mode"
@@ -87,13 +89,9 @@ func initAsyncCallMetrics() (*AsyncCallMetrics, error) {
 	return result, nil
 }
 
-func wrapErr(signalName string, err error) error {
-	return fmt.Errorf("failed to create %q signal: %w", signalName, err)
-}
-
-func (m *AsyncCallMetrics) Created(ctx context.Context, verb schema.RefKey, origin string, remainingAttempts int64, maybeErr error) {
-	attrs := extractRefAttrs(verb, origin)
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+func (m *AsyncCallMetrics) Created(ctx context.Context, verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, remainingAttempts int64, maybeErr error) {
+	attrs := extractRefAttrs(verb, catchVerb, origin, false)
+	attrs = append(attrs, observability.SuccessOrFailureStatusAttr(maybeErr == nil))
 	attrs = append(attrs, attribute.Int64(asyncCallRemainingAttemptsAttr, remainingAttempts))
 
 	m.created.Add(ctx, 1, metric.WithAttributes(attrs...))
@@ -103,17 +101,17 @@ func (m *AsyncCallMetrics) RecordQueueDepth(ctx context.Context, queueDepth int6
 	m.queueDepth.Record(ctx, queueDepth)
 }
 
-func (m *AsyncCallMetrics) Acquired(ctx context.Context, verb schema.RefKey, origin string, scheduledAt time.Time, maybeErr error) {
-	attrs := extractAsyncCallAttrs(verb, origin, scheduledAt)
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+func (m *AsyncCallMetrics) Acquired(ctx context.Context, verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool, maybeErr error) {
+	attrs := extractAsyncCallAttrs(verb, catchVerb, origin, scheduledAt, isCatching)
+	attrs = append(attrs, observability.SuccessOrFailureStatusAttr(maybeErr == nil))
 	m.acquired.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
-func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, origin string, scheduledAt time.Time, maybeFailureMode optional.Option[string]) {
-	attrs := extractAsyncCallAttrs(verb, origin, scheduledAt)
+func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool, maybeFailureMode optional.Option[string]) {
+	attrs := extractAsyncCallAttrs(verb, catchVerb, origin, scheduledAt, isCatching)
 
 	failureMode, ok := maybeFailureMode.Get()
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, !ok))
+	attrs = append(attrs, observability.SuccessOrFailureStatusAttr(!ok))
 	if ok {
 		attrs = append(attrs, attribute.String(asyncCallExecFailureModeAttr, failureMode))
 	}
@@ -121,11 +119,11 @@ func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, ori
 	m.executed.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
-func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, origin string, scheduledAt time.Time, queueDepth int64, maybeErr error) {
+func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool, queueDepth int64, maybeErr error) {
 	msToComplete := timeSinceMS(scheduledAt)
 
-	attrs := extractRefAttrs(verb, origin)
-	attrs = append(attrs, attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil))
+	attrs := extractRefAttrs(verb, catchVerb, origin, isCatching)
+	attrs = append(attrs, observability.SuccessOrFailureStatusAttr(maybeErr == nil))
 	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
 
 	attrs = append(attrs, attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, msToComplete)))
@@ -153,14 +151,19 @@ func RetrieveTraceContextFromContext(ctx context.Context) ([]byte, error) {
 	return jsonOc, nil
 }
 
-func extractAsyncCallAttrs(verb schema.RefKey, origin string, scheduledAt time.Time) []attribute.KeyValue {
-	return append(extractRefAttrs(verb, origin), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, timeSinceMS(scheduledAt))))
+func extractAsyncCallAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool) []attribute.KeyValue {
+	return append(extractRefAttrs(verb, catchVerb, origin, isCatching), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, timeSinceMS(scheduledAt))))
 }
 
-func extractRefAttrs(verb schema.RefKey, origin string) []attribute.KeyValue {
-	return []attribute.KeyValue{
+func extractRefAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, isCatching bool) []attribute.KeyValue {
+	attributes := []attribute.KeyValue{
 		attribute.String(observability.ModuleNameAttribute, verb.Module),
 		attribute.String(asyncCallVerbRefAttr, verb.String()),
 		attribute.String(asyncCallOriginAttr, origin),
+		attribute.Bool(asyncCallIsCatchingAttr, isCatching),
 	}
+	if catch, ok := catchVerb.Get(); ok {
+		attributes = append(attributes, attribute.String(asyncCallCatchVerbRefAttr, catch.String()))
+	}
+	return attributes
 }

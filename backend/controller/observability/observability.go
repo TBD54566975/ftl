@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"math"
 	"time"
-
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/noop"
 )
 
 var (
@@ -16,6 +13,7 @@ var (
 	Deployment *DeploymentMetrics
 	FSM        *FSMMetrics
 	PubSub     *PubSubMetrics
+	Cron       *CronMetrics
 )
 
 func init() {
@@ -32,20 +30,16 @@ func init() {
 	errs = errors.Join(errs, err)
 	PubSub, err = initPubSubMetrics()
 	errs = errors.Join(errs, err)
+	Cron, err = initCronMetrics()
+	errs = errors.Join(errs, err)
 
 	if err != nil {
 		panic(fmt.Errorf("could not initialize controller metrics: %w", errs))
 	}
 }
 
-//nolint:unparam
-func handleInt64CounterError(counter string, err error, errs error) (metric.Int64Counter, error) {
-	return noop.Int64Counter{}, errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
-}
-
-//nolint:unparam
-func handleInt64UpDownCounterError(counter string, err error, errs error) (metric.Int64UpDownCounter, error) {
-	return noop.Int64UpDownCounter{}, errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
+func wrapErr(signalName string, err error) error {
+	return fmt.Errorf("failed to create %q signal: %w", signalName, err)
 }
 
 func timeSinceMS(start time.Time) int64 {

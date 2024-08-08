@@ -469,8 +469,28 @@ FROM expired;
 SELECT expires_at, metadata FROM leases WHERE key = @key::lease_key;
 
 -- name: CreateAsyncCall :one
-INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, parent_request_key, trace_context)
-VALUES (@verb, @origin, @request, @remaining_attempts, @backoff::interval, @max_backoff::interval, @parent_request_key, @trace_context::jsonb)
+INSERT INTO async_calls (
+  verb,
+  origin,
+  request,
+  remaining_attempts,
+  backoff,
+  max_backoff,
+  catch_verb,
+  parent_request_key,
+  trace_context
+)
+VALUES (
+  @verb,
+  @origin,
+  @request,
+  @remaining_attempts,
+  @backoff::interval,
+  @max_backoff::interval,
+  @catch_verb,
+  @parent_request_key,
+  @trace_context::jsonb
+)
 RETURNING id;
 
 -- name: AsyncCallQueueDepth :one
@@ -507,19 +527,23 @@ RETURNING
   (SELECT count(*) FROM pending_calls) AS queue_depth,
   origin,
   verb,
+  catch_verb,
   request,
   scheduled_at,
   remaining_attempts,
+  error,
   backoff,
   max_backoff,
   parent_request_key,
-  trace_context;
+  trace_context,
+  catching;
 
 -- name: SucceedAsyncCall :one
 UPDATE async_calls
 SET
   state = 'success'::async_call_state,
-  response = @response::JSONB
+  response = @response::JSONB,
+  error = null
 WHERE id = @id
 RETURNING true;
 
@@ -539,10 +563,31 @@ WITH updated AS (
   WHERE id = @id::BIGINT
   RETURNING *
 )
-INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, scheduled_at)
-SELECT updated.verb, updated.origin, updated.request, @remaining_attempts, @backoff::interval, @max_backoff::interval, @scheduled_at::TIMESTAMPTZ
-  FROM updated
-  RETURNING true;
+INSERT INTO async_calls (
+  verb,
+  origin,
+  request,
+  catch_verb,
+  remaining_attempts,
+  backoff,
+  max_backoff,
+  scheduled_at,
+  catching,
+  error
+)
+SELECT
+  updated.verb,
+  updated.origin,
+  updated.request,
+  updated.catch_verb,
+  @remaining_attempts,
+  @backoff::interval,
+  @max_backoff::interval,
+  @scheduled_at::TIMESTAMPTZ,
+  @catching::bool,
+  @original_error
+FROM updated
+RETURNING true;
 
 -- name: LoadAsyncCall :one
 SELECT *
@@ -684,7 +729,8 @@ INSERT INTO topic_subscribers (
   sink,
   retry_attempts,
   backoff,
-  max_backoff
+  max_backoff,
+  catch_verb
 )
 VALUES (
   sqlc.arg('key')::subscriber_key,
@@ -699,7 +745,8 @@ VALUES (
   sqlc.arg('sink'),
   sqlc.arg('retry_attempts'),
   sqlc.arg('backoff')::interval,
-  sqlc.arg('max_backoff')::interval
+  sqlc.arg('max_backoff')::interval,
+  sqlc.arg('catch_verb')
 );
 
 -- name: PublishEventForTopic :exec
@@ -771,7 +818,8 @@ SELECT
   subscribers.sink as sink,
   subscribers.retry_attempts as retry_attempts,
   subscribers.backoff as backoff,
-  subscribers.max_backoff as max_backoff
+  subscribers.max_backoff as max_backoff,
+  subscribers.catch_verb as catch_verb
 FROM topic_subscribers as subscribers
 JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
 WHERE topic_subscriptions.key = sqlc.arg('key')::subscription_key

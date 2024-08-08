@@ -10,6 +10,7 @@ import (
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
@@ -203,9 +204,11 @@ func (*DirectiveCronJob) MustAnnotate() []ast.Node {
 type DirectiveRetry struct {
 	Pos token.Pos
 
-	Count      *int   `parser:"'retry' (@Number Whitespace)?"`
-	MinBackoff string `parser:"@(Number (?! Whitespace) Ident)?"`
-	MaxBackoff string `parser:"@(Number (?! Whitespace) Ident)?"`
+	Count       *int    `parser:"'retry' (@Number Whitespace)?"`
+	MinBackoff  string  `parser:"@(Number (?! Whitespace) Ident)?"`
+	MaxBackoff  string  `parser:"@(Number (?! Whitespace) Ident)?"`
+	CatchModule *string `parser:"('catch' (@Ident '.')?"`
+	CatchVerb   *string `parser:"@Ident)?"`
 }
 
 func (*DirectiveRetry) directive() {}
@@ -219,6 +222,9 @@ func (d *DirectiveRetry) String() string {
 	if len(d.MaxBackoff) > 0 {
 		components = append(components, d.MaxBackoff)
 	}
+	if catch, ok := d.Catch().Get(); ok {
+		components = append(components, fmt.Sprintf("catch %v", catch))
+	}
 	return strings.Join(components, " ")
 }
 func (*DirectiveRetry) GetTypeName() string { return "retry" }
@@ -230,6 +236,20 @@ func (d *DirectiveRetry) GetPosition() token.Pos {
 }
 func (*DirectiveRetry) MustAnnotate() []ast.Node {
 	return []ast.Node{&ast.FuncDecl{}, &ast.GenDecl{}}
+}
+
+func (d *DirectiveRetry) Catch() optional.Option[schema.Ref] {
+	if d.CatchVerb == nil {
+		return optional.None[schema.Ref]()
+	}
+	var module string
+	if d.CatchModule != nil {
+		module = *d.CatchModule
+	}
+	return optional.Some[schema.Ref](schema.Ref{
+		Module: module,
+		Name:   *d.CatchVerb,
+	})
 }
 
 // DirectiveSubscriber is used to subscribe a sink to a subscription

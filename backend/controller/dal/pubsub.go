@@ -134,8 +134,9 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			MaxBackoff:        subscriber.MaxBackoff,
 			ParentRequestKey:  nextCursor.RequestKey,
 			TraceContext:      nextCursor.TraceContext,
+			CatchVerb:         subscriber.CatchVerb,
 		})
-		observability.AsyncCalls.Created(ctx, subscriber.Sink, origin.String(), int64(subscriber.RetryAttempts), err)
+		observability.AsyncCalls.Created(ctx, subscriber.Sink, subscriber.CatchVerb, origin.String(), int64(subscriber.RetryAttempts), err)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
 			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
@@ -301,6 +302,7 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 				RetryAttempts:    int32(retryParams.Count),
 				Backoff:          retryParams.MinBackoff,
 				MaxBackoff:       retryParams.MaxBackoff,
+				CatchVerb:        retryParams.Catch,
 			})
 			if err != nil {
 				return fmt.Errorf("could not insert subscriber: %w", dalerrs.TranslatePGError(err))

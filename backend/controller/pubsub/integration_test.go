@@ -94,16 +94,43 @@ func TestRetry(t *testing.T) {
 
 		in.Sleep(time.Second*6),
 
-		// check that there are the right amount of failed async calls
+		// check that there are the right amount of failed async calls to the verb
 		in.QueryRow("ftl",
 			fmt.Sprintf(`
 				SELECT COUNT(*)
 				FROM async_calls
 				WHERE
 					state = 'error'
+					AND catching = false
 					AND origin = '%s'
 		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
 			1+retriesPerCall),
+
+		// check that there is one failed attempt to catch (we purposely fail the first one)
+		in.QueryRow("ftl",
+			fmt.Sprintf(`
+			SELECT COUNT(*)
+			FROM async_calls
+			WHERE
+				state = 'error'
+				AND error = 'call to verb subscriber.catch failed: catching error'
+				AND catching = true
+				AND origin = '%s'
+	`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
+			1),
+
+		// check that there is one successful attempt to catch (we succeed the second one as long as we receive the correct error in the request)
+		in.QueryRow("ftl",
+			fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM async_calls
+		WHERE
+			state = 'success'
+			AND error IS NULL
+			AND catching = true
+			AND origin = '%s'
+`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
+			1),
 	)
 }
 

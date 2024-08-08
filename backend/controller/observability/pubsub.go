@@ -2,7 +2,6 @@ package observability
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/alecthomas/types/optional"
@@ -31,51 +30,46 @@ const (
 )
 
 type PubSubMetrics struct {
-	meter             metric.Meter
 	published         metric.Int64Counter
 	propagationFailed metric.Int64Counter
 	sinkCalled        metric.Int64Counter
 }
 
 func initPubSubMetrics() (*PubSubMetrics, error) {
-	result := &PubSubMetrics{}
-	var errs error
-	var err error
+	result := &PubSubMetrics{
+		published:         noop.Int64Counter{},
+		propagationFailed: noop.Int64Counter{},
+		sinkCalled:        noop.Int64Counter{},
+	}
 
-	result.meter = otel.Meter(pubsubMeterName)
+	var err error
+	meter := otel.Meter(pubsubMeterName)
 
 	counterName := fmt.Sprintf("%s.published", pubsubMeterName)
-	if result.published, err = result.meter.Int64Counter(
+	if result.published, err = meter.Int64Counter(
 		counterName,
 		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that an event is published to a topic")); err != nil {
-		errs = handleInitCounterError(errs, err, counterName)
-		result.published = noop.Int64Counter{}
+		return nil, wrapErr(counterName, err)
 	}
 
 	counterName = fmt.Sprintf("%s.propagation.failed", pubsubMeterName)
-	if result.propagationFailed, err = result.meter.Int64Counter(
+	if result.propagationFailed, err = meter.Int64Counter(
 		counterName,
 		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that subscriptions fail to progress")); err != nil {
-		errs = handleInitCounterError(errs, err, counterName)
-		result.propagationFailed = noop.Int64Counter{}
+		return nil, wrapErr(counterName, err)
 	}
 
 	counterName = fmt.Sprintf("%s.sink.called", pubsubMeterName)
-	if result.sinkCalled, err = result.meter.Int64Counter(
+	if result.sinkCalled, err = meter.Int64Counter(
 		counterName,
 		metric.WithUnit("1"),
 		metric.WithDescription("the number of times that a pubsub event has been enqueued to asynchronously send to a subscriber")); err != nil {
-		errs = handleInitCounterError(errs, err, counterName)
-		result.sinkCalled = noop.Int64Counter{}
+		return nil, wrapErr(counterName, err)
 	}
 
-	return result, errs
-}
-
-func handleInitCounterError(errs error, err error, counterName string) error {
-	return errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counterName, err))
+	return result, nil
 }
 
 func (m *PubSubMetrics) Published(ctx context.Context, module, topic, caller string, maybeErr error) {
@@ -83,7 +77,7 @@ func (m *PubSubMetrics) Published(ctx context.Context, module, topic, caller str
 		attribute.String(observability.ModuleNameAttribute, module),
 		attribute.String(pubsubTopicRefAttr, schema.RefKey{Module: module, Name: topic}.String()),
 		attribute.String(pubsubCallerVerbRefAttr, schema.RefKey{Module: module, Name: caller}.String()),
-		attribute.Bool(observability.StatusSucceededAttribute, maybeErr == nil),
+		observability.SuccessOrFailureStatusAttr(maybeErr == nil),
 	}
 
 	m.published.Add(ctx, 1, metric.WithAttributes(attrs...))

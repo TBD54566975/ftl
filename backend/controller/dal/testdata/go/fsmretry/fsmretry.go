@@ -3,6 +3,7 @@ package fsmretry
 import (
 	"context"
 	"fmt"
+	"ftl/builtin"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
@@ -19,7 +20,8 @@ type StartEvent struct {
 }
 
 type TransitionToTwoEvent struct {
-	ID string `json:"id"`
+	ID        string `json:"id"`
+	FailCatch bool
 }
 
 type TransitionToThreeEvent struct {
@@ -32,9 +34,17 @@ func State1(ctx context.Context, in StartEvent) error {
 }
 
 //ftl:verb
-//ftl:retry 2 2s 2s
+//ftl:retry 2 2s 2s catch catchState2
 func State2(ctx context.Context, in TransitionToTwoEvent) error {
 	return fmt.Errorf("transition will never succeed")
+}
+
+//ftl:verb
+func CatchState2(ctx context.Context, in builtin.CatchRequest[TransitionToTwoEvent]) error {
+	if in.Request.FailCatch {
+		return fmt.Errorf("catching failed as requested by event")
+	}
+	return nil
 }
 
 // State3 will have its retry policy defaulted to the fsm one

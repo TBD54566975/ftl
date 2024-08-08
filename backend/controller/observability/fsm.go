@@ -2,7 +2,6 @@ package observability
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"go.opentelemetry.io/otel"
@@ -21,45 +20,43 @@ const (
 )
 
 type FSMMetrics struct {
-	meter              metric.Meter
 	instancesActive    metric.Int64UpDownCounter
 	transitionsActive  metric.Int64UpDownCounter
 	transitionAttempts metric.Int64Counter
 }
 
 func initFSMMetrics() (*FSMMetrics, error) {
-	result := &FSMMetrics{}
+	result := &FSMMetrics{
+		instancesActive:    noop.Int64UpDownCounter{},
+		transitionsActive:  noop.Int64UpDownCounter{},
+		transitionAttempts: noop.Int64Counter{},
+	}
 
-	var errs error
 	var err error
+	meter := otel.Meter(fsmMeterName)
 
-	result.meter = otel.Meter(fsmMeterName)
-
-	counter := fmt.Sprintf("%s.instances.active", fsmMeterName)
-	if result.instancesActive, err = result.meter.Int64UpDownCounter(
-		counter,
+	signalName := fmt.Sprintf("%s.instances.active", fsmMeterName)
+	if result.instancesActive, err = meter.Int64UpDownCounter(
+		signalName,
 		metric.WithDescription("counts the number of active FSM instances")); err != nil {
-		errs = joinInitErrors(counter, err, errs)
-		result.instancesActive = noop.Int64UpDownCounter{}
+		return nil, wrapErr(signalName, err)
 	}
 
-	counter = fmt.Sprintf("%s.transitions.active", fsmMeterName)
-	if result.transitionsActive, err = result.meter.Int64UpDownCounter(
-		counter,
+	signalName = fmt.Sprintf("%s.transitions.active", fsmMeterName)
+	if result.transitionsActive, err = meter.Int64UpDownCounter(
+		signalName,
 		metric.WithDescription("counts the number of active FSM transitions")); err != nil {
-		errs = joinInitErrors(counter, err, errs)
-		result.transitionsActive = noop.Int64UpDownCounter{}
+		return nil, wrapErr(signalName, err)
 	}
 
-	counter = fmt.Sprintf("%s.transitions.attempts", fsmMeterName)
-	if result.transitionAttempts, err = result.meter.Int64Counter(
-		counter,
+	signalName = fmt.Sprintf("%s.transitions.attempts", fsmMeterName)
+	if result.transitionAttempts, err = meter.Int64Counter(
+		signalName,
 		metric.WithDescription("counts the number of attempted FSM transitions")); err != nil {
-		errs = joinInitErrors(counter, err, errs)
-		result.transitionAttempts = noop.Int64Counter{}
+		return nil, wrapErr(signalName, err)
 	}
 
-	return result, errs
+	return result, nil
 }
 
 func (m *FSMMetrics) InstanceCreated(ctx context.Context, fsm schema.RefKey) {
@@ -89,8 +86,4 @@ func (m *FSMMetrics) TransitionCompleted(ctx context.Context, fsm schema.RefKey)
 	m.transitionsActive.Add(ctx, -1, metric.WithAttributes(
 		attribute.String(observability.ModuleNameAttribute, fsm.Module),
 		attribute.String(fsmRefAttribute, fsm.String())))
-}
-
-func joinInitErrors(counter string, err error, errs error) error {
-	return errors.Join(errs, fmt.Errorf("%q counter init failed; falling back to noop: %w", counter, err))
 }
