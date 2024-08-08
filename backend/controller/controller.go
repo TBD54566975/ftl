@@ -1393,7 +1393,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 
 	// Extract the otel context from the call
 	var oc propagation.MapCarrier
-	err = json.Unmarshal(call.OtelContext, &oc)
+	err = json.Unmarshal(call.TraceContext, &oc)
 	if err != nil {
 		observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, err)
 		return 0, fmt.Errorf("failed to unmarshal otel context: %w", err)

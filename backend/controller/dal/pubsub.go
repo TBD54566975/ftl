@@ -47,13 +47,13 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 	}
 
 	err = d.db.PublishEventForTopic(ctx, sql.PublishEventForTopicParams{
-		Key:         model.NewTopicEventKey(module, topic),
-		Module:      module,
-		Topic:       topic,
-		Caller:      caller,
-		Payload:     encryptedPayload,
-		RequestKey:  requestKey,
-		OtelContext: jsonOc,
+		Key:          model.NewTopicEventKey(module, topic),
+		Module:       module,
+		Topic:        topic,
+		Caller:       caller,
+		Payload:      encryptedPayload,
+		RequestKey:   requestKey,
+		TraceContext: jsonOc,
 	})
 	observability.PubSub.Published(ctx, module, topic, caller, err)
 	if err != nil {
@@ -137,7 +137,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,
 			ParentRequestKey:  nextCursor.RequestKey,
-			OtelContext:       nextCursor.OtelContext,
+			TraceContext:      nextCursor.TraceContext,
 		})
 		observability.AsyncCalls.Created(ctx, subscriber.Sink, origin.String(), int64(subscriber.RetryAttempts), err)
 		if err != nil {

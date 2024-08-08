@@ -50,7 +50,7 @@ RETURNING
   backoff,
   max_backoff,
   parent_request_key,
-  otel_context
+  trace_context
 `
 
 type AcquireAsyncCallRow struct {
@@ -66,7 +66,7 @@ type AcquireAsyncCallRow struct {
 	Backoff             time.Duration
 	MaxBackoff          time.Duration
 	ParentRequestKey    optional.Option[string]
-	OtelContext         []byte
+	TraceContext        []byte
 }
 
 // Reserve a pending async call for execution, returning the associated lease
@@ -87,7 +87,7 @@ func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (Acqu
 		&i.Backoff,
 		&i.MaxBackoff,
 		&i.ParentRequestKey,
-		&i.OtelContext,
+		&i.TraceContext,
 	)
 	return i, err
 }
@@ -129,7 +129,7 @@ func (q *Queries) AsyncCallQueueDepth(ctx context.Context) (int64, error) {
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-  SELECT id, created_at, key, topic_id, payload, caller, request_key, otel_context
+  SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
   FROM topic_events
   WHERE "key" = $2::topic_event_key
 )
@@ -176,7 +176,7 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 }
 
 const createAsyncCall = `-- name: CreateAsyncCall :one
-INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, parent_request_key, otel_context)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, parent_request_key, trace_context)
 VALUES ($1, $2, $3, $4, $5::interval, $6::interval, $7, $8::jsonb)
 RETURNING id
 `
@@ -189,7 +189,7 @@ type CreateAsyncCallParams struct {
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
 	ParentRequestKey  optional.Option[string]
-	OtelContext       []byte
+	TraceContext      []byte
 }
 
 func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error) {
@@ -201,7 +201,7 @@ func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams
 		arg.Backoff,
 		arg.MaxBackoff,
 		arg.ParentRequestKey,
-		arg.OtelContext,
+		arg.TraceContext,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -485,7 +485,7 @@ WITH updated AS (
   SET state = 'error'::async_call_state,
       error = $5::TEXT
   WHERE id = $6::BIGINT
-  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, parent_request_key, otel_context
+  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, parent_request_key, trace_context
 )
 INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, scheduled_at)
 SELECT updated.verb, updated.origin, updated.request, $1, $2::interval, $3::interval, $4::TIMESTAMPTZ
@@ -1307,7 +1307,7 @@ SELECT events."key" as event,
         events.created_at,
         events.caller,
         events.request_key,
-        events.otel_context,
+        events.trace_context,
         NOW() - events.created_at >= $1::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id
@@ -1318,13 +1318,13 @@ LIMIT 1
 `
 
 type GetNextEventForSubscriptionRow struct {
-	Event       optional.Option[model.TopicEventKey]
-	Payload     []byte
-	CreatedAt   optional.Option[time.Time]
-	Caller      optional.Option[string]
-	RequestKey  optional.Option[string]
-	OtelContext []byte
-	Ready       bool
+	Event        optional.Option[model.TopicEventKey]
+	Payload      []byte
+	CreatedAt    optional.Option[time.Time]
+	Caller       optional.Option[string]
+	RequestKey   optional.Option[string]
+	TraceContext []byte
+	Ready        bool
 }
 
 func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDelay time.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
@@ -1336,7 +1336,7 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 		&i.CreatedAt,
 		&i.Caller,
 		&i.RequestKey,
-		&i.OtelContext,
+		&i.TraceContext,
 		&i.Ready,
 	)
 	return i, err
@@ -1773,7 +1773,7 @@ func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
 }
 
 const getTopicEvent = `-- name: GetTopicEvent :one
-SELECT id, created_at, key, topic_id, payload, caller, request_key, otel_context
+SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
 FROM topic_events
 WHERE id = $1::BIGINT
 `
@@ -1789,7 +1789,7 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 		&i.Payload,
 		&i.Caller,
 		&i.RequestKey,
-		&i.OtelContext,
+		&i.TraceContext,
 	)
 	return i, err
 }
@@ -2097,7 +2097,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, parent_request_key, otel_context
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, parent_request_key, trace_context
 FROM async_calls
 WHERE id = $1
 `
@@ -2120,7 +2120,7 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.Backoff,
 		&i.MaxBackoff,
 		&i.ParentRequestKey,
-		&i.OtelContext,
+		&i.TraceContext,
 	)
 	return i, err
 }
@@ -2155,7 +2155,7 @@ INSERT INTO topic_events (
     caller,
     payload,
     request_key,
-    otel_context
+    trace_context
   )
 VALUES (
   $1::topic_event_key,
@@ -2174,13 +2174,13 @@ VALUES (
 `
 
 type PublishEventForTopicParams struct {
-	Key         model.TopicEventKey
-	Module      string
-	Topic       string
-	Caller      string
-	Payload     []byte
-	RequestKey  string
-	OtelContext []byte
+	Key          model.TopicEventKey
+	Module       string
+	Topic        string
+	Caller       string
+	Payload      []byte
+	RequestKey   string
+	TraceContext []byte
 }
 
 func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error {
@@ -2191,7 +2191,7 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 		arg.Caller,
 		arg.Payload,
 		arg.RequestKey,
-		arg.OtelContext,
+		arg.TraceContext,
 	)
 	return err
 }

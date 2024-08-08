@@ -469,8 +469,8 @@ FROM expired;
 SELECT expires_at, metadata FROM leases WHERE key = @key::lease_key;
 
 -- name: CreateAsyncCall :one
-INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, parent_request_key, otel_context)
-VALUES (@verb, @origin, @request, @remaining_attempts, @backoff::interval, @max_backoff::interval, @parent_request_key, @otel_context::jsonb)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, parent_request_key, trace_context)
+VALUES (@verb, @origin, @request, @remaining_attempts, @backoff::interval, @max_backoff::interval, @parent_request_key, @trace_context::jsonb)
 RETURNING id;
 
 -- name: AsyncCallQueueDepth :one
@@ -513,7 +513,7 @@ RETURNING
   backoff,
   max_backoff,
   parent_request_key,
-  otel_context;
+  trace_context;
 
 -- name: SucceedAsyncCall :one
 UPDATE async_calls
@@ -709,7 +709,7 @@ INSERT INTO topic_events (
     caller,
     payload,
     request_key,
-    otel_context
+    trace_context
   )
 VALUES (
   sqlc.arg('key')::topic_event_key,
@@ -723,7 +723,7 @@ VALUES (
   sqlc.arg('caller')::TEXT,
   sqlc.arg('payload'),
   sqlc.arg('request_key')::TEXT,
-  sqlc.arg('otel_context')::jsonb
+  sqlc.arg('trace_context')::jsonb
 );
 
 -- name: GetSubscriptionsNeedingUpdate :many
@@ -757,7 +757,7 @@ SELECT events."key" as event,
         events.created_at,
         events.caller,
         events.request_key,
-        events.otel_context,
+        events.trace_context,
         NOW() - events.created_at >= sqlc.arg('consumption_delay')::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id

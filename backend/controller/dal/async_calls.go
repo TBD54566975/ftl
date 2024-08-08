@@ -79,7 +79,7 @@ type AsyncCall struct {
 	ScheduledAt      time.Time
 	QueueDepth       int64
 	ParentRequestKey optional.Option[string]
-	OtelContext      []byte
+	TraceContext     []byte
 
 	RemainingAttempts int32
 	Backoff           time.Duration
@@ -126,7 +126,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		ScheduledAt:       row.ScheduledAt,
 		QueueDepth:        row.QueueDepth,
 		ParentRequestKey:  row.ParentRequestKey,
-		OtelContext:       row.OtelContext,
+		TraceContext:      row.TraceContext,
 		RemainingAttempts: row.RemainingAttempts,
 		Backoff:           row.Backoff,
 		MaxBackoff:        row.MaxBackoff,

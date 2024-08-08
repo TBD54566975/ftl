@@ -383,7 +383,7 @@ type AsyncCall struct {
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
 	ParentRequestKey  optional.Option[string]
-	OtelContext       []byte
+	TraceContext      []byte
 }
 
 type Controller struct {
@@ -521,14 +521,14 @@ type Topic struct {
 }
 
 type TopicEvent struct {
-	ID          int64
-	CreatedAt   time.Time
-	Key         model.TopicEventKey
-	TopicID     int64
-	Payload     []byte
-	Caller      optional.Option[string]
-	RequestKey  optional.Option[string]
-	OtelContext []byte
+	ID           int64
+	CreatedAt    time.Time
+	Key          model.TopicEventKey
+	TopicID      int64
+	Payload      []byte
+	Caller       optional.Option[string]
+	RequestKey   optional.Option[string]
+	TraceContext []byte
 }
 
 type TopicSubscriber struct {
