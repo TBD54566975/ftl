@@ -101,9 +101,9 @@ message FSM {
   optional Position pos = 1;
   repeated string comments = 2;
   string name = 3;
-  repeated Metadata metadata = 4;
-  repeated Ref start = 5;
-  repeated FSMTransition transitions = 6;
+  repeated Ref start = 4;
+  repeated FSMTransition transitions = 5;
+  repeated Metadata metadata = 6;
 }
 
 message FSMTransition {

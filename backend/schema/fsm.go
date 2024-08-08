@@ -16,9 +16,9 @@ type FSM struct {
 
 	Comments    []string         `parser:"@Comment*" protobuf:"2"`
 	Name        string           `parser:"'fsm' @Ident " protobuf:"3"`
-	Metadata    []Metadata       `parser:"@@*" protobuf:"4"`
-	Start       []*Ref           `parser:"'{' ('start' @@)*" protobuf:"5"` // Start states.
-	Transitions []*FSMTransition `parser:"('transition' @@)* '}'" protobuf:"6"`
+	Metadata    []Metadata       `parser:"@@*" protobuf:"6"`
+	Start       []*Ref           `parser:"'{' ('start' @@)*" protobuf:"4"` // Start states.
+	Transitions []*FSMTransition `parser:"('transition' @@)* '}'" protobuf:"5"`
 }
 
 func FSMFromProto(pb *schemapb.FSM) *FSM {
