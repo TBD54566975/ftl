@@ -1,8 +1,19 @@
 package reflect
 
 import (
+	"container/list"
 	"testing"
+
+	"gotest.tools/v3/assert"
 )
+
+func TestListElements(t *testing.T) {
+	l := list.New()
+	l.PushBack("one")
+	output := DeepCopy(l)
+	assert.Equal(t, output.Front().Value, l.Front().Value)
+	assert.Equal(t, output.Len(), l.Len())
+}
 
 type structOfPointers struct {
 	intPtr    *int
