@@ -2,13 +2,13 @@ package sqltest
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/internal/flock"
@@ -16,7 +16,7 @@ import (
 
 // OpenForTesting opens a database connection for testing, recreating the
 // database beforehand.
-func OpenForTesting(ctx context.Context, t testing.TB) *pgxpool.Pool {
+func OpenForTesting(ctx context.Context, t testing.TB) *sql.DB {
 	t.Helper()
 	// Acquire lock for this DB.
 	lockPath := filepath.Join(os.TempDir(), "ftl-db-test.lock")

@@ -2,10 +2,9 @@ package sql
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type DBI interface {
@@ -16,7 +15,7 @@ type DBI interface {
 
 type ConnI interface {
 	DBTX
-	Begin(ctx context.Context) (pgx.Tx, error)
+	Begin() (*sql.Tx, error)
 }
 
 type DB struct {
@@ -31,32 +30,36 @@ func NewDB(conn ConnI) *DB {
 func (d *DB) Conn() ConnI { return d.conn }
 
 func (d *DB) Begin(ctx context.Context) (*Tx, error) {
-	tx, err := d.conn.Begin(ctx)
+	tx, err := d.conn.Begin()
 	if err != nil {
 		return nil, err
 	}
 	return &Tx{tx: tx, Queries: New(tx)}, nil
 }
 
+type noopSubConn struct {
+	DBTX
+}
+
+func (noopSubConn) Begin() (*sql.Tx, error) {
+	return nil, errors.New("sql: not implemented")
+}
+
 type Tx struct {
-	tx pgx.Tx
+	tx *sql.Tx
 	*Queries
 }
 
-func (t *Tx) Conn() ConnI { return t.tx }
+func (t *Tx) Conn() ConnI { return noopSubConn{t.tx} }
 
-func (t *Tx) Tx() pgx.Tx { return t.tx }
+func (t *Tx) Tx() *sql.Tx { return t.tx }
 
 func (t *Tx) Begin(ctx context.Context) (*Tx, error) {
-	_, err := t.tx.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("beginning transaction: %w", err)
-	}
-	return &Tx{tx: t.tx, Queries: t.Queries}, nil
+	return nil, fmt.Errorf("cannot nest transactions")
 }
 
 func (t *Tx) Commit(ctx context.Context) error {
-	err := t.tx.Commit(ctx)
+	err := t.tx.Commit()
 	if err != nil {
 		return fmt.Errorf("committing transaction: %w", err)
 	}
@@ -65,7 +68,7 @@ func (t *Tx) Commit(ctx context.Context) error {
 }
 
 func (t *Tx) Rollback(ctx context.Context) error {
-	err := t.tx.Rollback(ctx)
+	err := t.tx.Rollback()
 	if err != nil {
 		return fmt.Errorf("rolling back transaction: %w", err)
 	}

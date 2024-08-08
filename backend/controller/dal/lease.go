@@ -9,9 +9,11 @@ import (
 
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -44,7 +46,7 @@ func (l *Lease) renew(ctx context.Context, cancelCtx context.CancelFunc) {
 		case <-time.After(leaseRenewalInterval):
 			logger.Tracef("Renewing lease")
 			ctx, cancel := context.WithTimeout(ctx, leaseRenewalInterval)
-			_, err := l.db.RenewLease(ctx, l.ttl, l.idempotencyKey, l.key)
+			_, err := l.db.RenewLease(ctx, sqltypes.Duration(l.ttl), l.idempotencyKey, l.key)
 			cancel()
 
 			if err != nil {
@@ -94,7 +96,7 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 			return nil, nil, fmt.Errorf("failed to marshal lease metadata: %w", err)
 		}
 	}
-	idempotencyKey, err := d.db.NewLease(ctx, key, ttl, metadataBytes)
+	idempotencyKey, err := d.db.NewLease(ctx, key, sqltypes.Duration(ttl), pqtype.NullRawMessage{RawMessage: metadataBytes})
 	if err != nil {
 		err = dalerrs.TranslatePGError(err)
 		if errors.Is(err, dalerrs.ErrConflict) {
@@ -128,7 +130,7 @@ func (d *DAL) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (e
 	if err != nil {
 		return expiry, dalerrs.TranslatePGError(err)
 	}
-	if err := json.Unmarshal(l.Metadata, metadata); err != nil {
+	if err := json.Unmarshal(l.Metadata.RawMessage, metadata); err != nil {
 		return expiry, fmt.Errorf("could not unmarshal lease metadata: %w", err)
 	}
 	return l.ExpiresAt, nil

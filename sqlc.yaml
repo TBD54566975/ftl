@@ -12,7 +12,6 @@ sql:
     gen:
       go: &gengo
         package: "sql"
-        sql_package: "pgx/v5"
         out: "backend/controller/sql"
         emit_interface: true
         query_parameter_limit: 3
@@ -26,11 +25,11 @@ sql:
           - db_type: "timestamptz"
             go_type: "time.Time"
           - db_type: "pg_catalog.interval"
-            go_type: "time.Duration"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/sql/sqltypes.Duration"
           - db_type: "pg_catalog.interval"
             nullable: true
             go_type:
-              type: "optional.Option[time.Duration]"
+              type: "optional.Option[sqltypes.Duration]"
           - db_type: "module_schema_pb"
             go_type: "*github.com/TBD54566975/ftl/backend/schema.Module"
           - db_type: "timestamptz"

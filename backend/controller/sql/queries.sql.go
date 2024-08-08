@@ -11,10 +11,13 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
+	"github.com/sqlc-dev/pqtype"
 )
 
 const acquireAsyncCall = `-- name: AcquireAsyncCall :one
@@ -64,21 +67,21 @@ type AcquireAsyncCallRow struct {
 	Origin              string
 	Verb                schema.RefKey
 	CatchVerb           optional.Option[schema.RefKey]
-	Request             []byte
+	Request             json.RawMessage
 	ScheduledAt         time.Time
 	RemainingAttempts   int32
 	Error               optional.Option[string]
-	Backoff             time.Duration
-	MaxBackoff          time.Duration
+	Backoff             sqltypes.Duration
+	MaxBackoff          sqltypes.Duration
 	ParentRequestKey    optional.Option[string]
-	TraceContext        []byte
+	TraceContext        pqtype.NullRawMessage
 	Catching            bool
 }
 
 // Reserve a pending async call for execution, returning the associated lease
 // reservation key and accompanying metadata.
-func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl time.Duration) (AcquireAsyncCallRow, error) {
-	row := q.db.QueryRow(ctx, acquireAsyncCall, ttl)
+func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl sqltypes.Duration) (AcquireAsyncCallRow, error) {
+	row := q.db.QueryRowContext(ctx, acquireAsyncCall, ttl)
 	var i AcquireAsyncCallRow
 	err := row.Scan(
 		&i.AsyncCallID,
@@ -114,7 +117,7 @@ type AssociateArtefactWithDeploymentParams struct {
 }
 
 func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error {
-	_, err := q.db.Exec(ctx, associateArtefactWithDeployment,
+	_, err := q.db.ExecContext(ctx, associateArtefactWithDeployment,
 		arg.Key,
 		arg.ArtefactID,
 		arg.Executable,
@@ -130,7 +133,7 @@ WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
 `
 
 func (q *Queries) AsyncCallQueueDepth(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, asyncCallQueueDepth)
+	row := q.db.QueryRowContext(ctx, asyncCallQueueDepth)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -149,7 +152,7 @@ WHERE key = $1::subscription_key
 `
 
 func (q *Queries) BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error {
-	_, err := q.db.Exec(ctx, beginConsumingTopicEvent, subscription, event)
+	_, err := q.db.ExecContext(ctx, beginConsumingTopicEvent, subscription, event)
 	return err
 }
 
@@ -166,7 +169,7 @@ WHERE name = $1::TEXT
 `
 
 func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string, module string) error {
-	_, err := q.db.Exec(ctx, completeEventForSubscription, name, module)
+	_, err := q.db.ExecContext(ctx, completeEventForSubscription, name, module)
 	return err
 }
 
@@ -178,7 +181,7 @@ RETURNING id
 
 // Create a new artefact and return the artefact ID.
 func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error) {
-	row := q.db.QueryRow(ctx, createArtefact, digest, content)
+	row := q.db.QueryRowContext(ctx, createArtefact, digest, content)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -213,17 +216,17 @@ RETURNING id
 type CreateAsyncCallParams struct {
 	Verb              schema.RefKey
 	Origin            string
-	Request           []byte
+	Request           json.RawMessage
 	RemainingAttempts int32
-	Backoff           time.Duration
-	MaxBackoff        time.Duration
+	Backoff           sqltypes.Duration
+	MaxBackoff        sqltypes.Duration
 	CatchVerb         optional.Option[schema.RefKey]
 	ParentRequestKey  optional.Option[string]
-	TraceContext      []byte
+	TraceContext      json.RawMessage
 }
 
 func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createAsyncCall,
+	row := q.db.QueryRowContext(ctx, createAsyncCall,
 		arg.Verb,
 		arg.Origin,
 		arg.Request,
@@ -262,7 +265,7 @@ type CreateCronJobParams struct {
 }
 
 func (q *Queries) CreateCronJob(ctx context.Context, arg CreateCronJobParams) error {
-	_, err := q.db.Exec(ctx, createCronJob,
+	_, err := q.db.ExecContext(ctx, createCronJob,
 		arg.Key,
 		arg.DeploymentKey,
 		arg.ModuleName,
@@ -280,7 +283,7 @@ VALUES ((SELECT id FROM modules WHERE name = $1::TEXT LIMIT 1), $2::BYTEA, $3::d
 `
 
 func (q *Queries) CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error {
-	_, err := q.db.Exec(ctx, createDeployment, moduleName, schema, key)
+	_, err := q.db.ExecContext(ctx, createDeployment, moduleName, schema, key)
 	return err
 }
 
@@ -298,7 +301,7 @@ type CreateIngressRouteParams struct {
 }
 
 func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error {
-	_, err := q.db.Exec(ctx, createIngressRoute,
+	_, err := q.db.ExecContext(ctx, createIngressRoute,
 		arg.Key,
 		arg.Module,
 		arg.Verb,
@@ -314,7 +317,7 @@ VALUES ($1, $2, $3)
 `
 
 func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error {
-	_, err := q.db.Exec(ctx, createRequest, origin, key, sourceAddr)
+	_, err := q.db.ExecContext(ctx, createRequest, origin, key, sourceAddr)
 	return err
 }
 
@@ -329,8 +332,8 @@ SELECT COUNT(*)
 FROM deleted
 `
 
-func (q *Queries) DeleteOldEvents(ctx context.Context, timeout time.Duration, type_ EventType) (int64, error) {
-	row := q.db.QueryRow(ctx, deleteOldEvents, timeout, type_)
+func (q *Queries) DeleteOldEvents(ctx context.Context, timeout sqltypes.Duration, type_ EventType) (int64, error) {
+	row := q.db.QueryRowContext(ctx, deleteOldEvents, timeout, type_)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -347,7 +350,7 @@ RETURNING topic_subscribers.key
 `
 
 func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error) {
-	rows, err := q.db.Query(ctx, deleteSubscribers, deployment)
+	rows, err := q.db.QueryContext(ctx, deleteSubscribers, deployment)
 	if err != nil {
 		return nil, err
 	}
@@ -359,6 +362,9 @@ func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.Deploy
 			return nil, err
 		}
 		items = append(items, key)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -377,7 +383,7 @@ RETURNING topic_subscriptions.key
 `
 
 func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error) {
-	rows, err := q.db.Query(ctx, deleteSubscriptions, deployment)
+	rows, err := q.db.QueryContext(ctx, deleteSubscriptions, deployment)
 	if err != nil {
 		return nil, err
 	}
@@ -389,6 +395,9 @@ func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.Depl
 			return nil, err
 		}
 		items = append(items, key)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -408,7 +417,7 @@ FROM matches
 `
 
 func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error) {
-	row := q.db.QueryRow(ctx, deregisterRunner, key)
+	row := q.db.QueryRowContext(ctx, deregisterRunner, key)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -442,7 +451,7 @@ type EndCronJobRow struct {
 }
 
 func (q *Queries) EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error) {
-	row := q.db.QueryRow(ctx, endCronJob, nextExecution, key, startTime)
+	row := q.db.QueryRowContext(ctx, endCronJob, nextExecution, key, startTime)
 	var i EndCronJobRow
 	err := row.Scan(
 		&i.Key,
@@ -468,7 +477,7 @@ FROM expired
 `
 
 func (q *Queries) ExpireLeases(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, expireLeases)
+	row := q.db.QueryRowContext(ctx, expireLeases)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -488,7 +497,7 @@ FROM rows
 `
 
 func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, expireRunnerReservations)
+	row := q.db.QueryRowContext(ctx, expireRunnerReservations)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -504,7 +513,7 @@ RETURNING true
 `
 
 func (q *Queries) FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error) {
-	row := q.db.QueryRow(ctx, failAsyncCall, error, iD)
+	row := q.db.QueryRowContext(ctx, failAsyncCall, error, iD)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -547,8 +556,8 @@ RETURNING true
 
 type FailAsyncCallWithRetryParams struct {
 	RemainingAttempts int32
-	Backoff           time.Duration
-	MaxBackoff        time.Duration
+	Backoff           sqltypes.Duration
+	MaxBackoff        sqltypes.Duration
 	ScheduledAt       time.Time
 	Catching          bool
 	OriginalError     optional.Option[string]
@@ -557,7 +566,7 @@ type FailAsyncCallWithRetryParams struct {
 }
 
 func (q *Queries) FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error) {
-	row := q.db.QueryRow(ctx, failAsyncCallWithRetry,
+	row := q.db.QueryRowContext(ctx, failAsyncCallWithRetry,
 		arg.RemainingAttempts,
 		arg.Backoff,
 		arg.MaxBackoff,
@@ -585,7 +594,7 @@ RETURNING true
 `
 
 func (q *Queries) FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
-	row := q.db.QueryRow(ctx, failFSMInstance, fsm, key)
+	row := q.db.QueryRowContext(ctx, failFSMInstance, fsm, key)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -605,7 +614,7 @@ RETURNING true
 
 // Mark an FSM transition as completed, updating the current state and clearing the async call ID.
 func (q *Queries) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
-	row := q.db.QueryRow(ctx, finishFSMTransition, fsm, key)
+	row := q.db.QueryRowContext(ctx, finishFSMTransition, fsm, key)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -619,7 +628,7 @@ ORDER BY c.key
 `
 
 func (q *Queries) GetActiveControllers(ctx context.Context) ([]Controller, error) {
-	rows, err := q.db.Query(ctx, getActiveControllers)
+	rows, err := q.db.QueryContext(ctx, getActiveControllers)
 	if err != nil {
 		return nil, err
 	}
@@ -639,6 +648,9 @@ func (q *Queries) GetActiveControllers(ctx context.Context) ([]Controller, error
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -655,7 +667,7 @@ type GetActiveDeploymentSchemasRow struct {
 }
 
 func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error) {
-	rows, err := q.db.Query(ctx, getActiveDeploymentSchemas)
+	rows, err := q.db.QueryContext(ctx, getActiveDeploymentSchemas)
 	if err != nil {
 		return nil, err
 	}
@@ -667,6 +679,9 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -692,7 +707,7 @@ type GetActiveDeploymentsRow struct {
 }
 
 func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error) {
-	rows, err := q.db.Query(ctx, getActiveDeployments)
+	rows, err := q.db.QueryContext(ctx, getActiveDeployments)
 	if err != nil {
 		return nil, err
 	}
@@ -716,6 +731,9 @@ func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeployme
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -738,7 +756,7 @@ type GetActiveIngressRoutesRow struct {
 }
 
 func (q *Queries) GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngressRoutesRow, error) {
-	rows, err := q.db.Query(ctx, getActiveIngressRoutes)
+	rows, err := q.db.QueryContext(ctx, getActiveIngressRoutes)
 	if err != nil {
 		return nil, err
 	}
@@ -756,6 +774,9 @@ func (q *Queries) GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngres
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -783,14 +804,14 @@ type GetActiveRunnersRow struct {
 	RunnerKey     model.RunnerKey
 	Endpoint      string
 	State         RunnerState
-	Labels        []byte
+	Labels        json.RawMessage
 	LastSeen      time.Time
 	ModuleName    optional.Option[string]
 	DeploymentKey optional.Option[string]
 }
 
 func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error) {
-	rows, err := q.db.Query(ctx, getActiveRunners)
+	rows, err := q.db.QueryContext(ctx, getActiveRunners)
 	if err != nil {
 		return nil, err
 	}
@@ -811,6 +832,9 @@ func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, 
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -824,7 +848,7 @@ WHERE a.id = $3
 `
 
 func (q *Queries) GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error) {
-	row := q.db.QueryRow(ctx, getArtefactContentRange, start, count, iD)
+	row := q.db.QueryRowContext(ctx, getArtefactContentRange, start, count, iD)
 	var content []byte
 	err := row.Scan(&content)
 	return content, err
@@ -843,7 +867,7 @@ type GetArtefactDigestsRow struct {
 
 // Return the digests that exist in the database.
 func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error) {
-	rows, err := q.db.Query(ctx, getArtefactDigests, digests)
+	rows, err := q.db.QueryContext(ctx, getArtefactDigests, pq.Array(digests))
 	if err != nil {
 		return nil, err
 	}
@@ -855,6 +879,9 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -881,7 +908,7 @@ type GetCronJobsRow struct {
 }
 
 func (q *Queries) GetCronJobs(ctx context.Context) ([]GetCronJobsRow, error) {
-	rows, err := q.db.Query(ctx, getCronJobs)
+	rows, err := q.db.QueryContext(ctx, getCronJobs)
 	if err != nil {
 		return nil, err
 	}
@@ -902,6 +929,9 @@ func (q *Queries) GetCronJobs(ctx context.Context) ([]GetCronJobsRow, error) {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -924,7 +954,7 @@ type GetDeploymentRow struct {
 }
 
 func (q *Queries) GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error) {
-	row := q.db.QueryRow(ctx, getDeployment, key)
+	row := q.db.QueryRowContext(ctx, getDeployment, key)
 	var i GetDeploymentRow
 	err := row.Scan(
 		&i.Deployment.ID,
@@ -959,7 +989,7 @@ type GetDeploymentArtefactsRow struct {
 
 // Get all artefacts matching the given digests.
 func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error) {
-	rows, err := q.db.Query(ctx, getDeploymentArtefacts, deploymentID)
+	rows, err := q.db.QueryContext(ctx, getDeploymentArtefacts, deploymentID)
 	if err != nil {
 		return nil, err
 	}
@@ -979,6 +1009,9 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -992,7 +1025,7 @@ WHERE id = ANY ($1::BIGINT[])
 `
 
 func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error) {
-	rows, err := q.db.Query(ctx, getDeploymentsByID, ids)
+	rows, err := q.db.QueryContext(ctx, getDeploymentsByID, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
@@ -1012,6 +1045,9 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1042,7 +1078,7 @@ type GetDeploymentsNeedingReconciliationRow struct {
 
 // Get deployments that have a mismatch between the number of assigned and required replicas.
 func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error) {
-	rows, err := q.db.Query(ctx, getDeploymentsNeedingReconciliation)
+	rows, err := q.db.QueryContext(ctx, getDeploymentsNeedingReconciliation)
 	if err != nil {
 		return nil, err
 	}
@@ -1060,6 +1096,9 @@ func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Ge
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1091,7 +1130,7 @@ type GetDeploymentsWithArtefactsRow struct {
 
 // Get all deployments that have artefacts matching the given digests.
 func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, schema []byte, count int64) ([]GetDeploymentsWithArtefactsRow, error) {
-	rows, err := q.db.Query(ctx, getDeploymentsWithArtefacts, digests, schema, count)
+	rows, err := q.db.QueryContext(ctx, getDeploymentsWithArtefacts, pq.Array(digests), schema, count)
 	if err != nil {
 		return nil, err
 	}
@@ -1109,6 +1148,9 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1131,7 +1173,7 @@ type GetDeploymentsWithMinReplicasRow struct {
 }
 
 func (q *Queries) GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error) {
-	rows, err := q.db.Query(ctx, getDeploymentsWithMinReplicas)
+	rows, err := q.db.QueryContext(ctx, getDeploymentsWithMinReplicas)
 	if err != nil {
 		return nil, err
 	}
@@ -1154,6 +1196,9 @@ func (q *Queries) GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeplo
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -1175,7 +1220,7 @@ type GetExistingDeploymentForModuleRow struct {
 	ModuleID    int64
 	Key         model.DeploymentKey
 	Schema      *schema.Module
-	Labels      []byte
+	Labels      json.RawMessage
 	MinReplicas int32
 	ID_2        int64
 	Language    string
@@ -1183,7 +1228,7 @@ type GetExistingDeploymentForModuleRow struct {
 }
 
 func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error) {
-	row := q.db.QueryRow(ctx, getExistingDeploymentForModule, name)
+	row := q.db.QueryRowContext(ctx, getExistingDeploymentForModule, name)
 	var i GetExistingDeploymentForModuleRow
 	err := row.Scan(
 		&i.ID,
@@ -1207,7 +1252,7 @@ WHERE fsm = $1::schema_ref AND key = $2
 `
 
 func (q *Queries) GetFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (FsmInstance, error) {
-	row := q.db.QueryRow(ctx, getFSMInstance, fsm, key)
+	row := q.db.QueryRowContext(ctx, getFSMInstance, fsm, key)
 	var i FsmInstance
 	err := row.Scan(
 		&i.ID,
@@ -1231,8 +1276,8 @@ WHERE labels @> $1::jsonb
 LIMIT $2
 `
 
-func (q *Queries) GetIdleRunners(ctx context.Context, labels []byte, limit int64) ([]Runner, error) {
-	rows, err := q.db.Query(ctx, getIdleRunners, labels, limit)
+func (q *Queries) GetIdleRunners(ctx context.Context, labels json.RawMessage, limit int64) ([]Runner, error) {
+	rows, err := q.db.QueryContext(ctx, getIdleRunners, labels, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1255,6 +1300,9 @@ func (q *Queries) GetIdleRunners(ctx context.Context, labels []byte, limit int64
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1282,7 +1330,7 @@ type GetIngressRoutesRow struct {
 
 // Get the runner endpoints corresponding to the given ingress route.
 func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error) {
-	rows, err := q.db.Query(ctx, getIngressRoutes, method)
+	rows, err := q.db.QueryContext(ctx, getIngressRoutes, method)
 	if err != nil {
 		return nil, err
 	}
@@ -1302,6 +1350,9 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIng
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -1314,11 +1365,11 @@ SELECT expires_at, metadata FROM leases WHERE key = $1::lease_key
 
 type GetLeaseInfoRow struct {
 	ExpiresAt time.Time
-	Metadata  []byte
+	Metadata  pqtype.NullRawMessage
 }
 
 func (q *Queries) GetLeaseInfo(ctx context.Context, key leases.Key) (GetLeaseInfoRow, error) {
-	row := q.db.QueryRow(ctx, getLeaseInfo, key)
+	row := q.db.QueryRowContext(ctx, getLeaseInfo, key)
 	var i GetLeaseInfoRow
 	err := row.Scan(&i.ExpiresAt, &i.Metadata)
 	return i, err
@@ -1331,7 +1382,7 @@ WHERE id = ANY ($1::BIGINT[])
 `
 
 func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, error) {
-	rows, err := q.db.Query(ctx, getModulesByID, ids)
+	rows, err := q.db.QueryContext(ctx, getModulesByID, pq.Array(ids))
 	if err != nil {
 		return nil, err
 	}
@@ -1343,6 +1394,9 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1379,12 +1433,12 @@ type GetNextEventForSubscriptionRow struct {
 	CreatedAt    optional.Option[time.Time]
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
-	TraceContext []byte
+	TraceContext pqtype.NullRawMessage
 	Ready        bool
 }
 
-func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDelay time.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
-	row := q.db.QueryRow(ctx, getNextEventForSubscription, consumptionDelay, topic, cursor)
+func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error) {
+	row := q.db.QueryRowContext(ctx, getNextEventForSubscription, consumptionDelay, topic, cursor)
 	var i GetNextEventForSubscriptionRow
 	err := row.Scan(
 		&i.Event,
@@ -1414,14 +1468,14 @@ ORDER BY d.key
 type GetProcessListRow struct {
 	MinReplicas      int32
 	DeploymentKey    model.DeploymentKey
-	DeploymentLabels []byte
+	DeploymentLabels json.RawMessage
 	RunnerKey        optional.Option[model.RunnerKey]
 	Endpoint         optional.Option[string]
-	RunnerLabels     []byte
+	RunnerLabels     pqtype.NullRawMessage
 }
 
 func (q *Queries) GetProcessList(ctx context.Context) ([]GetProcessListRow, error) {
-	rows, err := q.db.Query(ctx, getProcessList)
+	rows, err := q.db.QueryContext(ctx, getProcessList)
 	if err != nil {
 		return nil, err
 	}
@@ -1440,6 +1494,9 @@ func (q *Queries) GetProcessList(ctx context.Context) ([]GetProcessListRow, erro
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1464,13 +1521,13 @@ LIMIT 1
 type GetRandomSubscriberRow struct {
 	Sink          schema.RefKey
 	RetryAttempts int32
-	Backoff       time.Duration
-	MaxBackoff    time.Duration
+	Backoff       sqltypes.Duration
+	MaxBackoff    sqltypes.Duration
 	CatchVerb     optional.Option[schema.RefKey]
 }
 
 func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error) {
-	row := q.db.QueryRow(ctx, getRandomSubscriber, key)
+	row := q.db.QueryRowContext(ctx, getRandomSubscriber, key)
 	var i GetRandomSubscriberRow
 	err := row.Scan(
 		&i.Sink,
@@ -1499,7 +1556,7 @@ type GetRouteForRunnerRow struct {
 
 // Retrieve routing information for a runner.
 func (q *Queries) GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error) {
-	row := q.db.QueryRow(ctx, getRouteForRunner, key)
+	row := q.db.QueryRowContext(ctx, getRouteForRunner, key)
 	var i GetRouteForRunnerRow
 	err := row.Scan(
 		&i.Endpoint,
@@ -1528,7 +1585,7 @@ type GetRoutingTableRow struct {
 }
 
 func (q *Queries) GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error) {
-	rows, err := q.db.Query(ctx, getRoutingTable, modules)
+	rows, err := q.db.QueryContext(ctx, getRoutingTable, pq.Array(modules))
 	if err != nil {
 		return nil, err
 	}
@@ -1545,6 +1602,9 @@ func (q *Queries) GetRoutingTable(ctx context.Context, modules []string) ([]GetR
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1571,14 +1631,14 @@ type GetRunnerRow struct {
 	RunnerKey     model.RunnerKey
 	Endpoint      string
 	State         RunnerState
-	Labels        []byte
+	Labels        json.RawMessage
 	LastSeen      time.Time
 	ModuleName    optional.Option[string]
 	DeploymentKey optional.Option[string]
 }
 
 func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error) {
-	row := q.db.QueryRow(ctx, getRunner, key)
+	row := q.db.QueryRowContext(ctx, getRunner, key)
 	var i GetRunnerRow
 	err := row.Scan(
 		&i.RunnerKey,
@@ -1599,7 +1659,7 @@ WHERE key = $1::runner_key
 `
 
 func (q *Queries) GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error) {
-	row := q.db.QueryRow(ctx, getRunnerState, key)
+	row := q.db.QueryRowContext(ctx, getRunnerState, key)
 	var state RunnerState
 	err := row.Scan(&state)
 	return state, err
@@ -1623,18 +1683,18 @@ type GetRunnersForDeploymentRow struct {
 	Endpoint           string
 	ModuleName         optional.Option[string]
 	DeploymentID       optional.Option[int64]
-	Labels             []byte
+	Labels             json.RawMessage
 	ID_2               int64
 	CreatedAt          time.Time
 	ModuleID           int64
 	Key_2              model.DeploymentKey
 	Schema             *schema.Module
-	Labels_2           []byte
+	Labels_2           json.RawMessage
 	MinReplicas        int32
 }
 
 func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error) {
-	rows, err := q.db.Query(ctx, getRunnersForDeployment, key)
+	rows, err := q.db.QueryContext(ctx, getRunnersForDeployment, key)
 	if err != nil {
 		return nil, err
 	}
@@ -1665,6 +1725,9 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.Deploym
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -1676,7 +1739,7 @@ SELECT schema FROM deployments WHERE key = $1::deployment_key
 `
 
 func (q *Queries) GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error) {
-	row := q.db.QueryRow(ctx, getSchemaForDeployment, key)
+	row := q.db.QueryRowContext(ctx, getSchemaForDeployment, key)
 	var schema *schema.Module
 	err := row.Scan(&schema)
 	return schema, err
@@ -1701,8 +1764,8 @@ type GetStaleCronJobsRow struct {
 	State         model.CronJobState
 }
 
-func (q *Queries) GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) ([]GetStaleCronJobsRow, error) {
-	rows, err := q.db.Query(ctx, getStaleCronJobs, dollar_1)
+func (q *Queries) GetStaleCronJobs(ctx context.Context, dollar_1 sqltypes.Duration) ([]GetStaleCronJobsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getStaleCronJobs, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -1724,6 +1787,9 @@ func (q *Queries) GetStaleCronJobs(ctx context.Context, dollar_1 time.Duration) 
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -1743,7 +1809,7 @@ WHERE name = $1::TEXT
 `
 
 func (q *Queries) GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error) {
-	row := q.db.QueryRow(ctx, getSubscription, column1, column2)
+	row := q.db.QueryRowContext(ctx, getSubscription, column1, column2)
 	var i TopicSubscription
 	err := row.Scan(
 		&i.ID,
@@ -1786,7 +1852,7 @@ type GetSubscriptionsNeedingUpdateRow struct {
 // Sorting ensures that brand new events (that may not be ready for consumption)
 // don't prevent older events from being consumed
 func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error) {
-	rows, err := q.db.Query(ctx, getSubscriptionsNeedingUpdate)
+	rows, err := q.db.QueryContext(ctx, getSubscriptionsNeedingUpdate)
 	if err != nil {
 		return nil, err
 	}
@@ -1804,6 +1870,9 @@ func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubsc
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -1817,7 +1886,7 @@ WHERE id = $1::BIGINT
 `
 
 func (q *Queries) GetTopic(ctx context.Context, dollar_1 int64) (Topic, error) {
-	row := q.db.QueryRow(ctx, getTopic, dollar_1)
+	row := q.db.QueryRowContext(ctx, getTopic, dollar_1)
 	var i Topic
 	err := row.Scan(
 		&i.ID,
@@ -1838,7 +1907,7 @@ WHERE id = $1::BIGINT
 `
 
 func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error) {
-	row := q.db.QueryRow(ctx, getTopicEvent, dollar_1)
+	row := q.db.QueryRowContext(ctx, getTopicEvent, dollar_1)
 	var i TopicEvent
 	err := row.Scan(
 		&i.ID,
@@ -1899,7 +1968,7 @@ type InsertCallEventParams struct {
 }
 
 func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
-	_, err := q.db.Exec(ctx, insertCallEvent,
+	_, err := q.db.ExecContext(ctx, insertCallEvent,
 		arg.DeploymentKey,
 		arg.RequestKey,
 		arg.ParentRequestKey,
@@ -1942,7 +2011,7 @@ type InsertDeploymentCreatedEventParams struct {
 }
 
 func (q *Queries) InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error {
-	_, err := q.db.Exec(ctx, insertDeploymentCreatedEvent,
+	_, err := q.db.ExecContext(ctx, insertDeploymentCreatedEvent,
 		arg.DeploymentKey,
 		arg.Language,
 		arg.ModuleName,
@@ -1980,7 +2049,7 @@ type InsertDeploymentUpdatedEventParams struct {
 }
 
 func (q *Queries) InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error {
-	_, err := q.db.Exec(ctx, insertDeploymentUpdatedEvent,
+	_, err := q.db.ExecContext(ctx, insertDeploymentUpdatedEvent,
 		arg.DeploymentKey,
 		arg.Language,
 		arg.ModuleName,
@@ -2010,7 +2079,7 @@ type InsertEventParams struct {
 }
 
 func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error {
-	_, err := q.db.Exec(ctx, insertEvent,
+	_, err := q.db.ExecContext(ctx, insertEvent,
 		arg.DeploymentID,
 		arg.RequestID,
 		arg.ParentRequestID,
@@ -2057,7 +2126,7 @@ type InsertLogEventParams struct {
 }
 
 func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
-	_, err := q.db.Exec(ctx, insertLogEvent,
+	_, err := q.db.ExecContext(ctx, insertLogEvent,
 		arg.DeploymentKey,
 		arg.RequestKey,
 		arg.TimeStamp,
@@ -2103,13 +2172,13 @@ type InsertSubscriberParams struct {
 	Deployment       model.DeploymentKey
 	Sink             schema.RefKey
 	RetryAttempts    int32
-	Backoff          time.Duration
-	MaxBackoff       time.Duration
+	Backoff          sqltypes.Duration
+	MaxBackoff       sqltypes.Duration
 	CatchVerb        optional.Option[schema.RefKey]
 }
 
 func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error {
-	_, err := q.db.Exec(ctx, insertSubscriber,
+	_, err := q.db.ExecContext(ctx, insertSubscriber,
 		arg.Key,
 		arg.Module,
 		arg.SubscriptionName,
@@ -2134,8 +2203,8 @@ FROM matches
 `
 
 // Mark any controller entries that haven't been updated recently as dead.
-func (q *Queries) KillStaleControllers(ctx context.Context, timeout time.Duration) (int64, error) {
-	row := q.db.QueryRow(ctx, killStaleControllers, timeout)
+func (q *Queries) KillStaleControllers(ctx context.Context, timeout sqltypes.Duration) (int64, error) {
+	row := q.db.QueryRowContext(ctx, killStaleControllers, timeout)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -2152,8 +2221,8 @@ SELECT COUNT(*)
 FROM matches
 `
 
-func (q *Queries) KillStaleRunners(ctx context.Context, timeout time.Duration) (int64, error) {
-	row := q.db.QueryRow(ctx, killStaleRunners, timeout)
+func (q *Queries) KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error) {
+	row := q.db.QueryRowContext(ctx, killStaleRunners, timeout)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -2166,7 +2235,7 @@ WHERE id = $1
 `
 
 func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error) {
-	row := q.db.QueryRow(ctx, loadAsyncCall, id)
+	row := q.db.QueryRowContext(ctx, loadAsyncCall, id)
 	var i AsyncCall
 	err := row.Scan(
 		&i.ID,
@@ -2206,8 +2275,8 @@ VALUES (
 RETURNING idempotency_key
 `
 
-func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata []byte) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, newLease, key, ttl, metadata)
+func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl sqltypes.Duration, metadata pqtype.NullRawMessage) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, newLease, key, ttl, metadata)
 	var idempotency_key uuid.UUID
 	err := row.Scan(&idempotency_key)
 	return idempotency_key, err
@@ -2245,11 +2314,11 @@ type PublishEventForTopicParams struct {
 	Caller       string
 	Payload      []byte
 	RequestKey   string
-	TraceContext []byte
+	TraceContext json.RawMessage
 }
 
 func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error {
-	_, err := q.db.Exec(ctx, publishEventForTopic,
+	_, err := q.db.ExecContext(ctx, publishEventForTopic,
 		arg.Key,
 		arg.Module,
 		arg.Topic,
@@ -2268,7 +2337,7 @@ RETURNING true
 `
 
 func (q *Queries) ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
-	row := q.db.QueryRow(ctx, releaseLease, idempotencyKey, key)
+	row := q.db.QueryRowContext(ctx, releaseLease, idempotencyKey, key)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -2281,8 +2350,8 @@ WHERE idempotency_key = $2 AND key = $3::lease_key
 RETURNING true
 `
 
-func (q *Queries) RenewLease(ctx context.Context, ttl time.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
-	row := q.db.QueryRow(ctx, renewLease, ttl, idempotencyKey, key)
+func (q *Queries) RenewLease(ctx context.Context, ttl sqltypes.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
+	row := q.db.QueryRowContext(ctx, renewLease, ttl, idempotencyKey, key)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -2307,8 +2376,8 @@ RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.r
 `
 
 // Find an idle runner and reserve it for the given deployment.
-func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels []byte) (Runner, error) {
-	row := q.db.QueryRow(ctx, reserveRunner, reservationTimeout, deploymentKey, labels)
+func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels json.RawMessage) (Runner, error) {
+	row := q.db.QueryRowContext(ctx, reserveRunner, reservationTimeout, deploymentKey, labels)
 	var i Runner
 	err := row.Scan(
 		&i.ID,
@@ -2333,7 +2402,7 @@ RETURNING 1
 `
 
 func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error {
-	_, err := q.db.Exec(ctx, setDeploymentDesiredReplicas, key, minReplicas)
+	_, err := q.db.ExecContext(ctx, setDeploymentDesiredReplicas, key, minReplicas)
 	return err
 }
 
@@ -2350,7 +2419,7 @@ WHERE key = $1::subscription_key
 `
 
 func (q *Queries) SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error {
-	_, err := q.db.Exec(ctx, setSubscriptionCursor, column1, column2)
+	_, err := q.db.ExecContext(ctx, setSubscriptionCursor, column1, column2)
 	return err
 }
 
@@ -2390,7 +2459,7 @@ type StartCronJobsRow struct {
 }
 
 func (q *Queries) StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error) {
-	rows, err := q.db.Query(ctx, startCronJobs, keys)
+	rows, err := q.db.QueryContext(ctx, startCronJobs, pq.Array(keys))
 	if err != nil {
 		return nil, err
 	}
@@ -2413,6 +2482,9 @@ func (q *Queries) StartCronJobs(ctx context.Context, keys []string) ([]StartCron
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -2454,7 +2526,7 @@ type StartFSMTransitionParams struct {
 //
 // "key" is the unique identifier for the FSM execution.
 func (q *Queries) StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error) {
-	row := q.db.QueryRow(ctx, startFSMTransition,
+	row := q.db.QueryRowContext(ctx, startFSMTransition,
 		arg.Fsm,
 		arg.Key,
 		arg.DestinationState,
@@ -2485,8 +2557,8 @@ WHERE id = $2
 RETURNING true
 `
 
-func (q *Queries) SucceedAsyncCall(ctx context.Context, response []byte, iD int64) (bool, error) {
-	row := q.db.QueryRow(ctx, succeedAsyncCall, response, iD)
+func (q *Queries) SucceedAsyncCall(ctx context.Context, response json.RawMessage, iD int64) (bool, error) {
+	row := q.db.QueryRowContext(ctx, succeedAsyncCall, response, iD)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -2506,7 +2578,7 @@ RETURNING true
 `
 
 func (q *Queries) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
-	row := q.db.QueryRow(ctx, succeedFSMInstance, fsm, key)
+	row := q.db.QueryRowContext(ctx, succeedFSMInstance, fsm, key)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -2522,7 +2594,7 @@ RETURNING id
 `
 
 func (q *Queries) UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error) {
-	row := q.db.QueryRow(ctx, upsertController, key, endpoint)
+	row := q.db.QueryRowContext(ctx, upsertController, key, endpoint)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -2536,7 +2608,7 @@ RETURNING id
 `
 
 func (q *Queries) UpsertModule(ctx context.Context, language string, name string) (int64, error) {
-	row := q.db.QueryRow(ctx, upsertModule, language, name)
+	row := q.db.QueryRowContext(ctx, upsertModule, language, name)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -2571,7 +2643,7 @@ type UpsertRunnerParams struct {
 	Key           model.RunnerKey
 	Endpoint      string
 	State         RunnerState
-	Labels        []byte
+	Labels        json.RawMessage
 	DeploymentKey optional.Option[model.DeploymentKey]
 }
 
@@ -2581,7 +2653,7 @@ type UpsertRunnerParams struct {
 // there is no corresponding deployment, then the deployment ID is -1
 // and the parent statement will fail due to a foreign key constraint.
 func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (optional.Option[int64], error) {
-	row := q.db.QueryRow(ctx, upsertRunner,
+	row := q.db.QueryRowContext(ctx, upsertRunner,
 		arg.Key,
 		arg.Endpoint,
 		arg.State,
@@ -2640,7 +2712,7 @@ type UpsertSubscriptionRow struct {
 }
 
 func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error) {
-	row := q.db.QueryRow(ctx, upsertSubscription,
+	row := q.db.QueryRowContext(ctx, upsertSubscription,
 		arg.Key,
 		arg.TopicModule,
 		arg.TopicName,
@@ -2675,7 +2747,7 @@ type UpsertTopicParams struct {
 }
 
 func (q *Queries) UpsertTopic(ctx context.Context, arg UpsertTopicParams) error {
-	_, err := q.db.Exec(ctx, upsertTopic,
+	_, err := q.db.ExecContext(ctx, upsertTopic,
 		arg.Topic,
 		arg.Module,
 		arg.Name,

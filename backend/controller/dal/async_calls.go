@@ -12,6 +12,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
@@ -101,7 +102,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 	defer tx.CommitOrRollback(ctx, &err)
 
 	ttl := time.Second * 5
-	row, err := tx.db.AcquireAsyncCall(ctx, ttl)
+	row, err := tx.db.AcquireAsyncCall(ctx, sqltypes.Duration(ttl))
 	if err != nil {
 		err = dalerrs.TranslatePGError(err)
 		if errors.Is(err, dalerrs.ErrNotFound) {
@@ -131,11 +132,11 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		ScheduledAt:       row.ScheduledAt,
 		QueueDepth:        row.QueueDepth,
 		ParentRequestKey:  row.ParentRequestKey,
-		TraceContext:      row.TraceContext,
+		TraceContext:      row.TraceContext.RawMessage,
 		RemainingAttempts: row.RemainingAttempts,
 		Error:             row.Error,
-		Backoff:           row.Backoff,
-		MaxBackoff:        row.MaxBackoff,
+		Backoff:           time.Duration(row.Backoff),
+		MaxBackoff:        time.Duration(row.MaxBackoff),
 		Catching:          row.Catching,
 	}, nil
 }
@@ -169,8 +170,8 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 				ID:                call.ID,
 				Error:             result.Get(),
 				RemainingAttempts: call.RemainingAttempts - 1,
-				Backoff:           min(call.Backoff*2, call.MaxBackoff),
-				MaxBackoff:        call.MaxBackoff,
+				Backoff:           sqltypes.Duration(min(call.Backoff*2, call.MaxBackoff)),
+				MaxBackoff:        sqltypes.Duration(call.MaxBackoff),
 				ScheduledAt:       time.Now().Add(call.Backoff),
 			})
 			if err != nil {
@@ -190,8 +191,8 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 				ID:                call.ID,
 				Error:             result.Get(),
 				RemainingAttempts: 0,
-				Backoff:           call.Backoff, // maintain backoff
-				MaxBackoff:        call.MaxBackoff,
+				Backoff:           sqltypes.Duration(call.Backoff), // maintain backoff
+				MaxBackoff:        sqltypes.Duration(call.MaxBackoff),
 				ScheduledAt:       scheduledAt,
 				Catching:          true,
 				OriginalError:     optional.Some(originalError),

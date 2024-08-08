@@ -3,6 +3,7 @@ package dal
 
 import (
 	"context"
+	stdsql "database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,10 +14,10 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	sets "github.com/deckarep/golang-set/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -209,18 +210,12 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool, encryptors *Encryptors) (*DAL, error) {
-	_, err := pool.Acquire(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not acquire connection: %w", err)
-	}
-	dal := &DAL{
-		db:                sql.NewDB(pool),
+func New(ctx context.Context, conn *stdsql.DB, encryptors *Encryptors) (*DAL, error) {
+	return &DAL{
+		db:                sql.NewDB(conn),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
 		encryptors:        encryptors,
-	}
-
-	return dal, nil
+	}, nil
 }
 
 type DAL struct {
@@ -602,13 +597,13 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 
 // KillStaleRunners deletes runners that have not had heartbeats for the given duration.
 func (d *DAL) KillStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleRunners(ctx, age)
+	count, err := d.db.KillStaleRunners(ctx, sqltypes.Duration(age))
 	return count, err
 }
 
 // KillStaleControllers deletes controllers that have not had heartbeats for the given duration.
 func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleControllers(ctx, age)
+	count, err := d.db.KillStaleControllers(ctx, sqltypes.Duration(age))
 	return count, err
 }
 
@@ -946,7 +941,7 @@ func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 		var runner optional.Option[ProcessRunner]
 		if endpoint, ok := row.Endpoint.Get(); ok {
 			var labels model.Labels
-			if err := json.Unmarshal(row.RunnerLabels, &labels); err != nil {
+			if err := json.Unmarshal(row.RunnerLabels.RawMessage, &labels); err != nil {
 				return Process{}, fmt.Errorf("invalid labels JSON for runner %s: %w", row.RunnerKey, err)
 			}
 
@@ -1170,7 +1165,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 }
 
 func (d *DAL) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
-	count, err := d.db.DeleteOldEvents(ctx, age, eventType)
+	count, err := d.db.DeleteOldEvents(ctx, sqltypes.Duration(age), eventType)
 	return count, dalerrs.TranslatePGError(err)
 }
 
