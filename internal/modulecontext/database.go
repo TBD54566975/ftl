@@ -23,11 +23,11 @@ type Database struct {
 func NewDatabase(dbType DBType, dsn string) (Database, error) {
 	db, err := otelsql.Open("pgx", dsn)
 	if err != nil {
-		return Database{}, err
+		return Database{}, fmt.Errorf("failed to open database: %w", err)
 	}
 	err = otelsql.RegisterDBStatsMetrics(db, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
 	if err != nil {
-		return Database{}, err
+		return Database{}, fmt.Errorf("failed to register db metrics: %w", err)
 	}
 	return Database{
 		DSN:    dsn,
