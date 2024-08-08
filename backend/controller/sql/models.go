@@ -384,6 +384,8 @@ type AsyncCall struct {
 	MaxBackoff        time.Duration
 	CatchVerb         optional.Option[schema.RefKey]
 	Catching          bool
+	ParentRequestKey  optional.Option[string]
+	TraceContext      []byte
 }
 
 type Controller struct {
@@ -426,16 +428,17 @@ type DeploymentArtefact struct {
 }
 
 type Event struct {
-	ID           int64
-	TimeStamp    time.Time
-	DeploymentID int64
-	RequestID    optional.Option[int64]
-	Type         EventType
-	CustomKey1   optional.Option[string]
-	CustomKey2   optional.Option[string]
-	CustomKey3   optional.Option[string]
-	CustomKey4   optional.Option[string]
-	Payload      json.RawMessage
+	ID              int64
+	TimeStamp       time.Time
+	DeploymentID    int64
+	RequestID       optional.Option[int64]
+	Type            EventType
+	CustomKey1      optional.Option[string]
+	CustomKey2      optional.Option[string]
+	CustomKey3      optional.Option[string]
+	CustomKey4      optional.Option[string]
+	Payload         json.RawMessage
+	ParentRequestID optional.Option[string]
 }
 
 type FsmInstance struct {
@@ -520,12 +523,14 @@ type Topic struct {
 }
 
 type TopicEvent struct {
-	ID        int64
-	CreatedAt time.Time
-	Key       model.TopicEventKey
-	TopicID   int64
-	Payload   []byte
-	Caller    optional.Option[string]
+	ID           int64
+	CreatedAt    time.Time
+	Key          model.TopicEventKey
+	TopicID      int64
+	Payload      []byte
+	Caller       optional.Option[string]
+	RequestKey   optional.Option[string]
+	TraceContext []byte
 }
 
 type TopicSubscriber struct {

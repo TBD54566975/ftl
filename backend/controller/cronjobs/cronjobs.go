@@ -80,7 +80,7 @@ type Scheduler interface {
 	Parallel(retry backoff.Backoff, job scheduledtask.Job)
 }
 
-type ExecuteCallFunc func(context.Context, *connect.Request[ftlv1.CallRequest], optional.Option[model.RequestKey], string) (*connect.Response[ftlv1.CallResponse], error)
+type ExecuteCallFunc func(context.Context, *connect.Request[ftlv1.CallRequest], optional.Option[model.RequestKey], optional.Option[model.RequestKey], string) (*connect.Response[ftlv1.CallResponse], error)
 
 type Service struct {
 	config        Config
@@ -216,9 +216,8 @@ func (s *Service) executeJob(ctx context.Context, job model.CronJob) {
 
 	callCtx, cancel := context.WithTimeout(ctx, s.config.Timeout)
 	defer cancel()
-
 	observability.Cron.JobStarted(ctx, job)
-	_, err = s.call(callCtx, req, optional.Some(requestKey), s.requestSource)
+	_, err = s.call(callCtx, req, optional.Some(requestKey), optional.None[model.RequestKey](), s.requestSource)
 
 	// Record execution success/failure metric now and leave post job-execution-action observability to logging
 	if err != nil {

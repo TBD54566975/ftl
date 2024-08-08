@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -23,12 +24,32 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload: %w", err)
 	}
+
+	// Store the current otel context with the event
+	jsonOc, err := observability.RetrieveTraceContextFromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve trace context: %w", err)
+	}
+
+	// Store the request key that initiated this publish, this will eventually
+	// become the parent request key of the subscriber call
+	requestKey := ""
+	if rk, err := rpc.RequestKeyFromContext(ctx); err == nil {
+		if rk, ok := rk.Get(); ok {
+			requestKey = rk.String()
+		}
+	} else {
+		return fmt.Errorf("failed to get request key: %w", err)
+	}
+
 	err = d.db.PublishEventForTopic(ctx, sql.PublishEventForTopicParams{
-		Key:     model.NewTopicEventKey(module, topic),
-		Module:  module,
-		Topic:   topic,
-		Caller:  caller,
-		Payload: encryptedPayload,
+		Key:          model.NewTopicEventKey(module, topic),
+		Module:       module,
+		Topic:        topic,
+		Caller:       caller,
+		Payload:      encryptedPayload,
+		RequestKey:   requestKey,
+		TraceContext: jsonOc,
 	})
 	observability.PubSub.Published(ctx, module, topic, caller, err)
 	if err != nil {
@@ -111,6 +132,8 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			RemainingAttempts: subscriber.RetryAttempts,
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,
+			ParentRequestKey:  nextCursor.RequestKey,
+			TraceContext:      nextCursor.TraceContext,
 			CatchVerb:         subscriber.CatchVerb,
 		})
 		observability.AsyncCalls.Created(ctx, subscriber.Sink, subscriber.CatchVerb, origin.String(), int64(subscriber.RetryAttempts), err)

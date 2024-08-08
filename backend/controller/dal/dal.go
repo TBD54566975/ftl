@@ -1142,6 +1142,10 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if rn, ok := call.RequestKey.Get(); ok {
 		requestKey = optional.Some(rn.String())
 	}
+	var parentRequestKey optional.Option[string]
+	if pr, ok := call.ParentRequestKey.Get(); ok {
+		parentRequestKey = optional.Some(pr.String())
+	}
 	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
 		"duration_ms": call.Duration.Milliseconds(),
 		"request":     call.Request,
@@ -1153,14 +1157,15 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 		return fmt.Errorf("failed to encrypt call payload: %w", err)
 	}
 	return dalerrs.TranslatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
-		DeploymentKey: call.DeploymentKey,
-		RequestKey:    requestKey,
-		TimeStamp:     call.Time,
-		SourceModule:  sourceModule,
-		SourceVerb:    sourceVerb,
-		DestModule:    call.DestVerb.Module,
-		DestVerb:      call.DestVerb.Name,
-		Payload:       payload,
+		DeploymentKey:    call.DeploymentKey,
+		RequestKey:       requestKey,
+		ParentRequestKey: parentRequestKey,
+		TimeStamp:        call.Time,
+		SourceModule:     sourceModule,
+		SourceVerb:       sourceVerb,
+		DestModule:       call.DestVerb.Module,
+		DestVerb:         call.DestVerb.Name,
+		Payload:          payload,
 	}))
 }
 

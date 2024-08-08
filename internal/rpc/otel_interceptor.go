@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	otelFtlRequestKeyAttr = attribute.Key("ftl.request_key")
-	otelFtlVerbChainAttr  = attribute.Key("ftl.verb_chain")
-	otelFtlVerbRefAttr    = attribute.Key("ftl.verb.ref")
-	otelFtlVerbModuleAttr = attribute.Key("ftl.verb.module")
+	otelFtlRequestKeyAttr       = attribute.Key("ftl.request_key")
+	otelFtlParentRequestKeyAttr = attribute.Key("ftl.parent_request_key")
+	otelFtlVerbChainAttr        = attribute.Key("ftl.verb_chain")
+	otelFtlVerbRefAttr          = attribute.Key("ftl.verb.ref")
+	otelFtlVerbModuleAttr       = attribute.Key("ftl.verb.module")
 )
 
 func CustomOtelInterceptor() connect.Interceptor {
@@ -32,6 +33,13 @@ func getAttributes(ctx context.Context) []attribute.KeyValue {
 	}
 	if key, ok := requestKey.Get(); ok {
 		attributes = append(attributes, otelFtlRequestKeyAttr.String(key.String()))
+	}
+	parentRequestKey, err := ParentRequestKeyFromContext(ctx)
+	if err != nil {
+		logger.Warnf("failed to get parent request key: %s", err)
+	}
+	if key, ok := parentRequestKey.Get(); ok {
+		attributes = append(attributes, otelFtlParentRequestKeyAttr.String(key.String()))
 	}
 	if verb, ok := VerbFromContext(ctx); ok {
 		attributes = append(attributes, otelFtlVerbRefAttr.String(verb.String()))

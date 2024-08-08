@@ -25,7 +25,7 @@ func Handle(
 	routes []dal.IngressRoute,
 	w http.ResponseWriter,
 	r *http.Request,
-	call func(context.Context, *connect.Request[ftlv1.CallRequest], optional.Option[model.RequestKey], string) (*connect.Response[ftlv1.CallResponse], error),
+	call func(context.Context, *connect.Request[ftlv1.CallRequest], optional.Option[model.RequestKey], optional.Option[model.RequestKey], string) (*connect.Response[ftlv1.CallResponse], error),
 ) {
 	logger := log.FromContext(r.Context())
 	logger.Debugf("%s %s", r.Method, r.URL.Path)
@@ -54,7 +54,7 @@ func Handle(
 		Body:     body,
 	})
 
-	resp, err := call(r.Context(), creq, optional.Some(requestKey), r.RemoteAddr)
+	resp, err := call(r.Context(), creq, optional.Some(requestKey), optional.None[model.RequestKey](), r.RemoteAddr)
 	if err != nil {
 		logger.Errorf(err, "failed to call verb %s", route.Verb)
 		if connectErr := new(connect.Error); errors.As(err, &connectErr) {

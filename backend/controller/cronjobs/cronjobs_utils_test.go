@@ -233,7 +233,7 @@ func testServiceWithDal(ctx context.Context, t *testing.T, dal DAL, parentDAL Pa
 	err = parentDAL.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
 
-	_ = newControllers(ctx, 5, dal, func() clock.Clock { return clk }, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
+	_ = newControllers(ctx, 5, dal, func() clock.Clock { return clk }, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], p optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
 		verbRef := schema.RefFromProto(r.Msg.Verb)
 
 		verbCallCountLock.Lock()

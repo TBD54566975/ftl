@@ -337,6 +337,7 @@ VALUES (
 INSERT INTO events (
   deployment_id,
   request_id,
+  parent_request_id,
   time_stamp,
   type,
   custom_key_1,
@@ -350,6 +351,10 @@ VALUES (
   (CASE
       WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
       ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT)
+    END),
+  (CASE
+      WHEN sqlc.narg('parent_request_key')::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('parent_request_key')::TEXT)
     END),
   sqlc.arg('time_stamp')::TIMESTAMPTZ,
   'call',
@@ -419,10 +424,10 @@ WHERE d.min_replicas > 0;
 
 
 -- name: InsertEvent :exec
-INSERT INTO events (deployment_id, request_id, type,
+INSERT INTO events (deployment_id, request_id, parent_request_id, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4,
                     payload)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id;
 
 -- name: NewLease :one
@@ -471,7 +476,9 @@ INSERT INTO async_calls (
   remaining_attempts,
   backoff,
   max_backoff,
-  catch_verb
+  catch_verb,
+  parent_request_key,
+  trace_context
 )
 VALUES (
   @verb,
@@ -480,7 +487,9 @@ VALUES (
   @remaining_attempts,
   @backoff::interval,
   @max_backoff::interval,
-  @catch_verb
+  @catch_verb,
+  @parent_request_key,
+  @trace_context::jsonb
 )
 RETURNING id;
 
@@ -525,6 +534,8 @@ RETURNING
   error,
   backoff,
   max_backoff,
+  parent_request_key,
+  trace_context,
   catching;
 
 -- name: SucceedAsyncCall :one
@@ -743,7 +754,9 @@ INSERT INTO topic_events (
     "key",
     topic_id,
     caller,
-    payload
+    payload,
+    request_key,
+    trace_context
   )
 VALUES (
   sqlc.arg('key')::topic_event_key,
@@ -755,7 +768,9 @@ VALUES (
       AND topics.name = sqlc.arg('topic')::TEXT
   ),
   sqlc.arg('caller')::TEXT,
-  sqlc.arg('payload')
+  sqlc.arg('payload'),
+  sqlc.arg('request_key')::TEXT,
+  sqlc.arg('trace_context')::jsonb
 );
 
 -- name: GetSubscriptionsNeedingUpdate :many
@@ -788,6 +803,8 @@ SELECT events."key" as event,
         events.payload,
         events.created_at,
         events.caller,
+        events.request_key,
+        events.trace_context,
         NOW() - events.created_at >= sqlc.arg('consumption_delay')::interval AS ready
 FROM topics
 LEFT JOIN topic_events as events ON events.topic_id = topics.id

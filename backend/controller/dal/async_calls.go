@@ -71,14 +71,16 @@ func ParseAsyncOrigin(origin string) (AsyncOrigin, error) {
 }
 
 type AsyncCall struct {
-	*Lease      // May be nil
-	ID          int64
-	Origin      AsyncOrigin
-	Verb        schema.RefKey
-	CatchVerb   optional.Option[schema.RefKey]
-	Request     json.RawMessage
-	ScheduledAt time.Time
-	QueueDepth  int64
+	*Lease           // May be nil
+	ID               int64
+	Origin           AsyncOrigin
+	Verb             schema.RefKey
+	CatchVerb        optional.Option[schema.RefKey]
+	Request          json.RawMessage
+	ScheduledAt      time.Time
+	QueueDepth       int64
+	ParentRequestKey optional.Option[string]
+	TraceContext     []byte
 
 	Error optional.Option[string]
 
@@ -128,6 +130,8 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		Lease:             lease,
 		ScheduledAt:       row.ScheduledAt,
 		QueueDepth:        row.QueueDepth,
+		ParentRequestKey:  row.ParentRequestKey,
+		TraceContext:      row.TraceContext,
 		RemainingAttempts: row.RemainingAttempts,
 		Error:             row.Error,
 		Backoff:           row.Backoff,

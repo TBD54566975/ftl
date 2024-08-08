@@ -19,6 +19,9 @@ const (
 	VerbHeader = "Ftl-Verb"
 	// RequestIDHeader is the header used to pass the inbound request ID.
 	RequestIDHeader = "Ftl-Request-Id"
+	// ParentRequestIDHeader is the header used to pass the parent request ID,
+	// i.e. the publisher or fsm call that initiated this call.
+	ParentRequestIDHeader = "Ftl-Parent-Request-Id"
 )
 
 func IsDirectRouted(header http.Header) bool {
@@ -33,11 +36,24 @@ func SetRequestKey(header http.Header, key model.RequestKey) {
 	header.Set(RequestIDHeader, key.String())
 }
 
+func SetParentRequestKey(header http.Header, key model.RequestKey) {
+	header.Set(ParentRequestIDHeader, key.String())
+}
+
 // GetRequestKey from an incoming request.
 //
 // Will return ("", false, nil) if no request key is present.
 func GetRequestKey(header http.Header) (model.RequestKey, bool, error) {
 	keyStr := header.Get(RequestIDHeader)
+	return getRequestKeyFromKeyStr(keyStr)
+}
+
+func GetParentRequestKey(header http.Header) (model.RequestKey, bool, error) {
+	keyStr := header.Get(ParentRequestIDHeader)
+	return getRequestKeyFromKeyStr(keyStr)
+}
+
+func getRequestKeyFromKeyStr(keyStr string) (model.RequestKey, bool, error) {
 	if keyStr == "" {
 		return model.RequestKey{}, false, nil
 	}
