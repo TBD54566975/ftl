@@ -163,7 +163,7 @@ class FtlProcessor {
                     } else if (topics.getTopics().containsKey(type.name())) {
                         var topic = topics.getTopics().get(type.name());
                         Class<?> paramType = loadClass(type);
-                        return recorder.topicParamExtractor(topic.generatedProducer(), "");
+                        return recorder.topicParamExtractor(topic.generatedProducer());
                     } else if (verbClients.getVerbClients().containsKey(type.name())) {
                         var client = verbClients.getVerbClients().get(type.name());
                         Class<?> paramType = loadClass(type);

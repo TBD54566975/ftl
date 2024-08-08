@@ -3,21 +3,21 @@ package xyz.block.ftl.runtime;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.annotations.Recorder;
-import org.checkerframework.checker.units.qual.C;
 import org.jboss.resteasy.reactive.server.core.ResteasyReactiveRequestContext;
 import org.jboss.resteasy.reactive.server.core.parameters.ParameterExtractor;
-import xyz.block.ftl.Topic;
-import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.v1.CallRequest;
 
-import java.lang.reflect.Type;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.function.BiFunction;
 
 @Recorder
 public class FTLRecorder {
 
-    public void registerVerb(String module, String verbName, String methodName, List<Class<?>> parameterTypes, Class<?> verbHandlerClass,  List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers) {
+    public static final String X_FTL_VERB = "X-ftl-verb";
+
+    public void registerVerb(String module, String verbName, String methodName, List<Class<?>> parameterTypes, Class<?> verbHandlerClass, List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers) {
         //TODO: this sucks
         try {
             var method = verbHandlerClass.getDeclaredMethod(methodName, parameterTypes.toArray(new Class[0]));
@@ -67,15 +67,21 @@ public class FTLRecorder {
         }
     }
 
-    public ParameterExtractor topicParamExtractor(String className, String callingVerb) {
+    public ParameterExtractor topicParamExtractor(String className) {
 
         try {
             var cls = Thread.currentThread().getContextClassLoader().loadClass(className.replace("/", "."));
-            var topic = cls.getDeclaredConstructor(String.class).newInstance(callingVerb);
+            Constructor<?> ctor = cls.getDeclaredConstructor(String.class);
             return new ParameterExtractor() {
                 @Override
                 public Object extractParameter(ResteasyReactiveRequestContext context) {
-                    return topic;
+
+                    try {
+                        Object topic = ctor.newInstance(context.getHeader(X_FTL_VERB, true));
+                        return topic;
+                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
             };
         } catch (Exception e) {
@@ -87,7 +93,7 @@ public class FTLRecorder {
         try {
             var cls = Thread.currentThread().getContextClassLoader().loadClass(className.replace("/", "."));
             var client = cls.getDeclaredConstructor().newInstance();
-            return  new ParameterExtractor() {
+            return new ParameterExtractor() {
                 @Override
                 public Object extractParameter(ResteasyReactiveRequestContext context) {
                     return client;

@@ -54,6 +54,7 @@ public class FTLHttpHandler implements VerbInvoker{
     public CallResponse handle(CallRequest in) {
         try {
             var body = mapper.createParser(in.getBody().newInput()).readValueAs(xyz.block.ftl.runtime.builtin.HttpRequest.class);
+            body.getHeaders().put(FTLRecorder.X_FTL_VERB, List.of(in.getVerb().getName()));
             var ret = handleRequest(body);
             var mappedResponse = mapper.writer().writeValueAsBytes(ret);
             return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
