@@ -304,7 +304,7 @@ class FtlProcessor {
                     String name = param.annotation(Config.class).value().asString();
                     paramMappers.add(new VerbRegistry.ConfigSupplier(name, paramType));
                     if (!context.knownConfig.contains(name)) {
-                        context.moduleBuilder.addDecls(Decl.newBuilder().setSecret(xyz.block.ftl.v1.schema.Secret.newBuilder().setType(buildType(context, param.type())).setName(name)));
+                        context.moduleBuilder.addDecls(Decl.newBuilder().setConfig(xyz.block.ftl.v1.schema.Config.newBuilder().setType(buildType(context, param.type())).setName(name)));
                         context.knownConfig.add(name);
                     }
                 } else if (context.knownTopics.containsKey(param.type().name())) {
