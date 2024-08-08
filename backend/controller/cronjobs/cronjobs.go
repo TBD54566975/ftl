@@ -2,6 +2,7 @@ package cronjobs
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/benbjohnson/clock"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jpillora/backoff"
 	"github.com/serialx/hashring"
 
@@ -97,8 +97,8 @@ type Service struct {
 	hashRingState atomic.Value[*hashRingState]
 }
 
-func New(ctx context.Context, key model.ControllerKey, requestSource string, config Config, pool *pgxpool.Pool, scheduler Scheduler, call ExecuteCallFunc) *Service {
-	return NewForTesting(ctx, key, requestSource, config, dal.New(pool), scheduler, call, clock.New())
+func New(ctx context.Context, key model.ControllerKey, requestSource string, config Config, conn *sql.DB, scheduler Scheduler, call ExecuteCallFunc) *Service {
+	return NewForTesting(ctx, key, requestSource, config, dal.New(conn), scheduler, call, clock.New())
 }
 
 func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, config Config, dal DAL, scheduler Scheduler, call ExecuteCallFunc, clock clock.Clock) *Service {

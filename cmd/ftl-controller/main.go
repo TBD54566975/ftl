@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
@@ -10,7 +11,6 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
@@ -51,7 +51,7 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
-	conn, err := pgxpool.New(ctx, cli.ControllerConfig.DSN)
+	conn, err := sql.Open("pgx", cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
 	dal, err := dal.New(ctx, conn, encryptors)
 	kctx.FatalIfErrorf(err)

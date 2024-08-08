@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -19,8 +18,8 @@ type DAL struct {
 	db sql.DBI
 }
 
-func New(pool *pgxpool.Pool) *DAL {
-	return &DAL{db: sql.NewDB(pool)}
+func New(conn sql.ConnI) *DAL {
+	return &DAL{db: sql.NewDB(conn)}
 }
 
 func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
@@ -92,7 +91,7 @@ func (d *DAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time)
 
 // GetStaleCronJobs returns a list of cron jobs that have been executing longer than the duration
 func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]model.CronJob, error) {
-	rows, err := d.db.GetStaleCronJobs(ctx, duration)
+	rows, err := d.db.GetStaleCronJobs(ctx, sqltypes.Duration(duration))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stale cron jobs: %w", dalerrs.TranslatePGError(err))
 	}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/types/optional"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/common/configuration/sql"
@@ -16,8 +15,8 @@ type DAL struct {
 	db sql.DBI
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool) (*DAL, error) {
-	dal := &DAL{db: sql.NewDB(pool)}
+func New(ctx context.Context, conn sql.ConnI) (*DAL, error) {
+	dal := &DAL{db: sql.NewDB(conn)}
 	return dal, nil
 }
 

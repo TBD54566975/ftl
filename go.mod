@@ -42,6 +42,7 @@ require (
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.11.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
+	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/swaggest/jsonschema-go v0.3.72
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	github.com/titanous/json5 v1.0.0
@@ -127,7 +128,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
-	github.com/lib/pq v1.10.9 // indirect
+	github.com/lib/pq v1.10.9
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.4.0
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect

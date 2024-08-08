@@ -2,13 +2,13 @@ package dal
 
 import (
 	"context"
+	stdsql "database/sql"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/alecthomas/types/optional"
-	"github.com/jackc/pgx/v5"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
@@ -260,10 +260,11 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 		deploymentQuery += ` WHERE key = ANY($1::TEXT[])`
 		deploymentArgs = append(deploymentArgs, filter.deployments)
 	}
-	rows, err := d.db.Conn().Query(ctx, deploymentQuery, deploymentArgs...)
+	rows, err := d.db.Conn().QueryContext(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
 		return nil, dalerrs.TranslatePGError(err)
 	}
+	defer rows.Close() // nolint:errcheck
 	deploymentIDs := []int64{}
 	for rows.Next() {
 		var id int64
@@ -315,7 +316,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	q += fmt.Sprintf(" LIMIT %d", limit)
 
 	// Issue query.
-	rows, err = d.db.Conn().Query(ctx, q, args...)
+	rows, err = d.db.Conn().QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", q, dalerrs.TranslatePGError(err))
 	}
@@ -328,7 +329,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	return events, nil
 }
 
-func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pgx.Rows) ([]Event, error) {
+func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows *stdsql.Rows) ([]Event, error) {
 	var out []Event
 	for rows.Next() {
 		row := eventRow{}

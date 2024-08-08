@@ -7,6 +7,7 @@ package sql
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/alecthomas/types/optional"
 )
@@ -21,9 +22,9 @@ ORDER BY module NULLS LAST
 LIMIT 1
 `
 
-func (q *Queries) GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) ([]byte, error) {
-	row := q.db.QueryRow(ctx, getModuleConfiguration, module, name)
-	var value []byte
+func (q *Queries) GetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) (json.RawMessage, error) {
+	row := q.db.QueryRowContext(ctx, getModuleConfiguration, module, name)
+	var value json.RawMessage
 	err := row.Scan(&value)
 	return value, err
 }
@@ -39,7 +40,7 @@ LIMIT 1
 `
 
 func (q *Queries) GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error) {
-	row := q.db.QueryRow(ctx, getModuleSecretURL, module, name)
+	row := q.db.QueryRowContext(ctx, getModuleSecretURL, module, name)
 	var url string
 	err := row.Scan(&url)
 	return url, err
@@ -52,7 +53,7 @@ ORDER BY module, name
 `
 
 func (q *Queries) ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error) {
-	rows, err := q.db.Query(ctx, listModuleConfiguration)
+	rows, err := q.db.QueryContext(ctx, listModuleConfiguration)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +72,9 @@ func (q *Queries) ListModuleConfiguration(ctx context.Context) ([]ModuleConfigur
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -84,7 +88,7 @@ ORDER BY module, name
 `
 
 func (q *Queries) ListModuleSecrets(ctx context.Context) ([]ModuleSecret, error) {
-	rows, err := q.db.Query(ctx, listModuleSecrets)
+	rows, err := q.db.QueryContext(ctx, listModuleSecrets)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +107,9 @@ func (q *Queries) ListModuleSecrets(ctx context.Context) ([]ModuleSecret, error)
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -115,8 +122,8 @@ VALUES ($1, $2, $3)
 ON CONFLICT ((COALESCE(module, '')), name) DO UPDATE SET value = $3
 `
 
-func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value []byte) error {
-	_, err := q.db.Exec(ctx, setModuleConfiguration, module, name, value)
+func (q *Queries) SetModuleConfiguration(ctx context.Context, module optional.Option[string], name string, value json.RawMessage) error {
+	_, err := q.db.ExecContext(ctx, setModuleConfiguration, module, name, value)
 	return err
 }
 
@@ -127,7 +134,7 @@ ON CONFLICT ((COALESCE(module, '')), name) DO UPDATE SET url = $3
 `
 
 func (q *Queries) SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error {
-	_, err := q.db.Exec(ctx, setModuleSecretURL, module, name, url)
+	_, err := q.db.ExecContext(ctx, setModuleSecretURL, module, name, url)
 	return err
 }
 
@@ -137,7 +144,7 @@ WHERE COALESCE(module, '') = COALESCE($1, '') AND name = $2
 `
 
 func (q *Queries) UnsetModuleConfiguration(ctx context.Context, module optional.Option[string], name string) error {
-	_, err := q.db.Exec(ctx, unsetModuleConfiguration, module, name)
+	_, err := q.db.ExecContext(ctx, unsetModuleConfiguration, module, name)
 	return err
 }
 
@@ -147,6 +154,6 @@ WHERE COALESCE(module, '') = COALESCE($1, '') AND name = $2
 `
 
 func (q *Queries) UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error {
-	_, err := q.db.Exec(ctx, unsetModuleSecret, module, name)
+	_, err := q.db.ExecContext(ctx, unsetModuleSecret, module, name)
 	return err
 }

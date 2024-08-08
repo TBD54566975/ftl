@@ -12,6 +12,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 )
@@ -42,8 +43,8 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 		Origin:            origin.String(),
 		Request:           encryptedRequest,
 		RemainingAttempts: int32(retryParams.Count),
-		Backoff:           retryParams.MinBackoff,
-		MaxBackoff:        retryParams.MaxBackoff,
+		Backoff:           sqltypes.Duration(retryParams.MinBackoff),
+		MaxBackoff:        sqltypes.Duration(retryParams.MaxBackoff),
 		CatchVerb:         retryParams.Catch,
 	})
 	observability.AsyncCalls.Created(ctx, destinationState, retryParams.Catch, origin.String(), int64(retryParams.Count), err)

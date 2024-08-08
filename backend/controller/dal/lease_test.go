@@ -21,7 +21,7 @@ func leaseExists(t *testing.T, conn sql.ConnI, idempotencyKey uuid.UUID, key lea
 	t.Helper()
 	var count int
 	err := dalerrs.TranslatePGError(conn.
-		QueryRow(context.Background(), "SELECT COUNT(*) FROM leases WHERE idempotency_key = $1 AND key = $2", idempotencyKey, key).
+		QueryRowContext(context.Background(), "SELECT COUNT(*) FROM leases WHERE idempotency_key = $1 AND key = $2", idempotencyKey, key).
 		Scan(&count))
 	if errors.Is(err, dalerrs.ErrNotFound) {
 		return false

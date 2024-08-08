@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type AsyncCallState string
@@ -376,16 +378,16 @@ type AsyncCall struct {
 	State             AsyncCallState
 	Origin            string
 	ScheduledAt       time.Time
-	Request           []byte
-	Response          []byte
+	Request           json.RawMessage
+	Response          pqtype.NullRawMessage
 	Error             optional.Option[string]
 	RemainingAttempts int32
-	Backoff           time.Duration
-	MaxBackoff        time.Duration
+	Backoff           sqltypes.Duration
+	MaxBackoff        sqltypes.Duration
 	CatchVerb         optional.Option[schema.RefKey]
 	Catching          bool
 	ParentRequestKey  optional.Option[string]
-	TraceContext      []byte
+	TraceContext      pqtype.NullRawMessage
 }
 
 type Controller struct {
@@ -415,7 +417,7 @@ type Deployment struct {
 	ModuleID    int64
 	Key         model.DeploymentKey
 	Schema      *schema.Module
-	Labels      []byte
+	Labels      json.RawMessage
 	MinReplicas int32
 }
 
@@ -467,7 +469,7 @@ type Lease struct {
 	Key            leases.Key
 	CreatedAt      time.Time
 	ExpiresAt      time.Time
-	Metadata       []byte
+	Metadata       pqtype.NullRawMessage
 }
 
 type Module struct {
@@ -481,7 +483,7 @@ type ModuleConfiguration struct {
 	CreatedAt time.Time
 	Module    optional.Option[string]
 	Name      string
-	Value     []byte
+	Value     json.RawMessage
 }
 
 type ModuleSecret struct {
@@ -509,7 +511,7 @@ type Runner struct {
 	Endpoint           string
 	ModuleName         optional.Option[string]
 	DeploymentID       optional.Option[int64]
-	Labels             []byte
+	Labels             json.RawMessage
 }
 
 type Topic struct {
@@ -530,7 +532,7 @@ type TopicEvent struct {
 	Payload      []byte
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
-	TraceContext []byte
+	TraceContext pqtype.NullRawMessage
 }
 
 type TopicSubscriber struct {
@@ -541,8 +543,8 @@ type TopicSubscriber struct {
 	DeploymentID         int64
 	Sink                 schema.RefKey
 	RetryAttempts        int32
-	Backoff              time.Duration
-	MaxBackoff           time.Duration
+	Backoff              sqltypes.Duration
+	MaxBackoff           sqltypes.Duration
 	CatchVerb            optional.Option[schema.RefKey]
 }
 

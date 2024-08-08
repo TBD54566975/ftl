@@ -2,11 +2,13 @@ package databasetesting
 
 import (
 	"context"
+	stdsql "database/sql"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -15,20 +17,21 @@ import (
 // CreateForDevel creates and migrates a new database for development or testing.
 //
 // If "recreate" is true, the database will be dropped and recreated.
-func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Pool, error) {
+func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB, error) {
 	logger := log.FromContext(ctx)
-	config, err := pgx.ParseConfig(dsn)
+	config, err := url.Parse(dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse DSN: %w", err)
 	}
 
-	noDBDSN := config.Copy()
-	noDBDSN.Database = ""
-	var conn *pgx.Conn
+	noDBDSN := *config
+	noDBDSN.Path = "" // Remove the database name.
+
+	var conn *stdsql.DB
 	for range 10 {
-		conn, err = pgx.ConnectConfig(ctx, noDBDSN)
+		conn, err = stdsql.Open("pgx", noDBDSN.String())
 		if err == nil {
-			defer conn.Close(ctx)
+			defer conn.Close()
 			break
 		}
 		logger.Debugf("Waiting for database to be ready: %v", err)
@@ -43,31 +46,33 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Po
 		return nil, fmt.Errorf("database not ready after 10 tries: %w", err)
 	}
 
+	dbName := strings.TrimPrefix(config.Path, "/")
+
 	if recreate {
 		// Terminate any dangling connections.
-		_, err = conn.Exec(ctx, `
+		_, err = conn.ExecContext(ctx, `
 			SELECT pid, pg_terminate_backend(pid)
 			FROM pg_stat_activity
 			WHERE datname = $1 AND pid <> pg_backend_pid()`,
-			config.Database)
+			dbName)
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = conn.Exec(ctx, fmt.Sprintf("DROP DATABASE IF EXISTS %q", config.Database))
+		_, err = conn.ExecContext(ctx, fmt.Sprintf("DROP DATABASE IF EXISTS %q", dbName))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	_, _ = conn.Exec(ctx, fmt.Sprintf("CREATE DATABASE %q", config.Database)) //nolint:errcheck // PG doesn't support "IF NOT EXISTS" so instead we just ignore any error.
+	_, _ = conn.ExecContext(ctx, fmt.Sprintf("CREATE DATABASE %q", dbName)) //nolint:errcheck // PG doesn't support "IF NOT EXISTS" so instead we just ignore any error.
 
 	err = sql.Migrate(ctx, dsn, log.Debug)
 	if err != nil {
 		return nil, err
 	}
 
-	realConn, err := pgxpool.New(ctx, dsn)
+	realConn, err := stdsql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +80,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*pgxpool.Po
 	// This includes things like resetting the state of async calls, leases,
 	// controller/runner registration, etc. but not anything more.
 	if !recreate {
-		_, err = realConn.Exec(ctx, `
+		_, err = realConn.ExecContext(ctx, `
 			WITH deleted AS (
 				DELETE FROM async_calls
 				RETURNING 1
