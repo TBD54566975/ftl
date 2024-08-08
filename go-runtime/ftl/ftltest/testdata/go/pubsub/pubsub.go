@@ -11,6 +11,10 @@ import (
 
 //ftl:export
 var Topic = ftl.Topic[Event]("topic")
+
+//ftl:export
+var Topic2 = ftl.Topic[Event]("topic2")
+
 var subscription = ftl.Subscription(Topic, "subscription")
 
 //ftl:data
@@ -21,6 +25,11 @@ type Event struct {
 //ftl:verb
 func PublishToTopicOne(ctx context.Context, event Event) error {
 	return Topic.Publish(ctx, event)
+}
+
+//ftl:verb
+func PublishToTopicTwo(ctx context.Context, event Event) error {
+	return Topic2.Publish(ctx, event)
 }
 
 //ftl:subscribe subscription

@@ -26,6 +26,17 @@ func TestSubscriberReturningErrors(t *testing.T) {
 	assert.Equal(t, count, len(ftltest.EventsForTopic(ctx, Topic)))
 }
 
+func TestPropagateEvents(t *testing.T) {
+	// Test that we can publish multiple events, which will take time to consume, and that we track each error
+	ctx := ftltest.Context(
+		ftltest.WithSubscriber(subscription, PublishToTopicTwo),
+	)
+	assert.NoError(t, PublishToTopicOne(ctx, Event{Value: "propagation-test"}))
+	ftltest.WaitForSubscriptionsToComplete(ctx)
+	assert.Equal(t, 1, len(ftltest.EventsForTopic(ctx, Topic)))
+	assert.Equal(t, 1, len(ftltest.EventsForTopic(ctx, Topic2)))
+}
+
 func TestMultipleMultipleFakeSubscribers(t *testing.T) {
 	// Test that multiple adhoc subscribers can be added for a subscription
 	count := 5
