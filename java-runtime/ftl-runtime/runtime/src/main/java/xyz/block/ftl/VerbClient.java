@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface VerbClient<P, R> {
 
-    @NotNull
     R call(P param);
 
 }

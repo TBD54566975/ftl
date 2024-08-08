@@ -14,6 +14,7 @@ import io.quarkus.deployment.CodeGenContext;
 import io.quarkus.deployment.CodeGenProvider;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
 import xyz.block.ftl.v1.schema.Module;
@@ -125,19 +126,27 @@ public class FTLCodeGenerator implements CodeGenProvider {
     }
 
     private TypeName toJavaTypeName(Type type) {
+        var results = toJavaTypeNameImpl(type);
+        if (type.hasRef() || type.hasArray() || type.hasBytes() || type.hasString() || type.hasMap()) {
+            return results.annotated(AnnotationSpec.builder(NotNull.class).build());
+        }
+        return results;
+    }
+
+    private TypeName toJavaTypeNameImpl(Type type) {
         if (type.hasArray()) {
-            return ParameterizedTypeName.get(ClassName.get(List.class), toJavaTypeName(type.getArray().getElement()));
+            return ParameterizedTypeName.get(ClassName.get(List.class), toJavaTypeNameImpl(type.getArray().getElement()));
         } else if (type.hasString()) {
             return ClassName.get(String.class);
         } else if (type.hasOptional()) {
-            return ParameterizedTypeName.get(ClassName.get(Optional.class), toJavaTypeName(type.getOptional().getType()));
+            return  toJavaTypeNameImpl(type.getOptional().getType());
         } else if (type.hasRef()) {
             if (type.getRef().getModule().isEmpty()) {
                 return TypeVariableName.get(type.getRef().getName());
             }
             return ClassName.get(PACKAGE_PREFIX + type.getRef().getModule(), type.getRef().getName());
         } else if (type.hasMap()) {
-            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeName(type.getMap().getKey()), toJavaTypeName(type.getMap().getValue()));
+            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeNameImpl(type.getMap().getKey()), toJavaTypeNameImpl(type.getMap().getValue()));
         } else if (type.hasTime()) {
             return ClassName.get(Instant.class);
         } else if (type.hasInt()) {
