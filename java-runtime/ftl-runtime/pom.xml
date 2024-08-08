@@ -12,6 +12,7 @@
         <module>deployment</module>
         <module>runtime</module>
         <module>integration-tests</module>
+        <module>test-framework</module>
     </modules>
 
     <properties>
@@ -35,6 +36,21 @@
                 <version>${quarkus.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>xyz.block</groupId>
+                <artifactId>ftl-java-runtime</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>xyz.block</groupId>
+                <artifactId>ftl-java-runtime-deployment</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>xyz.block</groupId>
+                <artifactId>ftl-java-test-framework</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.grpc</groupId>

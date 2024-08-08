@@ -1,0 +1,17 @@
+package xyz.block.ftl.java.runtime.it;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.is;
+
+import org.junit.jupiter.api.Test;
+
+import io.quarkus.test.junit.QuarkusTest;
+
+@QuarkusTest
+public class FtlJavaRuntimeResourceTest {
+
+    @Test
+    public void testHelloEndpoint() {
+        //TODO
+    }
+}
