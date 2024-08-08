@@ -9,6 +9,7 @@ require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/TBD54566975/golang-tools v0.2.1
 	github.com/TBD54566975/scaffolder v1.0.0
+	github.com/XSAM/otelsql v0.32.0
 	github.com/alecthomas/assert/v2 v2.10.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/chroma/v2 v2.14.0
@@ -70,7 +71,6 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/XSAM/otelsql v0.32.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.11 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.15 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.15 // indirect
