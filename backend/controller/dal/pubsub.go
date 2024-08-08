@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
@@ -28,11 +26,9 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 	}
 
 	// Store the current otel context with the event
-	oc := propagation.MapCarrier(make(map[string]string))
-	otel.GetTextMapPropagator().Inject(ctx, oc)
-	jsonOc, err := json.Marshal(oc)
+	jsonOc, err := observability.RetrieveTraceContextFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to marshal otel context: %w", err)
+		return fmt.Errorf("failed to retrieve trace context: %w", err)
 	}
 
 	// Store the request key that initiated this publish, this will eventually

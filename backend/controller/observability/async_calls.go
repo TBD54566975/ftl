@@ -2,6 +2,7 @@ package observability
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -130,6 +132,25 @@ func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, or
 	m.completed.Add(ctx, 1, metric.WithAttributes(attrs...))
 
 	m.queueDepth.Record(ctx, queueDepth)
+}
+
+func ExtractTraceContextToContext(ctx context.Context, traceContext []byte) (context.Context, error) {
+	var oc propagation.MapCarrier
+	err := json.Unmarshal(traceContext, &oc)
+	if err != nil {
+		return ctx, fmt.Errorf("failed to unmarshal otel context: %w", err)
+	}
+	return otel.GetTextMapPropagator().Extract(ctx, oc), nil
+}
+
+func RetrieveTraceContextFromContext(ctx context.Context) ([]byte, error) {
+	oc := propagation.MapCarrier(make(map[string]string))
+	otel.GetTextMapPropagator().Inject(ctx, oc)
+	jsonOc, err := json.Marshal(oc)
+	if err != nil {
+		return jsonOc, fmt.Errorf("failed to marshal otel context: %w", err)
+	}
+	return jsonOc, nil
 }
 
 func extractAsyncCallAttrs(verb schema.RefKey, origin string, scheduledAt time.Time) []attribute.KeyValue {
