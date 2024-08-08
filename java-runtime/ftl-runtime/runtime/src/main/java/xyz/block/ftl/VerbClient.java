@@ -1,5 +1,7 @@
 package xyz.block.ftl;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * A client for a specific verb
  * @param <P> The verb parameter type
@@ -7,6 +9,7 @@ package xyz.block.ftl;
  */
 public interface VerbClient<P, R> {
 
+    @NotNull
     R call(P param);
 
 }

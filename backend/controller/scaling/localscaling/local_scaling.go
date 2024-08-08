@@ -92,7 +92,7 @@ func (l *LocalScaling) SetReplicas(ctx context.Context, replicas int, idleRunner
 		simpleName := fmt.Sprintf("runner%d", keySuffix)
 		if err := kong.ApplyDefaults(&config, kong.Vars{
 			"deploymentdir": filepath.Join(l.cacheDir, "ftl-runner", simpleName, "deployments"),
-			"language":      "go,kotlin,rust",
+			"language":      "go,kotlin,rust,java",
 		}); err != nil {
 			return err
 		}

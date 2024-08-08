@@ -11,7 +11,7 @@ import (
 type MetadataTypeMap struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Runtime    string `parser:"'+' 'typemap' @('go' | 'kotlin')" protobuf:"2"`
+	Runtime    string `parser:"'+' 'typemap' @('go' | 'kotlin' | 'java')" protobuf:"2"`
 	NativeName string `parser:"@String" protobuf:"3"`
 }
 

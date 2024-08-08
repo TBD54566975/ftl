@@ -49,7 +49,7 @@ type Config struct {
 	TemplateDir           string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
 	DeploymentDir         string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
 	DeploymentKeepHistory int             `help:"Number of deployments to keep history for." default:"3"`
-	Language              []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust"`
+	Language              []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust,java"`
 	HeartbeatPeriod       time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter       time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
 	RunnerStartDelay      time.Duration   `help:"Time in seconds for a runner to wait before contacting the controller. This can be needed in istio environments to work around initialization races." env:"FTL_RUNNER_START_DELAY" default:"0s"`

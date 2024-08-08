@@ -21,6 +21,9 @@ type ModuleGoConfig struct{}
 // ModuleKotlinConfig is language-specific configuration for Kotlin modules.
 type ModuleKotlinConfig struct{}
 
+// ModuleJavaConfig is language-specific configuration for Java modules.
+type ModuleJavaConfig struct{}
+
 // ModuleConfig is the configuration for an FTL module.
 //
 // Module config files are currently TOML.
@@ -46,6 +49,7 @@ type ModuleConfig struct {
 
 	Go     ModuleGoConfig     `toml:"go,optional"`
 	Kotlin ModuleKotlinConfig `toml:"kotlin,optional"`
+	Java   ModuleJavaConfig   `toml:"java,optional"`
 }
 
 // AbsModuleConfig is a ModuleConfig with all paths made absolute.
@@ -119,6 +123,19 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	switch config.Language {
 	case "kotlin":
 		if config.Build == "" {
+			config.Build = "mvn -B compile"
+		}
+		if config.DeployDir == "" {
+			config.DeployDir = "target"
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main", "classes", "dependency", "classpath.txt"}
+		}
+		if len(config.Watch) == 0 {
+			config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
+		}
+	case "java":
+		if config.Build == "" {
 			config.Build = "mvn -B -e package"
 		}
 		if config.DeployDir == "" {
@@ -130,7 +147,6 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		if len(config.Watch) == 0 {
 			config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
 		}
-
 	case "go":
 		if config.DeployDir == "" {
 			config.DeployDir = ".ftl"

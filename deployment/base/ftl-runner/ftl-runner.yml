@@ -31,7 +31,7 @@ spec:
             - name: FTL_RUNNER_ADVERTISE
               value: "http://$(MY_POD_IP):8893"
             - name: FTL_LANGUAGE
-              value: "go,kotlin"
+              value: "go,kotlin,java"
           ports:
             - containerPort: 8893
           readinessProbe:
