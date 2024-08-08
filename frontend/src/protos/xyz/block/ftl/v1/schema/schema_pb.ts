@@ -1526,6 +1526,11 @@ export class MetadataRetry extends Message<MetadataRetry> {
    */
   maxBackoff = "";
 
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Ref catch = 5;
+   */
+  catch?: Ref;
+
   constructor(data?: PartialMessage<MetadataRetry>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1538,6 +1543,7 @@ export class MetadataRetry extends Message<MetadataRetry> {
     { no: 2, name: "count", kind: "scalar", T: 3 /* ScalarType.INT64 */, opt: true },
     { no: 3, name: "minBackoff", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "maxBackoff", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "catch", kind: "message", T: Ref, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataRetry {

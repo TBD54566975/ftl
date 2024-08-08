@@ -168,7 +168,10 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 						}
 						ingress[key] = n
 
-					case *MetadataCronJob, *MetadataRetry, *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap:
+					case *MetadataRetry:
+						validateRetries(module, md, optional.Some(n.Request), scopes, optional.Some(schema))
+
+					case *MetadataCronJob, *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap:
 					}
 				}
 
@@ -322,6 +325,12 @@ func ValidateModule(module *Module) error {
 				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 			}
 
+		case *FSM:
+			if retry, ok := islices.FindVariant[*MetadataRetry](n.Metadata); ok {
+				suberrs := validateRetries(module, retry, optional.None[Type](), scopes, optional.None[*Schema]())
+				merr = append(merr, suberrs...)
+			}
+
 		case *Verb:
 			merr = append(merr, validateVerbMetadata(scopes, module, n)...)
 
@@ -359,12 +368,17 @@ func ValidateModule(module *Module) error {
 				}
 			}
 
+		case *MetadataRetry:
+			if n.Catch != nil && n.Catch.Module == "" {
+				n.Catch.Module = module.Name
+			}
+
 		case *Array, *Bool, *Database, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*FSM, *Config, *FSMTransition, *Secret, *MetadataRetry, *MetadataSubscriber, *MetadataTypeMap:
+			*Config, *FSMTransition, *Secret, *MetadataSubscriber, *MetadataTypeMap:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -561,7 +575,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 				merr = append(merr, errorf(md, "verb %s: cron job can not have a response type", n.Name))
 			}
 		case *MetadataRetry:
-			// Only allow retries on FSM transitions for now
+			// Only allow retries on FSM transitions or pubsub subscribers for now
 			_, isPartOfFSM := islices.Find(module.Decls, func(d Decl) bool {
 				if d, ok := d.(*FSM); ok {
 					// check if this verb part of the FSM
@@ -580,24 +594,13 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			})
 			_, isSubscriber := islices.FindVariant[*MetadataSubscriber](n.Metadata)
 			if !isPartOfFSM && !isSubscriber {
-				merr = append(merr, errorf(md, `verb %s: retries can only be added to subscribers or FSM transitions`, n.Name))
+				merr = append(merr, errorf(md, `retries can only be added to subscribers or FSM transitions`))
 				return
 			}
 
-			// Validate count
-			if md.Count != nil && *md.Count <= 0 {
-				merr = append(merr, errorf(md, "verb %s: retry count must be at least 1", n.Name))
-			}
+			subErrs := validateRetries(module, md, optional.Some(n.Request), scopes, optional.None[*Schema]())
+			merr = append(merr, subErrs...)
 
-			// Validate parsing of durations
-			retryParams, err := md.RetryParams()
-			if err != nil {
-				merr = append(merr, errorf(md, "verb %s: %v", n.Name, err))
-				return
-			}
-			if retryParams.MaxBackoff < retryParams.MinBackoff {
-				merr = append(merr, errorf(md, "verb %s: max backoff duration (%s) needs to be at least as long as initial backoff (%s)", n.Name, md.MaxBackoff, md.MinBackoff))
-			}
 		case *MetadataSubscriber:
 			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
 			merr = append(merr, subErrs...)
@@ -737,6 +740,63 @@ func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, 
 	}
 	if _, ok := v.Response.(*Unit); !ok {
 		merr = append(merr, errorf(md, "verb %s: must be a sink to subscribe but found response type %v", v.Name, v.Response))
+	}
+	return merr
+}
+
+func validateRetries(module *Module, retry *MetadataRetry, requestType optional.Option[Type], scopes Scopes, schema optional.Option[*Schema]) (merr []error) {
+	// Validate count
+	if retry.Count != nil && *retry.Count <= 0 {
+		merr = append(merr, errorf(retry, "retry count must be at least 1"))
+	}
+
+	// Validate parsing of durations
+	retryParams, err := retry.RetryParams()
+	if err != nil {
+		merr = append(merr, errorf(retry, err.Error()))
+		return
+	}
+	if retryParams.MaxBackoff < retryParams.MinBackoff {
+		merr = append(merr, errorf(retry, "max backoff duration (%s) needs to be at least as long as initial backoff (%s)", retry.MaxBackoff, retry.MinBackoff))
+	}
+
+	// validate catch
+	if retry.Catch == nil {
+		return
+	}
+	req, ok := requestType.Get()
+	if !ok {
+		// request type is not set for FSMs
+		merr = append(merr, errorf(retry, "catch can only be defined on verbs"))
+		return
+	}
+	if retry.Catch.Module == "" {
+		retry.Catch.Module = module.Name
+	}
+	catchDecl := scopes.Resolve(*retry.Catch)
+	if catchDecl == nil {
+		if retry.Catch.Module != "" && retry.Catch.Module != module.Name && !schema.Ok() {
+			// can not validate catch ref from external modules until we have the whole schema
+			return
+		}
+		merr = append(merr, errorf(retry, "could not resolve catch verb %q", retry.Catch))
+		return
+	}
+	catchVerb, ok := catchDecl.Symbol.(*Verb)
+	if !ok {
+		merr = append(merr, errorf(retry, "expected catch to be a verb"))
+		return
+	}
+	catchRequestRef, ok := catchVerb.Request.(*Ref)
+	if !ok {
+		merr = append(merr, errorf(retry, "catch verb must have a request type of builtin.CatchRequest<%s> but found %v", requestType, catchVerb.Request))
+	} else if !strings.HasPrefix(catchRequestRef.String(), "builtin.CatchRequest") {
+		merr = append(merr, errorf(retry, "catch verb must have a request type of builtin.CatchRequest<%s> but found %v", requestType, catchRequestRef))
+	} else if len(catchRequestRef.TypeParameters) != 1 || catchRequestRef.TypeParameters[0].String() != req.String() {
+		merr = append(merr, errorf(retry, "catch verb must have a request type of builtin.CatchRequest<%s> but found %v", requestType, catchRequestRef))
+	}
+	if _, ok := catchVerb.Response.(*Unit); !ok {
+		merr = append(merr, errorf(retry, "catch verb must not have a response type but found %v", catchVerb.Response))
 	}
 	return merr
 }
