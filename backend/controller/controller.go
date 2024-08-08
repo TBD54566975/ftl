@@ -1404,17 +1404,12 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		call.Release() //nolint:errcheck
 	}()
 
-	// Queue depth is queried at acquisition time, which means it includes the async
-	// call that was just executed, but it will be recorded at completion time, so
-	// decrement the value accordingly.
-	queueDepth := call.QueueDepth - 1
-
 	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb))
 
 	if call.Catching {
 		// Retries have been exhausted but catch verb has previously failed
 		// We need to try again to catch the async call
-		return 0, s.catchAsyncCall(ctx, logger, call, queueDepth)
+		return 0, s.catchAsyncCall(ctx, logger, call)
 	}
 
 	logger.Tracef("Executing async call")
@@ -1438,6 +1433,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, optional.None[string]())
 	}
 
+	queueDepth := call.QueueDepth
 	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx, isFinalResult bool) error {
 		return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
 	})
@@ -1445,15 +1441,16 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, err)
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
-	if didScheduleAnotherCall {
-		// Increment queue depth to model the next scheduled attempt
-		queueDepth++
+	if !didScheduleAnotherCall {
+		// Queue depth is queried at acquisition time, which means it includes the async
+		// call that was just executed so we need to decrement
+		queueDepth = call.QueueDepth - 1
 	}
 	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, nil)
 	return 0, nil
 }
 
-func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *dal.AsyncCall, queueDepth int64) error {
+func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *dal.AsyncCall) error {
 	catchVerb, ok := call.CatchVerb.Get()
 	if !ok {
 		logger.Warnf("Async call %s could not catch, missing catch verb", call.Verb)
@@ -1494,7 +1491,8 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.None[string]())
 		catchResult = either.LeftOf[string](resp.Msg.GetBody())
 	}
-	_, err = s.dal.CompleteAsyncCall(ctx, call, catchResult, func(tx *dal.Tx, isFinalResult bool) error {
+	queueDepth := call.QueueDepth
+	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, catchResult, func(tx *dal.Tx, isFinalResult bool) error {
 		// Exposes the original error to external components such as PubSub and FSM
 		return s.finaliseAsyncCall(ctx, tx, call, originalResult, isFinalResult)
 	})
@@ -1502,6 +1500,11 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 		logger.Errorf(err, "Async call %s could not complete after catching (%s)", call.Verb, catchVerb)
 		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, err)
 		return fmt.Errorf("async call %s could not complete after catching (%s): %w", call.Verb, catchVerb, err)
+	}
+	if !didScheduleAnotherCall {
+		// Queue depth is queried at acquisition time, which means it includes the async
+		// call that was just executed so we need to decrement
+		queueDepth = call.QueueDepth - 1
 	}
 	logger.Debugf("Caught async call %s with %s", call.Verb, catchVerb)
 	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, nil)
