@@ -19,7 +19,7 @@ const (
 	asyncCallMeterName                      = "ftl.async_call"
 	asyncCallOriginAttr                     = "ftl.async_call.origin"
 	asyncCallVerbRefAttr                    = "ftl.async_call.verb.ref"
-	asyncCallCatchVerbRefAttr               = "ftl.async_call.catchverb.ref"
+	asyncCallCatchVerbRefAttr               = "ftl.async_call.catch_verb.ref"
 	asyncCallIsCatchingAttr                 = "ftl.async_call.catching"
 	asyncCallTimeSinceScheduledAtBucketAttr = "ftl.async_call.time_since_scheduled_at_ms.bucket"
 	asyncCallRemainingAttemptsAttr          = "ftl.async_call.remaining_attempts"
@@ -130,8 +130,8 @@ func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, ca
 	m.queueDepth.Record(ctx, queueDepth)
 }
 
-func extractAsyncCallAttrs(verb schema.RefKey, caughtByVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool) []attribute.KeyValue {
-	return append(extractRefAttrs(verb, caughtByVerb, origin, isCatching), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, timeSinceMS(scheduledAt))))
+func extractAsyncCallAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool) []attribute.KeyValue {
+	return append(extractRefAttrs(verb, catchVerb, origin, isCatching), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, timeSinceMS(scheduledAt))))
 }
 
 func extractRefAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, isCatching bool) []attribute.KeyValue {
@@ -142,7 +142,7 @@ func extractRefAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey
 		attribute.Bool(asyncCallIsCatchingAttr, isCatching),
 	}
 	if catch, ok := catchVerb.Get(); ok {
-		attributes = append(attributes, attribute.String(asyncCallVerbRefAttr, catch.String()))
+		attributes = append(attributes, attribute.String(asyncCallCatchVerbRefAttr, catch.String()))
 	}
 	return attributes
 }
