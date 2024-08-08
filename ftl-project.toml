@@ -1,8 +1,6 @@
 name = "ftl"
 module-dirs = ["examples/go"]
 ftl-min-version = ""
-hermit = false
-no-git = false
 
 [global]
   [global.configuration]
@@ -13,9 +11,6 @@ no-git = false
   [modules.echo]
     [modules.echo.configuration]
       default = "inline://ImFub255bW91cyI"
-  [modules.test]
-    [modules.test.configuration]
-    [modules.test.secrets]
 
 [commands]
   startup = ["echo 'FTL startup command ⚡️'"]

@@ -84,7 +84,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 	}
 	err = otelsql.RegisterDBStatsMetrics(realConn, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	// Reset transient state in the database to a clean state for development purposes.
 	// This includes things like resetting the state of async calls, leases,
