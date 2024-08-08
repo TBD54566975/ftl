@@ -70,7 +70,7 @@ func TestHashRing(t *testing.T) {
 	err = mockDal.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
 
-	controllers := newControllers(ctx, 20, mockDal, func() clock.Clock { return clock.NewMock() }, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
+	controllers := newControllers(ctx, 20, mockDal, func() clock.Clock { return clock.NewMock() }, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], o optional.Option[model.RequestKey], p optional.Option[model.RequestKey], s string) (*connect.Response[ftlv1.CallResponse], error) {
 		return &connect.Response[ftlv1.CallResponse]{}, nil
 	})
 

@@ -21,6 +21,7 @@ import (
 type ftlDirectRoutingKey struct{}
 type ftlVerbKey struct{}
 type requestIDKey struct{}
+type parentRequestIDKey struct{}
 
 // WithDirectRouting ensures any hops in Verb routing do not redirect.
 //
@@ -63,6 +64,24 @@ func IsDirectRouted(ctx context.Context) bool {
 // TODO: Return an Option here instead of a bool.
 func RequestKeyFromContext(ctx context.Context) (optional.Option[model.RequestKey], error) {
 	value := ctx.Value(requestIDKey{})
+	return requestKeyFromContextValue(value)
+}
+
+// WithRequestKey adds the request key to the context.
+func WithRequestKey(ctx context.Context, key model.RequestKey) context.Context {
+	return context.WithValue(ctx, requestIDKey{}, key.String())
+}
+
+func ParentRequestKeyFromContext(ctx context.Context) (optional.Option[model.RequestKey], error) {
+	value := ctx.Value(parentRequestIDKey{})
+	return requestKeyFromContextValue(value)
+}
+
+func WithParentRequestKey(ctx context.Context, key model.RequestKey) context.Context {
+	return context.WithValue(ctx, parentRequestIDKey{}, key.String())
+}
+
+func requestKeyFromContextValue(value any) (optional.Option[model.RequestKey], error) {
 	keyStr, ok := value.(string)
 	if !ok {
 		return optional.None[model.RequestKey](), nil
@@ -72,11 +91,6 @@ func RequestKeyFromContext(ctx context.Context) (optional.Option[model.RequestKe
 		return optional.None[model.RequestKey](), fmt.Errorf("invalid request key: %w", err)
 	}
 	return optional.Some(key), nil
-}
-
-// WithRequestKey adds the request key to the context.
-func WithRequestKey(ctx context.Context, key model.RequestKey) context.Context {
-	return context.WithValue(ctx, requestIDKey{}, key.String())
 }
 
 func DefaultClientOptions(level log.Level) []connect.ClientOption {
@@ -253,6 +267,11 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 		} else if key, ok := key.Get(); ok {
 			headers.SetRequestKey(header, key)
 		}
+		if key, err := ParentRequestKeyFromContext(ctx); err != nil {
+			return nil, fmt.Errorf("invalid parent request key in context: %w", err)
+		} else if key, ok := key.Get(); ok {
+			headers.SetParentRequestKey(header, key)
+		}
 	} else {
 		if headers.IsDirectRouted(header) {
 			ctx = WithDirectRouting(ctx)
@@ -266,6 +285,11 @@ func propagateHeaders(ctx context.Context, isClient bool, header http.Header) (c
 			return nil, err
 		} else if ok {
 			ctx = WithRequestKey(ctx, key)
+		}
+		if key, ok, err := headers.GetParentRequestKey(header); err != nil {
+			return nil, fmt.Errorf("invalid parent request key in header: %w", err)
+		} else if ok {
+			ctx = WithParentRequestKey(ctx, key)
 		}
 	}
 	return ctx, nil

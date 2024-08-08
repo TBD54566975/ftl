@@ -51,17 +51,18 @@ func (e *LogEvent) GetID() int64 { return e.ID }
 func (e *LogEvent) event()       {}
 
 type CallEvent struct {
-	ID            int64
-	DeploymentKey model.DeploymentKey
-	RequestKey    optional.Option[model.RequestKey]
-	Time          time.Time
-	SourceVerb    optional.Option[schema.Ref]
-	DestVerb      schema.Ref
-	Duration      time.Duration
-	Request       json.RawMessage
-	Response      json.RawMessage
-	Error         optional.Option[string]
-	Stack         optional.Option[string]
+	ID               int64
+	DeploymentKey    model.DeploymentKey
+	RequestKey       optional.Option[model.RequestKey]
+	ParentRequestKey optional.Option[model.RequestKey]
+	Time             time.Time
+	SourceVerb       optional.Option[schema.Ref]
+	DestVerb         schema.Ref
+	Duration         time.Duration
+	Request          json.RawMessage
+	Response         json.RawMessage
+	Error            optional.Option[string]
+	Stack            optional.Option[string]
 }
 
 func (e *CallEvent) GetID() int64 { return e.ID }

@@ -382,6 +382,7 @@ type AsyncCall struct {
 	RemainingAttempts int32
 	Backoff           time.Duration
 	MaxBackoff        time.Duration
+	ParentRequestKey  optional.Option[string]
 	OtelContext       []byte
 }
 
@@ -425,16 +426,17 @@ type DeploymentArtefact struct {
 }
 
 type Event struct {
-	ID           int64
-	TimeStamp    time.Time
-	DeploymentID int64
-	RequestID    optional.Option[int64]
-	Type         EventType
-	CustomKey1   optional.Option[string]
-	CustomKey2   optional.Option[string]
-	CustomKey3   optional.Option[string]
-	CustomKey4   optional.Option[string]
-	Payload      json.RawMessage
+	ID              int64
+	TimeStamp       time.Time
+	DeploymentID    int64
+	RequestID       optional.Option[int64]
+	Type            EventType
+	CustomKey1      optional.Option[string]
+	CustomKey2      optional.Option[string]
+	CustomKey3      optional.Option[string]
+	CustomKey4      optional.Option[string]
+	Payload         json.RawMessage
+	ParentRequestID optional.Option[string]
 }
 
 type FsmInstance struct {
@@ -525,6 +527,7 @@ type TopicEvent struct {
 	TopicID     int64
 	Payload     []byte
 	Caller      optional.Option[string]
+	RequestKey  optional.Option[string]
 	OtelContext []byte
 }
 

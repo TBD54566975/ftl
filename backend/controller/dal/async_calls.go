@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
@@ -70,14 +71,15 @@ func ParseAsyncOrigin(origin string) (AsyncOrigin, error) {
 }
 
 type AsyncCall struct {
-	*Lease      // May be nil
-	ID          int64
-	Origin      AsyncOrigin
-	Verb        schema.RefKey
-	Request     json.RawMessage
-	ScheduledAt time.Time
-	QueueDepth  int64
-	OtelContext []byte
+	*Lease           // May be nil
+	ID               int64
+	Origin           AsyncOrigin
+	Verb             schema.RefKey
+	Request          json.RawMessage
+	ScheduledAt      time.Time
+	QueueDepth       int64
+	ParentRequestKey optional.Option[string]
+	OtelContext      []byte
 
 	RemainingAttempts int32
 	Backoff           time.Duration
@@ -123,6 +125,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		Lease:             lease,
 		ScheduledAt:       row.ScheduledAt,
 		QueueDepth:        row.QueueDepth,
+		ParentRequestKey:  row.ParentRequestKey,
 		OtelContext:       row.OtelContext,
 		RemainingAttempts: row.RemainingAttempts,
 		Backoff:           row.Backoff,

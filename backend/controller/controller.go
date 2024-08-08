@@ -858,7 +858,7 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
-	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), "")
+	return s.callWithRequest(ctx, req, optional.None[model.RequestKey](), optional.None[model.RequestKey](), "")
 }
 
 func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.SendFSMEventRequest]) (resp *connect.Response[ftlv1.SendFSMEventResponse], err error) {
@@ -964,6 +964,7 @@ func (s *Service) callWithRequest(
 	ctx context.Context,
 	req *connect.Request[ftlv1.CallRequest],
 	key optional.Option[model.RequestKey],
+	parentKey optional.Option[model.RequestKey],
 	sourceAddress string,
 ) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
@@ -1051,6 +1052,9 @@ func (s *Service) callWithRequest(
 		}
 	}
 
+	if pk, ok := parentKey.Get(); ok {
+		ctx = rpc.WithParentRequestKey(ctx, pk)
+	}
 	ctx = rpc.WithRequestKey(ctx, requestKey)
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
@@ -1066,14 +1070,15 @@ func (s *Service) callWithRequest(
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 	}
 	s.recordCall(ctx, &Call{
-		deploymentKey: route.Deployment,
-		requestKey:    requestKey,
-		startTime:     start,
-		destVerb:      verbRef,
-		callers:       callers,
-		callError:     optional.Nil(err),
-		request:       req.Msg,
-		response:      maybeResponse,
+		deploymentKey:    route.Deployment,
+		requestKey:       requestKey,
+		parentRequestKey: parentKey,
+		startTime:        start,
+		destVerb:         verbRef,
+		callers:          callers,
+		callError:        optional.Nil(err),
+		request:          req.Msg,
+		response:         maybeResponse,
 	})
 	return resp, err
 }
@@ -1386,6 +1391,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		return 0, err
 	}
 
+	// Extract the otel context from the call
 	var oc propagation.MapCarrier
 	err = json.Unmarshal(call.OtelContext, &oc)
 	if err != nil {
@@ -1393,6 +1399,16 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		return 0, fmt.Errorf("failed to unmarshal otel context: %w", err)
 	}
 	ctx = otel.GetTextMapPropagator().Extract(ctx, oc)
+
+	// Extract the request key from the call and attach it as the parent request key
+	parentRequestKey := optional.None[model.RequestKey]()
+	if prk, ok := call.ParentRequestKey.Get(); ok {
+		if rk, err := model.ParseRequestKey(prk); err == nil {
+			parentRequestKey = optional.Some(rk)
+		} else {
+			logger.Tracef("Ignoring invalid request key: %s", prk)
+		}
+	}
 
 	observability.AsyncCalls.Acquired(ctx, call.Verb, call.Origin.String(), call.ScheduledAt, nil)
 	defer call.Release() //nolint:errcheck
@@ -1409,7 +1425,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (time.Duration, error) 
 		Verb: call.Verb.ToProto(),
 		Body: call.Request,
 	}
-	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), s.config.Advertise.String())
+	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), parentRequestKey, s.config.Advertise.String())
 	var callResult either.Either[[]byte, string]
 	failed := false
 	if err != nil {

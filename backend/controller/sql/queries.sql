@@ -337,6 +337,7 @@ VALUES (
 INSERT INTO events (
   deployment_id,
   request_id,
+  parent_request_id,
   time_stamp,
   type,
   custom_key_1,
@@ -350,6 +351,10 @@ VALUES (
   (CASE
       WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
       ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT)
+    END),
+  (CASE
+      WHEN sqlc.narg('parent_request_key')::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('parent_request_key')::TEXT)
     END),
   sqlc.arg('time_stamp')::TIMESTAMPTZ,
   'call',
@@ -419,10 +424,10 @@ WHERE d.min_replicas > 0;
 
 
 -- name: InsertEvent :exec
-INSERT INTO events (deployment_id, request_id, type,
+INSERT INTO events (deployment_id, request_id, parent_request_id, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4,
                     payload)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id;
 
 -- name: NewLease :one
@@ -464,8 +469,8 @@ FROM expired;
 SELECT expires_at, metadata FROM leases WHERE key = @key::lease_key;
 
 -- name: CreateAsyncCall :one
-INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, otel_context)
-VALUES (@verb, @origin, @request, @remaining_attempts, @backoff::interval, @max_backoff::interval, @otel_context::jsonb)
+INSERT INTO async_calls (verb, origin, request, remaining_attempts, backoff, max_backoff, parent_request_key, otel_context)
+VALUES (@verb, @origin, @request, @remaining_attempts, @backoff::interval, @max_backoff::interval, @parent_request_key, @otel_context::jsonb)
 RETURNING id;
 
 -- name: AsyncCallQueueDepth :one
@@ -507,6 +512,7 @@ RETURNING
   remaining_attempts,
   backoff,
   max_backoff,
+  parent_request_key,
   otel_context;
 
 -- name: SucceedAsyncCall :one
@@ -702,6 +708,7 @@ INSERT INTO topic_events (
     topic_id,
     caller,
     payload,
+    request_key,
     otel_context
   )
 VALUES (
@@ -715,6 +722,7 @@ VALUES (
   ),
   sqlc.arg('caller')::TEXT,
   sqlc.arg('payload'),
+  sqlc.arg('request_key')::TEXT,
   sqlc.arg('otel_context')::jsonb
 );
 
@@ -748,6 +756,7 @@ SELECT events."key" as event,
         events.payload,
         events.created_at,
         events.caller,
+        events.request_key,
         events.otel_context,
         NOW() - events.created_at >= sqlc.arg('consumption_delay')::interval AS ready
 FROM topics
