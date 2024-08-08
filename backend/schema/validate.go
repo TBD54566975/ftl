@@ -178,7 +178,9 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 			case *Enum:
 				if n.IsValueEnum() {
 					for _, v := range n.Variants {
-						if reflect.TypeOf(v.Value.schemaValueType()) != reflect.TypeOf(n.Type) {
+						expected := resolveType(schema, v.Value.schemaValueType())
+						actual := resolveType(schema, n.Type)
+						if reflect.TypeOf(expected) != reflect.TypeOf(actual) {
 							merr = append(merr, errorf(v, "enum variant %q of type %s cannot have a value of "+
 								"type %q", v.Name, n.Type, v.Value.schemaValueType()))
 						}
@@ -804,4 +806,20 @@ func validateRetries(module *Module, retry *MetadataRetry, requestType optional.
 // Give a type a human-readable name.
 func typeName(v any) string {
 	return strings.ToLower(reflect.Indirect(reflect.ValueOf(v)).Type().Name())
+}
+
+func resolveType(sch *Schema, typ Type) Type {
+	ref, ok := typ.(*Ref)
+	if !ok {
+		return typ
+	}
+	resolved, ok := sch.Resolve(ref).Get()
+	if !ok {
+		return typ
+	}
+	ta, ok := resolved.(*TypeAlias)
+	if !ok {
+		return typ
+	}
+	return resolveType(sch, ta.Type)
 }

@@ -14,8 +14,8 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 )
 
-// Extractor extracts type aliases to the module schema.
-var Extractor = common.NewDeclExtractor[*schema.Enum, *ast.TypeSpec]("typealias", Extract)
+// Extractor extracts enums to the module schema.
+var Extractor = common.NewDeclExtractor[*schema.Enum, *ast.TypeSpec]("enums", Extract)
 
 func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional.Option[*schema.Enum] {
 	valueVariants := findValueEnumVariants(pass, obj)
@@ -68,7 +68,7 @@ func Extract(pass *analysis.Pass, node *ast.TypeSpec, obj types.Object) optional
 func findValueEnumVariants(pass *analysis.Pass, obj types.Object) []*schema.EnumVariant {
 	var variants []*schema.EnumVariant
 	for o, fact := range common.GetAllFactsOfType[*common.MaybeValueEnumVariant](pass) {
-		if o.Type() == obj.Type() && validateVariant(pass, o, fact.Variant) {
+		if fact.Type == obj && validateVariant(pass, o, fact.Variant) {
 			variants = append(variants, fact.Variant)
 		}
 	}

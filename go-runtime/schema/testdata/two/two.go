@@ -114,3 +114,23 @@ func superTransitiveVerbCall(ctx context.Context, req Payload[string]) error {
 	_, err := ftl.Call(ctx, Three, req)
 	return err
 }
+
+type PaymentState string
+
+type PayinState PaymentState
+
+const (
+	PayinPending PayinState = "PAYIN_PENDING"
+)
+
+type PayoutState PaymentState
+
+const (
+	PayoutPending PayoutState = "PAYOUT_PENDING"
+)
+
+//ftl:data
+type Payment struct {
+	In  PayinState
+	Out PayoutState
+}
