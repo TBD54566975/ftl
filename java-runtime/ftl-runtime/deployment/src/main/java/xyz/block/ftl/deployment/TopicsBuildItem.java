@@ -7,7 +7,7 @@ import org.jboss.jandex.Type;
 import java.util.HashMap;
 import java.util.Map;
 
-public final class TopicsBuildItem  extends SimpleBuildItem {
+public final class TopicsBuildItem extends SimpleBuildItem {
 
     final Map<DotName, DiscoveredTopic> topics;
 
@@ -19,7 +19,7 @@ public final class TopicsBuildItem  extends SimpleBuildItem {
         return topics;
     }
 
-    public record DiscoveredTopic(String topicName, DotName generatedProducer, Type eventType, boolean exported) {
+    public record DiscoveredTopic(String topicName, String generatedProducer, Type eventType, boolean exported) {
 
     }
 }

@@ -7,6 +7,8 @@ import io.quarkus.runtime.Startup;
 import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
+import xyz.block.ftl.v1.CallRequest;
+import xyz.block.ftl.v1.CallResponse;
 import xyz.block.ftl.v1.ModuleContextRequest;
 import xyz.block.ftl.v1.ModuleContextResponse;
 import xyz.block.ftl.v1.PublishEventRequest;
@@ -87,6 +89,32 @@ public class FTLController {
             return context.getConfigsMap().get(secretName).toByteArray();
         }
         throw new RuntimeException("Config not found: " + secretName);
+    }
+
+    public byte[] callVerb(String name, String module, byte[] payload) {
+        CompletableFuture<byte[]> cf = new CompletableFuture<>();
+        verbService.call(CallRequest.newBuilder().setVerb(Ref.newBuilder().setModule(module).setName(name)).setBody(ByteString.copyFrom(payload)).build(), new StreamObserver<>() {
+
+            @Override
+            public void onNext(CallResponse callResponse) {
+                cf.complete(callResponse.getBody().toByteArray());
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                cf.completeExceptionally(throwable);
+            }
+
+            @Override
+            public void onCompleted() {
+
+            }
+        });
+        try {
+            return cf.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void publishEvent(String topic, String callingVerbName, byte[] event) {

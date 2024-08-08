@@ -61,7 +61,7 @@ public class TopicsProcessor {
                 var helper = publish.invokeStaticMethod(MethodDescriptor.ofMethod(TopicHelper.class, "instance", TopicHelper.class));
                 publish.invokeVirtualMethod(MethodDescriptor.ofMethod(TopicHelper.class, "publish", void.class, String.class, String.class, Object.class), helper, publish.load(name), publish.readInstanceField(verb.getFieldDescriptor(), publish.getThis()), publish.getMethodParam(0));
                 publish.returnVoid();
-                topics.put(iface.name(), new TopicsBuildItem.DiscoveredTopic(name, DotName.createSimple(cc.getClassName()), paramType, iface.hasAnnotation(Export.class)));
+                topics.put(iface.name(), new TopicsBuildItem.DiscoveredTopic(name, cc.getClassName(), paramType, iface.hasAnnotation(Export.class)));
             }
         }
         return new TopicsBuildItem(topics);

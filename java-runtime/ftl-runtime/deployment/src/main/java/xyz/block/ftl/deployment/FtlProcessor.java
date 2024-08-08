@@ -44,6 +44,7 @@ import xyz.block.ftl.runtime.FTLController;
 import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.TopicHelper;
+import xyz.block.ftl.runtime.VerbClientHelper;
 import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
@@ -60,6 +61,7 @@ import xyz.block.ftl.v1.schema.IngressPathLiteral;
 import xyz.block.ftl.v1.schema.IngressPathParameter;
 import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
+import xyz.block.ftl.v1.schema.MetadataCalls;
 import xyz.block.ftl.v1.schema.MetadataCronJob;
 import xyz.block.ftl.v1.schema.MetadataIngress;
 import xyz.block.ftl.v1.schema.MetadataSubscriber;
@@ -118,7 +120,7 @@ class FtlProcessor {
     @BuildStep
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(VerbHandler.class, VerbRegistry.class, FTLHttpHandler.class, FTLController.class, TopicHelper.class)
+                .addBeanClasses(VerbHandler.class, VerbRegistry.class, FTLHttpHandler.class, FTLController.class, TopicHelper.class, VerbClientHelper.class)
                 .setUnremovable().build();
     }
 
@@ -145,13 +147,14 @@ class FtlProcessor {
                               ApplicationInfoBuildItem applicationInfoBuildItem,
                               OutputTargetBuildItem outputTargetBuildItem,
                               ResteasyReactiveResourceMethodEntriesBuildItem restEndpoints,
-                              TopicsBuildItem topics) throws Exception {
+                              TopicsBuildItem topics,
+                              VerbClientBuildItem verbClients) throws Exception {
         String moduleName = applicationInfoBuildItem.getName();
         Module.Builder moduleBuilder = Module.newBuilder()
                 .setName(moduleName)
                 .setBuiltin(false);
         Map<TypeKey, Ref> dataElements = new HashMap<>();
-        ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements, new HashSet<>(), new HashSet<>(), topics.getTopics());
+        ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements, new HashSet<>(), new HashSet<>(), topics.getTopics(), verbClients.getVerbClients());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
 
         //register all the topics we are defining in the module definition
@@ -283,6 +286,7 @@ class FtlProcessor {
             org.jboss.jandex.Type bodyParamType = null;
             xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
             String verbName = method.name();
+            MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
             for (var param : method.parameters()) {
                 if (param.hasAnnotation(Secret.class)) {
 
@@ -307,11 +311,18 @@ class FtlProcessor {
                    var topic =  context.knownTopics.get(param.type().name());
                     Class<?> paramType = loadClass(param.type());
                     parameterTypes.add(paramType);
-                    paramMappers.add(context.recorder().topicSupplier(topic.generatedProducer().toString(), verbName));
+                    paramMappers.add(context.recorder().topicSupplier(topic.generatedProducer(), verbName));
+                }else if (context.verbClients.containsKey(param.type().name())) {
+                    var client =  context.verbClients.get(param.type().name());
+                    Class<?> paramType = loadClass(param.type());
+                    parameterTypes.add(paramType);
+                    paramMappers.add(context.recorder().verbClientSupplier(client.generatedClient()));
+                    callsMetadata.addCalls(Ref.newBuilder().setName(client.name()).setModule(client.module()).build());
                 } else if (bodyType != BodyType.DISALLOWED && bodyParamType == null) {
                     bodyParamType = param.type();
                     Class<?> paramType = loadClass(param.type());
                     parameterTypes.add(paramType);
+                    //TODO: map and list types
                     paramMappers.add(new VerbRegistry.BodySupplier(paramType));
                 } else {
                     throw new RuntimeException("Unknown parameter type " + param.type() +" on FTL method: " + method.declaringClass().name() + "." + method.name());
@@ -328,6 +339,7 @@ class FtlProcessor {
             context.recorder.registerVerb(context.moduleName(), method.name(), method.name(), parameterTypes, Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers);
             verbBuilder
                     .setName(verbName)
+                    .addMetadata(Metadata.newBuilder().setCalls(callsMetadata))
                     .setExport(exported)
                     .setRequest(buildType(context, bodyParamType))
                     .setResponse(buildType(context, method.returnType()));
@@ -492,7 +504,8 @@ class FtlProcessor {
     record ExtractionContext(String moduleName, CombinedIndexBuildItem index, FTLRecorder recorder,
                              Module.Builder moduleBuilder,
                              Map<TypeKey, Ref> dataElements, Set<String> knownSecrets, Set<String> knownConfig,
-                             Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics) {
+                             Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
+                             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients) {
     }
 
     enum BodyType {

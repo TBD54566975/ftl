@@ -5,6 +5,7 @@ import io.quarkus.arc.Arc;
 import io.quarkus.runtime.annotations.Recorder;
 import org.checkerframework.checker.units.qual.C;
 import xyz.block.ftl.Topic;
+import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.v1.CallRequest;
 
 import java.lang.reflect.Type;
@@ -37,11 +38,26 @@ public class FTLRecorder {
     public BiFunction<ObjectMapper, CallRequest, Object> topicSupplier(String className, String callingVerb) {
         try {
             var cls = Thread.currentThread().getContextClassLoader().loadClass(className.replace("/", "."));
-            var topic = (Topic<?>) cls.getDeclaredConstructor(String.class).newInstance(callingVerb);
+            var topic = cls.getDeclaredConstructor(String.class).newInstance(callingVerb);
             return new BiFunction<ObjectMapper, CallRequest, Object>() {
                 @Override
                 public Object apply(ObjectMapper mapper, CallRequest callRequest) {
                     return topic;
+                }
+            };
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public BiFunction<ObjectMapper, CallRequest, Object> verbClientSupplier(String className) {
+        try {
+            var cls = Thread.currentThread().getContextClassLoader().loadClass(className.replace("/", "."));
+            var client = cls.getDeclaredConstructor().newInstance();
+            return new BiFunction<ObjectMapper, CallRequest, Object>() {
+                @Override
+                public Object apply(ObjectMapper mapper, CallRequest callRequest) {
+                    return client;
                 }
             };
         } catch (Exception e) {
