@@ -133,6 +133,9 @@ func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, ca
 }
 
 func ExtractTraceContextToContext(ctx context.Context, traceContext []byte) (context.Context, error) {
+	if len(traceContext) == 0 {
+		return ctx, nil
+	}
 	var oc propagation.MapCarrier
 	err := json.Unmarshal(traceContext, &oc)
 	if err != nil {
