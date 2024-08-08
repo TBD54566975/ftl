@@ -21,24 +21,27 @@ import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
 import io.quarkus.netty.runtime.virtual.VirtualServerChannel;
 import io.quarkus.resteasy.reactive.server.deployment.ResteasyReactiveResourceMethodEntriesBuildItem;
+import io.quarkus.resteasy.reactive.server.spi.MethodScannerBuildItem;
 import io.quarkus.vertx.core.deployment.CoreVertxBuildItem;
 import io.quarkus.vertx.core.deployment.EventLoopCountBuildItem;
 import io.quarkus.vertx.http.deployment.RequireVirtualHttpBuildItem;
 import io.quarkus.vertx.http.deployment.WebsocketSubProtocolsBuildItem;
 import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
 import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.VoidType;
 import org.jboss.resteasy.reactive.common.model.MethodParameter;
 import org.jboss.resteasy.reactive.common.model.ParameterType;
+import org.jboss.resteasy.reactive.server.core.parameters.ParameterExtractor;
 import org.jboss.resteasy.reactive.server.mapping.URITemplate;
+import org.jboss.resteasy.reactive.server.processor.scanning.MethodScanner;
 import xyz.block.ftl.Config;
 import xyz.block.ftl.Cron;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.Subscription;
-import xyz.block.ftl.TopicDefinition;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.runtime.FTLController;
 import xyz.block.ftl.runtime.FTLHttpHandler;
@@ -95,10 +98,10 @@ class FtlProcessor {
     public static final DotName VERB = DotName.createSimple(Verb.class);
     public static final DotName CRON = DotName.createSimple(Cron.class);
     public static final DotName SUBSCRIPTION = DotName.createSimple(Subscription.class);
-    public static final DotName TPOIC = DotName.createSimple(Subscription.class);
-    public static final DotName TPOIC_DEFINITION = DotName.createSimple(TopicDefinition.class);
     public static final String BUILTIN = "builtin";
     public static final DotName CONSUMER = DotName.createSimple(Consumer.class);
+    public static final DotName SECRET = DotName.createSimple(Secret.class);
+    public static final DotName CONFIG = DotName.createSimple(Config.class);
 
     @BuildStep
     FeatureBuildItem feature() {
@@ -142,6 +145,40 @@ class FtlProcessor {
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
+    public MethodScannerBuildItem methodScanners(TopicsBuildItem topics,
+                                                 VerbClientBuildItem verbClients, FTLRecorder recorder) {
+        return new MethodScannerBuildItem(new MethodScanner() {
+            @Override
+            public ParameterExtractor handleCustomParameter(org.jboss.jandex.Type type, Map<DotName, AnnotationInstance> annotations, boolean field, Map<String, Object> methodContext) {
+                try {
+
+                    if (annotations.containsKey(SECRET)) {
+                        Class<?> paramType = loadClass(type);
+                        String name = annotations.get(SECRET).value().asString();
+                        return new VerbRegistry.SecretSupplier(name, paramType);
+                    } else if (annotations.containsKey(CONFIG)) {
+                        Class<?> paramType = loadClass(type);
+                        String name = annotations.get(CONFIG).value().asString();
+                        return new VerbRegistry.ConfigSupplier(name, paramType);
+                    } else if (topics.getTopics().containsKey(type.name())) {
+                        var topic = topics.getTopics().get(type.name());
+                        Class<?> paramType = loadClass(type);
+                        return recorder.topicParamExtractor(topic.generatedProducer(), "");
+                    } else if (verbClients.getVerbClients().containsKey(type.name())) {
+                        var client = verbClients.getVerbClients().get(type.name());
+                        Class<?> paramType = loadClass(type);
+                        return recorder.verbParamExtractor(client.generatedClient());
+                    }
+                    return null;
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+    }
+
+    @BuildStep
+    @Record(ExecutionTime.RUNTIME_INIT)
     public void registerVerbs(CombinedIndexBuildItem index,
                               FTLRecorder recorder,
                               ApplicationInfoBuildItem applicationInfoBuildItem,
@@ -160,10 +197,10 @@ class FtlProcessor {
         //register all the topics we are defining in the module definition
 
         for (var topic : topics.getTopics().values()) {
-                extractionContext.moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
-                        .setExport(topic.exported())
-                        .setName(topic.topicName())
-                        .setEvent(buildType(extractionContext, topic.eventType())).build()));
+            extractionContext.moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
+                    .setExport(topic.exported())
+                    .setName(topic.topicName())
+                    .setEvent(buildType(extractionContext, topic.eventType())).build()));
         }
 
         for (var verb : index.getIndex().getAnnotations(VERB)) {
@@ -279,7 +316,8 @@ class FtlProcessor {
         Files.setPosixFilePermissions(output, newPerms);
     }
 
-    private void handleVerbMethod(ExtractionContext context, MethodInfo method, String className, boolean exported, BodyType bodyType, Consumer<xyz.block.ftl.v1.schema.Verb.Builder> metadataCallback) {
+    private void handleVerbMethod(ExtractionContext context, MethodInfo method, String className,
+                                  boolean exported, BodyType bodyType, Consumer<xyz.block.ftl.v1.schema.Verb.Builder> metadataCallback) {
         try {
             List<Class<?>> parameterTypes = new ArrayList<>();
             List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
@@ -289,7 +327,6 @@ class FtlProcessor {
             MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
             for (var param : method.parameters()) {
                 if (param.hasAnnotation(Secret.class)) {
-
                     Class<?> paramType = loadClass(param.type());
                     parameterTypes.add(paramType);
                     String name = param.annotation(Secret.class).value().asString();
@@ -308,12 +345,12 @@ class FtlProcessor {
                         context.knownConfig.add(name);
                     }
                 } else if (context.knownTopics.containsKey(param.type().name())) {
-                   var topic =  context.knownTopics.get(param.type().name());
+                    var topic = context.knownTopics.get(param.type().name());
                     Class<?> paramType = loadClass(param.type());
                     parameterTypes.add(paramType);
                     paramMappers.add(context.recorder().topicSupplier(topic.generatedProducer(), verbName));
-                }else if (context.verbClients.containsKey(param.type().name())) {
-                    var client =  context.verbClients.get(param.type().name());
+                } else if (context.verbClients.containsKey(param.type().name())) {
+                    var client = context.verbClients.get(param.type().name());
                     Class<?> paramType = loadClass(param.type());
                     parameterTypes.add(paramType);
                     paramMappers.add(context.recorder().verbClientSupplier(client.generatedClient()));
@@ -325,7 +362,7 @@ class FtlProcessor {
                     //TODO: map and list types
                     paramMappers.add(new VerbRegistry.BodySupplier(paramType));
                 } else {
-                    throw new RuntimeException("Unknown parameter type " + param.type() +" on FTL method: " + method.declaringClass().name() + "." + method.name());
+                    throw new RuntimeException("Unknown parameter type " + param.type() + " on FTL method: " + method.declaringClass().name() + "." + method.name());
                 }
             }
             if (bodyParamType == null) {
@@ -479,7 +516,6 @@ class FtlProcessor {
 
         throw new RuntimeException("NOT YET IMPLEMENTED");
     }
-
 
 
     private void buildDataElement(ExtractionContext context, Data.Builder data, DotName className) {

@@ -8,6 +8,8 @@ import io.quarkus.arc.Arc;
 import io.quarkus.arc.InstanceHandle;
 import jakarta.inject.Singleton;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.server.core.ResteasyReactiveRequestContext;
+import org.jboss.resteasy.reactive.server.core.parameters.ParameterExtractor;
 import xyz.block.ftl.Topic;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
@@ -99,7 +101,7 @@ public class VerbRegistry {
         }
     }
 
-    public static class SecretSupplier implements BiFunction<ObjectMapper, CallRequest, Object> {
+    public static class SecretSupplier implements BiFunction<ObjectMapper, CallRequest, Object>, ParameterExtractor {
 
         final String name;
         final Class<?> inputClass;
@@ -131,9 +133,14 @@ public class VerbRegistry {
         public Class<?> getInputClass() {
             return inputClass;
         }
+
+        @Override
+        public Object extractParameter(ResteasyReactiveRequestContext context) {
+            return apply(Arc.container().instance(ObjectMapper.class).get(), null);
+        }
     }
 
-    public static class ConfigSupplier implements BiFunction<ObjectMapper, CallRequest, Object> {
+    public static class ConfigSupplier implements BiFunction<ObjectMapper, CallRequest, Object>, ParameterExtractor {
 
         final String name;
         final Class<?> inputClass;
@@ -156,6 +163,10 @@ public class VerbRegistry {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+        @Override
+        public Object extractParameter(ResteasyReactiveRequestContext context) {
+            return apply(Arc.container().instance(ObjectMapper.class).get(), null);
         }
 
         public Class<?> getInputClass() {

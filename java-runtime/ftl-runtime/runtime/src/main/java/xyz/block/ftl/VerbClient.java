@@ -1,7 +1,5 @@
 package xyz.block.ftl;
 
-import org.jetbrains.annotations.NotNull;
-
 /**
  * A client for a specific verb
  * @param <P> The verb parameter type

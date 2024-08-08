@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.annotations.Recorder;
 import org.checkerframework.checker.units.qual.C;
+import org.jboss.resteasy.reactive.server.core.ResteasyReactiveRequestContext;
+import org.jboss.resteasy.reactive.server.core.parameters.ParameterExtractor;
 import xyz.block.ftl.Topic;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.v1.CallRequest;
@@ -57,6 +59,37 @@ public class FTLRecorder {
             return new BiFunction<ObjectMapper, CallRequest, Object>() {
                 @Override
                 public Object apply(ObjectMapper mapper, CallRequest callRequest) {
+                    return client;
+                }
+            };
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ParameterExtractor topicParamExtractor(String className, String callingVerb) {
+
+        try {
+            var cls = Thread.currentThread().getContextClassLoader().loadClass(className.replace("/", "."));
+            var topic = cls.getDeclaredConstructor(String.class).newInstance(callingVerb);
+            return new ParameterExtractor() {
+                @Override
+                public Object extractParameter(ResteasyReactiveRequestContext context) {
+                    return topic;
+                }
+            };
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ParameterExtractor verbParamExtractor(String className) {
+        try {
+            var cls = Thread.currentThread().getContextClassLoader().loadClass(className.replace("/", "."));
+            var client = cls.getDeclaredConstructor().newInstance();
+            return  new ParameterExtractor() {
+                @Override
+                public Object extractParameter(ResteasyReactiveRequestContext context) {
                     return client;
                 }
             };

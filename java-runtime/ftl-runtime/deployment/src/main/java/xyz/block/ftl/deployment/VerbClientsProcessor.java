@@ -43,7 +43,9 @@ public class VerbClientsProcessor {
                         returnType = i.asParameterizedType().arguments().get(1);
                     }
                 }
-
+            }
+            if (paramType == null || returnType == null) {
+                //when we don't directly extend VerbClient we just look directly for a call method
             }
             if (paramType == null || returnType == null) {
                 throw new RuntimeException("@VerbClientDefinition can only be applied to interfaces that directly extend " + VERB_CLIENT + " with a concrete type parameter and " + iface.name() + " does not extend this interface");
