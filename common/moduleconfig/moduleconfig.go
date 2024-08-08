@@ -40,6 +40,8 @@ type ModuleConfig struct {
 	Deploy []string `toml:"deploy"`
 	// DeployDir is the directory to deploy from, relative to the module directory.
 	DeployDir string `toml:"deploy-dir"`
+	// GeneratedSchemaDir is the directory to generate protobuf schema files into. These can be picked up by language specific build tools
+	GeneratedSchemaDir string `toml:"generated-schema-dir"`
 	// Schema is the name of the schema file relative to the DeployDir.
 	Schema string `toml:"schema"`
 	// Errors is the name of the error file relative to the DeployDir.
@@ -87,6 +89,12 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 	clone.DeployDir = filepath.Clean(filepath.Join(clone.Dir, clone.DeployDir))
 	if !strings.HasPrefix(clone.DeployDir, clone.Dir) {
 		panic(fmt.Sprintf("deploy-dir %q is not beneath module directory %q", clone.DeployDir, clone.Dir))
+	}
+	if clone.GeneratedSchemaDir != "" {
+		clone.GeneratedSchemaDir = filepath.Clean(filepath.Join(clone.Dir, clone.GeneratedSchemaDir))
+		if !strings.HasPrefix(clone.GeneratedSchemaDir, clone.Dir) {
+			panic(fmt.Sprintf("generated-schema-dir %q is not beneath module directory %q", clone.GeneratedSchemaDir, clone.Dir))
+		}
 	}
 	clone.Schema = filepath.Clean(filepath.Join(clone.DeployDir, clone.Schema))
 	if !strings.HasPrefix(clone.Schema, clone.DeployDir) {
@@ -140,6 +148,9 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		}
 		if config.DeployDir == "" {
 			config.DeployDir = "target"
+		}
+		if config.GeneratedSchemaDir == "" {
+			config.GeneratedSchemaDir = "src/main/ftl-module-schema"
 		}
 		if len(config.Deploy) == 0 {
 			config.Deploy = []string{"main", "quarkus-app"}

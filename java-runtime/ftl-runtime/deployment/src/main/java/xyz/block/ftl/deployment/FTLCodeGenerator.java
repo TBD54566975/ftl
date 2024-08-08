@@ -1,29 +1,40 @@
 package xyz.block.ftl.deployment;
 
+import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.ArrayTypeName;
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import io.grpc.ManagedChannelBuilder;
+import com.squareup.javapoet.TypeVariableName;
 import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.bootstrap.prebuild.CodeGenException;
 import io.quarkus.deployment.CodeGenContext;
 import io.quarkus.deployment.CodeGenProvider;
 import org.eclipse.microprofile.config.Config;
 import org.jboss.logging.Logger;
-import xyz.block.ftl.v1.ControllerServiceGrpc;
-import xyz.block.ftl.v1.GetSchemaRequest;
+import xyz.block.ftl.VerbClient;
+import xyz.block.ftl.VerbClientDefinition;
+import xyz.block.ftl.v1.schema.Module;
+import xyz.block.ftl.v1.schema.Type;
 
 import javax.lang.model.element.Modifier;
 import java.io.IOException;
-import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 public class FTLCodeGenerator implements CodeGenProvider {
 
-    private static final Logger log= Logger.getLogger(FTLCodeGenerator.class);
+    private static final Logger log = Logger.getLogger(FTLCodeGenerator.class);
 
     public static final String CLIENT = "Client";
+    public static final String PACKAGE_PREFIX = "ftl.";
     String moduleName;
 
     @Override
@@ -39,62 +50,109 @@ public class FTLCodeGenerator implements CodeGenProvider {
 
     @Override
     public String inputDirectory() {
-        return "ftl";
+        return "ftl-module-schema";
     }
 
     @Override
     public boolean trigger(CodeGenContext context) throws CodeGenException {
-        try {
-            runCodeGeneration(context.outDir());
+        if (!Files.isDirectory(context.inputDir())) {
+            return false;
+        }
+
+        try (Stream<Path> pathStream = Files.list(context.inputDir())) {
+            for (var file : pathStream.toList()) {
+                String fileName = file.getFileName().toString();
+                if (!fileName.endsWith(".pb")) {
+                    continue;
+                }
+                var module = Module.parseFrom(Files.readAllBytes(file));
+                for (var decl : module.getDeclsList()) {
+                    if (decl.hasVerb()) {
+                        var verb = decl.getVerb();
+                        if (!verb.getExport()) {
+                            continue;
+                        }
+                        try {
+
+                            String packageName = PACKAGE_PREFIX + module.getName();
+                            TypeSpec helloWorld = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
+                                    .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
+                                            .addMember("name", "\"" + verb.getName() + "\"")
+                                            .addMember("module", "\"" + module.getName() + "\"")
+                                            .build())
+                                    .addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class), toJavaTypeName(verb.getRequest()), toJavaTypeName(verb.getResponse())))
+                                    .addModifiers(Modifier.PUBLIC)
+                                    .build();
+
+                            JavaFile javaFile = JavaFile.builder(packageName, helloWorld)
+                                    .build();
+
+                            javaFile.writeTo(context.outDir());
+
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    } else if (decl.hasData()) {
+                        var data = decl.getData();
+                        try {
+                            String packageName = PACKAGE_PREFIX + module.getName();
+                            TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(className(data.getName()))
+                                    .addModifiers(Modifier.PUBLIC);
+                            for (var param : data.getTypeParametersList()) {
+                                dataBuilder.addTypeVariable(TypeVariableName.get(param.getName()));
+                            }
+
+                            for (var i : data.getFieldsList()) {
+                                dataBuilder.addField(toJavaTypeName(i.getType()), i.getName(), Modifier.PUBLIC);
+                            }
+
+                            JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
+                                    .build();
+
+                            javaFile.writeTo(context.outDir());
+
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            }
+
         } catch (Exception e) {
-            log.error("Failed to generate FTL code", e);
+            throw new CodeGenException(e);
         }
         return true;
     }
 
-    static void runCodeGeneration(Path outdir) {
-        String endpoint = System.getenv("FTL_ENDPOINT");
-        if (endpoint == null) {
-            endpoint = "http://localhost:8892";
-        }
-        URI uri = URI.create(endpoint);
-
-        var channelBuilder = ManagedChannelBuilder.forAddress(uri.getHost(), uri.getPort());
-        if (uri.getScheme().equals("http")) {
-            channelBuilder.usePlaintext();
-        }
-
-        var channel = channelBuilder.build();
-        var blockingStub = ControllerServiceGrpc.newBlockingStub(channel);
-        var schemaResponse = blockingStub.getSchema(GetSchemaRequest.newBuilder().build());
-        for (var module : schemaResponse.getSchema().getModulesList()) {
-            for (var decl : module.getDeclsList()) {
-                var verb = decl.getVerb();
-                if (verb != null && !verb.getName().isEmpty()) {
-                    try {
-
-                        MethodSpec call = MethodSpec.methodBuilder("call")
-                                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                                .returns(void.class)
-                                .addParameter(String[].class, "args")
-                                .build();
-
-                        TypeSpec helloWorld = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
-                                .addModifiers(Modifier.PUBLIC)
-                                .addMethod(call)
-                                .build();
-
-                        JavaFile javaFile = JavaFile.builder(module.getName(), helloWorld)
-                                .build();
-
-                        javaFile.writeTo(outdir);
-
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
+    private TypeName toJavaTypeName(Type type) {
+        if (type.hasArray()) {
+            return ParameterizedTypeName.get(ClassName.get(List.class), toJavaTypeName(type.getArray().getElement()));
+        } else if (type.hasString()) {
+            return ClassName.get(String.class);
+        } else if (type.hasOptional()) {
+            return ParameterizedTypeName.get(ClassName.get(Optional.class), toJavaTypeName(type.getOptional().getType()));
+        } else if (type.hasRef()) {
+            if (type.getRef().getModule().isEmpty()) {
+                return TypeVariableName.get(type.getRef().getName());
             }
+            return ClassName.get(PACKAGE_PREFIX + type.getRef().getModule(), type.getRef().getName());
+        } else if (type.hasMap()) {
+            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeName(type.getMap().getKey()), toJavaTypeName(type.getMap().getValue()));
+        } else if (type.hasTime()) {
+            return ClassName.get(Instant.class);
+        } else if (type.hasInt()) {
+            return TypeName.LONG;
+        } else if (type.hasUnit()) {
+            return TypeName.VOID;
+        } else if (type.hasBool()) {
+            return TypeName.BOOLEAN;
+        } else if (type.hasFloat()) {
+            return TypeName.DOUBLE;
+        } else if (type.hasBytes()) {
+            return ArrayTypeName.BYTE;
         }
+
+        throw new RuntimeException("Cannot generate Java type name: " + type);
     }
 
     @Override
@@ -103,7 +161,7 @@ public class FTLCodeGenerator implements CodeGenProvider {
     }
 
 
-    static String className(String in ) {
+    static String className(String in) {
         return Character.toUpperCase(in.charAt(0)) + in.substring(1);
     }
 }

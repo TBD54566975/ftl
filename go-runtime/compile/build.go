@@ -277,7 +277,7 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConf
 	}
 	hasGo := false
 	for _, mc := range moduleConfigs {
-		if mc.Language == "go" {
+		if mc.Language == "go" && mc.Module != "builtin" {
 			hasGo = true
 		}
 	}
@@ -302,6 +302,9 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConf
 		// If there's no module config, use the go.mod file for the first config we find.
 		if moduleConfig == nil {
 			for _, mod := range moduleConfigs {
+				if mod.Language != "go" {
+					continue
+				}
 				goModPath := filepath.Join(mod.Dir, "go.mod")
 				_, goModVersion, err = updateGoModule(goModPath)
 				if err != nil {
