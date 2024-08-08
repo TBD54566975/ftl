@@ -41,43 +41,47 @@ import (
 // It is a list of lists, where each list is a round of tasks dependent on the prior round's execution (e.g. an analyzer
 // in Extractors[1] will only execute once all analyzers in Extractors[0] complete). Elements of the same list
 // should be considered unordered and may run in parallel.
-var Extractors = [][]*analysis.Analyzer{
-	{
-		initialize.Analyzer,
-		inspect.Analyzer,
-	},
-	{
-		metadata.Extractor,
-	},
-	{
-		// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
-		// interfaces and typeenumvariant.Extractor determines any types that implement these
-		typeenum.Extractor,
-	},
-	{
-		configsecret.Extractor,
-		data.Extractor,
-		database.Extractor,
-		fsm.Extractor,
-		topic.Extractor,
-		typealias.Extractor,
-		typeenumvariant.Extractor,
-		valueenumvariant.Extractor,
-		verb.Extractor,
-	},
-	{
-		call.Extractor,
-		// must run after valueenumvariant.Extractor and typeenumvariant.Extractor;
-		// visits a node and aggregates its enum variants if present
-		enum.Extractor,
-		subscription.Extractor,
-	},
-	{
-		transitive.Extractor,
-	},
-	{
-		finalize.Analyzer,
-	},
+var Extractors [][]*analysis.Analyzer
+
+func init() {
+	Extractors = [][]*analysis.Analyzer{
+		{
+			initialize.Analyzer,
+			inspect.Analyzer,
+		},
+		{
+			metadata.Extractor,
+		},
+		{
+			// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
+			// interfaces and typeenumvariant.Extractor determines any types that implement these
+			typeenum.Extractor,
+		},
+		{
+			configsecret.Extractor,
+			data.Extractor,
+			database.Extractor,
+			fsm.Extractor,
+			topic.Extractor,
+			typealias.Extractor,
+			typeenumvariant.Extractor,
+			valueenumvariant.Extractor,
+			verb.Extractor,
+		},
+		{
+			call.Extractor,
+			// must run after valueenumvariant.Extractor and typeenumvariant.Extractor;
+			// visits a node and aggregates its enum variants if present
+			enum.Extractor,
+			subscription.Extractor,
+		},
+		{
+			transitive.Extractor,
+		},
+		{
+			finalize.Analyzer,
+		},
+	}
 }
 
 // NativeNames is a map of top-level declarations to their native Go names.
@@ -297,7 +301,13 @@ func analyzersWithDependencies() []*analysis.Analyzer {
 func dependenciesBeforeIndex(idx int) []*analysis.Analyzer {
 	var deps []*analysis.Analyzer
 	for i := range idx {
-		deps = append(deps, Extractors[i]...)
+		for _, extractor := range Extractors[i] {
+			if extractor == nil {
+				panic(fmt.Sprintf("analyzer at Extractors[%d] not yet initialized", i))
+			}
+
+			deps = append(deps, extractor)
+		}
 	}
 	return deps
 }
