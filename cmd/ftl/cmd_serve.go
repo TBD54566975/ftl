@@ -36,7 +36,7 @@ import (
 )
 
 type serveCmd struct {
-	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress and runner will increment the port by 1" default:"http://localhost:8891"`
+	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress and runner will increment the port by 1" default:"http://127.0.0.1:8891"`
 	DBPort              int                  `help:"Port to use for the database." default:"15432"`
 	Recreate            bool                 `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
