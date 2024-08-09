@@ -125,6 +125,33 @@ func TestSingleLeader(t *testing.T) {
 	ctxSlicesLock.Unlock()
 }
 
+func TestLeaseErrorFilteringPersistentError(t *testing.T) {
+	filter := NewErrorFilter(time.Millisecond * 200)
+	assert.False(t, filter.ReportLeaseError(), "first error should be filtered")
+	assert.False(t, filter.ReportLeaseError(), "second error should be filtered")
+	assert.False(t, filter.ReportLeaseError(), "third error should be filtered")
+	time.Sleep(time.Millisecond * 201)
+	assert.True(t, filter.ReportLeaseError(), "third error should be reported")
+}
+
+func TestLeaseErrorFilteringTransientError(t *testing.T) {
+	filter := NewErrorFilter(time.Millisecond * 200)
+	assert.False(t, filter.ReportLeaseError(), "first error should be filtered")
+	assert.False(t, filter.ReportLeaseError(), "second error should be filtered")
+	assert.False(t, filter.ReportLeaseError(), "third error should be filtered")
+	time.Sleep(time.Millisecond * 201)
+	filter.ReportOperationSuccess()
+	assert.False(t, filter.ReportLeaseError(), "first error again")
+}
+
+func TestLeaseErrorTransientErrors(t *testing.T) {
+	filter := NewErrorFilter(time.Millisecond * 200)
+	assert.False(t, filter.ReportLeaseError(), "first error should be filtered")
+	assert.False(t, filter.ReportLeaseError(), "second error should be filtered")
+	filter.ReportOperationSuccess()
+	assert.True(t, filter.ReportLeaseError(), "success and failure within the TTL should be reported")
+}
+
 func leaderFromCoordinators(t *testing.T, coordinators []*Coordinator[string]) (leaderIdx int, leaderStr string) {
 	t.Helper()
 
