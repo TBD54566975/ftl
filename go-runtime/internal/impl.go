@@ -63,7 +63,25 @@ func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) 
 		Body:     body,
 	}))
 	if err != nil {
-		return fmt.Errorf("failed to send event: %w", err)
+		return fmt.Errorf("failed to send fsm event: %w", err)
+	}
+	return nil
+}
+
+func (r *RealFTL) FSMNext(ctx context.Context, fsm, instance string, event any) error {
+	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
+	body, err := encoding.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+	_, err = client.SetNextFSMEvent(ctx, connect.NewRequest(&ftlv1.SendFSMEventRequest{
+		Fsm:      &schemapb.Ref{Module: reflection.Module(), Name: fsm},
+		Instance: instance,
+		Event:    schema.TypeToProto(reflection.ReflectTypeToSchemaType(reflect.TypeOf(event))),
+		Body:     body,
+	}))
+	if err != nil {
+		return fmt.Errorf("failed to set next fsm event: %w", err)
 	}
 	return nil
 }

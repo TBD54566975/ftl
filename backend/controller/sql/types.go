@@ -22,7 +22,7 @@ func (t *Type) Scan(src interface{}) error {
 	case []byte:
 		pb := &schemapb.Type{}
 		if err := proto.Unmarshal(src, pb); err != nil {
-			return err
+			return fmt.Errorf("could not unmarshal type: %w", err)
 		}
 		t.Type = schema.TypeFromProto(pb)
 		return nil
@@ -31,8 +31,8 @@ func (t *Type) Scan(src interface{}) error {
 	}
 }
 
-func (t *Type) Value() (driver.Value, error) {
-	data, err := proto.Marshal(t.Type.ToProto())
+func (t Type) Value() (driver.Value, error) {
+	data, err := proto.Marshal(schema.TypeToProto(t.Type))
 	if err != nil {
 		return nil, err
 	}

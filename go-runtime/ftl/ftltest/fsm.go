@@ -85,3 +85,7 @@ func (f *fakeFSMManager) SendEvent(ctx context.Context, fsm string, instance str
 	}
 	return err
 }
+
+func (f *fakeFSMManager) SetNextFSMEvent(ctx context.Context, fsm string, instance string, event any) error {
+	panic("implement me")
+}

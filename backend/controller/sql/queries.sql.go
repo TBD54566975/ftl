@@ -2282,6 +2282,30 @@ func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl sqltypes.Dur
 	return idempotency_key, err
 }
 
+const popNextFSMEvent = `-- name: PopNextFSMEvent :one
+DELETE FROM fsm_next_event
+WHERE fsm_instance_id = (
+  SELECT id
+  FROM fsm_instances
+  WHERE fsm = $1::schema_ref AND key = $2
+)
+RETURNING id, created_at, fsm_instance_id, next_state, request, request_type
+`
+
+func (q *Queries) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (FsmNextEvent, error) {
+	row := q.db.QueryRowContext(ctx, popNextFSMEvent, fsm, instanceKey)
+	var i FsmNextEvent
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.FsmInstanceID,
+		&i.NextState,
+		&i.Request,
+		&i.RequestType,
+	)
+	return i, err
+}
+
 const publishEventForTopic = `-- name: PublishEventForTopic :exec
 INSERT INTO topic_events (
     "key",
@@ -2404,6 +2428,38 @@ RETURNING 1
 func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error {
 	_, err := q.db.ExecContext(ctx, setDeploymentDesiredReplicas, key, minReplicas)
 	return err
+}
+
+const setNextFSMEvent = `-- name: SetNextFSMEvent :one
+INSERT INTO fsm_next_event (fsm_instance_id, next_state, request, request_type)
+VALUES (
+  (SELECT id FROM fsm_instances WHERE fsm = $1::schema_ref AND key = $2),
+  $3,
+  $4,
+  $5::schema_type
+)
+RETURNING id
+`
+
+type SetNextFSMEventParams struct {
+	Fsm         schema.RefKey
+	InstanceKey string
+	Event       schema.RefKey
+	Request     []byte
+	RequestType Type
+}
+
+func (q *Queries) SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, setNextFSMEvent,
+		arg.Fsm,
+		arg.InstanceKey,
+		arg.Event,
+		arg.Request,
+		arg.RequestType,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const setSubscriptionCursor = `-- name: SetSubscriptionCursor :exec
@@ -2686,7 +2742,7 @@ VALUES (
   $6::TEXT
 )
 ON CONFLICT (name, module_id) DO
-UPDATE SET 
+UPDATE SET
   topic_id = excluded.topic_id,
   deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
 RETURNING 
@@ -2733,8 +2789,8 @@ VALUES (
   $3::TEXT,
   $4::TEXT
 )
-ON CONFLICT (name, module_id) DO 
-UPDATE SET 
+ON CONFLICT (name, module_id) DO
+UPDATE SET
   type = $4::TEXT
 RETURNING id
 `

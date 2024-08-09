@@ -117,6 +117,10 @@ func (f *fakeFTL) FSMSend(ctx context.Context, fsm string, instance string, even
 	return f.fsm.SendEvent(ctx, fsm, instance, event)
 }
 
+func (f *fakeFTL) FSMNext(ctx context.Context, fsm, instance string, event any) error {
+	return f.fsm.SetNextFSMEvent(ctx, fsm, instance, event)
+}
+
 // addMapMock saves a new mock of ftl.Map to the internal map in fakeFTL.
 //
 // mockMap provides the whole mock implemention, so it gets called in place of both `fn`

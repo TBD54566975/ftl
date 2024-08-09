@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -57,8 +58,41 @@ func (f *FSM) TerminalStates() []*Ref {
 		return out[i].String() < out[j].String()
 	})
 	return out
-
 }
+
+// NextState returns the next state, if any, given the current state and event.
+//
+// If currentState is None, the instance has not started.
+func (f *FSM) NextState(sch *Schema, currentState optional.Option[RefKey], event Type) optional.Option[*Ref] {
+	verb := Verb{}
+	curState, ok := currentState.Get()
+	if !ok {
+		for _, start := range f.Start {
+			// This shouldn't happen, but if it does, we'll just return false.
+			if err := sch.ResolveToType(start, &verb); err != nil {
+				return optional.None[*Ref]()
+			}
+			if verb.Request.Equal(event) {
+				return optional.Some(start)
+			}
+		}
+		return optional.None[*Ref]()
+	}
+	for _, transition := range f.Transitions {
+		if transition.From.ToRefKey() != curState {
+			continue
+		}
+		// This shouldn't happen, but if it does we'll just return false.
+		if err := sch.ResolveToType(transition.To, &verb); err != nil {
+			return optional.None[*Ref]()
+		}
+		if verb.Request.Equal(event) {
+			return optional.Some(transition.To)
+		}
+	}
+	return optional.None[*Ref]()
+}
+
 func (f *FSM) GetName() string    { return f.Name }
 func (f *FSM) IsExported() bool   { return false }
 func (f *FSM) Position() Position { return f.Pos }
