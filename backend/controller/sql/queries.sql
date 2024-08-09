@@ -665,14 +665,18 @@ VALUES (
   (SELECT id FROM fsm_instances WHERE fsm = @fsm::schema_ref AND key = @instance_key),
   @event,
   @request,
-  @request_type
+  sqlc.arg('request_type')::schema_type
 )
 RETURNING id;
 
--- name: GetNextFSMEvent :one
-SELECT *
-FROM fsm_next_event
-WHERE fsm_instance_id = (SELECT id FROM fsm_instances WHERE fsm = @fsm::schema_ref AND key = @instance_key);
+-- name: PopNextFSMEvent :one
+DELETE FROM fsm_next_event
+WHERE fsm_instance_id = (
+  SELECT id
+  FROM fsm_instances
+  WHERE fsm = @fsm::schema_ref AND key = @instance_key
+)
+RETURNING *;
 
 -- name: UpsertTopic :exec
 INSERT INTO topics (key, module_id, name, type)

@@ -79,11 +79,17 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanc
 	return nil
 }
 
-func (d *DAL) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
-	_, err := d.db.FinishFSMTransition(ctx, fsm, instanceKey)
-	observability.FSM.TransitionCompleted(ctx, fsm)
-
-	return dalerrs.TranslatePGError(err)
+// FinishFSMTransition marks an FSM transition as completed and updates the instance struct.
+func (d *DAL) FinishFSMTransition(ctx context.Context, instance *FSMInstance) error {
+	_, err := d.db.FinishFSMTransition(ctx, instance.FSM, instance.Key)
+	observability.FSM.TransitionCompleted(ctx, instance.FSM)
+	if err != nil {
+		return dalerrs.TranslatePGError(err)
+	}
+	// update the instance with the latest state
+	instance.CurrentState = instance.DestinationState
+	instance.DestinationState = optional.None[schema.RefKey]()
+	return nil
 }
 
 func (d *DAL) FailFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
@@ -98,12 +104,12 @@ func (d *DAL) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, instanc
 	return dalerrs.TranslatePGError(err)
 }
 
-func (d *DAL) GetFSMState(ctx context.Context, fsm schema.RefKey, instanceKey string) (optional.Option[schema.RefKey], error) {
+func (d *DAL) GetFSMStates(ctx context.Context, fsm schema.RefKey, instanceKey string) (currentState, destinationState optional.Option[schema.RefKey], err error) {
 	instance, err := d.db.GetFSMInstance(ctx, fsm, instanceKey)
 	if err != nil {
-		return optional.None[schema.RefKey](), dalerrs.TranslatePGError(err)
+		return optional.None[schema.RefKey](), optional.None[schema.RefKey](), dalerrs.TranslatePGError(err)
 	}
-	return instance.CurrentState, nil
+	return instance.CurrentState, instance.DestinationState, nil
 }
 
 type NextFSMEvent struct {
@@ -113,13 +119,14 @@ type NextFSMEvent struct {
 }
 
 // GetNextFSMEvent returns the next event for an FSM instance, if any.
-func (d *DAL) GetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (optional.Option[NextFSMEvent], error) {
-	next, err := d.db.GetNextFSMEvent(ctx, fsm, instanceKey)
+func (d *DAL) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (optional.Option[NextFSMEvent], error) {
+	next, err := d.db.PopNextFSMEvent(ctx, fsm, instanceKey)
 	if err != nil {
+		err = dalerrs.TranslatePGError(err)
 		if errors.Is(err, dalerrs.ErrNotFound) {
 			return optional.None[NextFSMEvent](), nil
 		}
-		return optional.None[NextFSMEvent](), dalerrs.TranslatePGError(err)
+		return optional.None[NextFSMEvent](), err
 	}
 	return optional.Some(NextFSMEvent{
 		DestinationState: next.NextState,
