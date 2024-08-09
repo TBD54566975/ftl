@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Stream;
 
 public class FTLCodeGenerator implements CodeGenProvider {
@@ -131,15 +132,23 @@ public class FTLCodeGenerator implements CodeGenProvider {
                         String thisType = className(data.getName());
                         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
                                 .addModifiers(Modifier.PUBLIC);
+                        MethodSpec.Builder allConstructor = MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC);
+
+                        dataBuilder.addMethod(allConstructor.build());
                         for (var param : data.getTypeParametersList()) {
                             dataBuilder.addTypeVariable(TypeVariableName.get(param.getName()));
                         }
+                        Map<String, Runnable> sortedFields = new TreeMap<>();
 
                         for (var i : data.getFieldsList()) {
                             TypeName dataType = toAnnotatedJavaTypeName(i.getType(), typeAliasMap);
                             String name = i.getName();
                             var fieldName = toJavaName(name);
                             dataBuilder.addField(dataType, fieldName, Modifier.PRIVATE);
+                            sortedFields.put(fieldName, () -> {
+                                allConstructor.addParameter(dataType, fieldName);
+                                allConstructor.addCode("this.$L = $L;\n", fieldName, fieldName);
+                            });
                             String methodName = Character.toUpperCase(name.charAt(0)) + name.substring(1);
                             dataBuilder.addMethod(MethodSpec.methodBuilder("set" + methodName)
                                     .addModifiers(Modifier.PUBLIC)
@@ -162,7 +171,14 @@ public class FTLCodeGenerator implements CodeGenProvider {
                                         .build());
                             }
                         }
+                        if (!sortedFields.isEmpty()) {
 
+                            for (var v : sortedFields.values()) {
+                                v.run();
+                            }
+                            dataBuilder.addMethod(allConstructor.build());
+
+                        }
                         JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
                                 .build();
 
