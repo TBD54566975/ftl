@@ -5,9 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	"github.com/alecthomas/types/optional"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
