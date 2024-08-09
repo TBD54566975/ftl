@@ -10,5 +10,5 @@ import (
 
 func TestSchemaMismatch(t *testing.T) {
 	dflt := resource.Default()
-	assert.Equal(t, dflt.SchemaURL(), schemaURL, `change import in client.go to: semconv "go.opentelemetry.io/otel/semconv/v%s"`, path.Base(dflt.SchemaURL()))
+	assert.Equal(t, dflt.SchemaURL(), schemaURL, `in every file that imports go.opentelemetry.io/otel/semconv, change the import to: semconv "go.opentelemetry.io/otel/semconv/v%s"`, path.Base(dflt.SchemaURL()))
 }

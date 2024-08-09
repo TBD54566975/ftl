@@ -9,6 +9,7 @@ require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/TBD54566975/golang-tools v0.2.1
 	github.com/TBD54566975/scaffolder v1.0.0
+	github.com/XSAM/otelsql v0.32.0
 	github.com/alecthomas/assert/v2 v2.10.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/chroma/v2 v2.14.0
