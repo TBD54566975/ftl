@@ -18,6 +18,9 @@ import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
+import xyz.block.ftl.VerbClientEmpty;
+import xyz.block.ftl.VerbClientSink;
+import xyz.block.ftl.VerbClientSource;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Type;
 
@@ -76,13 +79,26 @@ public class FTLCodeGenerator implements CodeGenProvider {
                         try {
 
                             String packageName = PACKAGE_PREFIX + module.getName();
-                            TypeSpec helloWorld = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
+                            TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
                                     .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
                                             .addMember("name", "\"" + verb.getName() + "\"")
                                             .addMember("module", "\"" + module.getName() + "\"")
                                             .build())
-                                    .addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class), toJavaTypeName(verb.getRequest()), toJavaTypeName(verb.getResponse())))
-                                    .addModifiers(Modifier.PUBLIC)
+                                    .addModifiers(Modifier.PUBLIC);
+                            if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
+                                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientEmpty.class)));
+                            } else if (verb.getRequest().hasUnit()) {
+                                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class), toJavaTypeName(verb.getResponse())));
+                                typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(toAnnotatedJavaTypeName(verb.getResponse())).addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                            } else if (verb.getResponse().hasUnit()) {
+                                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class), toJavaTypeName(verb.getRequest())));
+                                typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID).addParameter(toAnnotatedJavaTypeName(verb.getRequest()), "value").addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                            } else {
+                                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class), toJavaTypeName(verb.getRequest()), toJavaTypeName(verb.getResponse())));
+                                typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(toAnnotatedJavaTypeName(verb.getResponse())).addParameter(toAnnotatedJavaTypeName(verb.getRequest()), "value").addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                            }
+
+                            TypeSpec helloWorld = typeBuilder
                                     .build();
 
                             JavaFile javaFile = JavaFile.builder(packageName, helloWorld)
@@ -150,7 +166,7 @@ public class FTLCodeGenerator implements CodeGenProvider {
 
     private TypeName toAnnotatedJavaTypeName(Type type) {
         var results = toJavaTypeName(type);
-        if (type.hasRef() || type.hasArray() || type.hasBytes() || type.hasString() || type.hasMap()) {
+        if (type.hasRef() || type.hasArray() || type.hasBytes() || type.hasString() || type.hasMap() || type.hasTime()) {
             return results.annotated(AnnotationSpec.builder(NotNull.class).build());
         }
         return results;

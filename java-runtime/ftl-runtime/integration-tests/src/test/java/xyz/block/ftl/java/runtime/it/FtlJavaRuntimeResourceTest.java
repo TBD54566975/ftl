@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 import org.mockito.Mockito;
+import xyz.block.ftl.v1.Ftl;
 
 @QuarkusTest
 public class FtlJavaRuntimeResourceTest {
