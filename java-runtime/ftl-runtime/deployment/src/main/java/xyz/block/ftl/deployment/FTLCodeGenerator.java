@@ -9,6 +9,7 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
+import com.squareup.javapoet.WildcardTypeName;
 import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.bootstrap.prebuild.CodeGenException;
 import io.quarkus.deployment.CodeGenContext;
@@ -29,8 +30,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class FTLCodeGenerator implements CodeGenProvider {
@@ -63,6 +67,10 @@ public class FTLCodeGenerator implements CodeGenProvider {
             return false;
         }
 
+        List<Module> modules = new ArrayList<>();
+
+        Map<Key, Type> typeAliasMap = new HashMap<>();
+
         try (Stream<Path> pathStream = Files.list(context.inputDir())) {
             for (var file : pathStream.toList()) {
                 String fileName = file.getFileName().toString();
@@ -71,89 +79,111 @@ public class FTLCodeGenerator implements CodeGenProvider {
                 }
                 var module = Module.parseFrom(Files.readAllBytes(file));
                 for (var decl : module.getDeclsList()) {
+                    if (decl.hasTypeAlias()) {
+                        var data = decl.getTypeAlias();
+                        typeAliasMap.put(new Key(module.getName(), data.getName()), data.getType());
+                    }
+                }
+                modules.add(module);
+            }
+        } catch (IOException e) {
+            throw new CodeGenException(e);
+        }
+        try {
+            for (var module : modules) {
+                String packageName = PACKAGE_PREFIX + module.getName();
+                for (var decl : module.getDeclsList()) {
                     if (decl.hasVerb()) {
                         var verb = decl.getVerb();
                         if (!verb.getExport()) {
                             continue;
                         }
-                        try {
 
-                            String packageName = PACKAGE_PREFIX + module.getName();
-                            TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
-                                    .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
-                                            .addMember("name", "\"" + verb.getName() + "\"")
-                                            .addMember("module", "\"" + module.getName() + "\"")
-                                            .build())
-                                    .addModifiers(Modifier.PUBLIC);
-                            if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
-                                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientEmpty.class)));
-                            } else if (verb.getRequest().hasUnit()) {
-                                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class), toJavaTypeName(verb.getResponse())));
-                                typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(toAnnotatedJavaTypeName(verb.getResponse())).addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
-                            } else if (verb.getResponse().hasUnit()) {
-                                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class), toJavaTypeName(verb.getRequest())));
-                                typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID).addParameter(toAnnotatedJavaTypeName(verb.getRequest()), "value").addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
-                            } else {
-                                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class), toJavaTypeName(verb.getRequest()), toJavaTypeName(verb.getResponse())));
-                                typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(toAnnotatedJavaTypeName(verb.getResponse())).addParameter(toAnnotatedJavaTypeName(verb.getRequest()), "value").addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
-                            }
-
-                            TypeSpec helloWorld = typeBuilder
-                                    .build();
-
-                            JavaFile javaFile = JavaFile.builder(packageName, helloWorld)
-                                    .build();
-
-                            javaFile.writeTo(context.outDir());
-
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+                        TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
+                                .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
+                                        .addMember("name", "\"" + verb.getName() + "\"")
+                                        .addMember("module", "\"" + module.getName() + "\"")
+                                        .build())
+                                .addModifiers(Modifier.PUBLIC);
+                        if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
+                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientEmpty.class)));
+                        } else if (verb.getRequest().hasUnit()) {
+                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class), toJavaTypeName(verb.getResponse(), typeAliasMap)));
+                            typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap)).addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                        } else if (verb.getResponse().hasUnit()) {
+                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class), toJavaTypeName(verb.getRequest(), typeAliasMap)));
+                            typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID).addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value").addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                        } else {
+                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class), toJavaTypeName(verb.getRequest(), typeAliasMap), toJavaTypeName(verb.getResponse(), typeAliasMap)));
+                            typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap)).addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value").addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
                         }
+
+                        TypeSpec helloWorld = typeBuilder
+                                .build();
+
+                        JavaFile javaFile = JavaFile.builder(packageName, helloWorld)
+                                .build();
+
+                        javaFile.writeTo(context.outDir());
+
                     } else if (decl.hasData()) {
                         var data = decl.getData();
-                        try {
-                            String packageName = PACKAGE_PREFIX + module.getName();
-                            String thisType = className(data.getName());
-                            TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
-                                    .addModifiers(Modifier.PUBLIC);
-                            for (var param : data.getTypeParametersList()) {
-                                dataBuilder.addTypeVariable(TypeVariableName.get(param.getName()));
-                            }
-
-                            for (var i : data.getFieldsList()) {
-                                TypeName dataType = toAnnotatedJavaTypeName(i.getType());
-                                dataBuilder.addField(dataType, i.getName(), Modifier.PRIVATE);
-                                String methodName = Character.toUpperCase(i.getName().charAt(0)) + i.getName().substring(1);
-                                dataBuilder.addMethod(MethodSpec.methodBuilder("set" + methodName)
-                                                .addModifiers(Modifier.PUBLIC)
-                                                .addParameter(dataType, i.getName())
-                                                .returns(ClassName.get(packageName, thisType))
-                                                .addCode("this.$L = $L;\n", i.getName(), i.getName())
-                                                .addCode("return this;")
-                                        .build());
-                                if (i.getType().hasBool()) {
-                                    dataBuilder.addMethod(MethodSpec.methodBuilder("is" + methodName)
-                                            .addModifiers(Modifier.PUBLIC)
-                                            .returns(dataType)
-                                            .addCode("return $L;", i.getName())
-                                            .build());
-                                } else {
-                                    dataBuilder.addMethod(MethodSpec.methodBuilder("get" + methodName)
-                                            .addModifiers(Modifier.PUBLIC)
-                                            .returns(dataType)
-                                            .addCode("return $L;", i.getName())
-                                            .build());
-                                }
-                            }
-
-                            JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
-                                    .build();
-
-                            javaFile.writeTo(context.outDir());
-
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+                        String thisType = className(data.getName());
+                        TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
+                                .addModifiers(Modifier.PUBLIC);
+                        for (var param : data.getTypeParametersList()) {
+                            dataBuilder.addTypeVariable(TypeVariableName.get(param.getName()));
                         }
+
+                        for (var i : data.getFieldsList()) {
+                            TypeName dataType = toAnnotatedJavaTypeName(i.getType(), typeAliasMap);
+                            String name = i.getName();
+                            var fieldName = toJavaName(name);
+                            dataBuilder.addField(dataType, fieldName, Modifier.PRIVATE);
+                            String methodName = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+                            dataBuilder.addMethod(MethodSpec.methodBuilder("set" + methodName)
+                                    .addModifiers(Modifier.PUBLIC)
+                                    .addParameter(dataType, fieldName)
+                                    .returns(ClassName.get(packageName, thisType))
+                                    .addCode("this.$L = $L;\n", fieldName, fieldName)
+                                    .addCode("return this;")
+                                    .build());
+                            if (i.getType().hasBool()) {
+                                dataBuilder.addMethod(MethodSpec.methodBuilder("is" + methodName)
+                                        .addModifiers(Modifier.PUBLIC)
+                                        .returns(dataType)
+                                        .addCode("return $L;", fieldName)
+                                        .build());
+                            } else {
+                                dataBuilder.addMethod(MethodSpec.methodBuilder("get" + methodName)
+                                        .addModifiers(Modifier.PUBLIC)
+                                        .returns(dataType)
+                                        .addCode("return $L;", fieldName)
+                                        .build());
+                            }
+                        }
+
+                        JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
+                                .build();
+
+                        javaFile.writeTo(context.outDir());
+
+
+                    } else if (decl.hasEnum()) {
+                        var data = decl.getEnum();
+                        String thisType = className(data.getName());
+                        TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(thisType)
+                                .addModifiers(Modifier.PUBLIC);
+
+                        for (var i : data.getVariantsList()) {
+                            dataBuilder.addEnumConstant(i.getName());
+                        }
+
+                        JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
+                                .build();
+
+                        javaFile.writeTo(context.outDir());
+
                     }
                 }
             }
@@ -164,28 +194,46 @@ public class FTLCodeGenerator implements CodeGenProvider {
         return true;
     }
 
-    private TypeName toAnnotatedJavaTypeName(Type type) {
-        var results = toJavaTypeName(type);
+    private String toJavaName(String name) {
+        if (JAVA_KEYWORDS.contains(name)) {
+            return name + "_";
+        }
+        return name;
+    }
+
+    private TypeName toAnnotatedJavaTypeName(Type type, Map<Key, Type> typeAliasMap) {
+        var results = toJavaTypeName(type, typeAliasMap);
         if (type.hasRef() || type.hasArray() || type.hasBytes() || type.hasString() || type.hasMap() || type.hasTime()) {
             return results.annotated(AnnotationSpec.builder(NotNull.class).build());
         }
         return results;
     }
 
-    private TypeName toJavaTypeName(Type type) {
+    private TypeName toJavaTypeName(Type type, Map<Key, Type> typeAliasMap) {
         if (type.hasArray()) {
-            return ParameterizedTypeName.get(ClassName.get(List.class), toJavaTypeName(type.getArray().getElement()));
+            return ParameterizedTypeName.get(ClassName.get(List.class), toJavaTypeName(type.getArray().getElement(), typeAliasMap));
         } else if (type.hasString()) {
             return ClassName.get(String.class);
         } else if (type.hasOptional()) {
-            return  toJavaTypeName(type.getOptional().getType());
+            return toJavaTypeName(type.getOptional().getType(), typeAliasMap);
         } else if (type.hasRef()) {
             if (type.getRef().getModule().isEmpty()) {
                 return TypeVariableName.get(type.getRef().getName());
             }
-            return ClassName.get(PACKAGE_PREFIX + type.getRef().getModule(), type.getRef().getName());
+
+            Key key = new Key(type.getRef().getModule(), type.getRef().getName());
+            if (typeAliasMap.containsKey(key)) {
+                return toJavaTypeName(typeAliasMap.get(key), typeAliasMap);
+            }
+            var params = type.getRef().getTypeParametersList();
+            ClassName className = ClassName.get(PACKAGE_PREFIX + type.getRef().getModule(), type.getRef().getName());
+            if (params.isEmpty()) {
+                return className;
+            }
+            List<TypeName> javaTypes = params.stream().map(s -> s.hasUnit() ? WildcardTypeName.subtypeOf(Object.class) : toJavaTypeName(s, typeAliasMap)).toList();
+            return ParameterizedTypeName.get(className, javaTypes.toArray(new TypeName[javaTypes.size()]));
         } else if (type.hasMap()) {
-            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeName(type.getMap().getKey()), toJavaTypeName(type.getMap().getValue()));
+            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeName(type.getMap().getKey(), typeAliasMap), toJavaTypeName(type.getMap().getValue(), typeAliasMap));
         } else if (type.hasTime()) {
             return ClassName.get(Instant.class);
         } else if (type.hasInt()) {
@@ -197,7 +245,9 @@ public class FTLCodeGenerator implements CodeGenProvider {
         } else if (type.hasFloat()) {
             return TypeName.DOUBLE;
         } else if (type.hasBytes()) {
-            return ArrayTypeName.BYTE;
+            return ArrayTypeName.of(TypeName.BYTE);
+        } else if (type.hasAny()) {
+            return TypeName.OBJECT;
         }
 
         throw new RuntimeException("Cannot generate Java type name: " + type);
@@ -208,8 +258,17 @@ public class FTLCodeGenerator implements CodeGenProvider {
         return true;
     }
 
+    record Key(String module, String name) {
+    }
+
 
     static String className(String in) {
         return Character.toUpperCase(in.charAt(0)) + in.substring(1);
     }
+
+    private static final Set<String> JAVA_KEYWORDS = Set.of("abstract", "continue", "for", "new", "switch", "assert",
+            "default", "goto", "package", "synchronized", "boolean", "do", "if", "private", "this", "break", "double",
+            "implements", "protected", "throw", "byte", "else", "import", "public", "throws", "case", "enum", "instanceof",
+            "return", "transient", "catch", "extends", "int", "short", "try", "char", "final", "interface", "static", "void",
+            "class", "finally", "long", "strictfp", "volatile", "const", "float", "native", "super", "while");
 }
