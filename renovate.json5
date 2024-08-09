@@ -14,13 +14,7 @@
       automerge: true,
     },
     {
-      matchPackageNames: [
-        "jbr",
-        "ktfmt",
-        "golangci-lint",
-        "svu",
-        "lefthook", // Everything after 1.6.14 is broken
-      ],
+      matchPackageNames: ["jbr", "ktfmt", "golangci-lint", "svu"],
       matchManagers: ["hermit"],
       enabled: false,
     },
