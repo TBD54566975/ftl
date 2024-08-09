@@ -35,9 +35,7 @@ public class FtlJavaRuntimeResource {
 
     @Verb
     public String hello(String name, EchoClient echoClient) {
-        EchoRequest echoRequest = new EchoRequest();
-        echoRequest.name = name;
-        return "Hello " + echoClient.call(echoRequest).message;
+        return "Hello " + echoClient.call(new EchoRequest().setName(name)).getMessage();
     }
 
     @Verb

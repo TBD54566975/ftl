@@ -23,12 +23,11 @@ public class FtlJavaRuntimeResourceTest {
 
     @Test
     public void testHelloEndpoint() {
-        EchoResponse response = new EchoResponse();
-        response.message = "Stuart";
         EchoClient echoClient = Mockito.mock(EchoClient.class);
-        Mockito.when(echoClient.call(Mockito.any())).thenReturn(response);
+        Mockito.when(echoClient.call(Mockito.any())).thenReturn(new EchoResponse().setMessage("Stuart"));
         Assertions.assertEquals("Hello Stuart", resource.hello("Stuart", echoClient));
     }
+
     @Test
     public void testTopic() {
         MyTopic topic = Mockito.mock(MyTopic.class);

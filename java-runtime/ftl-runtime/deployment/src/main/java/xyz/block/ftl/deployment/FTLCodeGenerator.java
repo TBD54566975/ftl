@@ -4,6 +4,7 @@ import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
@@ -27,7 +28,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Stream;
 
 public class FTLCodeGenerator implements CodeGenProvider {
@@ -97,14 +97,37 @@ public class FTLCodeGenerator implements CodeGenProvider {
                         var data = decl.getData();
                         try {
                             String packageName = PACKAGE_PREFIX + module.getName();
-                            TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(className(data.getName()))
+                            String thisType = className(data.getName());
+                            TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
                                     .addModifiers(Modifier.PUBLIC);
                             for (var param : data.getTypeParametersList()) {
                                 dataBuilder.addTypeVariable(TypeVariableName.get(param.getName()));
                             }
 
                             for (var i : data.getFieldsList()) {
-                                dataBuilder.addField(toJavaTypeName(i.getType()), i.getName(), Modifier.PUBLIC);
+                                TypeName dataType = toAnnotatedJavaTypeName(i.getType());
+                                dataBuilder.addField(dataType, i.getName(), Modifier.PRIVATE);
+                                String methodName = Character.toUpperCase(i.getName().charAt(0)) + i.getName().substring(1);
+                                dataBuilder.addMethod(MethodSpec.methodBuilder("set" + methodName)
+                                                .addModifiers(Modifier.PUBLIC)
+                                                .addParameter(dataType, i.getName())
+                                                .returns(ClassName.get(packageName, thisType))
+                                                .addCode("this.$L = $L;\n", i.getName(), i.getName())
+                                                .addCode("return this;")
+                                        .build());
+                                if (i.getType().hasBool()) {
+                                    dataBuilder.addMethod(MethodSpec.methodBuilder("is" + methodName)
+                                            .addModifiers(Modifier.PUBLIC)
+                                            .returns(dataType)
+                                            .addCode("return $L;", i.getName())
+                                            .build());
+                                } else {
+                                    dataBuilder.addMethod(MethodSpec.methodBuilder("get" + methodName)
+                                            .addModifiers(Modifier.PUBLIC)
+                                            .returns(dataType)
+                                            .addCode("return $L;", i.getName())
+                                            .build());
+                                }
                             }
 
                             JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
@@ -125,28 +148,28 @@ public class FTLCodeGenerator implements CodeGenProvider {
         return true;
     }
 
-    private TypeName toJavaTypeName(Type type) {
-        var results = toJavaTypeNameImpl(type);
+    private TypeName toAnnotatedJavaTypeName(Type type) {
+        var results = toJavaTypeName(type);
         if (type.hasRef() || type.hasArray() || type.hasBytes() || type.hasString() || type.hasMap()) {
             return results.annotated(AnnotationSpec.builder(NotNull.class).build());
         }
         return results;
     }
 
-    private TypeName toJavaTypeNameImpl(Type type) {
+    private TypeName toJavaTypeName(Type type) {
         if (type.hasArray()) {
-            return ParameterizedTypeName.get(ClassName.get(List.class), toJavaTypeNameImpl(type.getArray().getElement()));
+            return ParameterizedTypeName.get(ClassName.get(List.class), toJavaTypeName(type.getArray().getElement()));
         } else if (type.hasString()) {
             return ClassName.get(String.class);
         } else if (type.hasOptional()) {
-            return  toJavaTypeNameImpl(type.getOptional().getType());
+            return  toJavaTypeName(type.getOptional().getType());
         } else if (type.hasRef()) {
             if (type.getRef().getModule().isEmpty()) {
                 return TypeVariableName.get(type.getRef().getName());
             }
             return ClassName.get(PACKAGE_PREFIX + type.getRef().getModule(), type.getRef().getName());
         } else if (type.hasMap()) {
-            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeNameImpl(type.getMap().getKey()), toJavaTypeNameImpl(type.getMap().getValue()));
+            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeName(type.getMap().getKey()), toJavaTypeName(type.getMap().getValue()));
         } else if (type.hasTime()) {
             return ClassName.get(Instant.class);
         } else if (type.hasInt()) {
