@@ -158,6 +158,7 @@ lint-frontend: build-frontend
 # Lint the backend
 lint-backend:
   @golangci-lint run --new-from-rev=$(git merge-base origin/main HEAD) ./...
+  @lint-commit-or-rollback ./backend/...
 
 lint-scripts:
 	@shellcheck -f gcc -e SC2016 $(find scripts -type f -not -path scripts/tests) | to-annotation

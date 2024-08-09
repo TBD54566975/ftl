@@ -684,7 +684,7 @@ func (p *postgresClaim) Rollback(ctx context.Context) error {
 func (p *postgresClaim) Runner() Runner { return p.runner }
 
 // SetDeploymentReplicas activates the given deployment.
-func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
+func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) (err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {

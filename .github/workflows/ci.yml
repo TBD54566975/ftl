@@ -89,6 +89,8 @@ jobs:
         uses: ./.github/actions/build-cache
       - name: golangci-lint
         run: golangci-lint run --new-from-rev="$(git merge-base origin/main HEAD)" --out-format github-actions ./...
+      - name: lint-commit-or-rollback
+        run: lint-commit-or-rollback ./backend/... 2>&1 | to-annotation
       - name: go-check-sumtype
         shell: bash
         run: go-check-sumtype ./... 2>&1 | to-annotation
