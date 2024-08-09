@@ -461,6 +461,7 @@ type FsmNextEvent struct {
 	FsmInstanceID int64
 	NextState     schema.RefKey
 	Request       []byte
+	RequestType   Type
 }
 
 type IngressRoute struct {

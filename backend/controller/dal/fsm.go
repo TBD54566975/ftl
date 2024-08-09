@@ -109,6 +109,7 @@ func (d *DAL) GetFSMState(ctx context.Context, fsm schema.RefKey, instanceKey st
 type NextFSMEvent struct {
 	DestinationState schema.RefKey
 	Request          json.RawMessage
+	RequestType      schema.Type
 }
 
 // GetNextFSMEvent returns the next event for an FSM instance, if any.
@@ -123,15 +124,19 @@ func (d *DAL) GetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKe
 	return optional.Some(NextFSMEvent{
 		DestinationState: next.NextState,
 		Request:          next.Request,
+		RequestType:      next.RequestType,
 	}), nil
 }
 
-func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string, nextState schema.RefKey, request json.RawMessage) error {
+func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string, nextState schema.RefKey, request json.RawMessage, requestType schema.Type) error {
 	_, err := d.db.SetNextFSMEvent(ctx, sql.SetNextFSMEventParams{
 		Fsm:         fsm,
 		InstanceKey: instanceKey,
 		Event:       nextState,
 		Request:     request,
+		RequestType: sql.Type{
+			Type: requestType,
+		},
 	})
 	return dalerrs.TranslatePGError(err)
 }
