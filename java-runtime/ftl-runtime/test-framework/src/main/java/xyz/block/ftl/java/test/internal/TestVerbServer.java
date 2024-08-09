@@ -1,8 +1,11 @@
 package xyz.block.ftl.java.test.internal;
 
+import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import xyz.block.ftl.v1.VerbServiceGrpc;
 import xyz.block.ftl.v1.*;
+
+import java.nio.charset.StandardCharsets;
 
 
 public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
@@ -10,8 +13,6 @@ public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
 
     @Override
     public void call(CallRequest request, StreamObserver<CallResponse> responseObserver) {
-        var response = registry.invoke(request);
-        responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
 
@@ -32,7 +33,7 @@ public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
 
     @Override
     public void getModuleContext(ModuleContextRequest request, StreamObserver<ModuleContextResponse> responseObserver) {
-        super.getModuleContext(request, responseObserver);
+        responseObserver.onNext( ModuleContextResponse.newBuilder().setModule("test").putConfigs("test", ByteString.copyFrom("test", StandardCharsets.UTF_8)).build());
     }
 
     @Override

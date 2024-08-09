@@ -10,8 +10,3 @@ import (
 
 // Files is the FTL Java runtime scaffolding files.
 func Files() *zip.Reader { return internal.ZipRelativeToCaller("scaffolding") }
-
-// ExternalModuleTemplates are templates for scaffolding external modules in the FTL Java runtime.
-func ExternalModuleTemplates() *zip.Reader {
-	return internal.ZipRelativeToCaller("external-module-template")
-}

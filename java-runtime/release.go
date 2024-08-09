@@ -22,12 +22,3 @@ func Files() *zip.Reader {
 	}
 	return zr
 }
-
-// ExternalModuleTemplates are templates for scaffolding external modules in the FTL Java runtime.
-func ExternalModuleTemplates() *zip.Reader {
-	zr, err := zip.NewReader(bytes.NewReader(externalModuleTemplate), int64(len(externalModuleTemplate)))
-	if err != nil {
-		panic(err)
-	}
-	return zr
-}

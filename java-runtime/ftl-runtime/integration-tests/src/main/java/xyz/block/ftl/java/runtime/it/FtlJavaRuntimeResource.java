@@ -16,6 +16,8 @@
 */
 package xyz.block.ftl.java.runtime.it;
 
+import ftl.echo.EchoClient;
+import ftl.echo.EchoRequest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -24,7 +26,6 @@ import xyz.block.ftl.Verb;
 
 @ApplicationScoped
 public class FtlJavaRuntimeResource {
-    // add some rest methods here
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -33,7 +34,9 @@ public class FtlJavaRuntimeResource {
     }
 
     @Verb
-    public String hello() {
-        return "Hello ftl-java-runtime";
+    public String hello(String name, EchoClient echoClient) {
+        EchoRequest echoRequest = new EchoRequest();
+        echoRequest.name = name;
+        return "Hello " + echoClient.call(echoRequest).message;
     }
 }
