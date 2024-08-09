@@ -30,7 +30,7 @@ public class FtlJavaRuntimeResource {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     public String post(Person person) {
-        return "Hello " + person.getFirst() + " " + person.getLast();
+        return "Hello " + person.first() + " " + person.last();
     }
 
     @Verb
@@ -38,5 +38,10 @@ public class FtlJavaRuntimeResource {
         EchoRequest echoRequest = new EchoRequest();
         echoRequest.name = name;
         return "Hello " + echoClient.call(echoRequest).message;
+    }
+
+    @Verb
+    public void publish(Person person, MyTopic topic) {
+        topic.publish(person);
     }
 }
