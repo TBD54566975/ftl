@@ -660,11 +660,12 @@ WHERE
 RETURNING true;
 
 -- name: SetNextFSMEvent :one
-INSERT INTO fsm_next_event (fsm_instance_id, next_state, request)
+INSERT INTO fsm_next_event (fsm_instance_id, next_state, request, request_type)
 VALUES (
   (SELECT id FROM fsm_instances WHERE fsm = @fsm::schema_ref AND key = @instance_key),
   @event,
-  @request
+  @request,
+  @request_type
 )
 RETURNING id;
 

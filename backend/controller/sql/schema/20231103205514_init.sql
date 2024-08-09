@@ -505,7 +505,8 @@ CREATE TABLE fsm_next_event (
     created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     fsm_instance_id BIGINT UNIQUE NOT NULL REFERENCES fsm_instances(id) ON DELETE CASCADE,
     next_state schema_ref NOT NULL,
-    request JSONB NOT NULL,
+    request BYTEA NOT NULL,
+    request_type schema_type NOT NULL,
     UNIQUE (fsm_instance_id, next_state)
 );
 

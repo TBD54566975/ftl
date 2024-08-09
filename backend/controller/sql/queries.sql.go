@@ -1453,13 +1453,13 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 }
 
 const getNextFSMEvent = `-- name: GetNextFSMEvent :one
-SELECT id, created_at, fsm_instance_id, next_state, request
+SELECT id, created_at, fsm_instance_id, next_state, request, request_type
 FROM fsm_next_event
 WHERE fsm_instance_id = (SELECT id FROM fsm_instances WHERE fsm = $1::schema_ref AND key = $2)
 `
 
 func (q *Queries) GetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (FsmNextEvent, error) {
-	row := q.db.QueryRow(ctx, getNextFSMEvent, fsm, instanceKey)
+	row := q.db.QueryRowContext(ctx, getNextFSMEvent, fsm, instanceKey)
 	var i FsmNextEvent
 	err := row.Scan(
 		&i.ID,
@@ -1467,6 +1467,7 @@ func (q *Queries) GetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instan
 		&i.FsmInstanceID,
 		&i.NextState,
 		&i.Request,
+		&i.RequestType,
 	)
 	return i, err
 }
@@ -2425,6 +2426,38 @@ func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.De
 	return err
 }
 
+const setNextFSMEvent = `-- name: SetNextFSMEvent :one
+INSERT INTO fsm_next_event (fsm_instance_id, next_state, request, request_type)
+VALUES (
+  (SELECT id FROM fsm_instances WHERE fsm = $1::schema_ref AND key = $2),
+  $3,
+  $4,
+  $5
+)
+RETURNING id
+`
+
+type SetNextFSMEventParams struct {
+	Fsm         schema.RefKey
+	InstanceKey string
+	Event       schema.RefKey
+	Request     []byte
+	RequestType Type
+}
+
+func (q *Queries) SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, setNextFSMEvent,
+		arg.Fsm,
+		arg.InstanceKey,
+		arg.Event,
+		arg.Request,
+		arg.RequestType,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const setSubscriptionCursor = `-- name: SetSubscriptionCursor :exec
 WITH event AS (
   SELECT id, created_at, key, topic_id, payload
@@ -2440,35 +2473,6 @@ WHERE key = $1::subscription_key
 func (q *Queries) SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error {
 	_, err := q.db.ExecContext(ctx, setSubscriptionCursor, column1, column2)
 	return err
-}
-
-const setNextFSMEvent = `-- name: SetNextFSMEvent :one
-INSERT INTO fsm_next_event (fsm_instance_id, next_state, request)
-VALUES (
-  (SELECT id FROM fsm_instances WHERE fsm = $1::schema_ref AND key = $2),
-  $3,
-  $4
-)
-RETURNING id
-`
-
-type SetNextFSMEventParams struct {
-	Fsm         schema.RefKey
-	InstanceKey string
-	Event       schema.RefKey
-	Request     []byte
-}
-
-func (q *Queries) SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error) {
-	row := q.db.QueryRow(ctx, setNextFSMEvent,
-		arg.Fsm,
-		arg.InstanceKey,
-		arg.Event,
-		arg.Request,
-	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
 }
 
 const startCronJobs = `-- name: StartCronJobs :many
