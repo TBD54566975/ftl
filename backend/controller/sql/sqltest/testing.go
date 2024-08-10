@@ -27,5 +27,6 @@ func OpenForTesting(ctx context.Context, t testing.TB) *sql.DB {
 	testDSN := "postgres://localhost:15432/ftl-test?user=postgres&password=secret&sslmode=disable"
 	conn, err := databasetesting.CreateForDevel(ctx, testDSN, true)
 	assert.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, conn.Close()) })
 	return conn
 }
