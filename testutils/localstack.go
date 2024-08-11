@@ -2,11 +2,12 @@ package testutils
 
 import (
 	"context"
+	"testing"
+
 	"github.com/alecthomas/assert/v2"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	"testing"
 )
 
 func NewLocalstackConfig(t *testing.T, ctx context.Context) aws.Config { // nolint: revive

@@ -18,6 +18,7 @@ require (
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.16.0
 	github.com/amacneil/dbmate/v2 v2.19.0
+	github.com/aws/aws-sdk-go v1.44.267
 	github.com/aws/aws-sdk-go-v2 v1.30.3
 	github.com/aws/aws-sdk-go-v2/config v1.27.27
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.27
@@ -72,7 +73,6 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/aws/aws-sdk-go v1.44.267 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.11 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.15 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.15 // indirect
