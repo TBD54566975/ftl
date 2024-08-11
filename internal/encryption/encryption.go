@@ -176,8 +176,8 @@ func decryptBytesForStreaming(streamingPrimitive tink.StreamingAEAD, encrypted [
 type SubKey string
 
 const (
-	Logs  SubKey = "logs"
-	Async SubKey = "async"
+	LogsSubKey  SubKey = "logs"
+	AsyncSubKey SubKey = "async"
 )
 
 type EncryptorNext interface {

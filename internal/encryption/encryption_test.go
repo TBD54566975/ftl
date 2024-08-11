@@ -52,18 +52,18 @@ func TestPlaintextEncryptor(t *testing.T) {
 	encryptor, err := NewPlaintextEncryptor(key)
 	assert.NoError(t, err)
 
-	encrypted, err := encryptor.Encrypt(Logs, []byte("hunter2"))
+	encrypted, err := encryptor.Encrypt(LogsSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
 	fmt.Printf("Encrypted: %s\n", encrypted)
 
-	decrypted, err := encryptor.Decrypt(Logs, encrypted)
+	decrypted, err := encryptor.Decrypt(LogsSubKey, encrypted)
 	assert.NoError(t, err)
 	fmt.Printf("Decrypted: %s\n", decrypted)
 
 	assert.Equal(t, "hunter2", string(decrypted))
 
 	// Should fail to decrypt with the wrong subkey
-	_, err = encryptor.Decrypt(Async, encrypted)
+	_, err = encryptor.Decrypt(AsyncSubKey, encrypted)
 	assert.Error(t, err)
 
 }
@@ -71,10 +71,10 @@ func TestPlaintextEncryptor(t *testing.T) {
 func TestNoOpEncryptor(t *testing.T) {
 	encryptor := NoOpEncryptorNext{}
 
-	encrypted, err := encryptor.Encrypt(Logs, []byte("hunter2"))
+	encrypted, err := encryptor.Encrypt(LogsSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(Logs, encrypted)
+	decrypted, err := encryptor.Decrypt(LogsSubKey, encrypted)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "hunter2", string(decrypted))
@@ -86,14 +86,14 @@ func TestKMSEncryptorFakeKMS(t *testing.T) {
 	encryptor, err := NewKMSEncryptorGenerateKey(uri, nil)
 	assert.NoError(t, err)
 
-	encrypted, err := encryptor.Encrypt(Logs, []byte("hunter2"))
+	encrypted, err := encryptor.Encrypt(LogsSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(Logs, encrypted)
+	decrypted, err := encryptor.Decrypt(LogsSubKey, encrypted)
 	assert.NoError(t, err)
 	assert.Equal(t, "hunter2", string(decrypted))
 
 	// Should fail to decrypt with the wrong subkey
-	_, err = encryptor.Decrypt(Async, encrypted)
+	_, err = encryptor.Decrypt(AsyncSubKey, encrypted)
 	assert.Error(t, err)
 }
