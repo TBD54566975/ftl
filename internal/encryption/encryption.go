@@ -228,7 +228,7 @@ func (p PlaintextEncryptor) Decrypt(subKey SubKey, encrypted []byte) ([]byte, er
 	return decrypted, nil
 }
 
-// KMSEncryptor
+// KMSEncryptor encrypts and decrypts using a KMS key via tink.
 // TODO: maybe change to DerivableEncryptor and integrate plaintext and kms encryptor.
 type KMSEncryptor struct {
 	root            keyset.Handle
