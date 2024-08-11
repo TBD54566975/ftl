@@ -227,8 +227,8 @@ type DAL struct {
 }
 
 type Encryptors struct {
-	Logs  encryption.Encryptable
-	Async encryption.Encryptable
+	Logs  encryption.DeprecatedEncryptable
+	Async encryption.DeprecatedEncryptable
 }
 
 // NoOpEncryptors do not encrypt potentially sensitive data.

@@ -22,8 +22,6 @@ import (
 	"github.com/alecthomas/types/optional"
 	. "github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 )
@@ -38,10 +36,7 @@ func setUp(ctx context.Context, t *testing.T, router optional.Option[Router[Secr
 		router = optional.Some[Router[Secrets]](ProjectConfigResolver[Secrets]{Config: projectPath})
 	}
 
-	cc := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider("test", "test", ""))
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(cc), config.WithRegion("us-west-2"))
-	assert.NoError(t, err)
-
+	cfg := testutils.NewLocalstackConfig(t, ctx)
 	externalClient := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
 		o.BaseEndpoint = aws.String("http://localhost:4566")
 	})

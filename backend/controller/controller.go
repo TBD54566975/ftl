@@ -85,15 +85,15 @@ func (c *CommonConfig) Validate() error {
 	return nil
 }
 
-type EncryptionKeys struct {
+type DeprecatedEncryptionKeys struct {
 	Logs  string `name:"log-key" help:"Key for sensitive log data in internal FTL tables." env:"FTL_LOG_ENCRYPTION_KEY"`
 	Async string `name:"async-key" help:"Key for sensitive async call data in internal FTL tables." env:"FTL_ASYNC_ENCRYPTION_KEY"`
 }
 
-func (e EncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
+func (e DeprecatedEncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
 	encryptors := dal.Encryptors{}
 	if e.Logs != "" {
-		enc, err := encryption.NewForKeyOrURI(e.Logs)
+		enc, err := encryption.NewDeprecatedKeyKeyOrURI(e.Logs)
 		if err != nil {
 			return nil, fmt.Errorf("could not create log encryptor: %w", err)
 		}
@@ -105,7 +105,7 @@ func (e EncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
 	}
 
 	if e.Async != "" {
-		enc, err := encryption.NewForKeyOrURI(e.Async)
+		enc, err := encryption.NewDeprecatedKeyKeyOrURI(e.Async)
 		if err != nil {
 			return nil, fmt.Errorf("could not create async calls encryptor: %w", err)
 		}
@@ -133,7 +133,8 @@ type Config struct {
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	EncryptionKeys
+	KMSURI                       *url.URL            `help:"URI for KMS key e.g. aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
+	DeprecatedEncryptionKeys
 	CommonConfig
 }
 
