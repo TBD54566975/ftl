@@ -228,9 +228,9 @@ func (p PlaintextEncryptor) Decrypt(subKey SubKey, encrypted []byte) ([]byte, er
 	return decrypted, nil
 }
 
-// KmsEncryptor
+// KMSEncryptor
 // TODO: maybe change to DerivableEncryptor and integrate plaintext and kms encryptor.
-type KmsEncryptor struct {
+type KMSEncryptor struct {
 	root            keyset.Handle
 	kekAEAD         tink.AEAD
 	encryptedKeyset []byte
@@ -267,7 +267,7 @@ func newClientWithAEAD(uri string, kms *awsv1kms.KMS) (tink.AEAD, error) {
 	return kekAEAD, nil
 }
 
-func NewKmsEncryptorGenerateKey(uri string, v1client *awsv1kms.KMS) (*KmsEncryptor, error) {
+func NewKMSEncryptorGenerateKey(uri string, v1client *awsv1kms.KMS) (*KMSEncryptor, error) {
 	kekAEAD, err := newClientWithAEAD(uri, v1client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create KMS client: %w", err)
@@ -298,14 +298,14 @@ func NewKmsEncryptorGenerateKey(uri string, v1client *awsv1kms.KMS) (*KmsEncrypt
 	}
 	encryptedKeyset := buf.Bytes()
 
-	return &KmsEncryptor{
+	return &KMSEncryptor{
 		root:            *handle,
 		kekAEAD:         kekAEAD,
 		encryptedKeyset: encryptedKeyset,
 	}, nil
 }
 
-func NewKmsEncryptorWithKMS(uri string, v1client *awsv1kms.KMS, encryptedKeyset []byte) (*KmsEncryptor, error) {
+func NewKMSEncryptorWithKMS(uri string, v1client *awsv1kms.KMS, encryptedKeyset []byte) (*KMSEncryptor, error) {
 	kekAEAD, err := newClientWithAEAD(uri, v1client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create KMS client: %w", err)
@@ -317,14 +317,14 @@ func NewKmsEncryptorWithKMS(uri string, v1client *awsv1kms.KMS, encryptedKeyset 
 		return nil, fmt.Errorf("failed to read keyset: %w", err)
 	}
 
-	return &KmsEncryptor{
+	return &KMSEncryptor{
 		root:            *handle,
 		kekAEAD:         kekAEAD,
 		encryptedKeyset: encryptedKeyset,
 	}, nil
 }
 
-func (k *KmsEncryptor) GetEncryptedKeyset() []byte {
+func (k *KMSEncryptor) GetEncryptedKeyset() []byte {
 	return k.encryptedKeyset
 }
 
@@ -342,7 +342,7 @@ func deriveKeyset(root keyset.Handle, salt []byte) (*keyset.Handle, error) {
 	return derived, nil
 }
 
-func (k *KmsEncryptor) Encrypt(subKey SubKey, cleartext []byte) ([]byte, error) {
+func (k *KMSEncryptor) Encrypt(subKey SubKey, cleartext []byte) ([]byte, error) {
 	encrypted, err := derivedEncrypt(k.root, subKey, cleartext)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt with derive: %w", err)
@@ -351,7 +351,7 @@ func (k *KmsEncryptor) Encrypt(subKey SubKey, cleartext []byte) ([]byte, error) 
 	return encrypted, nil
 }
 
-func (k *KmsEncryptor) Decrypt(subKey SubKey, encrypted []byte) ([]byte, error) {
+func (k *KMSEncryptor) Decrypt(subKey SubKey, encrypted []byte) ([]byte, error) {
 	decrypted, err := derivedDecrypt(k.root, subKey, encrypted)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt with derive: %w", err)

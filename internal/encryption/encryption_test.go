@@ -80,10 +80,10 @@ func TestNoOpEncryptor(t *testing.T) {
 	assert.Equal(t, "hunter2", string(decrypted))
 }
 
-func TestKmsEncryptorFakeKMS(t *testing.T) {
+func TestKMSEncryptorFakeKMS(t *testing.T) {
 	uri := "fake-kms://CM2b3_MDElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEIK75t5L-adlUwVhWvRuWUwYARABGM2b3_MDIAE"
 
-	encryptor, err := NewKmsEncryptorGenerateKey(uri, nil)
+	encryptor, err := NewKMSEncryptorGenerateKey(uri, nil)
 	assert.NoError(t, err)
 
 	encrypted, err := encryptor.Encrypt(Logs, []byte("hunter2"))

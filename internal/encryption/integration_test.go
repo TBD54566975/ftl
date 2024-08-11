@@ -108,7 +108,7 @@ func validateAsyncCall(verb string, sensitive string) in.Action {
 	}
 }
 
-func TestKmsEncryptorLocalstack(t *testing.T) {
+func TestKMSEncryptorLocalstack(t *testing.T) {
 	endpoint := "http://localhost:4566"
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
@@ -130,7 +130,7 @@ func TestKmsEncryptorLocalstack(t *testing.T) {
 		Region:      awsv1.String("us-west-2"),
 	})
 
-	encryptor, err := NewKmsEncryptorGenerateKey(uri, v1client)
+	encryptor, err := NewKMSEncryptorGenerateKey(uri, v1client)
 	assert.NoError(t, err)
 
 	encrypted, err := encryptor.Encrypt(Logs, []byte("hunter2"))
