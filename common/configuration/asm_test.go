@@ -12,18 +12,17 @@ import (
 	"sort"
 	"testing"
 
-	"connectrpc.com/connect"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/testutils"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 	. "github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 )
@@ -38,10 +37,7 @@ func setUp(ctx context.Context, t *testing.T, router optional.Option[Router[Secr
 		router = optional.Some[Router[Secrets]](ProjectConfigResolver[Secrets]{Config: projectPath})
 	}
 
-	cc := aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider("test", "test", ""))
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithCredentialsProvider(cc), config.WithRegion("us-west-2"))
-	assert.NoError(t, err)
-
+	cfg := testutils.NewLocalstackConfig(t, ctx)
 	externalClient := secretsmanager.NewFromConfig(cfg, func(o *secretsmanager.Options) {
 		o.BaseEndpoint = aws.String("http://localhost:4566")
 	})

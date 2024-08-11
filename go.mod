@@ -18,9 +18,11 @@ require (
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.16.0
 	github.com/amacneil/dbmate/v2 v2.19.0
+	github.com/aws/aws-sdk-go v1.44.267
 	github.com/aws/aws-sdk-go-v2 v1.30.3
 	github.com/aws/aws-sdk-go-v2/config v1.27.27
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.27
+	github.com/aws/aws-sdk-go-v2/service/kms v1.35.3
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.4
 	github.com/aws/smithy-go v1.20.3
 	github.com/beevik/etree v1.4.1
@@ -44,6 +46,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/swaggest/jsonschema-go v0.3.72
+	github.com/tink-crypto/tink-go-awskms v0.0.0-20230616072154-ba4f9f22c3e9
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	github.com/titanous/json5 v1.0.0
 	github.com/tliron/commonlog v0.2.17
@@ -87,6 +90,7 @@ require (
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
