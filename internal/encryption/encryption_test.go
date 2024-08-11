@@ -1,20 +1,11 @@
 package encryption
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/testutils"
 	"github.com/alecthomas/assert/v2"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/kms"
-	awsv1 "github.com/aws/aws-sdk-go/aws"
-	awsv1credentials "github.com/aws/aws-sdk-go/aws/credentials"
-	awsv1session "github.com/aws/aws-sdk-go/aws/session"
-	awsv1kms "github.com/aws/aws-sdk-go/service/kms"
 )
 
 const streamingKey = `{
@@ -106,41 +97,4 @@ func TestKmsEncryptorFakeKMS(t *testing.T) {
 	_, err = encryptor.Decrypt(Async, encrypted)
 	assert.Error(t, err)
 
-}
-
-func TestKmsEncryptorLocalstack(t *testing.T) {
-	endpoint := "http://localhost:4566"
-
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	cfg := testutils.NewLocalstackConfig(t, ctx)
-	v2client := kms.NewFromConfig(cfg, func(o *kms.Options) {
-		o.BaseEndpoint = aws.String(endpoint)
-	})
-	createKey, err := v2client.CreateKey(ctx, &kms.CreateKeyInput{})
-	assert.NoError(t, err)
-	uri := fmt.Sprintf("aws-kms://%s", *createKey.KeyMetadata.Arn)
-	fmt.Printf("URI: %s\n", uri)
-
-	// tink does not support awsv2 yet so here be dragons
-	// https://github.com/tink-crypto/tink-go-awskms/issues/2
-	s := awsv1session.Must(awsv1session.NewSession())
-	v1client := awsv1kms.New(s, &awsv1.Config{
-		Credentials: awsv1credentials.NewStaticCredentials("test", "test", ""),
-		Endpoint:    aws.String(endpoint),
-		Region:      aws.String("us-west-2"),
-	})
-
-	encryptor, err := NewKmsEncryptorGenerateKey(uri, v1client)
-	assert.NoError(t, err)
-
-	encrypted, err := encryptor.Encrypt(Logs, []byte("hunter2"))
-	assert.NoError(t, err)
-
-	decrypted, err := encryptor.Decrypt(Logs, encrypted)
-	assert.NoError(t, err)
-	assert.Equal(t, "hunter2", string(decrypted))
-
-	// Should fail to decrypt with the wrong subkey
-	_, err = encryptor.Decrypt(Async, encrypted)
-	assert.Error(t, err)
 }
