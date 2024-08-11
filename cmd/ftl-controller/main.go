@@ -43,7 +43,7 @@ func main() {
 	)
 	cli.ControllerConfig.SetDefaults()
 
-	encryptors, err := cli.ControllerConfig.DeprecatedEncryptionKeys.Encryptors(true)
+	encryptors, err := cli.ControllerConfig.EncryptionKeys.Encryptors(true)
 	kctx.FatalIfErrorf(err, "failed to create encryptors")
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))

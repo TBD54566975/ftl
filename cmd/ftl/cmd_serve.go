@@ -152,7 +152,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		if err != nil {
 			return fmt.Errorf("failed to bring up DB connection: %w", err)
 		}
-		encryptors, err := config.DeprecatedEncryptionKeys.Encryptors(false)
+		encryptors, err := config.EncryptionKeys.Encryptors(false)
 		if err != nil {
 			return fmt.Errorf("failed to create encryptors: %w", err)
 		}

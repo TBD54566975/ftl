@@ -25,7 +25,7 @@ const streamingKey = `{
 func TestDeprecatedNewEncryptor(t *testing.T) {
 	jsonInput := "\"hello\""
 
-	encryptor, err := NewEncryptableKeyOrURI(streamingKey)
+	encryptor, err := NewForKeyOrURI(streamingKey)
 	assert.NoError(t, err)
 
 	encrypted, err := encryptor.EncryptJSON(jsonInput)

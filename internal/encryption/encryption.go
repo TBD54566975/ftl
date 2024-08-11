@@ -27,9 +27,9 @@ type Encryptable interface {
 	DecryptJSON(input json.RawMessage, output any) error
 }
 
-// NewEncryptableKeyOrURI creates a new encryptor using the provided key or URI.
+// NewForKeyOrURI creates a new encryptor using the provided key or URI.
 // Deprecated: This is will be changed or removed very soon.
-func NewEncryptableKeyOrURI(keyOrURI string) (Encryptable, error) {
+func NewForKeyOrURI(keyOrURI string) (Encryptable, error) {
 	if len(keyOrURI) == 0 {
 		return NoOpEncryptor{}, nil
 	}
