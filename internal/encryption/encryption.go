@@ -20,12 +20,16 @@ import (
 	"github.com/tink-crypto/tink-go/v2/tink"
 )
 
-type DeprecatedEncryptable interface {
+// Encryptable is an interface for encrypting and decrypting JSON payloads.
+// Deprecated: This is will be changed or removed very soon.
+type Encryptable interface {
 	EncryptJSON(input any) (json.RawMessage, error)
 	DecryptJSON(input json.RawMessage, output any) error
 }
 
-func NewDeprecatedKeyKeyOrURI(keyOrURI string) (DeprecatedEncryptable, error) {
+// NewEncryptableKeyOrURI creates a new encryptor using the provided key or URI.
+// Deprecated: This is will be changed or removed very soon.
+func NewEncryptableKeyOrURI(keyOrURI string) (Encryptable, error) {
 	if len(keyOrURI) == 0 {
 		return NoOpEncryptor{}, nil
 	}
@@ -41,7 +45,9 @@ func NewDeprecatedKeyKeyOrURI(keyOrURI string) (DeprecatedEncryptable, error) {
 	return nil, fmt.Errorf("unsupported key or uri: %s", keyOrURI)
 }
 
-type DeprecatedNoOpEncryptor struct {
+// NoOpEncryptor does not encrypt or decrypt and just passes the input as is.
+// Deprecated: This is will be changed or removed very soon.
+type NoOpEncryptor struct {
 }
 
 func (n NoOpEncryptor) EncryptJSON(input any) (json.RawMessage, error) {
@@ -62,7 +68,7 @@ func (n NoOpEncryptor) DecryptJSON(input json.RawMessage, output any) error {
 	return nil
 }
 
-func NewClearTextEncryptor(key string) (DeprecatedEncryptable, error) {
+func NewClearTextEncryptor(key string) (Encryptable, error) {
 	keySetHandle, err := insecurecleartextkeyset.Read(
 		keyset.NewJSONReader(bytes.NewBufferString(key)))
 	if err != nil {
@@ -79,25 +85,29 @@ func NewClearTextEncryptor(key string) (DeprecatedEncryptable, error) {
 
 // NewDeprecatedEncryptor encrypts and decrypts JSON payloads using the provided key set.
 // The key set must contain a primary key that is a streaming AEAD primitive.
-func NewDeprecatedEncryptor(keySet keyset.Handle) (DeprecatedEncryptable, error) {
+func NewDeprecatedEncryptor(keySet keyset.Handle) (Encryptable, error) {
 	primitive, err := streamingaead.New(&keySet)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create primitive during encryption: %w", err)
 	}
 
-	return DeprecatedEncryptor{keySetHandle: keySet, primitive: primitive}, nil
+	return Encryptor{keySetHandle: keySet, primitive: primitive}, nil
 }
 
-type DeprecatedEncryptor struct {
+// Encryptor uses streaming with JSON payloads.
+// Deprecated: This is will be changed or removed very soon.
+type Encryptor struct {
 	keySetHandle keyset.Handle
 	primitive    tink.StreamingAEAD
 }
 
-type DeprecatedEncryptedPayload struct {
+// EncryptedPayload is a JSON payload that contains the encrypted data to put into the database.
+// Deprecated: This is will be changed or removed very soon.
+type EncryptedPayload struct {
 	Encrypted []byte `json:"encrypted"`
 }
 
-func (e DeprecatedEncryptor) EncryptJSON(input any) (json.RawMessage, error) {
+func (e Encryptor) EncryptJSON(input any) (json.RawMessage, error) {
 	msg, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal input: %w", err)
@@ -108,15 +118,15 @@ func (e DeprecatedEncryptor) EncryptJSON(input any) (json.RawMessage, error) {
 		return nil, fmt.Errorf("failed to encrypt data: %w", err)
 	}
 
-	out, err := json.Marshal(DeprecatedEncryptedPayload{Encrypted: encrypted})
+	out, err := json.Marshal(EncryptedPayload{Encrypted: encrypted})
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal encrypted data: %w", err)
 	}
 	return out, nil
 }
 
-func (e DeprecatedEncryptor) DecryptJSON(input json.RawMessage, output any) error {
-	var payload DeprecatedEncryptedPayload
+func (e Encryptor) DecryptJSON(input json.RawMessage, output any) error {
+	var payload EncryptedPayload
 	if err := json.Unmarshal(input, &payload); err != nil {
 		return fmt.Errorf("failed to unmarshal encrypted payload: %w", err)
 	}
@@ -170,19 +180,19 @@ const (
 	Async SubKey = "async"
 )
 
-type Encryptor interface {
+type EncryptorNext interface {
 	Encrypt(subKey SubKey, cleartext []byte) ([]byte, error)
 	Decrypt(subKey SubKey, encrypted []byte) ([]byte, error)
 }
 
-// NoOpEncryptor does not encrypt and just passes the input as is.
-type NoOpEncryptor struct{}
+// NoOpEncryptorNext does not encrypt and just passes the input as is.
+type NoOpEncryptorNext struct{}
 
-func (n NoOpEncryptor) Encrypt(_ SubKey, cleartext []byte) ([]byte, error) {
+func (n NoOpEncryptorNext) Encrypt(_ SubKey, cleartext []byte) ([]byte, error) {
 	return cleartext, nil
 }
 
-func (n NoOpEncryptor) Decrypt(_ SubKey, encrypted []byte) ([]byte, error) {
+func (n NoOpEncryptorNext) Decrypt(_ SubKey, encrypted []byte) ([]byte, error) {
 	return encrypted, nil
 }
 
@@ -218,6 +228,8 @@ func (p PlaintextEncryptor) Decrypt(subKey SubKey, encrypted []byte) ([]byte, er
 	return decrypted, nil
 }
 
+// KmsEncryptor
+// TODO: maybe change to DerivableEncryptor and integrate plaintext and kms encryptor.
 type KmsEncryptor struct {
 	root            keyset.Handle
 	kekAEAD         tink.AEAD

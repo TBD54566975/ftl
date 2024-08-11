@@ -93,7 +93,7 @@ type DeprecatedEncryptionKeys struct {
 func (e DeprecatedEncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
 	encryptors := dal.Encryptors{}
 	if e.Logs != "" {
-		enc, err := encryption.NewDeprecatedKeyKeyOrURI(e.Logs)
+		enc, err := encryption.NewEncryptableKeyOrURI(e.Logs)
 		if err != nil {
 			return nil, fmt.Errorf("could not create log encryptor: %w", err)
 		}
@@ -105,7 +105,7 @@ func (e DeprecatedEncryptionKeys) Encryptors(required bool) (*dal.Encryptors, er
 	}
 
 	if e.Async != "" {
-		enc, err := encryption.NewDeprecatedKeyKeyOrURI(e.Async)
+		enc, err := encryption.NewEncryptableKeyOrURI(e.Async)
 		if err != nil {
 			return nil, fmt.Errorf("could not create async calls encryptor: %w", err)
 		}
