@@ -96,5 +96,4 @@ func TestKmsEncryptorFakeKMS(t *testing.T) {
 	// Should fail to decrypt with the wrong subkey
 	_, err = encryptor.Decrypt(Async, encrypted)
 	assert.Error(t, err)
-
 }

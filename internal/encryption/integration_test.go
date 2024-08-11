@@ -5,18 +5,18 @@ package encryption
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"testing"
 	"time"
 
+	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
+	in "github.com/TBD54566975/ftl/integration"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/testutils"
 
 	"connectrpc.com/connect"
-	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
-	in "github.com/TBD54566975/ftl/integration"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/assert/v2"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kms"
 	awsv1 "github.com/aws/aws-sdk-go/aws"
 	awsv1credentials "github.com/aws/aws-sdk-go/aws/credentials"
