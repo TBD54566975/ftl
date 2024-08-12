@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15.8
+    image: postgres:16.4
     command: postgres
     user: postgres
     # For local debugging
