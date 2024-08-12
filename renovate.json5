@@ -25,6 +25,14 @@
       enabled: false,
     },
     {
+      matchPackageNames: [
+        "openjdk",  // We don't want automatic major version updates, just minors
+      ],
+      matchManagers: ["hermit"],
+      matchUpdateTypes: ["major"],
+      enabled: false
+    },
+    {
       matchFileNames: ["**/testdata/**/go.mod"],
       enabled: false,
     },
