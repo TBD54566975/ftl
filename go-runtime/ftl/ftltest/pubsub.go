@@ -17,6 +17,13 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+type topicState struct {
+	// events published to this topic
+	events []any
+	// tracks the number of live subscriptions for this topic
+	subscriptionCount int
+}
+
 type fakePubSub struct {
 	// all pubsub events are processed through globalTopic
 	globalTopic *pubsub.Topic[pubSubEvent]
@@ -25,7 +32,7 @@ type fakePubSub struct {
 
 	// pubSubLock required to access [topics, subscriptions, subscribers]
 	pubSubLock    sync.Mutex
-	topics        map[schema.RefKey][]any
+	topics        map[schema.RefKey]*topicState
 	subscriptions map[string]*subscription
 	subscribers   map[string][]subscriber
 }
@@ -33,7 +40,7 @@ type fakePubSub struct {
 func newFakePubSub(ctx context.Context) *fakePubSub {
 	f := &fakePubSub{
 		globalTopic:   pubsub.New[pubSubEvent](),
-		topics:        map[schema.RefKey][]any{},
+		topics:        map[schema.RefKey]*topicState{},
 		subscriptions: map[string]*subscription{},
 		subscribers:   map[string][]subscriber{},
 	}
@@ -42,8 +49,19 @@ func newFakePubSub(ctx context.Context) *fakePubSub {
 }
 
 func (f *fakePubSub) publishEvent(topic *schema.Ref, event any) error {
-	f.publishWaitGroup.Add(1)
+	f.publishWaitGroup.Add(f.fetchTopicState(topic).subscriptionCount)
 	return f.globalTopic.PublishSync(publishEvent{topic: topic, content: event})
+}
+
+func (f *fakePubSub) fetchTopicState(topic *schema.Ref) *topicState {
+	ts, ok := f.topics[topic.ToRefKey()]
+	if !ok {
+		ts = &topicState{
+			events: []any{},
+		}
+		f.topics[topic.ToRefKey()] = ts
+	}
+	return ts
 }
 
 // addSubscriber adds a subscriber to the fake FTL instance. Each subscriber included in the test must be manually added
@@ -57,6 +75,7 @@ func addSubscriber[E any](f *fakePubSub, sub ftl.SubscriptionHandle[E], sink ftl
 			topic:  sub.Topic,
 			errors: map[int]error{},
 		}
+		f.fetchTopicState(sub.Topic).subscriptionCount++
 	}
 
 	f.subscribers[sub.Name] = append(f.subscribers[sub.Name], func(ctx context.Context, event any) error {
@@ -77,11 +96,8 @@ func eventsForTopic[E any](ctx context.Context, f *fakePubSub, topic ftl.TopicHa
 
 	logger := log.FromContext(ctx).Scope("pubsub")
 	var events = []E{}
-	raw, ok := f.topics[topic.Ref.ToRefKey()]
-	if !ok {
-		return events
-	}
-	for _, e := range raw {
+	ts := f.fetchTopicState(topic.Ref)
+	for _, e := range ts.events {
 		if event, ok := e.(E); ok {
 			events = append(events, event)
 		} else {
@@ -103,17 +119,13 @@ func resultsForSubscription[E any](ctx context.Context, f *fakePubSub, handle ft
 	if !ok {
 		return results
 	}
-	topic, ok := f.topics[handle.Topic.ToRefKey()]
-	if !ok {
-		return results
-	}
-
+	ts := f.fetchTopicState(subscription.topic)
 	count := subscription.cursor.Default(-1)
 	if !subscription.isExecuting {
 		count++
 	}
 	for i := range count {
-		e := topic[i]
+		e := ts.events[i]
 		if event, ok := e.(E); ok {
 			result := SubscriptionResult[E]{
 				Event: event,
@@ -155,12 +167,8 @@ func (f *fakePubSub) handlePubSubEvent(ctx context.Context, e pubSubEvent) {
 	switch event := e.(type) {
 	case publishEvent:
 		logger.Debugf("publishing to %s: %v", event.topic.Name, event.content)
-		if _, ok := f.topics[event.topic.ToRefKey()]; !ok {
-			f.topics[event.topic.ToRefKey()] = []any{event.content}
-		} else {
-			f.topics[event.topic.ToRefKey()] = append(f.topics[event.topic.ToRefKey()], event.content)
-		}
-		f.publishWaitGroup.Done()
+		ts := f.fetchTopicState(event.topic)
+		ts.events = append(ts.events, event.content)
 	case subscriptionDidConsumeEvent:
 		sub, ok := f.subscriptions[event.subscription]
 		if !ok {
@@ -170,6 +178,7 @@ func (f *fakePubSub) handlePubSubEvent(ctx context.Context, e pubSubEvent) {
 			sub.errors[sub.cursor.MustGet()] = event.err
 		}
 		sub.isExecuting = false
+		f.publishWaitGroup.Done()
 	}
 
 	for _, sub := range f.subscriptions {
@@ -177,13 +186,13 @@ func (f *fakePubSub) handlePubSubEvent(ctx context.Context, e pubSubEvent) {
 			// already executing
 			continue
 		}
-		topicEvents, ok := f.topics[sub.topic.ToRefKey()]
-		if !ok {
-			// no events publshed yet
+		ts := f.fetchTopicState(sub.topic)
+		if len(ts.events) == 0 {
+			// no events published yet
 			continue
 		}
 		var cursor = sub.cursor.Default(-1)
-		if len(topicEvents) <= cursor+1 {
+		if len(ts.events) <= cursor+1 {
 			// no new events
 			continue
 		}
@@ -200,7 +209,7 @@ func (f *fakePubSub) handlePubSubEvent(ctx context.Context, e pubSubEvent) {
 		go func(sub string, chosenSubscriber subscriber, event any) {
 			err := chosenSubscriber(ctx, event)
 			f.globalTopic.Publish(subscriptionDidConsumeEvent{subscription: sub, err: err})
-		}(sub.name, chosenSubscriber, topicEvents[sub.cursor.MustGet()])
+		}(sub.name, chosenSubscriber, ts.events[sub.cursor.MustGet()])
 	}
 }
 
@@ -237,13 +246,13 @@ func (f *fakePubSub) checkSubscriptionsAreComplete(ctx context.Context, shouldPr
 	}
 	remaining := []remainingState{}
 	for _, sub := range f.subscriptions {
-		topicEvents, ok := f.topics[sub.topic.ToRefKey()]
-		if !ok {
-			// no events publshed yet
+		ts := f.fetchTopicState(sub.topic)
+		if len(ts.events) == 0 {
+			// no events published yet
 			continue
 		}
 		var cursor = sub.cursor.Default(-1)
-		if !sub.isExecuting && len(topicEvents) <= cursor+1 {
+		if !sub.isExecuting && len(ts.events) <= cursor+1 {
 			// all events have been consumed
 			continue
 		}
@@ -255,7 +264,7 @@ func (f *fakePubSub) checkSubscriptionsAreComplete(ctx context.Context, shouldPr
 		remaining = append(remaining, remainingState{
 			name:          sub.name,
 			isExecuting:   sub.isExecuting,
-			pendingEvents: len(topicEvents) - cursor - 1,
+			pendingEvents: len(ts.events) - cursor - 1,
 		})
 	}
 	if len(remaining) == 0 {
