@@ -85,3 +85,72 @@ type UserToken = string
 
 ---
 
+## Optional types
+
+FTL supports optional types, which are types that can be `None` or `Some` and can be declared via `ftl.Option[T]`. These types are provided by the `ftl` runtimes. For example, the following FTL type declaration in go, will provide an optional string type "Name":
+
+```go
+type EchoResponse struct {
+	Name ftl.Option[string] `json:"name"`
+}
+```
+
+The value of this type can be set to `Some` or `None`:
+
+```go
+resp := EchoResponse{
+  Name: ftl.Some("John"),
+}
+
+resp := EchoResponse{
+  Name: ftl.None(),
+}
+```
+
+The value of the optional type can be accessed using `Get`, `MustGet`, or `Default` methods:
+
+```go
+// Get returns the value and a boolean indicating if the Option contains a value.
+if value, ok := resp.Name.Get(); ok {
+  resp.Name = ftl.Some(value)
+}
+
+// MustGet returns the value or panics if the Option is None.
+value := resp.Name.MustGet()
+
+// Default returns the value or a default value if the Option is None.
+value := resp.Name.Default("default")
+``` 
+
+## Unit "void" type
+
+The `Unit` type is similar to the `void` type in other languages. It is used to indicate that a function does not return a value. For example:
+
+```go
+//ftl:ingress GET /unit
+func Unit(ctx context.Context, req builtin.HttpRequest[TimeRequest]) (builtin.HttpResponse[ftl.Unit, string], error) {
+	return builtin.HttpResponse[ftl.Unit, string]{Body: ftl.Some(ftl.Unit{})}, nil
+}
+```
+
+This request will return an empty body with a status code of 200:
+
+```sh
+curl http://localhost:8891/unit -i
+```
+
+```http
+HTTP/1.1 200 OK
+Date: Mon, 12 Aug 2024 17:58:22 GMT
+Content-Length: 0
+```
+
+## Builtin types
+
+FTL provides a set of builtin types that are automatically available in all FTL runtimes. These types are:
+
+- `builtin.HttpRequest[Body]` - Represents an HTTP request with a body of type `Body`.
+- `builtin.HttpResponse[Body, Error]` - Represents an HTTP response with a body of type `Body` and an error of type `Error`.
+- `builtin.Empty` - Represents an empty type. This equates to an empty structure `{}`.
+- `builtin.CatchRequest` - Represents a request structure for catch verbs.
+
