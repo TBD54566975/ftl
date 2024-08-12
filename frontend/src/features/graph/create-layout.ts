@@ -108,8 +108,6 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
                 style: { stroke: 'rgb(251 113 133)' },
                 animated: true,
               })
-              call.name
-              call.module
             }
           }),
         )
