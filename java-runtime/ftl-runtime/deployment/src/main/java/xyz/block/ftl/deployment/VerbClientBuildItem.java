@@ -1,10 +1,11 @@
 package xyz.block.ftl.deployment;
 
-import io.quarkus.builder.item.SimpleBuildItem;
-import org.jboss.jandex.DotName;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.jboss.jandex.DotName;
+
+import io.quarkus.builder.item.SimpleBuildItem;
 
 public final class VerbClientBuildItem extends SimpleBuildItem {
 
@@ -18,7 +19,7 @@ public final class VerbClientBuildItem extends SimpleBuildItem {
         return verbClients;
     }
 
-    public record DiscoveredClients(String name,String module, String generatedClient) {
+    public record DiscoveredClients(String name, String module, String generatedClient) {
 
     }
 }

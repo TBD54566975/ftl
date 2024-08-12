@@ -16,12 +16,13 @@
 */
 package xyz.block.ftl.java.runtime.it;
 
-import ftl.echo.EchoClient;
-import ftl.echo.EchoRequest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.core.MediaType;
+
+import ftl.echo.EchoClient;
+import ftl.echo.EchoRequest;
 import xyz.block.ftl.Verb;
 
 @ApplicationScoped

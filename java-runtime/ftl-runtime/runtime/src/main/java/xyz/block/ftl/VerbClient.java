@@ -1,7 +1,5 @@
 package xyz.block.ftl;
 
-import org.jetbrains.annotations.NotNull;
-
 /**
  * A client for a specific verb.
  *
@@ -14,6 +12,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public interface VerbClient<P, R> {
 
-     R call( P param);
+    R call(P param);
 
 }

@@ -1,23 +1,25 @@
 package xyz.block.ftl.java.runtime.it;
 
+import java.util.function.Function;
+
+import jakarta.inject.Inject;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
 import ftl.echo.EchoClient;
 import ftl.echo.EchoRequest;
 import ftl.echo.EchoResponse;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
 import xyz.block.ftl.VerbClientSink;
 import xyz.block.ftl.java.test.FTLManaged;
 import xyz.block.ftl.java.test.internal.FTLTestResource;
 import xyz.block.ftl.java.test.internal.TestVerbServer;
-
-import java.util.function.Function;
 
 @QuarkusTest
 @QuarkusTestResource(FTLTestResource.class)
@@ -30,6 +32,7 @@ public class FtlJavaRuntimeResourceTest {
     @FTLManaged
     @Inject
     HelloClient helloClient;
+
     @Test
     public void testHelloEndpoint() {
         TestVerbServer.registerFakeVerb("echo", "echo", new Function<EchoRequest, EchoResponse>() {
@@ -52,6 +55,7 @@ public class FtlJavaRuntimeResourceTest {
     @VerbClientDefinition(name = "publish")
     interface PublishVerbClient extends VerbClientSink<Person> {
     }
+
     @VerbClientDefinition(name = "hello")
     interface HelloClient extends VerbClient<String, String> {
     }

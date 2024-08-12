@@ -1,11 +1,17 @@
 package xyz.block.ftl.java.test.internal;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.ByteString;
+
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import io.quarkus.arc.Arc;
-import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.v1.AcquireLeaseRequest;
 import xyz.block.ftl.v1.AcquireLeaseResponse;
 import xyz.block.ftl.v1.CallRequest;
@@ -20,13 +26,6 @@ import xyz.block.ftl.v1.SendFSMEventRequest;
 import xyz.block.ftl.v1.SendFSMEventResponse;
 import xyz.block.ftl.v1.VerbServiceGrpc;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
-
-
 public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
 
     final VerbServiceGrpc.VerbServiceStub verbService;
@@ -34,7 +33,7 @@ public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
     /**
      * TODO: this is so hacked up
      */
-    static final Map<Key, Function<?,?>> fakeVerbs = new HashMap<>();
+    static final Map<Key, Function<?, ?>> fakeVerbs = new HashMap<>();
 
     public TestVerbServer() {
         var channelBuilder = ManagedChannelBuilder.forAddress("127.0.0.1", 8081);
@@ -42,7 +41,6 @@ public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
         var channel = channelBuilder.build();
         verbService = VerbServiceGrpc.newStub(channel);
     }
-
 
     @Override
     public void call(CallRequest request, StreamObserver<CallResponse> responseObserver) {
@@ -63,9 +61,10 @@ public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
                 }
             }
             try {
-               var result = function.apply(mapper.readerFor(type).readValue(request.getBody().newInput()));
-               responseObserver.onNext( CallResponse.newBuilder().setBody(ByteString.copyFrom(mapper.writeValueAsBytes(result))).build());
-               responseObserver.onCompleted();
+                var result = function.apply(mapper.readerFor(type).readValue(request.getBody().newInput()));
+                responseObserver.onNext(
+                        CallResponse.newBuilder().setBody(ByteString.copyFrom(mapper.writeValueAsBytes(result))).build());
+                responseObserver.onCompleted();
             } catch (IOException e) {
                 responseObserver.onError(e);
             }
@@ -91,7 +90,8 @@ public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
 
     @Override
     public void getModuleContext(ModuleContextRequest request, StreamObserver<ModuleContextResponse> responseObserver) {
-        responseObserver.onNext(ModuleContextResponse.newBuilder().setModule("test").putConfigs("test", ByteString.copyFrom("test", StandardCharsets.UTF_8)).build());
+        responseObserver.onNext(ModuleContextResponse.newBuilder().setModule("test")
+                .putConfigs("test", ByteString.copyFrom("test", StandardCharsets.UTF_8)).build());
     }
 
     @Override
@@ -100,7 +100,7 @@ public class TestVerbServer extends VerbServiceGrpc.VerbServiceImplBase {
         responseObserver.onCompleted();
     }
 
-    public static <P,R> void registerFakeVerb(String module, String verb, Function<P, R> verbFunction) {
+    public static <P, R> void registerFakeVerb(String module, String verb, Function<P, R> verbFunction) {
         fakeVerbs.put(new Key(module, verb), verbFunction);
     }
 

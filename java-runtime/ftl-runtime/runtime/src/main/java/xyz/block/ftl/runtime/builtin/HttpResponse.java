@@ -1,14 +1,14 @@
 package xyz.block.ftl.runtime.builtin;
 
-import com.fasterxml.jackson.annotation.JsonRawValue;
-
 import java.util.List;
 import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonRawValue;
 
 /**
  * TODO: should this be generated
  */
-public class HttpResponse{
+public class HttpResponse {
     private long status;
     private Map<String, List<String>> headers;
     @JsonRawValue

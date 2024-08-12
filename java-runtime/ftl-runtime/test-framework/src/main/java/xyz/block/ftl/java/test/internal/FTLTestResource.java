@@ -1,8 +1,8 @@
 package xyz.block.ftl.java.test.internal;
 
-import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
-
 import java.util.Map;
+
+import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 
 public class FTLTestResource implements QuarkusTestResourceLifecycleManager {
 

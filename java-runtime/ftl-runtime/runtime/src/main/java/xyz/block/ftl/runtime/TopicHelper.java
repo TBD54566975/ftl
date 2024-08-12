@@ -1,9 +1,11 @@
 package xyz.block.ftl.runtime;
 
+import jakarta.inject.Singleton;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.quarkus.arc.Arc;
-import jakarta.inject.Singleton;
 
 @Singleton
 public class TopicHelper {

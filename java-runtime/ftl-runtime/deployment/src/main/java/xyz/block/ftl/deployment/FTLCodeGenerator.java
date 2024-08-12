@@ -1,31 +1,5 @@
 package xyz.block.ftl.deployment;
 
-import com.squareup.javapoet.AnnotationSpec;
-import com.squareup.javapoet.ArrayTypeName;
-import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.JavaFile;
-import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
-import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeVariableName;
-import com.squareup.javapoet.WildcardTypeName;
-import io.quarkus.bootstrap.model.ApplicationModel;
-import io.quarkus.bootstrap.prebuild.CodeGenException;
-import io.quarkus.deployment.CodeGenContext;
-import io.quarkus.deployment.CodeGenProvider;
-import org.eclipse.microprofile.config.Config;
-import org.jboss.logging.Logger;
-import org.jetbrains.annotations.NotNull;
-import xyz.block.ftl.VerbClient;
-import xyz.block.ftl.VerbClientDefinition;
-import xyz.block.ftl.VerbClientEmpty;
-import xyz.block.ftl.VerbClientSink;
-import xyz.block.ftl.VerbClientSource;
-import xyz.block.ftl.v1.schema.Module;
-import xyz.block.ftl.v1.schema.Type;
-
-import javax.lang.model.element.Modifier;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,6 +11,35 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Stream;
+
+import javax.lang.model.element.Modifier;
+
+import org.eclipse.microprofile.config.Config;
+import org.jboss.logging.Logger;
+import org.jetbrains.annotations.NotNull;
+
+import com.squareup.javapoet.AnnotationSpec;
+import com.squareup.javapoet.ArrayTypeName;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
+import com.squareup.javapoet.TypeVariableName;
+import com.squareup.javapoet.WildcardTypeName;
+
+import io.quarkus.bootstrap.model.ApplicationModel;
+import io.quarkus.bootstrap.prebuild.CodeGenException;
+import io.quarkus.deployment.CodeGenContext;
+import io.quarkus.deployment.CodeGenProvider;
+import xyz.block.ftl.VerbClient;
+import xyz.block.ftl.VerbClientDefinition;
+import xyz.block.ftl.VerbClientEmpty;
+import xyz.block.ftl.VerbClientSink;
+import xyz.block.ftl.VerbClientSource;
+import xyz.block.ftl.v1.schema.Module;
+import xyz.block.ftl.v1.schema.Type;
 
 public class FTLCodeGenerator implements CodeGenProvider {
 
@@ -109,14 +112,25 @@ public class FTLCodeGenerator implements CodeGenProvider {
                         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
                             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientEmpty.class)));
                         } else if (verb.getRequest().hasUnit()) {
-                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class), toJavaTypeName(verb.getResponse(), typeAliasMap)));
-                            typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap)).addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class),
+                                    toJavaTypeName(verb.getResponse(), typeAliasMap)));
+                            typeBuilder.addMethod(MethodSpec.methodBuilder("call")
+                                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap))
+                                    .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
                         } else if (verb.getResponse().hasUnit()) {
-                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class), toJavaTypeName(verb.getRequest(), typeAliasMap)));
-                            typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID).addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value").addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class),
+                                    toJavaTypeName(verb.getRequest(), typeAliasMap)));
+                            typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID)
+                                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value")
+                                    .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
                         } else {
-                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class), toJavaTypeName(verb.getRequest(), typeAliasMap), toJavaTypeName(verb.getResponse(), typeAliasMap)));
-                            typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap)).addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value").addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class),
+                                    toJavaTypeName(verb.getRequest(), typeAliasMap),
+                                    toJavaTypeName(verb.getResponse(), typeAliasMap)));
+                            typeBuilder.addMethod(MethodSpec.methodBuilder("call")
+                                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap))
+                                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value")
+                                    .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
                         }
 
                         TypeSpec helloWorld = typeBuilder
@@ -184,7 +198,6 @@ public class FTLCodeGenerator implements CodeGenProvider {
 
                         javaFile.writeTo(context.outDir());
 
-
                     } else if (decl.hasEnum()) {
                         var data = decl.getEnum();
                         String thisType = className(data.getName());
@@ -227,7 +240,8 @@ public class FTLCodeGenerator implements CodeGenProvider {
 
     private TypeName toJavaTypeName(Type type, Map<Key, Type> typeAliasMap) {
         if (type.hasArray()) {
-            return ParameterizedTypeName.get(ClassName.get(List.class), toJavaTypeName(type.getArray().getElement(), typeAliasMap));
+            return ParameterizedTypeName.get(ClassName.get(List.class),
+                    toJavaTypeName(type.getArray().getElement(), typeAliasMap));
         } else if (type.hasString()) {
             return ClassName.get(String.class);
         } else if (type.hasOptional()) {
@@ -246,10 +260,13 @@ public class FTLCodeGenerator implements CodeGenProvider {
             if (params.isEmpty()) {
                 return className;
             }
-            List<TypeName> javaTypes = params.stream().map(s -> s.hasUnit() ? WildcardTypeName.subtypeOf(Object.class) : toJavaTypeName(s, typeAliasMap)).toList();
+            List<TypeName> javaTypes = params.stream()
+                    .map(s -> s.hasUnit() ? WildcardTypeName.subtypeOf(Object.class) : toJavaTypeName(s, typeAliasMap))
+                    .toList();
             return ParameterizedTypeName.get(className, javaTypes.toArray(new TypeName[javaTypes.size()]));
         } else if (type.hasMap()) {
-            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeName(type.getMap().getKey(), typeAliasMap), toJavaTypeName(type.getMap().getValue(), typeAliasMap));
+            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeName(type.getMap().getKey(), typeAliasMap),
+                    toJavaTypeName(type.getMap().getValue(), typeAliasMap));
         } else if (type.hasTime()) {
             return ClassName.get(Instant.class);
         } else if (type.hasInt()) {
@@ -276,7 +293,6 @@ public class FTLCodeGenerator implements CodeGenProvider {
 
     record Key(String module, String name) {
     }
-
 
     static String className(String in) {
         return Character.toUpperCase(in.charAt(0)) + in.substring(1);

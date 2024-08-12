@@ -1,37 +1,41 @@
 package xyz.block.ftl.runtime;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.arc.Arc;
-import io.quarkus.runtime.annotations.Recorder;
-import org.jboss.resteasy.reactive.server.core.ResteasyReactiveRequestContext;
-import org.jboss.resteasy.reactive.server.core.parameters.ParameterExtractor;
-import xyz.block.ftl.v1.CallRequest;
-
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.function.BiFunction;
+
+import org.jboss.resteasy.reactive.server.core.ResteasyReactiveRequestContext;
+import org.jboss.resteasy.reactive.server.core.parameters.ParameterExtractor;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.quarkus.arc.Arc;
+import io.quarkus.runtime.annotations.Recorder;
+import xyz.block.ftl.v1.CallRequest;
 
 @Recorder
 public class FTLRecorder {
 
     public static final String X_FTL_VERB = "X-ftl-verb";
 
-    public void registerVerb(String module, String verbName, String methodName, List<Class<?>> parameterTypes, Class<?> verbHandlerClass, List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers) {
+    public void registerVerb(String module, String verbName, String methodName, List<Class<?>> parameterTypes,
+            Class<?> verbHandlerClass, List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers) {
         //TODO: this sucks
         try {
             var method = verbHandlerClass.getDeclaredMethod(methodName, parameterTypes.toArray(new Class[0]));
             var handlerInstance = Arc.container().instance(verbHandlerClass);
-            Arc.container().instance(VerbRegistry.class).get().register(module, verbName, handlerInstance, method, paramMappers);
+            Arc.container().instance(VerbRegistry.class).get().register(module, verbName, handlerInstance, method,
+                    paramMappers);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-
     public void registerHttpIngress(String module, String verbName) {
         try {
-            Arc.container().instance(VerbRegistry.class).get().register(module, verbName, Arc.container().instance(FTLHttpHandler.class).get());
+            Arc.container().instance(VerbRegistry.class).get().register(module, verbName,
+                    Arc.container().instance(FTLHttpHandler.class).get());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

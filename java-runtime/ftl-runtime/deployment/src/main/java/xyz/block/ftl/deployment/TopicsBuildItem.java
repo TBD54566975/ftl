@@ -1,11 +1,12 @@
 package xyz.block.ftl.deployment;
 
-import io.quarkus.builder.item.SimpleBuildItem;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
 
-import java.util.HashMap;
-import java.util.Map;
+import io.quarkus.builder.item.SimpleBuildItem;
 
 public final class TopicsBuildItem extends SimpleBuildItem {
 

@@ -1,12 +1,19 @@
 package xyz.block.ftl.runtime;
 
+import java.net.URI;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+import jakarta.inject.Singleton;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
 import com.google.protobuf.ByteString;
+
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import io.quarkus.runtime.Startup;
-import jakarta.inject.Singleton;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
 import xyz.block.ftl.v1.ModuleContextRequest;
@@ -15,10 +22,6 @@ import xyz.block.ftl.v1.PublishEventRequest;
 import xyz.block.ftl.v1.PublishEventResponse;
 import xyz.block.ftl.v1.VerbServiceGrpc;
 import xyz.block.ftl.v1.schema.Ref;
-
-import java.net.URI;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 @Singleton
 @Startup
@@ -63,7 +66,8 @@ public class FTLController {
         }
     };
 
-    public FTLController(@ConfigProperty(name = "ftl.endpoint", defaultValue = "http://localhost:8892") URI uri, @ConfigProperty(name = "ftl.module.name") String moduleName) {
+    public FTLController(@ConfigProperty(name = "ftl.endpoint", defaultValue = "http://localhost:8892") URI uri,
+            @ConfigProperty(name = "ftl.module.name") String moduleName) {
         this.moduleName = moduleName;
         var channelBuilder = ManagedChannelBuilder.forAddress(uri.getHost(), uri.getPort());
         if (uri.getScheme().equals("http")) {
@@ -93,27 +97,28 @@ public class FTLController {
 
     public byte[] callVerb(String name, String module, byte[] payload) {
         CompletableFuture<byte[]> cf = new CompletableFuture<>();
-        verbService.call(CallRequest.newBuilder().setVerb(Ref.newBuilder().setModule(module).setName(name)).setBody(ByteString.copyFrom(payload)).build(), new StreamObserver<>() {
+        verbService.call(CallRequest.newBuilder().setVerb(Ref.newBuilder().setModule(module).setName(name))
+                .setBody(ByteString.copyFrom(payload)).build(), new StreamObserver<>() {
 
-            @Override
-            public void onNext(CallResponse callResponse) {
-                if (callResponse.hasError()) {
-                    cf.completeExceptionally(new RuntimeException(callResponse.getError().getMessage()));
-                } else {
-                    cf.complete(callResponse.getBody().toByteArray());
-                }
-            }
+                    @Override
+                    public void onNext(CallResponse callResponse) {
+                        if (callResponse.hasError()) {
+                            cf.completeExceptionally(new RuntimeException(callResponse.getError().getMessage()));
+                        } else {
+                            cf.complete(callResponse.getBody().toByteArray());
+                        }
+                    }
 
-            @Override
-            public void onError(Throwable throwable) {
-                cf.completeExceptionally(throwable);
-            }
+                    @Override
+                    public void onError(Throwable throwable) {
+                        cf.completeExceptionally(throwable);
+                    }
 
-            @Override
-            public void onCompleted() {
+                    @Override
+                    public void onCompleted() {
 
-            }
-        });
+                    }
+                });
         try {
             return cf.get();
         } catch (Exception e) {
@@ -125,22 +130,23 @@ public class FTLController {
         CompletableFuture<?> cf = new CompletableFuture<>();
         verbService.publishEvent(PublishEventRequest.newBuilder()
                 .setCaller(callingVerbName).setBody(ByteString.copyFrom(event))
-                .setTopic(Ref.newBuilder().setModule(moduleName).setName(topic).build()).build(), new StreamObserver<PublishEventResponse>() {
-            @Override
-            public void onNext(PublishEventResponse publishEventResponse) {
-                cf.complete(null);
-            }
+                .setTopic(Ref.newBuilder().setModule(moduleName).setName(topic).build()).build(),
+                new StreamObserver<PublishEventResponse>() {
+                    @Override
+                    public void onNext(PublishEventResponse publishEventResponse) {
+                        cf.complete(null);
+                    }
 
-            @Override
-            public void onError(Throwable throwable) {
-                cf.completeExceptionally(throwable);
-            }
+                    @Override
+                    public void onError(Throwable throwable) {
+                        cf.completeExceptionally(throwable);
+                    }
 
-            @Override
-            public void onCompleted() {
-                cf.complete(null);
-            }
-        });
+                    @Override
+                    public void onCompleted() {
+                        cf.complete(null);
+                    }
+                });
         try {
             cf.get();
         } catch (InterruptedException | ExecutionException e) {
@@ -154,7 +160,7 @@ public class FTLController {
             return moduleContext;
         }
         synchronized (moduleObserver) {
-            for (; ; ) {
+            for (;;) {
                 moduleContext = moduleContextResponse;
                 if (moduleContext != null) {
                     return moduleContext;

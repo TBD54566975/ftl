@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
  * Marks the given item as exported in the FTL schema.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.METHOD, ElementType.TYPE, ElementType.PARAMETER})
+@Target({ ElementType.METHOD, ElementType.TYPE, ElementType.PARAMETER })
 public @interface Export {
 }

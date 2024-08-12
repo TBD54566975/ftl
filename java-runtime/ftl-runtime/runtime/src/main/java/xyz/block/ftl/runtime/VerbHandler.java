@@ -1,8 +1,9 @@
 package xyz.block.ftl.runtime;
 
+import jakarta.inject.Singleton;
+
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
-import jakarta.inject.Singleton;
 import xyz.block.ftl.v1.*;
 
 @Singleton

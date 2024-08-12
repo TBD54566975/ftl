@@ -1,9 +1,10 @@
 package xyz.block.ftl.java.test.internal;
 
-import io.grpc.Server;
-import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+
+import io.grpc.Server;
+import io.grpc.netty.NettyServerBuilder;
 
 public class FTLTestServer {
 

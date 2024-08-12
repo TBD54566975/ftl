@@ -1,19 +1,19 @@
 package xyz.block.ftl.runtime.builtin;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import java.util.List;
 import java.util.Map;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * TODO: should this be generated?
  */
 public class HttpRequest {
-    private String    method;
-    private String   path;
+    private String method;
+    private String path;
     private Map<String, String> pathParameters;
-    private Map<String, List<String>>    query;
-    private Map<String, List<String>>    headers;
+    private Map<String, List<String>> query;
+    private Map<String, List<String>> headers;
     private JsonNode body;
 
     public String getMethod() {

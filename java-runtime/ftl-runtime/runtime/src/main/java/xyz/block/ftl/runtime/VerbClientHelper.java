@@ -1,10 +1,12 @@
 package xyz.block.ftl.runtime;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.arc.Arc;
+import java.util.Map;
+
 import jakarta.inject.Singleton;
 
-import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.quarkus.arc.Arc;
 
 @Singleton
 public class VerbClientHelper {
@@ -17,7 +19,8 @@ public class VerbClientHelper {
         this.mapper = mapper;
     }
 
-    public Object call(String verb, String module, Object message, Class<?> returnType, boolean listReturnType, boolean mapReturnType) {
+    public Object call(String verb, String module, Object message, Class<?> returnType, boolean listReturnType,
+            boolean mapReturnType) {
         try {
             if (message == null) {
                 //Unit must be an empty map

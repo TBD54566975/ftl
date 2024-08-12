@@ -25,4 +25,11 @@ public @interface Subscription {
      */
     String name();
 
+    /**
+     * The type of the payload, if not set then it is inferred. This is mostly useful in the case where this is being
+     * used as a meta annotation, as it allows the processor to easily validate that a subscription is being used correctly.
+     *
+     */
+    Class<?> payloadType() default Object.class;
+
 }

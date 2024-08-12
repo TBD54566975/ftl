@@ -1,10 +1,10 @@
 package xyz.block.ftl.runtime;
 
-import org.eclipse.microprofile.config.spi.ConfigSource;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Set;
+
+import org.eclipse.microprofile.config.spi.ConfigSource;
 
 public class FTLConfigSource implements ConfigSource {
 

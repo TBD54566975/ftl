@@ -1,8 +1,21 @@
 package xyz.block.ftl.runtime;
 
+import java.io.ByteArrayOutputStream;
+import java.net.InetSocketAddress;
+import java.nio.channels.Channels;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import jakarta.inject.Singleton;
+import jakarta.ws.rs.core.MediaType;
+
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.protobuf.ByteString;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.FileRegion;
@@ -12,24 +25,12 @@ import io.quarkus.netty.runtime.virtual.VirtualClientConnection;
 import io.quarkus.netty.runtime.virtual.VirtualResponseHandler;
 import io.quarkus.vertx.http.runtime.QuarkusHttpHeaders;
 import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
-import jakarta.inject.Singleton;
-import jakarta.ws.rs.core.MediaType;
-import org.jboss.logging.Logger;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
 
-import javax.annotation.PostConstruct;
-import java.io.ByteArrayOutputStream;
-import java.net.InetSocketAddress;
-import java.nio.channels.Channels;
-import java.nio.channels.WritableByteChannel;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-
 @SuppressWarnings("unused")
 @Singleton
-public class FTLHttpHandler implements VerbInvoker{
+public class FTLHttpHandler implements VerbInvoker {
 
     public static final String CONTENT_TYPE = "Content-Type";
     final ObjectMapper mapper;
@@ -49,20 +50,22 @@ public class FTLHttpHandler implements VerbInvoker{
         this.mapper = mapper;
     }
 
-
     @Override
     public CallResponse handle(CallRequest in) {
         try {
-            var body = mapper.createParser(in.getBody().newInput()).readValueAs(xyz.block.ftl.runtime.builtin.HttpRequest.class);
+            var body = mapper.createParser(in.getBody().newInput())
+                    .readValueAs(xyz.block.ftl.runtime.builtin.HttpRequest.class);
             body.getHeaders().put(FTLRecorder.X_FTL_VERB, List.of(in.getVerb().getName()));
             var ret = handleRequest(body);
             var mappedResponse = mapper.writer().writeValueAsBytes(ret);
             return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
         } catch (Exception e) {
-            return CallResponse.newBuilder().setError(CallResponse.Error.newBuilder().setMessage(e.getMessage()).build()).build();
+            return CallResponse.newBuilder().setError(CallResponse.Error.newBuilder().setMessage(e.getMessage()).build())
+                    .build();
         }
 
     }
+
     public xyz.block.ftl.runtime.builtin.HttpResponse handleRequest(xyz.block.ftl.runtime.builtin.HttpRequest request) {
         InetSocketAddress clientAddress = null;
         try {
@@ -138,7 +141,7 @@ public class FTLHttpHandler implements VerbInvoker{
                         if (ct == null || ct.isEmpty()) {
                             //TODO: how to handle this
                             responseBuilder.setBody(baos.toString(StandardCharsets.UTF_8));
-                        } else if (ct.get(0).contains(MediaType.TEXT_PLAIN)){
+                        } else if (ct.get(0).contains(MediaType.TEXT_PLAIN)) {
                             // need to encode as JSON string
                             responseBuilder.setBody(mapper.writer().writeValueAsString(baos.toString(StandardCharsets.UTF_8)));
                         } else {
@@ -163,7 +166,8 @@ public class FTLHttpHandler implements VerbInvoker{
         }
     }
 
-    private xyz.block.ftl.runtime.builtin.HttpResponse nettyDispatch(InetSocketAddress clientAddress, xyz.block.ftl.runtime.builtin.HttpRequest request)
+    private xyz.block.ftl.runtime.builtin.HttpResponse nettyDispatch(InetSocketAddress clientAddress,
+            xyz.block.ftl.runtime.builtin.HttpRequest request)
             throws Exception {
         QuarkusHttpHeaders quarkusHeaders = new QuarkusHttpHeaders();
         quarkusHeaders.setContextObject(xyz.block.ftl.runtime.builtin.HttpRequest.class, request);
