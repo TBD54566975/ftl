@@ -107,9 +107,10 @@ build-kt-runtime:
   @cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} .
 
 # Install Node dependencies
+# npm install fails intermittently due to network issues, so we retry a few times.
 npm-install:
-  @mk frontend/node_modules : frontend/package.json -- "cd frontend && npm install"
-  @mk extensions/vscode/node_modules : extensions/vscode/package.json extensions/vscode/src -- "cd extensions/vscode && npm install"
+  @mk frontend/node_modules : frontend/package.json -- "cd frontend && for i in {1..3}; do npm install && break || sleep 5; done"
+  @mk extensions/vscode/node_modules : extensions/vscode/package.json extensions/vscode/src -- "cd extensions/vscode && for i in {1..3}; do npm install && break || sleep 5; done"
 
 # Regenerate protos
 build-protos: npm-install
