@@ -1,0 +1,3 @@
+  ALTER TABLE test
+    ADD COLUMN name TEXT,
+    ADD COLUMN age INT;

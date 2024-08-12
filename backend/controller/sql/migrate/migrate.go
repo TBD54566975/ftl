@@ -11,9 +11,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"reflect"
 	"regexp"
-	"runtime"
 	"sort"
 	"time"
 
@@ -21,23 +19,45 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-var migrationFileNameRe = regexp.MustCompile(`^.*(\d{14})_(.*)\.sql$`)
-var migrationFuncNameRe = regexp.MustCompile(`^.*\.Migrate(\d{14})(.*)$`)
+var migrationFileNameRe = regexp.MustCompile(`^.*(\d{14})_(.*)(\.sql)?$`)
 
-type Migration func(ctx context.Context, db *sql.Tx) error
+type migrateOptions struct {
+	logLevel   log.Level
+	migrations map[string]MigrationFunc
+}
+
+// Option is a configuration option for Migrate.
+type Option func(*migrateOptions)
+
+// Migration adds a named migration function to the migration set.
+//
+// "version" must be in the form "<YYYY><MM><DD><hh><mm><ss>".
+func Migration(version, name string, migration MigrationFunc) Option {
+	return func(opts *migrateOptions) {
+		opts.migrations[version+"_"+name] = migration
+	}
+}
+
+// LogLevel sets the loggging level of the migrator.
+func LogLevel(level log.Level) Option {
+	return func(opts *migrateOptions) {
+		opts.logLevel = level
+	}
+}
+
+type MigrationFunc func(ctx context.Context, db *sql.Tx) error
 
 type namedMigration struct {
 	name      string
 	version   string
-	migration Migration
+	migration MigrationFunc
 }
 
 func (m namedMigration) String() string { return m.name }
 
-// Migrate applies all migrations in the provided fs.FS and migrationFuncs to the provided database.
-//
-// Migration functions must be named in the form "MigrationYYYYMMDDHHMMSS<detail>".
-func Migrate(ctx context.Context, db *sql.DB, migrationFiles fs.FS, migrationFuncs ...Migration) error {
+// Migrate applies all migrations in the provided fs.FS and migration functions
+// to the provided database.
+func Migrate(ctx context.Context, db *sql.DB, migrationFiles fs.FS, options ...Option) error {
 	// Create schema_migrations table if it doesn't exist.
 	// This table structure is compatible with dbmate.
 	_, _ = db.ExecContext(ctx, `CREATE TABLE schema_migrations (version TEXT PRIMARY KEY)`) //nolint:errcheck
@@ -47,14 +67,22 @@ func Migrate(ctx context.Context, db *sql.DB, migrationFiles fs.FS, migrationFun
 		return fmt.Errorf("failed to read migration files: %w", err)
 	}
 
-	migrations := make([]namedMigration, 0, len(sqlFiles)+len(migrationFuncs))
+	opts := migrateOptions{
+		logLevel:   log.Debug,
+		migrations: make(map[string]MigrationFunc),
+	}
+	for _, opt := range options {
+		opt(&opts)
+	}
+
+	migrations := make([]namedMigration, 0, len(sqlFiles)+len(opts.migrations))
 
 	// Collect .sql files.
 	for _, sqlFile := range sqlFiles {
 		name := filepath.Base(sqlFile)
 		groups := migrationFileNameRe.FindStringSubmatch(name)
 		if groups == nil {
-			return fmt.Errorf("invalid migration file name %q, must be in the form <date>_<detail>.sql", sqlFile)
+			return fmt.Errorf("invalid migration file name %q, must be in the form <YYYY><MM><DD><hh><mm><ss>_<detail>.sql", sqlFile)
 		}
 		version := groups[1]
 		migrations = append(migrations, namedMigration{name, version, func(ctx context.Context, db *sql.Tx) error {
@@ -65,8 +93,12 @@ func Migrate(ctx context.Context, db *sql.DB, migrationFiles fs.FS, migrationFun
 			return migrateSQLFile(ctx, db, sqlFile, sqlMigration)
 		}})
 	}
-	for _, migration := range migrationFuncs {
-		name, version := migrationFuncVersion(migration)
+	for name, migration := range opts.migrations {
+		groups := migrationFileNameRe.FindStringSubmatch(name)
+		if groups == nil {
+			return fmt.Errorf("invalid migration name %q, must be in the form <YYYY><MM><DD><hh><mm><ss>_<detail>", name)
+		}
+		version := groups[1]
 		migrations = append(migrations, namedMigration{name, version, migration})
 	}
 	sort.Slice(migrations, func(i, j int) bool {
@@ -77,7 +109,7 @@ func Migrate(ctx context.Context, db *sql.DB, migrationFiles fs.FS, migrationFun
 		if err != nil {
 			return fmt.Errorf("migration %s: failed to begin transaction: %w", migration, err)
 		}
-		err = applyMigration(ctx, tx, migration)
+		err = applyMigration(ctx, opts.logLevel, tx, migration)
 		if err != nil {
 			if txerr := tx.Rollback(); txerr != nil {
 				return fmt.Errorf("migration %s: failed to rollback transaction: %w", migration, txerr)
@@ -92,7 +124,7 @@ func Migrate(ctx context.Context, db *sql.DB, migrationFiles fs.FS, migrationFun
 	return nil
 }
 
-func applyMigration(ctx context.Context, tx *sql.Tx, migration namedMigration) error {
+func applyMigration(ctx context.Context, level log.Level, tx *sql.Tx, migration namedMigration) error {
 	start := time.Now()
 	logger := log.FromContext(ctx).Scope("migrate")
 	_, err := tx.ExecContext(ctx, "INSERT INTO schema_migrations (version) VALUES ($1)", migration.version)
@@ -101,26 +133,17 @@ func applyMigration(ctx context.Context, tx *sql.Tx, migration namedMigration) e
 		if txerr := tx.Rollback(); txerr != nil {
 			return fmt.Errorf("failed to rollback transaction: %w", txerr)
 		}
-		logger.Debugf("Skipping: %s", migration)
+		logger.Logf(level, "Skipping: %s", migration)
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("failed to insert migration: %w", err)
 	}
-	logger.Debugf("Applying: %s", migration)
+	logger.Logf(level, "Applying: %s", migration)
 	if err := migration.migration(ctx, tx); err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
-	logger.Debugf("Applied: %s in %s", migration, time.Since(start))
+	logger.Logf(level, "Applied: %s in %s", migration, time.Since(start))
 	return nil
-}
-
-func migrationFuncVersion(i any) (name string, version string) {
-	name = runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-	groups := migrationFuncNameRe.FindStringSubmatch(name)
-	if groups == nil {
-		panic(fmt.Sprintf("invalid migration name %q, must be in the form Migrate<date><detail>", name))
-	}
-	return name, groups[1]
 }
 
 func migrateSQLFile(ctx context.Context, db *sql.Tx, name string, sqlMigration []byte) error {
