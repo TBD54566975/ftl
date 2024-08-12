@@ -1582,22 +1582,17 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 }
 
 func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.Tx, call *dal.AsyncCall, callResult either.Either[[]byte, string], isFinalResult bool) error {
-	if !isFinalResult {
-		// Will retry, do not propagate yet.
-		return nil
-	}
-
 	_, failed := callResult.(either.Right[[]byte, string])
 
 	// Allow for handling of completion based on origin
 	switch origin := call.Origin.(type) {
 	case dal.AsyncOriginFSM:
-		if err := s.onAsyncFSMCallCompletion(ctx, tx, origin, failed); err != nil {
+		if err := s.onAsyncFSMCallCompletion(ctx, tx, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize FSM async call: %w", err)
 		}
 
 	case dal.AsyncOriginPubSub:
-		if err := s.pubSub.OnCallCompletion(ctx, tx, origin, failed); err != nil {
+		if err := s.pubSub.OnCallCompletion(ctx, tx, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize pubsub async call: %w", err)
 		}
 
@@ -1607,8 +1602,18 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.Tx, call *dal.A
 	return nil
 }
 
-func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, origin dal.AsyncOriginFSM, failed bool) error {
+func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, origin dal.AsyncOriginFSM, failed bool, isFinalResult bool) error {
 	logger := log.FromContext(ctx).Scope(origin.FSM.String())
+
+	// retrieve the next fsm event and delete it
+	next, err := tx.PopNextFSMEvent(ctx, origin.FSM, origin.Key)
+	if err != nil {
+		return fmt.Errorf("%s: failed to get next FSM event: %w", origin, err)
+	}
+	if !isFinalResult {
+		// Will retry, so we only want next fsm to be removed
+		return nil
+	}
 
 	instance, err := tx.AcquireFSMInstance(ctx, origin.FSM, origin.Key)
 	if err != nil {
@@ -1653,11 +1658,6 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, orig
 	}
 
 	// If there's a next event enqueued, we immediately start it.
-	next, err := tx.PopNextFSMEvent(ctx, origin.FSM, origin.Key)
-	if err != nil {
-		return fmt.Errorf("%s: failed to get next FSM event: %w", origin, err)
-	}
-
 	if next, ok := next.Get(); ok {
 		return s.sendFSMEventInTx(ctx, tx, instance, fsm, next.RequestType, next.Request)
 	}
