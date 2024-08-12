@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.jboss.jandex.AnnotationTarget;
-import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
 
@@ -84,18 +83,14 @@ public class TopicsProcessor {
     @BuildStep
     SubscriptionMetaAnnotationsBuildItem subscriptionAnnotations(CombinedIndexBuildItem combinedIndexBuildItem,
             ModuleNameBuildItem moduleNameBuildItem) {
+
         Map<DotName, SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation> annotations = new HashMap<>();
         for (var subscriptions : combinedIndexBuildItem.getComputingIndex().getAnnotations(Subscription.class)) {
-            if (subscriptions.target().kind() != AnnotationTarget.Kind.TYPE) {
+            if (subscriptions.target().kind() != AnnotationTarget.Kind.CLASS) {
                 continue;
             }
-            AnnotationValue moduleValue = subscriptions.value("module");
             annotations.put(subscriptions.target().asClass().name(),
-                    new SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation(
-                            moduleValue == null || moduleValue.asString().isEmpty() ? moduleNameBuildItem.getModuleName()
-                                    : moduleValue.asString(),
-                            subscriptions.value("topic").asString(),
-                            subscriptions.value("name").asString()));
+                    SubscriptionMetaAnnotationsBuildItem.fromJandex(subscriptions, moduleNameBuildItem.getModuleName()));
         }
         return new SubscriptionMetaAnnotationsBuildItem(annotations);
     }

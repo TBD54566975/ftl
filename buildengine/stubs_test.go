@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestGenerateGoStubs(t *testing.T) {
@@ -180,7 +181,7 @@ func init() {
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	projectRoot := t.TempDir()
-	err := GenerateStubs(ctx, projectRoot, modules, []moduleconfig.ModuleConfig{})
+	err := GenerateStubs(ctx, projectRoot, modules, []moduleconfig.ModuleConfig{{Language: "go"}})
 	assert.NoError(t, err)
 
 	generatedPath := filepath.Join(projectRoot, ".ftl/go/modules/other/external_module.go")
@@ -240,7 +241,7 @@ func Call(context.Context, Req) (Resp, error) {
 `
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	projectRoot := t.TempDir()
-	err := GenerateStubs(ctx, projectRoot, modules, []moduleconfig.ModuleConfig{})
+	err := GenerateStubs(ctx, projectRoot, modules, []moduleconfig.ModuleConfig{{Language: "go"}})
 	assert.NoError(t, err)
 
 	generatedPath := filepath.Join(projectRoot, ".ftl/go/modules/test/external_module.go")

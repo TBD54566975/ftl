@@ -34,6 +34,7 @@ import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.bootstrap.prebuild.CodeGenException;
 import io.quarkus.deployment.CodeGenContext;
 import io.quarkus.deployment.CodeGenProvider;
+import xyz.block.ftl.GeneratedRef;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
@@ -150,6 +151,10 @@ public class FTLCodeGenerator implements CodeGenProvider {
                         }
                         String thisType = className(data.getName());
                         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
+                                .addAnnotation(
+                                        AnnotationSpec.builder(GeneratedRef.class)
+                                                .addMember("name", "\"" + data.getName() + "\"")
+                                                .addMember("module", "\"" + module.getName() + "\"").build())
                                 .addModifiers(Modifier.PUBLIC);
                         MethodSpec.Builder allConstructor = MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC);
 
@@ -210,6 +215,10 @@ public class FTLCodeGenerator implements CodeGenProvider {
                         }
                         String thisType = className(data.getName());
                         TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(thisType)
+                                .addAnnotation(
+                                        AnnotationSpec.builder(GeneratedRef.class)
+                                                .addMember("name", "\"" + data.getName() + "\"")
+                                                .addMember("module", "\"" + module.getName() + "\"").build())
                                 .addModifiers(Modifier.PUBLIC);
 
                         for (var i : data.getVariantsList()) {

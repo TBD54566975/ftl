@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.ClassInfo;
+import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.VoidType;
@@ -63,6 +65,8 @@ import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
 import xyz.block.ftl.Config;
 import xyz.block.ftl.Cron;
 import xyz.block.ftl.Export;
+import xyz.block.ftl.GeneratedRef;
+import xyz.block.ftl.Retry;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Verb;
@@ -91,6 +95,7 @@ import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataCalls;
 import xyz.block.ftl.v1.schema.MetadataCronJob;
 import xyz.block.ftl.v1.schema.MetadataIngress;
+import xyz.block.ftl.v1.schema.MetadataRetry;
 import xyz.block.ftl.v1.schema.MetadataSubscriber;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Optional;
@@ -114,6 +119,7 @@ class FtlProcessor {
     public static final DotName SECRET = DotName.createSimple(Secret.class);
     public static final DotName CONFIG = DotName.createSimple(Config.class);
     public static final DotName OFFSET_DATE_TIME = DotName.createSimple(OffsetDateTime.class.getName());
+    public static final DotName GENERATED_REF = DotName.createSimple(GeneratedRef.class);
 
     @BuildStep
     ModuleNameBuildItem moduleName(ApplicationInfoBuildItem applicationInfoBuildItem) {
@@ -224,49 +230,10 @@ class FtlProcessor {
                     .setEvent(buildType(extractionContext, topic.eventType())).build()));
         }
 
-        for (var verb : index.getIndex().getAnnotations(VERB)) {
-            boolean exported = verb.target().hasAnnotation(EXPORT);
-            var method = verb.target().asMethod();
-            String className = method.declaringClass().name().toString();
-            beans.addBeanClass(className);
-
-            handleVerbMethod(extractionContext, method, className, exported, BodyType.ALLOWED, null);
-        }
-        for (var cron : index.getIndex().getAnnotations(CRON)) {
-            var method = cron.target().asMethod();
-            String className = method.declaringClass().name().toString();
-            beans.addBeanClass(className);
-            handleVerbMethod(extractionContext, method, className, false, BodyType.DISALLOWED, (builder -> {
-                builder.addMetadata(Metadata.newBuilder()
-                        .setCronJob(MetadataCronJob.newBuilder().setCron(cron.value().asString())).build());
-            }));
-        }
-        for (var subscription : index.getIndex().getAnnotations(SUBSCRIPTION)) {
-            if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
-                continue;
-            }
-            var method = subscription.target().asMethod();
-            String className = method.declaringClass().name().toString();
-            String name = subscription.value("name").asString();
-            String module = subscription.value("module") == null ? moduleName : subscription.value("module").asString();
-            String topic = subscription.value("topic").asString();
-            generateSubscription(moduleBuilder, extractionContext, beans, method, className, name, module, topic);
-        }
-        for (var metaSub : subscriptionMetaAnnotationsBuildItem.getAnnotations().entrySet()) {
-            for (var subscription : index.getIndex().getAnnotations(metaSub.getKey())) {
-                if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
-                    log.warnf("Subscription annotation on non-method target: %s", subscription.target());
-                    continue;
-                }
-                var method = subscription.target().asMethod();
-                generateSubscription(moduleBuilder, extractionContext, beans, method,
-                        method.declaringClass().name().toString(),
-                        metaSub.getValue().name(),
-                        metaSub.getValue().module(),
-                        metaSub.getValue().topic());
-            }
-
-        }
+        handleVerbAnnotations(index, beans, extractionContext);
+        handleCronAnnotations(index, beans, extractionContext);
+        handleSubscriptionAnnotations(index, subscriptionMetaAnnotationsBuildItem, moduleName, moduleBuilder, extractionContext,
+                beans);
 
         //TODO: make this composable so it is not just one big method, build items should contribute to the schema
         for (var endpoint : restEndpoints.getEntries()) {
@@ -355,9 +322,6 @@ class FtlProcessor {
 
         output = outputTargetBuildItem.getOutputDirectory().resolve("main");
         try (var out = Files.newOutputStream(output)) {
-            //            out.write("""
-            //                    #!/bin/bash
-            //                    exec java -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005 -jar quarkus-app/quarkus-run.jar""".getBytes(StandardCharsets.UTF_8));
             out.write("""
                     #!/bin/bash
                     exec java -jar quarkus-app/quarkus-run.jar""".getBytes(StandardCharsets.UTF_8));
@@ -369,14 +333,80 @@ class FtlProcessor {
         Files.setPosixFilePermissions(output, newPerms);
     }
 
+    private void handleVerbAnnotations(CombinedIndexBuildItem index, AdditionalBeanBuildItem.Builder beans,
+            ExtractionContext extractionContext) {
+        for (var verb : index.getIndex().getAnnotations(VERB)) {
+            boolean exported = verb.target().hasAnnotation(EXPORT);
+            var method = verb.target().asMethod();
+            String className = method.declaringClass().name().toString();
+            beans.addBeanClass(className);
+
+            handleVerbMethod(extractionContext, method, className, exported, BodyType.ALLOWED, null);
+        }
+    }
+
+    private void handleSubscriptionAnnotations(CombinedIndexBuildItem index,
+            SubscriptionMetaAnnotationsBuildItem subscriptionMetaAnnotationsBuildItem, String moduleName,
+            Module.Builder moduleBuilder, ExtractionContext extractionContext, AdditionalBeanBuildItem.Builder beans) {
+        for (var subscription : index.getIndex().getAnnotations(SUBSCRIPTION)) {
+            var info = SubscriptionMetaAnnotationsBuildItem.fromJandex(subscription, moduleName);
+            if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
+                continue;
+            }
+            var method = subscription.target().asMethod();
+            String className = method.declaringClass().name().toString();
+            generateSubscription(moduleBuilder, extractionContext, beans, method, className, info);
+        }
+        for (var metaSub : subscriptionMetaAnnotationsBuildItem.getAnnotations().entrySet()) {
+            for (var subscription : index.getIndex().getAnnotations(metaSub.getKey())) {
+                if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
+                    log.warnf("Subscription annotation on non-method target: %s", subscription.target());
+                    continue;
+                }
+                var method = subscription.target().asMethod();
+                generateSubscription(moduleBuilder, extractionContext, beans, method,
+                        method.declaringClass().name().toString(),
+                        metaSub.getValue());
+            }
+
+        }
+    }
+
+    private void handleCronAnnotations(CombinedIndexBuildItem index, AdditionalBeanBuildItem.Builder beans,
+            ExtractionContext extractionContext) {
+        for (var cron : index.getIndex().getAnnotations(CRON)) {
+            var method = cron.target().asMethod();
+            String className = method.declaringClass().name().toString();
+            beans.addBeanClass(className);
+            handleVerbMethod(extractionContext, method, className, false, BodyType.DISALLOWED, (builder -> {
+                builder.addMetadata(Metadata.newBuilder()
+                        .setCronJob(MetadataCronJob.newBuilder().setCron(cron.value().asString())).build());
+            }));
+        }
+    }
+
     private void generateSubscription(Module.Builder moduleBuilder, ExtractionContext extractionContext,
-            AdditionalBeanBuildItem.Builder beans, MethodInfo method, String className, String name, String module,
-            String topic) {
+            AdditionalBeanBuildItem.Builder beans, MethodInfo method, String className,
+            SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation info) {
         beans.addBeanClass(className);
         moduleBuilder.addDecls(Decl.newBuilder().setSubscription(xyz.block.ftl.v1.schema.Subscription.newBuilder()
-                .setName(name).setTopic(Ref.newBuilder().setName(topic).setModule(module).build())).build());
+                .setName(info.name()).setTopic(Ref.newBuilder().setName(info.topic()).setModule(info.module()).build()))
+                .build());
         handleVerbMethod(extractionContext, method, className, false, BodyType.REQUIRED, (builder -> {
-            builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder().setName(name)));
+            builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder().setName(info.name())));
+            if (method.hasAnnotation(Retry.class)) {
+                RetryRecord retry = RetryRecord.fromJandex(method.annotation(Retry.class), extractionContext.moduleName);
+
+                MetadataRetry.Builder retryBuilder = MetadataRetry.newBuilder();
+                if (!retry.catchVerb().isEmpty()) {
+                    retryBuilder.setCatch(Ref.newBuilder().setModule(retry.catchModule())
+                            .setName(retry.catchVerb()).build());
+                }
+                retryBuilder.setCount(retry.count())
+                        .setMaxBackoff(retry.maxBackoff())
+                        .setMinBackoff(retry.minBackoff());
+                builder.addMetadata(Metadata.newBuilder().setRetry(retryBuilder).build());
+            }
         }));
     }
 
@@ -438,12 +468,14 @@ class FtlProcessor {
                 }
                 bodyParamType = VoidType.VOID;
             }
+            if (callsMetadata.getCallsCount() > 0) {
+                verbBuilder.addMetadata(Metadata.newBuilder().setCalls(callsMetadata));
+            }
 
             context.recorder.registerVerb(context.moduleName(), verbName, method.name(), parameterTypes,
                     Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers);
             verbBuilder
                     .setName(verbName)
-                    .addMetadata(Metadata.newBuilder().setCalls(callsMetadata))
                     .setExport(exported)
                     .setRequest(buildType(context, bodyParamType))
                     .setResponse(buildType(context, method.returnType()));
@@ -557,6 +589,14 @@ class FtlProcessor {
             }
             case CLASS -> {
                 var clazz = type.asClassType();
+                var info = context.index().getComputingIndex().getClassByName(clazz.name());
+                if (info != null && info.hasDeclaredAnnotation(GENERATED_REF)) {
+                    var ref = info.declaredAnnotation(GENERATED_REF);
+                    return Type.newBuilder()
+                            .setRef(Ref.newBuilder().setName(ref.value("name").asString())
+                                    .setModule(ref.value("module").asString()))
+                            .build();
+                }
                 if (clazz.name().equals(DotName.STRING_NAME)) {
                     return Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
                 }
@@ -601,6 +641,18 @@ class FtlProcessor {
                                     .addTypeParameters(buildType(context, paramType.arguments().get(0)))
                                     .addTypeParameters(Type.newBuilder().setUnit(Unit.newBuilder().build())))
                             .build();
+                } else {
+                    ClassInfo classByName = context.index().getComputingIndex().getClassByName(paramType.name());
+                    var cb = ClassType.builder(classByName.name());
+                    var main = buildType(context, cb.build());
+                    var builder = main.toBuilder();
+                    var refBuilder = builder.getRef().toBuilder();
+
+                    for (var arg : paramType.arguments()) {
+                        refBuilder.addTypeParameters(buildType(context, arg));
+                    }
+                    builder.setRef(refBuilder);
+                    return builder.build();
                 }
             }
         }

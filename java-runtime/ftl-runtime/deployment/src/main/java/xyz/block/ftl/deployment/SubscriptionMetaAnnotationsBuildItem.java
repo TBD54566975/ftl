@@ -2,6 +2,8 @@ package xyz.block.ftl.deployment;
 
 import java.util.Map;
 
+import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 
 import io.quarkus.builder.item.SimpleBuildItem;
@@ -19,5 +21,15 @@ public final class SubscriptionMetaAnnotationsBuildItem extends SimpleBuildItem 
     }
 
     public record SubscriptionAnnotation(String module, String topic, String name) {
+    }
+
+    public static SubscriptionAnnotation fromJandex(AnnotationInstance subscriptions, String currentModuleName) {
+        AnnotationValue moduleValue = subscriptions.value("module");
+
+        return new SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation(
+                moduleValue == null || moduleValue.asString().isEmpty() ? currentModuleName
+                        : moduleValue.asString(),
+                subscriptions.value("topic").asString(),
+                subscriptions.value("name").asString());
     }
 }
