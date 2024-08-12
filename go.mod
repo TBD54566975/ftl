@@ -18,7 +18,7 @@ require (
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.16.0
 	github.com/amacneil/dbmate/v2 v2.19.0
-	github.com/aws/aws-sdk-go v1.44.267
+	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2 v1.30.3
 	github.com/aws/aws-sdk-go-v2/config v1.27.27
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.27
