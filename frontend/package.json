@@ -74,7 +74,7 @@
     "fast-glob": "3.3.2",
     "lint-staged": "15.2.8",
     "postcss": "8.4.41",
-    "postcss-nesting": "12.1.5",
+    "postcss-nesting": "13.0.0",
     "storybook": "^8.2.7",
     "storybook-dark-mode": "^4.0.2",
     "typed-css-modules": "0.9.1",
