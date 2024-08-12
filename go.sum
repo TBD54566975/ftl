@@ -252,6 +252,7 @@ github.com/swaggest/refl v1.3.0 h1:PEUWIku+ZznYfsoyheF97ypSduvMApYyGkYF3nabS0I=
 github.com/swaggest/refl v1.3.0/go.mod h1:3Ujvbmh1pfSbDYjC6JGG7nMgPvpG0ehQL4iNonnLNbg=
 github.com/tink-crypto/tink-go-awskms v0.0.0-20230616072154-ba4f9f22c3e9 h1:MoIsYvBNJd8vkKZjLYloE3OK8bfcO10cMPw/EtydMBs=
 github.com/tink-crypto/tink-go-awskms v0.0.0-20230616072154-ba4f9f22c3e9/go.mod h1:TTE4PoQLsYB5jQ1kK2g7WU4wzHg0Arn1CEozIUXiGSY=
+github.com/tink-crypto/tink-go-awskms/v2 v2.1.0/go.mod h1:PxSp9GlOkKL9rlybW804uspnHuO9nbD98V/fDX4uSis=
 github.com/tink-crypto/tink-go/v2 v2.2.0 h1:L2Da0F2Udh2agtKztdr69mV/KpnY3/lGTkMgLTVIXlA=
 github.com/tink-crypto/tink-go/v2 v2.2.0/go.mod h1:JJ6PomeNPF3cJpfWC0lgyTES6zpJILkAX0cJNwlS3xU=
 github.com/titanous/json5 v1.0.0 h1:hJf8Su1d9NuI/ffpxgxQfxh/UiBFZX7bMPid0rIL/7s=
