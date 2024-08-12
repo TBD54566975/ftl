@@ -339,22 +339,27 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
 	if err != nil {
 		if errors.Is(err, dalerrs.ErrNotFound) {
 			http.NotFound(w, r)
+			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("failed to resolve route from dal"))
 		return
 	}
 	sch, err := s.dal.GetActiveSchema(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("could not get active schema"))
 		return
 	}
 	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-	ingress.Handle(sch, requestKey, routes, w, r, s.callWithRequest)
+	ingress.Handle(start, sch, requestKey, routes, w, r, s.callWithRequest)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
