@@ -33,7 +33,9 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 	var other *schema.Schema
 	var err error
 	sameModulesOnly := false
-	if d.OtherEndpoint.String() == "" {
+	otherEndpoint := d.OtherEndpoint.String()
+	if otherEndpoint == "" {
+		otherEndpoint = "Local Changes"
 		sameModulesOnly = true
 		other, err = localSchema(ctx, projConfig)
 	} else {
@@ -61,8 +63,8 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 		}
 	}
 
-	edits := myers.ComputeEdits(span.URIFromPath(""), other.String(), current.String())
-	diff := fmt.Sprint(gotextdiff.ToUnified(d.OtherEndpoint.String(), currentURL.String(), other.String(), edits))
+	edits := myers.ComputeEdits(span.URIFromPath(""), current.String(), other.String())
+	diff := fmt.Sprint(gotextdiff.ToUnified(currentURL.String(), otherEndpoint, current.String(), edits))
 
 	color := d.Color || isatty.IsTerminal(os.Stdout.Fd())
 	if color {
