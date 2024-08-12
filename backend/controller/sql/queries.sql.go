@@ -2413,8 +2413,7 @@ WITH event AS (
   WHERE "key" = $2::topic_event_key
 )
 UPDATE topic_subscriptions
-SET state = 'idle',
-    cursor = (SELECT id FROM event)
+SET cursor = (SELECT id FROM event)
 WHERE key = $1::subscription_key
 `
 
