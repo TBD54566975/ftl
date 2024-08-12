@@ -11,6 +11,7 @@ import (
 	"path"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -177,7 +178,7 @@ func TestFollowerSync(t *testing.T) {
 
 	// fakeRPCClient connects the follower to the leader
 	fakeRPCClient := &fakeAdminClient{sm: leaderManager}
-	follower := newASMFollower(fakeRPCClient, "fake")
+	follower := newASMFollower(fakeRPCClient, "fake", time.Second)
 
 	followerASM := newASMForTesting(ctx, externalClient, URL("http://localhost:1235"), leaser, optional.Some[asmClient](follower))
 	asmClient, err := followerASM.coordinator.Get()
