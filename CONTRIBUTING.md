@@ -12,9 +12,11 @@ This guide is for you.
 ## Development Prerequisites
 
 We recommend that you use OrbStack instead of Docker desktop when developing on this project:
+
 ```
 brew install orbstack
 ```
+
 or [OrbStack Website](https://orbstack.dev/)
 
 The tools used by this project are managed by
@@ -56,9 +58,18 @@ $ ftl dev --recreate ./examples/go
 
 ### Code reviews
 
-Because we're a geographically distributed team, we use a review-after-merge development flow. That is, if a PR is urgent, minor, or the developer has high confidence, we encourage merging without waiting for review in order to decrease friction. Conversely, if a change is more complex, or needs more eyes, we encourage developers to wait for review if it will make them feel more comfortable. Use your best judgement.
+Our goal is to maintain velocity while keeping code quality high. To that end, the process is an exercise in trust on the part of the reviewer, and responsibility on the part of the PR author.
 
-We discourage bike-shedding. Code and documentation are easy to change, we can always adjust it later.
+In practice, the **reviewer** will review _and_ approve the PR at the same time, trusting that the author will apply the feedback before merging.
+
+On the **author's** side, they are responsible for reading and understanding all feedback, and applying that feedback where they think it is appropriate. If either side doesn't understand something and it's important, comment accordingly, or do a quick pairing to resolve it. The author should feel free to re-request a review.
+
+Additional points of note:
+
+- We discourage bike-shedding. Code and documentation are easy to change, we can always adjust it later.
+- Keep your PRs digestible, large PRs are very difficult to comprehend and review.
+- Changing code is cheap, we can fix it later. The only caveat here is data storage.
+- Reviewing code is everybody's responsibility.
 
 ### Design process
 
@@ -135,6 +146,7 @@ just build-sqlc
 ```
 
 We use [dbmate](https://github.com/amacneil/dbmate) to manage migrations. To create a migration file, run `dbmate new` with the name of your migration. Example:
+
 ```
 dbmate new create_users_table
 ```
@@ -191,15 +203,19 @@ For an in-line replacement of `ftl dev <args>`, use the command:
 just debug <args>
 ```
 
-This command compiles a binary with debug information, runs `ftl dev <args>` using this binary, and provides an endpoint to attach a remote debugger at __127.0.0.1:2345__.
+This command compiles a binary with debug information, runs `ftl dev <args>` using this binary, and provides an endpoint to attach a remote debugger at **127.0.0.1:2345**.
 You do not need to run `FTL_DEBUG=true just build ftl` separately when using this command.
+
 ### Attaching a Debugger
 
 By running `just debug <args>` and then attaching a remote debugger, you can debug the FTL infrastructure while running your project.
 
 #### IntelliJ
+
 Run `Debug FTL` from the `Run/Debug Configurations` dropdown while in the FTL project.
+
 #### VSCode
+
 Run `Debug FTL` from the `Run and Debug` dropdown while in the FTL project.
 
 ## Useful links
