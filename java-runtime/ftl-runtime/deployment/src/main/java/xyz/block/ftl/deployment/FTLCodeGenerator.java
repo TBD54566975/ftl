@@ -1,6 +1,7 @@
 package xyz.block.ftl.deployment;
 
 import java.io.IOException;
+import java.lang.annotation.Retention;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -33,6 +34,7 @@ import io.quarkus.bootstrap.model.ApplicationModel;
 import io.quarkus.bootstrap.prebuild.CodeGenException;
 import io.quarkus.deployment.CodeGenContext;
 import io.quarkus.deployment.CodeGenProvider;
+import xyz.block.ftl.Subscription;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
 import xyz.block.ftl.VerbClientEmpty;
@@ -143,6 +145,9 @@ public class FTLCodeGenerator implements CodeGenProvider {
 
                     } else if (decl.hasData()) {
                         var data = decl.getData();
+                        if (!data.getExport()) {
+                            continue;
+                        }
                         String thisType = className(data.getName());
                         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
                                 .addModifiers(Modifier.PUBLIC);
@@ -200,6 +205,9 @@ public class FTLCodeGenerator implements CodeGenProvider {
 
                     } else if (decl.hasEnum()) {
                         var data = decl.getEnum();
+                        if (!data.getExport()) {
+                            continue;
+                        }
                         String thisType = className(data.getName());
                         TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(thisType)
                                 .addModifiers(Modifier.PUBLIC);
@@ -207,6 +215,32 @@ public class FTLCodeGenerator implements CodeGenProvider {
                         for (var i : data.getVariantsList()) {
                             dataBuilder.addEnumConstant(i.getName());
                         }
+
+                        JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
+                                .build();
+
+                        javaFile.writeTo(context.outDir());
+
+                    } else if (decl.hasTopic()) {
+                        var data = decl.getTopic();
+                        if (!data.getExport()) {
+                            continue;
+                        }
+                        String thisType = className(data.getName() + "Subscription");
+
+                        TypeSpec.Builder dataBuilder = TypeSpec.annotationBuilder(thisType)
+                                .addModifiers(Modifier.PUBLIC);
+                        if (data.getEvent().hasRef()) {
+                            dataBuilder.addJavadoc("Subscription to the topic of type {@link $L}",
+                                    data.getEvent().getRef().getName());
+                        }
+                        dataBuilder.addAnnotation(AnnotationSpec.builder(Retention.class)
+                                .addMember("value", "java.lang.annotation.RetentionPolicy.RUNTIME").build());
+                        dataBuilder.addAnnotation(AnnotationSpec.builder(Subscription.class)
+                                .addMember("topic", "\"" + data.getName() + "\"")
+                                .addMember("module", "\"" + module.getName() + "\"")
+                                .addMember("name", "\"" + data.getName() + "Subscription\"")
+                                .build());
 
                         JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
                                 .build();

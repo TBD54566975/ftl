@@ -19,14 +19,17 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.VoidType;
+import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.common.model.MethodParameter;
 import org.jboss.resteasy.reactive.common.model.ParameterType;
 import org.jboss.resteasy.reactive.server.core.parameters.ParameterExtractor;
 import org.jboss.resteasy.reactive.server.mapping.URITemplate;
 import org.jboss.resteasy.reactive.server.processor.scanning.MethodScanner;
+import org.jetbrains.annotations.NotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -63,6 +66,7 @@ import xyz.block.ftl.Export;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Verb;
+import xyz.block.ftl.VerbName;
 import xyz.block.ftl.runtime.FTLController;
 import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
@@ -96,6 +100,8 @@ import xyz.block.ftl.v1.schema.Type;
 import xyz.block.ftl.v1.schema.Unit;
 
 class FtlProcessor {
+
+    private static final Logger log = Logger.getLogger(FtlProcessor.class);
 
     private static final String SCHEMA_OUT = "schema.pb";
     private static final String FEATURE = "ftl-java-runtime";
@@ -198,7 +204,8 @@ class FtlProcessor {
             ResteasyReactiveResourceMethodEntriesBuildItem restEndpoints,
             TopicsBuildItem topics,
             VerbClientBuildItem verbClients,
-            ModuleNameBuildItem moduleNameBuildItem) throws Exception {
+            ModuleNameBuildItem moduleNameBuildItem,
+            SubscriptionMetaAnnotationsBuildItem subscriptionMetaAnnotationsBuildItem) throws Exception {
         String moduleName = moduleNameBuildItem.getModuleName();
         Module.Builder moduleBuilder = Module.newBuilder()
                 .setName(moduleName)
@@ -235,23 +242,36 @@ class FtlProcessor {
             }));
         }
         for (var subscription : index.getIndex().getAnnotations(SUBSCRIPTION)) {
+            if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
+                continue;
+            }
             var method = subscription.target().asMethod();
             String className = method.declaringClass().name().toString();
             String name = subscription.value("name").asString();
             String module = subscription.value("module") == null ? moduleName : subscription.value("module").asString();
             String topic = subscription.value("topic").asString();
-            beans.addBeanClass(className);
-            moduleBuilder.addDecls(Decl.newBuilder().setSubscription(xyz.block.ftl.v1.schema.Subscription.newBuilder()
-                    .setName(name).setTopic(Ref.newBuilder().setName(topic).setModule(module).build())).build());
-            handleVerbMethod(extractionContext, method, className, false, BodyType.REQUIRED, (builder -> {
-                builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder().setName(name)));
-            }));
+            generateSubscription(moduleBuilder, extractionContext, beans, method, className, name, module, topic);
+        }
+        for (var metaSub : subscriptionMetaAnnotationsBuildItem.getAnnotations().entrySet()) {
+            for (var subscription : index.getIndex().getAnnotations(metaSub.getKey())) {
+                if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
+                    log.warnf("Subscription annotation on non-method target: %s", subscription.target());
+                    continue;
+                }
+                var method = subscription.target().asMethod();
+                generateSubscription(moduleBuilder, extractionContext, beans, method,
+                        method.declaringClass().name().toString(),
+                        metaSub.getValue().name(),
+                        metaSub.getValue().module(),
+                        metaSub.getValue().topic());
+            }
+
         }
 
         //TODO: make this composable so it is not just one big method, build items should contribute to the schema
         for (var endpoint : restEndpoints.getEntries()) {
             //TODO: naming
-            var verbName = endpoint.getMethodInfo().name();
+            var verbName = methodToName(endpoint.getMethodInfo());
             recorder.registerHttpIngress(moduleName, verbName);
 
             //TODO: handle type parameters properly
@@ -283,7 +303,8 @@ class FtlProcessor {
                 if (i.type == URITemplate.Type.CUSTOM_REGEX) {
                     throw new RuntimeException(
                             "Invalid path " + path + " on HTTP endpoint: " + endpoint.getActualClassInfo().name() + "."
-                                    + endpoint.getMethodInfo().name() + " FTL does not support custom regular expressions");
+                                    + methodToName(endpoint.getMethodInfo())
+                                    + " FTL does not support custom regular expressions");
                 } else if (i.type == URITemplate.Type.LITERAL) {
                     if (i.literalText.equals("/")) {
                         continue;
@@ -348,6 +369,17 @@ class FtlProcessor {
         Files.setPosixFilePermissions(output, newPerms);
     }
 
+    private void generateSubscription(Module.Builder moduleBuilder, ExtractionContext extractionContext,
+            AdditionalBeanBuildItem.Builder beans, MethodInfo method, String className, String name, String module,
+            String topic) {
+        beans.addBeanClass(className);
+        moduleBuilder.addDecls(Decl.newBuilder().setSubscription(xyz.block.ftl.v1.schema.Subscription.newBuilder()
+                .setName(name).setTopic(Ref.newBuilder().setName(topic).setModule(module).build())).build());
+        handleVerbMethod(extractionContext, method, className, false, BodyType.REQUIRED, (builder -> {
+            builder.addMetadata(Metadata.newBuilder().setSubscriber(MetadataSubscriber.newBuilder().setName(name)));
+        }));
+    }
+
     private void handleVerbMethod(ExtractionContext context, MethodInfo method, String className,
             boolean exported, BodyType bodyType, Consumer<xyz.block.ftl.v1.schema.Verb.Builder> metadataCallback) {
         try {
@@ -355,7 +387,7 @@ class FtlProcessor {
             List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
             org.jboss.jandex.Type bodyParamType = null;
             xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
-            String verbName = method.name();
+            String verbName = methodToName(method);
             MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
             for (var param : method.parameters()) {
                 if (param.hasAnnotation(Secret.class)) {
@@ -407,7 +439,7 @@ class FtlProcessor {
                 bodyParamType = VoidType.VOID;
             }
 
-            context.recorder.registerVerb(context.moduleName(), method.name(), method.name(), parameterTypes,
+            context.recorder.registerVerb(context.moduleName(), verbName, method.name(), parameterTypes,
                     Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers);
             verbBuilder
                     .setName(verbName)
@@ -427,6 +459,13 @@ class FtlProcessor {
             throw new RuntimeException("Failed to process FTL method " + method.declaringClass().name() + "." + method.name(),
                     e);
         }
+    }
+
+    private static @NotNull String methodToName(MethodInfo method) {
+        if (method.hasAnnotation(VerbName.class)) {
+            return method.annotation(VerbName.class).value().asString();
+        }
+        return method.name();
     }
 
     private static Class<?> loadClass(org.jboss.jandex.Type param) throws ClassNotFoundException {

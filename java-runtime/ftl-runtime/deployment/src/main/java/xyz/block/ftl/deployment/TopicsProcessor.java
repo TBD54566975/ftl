@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
 
@@ -16,6 +18,7 @@ import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import xyz.block.ftl.Export;
+import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Topic;
 import xyz.block.ftl.TopicDefinition;
 import xyz.block.ftl.runtime.TopicHelper;
@@ -76,5 +79,24 @@ public class TopicsProcessor {
             }
         }
         return new TopicsBuildItem(topics);
+    }
+
+    @BuildStep
+    SubscriptionMetaAnnotationsBuildItem subscriptionAnnotations(CombinedIndexBuildItem combinedIndexBuildItem,
+            ModuleNameBuildItem moduleNameBuildItem) {
+        Map<DotName, SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation> annotations = new HashMap<>();
+        for (var subscriptions : combinedIndexBuildItem.getComputingIndex().getAnnotations(Subscription.class)) {
+            if (subscriptions.target().kind() != AnnotationTarget.Kind.TYPE) {
+                continue;
+            }
+            AnnotationValue moduleValue = subscriptions.value("module");
+            annotations.put(subscriptions.target().asClass().name(),
+                    new SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation(
+                            moduleValue == null || moduleValue.asString().isEmpty() ? moduleNameBuildItem.getModuleName()
+                                    : moduleValue.asString(),
+                            subscriptions.value("topic").asString(),
+                            subscriptions.value("name").asString()));
+        }
+        return new SubscriptionMetaAnnotationsBuildItem(annotations);
     }
 }
