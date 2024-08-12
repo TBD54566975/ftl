@@ -32,11 +32,11 @@ var Payins = ftl.Topic[PayinEvent]("payins")
 
 var _ = ftl.Subscription(PublicBroadcast, "broadcastSubscription")
 
-// public_broadcast is a topic that broadcasts payin events to the public.
+// publicBroadcast is a topic that broadcasts payin events to the public.
 // out of order with subscription registration to test ordering doesn't matter.
 //
 //ftl:export
-var PublicBroadcast = ftl.Topic[PayinEvent]("public_broadcast")
+var PublicBroadcast = ftl.Topic[PayinEvent]("publicBroadcast")
 
 //ftl:verb export
 func Broadcast(ctx context.Context) error {

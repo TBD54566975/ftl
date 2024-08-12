@@ -192,7 +192,7 @@ func (ExportedVariant) exportedTag() {}
 var Topic = ftl.Topic[` + symbol + `]("topic")
 
 //ftl:export
-var ExportedTopic = ftl.Topic[` + symbol + `]("exported_topic")
+var ExportedTopic = ftl.Topic[` + symbol + `]("exportedTopic")
 
 var _ = ftl.Subscription(Topic, "subscription")
 
