@@ -303,7 +303,7 @@ func (d *DirectiveExport) IsExported() bool {
 type DirectiveTypeMap struct {
 	Pos token.Pos
 
-	Runtime    string `parser:"'typemap' @('go' | 'kotlin')"`
+	Runtime    string `parser:"'typemap' @('go' | 'kotlin' | 'java')"`
 	NativeName string `parser:"@String"`
 }
 

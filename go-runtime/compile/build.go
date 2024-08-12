@@ -267,13 +267,22 @@ func CleanStubs(ctx context.Context, projectRoot string) error {
 // GenerateStubsForModules generates stubs for all modules in the schema.
 func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConfigs []moduleconfig.ModuleConfig, sch *schema.Schema) error {
 	logger := log.FromContext(ctx)
-	logger.Debugf("Generating module stubs")
+	logger.Debugf("Generating go module stubs")
 
 	sharedFtlDir := filepath.Join(projectRoot, buildDirName)
 
 	ftlVersion := ""
 	if ftl.IsRelease(ftl.Version) {
 		ftlVersion = ftl.Version
+	}
+	hasGo := false
+	for _, mc := range moduleConfigs {
+		if mc.Language == "go" && mc.Module != "builtin" {
+			hasGo = true
+		}
+	}
+	if !hasGo {
+		return nil
 	}
 
 	for _, module := range sch.Modules {
@@ -292,12 +301,18 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConf
 
 		// If there's no module config, use the go.mod file for the first config we find.
 		if moduleConfig == nil {
-			if len(moduleConfigs) > 0 {
-				_, goModVersion, err = updateGoModule(filepath.Join(moduleConfigs[0].Dir, "go.mod"))
-				if err != nil {
-					return err
+			for _, mod := range moduleConfigs {
+				if mod.Language != "go" {
+					continue
 				}
-			} else {
+				goModPath := filepath.Join(mod.Dir, "go.mod")
+				_, goModVersion, err = updateGoModule(goModPath)
+				if err != nil {
+					logger.Debugf("could not read go.mod %s", goModPath)
+					continue
+				}
+			}
+			if goModVersion == "" {
 				// The best we can do here if we don't have a module to read from is to use the current Go version.
 				goModVersion = runtime.Version()[2:]
 			}

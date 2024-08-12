@@ -31,6 +31,7 @@ clean:
   rm -rf frontend/node_modules
   find . -name '*.zip' -exec rm {} \;
   mvn -f kotlin-runtime/ftl-runtime clean
+  mvn -f java-runtime/ftl-runtime clean
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
@@ -41,7 +42,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips lsp-generate
+build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips lsp-generate build-java
   @just build ftl ftl-controller ftl-runner ftl-initdb
 
 # Run "go generate" on all packages
@@ -63,6 +64,9 @@ build +tools: build-protos build-zips build-frontend
 # Build all backend binaries
 build-backend:
   just build ftl ftl-controller ftl-runner
+
+build-java:
+  mvn -f java-runtime/ftl-runtime install
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
 

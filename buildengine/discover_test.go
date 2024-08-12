@@ -73,7 +73,7 @@ func TestDiscoverModules(t *testing.T) {
 				Language: "kotlin",
 				Realm:    "home",
 				Module:   "echo",
-				Build:    "mvn -B compile",
+				Build:    "mvn -B package",
 				Deploy: []string{
 					"main",
 					"classes",
@@ -116,7 +116,7 @@ func TestDiscoverModules(t *testing.T) {
 				Language: "kotlin",
 				Realm:    "home",
 				Module:   "externalkotlin",
-				Build:    "mvn -B compile",
+				Build:    "mvn -B package",
 				Deploy: []string{
 					"main",
 					"classes",

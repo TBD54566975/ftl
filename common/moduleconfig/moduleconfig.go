@@ -21,6 +21,9 @@ type ModuleGoConfig struct{}
 // ModuleKotlinConfig is language-specific configuration for Kotlin modules.
 type ModuleKotlinConfig struct{}
 
+// ModuleJavaConfig is language-specific configuration for Java modules.
+type ModuleJavaConfig struct{}
+
 // ModuleConfig is the configuration for an FTL module.
 //
 // Module config files are currently TOML.
@@ -37,6 +40,8 @@ type ModuleConfig struct {
 	Deploy []string `toml:"deploy"`
 	// DeployDir is the directory to deploy from, relative to the module directory.
 	DeployDir string `toml:"deploy-dir"`
+	// GeneratedSchemaDir is the directory to generate protobuf schema files into. These can be picked up by language specific build tools
+	GeneratedSchemaDir string `toml:"generated-schema-dir"`
 	// Schema is the name of the schema file relative to the DeployDir.
 	Schema string `toml:"schema"`
 	// Errors is the name of the error file relative to the DeployDir.
@@ -46,6 +51,7 @@ type ModuleConfig struct {
 
 	Go     ModuleGoConfig     `toml:"go,optional"`
 	Kotlin ModuleKotlinConfig `toml:"kotlin,optional"`
+	Java   ModuleJavaConfig   `toml:"java,optional"`
 }
 
 // AbsModuleConfig is a ModuleConfig with all paths made absolute.
@@ -84,6 +90,12 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 	if !strings.HasPrefix(clone.DeployDir, clone.Dir) {
 		panic(fmt.Sprintf("deploy-dir %q is not beneath module directory %q", clone.DeployDir, clone.Dir))
 	}
+	if clone.GeneratedSchemaDir != "" {
+		clone.GeneratedSchemaDir = filepath.Clean(filepath.Join(clone.Dir, clone.GeneratedSchemaDir))
+		if !strings.HasPrefix(clone.GeneratedSchemaDir, clone.Dir) {
+			panic(fmt.Sprintf("generated-schema-dir %q is not beneath module directory %q", clone.GeneratedSchemaDir, clone.Dir))
+		}
+	}
 	clone.Schema = filepath.Clean(filepath.Join(clone.DeployDir, clone.Schema))
 	if !strings.HasPrefix(clone.Schema, clone.DeployDir) {
 		panic(fmt.Sprintf("schema %q is not beneath deploy directory %q", clone.Schema, clone.DeployDir))
@@ -119,7 +131,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	switch config.Language {
 	case "kotlin":
 		if config.Build == "" {
-			config.Build = "mvn -B compile"
+			config.Build = "mvn -B package"
 		}
 		if config.DeployDir == "" {
 			config.DeployDir = "target"
@@ -130,7 +142,22 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		if len(config.Watch) == 0 {
 			config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
 		}
-
+	case "java":
+		if config.Build == "" {
+			config.Build = "mvn -B package"
+		}
+		if config.DeployDir == "" {
+			config.DeployDir = "target"
+		}
+		if config.GeneratedSchemaDir == "" {
+			config.GeneratedSchemaDir = "src/main/ftl-module-schema"
+		}
+		if len(config.Deploy) == 0 {
+			config.Deploy = []string{"main", "quarkus-app"}
+		}
+		if len(config.Watch) == 0 {
+			config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
+		}
 	case "go":
 		if config.DeployDir == "" {
 			config.DeployDir = ".ftl"

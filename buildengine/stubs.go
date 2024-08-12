@@ -3,6 +3,8 @@ package buildengine
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
@@ -13,7 +15,11 @@ import (
 //
 // Currently, only Go stubs are supported. Kotlin and other language stubs can be added in the future.
 func GenerateStubs(ctx context.Context, projectRoot string, modules []*schema.Module, moduleConfigs []moduleconfig.ModuleConfig) error {
-	return generateGoStubs(ctx, projectRoot, modules, moduleConfigs)
+	err := generateGoStubs(ctx, projectRoot, modules, moduleConfigs)
+	if err != nil {
+		return err
+	}
+	return writeGenericSchemaFiles(ctx, projectRoot, modules, moduleConfigs)
 }
 
 // CleanStubs removes all generated stubs.
@@ -37,6 +43,39 @@ func generateGoStubs(ctx context.Context, projectRoot string, modules []*schema.
 	return nil
 }
 
+func writeGenericSchemaFiles(ctx context.Context, projectRoot string, modules []*schema.Module, moduleConfigs []moduleconfig.ModuleConfig) error {
+	sch := &schema.Schema{Modules: modules}
+	for _, module := range moduleConfigs {
+		if module.GeneratedSchemaDir == "" {
+			continue
+		}
+
+		modPath := module.Abs().GeneratedSchemaDir
+		err := os.MkdirAll(modPath, 0750)
+		if err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", modPath, err)
+		}
+
+		for _, mod := range sch.Modules {
+			if mod.Name == module.Module {
+				continue
+			}
+			data, err := schema.ModuleToBytes(mod)
+			if err != nil {
+				return fmt.Errorf("failed to export module schema for module %s %w", mod.Name, err)
+			}
+			err = os.WriteFile(filepath.Join(modPath, mod.Name+".pb"), data, 0600)
+			if err != nil {
+				return fmt.Errorf("failed to write schema file for module %s %w", mod.Name, err)
+			}
+		}
+	}
+	err := compile.GenerateStubsForModules(ctx, projectRoot, moduleConfigs, sch)
+	if err != nil {
+		return fmt.Errorf("failed to generate go stubs: %w", err)
+	}
+	return nil
+}
 func cleanGoStubs(ctx context.Context, projectRoot string) error {
 	err := compile.CleanStubs(ctx, projectRoot)
 	if err != nil {
