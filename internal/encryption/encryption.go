@@ -48,6 +48,7 @@ type KMSEncryptor struct {
 	root            keyset.Handle
 	kekAEAD         tink.AEAD
 	encryptedKeyset []byte
+	cachedDerived   map[SubKey]tink.AEAD
 }
 
 func newClientWithAEAD(uri string, kms *awsv1kms.KMS) (tink.AEAD, error) {
@@ -116,6 +117,7 @@ func NewKMSEncryptorGenerateKey(uri string, v1client *awsv1kms.KMS) (*KMSEncrypt
 		root:            *handle,
 		kekAEAD:         kekAEAD,
 		encryptedKeyset: encryptedKeyset,
+		cachedDerived:   make(map[SubKey]tink.AEAD),
 	}, nil
 }
 
@@ -135,6 +137,7 @@ func NewKMSEncryptorWithKMS(uri string, v1client *awsv1kms.KMS, encryptedKeyset 
 		root:            *handle,
 		kekAEAD:         kekAEAD,
 		encryptedKeyset: encryptedKeyset,
+		cachedDerived:   make(map[SubKey]tink.AEAD),
 	}, nil
 }
 
@@ -156,59 +159,49 @@ func deriveKeyset(root keyset.Handle, salt []byte) (*keyset.Handle, error) {
 	return derived, nil
 }
 
-func (k *KMSEncryptor) Encrypt(subKey SubKey, cleartext []byte) ([]byte, error) {
-	encrypted, err := derivedEncrypt(k.root, subKey, cleartext)
+func (k *KMSEncryptor) getDerivedPrimitive(subKey SubKey) (tink.AEAD, error) {
+	if primitive, ok := k.cachedDerived[subKey]; ok {
+		return primitive, nil
+	}
+
+	derived, err := deriveKeyset(k.root, []byte(subKey))
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt with derive: %w", err)
+		return nil, fmt.Errorf("failed to derive keyset: %w", err)
+	}
+
+	primitive, err := aead.New(derived)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create primitive: %w", err)
+	}
+
+	k.cachedDerived[subKey] = primitive
+	return primitive, nil
+}
+
+func (k *KMSEncryptor) Encrypt(subKey SubKey, cleartext []byte) ([]byte, error) {
+	primitive, err := k.getDerivedPrimitive(subKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get derived primitive: %w", err)
+	}
+
+	encrypted, err := primitive.Encrypt(cleartext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt: %w", err)
 	}
 
 	return encrypted, nil
 }
 
 func (k *KMSEncryptor) Decrypt(subKey SubKey, encrypted []byte) ([]byte, error) {
-	decrypted, err := derivedDecrypt(k.root, subKey, encrypted)
+	primitive, err := k.getDerivedPrimitive(subKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt with derive: %w", err)
+		return nil, fmt.Errorf("failed to get derived primitive: %w", err)
 	}
 
-	return decrypted, nil
-}
-
-func derivedDecrypt(root keyset.Handle, subKey SubKey, encrypted []byte) ([]byte, error) {
-	derived, err := deriveKeyset(root, []byte(subKey))
-	if err != nil {
-		return nil, fmt.Errorf("failed to derive keyset: %w", err)
-	}
-
-	primitive, err := aead.New(derived)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create primitive: %w", err)
-	}
-
-	bytes, err := primitive.Decrypt(encrypted, nil)
+	decrypted, err := primitive.Decrypt(encrypted, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt: %w", err)
 	}
 
-	return bytes, nil
-}
-
-func derivedEncrypt(root keyset.Handle, subKey SubKey, cleartext []byte) ([]byte, error) {
-	// TODO: Deriving might be expensive, consider caching the derived keyset.
-	derived, err := deriveKeyset(root, []byte(subKey))
-	if err != nil {
-		return nil, fmt.Errorf("failed to derive keyset: %w", err)
-	}
-
-	primitive, err := aead.New(derived)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create primitive: %w", err)
-	}
-
-	bytes, err := primitive.Encrypt(cleartext, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt: %w", err)
-	}
-
-	return bytes, nil
+	return decrypted, nil
 }

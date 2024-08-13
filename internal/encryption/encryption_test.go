@@ -1,6 +1,8 @@
 package encryption
 
 import (
+	"bytes"
+	"github.com/tink-crypto/tink-go/v2/aead"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -35,4 +37,64 @@ func TestKMSEncryptorFakeKMS(t *testing.T) {
 	// Should fail to decrypt with the wrong subkey
 	_, err = encryptor.Decrypt(AsyncSubKey, encrypted)
 	assert.Error(t, err)
+}
+
+func BenchmarkDeriveAndEncrypt(b *testing.B) {
+	uri := "fake-kms://CKbvh_ILElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEE6tD2yE5AWYOirhmkY-r3sYARABGKbvh_ILIAE"
+	clearText := []byte(uri)
+	encryptor, err := NewKMSEncryptorGenerateKey(uri, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		encrypted, err := encryptor.Encrypt(LogsSubKey, clearText)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		decrypted, err := encryptor.Decrypt(LogsSubKey, encrypted)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		if !bytes.Equal(clearText, decrypted) {
+			b.Fatal("decrypted text does not match clear text")
+		}
+	}
+}
+
+func BenchmarkCacheDeriveAndEncrypt(b *testing.B) {
+	uri := "fake-kms://CKbvh_ILElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEE6tD2yE5AWYOirhmkY-r3sYARABGKbvh_ILIAE"
+	clearText := []byte(uri)
+	encryptor, err := NewKMSEncryptorGenerateKey(uri, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	derived, err := deriveKeyset(encryptor.root, []byte(LogsSubKey))
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	primitive, err := aead.New(derived)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		encrypted, err := primitive.Encrypt(clearText, nil)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		decrypted, err := primitive.Decrypt(encrypted, nil)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		if !bytes.Equal(clearText, decrypted) {
+			b.Fatal("decrypted text does not match clear text")
+		}
+	}
 }
