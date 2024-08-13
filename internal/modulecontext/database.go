@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/XSAM/otelsql"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 )
 
@@ -19,9 +22,13 @@ type Database struct {
 
 // NewDatabase creates a Database that can be added to ModuleContext
 func NewDatabase(dbType DBType, dsn string) (Database, error) {
-	db, err := sql.Open("pgx", dsn)
+	db, err := otelsql.Open("pgx", dsn)
 	if err != nil {
-		return Database{}, err
+		return Database{}, fmt.Errorf("failed to open database: %w", err)
+	}
+	err = otelsql.RegisterDBStatsMetrics(db, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
+	if err != nil {
+		return Database{}, fmt.Errorf("failed to register db metrics: %w", err)
 	}
 	return Database{
 		DSN:    dsn,

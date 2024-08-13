@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/XSAM/otelsql"
 	"github.com/alecthomas/kong"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
@@ -51,7 +52,9 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
-	conn, err := sql.Open("pgx", cli.ControllerConfig.DSN)
+	conn, err := otelsql.Open("pgx", cli.ControllerConfig.DSN)
+	kctx.FatalIfErrorf(err)
+	err = otelsql.RegisterDBStatsMetrics(conn, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
 	kctx.FatalIfErrorf(err)
 	dal, err := dal.New(ctx, conn, encryptors)
 	kctx.FatalIfErrorf(err)
