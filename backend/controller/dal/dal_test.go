@@ -387,7 +387,9 @@ func TestRunnerStateFromProto(t *testing.T) {
 	assert.Equal(t, RunnerStateIdle, RunnerStateFromProto(state))
 }
 
-func normaliseEvents(events []Event) string {
+func normaliseEvents(t *testing.T, events []Event) string {
+	t.Helper()
+
 	for i := range len(events) {
 		event := events[i]
 		re := reflect.Indirect(reflect.ValueOf(event))
@@ -399,16 +401,13 @@ func normaliseEvents(events []Event) string {
 	}
 
 	e, err := json.Marshal(events)
-	if err != nil {
-		panic(err)
-	}
-
+	assert.NoError(t, err)
 	return string(e)
 }
 
 func assertEventsEqual(t *testing.T, expected, actual []Event) {
 	t.Helper()
-	assert.Equal(t, normaliseEvents(expected), normaliseEvents(actual))
+	assert.Equal(t, normaliseEvents(t, expected), normaliseEvents(t, actual))
 }
 
 func TestDeleteOldEvents(t *testing.T) {
