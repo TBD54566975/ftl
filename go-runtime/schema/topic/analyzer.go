@@ -19,7 +19,7 @@ const (
 // Extractor extracts topics.
 var Extractor = common.NewCallDeclExtractor[*schema.Topic]("topic", Extract, ftlTopicFuncPath)
 
-// expects: var NameLiteral = ftl.Topic[EventType]("name_literal")
+// Extract expects: var NameLiteral = ftl.Topic[EventType]("nameLiteral")
 func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr *ast.CallExpr,
 	callPath string) optional.Option[*schema.Topic] {
 	indexExpr, ok := callExpr.Fun.(*ast.IndexExpr)
@@ -34,7 +34,7 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr 
 	}
 
 	topicName := common.ExtractStringLiteralArg(pass, callExpr, 0)
-	expTopicName := strcase.ToLowerSnake(topicName)
+	expTopicName := strcase.ToLowerCamel(strcase.ToUpperStrippedCamel(topicName))
 	if topicName != expTopicName {
 		common.Errorf(pass, node, "unsupported topic name %q, did you mean to use %q?", topicName, expTopicName)
 		return optional.None[*schema.Topic]()
@@ -43,7 +43,7 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr 
 	if len(node.Specs) > 0 {
 		if t, ok := node.Specs[0].(*ast.ValueSpec); ok {
 			varName := t.Names[0].Name
-			expVarName := strcase.ToUpperStrippedCamel(topicName)
+			expVarName := strcase.ToUpperCamel(topicName)
 			if varName != expVarName {
 				common.Errorf(pass, node, "unexpected topic variable name %q, did you mean %q?", varName, expVarName)
 				return optional.None[*schema.Topic]()
