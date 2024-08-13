@@ -378,7 +378,8 @@ type AsyncCall struct {
 	State             AsyncCallState
 	Origin            string
 	ScheduledAt       time.Time
-	Response          pqtype.NullRawMessage
+	Request           []byte
+	Response          []byte
 	Error             optional.Option[string]
 	RemainingAttempts int32
 	Backoff           sqltypes.Duration
@@ -387,7 +388,6 @@ type AsyncCall struct {
 	Catching          bool
 	ParentRequestKey  optional.Option[string]
 	TraceContext      pqtype.NullRawMessage
-	Request           []byte
 }
 
 type Controller struct {
@@ -445,8 +445,8 @@ type Event struct {
 	CustomKey2      optional.Option[string]
 	CustomKey3      optional.Option[string]
 	CustomKey4      optional.Option[string]
-	ParentRequestID optional.Option[string]
 	Payload         json.RawMessage
+	ParentRequestID optional.Option[string]
 }
 
 type FsmInstance struct {

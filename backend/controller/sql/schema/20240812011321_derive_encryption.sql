@@ -7,11 +7,13 @@ CREATE TABLE encryption_keys (
 );
 
 ALTER TABLE events
-    DROP COLUMN payload,
-    ADD COLUMN payload bytea;
+    ALTER COLUMN payload TYPE bytea
+        USING payload::text::bytea;
 
 ALTER TABLE async_calls
-    DROP COLUMN request,
-    ADD COLUMN request bytea;
+    ALTER COLUMN request TYPE bytea
+        USING request::text::bytea,
+    ALTER COLUMN response TYPE bytea
+        USING response::text::bytea;
 
 -- migrate:down

@@ -542,7 +542,7 @@ RETURNING
 UPDATE async_calls
 SET
   state = 'success'::async_call_state,
-  response = @response::JSONB,
+  response = @response,
   error = null
 WHERE id = @id
 RETURNING true;

@@ -113,7 +113,7 @@ type Querier interface {
 	//
 	// "key" is the unique identifier for the FSM execution.
 	StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error)
-	SucceedAsyncCall(ctx context.Context, response json.RawMessage, iD int64) (bool, error)
+	SucceedAsyncCall(ctx context.Context, response []byte, iD int64) (bool, error)
 	SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)

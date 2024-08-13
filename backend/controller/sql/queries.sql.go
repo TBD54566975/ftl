@@ -535,7 +535,7 @@ WITH updated AS (
   SET state = 'error'::async_call_state,
       error = $7::TEXT
   WHERE id = $8::BIGINT
-  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
+  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
 )
 INSERT INTO async_calls (
   verb,
@@ -2252,7 +2252,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout sqltypes.Duratio
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
 FROM async_calls
 WHERE id = $1
 `
@@ -2268,6 +2268,7 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.State,
 		&i.Origin,
 		&i.ScheduledAt,
+		&i.Request,
 		&i.Response,
 		&i.Error,
 		&i.RemainingAttempts,
@@ -2277,7 +2278,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.Catching,
 		&i.ParentRequestKey,
 		&i.TraceContext,
-		&i.Request,
 	)
 	return i, err
 }
@@ -2573,13 +2573,13 @@ const succeedAsyncCall = `-- name: SucceedAsyncCall :one
 UPDATE async_calls
 SET
   state = 'success'::async_call_state,
-  response = $1::JSONB,
+  response = $1,
   error = null
 WHERE id = $2
 RETURNING true
 `
 
-func (q *Queries) SucceedAsyncCall(ctx context.Context, response json.RawMessage, iD int64) (bool, error) {
+func (q *Queries) SucceedAsyncCall(ctx context.Context, response []byte, iD int64) (bool, error) {
 	row := q.db.QueryRowContext(ctx, succeedAsyncCall, response, iD)
 	var column_1 bool
 	err := row.Scan(&column_1)

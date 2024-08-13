@@ -2,7 +2,6 @@ package dal
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -78,7 +77,7 @@ type AsyncCall struct {
 	Origin           AsyncOrigin
 	Verb             schema.RefKey
 	CatchVerb        optional.Option[schema.RefKey]
-	Request          json.RawMessage
+	Request          []byte
 	ScheduledAt      time.Time
 	QueueDepth       int64
 	ParentRequestKey optional.Option[string]
@@ -159,7 +158,11 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	didScheduleAnotherCall = false
 	switch result := result.(type) {
 	case either.Left[[]byte, string]: // Successful response.
-		_, err = tx.db.SucceedAsyncCall(ctx, result.Get(), call.ID)
+		encryptedResult, err := d.encrypt(encryption.AsyncSubKey, result.Get())
+		if err != nil {
+			return false, fmt.Errorf("failed to encrypt async call result: %w", err)
+		}
+		_, err = tx.db.SucceedAsyncCall(ctx, encryptedResult, call.ID)
 		if err != nil {
 			return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
 		}
@@ -224,10 +227,14 @@ func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
+	request, err := d.decrypt(encryption.AsyncSubKey, row.Request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
+	}
 	return &AsyncCall{
 		ID:      row.ID,
 		Verb:    row.Verb,
 		Origin:  origin,
-		Request: row.Request,
+		Request: request,
 	}, nil
 }
