@@ -113,7 +113,7 @@ public class FTLCodeGenerator implements CodeGenProvider {
                                         .build())
                                 .addModifiers(Modifier.PUBLIC);
                         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
-                            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientEmpty.class)));
+                            typeBuilder.addSuperinterface(ClassName.get(VerbClientEmpty.class));
                         } else if (verb.getRequest().hasUnit()) {
                             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class),
                                     toJavaTypeName(verb.getResponse(), typeAliasMap)));

@@ -289,7 +289,7 @@ func GenerateStubsForModules(ctx context.Context, projectRoot string, moduleConf
 		var moduleConfig *moduleconfig.ModuleConfig
 		for _, mc := range moduleConfigs {
 			mcCopy := mc
-			if mc.Module == module.Name {
+			if mc.Module == module.Name && mc.Language == "go" {
 				moduleConfig = &mcCopy
 				break
 			}
@@ -361,6 +361,9 @@ func SyncGeneratedStubReferences(ctx context.Context, projectRootDir string, stu
 				continue
 			}
 			sharedModulesPaths = append(sharedModulesPaths, filepath.Join(projectRootDir, buildDirName, "go", "modules", mod))
+		}
+		if moduleConfig.Language != "go" {
+			continue
 		}
 
 		_, goModVersion, err := updateGoModule(filepath.Join(moduleConfig.Dir, "go.mod"))

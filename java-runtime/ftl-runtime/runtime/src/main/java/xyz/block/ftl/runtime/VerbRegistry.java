@@ -2,6 +2,7 @@ package xyz.block.ftl.runtime;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,8 +36,8 @@ public class VerbRegistry {
     }
 
     public void register(String module, String name, InstanceHandle<?> verbHandlerClass, Method method,
-            List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers) {
-        verbs.put(new Key(module, name), new AnnotatedEndpointHandler(verbHandlerClass, method, paramMappers));
+            List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers, boolean allowNullReturn) {
+        verbs.put(new Key(module, name), new AnnotatedEndpointHandler(verbHandlerClass, method, paramMappers, allowNullReturn));
     }
 
     public void register(String module, String name, VerbInvoker verbInvoker) {
@@ -60,12 +61,14 @@ public class VerbRegistry {
         final InstanceHandle<?> verbHandlerClass;
         final Method method;
         final List<BiFunction<ObjectMapper, CallRequest, Object>> parameterSuppliers;
+        final boolean allowNull;
 
         private AnnotatedEndpointHandler(InstanceHandle<?> verbHandlerClass, Method method,
-                List<BiFunction<ObjectMapper, CallRequest, Object>> parameterSuppliers) {
+                List<BiFunction<ObjectMapper, CallRequest, Object>> parameterSuppliers, boolean allowNull) {
             this.verbHandlerClass = verbHandlerClass;
             this.method = method;
             this.parameterSuppliers = parameterSuppliers;
+            this.allowNull = allowNull;
         }
 
         public CallResponse handle(CallRequest in) {
@@ -76,8 +79,18 @@ public class VerbRegistry {
                 }
                 Object ret;
                 ret = method.invoke(verbHandlerClass.get(), params);
-                var mappedResponse = mapper.writer().writeValueAsBytes(ret);
-                return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
+                if (ret == null) {
+                    if (allowNull) {
+                        return CallResponse.newBuilder().setBody(ByteString.copyFrom("{}", StandardCharsets.UTF_8)).build();
+                    } else {
+                        return CallResponse.newBuilder().setError(
+                                CallResponse.Error.newBuilder().setMessage("Verb returned an unexpected null response").build())
+                                .build();
+                    }
+                } else {
+                    var mappedResponse = mapper.writer().writeValueAsBytes(ret);
+                    return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
+                }
             } catch (Exception e) {
                 log.errorf(e, "Failed to invoke verb %s.%s", in.getVerb().getModule(), in.getVerb().getName());
                 return CallResponse.newBuilder().setError(CallResponse.Error.newBuilder().setMessage(e.getMessage()).build())
