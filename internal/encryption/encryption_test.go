@@ -2,10 +2,10 @@ package encryption
 
 import (
 	"bytes"
-	"github.com/tink-crypto/tink-go/v2/aead"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/tink-crypto/tink-go/v2/aead"
 )
 
 func TestNoOpEncryptor(t *testing.T) {
