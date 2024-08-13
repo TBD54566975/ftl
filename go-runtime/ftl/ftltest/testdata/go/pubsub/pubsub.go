@@ -10,15 +10,15 @@ import (
 )
 
 //ftl:export
-var Topic1 = ftl.Topic[Event]("topic1")
+var Topic1 = ftl.Topic[Event]("topic_1")
 
 //ftl:export
-var Topic2 = ftl.Topic[Event]("topic2")
+var Topic2 = ftl.Topic[Event]("topic_2")
 
-var subscription1_1 = ftl.Subscription(Topic1, "subscription1_1")
-var subscription1_2 = ftl.Subscription(Topic1, "subscription1_2")
-var subscription2_1 = ftl.Subscription(Topic2, "subscription2_1")
-var subscription2_2 = ftl.Subscription(Topic2, "subscription2_3")
+var subscription1_1 = ftl.Subscription(Topic1, "subscription_1_1")
+var subscription1_2 = ftl.Subscription(Topic1, "subscription_1_2")
+var subscription2_1 = ftl.Subscription(Topic2, "subscription_2_1")
+var subscription2_2 = ftl.Subscription(Topic2, "subscription_2_3")
 
 //ftl:data
 type Event struct {
@@ -40,7 +40,7 @@ func ConsumeEvent(_ context.Context, _ Event) error {
 	return nil
 }
 
-//ftl:subscribe subscription
+//ftl:subscribe subscription_1_1
 func ErrorsAfterASecond(ctx context.Context, event Event) error {
 	time.Sleep(1 * time.Second)
 	return fmt.Errorf("SubscriberThatFails always fails")
