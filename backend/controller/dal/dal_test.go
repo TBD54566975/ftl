@@ -3,6 +3,7 @@ package dal
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
@@ -25,7 +26,7 @@ import (
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, NoOpEncryptors())
+	dal, err := New(ctx, conn, optional.None[string]())
 	assert.NoError(t, err)
 	assert.NotZero(t, dal)
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
@@ -386,7 +387,7 @@ func TestRunnerStateFromProto(t *testing.T) {
 	assert.Equal(t, RunnerStateIdle, RunnerStateFromProto(state))
 }
 
-func normaliseEvents(events []Event) []Event {
+func normaliseEvents(events []Event) string {
 	for i := range len(events) {
 		event := events[i]
 		re := reflect.Indirect(reflect.ValueOf(event))
@@ -396,7 +397,13 @@ func normaliseEvents(events []Event) []Event {
 		f.Set(reflect.Zero(f.Type()))
 		events[i] = event
 	}
-	return events
+
+	e, err := json.Marshal(events)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(e)
 }
 
 func assertEventsEqual(t *testing.T, expected, actual []Event) {
@@ -407,7 +414,7 @@ func assertEventsEqual(t *testing.T, expected, actual []Event) {
 func TestDeleteOldEvents(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, NoOpEncryptors())
+	dal, err := New(ctx, conn, optional.None[string]())
 	assert.NoError(t, err)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)

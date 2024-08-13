@@ -67,14 +67,10 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	if err != nil {
 		return fmt.Errorf("failed to register DB metrics: %w", err)
 	}
-	encryptors, err := config.EncryptionKeys.Encryptors(false)
-	if err != nil {
-		return fmt.Errorf("failed to create encryptors: %w", err)
-	}
 
 	wg := errgroup.Group{}
 	wg.Go(func() error {
-		return controller.Start(ctx, config, runnerScaling, conn, encryptors)
+		return controller.Start(ctx, config, runnerScaling, conn)
 	})
 
 	// Wait for the controller to come up.

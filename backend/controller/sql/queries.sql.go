@@ -67,7 +67,7 @@ type AcquireAsyncCallRow struct {
 	Origin              string
 	Verb                schema.RefKey
 	CatchVerb           optional.Option[schema.RefKey]
-	Request             json.RawMessage
+	Request             []byte
 	ScheduledAt         time.Time
 	RemainingAttempts   int32
 	Error               optional.Option[string]
@@ -216,7 +216,7 @@ RETURNING id
 type CreateAsyncCallParams struct {
 	Verb              schema.RefKey
 	Origin            string
-	Request           json.RawMessage
+	Request           []byte
 	RemainingAttempts int32
 	Backoff           sqltypes.Duration
 	MaxBackoff        sqltypes.Duration
@@ -308,6 +308,16 @@ func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRoute
 		arg.Method,
 		arg.Path,
 	)
+	return err
+}
+
+const createOnlyEncryptionKey = `-- name: CreateOnlyEncryptionKey :exec
+INSERT INTO encryption_keys (id, key)
+VALUES (1, $1)
+`
+
+func (q *Queries) CreateOnlyEncryptionKey(ctx context.Context, key []byte) error {
+	_, err := q.db.ExecContext(ctx, createOnlyEncryptionKey, key)
 	return err
 }
 
@@ -525,7 +535,7 @@ WITH updated AS (
   SET state = 'error'::async_call_state,
       error = $7::TEXT
   WHERE id = $8::BIGINT
-  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
+  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 )
 INSERT INTO async_calls (
   verb,
@@ -1452,6 +1462,19 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 	return i, err
 }
 
+const getOnlyEncryptionKey = `-- name: GetOnlyEncryptionKey :one
+SELECT key
+FROM encryption_keys
+WHERE id = 1
+`
+
+func (q *Queries) GetOnlyEncryptionKey(ctx context.Context) ([]byte, error) {
+	row := q.db.QueryRowContext(ctx, getOnlyEncryptionKey)
+	var key []byte
+	err := row.Scan(&key)
+	return key, err
+}
+
 const getProcessList = `-- name: GetProcessList :many
 SELECT d.min_replicas,
        d.key   AS deployment_key,
@@ -2229,7 +2252,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout sqltypes.Duratio
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, request
 FROM async_calls
 WHERE id = $1
 `
@@ -2245,7 +2268,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.State,
 		&i.Origin,
 		&i.ScheduledAt,
-		&i.Request,
 		&i.Response,
 		&i.Error,
 		&i.RemainingAttempts,
@@ -2255,6 +2277,7 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.Catching,
 		&i.ParentRequestKey,
 		&i.TraceContext,
+		&i.Request,
 	)
 	return i, err
 }

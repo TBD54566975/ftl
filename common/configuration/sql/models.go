@@ -378,7 +378,6 @@ type AsyncCall struct {
 	State             AsyncCallState
 	Origin            string
 	ScheduledAt       time.Time
-	Request           json.RawMessage
 	Response          pqtype.NullRawMessage
 	Error             optional.Option[string]
 	RemainingAttempts int32
@@ -388,6 +387,7 @@ type AsyncCall struct {
 	Catching          bool
 	ParentRequestKey  optional.Option[string]
 	TraceContext      pqtype.NullRawMessage
+	Request           []byte
 }
 
 type Controller struct {
@@ -429,6 +429,12 @@ type DeploymentArtefact struct {
 	Path         string
 }
 
+type EncryptionKey struct {
+	ID        int64
+	Key       []byte
+	CreatedAt time.Time
+}
+
 type Event struct {
 	ID              int64
 	TimeStamp       time.Time
@@ -439,8 +445,8 @@ type Event struct {
 	CustomKey2      optional.Option[string]
 	CustomKey3      optional.Option[string]
 	CustomKey4      optional.Option[string]
-	Payload         json.RawMessage
 	ParentRequestID optional.Option[string]
+	Payload         json.RawMessage
 }
 
 type FsmInstance struct {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -31,7 +32,7 @@ import (
 //
 // Note: no validation of the FSM is performed.
 func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executionKey string, destinationState schema.RefKey, request json.RawMessage, retryParams schema.RetryParams) (err error) {
-	encryptedRequest, err := d.encryptors.Async.EncryptJSON(request)
+	encryptedRequest, err := d.encryptJSON(encryption.AsyncSubKey, request)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt FSM request: %w", err)
 	}

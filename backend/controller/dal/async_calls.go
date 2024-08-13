@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"time"
 
 	"github.com/alecthomas/participle/v2"
@@ -115,8 +116,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 
-	var decryptedRequest json.RawMessage
-	err = d.encryptors.Async.DecryptJSON(row.Request, &decryptedRequest)
+	decryptedRequest, err := d.decrypt(encryption.AsyncSubKey, row.Request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}

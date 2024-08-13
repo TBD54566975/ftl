@@ -2,6 +2,7 @@ package dal
 
 import (
 	"context"
+	"github.com/alecthomas/types/optional"
 	"testing"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
@@ -13,7 +14,7 @@ import (
 func TestNoCallToAcquire(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, NoOpEncryptors())
+	dal, err := New(ctx, conn, optional.None[string]())
 	assert.NoError(t, err)
 
 	_, err = dal.AcquireAsyncCall(ctx)

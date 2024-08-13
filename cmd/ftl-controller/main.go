@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/alecthomas/types/optional"
 	"os"
 	"strconv"
 	"time"
@@ -44,8 +45,9 @@ func main() {
 	)
 	cli.ControllerConfig.SetDefaults()
 
-	encryptors, err := cli.ControllerConfig.EncryptionKeys.Encryptors(true)
-	kctx.FatalIfErrorf(err, "failed to create encryptors")
+	if cli.ControllerConfig.KMSURI == nil {
+		kctx.Fatalf("KMSURI is required")
+	}
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
 	err = observability.Init(ctx, false, "", "ftl-controller", ftl.Version, cli.ObservabilityConfig)
@@ -56,7 +58,7 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	err = otelsql.RegisterDBStatsMetrics(conn, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
 	kctx.FatalIfErrorf(err)
-	dal, err := dal.New(ctx, conn, encryptors)
+	dal, err := dal.New(ctx, conn, optional.Some[string](*cli.ControllerConfig.KMSURI))
 	kctx.FatalIfErrorf(err)
 
 	configDal, err := cfdal.New(ctx, conn)
@@ -77,6 +79,6 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	ctx = cf.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), conn, encryptors)
+	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), conn)
 	kctx.FatalIfErrorf(err)
 }
