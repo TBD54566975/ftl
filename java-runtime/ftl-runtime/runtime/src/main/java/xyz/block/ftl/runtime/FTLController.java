@@ -1,8 +1,12 @@
 package xyz.block.ftl.runtime;
 
 import java.net.URI;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Deque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import jakarta.inject.Singleton;
 
@@ -14,6 +18,10 @@ import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import io.quarkus.runtime.Startup;
+import xyz.block.ftl.LeaseClient;
+import xyz.block.ftl.LeaseFailedException;
+import xyz.block.ftl.v1.AcquireLeaseRequest;
+import xyz.block.ftl.v1.AcquireLeaseResponse;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
 import xyz.block.ftl.v1.ModuleContextRequest;
@@ -25,9 +33,11 @@ import xyz.block.ftl.v1.schema.Ref;
 
 @Singleton
 @Startup
-public class FTLController {
+public class FTLController implements LeaseClient {
     private static final Logger log = Logger.getLogger(FTLController.class);
     final String moduleName;
+    private StreamObserver<AcquireLeaseRequest> leaseClient;
+    private final Deque<CompletableFuture<?>> leaseWaiters = new LinkedBlockingDeque<>();
 
     private Throwable currentError;
     private volatile ModuleContextResponse moduleContextResponse;
@@ -76,7 +86,29 @@ public class FTLController {
         var channel = channelBuilder.build();
         verbService = VerbServiceGrpc.newStub(channel);
         verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+        synchronized (this) {
+            this.leaseClient = verbService.acquireLease(new StreamObserver<AcquireLeaseResponse>() {
+                @Override
+                public void onNext(AcquireLeaseResponse value) {
+                    leaseWaiters.pop().complete(null);
+                }
 
+                @Override
+                public void onError(Throwable t) {
+                    leaseWaiters.pop().completeExceptionally(t);
+                }
+
+                @Override
+                public void onCompleted() {
+                    synchronized (FTLController.this) {
+                        while (!leaseWaiters.isEmpty()) {
+                            leaseWaiters.pop().completeExceptionally(new RuntimeException("connection closed"));
+                        }
+                        leaseClient = verbService.acquireLease(this);
+                    }
+                }
+            });
+        }
     }
 
     public byte[] getSecret(String secretName) {
@@ -97,6 +129,7 @@ public class FTLController {
 
     public byte[] callVerb(String name, String module, byte[] payload) {
         CompletableFuture<byte[]> cf = new CompletableFuture<>();
+
         verbService.call(CallRequest.newBuilder().setVerb(Ref.newBuilder().setModule(module).setName(name))
                 .setBody(ByteString.copyFrom(payload)).build(), new StreamObserver<>() {
 
@@ -151,6 +184,23 @@ public class FTLController {
             cf.get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public void acquireLease(Duration duration, String... keys) throws LeaseFailedException {
+        CompletableFuture<?> cf = new CompletableFuture<>();
+        synchronized (this) {
+            leaseWaiters.push(cf);
+            leaseClient.onNext(AcquireLeaseRequest.newBuilder().setModule(moduleName)
+                    .addAllKey(Arrays.asList(keys))
+                    .setTtl(com.google.protobuf.Duration.newBuilder()
+                            .setSeconds(duration.toSeconds()))
+                    .build());
+        }
+        try {
+            cf.get();
+        } catch (Exception e) {
+            throw new LeaseFailedException(e);
         }
     }
 
