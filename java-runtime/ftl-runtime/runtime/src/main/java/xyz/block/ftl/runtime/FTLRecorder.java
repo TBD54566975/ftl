@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.annotations.Recorder;
+import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.v1.CallRequest;
 
 @Recorder
@@ -71,6 +72,20 @@ public class FTLRecorder {
         }
     }
 
+    public BiFunction<ObjectMapper, CallRequest, Object> leaseClientSupplier() {
+        return new BiFunction<ObjectMapper, CallRequest, Object>() {
+            volatile LeaseClient leaseClient;
+
+            @Override
+            public Object apply(ObjectMapper mapper, CallRequest callRequest) {
+                if (leaseClient == null) {
+                    leaseClient = Arc.container().instance(LeaseClient.class).get();
+                }
+                return leaseClient;
+            }
+        };
+    }
+
     public ParameterExtractor topicParamExtractor(String className) {
 
         try {
@@ -101,6 +116,25 @@ public class FTLRecorder {
                 @Override
                 public Object extractParameter(ResteasyReactiveRequestContext context) {
                     return client;
+                }
+            };
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ParameterExtractor leaseClientExtractor() {
+        try {
+            return new ParameterExtractor() {
+
+                volatile LeaseClient leaseClient;
+
+                @Override
+                public Object extractParameter(ResteasyReactiveRequestContext context) {
+                    if (leaseClient == null) {
+                        leaseClient = Arc.container().instance(LeaseClient.class).get();
+                    }
+                    return leaseClient;
                 }
             };
         } catch (Exception e) {

@@ -66,6 +66,7 @@ import xyz.block.ftl.Config;
 import xyz.block.ftl.Cron;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.GeneratedRef;
+import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.Retry;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.Subscription;
@@ -120,6 +121,7 @@ class FtlProcessor {
     public static final DotName CONFIG = DotName.createSimple(Config.class);
     public static final DotName OFFSET_DATE_TIME = DotName.createSimple(OffsetDateTime.class.getName());
     public static final DotName GENERATED_REF = DotName.createSimple(GeneratedRef.class);
+    public static final DotName LEASE_CLIENT = DotName.createSimple(LeaseClient.class);
 
     @BuildStep
     ModuleNameBuildItem moduleName(ApplicationInfoBuildItem applicationInfoBuildItem) {
@@ -187,12 +189,12 @@ class FtlProcessor {
                         return new VerbRegistry.ConfigSupplier(name, paramType);
                     } else if (topics.getTopics().containsKey(type.name())) {
                         var topic = topics.getTopics().get(type.name());
-                        Class<?> paramType = loadClass(type);
                         return recorder.topicParamExtractor(topic.generatedProducer());
                     } else if (verbClients.getVerbClients().containsKey(type.name())) {
                         var client = verbClients.getVerbClients().get(type.name());
-                        Class<?> paramType = loadClass(type);
                         return recorder.verbParamExtractor(client.generatedClient());
+                    } else if (LEASE_CLIENT.equals(type.name())) {
+                        return recorder.leaseClientExtractor();
                     }
                     return null;
                 } catch (ClassNotFoundException e) {
@@ -451,6 +453,9 @@ class FtlProcessor {
                     parameterTypes.add(paramType);
                     paramMappers.add(context.recorder().verbClientSupplier(client.generatedClient()));
                     callsMetadata.addCalls(Ref.newBuilder().setName(client.name()).setModule(client.module()).build());
+                } else if (LEASE_CLIENT.equals(param.type().name())) {
+                    parameterTypes.add(LeaseClient.class);
+                    paramMappers.add(context.recorder().leaseClientSupplier());
                 } else if (bodyType != BodyType.DISALLOWED && bodyParamType == null) {
                     bodyParamType = param.type();
                     Class<?> paramType = loadClass(param.type());
