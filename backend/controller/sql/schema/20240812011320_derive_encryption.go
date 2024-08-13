@@ -4,14 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"os"
 	"strings"
 )
 
-// Migrate20240811162246DeriveEncryption
+type Envs struct {
+	logKey   string
+	asyncKey string
+	kmsURI   string
+}
+
+// MigrateDeriveEncryption
 //
 // If there are settings set for DeprecatedEncryptionKeys, then check that there is also a KMSURI. If not error out.
-// If there is no DeprecatedEncryptionKeys, use the NoOpEncryptor so the data will just be transformed to bytea.
+// If there is no DeprecatedEncryptionKeys, the data will just be transformed to bytea.
 //   - but... also make sure none of the data is already encrypted!
 //
 // keys:
@@ -23,7 +31,6 @@ import (
 //
 // async_calls:
 // - Add async_calls.request_new as type BYTEA
-// - !! REMOVE async_calls.response because we don't use it
 // - Add async_calls.encryption_key_id as type BIGINT as a foreign key to encryption_keys.id
 //
 // topic_events:
@@ -35,14 +42,29 @@ import (
 // For topic.request, Similar to events and async_calls.
 //
 // Drop the old columns and rename the new columns to the old column names.
-func Migrate20240811162246DeriveEncryption(ctx context.Context, tx *sql.Tx) error {
-	encryption, err := sanityCheck(ctx, tx)
+func MigrateDeriveEncryption(ctx context.Context, tx *sql.Tx) error {
+	envs := Envs{
+		logKey:   os.Getenv("FTL_LOG_ENCRYPTION_KEY"),
+		asyncKey: os.Getenv("FTL_ASYNC_ENCRYPTION_KEY"),
+		kmsURI:   os.Getenv("FTL_KMS_URI"),
+	}
+
+	encrypted, err := sanityCheck(ctx, tx, envs)
 	if err != nil {
 		return fmt.Errorf("sanity check failed: %w", err)
 	}
 
-	if encryption {
-		if err := migrateDataEncrypted(ctx, tx); err != nil {
+	if encrypted {
+		e := controller.EncryptionKeys{
+			Logs:  envs.logKey,
+			Async: envs.asyncKey,
+		}
+		encryptors, err := e.Encryptors(true)
+		if err != nil {
+			return fmt.Errorf("failed to create encryptors: %w", err)
+		}
+
+		if err := migrateDataEncrypted(ctx, tx, encryptors); err != nil {
 			return fmt.Errorf("failed to migrate encrypted data: %w", err)
 		}
 	} else {
@@ -54,29 +76,26 @@ func Migrate20240811162246DeriveEncryption(ctx context.Context, tx *sql.Tx) erro
 	return nil
 }
 
-func sanityCheck(ctx context.Context, tx *sql.Tx) (bool, error) {
-	logKey := os.Getenv("FTL_LOG_ENCRYPTION_KEY")
-	asyncKey := os.Getenv("FTL_ASYNC_ENCRYPTION_KEY")
-	kmsURI := os.Getenv("FTL_KMS_URI")
-	encryption := false
-	if logKey != "" || asyncKey != "" {
-		if kmsURI == "" {
+func sanityCheck(ctx context.Context, tx *sql.Tx, envs Envs) (bool, error) {
+	encrypted := false
+	if envs.logKey != "" || envs.asyncKey != "" {
+		if envs.kmsURI == "" {
 			return false, fmt.Errorf("deprecated encryption keys are set but no KMS URI was set, refuse to migrate")
 		}
-		encryption = true
+		encrypted = true
 	}
 
-	if err := checkTableForEncryption(ctx, tx, "SELECT payload FROM events", encryption); err != nil {
+	if err := checkTableForEncryption(ctx, tx, "SELECT payload FROM events", encrypted); err != nil {
 		return false, fmt.Errorf("failed to check events: %w", err)
 	}
-	if err := checkTableForEncryption(ctx, tx, "SELECT request FROM async_calls", encryption); err != nil {
+	if err := checkTableForEncryption(ctx, tx, "SELECT request FROM async_calls", encrypted); err != nil {
 		return false, fmt.Errorf("failed to check async_calls: %w", err)
 	}
-	if err := checkTableForEncryption(ctx, tx, "SELECT payload FROM topic_events", encryption); err != nil {
+	if err := checkTableForEncryption(ctx, tx, "SELECT payload FROM topic_events", encrypted); err != nil {
 		return false, fmt.Errorf("failed to check topic_events: %w", err)
 	}
 
-	return encryption, nil
+	return encrypted, nil
 }
 
 func checkTableForEncryption(ctx context.Context, tx *sql.Tx, sql string, encryption bool) error {
@@ -127,16 +146,37 @@ func migrateDataUnencrypted(ctx context.Context, tx *sql.Tx) error {
 }
 
 // migrateDataEncrypted will migrate data from the old field to the new field using the appropriate encryption.
-func migrateDataEncrypted(ctx context.Context, tx *sql.Tx) error {
-	if err := migrateData(ctx, tx, "events", "payload", "payload_new"); err != nil {
+func migrateDataEncrypted(ctx context.Context, tx *sql.Tx, encryptors *dal.Encryptors) error {
+	if err := migrateData(ctx, tx, encryptors, "events", "payload", "payload_new"); err != nil {
 		return fmt.Errorf("failed to migrate events: %w", err)
 	}
-	if err := migrateData(ctx, tx, "async_calls", "request", "request_new"); err != nil {
+	if err := migrateData(ctx, tx, encryptors, "async_calls", "request", "request_new"); err != nil {
 		return fmt.Errorf("failed to migrate async_calls: %w", err)
 	}
-	if err := migrateData(ctx, tx, "topic_events", "payload", "payload_new"); err != nil {
+	if err := migrateData(ctx, tx, encryptors, "topic_events", "payload", "payload_new"); err != nil {
 		return fmt.Errorf("failed to migrate topic_events: %w", err)
 	}
 
 	return nil
+}
+
+func migrateData(ctx context.Context, tx *sql.Tx, encryptors *dal.Encryptors, table, oldColumn, newColumn string) error {
+	rows, err := tx.QueryContext(ctx, fmt.Sprintf("SELECT id, %s FROM %s", oldColumn, table))
+	if err != nil {
+		return fmt.Errorf("failed to query %s: %w", table, err)
+	}
+	defer rows.Close()
+
+	updates := map[int][]byte{}
+	for rows.Next() {
+		var id int
+		var payload []byte
+		if err := rows.Scan(&id, &payload); err != nil {
+			return fmt.Errorf("failed to scan %s: %w", table, err)
+		}
+
+		// Decrypt the payload
+
+		return nil
+	}
 }
