@@ -21,13 +21,14 @@ public class FTLRecorder {
     public static final String X_FTL_VERB = "X-ftl-verb";
 
     public void registerVerb(String module, String verbName, String methodName, List<Class<?>> parameterTypes,
-            Class<?> verbHandlerClass, List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers) {
+            Class<?> verbHandlerClass, List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers,
+            boolean allowNullReturn) {
         //TODO: this sucks
         try {
             var method = verbHandlerClass.getDeclaredMethod(methodName, parameterTypes.toArray(new Class[0]));
             var handlerInstance = Arc.container().instance(verbHandlerClass);
             Arc.container().instance(VerbRegistry.class).get().register(module, verbName, handlerInstance, method,
-                    paramMappers);
+                    paramMappers, allowNullReturn);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

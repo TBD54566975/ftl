@@ -75,6 +75,7 @@ import xyz.block.ftl.VerbName;
 import xyz.block.ftl.runtime.FTLController;
 import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
+import xyz.block.ftl.runtime.JsonSerializationConfig;
 import xyz.block.ftl.runtime.TopicHelper;
 import xyz.block.ftl.runtime.VerbClientHelper;
 import xyz.block.ftl.runtime.VerbHandler;
@@ -149,8 +150,9 @@ class FtlProcessor {
     @BuildStep
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
-                .addBeanClasses(VerbHandler.class, VerbRegistry.class, FTLHttpHandler.class, FTLController.class,
-                        TopicHelper.class, VerbClientHelper.class)
+                .addBeanClasses(VerbHandler.class,
+                        VerbRegistry.class, FTLHttpHandler.class, FTLController.class,
+                        TopicHelper.class, VerbClientHelper.class, JsonSerializationConfig.class)
                 .setUnremovable().build();
     }
 
@@ -477,8 +479,10 @@ class FtlProcessor {
                 verbBuilder.addMetadata(Metadata.newBuilder().setCalls(callsMetadata));
             }
 
+            //TODO: we need better handling around Optional
             context.recorder.registerVerb(context.moduleName(), verbName, method.name(), parameterTypes,
-                    Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers);
+                    Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers,
+                    method.returnType() == VoidType.VOID);
             verbBuilder
                     .setName(verbName)
                     .setExport(exported)
