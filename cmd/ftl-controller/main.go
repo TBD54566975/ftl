@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/alecthomas/types/optional"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/XSAM/otelsql"
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"

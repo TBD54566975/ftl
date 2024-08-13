@@ -3,7 +3,6 @@ package dal
 import (
 	"context"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"

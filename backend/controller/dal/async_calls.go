@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
@@ -16,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 )
 
 type asyncOriginParseRoot struct {

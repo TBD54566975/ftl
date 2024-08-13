@@ -5,7 +5,6 @@ import (
 	stdsql "database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"strconv"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )

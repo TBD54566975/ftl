@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -16,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 )
 
 // StartFSMTransition sends an event to an executing instance of an FSM.
