@@ -65,8 +65,8 @@ build +tools: build-protos build-zips build-frontend
 build-backend:
   just build ftl ftl-controller ftl-runner
 
-build-java:
-  mvn -f java-runtime/ftl-runtime install
+build-java *args:
+  mvn -f java-runtime/ftl-runtime install {{args}}
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
 

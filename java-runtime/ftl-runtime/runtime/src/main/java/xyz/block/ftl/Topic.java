@@ -8,5 +8,5 @@ package xyz.block.ftl;
  */
 public interface Topic<T> {
 
-    <T> void publish(T object);
+    void publish(T object);
 }

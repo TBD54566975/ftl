@@ -33,6 +33,10 @@ public class FtlJavaRuntimeResourceTest {
     @Inject
     HelloClient helloClient;
 
+    @FTLManaged
+    @Inject
+    BytesClient bytesClient;
+
     @Test
     public void testHelloEndpoint() {
         TestVerbServer.registerFakeVerb("echo", "echo", new Function<EchoRequest, EchoResponse>() {
@@ -52,11 +56,20 @@ public class FtlJavaRuntimeResourceTest {
         myVerbClient.call(new Person("Stuart", "Douglas"));
     }
 
+    @Test
+    public void testBytesSerialization() {
+        Assertions.assertArrayEquals(new byte[] { 1, 2 }, bytesClient.call(new byte[] { 1, 2 }));
+    }
+
     @VerbClientDefinition(name = "publish")
     interface PublishVerbClient extends VerbClientSink<Person> {
     }
 
     @VerbClientDefinition(name = "hello")
     interface HelloClient extends VerbClient<String, String> {
+    }
+
+    @VerbClientDefinition(name = "bytes")
+    interface BytesClient extends VerbClient<byte[], byte[]> {
     }
 }

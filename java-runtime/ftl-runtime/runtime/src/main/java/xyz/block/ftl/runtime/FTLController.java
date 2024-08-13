@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingDeque;
 
+import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -42,6 +43,7 @@ public class FTLController implements LeaseClient {
     private Throwable currentError;
     private volatile ModuleContextResponse moduleContextResponse;
     private boolean waiters = false;
+    private volatile boolean closed = false;
 
     final VerbServiceGrpc.VerbServiceStub verbService;
     final StreamObserver<ModuleContextResponse> moduleObserver = new StreamObserver<>() {
@@ -68,13 +70,21 @@ public class FTLController implements LeaseClient {
                     waiters = false;
                 }
             }
+            if (!closed) {
+                verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+            }
         }
 
         @Override
         public void onCompleted() {
-            verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+            onError(new RuntimeException("connection closed"));
         }
     };
+
+    @PreDestroy
+    void shutdown() {
+
+    }
 
     public FTLController(@ConfigProperty(name = "ftl.endpoint", defaultValue = "http://localhost:8892") URI uri,
             @ConfigProperty(name = "ftl.module.name") String moduleName) {
@@ -95,17 +105,21 @@ public class FTLController implements LeaseClient {
 
                 @Override
                 public void onError(Throwable t) {
-                    leaseWaiters.pop().completeExceptionally(t);
+                    synchronized (FTLController.this) {
+                        while (!leaseWaiters.isEmpty()) {
+                            leaseWaiters.pop().completeExceptionally(t);
+                        }
+                        if (!closed) {
+                            leaseClient = verbService.acquireLease(this);
+                        }
+                    }
                 }
 
                 @Override
                 public void onCompleted() {
-                    synchronized (FTLController.this) {
-                        while (!leaseWaiters.isEmpty()) {
-                            leaseWaiters.pop().completeExceptionally(new RuntimeException("connection closed"));
-                        }
-                        leaseClient = verbService.acquireLease(this);
-                    }
+                    //if we have any waiters error them out
+                    //if we have not shut down we can try and connect again
+                    onError(new RuntimeException("stream closed"));
                 }
             });
         }

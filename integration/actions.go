@@ -95,6 +95,17 @@ func Chain(actions ...Action) Action {
 	}
 }
 
+// SubTests runs a list of individual actions as separate tests
+func SubTests(tests ...SubTest) Action {
+	return func(t testing.TB, ic TestContext) {
+		for _, test := range tests {
+			ic.Run(test.Name, func(t *testing.T) {
+				ic.AssertWithRetry(t, test.Action)
+			})
+		}
+	}
+}
+
 // Repeat an action N times.
 func Repeat(n int, action Action) Action {
 	return func(t testing.TB, ic TestContext) {

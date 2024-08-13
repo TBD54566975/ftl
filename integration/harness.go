@@ -177,7 +177,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 		assert.NoError(t, err)
 		if opts.requireJava {
-			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java").RunBuffered(ctx)
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java", "-DskipTests").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
 	})
@@ -203,6 +203,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				workDir:  tmpDir,
 				binDir:   binDir,
 				Verbs:    verbs,
+				realT:    t,
 			}
 
 			if opts.startController {
@@ -239,6 +240,12 @@ type TestContext struct {
 	Controller ftlv1connect.ControllerServiceClient
 	Console    pbconsoleconnect.ConsoleServiceClient
 	Verbs      ftlv1connect.VerbServiceClient
+
+	realT *testing.T
+}
+
+func (i TestContext) Run(name string, f func(t *testing.T)) bool {
+	return i.realT.Run(name, f)
 }
 
 // WorkingDir returns the temporary directory the test is executing in.
@@ -282,6 +289,11 @@ func (i TestContext) runAssertionOnce(t testing.TB, assertion Action) (err error
 }
 
 type Action func(t testing.TB, ic TestContext)
+
+type SubTest struct {
+	Name   string
+	Action Action
+}
 
 type logWriter struct {
 	mu     sync.Mutex
