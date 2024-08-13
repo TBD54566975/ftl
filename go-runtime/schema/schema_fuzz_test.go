@@ -334,7 +334,7 @@ module test {
 
   database postgres testDb
 
-  export topic exported_topic {{.TypeName}}
+  export topic exportedTopic {{.TypeName}}
   topic topic {{.TypeName}}
   subscription subscription test.topic
 
