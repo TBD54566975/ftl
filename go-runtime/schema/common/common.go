@@ -580,6 +580,8 @@ func GetObjectForNode(typesInfo *types.Info, node ast.Node) optional.Option[type
 		return GetObjectForNode(typesInfo, n.Sel)
 	case *ast.ArrayType:
 		return GetObjectForNode(typesInfo, n.Elt)
+	case *ast.CallExpr:
+		return GetObjectForNode(typesInfo, n.Fun)
 	default:
 		return optional.None[types.Object]()
 	}
