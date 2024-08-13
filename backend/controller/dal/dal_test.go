@@ -3,7 +3,6 @@ package dal
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
@@ -236,7 +235,7 @@ func TestDAL(t *testing.T) {
 		DeploymentKey: deploymentKey,
 		RequestKey:    optional.Some(requestKey),
 		Request:       []byte("{}"),
-		Response:      []byte(`{"time": "now"}`),
+		Response:      []byte(`{"time":"now"}`),
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
@@ -387,9 +386,7 @@ func TestRunnerStateFromProto(t *testing.T) {
 	assert.Equal(t, RunnerStateIdle, RunnerStateFromProto(state))
 }
 
-func normaliseEvents(t *testing.T, events []Event) string {
-	t.Helper()
-
+func normaliseEvents(events []Event) []Event {
 	for i := range len(events) {
 		event := events[i]
 		re := reflect.Indirect(reflect.ValueOf(event))
@@ -400,14 +397,12 @@ func normaliseEvents(t *testing.T, events []Event) string {
 		events[i] = event
 	}
 
-	e, err := json.Marshal(events)
-	assert.NoError(t, err)
-	return string(e)
+	return events
 }
 
 func assertEventsEqual(t *testing.T, expected, actual []Event) {
 	t.Helper()
-	assert.Equal(t, normaliseEvents(t, expected), normaliseEvents(t, actual))
+	assert.Equal(t, normaliseEvents(expected), normaliseEvents(actual))
 }
 
 func TestDeleteOldEvents(t *testing.T) {
