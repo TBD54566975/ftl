@@ -133,7 +133,7 @@ func copyAny(src any, ptrs map[uintptr]any, copyConf *copyConfig) (dst any) {
 	}
 
 	// Special case list.List to handle its internal structure
-	if reflect.TypeOf(src) == reflect.TypeOf(&list.List{}) {
+	if reflect.TypeOf(src) == reflect.TypeFor[*list.List]() {
 		return copyList(src.(*list.List), ptrs, copyConf)
 	}
 
