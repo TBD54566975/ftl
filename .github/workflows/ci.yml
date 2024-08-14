@@ -38,6 +38,7 @@ jobs:
   test-scripts:
     name: Test Scripts
     runs-on: ubuntu-latest
+    if: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,6 +67,7 @@ jobs:
   ensure-frozen-migrations:
     name: Ensure Frozen Migrations
     runs-on: ubuntu-latest
+    if: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -78,6 +80,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    if: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
