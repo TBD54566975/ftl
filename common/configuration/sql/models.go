@@ -435,20 +435,6 @@ type EncryptionKey struct {
 	CreatedAt time.Time
 }
 
-type Event struct {
-	ID              int64
-	TimeStamp       time.Time
-	DeploymentID    int64
-	RequestID       optional.Option[int64]
-	Type            EventType
-	CustomKey1      optional.Option[string]
-	CustomKey2      optional.Option[string]
-	CustomKey3      optional.Option[string]
-	CustomKey4      optional.Option[string]
-	Payload         json.RawMessage
-	ParentRequestID optional.Option[string]
-}
-
 type FsmInstance struct {
 	ID               int64
 	CreatedAt        time.Time
@@ -518,6 +504,20 @@ type Runner struct {
 	ModuleName         optional.Option[string]
 	DeploymentID       optional.Option[int64]
 	Labels             json.RawMessage
+}
+
+type Timeline struct {
+	ID              int64
+	TimeStamp       time.Time
+	DeploymentID    int64
+	RequestID       optional.Option[int64]
+	Type            EventType
+	CustomKey1      optional.Option[string]
+	CustomKey2      optional.Option[string]
+	CustomKey3      optional.Option[string]
+	CustomKey4      optional.Option[string]
+	Payload         []byte
+	ParentRequestID optional.Option[string]
 }
 
 type Topic struct {

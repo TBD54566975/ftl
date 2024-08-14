@@ -709,14 +709,14 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return dalerrs.TranslatePGError(err)
 		}
 	}
-	payload, err := d.encryptJSON(encryption.LogsSubKey, map[string]interface{}{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]interface{}{
 		"prev_min_replicas": deployment.MinReplicas,
 		"min_replicas":      minReplicas,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload for InsertDeploymentUpdatedEvent: %w", err)
 	}
-	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
+	err = tx.InsertTimelineDeploymentUpdatedEvent(ctx, sql.InsertTimelineDeploymentUpdatedEventParams{
 		DeploymentKey: key,
 		Payload:       payload,
 	})
@@ -782,7 +782,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
-	payload, err := d.encryptJSON(encryption.LogsSubKey, map[string]any{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]any{
 		"min_replicas": int32(minReplicas),
 		"replaced":     replacedDeploymentKey,
 	})
@@ -790,7 +790,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		return fmt.Errorf("replace deployment failed to encrypt payload: %w", err)
 	}
 
-	err = tx.InsertDeploymentCreatedEvent(ctx, sql.InsertDeploymentCreatedEventParams{
+	err = tx.InsertTimelineDeploymentCreatedEvent(ctx, sql.InsertTimelineDeploymentCreatedEventParams{
 		DeploymentKey: newDeploymentKey,
 		Language:      newDeployment.Language,
 		ModuleName:    newDeployment.ModuleName,
@@ -1057,11 +1057,11 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		"error":      log.Error,
 		"stack":      log.Stack,
 	}
-	encryptedPayload, err := d.encryptJSON(encryption.LogsSubKey, payload)
+	encryptedPayload, err := d.encryptJSON(encryption.TimelineSubKey, payload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
 	}
-	return dalerrs.TranslatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
+	return dalerrs.TranslatePGError(d.db.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
 		DeploymentKey: log.DeploymentKey,
 		RequestKey:    requestKey,
 		TimeStamp:     log.Time,
@@ -1137,7 +1137,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if pr, ok := call.ParentRequestKey.Get(); ok {
 		parentRequestKey = optional.Some(pr.String())
 	}
-	payload, err := d.encryptJSON(encryption.LogsSubKey, map[string]any{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]any{
 		"duration_ms": call.Duration.Milliseconds(),
 		"request":     call.Request,
 		"response":    call.Response,
@@ -1147,7 +1147,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if err != nil {
 		return fmt.Errorf("failed to encrypt call payload: %w", err)
 	}
-	return dalerrs.TranslatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
+	return dalerrs.TranslatePGError(d.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
 		DeploymentKey:    call.DeploymentKey,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentRequestKey,
@@ -1161,7 +1161,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 }
 
 func (d *DAL) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
-	count, err := d.db.DeleteOldEvents(ctx, sqltypes.Duration(age), eventType)
+	count, err := d.db.DeleteOldTimelineEvents(ctx, sqltypes.Duration(age), eventType)
 	return count, dalerrs.TranslatePGError(err)
 }
 

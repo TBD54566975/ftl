@@ -263,39 +263,39 @@ func TestDAL(t *testing.T) {
 
 	t.Run("QueryEvents", func(t *testing.T) {
 		t.Run("Limit", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1)
+			events, err := dal.QueryTimeline(ctx, 1)
 			assert.NoError(t, err)
 			assert.Equal(t, 1, len(events))
 		})
 
 		t.Run("NoFilters", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000)
+			events, err := dal.QueryTimeline(ctx, 1000)
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterDeployments(deploymentKey))
+			events, err := dal.QueryTimeline(ctx, 1000, FilterDeployments(deploymentKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
+			events, err := dal.QueryTimeline(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{callEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{callEvent}, events)
 		})
 
 		t.Run("ByLogLevel", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
+			events, err := dal.QueryTimeline(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{logEvent}, events)
 		})
 
 		t.Run("ByRequests", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterRequests(requestKey))
+			events, err := dal.QueryTimeline(ctx, 1000, FilterRequests(requestKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{callEvent, logEvent}, events)
 		})
 	})
 
@@ -386,7 +386,7 @@ func TestRunnerStateFromProto(t *testing.T) {
 	assert.Equal(t, RunnerStateIdle, RunnerStateFromProto(state))
 }
 
-func normaliseEvents(events []Event) []Event {
+func normaliseEvents(events []TimelineEvent) []TimelineEvent {
 	for i := range len(events) {
 		event := events[i]
 		re := reflect.Indirect(reflect.ValueOf(event))
@@ -400,7 +400,7 @@ func normaliseEvents(events []Event) []Event {
 	return events
 }
 
-func assertEventsEqual(t *testing.T, expected, actual []Event) {
+func assertEventsEqual(t *testing.T, expected, actual []TimelineEvent) {
 	t.Helper()
 	assert.Equal(t, normaliseEvents(expected), normaliseEvents(actual))
 }

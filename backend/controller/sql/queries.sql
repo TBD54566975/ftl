@@ -270,8 +270,8 @@ WITH rows AS (
 SELECT COUNT(*)
 FROM rows;
 
--- name: InsertLogEvent :exec
-INSERT INTO events (
+-- name: InsertTimelineLogEvent :exec
+INSERT INTO timeline (
   deployment_id,
   request_id,
   time_stamp,
@@ -293,8 +293,8 @@ VALUES (
   sqlc.arg('payload')
 );
 
--- name: InsertDeploymentCreatedEvent :exec
-INSERT INTO events (
+-- name: InsertTimelineDeploymentCreatedEvent :exec
+INSERT INTO timeline (
   deployment_id,
   type,
   custom_key_1,
@@ -302,7 +302,7 @@ INSERT INTO events (
   payload
 )
 VALUES (
-  ( 
+  (
     SELECT id
     FROM deployments
     WHERE deployments.key = sqlc.arg('deployment_key')::deployment_key
@@ -313,8 +313,8 @@ VALUES (
   sqlc.arg('payload')
 );
 
--- name: InsertDeploymentUpdatedEvent :exec
-INSERT INTO events (
+-- name: InsertTimelineDeploymentUpdatedEvent :exec
+INSERT INTO timeline (
   deployment_id,
   type,
   custom_key_1,
@@ -333,8 +333,8 @@ VALUES (
   sqlc.arg('payload')
 );
 
--- name: InsertCallEvent :exec
-INSERT INTO events (
+-- name: InsertTimelineCallEvent :exec
+INSERT INTO timeline (
   deployment_id,
   request_id,
   parent_request_id,
@@ -365,9 +365,9 @@ VALUES (
   sqlc.arg('payload')
 );
 
--- name: DeleteOldEvents :one
+-- name: DeleteOldTimelineEvents :one
 WITH deleted AS (
-    DELETE FROM events
+    DELETE FROM timeline
     WHERE time_stamp < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
       AND type = sqlc.arg('type')
     RETURNING 1
@@ -423,8 +423,8 @@ FROM ingress_routes ir
 WHERE d.min_replicas > 0;
 
 
--- name: InsertEvent :exec
-INSERT INTO events (deployment_id, request_id, parent_request_id, type,
+-- name: InsertTimelineEvent :exec
+INSERT INTO timeline (deployment_id, request_id, parent_request_id, type,
                     custom_key_1, custom_key_2, custom_key_3, custom_key_4,
                     payload)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -667,8 +667,8 @@ VALUES (
   sqlc.arg('name')::TEXT,
   sqlc.arg('event_type')::TEXT
 )
-ON CONFLICT (name, module_id) DO 
-UPDATE SET 
+ON CONFLICT (name, module_id) DO
+UPDATE SET
   type = sqlc.arg('event_type')::TEXT
 RETURNING id;
 
@@ -693,12 +693,12 @@ VALUES (
   sqlc.arg('name')::TEXT
 )
 ON CONFLICT (name, module_id) DO
-UPDATE SET 
+UPDATE SET
   topic_id = excluded.topic_id,
   deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployment')::deployment_key)
-RETURNING 
+RETURNING
   id,
-  CASE 
+  CASE
     WHEN xmax = 0 THEN true
     ELSE false
   END AS inserted;

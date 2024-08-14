@@ -331,9 +331,9 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
-const deleteOldEvents = `-- name: DeleteOldEvents :one
+const deleteOldTimelineEvents = `-- name: DeleteOldTimelineEvents :one
 WITH deleted AS (
-    DELETE FROM events
+    DELETE FROM timeline
     WHERE time_stamp < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
       AND type = $2
     RETURNING 1
@@ -342,8 +342,8 @@ SELECT COUNT(*)
 FROM deleted
 `
 
-func (q *Queries) DeleteOldEvents(ctx context.Context, timeout sqltypes.Duration, type_ EventType) (int64, error) {
-	row := q.db.QueryRowContext(ctx, deleteOldEvents, timeout, type_)
+func (q *Queries) DeleteOldTimelineEvents(ctx context.Context, timeout sqltypes.Duration, type_ EventType) (int64, error) {
+	row := q.db.QueryRowContext(ctx, deleteOldTimelineEvents, timeout, type_)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -1945,220 +1945,6 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 	return i, err
 }
 
-const insertCallEvent = `-- name: InsertCallEvent :exec
-INSERT INTO events (
-  deployment_id,
-  request_id,
-  parent_request_id,
-  time_stamp,
-  type,
-  custom_key_1,
-  custom_key_2,
-  custom_key_3,
-  custom_key_4,
-  payload
-)
-VALUES (
-  (SELECT id FROM deployments WHERE deployments.key = $1::deployment_key),
-  (CASE
-      WHEN $2::TEXT IS NULL THEN NULL
-      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT)
-    END),
-  (CASE
-      WHEN $3::TEXT IS NULL THEN NULL
-      ELSE (SELECT id FROM requests ir WHERE ir.key = $3::TEXT)
-    END),
-  $4::TIMESTAMPTZ,
-  'call',
-  $5::TEXT,
-  $6::TEXT,
-  $7::TEXT,
-  $8::TEXT,
-  $9
-)
-`
-
-type InsertCallEventParams struct {
-	DeploymentKey    model.DeploymentKey
-	RequestKey       optional.Option[string]
-	ParentRequestKey optional.Option[string]
-	TimeStamp        time.Time
-	SourceModule     optional.Option[string]
-	SourceVerb       optional.Option[string]
-	DestModule       string
-	DestVerb         string
-	Payload          json.RawMessage
-}
-
-func (q *Queries) InsertCallEvent(ctx context.Context, arg InsertCallEventParams) error {
-	_, err := q.db.ExecContext(ctx, insertCallEvent,
-		arg.DeploymentKey,
-		arg.RequestKey,
-		arg.ParentRequestKey,
-		arg.TimeStamp,
-		arg.SourceModule,
-		arg.SourceVerb,
-		arg.DestModule,
-		arg.DestVerb,
-		arg.Payload,
-	)
-	return err
-}
-
-const insertDeploymentCreatedEvent = `-- name: InsertDeploymentCreatedEvent :exec
-INSERT INTO events (
-  deployment_id,
-  type,
-  custom_key_1,
-  custom_key_2,
-  payload
-)
-VALUES (
-  ( 
-    SELECT id
-    FROM deployments
-    WHERE deployments.key = $1::deployment_key
-  ),
-  'deployment_created',
-  $2::TEXT,
-  $3::TEXT,
-  $4
-)
-`
-
-type InsertDeploymentCreatedEventParams struct {
-	DeploymentKey model.DeploymentKey
-	Language      string
-	ModuleName    string
-	Payload       json.RawMessage
-}
-
-func (q *Queries) InsertDeploymentCreatedEvent(ctx context.Context, arg InsertDeploymentCreatedEventParams) error {
-	_, err := q.db.ExecContext(ctx, insertDeploymentCreatedEvent,
-		arg.DeploymentKey,
-		arg.Language,
-		arg.ModuleName,
-		arg.Payload,
-	)
-	return err
-}
-
-const insertDeploymentUpdatedEvent = `-- name: InsertDeploymentUpdatedEvent :exec
-INSERT INTO events (
-  deployment_id,
-  type,
-  custom_key_1,
-  custom_key_2,
-  payload
-)
-VALUES (
-  (
-    SELECT id
-    FROM deployments
-    WHERE deployments.key = $1::deployment_key
-  ),
-  'deployment_updated',
-  $2::TEXT,
-  $3::TEXT,
-  $4
-)
-`
-
-type InsertDeploymentUpdatedEventParams struct {
-	DeploymentKey model.DeploymentKey
-	Language      string
-	ModuleName    string
-	Payload       json.RawMessage
-}
-
-func (q *Queries) InsertDeploymentUpdatedEvent(ctx context.Context, arg InsertDeploymentUpdatedEventParams) error {
-	_, err := q.db.ExecContext(ctx, insertDeploymentUpdatedEvent,
-		arg.DeploymentKey,
-		arg.Language,
-		arg.ModuleName,
-		arg.Payload,
-	)
-	return err
-}
-
-const insertEvent = `-- name: InsertEvent :exec
-INSERT INTO events (deployment_id, request_id, parent_request_id, type,
-                    custom_key_1, custom_key_2, custom_key_3, custom_key_4,
-                    payload)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id
-`
-
-type InsertEventParams struct {
-	DeploymentID    int64
-	RequestID       optional.Option[int64]
-	ParentRequestID optional.Option[string]
-	Type            EventType
-	CustomKey1      optional.Option[string]
-	CustomKey2      optional.Option[string]
-	CustomKey3      optional.Option[string]
-	CustomKey4      optional.Option[string]
-	Payload         json.RawMessage
-}
-
-func (q *Queries) InsertEvent(ctx context.Context, arg InsertEventParams) error {
-	_, err := q.db.ExecContext(ctx, insertEvent,
-		arg.DeploymentID,
-		arg.RequestID,
-		arg.ParentRequestID,
-		arg.Type,
-		arg.CustomKey1,
-		arg.CustomKey2,
-		arg.CustomKey3,
-		arg.CustomKey4,
-		arg.Payload,
-	)
-	return err
-}
-
-const insertLogEvent = `-- name: InsertLogEvent :exec
-INSERT INTO events (
-  deployment_id,
-  request_id,
-  time_stamp,
-  custom_key_1,
-  type,
-  payload
-)
-VALUES (
-  (SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
-  (
-    CASE
-      WHEN $2::TEXT IS NULL THEN NULL
-      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT LIMIT 1)
-    END
-  ),
-  $3::TIMESTAMPTZ,
-  $4::INT,
-  'log',
-  $5
-)
-`
-
-type InsertLogEventParams struct {
-	DeploymentKey model.DeploymentKey
-	RequestKey    optional.Option[string]
-	TimeStamp     time.Time
-	Level         int32
-	Payload       json.RawMessage
-}
-
-func (q *Queries) InsertLogEvent(ctx context.Context, arg InsertLogEventParams) error {
-	_, err := q.db.ExecContext(ctx, insertLogEvent,
-		arg.DeploymentKey,
-		arg.RequestKey,
-		arg.TimeStamp,
-		arg.Level,
-		arg.Payload,
-	)
-	return err
-}
-
 const insertSubscriber = `-- name: InsertSubscriber :exec
 INSERT INTO topic_subscribers (
   key,
@@ -2211,6 +1997,220 @@ func (q *Queries) InsertSubscriber(ctx context.Context, arg InsertSubscriberPara
 		arg.Backoff,
 		arg.MaxBackoff,
 		arg.CatchVerb,
+	)
+	return err
+}
+
+const insertTimelineCallEvent = `-- name: InsertTimelineCallEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  parent_request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  custom_key_3,
+  custom_key_4,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments WHERE deployments.key = $1::deployment_key),
+  (CASE
+      WHEN $2::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT)
+    END),
+  (CASE
+      WHEN $3::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $3::TEXT)
+    END),
+  $4::TIMESTAMPTZ,
+  'call',
+  $5::TEXT,
+  $6::TEXT,
+  $7::TEXT,
+  $8::TEXT,
+  $9
+)
+`
+
+type InsertTimelineCallEventParams struct {
+	DeploymentKey    model.DeploymentKey
+	RequestKey       optional.Option[string]
+	ParentRequestKey optional.Option[string]
+	TimeStamp        time.Time
+	SourceModule     optional.Option[string]
+	SourceVerb       optional.Option[string]
+	DestModule       string
+	DestVerb         string
+	Payload          []byte
+}
+
+func (q *Queries) InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelineCallEvent,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.ParentRequestKey,
+		arg.TimeStamp,
+		arg.SourceModule,
+		arg.SourceVerb,
+		arg.DestModule,
+		arg.DestVerb,
+		arg.Payload,
+	)
+	return err
+}
+
+const insertTimelineDeploymentCreatedEvent = `-- name: InsertTimelineDeploymentCreatedEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  type,
+  custom_key_1,
+  custom_key_2,
+  payload
+)
+VALUES (
+  (
+    SELECT id
+    FROM deployments
+    WHERE deployments.key = $1::deployment_key
+  ),
+  'deployment_created',
+  $2::TEXT,
+  $3::TEXT,
+  $4
+)
+`
+
+type InsertTimelineDeploymentCreatedEventParams struct {
+	DeploymentKey model.DeploymentKey
+	Language      string
+	ModuleName    string
+	Payload       []byte
+}
+
+func (q *Queries) InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelineDeploymentCreatedEvent,
+		arg.DeploymentKey,
+		arg.Language,
+		arg.ModuleName,
+		arg.Payload,
+	)
+	return err
+}
+
+const insertTimelineDeploymentUpdatedEvent = `-- name: InsertTimelineDeploymentUpdatedEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  type,
+  custom_key_1,
+  custom_key_2,
+  payload
+)
+VALUES (
+  (
+    SELECT id
+    FROM deployments
+    WHERE deployments.key = $1::deployment_key
+  ),
+  'deployment_updated',
+  $2::TEXT,
+  $3::TEXT,
+  $4
+)
+`
+
+type InsertTimelineDeploymentUpdatedEventParams struct {
+	DeploymentKey model.DeploymentKey
+	Language      string
+	ModuleName    string
+	Payload       []byte
+}
+
+func (q *Queries) InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelineDeploymentUpdatedEvent,
+		arg.DeploymentKey,
+		arg.Language,
+		arg.ModuleName,
+		arg.Payload,
+	)
+	return err
+}
+
+const insertTimelineEvent = `-- name: InsertTimelineEvent :exec
+INSERT INTO timeline (deployment_id, request_id, parent_request_id, type,
+                    custom_key_1, custom_key_2, custom_key_3, custom_key_4,
+                    payload)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id
+`
+
+type InsertTimelineEventParams struct {
+	DeploymentID    int64
+	RequestID       optional.Option[int64]
+	ParentRequestID optional.Option[string]
+	Type            EventType
+	CustomKey1      optional.Option[string]
+	CustomKey2      optional.Option[string]
+	CustomKey3      optional.Option[string]
+	CustomKey4      optional.Option[string]
+	Payload         []byte
+}
+
+func (q *Queries) InsertTimelineEvent(ctx context.Context, arg InsertTimelineEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelineEvent,
+		arg.DeploymentID,
+		arg.RequestID,
+		arg.ParentRequestID,
+		arg.Type,
+		arg.CustomKey1,
+		arg.CustomKey2,
+		arg.CustomKey3,
+		arg.CustomKey4,
+		arg.Payload,
+	)
+	return err
+}
+
+const insertTimelineLogEvent = `-- name: InsertTimelineLogEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  time_stamp,
+  custom_key_1,
+  type,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
+  (
+    CASE
+      WHEN $2::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT LIMIT 1)
+    END
+  ),
+  $3::TIMESTAMPTZ,
+  $4::INT,
+  'log',
+  $5
+)
+`
+
+type InsertTimelineLogEventParams struct {
+	DeploymentKey model.DeploymentKey
+	RequestKey    optional.Option[string]
+	TimeStamp     time.Time
+	Level         int32
+	Payload       []byte
+}
+
+func (q *Queries) InsertTimelineLogEvent(ctx context.Context, arg InsertTimelineLogEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelineLogEvent,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.TimeStamp,
+		arg.Level,
+		arg.Payload,
 	)
 	return err
 }
@@ -2708,12 +2708,12 @@ VALUES (
   $6::TEXT
 )
 ON CONFLICT (name, module_id) DO
-UPDATE SET 
+UPDATE SET
   topic_id = excluded.topic_id,
   deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
-RETURNING 
+RETURNING
   id,
-  CASE 
+  CASE
     WHEN xmax = 0 THEN true
     ELSE false
   END AS inserted
@@ -2755,8 +2755,8 @@ VALUES (
   $3::TEXT,
   $4::TEXT
 )
-ON CONFLICT (name, module_id) DO 
-UPDATE SET 
+ON CONFLICT (name, module_id) DO
+UPDATE SET
   type = $4::TEXT
 RETURNING id
 `
