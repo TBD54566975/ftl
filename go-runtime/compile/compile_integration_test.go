@@ -12,7 +12,7 @@ import (
 )
 
 func TestNonExportedDecls(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("time"),
 		in.Deploy("time"),
 		in.CopyModule("echo"),
@@ -26,7 +26,7 @@ func TestNonExportedDecls(t *testing.T) {
 }
 
 func TestUndefinedExportedDecls(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("time"),
 		in.Deploy("time"),
 		in.CopyModule("echo"),
@@ -40,7 +40,7 @@ func TestUndefinedExportedDecls(t *testing.T) {
 }
 
 func TestNonFTLTypes(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("external"),
 		in.Deploy("external"),
 		in.Call("external", "echo", in.Obj{"message": "hello"}, func(t testing.TB, response in.Obj) {
@@ -50,7 +50,7 @@ func TestNonFTLTypes(t *testing.T) {
 }
 
 func TestNonStructRequestResponse(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("two"),
 		in.Deploy("two"),
 		in.CopyModule("one"),

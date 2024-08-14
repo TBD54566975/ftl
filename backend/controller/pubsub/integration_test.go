@@ -15,7 +15,7 @@ import (
 func TestPubSub(t *testing.T) {
 	calls := 20
 	events := calls * 10
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -40,7 +40,7 @@ func TestPubSub(t *testing.T) {
 }
 
 func TestConsumptionDelay(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -83,7 +83,7 @@ func TestConsumptionDelay(t *testing.T) {
 
 func TestRetry(t *testing.T) {
 	retriesPerCall := 2
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -135,7 +135,7 @@ func TestRetry(t *testing.T) {
 }
 
 func TestExternalPublishRuntimeCheck(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),

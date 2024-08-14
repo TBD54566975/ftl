@@ -51,13 +51,18 @@ func GitInit() Action {
 
 // Copy a module from the testdata directory to the working directory.
 //
-// Ensures that replace directives are correctly handled.
+// Ensures that any language-specific local modifications are made correctly,
+// such as Go module file replace directives for FTL.
 func CopyModule(module string) Action {
 	return Chain(
 		CopyDir(module, module),
 		func(t testing.TB, ic TestContext) {
-			err := ftlexec.Command(ic, log.Debug, filepath.Join(ic.workDir, module), "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.RootDir).RunBuffered(ic)
-			assert.NoError(t, err)
+			root := filepath.Join(ic.workDir, module)
+			// TODO: Load the module configuration from the module itself and use that to determine the language-specific stuff.
+			if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
+				err := ftlexec.Command(ic, log.Debug, root, "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.RootDir).RunBuffered(ic)
+				assert.NoError(t, err)
+			}
 		},
 	)
 }

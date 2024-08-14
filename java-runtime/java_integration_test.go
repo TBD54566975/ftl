@@ -14,7 +14,8 @@ import (
 )
 
 func TestJavaToGoCall(t *testing.T) {
-	in.RunWithJava(t, "",
+	in.Run(t,
+		in.WithJava(),
 		in.CopyModule("gomodule"),
 		in.CopyDir("javamodule", "javamodule"),
 		in.Deploy("gomodule"),

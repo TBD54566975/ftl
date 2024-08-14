@@ -24,8 +24,13 @@ import (
 	awsv1kms "github.com/aws/aws-sdk-go/service/kms"
 )
 
+func WithEncryption() in.Option {
+	return in.WithEnvar("FTL_KMS_URI", "fake-kms://CKbvh_ILElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEE6tD2yE5AWYOirhmkY-r3sYARABGKbvh_ILIAE")
+}
+
 func TestEncryptionForLogs(t *testing.T) {
-	in.RunWithEncryption(t, "",
+	in.Run(t,
+		WithEncryption(),
 		in.CopyModule("encryption"),
 		in.Deploy("encryption"),
 		in.Call[map[string]interface{}, any]("encryption", "echo", map[string]interface{}{"name": "Alice"}, nil),
@@ -61,7 +66,8 @@ func TestEncryptionForLogs(t *testing.T) {
 }
 
 func TestEncryptionForPubSub(t *testing.T) {
-	in.RunWithEncryption(t, "",
+	in.Run(t,
+		WithEncryption(),
 		in.CopyModule("encryption"),
 		in.Deploy("encryption"),
 		in.Call[map[string]interface{}, any]("encryption", "publish", map[string]interface{}{"name": "AliceInWonderland"}, nil),
@@ -81,7 +87,8 @@ func TestEncryptionForPubSub(t *testing.T) {
 }
 
 func TestEncryptionForFSM(t *testing.T) {
-	in.RunWithEncryption(t, "",
+	in.Run(t,
+		WithEncryption(),
 		in.CopyModule("encryption"),
 		in.Deploy("encryption"),
 		in.Call[map[string]interface{}, any]("encryption", "beginFsm", map[string]interface{}{"name": "Rosebud"}, nil),

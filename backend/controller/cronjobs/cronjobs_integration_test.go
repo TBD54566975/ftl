@@ -53,7 +53,7 @@ func TestCron(t *testing.T) {
 
 	t.Cleanup(func() { _ = os.Remove(tmpFile) })
 
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("cron"),
 		in.Deploy("cron"),
 		func(t testing.TB, ic in.TestContext) {

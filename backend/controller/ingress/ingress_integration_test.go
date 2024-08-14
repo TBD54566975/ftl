@@ -14,7 +14,7 @@ import (
 )
 
 func TestHttpIngress(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("httpingress"),
 		in.Deploy("httpingress"),
 		in.HttpCall(http.MethodGet, "/users/123/posts/456", nil, in.JsonData(t, in.Obj{}), func(t testing.TB, resp *in.HTTPResponse) {
@@ -152,7 +152,7 @@ func TestHttpIngress(t *testing.T) {
 func TestHttpIngressWithCors(t *testing.T) {
 	os.Setenv("FTL_CONTROLLER_ALLOW_ORIGIN", "http://localhost:8892")
 	os.Setenv("FTL_CONTROLLER_ALLOW_HEADERS", "x-forwarded-capabilities")
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("httpingress"),
 		in.Deploy("httpingress"),
 		// A correct CORS preflight request

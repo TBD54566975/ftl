@@ -18,7 +18,7 @@ import (
 )
 
 func TestLease(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("leases"),
 		in.Build("leases"),
 		// checks if leases work in a unit test environment

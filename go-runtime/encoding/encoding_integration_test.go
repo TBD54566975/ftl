@@ -6,12 +6,13 @@ import (
 	"net/http"
 	"testing"
 
-	in "github.com/TBD54566975/ftl/integration"
 	"github.com/alecthomas/assert/v2"
+
+	in "github.com/TBD54566975/ftl/integration"
 )
 
 func TestHttpEncodeOmitempty(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("omitempty"),
 		in.Deploy("omitempty"),
 		in.HttpCall(http.MethodGet, "/get", nil, in.JsonData(t, in.Obj{}), func(t testing.TB, resp *in.HTTPResponse) {
