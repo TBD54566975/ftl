@@ -115,7 +115,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 
-	decryptedRequest, err := d.decrypt(encryption.AsyncSubKey, row.Request)
+	decryptedRequest, err := d.decrypt(&row.Request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}
@@ -158,11 +158,12 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	didScheduleAnotherCall = false
 	switch result := result.(type) {
 	case either.Left[[]byte, string]: // Successful response.
-		encryptedResult, err := d.encrypt(encryption.AsyncSubKey, result.Get())
+		var encryptedResult encryption.EncryptedAsyncColumn
+		err := d.encrypt(result.Get(), &encryptedResult)
 		if err != nil {
 			return false, fmt.Errorf("failed to encrypt async call result: %w", err)
 		}
-		_, err = tx.db.SucceedAsyncCall(ctx, encryptedResult, call.ID)
+		_, err = tx.db.SucceedAsyncCall(ctx, optional.Some(encryptedResult), call.ID)
 		if err != nil {
 			return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
 		}
@@ -227,7 +228,7 @@ func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
-	request, err := d.decrypt(encryption.AsyncSubKey, row.Request)
+	request, err := d.decrypt(&row.Request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}

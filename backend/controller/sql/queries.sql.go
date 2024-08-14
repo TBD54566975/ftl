@@ -13,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
@@ -67,7 +68,7 @@ type AcquireAsyncCallRow struct {
 	Origin              string
 	Verb                schema.RefKey
 	CatchVerb           optional.Option[schema.RefKey]
-	Request             []byte
+	Request             encryption.EncryptedAsyncColumn
 	ScheduledAt         time.Time
 	RemainingAttempts   int32
 	Error               optional.Option[string]
@@ -218,7 +219,7 @@ RETURNING id
 type CreateAsyncCallParams struct {
 	Verb              schema.RefKey
 	Origin            string
-	Request           []byte
+	Request           encryption.EncryptedAsyncColumn
 	RemainingAttempts int32
 	Backoff           sqltypes.Duration
 	MaxBackoff        sqltypes.Duration
@@ -2045,7 +2046,7 @@ type InsertTimelineCallEventParams struct {
 	SourceVerb       optional.Option[string]
 	DestModule       string
 	DestVerb         string
-	Payload          []byte
+	Payload          encryption.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error {
@@ -2088,7 +2089,7 @@ type InsertTimelineDeploymentCreatedEventParams struct {
 	DeploymentKey model.DeploymentKey
 	Language      string
 	ModuleName    string
-	Payload       []byte
+	Payload       encryption.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error {
@@ -2126,7 +2127,7 @@ type InsertTimelineDeploymentUpdatedEventParams struct {
 	DeploymentKey model.DeploymentKey
 	Language      string
 	ModuleName    string
-	Payload       []byte
+	Payload       encryption.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error {
@@ -2156,7 +2157,7 @@ type InsertTimelineEventParams struct {
 	CustomKey2      optional.Option[string]
 	CustomKey3      optional.Option[string]
 	CustomKey4      optional.Option[string]
-	Payload         []byte
+	Payload         encryption.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineEvent(ctx context.Context, arg InsertTimelineEventParams) error {
@@ -2203,7 +2204,7 @@ type InsertTimelineLogEventParams struct {
 	RequestKey    optional.Option[string]
 	TimeStamp     time.Time
 	Level         int32
-	Payload       []byte
+	Payload       encryption.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineLogEvent(ctx context.Context, arg InsertTimelineLogEventParams) error {
@@ -2637,7 +2638,7 @@ WHERE id = $2
 RETURNING true
 `
 
-func (q *Queries) SucceedAsyncCall(ctx context.Context, response []byte, iD int64) (bool, error) {
+func (q *Queries) SucceedAsyncCall(ctx context.Context, response encryption.OptionalEncryptedAsyncColumn, iD int64) (bool, error) {
 	row := q.db.QueryRowContext(ctx, succeedAsyncCall, response, iD)
 	var column_1 bool
 	err := row.Scan(&column_1)

@@ -13,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
@@ -378,8 +379,8 @@ type AsyncCall struct {
 	State             AsyncCallState
 	Origin            string
 	ScheduledAt       time.Time
-	Request           []byte
-	Response          []byte
+	Request           encryption.EncryptedAsyncColumn
+	Response          encryption.OptionalEncryptedAsyncColumn
 	Error             optional.Option[string]
 	RemainingAttempts int32
 	Backoff           sqltypes.Duration
@@ -525,7 +526,7 @@ type Timeline struct {
 	CustomKey2      optional.Option[string]
 	CustomKey3      optional.Option[string]
 	CustomKey4      optional.Option[string]
-	Payload         []byte
+	Payload         encryption.EncryptedTimelineColumn
 	ParentRequestID optional.Option[string]
 }
 

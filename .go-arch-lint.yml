@@ -101,3 +101,7 @@ deps:
       - internal
       - sql
       - leases
+  encoding:
+    mayDependOn:
+      - common
+      - internal

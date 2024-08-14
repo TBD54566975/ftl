@@ -9,13 +9,14 @@ import (
 func TestNoOpEncryptor(t *testing.T) {
 	encryptor := NoOpEncryptorNext{}
 
-	encrypted, err := encryptor.Encrypt(TimelineSubKey, []byte("hunter2"))
+	var encrypted EncryptedTimelineColumn
+	err := encryptor.Encrypt([]byte("hunter2"), &encrypted)
 	assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(TimelineSubKey, encrypted)
+	decryptedLogs, err := encryptor.Decrypt(&encrypted)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "hunter2", string(decrypted))
+	assert.Equal(t, "hunter2", string(decryptedLogs))
 }
 
 // echo -n "fake-kms://" && tinkey create-keyset --key-template AES128_GCM --out-format binary | base64 | tr '+/' '-_' | tr -d '='
@@ -25,14 +26,16 @@ func TestKMSEncryptorFakeKMS(t *testing.T) {
 	encryptor, err := NewKMSEncryptorGenerateKey(uri, nil)
 	assert.NoError(t, err)
 
-	encrypted, err := encryptor.Encrypt(TimelineSubKey, []byte("hunter2"))
+	var encrypted EncryptedTimelineColumn
+	err = encryptor.Encrypt([]byte("hunter2"), &encrypted)
 	assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(TimelineSubKey, encrypted)
+	decrypted, err := encryptor.Decrypt(&encrypted)
 	assert.NoError(t, err)
 	assert.Equal(t, "hunter2", string(decrypted))
 
+	wrongSubKey := EncryptedAsyncColumn(encrypted)
 	// Should fail to decrypt with the wrong subkey
-	_, err = encryptor.Decrypt(AsyncSubKey, encrypted)
+	_, err = encryptor.Decrypt(&wrongSubKey)
 	assert.Error(t, err)
 }

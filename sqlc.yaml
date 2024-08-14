@@ -64,6 +64,16 @@ sql:
             nullable: true
             go_type:
               type: "optional.Option[model.CronJobKey]"
+          - db_type: "encrypted_async"
+            go_type: "github.com/TBD54566975/ftl/internal/encryption.EncryptedAsyncColumn"
+          - db_type: "encrypted_async"
+            nullable: true
+            go_type: "github.com/TBD54566975/ftl/internal/encryption.OptionalEncryptedAsyncColumn"
+          - db_type: "encrypted_timeline"
+            go_type: "github.com/TBD54566975/ftl/internal/encryption.EncryptedTimelineColumn"
+          - db_type: "encrypted_timeline"
+            nullable: true
+            go_type: "github.com/TBD54566975/ftl/internal/encryption.OptionalEncryptedTimelineColumn"
           - db_type: "lease_key"
             go_type: "github.com/TBD54566975/ftl/backend/controller/leases.Key"
           - db_type: "lease_key"
