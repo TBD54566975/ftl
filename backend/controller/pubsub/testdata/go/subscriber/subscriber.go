@@ -14,12 +14,12 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-var _ = ftl.Subscription(publisher.TestTopic, "testSubscription")
+var _ = ftl.Subscription(publisher.TestTopic, "testTopicSubscription")
 
 var catchCount atomic.Value[int]
 
 //ftl:verb
-//ftl:subscribe testSubscription
+//ftl:subscribe testTopicSubscription
 func Consume(ctx context.Context, req publisher.PubSubEvent) error {
 	ftl.LoggerFromContext(ctx).Infof("Subscriber is consuming %v", req.Time)
 	return nil
