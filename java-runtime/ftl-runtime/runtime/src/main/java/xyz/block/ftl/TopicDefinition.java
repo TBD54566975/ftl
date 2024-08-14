@@ -12,6 +12,6 @@ public @interface TopicDefinition {
      *
      * @return The name of the topic
      */
-    String name();
+    String value();
 
 }

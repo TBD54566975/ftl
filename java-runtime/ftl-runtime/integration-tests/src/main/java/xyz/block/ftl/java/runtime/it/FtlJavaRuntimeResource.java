@@ -43,4 +43,9 @@ public class FtlJavaRuntimeResource {
     public void publish(Person person, MyTopic topic) {
         topic.publish(person);
     }
+
+    @Verb
+    public byte[] bytes(byte[] bytes) {
+        return bytes;
+    }
 }

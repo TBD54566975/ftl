@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -116,20 +116,20 @@ public class FTLCodeGenerator implements CodeGenProvider {
                             typeBuilder.addSuperinterface(ClassName.get(VerbClientEmpty.class));
                         } else if (verb.getRequest().hasUnit()) {
                             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class),
-                                    toJavaTypeName(verb.getResponse(), typeAliasMap)));
+                                    toJavaTypeName(verb.getResponse(), typeAliasMap, true)));
                             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
                                     .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap))
                                     .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
                         } else if (verb.getResponse().hasUnit()) {
                             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class),
-                                    toJavaTypeName(verb.getRequest(), typeAliasMap)));
+                                    toJavaTypeName(verb.getRequest(), typeAliasMap, true)));
                             typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID)
                                     .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value")
                                     .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
                         } else {
                             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class),
-                                    toJavaTypeName(verb.getRequest(), typeAliasMap),
-                                    toJavaTypeName(verb.getResponse(), typeAliasMap)));
+                                    toJavaTypeName(verb.getRequest(), typeAliasMap, true),
+                                    toJavaTypeName(verb.getResponse(), typeAliasMap, true)));
                             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
                                     .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap))
                                     .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value")
@@ -274,29 +274,29 @@ public class FTLCodeGenerator implements CodeGenProvider {
     }
 
     private TypeName toAnnotatedJavaTypeName(Type type, Map<Key, Type> typeAliasMap) {
-        var results = toJavaTypeName(type, typeAliasMap);
+        var results = toJavaTypeName(type, typeAliasMap, false);
         if (type.hasRef() || type.hasArray() || type.hasBytes() || type.hasString() || type.hasMap() || type.hasTime()) {
             return results.annotated(AnnotationSpec.builder(NotNull.class).build());
         }
         return results;
     }
 
-    private TypeName toJavaTypeName(Type type, Map<Key, Type> typeAliasMap) {
+    private TypeName toJavaTypeName(Type type, Map<Key, Type> typeAliasMap, boolean boxPrimitives) {
         if (type.hasArray()) {
             return ParameterizedTypeName.get(ClassName.get(List.class),
-                    toJavaTypeName(type.getArray().getElement(), typeAliasMap));
+                    toJavaTypeName(type.getArray().getElement(), typeAliasMap, false));
         } else if (type.hasString()) {
             return ClassName.get(String.class);
         } else if (type.hasOptional()) {
-            return toJavaTypeName(type.getOptional().getType(), typeAliasMap);
+            // Always box for optional, as normal primities can't be null
+            return toJavaTypeName(type.getOptional().getType(), typeAliasMap, true);
         } else if (type.hasRef()) {
             if (type.getRef().getModule().isEmpty()) {
                 return TypeVariableName.get(type.getRef().getName());
             }
-
             Key key = new Key(type.getRef().getModule(), type.getRef().getName());
             if (typeAliasMap.containsKey(key)) {
-                return toJavaTypeName(typeAliasMap.get(key), typeAliasMap);
+                return toJavaTypeName(typeAliasMap.get(key), typeAliasMap, boxPrimitives);
             }
             var params = type.getRef().getTypeParametersList();
             ClassName className = ClassName.get(PACKAGE_PREFIX + type.getRef().getModule(), type.getRef().getName());
@@ -304,22 +304,23 @@ public class FTLCodeGenerator implements CodeGenProvider {
                 return className;
             }
             List<TypeName> javaTypes = params.stream()
-                    .map(s -> s.hasUnit() ? WildcardTypeName.subtypeOf(Object.class) : toJavaTypeName(s, typeAliasMap))
+                    .map(s -> s.hasUnit() ? WildcardTypeName.subtypeOf(Object.class) : toJavaTypeName(s, typeAliasMap, true))
                     .toList();
             return ParameterizedTypeName.get(className, javaTypes.toArray(new TypeName[javaTypes.size()]));
         } else if (type.hasMap()) {
-            return ParameterizedTypeName.get(ClassName.get(Map.class), toJavaTypeName(type.getMap().getKey(), typeAliasMap),
-                    toJavaTypeName(type.getMap().getValue(), typeAliasMap));
+            return ParameterizedTypeName.get(ClassName.get(Map.class),
+                    toJavaTypeName(type.getMap().getKey(), typeAliasMap, true),
+                    toJavaTypeName(type.getMap().getValue(), typeAliasMap, true));
         } else if (type.hasTime()) {
-            return ClassName.get(Instant.class);
+            return ClassName.get(ZonedDateTime.class);
         } else if (type.hasInt()) {
-            return TypeName.LONG;
+            return boxPrimitives ? ClassName.get(Long.class) : TypeName.LONG;
         } else if (type.hasUnit()) {
             return TypeName.VOID;
         } else if (type.hasBool()) {
-            return TypeName.BOOLEAN;
+            return boxPrimitives ? ClassName.get(Boolean.class) : TypeName.BOOLEAN;
         } else if (type.hasFloat()) {
-            return TypeName.DOUBLE;
+            return boxPrimitives ? ClassName.get(Double.class) : TypeName.DOUBLE;
         } else if (type.hasBytes()) {
             return ArrayTypeName.of(TypeName.BYTE);
         } else if (type.hasAny()) {

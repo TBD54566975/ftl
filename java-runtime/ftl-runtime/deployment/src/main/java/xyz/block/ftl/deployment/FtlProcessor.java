@@ -6,7 +6,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -20,10 +22,12 @@ import java.util.stream.Collectors;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
+import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.VoidType;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.common.model.MethodParameter;
@@ -85,6 +89,7 @@ import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
+import xyz.block.ftl.v1.schema.Bytes;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Decl;
 import xyz.block.ftl.v1.schema.Field;
@@ -123,6 +128,9 @@ class FtlProcessor {
     public static final DotName OFFSET_DATE_TIME = DotName.createSimple(OffsetDateTime.class.getName());
     public static final DotName GENERATED_REF = DotName.createSimple(GeneratedRef.class);
     public static final DotName LEASE_CLIENT = DotName.createSimple(LeaseClient.class);
+    public static final DotName INSTANT = DotName.createSimple(Instant.class);
+    public static final DotName ZONED_DATE_TIME = DotName.createSimple(ZonedDateTime.class);
+    public static final DotName NOT_NULL = DotName.createSimple(NotNull.class);
 
     @BuildStep
     ModuleNameBuildItem moduleName(ApplicationInfoBuildItem applicationInfoBuildItem) {
@@ -326,9 +334,11 @@ class FtlProcessor {
 
         output = outputTargetBuildItem.getOutputDirectory().resolve("main");
         try (var out = Files.newOutputStream(output)) {
-            out.write("""
-                    #!/bin/bash
-                    exec java -jar quarkus-app/quarkus-run.jar""".getBytes(StandardCharsets.UTF_8));
+            out.write(
+                    """
+                            #!/bin/bash
+                            exec java $FTL_JVM_OPTS -jar quarkus-app/quarkus-run.jar"""
+                            .getBytes(StandardCharsets.UTF_8));
         }
         var perms = Files.getPosixFilePermissions(output);
         EnumSet<PosixFilePermission> newPerms = EnumSet.copyOf(perms);
@@ -536,9 +546,33 @@ class FtlProcessor {
                 default:
                     throw new RuntimeException("Unknown primitive type " + param.asPrimitiveType().primitive());
             }
-        } else {
-            throw new RuntimeException("Unknown type " + param.kind());
+        } else if (param.kind() == org.jboss.jandex.Type.Kind.ARRAY) {
+            ArrayType array = param.asArrayType();
+            if (array.componentType().kind() == org.jboss.jandex.Type.Kind.PRIMITIVE) {
+                switch (array.componentType().asPrimitiveType().primitive()) {
+                    case BOOLEAN:
+                        return boolean[].class;
+                    case BYTE:
+                        return byte[].class;
+                    case SHORT:
+                        return short[].class;
+                    case INT:
+                        return int[].class;
+                    case LONG:
+                        return long[].class;
+                    case FLOAT:
+                        return float[].class;
+                    case DOUBLE:
+                        return double[].class;
+                    case CHAR:
+                        return char[].class;
+                    default:
+                        throw new RuntimeException("Unknown primitive type " + param.asPrimitiveType().primitive());
+                }
+            }
         }
+        throw new RuntimeException("Unknown type " + param.kind());
+
     }
 
     /**
@@ -592,13 +626,27 @@ class FtlProcessor {
                 return Type.newBuilder().setUnit(Unit.newBuilder().build()).build();
             }
             case ARRAY -> {
+                ArrayType arrayType = type.asArrayType();
+                if (arrayType.componentType().kind() == org.jboss.jandex.Type.Kind.PRIMITIVE && arrayType
+                        .componentType().asPrimitiveType().primitive() == PrimitiveType.Primitive.BYTE) {
+                    return Type.newBuilder().setBytes(Bytes.newBuilder().build()).build();
+                }
                 return Type.newBuilder()
-                        .setArray(Array.newBuilder().setElement(buildType(context, type.asArrayType().componentType())).build())
+                        .setArray(Array.newBuilder().setElement(buildType(context, arrayType.componentType())).build())
                         .build();
             }
             case CLASS -> {
                 var clazz = type.asClassType();
                 var info = context.index().getComputingIndex().getClassByName(clazz.name());
+
+                PrimitiveType unboxed = PrimitiveType.unbox(clazz);
+                if (unboxed != null) {
+                    Type primitive = buildType(context, unboxed);
+                    if (type.hasAnnotation(NOT_NULL)) {
+                        return primitive;
+                    }
+                    return Type.newBuilder().setOptional(Optional.newBuilder().setType(primitive)).build();
+                }
                 if (info != null && info.hasDeclaredAnnotation(GENERATED_REF)) {
                     var ref = info.declaredAnnotation(GENERATED_REF);
                     return Type.newBuilder()
@@ -610,6 +658,12 @@ class FtlProcessor {
                     return Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
                 }
                 if (clazz.name().equals(OFFSET_DATE_TIME)) {
+                    return Type.newBuilder().setTime(Time.newBuilder().build()).build();
+                }
+                if (clazz.name().equals(INSTANT)) {
+                    return Type.newBuilder().setTime(Time.newBuilder().build()).build();
+                }
+                if (clazz.name().equals(ZONED_DATE_TIME)) {
                     return Type.newBuilder().setTime(Time.newBuilder().build()).build();
                 }
                 var existing = context.dataElements.get(new TypeKey(clazz.name().toString(), List.of()));
@@ -636,6 +690,7 @@ class FtlProcessor {
                             .setValue(buildType(context, paramType.arguments().get(0))))
                             .build();
                 } else if (paramType.name().equals(DotNames.OPTIONAL)) {
+                    //TODO: optional kinda sucks
                     return Type.newBuilder()
                             .setOptional(Optional.newBuilder().setType(buildType(context, paramType.arguments().get(0))))
                             .build();

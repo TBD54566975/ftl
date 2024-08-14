@@ -51,7 +51,7 @@ public class TopicsProcessor {
                         + " with a concrete type parameter " + iface.name() + " does not extend this interface");
             }
 
-            String name = topicDefinition.value("name").asString();
+            String name = topicDefinition.value().asString();
             if (names.contains(name)) {
                 throw new RuntimeException("Multiple topic definitions found for topic " + name);
             }

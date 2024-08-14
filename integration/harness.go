@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"syscall"
 	"testing"
@@ -78,8 +79,10 @@ func WithEnvar(key, value string) Option {
 	}
 }
 
-// WithJava is a Run* option that ensures the Java runtime is built.
-func WithJava() Option {
+// WithJavaBuild is a Run* option that ensures the Java runtime is built.
+// If the test languages contain java this is not necessary, as it is implied
+// Note that this will not actually add Java as a language under test
+func WithJavaBuild() Option {
 	return func(o *options) {
 		o.requireJava = true
 	}
@@ -176,13 +179,14 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		Infof("Building ftl")
 		err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 		assert.NoError(t, err)
-		if opts.requireJava {
-			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java").RunBuffered(ctx)
+		if opts.requireJava || slices.Contains(opts.languages, "java") {
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java", "-DskipTests").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
 	})
 
 	for _, language := range opts.languages {
+		ctx, done := context.WithCancel(ctx)
 		t.Run(language, func(t *testing.T) {
 			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
@@ -203,6 +207,8 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				workDir:  tmpDir,
 				binDir:   binDir,
 				Verbs:    verbs,
+				realT:    t,
+				language: language,
 			}
 
 			if opts.startController {
@@ -222,6 +228,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				ic.AssertWithRetry(t, action)
 			}
 		})
+		done()
 	}
 }
 
@@ -235,10 +242,18 @@ type TestContext struct {
 	testData string
 	// Path to the "bin" directory.
 	binDir string
+	// The Language under test
+	language string
 
 	Controller ftlv1connect.ControllerServiceClient
 	Console    pbconsoleconnect.ConsoleServiceClient
 	Verbs      ftlv1connect.VerbServiceClient
+
+	realT *testing.T
+}
+
+func (i TestContext) Run(name string, f func(t *testing.T)) bool {
+	return i.realT.Run(name, f)
 }
 
 // WorkingDir returns the temporary directory the test is executing in.
@@ -282,6 +297,11 @@ func (i TestContext) runAssertionOnce(t testing.TB, assertion Action) (err error
 }
 
 type Action func(t testing.TB, ic TestContext)
+
+type SubTest struct {
+	Name   string
+	Action Action
+}
 
 type logWriter struct {
 	mu     sync.Mutex
