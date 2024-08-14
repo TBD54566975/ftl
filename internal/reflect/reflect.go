@@ -13,7 +13,6 @@
 package reflect
 
 import (
-	"container/list"
 	"fmt"
 	"reflect"
 	"strings"
@@ -132,11 +131,6 @@ func copyAny(src any, ptrs map[uintptr]any, copyConf *copyConfig) (dst any) {
 		return src
 	}
 
-	// Special case list.List to handle its internal structure
-	if reflect.TypeOf(src) == reflect.TypeFor[*list.List]() {
-		return copyList(src.(*list.List), ptrs, copyConf)
-	}
-
 	// Look up the corresponding copy function.
 	switch v.Kind() {
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
@@ -145,11 +139,7 @@ func copyAny(src any, ptrs map[uintptr]any, copyConf *copyConfig) (dst any) {
 		reflect.Complex64, reflect.Complex128, reflect.Func:
 		dst = copyPremitive(src, ptrs, copyConf)
 	case reflect.String:
-		if v.Type() == reflect.TypeFor[string]() {
-			dst = strings.Clone(src.(string))
-		} else {
-			dst = copyStringAlias(src, ptrs, copyConf)
-		}
+		dst = strings.Clone(src.(string))
 	case reflect.Slice:
 		dst = copySlice(src, ptrs, copyConf)
 	case reflect.Array:
@@ -170,18 +160,6 @@ func copyAny(src any, ptrs map[uintptr]any, copyConf *copyConfig) (dst any) {
 	return
 }
 
-func copyList(src *list.List, ptrs map[uintptr]any, copyConf *copyConfig) *list.List {
-	if src == nil {
-		return nil
-	}
-	dst := list.New()
-	for e := src.Front(); e != nil; e = e.Next() {
-		copiedValue := copyAny(e.Value, ptrs, copyConf)
-		dst.PushBack(copiedValue)
-	}
-	return dst
-}
-
 func copyPremitive(src any, ptr map[uintptr]any, copyConf *copyConfig) (dst any) {
 	kind := reflect.ValueOf(src).Kind()
 	switch kind {
@@ -190,13 +168,6 @@ func copyPremitive(src any, ptr map[uintptr]any, copyConf *copyConfig) (dst any)
 	}
 	dst = src
 	return
-}
-
-func copyStringAlias(src any, ptr map[uintptr]any, copyConf *copyConfig) any {
-	v := reflect.ValueOf(src)
-	dc := reflect.New(v.Type()).Elem()
-	dc.Set(v)
-	return dc.Interface()
 }
 
 func copySlice(x any, ptrs map[uintptr]any, copyConf *copyConfig) any {

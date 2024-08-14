@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -14,10 +15,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/XSAM/otelsql"
 	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl"
@@ -148,14 +147,10 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		}
 		controllerCtx = cf.ContextWithSecrets(controllerCtx, sm)
 
-		// Bring up the DB connection for the controller.
-		conn, err := otelsql.Open("pgx", config.DSN)
+		// Bring up the DB connection and DAL.
+		conn, err := sql.Open("pgx", config.DSN)
 		if err != nil {
 			return fmt.Errorf("failed to bring up DB connection: %w", err)
-		}
-		err = otelsql.RegisterDBStatsMetrics(conn, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
-		if err != nil {
-			return fmt.Errorf("failed to register DB metrics: %w", err)
 		}
 
 		wg.Go(func() error {
