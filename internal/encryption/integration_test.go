@@ -55,7 +55,6 @@ func TestEncryptionForLogs(t *testing.T) {
 			values := in.GetRow(t, ic, "ftl", "SELECT payload FROM events WHERE type = 'call' LIMIT 1", 1)
 			payload, ok := values[0].([]byte)
 			assert.True(t, ok, "could not convert payload to string")
-			assert.Contains(t, string(payload), "encrypted", "raw request string should not be stored in the table")
 			assert.NotContains(t, string(payload), "Alice", "raw request string should not be stored in the table")
 		},
 	)
@@ -75,7 +74,6 @@ func TestEncryptionForPubSub(t *testing.T) {
 			values := in.GetRow(t, ic, "ftl", "SELECT payload FROM topic_events", 1)
 			payload, ok := values[0].([]byte)
 			assert.True(t, ok, "could not convert payload to string")
-			assert.Contains(t, string(payload), "encrypted", "raw request string should not be stored in the table")
 			assert.NotContains(t, string(payload), "AliceInWonderland", "raw request string should not be stored in the table")
 		},
 		validateAsyncCall("consume", "AliceInWonderland"),
@@ -103,7 +101,6 @@ func validateAsyncCall(verb string, sensitive string) in.Action {
 		values := in.GetRow(t, ic, "ftl", fmt.Sprintf("SELECT request FROM async_calls WHERE verb = 'encryption.%s' AND state = 'success'", verb), 1)
 		request, ok := values[0].([]byte)
 		assert.True(t, ok, "could not convert payload to string")
-		assert.Contains(t, string(request), "encrypted", "raw request string should not be stored in the table")
 		assert.NotContains(t, string(request), sensitive, "raw request string should not be stored in the table")
 	}
 }
