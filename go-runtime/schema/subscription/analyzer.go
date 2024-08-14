@@ -63,7 +63,7 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr 
 			common.Errorf(pass, callExpr, "subscription registration must have a topic")
 			return optional.None[*schema.Subscription]()
 		}
-		name := strcase.ToLowerCamel(varName)
+		name := strcase.ToLowerSnake(varName)
 		topicRef = &schema.Ref{
 			Module: moduleIdent.Name,
 			Name:   name,

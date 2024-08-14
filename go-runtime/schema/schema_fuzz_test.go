@@ -192,7 +192,7 @@ func (ExportedVariant) exportedTag() {}
 var Topic = ftl.Topic[` + symbol + `]("topic")
 
 //ftl:export
-var ExportedTopic = ftl.Topic[` + symbol + `]("exportedTopic")
+var ExportedTopic = ftl.Topic[` + symbol + `]("exported_topic")
 
 var _ = ftl.Subscription(Topic, "subscription")
 
@@ -334,7 +334,7 @@ module test {
 
   database postgres testDb
 
-  export topic exportedTopic {{.TypeName}}
+  export topic exported_topic {{.TypeName}}
   topic topic {{.TypeName}}
   subscription subscription test.topic
 
