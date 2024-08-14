@@ -61,7 +61,7 @@ func TestEncryptionForLogs(t *testing.T) {
 	)
 }
 
-func TestEncryptionForubSub(t *testing.T) {
+func TestEncryptionForPubSub(t *testing.T) {
 	in.RunWithEncryption(t, "",
 		in.CopyModule("encryption"),
 		in.Deploy("encryption"),
