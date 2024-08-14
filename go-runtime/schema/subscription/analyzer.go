@@ -73,9 +73,15 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr 
 		return optional.None[*schema.Subscription]()
 	}
 
+	subName := common.ExtractStringLiteralArg(pass, callExpr, 1)
+	expSubName := strcase.ToLowerCamel(subName)
+	if subName != expSubName {
+		common.Errorf(pass, node, "unsupported subscription name %q, did you mean to use %q?", subName, expSubName)
+		return optional.None[*schema.Subscription]()
+	}
 	subscription := &schema.Subscription{
 		Pos:   common.GoPosToSchemaPos(pass.Fset, callExpr.Pos()),
-		Name:  common.ExtractStringLiteralArg(pass, callExpr, 1),
+		Name:  subName,
 		Topic: topicRef,
 	}
 	common.ApplyMetadata[*schema.Subscription](pass, obj, func(md *common.ExtractedMetadata) {
