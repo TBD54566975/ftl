@@ -34,7 +34,7 @@ func TestPubSub(t *testing.T) {
 				WHERE
 					state = 'success'
 					AND origin = '%s'
-		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "testSubscription"}}.String()),
+		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "test_subscription"}}.String()),
 			events),
 	)
 }
@@ -103,7 +103,7 @@ func TestRetry(t *testing.T) {
 					state = 'error'
 					AND catching = false
 					AND origin = '%s'
-		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
+		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
 			1+retriesPerCall),
 
 		// check that there is one failed attempt to catch (we purposely fail the first one)
@@ -116,7 +116,7 @@ func TestRetry(t *testing.T) {
 				AND error = 'call to verb subscriber.catch failed: catching error'
 				AND catching = true
 				AND origin = '%s'
-	`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
+	`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
 			1),
 
 		// check that there is one successful attempt to catch (we succeed the second one as long as we receive the correct error in the request)
@@ -129,7 +129,7 @@ func TestRetry(t *testing.T) {
 			AND error IS NULL
 			AND catching = true
 			AND origin = '%s'
-`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
+`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
 			1),
 	)
 }
