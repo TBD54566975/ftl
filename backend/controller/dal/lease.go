@@ -96,7 +96,7 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 			return nil, nil, fmt.Errorf("failed to marshal lease metadata: %w", err)
 		}
 	}
-	idempotencyKey, err := d.db.NewLease(ctx, key, sqltypes.Duration(ttl), pqtype.NullRawMessage{RawMessage: metadataBytes})
+	idempotencyKey, err := d.db.NewLease(ctx, key, sqltypes.Duration(ttl), pqtype.NullRawMessage{RawMessage: metadataBytes, Valid: true})
 	if err != nil {
 		err = dalerrs.TranslatePGError(err)
 		if errors.Is(err, dalerrs.ErrConflict) {
@@ -130,8 +130,10 @@ func (d *DAL) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (e
 	if err != nil {
 		return expiry, dalerrs.TranslatePGError(err)
 	}
-	if err := json.Unmarshal(l.Metadata.RawMessage, metadata); err != nil {
-		return expiry, fmt.Errorf("could not unmarshal lease metadata: %w", err)
+	if l.Metadata.Valid {
+		if err := json.Unmarshal(l.Metadata.RawMessage, metadata); err != nil {
+			return expiry, fmt.Errorf("could not unmarshal lease metadata: %w", err)
+		}
 	}
 	return l.ExpiresAt, nil
 }
