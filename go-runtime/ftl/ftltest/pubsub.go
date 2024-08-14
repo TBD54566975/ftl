@@ -49,6 +49,9 @@ func newFakePubSub(ctx context.Context) *fakePubSub {
 }
 
 func (f *fakePubSub) publishEvent(topic *schema.Ref, event any) error {
+	// tracks event publication to a topic
+	f.publishWaitGroup.Add(1)
+	// tracks event subscription consumption completion
 	f.publishWaitGroup.Add(f.fetchTopicState(topic).subscriptionCount)
 	return f.globalTopic.PublishSync(publishEvent{topic: topic, content: event})
 }
@@ -169,6 +172,8 @@ func (f *fakePubSub) handlePubSubEvent(ctx context.Context, e pubSubEvent) {
 		logger.Debugf("publishing to %s: %v", event.topic.Name, event.content)
 		ts := f.fetchTopicState(event.topic)
 		ts.events = append(ts.events, event.content)
+		// indicate that the event has been published to the topic
+		f.publishWaitGroup.Done()
 	case subscriptionDidConsumeEvent:
 		sub, ok := f.subscriptions[event.subscription]
 		if !ok {
@@ -178,6 +183,7 @@ func (f *fakePubSub) handlePubSubEvent(ctx context.Context, e pubSubEvent) {
 			sub.errors[sub.cursor.MustGet()] = event.err
 		}
 		sub.isExecuting = false
+		// indicate that the subscription has processed the event
 		f.publishWaitGroup.Done()
 	}
 
