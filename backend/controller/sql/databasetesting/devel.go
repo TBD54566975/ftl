@@ -74,7 +74,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 
 	realConn, err := stdsql.Open("pgx", dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 	// Reset transient state in the database to a clean state for development purposes.
 	// This includes things like resetting the state of async calls, leases,
