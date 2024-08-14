@@ -19,7 +19,7 @@ top = false
 |               | Optional Type   | ✔️  | ✔️  |      |
 |               | Unit Type       | ✔️  | ✔️  |      |
 |               | Empty Type      | ✔️  | ✔️  |      |
-|               | Generic Types   | ✔️  | ️   |      |
+|               | Generic Types   | ✔️  | ✔️  |      |
 |               | Type Aliases    | ✔️  | ️   |      |
 |               | Value Enums     | ✔️  | ️   |      |
 |               | Type Enums      | ✔️  | ️   |      |
@@ -31,9 +31,9 @@ top = false
 |               | Visibility      | ✔️  | ✔️  |      |
 | **Core**      | FSM             | ✔️  | ️   |      |
 |               | Leases          | ✔️  | ✔️  |      |
-|               | Cron            | ✔️  |     |      |
+|               | Cron            | ✔️  | ✔️  |      |
 |               | Config          | ✔️  | ✔️  |      |
-|               | Secrets         | ✔️  |     |      |
+|               | Secrets         | ✔️  | ✔️  |      |
 |               | HTTP Ingress    | ✔️  | ✔️  |      |
 | **Resources** | PostgreSQL      | ✔️  | ️   |      |
 |               | MySQL           |     |     |      |
