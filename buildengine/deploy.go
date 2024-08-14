@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	goslices "slices"
 	"time"
 
 	"connectrpc.com/connect"
@@ -19,8 +20,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
-
-	goslices "slices"
 )
 
 type deploymentArtefact struct {
