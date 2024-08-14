@@ -19,10 +19,12 @@ import (
 
 func TestLease(t *testing.T) {
 	in.Run(t,
+		in.WithLanguages("go", "java"),
+		in.WithJava(),
 		in.CopyModule("leases"),
 		in.Build("leases"),
 		// checks if leases work in a unit test environment
-		in.ExecModuleTest("leases"),
+		in.IfLanguage("go", in.ExecModuleTest("leases")),
 		in.Deploy("leases"),
 		// checks if it leases work with a real controller
 		func(t testing.TB, ic in.TestContext) {
@@ -34,6 +36,7 @@ func TestLease(t *testing.T) {
 					Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
 					Body: []byte("{}"),
 				}))
+				assert.NoError(t, err)
 				if respErr := resp.Msg.GetError(); respErr != nil {
 					return fmt.Errorf("received error on first call: %v", respErr)
 				}

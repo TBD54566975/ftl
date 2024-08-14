@@ -183,6 +183,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	})
 
 	for _, language := range opts.languages {
+		ctx, done := context.WithCancel(ctx)
 		t.Run(language, func(t *testing.T) {
 			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
@@ -204,6 +205,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				binDir:   binDir,
 				Verbs:    verbs,
 				realT:    t,
+				language: language,
 			}
 
 			if opts.startController {
@@ -223,6 +225,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				ic.AssertWithRetry(t, action)
 			}
 		})
+		done()
 	}
 }
 
@@ -236,6 +239,8 @@ type TestContext struct {
 	testData string
 	// Path to the "bin" directory.
 	binDir string
+	// The Language under test
+	language string
 
 	Controller ftlv1connect.ControllerServiceClient
 	Console    pbconsoleconnect.ConsoleServiceClient

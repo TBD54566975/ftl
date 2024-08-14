@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -511,6 +512,18 @@ func HttpCall(method string, path string, headers map[string][]string, body []by
 			JsonBody:  resBody,
 			BodyBytes: bodyBytes,
 		})
+	}
+}
+
+func IfLanguage(language string, action Action) Action {
+	return IfLanguages(action, language)
+}
+
+func IfLanguages(action Action, languages ...string) Action {
+	return func(t testing.TB, ic TestContext) {
+		if slices.Contains(languages, ic.language) {
+			action(t, ic)
+		}
 	}
 }
 

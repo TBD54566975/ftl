@@ -18,9 +18,13 @@ public class VerbHandler extends VerbServiceGrpc.VerbServiceImplBase {
 
     @Override
     public void call(CallRequest request, StreamObserver<CallResponse> responseObserver) {
-        var response = registry.invoke(request);
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+        try {
+            var response = registry.invoke(request);
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(e);
+        }
     }
 
     @Override

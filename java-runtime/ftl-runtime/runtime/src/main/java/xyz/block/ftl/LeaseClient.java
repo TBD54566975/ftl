@@ -7,5 +7,13 @@ import java.time.Duration;
  */
 public interface LeaseClient {
 
-    void acquireLease(Duration duration, String... keys) throws LeaseFailedException;
+    /**
+     * Acquire a lease for the given keys. The lease will be held for the given duration.
+     *
+     * @param duration The time to acquire the lease for
+     * @param keys The lease keys
+     * @return A handle that can be used to release the lease
+     * @throws LeaseFailedException
+     */
+    LeaseHandle acquireLease(Duration duration, String... keys) throws LeaseFailedException;
 }

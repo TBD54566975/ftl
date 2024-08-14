@@ -3,10 +3,8 @@ package xyz.block.ftl.runtime;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.LinkedBlockingDeque;
 
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Singleton;
@@ -21,6 +19,7 @@ import io.grpc.stub.StreamObserver;
 import io.quarkus.runtime.Startup;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.LeaseFailedException;
+import xyz.block.ftl.LeaseHandle;
 import xyz.block.ftl.v1.AcquireLeaseRequest;
 import xyz.block.ftl.v1.AcquireLeaseResponse;
 import xyz.block.ftl.v1.CallRequest;
@@ -37,8 +36,6 @@ import xyz.block.ftl.v1.schema.Ref;
 public class FTLController implements LeaseClient {
     private static final Logger log = Logger.getLogger(FTLController.class);
     final String moduleName;
-    private StreamObserver<AcquireLeaseRequest> leaseClient;
-    private final Deque<CompletableFuture<?>> leaseWaiters = new LinkedBlockingDeque<>();
 
     private Throwable currentError;
     private volatile ModuleContextResponse moduleContextResponse;
@@ -96,33 +93,6 @@ public class FTLController implements LeaseClient {
         var channel = channelBuilder.build();
         verbService = VerbServiceGrpc.newStub(channel);
         verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
-        synchronized (this) {
-            this.leaseClient = verbService.acquireLease(new StreamObserver<AcquireLeaseResponse>() {
-                @Override
-                public void onNext(AcquireLeaseResponse value) {
-                    leaseWaiters.pop().complete(null);
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    synchronized (FTLController.this) {
-                        while (!leaseWaiters.isEmpty()) {
-                            leaseWaiters.pop().completeExceptionally(t);
-                        }
-                        if (!closed) {
-                            leaseClient = verbService.acquireLease(this);
-                        }
-                    }
-                }
-
-                @Override
-                public void onCompleted() {
-                    //if we have any waiters error them out
-                    //if we have not shut down we can try and connect again
-                    onError(new RuntimeException("stream closed"));
-                }
-            });
-        }
     }
 
     public byte[] getSecret(String secretName) {
@@ -201,21 +171,42 @@ public class FTLController implements LeaseClient {
         }
     }
 
-    public void acquireLease(Duration duration, String... keys) throws LeaseFailedException {
+    public LeaseHandle acquireLease(Duration duration, String... keys) throws LeaseFailedException {
         CompletableFuture<?> cf = new CompletableFuture<>();
-        synchronized (this) {
-            leaseWaiters.push(cf);
-            leaseClient.onNext(AcquireLeaseRequest.newBuilder().setModule(moduleName)
-                    .addAllKey(Arrays.asList(keys))
-                    .setTtl(com.google.protobuf.Duration.newBuilder()
-                            .setSeconds(duration.toSeconds()))
-                    .build());
-        }
+        var client = verbService.acquireLease(new StreamObserver<AcquireLeaseResponse>() {
+            @Override
+            public void onNext(AcquireLeaseResponse value) {
+                cf.complete(null);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                cf.completeExceptionally(t);
+            }
+
+            @Override
+            public void onCompleted() {
+                if (!cf.isDone()) {
+                    onError(new RuntimeException("stream closed"));
+                }
+            }
+        });
+        client.onNext(AcquireLeaseRequest.newBuilder().setModule(moduleName)
+                .addAllKey(Arrays.asList(keys))
+                .setTtl(com.google.protobuf.Duration.newBuilder()
+                        .setSeconds(duration.toSeconds()))
+                .build());
         try {
             cf.get();
         } catch (Exception e) {
-            throw new LeaseFailedException(e);
+            throw new LeaseFailedException("lease already held", e);
         }
+        return new LeaseHandle() {
+            @Override
+            public void close() {
+                client.onCompleted();
+            }
+        };
     }
 
     private ModuleContextResponse getModuleContext() {
