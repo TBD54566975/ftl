@@ -2,6 +2,7 @@ package dal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 )
 
 type asyncOriginParseRoot struct {
@@ -77,7 +77,7 @@ type AsyncCall struct {
 	Origin           AsyncOrigin
 	Verb             schema.RefKey
 	CatchVerb        optional.Option[schema.RefKey]
-	Request          []byte
+	Request          json.RawMessage
 	ScheduledAt      time.Time
 	QueueDepth       int64
 	ParentRequestKey optional.Option[string]
@@ -115,7 +115,8 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 
-	decryptedRequest, err := d.decrypt(encryption.AsyncSubKey, row.Request)
+	var decryptedRequest json.RawMessage
+	err = d.encryptors.Async.DecryptJSON(row.Request, &decryptedRequest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}
@@ -158,11 +159,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	didScheduleAnotherCall = false
 	switch result := result.(type) {
 	case either.Left[[]byte, string]: // Successful response.
-		encryptedResult, err := d.encrypt(encryption.AsyncSubKey, result.Get())
-		if err != nil {
-			return false, fmt.Errorf("failed to encrypt async call result: %w", err)
-		}
-		_, err = tx.db.SucceedAsyncCall(ctx, encryptedResult, call.ID)
+		_, err = tx.db.SucceedAsyncCall(ctx, result.Get(), call.ID)
 		if err != nil {
 			return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
 		}
@@ -227,14 +224,10 @@ func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
-	request, err := d.decrypt(encryption.AsyncSubKey, row.Request)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
-	}
 	return &AsyncCall{
 		ID:      row.ID,
 		Verb:    row.Verb,
 		Origin:  origin,
-		Request: request,
+		Request: row.Request,
 	}, nil
 }

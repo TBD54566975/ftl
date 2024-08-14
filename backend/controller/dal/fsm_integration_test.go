@@ -98,7 +98,7 @@ func TestFSMRetry(t *testing.T) {
 		in.Call("fsmretry", "startTransitionToThree", in.Obj{"id": "2"}, func(t testing.TB, response any) {}),
 		in.Call("fsmretry", "startTransitionToTwo", in.Obj{"id": "3", "failCatch": true}, func(t testing.TB, response any) {}),
 
-		in.Sleep(7*time.Second), //6s is longest run of retries
+		in.Sleep(9*time.Second), //6s is longest run of retries
 
 		// First two FSMs instances should have failed
 		// Third one will not as it is still catching

@@ -210,28 +210,33 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, conn *stdsql.DB, kmsURL optional.Option[string]) (*DAL, error) {
-	d := &DAL{
+func New(ctx context.Context, conn *stdsql.DB, encryptors *Encryptors) (*DAL, error) {
+	return &DAL{
 		db:                sql.NewDB(conn),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
-		kmsURL:            kmsURL,
-	}
-
-	if err := d.setupEncryptor(ctx); err != nil {
-		return nil, fmt.Errorf("failed to setup encryptor: %w", err)
-	}
-
-	return d, nil
+		encryptors:        encryptors,
+	}, nil
 }
 
 type DAL struct {
-	db sql.DBI
-
-	kmsURL    optional.Option[string]
-	encryptor encryption.DataEncryptor
+	db         sql.DBI
+	encryptors *Encryptors
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
+}
+
+type Encryptors struct {
+	Logs  encryption.Encryptable
+	Async encryption.Encryptable
+}
+
+// NoOpEncryptors do not encrypt potentially sensitive data.
+func NoOpEncryptors() *Encryptors {
+	return &Encryptors{
+		Logs:  encryption.NoOpEncryptor{},
+		Async: encryption.NoOpEncryptor{},
+	}
 }
 
 // Tx is DAL within a transaction.
@@ -280,8 +285,7 @@ func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
 	return &Tx{&DAL{
 		db:                tx,
 		DeploymentChanges: d.DeploymentChanges,
-		kmsURL:            d.kmsURL,
-		encryptor:         d.encryptor,
+		encryptors:        d.encryptors,
 	}}, nil
 }
 
@@ -709,7 +713,7 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return dalerrs.TranslatePGError(err)
 		}
 	}
-	payload, err := d.encryptJSON(encryption.LogsSubKey, map[string]interface{}{
+	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
 		"prev_min_replicas": deployment.MinReplicas,
 		"min_replicas":      minReplicas,
 	})
@@ -782,7 +786,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
-	payload, err := d.encryptJSON(encryption.LogsSubKey, map[string]any{
+	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
 		"min_replicas": int32(minReplicas),
 		"replaced":     replacedDeploymentKey,
 	})
@@ -1057,7 +1061,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		"error":      log.Error,
 		"stack":      log.Stack,
 	}
-	encryptedPayload, err := d.encryptJSON(encryption.LogsSubKey, payload)
+	encryptedPayload, err := d.encryptors.Logs.EncryptJSON(payload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
 	}
@@ -1137,7 +1141,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if pr, ok := call.ParentRequestKey.Get(); ok {
 		parentRequestKey = optional.Some(pr.String())
 	}
-	payload, err := d.encryptJSON(encryption.LogsSubKey, map[string]any{
+	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
 		"duration_ms": call.Duration.Milliseconds(),
 		"request":     call.Request,
 		"response":    call.Response,

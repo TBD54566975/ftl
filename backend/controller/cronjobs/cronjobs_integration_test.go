@@ -9,15 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
-	"github.com/benbjohnson/clock"
-
 	db "github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdb "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	in "github.com/TBD54566975/ftl/integration"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/alecthomas/assert/v2"
+	"github.com/benbjohnson/clock"
 )
 
 func TestServiceWithRealDal(t *testing.T) {
@@ -28,7 +26,7 @@ func TestServiceWithRealDal(t *testing.T) {
 
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal := db.New(conn)
-	parentDAL, err := parentdb.New(ctx, conn, optional.None[string]())
+	parentDAL, err := parentdb.New(ctx, conn, parentdb.NoOpEncryptors())
 	assert.NoError(t, err)
 
 	// Using a real clock because real db queries use db clock

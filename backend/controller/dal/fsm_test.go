@@ -2,7 +2,6 @@ package dal
 
 import (
 	"context"
-	"github.com/alecthomas/types/optional"
 	"testing"
 	"time"
 
@@ -18,7 +17,7 @@ import (
 func TestSendFSMEvent(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, optional.None[string]())
+	dal, err := New(ctx, conn, NoOpEncryptors())
 	assert.NoError(t, err)
 
 	_, err = dal.AcquireAsyncCall(ctx)

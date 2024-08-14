@@ -378,8 +378,8 @@ type AsyncCall struct {
 	State             AsyncCallState
 	Origin            string
 	ScheduledAt       time.Time
-	Request           []byte
-	Response          []byte
+	Request           json.RawMessage
+	Response          pqtype.NullRawMessage
 	Error             optional.Option[string]
 	RemainingAttempts int32
 	Backoff           sqltypes.Duration
@@ -427,12 +427,6 @@ type DeploymentArtefact struct {
 	CreatedAt    time.Time
 	Executable   bool
 	Path         string
-}
-
-type EncryptionKey struct {
-	ID        int64
-	Key       []byte
-	CreatedAt time.Time
 }
 
 type Event struct {

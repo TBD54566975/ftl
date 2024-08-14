@@ -25,7 +25,7 @@ import (
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, optional.None[string]())
+	dal, err := New(ctx, conn, NoOpEncryptors())
 	assert.NoError(t, err)
 	assert.NotZero(t, dal)
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
@@ -235,7 +235,7 @@ func TestDAL(t *testing.T) {
 		DeploymentKey: deploymentKey,
 		RequestKey:    optional.Some(requestKey),
 		Request:       []byte("{}"),
-		Response:      []byte(`{"time":"now"}`),
+		Response:      []byte(`{"time": "now"}`),
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
@@ -396,7 +396,6 @@ func normaliseEvents(events []Event) []Event {
 		f.Set(reflect.Zero(f.Type()))
 		events[i] = event
 	}
-
 	return events
 }
 
@@ -408,7 +407,7 @@ func assertEventsEqual(t *testing.T, expected, actual []Event) {
 func TestDeleteOldEvents(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, optional.None[string]())
+	dal, err := New(ctx, conn, NoOpEncryptors())
 	assert.NoError(t, err)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)

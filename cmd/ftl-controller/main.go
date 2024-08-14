@@ -9,7 +9,6 @@ import (
 
 	"github.com/XSAM/otelsql"
 	"github.com/alecthomas/kong"
-	"github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -45,9 +44,8 @@ func main() {
 	)
 	cli.ControllerConfig.SetDefaults()
 
-	if cli.ControllerConfig.KMSURI == nil {
-		kctx.Fatalf("KMSURI is required")
-	}
+	encryptors, err := cli.ControllerConfig.EncryptionKeys.Encryptors(true)
+	kctx.FatalIfErrorf(err, "failed to create encryptors")
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
 	err = observability.Init(ctx, false, "", "ftl-controller", ftl.Version, cli.ObservabilityConfig)
@@ -58,7 +56,7 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	err = otelsql.RegisterDBStatsMetrics(conn, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
 	kctx.FatalIfErrorf(err)
-	dal, err := dal.New(ctx, conn, optional.Some[string](*cli.ControllerConfig.KMSURI))
+	dal, err := dal.New(ctx, conn, encryptors)
 	kctx.FatalIfErrorf(err)
 
 	configDal, err := cfdal.New(ctx, conn)
@@ -79,6 +77,6 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	ctx = cf.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), conn)
+	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), conn, encryptors)
 	kctx.FatalIfErrorf(err)
 }

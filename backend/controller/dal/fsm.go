@@ -15,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 )
 
 // StartFSMTransition sends an event to an executing instance of an FSM.
@@ -32,7 +31,7 @@ import (
 //
 // Note: no validation of the FSM is performed.
 func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executionKey string, destinationState schema.RefKey, request json.RawMessage, retryParams schema.RetryParams) (err error) {
-	encryptedRequest, err := d.encryptJSON(encryption.AsyncSubKey, request)
+	encryptedRequest, err := d.encryptors.Async.EncryptJSON(request)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt FSM request: %w", err)
 	}
