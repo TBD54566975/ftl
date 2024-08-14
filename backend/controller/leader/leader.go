@@ -182,7 +182,9 @@ func (c *Coordinator[P]) createFollower() (out P, err error) {
 		}
 		return out, fmt.Errorf("could not get lease for %s: %w", c.key, err)
 	}
-	if urlString == c.advertise.String() {
+	if urlString == "" {
+		return out, fmt.Errorf("%s leader lease missing url in metadata", c.key)
+	} else if urlString == c.advertise.String() {
 		// This prevents endless loops after a lease breaks.
 		// If we create a follower pointing locally, the receiver will likely try to then call the leader, which starts the loop again.
 		return out, fmt.Errorf("could not follow %s leader at own url: %s", c.key, urlString)
@@ -219,4 +221,72 @@ func (c *Coordinator[P]) retireFollower() {
 	}
 	f.cancelCtx()
 	c.follower = optional.None[*follower[P]]()
+}
+
+// ErrorFilter allows uses of leases to decide if an error might be due to the master falling over,
+// or is something else that will not resolve itself after the TTL
+type ErrorFilter struct {
+	leaseTTL time.Duration
+	// Error reporting utilities
+	// If a controller has failed over we don't want error logs while we are waiting for the lease to expire.
+	// This records error state and allows us to filter errors until we are past lease timeout
+	// and only reports the error if it persists
+	// firstErrorTime is the time of the first error, used to lower log levels if the errors all occur within a lease window
+	firstErrorTime      optional.Option[time.Time]
+	recordedSuccessTime optional.Option[time.Time]
+
+	// errorMutex protects firstErrorTime
+	errorMutex sync.Mutex
+}
+
+func NewErrorFilter(leaseTTL time.Duration) *ErrorFilter {
+	return &ErrorFilter{
+		errorMutex: sync.Mutex{},
+		leaseTTL:   leaseTTL,
+	}
+}
+
+// ReportLeaseError reports that an operation that relies on the leader being up has failed
+// If this is either the first report or the error is within the lease timeout duration from
+// the time of the first report it will return false, indicating that this may be a transient error
+// If it returns true then the error has persisted over the length of a lease, and is probably serious
+// this will also return true if some operations are succeeding and some are failing, indicating a non-lease
+// related transient error
+func (c *ErrorFilter) ReportLeaseError() bool {
+	c.errorMutex.Lock()
+	defer c.errorMutex.Unlock()
+	errorTime, ok := c.firstErrorTime.Get()
+	if !ok {
+		c.firstErrorTime = optional.Some(time.Now())
+		return false
+	}
+	// We have seen a success recorded, and a previous error
+	// within the lease timeout, this indicates transient errors are happening
+	if c.recordedSuccessTime.Ok() {
+		return true
+	}
+	if errorTime.Add(c.leaseTTL).After(time.Now()) {
+		// Within the lease window, it will probably be resolved when a new leader is elected
+		return false
+	}
+	return true
+}
+
+// ReportOperationSuccess reports that an operation that relies on the leader being up has succeeded
+// it is used to decide if an error is transient and will be fixed with a new leader, or if the error is persistent
+func (c *ErrorFilter) ReportOperationSuccess() {
+	c.errorMutex.Lock()
+	defer c.errorMutex.Unlock()
+	errorTime, ok := c.firstErrorTime.Get()
+	if !ok {
+		// Normal operation, no errors
+		return
+	}
+	if errorTime.Add(c.leaseTTL).After(time.Now()) {
+		c.recordedSuccessTime = optional.Some(time.Now())
+	} else {
+		// Outside the lease window, clear our state
+		c.recordedSuccessTime = optional.None[time.Time]()
+		c.firstErrorTime = optional.None[time.Time]()
+	}
 }

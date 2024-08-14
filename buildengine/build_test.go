@@ -93,7 +93,7 @@ func testBuildClearsBuildDir(t *testing.T, bctx buildContext) {
 	projectRoot := t.TempDir()
 
 	// generate stubs to create the shared modules directory
-	err = GenerateStubs(ctx, projectRoot, bctx.sch.Modules, []moduleconfig.ModuleConfig{{Dir: bctx.moduleDir}})
+	err = GenerateStubs(ctx, projectRoot, bctx.sch.Modules, []moduleconfig.ModuleConfig{{Dir: bctx.moduleDir, Language: "go"}})
 	assert.NoError(t, err)
 
 	// build to generate the build directory

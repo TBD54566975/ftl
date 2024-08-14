@@ -1,46 +1,38 @@
 package encryption
 
 import (
-	"encoding/json"
-	"fmt"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 )
 
-const key = `{
-    "primaryKeyId": 1720777699,
-    "key": [{
-        "keyData": {
-            "typeUrl": "type.googleapis.com/google.crypto.tink.AesCtrHmacStreamingKey",
-            "keyMaterialType": "SYMMETRIC",
-            "value": "Eg0IgCAQIBgDIgQIAxAgGiDtesd/4gCnQdTrh+AXodwpm2b6BFJkp043n+8mqx0YGw=="
-        },
-        "outputPrefixType": "RAW",
-        "keyId": 1720777699,
-        "status": "ENABLED"
-    }]
-        }`
+func TestNoOpEncryptor(t *testing.T) {
+	encryptor := NoOpEncryptorNext{}
 
-func TestNewEncryptor(t *testing.T) {
-	jsonInput := "\"hello\""
-
-	encryptor, err := NewForKeyOrURI(key)
+	encrypted, err := encryptor.Encrypt(TimelineSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
 
-	encrypted, err := encryptor.EncryptJSON(jsonInput)
+	decrypted, err := encryptor.Decrypt(TimelineSubKey, encrypted)
 	assert.NoError(t, err)
-	fmt.Printf("Encrypted: %s\n", encrypted)
 
-	var decrypted json.RawMessage
-	err = encryptor.DecryptJSON(encrypted, &decrypted)
+	assert.Equal(t, "hunter2", string(decrypted))
+}
+
+// echo -n "fake-kms://" && tinkey create-keyset --key-template AES128_GCM --out-format binary | base64 | tr '+/' '-_' | tr -d '='
+func TestKMSEncryptorFakeKMS(t *testing.T) {
+	uri := "fake-kms://CKbvh_ILElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEE6tD2yE5AWYOirhmkY-r3sYARABGKbvh_ILIAE"
+
+	encryptor, err := NewKMSEncryptorGenerateKey(uri, nil)
 	assert.NoError(t, err)
-	fmt.Printf("Decrypted: %s\n", decrypted)
 
-	var decryptedString string
-	err = json.Unmarshal(decrypted, &decryptedString)
+	encrypted, err := encryptor.Encrypt(TimelineSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
-	fmt.Printf("Decrypted string: %s\n", decryptedString)
 
-	assert.Equal(t, jsonInput, decryptedString)
+	decrypted, err := encryptor.Decrypt(TimelineSubKey, encrypted)
+	assert.NoError(t, err)
+	assert.Equal(t, "hunter2", string(decrypted))
+
+	// Should fail to decrypt with the wrong subkey
+	_, err = encryptor.Decrypt(AsyncSubKey, encrypted)
+	assert.Error(t, err)
 }

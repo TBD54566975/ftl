@@ -434,10 +434,10 @@ func TestExtractModulePubSub(t *testing.T) {
 	actual := schema.Normalise(r.Module)
 	expected := `module pubsub {
 		topic payins pubsub.PayinEvent
-		// public_broadcast is a topic that broadcasts payin events to the public.
+		// publicBroadcast is a topic that broadcasts payin events to the public.
 		// out of order with subscription registration to test ordering doesn't matter.
-		export topic public_broadcast pubsub.PayinEvent
-		subscription broadcastSubscription pubsub.public_broadcast
+		export topic publicBroadcast pubsub.PayinEvent
+		subscription broadcastSubscription pubsub.publicBroadcast
 		subscription paymentProcessing pubsub.payins
 
         export data PayinEvent {
@@ -469,7 +469,7 @@ func TestExtractModuleSubscriber(t *testing.T) {
 	assert.Equal(t, nil, r.Errors, "expected no schema errors")
 	actual := schema.Normalise(r.Module)
 	expected := `module subscriber {
-		subscription subscriptionToExternalTopic pubsub.public_broadcast
+		subscription subscriptionToExternalTopic pubsub.publicBroadcast
 
         verb consumesSubscriptionFromExternalTopic(pubsub.PayinEvent) Unit
 		+subscribe subscriptionToExternalTopic

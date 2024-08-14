@@ -31,5 +31,14 @@ runs:
         restore-keys: |
           ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           ${{ runner.os }}-maven-
+    - name: Restore NPM Cache
+      id: cache-npm
+      uses: actions/cache/restore@v4
+      with:
+        path: .hermit/node/cache/_cacache
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          ${{ runner.os }}-npm-
 
 

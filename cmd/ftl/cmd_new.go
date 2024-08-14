@@ -79,7 +79,7 @@ func (i newGoCmd) Run(ctx context.Context) error {
 				return err
 			}
 		}
-		if err := maybeGitAdd(ctx, i.Dir, filepath.Join(path, "*")); err != nil {
+		if err := maybeGitAdd(ctx, i.Dir, filepath.Join(i.Name, "*")); err != nil {
 			return err
 		}
 	}

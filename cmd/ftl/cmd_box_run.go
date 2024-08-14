@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/url"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 	"github.com/jpillora/backoff"
 	"golang.org/x/sync/errgroup"
 
@@ -57,18 +58,14 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	}
 
 	// Bring up the DB connection and DAL.
-	pool, err := pgxpool.New(ctx, config.DSN)
+	conn, err := sql.Open("pgx", config.DSN)
 	if err != nil {
 		return fmt.Errorf("failed to bring up DB connection: %w", err)
-	}
-	encryptors, err := config.EncryptionKeys.Encryptors(false)
-	if err != nil {
-		return fmt.Errorf("failed to create encryptors: %w", err)
 	}
 
 	wg := errgroup.Group{}
 	wg.Go(func() error {
-		return controller.Start(ctx, config, runnerScaling, pool, encryptors)
+		return controller.Start(ctx, config, runnerScaling, conn)
 	})
 
 	// Wait for the controller to come up.

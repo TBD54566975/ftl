@@ -43,16 +43,14 @@ func buildKotlinModule(ctx context.Context, sch *schema.Schema, module Module) e
 	if err := SetPOMProperties(ctx, module.Config.Dir); err != nil {
 		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Config.Dir, err)
 	}
-
 	if err := generateExternalModules(ctx, module, sch); err != nil {
 		return fmt.Errorf("unable to generate external modules for %s: %w", module.Config.Module, err)
 	}
-
 	if err := prepareFTLRoot(module); err != nil {
 		return fmt.Errorf("unable to prepare FTL root for %s: %w", module.Config.Module, err)
 	}
 
-	logger.Debugf("Using build command '%s'", module.Config.Build)
+	logger.Infof("Using build command '%s'", module.Config.Build)
 	err := exec.Command(ctx, log.Debug, module.Config.Dir, "bash", "-c", module.Config.Build).RunBuffered(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to build module %q: %w", module.Config.Module, err)

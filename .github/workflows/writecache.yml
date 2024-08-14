@@ -23,10 +23,13 @@ jobs:
         run: just build-all
       - name: Download Go Dependencies
         run: go mod download -x
+      - name: Download NPM Dependencies
+        run: find . -name package-lock.json -execdir npm ci \;
       - id: find-go-build-cache
         shell: bash
         run: echo "cache=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache/save@v4
+      - name: Save Go Module Cache
+        uses: actions/cache/save@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -38,3 +41,9 @@ jobs:
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+      - name: Save NPM Modules Cache
+        id: cache-npm
+        uses: actions/cache/save@v4
+        with:
+          path: .hermit/node/cache/_cacache
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}

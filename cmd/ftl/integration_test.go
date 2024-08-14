@@ -24,7 +24,8 @@ func TestBox(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	err := exec.Command(ctx, log.Debug, "../..", "docker", "build", "-t", "ftl0/ftl-box:latest", "--progress=plain", "--platform=linux/amd64", "-f", "Dockerfile.box", ".").Run()
 	assert.NoError(t, err)
-	RunWithoutController(t, "",
+	Run(t,
+		WithoutController(),
 		CopyModule("time"),
 		CopyModule("echo"),
 		Exec("ftl", "box", "echo", "--compose=echo-compose.yml"),
@@ -35,17 +36,17 @@ func TestBox(t *testing.T) {
 }
 
 func TestConfigsWithController(t *testing.T) {
-	Run(t, "", configActions(t)...)
+	Run(t, configActions(t)...)
 }
 
 func TestConfigsWithoutController(t *testing.T) {
-	RunWithoutController(t, "", configActions(t)...)
+	Run(t, configActions(t, WithoutController())...)
 }
 
-func configActions(t *testing.T) []Action {
+func configActions(t *testing.T, prepend ...ActionOrOption) []ActionOrOption {
 	t.Helper()
 
-	return []Action{
+	return append(prepend,
 		// test setting value without --json flag
 		Exec("ftl", "config", "set", "test.one", "hello world", "--inline"),
 		ExecWithExpectedOutput("\"hello world\"\n", "ftl", "config", "get", "test.one"),
@@ -58,18 +59,18 @@ func configActions(t *testing.T) []Action {
 			ExecWithOutput("ftl", []string{"config", "get", "test.one"}, func(output string) {}),
 			"failed to get from config manager: not found",
 		),
-	}
+	)
 }
 
 func TestSecretsWithController(t *testing.T) {
-	Run(t, "", secretActions(t)...)
+	Run(t, secretActions(t)...)
 }
 
 func TestSecretsWithoutController(t *testing.T) {
-	RunWithoutController(t, "", secretActions(t)...)
+	Run(t, secretActions(t, WithoutController())...)
 }
 
-func secretActions(t *testing.T) []Action {
+func secretActions(t *testing.T, prepend ...ActionOrOption) []ActionOrOption {
 	t.Helper()
 
 	// can not easily use Exec() to enter secure text, using secret import instead
@@ -78,7 +79,7 @@ func secretActions(t *testing.T) []Action {
 	secretsPath2, err := filepath.Abs("testdata/secrets2.json")
 	assert.NoError(t, err)
 
-	return []Action{
+	return append(prepend,
 		// test setting secret without --json flag
 		Exec("ftl", "secret", "import", "--inline", secretsPath1),
 		ExecWithExpectedOutput("\"hello world\"\n", "ftl", "secret", "get", "test.one"),
@@ -91,7 +92,7 @@ func secretActions(t *testing.T) []Action {
 			ExecWithOutput("ftl", []string{"secret", "get", "test.one"}, func(output string) {}),
 			"failed to get from secret manager: not found",
 		),
-	}
+	)
 }
 
 func TestSecretImportExport(t *testing.T) {
@@ -116,7 +117,8 @@ func testImportExport(t *testing.T, object string) {
 	blank := ""
 	exported := &blank
 
-	RunWithoutController(t, "",
+	Run(t,
+		WithoutController(),
 		// duplicate project file in the temp directory
 		Exec("cp", firstProjFile, secondProjFile),
 		// import into first project file
@@ -152,7 +154,7 @@ func NewFunction(ctx context.Context, req TimeRequest) (TimeResponse, error) {
 	return TimeResponse{Time: time.Now()}, nil
 }
 `
-	Run(t, "",
+	Run(t,
 		CopyModule("time"),
 		Deploy("time"),
 		ExecWithOutput("ftl", []string{"schema", "diff"}, func(output string) {
@@ -199,7 +201,7 @@ func TestResetSubscription(t *testing.T) {
 		`, module, subscription), cursor)
 	}
 
-	Run(t, "",
+	Run(t,
 		CopyModule("time"),
 		CopyModule("echo"),
 		Deploy("time"),

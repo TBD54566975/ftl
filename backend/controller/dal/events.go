@@ -2,17 +2,18 @@ package dal
 
 import (
 	"context"
+	stdsql "database/sql"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/alecthomas/types/optional"
-	"github.com/jackc/pgx/v5"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -27,10 +28,10 @@ const (
 	EventTypeDeploymentUpdated = sql.EventTypeDeploymentUpdated
 )
 
-// Event types.
+// TimelineEvent types.
 //
 //sumtype:decl
-type Event interface {
+type TimelineEvent interface {
 	GetID() int64
 	event()
 }
@@ -111,9 +112,9 @@ type eventFilter struct {
 	descending   bool
 }
 
-type EventFilter func(query *eventFilter)
+type TimelineFilter func(query *eventFilter)
 
-func FilterLogLevel(level log.Level) EventFilter {
+func FilterLogLevel(level log.Level) TimelineFilter {
 	return func(query *eventFilter) {
 		query.level = &level
 	}
@@ -122,19 +123,19 @@ func FilterLogLevel(level log.Level) EventFilter {
 // FilterCall filters call events between the given modules.
 //
 // May be called multiple times.
-func FilterCall(sourceModule optional.Option[string], destModule string, destVerb optional.Option[string]) EventFilter {
+func FilterCall(sourceModule optional.Option[string], destModule string, destVerb optional.Option[string]) TimelineFilter {
 	return func(query *eventFilter) {
 		query.calls = append(query.calls, &eventFilterCall{sourceModule: sourceModule, destModule: destModule, destVerb: destVerb})
 	}
 }
 
-func FilterDeployments(deploymentKeys ...model.DeploymentKey) EventFilter {
+func FilterDeployments(deploymentKeys ...model.DeploymentKey) TimelineFilter {
 	return func(query *eventFilter) {
 		query.deployments = append(query.deployments, deploymentKeys...)
 	}
 }
 
-func FilterRequests(requestKeys ...model.RequestKey) EventFilter {
+func FilterRequests(requestKeys ...model.RequestKey) TimelineFilter {
 	return func(query *eventFilter) {
 		for _, request := range requestKeys {
 			query.requests = append(query.requests, request.String())
@@ -142,7 +143,7 @@ func FilterRequests(requestKeys ...model.RequestKey) EventFilter {
 	}
 }
 
-func FilterTypes(types ...sql.EventType) EventFilter {
+func FilterTypes(types ...sql.EventType) TimelineFilter {
 	return func(query *eventFilter) {
 		query.types = append(query.types, types...)
 	}
@@ -151,7 +152,7 @@ func FilterTypes(types ...sql.EventType) EventFilter {
 // FilterTimeRange filters events between the given times, inclusive.
 //
 // Either maybe be zero to indicate no upper or lower bound.
-func FilterTimeRange(olderThan, newerThan time.Time) EventFilter {
+func FilterTimeRange(olderThan, newerThan time.Time) TimelineFilter {
 	return func(query *eventFilter) {
 		query.newerThan = newerThan
 		query.olderThan = olderThan
@@ -159,7 +160,7 @@ func FilterTimeRange(olderThan, newerThan time.Time) EventFilter {
 }
 
 // FilterIDRange filters events between the given IDs, inclusive.
-func FilterIDRange(higherThan, lowerThan int64) EventFilter {
+func FilterIDRange(higherThan, lowerThan int64) TimelineFilter {
 	return func(query *eventFilter) {
 		query.idHigherThan = higherThan
 		query.idLowerThan = lowerThan
@@ -167,7 +168,7 @@ func FilterIDRange(higherThan, lowerThan int64) EventFilter {
 }
 
 // FilterDescending returns events in descending order.
-func FilterDescending() EventFilter {
+func FilterDescending() TimelineFilter {
 	return func(query *eventFilter) {
 		query.descending = true
 	}
@@ -200,12 +201,12 @@ type eventDeploymentUpdatedJSON struct {
 }
 
 type eventRow struct {
-	sql.Event
+	sql.Timeline
 	DeploymentKey model.DeploymentKey
 	RequestKey    optional.Option[model.RequestKey]
 }
 
-func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter) ([]Event, error) {
+func (d *DAL) QueryTimeline(ctx context.Context, limit int, filters ...TimelineFilter) ([]TimelineEvent, error) {
 	if limit < 1 {
 		return nil, fmt.Errorf("limit must be >= 1, got %d", limit)
 	}
@@ -221,7 +222,7 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 				e.custom_key_4,
 				e.type,
 				e.payload
-			FROM events e
+			FROM timeline e
 					 LEFT JOIN requests ir on e.request_id = ir.id
 			WHERE true -- The "true" is to simplify the ANDs below.
 		`
@@ -255,15 +256,16 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	deploymentArgs := []any{}
 	if len(filter.deployments) != 0 {
 		// Unfortunately, if we use a join here, PG will do a sequential scan on
-		// events and deployments, making a 7ms query into a 700ms query.
+		// timeline and deployments, making a 7ms query into a 700ms query.
 		// https://www.pgexplain.dev/plan/ecd44488-6060-4ad1-a9b4-49d092c3de81
 		deploymentQuery += ` WHERE key = ANY($1::TEXT[])`
 		deploymentArgs = append(deploymentArgs, filter.deployments)
 	}
-	rows, err := d.db.Conn().Query(ctx, deploymentQuery, deploymentArgs...)
+	rows, err := d.db.Conn().QueryContext(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
 		return nil, dalerrs.TranslatePGError(err)
 	}
+	defer rows.Close() // nolint:errcheck
 	deploymentIDs := []int64{}
 	for rows.Next() {
 		var id int64
@@ -315,21 +317,21 @@ func (d *DAL) QueryEvents(ctx context.Context, limit int, filters ...EventFilter
 	q += fmt.Sprintf(" LIMIT %d", limit)
 
 	// Issue query.
-	rows, err = d.db.Conn().Query(ctx, q, args...)
+	rows, err = d.db.Conn().QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", q, dalerrs.TranslatePGError(err))
 	}
 	defer rows.Close()
 
-	events, err := d.transformRowsToEvents(deploymentKeys, rows)
+	events, err := d.transformRowsToTimelineEvents(deploymentKeys, rows)
 	if err != nil {
 		return nil, err
 	}
 	return events, nil
 }
 
-func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey, rows pgx.Rows) ([]Event, error) {
-	var out []Event
+func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.DeploymentKey, rows *stdsql.Rows) ([]TimelineEvent, error) {
+	var out []TimelineEvent
 	for rows.Next() {
 		row := eventRow{}
 		var deploymentID int64
@@ -347,7 +349,7 @@ func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
-			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+			if err := d.decryptJSON(encryption.TimelineSubKey, row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt log event: %w", err)
 			}
 
@@ -369,7 +371,7 @@ func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+			if err := d.decryptJSON(encryption.TimelineSubKey, row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			var sourceVerb optional.Option[schema.Ref]
@@ -394,7 +396,7 @@ func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey
 
 		case sql.EventTypeDeploymentCreated:
 			var jsonPayload eventDeploymentCreatedJSON
-			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+			if err := d.decryptJSON(encryption.TimelineSubKey, row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentCreatedEvent{
@@ -409,7 +411,7 @@ func (d *DAL) transformRowsToEvents(deploymentKeys map[int64]model.DeploymentKey
 
 		case sql.EventTypeDeploymentUpdated:
 			var jsonPayload eventDeploymentUpdatedJSON
-			if err := d.encryptors.Logs.DecryptJSON(row.Payload, &jsonPayload); err != nil {
+			if err := d.decryptJSON(encryption.TimelineSubKey, row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentUpdatedEvent{

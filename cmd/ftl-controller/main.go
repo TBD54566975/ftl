@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
@@ -43,17 +44,18 @@ func main() {
 	)
 	cli.ControllerConfig.SetDefaults()
 
-	encryptors, err := cli.ControllerConfig.EncryptionKeys.Encryptors(true)
-	kctx.FatalIfErrorf(err, "failed to create encryptors")
+	if cli.ControllerConfig.KMSURI == nil {
+		kctx.Fatalf("KMSURI is required")
+	}
 
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
 	err = observability.Init(ctx, false, "", "ftl-controller", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
-	conn, err := pgxpool.New(ctx, cli.ControllerConfig.DSN)
+	conn, err := sql.Open("pgx", cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
-	dal, err := dal.New(ctx, conn, encryptors)
+	dal, err := dal.New(ctx, conn, optional.Some[string](*cli.ControllerConfig.KMSURI))
 	kctx.FatalIfErrorf(err)
 
 	configDal, err := cfdal.New(ctx, conn)
@@ -74,6 +76,6 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	ctx = cf.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), conn, encryptors)
+	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), conn)
 	kctx.FatalIfErrorf(err)
 }

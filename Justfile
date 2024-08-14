@@ -31,6 +31,7 @@ clean:
   rm -rf frontend/node_modules
   find . -name '*.zip' -exec rm {} \;
   mvn -f kotlin-runtime/ftl-runtime clean
+  mvn -f java-runtime/ftl-runtime clean
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
@@ -41,7 +42,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips lsp-generate
+build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips lsp-generate build-java
   @just build ftl ftl-controller ftl-runner ftl-initdb
 
 # Run "go generate" on all packages
@@ -63,6 +64,9 @@ build +tools: build-protos build-zips build-frontend
 # Build all backend binaries
 build-backend:
   just build ftl ftl-controller ftl-runner
+
+build-java:
+  mvn -f java-runtime/ftl-runtime install
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
 
@@ -107,9 +111,10 @@ build-kt-runtime:
   @cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} .
 
 # Install Node dependencies
+# npm install fails intermittently due to network issues, so we retry a few times.
 npm-install:
-  @mk frontend/node_modules : frontend/package.json -- "cd frontend && npm install"
-  @mk extensions/vscode/node_modules : extensions/vscode/package.json extensions/vscode/src -- "cd extensions/vscode && npm install"
+  @mk frontend/node_modules : frontend/package.json -- "cd frontend && for i in {1..3}; do npm install && break || sleep 5; done"
+  @mk extensions/vscode/node_modules : extensions/vscode/package.json extensions/vscode/src -- "cd extensions/vscode && for i in {1..3}; do npm install && break || sleep 5; done"
 
 # Regenerate protos
 build-protos: npm-install
@@ -158,6 +163,7 @@ lint-frontend: build-frontend
 # Lint the backend
 lint-backend:
   @golangci-lint run --new-from-rev=$(git merge-base origin/main HEAD) ./...
+  @lint-commit-or-rollback ./backend/...
 
 lint-scripts:
 	@shellcheck -f gcc -e SC2016 $(find scripts -type f -not -path scripts/tests) | to-annotation

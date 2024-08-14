@@ -3,6 +3,7 @@ package dal
 
 import (
 	"context"
+	stdsql "database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,10 +14,10 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	sets "github.com/deckarep/golang-set/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -209,39 +210,28 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool, encryptors *Encryptors) (*DAL, error) {
-	_, err := pool.Acquire(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not acquire connection: %w", err)
-	}
-	dal := &DAL{
-		db:                sql.NewDB(pool),
+func New(ctx context.Context, conn *stdsql.DB, kmsURL optional.Option[string]) (*DAL, error) {
+	d := &DAL{
+		db:                sql.NewDB(conn),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
-		encryptors:        encryptors,
+		kmsURL:            kmsURL,
 	}
 
-	return dal, nil
+	if err := d.setupEncryptor(ctx); err != nil {
+		return nil, fmt.Errorf("failed to setup encryptor: %w", err)
+	}
+
+	return d, nil
 }
 
 type DAL struct {
-	db         sql.DBI
-	encryptors *Encryptors
+	db sql.DBI
+
+	kmsURL    optional.Option[string]
+	encryptor encryption.DataEncryptor
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
-}
-
-type Encryptors struct {
-	Logs  encryption.Encryptable
-	Async encryption.Encryptable
-}
-
-// NoOpEncryptors do not encrypt potentially sensitive data.
-func NoOpEncryptors() *Encryptors {
-	return &Encryptors{
-		Logs:  encryption.NoOpEncryptor{},
-		Async: encryption.NoOpEncryptor{},
-	}
 }
 
 // Tx is DAL within a transaction.
@@ -290,7 +280,8 @@ func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
 	return &Tx{&DAL{
 		db:                tx,
 		DeploymentChanges: d.DeploymentChanges,
-		encryptors:        d.encryptors,
+		kmsURL:            d.kmsURL,
+		encryptor:         d.encryptor,
 	}}, nil
 }
 
@@ -602,13 +593,13 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 
 // KillStaleRunners deletes runners that have not had heartbeats for the given duration.
 func (d *DAL) KillStaleRunners(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleRunners(ctx, age)
+	count, err := d.db.KillStaleRunners(ctx, sqltypes.Duration(age))
 	return count, err
 }
 
 // KillStaleControllers deletes controllers that have not had heartbeats for the given duration.
 func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int64, error) {
-	count, err := d.db.KillStaleControllers(ctx, age)
+	count, err := d.db.KillStaleControllers(ctx, sqltypes.Duration(age))
 	return count, err
 }
 
@@ -689,7 +680,7 @@ func (p *postgresClaim) Rollback(ctx context.Context) error {
 func (p *postgresClaim) Runner() Runner { return p.runner }
 
 // SetDeploymentReplicas activates the given deployment.
-func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) error {
+func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) (err error) {
 	// Start the transaction
 	tx, err := d.db.Begin(ctx)
 	if err != nil {
@@ -718,14 +709,14 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return dalerrs.TranslatePGError(err)
 		}
 	}
-	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]interface{}{
 		"prev_min_replicas": deployment.MinReplicas,
 		"min_replicas":      minReplicas,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload for InsertDeploymentUpdatedEvent: %w", err)
 	}
-	err = tx.InsertDeploymentUpdatedEvent(ctx, sql.InsertDeploymentUpdatedEventParams{
+	err = tx.InsertTimelineDeploymentUpdatedEvent(ctx, sql.InsertTimelineDeploymentUpdatedEventParams{
 		DeploymentKey: key,
 		Payload:       payload,
 	})
@@ -791,7 +782,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
-	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]any{
 		"min_replicas": int32(minReplicas),
 		"replaced":     replacedDeploymentKey,
 	})
@@ -799,7 +790,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		return fmt.Errorf("replace deployment failed to encrypt payload: %w", err)
 	}
 
-	err = tx.InsertDeploymentCreatedEvent(ctx, sql.InsertDeploymentCreatedEventParams{
+	err = tx.InsertTimelineDeploymentCreatedEvent(ctx, sql.InsertTimelineDeploymentCreatedEventParams{
 		DeploymentKey: newDeploymentKey,
 		Language:      newDeployment.Language,
 		ModuleName:    newDeployment.ModuleName,
@@ -946,7 +937,7 @@ func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 		var runner optional.Option[ProcessRunner]
 		if endpoint, ok := row.Endpoint.Get(); ok {
 			var labels model.Labels
-			if err := json.Unmarshal(row.RunnerLabels, &labels); err != nil {
+			if err := json.Unmarshal(row.RunnerLabels.RawMessage, &labels); err != nil {
 				return Process{}, fmt.Errorf("invalid labels JSON for runner %s: %w", row.RunnerKey, err)
 			}
 
@@ -1066,11 +1057,11 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		"error":      log.Error,
 		"stack":      log.Stack,
 	}
-	encryptedPayload, err := d.encryptors.Logs.EncryptJSON(payload)
+	encryptedPayload, err := d.encryptJSON(encryption.TimelineSubKey, payload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
 	}
-	return dalerrs.TranslatePGError(d.db.InsertLogEvent(ctx, sql.InsertLogEventParams{
+	return dalerrs.TranslatePGError(d.db.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
 		DeploymentKey: log.DeploymentKey,
 		RequestKey:    requestKey,
 		TimeStamp:     log.Time,
@@ -1146,7 +1137,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if pr, ok := call.ParentRequestKey.Get(); ok {
 		parentRequestKey = optional.Some(pr.String())
 	}
-	payload, err := d.encryptors.Logs.EncryptJSON(map[string]any{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]any{
 		"duration_ms": call.Duration.Milliseconds(),
 		"request":     call.Request,
 		"response":    call.Response,
@@ -1156,7 +1147,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if err != nil {
 		return fmt.Errorf("failed to encrypt call payload: %w", err)
 	}
-	return dalerrs.TranslatePGError(d.db.InsertCallEvent(ctx, sql.InsertCallEventParams{
+	return dalerrs.TranslatePGError(d.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
 		DeploymentKey:    call.DeploymentKey,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentRequestKey,
@@ -1170,7 +1161,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 }
 
 func (d *DAL) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
-	count, err := d.db.DeleteOldEvents(ctx, age, eventType)
+	count, err := d.db.DeleteOldTimelineEvents(ctx, sqltypes.Duration(age), eventType)
 	return count, dalerrs.TranslatePGError(err)
 }
 

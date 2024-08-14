@@ -6,15 +6,18 @@ import (
 	"context"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
+
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	in "github.com/TBD54566975/ftl/integration"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 )
 
 func TestDiskSchemaRetrieverWithBuildArtefact(t *testing.T) {
-	in.RunWithoutController(t, "ftl-project-dr.toml",
+	in.Run(t,
+		in.WithFTLConfig("ftl-project-dr.toml"),
+		in.WithoutController(),
 		in.CopyModule("dischema"),
 		in.Build("dischema"),
 		func(t testing.TB, ic in.TestContext) {
@@ -30,7 +33,9 @@ func TestDiskSchemaRetrieverWithBuildArtefact(t *testing.T) {
 }
 
 func TestDiskSchemaRetrieverWithNoSchema(t *testing.T) {
-	in.RunWithoutController(t, "ftl-project-dr.toml",
+	in.Run(t,
+		in.WithFTLConfig("ftl-project-dr.toml"),
+		in.WithoutController(),
 		in.CopyModule("dischema"),
 		func(t testing.TB, ic in.TestContext) {
 			dsr := &diskSchemaRetriever{}

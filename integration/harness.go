@@ -43,39 +43,98 @@ func Infof(format string, args ...any) {
 
 var buildOnce sync.Once
 
+// An Option for configuring the integration test harness.
+type Option func(*options)
+
+// ActionOrOption is a type that can be either an Action or an Option.
+type ActionOrOption any
+
+// WithLanguages is a Run* option that specifies the languages to test.
+//
+// Defaults to "go" if not provided.
+func WithLanguages(languages ...string) Option {
+	return func(o *options) {
+		o.languages = languages
+	}
+}
+
+// WithFTLConfig is a Run* option that specifies the FTL config to use.
+//
+// This will set FTL_CONFIG for this test, then pass in the relative
+// path based on ./testdata/go/ where "." denotes the directory containing the
+// integration test (e.g. for "integration/harness_test.go" supplying
+// "database/ftl-project.toml" would set FTL_CONFIG to
+// "integration/testdata/go/database/ftl-project.toml").
+func WithFTLConfig(path string) Option {
+	return func(o *options) {
+		o.ftlConfigPath = path
+	}
+}
+
+// WithEnvar is a Run* option that specifies an environment variable to set.
+func WithEnvar(key, value string) Option {
+	return func(o *options) {
+		o.envars[key] = value
+	}
+}
+
+// WithJava is a Run* option that ensures the Java runtime is built.
+func WithJava() Option {
+	return func(o *options) {
+		o.requireJava = true
+	}
+}
+
+// WithoutController is a Run* option that disables starting the controller.
+func WithoutController() Option {
+	return func(o *options) {
+		o.startController = false
+	}
+}
+
+type options struct {
+	languages       []string
+	ftlConfigPath   string
+	startController bool
+	requireJava     bool
+	envars          map[string]string
+}
+
 // Run an integration test.
-// ftlConfigPath: if FTL_CONFIG should be set for this test, then pass in the relative
-//
-//	path based on ./testdata/go/ where "." denotes the directory containing the
-//	integration test (e.g. for "integration/harness_test.go" supplying
-//	"database/ftl-project.toml" would set FTL_CONFIG to
-//	"integration/testdata/go/database/ftl-project.toml").
-func Run(t *testing.T, ftlConfigPath string, actions ...Action) {
-	run(t, ftlConfigPath, true, actions...)
+func Run(t *testing.T, actionsOrOptions ...ActionOrOption) {
+	run(t, actionsOrOptions...)
 }
 
-// RunWithoutController runs an integration test without starting the controller.
-// ftlConfigPath: if FTL_CONFIG should be set for this test, then pass in the relative
-//
-//	path based on ./testdata/go/ where "." denotes the directory containing the
-//	integration test (e.g. for "integration/harness_test.go" supplying
-//	"database/ftl-project.toml" would set FTL_CONFIG to
-//	"integration/testdata/go/database/ftl-project.toml").
-func RunWithoutController(t *testing.T, ftlConfigPath string, actions ...Action) {
-	run(t, ftlConfigPath, false, actions...)
-}
+func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
+	opts := options{
+		startController: true,
+		languages:       []string{"go"},
+		envars:          map[string]string{},
+	}
+	actions := []Action{}
+	for _, opt := range actionsOrOptions {
+		switch o := opt.(type) {
+		case Action:
+			actions = append(actions, o)
 
-func RunWithEncryption(t *testing.T, ftlConfigPath string, actions ...Action) {
-	logKey := `{"primaryKeyId":1467957621,"key":[{"keyData":{"typeUrl":"type.googleapis.com/google.crypto.tink.AesCtrHmacStreamingKey","value":"Eg4IgIBAECAYAyIECAMQIBog7t16YRvohzTJBKt0D4WcqFpoeWH0C20Hr09v+AxbOOE=","keyMaterialType":"SYMMETRIC"},"status":"ENABLED","keyId":1467957621,"outputPrefixType":"RAW"}]}`
-	asyncKey := `{"primaryKeyId":2710864232,"key":[{"keyData":{"typeUrl":"type.googleapis.com/google.crypto.tink.AesCtrHmacStreamingKey","value":"Eg4IgIBAECAYAyIECAMQIBogTFCSLcJGRRazu74LrehNGL82J0sicjnjG5uNZcDyjGE=","keyMaterialType":"SYMMETRIC"},"status":"ENABLED","keyId":2710864232,"outputPrefixType":"RAW"}]}`
+		case func(t testing.TB, ic TestContext):
+			actions = append(actions, Action(o))
 
-	t.Setenv("FTL_LOG_ENCRYPTION_KEY", logKey)
-	t.Setenv("FTL_ASYNC_ENCRYPTION_KEY", asyncKey)
+		case Option:
+			o(&opts)
 
-	run(t, ftlConfigPath, true, actions...)
-}
+		case func(*options):
+			o(&opts)
 
-func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Action) {
+		default:
+			panic(fmt.Sprintf("expected Option or Action, not %T", opt))
+		}
+	}
+
+	for key, value := range opts.envars {
+		t.Setenv(key, value)
+	}
+
 	tmpDir := t.TempDir()
 
 	cwd, err := os.Getwd()
@@ -84,12 +143,13 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 	rootDir, ok := internal.GitRoot("").Get()
 	assert.True(t, ok)
 
-	if ftlConfigPath != "" {
-		ftlConfigPath = filepath.Join(cwd, "testdata", "go", ftlConfigPath)
+	if opts.ftlConfigPath != "" {
+		// TODO: We shouldn't be copying the shared config from the "go" testdata...
+		opts.ftlConfigPath = filepath.Join(cwd, "testdata", "go", opts.ftlConfigPath)
 		projectPath := filepath.Join(tmpDir, "ftl-project.toml")
 
 		// Copy the specified FTL config to the temporary directory.
-		err = copy.Copy(ftlConfigPath, projectPath)
+		err = copy.Copy(opts.ftlConfigPath, projectPath)
 		if err == nil {
 			t.Setenv("FTL_CONFIG", projectPath)
 		} else {
@@ -98,8 +158,8 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 			// can't be loaded until the module is copied over, and the config itself
 			// is used by FTL during startup.
 			// Some tests still rely on this behavior, so we can't remove it entirely.
-			t.Logf("Failed to copy %s to %s: %s", ftlConfigPath, projectPath, err)
-			t.Setenv("FTL_CONFIG", ftlConfigPath)
+			t.Logf("Failed to copy %s to %s: %s", opts.ftlConfigPath, projectPath, err)
+			t.Setenv("FTL_CONFIG", opts.ftlConfigPath)
 		}
 
 	} else {
@@ -116,44 +176,52 @@ func run(t *testing.T, ftlConfigPath string, startController bool, actions ...Ac
 		Infof("Building ftl")
 		err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 		assert.NoError(t, err)
+		if opts.requireJava {
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java").RunBuffered(ctx)
+			assert.NoError(t, err)
+		}
 	})
 
-	verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
+	for _, language := range opts.languages {
+		t.Run(language, func(t *testing.T) {
+			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
-	var controller ftlv1connect.ControllerServiceClient
-	var console pbconsoleconnect.ConsoleServiceClient
-	if startController {
-		controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
-		console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
+			var controller ftlv1connect.ControllerServiceClient
+			var console pbconsoleconnect.ConsoleServiceClient
+			if opts.startController {
+				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
+				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
 
-		Infof("Starting ftl cluster")
-		ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
-	}
+				Infof("Starting ftl cluster")
+				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
+			}
 
-	ic := TestContext{
-		Context:  ctx,
-		RootDir:  rootDir,
-		testData: filepath.Join(cwd, "testdata", "go"),
-		workDir:  tmpDir,
-		binDir:   binDir,
-		Verbs:    verbs,
-	}
+			ic := TestContext{
+				Context:  ctx,
+				RootDir:  rootDir,
+				testData: filepath.Join(cwd, "testdata", language),
+				workDir:  tmpDir,
+				binDir:   binDir,
+				Verbs:    verbs,
+			}
 
-	if startController {
-		ic.Controller = controller
-		ic.Console = console
+			if opts.startController {
+				ic.Controller = controller
+				ic.Console = console
 
-		Infof("Waiting for controller to be ready")
-		ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
-			_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
-			assert.NoError(t, err)
+				Infof("Waiting for controller to be ready")
+				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
+					_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+					assert.NoError(t, err)
+				})
+			}
+
+			Infof("Starting test")
+
+			for _, action := range actions {
+				ic.AssertWithRetry(t, action)
+			}
 		})
-	}
-
-	Infof("Starting test")
-
-	for _, action := range actions {
-		ic.AssertWithRetry(t, action)
 	}
 }
 
@@ -237,7 +305,7 @@ func (l *logWriter) Write(p []byte) (n int, err error) {
 	}
 }
 
-// startProcess runs a binary in the background.
+// startProcess runs a binary in the background and terminates it when the test completes.
 func startProcess(ctx context.Context, t testing.TB, args ...string) context.Context {
 	t.Helper()
 	ctx, cancel := context.WithCancel(ctx)

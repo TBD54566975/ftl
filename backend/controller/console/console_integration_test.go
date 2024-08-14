@@ -6,9 +6,10 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/assert/v2"
+
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
 	in "github.com/TBD54566975/ftl/integration"
-	"github.com/alecthomas/assert/v2"
 )
 
 // GetModules calls console service GetModules and returns the response.
@@ -24,7 +25,7 @@ func GetModules(onResponse func(t testing.TB, resp *connect.Response[pbconsole.G
 }
 
 func TestConsoleGetModules(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("console"),
 		in.Deploy("console"),
 		GetModules(func(t testing.TB, resp *connect.Response[pbconsole.GetModulesResponse]) {

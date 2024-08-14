@@ -21,7 +21,7 @@ type Database struct {
 func NewDatabase(dbType DBType, dsn string) (Database, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return Database{}, err
+		return Database{}, fmt.Errorf("failed to bring up DB connection: %w", err)
 	}
 	return Database{
 		DSN:    dsn,

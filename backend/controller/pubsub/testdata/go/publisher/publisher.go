@@ -9,7 +9,7 @@ import (
 )
 
 //ftl:export
-var TestTopic = ftl.Topic[PubSubEvent]("test_topic")
+var TestTopic = ftl.Topic[PubSubEvent]("testTopic")
 
 type PubSubEvent struct {
 	Time time.Time
@@ -38,7 +38,7 @@ func PublishOne(ctx context.Context) error {
 }
 
 //ftl:export
-var Topic2 = ftl.Topic[PubSubEvent]("topic_2")
+var Topic2 = ftl.Topic[PubSubEvent]("topic2")
 
 //ftl:verb
 func PublishOneToTopic2(ctx context.Context) error {

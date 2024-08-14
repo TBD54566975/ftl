@@ -64,7 +64,9 @@ export const CodeEditor = (
 
   const handleEditorTextChange = useCallback((state: EditorState) => {
     const currentText = state.doc.toString()
-    onTextChanged && onTextChanged(currentText)
+    if (onTextChanged) {
+      onTextChanged(currentText)
+    }
   }, [onTextChanged])
 
   useEffect(() => {

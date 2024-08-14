@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	sha "crypto/sha256"
+	"database/sql"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -25,7 +26,6 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
 	"golang.org/x/exp/maps"
@@ -55,7 +55,6 @@ import (
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	frontend "github.com/TBD54566975/ftl/frontend"
 	"github.com/TBD54566975/ftl/internal/cors"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
@@ -85,40 +84,6 @@ func (c *CommonConfig) Validate() error {
 	return nil
 }
 
-type EncryptionKeys struct {
-	Logs  string `name:"log-key" help:"Key for sensitive log data in internal FTL tables." env:"FTL_LOG_ENCRYPTION_KEY"`
-	Async string `name:"async-key" help:"Key for sensitive async call data in internal FTL tables." env:"FTL_ASYNC_ENCRYPTION_KEY"`
-}
-
-func (e EncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
-	encryptors := dal.Encryptors{}
-	if e.Logs != "" {
-		enc, err := encryption.NewForKeyOrURI(e.Logs)
-		if err != nil {
-			return nil, fmt.Errorf("could not create log encryptor: %w", err)
-		}
-		encryptors.Logs = enc
-	} else if required {
-		return nil, fmt.Errorf("FTL_LOG_ENCRYPTION_KEY is required")
-	} else {
-		encryptors.Logs = encryption.NoOpEncryptor{}
-	}
-
-	if e.Async != "" {
-		enc, err := encryption.NewForKeyOrURI(e.Async)
-		if err != nil {
-			return nil, fmt.Errorf("could not create async calls encryptor: %w", err)
-		}
-		encryptors.Async = enc
-	} else if required {
-		return nil, fmt.Errorf("FTL_ASYNC_ENCRYPTION_KEY is required")
-	} else {
-		encryptors.Async = encryption.NoOpEncryptor{}
-	}
-
-	return &encryptors, nil
-}
-
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_CONTROLLER_BIND"`
 	IngressBind                  *url.URL            `help:"Socket to bind to for ingress." default:"http://127.0.0.1:8891" env:"FTL_CONTROLLER_INGRESS_BIND"`
@@ -133,7 +98,7 @@ type Config struct {
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	EncryptionKeys
+	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
 	CommonConfig
 }
 
@@ -147,7 +112,7 @@ func (c *Config) SetDefaults() {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, pool *pgxpool.Pool, encryptors *dal.Encryptors) error {
+func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, conn *sql.DB) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -168,7 +133,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, pool, config, runnerScaling, encryptors)
+	svc, err := New(ctx, conn, config, runnerScaling)
 	if err != nil {
 		return err
 	}
@@ -226,7 +191,7 @@ type ControllerListListener interface {
 }
 
 type Service struct {
-	pool               *pgxpool.Pool
+	conn               *sql.DB
 	dal                *dal.DAL
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
@@ -250,7 +215,7 @@ type Service struct {
 	asyncCallsLock          sync.Mutex
 }
 
-func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling scaling.RunnerScaling, encryptors *dal.Encryptors) (*Service, error) {
+func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -264,7 +229,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	db, err := dal.New(ctx, pool, encryptors)
+	db, err := dal.New(ctx, conn, optional.Ptr[string](config.KMSURI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create DAL: %w", err)
 	}
@@ -272,7 +237,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, db),
 		dal:                     db,
-		pool:                    pool,
+		conn:                    conn,
 		key:                     key,
 		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
@@ -283,7 +248,7 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, pool, svc.tasks, svc.callWithRequest)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, conn, svc.tasks, svc.callWithRequest)
 	svc.cronJobs = cronSvc
 	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 
@@ -336,22 +301,27 @@ func New(ctx context.Context, pool *pgxpool.Pool, config Config, runnerScaling s
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
 	if err != nil {
 		if errors.Is(err, dalerrs.ErrNotFound) {
 			http.NotFound(w, r)
+			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("failed to resolve route from dal"))
 		return
 	}
 	sch, err := s.dal.GetActiveSchema(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("could not get active schema"))
 		return
 	}
 	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-	ingress.Handle(sch, requestKey, routes, w, r, s.callWithRequest)
+	ingress.Handle(start, sch, requestKey, routes, w, r, s.callWithRequest)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
@@ -1484,7 +1454,7 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	originalResult := either.RightOf[[]byte](originalError)
 
 	request := map[string]any{
-		"request": call.Request,
+		"request": json.RawMessage(call.Request),
 		"error":   originalError,
 	}
 	body, err := json.Marshal(request)

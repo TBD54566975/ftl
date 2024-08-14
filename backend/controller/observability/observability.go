@@ -12,6 +12,7 @@ var (
 	Calls      *CallMetrics
 	Deployment *DeploymentMetrics
 	FSM        *FSMMetrics
+	Ingress    *IngressMetrics
 	PubSub     *PubSubMetrics
 	Cron       *CronMetrics
 )
@@ -27,6 +28,8 @@ func init() {
 	Deployment, err = initDeploymentMetrics()
 	errs = errors.Join(errs, err)
 	FSM, err = initFSMMetrics()
+	errs = errors.Join(errs, err)
+	Ingress, err = initIngressMetrics()
 	errs = errors.Join(errs, err)
 	PubSub, err = initPubSubMetrics()
 	errs = errors.Join(errs, err)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -15,7 +16,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
-	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl"
@@ -147,17 +148,13 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerCtx = cf.ContextWithSecrets(controllerCtx, sm)
 
 		// Bring up the DB connection and DAL.
-		pool, err := pgxpool.New(ctx, config.DSN)
+		conn, err := sql.Open("pgx", config.DSN)
 		if err != nil {
 			return fmt.Errorf("failed to bring up DB connection: %w", err)
 		}
-		encryptors, err := config.EncryptionKeys.Encryptors(false)
-		if err != nil {
-			return fmt.Errorf("failed to create encryptors: %w", err)
-		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling, pool, encryptors); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling, conn); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}

@@ -25,7 +25,7 @@ import (
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, NoOpEncryptors())
+	dal, err := New(ctx, conn, optional.None[string]())
 	assert.NoError(t, err)
 	assert.NotZero(t, dal)
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
@@ -235,7 +235,7 @@ func TestDAL(t *testing.T) {
 		DeploymentKey: deploymentKey,
 		RequestKey:    optional.Some(requestKey),
 		Request:       []byte("{}"),
-		Response:      []byte(`{"time": "now"}`),
+		Response:      []byte(`{"time":"now"}`),
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
@@ -263,39 +263,39 @@ func TestDAL(t *testing.T) {
 
 	t.Run("QueryEvents", func(t *testing.T) {
 		t.Run("Limit", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1)
+			events, err := dal.QueryTimeline(ctx, 1)
 			assert.NoError(t, err)
 			assert.Equal(t, 1, len(events))
 		})
 
 		t.Run("NoFilters", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000)
+			events, err := dal.QueryTimeline(ctx, 1000)
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterDeployments(deploymentKey))
+			events, err := dal.QueryTimeline(ctx, 1000, FilterDeployments(deploymentKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
+			events, err := dal.QueryTimeline(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{callEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{callEvent}, events)
 		})
 
 		t.Run("ByLogLevel", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
+			events, err := dal.QueryTimeline(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{logEvent}, events)
 		})
 
 		t.Run("ByRequests", func(t *testing.T) {
-			events, err := dal.QueryEvents(ctx, 1000, FilterRequests(requestKey))
+			events, err := dal.QueryTimeline(ctx, 1000, FilterRequests(requestKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{callEvent, logEvent}, events)
 		})
 	})
 
@@ -386,7 +386,7 @@ func TestRunnerStateFromProto(t *testing.T) {
 	assert.Equal(t, RunnerStateIdle, RunnerStateFromProto(state))
 }
 
-func normaliseEvents(events []Event) []Event {
+func normaliseEvents(events []TimelineEvent) []TimelineEvent {
 	for i := range len(events) {
 		event := events[i]
 		re := reflect.Indirect(reflect.ValueOf(event))
@@ -396,10 +396,11 @@ func normaliseEvents(events []Event) []Event {
 		f.Set(reflect.Zero(f.Type()))
 		events[i] = event
 	}
+
 	return events
 }
 
-func assertEventsEqual(t *testing.T, expected, actual []Event) {
+func assertEventsEqual(t *testing.T, expected, actual []TimelineEvent) {
 	t.Helper()
 	assert.Equal(t, normaliseEvents(expected), normaliseEvents(actual))
 }
@@ -407,7 +408,7 @@ func assertEventsEqual(t *testing.T, expected, actual []Event) {
 func TestDeleteOldEvents(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, NoOpEncryptors())
+	dal, err := New(ctx, conn, optional.None[string]())
 	assert.NoError(t, err)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)

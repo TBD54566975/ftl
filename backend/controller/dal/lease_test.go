@@ -21,7 +21,7 @@ func leaseExists(t *testing.T, conn sql.ConnI, idempotencyKey uuid.UUID, key lea
 	t.Helper()
 	var count int
 	err := dalerrs.TranslatePGError(conn.
-		QueryRow(context.Background(), "SELECT COUNT(*) FROM leases WHERE idempotency_key = $1 AND key = $2", idempotencyKey, key).
+		QueryRowContext(context.Background(), "SELECT COUNT(*) FROM leases WHERE idempotency_key = $1 AND key = $2", idempotencyKey, key).
 		Scan(&count))
 	if errors.Is(err, dalerrs.ErrNotFound) {
 		return false
@@ -36,7 +36,7 @@ func TestLease(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, NoOpEncryptors())
+	dal, err := New(ctx, conn, optional.None[string]())
 	assert.NoError(t, err)
 
 	// TTL is too short, expect an error
@@ -71,7 +71,7 @@ func TestExpireLeases(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, NoOpEncryptors())
+	dal, err := New(ctx, conn, optional.None[string]())
 	assert.NoError(t, err)
 
 	leasei, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())

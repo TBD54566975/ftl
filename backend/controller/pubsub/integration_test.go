@@ -15,7 +15,7 @@ import (
 func TestPubSub(t *testing.T) {
 	calls := 20
 	events := calls * 10
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -34,13 +34,13 @@ func TestPubSub(t *testing.T) {
 				WHERE
 					state = 'success'
 					AND origin = '%s'
-		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "test_subscription"}}.String()),
+		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "testSubscription"}}.String()),
 			events),
 	)
 }
 
 func TestConsumptionDelay(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -83,7 +83,7 @@ func TestConsumptionDelay(t *testing.T) {
 
 func TestRetry(t *testing.T) {
 	retriesPerCall := 2
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -103,7 +103,7 @@ func TestRetry(t *testing.T) {
 					state = 'error'
 					AND catching = false
 					AND origin = '%s'
-		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
+		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
 			1+retriesPerCall),
 
 		// check that there is one failed attempt to catch (we purposely fail the first one)
@@ -116,7 +116,7 @@ func TestRetry(t *testing.T) {
 				AND error = 'call to verb subscriber.catch failed: catching error'
 				AND catching = true
 				AND origin = '%s'
-	`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
+	`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
 			1),
 
 		// check that there is one successful attempt to catch (we succeed the second one as long as we receive the correct error in the request)
@@ -129,13 +129,13 @@ func TestRetry(t *testing.T) {
 			AND error IS NULL
 			AND catching = true
 			AND origin = '%s'
-`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomed_subscription"}}.String()),
+`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
 			1),
 	)
 }
 
 func TestExternalPublishRuntimeCheck(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),

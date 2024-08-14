@@ -2,7 +2,6 @@ package dal
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -11,8 +10,10 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -20,7 +21,7 @@ import (
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
-	encryptedPayload, err := d.encryptors.Async.EncryptJSON(json.RawMessage(payload))
+	encryptedPayload, err := d.encrypt(encryption.AsyncSubKey, payload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload: %w", err)
 	}
@@ -91,7 +92,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 	successful := 0
 	for _, subscription := range subs {
-		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, eventConsumptionDelay, subscription.Topic, subscription.Cursor)
+		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, sqltypes.Duration(eventConsumptionDelay), subscription.Topic, subscription.Cursor)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
 			return 0, fmt.Errorf("failed to get next cursor: %w", dalerrs.TranslatePGError(err))
@@ -133,7 +134,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,
 			ParentRequestKey:  nextCursor.RequestKey,
-			TraceContext:      nextCursor.TraceContext,
+			TraceContext:      nextCursor.TraceContext.RawMessage,
 			CatchVerb:         subscriber.CatchVerb,
 		})
 		observability.AsyncCalls.Created(ctx, subscriber.Sink, subscriber.CatchVerb, origin.String(), int64(subscriber.RetryAttempts), err)
@@ -300,8 +301,8 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 				Deployment:       key,
 				Sink:             sinkRef,
 				RetryAttempts:    int32(retryParams.Count),
-				Backoff:          retryParams.MinBackoff,
-				MaxBackoff:       retryParams.MaxBackoff,
+				Backoff:          sqltypes.Duration(retryParams.MinBackoff),
+				MaxBackoff:       sqltypes.Duration(retryParams.MaxBackoff),
 				CatchVerb:        retryParams.Catch,
 			})
 			if err != nil {

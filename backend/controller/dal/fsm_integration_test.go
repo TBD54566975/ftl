@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
-	in "github.com/TBD54566975/ftl/integration"
 	"github.com/alecthomas/assert/v2"
+
+	in "github.com/TBD54566975/ftl/integration"
 )
 
 func TestFSM(t *testing.T) {
@@ -22,7 +23,7 @@ func TestFSM(t *testing.T) {
 			WHERE fsm = 'fsm.fsm' AND key = '%s'
 		`, instance), status, state)
 	}
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("fsm"),
 		in.Deploy("fsm"),
 
@@ -81,7 +82,7 @@ func TestFSMRetry(t *testing.T) {
 		}
 	}
 
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("fsmretry"),
 		in.Build("fsmretry"),
 		in.Deploy("fsmretry"),
@@ -98,7 +99,7 @@ func TestFSMRetry(t *testing.T) {
 		in.Call("fsmretry", "startTransitionToThree", in.Obj{"id": "2"}, func(t testing.TB, response any) {}),
 		in.Call("fsmretry", "startTransitionToTwo", in.Obj{"id": "3", "failCatch": true}, func(t testing.TB, response any) {}),
 
-		in.Sleep(9*time.Second), //6s is longest run of retries
+		in.Sleep(7*time.Second), //6s is longest run of retries
 
 		// First two FSMs instances should have failed
 		// Third one will not as it is still catching
@@ -127,7 +128,7 @@ func TestFSMRetry(t *testing.T) {
 func TestFSMGoTests(t *testing.T) {
 	logFilePath := filepath.Join(t.TempDir(), "fsm.log")
 	t.Setenv("FSM_LOG_FILE", logFilePath)
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("fsm"),
 		in.Build("fsm"),
 		in.ExecModuleTest("fsm"),

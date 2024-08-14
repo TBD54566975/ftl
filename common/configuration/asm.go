@@ -52,18 +52,19 @@ func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client,
 			return override, nil
 		}
 		rpcClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, url.String(), log.Error)
-		return newASMFollower(rpcClient, url.String()), nil
+		return newASMFollower(rpcClient, url.String(), time.Second*10), nil
 	}
+	coordinator := leader.NewCoordinator[asmClient](
+		ctx,
+		advertise,
+		leases.SystemKey("asm"),
+		leaser,
+		time.Second*10,
+		leaderFactory,
+		followerFactory,
+	)
 	return &ASM{
-		coordinator: leader.NewCoordinator[asmClient](
-			ctx,
-			advertise,
-			leases.SystemKey("asm"),
-			leaser,
-			time.Second*10,
-			leaderFactory,
-			followerFactory,
-		),
+		coordinator: coordinator,
 	}
 }
 

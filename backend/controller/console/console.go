@@ -195,7 +195,7 @@ func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbc
 	// Get 1 more than the requested limit to determine if there are more results.
 	limitPlusOne := limit + 1
 
-	results, err := c.dal.QueryEvents(ctx, limitPlusOne, query...)
+	results, err := c.dal.QueryTimeline(ctx, limitPlusOne, query...)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 			newQuery = append(newQuery, dal.FilterTimeRange(thisRequestTime, lastEventTime))
 		}
 
-		events, err := c.dal.QueryEvents(ctx, int(req.Msg.Query.Limit), newQuery...)
+		events, err := c.dal.QueryTimeline(ctx, int(req.Msg.Query.Limit), newQuery...)
 		if err != nil {
 			return err
 		}
@@ -264,8 +264,8 @@ func (c *ConsoleService) StreamEvents(ctx context.Context, req *connect.Request[
 	}
 }
 
-func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error) {
-	var query []dal.EventFilter
+func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.TimelineFilter, error) {
+	var query []dal.TimelineFilter
 
 	if pb.Order == pbconsole.EventsQuery_DESC {
 		query = append(query, dal.FilterDescending())
@@ -357,7 +357,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]dal.EventFilter, error)
 	return query, nil
 }
 
-func eventDALToProto(event dal.Event) *pbconsole.Event {
+func eventDALToProto(event dal.TimelineEvent) *pbconsole.Event {
 	switch event := event.(type) {
 	case *dal.CallEvent:
 		var requestKey *string
