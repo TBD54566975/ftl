@@ -182,7 +182,9 @@ func (c *Coordinator[P]) createFollower() (out P, err error) {
 		}
 		return out, fmt.Errorf("could not get lease for %s: %w", c.key, err)
 	}
-	if urlString == c.advertise.String() {
+	if urlString == "" {
+		return out, fmt.Errorf("%s leader lease missing url in metadata", c.key)
+	} else if urlString == c.advertise.String() {
 		// This prevents endless loops after a lease breaks.
 		// If we create a follower pointing locally, the receiver will likely try to then call the leader, which starts the loop again.
 		return out, fmt.Errorf("could not follow %s leader at own url: %s", c.key, urlString)
