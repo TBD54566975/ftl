@@ -19,6 +19,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
+
+	goslices "slices"
 )
 
 type deploymentArtefact struct {
@@ -74,7 +76,19 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 			Content: content,
 		}))
 		if err != nil {
-			return err
+			// There is a possible race here, another deployment may have uploaded it
+			// double check it has not been added
+			newDiffs, diffErr := client.GetArtefactDiffs(ctx, connect.NewRequest(&ftlv1.GetArtefactDiffsRequest{ClientDigests: maps.Keys(filesByHash)}))
+			if diffErr != nil {
+				return fmt.Errorf("failed to get artefact diffs: %w after upload failure %w", diffErr, err)
+			}
+			if goslices.Contains(newDiffs.Msg.MissingDigests, missing) {
+				// It is still missing, return the error
+				return fmt.Errorf("failed to upload artifacts %w", err)
+			} else {
+				logger.Debugf("Upload %s of was cancelled as another deployment uploaded it", relToCWD(file.localPath))
+				continue
+			}
 		}
 		logger.Debugf("Uploaded %s as %s:%s", relToCWD(file.localPath), sha256.FromBytes(resp.Msg.Digest), file.Path)
 	}
