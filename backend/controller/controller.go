@@ -1454,7 +1454,7 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	originalResult := either.RightOf[[]byte](originalError)
 
 	request := map[string]any{
-		"request": call.Request,
+		"request": json.RawMessage(call.Request),
 		"error":   originalError,
 	}
 	body, err := json.Marshal(request)
