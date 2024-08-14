@@ -9,7 +9,7 @@ import (
 )
 
 func TestRuntimeReflection(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("runtimereflection"),
 		in.ExecModuleTest("runtimereflection"),
 	)

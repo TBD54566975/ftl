@@ -9,7 +9,7 @@ import (
 )
 
 func TestFTLMap(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("mapper"),
 		in.Build("mapper"),
 		in.ExecModuleTest("mapper"),

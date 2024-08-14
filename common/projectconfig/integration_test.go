@@ -14,7 +14,8 @@ import (
 )
 
 func TestDefaultToRootWhenModuleDirsMissing(t *testing.T) {
-	in.Run(t, "no-module-dirs-ftl-project.toml",
+	in.Run(t,
+		in.WithFTLConfig("no-module-dirs-ftl-project.toml"),
 		in.CopyModule("echo"),
 		in.Exec("ftl", "build"), // Needs to be `ftl build`, not `ftl build echo`
 		in.Deploy("echo"),
@@ -25,7 +26,9 @@ func TestDefaultToRootWhenModuleDirsMissing(t *testing.T) {
 }
 
 func TestConfigCmdWithoutController(t *testing.T) {
-	in.RunWithoutController(t, "configs-ftl-project.toml",
+	in.Run(t,
+		in.WithFTLConfig("configs-ftl-project.toml"),
+		in.WithoutController(),
 		in.ExecWithExpectedOutput("\"value\"\n", "ftl", "config", "get", "key"),
 	)
 }
@@ -49,7 +52,8 @@ func TestFindConfig(t *testing.T) {
 			assert.Equal(t, "test = \"test\"\n", string(output))
 		}
 	}
-	in.RunWithoutController(t, "",
+	in.Run(t,
+		in.WithoutController(),
 		in.CopyModule("findconfig"),
 		checkConfig("findconfig"),
 		checkConfig("findconfig/subdir"),
@@ -61,7 +65,8 @@ func TestFindConfig(t *testing.T) {
 }
 
 func TestConfigValidation(t *testing.T) {
-	in.Run(t, "./validateconfig/ftl-project.toml",
+	in.Run(t,
+		in.WithFTLConfig("./validateconfig/ftl-project.toml"),
 		in.CopyModule("validateconfig"),
 
 		// Global sets never error.

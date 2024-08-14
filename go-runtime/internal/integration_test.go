@@ -11,7 +11,7 @@ import (
 )
 
 func TestRealMap(t *testing.T) {
-	Run(t, "",
+	Run(t,
 		CopyModule("mapper"),
 		Deploy("mapper"),
 		Call("mapper", "get", Obj{}, func(t testing.TB, response Obj) {

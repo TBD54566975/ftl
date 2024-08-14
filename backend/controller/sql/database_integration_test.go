@@ -10,7 +10,8 @@ import (
 )
 
 func TestDatabase(t *testing.T) {
-	in.Run(t, "database/ftl-project.toml",
+	in.Run(t,
+		in.WithFTLConfig("database/ftl-project.toml"),
 		// deploy real module against "testdb"
 		in.CopyModule("database"),
 		in.CreateDBAction("database", "testdb", false),
@@ -33,7 +34,8 @@ func TestMigrate(t *testing.T) {
 		return in.QueryRow(dbName, "SELECT version FROM schema_migrations WHERE version = '20240704103403'", "20240704103403")
 	}
 
-	in.RunWithoutController(t, "",
+	in.Run(t,
+		in.WithoutController(),
 		in.DropDBAction(t, dbName),
 		in.Fail(q(), "Should fail because the database does not exist."),
 		in.Exec("ftl", "migrate", "--dsn", dbUri),

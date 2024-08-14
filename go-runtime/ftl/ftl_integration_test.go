@@ -6,14 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	in "github.com/TBD54566975/ftl/integration"
 	"github.com/alecthomas/assert/v2"
+
+	in "github.com/TBD54566975/ftl/integration"
 
 	"github.com/alecthomas/repr"
 )
 
 func TestLifecycle(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.GitInit(),
 		in.Exec("rm", "ftl-project.toml"),
 		in.Exec("ftl", "init", "test", "."),
@@ -26,7 +27,7 @@ func TestLifecycle(t *testing.T) {
 }
 
 func TestInterModuleCall(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("echo"),
 		in.CopyModule("time"),
 		in.Deploy("time"),
@@ -42,7 +43,7 @@ func TestInterModuleCall(t *testing.T) {
 }
 
 func TestSchemaGenerate(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyDir("../schema-generate", "schema-generate"),
 		in.Mkdir("build/schema-generate"),
 		in.Exec("ftl", "schema", "generate", "schema-generate", "build/schema-generate"),
@@ -51,7 +52,7 @@ func TestSchemaGenerate(t *testing.T) {
 }
 
 func TestTypeRegistryUnitTest(t *testing.T) {
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("typeregistry"),
 		in.Deploy("typeregistry"),
 		in.ExecModuleTest("typeregistry"),
