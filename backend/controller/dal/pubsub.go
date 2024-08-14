@@ -2,7 +2,6 @@ package dal
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -21,7 +21,7 @@ import (
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
-	encryptedPayload, err := d.encryptors.Async.EncryptJSON(json.RawMessage(payload))
+	encryptedPayload, err := d.encrypt(encryption.AsyncSubKey, payload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload: %w", err)
 	}

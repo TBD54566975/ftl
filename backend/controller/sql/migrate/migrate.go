@@ -38,7 +38,7 @@ func Migration(version, name string, migration MigrationFunc) Option {
 	}
 }
 
-// LogLevel sets the loggging level of the migrator.
+// LogLevel sets the logging level of the migrator.
 func LogLevel(level log.Level) Option {
 	return func(opts *migrateOptions) {
 		opts.logLevel = level

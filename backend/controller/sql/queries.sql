@@ -542,7 +542,7 @@ RETURNING
 UPDATE async_calls
 SET
   state = 'success'::async_call_state,
-  response = @response::JSONB,
+  response = @response,
   error = null
 WHERE id = @id
 RETURNING true;
@@ -878,3 +878,12 @@ WHERE id = $1::BIGINT;
 SELECT *
 FROM topic_events
 WHERE id = $1::BIGINT;
+
+-- name: GetOnlyEncryptionKey :one
+SELECT key
+FROM encryption_keys
+WHERE id = 1;
+
+-- name: CreateOnlyEncryptionKey :exec
+INSERT INTO encryption_keys (id, key)
+VALUES (1, $1);

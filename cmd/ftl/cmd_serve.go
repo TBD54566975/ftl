@@ -148,7 +148,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		}
 		controllerCtx = cf.ContextWithSecrets(controllerCtx, sm)
 
-		// Bring up the DB connection and DAL.
+		// Bring up the DB connection for the controller.
 		conn, err := otelsql.Open("pgx", config.DSN)
 		if err != nil {
 			return fmt.Errorf("failed to bring up DB connection: %w", err)
@@ -157,13 +157,9 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		if err != nil {
 			return fmt.Errorf("failed to register DB metrics: %w", err)
 		}
-		encryptors, err := config.EncryptionKeys.Encryptors(false)
-		if err != nil {
-			return fmt.Errorf("failed to create encryptors: %w", err)
-		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling, conn, encryptors); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling, conn); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}

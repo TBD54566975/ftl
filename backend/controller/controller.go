@@ -55,7 +55,6 @@ import (
 	cf "github.com/TBD54566975/ftl/common/configuration"
 	frontend "github.com/TBD54566975/ftl/frontend"
 	"github.com/TBD54566975/ftl/internal/cors"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
@@ -85,42 +84,6 @@ func (c *CommonConfig) Validate() error {
 	return nil
 }
 
-// EncryptionKeys for the controller config.
-// Deprecated: Will remove this at some stage.
-type EncryptionKeys struct {
-	Logs  string `name:"log-key" help:"Key for sensitive log data in internal FTL tables." env:"FTL_LOG_ENCRYPTION_KEY"`
-	Async string `name:"async-key" help:"Key for sensitive async call data in internal FTL tables." env:"FTL_ASYNC_ENCRYPTION_KEY"`
-}
-
-func (e EncryptionKeys) Encryptors(required bool) (*dal.Encryptors, error) {
-	encryptors := dal.Encryptors{}
-	if e.Logs != "" {
-		enc, err := encryption.NewForKeyOrURI(e.Logs)
-		if err != nil {
-			return nil, fmt.Errorf("could not create log encryptor: %w", err)
-		}
-		encryptors.Logs = enc
-	} else if required {
-		return nil, fmt.Errorf("FTL_LOG_ENCRYPTION_KEY is required")
-	} else {
-		encryptors.Logs = encryption.NoOpEncryptor{}
-	}
-
-	if e.Async != "" {
-		enc, err := encryption.NewForKeyOrURI(e.Async)
-		if err != nil {
-			return nil, fmt.Errorf("could not create async calls encryptor: %w", err)
-		}
-		encryptors.Async = enc
-	} else if required {
-		return nil, fmt.Errorf("FTL_ASYNC_ENCRYPTION_KEY is required")
-	} else {
-		encryptors.Async = encryption.NoOpEncryptor{}
-	}
-
-	return &encryptors, nil
-}
-
 type Config struct {
 	Bind                         *url.URL            `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_CONTROLLER_BIND"`
 	IngressBind                  *url.URL            `help:"Socket to bind to for ingress." default:"http://127.0.0.1:8891" env:"FTL_CONTROLLER_INGRESS_BIND"`
@@ -135,8 +98,7 @@ type Config struct {
 	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
 	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	KMSURI                       *url.URL            `help:"URI for KMS key e.g. aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
-	EncryptionKeys
+	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
 	CommonConfig
 }
 
@@ -150,7 +112,7 @@ func (c *Config) SetDefaults() {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, conn *sql.DB, encryptors *dal.Encryptors) error {
+func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, conn *sql.DB) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -171,7 +133,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, conn, config, runnerScaling, encryptors)
+	svc, err := New(ctx, conn, config, runnerScaling)
 	if err != nil {
 		return err
 	}
@@ -253,7 +215,7 @@ type Service struct {
 	asyncCallsLock          sync.Mutex
 }
 
-func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling.RunnerScaling, encryptors *dal.Encryptors) (*Service, error) {
+func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -267,7 +229,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	db, err := dal.New(ctx, conn, encryptors)
+	db, err := dal.New(ctx, conn, optional.Ptr[string](config.KMSURI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create DAL: %w", err)
 	}
@@ -1492,7 +1454,7 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	originalResult := either.RightOf[[]byte](originalError)
 
 	request := map[string]any{
-		"request": call.Request,
+		"request": json.RawMessage(call.Request),
 		"error":   originalError,
 	}
 	body, err := json.Marshal(request)
