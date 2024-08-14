@@ -9,10 +9,10 @@ import (
 func TestNoOpEncryptor(t *testing.T) {
 	encryptor := NoOpEncryptorNext{}
 
-	encrypted, err := encryptor.Encrypt(LogsSubKey, []byte("hunter2"))
+	encrypted, err := encryptor.Encrypt(TimelineSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(LogsSubKey, encrypted)
+	decrypted, err := encryptor.Decrypt(TimelineSubKey, encrypted)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "hunter2", string(decrypted))
@@ -25,10 +25,10 @@ func TestKMSEncryptorFakeKMS(t *testing.T) {
 	encryptor, err := NewKMSEncryptorGenerateKey(uri, nil)
 	assert.NoError(t, err)
 
-	encrypted, err := encryptor.Encrypt(LogsSubKey, []byte("hunter2"))
+	encrypted, err := encryptor.Encrypt(TimelineSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(LogsSubKey, encrypted)
+	decrypted, err := encryptor.Decrypt(TimelineSubKey, encrypted)
 	assert.NoError(t, err)
 	assert.Equal(t, "hunter2", string(decrypted))
 

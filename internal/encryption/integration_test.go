@@ -50,9 +50,9 @@ func TestEncryptionForLogs(t *testing.T) {
 		},
 
 		// confirm that we can't find that raw request string in the table
-		in.QueryRow("ftl", "SELECT COUNT(*) FROM events WHERE type = 'call'", int64(1)),
+		in.QueryRow("ftl", "SELECT COUNT(*) FROM timeline WHERE type = 'call'", int64(1)),
 		func(t testing.TB, ic in.TestContext) {
-			values := in.GetRow(t, ic, "ftl", "SELECT payload FROM events WHERE type = 'call' LIMIT 1", 1)
+			values := in.GetRow(t, ic, "ftl", "SELECT payload FROM timeline WHERE type = 'call' LIMIT 1", 1)
 			payload, ok := values[0].([]byte)
 			assert.True(t, ok, "could not convert payload to string")
 			assert.NotContains(t, string(payload), "Alice", "raw request string should not be stored in the table")
@@ -130,10 +130,10 @@ func TestKMSEncryptorLocalstack(t *testing.T) {
 	encryptor, err := NewKMSEncryptorGenerateKey(uri, v1client)
 	assert.NoError(t, err)
 
-	encrypted, err := encryptor.Encrypt(LogsSubKey, []byte("hunter2"))
+	encrypted, err := encryptor.Encrypt(TimelineSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(LogsSubKey, encrypted)
+	decrypted, err := encryptor.Decrypt(TimelineSubKey, encrypted)
 	assert.NoError(t, err)
 	assert.Equal(t, "hunter2", string(decrypted))
 

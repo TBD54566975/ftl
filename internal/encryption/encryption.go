@@ -19,8 +19,8 @@ import (
 type SubKey string
 
 const (
-	LogsSubKey  SubKey = "logs"
-	AsyncSubKey SubKey = "async"
+	TimelineSubKey SubKey = "timeline"
+	AsyncSubKey    SubKey = "async"
 )
 
 type DataEncryptor interface {
