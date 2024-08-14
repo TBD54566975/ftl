@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"syscall"
 	"testing"
@@ -78,8 +79,9 @@ func WithEnvar(key, value string) Option {
 	}
 }
 
-// WithJava is a Run* option that ensures the Java runtime is built.
-func WithJava() Option {
+// BuildJava is a Run* option that ensures the Java runtime is built.
+// If the test languages contain java this is not necessary, as it is implied
+func BuildJava() Option {
 	return func(o *options) {
 		o.requireJava = true
 	}
@@ -176,7 +178,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		Infof("Building ftl")
 		err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 		assert.NoError(t, err)
-		if opts.requireJava {
+		if opts.requireJava || slices.Contains(opts.languages, "java") {
 			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java", "-DskipTests").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}

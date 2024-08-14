@@ -20,7 +20,6 @@ import (
 func TestLease(t *testing.T) {
 	in.Run(t,
 		in.WithLanguages("go", "java"),
-		in.WithJava(),
 		in.CopyModule("leases"),
 		in.Build("leases"),
 		// checks if leases work in a unit test environment

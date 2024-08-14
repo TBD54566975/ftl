@@ -22,7 +22,7 @@ func TestJavaToGoCall(t *testing.T) {
 		StringField: "obj",
 		BytesField:  []byte{87, 2, 9},
 		BoolField:   true,
-		TimeField:   time.Now().Local(),
+		TimeField:   time.Now().UTC(),
 		ArrayField:  []string{"foo", "bar"},
 		MapField:    map[string]string{"gar": "har"},
 	}
@@ -105,7 +105,6 @@ func TestJavaToGoCall(t *testing.T) {
 	//tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
 
 	in.Run(t,
-		in.WithJava(),
 		in.WithLanguages("java"),
 		in.CopyModule("gomodule"),
 		in.CopyModule("javamodule"),
