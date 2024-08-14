@@ -79,9 +79,10 @@ func WithEnvar(key, value string) Option {
 	}
 }
 
-// BuildJava is a Run* option that ensures the Java runtime is built.
+// WithJavaBuild is a Run* option that ensures the Java runtime is built.
 // If the test languages contain java this is not necessary, as it is implied
-func BuildJava() Option {
+// Note that this will not actually add Java as a language under test
+func WithJavaBuild() Option {
 	return func(o *options) {
 		o.requireJava = true
 	}

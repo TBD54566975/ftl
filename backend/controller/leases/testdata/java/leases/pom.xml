@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>xyz.block.ftl.examples</groupId>
     <artifactId>leases</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0-SNAPSHOT</version>
 
     <properties>
         <ftl.version>1.0-SNAPSHOT</ftl.version>
@@ -35,7 +35,7 @@
         <dependency>
             <groupId>xyz.block</groupId>
             <artifactId>ftl-java-runtime</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>

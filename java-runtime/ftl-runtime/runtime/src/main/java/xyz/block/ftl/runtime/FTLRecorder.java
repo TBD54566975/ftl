@@ -26,6 +26,7 @@ public class FTLRecorder {
         //TODO: this sucks
         try {
             var method = verbHandlerClass.getDeclaredMethod(methodName, parameterTypes.toArray(new Class[0]));
+            method.setAccessible(true);
             var handlerInstance = Arc.container().instance(verbHandlerClass);
             Arc.container().instance(VerbRegistry.class).get().register(module, verbName, handlerInstance, method,
                     paramMappers, allowNullReturn);
