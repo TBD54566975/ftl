@@ -78,7 +78,7 @@ func RunWithoutController(t *testing.T, ftlConfigPath string, actions ...Action)
 
 func RunWithEncryption(t *testing.T, ftlConfigPath string, actions ...Action) {
 	uri := "fake-kms://CKbvh_ILElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEE6tD2yE5AWYOirhmkY-r3sYARABGKbvh_ILIAE"
-	t.Setenv("FTL_KMS_URL", uri)
+	t.Setenv("FTL_KMS_URI", uri)
 
 	run(t, ftlConfigPath, true, false, actions...)
 }
