@@ -32,7 +32,7 @@ func TestJavaToGoCall(t *testing.T) {
 		StringField: ftl.Some[string]("obj"),
 		BytesField:  ftl.Some[[]byte]([]byte{87, 2, 9}),
 		BoolField:   ftl.Some[bool](true),
-		TimeField:   ftl.Some[time.Time](time.Now().Local()),
+		TimeField:   ftl.Some[time.Time](time.Now().UTC()),
 		ArrayField:  ftl.Some[[]string]([]string{"foo", "bar"}),
 		MapField:    ftl.Some[map[string]string](map[string]string{"gar": "har"}),
 	}
