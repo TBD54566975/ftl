@@ -47,10 +47,8 @@ func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema,
 	switch module.Config.Language {
 	case "go":
 		err = buildGoModule(ctx, projectRootDir, sch, module, filesTransaction)
-	case "java":
+	case "java", "kotlin":
 		err = buildJavaModule(ctx, module)
-	case "kotlin":
-		err = buildKotlinModule(ctx, sch, module)
 	case "rust":
 		err = buildRustModule(ctx, sch, module)
 	default:

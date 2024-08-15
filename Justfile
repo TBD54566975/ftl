@@ -4,12 +4,10 @@ set shell := ["bash", "-c"]
 WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml"
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
-KT_RUNTIME_OUT := "kotlin-runtime/ftl-runtime/target/ftl-runtime-1.0-SNAPSHOT.jar"
-KT_RUNTIME_RUNNER_TEMPLATE_OUT := "build/template/ftl/jars/ftl-runtime.jar"
 RUNNER_TEMPLATE_ZIP := "backend/controller/scaling/localscaling/template.zip"
 TIMESTAMP := `date +%s`
 SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
-ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template common-runtime/scaffolding go-runtime/scaffolding kotlin-runtime/scaffolding kotlin-runtime/external-module-template"
+ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template common-runtime/scaffolding go-runtime/scaffolding"
 FRONTEND_OUT := "frontend/dist/index.html"
 EXTENSION_OUT := "extensions/vscode/dist/extension.js"
 PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
@@ -30,7 +28,6 @@ clean:
   rm -rf build
   rm -rf frontend/node_modules
   find . -name '*.zip' -exec rm {} \;
-  mvn -f kotlin-runtime/ftl-runtime clean
   mvn -f jvm-runtime/ftl-runtime clean
 
 # Live rebuild the ftl binary whenever source changes.

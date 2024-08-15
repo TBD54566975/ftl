@@ -129,20 +129,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		config.Errors = "errors.pb"
 	}
 	switch config.Language {
-	case "kotlin":
-		if config.Build == "" {
-			config.Build = "mvn -B package"
-		}
-		if config.DeployDir == "" {
-			config.DeployDir = "target"
-		}
-		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"main", "classes", "dependency", "classpath.txt"}
-		}
-		if len(config.Watch) == 0 {
-			config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
-		}
-	case "java":
+	case "kotlin", "java":
 		if config.Build == "" {
 			config.Build = "mvn -B package"
 		}

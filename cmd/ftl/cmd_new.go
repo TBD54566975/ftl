@@ -16,13 +16,11 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
-	"github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/projectconfig"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	kotlinruntime "github.com/TBD54566975/ftl/kotlin-runtime"
 )
 
 type newCmd struct {
@@ -87,38 +85,7 @@ func (i newGoCmd) Run(ctx context.Context) error {
 }
 
 func (i newKotlinCmd) Run(ctx context.Context) error {
-	name, path, err := validateModule(i.Dir, i.Name)
-	if err != nil {
-		return err
-	}
-
-	config, err := projectconfig.Load(ctx, "")
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
-	}
-
-	logger := log.FromContext(ctx)
-	logger.Debugf("Creating FTL Kotlin module %q in %s", name, path)
-	if err := scaffold(ctx, config.Hermit, kotlinruntime.Files(), i.Dir, i); err != nil {
-		return err
-	}
-
-	if err := buildengine.SetPOMProperties(ctx, path); err != nil {
-		return err
-	}
-
-	logger.Debugf("Adding files to git")
-	if !config.NoGit {
-		if config.Hermit {
-			if err := maybeGitAdd(ctx, i.Dir, "bin/*"); err != nil {
-				return err
-			}
-		}
-		if err := maybeGitAdd(ctx, i.Dir, filepath.Join(path, "*")); err != nil {
-			return err
-		}
-	}
-	return nil
+	return fmt.Errorf("kotlin scaffolinging temporarily removed")
 }
 
 func validateModule(dir string, name string) (string, string, error) {
