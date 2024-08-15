@@ -228,7 +228,7 @@ class FtlProcessor {
         Module.Builder moduleBuilder = Module.newBuilder()
                 .setName(moduleName)
                 .setBuiltin(false);
-        Map<TypeKey, Ref> dataElements = new HashMap<>();
+        Map<TypeKey, ExistingRef> dataElements = new HashMap<>();
         ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements,
                 new HashSet<>(), new HashSet<>(), topics.getTopics(), verbClients.getVerbClients());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
@@ -239,7 +239,7 @@ class FtlProcessor {
             extractionContext.moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
                     .setExport(topic.exported())
                     .setName(topic.topicName())
-                    .setEvent(buildType(extractionContext, topic.eventType())).build()));
+                    .setEvent(buildType(extractionContext, topic.eventType(), topic.exported())).build()));
         }
 
         handleVerbAnnotations(index, beans, extractionContext);
@@ -308,8 +308,8 @@ class FtlProcessor {
                     .setIngress(ingressBuilder
                             .build())
                     .build();
-            Type requestTypeParam = buildType(extractionContext, bodyParamType);
-            Type responseTypeParam = buildType(extractionContext, endpoint.getMethodInfo().returnType());
+            Type requestTypeParam = buildType(extractionContext, bodyParamType, true);
+            Type responseTypeParam = buildType(extractionContext, endpoint.getMethodInfo().returnType(), true);
             moduleBuilder
                     .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
                             .addMetadata(ingressMetadata)
@@ -441,7 +441,7 @@ class FtlProcessor {
                     paramMappers.add(new VerbRegistry.SecretSupplier(name, paramType));
                     if (!context.knownSecrets.contains(name)) {
                         context.moduleBuilder.addDecls(Decl.newBuilder().setSecret(xyz.block.ftl.v1.schema.Secret.newBuilder()
-                                .setType(buildType(context, param.type())).setName(name)));
+                                .setType(buildType(context, param.type(), false)).setName(name)));
                         context.knownSecrets.add(name);
                     }
                 } else if (param.hasAnnotation(Config.class)) {
@@ -451,7 +451,7 @@ class FtlProcessor {
                     paramMappers.add(new VerbRegistry.ConfigSupplier(name, paramType));
                     if (!context.knownConfig.contains(name)) {
                         context.moduleBuilder.addDecls(Decl.newBuilder().setConfig(xyz.block.ftl.v1.schema.Config.newBuilder()
-                                .setType(buildType(context, param.type())).setName(name)));
+                                .setType(buildType(context, param.type(), false)).setName(name)));
                         context.knownConfig.add(name);
                     }
                 } else if (context.knownTopics.containsKey(param.type().name())) {
@@ -496,8 +496,8 @@ class FtlProcessor {
             verbBuilder
                     .setName(verbName)
                     .setExport(exported)
-                    .setRequest(buildType(context, bodyParamType))
-                    .setResponse(buildType(context, method.returnType()));
+                    .setRequest(buildType(context, bodyParamType, exported))
+                    .setResponse(buildType(context, method.returnType(), exported));
 
             if (metadataCallback != null) {
                 metadataCallback.accept(verbBuilder);
@@ -602,7 +602,7 @@ class FtlProcessor {
                 launchMode.isAuxiliaryApplication(), !capabilities.isPresent(Capability.VERTX_WEBSOCKETS));
     }
 
-    private Type buildType(ExtractionContext context, org.jboss.jandex.Type type) {
+    private Type buildType(ExtractionContext context, org.jboss.jandex.Type type, boolean export) {
         switch (type.kind()) {
             case PRIMITIVE -> {
                 var prim = type.asPrimitiveType();
@@ -632,7 +632,7 @@ class FtlProcessor {
                     return Type.newBuilder().setBytes(Bytes.newBuilder().build()).build();
                 }
                 return Type.newBuilder()
-                        .setArray(Array.newBuilder().setElement(buildType(context, arrayType.componentType())).build())
+                        .setArray(Array.newBuilder().setElement(buildType(context, arrayType.componentType(), export)).build())
                         .build();
             }
             case CLASS -> {
@@ -641,7 +641,7 @@ class FtlProcessor {
 
                 PrimitiveType unboxed = PrimitiveType.unbox(clazz);
                 if (unboxed != null) {
-                    Type primitive = buildType(context, unboxed);
+                    Type primitive = buildType(context, unboxed, export);
                     if (type.hasAnnotation(NOT_NULL)) {
                         return primitive;
                     }
@@ -668,52 +668,70 @@ class FtlProcessor {
                 }
                 var existing = context.dataElements.get(new TypeKey(clazz.name().toString(), List.of()));
                 if (existing != null) {
-                    return Type.newBuilder().setRef(existing).build();
+                    if (existing.exported() || !export || !existing.ref().getModule().equals(context.moduleName)) {
+                        return Type.newBuilder().setRef(existing.ref()).build();
+                    }
+                    //bit of an edge case, we have an existing non-exported object that we need to export
+                    for (var i = 0; i < context.moduleBuilder.getDeclsCount(); ++i) {
+                        var decl = context.moduleBuilder.getDecls(i);
+                        if (!decl.hasData()) {
+                            continue;
+                        }
+                        if (decl.getData().getName().equals(existing.ref().getName())) {
+                            context.moduleBuilder.setDecls(i,
+                                    decl.toBuilder().setData(decl.getData().toBuilder().setExport(true)).build());
+                            break;
+                        }
+                    }
+                    return Type.newBuilder().setRef(existing.ref()).build();
                 }
                 Data.Builder data = Data.newBuilder();
                 data.setName(clazz.name().local());
-                data.setExport(type.hasAnnotation(EXPORT));
+                data.setExport(type.hasAnnotation(EXPORT) || export);
                 buildDataElement(context, data, clazz.name());
                 context.moduleBuilder.addDecls(Decl.newBuilder().setData(data).build());
                 Ref ref = Ref.newBuilder().setName(data.getName()).setModule(context.moduleName).build();
-                context.dataElements.put(new TypeKey(clazz.name().toString(), List.of()), ref);
+                context.dataElements.put(new TypeKey(clazz.name().toString(), List.of()),
+                        new ExistingRef(ref, export || data.getExport()));
                 return Type.newBuilder().setRef(ref).build();
             }
             case PARAMETERIZED_TYPE -> {
                 var paramType = type.asParameterizedType();
                 if (paramType.name().equals(DotName.createSimple(List.class))) {
                     return Type.newBuilder()
-                            .setArray(Array.newBuilder().setElement(buildType(context, paramType.arguments().get(0)))).build();
+                            .setArray(Array.newBuilder().setElement(buildType(context, paramType.arguments().get(0), export)))
+                            .build();
                 } else if (paramType.name().equals(DotName.createSimple(Map.class))) {
                     return Type.newBuilder().setMap(xyz.block.ftl.v1.schema.Map.newBuilder()
-                            .setKey(buildType(context, paramType.arguments().get(0)))
-                            .setValue(buildType(context, paramType.arguments().get(0))))
+                            .setKey(buildType(context, paramType.arguments().get(0), export))
+                            .setValue(buildType(context, paramType.arguments().get(0), export)))
                             .build();
                 } else if (paramType.name().equals(DotNames.OPTIONAL)) {
                     //TODO: optional kinda sucks
                     return Type.newBuilder()
-                            .setOptional(Optional.newBuilder().setType(buildType(context, paramType.arguments().get(0))))
+                            .setOptional(
+                                    Optional.newBuilder().setType(buildType(context, paramType.arguments().get(0), export)))
                             .build();
                 } else if (paramType.name().equals(DotName.createSimple(HttpRequest.class))) {
                     return Type.newBuilder()
                             .setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpRequest.class.getSimpleName())
-                                    .addTypeParameters(buildType(context, paramType.arguments().get(0))))
+                                    .addTypeParameters(buildType(context, paramType.arguments().get(0), export)))
                             .build();
                 } else if (paramType.name().equals(DotName.createSimple(HttpResponse.class))) {
                     return Type.newBuilder()
                             .setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpResponse.class.getSimpleName())
-                                    .addTypeParameters(buildType(context, paramType.arguments().get(0)))
+                                    .addTypeParameters(buildType(context, paramType.arguments().get(0), export))
                                     .addTypeParameters(Type.newBuilder().setUnit(Unit.newBuilder().build())))
                             .build();
                 } else {
                     ClassInfo classByName = context.index().getComputingIndex().getClassByName(paramType.name());
                     var cb = ClassType.builder(classByName.name());
-                    var main = buildType(context, cb.build());
+                    var main = buildType(context, cb.build(), export);
                     var builder = main.toBuilder();
                     var refBuilder = builder.getRef().toBuilder();
 
                     for (var arg : paramType.arguments()) {
-                        refBuilder.addTypeParameters(buildType(context, arg));
+                        refBuilder.addTypeParameters(buildType(context, arg, export));
                     }
                     builder.setRef(refBuilder);
                     return builder.build();
@@ -735,7 +753,8 @@ class FtlProcessor {
         //TODO: handle getters and setters properly, also Jackson annotations etc
         for (var field : clazz.fields()) {
             if (!Modifier.isStatic(field.flags())) {
-                data.addFields(Field.newBuilder().setName(field.name()).setType(buildType(context, field.type())).build());
+                data.addFields(Field.newBuilder().setName(field.name())
+                        .setType(buildType(context, field.type(), data.getExport())).build());
             }
         }
         buildDataElement(context, data, clazz.superName());
@@ -747,7 +766,7 @@ class FtlProcessor {
 
     record ExtractionContext(String moduleName, CombinedIndexBuildItem index, FTLRecorder recorder,
             Module.Builder moduleBuilder,
-            Map<TypeKey, Ref> dataElements, Set<String> knownSecrets, Set<String> knownConfig,
+            Map<TypeKey, ExistingRef> dataElements, Set<String> knownSecrets, Set<String> knownConfig,
             Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients) {
     }
@@ -756,5 +775,9 @@ class FtlProcessor {
         DISALLOWED,
         ALLOWED,
         REQUIRED
+    }
+
+    record ExistingRef(Ref ref, boolean exported) {
+
     }
 }
