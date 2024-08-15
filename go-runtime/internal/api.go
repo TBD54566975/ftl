@@ -17,6 +17,9 @@ type FTL interface {
 	// FSMSend sends an event to an instance of an FSM.
 	FSMSend(ctx context.Context, fsm, instance string, data any) error
 
+	// FSMSend schedules the next transition for an FSM from within an FSM transition.
+	FSMNext(ctx context.Context, fsm, instance string, data any) error
+
 	// PublishEvent sends an event to a pubsub topic.
 	PublishEvent(ctx context.Context, topic *schema.Ref, event any) error
 

@@ -25,10 +25,10 @@ func TestSendFSMEvent(t *testing.T) {
 	assert.IsError(t, err, dalerrs.ErrNotFound)
 
 	ref := schema.RefKey{Module: "module", Name: "verb"}
-	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`), schema.RetryParams{})
+	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`), false, schema.RetryParams{})
 	assert.NoError(t, err)
 
-	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`), schema.RetryParams{})
+	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`), false, schema.RetryParams{})
 	assert.IsError(t, err, dalerrs.ErrConflict)
 	assert.EqualError(t, err, "transition already executing: conflict")
 

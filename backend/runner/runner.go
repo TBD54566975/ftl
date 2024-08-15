@@ -241,6 +241,10 @@ func (s *Service) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEv
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("FSM events must be sent to the controller"))
 }
 
+func (s *Service) SetNextFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("FSM events must be set by the controller"))
+}
+
 func (s *Service) PublishEvent(context.Context, *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("topic events must be sent to the controller"))
 }

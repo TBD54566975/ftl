@@ -57,5 +57,17 @@ func FSM(name string, transitions ...FSMTransition) *FSMHandle {
 // If the FSM instance is not executing, a new one will be started. If the event
 // is not valid for the current state, an error will be returned.
 func (f *FSMHandle) Send(ctx context.Context, instance string, event any) error {
-	return internal.FromContext(ctx).FSMSend(ctx, f.name, instance, event)
+	return internal.FromContext(ctx).FSMSend(ctx, f.name, instance, event) //nolint:wrapcheck
+}
+
+// Next schedules the next event for an instance of the FSM from within a transition.
+//
+// "instance" must uniquely identify an instance of the FSM. The event type must
+// be valid for the state the FSM instance is currently transitioning to.
+//
+// If the event is not valid for the state the FSM is in transition to, an error will
+// be returned. If there is already a next event scheduled for the instance of the FSM
+// an error will be returned.
+func (f *FSMHandle) Next(ctx context.Context, instance string, event any) error {
+	return internal.FromContext(ctx).FSMNext(ctx, f.name, instance, event) //nolint:wrapcheck
 }

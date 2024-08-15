@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
@@ -12,6 +13,7 @@ type fakeFSMInstance struct {
 	name       string
 	terminated bool
 	state      reflect.Value
+	next       ftl.Option[any]
 }
 
 func newFakeFSMManager() *fakeFSMManager {
@@ -66,14 +68,17 @@ func (f *fakeFSMManager) SendEvent(ctx context.Context, fsm string, instance str
 	}
 
 	out := transition.To.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(event)})
-	var err error
 	erri := out[0]
-	if erri.IsNil() {
-		fsmInstance.state = transition.To
-	} else {
-		err = erri.Interface().(error) //nolint:forcetypeassert
+	if !erri.IsNil() {
+		err := erri.Interface().(error) //nolint:forcetypeassert
 		fsmInstance.state = reflect.Value{}
+		fsmInstance.next = ftl.None[any]()
+		fsmInstance.terminated = true
+		return err
 	}
+
+	fsmInstance.state = transition.To
+
 	currentStateRef := reflection.FuncRef(fsmInstance.state.Interface()).ToSchema()
 
 	// Flag the FSM instance as terminated if the current state is a terminal state.
@@ -83,5 +88,26 @@ func (f *fakeFSMManager) SendEvent(ctx context.Context, fsm string, instance str
 			break
 		}
 	}
-	return err
+
+	if next, ok := fsmInstance.next.Get(); ok {
+		fsmInstance.next = ftl.None[any]()
+		return f.SendEvent(ctx, fsm, instance, next)
+	}
+	return nil
+}
+
+func (f *fakeFSMManager) SetNextFSMEvent(ctx context.Context, fsm string, instance string, event any) error {
+	key := fsmInstanceKey{fsm, instance}
+	fsmInstance, ok := f.instances[key]
+	if !ok {
+		return fmt.Errorf("fsm %q instance %q not found", fsm, instance)
+	}
+	if fsmInstance.terminated {
+		return fmt.Errorf("fsm %q instance %q is terminated", fsm, instance)
+	}
+	if _, ok := fsmInstance.next.Get(); ok {
+		return fmt.Errorf("fsm %q instance %q already has a pending event", fsm, instance)
+	}
+	fsmInstance.next = ftl.Some(event)
+	return nil
 }
