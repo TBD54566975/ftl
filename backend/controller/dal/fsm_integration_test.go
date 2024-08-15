@@ -189,11 +189,15 @@ func TestFSMNext(t *testing.T) {
 		// Schedule next and then error and retry. Each error should be the expected error, not a failure to schedule the next state
 		transitionFSMWithOptions("3", 1, optional.Some("computers are fun"), "A", "B"),
 
+		// Bad progression
+		transitionFSM("4", "A", "B", "B"),
+
 		in.Sleep(4*time.Second),
 
 		checkAsyncCall("1", "A", "B", "C", "D"),
 		checkRepeatedAsyncCallError("2", "A", "fsm instance already has its next state set"),
 		// will get "fsm instance already has its next state set" if next event is not cleared properly
 		checkRepeatedAsyncCallError("3", "A", "computers are fun"),
+		checkRepeatedAsyncCallError("4", "B", `invalid event "fsmnext.EventB" for state "fsmnext.stateB"`),
 	)
 }

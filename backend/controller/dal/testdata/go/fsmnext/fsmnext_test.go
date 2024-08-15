@@ -34,3 +34,16 @@ func TestDoubleNext(t *testing.T) {
 		},
 	}).Error(), `fsm "fsm" instance "1" already has a pending event`)
 }
+
+func TestBadProgression(t *testing.T) {
+	// Simple progression through each state
+	ctx := ftltest.Context()
+
+	assert.EqualError(t, SendOne(ctx, Request{
+		State: A,
+		Event: Event{
+			Instance:   "1",
+			NextStates: []State{B, C, C},
+		},
+	}), `invalid event "fsmnext.EventC" for state "fsmnext.EventC"`)
+}
