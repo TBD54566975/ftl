@@ -35,6 +35,7 @@ WHERE deployment_id = $1;
 -- Create a new artefact and return the artefact ID.
 INSERT INTO artefacts (digest, content)
 VALUES ($1, $2)
+ON CONFLICT (digest) DO NOTHING
 RETURNING id;
 
 -- name: AssociateArtefactWithDeployment :exec
