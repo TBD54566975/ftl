@@ -167,6 +167,7 @@ message Metadata {
     MetadataRetry retry = 6;
     MetadataSubscriber subscriber = 7;
     MetadataTypeMap typeMap = 8;
+    MetadataEncoding encoding = 9;
   }
 }
 
@@ -189,6 +190,12 @@ message MetadataCronJob {
 message MetadataDatabases {
   optional Position pos = 1;
   repeated Ref calls = 2;
+}
+
+message MetadataEncoding {
+  optional Position pos = 1;
+  string type = 2;
+  bool lenient = 3;
 }
 
 message MetadataIngress {

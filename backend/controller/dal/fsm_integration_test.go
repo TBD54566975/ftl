@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alecthomas/assert/v2"
-
 	in "github.com/TBD54566975/ftl/integration"
+	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 )
 
 func TestFSM(t *testing.T) {
@@ -130,7 +131,73 @@ func TestFSMGoTests(t *testing.T) {
 	t.Setenv("FSM_LOG_FILE", logFilePath)
 	in.Run(t,
 		in.CopyModule("fsm"),
-		in.Build("fsm"),
+		in.CopyModule("fsmnext"),
+		in.Build("fsm", "fsmnext"),
 		in.ExecModuleTest("fsm"),
+		in.ExecModuleTest("fsmnext"),
+	)
+}
+
+func TestFSMNext(t *testing.T) {
+	transitionFSMWithOptions := func(instance string, nextAttempts int, maybeErr optional.Option[string], states ...string) in.Action {
+		if len(states) == 0 {
+			return func(t testing.TB, ic in.TestContext) {}
+		}
+		return in.Call[in.Obj, in.Obj]("fsmnext", "sendOne", in.Obj{
+			"state": states[0],
+			"event": map[string]any{
+				"instance":     instance,
+				"nextStates":   states[1:],
+				"nextAttempts": nextAttempts,
+				"error":        maybeErr,
+			},
+		}, nil)
+	}
+	transitionFSM := func(instance string, states ...string) in.Action {
+		return transitionFSMWithOptions(instance, 1, optional.None[string](), states...)
+	}
+
+	checkAsyncCall := func(instance string, states ...string) in.Action {
+		actions := slices.Map(states, func(state string) in.Action {
+			return in.QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE origin = 'fsm:fsmnext.fsm:%s' AND verb = 'fsmnext.state%s' AND state = 'success'", instance, state), int64(1))
+		})
+		return in.Chain(actions...)
+	}
+
+	checkRepeatedAsyncCallError := func(instance string, state string, errorStr string) in.Action {
+		return func(t testing.TB, ic in.TestContext) {
+			// make sure each retry got the same error
+			for offset := range 3 {
+				result := in.GetRow(t, ic, "ftl", fmt.Sprintf("SELECT error FROM async_calls WHERE origin = 'fsm:fsmnext.fsm:%s' AND verb = 'fsmnext.state%s' AND state = 'error' ORDER BY created_at LIMIT 1 OFFSET %d", instance, state, offset), 1)
+				resultError, ok := result[0].(string)
+				assert.True(t, ok, "unexpected error type: %T", result[0])
+				assert.Contains(t, resultError, errorStr, "unexpected error: %s", resultError)
+			}
+		}
+	}
+
+	in.Run(t,
+		in.CopyModule("fsmnext"),
+		in.Deploy("fsmnext"),
+
+		// Simple progression through each state
+		transitionFSM("1", "A", "B", "C", "D"),
+
+		// Bad progression where fsm.Next() is called twice
+		transitionFSMWithOptions("2", 2, optional.None[string](), "A", "B"),
+
+		// Schedule next and then error and retry. Each error should be the expected error, not a failure to schedule the next state
+		transitionFSMWithOptions("3", 1, optional.Some("computers are fun"), "A", "B"),
+
+		// Bad progression
+		transitionFSM("4", "A", "B", "B"),
+
+		in.Sleep(4*time.Second),
+
+		checkAsyncCall("1", "A", "B", "C", "D"),
+		checkRepeatedAsyncCallError("2", "A", "fsm instance already has its next state set"),
+		// will get "fsm instance already has its next state set" if next event is not cleared properly
+		checkRepeatedAsyncCallError("3", "A", "computers are fun"),
+		checkRepeatedAsyncCallError("4", "B", `invalid event "fsmnext.EventB" for state "fsmnext.stateB"`),
 	)
 }

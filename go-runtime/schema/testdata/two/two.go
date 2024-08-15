@@ -5,6 +5,8 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+
+	"ftl/builtin"
 )
 
 //ftl:enum export
@@ -133,4 +135,23 @@ const (
 type Payment struct {
 	In  PayinState
 	Out PayoutState
+}
+
+type PostRequest struct {
+	UserID int
+	PostID int
+}
+
+type PostResponse struct {
+	Success bool
+}
+
+//ftl:ingress http POST /users
+//ftl:encoding lenient
+func Ingress(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse, string], error) {
+	return builtin.HttpResponse[PostResponse, string]{
+		Status:  201,
+		Headers: map[string][]string{"Post": {"Header from FTL"}},
+		Body:    ftl.Some(PostResponse{Success: true}),
+	}, nil
 }

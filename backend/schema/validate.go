@@ -171,7 +171,8 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 					case *MetadataRetry:
 						validateRetries(module, md, optional.Some(n.Request), scopes, optional.Some(schema))
 
-					case *MetadataCronJob, *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap:
+					case *MetadataCronJob, *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap,
+						*MetadataEncoding:
 					}
 				}
 
@@ -229,7 +230,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema, *TypeAlias,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
-				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap:
+				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding:
 			}
 			return next()
 		})
@@ -380,7 +381,7 @@ func ValidateModule(module *Module) error {
 			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*Config, *FSMTransition, *Secret, *MetadataSubscriber, *MetadataTypeMap:
+			*Config, *FSMTransition, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -606,7 +607,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 		case *MetadataSubscriber:
 			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
 			merr = append(merr, subErrs...)
-		case *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap:
+		case *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap, *MetadataEncoding:
 		}
 	}
 	return

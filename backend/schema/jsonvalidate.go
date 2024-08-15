@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	sets "github.com/deckarep/golang-set/v2"
 )
 
 type path []string
@@ -16,8 +18,28 @@ func (p path) String() string {
 	return strings.TrimLeft(strings.Join(p, ""), ".")
 }
 
+type encodingOptions struct {
+	lenient bool
+}
+
+type EncodingOption func(option *encodingOptions)
+
+func LenientMode() EncodingOption {
+	return func(eo *encodingOptions) {
+		eo.lenient = true
+	}
+}
+
 // ValidateJSONValue validates a given JSON value against the provided schema.
-func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error { //nolint:maintidx
+func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema, opts ...EncodingOption) error {
+	cfg := &encodingOptions{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return validateJSONValue(fieldType, path, value, sch, cfg)
+}
+
+func validateJSONValue(fieldType Type, path path, value any, sch *Schema, opts *encodingOptions) error { //nolint:maintidx
 	var typeMatches bool
 	switch fieldType := fieldType.(type) {
 	case *Any:
@@ -47,7 +69,6 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 		case int64, float64:
 			typeMatches = true
 		case string:
-			fmt.Printf("found string %s\n", value)
 			if _, err := strconv.ParseInt(value, 10, 64); err == nil {
 				typeMatches = true
 			}
@@ -85,7 +106,7 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 		for i := range rv.Len() {
 			elemPath := append(path, fmt.Sprintf("[%d]", i)) //nolint:gocritic
 			elem := rv.Index(i).Interface()
-			if err := ValidateJSONValue(elementType, elemPath, elem, sch); err != nil {
+			if err := validateJSONValue(elementType, elemPath, elem, sch, opts); err != nil {
 				return err
 			}
 		}
@@ -101,10 +122,10 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 		for _, key := range rv.MapKeys() {
 			elemPath := append(path, fmt.Sprintf("[%q]", key)) //nolint:gocritic
 			elem := rv.MapIndex(key).Interface()
-			if err := ValidateJSONValue(keyType, elemPath, key.Interface(), sch); err != nil {
+			if err := validateJSONValue(keyType, elemPath, key.Interface(), sch, opts); err != nil {
 				return err
 			}
-			if err := ValidateJSONValue(valueType, elemPath, elem, sch); err != nil {
+			if err := validateJSONValue(valueType, elemPath, elem, sch, opts); err != nil {
 				return err
 			}
 		}
@@ -123,13 +144,13 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 					return fmt.Errorf("failed to transform aliased fields: %w", err)
 				}
 
-				if err := ValidateRequestMap(fieldType, path, transformedMap, sch); err != nil {
+				if err := validateRequestMap(fieldType, path, transformedMap, sch, opts); err != nil {
 					return err
 				}
 				typeMatches = true
 			}
 		case *TypeAlias:
-			return ValidateJSONValue(d.Type, path, value, sch)
+			return validateJSONValue(d.Type, path, value, sch, opts)
 		case *Enum:
 			var inputName any
 			inputName = value
@@ -176,7 +197,7 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 						}
 
 						if v.Name == vNameStr {
-							return ValidateJSONValue(t.Value, path, vValue, sch)
+							return validateJSONValue(t.Value, path, vValue, sch, opts)
 						}
 					} else {
 						return fmt.Errorf(`malformed enum type %s: expected structure is `+
@@ -206,7 +227,7 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 		if value == nil {
 			typeMatches = true
 		} else {
-			return ValidateJSONValue(fieldType.Type, path, value, sch)
+			return validateJSONValue(fieldType.Type, path, value, sch, opts)
 		}
 	}
 
@@ -217,7 +238,16 @@ func ValidateJSONValue(fieldType Type, path path, value any, sch *Schema) error 
 }
 
 // ValidateRequestMap validates a given JSON map against the provided schema.
-func ValidateRequestMap(ref *Ref, path path, request map[string]any, sch *Schema) error {
+func ValidateRequestMap(ref *Ref, path path, request map[string]any, sch *Schema, opts ...EncodingOption) error {
+	cfg := &encodingOptions{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return validateRequestMap(ref, path, request, sch, cfg)
+}
+
+// ValidateRequestMap validates a given JSON map against the provided schema.
+func validateRequestMap(ref *Ref, path path, request map[string]any, sch *Schema, opts *encodingOptions) error {
 	symbol, err := sch.ResolveRequestResponseType(ref)
 	if err != nil {
 		return err
@@ -225,7 +255,9 @@ func ValidateRequestMap(ref *Ref, path path, request map[string]any, sch *Schema
 
 	var errs []error
 	if data, ok := symbol.(*Data); ok {
+		validFields := sets.NewSet[string]()
 		for _, field := range data.Fields {
+			validFields.Add(field.Name)
 			fieldPath := append(path, "."+field.Name) //nolint:gocritic
 
 			value, haveValue := request[field.Name]
@@ -235,9 +267,17 @@ func ValidateRequestMap(ref *Ref, path path, request map[string]any, sch *Schema
 			}
 
 			if haveValue {
-				err := ValidateJSONValue(field.Type, fieldPath, value, sch)
+				err := validateJSONValue(field.Type, fieldPath, value, sch, opts)
 				if err != nil {
 					errs = append(errs, err)
+				}
+			}
+		}
+
+		if !opts.lenient {
+			for key := range request {
+				if !validFields.Contains(key) {
+					errs = append(errs, fmt.Errorf("%s is not a valid field", append(path, "."+key)))
 				}
 			}
 		}

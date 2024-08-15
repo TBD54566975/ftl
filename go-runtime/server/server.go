@@ -57,13 +57,15 @@ func NewUserVerbServer(projectName string, moduleName string, handlers ...Handle
 // Handler for a Verb.
 type Handler struct {
 	ref reflection.Ref
-	fn  func(ctx context.Context, req []byte) ([]byte, error)
+	fn  func(ctx context.Context, req []byte, metadata map[internal.MetadataKey]string) ([]byte, error)
 }
 
 func handler[Req, Resp any](ref reflection.Ref, verb func(ctx context.Context, req Req) (Resp, error)) Handler {
 	return Handler{
 		ref: ref,
-		fn: func(ctx context.Context, reqdata []byte) ([]byte, error) {
+		fn: func(ctx context.Context, reqdata []byte, metadata map[internal.MetadataKey]string) ([]byte, error) {
+			ctx = internal.ContextWithCallMetadata(ctx, metadata)
+
 			// Decode request.
 			var req Req
 			err := encoding.Unmarshal(reqdata, &req)
@@ -141,12 +143,20 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 			}}})
 		}
 	}()
+
 	handler, ok := m.handlers[reflection.RefFromProto(req.Msg.Verb)]
 	if !ok {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %s.%s not found", req.Msg.Verb.Module, req.Msg.Verb.Name))
 	}
 
-	respdata, err := handler.fn(ctx, req.Msg.Body)
+	metadata := map[internal.MetadataKey]string{}
+	if req.Msg.Metadata != nil {
+		for _, pair := range req.Msg.Metadata.Values {
+			metadata[internal.MetadataKey(pair.Key)] = pair.Value
+		}
+	}
+
+	respdata, err := handler.fn(ctx, req.Msg.Body, metadata)
 	if err != nil {
 		// This makes me slightly ill.
 		return connect.NewResponse(&ftlv1.CallResponse{
@@ -173,6 +183,10 @@ func (m *moduleServer) Ping(_ context.Context, _ *connect.Request[ftlv1.PingRequ
 
 func (m *moduleServer) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("SendFSMEvent not implemented"))
+}
+
+func (m *moduleServer) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("SetNextFSMEvent not implemented"))
 }
 
 func (m *moduleServer) PublishEvent(context.Context, *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {

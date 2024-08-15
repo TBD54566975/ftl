@@ -323,6 +323,30 @@ func (*DirectiveTypeMap) MustAnnotate() []ast.Node {
 	return []ast.Node{&ast.GenDecl{}}
 }
 
+// DirectiveEncoding can be used to enable custom encoding behavior.
+type DirectiveEncoding struct {
+	Pos token.Pos
+
+	Type    string `parser:"'encoding' @('json')?"`
+	Lenient bool   `parser:"@'lenient'"`
+}
+
+func (*DirectiveEncoding) directive() {}
+
+func (d *DirectiveEncoding) String() string {
+	return "encoding"
+}
+func (*DirectiveEncoding) GetTypeName() string { return "encoding" }
+func (d *DirectiveEncoding) SetPosition(pos token.Pos) {
+	d.Pos = pos
+}
+func (d *DirectiveEncoding) GetPosition() token.Pos {
+	return d.Pos
+}
+func (*DirectiveEncoding) MustAnnotate() []ast.Node {
+	return []ast.Node{&ast.FuncDecl{}}
+}
+
 var DirectiveParser = participle.MustBuild[directiveWrapper](
 	participle.Lexer(schema.Lexer),
 	participle.Elide("Whitespace"),
@@ -330,7 +354,7 @@ var DirectiveParser = participle.MustBuild[directiveWrapper](
 	participle.UseLookahead(2),
 	participle.Union[Directive](&DirectiveVerb{}, &DirectiveData{}, &DirectiveEnum{}, &DirectiveTypeAlias{},
 		&DirectiveIngress{}, &DirectiveCronJob{}, &DirectiveRetry{}, &DirectiveSubscriber{}, &DirectiveExport{},
-		&DirectiveTypeMap{}),
+		&DirectiveTypeMap{}, &DirectiveEncoding{}),
 	participle.Union[schema.IngressPathComponent](&schema.IngressPathLiteral{}, &schema.IngressPathParameter{}),
 )
 

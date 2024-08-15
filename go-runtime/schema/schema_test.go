@@ -250,6 +250,15 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 			  out two.PayoutState
 			}
 
+			export data PostRequest {
+			  userId Int
+			  postId Int
+			}
+
+			export data PostResponse {
+			  success Bool
+			}
+
 			export data User {
 			  name String
 			}
@@ -266,6 +275,10 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 
 			export verb callsTwoAndThree(two.Payload<String>) two.Payload<String>
 				+calls two.three, two.two
+
+			export verb ingress(builtin.HttpRequest<two.PostRequest>) builtin.HttpResponse<two.PostResponse, String>
+				+ingress http POST /users
+				+encoding json lenient
 
 			export verb returnsUser(Unit) two.UserResponse
 

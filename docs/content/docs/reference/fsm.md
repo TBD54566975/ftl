@@ -45,10 +45,20 @@ func Paid(ctx context.Context, in Receipt) error { /* ... */ }
 func Defaulted(ctx context.Context, in Timeout) error { /* ... */ }
 ```
 
-Then to send events to the FSM:
+## Creating and transitioning instances
+
+To send an event to an fsm instance, call `Send()` on the FSM with the instance's unique key:
 
 ```go
 err := payment.Send(ctx, invoiceID, Invoice{Amount: 110})
 ```
 
+The first time you send an event for an instance key, an fsm instance will be created.
+
 Sending an event to an FSM is asynchronous. From the time an event is sent until the state function completes execution, the FSM is transitioning. It is invalid to send an event to an FSM that is transitioning.
+
+During a transition you may need to trigger a transition to another state. This can be done by calling `Next()` on the FSM:
+
+```go
+err := payment.Next(ctx, invoiceID, Receipt{...})
+```
