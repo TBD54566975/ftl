@@ -48,11 +48,8 @@ func extractDependencies(module Module) ([]string, error) {
 	case "go":
 		return extractGoFTLImports(module.Config.Module, module.Config.Dir)
 
-	case "kotlin":
-		return extractKotlinFTLImports(module.Config.Module, module.Config.Dir)
-
-	case "java":
-		return extractJavaFTLImports(module.Config.Module, module.Config.Dir)
+	case "java", "kotlin":
+		return extractJVMFTLImports(module.Config.Module, module.Config.Dir)
 
 	case "rust":
 		return extractRustFTLImports(module.Config.Module, module.Config.Dir)
@@ -143,7 +140,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func extractJavaFTLImports(self, dir string) ([]string, error) {
+func extractJVMFTLImports(self, dir string) ([]string, error) {
 	dependencies := map[string]bool{}
 	// We also attempt to look at kotlin files
 	// As the Java module supports both

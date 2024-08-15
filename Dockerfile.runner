@@ -12,7 +12,7 @@ RUN hermit install openjre-18.0.2.1_1
 RUN hermit uninstall openjre
 RUN hermit install jbr
 RUN go version
-RUN mvn -f kotlin-runtime/ftl-runtime -B --version
+RUN mvn -f jvm-runtime/ftl-runtime -B --version
 
 WORKDIR /src
 
