@@ -66,7 +66,11 @@ func (m *Manager) progressSubscriptions(ctx context.Context) (time.Duration, err
 }
 
 // OnCallCompletion is called within a transaction after an async call has completed to allow the subscription state to be updated.
-func (m *Manager) OnCallCompletion(ctx context.Context, tx *dal.Tx, origin dal.AsyncOriginPubSub, failed bool) error {
+func (m *Manager) OnCallCompletion(ctx context.Context, tx *dal.Tx, origin dal.AsyncOriginPubSub, failed bool, isFinalResult bool) error {
+	if !isFinalResult {
+		// Wait for the async call's retries to complete before progressing the subscription
+		return nil
+	}
 	return m.dal.CompleteEventForSubscription(ctx, origin.Subscription.Module, origin.Subscription.Name)
 }
 

@@ -6,6 +6,13 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 )
 
+type MetadataKey string
+
+const (
+	FSMNameMetadataKey     MetadataKey = "fsmName"
+	FSMInstanceMetadataKey MetadataKey = "fsmInstance"
+)
+
 // FTL is the interface that the FTL runtime provides to user code.
 //
 // In production, the FTL runtime will provide an implementation of this
@@ -16,6 +23,9 @@ import (
 type FTL interface {
 	// FSMSend sends an event to an instance of an FSM.
 	FSMSend(ctx context.Context, fsm, instance string, data any) error
+
+	// FSMSend schedules the next transition for an FSM from within an FSM transition.
+	FSMNext(ctx context.Context, fsm, instance string, data any) error
 
 	// PublishEvent sends an event to a pubsub topic.
 	PublishEvent(ctx context.Context, topic *schema.Ref, event any) error
@@ -48,4 +58,20 @@ func FromContext(ctx context.Context) FTL {
 		panic("FTL not found in context")
 	}
 	return ftl
+}
+
+type callMetadataKey struct{}
+
+// ContextWithCallMetadata returns a new context with the call metadata.
+func ContextWithCallMetadata(ctx context.Context, metadata map[MetadataKey]string) context.Context {
+	return context.WithValue(ctx, callMetadataKey{}, metadata)
+}
+
+// CallMetadataFromContext returns the call metadata from the context.
+func CallMetadataFromContext(ctx context.Context) map[MetadataKey]string {
+	metadata, ok := ctx.Value(callMetadataKey{}).(map[MetadataKey]string)
+	if !ok {
+		panic("Call metadata not found in context")
+	}
+	return metadata
 }

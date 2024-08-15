@@ -115,6 +115,9 @@ service VerbService {
   // Send an event to an FSM.
   rpc SendFSMEvent(SendFSMEventRequest) returns (SendFSMEventResponse);
 
+  // Set the next event for an FSM.
+  rpc SetNextFSMEvent(SendFSMEventRequest) returns (SendFSMEventResponse);
+
   // Publish an event to a topic.
   rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
 

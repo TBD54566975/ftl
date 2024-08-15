@@ -1,11 +1,9 @@
-module ftl/fsm
+module ftl/fsmnext
 
 go 1.22.2
 
-toolchain go1.22.3
-
 require (
-	github.com/TBD54566975/ftl v0.224.0
+	github.com/TBD54566975/ftl v1.1.5
 	github.com/alecthomas/assert/v2 v2.10.0
 )
 
@@ -29,7 +27,6 @@ require (
 	github.com/aws/smithy-go v1.20.3 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/danieljoos/wincred v1.2.0 // indirect
-	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect

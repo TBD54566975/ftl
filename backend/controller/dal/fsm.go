@@ -31,14 +31,19 @@ import (
 // future execution.
 //
 // Note: no validation of the FSM is performed.
-func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executionKey string, destinationState schema.RefKey, request json.RawMessage, retryParams schema.RetryParams) (err error) {
-	encryptedRequest, err := d.encryptJSON(encryption.AsyncSubKey, request)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt FSM request: %w", err)
+func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string, destinationState schema.RefKey, request []byte, encrypted bool, retryParams schema.RetryParams) (err error) {
+	var encryptedRequest []byte
+	if encrypted {
+		encryptedRequest = request
+	} else {
+		encryptedRequest, err = d.encrypt(encryption.AsyncSubKey, request)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt FSM request: %w", err)
+		}
 	}
 
 	// Create an async call for the event.
-	origin := AsyncOriginFSM{FSM: fsm, Key: executionKey}
+	origin := AsyncOriginFSM{FSM: fsm, Key: instanceKey}
 	asyncCallID, err := d.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
 		Verb:              destinationState,
 		Origin:            origin.String(),
@@ -62,7 +67,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 	// Start a transition.
 	instance, err := d.db.StartFSMTransition(ctx, sql.StartFSMTransitionParams{
 		Fsm:              fsm,
-		Key:              executionKey,
+		Key:              instanceKey,
 		DestinationState: destinationState,
 		AsyncCallID:      asyncCallID,
 	})
@@ -80,11 +85,21 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, executi
 	return nil
 }
 
-func (d *DAL) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
-	_, err := d.db.FinishFSMTransition(ctx, fsm, instanceKey)
-	observability.FSM.TransitionCompleted(ctx, fsm)
-
-	return dalerrs.TranslatePGError(err)
+// FinishFSMTransition marks an FSM transition as completed
+func (d *DAL) FinishFSMTransition(ctx context.Context, instance *FSMInstance) (*FSMInstance, error) {
+	_, err := d.db.FinishFSMTransition(ctx, instance.FSM, instance.Key)
+	observability.FSM.TransitionCompleted(ctx, instance.FSM)
+	if err != nil {
+		return nil, dalerrs.TranslatePGError(err)
+	}
+	return &FSMInstance{
+		Lease:            instance.Lease,
+		FSM:              instance.FSM,
+		Key:              instance.Key,
+		Status:           instance.Status,
+		CurrentState:     instance.DestinationState,
+		DestinationState: optional.None[schema.RefKey](),
+	}, nil
 }
 
 func (d *DAL) FailFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
@@ -96,6 +111,54 @@ func (d *DAL) FailFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKe
 func (d *DAL) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.SucceedFSMInstance(ctx, fsm, instanceKey)
 	observability.FSM.InstanceCompleted(ctx, fsm)
+	return dalerrs.TranslatePGError(err)
+}
+
+func (d *DAL) GetFSMStates(ctx context.Context, fsm schema.RefKey, instanceKey string) (currentState, destinationState optional.Option[schema.RefKey], err error) {
+	instance, err := d.db.GetFSMInstance(ctx, fsm, instanceKey)
+	if err != nil {
+		return optional.None[schema.RefKey](), optional.None[schema.RefKey](), dalerrs.TranslatePGError(err)
+	}
+	return instance.CurrentState, instance.DestinationState, nil
+}
+
+type NextFSMEvent struct {
+	DestinationState schema.RefKey
+	Request          json.RawMessage
+	RequestType      schema.Type
+}
+
+// PopNextFSMEvent returns the next event for an FSM instance, if any, and deletes it.
+func (d *DAL) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (optional.Option[NextFSMEvent], error) {
+	next, err := d.db.PopNextFSMEvent(ctx, fsm, instanceKey)
+	if err != nil {
+		err = dalerrs.TranslatePGError(err)
+		if errors.Is(err, dalerrs.ErrNotFound) {
+			return optional.None[NextFSMEvent](), nil
+		}
+		return optional.None[NextFSMEvent](), err
+	}
+	return optional.Some(NextFSMEvent{
+		DestinationState: next.NextState,
+		Request:          next.Request,
+		RequestType:      next.RequestType,
+	}), nil
+}
+
+func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string, nextState schema.RefKey, request json.RawMessage, requestType schema.Type) error {
+	encryptedRequest, err := d.encryptJSON(encryption.AsyncSubKey, request)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt FSM request: %w", err)
+	}
+	_, err = d.db.SetNextFSMEvent(ctx, sql.SetNextFSMEventParams{
+		Fsm:         fsm,
+		InstanceKey: instanceKey,
+		Event:       nextState,
+		Request:     encryptedRequest,
+		RequestType: sql.Type{
+			Type: requestType,
+		},
+	})
 	return dalerrs.TranslatePGError(err)
 }
 
