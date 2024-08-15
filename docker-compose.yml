@@ -18,6 +18,22 @@ services:
       timeout: 60s
       retries: 60
       start_period: 80s
+  grafana:
+    profiles:
+      - infra
+    image: grafana/otel-lgtm
+    platform: linux/amd64
+    restart: unless-stopped
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    ports:
+      - 3000:3000 # Portal Endpoint
+      - ${OTEL_GRPC_PORT}:4317 # OTLP GRPC Collector
+      - ${OTEL_HTTP_PORT}:4318 # OTLP HTTP Collector
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
   otel-collector:
     profiles:
       - infra
@@ -36,3 +52,6 @@ services:
     environment:
       SERVICES: secretsmanager
       DEBUG: 1
+
+volumes:
+  grafana-storage: {}
