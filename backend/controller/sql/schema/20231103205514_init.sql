@@ -316,10 +316,12 @@ CREATE TABLE topics (
     -- Data reference to the payload data type in the owning module's schema.
     type TEXT NOT NULL,
 
-    head BIGINT NULL,
-
-    UNIQUE (module_id, name)
+    head BIGINT NULL
 );
+
+CREATE UNIQUE INDEX topics_module_name_idx ON topics(module_id, name);
+
+CREATE UNIQUE INDEX topics_key_idx ON topics (key);
 
 CREATE TRIGGER topics_notify_event
     AFTER INSERT OR UPDATE OR DELETE
@@ -405,10 +407,10 @@ CREATE TABLE topic_subscriptions (
     cursor BIGINT REFERENCES topic_events(id) ON DELETE CASCADE,
 
     -- State is 'executing' when there is an unfinished async_call for the current cursor.
-    state topic_subscription_state NOT NULL DEFAULT 'idle',
-
-    UNIQUE (module_id, name)
+    state topic_subscription_state NOT NULL DEFAULT 'idle'
 );
+
+CREATE UNIQUE INDEX topic_subscriptions_module_name_idx ON topic_subscriptions(module_id, name);
 
 CREATE UNIQUE INDEX topic_subscriptions_key_idx ON topic_subscriptions (key);
 
@@ -504,10 +506,10 @@ CREATE TABLE fsm_instances (
     -- Destination state for the active transition or NULL if the FSM is idle.
     destination_state schema_ref,
     -- Call handling the current transition. Will be NULL if the FSM is idle.
-    async_call_id BIGINT REFERENCES async_calls(id),
-    UNIQUE (fsm, key)
+    async_call_id BIGINT REFERENCES async_calls(id)
 );
 
+CREATE UNIQUE INDEX idx_fsm_instances_fsm_key ON fsm_instances(fsm, key);
 CREATE INDEX idx_fsm_instances_status ON fsm_instances(status);
 
 CREATE TABLE module_configuration
