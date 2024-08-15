@@ -103,7 +103,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	bindAllocator, err := bind.NewBindAllocator(s.Bind)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create bind allocator: %w", err)
 	}
 
 	controllerAddresses := make([]*url.URL, 0, s.Controllers)
@@ -310,10 +310,18 @@ func (s *serveCmd) setupDB(ctx context.Context, image string) (string, error) {
 
 	recreate := s.Recreate
 	port := s.DBPort
+	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%d/ftl?sslmode=disable", port)
+	logger.Debugf("Postgres DSN: %s", dsn)
+	logger.Warnf("image: %s", image)
+
+	if image == "none" {
+		_, err := databasetesting.CreateForDevel(ctx, dsn, recreate)
+		return dsn, err
+	}
 
 	exists, err := container.DoesExist(ctx, ftlContainerName, optional.Some(image))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("setup db exists %s: %w", ftlContainerName, err)
 	}
 
 	if !exists {
@@ -352,9 +360,6 @@ func (s *serveCmd) setupDB(ctx context.Context, image string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("db container failed to be healthy: %w", err)
 	}
-
-	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%d/ftl?sslmode=disable", port)
-	logger.Debugf("Postgres DSN: %s", dsn)
 
 	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
 	if err != nil {
