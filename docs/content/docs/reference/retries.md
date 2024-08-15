@@ -32,7 +32,7 @@ func Process(ctx context.Context, in Invoice) error {
 
 ### PubSub
 
-Subscribers can have a retry policy, like this:
+Subscribers can have a retry policy. For example:
 ```go
 //ftl:subscribe exampleSubscription
 //ftl:retry 5 1s catch recoverPaymentProcessing
