@@ -1,10 +1,10 @@
-import { Edge, Node } from 'reactflow'
-import { Module, Topology } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { groupPadding } from './GroupNode'
-import { verbHeight } from './VerbNode'
-import { secretHeight } from './SecretNode'
-import { configHeight } from './ConfigNode'
+import type { Edge, Node } from 'reactflow'
+import type { Module, Topology } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { verbCalls } from '../verbs/verb.utils'
+import { configHeight } from './ConfigNode'
+import { groupPadding } from './GroupNode'
+import { secretHeight } from './SecretNode'
+import { verbHeight } from './VerbNode'
 
 const groupWidth = 200
 const ITEM_SPACING = 10
@@ -16,10 +16,10 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
   topology?.levels.reverse().forEach((level, index) => {
     let groupY = 0
 
-    level.modules.forEach((moduleName) => {
+    for (const moduleName of level.modules) {
       const module = modules.find((m) => m.name === moduleName)
       if (!module) {
-        return
+        continue
       }
 
       const verbs = module.verbs
@@ -41,7 +41,7 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
       })
 
       let y = 40
-      secrets.forEach((secret) => {
+      for (const secret of secrets) {
         nodes.push({
           id: `secret-${module.name}.${secret.secret?.name}`,
           position: { x: 20, y: y },
@@ -57,9 +57,9 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
           zIndex: 2,
         })
         y += secretHeight + ITEM_SPACING
-      })
+      }
 
-      configs.forEach((config) => {
+      for (const config of configs) {
         nodes.push({
           id: `config-${module.name}.${config.config?.name}`,
           position: { x: 20, y: y },
@@ -75,9 +75,9 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
           zIndex: 2,
         })
         y += configHeight + ITEM_SPACING
-      })
+      }
 
-      verbs.forEach((verb) => {
+      for (const verb of verbs) {
         const calls = verbCalls(verb)
 
         nodes.push({
@@ -96,8 +96,8 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
         })
 
         const uniqueEdgeIds = new Set<string>()
-        calls?.map((call) =>
-          call.calls.forEach((call) => {
+        calls?.map((metaCall) => {
+          for (const call of metaCall.calls) {
             const edgeId = `${module.name}.${verb.verb?.name}-${call.module}.${call.name}`
             if (!uniqueEdgeIds.has(edgeId)) {
               uniqueEdgeIds.add(edgeId)
@@ -109,13 +109,14 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
                 animated: true,
               })
             }
-          }),
-        )
+          }
+        })
 
         y += verbHeight + ITEM_SPACING
-      })
+      }
+
       groupY += y + 40
-    })
+    }
   })
 
   return { nodes, edges }

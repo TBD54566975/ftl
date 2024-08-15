@@ -1,11 +1,11 @@
-import { Timestamp } from '@bufbuild/protobuf'
+import type { Timestamp } from '@bufbuild/protobuf'
 import { useContext, useEffect, useState } from 'react'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
 import { useClient } from '../../../hooks/use-client'
 import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
-import { CallEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { CallEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { getRequestCalls } from '../../../services/console.service'
 import { formatDuration } from '../../../utils/date.utils'
@@ -14,7 +14,7 @@ import { RequestGraph } from '../../requests/RequestGraph'
 import { verbRefString } from '../../verbs/verb.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp; call: CallEvent }) => {
+export const TimelineCallDetails = ({ timestamp, call }: { timestamp?: Timestamp; call: CallEvent }) => {
   const client = useClient(ConsoleService)
   const { closePanel } = useContext(SidePanelContext)
   const [requestCalls, setRequestCalls] = useState<CallEvent[]>([])
@@ -50,9 +50,7 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp;
         <div className='flex items-center space-x-2'>
           <div className=''>
             {call.destinationVerbRef && (
-              <div
-                className={`inline-block rounded-md bg-indigo-200 dark:bg-indigo-700 px-2 py-1 mr-1 text-sm font-medium text-gray-700 dark:text-gray-100`}
-              >
+              <div className={'inline-block rounded-md bg-indigo-200 dark:bg-indigo-700 px-2 py-1 mr-1 text-sm font-medium text-gray-700 dark:text-gray-100'}>
                 {verbRefString(call.destinationVerbRef)}
               </div>
             )}
@@ -69,7 +67,7 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp: Timestamp;
       <div className='text-sm pt-2'>Request</div>
       <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.request), null, 2)} language='json' />
 
-      {selectedCall.response != 'null' && (
+      {selectedCall.response !== 'null' && (
         <>
           <div className='text-sm pt-2'>Response</div>
           <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.response), null, 2)} language='json' />

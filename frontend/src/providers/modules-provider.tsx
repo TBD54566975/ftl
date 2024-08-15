@@ -1,5 +1,5 @@
 import { Code, ConnectError } from '@connectrpc/connect'
-import { PropsWithChildren, createContext, useEffect, useState } from 'react'
+import { type PropsWithChildren, createContext, useEffect, useState } from 'react'
 import { useClient } from '../hooks/use-client'
 import { useSchema } from '../hooks/use-schema'
 import { useVisibility } from '../hooks/use-visibility'

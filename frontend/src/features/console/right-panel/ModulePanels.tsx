@@ -8,18 +8,14 @@ import {
   Cog6ToothIcon,
   LockClosedIcon,
 } from '@heroicons/react/24/outline'
-import { Module } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { ExpandablePanelProps } from '../ExpandablePanel'
+import type { NavigateFunction } from 'react-router-dom'
 import { CodeBlock } from '../../../components'
-import { NavigateFunction } from 'react-router-dom'
 import { RightPanelAttribute } from '../../../components/RightPanelAttribute'
+import type { Module } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { callsIn, callsOut } from '../../modules/module.utils'
+import type { ExpandablePanelProps } from '../ExpandablePanel'
 
-export const modulePanels = (
-  allModules: Module[],
-  module: Module,
-  navigate: NavigateFunction,
-): ExpandablePanelProps[] => {
+export const modulePanels = (allModules: Module[], module: Module, navigate: NavigateFunction): ExpandablePanelProps[] => {
   const panels = []
 
   if (module.verbs && module.verbs.length > 0) {
@@ -31,6 +27,7 @@ export const modulePanels = (
         <div key={v.verb?.name} className='flex justify-between items-center'>
           <span className='text-sm truncate'>{v.verb?.name}</span>
           <button
+            type='button'
             className='flex items-center space-x-2 hover:text-indigo-400 py-1 px-2 rounded'
             onClick={() => navigate(`/deployments/${module.deploymentKey}/verbs/${v.verb?.name}`)}
           >
@@ -57,9 +54,7 @@ export const modulePanels = (
       icon: Cog6ToothIcon,
       title: 'Configs',
       expanded: false,
-      children: module.configs.map((c) => (
-        <RightPanelAttribute key={c.config?.name} name={c.config?.name} value={c.config?.type?.value?.case} />
-      )),
+      children: module.configs.map((c) => <RightPanelAttribute key={c.config?.name} name={c.config?.name} value={c.config?.type?.value?.case} />),
     })
   }
 
@@ -77,10 +72,7 @@ export const modulePanels = (
         ))}
         {callsOut(module)?.map((out, outIndex) =>
           out?.calls.map((call, callIndex) => (
-            <div
-              key={`out-${outIndex}-${call?.module}.${call?.name}-${callIndex}`}
-              className='flex items-center space-x-2'
-            >
+            <div key={`out-${outIndex}-${call?.module}.${call?.name}-${callIndex}`} className='flex items-center space-x-2'>
               <ArrowRightStartOnRectangleIcon className='h-4 w-4 text-blue-600' />
               <div className='truncate text-xs'>{`${call?.module}.${call?.name}`}</div>
             </div>

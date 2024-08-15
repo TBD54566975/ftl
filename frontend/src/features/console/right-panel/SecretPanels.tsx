@@ -1,6 +1,6 @@
 import { RightPanelAttribute } from '../../../components/RightPanelAttribute'
-import { Secret } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { ExpandablePanelProps } from '../ExpandablePanel'
+import type { Secret } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { ExpandablePanelProps } from '../ExpandablePanel'
 
 export const secretPanels = (secret: Secret) => {
   return [

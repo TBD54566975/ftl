@@ -1,4 +1,4 @@
-export const RightPanelAttribute = ({ name, value }: { name?: string, value?: string }) => {
+export const RightPanelAttribute = ({ name, value }: { name?: string; value?: string }) => {
   return (
     <div className='flex justify-between space-x-2 items-center text-sm'>
       <span className='text-gray-500 dark:text-gray-400'>{name}</span>

@@ -1,5 +1,5 @@
-import { Duration, Timestamp } from '@bufbuild/protobuf'
-import { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Duration, Timestamp } from '@bufbuild/protobuf'
+import type { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { verbRefString } from '../verbs/verb.utils'
 
 const CallBlock = ({
@@ -72,11 +72,7 @@ export const RequestGraph = ({ calls, call, setSelectedCall }: Props) => {
   return (
     <div className='flex flex-col'>
       {calls.map((c, index) => (
-        <div
-          key={index}
-          className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm'
-          onClick={() => setSelectedCall(c)}
-        >
+        <div key={index} className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm' onClick={() => setSelectedCall(c)}>
           <div className='w-full relative'>
             <CallBlock call={c} selectedCall={call} firstTimeStamp={firstTimeStamp} firstDuration={firstDuration} />
           </div>

@@ -1,4 +1,4 @@
-import { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { verbRefString } from '../verbs/verb.utils'
 
 export const TimelineCall = ({ call }: { call: CallEvent }) => {
@@ -10,9 +10,7 @@ export const TimelineCall = ({ call }: { call: CallEvent }) => {
           {' -> '}
         </>
       )}
-      {call.destinationVerbRef?.module && (
-        <span className='text-indigo-500 dark:text-indigo-300'>{verbRefString(call.destinationVerbRef)}</span>
-      )}
+      {call.destinationVerbRef?.module && <span className='text-indigo-500 dark:text-indigo-300'>{verbRefString(call.destinationVerbRef)}</span>}
     </span>
   )
 }

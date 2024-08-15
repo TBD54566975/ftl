@@ -1,4 +1,4 @@
-import { NodeProps } from 'reactflow'
+import type { NodeProps } from 'reactflow'
 
 export const configHeight = 24
 

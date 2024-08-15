@@ -7,9 +7,7 @@ const BottomPanel = () => {
   const filters = useMemo(() => {
     return []
   }, [])
-  return (
-    <Timeline timeSettings={timeSettings} filters={filters} />
-  )
+  return <Timeline timeSettings={timeSettings} filters={filters} />
 }
 
 export default BottomPanel

@@ -1,11 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { ConsolePage } from './features/console/ConsolePage.tsx'
 import { DeploymentPage } from './features/deployments/DeploymentPage.tsx'
 import { DeploymentsPage } from './features/deployments/DeploymentsPage.tsx'
 import { TimelinePage } from './features/timeline/TimelinePage.tsx'
 import { VerbPage } from './features/verbs/VerbPage.tsx'
 import { Layout } from './layout/Layout.tsx'
 import { NotFoundPage } from './layout/NotFoundPage.tsx'
-import { ConsolePage } from './features/console/ConsolePage.tsx'
 
 export const App = () => {
   return (

@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 
-export const VerbFormInput = (
-  { requestType, initialPath, requestPath, readOnly, onSubmit }:
-    {
-      requestType: string,
-      initialPath: string,
-      requestPath: string,
-      readOnly: boolean,
-      onSubmit: (path: string) => void
-    }
-) => {
+export const VerbFormInput = ({
+  requestType,
+  initialPath,
+  requestPath,
+  readOnly,
+  onSubmit,
+}: {
+  requestType: string
+  initialPath: string
+  requestPath: string
+  readOnly: boolean
+  onSubmit: (path: string) => void
+}) => {
   const [path, setPath] = useState(initialPath)
 
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
@@ -24,9 +27,7 @@ export const VerbFormInput = (
   return (
     <form onSubmit={handleSubmit} className='rounded-lg'>
       <div className='flex rounded-md shadow-sm'>
-        <span className='inline-flex items-center rounded-l-md border border-r-0 border-gray-300 dark:border-gray-500 px-3 sm:text-sm'>
-          {requestType}
-        </span>
+        <span className='inline-flex items-center rounded-l-md border border-r-0 border-gray-300 dark:border-gray-500 px-3 sm:text-sm'>{requestType}</span>
         <input
           type='text'
           name='request-path'
@@ -36,17 +37,11 @@ export const VerbFormInput = (
           readOnly={readOnly}
           onChange={(event) => setPath(event.target.value)}
         />
-        <button
-          type='submit'
-          className='bg-indigo-700 text-white ml-2 px-4 py-2 rounded-lg hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'
-        >
+        <button type='submit' className='bg-indigo-700 text-white ml-2 px-4 py-2 rounded-lg hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'>
           Send
         </button>
       </div>
-      {!readOnly && (
-        <span className='text-xs text-gray-500'>{requestPath}</span>
-      )
-      }
+      {!readOnly && <span className='text-xs text-gray-500'>{requestPath}</span>}
     </form>
   )
 }

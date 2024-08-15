@@ -1,4 +1,4 @@
-import { Duration, Timestamp } from '@bufbuild/protobuf'
+import type { Duration, Timestamp } from '@bufbuild/protobuf'
 
 export const formatTimestamp = (timestamp?: Timestamp): string => {
   if (!timestamp) return '(no date)'
@@ -7,7 +7,7 @@ export const formatTimestamp = (timestamp?: Timestamp): string => {
 
 export const formatDuration = (duration?: Duration): string => {
   if (!duration) return '(no duration)'
-  return duration.seconds * BigInt(1000) + BigInt(duration.nanos) / BigInt(1000000) + 'ms'
+  return `${duration.seconds * BigInt(1000) + BigInt(duration.nanos) / BigInt(1000000)}ms`
 }
 
 export const formatTimestampShort = (timestamp?: Timestamp): string => {
@@ -17,9 +17,7 @@ export const formatTimestampShort = (timestamp?: Timestamp): string => {
 
   const formattedDate =
     `${month} ${String(date.getDate()).padStart(2, '0')} ` +
-    `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(
-      date.getSeconds(),
-    ).padStart(2, '0')}` +
+    `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}` +
     `.${String(date.getMilliseconds()).padStart(3, '0')}`
 
   return formattedDate

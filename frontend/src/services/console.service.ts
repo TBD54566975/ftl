@@ -1,10 +1,10 @@
-import { Timestamp } from '@bufbuild/protobuf'
+import type { Timestamp } from '@bufbuild/protobuf'
 import { Code, ConnectError } from '@connectrpc/connect'
 import { createClient } from '../hooks/use-client'
 import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
 import {
-  CallEvent,
-  Event,
+  type CallEvent,
+  type Event,
   EventType,
   EventsQuery_CallFilter,
   EventsQuery_DeploymentFilter,
@@ -15,7 +15,7 @@ import {
   EventsQuery_Order,
   EventsQuery_RequestFilter,
   EventsQuery_TimeFilter,
-  LogLevel,
+  type LogLevel,
 } from '../protos/xyz/block/ftl/v1/console/console_pb'
 
 const client = createClient(ConsoleService)
@@ -64,11 +64,7 @@ export const modulesFilter = (modules: string[]): EventsQuery_Filter => {
   return filter
 }
 
-export const callFilter = (
-  destModule: string,
-  destVerb: string | undefined = undefined,
-  sourceModule: string | undefined = undefined,
-): EventsQuery_Filter => {
+export const callFilter = (destModule: string, destVerb: string | undefined = undefined, sourceModule: string | undefined = undefined): EventsQuery_Filter => {
   const filter = new EventsQuery_Filter()
   const callFilter = new EventsQuery_CallFilter()
   callFilter.destModule = destModule

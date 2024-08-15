@@ -1,23 +1,8 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import { Listbox, Transition } from '@headlessui/react'
-import {
-  BackwardIcon,
-  CheckIcon,
-  ChevronUpDownIcon,
-  ForwardIcon,
-  PauseIcon,
-  PlayIcon,
-} from '@heroicons/react/24/outline'
+import { BackwardIcon, CheckIcon, ChevronUpDownIcon, ForwardIcon, PauseIcon, PlayIcon } from '@heroicons/react/24/outline'
 import { Fragment, useEffect, useState } from 'react'
-import {
-  bgColor,
-  borderColor,
-  classNames,
-  formatTimestampShort,
-  formatTimestampTime,
-  panelColor,
-  textColor,
-} from '../../../utils'
+import { bgColor, borderColor, classNames, formatTimestampShort, formatTimestampTime, panelColor, textColor } from '../../../utils'
 
 interface TimeRange {
   label: string
@@ -53,7 +38,7 @@ export const TimelineTimeControls = ({
   const [isPaused, setIsPaused] = useState(isTimelinePaused)
   const [newerThan, setNewerThan] = useState<Timestamp | undefined>()
 
-  const isTailing = selected.value === TIME_RANGES['tail'].value
+  const isTailing = selected.value === TIME_RANGES.tail.value
 
   useEffect(() => {
     handleRangeChanged(selectedTimeRange)
@@ -82,7 +67,7 @@ export const TimelineTimeControls = ({
   const handleRangeChanged = (range: TimeRange) => {
     setSelected(range)
 
-    if (range.value === TIME_RANGES['tail'].value) {
+    if (range.value === TIME_RANGES.tail.value) {
       setNewerThan(undefined)
       setIsPaused(false)
     } else {
@@ -118,10 +103,7 @@ export const TimelineTimeControls = ({
     <>
       <div className='flex items-center h-6'>
         {newerThan && (
-          <span
-            title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`}
-            className='text-xs font-roboto-mono mr-2 text-gray-400'
-          >
+          <span title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`} className='text-xs font-roboto-mono mr-2 text-gray-400'>
             {formatTimestampTime(olderThan)} - {formatTimestampTime(newerThan)}
           </span>
         )}
@@ -139,13 +121,7 @@ export const TimelineTimeControls = ({
                   </span>
                 </Listbox.Button>
 
-                <Transition
-                  show={open}
-                  as={Fragment}
-                  leave='transition ease-in duration-100'
-                  leaveFrom='opacity-100'
-                  leaveTo='opacity-0'
-                >
+                <Transition show={open} as={Fragment} leave='transition ease-in duration-100' leaveFrom='opacity-100' leaveTo='opacity-0'>
                   <Listbox.Options
                     className={`absolute z-10 max-h-60 w-full overflow-auto rounded-md ${panelColor} py-1 text-xs shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none`}
                   >
@@ -155,28 +131,16 @@ export const TimelineTimeControls = ({
                         <Listbox.Option
                           key={key}
                           className={({ active }) =>
-                            classNames(
-                              active ? 'bg-indigo-600 text-white' : `${textColor}`,
-                              'relative cursor-pointer select-none py-2 pl-3 pr-9',
-                            )
+                            classNames(active ? 'bg-indigo-600 text-white' : `${textColor}`, 'relative cursor-pointer select-none py-2 pl-3 pr-9')
                           }
                           value={timeRange}
                         >
                           {({ selected, active }) => (
                             <>
-                              <span
-                                className={classNames(selected ? 'font-semibold' : 'font-normal', 'block truncate')}
-                              >
-                                {timeRange.label}
-                              </span>
+                              <span className={classNames(selected ? 'font-semibold' : 'font-normal', 'block truncate')}>{timeRange.label}</span>
 
                               {selected ? (
-                                <span
-                                  className={classNames(
-                                    active ? 'text-white' : 'text-indigo-600',
-                                    'absolute inset-y-0 right-0 flex items-center pr-4',
-                                  )}
-                                >
+                                <span className={classNames(active ? 'text-white' : 'text-indigo-600', 'absolute inset-y-0 right-0 flex items-center pr-4')}>
                                   <CheckIcon className='h-4 w-4' aria-hidden='true' />
                                 </span>
                               ) : null}
@@ -192,11 +156,7 @@ export const TimelineTimeControls = ({
           )}
         </Listbox>
         {isTailing && (
-          <span
-            className={`isolate inline-flex rounded-md shadow-sm h-6 ${textColor} ${
-              isPaused ? bgColor : 'bg-indigo-600 text-white'
-            } `}
-          >
+          <span className={`isolate inline-flex rounded-md shadow-sm h-6 ${textColor} ${isPaused ? bgColor : 'bg-indigo-600 text-white'} `}>
             <button
               type='button'
               onClick={() => setIsPaused(!isPaused)}

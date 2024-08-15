@@ -1,5 +1,6 @@
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import React, { useEffect, useState } from 'react'
+import type React from 'react'
+import { useEffect, useState } from 'react'
 
 export interface ExpandablePanelProps {
   icon?: React.ElementType

@@ -1,8 +1,8 @@
-import { Timestamp } from '@bufbuild/protobuf'
+import type { Timestamp } from '@bufbuild/protobuf'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useVisibility } from '../../hooks/use-visibility.ts'
-import { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+import type { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import { eventIdFilter, getEvents, streamEvents, timeFilter } from '../../services/console.service.ts'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
@@ -17,7 +17,7 @@ import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCreatedDetails.tsx'
 import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUpdatedDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
-import { TimeSettings } from './filters/TimelineTimeControls.tsx'
+import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
 const maxTimelineEntries = 1000
 
@@ -97,10 +97,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
 
     switch (entry.entry?.case) {
       case 'call':
-        openPanel(
-          <TimelineCallDetails timestamp={entry.timeStamp as Timestamp} call={entry.entry.value} />,
-          handlePanelClosed,
-        )
+        openPanel(<TimelineCallDetails timestamp={entry.timeStamp as Timestamp} call={entry.entry.value} />, handlePanelClosed)
         break
       case 'log':
         openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />, handlePanelClosed)
@@ -136,17 +133,13 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
   return (
     <div className='border border-gray-100 dark:border-slate-700 rounded m-2'>
       <div className='overflow-x-hidden'>
-        <table className={`w-full table-fixed text-gray-600 dark:text-gray-300`}>
+        <table className={'w-full table-fixed text-gray-600 dark:text-gray-300'}>
           <thead>
             <tr className='flex text-xs'>
-              <th className='p-1 text-left border-b w-8 border-gray-100 dark:border-slate-700 flex-none'></th>
+              <th className='p-1 text-left border-b w-8 border-gray-100 dark:border-slate-700 flex-none' />
               <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>Date</th>
-              <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>
-                Deployment
-              </th>
-              <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-grow flex-shrink'>
-                Content
-              </th>
+              <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none'>Deployment</th>
+              <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-grow flex-shrink'>Content</th>
             </tr>
           </thead>
           <tbody>
@@ -161,15 +154,8 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
                 <td className='w-8 flex-none flex items-center justify-center'>
                   <TimelineIcon event={entry} />
                 </td>
-                <td className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>
-                  {formatTimestampShort(entry.timeStamp)}
-                </td>
-                <td
-                  title={deploymentKey(entry)}
-                  className={`p-1 pr-2 w-40 items-center flex-none truncate ${deploymentTextColor(
-                    deploymentKey(entry),
-                  )}`}
-                >
+                <td className='p-1 w-40 items-center flex-none text-gray-400 dark:text-gray-400'>{formatTimestampShort(entry.timeStamp)}</td>
+                <td title={deploymentKey(entry)} className={`p-1 pr-2 w-40 items-center flex-none truncate ${deploymentTextColor(deploymentKey(entry))}`}>
                   {deploymentKey(entry)}
                 </td>
                 <td className='p-1 flex-grow truncate'>

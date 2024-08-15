@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { classNames } from '../../utils'
-import { CodeEditor, InitialState } from '../../components/CodeEditor'
+import { CodeEditor, type InitialState } from '../../components/CodeEditor'
 import { useClient } from '../../hooks/use-client'
+import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
+import type { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { classNames } from '../../utils'
 import { VerbFormInput } from './VerbFormInput'
-import { createVerbRequest, defaultRequest, httpPopulatedRequestPath, isHttpIngress, fullRequestPath, requestType, simpleJsonSchema } from './verb.utils'
+import { createVerbRequest, defaultRequest, fullRequestPath, httpPopulatedRequestPath, isHttpIngress, requestType, simpleJsonSchema } from './verb.utils'
 
 export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb }) => {
   const client = useClient(VerbService)
@@ -59,14 +59,12 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
     localStorage.setItem(headersTextKey, text)
   }
 
-  const handleTabClick = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>, id: string) => {
+  const handleTabClick = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
     e.preventDefault()
     setActiveTabId(id)
   }
 
-  const tabs = [
-    { id: 'body', name: 'Body' },
-  ]
+  const tabs = [{ id: 'body', name: 'Body' }]
 
   if (isHttpIngress(verb)) {
     tabs.push({ id: 'headers', name: 'Headers' })
@@ -114,44 +112,37 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
         <div className='border-b border-gray-200 dark:border-white/10'>
           <nav className='-mb-px flex space-x-6' aria-label='Tabs'>
             {tabs.map((tab) => (
-              <a
+              <button
+                type='button'
                 key={tab.name}
                 className={classNames(
                   activeTabId === tab.id
                     ? 'border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:hover:border-gray-500 dark:text-gray-500 dark:hover:text-gray-300',
-                  'whitespace-nowrap cursor-pointer border-b-2 py-2 px-1 text-sm font-medium'
+                  'whitespace-nowrap cursor-pointer border-b-2 py-2 px-1 text-sm font-medium',
                 )}
                 aria-current={activeTabId === tab.id ? 'page' : undefined}
                 onClick={(e) => handleTabClick(e, tab.id)}
               >
                 {tab.name}
-              </a>
+              </button>
             ))}
           </nav>
         </div>
       </div>
       <div className='flex-1 overflow-hidden'>
         <div className='h-1/2 overflow-y-scroll'>
-          {activeTabId === 'body' && (
-            <CodeEditor initialState={initialEditorState} onTextChanged={handleEditorTextChanged} />
-          )}
-          {activeTabId === 'verbschema' && (
-            <CodeEditor initialState={{ initialText: verb?.schema ?? 'what', readonly: true }} />
-          )}
-          {activeTabId === 'jsonschema' && (
-            <CodeEditor initialState={{ initialText: verb?.jsonRequestSchema ?? '', readonly: true }} />
-          )}
-          {activeTabId === 'headers' && (
-            <CodeEditor initialState={initialHeadersState} onTextChanged={handleHeadersTextChanged} />
-          )}
+          {activeTabId === 'body' && <CodeEditor initialState={initialEditorState} onTextChanged={handleEditorTextChanged} />}
+          {activeTabId === 'verbschema' && <CodeEditor initialState={{ initialText: verb?.schema ?? 'what', readonly: true }} />}
+          {activeTabId === 'jsonschema' && <CodeEditor initialState={{ initialText: verb?.jsonRequestSchema ?? '', readonly: true }} />}
+          {activeTabId === 'headers' && <CodeEditor initialState={initialHeadersState} onTextChanged={handleHeadersTextChanged} />}
         </div>
 
-        <div className='border-b border-gray-200 dark:border-white/10'></div>
+        <div className='border-b border-gray-200 dark:border-white/10' />
         <div className='h-1/2 overflow-y-scroll'>
           <CodeEditor initialState={{ initialText: bottomText, readonly: true }} onTextChanged={setHeadersText} />
         </div>
       </div>
-    </div >
+    </div>
   )
 }

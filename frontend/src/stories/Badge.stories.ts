@@ -1,4 +1,4 @@
-import { StoryObj } from '@storybook/react/*'
+import type { StoryObj } from '@storybook/react/*'
 import { Badge } from '../components/Badge'
 
 const meta = {
@@ -7,7 +7,7 @@ const meta = {
 }
 
 export default meta
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<typeof meta>
 
 export const Primary: Story = {
   args: {

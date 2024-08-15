@@ -1,4 +1,4 @@
-import { DeploymentUpdatedEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { DeploymentUpdatedEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 export const TimelineDeploymentUpdated = ({ deployment }: { deployment: DeploymentUpdatedEvent }) => {
   return (

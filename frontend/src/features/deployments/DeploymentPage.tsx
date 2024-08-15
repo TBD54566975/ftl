@@ -1,17 +1,17 @@
 import { RocketLaunchIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Badge } from '../../components/Badge'
 import { Card } from '../../components/Card'
 import { Page } from '../../layout'
-import { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
-import { modulesFilter } from '../../services/console.service'
-import { Timeline } from '../timeline/Timeline'
-import { isCron, isExported, isHttpIngress } from '../verbs/verb.utils'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
-import { Badge } from '../../components/Badge'
+import { modulesFilter } from '../../services/console.service'
 import { deploymentKeyModuleName } from '../modules/module.utils'
+import { Timeline } from '../timeline/Timeline'
+import { isCron, isExported, isHttpIngress } from '../verbs/verb.utils'
 
 const timeSettings = { isTailing: true, isPaused: false }
 
@@ -53,11 +53,7 @@ export const DeploymentPage = () => {
   return (
     <SidePanelProvider>
       <Page>
-        <Page.Header
-          icon={<RocketLaunchIcon />}
-          title={module?.deploymentKey || 'Loading...'}
-          breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]}
-        />
+        <Page.Header icon={<RocketLaunchIcon />} title={module?.deploymentKey || 'Loading...'} breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]} />
 
         <Page.Body className='flex'>
           <div className=''>
@@ -81,18 +77,13 @@ export const DeploymentPage = () => {
                 ))}
               </div>
             </div>
-            <div
-              className='cursor-col-resize bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600 h-0.5'
-            />
-            <div className='flex-1 h-1/2 overflow-y-scroll'>
-              {module?.deploymentKey && <Timeline timeSettings={timeSettings} filters={filters} />}
-            </div>
+            <div className='cursor-col-resize bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600 h-0.5' />
+            <div className='flex-1 h-1/2 overflow-y-scroll'>{module?.deploymentKey && <Timeline timeSettings={timeSettings} filters={filters} />}</div>
           </div>
         </Page.Body>
       </Page>
     </SidePanelProvider>
   )
-
 }
 
 const badges = (verb?: Verb) => {

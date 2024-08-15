@@ -1,5 +1,5 @@
-import React from 'react'
-import { ExpandablePanel, ExpandablePanelProps } from '../ExpandablePanel'
+import type React from 'react'
+import { ExpandablePanel, type ExpandablePanelProps } from '../ExpandablePanel'
 
 interface RightPanelProps {
   header: React.ReactNode

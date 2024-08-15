@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useClient } from '../hooks/use-client'
 import { useVisibility } from '../hooks/use-visibility.ts'
 import { ControllerService } from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
-import { DeploymentChangeType, PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
+import { DeploymentChangeType, type PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
 
 export const useSchema = () => {
   const client = useClient(ControllerService)
@@ -40,9 +40,7 @@ export const useSchema = () => {
           }
 
           if (!response.more) {
-            setSchema(
-              Array.from(schemaMap.values()).sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0),
-            )
+            setSchema(Array.from(schemaMap.values()).sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0))
           }
         }
       } catch (error) {

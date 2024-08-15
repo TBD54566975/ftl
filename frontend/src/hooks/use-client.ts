@@ -1,5 +1,5 @@
-import { ServiceType } from '@bufbuild/protobuf'
-import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
+import type { ServiceType } from '@bufbuild/protobuf'
+import { type PromiseClient, createPromiseClient } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
 import { useMemo } from 'react'
 
