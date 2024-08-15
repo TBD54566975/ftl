@@ -102,6 +102,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataTypeMap:
 			v = &schemapb.Metadata_TypeMap{TypeMap: n.ToProto().(*schemapb.MetadataTypeMap)}
 
+		case *MetadataEncoding:
+			v = &schemapb.Metadata_Encoding{Encoding: n.ToProto().(*schemapb.MetadataEncoding)}
+
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}

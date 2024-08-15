@@ -1232,6 +1232,12 @@ export class Metadata extends Message<Metadata> {
      */
     value: MetadataTypeMap;
     case: "typeMap";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataEncoding encoding = 9;
+     */
+    value: MetadataEncoding;
+    case: "encoding";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Metadata>) {
@@ -1250,6 +1256,7 @@ export class Metadata extends Message<Metadata> {
     { no: 6, name: "retry", kind: "message", T: MetadataRetry, oneof: "value" },
     { no: 7, name: "subscriber", kind: "message", T: MetadataSubscriber, oneof: "value" },
     { no: 8, name: "typeMap", kind: "message", T: MetadataTypeMap, oneof: "value" },
+    { no: 9, name: "encoding", kind: "message", T: MetadataEncoding, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Metadata {
@@ -1444,6 +1451,55 @@ export class MetadataDatabases extends Message<MetadataDatabases> {
 
   static equals(a: MetadataDatabases | PlainMessage<MetadataDatabases> | undefined, b: MetadataDatabases | PlainMessage<MetadataDatabases> | undefined): boolean {
     return proto3.util.equals(MetadataDatabases, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataEncoding
+ */
+export class MetadataEncoding extends Message<MetadataEncoding> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string type = 2;
+   */
+  type = "";
+
+  /**
+   * @generated from field: bool lenient = 3;
+   */
+  lenient = false;
+
+  constructor(data?: PartialMessage<MetadataEncoding>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataEncoding";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "lenient", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataEncoding {
+    return new MetadataEncoding().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataEncoding {
+    return new MetadataEncoding().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataEncoding {
+    return new MetadataEncoding().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataEncoding | PlainMessage<MetadataEncoding> | undefined, b: MetadataEncoding | PlainMessage<MetadataEncoding> | undefined): boolean {
+    return proto3.util.equals(MetadataEncoding, a, b);
   }
 }
 

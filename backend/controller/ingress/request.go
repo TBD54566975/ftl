@@ -13,6 +13,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // BuildRequestBody extracts the HttpRequest body from an HTTP request.
@@ -84,7 +85,11 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 		return nil, err
 	}
 
-	err = schema.ValidateRequestMap(request, []string{request.String()}, requestMap, sch)
+	var opts []schema.EncodingOption
+	if e, ok := slices.FindVariant[*schema.MetadataEncoding](verb.Metadata); ok && e.Lenient {
+		opts = append(opts, schema.LenientMode())
+	}
+	err = schema.ValidateRequestMap(request, []string{request.String()}, requestMap, sch, opts...)
 	if err != nil {
 		return nil, err
 	}

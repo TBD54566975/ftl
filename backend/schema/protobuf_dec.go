@@ -183,6 +183,12 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			NativeName: s.TypeMap.NativeName,
 		}
 
+	case *schemapb.Metadata_Encoding:
+		return &MetadataEncoding{
+			Pos:     posFromProto(s.Encoding.Pos),
+			Lenient: s.Encoding.Lenient,
+		}
+
 	default:
 		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}

@@ -144,6 +144,14 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, in.JsonData(t, in.Obj{"Message": "hello"}), resp.BodyBytes)
 		}),
+		// not lenient
+		in.HttpCall(http.MethodPost, "/users", nil, in.JsonData(t, in.Obj{"user_id": 123, "postId": 345, "extra": "blah"}), func(t testing.TB, resp *in.HTTPResponse) {
+			assert.Equal(t, 400, resp.Status)
+		}),
+		// lenient
+		in.HttpCall(http.MethodPost, "/lenient", nil, in.JsonData(t, in.Obj{"user_id": 123, "postId": 345, "extra": "blah"}), func(t testing.TB, resp *in.HTTPResponse) {
+			assert.Equal(t, 201, resp.Status)
+		}),
 	)
 }
 
