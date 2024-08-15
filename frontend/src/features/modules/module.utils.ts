@@ -1,5 +1,5 @@
-import { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { verbCalls } from '../verbs/verb.utils'
 
 interface InCall {
@@ -10,38 +10,38 @@ interface InCall {
 export const getCalls = (module: Module) => {
   const verbCalls: Ref[] = []
 
-  const metadata = module.verbs
-    .map((v) => v.verb)
-    .map((v) => v?.metadata)
-    .flat()
+  const metadata = module.verbs.map((v) => v.verb).flatMap((v) => v?.metadata)
 
-  const metadataCalls = metadata
-    .filter((metadata) => metadata?.value.case === 'calls')
-    .map((metadata) => metadata?.value.value as MetadataCalls)
+  const metadataCalls = metadata.filter((metadata) => metadata?.value.case === 'calls').map((metadata) => metadata?.value.value as MetadataCalls)
 
-  const calls = metadataCalls.map((metadata) => metadata?.calls).flat()
+  const calls = metadataCalls.flatMap((metadata) => metadata?.calls)
 
-  calls.forEach((call) => {
+  for (const call of calls) {
     if (!verbCalls.find((v) => v.name === call.name && v.module === call.module)) {
       verbCalls.push({ name: call.name, module: call.module } as Ref)
     }
-  })
+  }
+
   return calls
 }
 
 export const callsIn = (modules: Module[], module: Module) => {
   const allCalls: InCall[] = []
-  modules.forEach((m) => {
-    m.verbs?.forEach((v) => {
-      verbCalls(v)?.forEach((call) => {
-        call.calls.forEach((c) => {
+  for (const m of modules) {
+    for (const v of m.verbs) {
+      const calls = verbCalls(v)
+      if (!calls) {
+        continue
+      }
+      for (const call of calls) {
+        for (const c of call.calls) {
           if (c.module === module.name) {
             allCalls.push({ module: m.name, verb: v.verb?.name })
           }
-        })
-      })
-    })
-  })
+        }
+      }
+    }
+  }
 
   return allCalls
 }

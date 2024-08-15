@@ -1,17 +1,17 @@
 import { BoltIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ResizablePanels } from '../../components/ResizablePanels'
 import { Page } from '../../layout'
-import { CallEvent, EventType, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { type CallEvent, EventType, type Module, type Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
+import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { callFilter, eventTypesFilter, streamEvents } from '../../services/console.service'
-import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
-import { ResizablePanels } from '../../components/ResizablePanels'
 import { CallList } from '../calls/CallList'
+import { deploymentKeyModuleName } from '../modules/module.utils'
 import { VerbRequestForm } from './VerbRequestForm'
 import { verbPanels } from './VerbRightPanel'
-import { deploymentKeyModuleName } from '../modules/module.utils'
 
 export const VerbPage = () => {
   const { deploymentKey, verbName } = useParams()
@@ -23,7 +23,7 @@ export const VerbPage = () => {
   const [calls, setCalls] = useState<CallEvent[]>([])
 
   useEffect(() => {
-    if (modules.modules.length == 0 || !deploymentKey || !verbName) return
+    if (modules.modules.length === 0 || !deploymentKey || !verbName) return
 
     let module = modules.modules.find((module) => module.deploymentKey === deploymentKey)
     if (!module) {

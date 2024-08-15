@@ -19,9 +19,7 @@ export const SidePanel = () => {
         leaveFrom='translate-x-0'
         leaveTo='translate-x-full'
       >
-        <div
-          className={`fixed right-0 sm:w-1/3 w-3/4 h-full ${sidePanelColor} dark:bg-slate-800 dark:shadow-black-600 shadow-2xl`}
-        >
+        <div className={`fixed right-0 sm:w-1/3 w-3/4 h-full ${sidePanelColor} dark:bg-slate-800 dark:shadow-black-600 shadow-2xl`}>
           <div className='overflow-y-auto h-full'>{component}</div>
         </div>
       </Transition>

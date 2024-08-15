@@ -1,18 +1,19 @@
-import React, { useState } from 'react'
-import { ExpandablePanelProps } from '../features/console/ExpandablePanel'
+import type React from 'react'
+import { useState } from 'react'
+import type { ExpandablePanelProps } from '../features/console/ExpandablePanel'
 import RightPanel from '../features/console/right-panel/RightPanel'
 import useLocalStorage from '../hooks/use-local-storage'
 
 interface ResizablePanelsProps {
-  initialRightPanelWidth?: number;
-  initialBottomPanelHeight?: number;
-  minRightPanelWidth?: number;
-  minBottomPanelHeight?: number;
-  topBarHeight?: number;
-  rightPanelHeader: React.ReactNode;
+  initialRightPanelWidth?: number
+  initialBottomPanelHeight?: number
+  minRightPanelWidth?: number
+  minBottomPanelHeight?: number
+  topBarHeight?: number
+  rightPanelHeader: React.ReactNode
   rightPanelPanels: ExpandablePanelProps[]
-  bottomPanelContent: React.ReactNode;
-  mainContent: React.ReactNode;
+  bottomPanelContent: React.ReactNode
+  mainContent: React.ReactNode
 }
 
 export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
@@ -71,8 +72,7 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
       onMouseLeave={stopDragging}
     >
       <div className='flex flex-1'>
-        <div style={{ maxHeight: `calc(100vh - ${(bottomPanelHeight + 46)}px)` }}
-          className='flex-1 flex-col min-h-64'>
+        <div style={{ maxHeight: `calc(100vh - ${bottomPanelHeight + 46}px)` }} className='flex-1 flex-col min-h-64'>
           {mainContent}
         </div>
         <div
@@ -82,11 +82,9 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
         />
         <div
           style={{ width: `${rightPanelWidth}px`, maxHeight: `calc(100vh - ${bottomPanelHeight + 46}px)` }}
-          className='flex flex-col h-full overflow-y-scroll'>
-          <RightPanel
-            header={rightPanelHeader}
-            panels={rightPanelPanels}
-          />
+          className='flex flex-col h-full overflow-y-scroll'
+        >
+          <RightPanel header={rightPanelHeader} panels={rightPanelPanels} />
         </div>
       </div>
       <div

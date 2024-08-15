@@ -1,6 +1,6 @@
 import { BoltIcon, Cog6ToothIcon, CubeIcon, LockClosedIcon, RectangleGroupIcon } from '@heroicons/react/24/outline'
 import { Config, Module, Secret, Verb } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { FTLNode } from '../../graph/GraphPane'
+import type { FTLNode } from '../../graph/GraphPane'
 
 export const headerForNode = (node: FTLNode | null) => {
   if (!node) {
@@ -11,11 +11,14 @@ export const headerForNode = (node: FTLNode | null) => {
   }
   if (node instanceof Module) {
     return moduleHeader(node)
-  } else if (node instanceof Verb) {
+  }
+  if (node instanceof Verb) {
     return verbHeader(node)
-  } else if (node instanceof Secret) {
+  }
+  if (node instanceof Secret) {
     return secretHeader(node)
-  } else if (node instanceof Config) {
+  }
+  if (node instanceof Config) {
     return configHeader(node)
   }
 }

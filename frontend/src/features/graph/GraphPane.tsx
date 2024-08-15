@@ -1,14 +1,14 @@
 import { useContext, useEffect } from 'react'
 import ReactFlow, { Background, Controls, useEdgesState, useNodesState } from 'reactflow'
 import 'reactflow/dist/style.css'
+import React from 'react'
+import type { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../providers/modules-provider'
+import { ConfigNode } from './ConfigNode'
 import { GroupNode } from './GroupNode'
+import { SecretNode } from './SecretNode'
 import { VerbNode } from './VerbNode'
 import { layoutNodes } from './create-layout'
-import { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import React from 'react'
-import { SecretNode } from './SecretNode'
-import { ConfigNode } from './ConfigNode'
 const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode, secretNode: SecretNode, configNode: ConfigNode }
 
 export type FTLNode = Module | Verb | Secret | Config

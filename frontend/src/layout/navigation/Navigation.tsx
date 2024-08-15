@@ -17,7 +17,7 @@ export const Navigation = ({
 
   return (
     <div className={`hidden sm:block bg-gray-800 flex-shrink-0 h-full ${isCollapsed ? '' : 'w-52'}`}>
-      <aside className={`flex flex-col h-full`}>
+      <aside className={'flex flex-col h-full'}>
         <div className='flex flex-col h-full overflow-y-auto bg-indigo-700'>
           <div className='flex grow flex-col overflow-y-auto bg-indigo-700 px-4'>
             <Link to='/events'>
@@ -27,19 +27,13 @@ export const Navigation = ({
                     <>
                       <span className='text-2xl font-medium text-white'>FTL</span>
                       <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
-                      <button
-                        onClick={() => setIsCollapsed(true)}
-                        className='hover:bg-indigo-600 p-1 ml-auto -mr-2 rounded'
-                      >
+                      <button type='button' onClick={() => setIsCollapsed(true)} className='hover:bg-indigo-600 p-1 ml-auto -mr-2 rounded'>
                         <ChevronDoubleLeftIcon className='h-6 w-6 text-gray-300' />
                       </button>
                     </>
                   )}
                   {isCollapsed && (
-                    <button
-                      onClick={() => setIsCollapsed(false)}
-                      className='hover:bg-indigo-600 p-1 rounded w-full flex justify-center'
-                    >
+                    <button type='button' onClick={() => setIsCollapsed(false)} className='hover:bg-indigo-600 p-1 rounded w-full flex justify-center'>
                       <ChevronDoubleRightIcon className='h-6 w-6 text-gray-300' />
                     </button>
                   )}
@@ -48,18 +42,16 @@ export const Navigation = ({
             </Link>
 
             <nav className='flex flex-1 flex-col pt-4'>
-              <ul role='list' className='flex flex-1 flex-col gap-y-7'>
+              <ul className='flex flex-1 flex-col gap-y-7'>
                 <li>
-                  <ul role='list' className='-mx-2 space-y-1'>
+                  <ul className='-mx-2 space-y-1'>
                     {navigation.map((item) => (
                       <li key={item.name}>
                         <NavLink
                           to={item.href}
                           className={({ isActive }) =>
                             classNames(
-                              isActive
-                                ? 'bg-indigo-600 text-white'
-                                : 'text-indigo-200 hover:text-white hover:bg-indigo-600',
+                              isActive ? 'bg-indigo-600 text-white' : 'text-indigo-200 hover:text-white hover:bg-indigo-600',
                               'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold',
                               isCollapsed ? 'justify-center' : '',
                             )
@@ -69,10 +61,7 @@ export const Navigation = ({
                             <>
                               <item.icon
                                 title={item.name}
-                                className={classNames(
-                                  isActive ? 'text-white' : 'text-indigo-200 group-hover:text-white',
-                                  'h-6 w-6 shrink-0',
-                                )}
+                                className={classNames(isActive ? 'text-white' : 'text-indigo-200 group-hover:text-white', 'h-6 w-6 shrink-0')}
                                 aria-hidden='true'
                               />
                               {!isCollapsed && item.name && (

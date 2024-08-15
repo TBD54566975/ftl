@@ -1,4 +1,4 @@
-import React, { PropsWithChildren, useState } from 'react'
+import React, { type PropsWithChildren, useState } from 'react'
 import { SidePanel } from '../layout/SidePanel'
 
 interface SidePanelContextType {

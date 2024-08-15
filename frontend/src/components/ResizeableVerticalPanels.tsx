@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react'
+import type React from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ResizableVerticalPanelsProps {
-  topPanelContent: React.ReactNode;
-  bottomPanelContent: React.ReactNode;
-  initialTopPanelHeightPercent?: number;
-  minTopPanelHeight?: number;
-  minBottomPanelHeight?: number;
+  topPanelContent: React.ReactNode
+  bottomPanelContent: React.ReactNode
+  initialTopPanelHeightPercent?: number
+  minTopPanelHeight?: number
+  minBottomPanelHeight?: number
 }
 
 export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = ({
@@ -16,7 +17,7 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
   minBottomPanelHeight = 100,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const [topPanelHeight, setTopPanelHeight] =  useState<number>()
+  const [topPanelHeight, setTopPanelHeight] = useState<number>()
   const [isDragging, setIsDragging] = useState(false)
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
     updateDimensions()
     window.addEventListener('resize', updateDimensions)
     return () => window.removeEventListener('resize', updateDimensions)
-  },[initialTopPanelHeightPercent])
+  }, [initialTopPanelHeightPercent])
 
   const startDragging = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -53,13 +54,7 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
   }
 
   return (
-    <div
-      ref={containerRef}
-      className='flex flex-col h-full w-full'
-      onMouseMove={onDrag}
-      onMouseUp={stopDragging}
-      onMouseLeave={stopDragging}
-    >
+    <div ref={containerRef} className='flex flex-col h-full w-full' onMouseMove={onDrag} onMouseUp={stopDragging} onMouseLeave={stopDragging}>
       <div style={{ height: `${topPanelHeight}px` }} className='overflow-auto'>
         {topPanelContent}
       </div>
@@ -68,9 +63,7 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
         onMouseDown={startDragging}
         style={{ height: '3px', cursor: 'row-resize' }}
       />
-      <div className='flex-1 overflow-auto'>
-        {bottomPanelContent}
-      </div>
+      <div className='flex-1 overflow-auto'>{bottomPanelContent}</div>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { Timestamp } from '@bufbuild/protobuf'
 import { useContext } from 'react'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
-import { DeploymentCreatedEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { DeploymentCreatedEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
 import { TimelineTimestamp } from './TimelineTimestamp'
@@ -18,7 +18,7 @@ export const TimelineDeploymentCreatedDetails = ({
 
   return (
     <>
-      <div className={`bg-green-500 dark:bg-green-300 h-2 w-full`}></div>
+      <div className={'bg-green-500 dark:bg-green-300 h-2 w-full'} />
       <div className='p-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-2'>

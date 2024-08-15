@@ -13,7 +13,6 @@ const fs = require('fs/promises')
     files.map(async (file) => {
       try {
         await fs.copyFile(file, file.replace(src, dist))
-        // eslint-disable-next-line no-console
         console.log(`${file.replace(src, '')} was copied to dist`)
       } catch {
         console.error(` ${file.replace(src, '')}could not be copied`)

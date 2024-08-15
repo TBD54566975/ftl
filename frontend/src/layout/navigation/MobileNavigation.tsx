@@ -16,7 +16,7 @@ const MobileNavigation = ({ onClose }: { onClose: () => void }) => {
           <span className='text-2xl font-medium text-white'>FTL</span>
           <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
         </div>
-        <button onClick={onClose}>
+        <button type='button' onClick={onClose}>
           <XMarkIcon className='h-6 w-6 text-white hover:bg-indigo-700' />
         </button>
       </div>
@@ -26,19 +26,12 @@ const MobileNavigation = ({ onClose }: { onClose: () => void }) => {
             <li key={item.name}>
               <NavLink
                 to={item.href}
-                className={({ isActive }) =>
-                  classNames(
-                    isActive ? 'bg-indigo-600 text-white' : 'text-indigo-200 hover:text-white hover:bg-indigo-600',
-                  )
-                }
+                className={({ isActive }) => classNames(isActive ? 'bg-indigo-600 text-white' : 'text-indigo-200 hover:text-white hover:bg-indigo-600')}
               >
                 {({ isActive }) => (
                   <div onClick={onClose} className='group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold'>
                     <item.icon
-                      className={classNames(
-                        isActive ? 'text-white' : 'text-indigo-200 group-hover:text-white',
-                        'h-6 w-6 shrink-0',
-                      )}
+                      className={classNames(isActive ? 'text-white' : 'text-indigo-200 group-hover:text-white', 'h-6 w-6 shrink-0')}
                       aria-hidden='true'
                     />
                     {item.name}

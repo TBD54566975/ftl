@@ -1,5 +1,5 @@
 import { ListBulletIcon, PhoneArrowDownLeftIcon, PhoneIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
-import { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { LogLevelBadgeSmall } from '../logs/LogLevelBadgeSmall'
 
 export const TimelineIcon = ({ event }: { event: Event }) => {

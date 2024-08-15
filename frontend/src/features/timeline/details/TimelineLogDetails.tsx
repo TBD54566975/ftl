@@ -3,7 +3,7 @@ import { useContext } from 'react'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
-import { Event, LogEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Event, LogEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { textColor } from '../../../utils/style.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
@@ -16,7 +16,7 @@ export const TimelineLogDetails = ({ event, log }: { event: Event; log: LogEvent
 
   return (
     <>
-      <div className={`${logLevelBgColor[log.logLevel]} h-2 w-full`}></div>
+      <div className={`${logLevelBgColor[log.logLevel]} h-2 w-full`} />
       <div className='p-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-2'>

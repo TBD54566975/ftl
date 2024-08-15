@@ -19,21 +19,17 @@ export const Layout = () => {
           <MobileNavigation onClose={() => setIsMobileMenuOpen(false)} />
         </div>
 
-        <div className={`flex justify-between items-center py-2 px-4 bg-indigo-600 sm:hidden`}>
+        <div className={'flex justify-between items-center py-2 px-4 bg-indigo-600 sm:hidden'}>
           <div className='flex shrink-0 items-center rounded-md hover:bg-indigo-700'>
             <span className='text-2xl font-medium text-white'>FTL</span>
             <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
           </div>
-          <button onClick={() => setIsMobileMenuOpen(true)}>
+          <button type='button' onClick={() => setIsMobileMenuOpen(true)}>
             <Bars3Icon className='h-6 w-6 text-white hover:bg-indigo-700' />
           </button>
         </div>
 
-        <div
-          className={`flex flex-col h-full sm:grid ${
-            isCollapsed ? 'sm:grid-cols-[4rem,1fr]' : 'sm:grid-cols-[13rem,1fr]'
-          }`}
-        >
+        <div className={`flex flex-col h-full sm:grid ${isCollapsed ? 'sm:grid-cols-[4rem,1fr]' : 'sm:grid-cols-[13rem,1fr]'}`}>
           <Navigation isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
           <main className='overflow-hidden flex-1'>
             <Outlet />

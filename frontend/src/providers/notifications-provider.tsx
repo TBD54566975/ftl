@@ -1,10 +1,10 @@
-import React, { PropsWithChildren, useRef, useState } from 'react'
+import React, { type PropsWithChildren, useRef, useState } from 'react'
 
 export enum NotificationType {
-  Success,
-  Error,
-  Warning,
-  Info,
+  Success = 0,
+  Error = 1,
+  Warning = 2,
+  Info = 3,
 }
 
 interface Notification {
@@ -54,9 +54,5 @@ export const NotificationsProvider = ({ children }: PropsWithChildren) => {
     }
   }
 
-  return (
-    <NotificationsContext.Provider value={{ isOpen, showNotification, closeNotification, notification }}>
-      {children}
-    </NotificationsContext.Provider>
-  )
+  return <NotificationsContext.Provider value={{ isOpen, showNotification, closeNotification, notification }}>{children}</NotificationsContext.Provider>
 }

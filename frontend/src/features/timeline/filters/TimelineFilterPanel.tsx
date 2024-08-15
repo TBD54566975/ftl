@@ -1,6 +1,7 @@
 import { PhoneIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
-import React, { useContext, useEffect, useState } from 'react'
-import { EventType, EventsQuery_Filter, LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type React from 'react'
+import { useContext, useEffect, useState } from 'react'
+import { EventType, type EventsQuery_Filter, LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { modulesContext } from '../../../providers/modules-provider'
 import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../services/console.service'
 import { textColor } from '../../../utils'
@@ -115,10 +116,7 @@ export const TimelineFilterPanel = ({
                   />
                 </div>
                 <div className='ml-2 text-sm leading-6 w-full'>
-                  <label
-                    htmlFor={`event-type-${key}`}
-                    className={`flex justify-between items-center ${textColor} cursor-pointer`}
-                  >
+                  <label htmlFor={`event-type-${key}`} className={`flex justify-between items-center ${textColor} cursor-pointer`}>
                     {EVENT_TYPES[key].label}
                     <span>{EVENT_TYPES[key].icon}</span>
                   </label>
@@ -128,21 +126,15 @@ export const TimelineFilterPanel = ({
           </FilterPanelSection>
 
           <FilterPanelSection title='Log level'>
-            <ul role='list' className='space-y-1'>
+            <ul className='space-y-1'>
               {Object.keys(LOG_LEVELS).map((key) => (
-                <li
-                  key={key}
-                  onClick={() => handleLogLevelChanged(key)}
-                  className='relative flex gap-x-2 cursor-pointer'
-                >
+                <li key={key} onClick={() => handleLogLevelChanged(key)} className='relative flex gap-x-2 cursor-pointer'>
                   <div className='relative flex h-5 w-3 flex-none items-center justify-center'>
                     <div
                       className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${
-                        selectedLogLevel <= Number(key)
-                          ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}`
-                          : 'bg-gray-300 ring-gray-300'
+                        selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
                       } rounded-full ring-1`}
-                    ></div>
+                    />
                   </div>
                   <p className='flex-auto text-sm leading-5 text-gray-500'>
                     <span className={`${logLevelColor[Number(key)]} flex`}>{LOG_LEVELS[Number(key)]}</span>
@@ -155,16 +147,14 @@ export const TimelineFilterPanel = ({
           <FilterPanelSection title='Modules'>
             <div className='relative flex items-center mb-2'>
               <button
+                type='button'
                 onClick={() => setSelectedModules(modules.modules.map((module) => module.deploymentKey))}
                 className='text-indigo-600 cursor-pointer hover:text-indigo-500'
               >
                 Select All
               </button>
               <span className='px-1 text-indigo-700'>|</span>
-              <button
-                onClick={() => setSelectedModules([])}
-                className='text-indigo-600 cursor-pointer hover:text-indigo-500'
-              >
+              <button type='button' onClick={() => setSelectedModules([])} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
                 Deselect All
               </button>
             </div>
