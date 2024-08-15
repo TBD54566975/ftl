@@ -1,6 +1,7 @@
 package xyz.block.ftl.runtime;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -91,9 +92,15 @@ public class VerbRegistry {
                     var mappedResponse = mapper.writer().writeValueAsBytes(ret);
                     return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
                 }
-            } catch (Exception e) {
-                log.errorf(e, "Failed to invoke verb %s.%s", in.getVerb().getModule(), in.getVerb().getName());
-                return CallResponse.newBuilder().setError(CallResponse.Error.newBuilder().setMessage(e.getMessage()).build())
+            } catch (Throwable e) {
+                if (e.getClass() == InvocationTargetException.class) {
+                    e = e.getCause();
+                }
+                var message = String.format("Failed to invoke verb %s.%s", in.getVerb().getModule(), in.getVerb().getName());
+                log.error(message, e);
+                return CallResponse.newBuilder()
+                        .setError(CallResponse.Error.newBuilder().setStack(e.toString())
+                                .setMessage(message + " " + e.getMessage()).build())
                         .build();
             }
         }

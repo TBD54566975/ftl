@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -91,6 +92,17 @@ func Chain(actions ...Action) Action {
 	return func(t testing.TB, ic TestContext) {
 		for _, action := range actions {
 			action(t, ic)
+		}
+	}
+}
+
+// SubTests runs a list of individual actions as separate tests
+func SubTests(tests ...SubTest) Action {
+	return func(t testing.TB, ic TestContext) {
+		for _, test := range tests {
+			ic.Run(test.Name, func(t *testing.T) {
+				ic.AssertWithRetry(t, test.Action)
+			})
 		}
 	}
 }
@@ -500,6 +512,18 @@ func HttpCall(method string, path string, headers map[string][]string, body []by
 			JsonBody:  resBody,
 			BodyBytes: bodyBytes,
 		})
+	}
+}
+
+func IfLanguage(language string, action Action) Action {
+	return IfLanguages(action, language)
+}
+
+func IfLanguages(action Action, languages ...string) Action {
+	return func(t testing.TB, ic TestContext) {
+		if slices.Contains(languages, ic.language) {
+			action(t, ic)
+		}
 	}
 }
 

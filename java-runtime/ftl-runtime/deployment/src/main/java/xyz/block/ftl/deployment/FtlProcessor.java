@@ -6,7 +6,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -20,10 +22,12 @@ import java.util.stream.Collectors;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
+import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
+import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.VoidType;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.common.model.MethodParameter;
@@ -85,6 +89,7 @@ import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
+import xyz.block.ftl.v1.schema.Bytes;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Decl;
 import xyz.block.ftl.v1.schema.Field;
@@ -123,6 +128,9 @@ class FtlProcessor {
     public static final DotName OFFSET_DATE_TIME = DotName.createSimple(OffsetDateTime.class.getName());
     public static final DotName GENERATED_REF = DotName.createSimple(GeneratedRef.class);
     public static final DotName LEASE_CLIENT = DotName.createSimple(LeaseClient.class);
+    public static final DotName INSTANT = DotName.createSimple(Instant.class);
+    public static final DotName ZONED_DATE_TIME = DotName.createSimple(ZonedDateTime.class);
+    public static final DotName NOT_NULL = DotName.createSimple(NotNull.class);
 
     @BuildStep
     ModuleNameBuildItem moduleName(ApplicationInfoBuildItem applicationInfoBuildItem) {
@@ -220,7 +228,7 @@ class FtlProcessor {
         Module.Builder moduleBuilder = Module.newBuilder()
                 .setName(moduleName)
                 .setBuiltin(false);
-        Map<TypeKey, Ref> dataElements = new HashMap<>();
+        Map<TypeKey, ExistingRef> dataElements = new HashMap<>();
         ExtractionContext extractionContext = new ExtractionContext(moduleName, index, recorder, moduleBuilder, dataElements,
                 new HashSet<>(), new HashSet<>(), topics.getTopics(), verbClients.getVerbClients());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
@@ -231,7 +239,7 @@ class FtlProcessor {
             extractionContext.moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
                     .setExport(topic.exported())
                     .setName(topic.topicName())
-                    .setEvent(buildType(extractionContext, topic.eventType())).build()));
+                    .setEvent(buildType(extractionContext, topic.eventType(), topic.exported())).build()));
         }
 
         handleVerbAnnotations(index, beans, extractionContext);
@@ -300,8 +308,8 @@ class FtlProcessor {
                     .setIngress(ingressBuilder
                             .build())
                     .build();
-            Type requestTypeParam = buildType(extractionContext, bodyParamType);
-            Type responseTypeParam = buildType(extractionContext, endpoint.getMethodInfo().returnType());
+            Type requestTypeParam = buildType(extractionContext, bodyParamType, true);
+            Type responseTypeParam = buildType(extractionContext, endpoint.getMethodInfo().returnType(), true);
             moduleBuilder
                     .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
                             .addMetadata(ingressMetadata)
@@ -326,9 +334,11 @@ class FtlProcessor {
 
         output = outputTargetBuildItem.getOutputDirectory().resolve("main");
         try (var out = Files.newOutputStream(output)) {
-            out.write("""
-                    #!/bin/bash
-                    exec java -jar quarkus-app/quarkus-run.jar""".getBytes(StandardCharsets.UTF_8));
+            out.write(
+                    """
+                            #!/bin/bash
+                            exec java $FTL_JVM_OPTS -jar quarkus-app/quarkus-run.jar"""
+                            .getBytes(StandardCharsets.UTF_8));
         }
         var perms = Files.getPosixFilePermissions(output);
         EnumSet<PosixFilePermission> newPerms = EnumSet.copyOf(perms);
@@ -431,7 +441,7 @@ class FtlProcessor {
                     paramMappers.add(new VerbRegistry.SecretSupplier(name, paramType));
                     if (!context.knownSecrets.contains(name)) {
                         context.moduleBuilder.addDecls(Decl.newBuilder().setSecret(xyz.block.ftl.v1.schema.Secret.newBuilder()
-                                .setType(buildType(context, param.type())).setName(name)));
+                                .setType(buildType(context, param.type(), false)).setName(name)));
                         context.knownSecrets.add(name);
                     }
                 } else if (param.hasAnnotation(Config.class)) {
@@ -441,7 +451,7 @@ class FtlProcessor {
                     paramMappers.add(new VerbRegistry.ConfigSupplier(name, paramType));
                     if (!context.knownConfig.contains(name)) {
                         context.moduleBuilder.addDecls(Decl.newBuilder().setConfig(xyz.block.ftl.v1.schema.Config.newBuilder()
-                                .setType(buildType(context, param.type())).setName(name)));
+                                .setType(buildType(context, param.type(), false)).setName(name)));
                         context.knownConfig.add(name);
                     }
                 } else if (context.knownTopics.containsKey(param.type().name())) {
@@ -486,8 +496,8 @@ class FtlProcessor {
             verbBuilder
                     .setName(verbName)
                     .setExport(exported)
-                    .setRequest(buildType(context, bodyParamType))
-                    .setResponse(buildType(context, method.returnType()));
+                    .setRequest(buildType(context, bodyParamType, exported))
+                    .setResponse(buildType(context, method.returnType(), exported));
 
             if (metadataCallback != null) {
                 metadataCallback.accept(verbBuilder);
@@ -536,9 +546,33 @@ class FtlProcessor {
                 default:
                     throw new RuntimeException("Unknown primitive type " + param.asPrimitiveType().primitive());
             }
-        } else {
-            throw new RuntimeException("Unknown type " + param.kind());
+        } else if (param.kind() == org.jboss.jandex.Type.Kind.ARRAY) {
+            ArrayType array = param.asArrayType();
+            if (array.componentType().kind() == org.jboss.jandex.Type.Kind.PRIMITIVE) {
+                switch (array.componentType().asPrimitiveType().primitive()) {
+                    case BOOLEAN:
+                        return boolean[].class;
+                    case BYTE:
+                        return byte[].class;
+                    case SHORT:
+                        return short[].class;
+                    case INT:
+                        return int[].class;
+                    case LONG:
+                        return long[].class;
+                    case FLOAT:
+                        return float[].class;
+                    case DOUBLE:
+                        return double[].class;
+                    case CHAR:
+                        return char[].class;
+                    default:
+                        throw new RuntimeException("Unknown primitive type " + param.asPrimitiveType().primitive());
+                }
+            }
         }
+        throw new RuntimeException("Unknown type " + param.kind());
+
     }
 
     /**
@@ -568,7 +602,7 @@ class FtlProcessor {
                 launchMode.isAuxiliaryApplication(), !capabilities.isPresent(Capability.VERTX_WEBSOCKETS));
     }
 
-    private Type buildType(ExtractionContext context, org.jboss.jandex.Type type) {
+    private Type buildType(ExtractionContext context, org.jboss.jandex.Type type, boolean export) {
         switch (type.kind()) {
             case PRIMITIVE -> {
                 var prim = type.asPrimitiveType();
@@ -592,13 +626,27 @@ class FtlProcessor {
                 return Type.newBuilder().setUnit(Unit.newBuilder().build()).build();
             }
             case ARRAY -> {
+                ArrayType arrayType = type.asArrayType();
+                if (arrayType.componentType().kind() == org.jboss.jandex.Type.Kind.PRIMITIVE && arrayType
+                        .componentType().asPrimitiveType().primitive() == PrimitiveType.Primitive.BYTE) {
+                    return Type.newBuilder().setBytes(Bytes.newBuilder().build()).build();
+                }
                 return Type.newBuilder()
-                        .setArray(Array.newBuilder().setElement(buildType(context, type.asArrayType().componentType())).build())
+                        .setArray(Array.newBuilder().setElement(buildType(context, arrayType.componentType(), export)).build())
                         .build();
             }
             case CLASS -> {
                 var clazz = type.asClassType();
                 var info = context.index().getComputingIndex().getClassByName(clazz.name());
+
+                PrimitiveType unboxed = PrimitiveType.unbox(clazz);
+                if (unboxed != null) {
+                    Type primitive = buildType(context, unboxed, export);
+                    if (type.hasAnnotation(NOT_NULL)) {
+                        return primitive;
+                    }
+                    return Type.newBuilder().setOptional(Optional.newBuilder().setType(primitive)).build();
+                }
                 if (info != null && info.hasDeclaredAnnotation(GENERATED_REF)) {
                     var ref = info.declaredAnnotation(GENERATED_REF);
                     return Type.newBuilder()
@@ -612,53 +660,78 @@ class FtlProcessor {
                 if (clazz.name().equals(OFFSET_DATE_TIME)) {
                     return Type.newBuilder().setTime(Time.newBuilder().build()).build();
                 }
+                if (clazz.name().equals(INSTANT)) {
+                    return Type.newBuilder().setTime(Time.newBuilder().build()).build();
+                }
+                if (clazz.name().equals(ZONED_DATE_TIME)) {
+                    return Type.newBuilder().setTime(Time.newBuilder().build()).build();
+                }
                 var existing = context.dataElements.get(new TypeKey(clazz.name().toString(), List.of()));
                 if (existing != null) {
-                    return Type.newBuilder().setRef(existing).build();
+                    if (existing.exported() || !export || !existing.ref().getModule().equals(context.moduleName)) {
+                        return Type.newBuilder().setRef(existing.ref()).build();
+                    }
+                    //bit of an edge case, we have an existing non-exported object that we need to export
+                    for (var i = 0; i < context.moduleBuilder.getDeclsCount(); ++i) {
+                        var decl = context.moduleBuilder.getDecls(i);
+                        if (!decl.hasData()) {
+                            continue;
+                        }
+                        if (decl.getData().getName().equals(existing.ref().getName())) {
+                            context.moduleBuilder.setDecls(i,
+                                    decl.toBuilder().setData(decl.getData().toBuilder().setExport(true)).build());
+                            break;
+                        }
+                    }
+                    return Type.newBuilder().setRef(existing.ref()).build();
                 }
                 Data.Builder data = Data.newBuilder();
                 data.setName(clazz.name().local());
-                data.setExport(type.hasAnnotation(EXPORT));
+                data.setExport(type.hasAnnotation(EXPORT) || export);
                 buildDataElement(context, data, clazz.name());
                 context.moduleBuilder.addDecls(Decl.newBuilder().setData(data).build());
                 Ref ref = Ref.newBuilder().setName(data.getName()).setModule(context.moduleName).build();
-                context.dataElements.put(new TypeKey(clazz.name().toString(), List.of()), ref);
+                context.dataElements.put(new TypeKey(clazz.name().toString(), List.of()),
+                        new ExistingRef(ref, export || data.getExport()));
                 return Type.newBuilder().setRef(ref).build();
             }
             case PARAMETERIZED_TYPE -> {
                 var paramType = type.asParameterizedType();
                 if (paramType.name().equals(DotName.createSimple(List.class))) {
                     return Type.newBuilder()
-                            .setArray(Array.newBuilder().setElement(buildType(context, paramType.arguments().get(0)))).build();
+                            .setArray(Array.newBuilder().setElement(buildType(context, paramType.arguments().get(0), export)))
+                            .build();
                 } else if (paramType.name().equals(DotName.createSimple(Map.class))) {
                     return Type.newBuilder().setMap(xyz.block.ftl.v1.schema.Map.newBuilder()
-                            .setKey(buildType(context, paramType.arguments().get(0)))
-                            .setValue(buildType(context, paramType.arguments().get(0))))
+                            .setKey(buildType(context, paramType.arguments().get(0), export))
+                            .setValue(buildType(context, paramType.arguments().get(0), export)))
                             .build();
                 } else if (paramType.name().equals(DotNames.OPTIONAL)) {
+                    //TODO: optional kinda sucks
                     return Type.newBuilder()
-                            .setOptional(Optional.newBuilder().setType(buildType(context, paramType.arguments().get(0))))
+                            .setOptional(
+                                    Optional.newBuilder().setType(buildType(context, paramType.arguments().get(0), export)))
                             .build();
                 } else if (paramType.name().equals(DotName.createSimple(HttpRequest.class))) {
                     return Type.newBuilder()
                             .setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpRequest.class.getSimpleName())
-                                    .addTypeParameters(buildType(context, paramType.arguments().get(0))))
+                                    .addTypeParameters(buildType(context, paramType.arguments().get(0), export)))
                             .build();
                 } else if (paramType.name().equals(DotName.createSimple(HttpResponse.class))) {
                     return Type.newBuilder()
                             .setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpResponse.class.getSimpleName())
-                                    .addTypeParameters(buildType(context, paramType.arguments().get(0)))
+                                    .addTypeParameters(buildType(context, paramType.arguments().get(0), export))
                                     .addTypeParameters(Type.newBuilder().setUnit(Unit.newBuilder().build())))
                             .build();
                 } else {
                     ClassInfo classByName = context.index().getComputingIndex().getClassByName(paramType.name());
                     var cb = ClassType.builder(classByName.name());
-                    var main = buildType(context, cb.build());
+                    var main = buildType(context, cb.build(), export);
                     var builder = main.toBuilder();
                     var refBuilder = builder.getRef().toBuilder();
 
                     for (var arg : paramType.arguments()) {
-                        refBuilder.addTypeParameters(buildType(context, arg));
+                        refBuilder.addTypeParameters(buildType(context, arg, export));
                     }
                     builder.setRef(refBuilder);
                     return builder.build();
@@ -680,7 +753,8 @@ class FtlProcessor {
         //TODO: handle getters and setters properly, also Jackson annotations etc
         for (var field : clazz.fields()) {
             if (!Modifier.isStatic(field.flags())) {
-                data.addFields(Field.newBuilder().setName(field.name()).setType(buildType(context, field.type())).build());
+                data.addFields(Field.newBuilder().setName(field.name())
+                        .setType(buildType(context, field.type(), data.getExport())).build());
             }
         }
         buildDataElement(context, data, clazz.superName());
@@ -692,7 +766,7 @@ class FtlProcessor {
 
     record ExtractionContext(String moduleName, CombinedIndexBuildItem index, FTLRecorder recorder,
             Module.Builder moduleBuilder,
-            Map<TypeKey, Ref> dataElements, Set<String> knownSecrets, Set<String> knownConfig,
+            Map<TypeKey, ExistingRef> dataElements, Set<String> knownSecrets, Set<String> knownConfig,
             Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients) {
     }
@@ -701,5 +775,9 @@ class FtlProcessor {
         DISALLOWED,
         ALLOWED,
         REQUIRED
+    }
+
+    record ExistingRef(Ref ref, boolean exported) {
+
     }
 }

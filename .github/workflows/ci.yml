@@ -168,6 +168,15 @@ jobs:
         run: just init-db
       - name: Rebuild All
         run: just build-all
+      - name: Check No SCM Changes
+        run: |
+          if [[ -n $(git status -s) ]]
+          then
+            echo "Running the build resulted in changes to git controlled files:"
+            git status -s
+            git --no-pager diff
+            exit 1
+          fi
   docs:
     name: Build Docs
     runs-on: ubuntu-latest

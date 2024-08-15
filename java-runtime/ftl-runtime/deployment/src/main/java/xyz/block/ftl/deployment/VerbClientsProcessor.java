@@ -1,6 +1,7 @@
 package xyz.block.ftl.deployment;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 import jakarta.inject.Singleton;
@@ -75,25 +76,30 @@ public class VerbClientsProcessor {
                                 cc.addAnnotation(TEST_ANNOTATION);
                                 cc.addAnnotation(Singleton.class);
                             }
-                            var publish = cc.getMethodCreator("call", returnType.name().toString(),
-                                    paramType.name().toString());
-                            var helper = publish.invokeStaticMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
-                            var results = publish.invokeVirtualMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
-                                            String.class, Object.class, Class.class, boolean.class, boolean.class),
-                                    helper, publish.load(name), publish.load(module), publish.getMethodParam(0),
-                                    publish.loadClass(returnType.name().toString()), publish.load(false), publish.load(false));
-                            publish.returnValue(results);
-                            publish = cc.getMethodCreator("call", Object.class, Object.class);
-                            helper = publish.invokeStaticMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
-                            results = publish.invokeVirtualMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
-                                            String.class, Object.class, Class.class, boolean.class, boolean.class),
-                                    helper, publish.load(name), publish.load(module), publish.getMethodParam(0),
-                                    publish.loadClass(returnType.name().toString()), publish.load(false), publish.load(false));
-                            publish.returnValue(results);
+                            LinkedHashSet<Map.Entry<String, String>> signatures = new LinkedHashSet<>();
+                            signatures.add(Map.entry(returnType.name().toString(), paramType.name().toString()));
+                            signatures.add(Map.entry(Object.class.getName(), Object.class.getName()));
+                            for (var method : iface.methods()) {
+                                if (method.name().equals("call") && method.parameters().size() == 1) {
+                                    signatures.add(Map.entry(method.returnType().name().toString(),
+                                            method.parameters().get(0).type().name().toString()));
+                                }
+                            }
+                            for (var sig : signatures) {
+
+                                var publish = cc.getMethodCreator("call", sig.getKey(),
+                                        sig.getValue());
+                                var helper = publish.invokeStaticMethod(
+                                        MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
+                                var results = publish.invokeVirtualMethod(
+                                        MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
+                                                String.class, Object.class, Class.class, boolean.class, boolean.class),
+                                        helper, publish.load(name), publish.load(module), publish.getMethodParam(0),
+                                        publish.loadClass(returnType.name().toString()), publish.load(false),
+                                        publish.load(false));
+                                publish.returnValue(results);
+                            }
+
                             clients.put(iface.name(),
                                     new VerbClientBuildItem.DiscoveredClients(name, module, cc.getClassName()));
                         }
@@ -113,24 +119,25 @@ public class VerbClientsProcessor {
                                 cc.addAnnotation(TEST_ANNOTATION);
                                 cc.addAnnotation(Singleton.class);
                             }
-                            var publish = cc.getMethodCreator("call", void.class, paramType.name().toString());
-                            var helper = publish.invokeStaticMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
-                            publish.invokeVirtualMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
-                                            String.class, Object.class, Class.class, boolean.class, boolean.class),
-                                    helper, publish.load(name), publish.load(module), publish.getMethodParam(0),
-                                    publish.loadClass(Void.class), publish.load(false), publish.load(false));
-                            publish.returnVoid();
-                            publish = cc.getMethodCreator("call", void.class, Object.class);
-                            helper = publish.invokeStaticMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
-                            publish.invokeVirtualMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
-                                            String.class, Object.class, Class.class, boolean.class, boolean.class),
-                                    helper, publish.load(name), publish.load(module), publish.getMethodParam(0),
-                                    publish.loadClass(Void.class), publish.load(false), publish.load(false));
-                            publish.returnVoid();
+                            LinkedHashSet<String> signatures = new LinkedHashSet<>();
+                            signatures.add(paramType.name().toString());
+                            signatures.add(Object.class.getName());
+                            for (var method : iface.methods()) {
+                                if (method.name().equals("call") && method.parameters().size() == 1) {
+                                    signatures.add(method.parameters().get(0).type().name().toString());
+                                }
+                            }
+                            for (var sig : signatures) {
+                                var publish = cc.getMethodCreator("call", void.class, sig);
+                                var helper = publish.invokeStaticMethod(
+                                        MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
+                                publish.invokeVirtualMethod(
+                                        MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
+                                                String.class, Object.class, Class.class, boolean.class, boolean.class),
+                                        helper, publish.load(name), publish.load(module), publish.getMethodParam(0),
+                                        publish.loadClass(Void.class), publish.load(false), publish.load(false));
+                                publish.returnVoid();
+                            }
                             clients.put(iface.name(),
                                     new VerbClientBuildItem.DiscoveredClients(name, module, cc.getClassName()));
                         }
@@ -150,25 +157,27 @@ public class VerbClientsProcessor {
                                 cc.addAnnotation(TEST_ANNOTATION);
                                 cc.addAnnotation(Singleton.class);
                             }
-                            var publish = cc.getMethodCreator("call", returnType.name().toString());
-                            var helper = publish.invokeStaticMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
-                            var results = publish.invokeVirtualMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
-                                            String.class, Object.class, Class.class, boolean.class, boolean.class),
-                                    helper, publish.load(name), publish.load(module), publish.loadNull(),
-                                    publish.loadClass(returnType.name().toString()), publish.load(false), publish.load(false));
-                            publish.returnValue(results);
+                            LinkedHashSet<String> signatures = new LinkedHashSet<>();
+                            signatures.add(returnType.name().toString());
+                            signatures.add(Object.class.getName());
+                            for (var method : iface.methods()) {
+                                if (method.name().equals("call") && method.parameters().size() == 0) {
+                                    signatures.add(method.returnType().name().toString());
+                                }
+                            }
+                            for (var sig : signatures) {
+                                var publish = cc.getMethodCreator("call", sig);
+                                var helper = publish.invokeStaticMethod(
+                                        MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
+                                var results = publish.invokeVirtualMethod(
+                                        MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
+                                                String.class, Object.class, Class.class, boolean.class, boolean.class),
+                                        helper, publish.load(name), publish.load(module), publish.loadNull(),
+                                        publish.loadClass(returnType.name().toString()), publish.load(false),
+                                        publish.load(false));
+                                publish.returnValue(results);
+                            }
 
-                            publish = cc.getMethodCreator("call", Object.class);
-                            helper = publish.invokeStaticMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "instance", VerbClientHelper.class));
-                            results = publish.invokeVirtualMethod(
-                                    MethodDescriptor.ofMethod(VerbClientHelper.class, "call", Object.class, String.class,
-                                            String.class, Object.class, Class.class, boolean.class, boolean.class),
-                                    helper, publish.load(name), publish.load(module), publish.loadNull(),
-                                    publish.loadClass(returnType.name().toString()), publish.load(false), publish.load(false));
-                            publish.returnValue(results);
                             clients.put(iface.name(),
                                     new VerbClientBuildItem.DiscoveredClients(name, module, cc.getClassName()));
                         }

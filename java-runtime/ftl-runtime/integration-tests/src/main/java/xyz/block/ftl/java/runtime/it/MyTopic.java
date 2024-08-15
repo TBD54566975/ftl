@@ -5,6 +5,6 @@ import xyz.block.ftl.Topic;
 import xyz.block.ftl.TopicDefinition;
 
 @Export
-@TopicDefinition(name = "testTopic")
+@TopicDefinition(value = "testTopic")
 public interface MyTopic extends Topic<Person> {
 }
