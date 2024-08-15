@@ -2,7 +2,6 @@ package modulecontext
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -130,22 +129,23 @@ func (m ModuleContext) GetSecret(name string, value any) error {
 	return json.Unmarshal(data, value)
 }
 
-// GetDatabase gets a database connection
+// GetDatabase gets a database DSN by name and type.
 //
-// Returns an error if no database with that name is found or it is not the expected type
-// When in a testing context (via ftltest), an error is returned if the database is not a test database
-func (m ModuleContext) GetDatabase(name string, dbType DBType) (*sql.DB, error) {
+// Returns an error if no database with that name is found or it is not the
+// expected type. When in a testing context (via ftltest), an error is returned
+// if the database is not a test database.
+func (m ModuleContext) GetDatabase(name string, dbType DBType) (string, error) {
 	db, ok := m.databases[name]
 	if !ok {
-		return nil, fmt.Errorf("missing DSN for database %s", name)
+		return "", fmt.Errorf("missing DSN for database %s", name)
 	}
 	if db.DBType != dbType {
-		return nil, fmt.Errorf("database %s does not match expected type of %s", name, dbType)
+		return "", fmt.Errorf("database %s does not match expected type of %s", name, dbType)
 	}
 	if m.isTesting && !db.isTestDB {
-		return nil, fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase(db) as an option with ftltest.Context(...)", name)
+		return "", fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase(db) as an option with ftltest.Context(...)", name)
 	}
-	return db.db, nil
+	return db.DSN, nil
 }
 
 // LeaseClient is the interface for acquiring, heartbeating and releasing leases
