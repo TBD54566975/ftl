@@ -1,9 +1,9 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { useEffect, useState } from 'react'
-import { useClient } from '../hooks/use-client'
-import { useVisibility } from '../hooks/use-visibility.ts'
-import { ControllerService } from '../protos/xyz/block/ftl/v1/ftl_connect.ts'
-import { DeploymentChangeType, type PullSchemaResponse } from '../protos/xyz/block/ftl/v1/ftl_pb'
+import { useClient } from '../../hooks/use-client.ts'
+import { useVisibility } from '../../hooks/use-visibility.ts'
+import { ControllerService } from '../../protos/xyz/block/ftl/v1/ftl_connect.ts'
+import { DeploymentChangeType, type PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/ftl_pb.ts'
 
 export const useSchema = () => {
   const client = useClient(ControllerService)
@@ -28,6 +28,7 @@ export const useSchema = () => {
           },
         )) {
           const moduleName = response.moduleName ?? ''
+          console.log(`${response.changeType} ${moduleName}`)
           switch (response.changeType) {
             case DeploymentChangeType.DEPLOYMENT_ADDED:
               schemaMap.set(moduleName, response)

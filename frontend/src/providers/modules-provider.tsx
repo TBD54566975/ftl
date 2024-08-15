@@ -1,7 +1,7 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { type PropsWithChildren, createContext, useEffect, useState } from 'react'
 import { useClient } from '../hooks/use-client'
-import { useSchema } from '../hooks/use-schema'
+import { useSchema } from '../api/schema/use-schema'
 import { useVisibility } from '../hooks/use-visibility'
 import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
 import { GetModulesResponse } from '../protos/xyz/block/ftl/v1/console/console_pb'

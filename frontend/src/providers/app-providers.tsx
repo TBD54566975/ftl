@@ -1,16 +1,16 @@
-import { App } from '../App'
-import { DarkModeProvider } from './dark-mode-provider'
 import { ModulesProvider } from './modules-provider'
 import { NotificationsProvider } from './notifications-provider'
+import { ReactQueryProvider } from './react-query-provider'
+import { RoutingProvider } from './routing-provider'
 
-export const AppProviders = () => {
+export const AppProvider = () => {
   return (
-    <DarkModeProvider>
+    <ReactQueryProvider>
       <ModulesProvider>
         <NotificationsProvider>
-          <App />
+          <RoutingProvider />
         </NotificationsProvider>
       </ModulesProvider>
-    </DarkModeProvider>
+    </ReactQueryProvider>
   )
 }

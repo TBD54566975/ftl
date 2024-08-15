@@ -27,13 +27,18 @@ export const Navigation = ({
                     <>
                       <span className='text-2xl font-medium text-white'>FTL</span>
                       <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
-                      <button type='button' onClick={() => setIsCollapsed(true)} className='hover:bg-indigo-600 p-1 ml-auto -mr-2 rounded'>
+                      <button title='Minimize' type='button' onClick={() => setIsCollapsed(true)} className='hover:bg-indigo-600 p-1 ml-auto -mr-2 rounded'>
                         <ChevronDoubleLeftIcon className='h-6 w-6 text-gray-300' />
                       </button>
                     </>
                   )}
                   {isCollapsed && (
-                    <button type='button' onClick={() => setIsCollapsed(false)} className='hover:bg-indigo-600 p-1 rounded w-full flex justify-center'>
+                    <button
+                      title='Minimize'
+                      type='button'
+                      onClick={() => setIsCollapsed(false)}
+                      className='hover:bg-indigo-600 p-1 rounded w-full flex justify-center'
+                    >
                       <ChevronDoubleRightIcon className='h-6 w-6 text-gray-300' />
                     </button>
                   )}

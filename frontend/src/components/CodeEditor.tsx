@@ -14,7 +14,7 @@ import { defaultKeymap } from '@codemirror/commands'
 import { handleRefresh, jsonSchemaHover, jsonSchemaLinter, stateExtensions } from 'codemirror-json-schema'
 import { json5, json5ParseLinter } from 'codemirror-json5'
 import { useCallback, useEffect, useRef } from 'react'
-import { useDarkMode } from '../providers/dark-mode-provider'
+import { useDarkMode } from '../hooks/use-dark-mode'
 
 const commonExtensions = [
   gutter({ class: 'CodeMirror-lint-markers' }),

@@ -24,7 +24,7 @@ export const Layout = () => {
             <span className='text-2xl font-medium text-white'>FTL</span>
             <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
           </div>
-          <button type='button' onClick={() => setIsMobileMenuOpen(true)}>
+          <button type='button' title='open' onClick={() => setIsMobileMenuOpen(true)}>
             <Bars3Icon className='h-6 w-6 text-white hover:bg-indigo-700' />
           </button>
         </div>
