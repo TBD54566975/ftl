@@ -16,6 +16,7 @@ func TestPubSub(t *testing.T) {
 	calls := 20
 	events := calls * 10
 	in.Run(t,
+		in.WithLanguages("java", "go"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -34,13 +35,14 @@ func TestPubSub(t *testing.T) {
 				WHERE
 					state = 'success'
 					AND origin = '%s'
-		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "testSubscription"}}.String()),
+		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "testTopicSubscription"}}.String()),
 			events),
 	)
 }
 
 func TestConsumptionDelay(t *testing.T) {
 	in.Run(t,
+		in.WithLanguages("go", "java"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -84,6 +86,7 @@ func TestConsumptionDelay(t *testing.T) {
 func TestRetry(t *testing.T) {
 	retriesPerCall := 2
 	in.Run(t,
+		in.WithLanguages("java", "go"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -113,7 +116,8 @@ func TestRetry(t *testing.T) {
 			FROM async_calls
 			WHERE
 				state = 'error'
-				AND error = 'call to verb subscriber.catch failed: catching error'
+				AND error LIKE '%%subscriber.catch %%'
+				AND error LIKE '%%catching error%%'
 				AND catching = true
 				AND origin = '%s'
 	`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
@@ -135,6 +139,7 @@ func TestRetry(t *testing.T) {
 }
 
 func TestExternalPublishRuntimeCheck(t *testing.T) {
+	// No java as there is no API for this
 	in.Run(t,
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
