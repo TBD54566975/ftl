@@ -10,10 +10,10 @@ import (
 )
 
 //ftl:export
-var Topic1 = ftl.Topic[Event]("topic_1")
+var Topic1 = ftl.Topic[Event]("topic1")
 
 //ftl:export
-var Topic2 = ftl.Topic[Event]("topic_2")
+var Topic2 = ftl.Topic[Event]("topic2")
 
 var subscription1_1 = ftl.Subscription(Topic1, "subscription_1_1")
 var subscription1_2 = ftl.Subscription(Topic1, "subscription_1_2")
