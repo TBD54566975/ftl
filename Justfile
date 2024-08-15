@@ -195,25 +195,7 @@ debug *args:
   wait "$dlv_pid"
 
 # otel is short for OpenTelemetry.
-otelGrpcPort := `cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //'`
-
-# Run otel collector behind a webapp to stream local (i.e. from ftl dev) signals to your
-# browser. Ctrl+C to stop. To start FTL, open another terminal tab and run `just otel-dev`
-# with any args you would pass to `ftl dev`.
-#
-# CAUTION: The version of otel-desktop-viewer we are running with only has support for
-# traces, NOT metrics or logs. If you want to view metrics or logs, you will need to use
-# `just otel-stream` below. The latest version of otel-desktop-viewer has support for
-# metrics and logs, but it is not available to be installed yet. Refer to issue:
-#     https://github.com/CtrlSpice/otel-desktop-viewer/issues/146
-otel-ui:
-  #!/bin/bash
-
-  if ! test -f $(git rev-parse --show-toplevel)/.hermit/go/bin/otel-desktop-viewer ; then
-    echo "Installing otel-desktop-viewer..."
-    go install github.com/CtrlSpice/otel-desktop-viewer@latest
-  fi
-  otel-desktop-viewer --grpc {{otelGrpcPort}}
+otel-grpc-port := `cat .env | grep "OTEL_GRPC_PORT" | sed 's/.*=//'`
 
 # Run otel collector in a docker container to stream local (i.e. from ftl dev) signals to
 # the terminal tab where this is running. To start FTL, opepn another terminal tab and run
@@ -223,25 +205,38 @@ otel-stream:
   #!/bin/bash
 
   docker run \
-    -p {{otelGrpcPort}}:{{otelGrpcPort}} \
+    -p {{otel-grpc-port}}:{{otel-grpc-port}} \
     -p 55679:55679 \
     otel/opentelemetry-collector:0.104.0 2>&1 | sed 's/\([A-Z].* #\)/\
   \1/g'
 
 # Stop the docker container running otel.
-otelContainerID := `docker ps -f ancestor=otel/opentelemetry-collector:0.104.0 | tail -1 | cut -d " " -f1`
+otel-container-id := `docker ps -f ancestor=otel/opentelemetry-collector:0.104.0 | tail -1 | cut -d " " -f1`
+grafana-container-id := `docker ps -f ancestor=grafana/otel-lgtm | tail -1 | cut -d " " -f1`
+
 otel-stop:
-  docker stop "{{otelContainerID}}"
+  docker stop "{{otel-container-id}}"
 
 # Run `ftl dev` with the given args after setting the necessary envar.
 otel-dev *args:
   #!/bin/bash
 
-  grpcPort=$(cat docker-compose.yml | grep "OTLP gRPC" | sed 's/:.*//' | sed -r 's/ +- //')
-  export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${grpcPort}"
+  export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:{{otel-grpc-port}}"
+  export OTEL_METRIC_EXPORT_INTERVAL=1000
   # Uncomment this line for much richer debug logs
   # export FTL_O11Y_LOG_LEVEL="debug"
   ftl dev {{args}}
+
+# Runs a Grafana stack for storing and visualizing telemetry. This stack includes a
+# Prometheus database for metrics and a Tempo database for traces; both of which are
+# populated by the OTLP over GRPC collector that is integrated with this stack.
+#
+# Running `just otel-dev` will export ftl metrics to this Grafana stack.
+grafana:
+  docker compose up -d grafana
+
+grafana-stop:
+  docker stop "{{grafana-container-id}}"
 
 storybook:
   #!/bin/bash
