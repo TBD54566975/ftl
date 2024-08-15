@@ -131,8 +131,10 @@ func TestFSMGoTests(t *testing.T) {
 	t.Setenv("FSM_LOG_FILE", logFilePath)
 	in.Run(t,
 		in.CopyModule("fsm"),
-		in.Build("fsm"),
+		in.CopyModule("fsmnext"),
+		in.Build("fsm", "fsmnext"),
 		in.ExecModuleTest("fsm"),
+		in.ExecModuleTest("fsmnext"),
 	)
 }
 
@@ -174,7 +176,7 @@ func TestFSMNext(t *testing.T) {
 		}
 	}
 
-	in.Run(t, "",
+	in.Run(t,
 		in.CopyModule("fsmnext"),
 		in.Deploy("fsmnext"),
 
