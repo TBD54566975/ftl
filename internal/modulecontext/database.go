@@ -1,7 +1,6 @@
 package modulecontext
 
 import (
-	"database/sql"
 	"fmt"
 	"strconv"
 
@@ -14,19 +13,13 @@ type Database struct {
 	DSN      string
 	DBType   DBType
 	isTestDB bool
-	db       *sql.DB
 }
 
 // NewDatabase creates a Database that can be added to ModuleContext
 func NewDatabase(dbType DBType, dsn string) (Database, error) {
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return Database{}, fmt.Errorf("failed to bring up DB connection: %w", err)
-	}
 	return Database{
 		DSN:    dsn,
 		DBType: dbType,
-		db:     db,
 	}, nil
 }
 
