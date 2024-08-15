@@ -195,3 +195,13 @@ type DirectTypeAlias = lib.NonFTLType
 func External2(ctx context.Context, req builtin.HttpRequest[DirectTypeAlias]) (builtin.HttpResponse[DirectTypeAlias, string], error) {
 	return builtin.HttpResponse[DirectTypeAlias, string]{Body: ftl.Some(req.Body)}, nil
 }
+
+//ftl:ingress http POST /lenient
+//ftl:encoding lenient
+func Lenient(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse, string], error) {
+	return builtin.HttpResponse[PostResponse, string]{
+		Status:  201,
+		Headers: map[string][]string{"Post": {"Header from FTL"}},
+		Body:    ftl.Some(PostResponse{Success: true}),
+	}, nil
+}

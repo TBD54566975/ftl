@@ -21,9 +21,10 @@ var (
 		&Ref{},
 	}
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
-	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataCronJob{}, &MetadataDatabases{}, &MetadataAlias{}, &MetadataRetry{}, &MetadataSubscriber{}, &MetadataTypeMap{}}
-	ingressUnion  = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
-	valueUnion    = []Value{&StringValue{}, &IntValue{}, &TypeValue{}}
+	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataCronJob{}, &MetadataDatabases{},
+		&MetadataAlias{}, &MetadataRetry{}, &MetadataSubscriber{}, &MetadataTypeMap{}, &MetadataEncoding{}}
+	ingressUnion = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
+	valueUnion   = []Value{&StringValue{}, &IntValue{}, &TypeValue{}}
 
 	// Used by protobuf generation.
 	unions = map[reflect.Type][]reflect.Type{

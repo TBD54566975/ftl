@@ -55,7 +55,12 @@ func ValidateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error 
 	if err != nil {
 		return fmt.Errorf("request body is not valid JSON: %w", err)
 	}
-	err = schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, root, sch)
+
+	var opts []schema.EncodingOption
+	if e, ok := slices.FindVariant[*schema.MetadataEncoding](verb.Metadata); ok && e.Lenient {
+		opts = append(opts, schema.LenientMode())
+	}
+	err = schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, root, sch, opts...)
 	if err != nil {
 		return fmt.Errorf("could not validate HTTP request body: %w", err)
 	}

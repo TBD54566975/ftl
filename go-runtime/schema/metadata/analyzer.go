@@ -136,10 +136,14 @@ func extractMetadata(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) 
 				Runtime:    dt.Runtime,
 				NativeName: dt.NativeName,
 			})
+		case *common.DirectiveEncoding:
+			metadata = append(metadata, &schema.MetadataEncoding{
+				Pos:     common.GoPosToSchemaPos(pass.Fset, dt.GetPosition()),
+				Lenient: dt.Lenient,
+			})
 		case *common.DirectiveVerb:
 			newSchType = &schema.Verb{}
 		case *common.DirectiveData:
-			requireOnlyDirective(pass, node, directives, dt.GetTypeName())
 			newSchType = &schema.Data{}
 		case *common.DirectiveEnum:
 			requireOnlyDirective(pass, node, directives, dt.GetTypeName())
@@ -152,12 +156,36 @@ func extractMetadata(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) 
 		declType = updateDeclType(pass, node.Pos(), declType, newSchType)
 	}
 
-	return optional.Some(&common.ExtractedMetadata{
+	md := &common.ExtractedMetadata{
 		Type:       declType,
 		Metadata:   metadata,
 		IsExported: exported,
 		Comments:   common.ExtractComments(doc),
-	})
+	}
+	validateMetadata(pass, node, md)
+	return optional.Some(md)
+}
+
+func validateMetadata(pass *analysis.Pass, node ast.Node, extracted *common.ExtractedMetadata) {
+	if _, ok := extracted.Type.(*schema.Verb); !ok {
+		return
+	}
+
+	isIngress := false
+	customEncoding := false
+	for _, md := range extracted.Metadata {
+		if _, ok := md.(*schema.MetadataIngress); ok {
+			isIngress = true
+		}
+
+		if _, ok := md.(*schema.MetadataEncoding); ok {
+			customEncoding = true
+		}
+	}
+
+	if customEncoding && !isIngress {
+		common.Errorf(pass, node, "custom encoding options can only be specified on ingress verbs")
+	}
 }
 
 func requireOnlyDirective(pass *analysis.Pass, node ast.Node, directives []common.Directive, typeName string) {
