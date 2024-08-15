@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>xyz.block.ftl</groupId>
+        <artifactId>ftl-build-parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../common/build-parent</relativePath>
+    </parent>
+    <artifactId>ftl-build-parent-java</artifactId>
+    <packaging>pom</packaging>
+    <name>Ftl Kotlin Build Parent POM</name>
+    <description>This pom.xml can be used as a parent pom to inherit all required configuration to build a FTL Java app.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>xyz.block.ftl</groupId>
+            <artifactId>ftl-java-runtime</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

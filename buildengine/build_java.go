@@ -15,7 +15,9 @@ import (
 func buildJavaModule(ctx context.Context, module Module) error {
 	logger := log.FromContext(ctx)
 	if err := SetPOMProperties(ctx, module.Config.Dir); err != nil {
-		return fmt.Errorf("unable to update ftl.version in %s: %w", module.Config.Dir, err)
+		// This is not a critical error, things will probably work fine
+		// TBH updating the pom is maybe not the best idea anyway
+		logger.Warnf("unable to update ftl.version in %s: %s", module.Config.Dir, err.Error())
 	}
 	logger.Infof("Using build command '%s'", module.Config.Build)
 	err := exec.Command(ctx, log.Debug, module.Config.Dir, "bash", "-c", module.Config.Build).RunBuffered(ctx)
@@ -44,6 +46,37 @@ func SetPOMProperties(ctx context.Context, baseDir string) error {
 		return fmt.Errorf("unable to read %s: %w", pomFile, err)
 	}
 	root := tree.Root()
+
+	parent := root.SelectElement("parent")
+	versionSet := false
+	if parent != nil {
+		// You can't use properties in the parent
+		// If they are using our parent then we want to update the version
+		group := parent.SelectElement("groupId")
+		artifact := parent.SelectElement("artifactId")
+		if group.Text() == "xyz.block.ftl" && (artifact.Text() == "ftl-build-parent-java" || artifact.Text() == "ftl-build-parent-kotlin") {
+			version := parent.SelectElement("version")
+			if version != nil {
+				version.SetText(ftlVersion)
+				versionSet = true
+			}
+		}
+	}
+
+	err := updatePomProperties(root, pomFile, ftlVersion)
+	if err != nil && !versionSet {
+		// This is only a failure if we also did not update the parent
+		return err
+	}
+
+	err = tree.WriteToFile(pomFile)
+	if err != nil {
+		return fmt.Errorf("unable to write %s: %w", pomFile, err)
+	}
+	return nil
+}
+
+func updatePomProperties(root *etree.Element, pomFile string, ftlVersion string) error {
 	properties := root.SelectElement("properties")
 	if properties == nil {
 		return fmt.Errorf("unable to find <properties> in %s", pomFile)
@@ -53,10 +86,5 @@ func SetPOMProperties(ctx context.Context, baseDir string) error {
 		return fmt.Errorf("unable to find <properties>/<ftl.version> in %s", pomFile)
 	}
 	version.SetText(ftlVersion)
-
-	err := tree.WriteToFile(pomFile)
-	if err != nil {
-		return fmt.Errorf("unable to write %s: %w", pomFile, err)
-	}
 	return nil
 }
