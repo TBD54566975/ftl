@@ -31,7 +31,7 @@ clean:
   rm -rf frontend/node_modules
   find . -name '*.zip' -exec rm {} \;
   mvn -f kotlin-runtime/ftl-runtime clean
-  mvn -f java-runtime/ftl-runtime clean
+  mvn -f jvm-runtime/ftl-runtime clean
 
 # Live rebuild the ftl binary whenever source changes.
 live-rebuild:
@@ -66,7 +66,7 @@ build-backend:
   just build ftl ftl-controller ftl-runner
 
 build-java *args:
-  mvn -f java-runtime/ftl-runtime install {{args}}
+  mvn -f jvm-runtime/ftl-runtime install {{args}}
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
 

@@ -180,7 +180,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 		assert.NoError(t, err)
 		if opts.requireJava || slices.Contains(opts.languages, "java") {
-			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java", "-DskipTests").RunBuffered(ctx)
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java", "-DskipTests", "-B").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
 	})
