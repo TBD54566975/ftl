@@ -1453,8 +1453,9 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 
 	logger.Tracef("Executing async call")
 	req := &ftlv1.CallRequest{
-		Verb: call.Verb.ToProto(),
-		Body: call.Request,
+		Verb:     call.Verb.ToProto(),
+		Body:     call.Request,
+		Metadata: metadataForAsyncCall(call),
 	}
 	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), parentRequestKey, s.config.Advertise.String())
 	var callResult either.Either[[]byte, string]
@@ -1511,8 +1512,9 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	}
 
 	req := &ftlv1.CallRequest{
-		Verb: catchVerb.ToProto(),
-		Body: body,
+		Verb:     catchVerb.ToProto(),
+		Body:     body,
+		Metadata: metadataForAsyncCall(call),
 	}
 	resp, err := s.callWithRequest(ctx, connect.NewRequest(req), optional.None[model.RequestKey](), optional.None[model.RequestKey](), s.config.Advertise.String())
 	var catchResult either.Either[[]byte, string]
@@ -1548,6 +1550,30 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	logger.Debugf("Caught async call %s with %s", call.Verb, catchVerb)
 	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, nil)
 	return nil
+}
+
+func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
+	switch origin := call.Origin.(type) {
+	case dal.AsyncOriginFSM:
+		return &ftlv1.Metadata{
+			Values: []*ftlv1.Metadata_Pair{
+				{
+					Key:   "fsmName",
+					Value: origin.FSM.Name,
+				},
+				{
+					Key:   "fsmInstance",
+					Value: origin.Key,
+				},
+			},
+		}
+
+	case dal.AsyncOriginPubSub:
+		return &ftlv1.Metadata{}
+
+	default:
+		panic(fmt.Errorf("unsupported async call origin: %v", call.Origin))
+	}
 }
 
 func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.Tx, call *dal.AsyncCall, callResult either.Either[[]byte, string], isFinalResult bool) error {

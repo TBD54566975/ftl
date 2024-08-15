@@ -56,17 +56,14 @@ func Consume(ctx context.Context, e Event) error {
 // FSM
 //
 // Used to test encryption of async_calls tables via FSM operations
-func fsm() *ftl.FSMHandle {
-	var fsm = ftl.FSM("payment",
-		ftl.Start(Created),
-		ftl.Start(Paid),
-		ftl.Transition(Created, Paid),
-		ftl.Transition(Paid, Completed),
-		ftl.Transition(Created, NextAndSleep),
-		ftl.Transition(NextAndSleep, Completed),
-	)
-	return fsm
-}
+var fsm = ftl.FSM("payment",
+	ftl.Start(Created),
+	ftl.Start(Paid),
+	ftl.Transition(Created, Paid),
+	ftl.Transition(Paid, Completed),
+	ftl.Transition(Created, NextAndSleep),
+	ftl.Transition(NextAndSleep, Completed),
+)
 
 type OnlinePaymentCompleted struct {
 	Name string `json:"name"`
@@ -84,17 +81,17 @@ type NextAndSleepEvent struct {
 
 //ftl:verb
 func BeginFSM(ctx context.Context, req OnlinePaymentCreated) error {
-	return fsm().Send(ctx, req.Name, req)
+	return fsm.Send(ctx, req.Name, req)
 }
 
 //ftl:verb
 func TransitionToPaid(ctx context.Context, req OnlinePaymentPaid) error {
-	return fsm().Send(ctx, req.Name, req)
+	return fsm.Send(ctx, req.Name, req)
 }
 
 //ftl:verb
 func TransitionToNextAndSleep(ctx context.Context, req NextAndSleepEvent) error {
-	return fsm().Send(ctx, req.Name, req)
+	return fsm.Send(ctx, req.Name, req)
 }
 
 //ftl:verb
@@ -116,7 +113,7 @@ func Paid(ctx context.Context, in OnlinePaymentPaid) error {
 //
 //ftl:verb
 func NextAndSleep(ctx context.Context, in NextAndSleepEvent) error {
-	err := fsm().Next(ctx, in.Name, OnlinePaymentCompleted{Name: in.Name})
+	err := ftl.FSMNext(ctx, OnlinePaymentCompleted{Name: in.Name})
 	if err != nil {
 		return err
 	}

@@ -7,22 +7,19 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-func fsm() *ftl.FSMHandle {
-	// This FSM allows transitions moving forward through the alphabet
-	// Each transition also declares the next state(s) to transition to using State
-	//
-	//ftl:retry 2 1s
-	var fsm = ftl.FSM("fsm",
-		ftl.Start(StateA),
-		ftl.Transition(StateA, StateB),
-		ftl.Transition(StateA, StateC),
-		ftl.Transition(StateA, StateD),
-		ftl.Transition(StateB, StateC),
-		ftl.Transition(StateB, StateD),
-		ftl.Transition(StateC, StateD),
-	)
-	return fsm
-}
+// This FSM allows transitions moving forward through the alphabet
+// Each transition also declares the next state(s) to transition to using State
+//
+//ftl:retry 2 1s
+var fsm = ftl.FSM("fsm",
+	ftl.Start(StateA),
+	ftl.Transition(StateA, StateB),
+	ftl.Transition(StateA, StateC),
+	ftl.Transition(StateA, StateD),
+	ftl.Transition(StateB, StateC),
+	ftl.Transition(StateB, StateD),
+	ftl.Transition(StateC, StateD),
+)
 
 type State string
 
@@ -80,7 +77,7 @@ type Request struct {
 
 //ftl:verb export
 func SendOne(ctx context.Context, in Request) error {
-	return fsm().Send(ctx, in.Event.Instance, eventFor(in.Event, in.State))
+	return fsm.Send(ctx, in.Event.Instance, eventFor(in.Event, in.State))
 }
 
 func handleEvent(ctx context.Context, in Event) error {
@@ -95,7 +92,7 @@ func handleEvent(ctx context.Context, in Event) error {
 	attempts := in.NextAttempts.Default(1)
 	for i := range attempts {
 		ftl.LoggerFromContext(ctx).Infof("scheduling next event for %s (%d/%d)", in.Instance, i+1, attempts)
-		if err := fsm().Next(ctx, in.Instance, event); err != nil {
+		if err := ftl.FSMNext(ctx, event); err != nil {
 			return err
 		}
 	}

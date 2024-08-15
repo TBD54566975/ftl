@@ -52,3 +52,19 @@ func FromContext(ctx context.Context) FTL {
 	}
 	return ftl
 }
+
+type callMetadataKey struct{}
+
+// ContextWithCallMetadata returns a new context with the call metadata.
+func ContextWithCallMetadata(ctx context.Context, metadata map[string]string) context.Context {
+	return context.WithValue(ctx, callMetadataKey{}, metadata)
+}
+
+// CallMetadataFromContext returns the call metadata from the context.
+func CallMetadataFromContext(ctx context.Context) map[string]string {
+	metadata, ok := ctx.Value(callMetadataKey{}).(map[string]string)
+	if !ok {
+		panic("Call metadata not found in context")
+	}
+	return metadata
+}
