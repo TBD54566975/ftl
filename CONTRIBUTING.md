@@ -218,6 +218,22 @@ Run `Debug FTL` from the `Run/Debug Configurations` dropdown while in the FTL pr
 
 Run `Debug FTL` from the `Run and Debug` dropdown while in the FTL project.
 
+## Running with Grafana for Metrics and Tracing
+
+Start the Grafana stack with:
+
+```sh
+just grafana
+```
+
+This will start Grafana (can be stopped via `just grafana-stop`). You can access Grafana at [http://localhost:3000](http://localhost:3000) with the default credentials `admin:admin`.
+
+Once Grafana is running, you can start FTL with otel enabled:
+
+```sh
+just otel-dev
+```
+
 ## Useful links
 
 - [VSCode extension samples](https://github.com/microsoft/vscode-extension-samples)
