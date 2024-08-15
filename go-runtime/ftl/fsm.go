@@ -74,11 +74,11 @@ func (f *FSMHandle) Send(ctx context.Context, instance string, event any) error 
 // an error will be returned.
 func FSMNext(ctx context.Context, event any) error {
 	metadata := internal.CallMetadataFromContext(ctx)
-	name, ok := metadata["fsmName"]
+	name, ok := metadata[internal.FSMNameMetadataKey]
 	if !ok {
 		return fmt.Errorf("could not schedule next FSM transition while not within an FSM transition: missing fsm name")
 	}
-	instance, ok := metadata["fsmInstance"]
+	instance, ok := metadata[internal.FSMInstanceMetadataKey]
 	if !ok {
 		return fmt.Errorf("could not schedule next FSM transition while not within an FSM transition: missing fsm instance")
 	}

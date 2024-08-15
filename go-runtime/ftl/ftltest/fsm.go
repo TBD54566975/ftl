@@ -7,6 +7,7 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/internal"
 )
 
 type fakeFSMInstance struct {
@@ -64,10 +65,14 @@ func (f *fakeFSMManager) SendEvent(ctx context.Context, fsm string, instance str
 
 	// Didn't find a transition.
 	if !transition.To.IsValid() {
-		return fmt.Errorf("no transition found for event %T", event)
+		return fmt.Errorf(`invalid event "%T" for state "%v"`, event, fsmInstance.state.Type().In(1))
 	}
 
-	out := transition.To.Call([]reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(event)})
+	callCtx := internal.ContextWithCallMetadata(ctx, map[string]string{
+		"fsmName":     fsm,
+		"fsmInstance": instance,
+	})
+	out := transition.To.Call([]reflect.Value{reflect.ValueOf(callCtx), reflect.ValueOf(event)})
 	erri := out[0]
 	if !erri.IsNil() {
 		err := erri.Interface().(error) //nolint:forcetypeassert

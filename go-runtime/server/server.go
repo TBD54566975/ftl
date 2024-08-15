@@ -57,13 +57,13 @@ func NewUserVerbServer(projectName string, moduleName string, handlers ...Handle
 // Handler for a Verb.
 type Handler struct {
 	ref reflection.Ref
-	fn  func(ctx context.Context, req []byte, metadata map[string]string) ([]byte, error)
+	fn  func(ctx context.Context, req []byte, metadata map[internal.MetadataKey]string) ([]byte, error)
 }
 
 func handler[Req, Resp any](ref reflection.Ref, verb func(ctx context.Context, req Req) (Resp, error)) Handler {
 	return Handler{
 		ref: ref,
-		fn: func(ctx context.Context, reqdata []byte, metadata map[string]string) ([]byte, error) {
+		fn: func(ctx context.Context, reqdata []byte, metadata map[internal.MetadataKey]string) ([]byte, error) {
 			ctx = internal.ContextWithCallMetadata(ctx, metadata)
 
 			// Decode request.
@@ -149,10 +149,10 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %s.%s not found", req.Msg.Verb.Module, req.Msg.Verb.Name))
 	}
 
-	metadata := map[string]string{}
+	metadata := map[internal.MetadataKey]string{}
 	if req.Msg.Metadata != nil {
 		for _, pair := range req.Msg.Metadata.Values {
-			metadata[pair.Key] = pair.Value
+			metadata[internal.MetadataKey(pair.Key)] = pair.Value
 		}
 	}
 
