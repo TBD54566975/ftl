@@ -1,5 +1,11 @@
 package xyz.block.ftl.java.test;
 
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
+
+import org.jetbrains.annotations.NotNull;
+
 import ftl.gomodule.BoolVerbClient;
 import ftl.gomodule.BytesVerbClient;
 import ftl.gomodule.EmptyVerbClient;
@@ -26,13 +32,8 @@ import ftl.gomodule.TestObjectOptionalFields;
 import ftl.gomodule.TestObjectOptionalFieldsVerbClient;
 import ftl.gomodule.TestObjectVerbClient;
 import ftl.gomodule.TimeVerbClient;
-import org.jetbrains.annotations.NotNull;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
-
-import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Map;
 
 public class TestInvokeGo {
 
@@ -116,12 +117,12 @@ public class TestInvokeGo {
 
     @Export
     @Verb
-    public @NotNull TestObjectOptionalFields testObjectOptionalFieldsVerb(@NotNull TestObjectOptionalFields val, TestObjectOptionalFieldsVerbClient client) {
+    public @NotNull TestObjectOptionalFields testObjectOptionalFieldsVerb(@NotNull TestObjectOptionalFields val,
+            TestObjectOptionalFieldsVerbClient client) {
         return client.call(val);
     }
 
     // now the same again but with option return / input types
-
 
     @Export
     @Verb
@@ -179,9 +180,9 @@ public class TestInvokeGo {
 
     @Export
     @Verb
-    public TestObjectOptionalFields optionalTestObjectOptionalFieldsVerb(TestObjectOptionalFields val, OptionalTestObjectOptionalFieldsVerbClient client) {
+    public TestObjectOptionalFields optionalTestObjectOptionalFieldsVerb(TestObjectOptionalFields val,
+            OptionalTestObjectOptionalFieldsVerbClient client) {
         return client.call(val);
     }
-
 
 }
