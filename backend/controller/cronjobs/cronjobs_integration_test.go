@@ -54,6 +54,7 @@ func TestCron(t *testing.T) {
 	t.Cleanup(func() { _ = os.Remove(tmpFile) })
 
 	in.Run(t,
+		in.WithLanguages("go", "java"),
 		in.CopyModule("cron"),
 		in.Deploy("cron"),
 		func(t testing.TB, ic in.TestContext) {
