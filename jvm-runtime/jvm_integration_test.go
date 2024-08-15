@@ -14,7 +14,7 @@ import (
 	"github.com/alecthomas/repr"
 )
 
-func TestJavaToGoCall(t *testing.T) {
+func TestJVMToGoCall(t *testing.T) {
 
 	exampleObject := TestObject{
 		IntField:    43,
@@ -105,11 +105,11 @@ func TestJavaToGoCall(t *testing.T) {
 	//tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
 
 	in.Run(t,
-		in.WithLanguages("java"),
-		in.CopyModule("gomodule"),
-		in.CopyModule("javamodule"),
+		in.WithLanguages("kotlin", "java"),
+		in.CopyModuleWithLanguage("gomodule", "go"),
+		in.CopyModule("passthrough"),
 		in.Deploy("gomodule"),
-		in.Deploy("javamodule"),
+		in.Deploy("passthrough"),
 		in.SubTests(tests...),
 	)
 }
@@ -121,8 +121,8 @@ func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTes
 			Action: testFunc("gomodule"),
 		},
 		{
-			Name:   name + "-Java",
-			Action: testFunc("javamodule"),
+			Name:   name + "-jvm",
+			Action: testFunc("passthrough"),
 		},
 	}
 }

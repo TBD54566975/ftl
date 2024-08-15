@@ -57,15 +57,31 @@ func GitInit() Action {
 func CopyModule(module string) Action {
 	return Chain(
 		CopyDir(module, module),
-		func(t testing.TB, ic TestContext) {
-			root := filepath.Join(ic.workDir, module)
-			// TODO: Load the module configuration from the module itself and use that to determine the language-specific stuff.
-			if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
-				err := ftlexec.Command(ic, log.Debug, root, "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.RootDir).RunBuffered(ic)
-				assert.NoError(t, err)
-			}
-		},
+		editGoMod(module),
 	)
+}
+
+// Copy a module from the testdata directory to the working directory
+// This will always use the specified language regardless of the language under test
+//
+// Ensures that any language-specific local modifications are made correctly,
+// such as Go module file replace directives for FTL.
+func CopyModuleWithLanguage(module string, language string) Action {
+	return Chain(
+		CopyDir(filepath.Join("..", language, module), module),
+		editGoMod(module),
+	)
+}
+
+func editGoMod(module string) func(t testing.TB, ic TestContext) {
+	return func(t testing.TB, ic TestContext) {
+		root := filepath.Join(ic.workDir, module)
+		// TODO: Load the module configuration from the module itself and use that to determine the language-specific stuff.
+		if _, err := os.Stat(filepath.Join(root, "go.mod")); err == nil {
+			err := ftlexec.Command(ic, log.Debug, root, "go", "mod", "edit", "-replace", "github.com/TBD54566975/ftl="+ic.RootDir).RunBuffered(ic)
+			assert.NoError(t, err)
+		}
+	}
 }
 
 // SetEnv sets an environment variable for the duration of the test.
