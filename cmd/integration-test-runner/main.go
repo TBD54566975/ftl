@@ -17,7 +17,7 @@ import (
 )
 
 type CLI struct {
-	MaxParallel int      `help:"Maximum number of tests to run in parallel." default:"10"`
+	MaxParallel int      `help:"Maximum number of tests to run in parallel." default:"2"`
 	Tests       []string `arg:"" help:"Tests to run. If not specified, all tests will be run." optional:""`
 	Nocache     bool     `help:"Do not use cache when building docker image."`
 }
@@ -61,17 +61,23 @@ services:
       - localstack
     platform: linux/amd64
     environment:
-      #FTL_CONTROLLER_DSN: "postgres://db:5432/ftl?sslmode=disable&user=postgres&password=secret"
-      #FTL_TEST_DSN: "postgres://db:5432/ftl?sslmode=disable&user=postgres&password=secret"
       FTL_DATABASE_IMAGE: "none"
-      #LOG_LEVEL: trace
     volumes:
-      #- $projectRoot:/ftl
       - $userHome/.cache/go-build:/root/.cache/go-build
       - $userHome/go/pkg/mod:/root/go/pkg/mod
       - $userHome/.npm:/root/.npm
-    #command: just integration-tests $testName
+      #- $userHome/.cache/ftl-integration-tests/node_modules:/node_modules
     command: bash -c "/root/run.sh $testName"
+  setup:
+    image: ftl-integration-test
+    platform: linux/amd64
+    volumes:
+      - $userHome/.cache/go-build:/root/.cache/go-build
+      - $userHome/go/pkg/mod:/root/go/pkg/mod
+      - $userHome/.npm:/root/.npm
+      - $userHome/.cache/ftl-integration-tests/node_modules:/ftl/frontend/node_modules
+    command: bash -c "sleep 1"
+    #command: bash -c "just build-frontend"
 `
 
 const dockerfileFTL = `
@@ -96,7 +102,6 @@ RUN apt-get install -y socat
 RUN chmod +x /root/run.sh
 COPY . /ftl
 WORKDIR /ftl
-RUN just build-frontend
 `
 
 // This is a way of running the integration tests in parallel inside docker-compose sets, so that the DB, localstack are all separate.
@@ -141,6 +146,11 @@ func main() {
 	logger.Infof("Docker image built in %s", time.Since(dockerStart))
 
 	start := time.Now()
+	err = setup(ctx, tempDir)
+	kctx.FatalIfErrorf(err, "failed to setup")
+	fmt.Println("Setup took", time.Since(start))
+
+	start = time.Now()
 
 	tests, err := getTests(ctx, tempDir, cli.Tests)
 	kctx.FatalIfErrorf(err)
@@ -165,7 +175,7 @@ func main() {
 		if result.err != nil {
 			cancel()
 			logger.Infof(result.output)
-			kctx.FatalIfErrorf(err)
+			kctx.FatalIfErrorf(result.err)
 		}
 	}
 
@@ -232,6 +242,25 @@ func getTests(ctx context.Context, tempDir string, requested []string) ([]job, e
 	return tests, nil
 }
 
+func setup(ctx context.Context, tempDir string) error {
+	gitRoot, ok := internal.GitRoot("").Get()
+	if !ok {
+		return fmt.Errorf("failed to find Git root")
+	}
+	composePath, err := generateCompose(tempDir, "setup", gitRoot)
+	if err != nil {
+		return fmt.Errorf("failed to write docker-compose file: %w", err)
+	}
+
+	args := []string{"-f", composePath, "up", "setup"}
+	err = exec.Command(ctx, log.Trace, gitRoot, "docker-compose", args...).RunBuffered(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to complete setup: %w", err)
+	}
+
+	return nil
+}
+
 func worker(ctx context.Context, tempDir string, jobs <-chan job, id int, results chan<- result) {
 	logger := log.FromContext(ctx)
 
@@ -244,12 +273,7 @@ func worker(ctx context.Context, tempDir string, jobs <-chan job, id int, result
 		logger.Infof("Running test %s", job.testName)
 		start := time.Now()
 
-		composePath := filepath.Join(tempDir, fmt.Sprintf("docker-compose-%s.yaml", job.testName))
-		content := strings.ReplaceAll(dockerComposeTemplate, "$testName", job.testName)
-		content = strings.ReplaceAll(content, "$projectRoot", gitRoot)
-		content = strings.ReplaceAll(content, "$tempDir", tempDir)
-		content = strings.ReplaceAll(content, "$userHome", os.Getenv("HOME"))
-		err := os.WriteFile(composePath, []byte(content), 0644)
+		composePath, err := generateCompose(tempDir, job.testName, gitRoot)
 		if err != nil {
 			err = fmt.Errorf("failed to write docker-compose file: %w", err)
 			results <- result{job: job, err: err, taken: time.Since(start)}
@@ -267,6 +291,7 @@ func worker(ctx context.Context, tempDir string, jobs <-chan job, id int, result
 			"--exit-code-from", "ftl",
 			"--abort-on-container-exit",
 			"--no-attach", "db-1,localstack-1",
+			"ftl",
 		)
 		out, err := exec.Capture(ctx, gitRoot, "docker-compose", ftlArgs...)
 		if err != nil {
@@ -285,4 +310,14 @@ func worker(ctx context.Context, tempDir string, jobs <-chan job, id int, result
 
 		results <- result{job: job, taken: time.Since(start)}
 	}
+}
+
+func generateCompose(tempDir, suffix, gitRoot string) (string, error) {
+	composePath := filepath.Join(tempDir, fmt.Sprintf("docker-compose-%s.yaml", suffix))
+	content := strings.ReplaceAll(dockerComposeTemplate, "$testName", suffix)
+	content = strings.ReplaceAll(content, "$projectRoot", gitRoot)
+	content = strings.ReplaceAll(content, "$tempDir", tempDir)
+	content = strings.ReplaceAll(content, "$userHome", os.Getenv("HOME"))
+	err := os.WriteFile(composePath, []byte(content), 0644)
+	return composePath, err
 }
