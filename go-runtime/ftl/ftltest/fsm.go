@@ -65,7 +65,10 @@ func (f *fakeFSMManager) SendEvent(ctx context.Context, fsm string, instance str
 
 	// Didn't find a transition.
 	if !transition.To.IsValid() {
-		return fmt.Errorf(`invalid event "%T" for state "%v"`, event, fsmInstance.state.Type().In(1))
+		if fsmInstance.state.IsValid() {
+			return fmt.Errorf(`invalid event "%T" for state "%v"`, event, fsmInstance.state.Type().In(1))
+		}
+		return fmt.Errorf(`invalid event "%T" for new instance`, event)
 	}
 
 	callCtx := internal.ContextWithCallMetadata(ctx, map[internal.MetadataKey]string{
