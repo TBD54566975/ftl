@@ -68,7 +68,7 @@ func (f *fakeFSMManager) SendEvent(ctx context.Context, fsm string, instance str
 		return fmt.Errorf(`invalid event "%T" for state "%v"`, event, fsmInstance.state.Type().In(1))
 	}
 
-	callCtx := internal.ContextWithCallMetadata(ctx, map[string]string{
+	callCtx := internal.ContextWithCallMetadata(ctx, map[internal.MetadataKey]string{
 		"fsmName":     fsm,
 		"fsmInstance": instance,
 	})

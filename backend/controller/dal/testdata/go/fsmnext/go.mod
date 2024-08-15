@@ -1,6 +1,6 @@
 module ftl/fsmnext
 
-go 1.22.5
+go 1.22.2
 
 require (
 	github.com/TBD54566975/ftl v1.1.5
