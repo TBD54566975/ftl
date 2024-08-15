@@ -176,7 +176,8 @@ func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string,
 const createArtefact = `-- name: CreateArtefact :one
 INSERT INTO artefacts (digest, content)
 VALUES ($1, $2)
-ON CONFLICT (digest) DO NOTHING
+ON CONFLICT (digest)
+DO UPDATE SET digest = EXCLUDED.digest
 RETURNING id
 `
 

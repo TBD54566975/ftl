@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -367,6 +368,47 @@ func TestDAL(t *testing.T) {
 		assert.Equal(t, expectedDeploymentChanges, deploymentChanges,
 			assert.Exclude[model.DeploymentKey](), assert.Exclude[time.Time](), assert.IgnoreGoStringer())
 	})
+}
+
+func TestCreateArtefactConflict(t *testing.T) {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	conn := sqltest.OpenForTesting(ctx, t)
+	dal, err := New(ctx, conn, optional.None[string]())
+	assert.NoError(t, err)
+
+	idch := make(chan sha256.SHA256, 2)
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	createContent := func() {
+		defer wg.Done()
+		tx1, err := dal.Begin(ctx)
+		assert.NoError(t, err)
+		digest, err := tx1.CreateArtefact(ctx, []byte("content"))
+		assert.NoError(t, err)
+		time.Sleep(time.Second * 2)
+		err = tx1.Commit(ctx)
+		assert.NoError(t, err)
+		idch <- digest
+	}
+
+	go createContent()
+	go createContent()
+
+	wg.Wait()
+
+	ids := []sha256.SHA256{}
+
+	for range 2 {
+		select {
+		case id := <-idch:
+			ids = append(ids, id)
+		case <-time.After(time.Second * 3):
+			t.Fatal("Timed out waiting for artefact creation")
+		}
+	}
+	assert.Equal(t, 2, len(ids))
+	assert.Equal(t, ids[0], ids[1])
 }
 
 func artefactContent(t testing.TB, artefacts []*model.Artefact) [][]byte {
