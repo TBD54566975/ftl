@@ -194,9 +194,6 @@ debug *args:
   dlv_pid=$!
   wait "$dlv_pid"
 
-# otel is short for OpenTelemetry.
-otel-grpc-port := `cat .env | grep "OTEL_GRPC_PORT" | sed 's/.*=//'`
-
 # Run otel collector in a docker container to stream local (i.e. from ftl dev) signals to
 # the terminal tab where this is running. To start FTL, opepn another terminal tab and run
 # `just otel-dev` with any args you would pass to `ftl dev`. To stop the otel stream, run
@@ -205,14 +202,13 @@ otel-stream:
   #!/bin/bash
 
   docker run \
-    -p {{otel-grpc-port}}:{{otel-grpc-port}} \
+    -p ${OTEL_GRPC_PORT}:${OTEL_GRPC_PORT} \
     -p 55679:55679 \
     otel/opentelemetry-collector:0.104.0 2>&1 | sed 's/\([A-Z].* #\)/\
   \1/g'
 
 # Stop the docker container running otel.
 otel-container-id := `docker ps -f ancestor=otel/opentelemetry-collector:0.104.0 | tail -1 | cut -d " " -f1`
-grafana-container-id := `docker ps -f ancestor=grafana/otel-lgtm | tail -1 | cut -d " " -f1`
 
 otel-stop:
   docker stop "{{otel-container-id}}"
@@ -221,8 +217,8 @@ otel-stop:
 otel-dev *args:
   #!/bin/bash
 
-  export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:{{otel-grpc-port}}"
-  export OTEL_METRIC_EXPORT_INTERVAL=1000
+  export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${OTEL_GRPC_PORT}"
+  export OTEL_METRIC_EXPORT_INTERVAL=${OTEL_METRIC_EXPORT_INTERVAL}
   # Uncomment this line for much richer debug logs
   # export FTL_O11Y_LOG_LEVEL="debug"
   ftl dev {{args}}
@@ -236,7 +232,7 @@ grafana:
   docker compose up -d grafana
 
 grafana-stop:
-  docker stop "{{grafana-container-id}}"
+  docker compose down grafana
 
 storybook:
   #!/bin/bash

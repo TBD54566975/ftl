@@ -19,6 +19,8 @@ services:
       retries: 60
       start_period: 80s
   grafana:
+    profiles:
+      - infra
     image: grafana/otel-lgtm
     platform: linux/amd64
     restart: unless-stopped
