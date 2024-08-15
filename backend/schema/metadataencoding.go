@@ -1,14 +1,12 @@
 package schema
 
 import (
+	"fmt"
 	"strings"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"google.golang.org/protobuf/reflect/protoreflect"
-)
 
-import (
-	"fmt"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
 type MetadataEncoding struct {
