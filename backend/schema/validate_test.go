@@ -478,10 +478,10 @@ func TestValidate(t *testing.T) {
 		}
 		`,
 			errs: []string{
-				"34:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventA> but found builtin.CatchRequest<test.EventB>",
+				"34:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventA> or builtin.CatchRequest<Any>, but found builtin.CatchRequest<test.EventB>",
 				"38:5-5: catch verb must not have a response type but found test.EventA",
-				"42:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventB> but found Unit",
-				"46:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventB> but found test.EventB",
+				"42:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found Unit",
+				"46:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found test.EventB",
 				"50:5-5: expected catch to be a verb",
 			},
 		},
