@@ -14,7 +14,7 @@ import { defaultKeymap } from '@codemirror/commands'
 import { handleRefresh, jsonSchemaHover, jsonSchemaLinter, stateExtensions } from 'codemirror-json-schema'
 import { json5, json5ParseLinter } from 'codemirror-json5'
 import { useCallback, useEffect, useRef } from 'react'
-import { useDarkMode } from '../hooks/use-dark-mode'
+import { useUserPreferences } from '../providers/user-preferences-provider'
 
 const commonExtensions = [
   gutter({ class: 'CodeMirror-lint-markers' }),
@@ -33,7 +33,7 @@ export interface InitialState {
 }
 
 export const CodeEditor = ({ initialState, onTextChanged }: { initialState: InitialState; onTextChanged?: (text: string) => void }) => {
-  const { isDarkMode } = useDarkMode()
+  const { isDarkMode } = useUserPreferences()
   const editorContainerRef = useRef(null)
   const editorViewRef = useRef<EditorView | null>(null)
 

@@ -1,10 +1,10 @@
-import { createBrowserRouter, createRoutesFromElements, Navigate, Route, RouterProvider } from 'react-router-dom'
-import { Layout } from '../layout'
-import { TimelinePage } from '../features/timeline/TimelinePage'
-import { DeploymentsPage } from '../features/deployments/DeploymentsPage'
-import { DeploymentPage } from '../features/deployments/DeploymentPage'
-import { VerbPage } from '../features/verbs/VerbPage'
+import { Navigate, Route, RouterProvider, createBrowserRouter, createRoutesFromElements } from 'react-router-dom'
 import { ConsolePage } from '../features/console/ConsolePage'
+import { DeploymentPage } from '../features/deployments/DeploymentPage'
+import { DeploymentsPage } from '../features/deployments/DeploymentsPage'
+import { TimelinePage } from '../features/timeline/TimelinePage'
+import { VerbPage } from '../features/verbs/VerbPage'
+import { Layout } from '../layout'
 import { NotFoundPage } from '../layout/NotFoundPage'
 
 const router = createBrowserRouter(
@@ -20,8 +20,8 @@ const router = createBrowserRouter(
         <Route path='console' element={<ConsolePage />} />
       </Route>
       <Route path='*' element={<NotFoundPage />} />
-    </>
-  )
+    </>,
+  ),
 )
 
 export const RoutingProvider = () => {

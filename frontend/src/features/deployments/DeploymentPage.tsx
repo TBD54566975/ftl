@@ -1,14 +1,14 @@
 import { RocketLaunchIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useModules } from '../../api/modules/use-modules'
+import { modulesFilter } from '../../api/timeline'
 import { Badge } from '../../components/Badge'
 import { Card } from '../../components/Card'
 import { Page } from '../../layout'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { modulesContext } from '../../providers/modules-provider'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
-import { modulesFilter } from '../../services/console.service'
 import { deploymentKeyModuleName } from '../modules/module.utils'
 import { Timeline } from '../timeline/Timeline'
 import { isCron, isExported, isHttpIngress } from '../verbs/verb.utils'
@@ -18,7 +18,7 @@ const timeSettings = { isTailing: true, isPaused: false }
 export const DeploymentPage = () => {
   const navigate = useNavigate()
   const { deploymentKey } = useParams()
-  const modules = useContext(modulesContext)
+  const modules = useModules()
   const notification = useContext(NotificationsContext)
   const navgation = useNavigate()
   const [module, setModule] = useState<Module | undefined>()
@@ -30,12 +30,12 @@ export const DeploymentPage = () => {
   }, [module?.deploymentKey])
 
   useEffect(() => {
-    if (modules.modules.length > 0 && deploymentKey) {
-      let module = modules.modules.find((module) => module.deploymentKey === deploymentKey)
+    if (modules.isSuccess && modules.data.modules.length > 0 && deploymentKey) {
+      let module = modules.data.modules.find((module) => module.deploymentKey === deploymentKey)
       if (!module) {
         const moduleName = deploymentKeyModuleName(deploymentKey)
         if (moduleName) {
-          module = modules.modules.find((module) => module.name === moduleName)
+          module = modules.data.modules.find((module) => module.name === moduleName)
           navgation(`/deployments/${module?.deploymentKey}`)
           notification.showNotification({
             title: 'Showing latest deployment',
@@ -48,7 +48,7 @@ export const DeploymentPage = () => {
         setModule(module)
       }
     }
-  }, [modules, deploymentKey])
+  }, [modules.data, deploymentKey])
 
   return (
     <SidePanelProvider>

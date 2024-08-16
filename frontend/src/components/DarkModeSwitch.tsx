@@ -1,10 +1,10 @@
 import { Switch } from '@headlessui/react'
 import { MoonIcon, SunIcon } from '@heroicons/react/20/solid'
+import { useUserPreferences } from '../providers/user-preferences-provider'
 import { classNames } from '../utils/react.utils'
-import { useDarkMode } from '../hooks/use-dark-mode'
 
 export const DarkModeSwitch = () => {
-  const { isDarkMode, setDarkMode } = useDarkMode()
+  const { isDarkMode, setDarkMode } = useUserPreferences()
 
   return (
     <Switch

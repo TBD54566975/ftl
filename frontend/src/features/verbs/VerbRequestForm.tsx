@@ -84,8 +84,10 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
 
       const requestBytes = createVerbRequest(path, verb, editorText, headersText)
       const response = await client.call({ verb: verbRef, body: requestBytes })
+
       if (response.response.case === 'body') {
-        const jsonString = Buffer.from(response.response.value).toString('utf-8')
+        const textDecoder = new TextDecoder('utf-8')
+        const jsonString = textDecoder.decode(response.response.value)
 
         setResponse(JSON.stringify(JSON.parse(jsonString), null, 2))
       } else if (response.response.case === 'error') {

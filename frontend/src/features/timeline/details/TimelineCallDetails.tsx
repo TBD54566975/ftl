@@ -3,11 +3,8 @@ import { useContext, useEffect, useState } from 'react'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
-import { useClient } from '../../../hooks/use-client'
-import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
 import type { CallEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
-import { getRequestCalls } from '../../../services/console.service'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
 import { RequestGraph } from '../../requests/RequestGraph'
@@ -15,34 +12,12 @@ import { verbRefString } from '../../verbs/verb.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 export const TimelineCallDetails = ({ timestamp, call }: { timestamp?: Timestamp; call: CallEvent }) => {
-  const client = useClient(ConsoleService)
   const { closePanel } = useContext(SidePanelContext)
-  const [requestCalls, setRequestCalls] = useState<CallEvent[]>([])
   const [selectedCall, setSelectedCall] = useState(call)
 
   useEffect(() => {
     setSelectedCall(call)
   }, [call])
-
-  useEffect(() => {
-    const abortController = new AbortController()
-    const fetchRequestCalls = async () => {
-      if (selectedCall.requestKey === undefined) {
-        return
-      }
-      const calls = await getRequestCalls({
-        abortControllerSignal: abortController.signal,
-        requestKey: selectedCall.requestKey,
-      })
-      setRequestCalls(calls.reverse())
-    }
-
-    fetchRequestCalls()
-
-    return () => {
-      abortController.abort()
-    }
-  }, [client, selectedCall])
 
   return (
     <div className='p-4'>
@@ -61,7 +36,7 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp?: Timestamp
       </div>
 
       <div className='pt-4'>
-        <RequestGraph calls={requestCalls} call={selectedCall} setSelectedCall={setSelectedCall} />
+        <RequestGraph call={selectedCall} setSelectedCall={setSelectedCall} />
       </div>
 
       <div className='text-sm pt-2'>Request</div>

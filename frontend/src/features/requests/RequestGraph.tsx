@@ -1,4 +1,6 @@
 import type { Duration, Timestamp } from '@bufbuild/protobuf'
+import { useRequestCalls } from '../../api/timeline/use-request-calls'
+import { Loader } from '../../components/Loader'
 import type { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { verbRefString } from '../verbs/verb.utils'
 
@@ -53,12 +55,23 @@ const CallBlock = ({
 }
 
 interface Props {
-  calls: CallEvent[]
   call?: CallEvent
   setSelectedCall: React.Dispatch<React.SetStateAction<CallEvent>>
 }
 
-export const RequestGraph = ({ calls, call, setSelectedCall }: Props) => {
+export const RequestGraph = ({ call, setSelectedCall }: Props) => {
+  const requestCalls = useRequestCalls(call?.requestKey)
+
+  if (requestCalls.isLoading) {
+    return (
+      <div className='flex justify-center'>
+        <Loader />
+      </div>
+    )
+  }
+
+  const calls = requestCalls.data?.reverse() || []
+
   if (calls.length === 0) {
     return <></>
   }

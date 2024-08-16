@@ -1,9 +1,9 @@
-import { useContext, useEffect } from 'react'
+import { useEffect } from 'react'
 import ReactFlow, { Background, Controls, useEdgesState, useNodesState } from 'reactflow'
 import 'reactflow/dist/style.css'
 import React from 'react'
+import { useModules } from '../../api/modules/use-modules'
 import type { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { modulesContext } from '../../providers/modules-provider'
 import { ConfigNode } from './ConfigNode'
 import { GroupNode } from './GroupNode'
 import { SecretNode } from './SecretNode'
@@ -18,20 +18,21 @@ interface GraphPaneProps {
 }
 
 export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
-  const modules = useContext(modulesContext)
+  const modules = useModules()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [selectedNode, setSelectedNode] = React.useState<FTLNode | null>(null)
 
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges } = layoutNodes(modules.modules, modules.topology)
+    if (!modules.isSuccess) return
+    const { nodes: newNodes, edges: newEdges } = layoutNodes(modules.data.modules, modules.data.topology)
 
     // Need to update after render loop for ReactFlow to pick up the changes
     setTimeout(() => {
       setNodes(newNodes)
       setEdges(newEdges)
     }, 0)
-  }, [modules.modules])
+  }, [modules.data?.modules])
 
   useEffect(() => {
     const currentNodes = nodes.map((node) => {

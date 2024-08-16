@@ -171,8 +171,9 @@ export const createVerbRequest = (path: string, verb?: Verb, editorText?: string
     requestJson = newRequestJson
   }
 
-  const buffer = Buffer.from(JSON.stringify(requestJson))
-  return new Uint8Array(buffer)
+  const textEncoder = new TextEncoder()
+  const encoded = textEncoder.encode(JSON.stringify(requestJson))
+  return encoded
 }
 
 export const verbCalls = (verb?: Verb) => {
