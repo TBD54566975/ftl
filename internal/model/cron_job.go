@@ -4,13 +4,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-)
-
-type CronJobState string
-
-const (
-	CronJobStateIdle      = "idle"
-	CronJobStateExecuting = "executing"
+	"github.com/alecthomas/types/optional"
 )
 
 type CronJob struct {
@@ -20,5 +14,5 @@ type CronJob struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         CronJobState
+	LastExecution optional.Option[time.Time]
 }

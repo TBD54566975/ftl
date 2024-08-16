@@ -389,6 +389,7 @@ type AsyncCall struct {
 	Catching          bool
 	ParentRequestKey  optional.Option[string]
 	TraceContext      pqtype.NullRawMessage
+	CronJobKey        optional.Option[model.CronJobKey]
 }
 
 type Controller struct {
@@ -408,8 +409,8 @@ type CronJob struct {
 	Schedule      string
 	StartTime     time.Time
 	NextExecution time.Time
-	State         model.CronJobState
 	ModuleName    string
+	LastExecution optional.Option[time.Time]
 }
 
 type Deployment struct {

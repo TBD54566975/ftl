@@ -472,6 +472,7 @@ SELECT expires_at, metadata FROM leases WHERE key = @key::lease_key;
 
 -- name: CreateAsyncCall :one
 INSERT INTO async_calls (
+  scheduled_at,
   verb,
   origin,
   request,
@@ -480,9 +481,11 @@ INSERT INTO async_calls (
   max_backoff,
   catch_verb,
   parent_request_key,
-  trace_context
+  trace_context,
+  cron_job_key
 )
 VALUES (
+  @scheduled_at::TIMESTAMPTZ,
   @verb,
   @origin,
   @request,
@@ -491,7 +494,8 @@ VALUES (
   @max_backoff::interval,
   @catch_verb,
   @parent_request_key,
-  @trace_context::jsonb
+  @trace_context::jsonb,
+  @cron_job_key
 )
 RETURNING id;
 

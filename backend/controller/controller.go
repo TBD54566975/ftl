@@ -249,9 +249,8 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, conn, svc.tasks, svc.callWithRequest)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, conn)
 	svc.cronJobs = cronSvc
-	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 
 	pubSub := pubsub.New(ctx, db, svc.tasks, svc)
 	svc.pubSub = pubSub
@@ -541,7 +540,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 		}
 	}
 
-	s.cronJobs.CreatedOrReplacedDeloyment(ctx, newDeploymentKey)
+	s.cronJobs.CreatedOrReplacedDeloyment(ctx)
 
 	return connect.NewResponse(&ftlv1.ReplaceDeployResponse{}), nil
 }
@@ -1568,6 +1567,9 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 
 func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
 	switch origin := call.Origin.(type) {
+	case dal.AsyncOriginCron:
+		return &ftlv1.Metadata{}
+
 	case dal.AsyncOriginFSM:
 		return &ftlv1.Metadata{
 			Values: []*ftlv1.Metadata_Pair{
@@ -1595,6 +1597,15 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.Tx, call *dal.A
 
 	// Allow for handling of completion based on origin
 	switch origin := call.Origin.(type) {
+	case dal.AsyncOriginCron:
+		cjk, err := model.ParseCronJobKey(origin.CronJobKey)
+		if err != nil {
+			return fmt.Errorf("failed to parse cron job key: %w", err)
+		}
+		if err := s.cronJobs.OnJobCompletion(ctx, cjk, failed); err != nil {
+			return fmt.Errorf("failed to finalize cron async call: %w", err)
+		}
+
 	case dal.AsyncOriginFSM:
 		if err := s.onAsyncFSMCallCompletion(ctx, tx, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize FSM async call: %w", err)

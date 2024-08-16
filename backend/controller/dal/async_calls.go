@@ -22,7 +22,7 @@ type asyncOriginParseRoot struct {
 }
 
 var asyncOriginParser = participle.MustBuild[asyncOriginParseRoot](
-	participle.Union[AsyncOrigin](AsyncOriginFSM{}, AsyncOriginPubSub{}),
+	participle.Union[AsyncOrigin](AsyncOriginCron{}, AsyncOriginFSM{}, AsyncOriginPubSub{}),
 )
 
 // AsyncOrigin is a sum type representing the originator of an async call.
@@ -34,6 +34,19 @@ type AsyncOrigin interface {
 	Origin() string
 	String() string
 }
+
+// AsyncOriginCron represents the context for the originator of a cron async call.
+//
+// It is in the form cron:<module>.<verb>
+type AsyncOriginCron struct {
+	CronJobKey string `parser:"'cron' ':' @(~EOF)+"`
+}
+
+var _ AsyncOrigin = AsyncOriginCron{}
+
+func (AsyncOriginCron) asyncOrigin()     {}
+func (a AsyncOriginCron) Origin() string { return "cron" }
+func (a AsyncOriginCron) String() string { return fmt.Sprintf("cron:%s", a.CronJobKey) }
 
 // AsyncOriginFSM represents the context for the originator of an FSM async call.
 //
