@@ -1,9 +1,9 @@
 import { PhoneIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
 import type React from 'react'
-import { useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useModules } from '../../../api/modules/use-modules'
+import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../api/timeline'
 import { EventType, type EventsQuery_Filter, LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { modulesContext } from '../../../providers/modules-provider'
-import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../services/console.service'
 import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
 import { logLevelBgColor, logLevelColor, logLevelRingColor } from '../../logs/log.utils'
@@ -43,24 +43,24 @@ export const TimelineFilterPanel = ({
 }: {
   onFiltersChanged: (filters: EventsQuery_Filter[]) => void
 }) => {
-  const modules = useContext(modulesContext)
+  const modules = useModules()
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(Object.keys(EVENT_TYPES))
   const [selectedModules, setSelectedModules] = useState<string[]>([])
   const [previousModules, setPreviousModules] = useState<string[]>([])
   const [selectedLogLevel, setSelectedLogLevel] = useState<number>(1)
 
   useEffect(() => {
-    if (modules.modules.length === 0) {
+    if (!modules.isSuccess || modules.data.modules.length === 0) {
       return
     }
-    const newModules = modules.modules.map((module) => module.deploymentKey)
+    const newModules = modules.data.modules.map((module) => module.deploymentKey)
     const addedModules = newModules.filter((name) => !previousModules.includes(name))
 
     if (addedModules.length > 0) {
       setSelectedModules((prevSelected) => [...prevSelected, ...addedModules])
     }
     setPreviousModules(newModules)
-  }, [modules])
+  }, [modules.data])
 
   useEffect(() => {
     const filter: EventsQuery_Filter[] = []
@@ -144,40 +144,42 @@ export const TimelineFilterPanel = ({
             </ul>
           </FilterPanelSection>
 
-          <FilterPanelSection title='Modules'>
-            <div className='relative flex items-center mb-2'>
-              <button
-                type='button'
-                onClick={() => setSelectedModules(modules.modules.map((module) => module.deploymentKey))}
-                className='text-indigo-600 cursor-pointer hover:text-indigo-500'
-              >
-                Select All
-              </button>
-              <span className='px-1 text-indigo-700'>|</span>
-              <button type='button' onClick={() => setSelectedModules([])} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
-                Deselect All
-              </button>
-            </div>
-            {modules.modules.map((module) => (
-              <div key={module.deploymentKey} className='relative flex items-start'>
-                <div className='flex h-6 items-center'>
-                  <input
-                    id={`module-${module.deploymentKey}`}
-                    name={`module-${module.deploymentKey}`}
-                    type='checkbox'
-                    checked={selectedModules.includes(module.deploymentKey)}
-                    onChange={(e) => handleModuleChanged(module.deploymentKey, e.target.checked)}
-                    className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
-                  />
-                </div>
-                <div className='ml-2 text-sm leading-6 w-full'>
-                  <label htmlFor={`module-${module.deploymentKey}`} className={`${textColor} flex cursor-pointer`}>
-                    {module.name}
-                  </label>
-                </div>
+          {modules.isSuccess && (
+            <FilterPanelSection title='Modules'>
+              <div className='relative flex items-center mb-2'>
+                <button
+                  type='button'
+                  onClick={() => setSelectedModules(modules.data.modules.map((module) => module.deploymentKey))}
+                  className='text-indigo-600 cursor-pointer hover:text-indigo-500'
+                >
+                  Select All
+                </button>
+                <span className='px-1 text-indigo-700'>|</span>
+                <button type='button' onClick={() => setSelectedModules([])} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
+                  Deselect All
+                </button>
               </div>
-            ))}
-          </FilterPanelSection>
+              {modules.data.modules.map((module) => (
+                <div key={module.deploymentKey} className='relative flex items-start'>
+                  <div className='flex h-6 items-center'>
+                    <input
+                      id={`module-${module.deploymentKey}`}
+                      name={`module-${module.deploymentKey}`}
+                      type='checkbox'
+                      checked={selectedModules.includes(module.deploymentKey)}
+                      onChange={(e) => handleModuleChanged(module.deploymentKey, e.target.checked)}
+                      className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
+                    />
+                  </div>
+                  <div className='ml-2 text-sm leading-6 w-full'>
+                    <label htmlFor={`module-${module.deploymentKey}`} className={`${textColor} flex cursor-pointer`}>
+                      {module.name}
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </FilterPanelSection>
+          )}
         </div>
       </div>
     </div>

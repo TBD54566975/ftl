@@ -1,8 +1,7 @@
 import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@heroicons/react/24/outline'
-import { useContext } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { useModules } from '../../api/modules/use-modules'
 import { DarkModeSwitch } from '../../components/DarkModeSwitch'
-import { modulesContext } from '../../providers/modules-provider'
 import { classNames } from '../../utils'
 import { navigation } from './navigation-items'
 
@@ -13,7 +12,7 @@ export const Navigation = ({
   isCollapsed: boolean
   setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>
 }) => {
-  const modules = useContext(modulesContext)
+  const modules = useModules()
 
   return (
     <div className={`hidden sm:block bg-gray-800 flex-shrink-0 h-full ${isCollapsed ? '' : 'w-52'}`}>
@@ -27,13 +26,18 @@ export const Navigation = ({
                     <>
                       <span className='text-2xl font-medium text-white'>FTL</span>
                       <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
-                      <button type='button' onClick={() => setIsCollapsed(true)} className='hover:bg-indigo-600 p-1 ml-auto -mr-2 rounded'>
+                      <button title='Minimize' type='button' onClick={() => setIsCollapsed(true)} className='hover:bg-indigo-600 p-1 ml-auto -mr-2 rounded'>
                         <ChevronDoubleLeftIcon className='h-6 w-6 text-gray-300' />
                       </button>
                     </>
                   )}
                   {isCollapsed && (
-                    <button type='button' onClick={() => setIsCollapsed(false)} className='hover:bg-indigo-600 p-1 rounded w-full flex justify-center'>
+                    <button
+                      title='Minimize'
+                      type='button'
+                      onClick={() => setIsCollapsed(false)}
+                      className='hover:bg-indigo-600 p-1 rounded w-full flex justify-center'
+                    >
                       <ChevronDoubleRightIcon className='h-6 w-6 text-gray-300' />
                     </button>
                   )}
@@ -72,7 +76,7 @@ export const Navigation = ({
                                       className='ml-auto w-9 min-w-max whitespace-nowrap rounded-full bg-indigo-600 px-2.5 py-0.5 text-center text-xs font-medium leading-5 text-white ring-1 ring-inset ring-indigo-500'
                                       aria-hidden='true'
                                     >
-                                      {modules.modules.length}
+                                      {modules.isSuccess && modules.data.modules.length}
                                     </span>
                                   )}
                                 </>

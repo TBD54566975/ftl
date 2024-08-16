@@ -1,13 +1,12 @@
 import { XMarkIcon } from '@heroicons/react/24/outline'
-import { useContext } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useModules } from '../../api/modules/use-modules'
 import { DarkModeSwitch } from '../../components'
-import { modulesContext } from '../../providers/modules-provider'
 import { classNames } from '../../utils'
 import { navigation } from './navigation-items'
 
 const MobileNavigation = ({ onClose }: { onClose: () => void }) => {
-  const modules = useContext(modulesContext)
+  const modules = useModules()
 
   return (
     <div className='fixed inset-0 z-50 flex flex-col h-full overflow-y-auto bg-indigo-600 text-white'>
@@ -40,7 +39,7 @@ const MobileNavigation = ({ onClose }: { onClose: () => void }) => {
                         className='ml-auto w-9 min-w-max whitespace-nowrap rounded-full bg-indigo-600 px-2.5 py-0.5 text-center text-xs font-medium leading-5 text-white ring-1 ring-inset ring-indigo-500'
                         aria-hidden='true'
                       >
-                        {modules.modules.length}
+                        {modules.isSuccess && modules.data.modules.length}
                       </span>
                     )}
                   </div>

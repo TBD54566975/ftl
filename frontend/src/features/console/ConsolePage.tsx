@@ -1,10 +1,10 @@
 import { CubeTransparentIcon } from '@heroicons/react/24/outline'
-import { useContext, useState } from 'react'
+import { useState } from 'react'
 import { type NavigateFunction, useNavigate } from 'react-router-dom'
+import { useModules } from '../../api/modules/use-modules'
 import { ResizablePanels } from '../../components/ResizablePanels'
 import { Page } from '../../layout'
 import { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { modulesContext } from '../../providers/modules-provider'
 import { type FTLNode, GraphPane } from '../graph/GraphPane'
 import BottomPanel from './BottomPanel'
 import type { ExpandablePanelProps } from './ExpandablePanel'
@@ -15,9 +15,13 @@ import { secretPanels } from './right-panel/SecretPanels'
 import { verbPanels } from './right-panel/VerbPanels'
 
 export const ConsolePage = () => {
-  const modules = useContext(modulesContext)
+  const modules = useModules()
   const navigate = useNavigate()
   const [selectedNode, setSelectedNode] = useState<FTLNode | null>(null)
+
+  if (!modules.isSuccess) {
+    return <Page>Loading...</Page>
+  }
 
   return (
     <Page>
@@ -26,7 +30,7 @@ export const ConsolePage = () => {
         <ResizablePanels
           mainContent={<GraphPane onTapped={setSelectedNode} />}
           rightPanelHeader={headerForNode(selectedNode)}
-          rightPanelPanels={panelsForNode(modules.modules, selectedNode, navigate)}
+          rightPanelPanels={panelsForNode(modules.data.modules, selectedNode, navigate)}
           bottomPanelContent={<BottomPanel />}
         />
       </Page.Body>

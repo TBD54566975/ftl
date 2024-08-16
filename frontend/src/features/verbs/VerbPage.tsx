@@ -1,13 +1,14 @@
 import { BoltIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
 import { useContext, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useModules } from '../../api/modules/use-modules'
+import { useStreamVerbCalls } from '../../api/timeline/stream-verb-calls'
+import { Loader } from '../../components/Loader'
 import { ResizablePanels } from '../../components/ResizablePanels'
 import { Page } from '../../layout'
-import { type CallEvent, EventType, type Module, type Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { modulesContext } from '../../providers/modules-provider'
+import type { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
-import { callFilter, eventTypesFilter, streamEvents } from '../../services/console.service'
 import { CallList } from '../calls/CallList'
 import { deploymentKeyModuleName } from '../modules/module.utils'
 import { VerbRequestForm } from './VerbRequestForm'
@@ -17,19 +18,19 @@ export const VerbPage = () => {
   const { deploymentKey, verbName } = useParams()
   const notification = useContext(NotificationsContext)
   const navgation = useNavigate()
-  const modules = useContext(modulesContext)
+  const modules = useModules()
   const [module, setModule] = useState<Module | undefined>()
   const [verb, setVerb] = useState<Verb | undefined>()
-  const [calls, setCalls] = useState<CallEvent[]>([])
 
   useEffect(() => {
-    if (modules.modules.length === 0 || !deploymentKey || !verbName) return
+    if (!modules.isSuccess) return
+    if (modules.data.modules.length === 0 || !deploymentKey || !verbName) return
 
-    let module = modules.modules.find((module) => module.deploymentKey === deploymentKey)
+    let module = modules.data.modules.find((module) => module.deploymentKey === deploymentKey)
     if (!module) {
       const moduleName = deploymentKeyModuleName(deploymentKey)
       if (moduleName) {
-        module = modules.modules.find((module) => module.name === moduleName)
+        module = modules.data.modules.find((module) => module.name === moduleName)
         navgation(`/deployments/${module?.deploymentKey}/verbs/${verbName}`)
         notification.showNotification({
           title: 'Showing latest deployment',
@@ -41,30 +42,18 @@ export const VerbPage = () => {
     setModule(module)
     const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === verbName?.toLocaleLowerCase())
     setVerb(verb)
-  }, [modules, deploymentKey])
+  }, [modules.data, deploymentKey])
 
-  useEffect(() => {
-    const abortController = new AbortController()
-    if (!module) return
+  const callEvents = useStreamVerbCalls(module?.name, verb?.verb?.name)
+  const calls: CallEvent[] = callEvents.data || []
 
-    const streamCalls = async () => {
-      setCalls([])
-      streamEvents({
-        abortControllerSignal: abortController.signal,
-        filters: [callFilter(module.name, verb?.verb?.name), eventTypesFilter([EventType.CALL])],
-        onEventsReceived: (events) => {
-          const callEvents = events.map((event) => event.entry.value as CallEvent)
-          setCalls((prev) => [...callEvents, ...prev])
-        },
-      })
-    }
-
-    streamCalls()
-
-    return () => {
-      abortController.abort()
-    }
-  }, [module])
+  if (!module || !verb || callEvents.isLoading) {
+    return (
+      <div className='flex justify-center items-center min-h-screen'>
+        <Loader />
+      </div>
+    )
+  }
 
   const header = (
     <div className='flex items-center gap-2 px-2 py-2'>

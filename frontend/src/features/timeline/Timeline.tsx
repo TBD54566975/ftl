@@ -1,10 +1,10 @@
 import type { Timestamp } from '@bufbuild/protobuf'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useVisibility } from '../../hooks/use-visibility.ts'
+import { timeFilter, useTimeline } from '../../api/timeline/index.ts'
+import { Loader } from '../../components/Loader.tsx'
 import type { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
-import { eventIdFilter, getEvents, streamEvents, timeFilter } from '../../services/console.service.ts'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { panelColor } from '../../utils/style.utils.ts'
 import { deploymentTextColor } from '../deployments/deployment.utils.ts'
@@ -19,62 +19,19 @@ import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUp
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
-const maxTimelineEntries = 1000
-
 export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings; filters: EventsQuery_Filter[] }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
-  const [entries, setEntries] = useState<Event[]>([])
   const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
-  const isVisible = useVisibility()
 
-  useEffect(() => {
-    const eventId = searchParams.get('id')
-    const abortController = new AbortController()
-    if (!isVisible) {
-      abortController.abort()
-      return
-    }
+  let eventFilters = filters
+  if (timeSettings.newerThan || timeSettings.olderThan) {
+    eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
+  }
 
-    const fetchEvents = async () => {
-      let eventFilters = filters
-      if (timeSettings.newerThan || timeSettings.olderThan) {
-        eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
-      }
+  const streamTimeline = timeSettings.isTailing && !timeSettings.isPaused
 
-      if (eventId) {
-        const id = BigInt(eventId)
-        eventFilters = [eventIdFilter({ higherThan: id }), ...filters]
-      }
-      const events = await getEvents({ abortControllerSignal: abortController.signal, filters: eventFilters })
-      setEntries(events)
-
-      if (eventId) {
-        const entry = events.find((event) => event.id.toString() === eventId)
-        if (entry) {
-          handleEntryClicked(entry)
-        }
-      }
-    }
-
-    if (timeSettings.isTailing && !timeSettings.isPaused && !eventId) {
-      setEntries([])
-      streamEvents({
-        abortControllerSignal: abortController.signal,
-        filters,
-        onEventsReceived: (events) => {
-          if (!timeSettings.isPaused) {
-            setEntries((prev) => [...events, ...prev].slice(0, maxTimelineEntries))
-          }
-        },
-      })
-    } else {
-      fetchEvents()
-    }
-    return () => {
-      abortController.abort()
-    }
-  }, [filters, timeSettings, isVisible])
+  const timeline = useTimeline(streamTimeline, eventFilters)
 
   useEffect(() => {
     if (!isOpen) {
@@ -129,6 +86,16 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
         return ''
     }
   }
+
+  if (timeline.isLoading) {
+    return (
+      <div className='flex justify-center items-center min-h-screen'>
+        <Loader />
+      </div>
+    )
+  }
+
+  const entries = timeline.data || []
 
   return (
     <div className='border border-gray-100 dark:border-slate-700 rounded m-2'>

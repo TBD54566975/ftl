@@ -1,24 +1,16 @@
 import type { Timestamp } from '@bufbuild/protobuf'
-import { Code, ConnectError } from '@connectrpc/connect'
-import { createClient } from '../hooks/use-client'
-import { ConsoleService } from '../protos/xyz/block/ftl/v1/console/console_connect'
 import {
-  type CallEvent,
-  type Event,
-  EventType,
+  type EventType,
   EventsQuery_CallFilter,
   EventsQuery_DeploymentFilter,
   EventsQuery_EventTypeFilter,
   EventsQuery_Filter,
   EventsQuery_IDFilter,
   EventsQuery_LogLevelFilter,
-  EventsQuery_Order,
   EventsQuery_RequestFilter,
   EventsQuery_TimeFilter,
   type LogLevel,
-} from '../protos/xyz/block/ftl/v1/console/console_pb'
-
-const client = createClient(ConsoleService)
+} from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 export const requestKeysFilter = (requestKeys: string[]): EventsQuery_Filter => {
   const filter = new EventsQuery_Filter()
@@ -105,89 +97,4 @@ export const eventIdFilter = ({
     value: idFilter,
   }
   return filter
-}
-
-export const getRequestCalls = async ({
-  abortControllerSignal,
-  requestKey,
-}: {
-  abortControllerSignal: AbortSignal
-  requestKey: string
-}): Promise<CallEvent[]> => {
-  const allEvents = await getEvents({
-    abortControllerSignal,
-    filters: [requestKeysFilter([requestKey]), eventTypesFilter([EventType.CALL])],
-  })
-  return allEvents.map((e) => e.entry.value) as CallEvent[]
-}
-
-export const getCalls = async ({
-  abortControllerSignal,
-  destModule,
-  destVerb,
-  sourceModule,
-}: {
-  abortControllerSignal: AbortSignal
-  destModule: string
-  destVerb?: string
-  sourceModule?: string
-}): Promise<CallEvent[]> => {
-  const allEvents = await getEvents({
-    abortControllerSignal,
-    filters: [callFilter(destModule, destVerb, sourceModule), eventTypesFilter([EventType.CALL])],
-  })
-  return allEvents.map((e) => e.entry.value) as CallEvent[]
-}
-
-export const getEvents = async ({
-  abortControllerSignal,
-  limit = 1000,
-  order = EventsQuery_Order.DESC,
-  filters = [],
-}: {
-  abortControllerSignal: AbortSignal
-  limit?: number
-  order?: EventsQuery_Order
-  filters?: EventsQuery_Filter[]
-}): Promise<Event[]> => {
-  try {
-    const response = await client.getEvents({ filters, limit, order }, { signal: abortControllerSignal })
-    return response.events
-  } catch (error) {
-    if (error instanceof ConnectError) {
-      if (error.code === Code.Canceled) {
-        return []
-      }
-    }
-    throw error
-  }
-}
-
-export const streamEvents = async ({
-  abortControllerSignal,
-  filters,
-  onEventsReceived,
-}: {
-  abortControllerSignal: AbortSignal
-  filters: EventsQuery_Filter[]
-  onEventsReceived: (events: Event[]) => void
-}) => {
-  try {
-    for await (const response of client.streamEvents(
-      { updateInterval: { seconds: BigInt(1) }, query: { limit: 200, filters, order: EventsQuery_Order.DESC } },
-      { signal: abortControllerSignal },
-    )) {
-      if (response.events) {
-        onEventsReceived(response.events)
-      }
-    }
-  } catch (error) {
-    if (error instanceof ConnectError) {
-      if (error.code !== Code.Canceled) {
-        console.error('Console service - streamEvents - Connect error:', error)
-      }
-    } else {
-      console.error('Console service - streamEvents:', error)
-    }
-  }
 }

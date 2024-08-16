@@ -1,19 +1,10 @@
 import { Switch } from '@headlessui/react'
 import { MoonIcon, SunIcon } from '@heroicons/react/20/solid'
-import { useEffect } from 'react'
-import { useDarkMode } from '../providers/dark-mode-provider'
+import { useUserPreferences } from '../providers/user-preferences-provider'
 import { classNames } from '../utils/react.utils'
 
 export const DarkModeSwitch = () => {
-  const { isDarkMode, setDarkMode } = useDarkMode()
-
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [isDarkMode])
+  const { isDarkMode, setDarkMode } = useUserPreferences()
 
   return (
     <Switch
