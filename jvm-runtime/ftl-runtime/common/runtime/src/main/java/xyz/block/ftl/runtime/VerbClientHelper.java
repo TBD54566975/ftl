@@ -11,11 +11,9 @@ import io.quarkus.arc.Arc;
 @Singleton
 public class VerbClientHelper {
 
-    final FTLController controller;
     final ObjectMapper mapper;
 
-    public VerbClientHelper(FTLController controller, ObjectMapper mapper) {
-        this.controller = controller;
+    public VerbClientHelper(ObjectMapper mapper) {
         this.mapper = mapper;
     }
 
@@ -27,7 +25,7 @@ public class VerbClientHelper {
                 //TODO: what about optional?
                 message = Map.of();
             }
-            var result = controller.callVerb(verb, module, mapper.writeValueAsBytes(message));
+            var result = FTLController.instance().callVerb(verb, module, mapper.writeValueAsBytes(message));
             if (listReturnType) {
                 return mapper.readerForArrayOf(returnType).readValue(result);
             } else if (mapReturnType) {

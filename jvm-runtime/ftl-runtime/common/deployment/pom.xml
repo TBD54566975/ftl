@@ -23,6 +23,14 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest-jackson-deployment</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-agroal-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-credentials-deployment</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>xyz.block.ftl</groupId>

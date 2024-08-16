@@ -35,7 +35,7 @@ top = false
 |               | Config          | ✔️  | ✔️  |      |
 |               | Secrets         | ✔️  | ✔️  |      |
 |               | HTTP Ingress    | ✔️  | ✔️  |      |
-| **Resources** | PostgreSQL      | ✔️  | ️   |      |
+| **Resources** | PostgreSQL      | ✔️  | ✔️  |      |
 |               | MySQL           |     |     |      |
 |               | Kafka           |     |     |      |
 | **PubSub**    | Declaring Topic | ✔️  | ✔️  |      |

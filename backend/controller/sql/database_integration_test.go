@@ -11,6 +11,7 @@ import (
 
 func TestDatabase(t *testing.T) {
 	in.Run(t,
+		in.WithLanguages("go", "java"),
 		in.WithFTLConfig("database/ftl-project.toml"),
 		// deploy real module against "testdb"
 		in.CopyModule("database"),
@@ -21,7 +22,7 @@ func TestDatabase(t *testing.T) {
 
 		// run tests which should only affect "testdb_test"
 		in.CreateDBAction("database", "testdb", true),
-		in.ExecModuleTest("database"),
+		in.IfLanguage("go", in.ExecModuleTest("database")),
 		in.QueryRow("testdb", "SELECT data FROM requests", "hello"),
 	)
 }

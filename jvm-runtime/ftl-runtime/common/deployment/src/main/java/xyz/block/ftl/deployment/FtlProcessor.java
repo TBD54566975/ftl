@@ -39,6 +39,7 @@ import org.jetbrains.annotations.NotNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.quarkus.agroal.spi.JdbcDataSourceBuildItem;
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.processor.DotNames;
 import io.quarkus.deployment.Capabilities;
@@ -51,7 +52,9 @@ import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
 import io.quarkus.deployment.builditem.ApplicationStartBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
+import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
 import io.quarkus.deployment.builditem.LaunchModeBuildItem;
+import io.quarkus.deployment.builditem.RunTimeConfigBuilderBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
@@ -76,7 +79,7 @@ import xyz.block.ftl.Secret;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.VerbName;
-import xyz.block.ftl.runtime.FTLController;
+import xyz.block.ftl.runtime.FTLDatasourceCredentials;
 import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.JsonSerializationConfig;
@@ -86,11 +89,14 @@ import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
+import xyz.block.ftl.runtime.config.FTLConfigSource;
+import xyz.block.ftl.runtime.config.FTLConfigSourceFactoryBuilder;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
 import xyz.block.ftl.v1.schema.Bytes;
 import xyz.block.ftl.v1.schema.Data;
+import xyz.block.ftl.v1.schema.Database;
 import xyz.block.ftl.v1.schema.Decl;
 import xyz.block.ftl.v1.schema.Field;
 import xyz.block.ftl.v1.schema.Float;
@@ -133,9 +139,13 @@ class FtlProcessor {
     public static final DotName NOT_NULL = DotName.createSimple(NotNull.class);
 
     @BuildStep
-    ModuleNameBuildItem moduleName(ApplicationInfoBuildItem applicationInfoBuildItem) {
-        return new ModuleNameBuildItem(applicationInfoBuildItem.getName());
+    ModuleNameBuildItem moduleName(ApplicationInfoBuildItem applicationInfoBuildItem, FTLBuildTimeConfig buildTimeConfig) {
+        return new ModuleNameBuildItem(buildTimeConfig.moduleName.orElse(applicationInfoBuildItem.getName()));
+    }
 
+    @BuildStep
+    RunTimeConfigBuilderBuildItem runTimeConfigBuilderBuildItem() {
+        return new RunTimeConfigBuilderBuildItem(FTLConfigSourceFactoryBuilder.class.getName());
     }
 
     @BuildStep
@@ -159,8 +169,9 @@ class FtlProcessor {
     AdditionalBeanBuildItem beans() {
         return AdditionalBeanBuildItem.builder()
                 .addBeanClasses(VerbHandler.class,
-                        VerbRegistry.class, FTLHttpHandler.class, FTLController.class,
-                        TopicHelper.class, VerbClientHelper.class, JsonSerializationConfig.class)
+                        VerbRegistry.class, FTLHttpHandler.class,
+                        TopicHelper.class, VerbClientHelper.class, JsonSerializationConfig.class,
+                        FTLDatasourceCredentials.class)
                 .setUnremovable().build();
     }
 
@@ -223,7 +234,10 @@ class FtlProcessor {
             TopicsBuildItem topics,
             VerbClientBuildItem verbClients,
             ModuleNameBuildItem moduleNameBuildItem,
-            SubscriptionMetaAnnotationsBuildItem subscriptionMetaAnnotationsBuildItem) throws Exception {
+            SubscriptionMetaAnnotationsBuildItem subscriptionMetaAnnotationsBuildItem,
+            List<JdbcDataSourceBuildItem> datasources,
+            BuildProducer<SystemPropertyBuildItem> systemPropProducer,
+            BuildProducer<GeneratedResourceBuildItem> generatedResourceBuildItemBuildProducer) throws Exception {
         String moduleName = moduleNameBuildItem.getModuleName();
         Module.Builder moduleBuilder = Module.newBuilder()
                 .setName(moduleName)
@@ -233,8 +247,36 @@ class FtlProcessor {
                 new HashSet<>(), new HashSet<>(), topics.getTopics(), verbClients.getVerbClients());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
 
-        //register all the topics we are defining in the module definition
+        List<String> namedDatasources = new ArrayList<>();
+        for (var ds : datasources) {
+            if (!ds.getDbKind().equals("postgresql")) {
+                throw new RuntimeException("only postgresql is supported not " + ds.getDbKind());
+            }
+            //default name is <default> which is not a valid name
+            String sanitisedName = ds.getName().replace("<", "").replace(">", "");
+            //we use a dynamic credentials provider
+            if (ds.isDefault()) {
+                systemPropProducer
+                        .produce(new SystemPropertyBuildItem("quarkus.datasource.credentials-provider", sanitisedName));
+                systemPropProducer
+                        .produce(new SystemPropertyBuildItem("quarkus.datasource.credentials-provider-name",
+                                FTLDatasourceCredentials.NAME));
+            } else {
+                namedDatasources.add(ds.getName());
+                systemPropProducer.produce(new SystemPropertyBuildItem(
+                        "quarkus.datasource." + ds.getName() + ".credentials-provider", sanitisedName));
+                systemPropProducer.produce(new SystemPropertyBuildItem(
+                        "quarkus.datasource." + ds.getName() + ".credentials-provider-name", FTLDatasourceCredentials.NAME));
+            }
+            moduleBuilder.addDecls(
+                    Decl.newBuilder().setDatabase(
+                            Database.newBuilder().setType("postgres").setName(sanitisedName))
+                            .build());
+        }
+        generatedResourceBuildItemBuildProducer.produce(new GeneratedResourceBuildItem(FTLConfigSource.DATASOURCE_NAMES,
+                String.join("\n", namedDatasources).getBytes(StandardCharsets.UTF_8)));
 
+        //register all the topics we are defining in the module definition
         for (var topic : topics.getTopics().values()) {
             extractionContext.moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
                     .setExport(topic.exported())
