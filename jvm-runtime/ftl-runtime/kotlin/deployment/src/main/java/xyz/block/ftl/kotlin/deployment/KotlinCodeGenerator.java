@@ -212,7 +212,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         } else if (type.hasBool()) {
             return new ClassName("kotlin", "Boolean");
         } else if (type.hasFloat()) {
-            return new ClassName("kotlin", "Boolean");
+            return new ClassName("kotlin", "Double");
         } else if (type.hasBytes()) {
             return new ClassName("kotlin", "ByteArray");
         } else if (type.hasAny()) {

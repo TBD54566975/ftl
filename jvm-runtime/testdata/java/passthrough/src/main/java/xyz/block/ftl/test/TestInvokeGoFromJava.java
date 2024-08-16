@@ -1,4 +1,4 @@
-package xyz.block.ftl.java.test;
+package xyz.block.ftl.test;
 
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -35,7 +35,7 @@ import ftl.gomodule.TimeVerbClient;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
 
-public class TestInvokeGo {
+public class TestInvokeGoFromJava {
 
     @Export
     @Verb
