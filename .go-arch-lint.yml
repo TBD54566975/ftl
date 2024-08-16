@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=./.go-arch-lint-schema.json
+version: 3
+workdir: .
+components:
+  controller: { in: backend/controller/** }
+  ftl-controller-cmd: { in: cmd/ftl-controller/** }
+  common: { in: common/** }
+  internal: { in: internal/** }
+  dal: { in: backend/dal/** }
+  protos: { in: backend/protos/** }
+  schema: { in: backend/schema/** }
+  ftl: { in: . }
+  ftl-cmd: { in: cmd/ftl/** }
+  go-runtime: { in: go-runtime/** }
+  jvm-runtime: { in: jvm-runtime/** }
+  rust-runtime: { in: rust-runtime/** }
+  runner: { in: backend/runner/** }
+  ftl-runner-cmd: { in: cmd/ftl-runner/** }
+  frontend: { in: frontend/** }
+  ftl-gen-lsp-cmd: { in: cmd/ftl-gen-lsp/** }
+  ftl-initdb-cmd: { in: cmd/ftl-initdb/** }
+  ftl-schema-cmd: { in: cmd/ftl-schema/** }
+  lint-commit-or-rollback-cmd: { in: cmd/lint-commit-or-rollback/** }
+  databasetesting: { in: backend/controller/sql/databasetesting/** }
+  sql: { in: backend/controller/sql/** }
+  # TODO: Nothing outside of the go-runtime package should depend on reflection.
+  reflection: { in: go-runtime/ftl/reflection/** }
+  # TODO: Nothing outside of the go-runtime package should depend on reflection.
+  encoding: { in: go-runtime/encoding/** }
+  leases: { in: backend/controller/leases/** }
+
+excludeFiles:
+  - ".*/testdata/.*"
+  - ".*/\\.ftl/.*"
+  - "/examples/.*"
+  - "/jvm-runtime/.*"
+
+allow:
+  depOnAnyVendor: true
+
+commonComponents:
+  - common
+  - internal
+  - dal
+  - protos
+  - schema
+  - ftl
+
+deps:
+  controller:
+    mayDependOn:
+      - controller
+      - frontend
+  runner:
+    mayDependOn:
+      - common
+      - internal
+      - runner
+  go-runtime:
+    mayDependOn:
+      - common
+      - internal
+      - go-runtime
+  ftl-cmd:
+    mayDependOn:
+      - controller
+      - common
+      - internal
+      - dal
+      - protos
+      - schema
+      - ftl
+      - jvm-runtime # TODO: When we decouple runtimes, this should be removed.
+      - go-runtime # TODO: When we decouple runtimes, this should be removed.
+  ftl-controller-cmd:
+    mayDependOn:
+      - controller
+      - common
+      - internal
+      - dal
+      - protos
+      - schema
+      - ftl
+  ftl-runner-cmd:
+    mayDependOn:
+      - common
+      - internal
+      - runner
+  ftl-initdb-cmd:
+    mayDependOn:
+      - databasetesting
+  databasetesting:
+    mayDependOn:
+      - common
+      - internal
+      - dal
+      - sql
+  sql:
+    mayDependOn:
+      - common
+      - internal
+      - sql
+      - leases
