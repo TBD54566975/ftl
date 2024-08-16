@@ -1514,9 +1514,13 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	originalResult := either.RightOf[[]byte](originalError)
 
 	request := map[string]any{
+		"verb": map[string]string{
+			"module": call.Verb.Module,
+			"name":   call.Verb.Name,
+		},
+		"requestType": verb.Request.String(),
 		"request":     json.RawMessage(call.Request),
 		"error":       originalError,
-		"requestType": verb.Request.String(),
 	}
 	body, err := json.Marshal(request)
 	if err != nil {

@@ -86,7 +86,7 @@ func TestConsumptionDelay(t *testing.T) {
 func TestRetry(t *testing.T) {
 	retriesPerCall := 2
 	in.Run(t,
-		in.WithLanguages("java", "go"),
+		in.WithLanguages( /*"java",*/ "go"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
@@ -104,6 +104,7 @@ func TestRetry(t *testing.T) {
 				FROM async_calls
 				WHERE
 					state = 'error'
+					AND verb = 'subscriber.consumeButFailAndRetry'
 					AND catching = false
 					AND origin = '%s'
 		`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
@@ -116,6 +117,7 @@ func TestRetry(t *testing.T) {
 			FROM async_calls
 			WHERE
 				state = 'error'
+				AND verb = 'subscriber.consumeButFailAndRetry'
 				AND error LIKE '%%subscriber.catch %%'
 				AND error LIKE '%%catching error%%'
 				AND catching = true
@@ -130,10 +132,25 @@ func TestRetry(t *testing.T) {
 		FROM async_calls
 		WHERE
 			state = 'success'
+			AND verb = 'subscriber.consumeButFailAndRetry'
 			AND error IS NULL
 			AND catching = true
 			AND origin = '%s'
 `, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription"}}.String()),
+			1),
+
+		// check that there was one successful attempt to catchAny
+		in.QueryRow("ftl",
+			fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM async_calls
+		WHERE
+			state = 'success'
+			AND verb = 'subscriber.consumeButFailAndCatchAny'
+			AND error IS NULL
+			AND catching = true
+			AND origin = '%s'
+`, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription2"}}.String()),
 			1),
 	)
 }

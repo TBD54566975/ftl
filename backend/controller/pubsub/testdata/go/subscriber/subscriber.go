@@ -15,6 +15,8 @@ import (
 )
 
 var _ = ftl.Subscription(publisher.TestTopic, "testTopicSubscription")
+var _ = ftl.Subscription(publisher.Topic2, "doomedSubscription")
+var _ = ftl.Subscription(publisher.Topic2, "doomedSubscription2")
 
 var catchCount atomic.Value[int]
 
@@ -25,12 +27,17 @@ func Consume(ctx context.Context, req publisher.PubSubEvent) error {
 	return nil
 }
 
-var _ = ftl.Subscription(publisher.Topic2, "doomedSubscription")
-
 //ftl:verb
 //ftl:subscribe doomedSubscription
 //ftl:retry 2 1s 1s catch catch
 func ConsumeButFailAndRetry(ctx context.Context, req publisher.PubSubEvent) error {
+	return fmt.Errorf("always error: event %v", req.Time)
+}
+
+//ftl:verb
+//ftl:subscribe doomedSubscription2
+//ftl:retry 1 1s 1s catch catchAny
+func ConsumeButFailAndCatchAny(ctx context.Context, req publisher.PubSubEvent) error {
 	return fmt.Errorf("always error: event %v", req.Time)
 }
 
@@ -55,5 +62,30 @@ func Catch(ctx context.Context, req builtin.CatchRequest[publisher.PubSubEvent])
 	}
 
 	// succeed after that
+	return nil
+}
+
+//ftl:verb
+func CatchAny(ctx context.Context, req builtin.CatchRequest[any]) error {
+	if req.Verb.Module != "subscriber" {
+		return fmt.Errorf("unexpected verb module: %v", req.Verb.Module)
+	}
+	if req.Verb.Name != "consumeButFailAndCatchAny" {
+		return fmt.Errorf("unexpected verb name: %v", req.Verb.Name)
+	}
+	if req.RequestType != "publisher.PubSubEvent" {
+		return fmt.Errorf("unexpected request type: %v", req.RequestType)
+	}
+	requestMap, ok := req.Request.(map[string]any)
+	if !ok {
+		return fmt.Errorf("expected request to be a map[string]any: %T", req.Request)
+	}
+	timeValue, ok := requestMap["time"]
+	if !ok {
+		return fmt.Errorf("expected request to have a time key")
+	}
+	if _, ok := timeValue.(string); !ok {
+		return fmt.Errorf("expected request to have a time value of type string")
+	}
 	return nil
 }
