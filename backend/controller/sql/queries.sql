@@ -35,7 +35,8 @@ WHERE deployment_id = $1;
 -- Create a new artefact and return the artefact ID.
 INSERT INTO artefacts (digest, content)
 VALUES ($1, $2)
-ON CONFLICT (digest) DO NOTHING
+ON CONFLICT (digest)
+DO UPDATE SET digest = EXCLUDED.digest
 RETURNING id;
 
 -- name: AssociateArtefactWithDeployment :exec
