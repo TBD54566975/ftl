@@ -10,14 +10,17 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 func buildJavaModule(ctx context.Context, module Module) error {
 	logger := log.FromContext(ctx)
-	if err := SetPOMProperties(ctx, module.Config.Dir); err != nil {
-		// This is not a critical error, things will probably work fine
-		// TBH updating the pom is maybe not the best idea anyway
-		logger.Warnf("unable to update ftl.version in %s: %s", module.Config.Dir, err.Error())
+	if module.Config.Java.BuildTool == moduleconfig.JavaBuildToolMaven {
+		if err := SetPOMProperties(ctx, module.Config.Dir); err != nil {
+			// This is not a critical error, things will probably work fine
+			// TBH updating the pom is maybe not the best idea anyway
+			logger.Warnf("unable to update ftl.version in %s: %s", module.Config.Dir, err.Error())
+		}
 	}
 	logger.Infof("Using build command '%s'", module.Config.Build)
 	err := exec.Command(ctx, log.Debug, module.Config.Dir, "bash", "-c", module.Config.Build).RunBuffered(ctx)
