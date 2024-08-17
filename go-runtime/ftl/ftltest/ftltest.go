@@ -15,13 +15,13 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	pc "github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	pc "github.com/TBD54566975/ftl/internal/projectconfig"
 	mcu "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
 )
 

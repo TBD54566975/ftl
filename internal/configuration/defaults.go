@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/common/projectconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 // NewConfigurationManager creates a new configuration manager with the default configuration providers.
