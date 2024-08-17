@@ -232,7 +232,7 @@ func ftl(args ...string) error {
 
 func updateModFile(t *testing.T, dir string) {
 	t.Helper()
-	cmd := exec.Command("go", "mod", "edit", "-replace=github.com/TBD54566975/ftl=..")
+	cmd := exec.Command("go", "mod", "edit", "-replace=github.com/TBD54566975/ftl=../..")
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
