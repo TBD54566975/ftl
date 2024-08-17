@@ -5,7 +5,7 @@ package ftl
 import (
 	"testing"
 
-	in "github.com/TBD54566975/ftl/integration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
 func TestFTLMap(t *testing.T) {

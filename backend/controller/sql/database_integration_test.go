@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	in "github.com/TBD54566975/ftl/integration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
 func TestDatabase(t *testing.T) {

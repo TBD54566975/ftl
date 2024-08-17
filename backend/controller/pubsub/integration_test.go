@@ -9,7 +9,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	in "github.com/TBD54566975/ftl/integration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
 func TestPubSub(t *testing.T) {

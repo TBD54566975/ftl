@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-ftldir="$(dirname "$0")/.."
+ftldir="$(dirname "$(readlink -f "$0")")/.."
 name="$(basename "$0")"
 dest="${ftldir}/build/devel"
 mkdir -p "$dest"

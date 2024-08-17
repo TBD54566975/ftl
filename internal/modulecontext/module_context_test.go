@@ -8,7 +8,7 @@ import (
 
 	"github.com/TBD54566975/ftl/internal/log"
 	. "github.com/TBD54566975/ftl/internal/modulecontext"
-	. "github.com/TBD54566975/ftl/testutils/modulecontext"
+	. "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
 )
 
 type manualContextSupplier struct {

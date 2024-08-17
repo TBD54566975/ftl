@@ -9,8 +9,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	cf "github.com/TBD54566975/ftl/common/configuration"
-	in "github.com/TBD54566975/ftl/integration"
+	cf "github.com/TBD54566975/ftl/internal/configuration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

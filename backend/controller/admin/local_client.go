@@ -8,9 +8,9 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/buildengine"
-	cf "github.com/TBD54566975/ftl/common/configuration"
-	"github.com/TBD54566975/ftl/common/projectconfig"
+	"github.com/TBD54566975/ftl/internal/buildengine"
+	cf "github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 // localClient reads and writes to local projectconfig files without making any network

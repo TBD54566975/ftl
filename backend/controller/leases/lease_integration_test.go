@@ -14,7 +14,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	in "github.com/TBD54566975/ftl/integration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
 func TestLease(t *testing.T) {

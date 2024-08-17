@@ -7,7 +7,7 @@ VERSION := `git describe --tags --always | sed -e 's/^v//'`
 RUNNER_TEMPLATE_ZIP := "backend/controller/scaling/localscaling/template.zip"
 TIMESTAMP := `date +%s`
 SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
-ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template common-runtime/scaffolding go-runtime/scaffolding"
+ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template internal/projectinit/scaffolding go-runtime/scaffolding"
 FRONTEND_OUT := "frontend/dist/index.html"
 EXTENSION_OUT := "extensions/vscode/dist/extension.js"
 PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
@@ -75,7 +75,7 @@ init-db:
 
 # Regenerate SQLC code (requires init-db to be run first)
 build-sqlc:
-  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} backend/controller/{cronjobs}/sql/{db.go,models.go,querier.go,queries.sql.go} common/configuration/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/{cronjobs}/sql/queries.sql common/configuration/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- "just init-db && sqlc generate"
+  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} backend/controller/{cronjobs}/sql/{db.go,models.go,querier.go,queries.sql.go} internal/configuration/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/{cronjobs}/sql/queries.sql internal/configuration/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- "just init-db && sqlc generate"
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips: build-kt-runtime

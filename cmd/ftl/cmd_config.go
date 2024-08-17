@@ -13,9 +13,9 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	cf "github.com/TBD54566975/ftl/common/configuration"
-	"github.com/TBD54566975/ftl/common/projectconfig"
+	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 

@@ -17,9 +17,9 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
-	cf "github.com/TBD54566975/ftl/common/configuration"
-	cfdal "github.com/TBD54566975/ftl/common/configuration/dal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	cf "github.com/TBD54566975/ftl/internal/configuration"
+	cfdal "github.com/TBD54566975/ftl/internal/configuration/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
 )

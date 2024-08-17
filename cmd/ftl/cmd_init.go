@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/ftl"
-	commonruntime "github.com/TBD54566975/ftl/common-runtime"
-	"github.com/TBD54566975/ftl/common/projectconfig"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/projectinit"
 )
 
 type initCmd struct {
@@ -32,7 +32,7 @@ func (i initCmd) Run(ctx context.Context) error {
 
 	logger := log.FromContext(ctx)
 	logger.Debugf("Initializing FTL project in %s", i.Dir)
-	if err := scaffold(ctx, i.Hermit, commonruntime.Files(), i.Dir, i); err != nil {
+	if err := scaffold(ctx, i.Hermit, projectinit.Files(), i.Dir, i); err != nil {
 		return err
 	}
 

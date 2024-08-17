@@ -3,15 +3,16 @@ package ftl
 import (
 	"context"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/log"
 	"strconv"
 	"testing"
+
+	"github.com/TBD54566975/ftl/internal/log"
+	. "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
 
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
-	. "github.com/TBD54566975/ftl/testutils/modulecontext"
 )
 
 type intHandle int

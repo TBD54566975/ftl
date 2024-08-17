@@ -9,10 +9,10 @@ import (
 	"time"
 
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
-	in "github.com/TBD54566975/ftl/integration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/testutils"
+	"github.com/TBD54566975/ftl/internal/testutils"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"

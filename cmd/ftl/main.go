@@ -15,9 +15,9 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/common/projectconfig"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 

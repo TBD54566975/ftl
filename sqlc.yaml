@@ -147,11 +147,11 @@ sql:
         <<: *gengo
         out: "backend/controller/cronjobs/sql"
   - <<: *daldir
-    queries: "common/configuration/sql/queries.sql"
+    queries: "internal/configuration/sql/queries.sql"
     gen:
       go:
         <<: *gengo
-        out: "common/configuration/sql"
+        out: "internal/configuration/sql"
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"
