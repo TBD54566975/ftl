@@ -1,6 +1,6 @@
 //go:build release
 
-package goruntime
+package projectinit
 
 import (
 	"archive/zip"
