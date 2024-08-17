@@ -1,14 +1,17 @@
 package typeregistry
 
 import (
-	"ftl/builtin"
-	"ftl/typeregistry/subpackage"
 	"testing"
+
+	"ftl/builtin"
+
+	"ftl/typeregistry/subpackage"
+
+	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/ftltest"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestIngress(t *testing.T) {
@@ -34,7 +37,7 @@ func TestIngress(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.Name, func(t *testing.T) {
-			resp, err := ftl.Call(ctx, Echo, builtin.HttpRequest[EchoRequest]{
+			resp, err := ftl.Call(ctx, Echo, builtin.HttpRequest[EchoRequest, ftl.Unit, ftl.Unit]{
 				Body: EchoRequest{Strings: test.Input},
 			})
 			assert.NoError(t, err)

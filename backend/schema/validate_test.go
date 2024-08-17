@@ -92,7 +92,7 @@ func TestValidate(t *testing.T) {
 		{name: "ValidIngressRequestType",
 			schema: `
 				module one {
-					export verb a(HttpRequest<Empty>) HttpResponse<Empty, Empty>
+					export verb a(HttpRequest<Unit, Unit, Unit>) HttpResponse<Empty, Empty>
 						+ingress http GET /a
 				}
 			`},
@@ -105,26 +105,28 @@ func TestValidate(t *testing.T) {
 			`,
 			errs: []string{
 				"3:20-20: ingress verb a: request type Empty must be builtin.HttpRequest",
-				"3:27-27: ingress verb a: response type Empty must be builtin.HttpRequest",
+				"3:27-27: ingress verb a: response type Empty must be builtin.HttpResponse",
 			}},
 		{name: "IngressBodyTypes",
 			schema: `
 				module one {
-					export verb bytes(HttpRequest<Bytes>) HttpResponse<Bytes, Bytes>
-						+ingress http GET /bytes
-					export verb string(HttpRequest<String>) HttpResponse<String, String>
-						+ingress http GET /string
-					export verb data(HttpRequest<Empty>) HttpResponse<Empty, Empty>
-						+ingress http GET /data
+					export verb bytes(HttpRequest<Bytes, Unit, Unit>) HttpResponse<Bytes, Bytes>
+						+ingress http POST /bytes
+					export verb string(HttpRequest<String, Unit, Unit>) HttpResponse<String, String>
+						+ingress http POST /string
+					export verb data(HttpRequest<Empty, Unit, Unit>) HttpResponse<Empty, Empty>
+						+ingress http POST /data
 
 					// Invalid types.
-					export verb any(HttpRequest<Any>) HttpResponse<Any, Any>
+					export verb any(HttpRequest<Any, Unit, Unit>) HttpResponse<Any, Any>
 						+ingress http GET /any
-					export verb path(HttpRequest<String>) HttpResponse<String, String>
+					export verb path(HttpRequest<Unit, String, Unit>) HttpResponse<String, String>
 						+ingress http GET /path/{invalid}
-					export verb pathMissing(HttpRequest<one.Path>) HttpResponse<String, String>
+					export verb pathInvalid(HttpRequest<Unit, String, Unit>) HttpResponse<String, String>
+						+ingress http GET /path/{invalid}/{extra}
+					export verb pathMissing(HttpRequest<Unit, one.Path, Unit>) HttpResponse<String, String>
 						+ingress http GET /path/{missing}
-					export verb pathFound(HttpRequest<one.Path>) HttpResponse<String, String>
+					export verb pathFound(HttpRequest<Unit, one.Path, Unit>) HttpResponse<String, String>
 						+ingress http GET /path/{parameter}
 
 					// Data comment
@@ -134,19 +136,30 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"11:22-22: ingress verb any: request type HttpRequest<Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
-				"11:40-40: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
-				"14:31-31: ingress verb path: cannot use path parameter \"invalid\" with request type String, expected Data type",
-				"16:31-31: ingress verb pathMissing: request type one.Path does not contain a field corresponding to the parameter \"missing\"",
-				"16:7-7: duplicate http ingress GET /path/{} for 17:6:\"pathFound\" and 15:6:\"pathMissing\"",
-				"18:7-7: duplicate http ingress GET /path/{} for 13:6:\"path\" and 17:6:\"pathFound\"",
+				"11:22-22: ingress verb any: GET request type HttpRequest<Any, Unit, Unit> must have a body of unit not Any",
+				"11:52-52: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
+				"16:31-31: ingress verb pathInvalid: cannot use path parameter \"invalid\" with request type String as it has multiple path parameters, expected Data or Map type",
+				"16:41-41: ingress verb pathInvalid: cannot use path parameter \"extra\" with request type String as it has multiple path parameters, expected Data or Map type",
+				"18:31-31: ingress verb pathMissing: request pathParameter type one.Path does not contain a field corresponding to the parameter \"missing\"",
+				"18:7-7: duplicate http ingress GET /path/{} for 19:6:\"pathFound\" and 17:6:\"pathMissing\"",
+				"20:7-7: duplicate http ingress GET /path/{} for 13:6:\"path\" and 19:6:\"pathFound\"",
+			}},
+		{name: "GetRequestWithBody",
+			schema: `
+				module one {
+					export verb bytes(HttpRequest<Bytes, Unit, Unit>) HttpResponse<Bytes, Bytes>
+						+ingress http GET /bytes
+				}
+			`,
+			errs: []string{
+				"3:24-24: ingress verb bytes: GET request type HttpRequest<Bytes, Unit, Unit> must have a body of unit not Bytes",
 			}},
 		{name: "Array",
 			schema: `
 				module one {
 					data Data {}
-					export verb one(HttpRequest<[one.Data]>) HttpResponse<[one.Data], Empty>
-						+ingress http GET /one
+					export verb one(HttpRequest<[one.Data], Unit, Unit>) HttpResponse<[one.Data], Empty>
+						+ingress http POST /one
 				}
 			`,
 		},
@@ -166,9 +179,9 @@ func TestValidate(t *testing.T) {
 			schema: `
 				module one {
 					data Data {}
-					export verb one(HttpRequest<[one.Data]>) HttpResponse<[one.Data], Empty>
-					    +ingress http GET /one
-					    +ingress http GET /two
+					export verb one(HttpRequest<[one.Data], Unit, Unit>) HttpResponse<[one.Data], Empty>
+					    +ingress http POST /one
+					    +ingress http POST /two
 				}
 			`,
 			errs: []string{
@@ -195,7 +208,7 @@ func TestValidate(t *testing.T) {
 					export data Data {}
 				}
 				module one {
-					export verb a(HttpRequest<two.Data>) HttpResponse<two.Data, Empty>
+					export verb a(HttpRequest<two.Data, Unit, Unit>) HttpResponse<two.Data, Empty>
 						+ingress http GET /a
 				}
 			`,

@@ -17,10 +17,10 @@ type Response struct {
 }
 
 //ftl:ingress http GET /test
-func Get(ctx context.Context, req builtin.HttpRequest[External]) (builtin.HttpResponse[Response, string], error) {
+func Get(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, External]) (builtin.HttpResponse[Response, string], error) {
 	return builtin.HttpResponse[Response, string]{
 		Body: ftl.Some(Response{
-			Message: fmt.Sprintf("Hello, %s", req.Body.Message),
+			Message: fmt.Sprintf("Hello, %s", req.Query.Message),
 		}),
 	}, nil
 }

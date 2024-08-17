@@ -164,7 +164,7 @@ func Nothing(ctx context.Context) error {
 }
 
 //ftl:ingress http GET /get
-func Http(ctx context.Context, req builtin.HttpRequest[Req]) (builtin.HttpResponse[Resp, ftl.Unit], error) {
+func Http(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, Req]) (builtin.HttpResponse[Resp, ftl.Unit], error) {
 	return builtin.HttpResponse[Resp, ftl.Unit]{}, nil
 }
 

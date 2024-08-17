@@ -34,12 +34,16 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 	var requestMap map[string]any
 
 	if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
-		pathParameters := map[string]any{}
+		pathParametersMap := map[string]string{}
 		matchSegments(route.Path, r.URL.Path, func(segment, value string) {
-			pathParameters[segment] = value
+			pathParametersMap[segment] = value
 		})
+		pathParameters, err := manglePathParameters(pathParametersMap, request, sch)
+		if err != nil {
+			return nil, err
+		}
 
-		httpRequestBody, err := extractHTTPRequestBody(route, r, request, sch)
+		httpRequestBody, err := extractHTTPRequestBody(r, request, sch)
 		if err != nil {
 			return nil, err
 		}
@@ -56,6 +60,10 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 			queryMap[key] = valuesAny
 		}
 
+		finalQueryParams, err := mangleQueryParameters(queryMap, r.URL.Query(), request, sch)
+		if err != nil {
+			return nil, err
+		}
 		headerMap := make(map[string]any)
 		for key, values := range r.Header {
 			valuesAny := make([]any, len(values))
@@ -69,15 +77,11 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 		requestMap["method"] = r.Method
 		requestMap["path"] = r.URL.Path
 		requestMap["pathParameters"] = pathParameters
-		requestMap["query"] = queryMap
+		requestMap["query"] = finalQueryParams
 		requestMap["headers"] = headerMap
 		requestMap["body"] = httpRequestBody
 	} else {
-		var err error
-		requestMap, err = buildRequestMap(route, r, request, sch)
-		if err != nil {
-			return nil, err
-		}
+		return nil, fmt.Errorf("no HTTP ingress metadata for verb %s", verb.Name)
 	}
 
 	requestMap, err = schema.TransformFromAliasedFields(request, sch, requestMap)
@@ -102,15 +106,15 @@ func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Sche
 	return body, nil
 }
 
-func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, sch *schema.Schema) (any, error) {
-	bodyField, err := getBodyField(ref, sch)
+func extractHTTPRequestBody(r *http.Request, ref *schema.Ref, sch *schema.Schema) (any, error) {
+	bodyField, err := getField("body", ref, sch)
 	if err != nil {
 		return nil, err
 	}
 
 	if ref, ok := bodyField.Type.(*schema.Ref); ok {
 		if err := sch.ResolveToType(ref, &schema.Data{}); err == nil {
-			return buildRequestMap(route, r, ref, sch)
+			return buildRequestMap(r)
 		}
 	}
 
@@ -120,6 +124,76 @@ func extractHTTPRequestBody(route *dal.IngressRoute, r *http.Request, ref *schem
 	}
 
 	return valueForData(bodyField.Type, bodyData)
+}
+
+// Takes the map of path parameters and transforms them into the appropriate type
+func manglePathParameters(params map[string]string, ref *schema.Ref, sch *schema.Schema) (any, error) {
+
+	paramsField, err := getField("pathParameters", ref, sch)
+	if err != nil {
+		return nil, err
+	}
+
+	switch paramsField.Type.(type) {
+	case *schema.Ref, *schema.Map:
+		ret := map[string]any{}
+		for k, v := range params {
+			ret[k] = v
+		}
+		return ret, nil
+	default:
+	}
+	// This is a scalar, there should only be a single param
+	// This is validated by the schema, we don't need extra validation here
+	for _, val := range params {
+
+		switch paramsField.Type.(type) {
+		case *schema.String:
+			return val, nil
+		case *schema.Int:
+			parsed, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int from path parameter: %w", err)
+			}
+			return parsed, nil
+		case *schema.Float:
+			float, err := strconv.ParseFloat(val, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse float from path parameter: %w", err)
+			}
+			return float, nil
+		case *schema.Bool:
+			// TODO: is anything else considered truthy?
+			return val == "true", nil
+		default:
+			return nil, fmt.Errorf("unsupported path parameter type %T", paramsField.Type)
+		}
+	}
+	// Empty map
+	return map[string]any{}, nil
+}
+
+// Takes the map of path parameters and transforms them into the appropriate type
+func mangleQueryParameters(params map[string]any, underlying map[string][]string, ref *schema.Ref, sch *schema.Schema) (any, error) {
+
+	paramsField, err := getField("query", ref, sch)
+	if err != nil {
+		return nil, err
+	}
+
+	if m, ok := paramsField.Type.(*schema.Map); ok {
+		if _, ok := m.Value.(*schema.Array); ok {
+			return params, nil
+		}
+	}
+	// We need to turn them into straight strings
+	newParams := map[string]any{}
+	for k, v := range underlying {
+		if len(v) > 0 {
+			newParams[k] = v[0]
+		}
+	}
+	return newParams, nil
 }
 
 func valueForData(typ schema.Type, data []byte) (any, error) {
@@ -203,12 +277,7 @@ func readRequestBody(r *http.Request) ([]byte, error) {
 	return bodyData, nil
 }
 
-func buildRequestMap(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, sch *schema.Schema) (map[string]any, error) {
-	requestMap := map[string]any{}
-	matchSegments(route.Path, r.URL.Path, func(segment, value string) {
-		requestMap[segment] = value
-	})
-
+func buildRequestMap(r *http.Request) (map[string]any, error) {
 	switch r.Method {
 	case http.MethodPost, http.MethodPut:
 		var bodyMap map[string]any
@@ -217,29 +286,10 @@ func buildRequestMap(route *dal.IngressRoute, r *http.Request, ref *schema.Ref, 
 			return nil, fmt.Errorf("HTTP request body is not valid JSON: %w", err)
 		}
 
-		// Merge bodyMap into params
-		for k, v := range bodyMap {
-			requestMap[k] = v
-		}
+		return bodyMap, nil
 	default:
-		symbol, err := sch.ResolveRequestResponseType(ref)
-		if err != nil {
-			return nil, err
-		}
-
-		if data, ok := symbol.(*schema.Data); ok {
-			queryMap, err := parseQueryParams(r.URL.Query(), data)
-			if err != nil {
-				return nil, fmt.Errorf("HTTP query params are not valid: %w", err)
-			}
-
-			for key, value := range queryMap {
-				requestMap[key] = value
-			}
-		}
+		return nil, nil
 	}
-
-	return requestMap, nil
 }
 
 func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, error) {

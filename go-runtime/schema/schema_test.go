@@ -8,9 +8,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+
+	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/errors"
@@ -162,7 +163,7 @@ func TestExtractModuleSchema(t *testing.T) {
 
   verb batchStringToTime([String]) [Time]
   
-  export verb http(builtin.HttpRequest<one.Req>) builtin.HttpResponse<one.Resp, Unit>
+  export verb http(builtin.HttpRequest<Unit, Unit, one.Req>) builtin.HttpResponse<one.Resp, Unit>
     +ingress http GET /get
 
   export verb nothing(Unit) Unit
@@ -276,7 +277,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 			export verb callsTwoAndThree(two.Payload<String>) two.Payload<String>
 				+calls two.three, two.two
 
-			export verb ingress(builtin.HttpRequest<two.PostRequest>) builtin.HttpResponse<two.PostResponse, String>
+			export verb ingress(builtin.HttpRequest<two.PostRequest, Unit, Unit>) builtin.HttpResponse<two.PostResponse, String>
 				+ingress http POST /users
 				+encoding json lenient
 
