@@ -12,7 +12,7 @@ import (
 	in "github.com/TBD54566975/ftl/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/testutils"
+	"github.com/TBD54566975/ftl/internal/testutils"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/assert/v2"

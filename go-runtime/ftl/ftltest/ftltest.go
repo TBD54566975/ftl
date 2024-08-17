@@ -22,7 +22,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
-	mcu "github.com/TBD54566975/ftl/testutils/modulecontext"
+	mcu "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
 )
 
 type OptionsState struct {
