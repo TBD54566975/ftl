@@ -5,7 +5,7 @@ package ftltest
 import (
 	"testing"
 
-	in "github.com/TBD54566975/ftl/integration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
 func TestModuleUnitTests(t *testing.T) {

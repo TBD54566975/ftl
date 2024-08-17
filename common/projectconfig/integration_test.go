@@ -8,8 +8,8 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	in "github.com/TBD54566975/ftl/integration"
 	"github.com/TBD54566975/ftl/internal/exec"
+	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

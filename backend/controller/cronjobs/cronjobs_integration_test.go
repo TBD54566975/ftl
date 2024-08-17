@@ -16,7 +16,7 @@ import (
 	db "github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdb "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	in "github.com/TBD54566975/ftl/integration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

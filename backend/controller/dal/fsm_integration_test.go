@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
-	in "github.com/TBD54566975/ftl/integration"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
+
+	in "github.com/TBD54566975/ftl/internal/integration"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 func TestFSM(t *testing.T) {
@@ -100,7 +101,7 @@ func TestFSMRetry(t *testing.T) {
 		in.Call("fsmretry", "startTransitionToThree", in.Obj{"id": "2"}, func(t testing.TB, response any) {}),
 		in.Call("fsmretry", "startTransitionToTwo", in.Obj{"id": "3", "failCatch": true}, func(t testing.TB, response any) {}),
 
-		in.Sleep(7*time.Second), //6s is longest run of retries
+		in.Sleep(7*time.Second), // 6s is longest run of retries
 
 		// First two FSMs instances should have failed
 		// Third one will not as it is still catching

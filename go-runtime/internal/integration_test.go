@@ -6,8 +6,6 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-
-	. "github.com/TBD54566975/ftl/integration"
 )
 
 func TestRealMap(t *testing.T) {

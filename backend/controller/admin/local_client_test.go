@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	cf "github.com/TBD54566975/ftl/common/configuration"
-	in "github.com/TBD54566975/ftl/integration"
+	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
