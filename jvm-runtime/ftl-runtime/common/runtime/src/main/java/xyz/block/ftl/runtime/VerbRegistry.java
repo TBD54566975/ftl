@@ -123,8 +123,6 @@ public class VerbRegistry {
         final String name;
         final Class<?> inputClass;
 
-        volatile FTLController ftlController;
-
         public SecretSupplier(String name, Class<?> inputClass) {
             this.name = name;
             this.inputClass = inputClass;
@@ -132,10 +130,8 @@ public class VerbRegistry {
 
         @Override
         public Object apply(ObjectMapper mapper, CallRequest in) {
-            if (ftlController == null) {
-                ftlController = Arc.container().instance(FTLController.class).get();
-            }
-            var secret = ftlController.getSecret(name);
+
+            var secret = FTLController.instance().getSecret(name);
             try {
                 return mapper.createParser(secret).readValueAs(inputClass);
             } catch (IOException e) {
@@ -162,8 +158,6 @@ public class VerbRegistry {
         final String name;
         final Class<?> inputClass;
 
-        volatile FTLController ftlController;
-
         public ConfigSupplier(String name, Class<?> inputClass) {
             this.name = name;
             this.inputClass = inputClass;
@@ -171,10 +165,7 @@ public class VerbRegistry {
 
         @Override
         public Object apply(ObjectMapper mapper, CallRequest in) {
-            if (ftlController == null) {
-                ftlController = Arc.container().instance(FTLController.class).get();
-            }
-            var secret = ftlController.getConfig(name);
+            var secret = FTLController.instance().getConfig(name);
             try {
                 return mapper.createParser(secret).readValueAs(inputClass);
             } catch (IOException e) {

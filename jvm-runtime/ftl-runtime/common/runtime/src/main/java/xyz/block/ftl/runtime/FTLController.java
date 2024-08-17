@@ -1,22 +1,21 @@
 package xyz.block.ftl.runtime;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
-import jakarta.annotation.PreDestroy;
-import jakarta.inject.Singleton;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import com.google.protobuf.ByteString;
 
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
-import io.quarkus.runtime.Startup;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.LeaseFailedException;
 import xyz.block.ftl.LeaseHandle;
@@ -31,8 +30,6 @@ import xyz.block.ftl.v1.PublishEventResponse;
 import xyz.block.ftl.v1.VerbServiceGrpc;
 import xyz.block.ftl.v1.schema.Ref;
 
-@Singleton
-@Startup
 public class FTLController implements LeaseClient {
     private static final Logger log = Logger.getLogger(FTLController.class);
     final String moduleName;
@@ -40,52 +37,37 @@ public class FTLController implements LeaseClient {
     private Throwable currentError;
     private volatile ModuleContextResponse moduleContextResponse;
     private boolean waiters = false;
-    private volatile boolean closed = false;
 
     final VerbServiceGrpc.VerbServiceStub verbService;
-    final StreamObserver<ModuleContextResponse> moduleObserver = new StreamObserver<>() {
-        @Override
-        public void onNext(ModuleContextResponse moduleContextResponse) {
-            synchronized (this) {
-                currentError = null;
-                FTLController.this.moduleContextResponse = moduleContextResponse;
-                if (waiters) {
-                    this.notifyAll();
-                    waiters = false;
+    final StreamObserver<ModuleContextResponse> moduleObserver = new ModuleObserver();
+
+    private static volatile FTLController controller;
+
+    /**
+     * TODO: look at how init should work, this is terrible and will break dev mode
+     */
+    public static FTLController instance() {
+        if (controller == null) {
+            synchronized (FTLController.class) {
+                if (controller == null) {
+                    controller = new FTLController();
                 }
             }
-
         }
-
-        @Override
-        public void onError(Throwable throwable) {
-            log.error("GRPC connection error", throwable);
-            synchronized (this) {
-                currentError = throwable;
-                if (waiters) {
-                    this.notifyAll();
-                    waiters = false;
-                }
-            }
-            if (!closed) {
-                verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
-            }
-        }
-
-        @Override
-        public void onCompleted() {
-            onError(new RuntimeException("connection closed"));
-        }
-    };
-
-    @PreDestroy
-    void shutdown() {
-
+        return controller;
     }
 
-    public FTLController(@ConfigProperty(name = "ftl.endpoint", defaultValue = "http://localhost:8892") URI uri,
-            @ConfigProperty(name = "ftl.module.name") String moduleName) {
-        this.moduleName = moduleName;
+    FTLController() {
+        String endpoint = System.getenv("FTL_ENDPOINT");
+        String testEndpoint = System.getProperty("ftl.test.endpoint"); //set by the test framework
+        if (testEndpoint != null) {
+            endpoint = testEndpoint;
+        }
+        if (endpoint == null) {
+            endpoint = "http://localhost:8892";
+        }
+        var uri = URI.create(endpoint);
+        this.moduleName = System.getProperty("ftl.module.name");
         var channelBuilder = ManagedChannelBuilder.forAddress(uri.getHost(), uri.getPort());
         if (uri.getScheme().equals("http")) {
             channelBuilder.usePlaintext();
@@ -109,6 +91,17 @@ public class FTLController implements LeaseClient {
             return context.getConfigsMap().get(secretName).toByteArray();
         }
         throw new RuntimeException("Config not found: " + secretName);
+    }
+
+    public Datasource getDatasource(String name) {
+        //TODO: only one database is supported at the moment
+        List<ModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
+        for (var i : databasesList) {
+            if (i.getName().equals(name)) {
+                return Datasource.fromDSN(i.getDsn());
+            }
+        }
+        return null;
     }
 
     public byte[] callVerb(String name, String module, byte[] payload) {
@@ -234,4 +227,80 @@ public class FTLController implements LeaseClient {
         }
     }
 
+    private class ModuleObserver implements StreamObserver<ModuleContextResponse> {
+
+        final AtomicInteger failCount = new AtomicInteger();
+
+        @Override
+        public void onNext(ModuleContextResponse moduleContextResponse) {
+            synchronized (this) {
+                currentError = null;
+                FTLController.this.moduleContextResponse = moduleContextResponse;
+                if (waiters) {
+                    this.notifyAll();
+                    waiters = false;
+                }
+            }
+
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            log.error("GRPC connection error", throwable);
+            synchronized (this) {
+                currentError = throwable;
+                if (waiters) {
+                    this.notifyAll();
+                    waiters = false;
+                }
+            }
+            if (failCount.incrementAndGet() < 5) {
+                verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+            }
+        }
+
+        @Override
+        public void onCompleted() {
+            onError(new RuntimeException("connection closed"));
+        }
+    }
+
+    public record Datasource(String connectionString, String username, String password) {
+
+        public static Datasource fromDSN(String dsn) {
+            try {
+                URI uri = new URI(dsn);
+                String username = "";
+                String password = "";
+                String userInfo = uri.getUserInfo();
+                if (userInfo != null) {
+                    var split = userInfo.split(":");
+                    username = split[0];
+                    password = split[1];
+                    return new Datasource(
+                            new URI("jdbc:postgresql", null, uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), null)
+                                    .toASCIIString(),
+                            username, password);
+                } else {
+                    //TODO: this is horrible, just quick hack for now
+                    var matcher = Pattern.compile("[&?]user=([^?]*)").matcher(dsn);
+                    if (matcher.find()) {
+                        username = matcher.group(1);
+                    }
+                    dsn = matcher.replaceAll("");
+                    matcher = Pattern.compile("[&?]password=([^?]*)").matcher(dsn);
+                    if (matcher.find()) {
+                        password = matcher.group(1);
+                    }
+                    dsn = matcher.replaceAll("");
+                    dsn = dsn.replaceAll("postgresql://", "jdbc:postgresql://");
+                    dsn = dsn.replaceAll("postgres://", "jdbc:postgresql://");
+                    return new Datasource(dsn, username, password);
+                }
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+    }
 }
