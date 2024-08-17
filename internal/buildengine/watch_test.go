@@ -11,8 +11,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/pubsub"
 
-	. "github.com/TBD54566975/ftl/buildengine"
 	"github.com/TBD54566975/ftl/common/moduleconfig"
+	. "github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

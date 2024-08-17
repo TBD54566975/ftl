@@ -7,7 +7,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/buildengine"
+	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
