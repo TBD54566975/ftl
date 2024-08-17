@@ -22,7 +22,12 @@ type ModuleGoConfig struct{}
 type ModuleKotlinConfig struct{}
 
 // ModuleJavaConfig is language-specific configuration for Java modules.
-type ModuleJavaConfig struct{}
+type ModuleJavaConfig struct {
+	BuildTool string `toml:"build-tool"`
+}
+
+const JavaBuildToolMaven string = "maven"
+const JavaBuildToolGradle string = "gradle"
 
 // ModuleConfig is the configuration for an FTL module.
 //
@@ -130,20 +135,39 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	}
 	switch config.Language {
 	case "kotlin", "java":
+
 		if config.Build == "" {
-			config.Build = "mvn -B package"
+			pom := filepath.Join(moduleDir, "pom.xml")
+			buildGradle := filepath.Join(moduleDir, "build.gradle")
+			buildGradleKts := filepath.Join(moduleDir, "build.gradle.kts")
+			if config.Java.BuildTool == JavaBuildToolMaven || fileExists(pom) {
+				config.Java.BuildTool = JavaBuildToolMaven
+				config.Build = "mvn -B package"
+				if config.DeployDir == "" {
+					config.DeployDir = "target"
+				}
+				if len(config.Watch) == 0 {
+					config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
+				}
+			} else if config.Java.BuildTool == JavaBuildToolGradle || fileExists(buildGradle) || fileExists(buildGradleKts) {
+				config.Java.BuildTool = JavaBuildToolGradle
+				config.Build = "gradle build"
+				if config.DeployDir == "" {
+					config.DeployDir = "build"
+				}
+				if len(config.Watch) == 0 {
+					config.Watch = []string{"pom.xml", "src/**", "build/generated"}
+				}
+			} else {
+				return fmt.Errorf("could not find JVM build file in %s", moduleDir)
+			}
 		}
-		if config.DeployDir == "" {
-			config.DeployDir = "target"
-		}
+
 		if config.GeneratedSchemaDir == "" {
 			config.GeneratedSchemaDir = "src/main/ftl-module-schema"
 		}
 		if len(config.Deploy) == 0 {
 			config.Deploy = []string{"main", "quarkus-app"}
-		}
-		if len(config.Watch) == 0 {
-			config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
 		}
 	case "go":
 		if config.DeployDir == "" {
@@ -178,15 +202,20 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 
 	// Do some validation.
 	if !isBeneath(moduleDir, config.DeployDir) {
-		return fmt.Errorf("deploy-dir must be relative to the module directory")
+		return fmt.Errorf("deploy-dir %s must be relative to the module directory %s", config.DeployDir, moduleDir)
 	}
 	for _, deploy := range config.Deploy {
 		if !isBeneath(moduleDir, deploy) {
-			return fmt.Errorf("deploy files must be relative to the module directory")
+			return fmt.Errorf("deploy %s files must be relative to the module directory %s", deploy, moduleDir)
 		}
 	}
 
 	return nil
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
 }
 
 func isBeneath(moduleDir, path string) bool {

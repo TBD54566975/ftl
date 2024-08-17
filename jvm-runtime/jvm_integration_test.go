@@ -130,6 +130,17 @@ func TestJVMToGoCall(t *testing.T) {
 	)
 }
 
+func TestGradle(t *testing.T) {
+	in.Run(t,
+		in.WithLanguages("java"),
+		in.CopyModule("gradle"),
+		in.Deploy("gradle"),
+		in.Call("gradle", "echo", "Bob", func(t testing.TB, response string) {
+			assert.Equal(t, "Hello, Bob!", response)
+		}),
+	)
+}
+
 func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTest {
 	return []in.SubTest{
 		{

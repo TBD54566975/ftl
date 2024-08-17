@@ -87,6 +87,9 @@ func TestDiscoverModules(t *testing.T) {
 					"src/**",
 					"target/generated-sources",
 				},
+				Java: moduleconfig.ModuleJavaConfig{
+					BuildTool: "maven",
+				},
 			},
 		},
 		{
@@ -128,6 +131,9 @@ func TestDiscoverModules(t *testing.T) {
 					"pom.xml",
 					"src/**",
 					"target/generated-sources",
+				},
+				Java: moduleconfig.ModuleJavaConfig{
+					BuildTool: "maven",
 				},
 			},
 		},
