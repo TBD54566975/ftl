@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/common/configuration/sql"
+	"github.com/TBD54566975/ftl/internal/configuration/sql"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 

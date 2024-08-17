@@ -4,8 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/TBD54566975/ftl/common/configuration/sql"
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/internal/configuration/sql"
 )
 
 type mockDBConfigResolverDAL struct{}

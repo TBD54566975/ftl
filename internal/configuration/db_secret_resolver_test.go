@@ -8,9 +8,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/TBD54566975/ftl/common/configuration/dal"
 	"github.com/alecthomas/assert/v2"
 	. "github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/internal/configuration/dal"
 )
 
 type mockDBSecretResolverDAL struct {

@@ -13,8 +13,8 @@ import (
 	"golang.org/x/term"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	cf "github.com/TBD54566975/ftl/common/configuration"
 	"github.com/TBD54566975/ftl/common/projectconfig"
+	cf "github.com/TBD54566975/ftl/internal/configuration"
 )
 
 type secretCmd struct {
