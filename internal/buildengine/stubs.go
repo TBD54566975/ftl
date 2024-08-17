@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/common/moduleconfig"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 // GenerateStubs generates stubs for the given modules.
