@@ -14,6 +14,22 @@ import (
 	"github.com/alecthomas/repr"
 )
 
+func TestLifecycle(t *testing.T) {
+	in.Run(t,
+		in.WithLanguages("java", "kotlin"),
+		in.GitInit(),
+		in.Exec("rm", "ftl-project.toml"),
+		in.IfLanguage("kotlin", in.Exec("rm", "-r", "echo")), //horrible, but we need to do cleanup, I wonder if we should be running each test in a separate directory
+		in.Exec("ftl", "init", "test", "."),
+		in.IfLanguage("java", in.Exec("ftl", "new", "java", ".", "echo")),
+		in.IfLanguage("kotlin", in.Exec("ftl", "new", "kotlin", ".", "echo")),
+		in.Deploy("echo"),
+		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
+			assert.Equal(t, "Hello, Bob!", response)
+		}),
+	)
+}
+
 func TestJVMToGoCall(t *testing.T) {
 
 	exampleObject := TestObject{
