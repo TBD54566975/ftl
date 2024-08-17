@@ -21,10 +21,13 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/jvm-runtime/java"
+	"github.com/TBD54566975/ftl/jvm-runtime/kotlin"
 )
 
 type newCmd struct {
 	Go     newGoCmd     `cmd:"" help:"Initialize a new FTL Go module."`
+	Java   newJavaCmd   `cmd:"" help:"Initialize a new FTL Java module."`
 	Kotlin newKotlinCmd `cmd:"" help:"Initialize a new FTL Kotlin module."`
 }
 
@@ -35,12 +38,18 @@ type newGoCmd struct {
 	GoVersion string
 }
 
+type newJavaCmd struct {
+	Dir   string `arg:"" help:"Directory to initialize the module in."`
+	Name  string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+	Group string `help:"The Maven groupId of the project." default:"com.example"`
+}
 type newKotlinCmd struct {
-	Dir  string `arg:"" help:"Directory to initialize the module in."`
-	Name string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+	Dir   string `arg:"" help:"Directory to initialize the module in."`
+	Name  string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+	Group string `help:"The Maven groupId of the project." default:"com.example"`
 }
 
-func (i newGoCmd) Run(ctx context.Context) error {
+func (i newGoCmd) Run(ctx context.Context, config projectconfig.Config) error {
 	name, path, err := validateModule(i.Dir, i.Name)
 	if err != nil {
 		return err
@@ -49,11 +58,6 @@ func (i newGoCmd) Run(ctx context.Context) error {
 	// Validate the module name with custom validation
 	if !isValidGoModuleName(name) {
 		return fmt.Errorf("module name %q must be a valid Go module name and not a reserved keyword", name)
-	}
-
-	config, err := projectconfig.Load(ctx, "")
-	if err != nil {
-		return fmt.Errorf("failed to load project config: %w", err)
 	}
 
 	logger := log.FromContext(ctx)
@@ -84,8 +88,54 @@ func (i newGoCmd) Run(ctx context.Context) error {
 	return nil
 }
 
-func (i newKotlinCmd) Run(ctx context.Context) error {
-	return fmt.Errorf("kotlin scaffolinging temporarily removed")
+func (i newJavaCmd) Run(ctx context.Context, config projectconfig.Config) error {
+	return RunJvmScaffolding(ctx, config, i.Dir, i.Name, i.Group, java.Files())
+}
+
+func (i newKotlinCmd) Run(ctx context.Context, config projectconfig.Config) error {
+	return RunJvmScaffolding(ctx, config, i.Dir, i.Name, i.Group, kotlin.Files())
+}
+
+func RunJvmScaffolding(ctx context.Context, config projectconfig.Config, dir string, name string, group string, source *zip.Reader) error {
+	name, path, err := validateModule(dir, name)
+	if err != nil {
+		return err
+	}
+
+	logger := log.FromContext(ctx)
+	logger.Debugf("Creating FTL module %q in %s", name, path)
+
+	packageDir := strings.ReplaceAll(group, ".", "/")
+
+	javaContext := struct {
+		Dir        string
+		Name       string
+		Group      string
+		PackageDir string
+	}{
+		Dir:        dir,
+		Name:       name,
+		Group:      group,
+		PackageDir: packageDir,
+	}
+
+	if err := scaffold(ctx, config.Hermit, source, dir, javaContext); err != nil {
+		return err
+	}
+
+	_, ok := internal.GitRoot(dir).Get()
+	if !config.NoGit && ok {
+		logger.Debugf("Adding files to git")
+		if config.Hermit {
+			if err := maybeGitAdd(ctx, dir, "bin/*"); err != nil {
+				return err
+			}
+		}
+		if err := maybeGitAdd(ctx, dir, filepath.Join(name, "*")); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validateModule(dir string, name string) (string, string, error) {
