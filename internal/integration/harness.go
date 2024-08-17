@@ -138,37 +138,11 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		t.Setenv(key, value)
 	}
 
-	tmpDir := t.TempDir()
-
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
 
 	rootDir, ok := internal.GitRoot("").Get()
 	assert.True(t, ok)
-
-	if opts.ftlConfigPath != "" {
-		// TODO: We shouldn't be copying the shared config from the "go" testdata...
-		opts.ftlConfigPath = filepath.Join(cwd, "testdata", "go", opts.ftlConfigPath)
-		projectPath := filepath.Join(tmpDir, "ftl-project.toml")
-
-		// Copy the specified FTL config to the temporary directory.
-		err = copy.Copy(opts.ftlConfigPath, projectPath)
-		if err == nil {
-			t.Setenv("FTL_CONFIG", projectPath)
-		} else {
-			// Use a path into the testdata directory instead of one relative to
-			// tmpDir. Otherwise we have a chicken and egg situation where the config
-			// can't be loaded until the module is copied over, and the config itself
-			// is used by FTL during startup.
-			// Some tests still rely on this behavior, so we can't remove it entirely.
-			t.Logf("Failed to copy %s to %s: %s", opts.ftlConfigPath, projectPath, err)
-			t.Setenv("FTL_CONFIG", opts.ftlConfigPath)
-		}
-
-	} else {
-		err = os.WriteFile(filepath.Join(tmpDir, "ftl-project.toml"), []byte(`name = "integration"`), 0644)
-		assert.NoError(t, err)
-	}
 
 	// Build FTL binary
 	logger := log.Configure(&logWriter{logger: t}, log.Config{Level: log.Debug})
@@ -188,6 +162,8 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	for _, language := range opts.languages {
 		ctx, done := context.WithCancel(ctx)
 		t.Run(language, func(t *testing.T) {
+			tmpDir := initWorkDir(t, cwd, opts)
+
 			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
 			var controller ftlv1connect.ControllerServiceClient
@@ -230,6 +206,35 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		})
 		done()
 	}
+}
+
+func initWorkDir(t testing.TB, cwd string, opts options) string {
+	tmpDir := t.TempDir()
+
+	if opts.ftlConfigPath != "" {
+		// TODO: We shouldn't be copying the shared config from the "go" testdata...
+		opts.ftlConfigPath = filepath.Join(cwd, "testdata", "go", opts.ftlConfigPath)
+		projectPath := filepath.Join(tmpDir, "ftl-project.toml")
+
+		// Copy the specified FTL config to the temporary directory.
+		err := copy.Copy(opts.ftlConfigPath, projectPath)
+		if err == nil {
+			t.Setenv("FTL_CONFIG", projectPath)
+		} else {
+			// Use a path into the testdata directory instead of one relative to
+			// tmpDir. Otherwise we have a chicken and egg situation where the config
+			// can't be loaded until the module is copied over, and the config itself
+			// is used by FTL during startup.
+			// Some tests still rely on this behavior, so we can't remove it entirely.
+			t.Logf("Failed to copy %s to %s: %s", opts.ftlConfigPath, projectPath, err)
+			t.Setenv("FTL_CONFIG", opts.ftlConfigPath)
+		}
+
+	} else {
+		err := os.WriteFile(filepath.Join(tmpDir, "ftl-project.toml"), []byte(`name = "integration"`), 0644)
+		assert.NoError(t, err)
+	}
+	return tmpDir
 }
 
 type TestContext struct {

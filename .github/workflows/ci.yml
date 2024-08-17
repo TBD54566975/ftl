@@ -20,7 +20,7 @@ jobs:
         run: docker compose up -d --wait
       - name: Test
         run: |
-          go-test-annotate ${{ (github.event_name == 'pull_request' && github.event.action != 'enqueued') && '-short' || '' }}
+          go-test-annotate ${{ (github.event_name == 'pull_request' && github.event.action != 'enqueued' && !contains( github.event.pull_request.labels.*.name, 'run-all')) && '-short' || '' }}
   test-readme:
     name: Test README
     runs-on: ubuntu-latest
@@ -153,7 +153,7 @@ jobs:
         run: just build-extension
   build-all:
     name: Rebuild All
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued'
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -188,7 +188,7 @@ jobs:
       - run: cd docs && zola build
   integration-shard:
     name: Shard Integration Tests
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-integration')
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.extract-tests.outputs.matrix }}
@@ -204,7 +204,7 @@ jobs:
           echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build integration' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
   integration-run:
     name: Integration Test
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-integration')
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     needs: integration-shard
     runs-on: ubuntu-latest
     strategy:
