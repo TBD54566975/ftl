@@ -15,9 +15,9 @@ import (
 )
 
 type CLI struct {
-	Config  string `type:"filepath" default:"lsp/hover.json" help:"Path to the hover configuration file"`
+	Config  string `type:"filepath" default:"internal/lsp/hover.json" help:"Path to the hover configuration file"`
 	DocRoot string `type:"dirpath" default:"docs/content/docs" help:"Path to the config referenced markdowns"`
-	Output  string `type:"filepath" default:"lsp/hoveritems.go" help:"Path to the generated Go file"`
+	Output  string `type:"filepath" default:"internal/lsp/hoveritems.go" help:"Path to the generated Go file"`
 }
 
 var cli CLI
