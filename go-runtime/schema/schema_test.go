@@ -194,6 +194,9 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	}
 	actual := schema.Normalise(r.Module)
 	expected := `module two {
+			typealias BackoffAlias Any
+        		+typemap go "github.com/jpillora/backoff.Backoff"
+        
 			typealias ExplicitAliasAlias Any
 				+typemap kotlin "com.foo.bar.NonFTLType"
 				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
