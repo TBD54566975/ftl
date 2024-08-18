@@ -5,6 +5,7 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+	libbackoff "github.com/jpillora/backoff"
 
 	"ftl/builtin"
 )
@@ -102,6 +103,9 @@ type TransitiveAliasType lib.NonFTLType
 type TransitiveAliasAlias = lib.NonFTLType
 
 type TransitiveAlias lib.NonFTLType
+
+//ftl:typealias
+type BackoffAlias libbackoff.Backoff
 
 func transitiveVerbCall(ctx context.Context, req Payload[string]) error {
 	_, err := ftl.Call(ctx, Two, req)

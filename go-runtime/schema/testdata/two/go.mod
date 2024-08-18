@@ -4,7 +4,10 @@ go 1.22.2
 
 replace github.com/TBD54566975/ftl => ../../../..
 
-require github.com/TBD54566975/ftl v0.150.3
+require (
+	github.com/TBD54566975/ftl v0.150.3
+	github.com/jpillora/backoff v1.0.0
+)
 
 require (
 	connectrpc.com/connect v1.16.2 // indirect
@@ -26,7 +29,6 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/pgx/v5 v5.6.0 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
-	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
