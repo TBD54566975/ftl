@@ -1498,14 +1498,10 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	}
 	logger.Debugf("Catching async call %s with %s", call.Verb, catchVerb)
 
-	sch, err := s.dal.GetActiveSchema(ctx)
-	if err != nil {
-		logger.Warnf("Async call %s could not catch, could not get active schema: %s", call.Verb, err)
-		return fmt.Errorf("async call %s could not catch, could not get active schema: %w", call.Verb, err)
-	}
+	sch := s.schema.Load()
 
 	verb := &schema.Verb{}
-	if err = sch.ResolveToType(call.Verb.ToRef(), verb); err != nil {
+	if err := sch.ResolveToType(call.Verb.ToRef(), verb); err != nil {
 		logger.Warnf("Async call %s could not catch, could not resolve original verb: %s", call.Verb, err)
 		return fmt.Errorf("async call %s could not catch, could not resolve original verb: %w", call.Verb, err)
 	}

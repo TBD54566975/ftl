@@ -86,7 +86,7 @@ func TestConsumptionDelay(t *testing.T) {
 func TestRetry(t *testing.T) {
 	retriesPerCall := 2
 	in.Run(t,
-		in.WithLanguages( /*"java",*/ "go"),
+		in.WithLanguages("java", "go"),
 		in.CopyModule("publisher"),
 		in.CopyModule("subscriber"),
 		in.Deploy("publisher"),
