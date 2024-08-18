@@ -17,7 +17,7 @@ import (
 )
 
 type CLI struct {
-	MaxParallel int      `help:"Maximum number of tests to run in parallel." default:"2"`
+	MaxParallel int      `short:"j" help:"Maximum number of tests to run in parallel." default:"2"`
 	Tests       []string `arg:"" help:"Tests to run. If not specified, all tests will be run." optional:""`
 	Nocache     bool     `help:"Do not use cache when building docker image."`
 }
@@ -33,6 +33,8 @@ type result struct {
 	output string
 	taken  time.Duration
 }
+
+// TestDiskSchemaRetrieverWithBuildArtefact TestCron TestFSM TestPubSub TestDatabase TestLeaderSync
 
 const dockerComposeTemplate = `
 services:
@@ -63,21 +65,15 @@ services:
     environment:
       FTL_DATABASE_IMAGE: "none"
     volumes:
-      - $userHome/.cache/go-build:/root/.cache/go-build
-      - $userHome/go/pkg/mod:/root/go/pkg/mod
-      - $userHome/.npm:/root/.npm
-      #- $userHome/.cache/ftl-integration-tests/node_modules:/node_modules
-    command: bash -c "/root/run.sh $testName"
-  setup:
-    image: ftl-integration-test
-    platform: linux/amd64
-    volumes:
-      - $userHome/.cache/go-build:/root/.cache/go-build
-      - $userHome/go/pkg/mod:/root/go/pkg/mod
-      - $userHome/.npm:/root/.npm
-      - $userHome/.cache/ftl-integration-tests/node_modules:/ftl/frontend/node_modules
-    command: bash -c "sleep 1"
-    #command: bash -c "just build-frontend"
+      - $integrationCache/go:/root/go
+      - $integrationCache/.m2:/root/.m2
+      - $integrationCache/java-runtime-test-framework:/ftl/java-runtime/ftl-runtime/test-framework/target
+      - $integrationCache/java-runtime-target:/ftl/java-runtime/ftl-runtime/target
+      - $workerCache/.cache:/root/.cache
+      - $workerCache/.npm:/root/.npm
+      - $workerCache/frontend-node-modules:/ftl/frontend/node_modules
+    #command: bash -c "/root/run.sh $testName"
+    command: bash -c "sleep infinity"
 `
 
 const dockerfileFTL = `
@@ -146,11 +142,6 @@ func main() {
 	logger.Infof("Docker image built in %s", time.Since(dockerStart))
 
 	start := time.Now()
-	err = setup(ctx, tempDir)
-	kctx.FatalIfErrorf(err, "failed to setup")
-	fmt.Println("Setup took", time.Since(start))
-
-	start = time.Now()
 
 	tests, err := getTests(ctx, tempDir, cli.Tests)
 	kctx.FatalIfErrorf(err)
@@ -242,82 +233,68 @@ func getTests(ctx context.Context, tempDir string, requested []string) ([]job, e
 	return tests, nil
 }
 
-func setup(ctx context.Context, tempDir string) error {
-	gitRoot, ok := internal.GitRoot("").Get()
-	if !ok {
-		return fmt.Errorf("failed to find Git root")
-	}
-	composePath, err := generateCompose(tempDir, "setup", gitRoot)
-	if err != nil {
-		return fmt.Errorf("failed to write docker-compose file: %w", err)
-	}
-
-	args := []string{"-f", composePath, "up", "setup"}
-	err = exec.Command(ctx, log.Trace, gitRoot, "docker-compose", args...).RunBuffered(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to complete setup: %w", err)
-	}
-
-	return nil
-}
-
 func worker(ctx context.Context, tempDir string, jobs <-chan job, id int, results chan<- result) {
 	logger := log.FromContext(ctx)
+	jobName := fmt.Sprintf("worker-%d", id)
 
 	gitRoot, ok := internal.GitRoot("").Get()
 	if !ok {
 		panic("failed to find Git root")
 	}
 
+	composePath, err := generateCompose(tempDir, jobName, gitRoot, id)
+	if err != nil {
+		panic("failed to write docker-compose file")
+	}
+
+	composeProjectName := strcase.ToLowerKebab(jobName)
+	args := []string{"-f", composePath,
+		"--project-name", composeProjectName,
+		"--project-directory", gitRoot,
+	}
+
+	start := time.Now()
+	ftlArgs := append(args, "up", "-d", "ftl")
+	out, err := exec.Capture(ctx, gitRoot, "docker-compose", ftlArgs...)
+	if err != nil {
+		panic(fmt.Sprintf("failed to run docker-compose: %v %s", err, out))
+	}
+
+	logger.Debugf("Worker %s started in %s", jobName, time.Since(start))
+
 	for job := range jobs {
 		logger.Infof("Running test %s", job.testName)
-		start := time.Now()
+		start = time.Now()
 
-		composePath, err := generateCompose(tempDir, job.testName, gitRoot)
+		// use run
+		args := append(args, "exec", "ftl", "bash", "-c", fmt.Sprintf("/root/run.sh %s", job.testName))
+		//out, err := exec.Capture(ctx, gitRoot, "docker-compose", args...)
+		err := exec.Command(ctx, log.Info, gitRoot, "docker-compose", args...).Run()
 		if err != nil {
-			err = fmt.Errorf("failed to write docker-compose file: %w", err)
-			results <- result{job: job, err: err, taken: time.Since(start)}
+			results <- result{job: job, err: err, output: string(out)}
 			continue
 		}
 
-		// snake case from job.testName's UpperBigNames to lower-big-names
-		composeProjectName := strcase.ToLowerKebab(job.testName)
-		args := []string{"-f", composePath,
-			"--project-name", composeProjectName,
-			"--project-directory", gitRoot,
-		}
+		results <- result{job: job, taken: time.Since(start), output: string(out)}
+	}
 
-		ftlArgs := append(args, "up",
-			"--exit-code-from", "ftl",
-			"--abort-on-container-exit",
-			"--no-attach", "db-1,localstack-1",
-			"ftl",
-		)
-		out, err := exec.Capture(ctx, gitRoot, "docker-compose", ftlArgs...)
-		if err != nil {
-			err = fmt.Errorf("failed to complete ftl test: %w", err)
-			results <- result{job: job, output: string(out), err: err, taken: time.Since(start)}
-			continue
-		}
-
-		logger.Debugf("Shutting down %s", composeProjectName)
-		err = exec.Command(ctx, log.Trace, gitRoot, "docker-compose", append(args, "down")...).Run()
-		if err != nil {
-			err = fmt.Errorf("failed to stop docker-compose: %w", err)
-			results <- result{job: job, err: err, taken: time.Since(start)}
-			continue
-		}
-
-		results <- result{job: job, taken: time.Since(start)}
+	logger.Debugf("Shutting down %s", composeProjectName)
+	err = exec.Command(ctx, log.Trace, gitRoot, "docker-compose", append(args, "down")...).Run()
+	if err != nil {
+		panic(fmt.Sprintf("failed to shut down docker-compose: %v", err))
 	}
 }
 
-func generateCompose(tempDir, suffix, gitRoot string) (string, error) {
+func generateCompose(tempDir, suffix, gitRoot string, workerId int) (string, error) {
 	composePath := filepath.Join(tempDir, fmt.Sprintf("docker-compose-%s.yaml", suffix))
 	content := strings.ReplaceAll(dockerComposeTemplate, "$testName", suffix)
 	content = strings.ReplaceAll(content, "$projectRoot", gitRoot)
 	content = strings.ReplaceAll(content, "$tempDir", tempDir)
 	content = strings.ReplaceAll(content, "$userHome", os.Getenv("HOME"))
+	integrationCache := fmt.Sprintf("%s/.cache/ftl/integration-tests/shared", os.Getenv("HOME"))
+	content = strings.ReplaceAll(content, "$integrationCache", integrationCache)
+	workerCache := fmt.Sprintf("%s/.cache/ftl/integration-tests/worker-%d", os.Getenv("HOME"), workerId)
+	content = strings.ReplaceAll(content, "$workerCache", workerCache)
 	err := os.WriteFile(composePath, []byte(content), 0644)
 	return composePath, err
 }
