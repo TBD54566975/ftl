@@ -186,6 +186,13 @@ jobs:
           submodules: true
       - uses: cashapp/activate-hermit@v1
       - run: cd docs && zola build
+  arch-lint:
+    name: Lint Architecture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cashapp/activate-hermit@v1
+      - run: go-arch-lint check || true
   integration-shard:
     name: Shard Integration Tests
     if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
