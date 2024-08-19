@@ -126,7 +126,7 @@ func (m *AsyncCallMetrics) Completed(ctx context.Context, verb schema.RefKey, ca
 	attrs = append(attrs, observability.SuccessOrFailureStatusAttr(maybeErr == nil))
 	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
 
-	attrs = append(attrs, attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, msToComplete)))
+	attrs = append(attrs, attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, asyncLogBucket(msToComplete)))
 	m.completed.Add(ctx, 1, metric.WithAttributes(attrs...))
 
 	m.queueDepth.Record(ctx, queueDepth)
@@ -155,7 +155,11 @@ func RetrieveTraceContextFromContext(ctx context.Context) ([]byte, error) {
 }
 
 func extractAsyncCallAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool) []attribute.KeyValue {
-	return append(extractRefAttrs(verb, catchVerb, origin, isCatching), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, logBucket(8, timeSinceMS(scheduledAt))))
+	return append(extractRefAttrs(verb, catchVerb, origin, isCatching), attribute.String(asyncCallTimeSinceScheduledAtBucketAttr, asyncLogBucket(timeSinceMS(scheduledAt))))
+}
+
+func asyncLogBucket(msToComplete int64) string {
+	return logBucket(4, msToComplete, optional.Some(4), optional.Some(6))
 }
 
 func extractRefAttrs(verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, isCatching bool) []attribute.KeyValue {
