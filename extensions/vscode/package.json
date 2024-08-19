@@ -95,7 +95,7 @@
     "eslint": "^8.57.0",
     "ts-loader": "^9.5.1",
     "typescript": "^5.3.3",
-    "@vscode/vsce": "^2.29.0",
+    "@vscode/vsce": "^3.0.0",
     "webpack": "^5.90.3",
     "webpack-cli": "^5.1.4"
   },
