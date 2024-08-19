@@ -1,8 +1,6 @@
 module ftl/publisher
 
-go 1.22.2
-
-toolchain go1.22.3
+go 1.23.0
 
 require github.com/TBD54566975/ftl v0.238.0
 
