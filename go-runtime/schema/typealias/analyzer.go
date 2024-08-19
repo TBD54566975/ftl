@@ -86,16 +86,14 @@ func qualifiedNameFromSelectorExpr(pass *analysis.Pass, node ast.Node) string {
 	if !ok {
 		return ""
 	}
-	for _, im := range pass.Pkg.Imports() {
-		if im.Name() != ident.Name {
-			continue
-		}
-		fqName := im.Path()
-		if parts := strings.Split(im.Path(), "/"); parts[len(parts)-1] != ident.Name {
-			// if package differs from the directory name, add the package name to the fqName
-			fqName = fqName + "." + ident.Name
-		}
-		return fqName + "." + se.Sel.Name
+	pkgName, ok := pass.TypesInfo.ObjectOf(ident).(*types.PkgName)
+	if !ok {
+		return ""
 	}
-	return ""
+	fqName := pkgName.Imported().Path()
+	if parts := strings.Split(fqName, "/"); parts[len(parts)-1] != pkgName.Imported().Name() {
+		// if package differs from the directory name, add the package name to the fqName
+		fqName = fqName + "." + ident.Name
+	}
+	return fqName + "." + se.Sel.Name
 }
