@@ -1,11 +1,16 @@
-package xyz.block.ftl.runtime;
+package xyz.block.ftl.runtime.http;
 
 import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import jakarta.inject.Singleton;
@@ -19,18 +24,27 @@ import com.google.protobuf.ByteString;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.FileRegion;
-import io.netty.handler.codec.http.*;
+import io.netty.handler.codec.http.DefaultHttpRequest;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import io.quarkus.netty.runtime.virtual.VirtualClientConnection;
 import io.quarkus.netty.runtime.virtual.VirtualResponseHandler;
 import io.quarkus.vertx.http.runtime.QuarkusHttpHeaders;
 import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
+import xyz.block.ftl.runtime.FTLRecorder;
+import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.CallResponse;
 
 @SuppressWarnings("unused")
 @Singleton
-public class FTLHttpHandler implements VerbInvoker {
+public class FTLHttpHandler {
 
     public static final String CONTENT_TYPE = "Content-Type";
     final ObjectMapper mapper;
@@ -50,13 +64,16 @@ public class FTLHttpHandler implements VerbInvoker {
         this.mapper = mapper;
     }
 
-    @Override
-    public CallResponse handle(CallRequest in) {
+    public CallResponse handle(CallRequest in, boolean base64Encoded) {
         try {
             var body = mapper.createParser(in.getBody().newInput())
                     .readValueAs(xyz.block.ftl.runtime.builtin.HttpRequest.class);
             body.getHeaders().put(FTLRecorder.X_FTL_VERB, List.of(in.getVerb().getName()));
-            var ret = handleRequest(body);
+            var ret = handleRequest(body, base64Encoded);
+            if (ret.getBody() == null) {
+                ret.setBody("{}");
+            }
+            ret.getHeaders().remove("content-length");
             var mappedResponse = mapper.writer().writeValueAsBytes(ret);
             return CallResponse.newBuilder().setBody(ByteString.copyFrom(mappedResponse)).build();
         } catch (Exception e) {
@@ -66,10 +83,10 @@ public class FTLHttpHandler implements VerbInvoker {
 
     }
 
-    public xyz.block.ftl.runtime.builtin.HttpResponse handleRequest(xyz.block.ftl.runtime.builtin.HttpRequest request) {
+    public xyz.block.ftl.runtime.builtin.HttpResponse handleRequest(HttpRequest request, boolean base64Encoded) {
         InetSocketAddress clientAddress = null;
         try {
-            return nettyDispatch(clientAddress, request);
+            return nettyDispatch(clientAddress, request, base64Encoded);
         } catch (Exception e) {
             log.error("Request Failure", e);
             xyz.block.ftl.runtime.builtin.HttpResponse res = new xyz.block.ftl.runtime.builtin.HttpResponse();
@@ -83,12 +100,15 @@ public class FTLHttpHandler implements VerbInvoker {
 
     private class NettyResponseHandler implements VirtualResponseHandler {
         xyz.block.ftl.runtime.builtin.HttpResponse responseBuilder = new xyz.block.ftl.runtime.builtin.HttpResponse();
+        final boolean base64Encoded;
         ByteArrayOutputStream baos;
         WritableByteChannel byteChannel;
         final xyz.block.ftl.runtime.builtin.HttpRequest request;
         CompletableFuture<xyz.block.ftl.runtime.builtin.HttpResponse> future = new CompletableFuture<>();
+        boolean json = false;
 
-        public NettyResponseHandler(xyz.block.ftl.runtime.builtin.HttpRequest request) {
+        public NettyResponseHandler(boolean base64Encoded, xyz.block.ftl.runtime.builtin.HttpRequest request) {
+            this.base64Encoded = base64Encoded;
             this.request = request;
         }
 
@@ -114,6 +134,12 @@ public class FTLHttpHandler implements VerbInvoker {
                         }
                         headers.put(name, allForName);
                     }
+                    if (res.headers().contains(CONTENT_TYPE)) {
+                        String contentType = res.headers().get(CONTENT_TYPE);
+                        if (contentType != null && !contentType.isEmpty()) {
+                            json = contentType.toLowerCase(Locale.ROOT).contains("application/json");
+                        }
+                    }
                 }
                 if (msg instanceof HttpContent) {
                     HttpContent content = (HttpContent) msg;
@@ -137,15 +163,21 @@ public class FTLHttpHandler implements VerbInvoker {
                 }
                 if (msg instanceof LastHttpContent) {
                     if (baos != null) {
+                        if (json) {
+                            responseBuilder.setBody(baos.toString(StandardCharsets.UTF_8));
+                        } else if (base64Encoded) {
+                            responseBuilder.setBody(
+                                    mapper.writer().writeValueAsString(Base64.getEncoder().encodeToString(baos.toByteArray())));
+                        } else {
+                            responseBuilder.setBody(mapper.writer().writeValueAsString(baos.toString(StandardCharsets.UTF_8)));
+                        }
                         List<String> ct = responseBuilder.getHeaders().get(CONTENT_TYPE);
                         if (ct == null || ct.isEmpty()) {
                             //TODO: how to handle this
                             responseBuilder.setBody(baos.toString(StandardCharsets.UTF_8));
                         } else if (ct.get(0).contains(MediaType.TEXT_PLAIN)) {
                             // need to encode as JSON string
-                            responseBuilder.setBody(mapper.writer().writeValueAsString(baos.toString(StandardCharsets.UTF_8)));
                         } else {
-                            responseBuilder.setBody(baos.toString(StandardCharsets.UTF_8));
                         }
                     }
                     future.complete(responseBuilder);
@@ -167,7 +199,7 @@ public class FTLHttpHandler implements VerbInvoker {
     }
 
     private xyz.block.ftl.runtime.builtin.HttpResponse nettyDispatch(InetSocketAddress clientAddress,
-            xyz.block.ftl.runtime.builtin.HttpRequest request)
+            HttpRequest request, boolean base64Encoded)
             throws Exception {
         QuarkusHttpHeaders quarkusHeaders = new QuarkusHttpHeaders();
         quarkusHeaders.setContextObject(xyz.block.ftl.runtime.builtin.HttpRequest.class, request);
@@ -212,10 +244,22 @@ public class FTLHttpHandler implements VerbInvoker {
         if (request.getBody() != null) {
             // See https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.3
             nettyRequest.headers().add(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
-            ByteBuf body = Unpooled.copiedBuffer(request.getBody().toString(), StandardCharsets.UTF_8); //TODO: do we need to look at the request encoding?
-            requestContent = new DefaultLastHttpContent(body);
+            if (base64Encoded) {
+                requestContent = new DefaultLastHttpContent(
+                        Unpooled.copiedBuffer(Base64.getDecoder().decode(request.getBody().asText())));
+            } else if (request.getBody().isTextual()) {
+                requestContent = new DefaultLastHttpContent(
+                        Unpooled.copiedBuffer(request.getBody().asText(), StandardCharsets.UTF_8));
+            } else if (request.getBody().isBigDecimal() || request.getBody().isDouble() || request.getBody().isFloat()
+                    || request.getBody().isInt() || request.getBody().isBigInteger()) {
+                requestContent = new DefaultLastHttpContent(
+                        Unpooled.copiedBuffer(request.getBody().toString(), StandardCharsets.UTF_8));
+            } else {
+                ByteBuf body = Unpooled.copiedBuffer(request.getBody().toString(), StandardCharsets.UTF_8); //TODO: do we need to look at the request encoding?
+                requestContent = new DefaultLastHttpContent(body);
+            }
         }
-        NettyResponseHandler handler = new NettyResponseHandler(request);
+        NettyResponseHandler handler = new NettyResponseHandler(base64Encoded, request);
         VirtualClientConnection connection = VirtualClientConnection.connect(handler, VertxHttpRecorder.VIRTUAL_HTTP,
                 clientAddress);
 

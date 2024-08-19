@@ -29,6 +29,12 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Needed for ordering -->
+        <dependency>
+            <groupId>xyz.block.ftl</groupId>
+            <artifactId>ftl-java-runtime-deployment</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit5-mockito</artifactId>

@@ -3,8 +3,7 @@ package xyz.block.ftl.runtime;
 import java.io.IOException;
 import java.util.Base64;
 
-import jakarta.enterprise.event.Observes;
-import jakarta.json.stream.JsonGenerator;
+import jakarta.inject.Singleton;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;
@@ -19,16 +18,19 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
-import io.quarkus.runtime.StartupEvent;
+import io.quarkus.arc.Unremovable;
+import io.quarkus.jackson.ObjectMapperCustomizer;
 
 /**
  * This class configures the FTL serialization
  */
-public class JsonSerializationConfig {
+@Singleton
+@Unremovable
+public class JsonSerializationConfig implements ObjectMapperCustomizer {
 
-    void startup(@Observes StartupEvent event, ObjectMapper mapper) {
+    @Override
+    public void customize(ObjectMapper mapper) {
         mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-
         SimpleModule module = new SimpleModule("ByteArraySerializer", new Version(1, 0, 0, ""));
         module.addSerializer(byte[].class, new ByteArraySerializer());
         module.addDeserializer(byte[].class, new ByteArrayDeserializer());

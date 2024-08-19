@@ -37,6 +37,7 @@ import org.jboss.resteasy.reactive.server.mapping.URITemplate;
 import org.jboss.resteasy.reactive.server.processor.scanning.MethodScanner;
 import org.jetbrains.annotations.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -79,7 +80,6 @@ import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Verb;
 import xyz.block.ftl.VerbName;
 import xyz.block.ftl.runtime.FTLDatasourceCredentials;
-import xyz.block.ftl.runtime.FTLHttpHandler;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.JsonSerializationConfig;
 import xyz.block.ftl.runtime.TopicHelper;
@@ -89,6 +89,7 @@ import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.runtime.config.FTLConfigSource;
+import xyz.block.ftl.runtime.http.FTLHttpHandler;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.schema.Any;
 import xyz.block.ftl.v1.schema.Array;
@@ -104,6 +105,7 @@ import xyz.block.ftl.v1.schema.IngressPathLiteral;
 import xyz.block.ftl.v1.schema.IngressPathParameter;
 import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
+import xyz.block.ftl.v1.schema.MetadataAlias;
 import xyz.block.ftl.v1.schema.MetadataCalls;
 import xyz.block.ftl.v1.schema.MetadataCronJob;
 import xyz.block.ftl.v1.schema.MetadataIngress;
@@ -277,7 +279,7 @@ class FtlProcessor {
         for (var endpoint : restEndpoints.getEntries()) {
             //TODO: naming
             var verbName = methodToName(endpoint.getMethodInfo());
-            recorder.registerHttpIngress(moduleName, verbName);
+            boolean base64 = false;
 
             //TODO: handle type parameters properly
             org.jboss.jandex.Type bodyParamType = VoidType.VOID;
@@ -290,13 +292,25 @@ class FtlProcessor {
                 }
             }
 
+            if (bodyParamType instanceof ArrayType) {
+                org.jboss.jandex.Type component = ((ArrayType) bodyParamType).component();
+                if (component instanceof PrimitiveType) {
+                    base64 = component.asPrimitiveType().equals(PrimitiveType.BYTE);
+                }
+            }
+
+            recorder.registerHttpIngress(moduleName, verbName, base64);
+
             StringBuilder pathBuilder = new StringBuilder();
             if (endpoint.getBasicResourceClassInfo().getPath() != null) {
                 pathBuilder.append(endpoint.getBasicResourceClassInfo().getPath());
             }
             if (endpoint.getResourceMethod().getPath() != null && !endpoint.getResourceMethod().getPath().isEmpty()) {
-                if (pathBuilder.charAt(pathBuilder.length() - 1) != '/'
-                        && !endpoint.getResourceMethod().getPath().startsWith("/")) {
+                boolean builderEndsSlash = pathBuilder.charAt(pathBuilder.length() - 1) == '/';
+                boolean pathStartsSlash = endpoint.getResourceMethod().getPath().startsWith("/");
+                if (builderEndsSlash && pathStartsSlash) {
+                    pathBuilder.setLength(pathBuilder.length() - 1);
+                } else if (!builderEndsSlash && !pathStartsSlash) {
                     pathBuilder.append('/');
                 }
                 pathBuilder.append(endpoint.getResourceMethod().getPath());
@@ -311,15 +325,17 @@ class FtlProcessor {
                                     + methodToName(endpoint.getMethodInfo())
                                     + " FTL does not support custom regular expressions");
                 } else if (i.type == URITemplate.Type.LITERAL) {
-                    if (i.literalText.equals("/")) {
-                        continue;
+                    for (var part : i.literalText.split("/")) {
+                        if (part.isEmpty()) {
+                            continue;
+                        }
+                        pathComponents.add(IngressPathComponent.newBuilder()
+                                .setIngressPathLiteral(IngressPathLiteral.newBuilder().setText(part))
+                                .build());
                     }
-                    pathComponents.add(IngressPathComponent.newBuilder()
-                            .setIngressPathLiteral(IngressPathLiteral.newBuilder().setText(i.literalText.replace("/", "")))
-                            .build());
                 } else {
                     pathComponents.add(IngressPathComponent.newBuilder()
-                            .setIngressPathParameter(IngressPathParameter.newBuilder().setName(i.name.replace("/", "")))
+                            .setIngressPathParameter(IngressPathParameter.newBuilder().setName(i.name))
                             .build());
                 }
             }
@@ -794,8 +810,18 @@ class FtlProcessor {
         //TODO: handle getters and setters properly, also Jackson annotations etc
         for (var field : clazz.fields()) {
             if (!Modifier.isStatic(field.flags())) {
-                data.addFields(Field.newBuilder().setName(field.name())
-                        .setType(buildType(context, field.type(), data.getExport())).build());
+                Field.Builder builder = Field.newBuilder().setName(field.name())
+                        .setType(buildType(context, field.type(), data.getExport()));
+                if (field.hasAnnotation(JsonAlias.class)) {
+                    var aliases = field.annotation(JsonAlias.class);
+                    if (aliases.value() != null) {
+                        for (var alias : aliases.value().asStringArray()) {
+                            builder.addMetadata(
+                                    Metadata.newBuilder().setAlias(MetadataAlias.newBuilder().setKind(0).setAlias(alias)));
+                        }
+                    }
+                }
+                data.addFields(builder.build());
             }
         }
         buildDataElement(context, data, clazz.superName());
