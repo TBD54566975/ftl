@@ -13,7 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -349,7 +348,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
-			if err := d.decryptJSON(encryption.TimelineSubKey, row.Payload, &jsonPayload); err != nil {
+			if err := d.decryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt log event: %w", err)
 			}
 
@@ -371,7 +370,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := d.decryptJSON(encryption.TimelineSubKey, row.Payload, &jsonPayload); err != nil {
+			if err := d.decryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			var sourceVerb optional.Option[schema.Ref]
@@ -396,7 +395,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 
 		case sql.EventTypeDeploymentCreated:
 			var jsonPayload eventDeploymentCreatedJSON
-			if err := d.decryptJSON(encryption.TimelineSubKey, row.Payload, &jsonPayload); err != nil {
+			if err := d.decryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentCreatedEvent{
@@ -411,7 +410,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 
 		case sql.EventTypeDeploymentUpdated:
 			var jsonPayload eventDeploymentUpdatedJSON
-			if err := d.decryptJSON(encryption.TimelineSubKey, row.Payload, &jsonPayload); err != nil {
+			if err := d.decryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentUpdatedEvent{
