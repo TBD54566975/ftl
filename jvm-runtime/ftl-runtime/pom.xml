@@ -22,9 +22,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.version>3.13.2</quarkus.version>
-        <surefire-plugin.version>3.2.5</surefire-plugin.version>
+        <surefire-plugin.version>3.4.0</surefire-plugin.version>
         <rootDir>${basedir}/../../../..</rootDir>
-        <grpc.version>1.65.1</grpc.version>
+        <grpc.version>1.66.0</grpc.version>
         <javapoet.version>1.13.0</javapoet.version>
         <version.formatter.plugin>2.24.1</version.formatter.plugin>
         <version.impsort.plugin>1.11.0</version.impsort.plugin>
