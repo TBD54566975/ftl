@@ -37,6 +37,7 @@ import org.jboss.resteasy.reactive.server.mapping.URITemplate;
 import org.jboss.resteasy.reactive.server.processor.scanning.MethodScanner;
 import org.jetbrains.annotations.NotNull;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.agroal.spi.JdbcDataSourceBuildItem;
@@ -92,6 +93,7 @@ import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.runtime.config.FTLConfigSource;
 import xyz.block.ftl.runtime.config.FTLConfigSourceFactoryBuilder;
 import xyz.block.ftl.v1.CallRequest;
+import xyz.block.ftl.v1.schema.Any;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
 import xyz.block.ftl.v1.schema.Bytes;
@@ -137,6 +139,7 @@ class FtlProcessor {
     public static final DotName INSTANT = DotName.createSimple(Instant.class);
     public static final DotName ZONED_DATE_TIME = DotName.createSimple(ZonedDateTime.class);
     public static final DotName NOT_NULL = DotName.createSimple(NotNull.class);
+    public static final DotName JSON_NODE = DotName.createSimple(JsonNode.class.getName());
 
     @BuildStep
     ModuleNameBuildItem moduleName(ApplicationInfoBuildItem applicationInfoBuildItem, FTLBuildTimeConfig buildTimeConfig) {
@@ -698,6 +701,9 @@ class FtlProcessor {
                 }
                 if (clazz.name().equals(DotName.STRING_NAME)) {
                     return Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
+                }
+                if (clazz.name().equals(DotName.OBJECT_NAME) || clazz.name().equals(JSON_NODE)) {
+                    return Type.newBuilder().setAny(Any.newBuilder().build()).build();
                 }
                 if (clazz.name().equals(OFFSET_DATE_TIME)) {
                     return Type.newBuilder().setTime(Time.newBuilder().build()).build();
