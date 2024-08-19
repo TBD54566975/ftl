@@ -17,7 +17,7 @@ func TestHttpIngress(t *testing.T) {
 	in.Run(t,
 		in.CopyModule("httpingress"),
 		in.Deploy("httpingress"),
-		in.HttpCall(http.MethodGet, "/users/123/posts/456", nil, in.JsonData(t, in.Obj{}), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodGet, "/users/123/posts/456", nil, nil, func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"Header from FTL"}, resp.Headers["Get"])
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
@@ -82,23 +82,23 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, nil, resp.BodyBytes)
 		}),
 
-		in.HttpCall(http.MethodGet, "/string", nil, []byte("Hello, World!"), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodPost, "/string", nil, []byte("Hello, World!"), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, []byte("Hello, World!"), resp.BodyBytes)
 		}),
 
-		in.HttpCall(http.MethodGet, "/int", nil, []byte("1234"), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodPost, "/int", nil, []byte("1234"), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, []byte("1234"), resp.BodyBytes)
 		}),
-		in.HttpCall(http.MethodGet, "/float", nil, []byte("1234.56789"), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodPost, "/float", nil, []byte("1234.56789"), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, []byte("1234.56789"), resp.BodyBytes)
 		}),
-		in.HttpCall(http.MethodGet, "/bool", nil, []byte("true"), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodPost, "/bool", nil, []byte("true"), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, []byte("true"), resp.BodyBytes)
@@ -108,7 +108,7 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, []string{"text/plain; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, []byte("Error from FTL"), resp.BodyBytes)
 		}),
-		in.HttpCall(http.MethodGet, "/array/string", nil, in.JsonData(t, []string{"hello", "world"}), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodPost, "/array/string", nil, in.JsonData(t, []string{"hello", "world"}), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, in.JsonData(t, []string{"hello", "world"}), resp.BodyBytes)
@@ -118,7 +118,7 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, in.JsonData(t, []in.Obj{{"item": "a"}, {"item": "b"}}), resp.BodyBytes)
 		}),
-		in.HttpCall(http.MethodGet, "/typeenum", nil, in.JsonData(t, in.Obj{"name": "A", "value": "hello"}), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodPost, "/typeenum", nil, in.JsonData(t, in.Obj{"name": "A", "value": "hello"}), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, in.JsonData(t, in.Obj{"name": "A", "value": "hello"}), resp.BodyBytes)
@@ -134,12 +134,12 @@ func TestHttpIngress(t *testing.T) {
 			assert.Equal(t, nil, resp.Headers["Access-Control-Allow-Methods"])
 			assert.Equal(t, nil, resp.Headers["Access-Control-Allow-Headers"])
 		}),
-		in.HttpCall(http.MethodGet, "/external", nil, in.JsonData(t, in.Obj{"message": "hello"}), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodPost, "/external", nil, in.JsonData(t, in.Obj{"message": "hello"}), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, in.JsonData(t, in.Obj{"message": "hello"}), resp.BodyBytes)
 		}),
-		in.HttpCall(http.MethodGet, "/external2", nil, in.JsonData(t, in.Obj{"message": "hello"}), func(t testing.TB, resp *in.HTTPResponse) {
+		in.HttpCall(http.MethodPost, "/external2", nil, in.JsonData(t, in.Obj{"message": "hello"}), func(t testing.TB, resp *in.HTTPResponse) {
 			assert.Equal(t, 200, resp.Status)
 			assert.Equal(t, []string{"application/json; charset=utf-8"}, resp.Headers["Content-Type"])
 			assert.Equal(t, in.JsonData(t, in.Obj{"Message": "hello"}), resp.BodyBytes)

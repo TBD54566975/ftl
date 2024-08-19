@@ -13,11 +13,11 @@ builtin module builtin {
   }
 
   // HTTP request structure used for HTTP ingress verbs.
-  export data HttpRequest<Body> {
+  export data HttpRequest<Body, Path, Query> {
     method String
     path String
-    pathParameters {String: String}
-    query {String: [String]}
+    pathParameters Path
+    query Query
     headers {String: [String]}
     body Body
   }

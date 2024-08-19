@@ -67,21 +67,21 @@ func ValidateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error 
 	return nil
 }
 
-func getBodyField(ref *schema.Ref, sch *schema.Schema) (*schema.Field, error) {
+func getField(name string, ref *schema.Ref, sch *schema.Schema) (*schema.Field, error) {
 	data, err := sch.ResolveMonomorphised(ref)
 	if err != nil {
 		return nil, err
 	}
 	var bodyField *schema.Field
 	for _, field := range data.Fields {
-		if field.Name == "body" {
+		if field.Name == name {
 			bodyField = field
 			break
 		}
 	}
 
 	if bodyField == nil {
-		return nil, fmt.Errorf("verb %s must have a 'body' field", ref.Name)
+		return nil, fmt.Errorf("verb %s must have a %q field", ref.Name, name)
 	}
 
 	return bodyField, nil

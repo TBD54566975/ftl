@@ -41,13 +41,13 @@ type PostJSONPayload struct {
 }
 
 // HTTPRequest mirrors builtin.HttpRequest.
-type HTTPRequest[Body any] struct {
+type HTTPRequest[Body any, Path any, Query any] struct {
 	Body           Body
 	Headers        map[string][]string `json:"headers,omitempty"`
 	Method         string
 	Path           string
-	PathParameters map[string]string   `json:"pathParameters,omitempty"`
-	Query          map[string][]string `json:"query,omitempty"`
+	PathParameters Path  `json:"pathParameters,omitempty"`
+	Query          Query `json:"query,omitempty"`
 }
 
 func TestBuildRequestBody(t *testing.T) {
@@ -77,20 +77,29 @@ func TestBuildRequestBody(t *testing.T) {
 				foo String
 			}
 
-			export verb getAlias(HttpRequest<test.AliasRequest>) HttpResponse<Empty, Empty>
+			export verb getAlias(HttpRequest<Unit, Unit, test.AliasRequest>) HttpResponse<Empty, Empty>
 				+ingress http GET /getAlias
 
-			export verb getPath(HttpRequest<test.PathParameterRequest>) HttpResponse<Empty, Empty>
+			export verb getPath(HttpRequest<Unit, test.PathParameterRequest, Unit>) HttpResponse<Empty, Empty>
 				+ingress http GET /getPath/{username}
 
-			export verb optionalQuery(HttpRequest<test.QueryParameterRequest>) HttpResponse<Empty, Empty>
+			export verb optionalQuery(HttpRequest<Unit, Unit, test.QueryParameterRequest>) HttpResponse<Empty, Empty>
 				+ingress http GET /optionalQuery
 
-			export verb postMissingTypes(HttpRequest<test.MissingTypes>) HttpResponse<Empty, Empty>
+			export verb postMissingTypes(HttpRequest<test.MissingTypes, Unit, Unit>) HttpResponse<Empty, Empty>
 				+ingress http POST /postMissingTypes
 
-			export verb postJsonPayload(HttpRequest<test.JsonPayload>) HttpResponse<Empty, Empty>
+			export verb postJsonPayload(HttpRequest<test.JsonPayload, Unit, Unit>) HttpResponse<Empty, Empty>
 				+ingress http POST /postJsonPayload
+
+			export verb getById(HttpRequest<Unit, Int, Unit>) HttpResponse<Empty, Empty>
+				+ingress http GET /getbyid/{id}
+
+			export verb mapQuery(HttpRequest<Unit, Unit, {String: String}>) HttpResponse<Empty, Empty>
+				+ingress http GET /mapQuery
+
+			export verb multiMapQuery(HttpRequest<Unit, Unit, {String: [String]}>) HttpResponse<Empty, Empty>
+				+ingress http GET /multiMapQuery
 		}
 	`)
 	assert.NoError(t, err)
@@ -119,13 +128,10 @@ func TestBuildRequestBody(t *testing.T) {
 			query: map[string][]string{
 				"alias": {"value"},
 			},
-			expected: HTTPRequest[AliasRequest]{
+			expected: HTTPRequest[ftl.Unit, map[string]string, AliasRequest]{
 				Method: "GET",
 				Path:   "/getAlias",
-				Query: map[string][]string{
-					"alias": {"value"},
-				},
-				Body: AliasRequest{
+				Query: AliasRequest{
 					Aliased: "value",
 				},
 			},
@@ -135,7 +141,7 @@ func TestBuildRequestBody(t *testing.T) {
 			method:    "POST",
 			path:      "/postMissingTypes",
 			routePath: "/postMissingTypes",
-			expected: HTTPRequest[MissingTypes]{
+			expected: HTTPRequest[MissingTypes, map[string]string, map[string][]string]{
 				Method: "POST",
 				Path:   "/postMissingTypes",
 				Body:   MissingTypes{},
@@ -147,7 +153,7 @@ func TestBuildRequestBody(t *testing.T) {
 			path:      "/postJsonPayload",
 			routePath: "/postJsonPayload",
 			body:      obj{"foo": "bar"},
-			expected: HTTPRequest[PostJSONPayload]{
+			expected: HTTPRequest[PostJSONPayload, map[string]string, map[string][]string]{
 				Method: "POST",
 				Path:   "/postJsonPayload",
 				Body:   PostJSONPayload{Foo: "bar"},
@@ -161,13 +167,10 @@ func TestBuildRequestBody(t *testing.T) {
 			query: map[string][]string{
 				"foo": {"bar"},
 			},
-			expected: HTTPRequest[QueryParameterRequest]{
+			expected: HTTPRequest[map[string]string, map[string][]string, QueryParameterRequest]{
 				Method: "GET",
 				Path:   "/optionalQuery",
-				Query: map[string][]string{
-					"foo": {"bar"},
-				},
-				Body: QueryParameterRequest{
+				Query: QueryParameterRequest{
 					Foo: ftl.Some("bar"),
 				},
 			},
@@ -177,15 +180,51 @@ func TestBuildRequestBody(t *testing.T) {
 			method:    "GET",
 			path:      "/getPath/bob",
 			routePath: "/getPath/{username}",
-			expected: HTTPRequest[PathParameterRequest]{
+			expected: HTTPRequest[ftl.Unit, PathParameterRequest, map[string][]string]{
 				Method: "GET",
 				Path:   "/getPath/bob",
-				PathParameters: map[string]string{
-					"username": "bob",
-				},
-				Body: PathParameterRequest{
+				PathParameters: PathParameterRequest{
 					Username: "bob",
 				},
+			},
+		},
+		{name: "GetById",
+			verb:      "getById",
+			method:    "GET",
+			path:      "/getbyid/100",
+			routePath: "/getbyid/{id}",
+			expected: HTTPRequest[ftl.Unit, int, ftl.Unit]{
+				Method:         "GET",
+				Path:           "/getbyid/100",
+				PathParameters: 100,
+			},
+		},
+		{name: "MapQuery",
+			verb:      "mapQuery",
+			method:    "GET",
+			path:      "/mapQuery",
+			routePath: "/mapQuery",
+			query: map[string][]string{
+				"alias": {"value"},
+			},
+			expected: HTTPRequest[ftl.Unit, ftl.Unit, map[string]string]{
+				Method: "GET",
+				Path:   "/mapQuery",
+				Query:  map[string]string{"alias": "value"},
+			},
+		},
+		{name: "MultiMapQuery",
+			verb:      "multiMapQuery",
+			method:    "GET",
+			path:      "/multiMapQuery",
+			routePath: "/multiMapQuery",
+			query: map[string][]string{
+				"alias": {"value"},
+			},
+			expected: HTTPRequest[ftl.Unit, ftl.Unit, map[string][]string]{
+				Method: "GET",
+				Path:   "/multiMapQuery",
+				Query:  map[string][]string{"alias": []string{"value"}},
 			},
 		},
 	} {

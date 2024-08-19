@@ -38,11 +38,11 @@ type B []string
 func (B) tag() {}
 
 //ftl:ingress http GET /users/{userId}/posts/{postId}
-func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[GetResponse, string], error) {
+func Get(ctx context.Context, req builtin.HttpRequest[ftl.Unit, GetRequest, ftl.Unit]) (builtin.HttpResponse[GetResponse, string], error) {
 	return builtin.HttpResponse[GetResponse, string]{
 		Headers: map[string][]string{"Get": {"Header from FTL"}},
 		Body: ftl.Some(GetResponse{
-			Message: fmt.Sprintf("UserID: %s, PostID: %s", req.Body.UserID, req.Body.PostID),
+			Message: fmt.Sprintf("UserID: %s, PostID: %s", req.PathParameters.UserID, req.PathParameters.PostID),
 			Nested: Nested{
 				GoodStuff: "This is good stuff",
 			},
@@ -60,7 +60,7 @@ type PostResponse struct {
 }
 
 //ftl:ingress http POST /users
-func Post(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse, string], error) {
+func Post(ctx context.Context, req builtin.HttpRequest[PostRequest, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostResponse, string], error) {
 	return builtin.HttpResponse[PostResponse, string]{
 		Status:  201,
 		Headers: map[string][]string{"Post": {"Header from FTL"}},
@@ -69,17 +69,16 @@ func Post(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.Ht
 }
 
 type PutRequest struct {
-	UserID string `json:"userId"`
 	PostID string `json:"postId"`
 }
 
 type PutResponse struct{}
 
 //ftl:ingress http PUT /users/{userId}
-func Put(ctx context.Context, req builtin.HttpRequest[PutRequest]) (builtin.HttpResponse[builtin.Empty, string], error) {
-	return builtin.HttpResponse[builtin.Empty, string]{
+func Put(ctx context.Context, req builtin.HttpRequest[PutRequest, string, ftl.Unit]) (builtin.HttpResponse[PutResponse, string], error) {
+	return builtin.HttpResponse[PutResponse, string]{
 		Headers: map[string][]string{"Put": {"Header from FTL"}},
-		Body:    ftl.Some(builtin.Empty{}),
+		Body:    ftl.Some(PutResponse{}),
 	}, nil
 }
 
@@ -90,7 +89,7 @@ type DeleteRequest struct {
 type DeleteResponse struct{}
 
 //ftl:ingress http DELETE /users/{userId}
-func Delete(ctx context.Context, req builtin.HttpRequest[DeleteRequest]) (builtin.HttpResponse[builtin.Empty, string], error) {
+func Delete(ctx context.Context, req builtin.HttpRequest[ftl.Unit, DeleteRequest, ftl.Unit]) (builtin.HttpResponse[builtin.Empty, string], error) {
 	return builtin.HttpResponse[builtin.Empty, string]{
 		Status:  200,
 		Headers: map[string][]string{"Delete": {"Header from FTL"}},
@@ -103,16 +102,14 @@ type QueryParamRequest struct {
 }
 
 //ftl:ingress http GET /queryparams
-func Query(ctx context.Context, req builtin.HttpRequest[QueryParamRequest]) (builtin.HttpResponse[string, string], error) {
+func Query(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, QueryParamRequest]) (builtin.HttpResponse[string, string], error) {
 	return builtin.HttpResponse[string, string]{
-		Body: ftl.Some(req.Body.Foo.Default("No value")),
+		Body: ftl.Some(req.Query.Foo.Default("No value")),
 	}, nil
 }
 
-type HtmlRequest struct{}
-
 //ftl:ingress http GET /html
-func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.HttpResponse[string, string], error) {
+func Html(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[string, string], error) {
 	return builtin.HttpResponse[string, string]{
 		Headers: map[string][]string{"Content-Type": {"text/html; charset=utf-8"}},
 		Body:    ftl.Some("<html><body><h1>HTML Page From FTL 🚀!</h1></body></html>"),
@@ -120,45 +117,45 @@ func Html(ctx context.Context, req builtin.HttpRequest[HtmlRequest]) (builtin.Ht
 }
 
 //ftl:ingress http POST /bytes
-func Bytes(ctx context.Context, req builtin.HttpRequest[[]byte]) (builtin.HttpResponse[[]byte, string], error) {
+func Bytes(ctx context.Context, req builtin.HttpRequest[[]byte, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[[]byte, string], error) {
 	return builtin.HttpResponse[[]byte, string]{Body: ftl.Some(req.Body)}, nil
 }
 
 //ftl:ingress http GET /empty
-func Empty(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.HttpResponse[ftl.Unit, string], error) {
+func Empty(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[ftl.Unit, string], error) {
 	return builtin.HttpResponse[ftl.Unit, string]{Body: ftl.Some(ftl.Unit{})}, nil
 }
 
-//ftl:ingress http GET /string
-func String(ctx context.Context, req builtin.HttpRequest[string]) (builtin.HttpResponse[string, string], error) {
+//ftl:ingress http POST /string
+func String(ctx context.Context, req builtin.HttpRequest[string, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[string, string], error) {
 	return builtin.HttpResponse[string, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-//ftl:ingress http GET /int
-func Int(ctx context.Context, req builtin.HttpRequest[int]) (builtin.HttpResponse[int, string], error) {
+//ftl:ingress http POST /int
+func Int(ctx context.Context, req builtin.HttpRequest[int, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[int, string], error) {
 	return builtin.HttpResponse[int, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-//ftl:ingress http GET /float
-func Float(ctx context.Context, req builtin.HttpRequest[float64]) (builtin.HttpResponse[float64, string], error) {
+//ftl:ingress http POST /float
+func Float(ctx context.Context, req builtin.HttpRequest[float64, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[float64, string], error) {
 	return builtin.HttpResponse[float64, string]{Body: ftl.Some(req.Body)}, nil
 }
 
-//ftl:ingress http GET /bool
-func Bool(ctx context.Context, req builtin.HttpRequest[bool]) (builtin.HttpResponse[bool, string], error) {
+//ftl:ingress http POST /bool
+func Bool(ctx context.Context, req builtin.HttpRequest[bool, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[bool, string], error) {
 	return builtin.HttpResponse[bool, string]{Body: ftl.Some(req.Body)}, nil
 }
 
 //ftl:ingress http GET /error
-func Error(ctx context.Context, req builtin.HttpRequest[ftl.Unit]) (builtin.HttpResponse[ftl.Unit, string], error) {
+func Error(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[ftl.Unit, string], error) {
 	return builtin.HttpResponse[ftl.Unit, string]{
 		Status: 500,
 		Error:  ftl.Some("Error from FTL"),
 	}, nil
 }
 
-//ftl:ingress http GET /array/string
-func ArrayString(ctx context.Context, req builtin.HttpRequest[[]string]) (builtin.HttpResponse[[]string, string], error) {
+//ftl:ingress http POST /array/string
+func ArrayString(ctx context.Context, req builtin.HttpRequest[[]string, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[[]string, string], error) {
 	return builtin.HttpResponse[[]string, string]{
 		Body: ftl.Some(req.Body),
 	}, nil
@@ -169,14 +166,14 @@ type ArrayType struct {
 }
 
 //ftl:ingress http POST /array/data
-func ArrayData(ctx context.Context, req builtin.HttpRequest[[]ArrayType]) (builtin.HttpResponse[[]ArrayType, string], error) {
+func ArrayData(ctx context.Context, req builtin.HttpRequest[[]ArrayType, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[[]ArrayType, string], error) {
 	return builtin.HttpResponse[[]ArrayType, string]{
 		Body: ftl.Some(req.Body),
 	}, nil
 }
 
-//ftl:ingress http GET /typeenum
-func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType]) (builtin.HttpResponse[SumType, string], error) {
+//ftl:ingress http POST /typeenum
+func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[SumType, string], error) {
 	return builtin.HttpResponse[SumType, string]{Body: ftl.Some(req.Body)}, nil
 }
 
@@ -184,21 +181,21 @@ func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType]) (builtin.Ht
 
 type NewTypeAlias lib.NonFTLType
 
-//ftl:ingress http GET /external
-func External(ctx context.Context, req builtin.HttpRequest[NewTypeAlias]) (builtin.HttpResponse[NewTypeAlias, string], error) {
+//ftl:ingress http POST /external
+func External(ctx context.Context, req builtin.HttpRequest[NewTypeAlias, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[NewTypeAlias, string], error) {
 	return builtin.HttpResponse[NewTypeAlias, string]{Body: ftl.Some(req.Body)}, nil
 }
 
 type DirectTypeAlias = lib.NonFTLType
 
-//ftl:ingress http GET /external2
-func External2(ctx context.Context, req builtin.HttpRequest[DirectTypeAlias]) (builtin.HttpResponse[DirectTypeAlias, string], error) {
+//ftl:ingress http POST /external2
+func External2(ctx context.Context, req builtin.HttpRequest[DirectTypeAlias, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[DirectTypeAlias, string], error) {
 	return builtin.HttpResponse[DirectTypeAlias, string]{Body: ftl.Some(req.Body)}, nil
 }
 
 //ftl:ingress http POST /lenient
 //ftl:encoding lenient
-func Lenient(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse, string], error) {
+func Lenient(ctx context.Context, req builtin.HttpRequest[PostRequest, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostResponse, string], error) {
 	return builtin.HttpResponse[PostResponse, string]{
 		Status:  201,
 		Headers: map[string][]string{"Post": {"Header from FTL"}},

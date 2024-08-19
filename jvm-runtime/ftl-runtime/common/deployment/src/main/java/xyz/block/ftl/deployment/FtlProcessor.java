@@ -345,6 +345,7 @@ class FtlProcessor {
 
             //TODO: process path properly
             MetadataIngress.Builder ingressBuilder = MetadataIngress.newBuilder()
+                    .setType("http")
                     .setMethod(endpoint.getResourceMethod().getHttpMethod());
             for (var i : pathComponents) {
                 ingressBuilder.addPath(i);
@@ -355,6 +356,11 @@ class FtlProcessor {
                     .build();
             Type requestTypeParam = buildType(extractionContext, bodyParamType, true);
             Type responseTypeParam = buildType(extractionContext, endpoint.getMethodInfo().returnType(), true);
+            Type stringType = Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
+            Type pathParamType = Type.newBuilder()
+                    .setMap(xyz.block.ftl.v1.schema.Map.newBuilder().setKey(stringType)
+                            .setValue(stringType))
+                    .build();
             moduleBuilder
                     .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
                             .addMetadata(ingressMetadata)
@@ -362,7 +368,13 @@ class FtlProcessor {
                             .setExport(true)
                             .setRequest(Type.newBuilder()
                                     .setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpRequest.class.getSimpleName())
-                                            .addTypeParameters(requestTypeParam))
+                                            .addTypeParameters(requestTypeParam)
+                                            .addTypeParameters(pathParamType)
+                                            .addTypeParameters(Type.newBuilder()
+                                                    .setMap(xyz.block.ftl.v1.schema.Map.newBuilder().setKey(stringType)
+                                                            .setValue(Type.newBuilder()
+                                                                    .setArray(Array.newBuilder().setElement(stringType)))
+                                                            .build())))
                                     .build())
                             .setResponse(Type.newBuilder()
                                     .setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpResponse.class.getSimpleName())

@@ -18,9 +18,12 @@ Verbs annotated with `ftl:ingress` will be exposed via HTTP (`http` is the defau
 The following will be available at `http://localhost:8891/http/users/123/posts?postId=456`.
 
 ```go
-type GetRequest struct {
+type GetRequestPathParams struct {
 	UserID string `json:"userId"`
-	PostID string `json:"postId"`
+}
+
+type GetRequestQueryParams struct {
+    PostID string `json:"postId"`
 }
 
 type GetResponse struct {
@@ -28,7 +31,17 @@ type GetResponse struct {
 }
 
 //ftl:ingress GET /http/users/{userId}/posts
-func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[GetResponse, ErrorResponse], error) {
+func Get(ctx context.Context, req builtin.HttpRequest[ftl.Unit, GetRequestPathParams, GetRequestQueryParams]) (builtin.HttpResponse[GetResponse, ErrorResponse], error) {
+  // ...
+}
+```
+
+Because the example above only has a single path parameter it can be simplified by just using a scalar such as `string` or `int64` as the path parameter type:
+
+```go
+
+//ftl:ingress GET /http/users/{userId}/posts
+func Get(ctx context.Context, req builtin.HttpRequest[ftl.Unit, int64, GetRequestQueryParams]) (builtin.HttpResponse[GetResponse, ErrorResponse], error) {
   // ...
 }
 ```
@@ -44,45 +57,42 @@ Key points:
 
 ## Field mapping
 
+The `HttpRequest` request object takes 3 type parameters, the body, the path parameters and the query parameters.
+
 Given the following request verb:
 
 ```go
-type GetRequest struct {
+
+type PostBody struct{
+    Title string               `json:"title"`
+	Content string             `json:"content"`
+    Tag ftl.Option[string]     `json:"tag"`
+}
+type PostPathParams struct {
 	UserID string             `json:"userId"`
-	Tag    ftl.Option[string] `json:"tag"`
 	PostID string             `json:"postId"`
 }
 
-type GetResponse struct {
-	Message string `json:"msg"`
+type PostQueryParams struct {
+	Publish boolean `json:"publish"`
 }
 
-//ftl:ingress http GET /users/{userId}/posts/{postId}
-func Get(ctx context.Context, req builtin.HttpRequest[GetRequest]) (builtin.HttpResponse[GetResponse, string], error) {
+//ftl:ingress http PUT /users/{userId}/posts/{postId}
+func Get(ctx context.Context, req builtin.HttpRequest[PostBody, PostPathParams, PostQueryParams]) (builtin.HttpResponse[GetResponse, string], error) {
 	return builtin.HttpResponse[GetResponse, string]{
 		Headers: map[string][]string{"Get": {"Header from FTL"}},
 		Body: ftl.Some(GetResponse{
-			Message: fmt.Sprintf("UserID: %s, PostID: %s, Tag: %s", req.Body.UserID, req.Body.PostID, req.Body.Tag.Default("none")),
+			Message: fmt.Sprintf("UserID: %s, PostID: %s, Tag: %s", req.pathParameters.UserID, req.pathParameters.PostID, req.Body.Tag.Default("none")),
 		}),
 	}, nil
 }
 ```
 
-`path`, `query`, and `body` parameters are automatically mapped to the `req` structure.
+The rules for how each element is mapped are slightly different, as they have a different structure:
 
-For example, this curl request will map `userId` to `req.Body.UserID` and `postId` to `req.Body.PostID`, and `tag` to `req.Body.Tag`:
-
-```sh
-curl -i http://localhost:8891/users/123/posts/456?tag=ftl
-```
-
-The response here will be:
-
-```json
-{
-  "msg": "UserID: 123, PostID: 456, Tag: ftl"
-}
-```
+- The body is mapped directly to the body of the request, generally as a JSON object. Scalars are also supported, as well as []byte to get the raw body. If they type is `any` then it will be assumed to be JSON and mapped to the appropriate types based on the JSON structure.
+- The path parameters can be mapped directly to an object with field names corresponding to the name of the path parameter. If there is only a single path parameter it can be injected directly as a scalar. They can also be injected as a `map[string]string`.
+- The path parameters can also be mapped directly to an object with field names corresponding to the name of the path parameter. They can also be injected directly as a `map[string]string`, or `map[string][]string` for multiple values.
 
 #### Optional fields
 
@@ -122,8 +132,8 @@ type B []string
 
 func (B) tag() {}
 
-//ftl:ingress http GET /typeenum
-func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType]) (builtin.HttpResponse[SumType, string], error) {
+//ftl:ingress http POST /typeenum
+func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[SumType, string], error) {
 	return builtin.HttpResponse[SumType, string]{Body: ftl.Some(req.Body)}, nil
 }
 ```
@@ -131,7 +141,7 @@ func TypeEnum(ctx context.Context, req builtin.HttpRequest[SumType]) (builtin.Ht
 The following curl request will map the `SumType` name and value to the `req.Body`:
 
 ```sh
-curl -X GET "http://localhost:8891/typeenum" \
+curl -X POST "http://localhost:8891/typeenum" \
      -H "Content-Type: application/json" \
      --data '{"name": "A", "value": "sample"}'
 ```

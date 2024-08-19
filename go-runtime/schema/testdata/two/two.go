@@ -148,7 +148,7 @@ type PostResponse struct {
 
 //ftl:ingress http POST /users
 //ftl:encoding lenient
-func Ingress(ctx context.Context, req builtin.HttpRequest[PostRequest]) (builtin.HttpResponse[PostResponse, string], error) {
+func Ingress(ctx context.Context, req builtin.HttpRequest[PostRequest, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostResponse, string], error) {
 	return builtin.HttpResponse[PostResponse, string]{
 		Status:  201,
 		Headers: map[string][]string{"Post": {"Header from FTL"}},

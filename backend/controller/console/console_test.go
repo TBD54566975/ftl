@@ -3,8 +3,9 @@ package console
 import (
 	"testing"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/backend/schema"
 )
 
 func TestVerbSchemaString(t *testing.T) {
@@ -15,7 +16,7 @@ func TestVerbSchemaString(t *testing.T) {
 	}
 	ingressVerb := &schema.Verb{
 		Name:     "Ingress",
-		Request:  &schema.Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []schema.Type{&schema.String{}}},
+		Request:  &schema.Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []schema.Type{&schema.String{}, &schema.Unit{}, &schema.Unit{}}},
 		Response: &schema.Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{&schema.String{}, &schema.String{}}},
 		Metadata: []schema.Metadata{
 			&schema.MetadataIngress{Type: "http", Method: "GET", Path: []schema.IngressPathComponent{&schema.IngressPathLiteral{Text: "test"}}},
@@ -107,7 +108,7 @@ verb Echo(foo.EchoRequest) foo.EchoResponse`
 func TestVerbSchemaStringIngress(t *testing.T) {
 	verb := &schema.Verb{
 		Name:     "Ingress",
-		Request:  &schema.Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []schema.Type{&schema.Ref{Module: "foo", Name: "FooRequest"}}},
+		Request:  &schema.Ref{Module: "builtin", Name: "HttpRequest", TypeParameters: []schema.Type{&schema.Ref{Module: "foo", Name: "FooRequest"}, &schema.Unit{}, &schema.Unit{}}},
 		Response: &schema.Ref{Module: "builtin", Name: "HttpResponse", TypeParameters: []schema.Type{&schema.Ref{Module: "foo", Name: "FooResponse"}, &schema.String{}}},
 		Metadata: []schema.Metadata{
 			&schema.MetadataIngress{Type: "http", Method: "GET", Path: []schema.IngressPathComponent{&schema.IngressPathLiteral{Text: "foo"}}},
@@ -135,11 +136,11 @@ func TestVerbSchemaStringIngress(t *testing.T) {
 	}
 
 	expected := `// HTTP request structure used for HTTP ingress verbs.
-export data HttpRequest<Body> {
+export data HttpRequest<Body, Path, Query> {
   method String
   path String
-  pathParameters {String: String}
-  query {String: [String]}
+  pathParameters Path
+  query Query
   headers {String: [String]}
   body Body
 }
@@ -161,7 +162,7 @@ data FooResponse {
   Message String
 }
 
-verb Ingress(builtin.HttpRequest<foo.FooRequest>) builtin.HttpResponse<foo.FooResponse, String>  
+verb Ingress(builtin.HttpRequest<foo.FooRequest, Unit, Unit>) builtin.HttpResponse<foo.FooResponse, String>  
   +ingress http GET /foo`
 
 	schemaString, err := verbSchemaString(sch, verb)

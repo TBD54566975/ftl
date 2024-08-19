@@ -128,7 +128,7 @@ The `Unit` type is similar to the `void` type in other languages. It is used to 
 
 ```go
 //ftl:ingress GET /unit
-func Unit(ctx context.Context, req builtin.HttpRequest[TimeRequest]) (builtin.HttpResponse[ftl.Unit, string], error) {
+func Unit(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, TimeRequest]) (builtin.HttpResponse[ftl.Unit, string], error) {
 	return builtin.HttpResponse[ftl.Unit, string]{Body: ftl.Some(ftl.Unit{})}, nil
 }
 ```
@@ -149,7 +149,7 @@ Content-Length: 0
 
 FTL provides a set of builtin types that are automatically available in all FTL runtimes. These types are:
 
-- `builtin.HttpRequest[Body]` - Represents an HTTP request with a body of type `Body`.
+- `builtin.HttpRequest[Body, PathParams, QueryParams]` - Represents an HTTP request with a body of type `Body`, path parameter type of `PathParams` and a query parameter type of `QueryParams`.
 - `builtin.HttpResponse[Body, Error]` - Represents an HTTP response with a body of type `Body` and an error of type `Error`.
 - `builtin.Empty` - Represents an empty type. This equates to an empty structure `{}`.
 - `builtin.CatchRequest` - Represents a request structure for catch verbs.

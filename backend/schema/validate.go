@@ -3,6 +3,7 @@ package schema
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"regexp"
 	"slices"
@@ -547,24 +548,55 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 
 		switch md := md.(type) {
 		case *MetadataIngress:
-			reqBodyType, reqBody, errs := validateIngressRequestOrResponse(scopes, module, n, "request", n.Request)
+			reqInfo, errs := validateIngressRequest(scopes, module, n, "request", n.Request, md.Method == http.MethodGet)
 			merr = append(merr, errs...)
-			_, _, errs = validateIngressRequestOrResponse(scopes, module, n, "response", n.Response)
+			errs = validateIngressResponse(scopes, module, n, "response", n.Response)
 			merr = append(merr, errs...)
 
-			// Validate path
-			for _, path := range md.Path {
-				switch path := path.(type) {
-				case *IngressPathParameter:
-					reqBodyData, ok := reqBody.(*Data)
-					if !ok {
-						merr = append(merr, errorf(path, "ingress verb %s: cannot use path parameter %q with request type %s, expected Data type", n.Name, path.Name, reqBodyType))
-					} else if reqBodyData.FieldByName(path.Name) == nil {
-						merr = append(merr, errorf(path, "ingress verb %s: request type %s does not contain a field corresponding to the parameter %q", n.Name, reqBodyType, path.Name))
+			if reqInfo.pathParamSymbol != nil {
+				// If this is nil it has already failed validation
+
+				hasParameters := false
+				// Validate path
+				for _, path := range md.Path {
+					switch path := path.(type) {
+					case *IngressPathParameter:
+						hasParameters = true
+						switch dataType := reqInfo.pathParamSymbol.(type) {
+						case *Data:
+							if dataType.FieldByName(path.Name) == nil {
+								merr = append(merr, errorf(path, "ingress verb %s: request pathParameter type %s does not contain a field corresponding to the parameter %q", n.Name, reqInfo.pathParamType, path.Name))
+							}
+						case *Map:
+							if keyType, ok := dataType.Key.(*String); !ok {
+								merr = append(merr, errorf(path, "ingress verb %s: request pathParameter map key time type %s does not contain a field corresponding to the parameter %q", n.Name, keyType, path.Name))
+							}
+						case *String, *Int, *Bool, *Float:
+							// Only valid for a single path parameter
+							count := 0
+							for _, p := range md.Path {
+								if _, ok := p.(*IngressPathParameter); ok {
+									count++
+								}
+							}
+							if count != 1 {
+								merr = append(merr, errorf(path, "ingress verb %s: cannot use path parameter %q with request type %s as it has multiple path parameters, expected Data or Map type", n.Name, path.Name, reqInfo.pathParamType))
+							}
+						default:
+							merr = append(merr, errorf(path, "ingress verb %s: cannot use path parameter %q with request type %s, expected Data or Map type", n.Name, path.Name, reqInfo.pathParamType))
+						}
+					case *IngressPathLiteral:
 					}
-
-				case *IngressPathLiteral:
 				}
+				if !hasParameters {
+					// We still allow map even with no path parameters
+					switch reqInfo.pathParamSymbol.(type) {
+					case *Unit, *Map:
+					default:
+						merr = append(merr, errorf(reqInfo.pathParamSymbol, "ingress verb %s: cannot use path parameter type %s, expected Unit or Map as ingress has no path parameters", n.Name, reqInfo.pathParamType))
+					}
+				}
+
 			}
 		case *MetadataCronJob:
 			_, err := cron.Parse(md.Cron)
@@ -613,7 +645,16 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 	return
 }
 
-func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, reqOrResp string, r Type) (fieldType Type, body Symbol, merr []error) {
+type httpRequestExtractedTypes struct {
+	fieldType        Type
+	body             Symbol
+	pathParamType    Type
+	pathParamSymbol  Symbol
+	queryParamType   Type
+	queryParamSymbol Symbol
+}
+
+func validateIngressResponse(scopes Scopes, module *Module, n *Verb, reqOrResp string, r Type) (merr []error) {
 	data, err := resolveValidIngressReqResp(scopes, reqOrResp, optional.None[*ModuleDecl](), r, nil)
 	if err != nil {
 		merr = append(merr, errorf(r, "ingress verb %s: %s type %s: %v", n.Name, reqOrResp, r, err))
@@ -621,12 +662,55 @@ func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, re
 	}
 	resp, ok := data.Get()
 	if !ok {
-		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpRequest", n.Name, reqOrResp, r))
+		merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpResponse", n.Name, reqOrResp, r))
 		return
 	}
 
 	scopes = scopes.PushScope(resp.Scope())
-	fieldType = resp.FieldByName("body").Type
+
+	_, _, merr = validateParam(resp, "body", scopes, module, n, reqOrResp, r, validateBodyPayloadType)
+	return
+}
+
+func validateIngressRequest(scopes Scopes, module *Module, n *Verb, reqOrResp string, r Type, getRequest bool) (result httpRequestExtractedTypes, merr []error) {
+	data, err := resolveValidIngressReqResp(scopes, reqOrResp, optional.None[*ModuleDecl](), r, nil)
+	if err != nil {
+		merr = append(merr, errorf(r, "ingress verb %s: %s type %s: %v", n.Name, reqOrResp, r, err))
+		return
+	}
+	resp, ok := data.Get()
+	isRequest := reqOrResp == "request"
+	if !ok {
+		if isRequest {
+			merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpRequest", n.Name, reqOrResp, r))
+		} else {
+			merr = append(merr, errorf(r, "ingress verb %s: %s type %s must be builtin.HttpResponse", n.Name, reqOrResp, r))
+		}
+		return
+	}
+
+	scopes = scopes.PushScope(resp.Scope())
+
+	var errs []error
+	if getRequest {
+		result.fieldType, result.body, errs = validateParam(resp, "body", scopes, module, n, reqOrResp, r, requireUnitPayloadType)
+		merr = append(merr, errs...)
+	} else {
+		result.fieldType, result.body, errs = validateParam(resp, "body", scopes, module, n, reqOrResp, r, validateBodyPayloadType)
+		merr = append(merr, errs...)
+	}
+	if isRequest {
+		result.pathParamType, result.pathParamSymbol, errs = validateParam(resp, "pathParameters", scopes, module, n, reqOrResp, r, validatePathParamsPayloadType)
+		merr = append(merr, errs...)
+
+		result.queryParamType, result.queryParamSymbol, errs = validateParam(resp, "query", scopes, module, n, reqOrResp, r, validateQueryParamsPayloadType)
+		merr = append(merr, errs...)
+	}
+	return
+}
+
+func validateParam(resp *Data, paramName string, scopes Scopes, module *Module, n *Verb, reqOrResp string, r Type, validationFunc func(Node, Type, *Verb, string) error) (fieldType Type, body Symbol, merr []error) {
+	fieldType = resp.FieldByName(paramName).Type
 	if opt, ok := fieldType.(*Optional); ok {
 		fieldType = opt.Type
 	}
@@ -643,7 +727,7 @@ func validateIngressRequestOrResponse(scopes Scopes, module *Module, n *Verb, re
 		return
 	}
 	body = bodySym.Symbol
-	err = validatePayloadType(bodySym.Symbol, r, n, reqOrResp)
+	err := validationFunc(bodySym.Symbol, r, n, reqOrResp)
 	if err != nil {
 		merr = append(merr, err)
 	}
@@ -689,15 +773,17 @@ func resolveValidIngressReqResp(scopes Scopes, reqOrResp string, moduleDecl opti
 	}
 }
 
-func validatePayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
+func validateBodyPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
 	switch t := n.(type) {
 	case *Bytes, *String, *Data, *Unit, *Float, *Int, *Bool, *Map, *Array: // Valid HTTP response payload types.
 	case *TypeAlias:
 		// allow aliases of external types
-		if len(t.Metadata) > 0 {
-			return nil
+		for _, m := range t.Metadata {
+			if _, ok := m.(*MetadataTypeMap); ok {
+				return nil
+			}
 		}
-		return validatePayloadType(t.Type, r, v, reqOrResp)
+		return validateBodyPayloadType(t.Type, r, v, reqOrResp)
 	case *Enum:
 		// Type enums are valid but value enums are not.
 		if t.IsValueEnum() {
@@ -705,6 +791,48 @@ func validatePayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
 		}
 	default:
 		return errorf(r, "ingress verb %s: %s type %s must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not %s", v.Name, reqOrResp, r, n)
+	}
+	return nil
+}
+
+func requireUnitPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
+	if _, ok := n.(*Unit); !ok {
+		return errorf(r, "ingress verb %s: GET request type %s must have a body of unit not %s", v.Name, r, n)
+
+	}
+	return nil
+}
+
+func validatePathParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
+	switch t := n.(type) {
+	case *String, *Data, *Unit, *Float, *Int, *Bool, *Map: // Valid HTTP param payload types.
+	case *TypeAlias:
+		// allow aliases of external types
+		for _, m := range t.Metadata {
+			if _, ok := m.(*MetadataTypeMap); ok {
+				return nil
+			}
+		}
+		return validatePathParamsPayloadType(t.Type, r, v, reqOrResp)
+	default:
+		return errorf(r, "ingress verb %s: %s type %s must have a param of data structure, unit or map not %s", v.Name, reqOrResp, r, n)
+	}
+	return nil
+}
+
+func validateQueryParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
+	switch t := n.(type) {
+	case *Data, *Unit, *Map: // Valid HTTP query payload types.
+	case *TypeAlias:
+		// allow aliases of external types
+		for _, m := range t.Metadata {
+			if _, ok := m.(*MetadataTypeMap); ok {
+				return nil
+			}
+		}
+		return validateQueryParamsPayloadType(t.Type, r, v, reqOrResp)
+	default:
+		return errorf(r, "ingress verb %s: %s type %s must have a param of data structure, unit or map not %s", v.Name, reqOrResp, r, n)
 	}
 	return nil
 }
