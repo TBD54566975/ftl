@@ -29,6 +29,20 @@ func TestLifecycle(t *testing.T) {
 	)
 }
 
+func TestVerbCalls(t *testing.T) {
+	in.Run(t,
+		in.WithLanguages("java"),
+		in.CopyModule("verbs"),
+		in.Deploy("verbs"),
+		in.Call("verbs", "anyInput", map[string]string{"name": "Jimmy"}, func(t testing.TB, response string) {
+			assert.Equal(t, "Jimmy", response)
+		}),
+		in.Call("verbs", "anyOutput", "Jimmy", func(t testing.TB, response map[string]string) {
+			assert.Equal(t, map[string]string{"name": "Jimmy"}, response)
+		}),
+	)
+}
+
 func TestJVMToGoCall(t *testing.T) {
 
 	exampleObject := TestObject{

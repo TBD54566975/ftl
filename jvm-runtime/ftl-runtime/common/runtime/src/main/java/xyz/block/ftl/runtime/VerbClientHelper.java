@@ -4,6 +4,7 @@ import java.util.Map;
 
 import jakarta.inject.Singleton;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.arc.Arc;
@@ -25,14 +26,16 @@ public class VerbClientHelper {
                 //TODO: what about optional?
                 message = Map.of();
             }
+
             var result = FTLController.instance().callVerb(verb, module, mapper.writeValueAsBytes(message));
-            if (listReturnType) {
+            if (result == null) {
+                return null;
+            } else if (listReturnType) {
                 return mapper.readerForArrayOf(returnType).readValue(result);
             } else if (mapReturnType) {
                 return mapper.readerForMapOf(returnType).readValue(result);
-            }
-            if (result == null) {
-                return null;
+            } else if (returnType == JsonNode.class) {
+                return mapper.readTree(result);
             }
             return mapper.readerFor(returnType).readValue(result);
         } catch (Exception e) {
