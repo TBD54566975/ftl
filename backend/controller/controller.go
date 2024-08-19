@@ -55,6 +55,7 @@ import (
 	"github.com/TBD54566975/ftl/frontend"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/cors"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
@@ -229,7 +230,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	db, err := dal.New(ctx, conn, optional.Ptr[string](config.KMSURI))
+	db, err := dal.New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create DAL: %w", err)
 	}

@@ -58,49 +58,31 @@ func (d *DAL) decryptJSON(encrypted encryption.Encrypted, v any) error { //nolin
 	return nil
 }
 
-// setupEncryptor sets up the encryptor for the DAL.
-// It will either create a key or load the existing one.
-// If the KMS URL is not set, it will use a NoOpEncryptor which does not encrypt anything.
-func (d *DAL) setupEncryptor(ctx context.Context) (err error) {
+func (d *DAL) EnsureKey(ctx context.Context, generateKey func() ([]byte, error)) (encryptedKey []byte, err error) {
 	logger := log.FromContext(ctx)
 	tx, err := d.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	url, ok := d.kmsURL.Get()
-	if !ok {
-		logger.Infof("KMS URL not set, encryption not enabled")
-		d.encryptor = encryption.NewNoOpEncryptor()
-		return nil
-	}
-
-	encryptedKey, err := tx.db.GetOnlyEncryptionKey(ctx)
-	if err != nil {
-		if dal.IsNotFound(err) {
-			logger.Infof("No encryption key found, generating a new one")
-			encryptor, err := encryption.NewKMSEncryptorGenerateKey(url, nil)
-			if err != nil {
-				return fmt.Errorf("failed to create encryptor for generation: %w", err)
-			}
-			d.encryptor = encryptor
-
-			if err = tx.db.CreateOnlyEncryptionKey(ctx, encryptor.GetEncryptedKeyset()); err != nil {
-				return fmt.Errorf("failed to create only encryption key: %w", err)
-			}
-
-			return nil
+	encryptedKey, err = tx.db.GetOnlyEncryptionKey(ctx)
+	if err != nil && dal.IsNotFound(err) {
+		logger.Debugf("No encryption key found, generating a new one")
+		key, err := generateKey()
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate key: %w", err)
 		}
-		return fmt.Errorf("failed to get only encryption key: %w", err)
+
+		if err = tx.db.CreateOnlyEncryptionKey(ctx, key); err != nil {
+			return nil, fmt.Errorf("failed to save the encryption key: %w", err)
+		}
+
+		return key, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to load the encryption key from the db: %w", err)
 	}
 
 	logger.Debugf("Encryption key found, using it")
-	encryptor, err := encryption.NewKMSEncryptorWithKMS(url, nil, encryptedKey)
-	if err != nil {
-		return fmt.Errorf("failed to create encryptor with encrypted key: %w", err)
-	}
-	d.encryptor = encryptor
-
-	return nil
+	return encryptedKey, nil
 }

@@ -2,7 +2,6 @@ package dal
 
 import (
 	"context"
-	"github.com/alecthomas/types/optional"
 	"testing"
 	"time"
 
@@ -12,13 +11,14 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestSendFSMEvent(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, optional.None[string]())
+	dal, err := New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
 	_, err = dal.AcquireAsyncCall(ctx)

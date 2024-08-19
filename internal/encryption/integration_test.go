@@ -146,7 +146,10 @@ func TestKMSEncryptorLocalstack(t *testing.T) {
 		Region:      awsv1.String("us-west-2"),
 	})
 
-	encryptor, err := NewKMSEncryptorGenerateKey(uri, v1client)
+	key, err := newKey(uri, v1client)
+	assert.NoError(t, err)
+
+	encryptor, err := NewKMSEncryptorWithKMS(uri, v1client, key)
 	assert.NoError(t, err)
 
 	var encrypted EncryptedTimelineColumn
