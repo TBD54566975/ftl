@@ -548,6 +548,7 @@ func TestParsing(t *testing.T) {
 
 					verb consumesA(test.eventA) Unit
 						+subscribe subA1
+						+retry 1m5s 1h catch catchesAny
 
 					verb consumesB1(test.eventB) Unit
 						+subscribe subB
@@ -561,6 +562,8 @@ func TestParsing(t *testing.T) {
 					verb catchesA(builtin.CatchRequest<test.eventA>) Unit
 
 					verb catchesB(builtin.CatchRequest<test.eventB>) Unit
+
+					verb catchesAny(builtin.CatchRequest<Any>) Unit
 				}
 			`,
 			expected: &Schema{
@@ -627,6 +630,19 @@ func TestParsing(t *testing.T) {
 							},
 						},
 						&Verb{
+							Name: "catchesAny",
+							Request: &Ref{
+								Module: "builtin",
+								Name:   "CatchRequest",
+								TypeParameters: []Type{
+									&Any{},
+								},
+							},
+							Response: &Unit{
+								Unit: true,
+							},
+						},
+						&Verb{
 							Name: "catchesB",
 							Request: &Ref{
 								Module: "builtin",
@@ -654,6 +670,14 @@ func TestParsing(t *testing.T) {
 							Metadata: []Metadata{
 								&MetadataSubscriber{
 									Name: "subA1",
+								},
+								&MetadataRetry{
+									MinBackoff: "1m5s",
+									MaxBackoff: "1h",
+									Catch: &Ref{
+										Module: "test",
+										Name:   "catchesAny",
+									},
 								},
 							},
 						},

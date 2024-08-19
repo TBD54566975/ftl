@@ -6,6 +6,12 @@ import "github.com/TBD54566975/ftl/internal/reflect"
 const BuiltinsSource = `
 // Built-in types for FTL.
 builtin module builtin {
+  // A reference to a declaration in the schema.
+  export data Ref {
+    module String
+    name String
+  }
+
   // HTTP request structure used for HTTP ingress verbs.
   export data HttpRequest<Body> {
     method String
@@ -29,7 +35,9 @@ builtin module builtin {
 
   // CatchRequest is a request structure for catch verbs.
   export data CatchRequest<Req> {
+    verb builtin.Ref
     request Req
+    requestType String
     error String
   }
 }

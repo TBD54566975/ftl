@@ -790,14 +790,22 @@ func validateRetries(module *Module, retry *MetadataRetry, requestType optional.
 		merr = append(merr, errorf(retry, "expected catch to be a verb"))
 		return
 	}
+
+	hasValidCatchRequest := true
 	catchRequestRef, ok := catchVerb.Request.(*Ref)
 	if !ok {
-		merr = append(merr, errorf(retry, "catch verb must have a request type of builtin.CatchRequest<%s> but found %v", requestType, catchVerb.Request))
+		hasValidCatchRequest = false
 	} else if !strings.HasPrefix(catchRequestRef.String(), "builtin.CatchRequest") {
-		merr = append(merr, errorf(retry, "catch verb must have a request type of builtin.CatchRequest<%s> but found %v", requestType, catchRequestRef))
-	} else if len(catchRequestRef.TypeParameters) != 1 || catchRequestRef.TypeParameters[0].String() != req.String() {
-		merr = append(merr, errorf(retry, "catch verb must have a request type of builtin.CatchRequest<%s> but found %v", requestType, catchRequestRef))
+		hasValidCatchRequest = false
+	} else if len(catchRequestRef.TypeParameters) != 1 {
+		hasValidCatchRequest = false
+	} else if _, isAny := catchRequestRef.TypeParameters[0].(*Any); !isAny && catchRequestRef.TypeParameters[0].String() != req.String() {
+		hasValidCatchRequest = false
 	}
+	if !hasValidCatchRequest {
+		merr = append(merr, errorf(retry, "catch verb must have a request type of builtin.CatchRequest<%s> or builtin.CatchRequest<Any>, but found %v", requestType, catchVerb.Request))
+	}
+
 	if _, ok := catchVerb.Response.(*Unit); !ok {
 		merr = append(merr, errorf(retry, "catch verb must not have a response type but found %v", catchVerb.Response))
 	}

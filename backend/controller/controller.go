@@ -1498,12 +1498,25 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	}
 	logger.Debugf("Catching async call %s with %s", call.Verb, catchVerb)
 
+	sch := s.schema.Load()
+
+	verb := &schema.Verb{}
+	if err := sch.ResolveToType(call.Verb.ToRef(), verb); err != nil {
+		logger.Warnf("Async call %s could not catch, could not resolve original verb: %s", call.Verb, err)
+		return fmt.Errorf("async call %s could not catch, could not resolve original verb: %w", call.Verb, err)
+	}
+
 	originalError := call.Error.Default("unknown error")
 	originalResult := either.RightOf[[]byte](originalError)
 
 	request := map[string]any{
-		"request": json.RawMessage(call.Request),
-		"error":   originalError,
+		"verb": map[string]string{
+			"module": call.Verb.Module,
+			"name":   call.Verb.Name,
+		},
+		"requestType": verb.Request.String(),
+		"request":     json.RawMessage(call.Request),
+		"error":       originalError,
 	}
 	body, err := json.Marshal(request)
 	if err != nil {
