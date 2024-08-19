@@ -4,6 +4,7 @@ sql:
     engine: "postgresql"
     queries:
       - backend/controller/sql/queries.sql
+      - backend/controller/sql/async_queries.sql
       # FIXME: Until we fully decouple cron from the controller, we need to include the cron queries here
       - backend/controller/cronjobs/sql/queries.sql
     schema: "backend/controller/sql/schema"
@@ -86,8 +87,6 @@ sql:
             nullable: true
             go_type:
               type: "optional.Option[model.DeploymentKey]"
-          - db_type: "cron_job_state"
-            go_type: "github.com/TBD54566975/ftl/internal/model.CronJobState"
           - db_type: "controller_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - db_type: "request_key"
@@ -153,8 +152,7 @@ sql:
   - <<: *daldir
     queries:
       - backend/controller/cronjobs/sql/queries.sql
-      # FIXME: We need to create async calls in the same transaction
-      - backend/controller/sql/queries.sql
+      - backend/controller/sql/async_queries.sql
     gen:
       go:
         <<: *gengo
@@ -220,8 +218,6 @@ sql:
             nullable: true
             go_type:
               type: "optional.Option[model.DeploymentKey]"
-          - db_type: "cron_job_state"
-            go_type: "github.com/TBD54566975/ftl/internal/model.CronJobState"
           - db_type: "controller_key"
             go_type: "github.com/TBD54566975/ftl/internal/model.ControllerKey"
           - db_type: "request_key"

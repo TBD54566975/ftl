@@ -18,5 +18,7 @@ ALTER TABLE cron_jobs
     DROP COLUMN state,
     ADD COLUMN last_execution TIMESTAMPTZ;
 
+DROP TYPE cron_job_state;
+
 -- migrate:down
 

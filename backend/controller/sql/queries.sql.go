@@ -190,69 +190,6 @@ func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []b
 	return id, err
 }
 
-const createAsyncCall = `-- name: CreateAsyncCall :one
-INSERT INTO async_calls (
-  scheduled_at,
-  verb,
-  origin,
-  request,
-  remaining_attempts,
-  backoff,
-  max_backoff,
-  catch_verb,
-  parent_request_key,
-  trace_context,
-  cron_job_key
-)
-VALUES (
-  $1::TIMESTAMPTZ,
-  $2,
-  $3,
-  $4,
-  $5,
-  $6::interval,
-  $7::interval,
-  $8,
-  $9,
-  $10::jsonb,
-  $11
-)
-RETURNING id
-`
-
-type CreateAsyncCallParams struct {
-	ScheduledAt       time.Time
-	Verb              schema.RefKey
-	Origin            string
-	Request           encryption.EncryptedAsyncColumn
-	RemainingAttempts int32
-	Backoff           sqltypes.Duration
-	MaxBackoff        sqltypes.Duration
-	CatchVerb         optional.Option[schema.RefKey]
-	ParentRequestKey  optional.Option[string]
-	TraceContext      json.RawMessage
-	CronJobKey        optional.Option[model.CronJobKey]
-}
-
-func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createAsyncCall,
-		arg.ScheduledAt,
-		arg.Verb,
-		arg.Origin,
-		arg.Request,
-		arg.RemainingAttempts,
-		arg.Backoff,
-		arg.MaxBackoff,
-		arg.CatchVerb,
-		arg.ParentRequestKey,
-		arg.TraceContext,
-		arg.CronJobKey,
-	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const createCronJob = `-- name: CreateCronJob :exec
 INSERT INTO cron_jobs (key, deployment_id, module_name, verb, schedule, start_time, next_execution)
   VALUES (
@@ -868,7 +805,7 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 }
 
 const getCronJobByKey = `-- name: GetCronJobByKey :one
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.last_execution
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE j.key = $1::cron_job_key
@@ -876,28 +813,30 @@ FOR UPDATE SKIP LOCKED
 `
 
 type GetCronJobByKeyRow struct {
-	Key           model.CronJobKey
-	DeploymentKey model.DeploymentKey
-	Module        string
-	Verb          string
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	LastExecution optional.Option[time.Time]
+	CronJob    CronJob
+	Deployment Deployment
 }
 
 func (q *Queries) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error) {
 	row := q.db.QueryRowContext(ctx, getCronJobByKey, key)
 	var i GetCronJobByKeyRow
 	err := row.Scan(
-		&i.Key,
-		&i.DeploymentKey,
-		&i.Module,
-		&i.Verb,
-		&i.Schedule,
-		&i.StartTime,
-		&i.NextExecution,
-		&i.LastExecution,
+		&i.CronJob.ID,
+		&i.CronJob.Key,
+		&i.CronJob.DeploymentID,
+		&i.CronJob.Verb,
+		&i.CronJob.Schedule,
+		&i.CronJob.StartTime,
+		&i.CronJob.NextExecution,
+		&i.CronJob.ModuleName,
+		&i.CronJob.LastExecution,
+		&i.Deployment.ID,
+		&i.Deployment.CreatedAt,
+		&i.Deployment.ModuleID,
+		&i.Deployment.Key,
+		&i.Deployment.Schema,
+		&i.Deployment.Labels,
+		&i.Deployment.MinReplicas,
 	)
 	return i, err
 }
@@ -1854,7 +1793,7 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 }
 
 const getUnscheduledCronJobs = `-- name: GetUnscheduledCronJobs :many
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.last_execution
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE d.min_replicas > 0
@@ -1873,14 +1812,8 @@ FOR UPDATE SKIP LOCKED
 `
 
 type GetUnscheduledCronJobsRow struct {
-	Key           model.CronJobKey
-	DeploymentKey model.DeploymentKey
-	Module        string
-	Verb          string
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	LastExecution optional.Option[time.Time]
+	CronJob    CronJob
+	Deployment Deployment
 }
 
 func (q *Queries) GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]GetUnscheduledCronJobsRow, error) {
@@ -1893,14 +1826,22 @@ func (q *Queries) GetUnscheduledCronJobs(ctx context.Context, startTime time.Tim
 	for rows.Next() {
 		var i GetUnscheduledCronJobsRow
 		if err := rows.Scan(
-			&i.Key,
-			&i.DeploymentKey,
-			&i.Module,
-			&i.Verb,
-			&i.Schedule,
-			&i.StartTime,
-			&i.NextExecution,
-			&i.LastExecution,
+			&i.CronJob.ID,
+			&i.CronJob.Key,
+			&i.CronJob.DeploymentID,
+			&i.CronJob.Verb,
+			&i.CronJob.Schedule,
+			&i.CronJob.StartTime,
+			&i.CronJob.NextExecution,
+			&i.CronJob.ModuleName,
+			&i.CronJob.LastExecution,
+			&i.Deployment.ID,
+			&i.Deployment.CreatedAt,
+			&i.Deployment.ModuleID,
+			&i.Deployment.Key,
+			&i.Deployment.Schema,
+			&i.Deployment.Labels,
+			&i.Deployment.MinReplicas,
 		); err != nil {
 			return nil, err
 		}
@@ -2183,23 +2124,6 @@ func (q *Queries) InsertTimelineLogEvent(ctx context.Context, arg InsertTimeline
 		arg.Payload,
 	)
 	return err
-}
-
-const isCronJobPending = `-- name: IsCronJobPending :one
-SELECT EXISTS (
-    SELECT 1
-    FROM async_calls ac
-    WHERE ac.cron_job_key = $1::cron_job_key
-      AND ac.scheduled_at > $2::TIMESTAMPTZ
-      AND ac.state = 'pending'
-) AS pending
-`
-
-func (q *Queries) IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error) {
-	row := q.db.QueryRowContext(ctx, isCronJobPending, key, startTime)
-	var pending bool
-	err := row.Scan(&pending)
-	return pending, err
 }
 
 const killStaleControllers = `-- name: KillStaleControllers :one

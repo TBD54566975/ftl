@@ -64,27 +64,15 @@ func (t *Tx) Rollback(ctx context.Context) error {
 	return nil
 }
 
-func cronJobFromGetByKeyRow(row sql.GetCronJobByKeyRow) model.CronJob {
+func cronJobFromRow(c sql.CronJob, d sql.Deployment) model.CronJob {
 	return model.CronJob{
-		Key:           row.Key,
-		DeploymentKey: row.DeploymentKey,
-		Verb:          schema.Ref{Module: row.Module, Name: row.Verb},
-		Schedule:      row.Schedule,
-		StartTime:     row.StartTime,
-		NextExecution: row.NextExecution,
-		LastExecution: row.LastExecution,
-	}
-}
-
-func cronJobFromGetUnscheduledRow(row sql.GetUnscheduledCronJobsRow) model.CronJob {
-	return model.CronJob{
-		Key:           row.Key,
-		DeploymentKey: row.DeploymentKey,
-		Verb:          schema.Ref{Module: row.Module, Name: row.Verb},
-		Schedule:      row.Schedule,
-		StartTime:     row.StartTime,
-		NextExecution: row.NextExecution,
-		LastExecution: row.LastExecution,
+		Key:           c.Key,
+		DeploymentKey: d.Key,
+		Verb:          schema.Ref{Module: c.ModuleName, Name: c.Verb},
+		Schedule:      c.Schedule,
+		StartTime:     c.StartTime,
+		NextExecution: c.NextExecution,
+		LastExecution: c.LastExecution,
 	}
 }
 
@@ -95,7 +83,9 @@ func (d *DAL) GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cron jobs: %w", dalerrs.TranslatePGError(err))
 	}
-	return slices.Map(rows, cronJobFromGetUnscheduledRow), nil
+	return slices.Map(rows, func(r sql.GetUnscheduledCronJobsRow) model.CronJob {
+		return cronJobFromRow(r.CronJob, r.Deployment)
+	}), nil
 }
 
 // GetCronJobByKey returns a cron job by its key
@@ -104,5 +94,5 @@ func (d *DAL) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (model.
 	if err != nil {
 		return model.CronJob{}, fmt.Errorf("failed to get cron job %q: %w", key, dalerrs.TranslatePGError(err))
 	}
-	return cronJobFromGetByKeyRow(row), nil
+	return cronJobFromRow(row.CronJob, row.Deployment), nil
 }

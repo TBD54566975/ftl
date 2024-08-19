@@ -1,5 +1,5 @@
 -- name: GetUnscheduledCronJobs :many
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.last_execution
+SELECT sqlc.embed(j), sqlc.embed(d)
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE d.min_replicas > 0
@@ -16,17 +16,8 @@ WHERE d.min_replicas > 0
   )
 FOR UPDATE SKIP LOCKED;
 
--- name: IsCronJobPending :one
-SELECT EXISTS (
-    SELECT 1
-    FROM async_calls ac
-    WHERE ac.cron_job_key = sqlc.arg('key')::cron_job_key
-      AND ac.scheduled_at > sqlc.arg('start_time')::TIMESTAMPTZ
-      AND ac.state = 'pending'
-) AS pending;
-
 -- name: GetCronJobByKey :one
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.last_execution
+SELECT sqlc.embed(j), sqlc.embed(d)
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE j.key = sqlc.arg('key')::cron_job_key
