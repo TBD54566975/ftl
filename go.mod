@@ -53,7 +53,7 @@ require (
 	github.com/titanous/json5 v1.0.0
 	github.com/tliron/commonlog v0.2.18
 	github.com/tliron/glsp v0.2.2
-	github.com/tliron/kutil v0.3.26
+	github.com/tliron/kutil v0.3.25
 	github.com/tmc/langchaingo v0.1.12
 	github.com/zalando/go-keyring v0.2.5
 	go.opentelemetry.io/otel v1.28.0
