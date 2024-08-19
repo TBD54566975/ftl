@@ -8,12 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/XSAM/otelsql"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/observability"
 )
 
 // CreateForDevel creates and migrates a new database for development or testing.
@@ -31,13 +30,9 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 
 	var conn *stdsql.DB
 	for range 10 {
-		conn, err = otelsql.Open("pgx", noDBDSN.String())
+		conn, err = observability.OpenDBAndInstrument(noDBDSN.String())
 		if err == nil {
 			defer conn.Close()
-			err = otelsql.RegisterDBStatsMetrics(conn, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
-			if err != nil {
-				panic(err)
-			}
 			break
 		}
 		logger.Debugf("Waiting for database to be ready: %v", err)
@@ -78,13 +73,9 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 		return nil, err
 	}
 
-	realConn, err := otelsql.Open("pgx", dsn)
+	realConn, err := observability.OpenDBAndInstrument(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-	err = otelsql.RegisterDBStatsMetrics(realConn, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
-	if err != nil {
-		return nil, fmt.Errorf("failed to register db metrics: %w", err)
 	}
 	// Reset transient state in the database to a clean state for development purposes.
 	// This includes things like resetting the state of async calls, leases,

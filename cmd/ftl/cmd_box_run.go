@@ -6,10 +6,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/XSAM/otelsql"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
 	"github.com/jpillora/backoff"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller"
@@ -21,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -59,13 +58,9 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	}
 
 	// Bring up the DB connection and DAL.
-	conn, err := otelsql.Open("pgx", config.DSN)
+	conn, err := observability.OpenDBAndInstrument(config.DSN)
 	if err != nil {
 		return fmt.Errorf("failed to bring up DB connection: %w", err)
-	}
-	err = otelsql.RegisterDBStatsMetrics(conn, otelsql.WithAttributes(semconv.DBSystemPostgreSQL))
-	if err != nil {
-		return fmt.Errorf("failed to register DB metrics: %w", err)
 	}
 
 	wg := errgroup.Group{}
