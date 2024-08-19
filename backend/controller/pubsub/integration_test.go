@@ -140,7 +140,8 @@ func TestRetry(t *testing.T) {
 			1),
 
 		// check that there was one successful attempt to catchAny
-		in.QueryRow("ftl",
+		// CatchRequest<Any> is not supported in java yet
+		in.IfLanguage("go", in.QueryRow("ftl",
 			fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM async_calls
@@ -151,7 +152,7 @@ func TestRetry(t *testing.T) {
 			AND catching = true
 			AND origin = '%s'
 `, dal.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "subscriber", Name: "doomedSubscription2"}}.String()),
-			1),
+			1)),
 	)
 }
 
