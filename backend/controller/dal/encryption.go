@@ -10,45 +10,45 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func (d *DAL) encrypt(cleartext []byte, dest encryption.Encrypted) error {
-	if d.encryptor == nil {
-		return fmt.Errorf("encryptor not set")
-	}
-
-	err := d.encryptor.Encrypt(cleartext, dest)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt binary with subkey %s: %w", dest.SubKey(), err)
-	}
-
-	return nil
-}
-
-func (d *DAL) decrypt(encrypted encryption.Encrypted) ([]byte, error) {
+func (d *DAL) encrypt(subKey encryption.SubKey, cleartext []byte) ([]byte, error) {
 	if d.encryptor == nil {
 		return nil, fmt.Errorf("encryptor not set")
 	}
 
-	v, err := d.encryptor.Decrypt(encrypted)
+	v, err := d.encryptor.Encrypt(subKey, cleartext)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt binary with subkey %s: %w", encrypted.SubKey(), err)
+		return nil, fmt.Errorf("failed to encrypt binary with subkey %s: %w", subKey, err)
 	}
 
 	return v, nil
 }
 
-func (d *DAL) encryptJSON(v any, dest encryption.Encrypted) error {
-	serialized, err := json.Marshal(v)
-	if err != nil {
-		return fmt.Errorf("failed to marshal JSON: %w", err)
+func (d *DAL) decrypt(subKey encryption.SubKey, encrypted []byte) ([]byte, error) {
+	if d.encryptor == nil {
+		return nil, fmt.Errorf("encryptor not set")
 	}
 
-	return d.encrypt(serialized, dest)
+	v, err := d.encryptor.Decrypt(subKey, encrypted)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt binary with subkey %s: %w", subKey, err)
+	}
+
+	return v, nil
 }
 
-func (d *DAL) decryptJSON(encrypted encryption.Encrypted, v any) error { //nolint:unparam
-	decrypted, err := d.decrypt(encrypted)
+func (d *DAL) encryptJSON(subKey encryption.SubKey, v any) ([]byte, error) {
+	serialized, err := json.Marshal(v)
 	if err != nil {
-		return fmt.Errorf("failed to decrypt json with subkey %s: %w", encrypted.SubKey(), err)
+		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	return d.encrypt(subKey, serialized)
+}
+
+func (d *DAL) decryptJSON(subKey encryption.SubKey, encrypted []byte, v any) error { //nolint:unparam
+	decrypted, err := d.decrypt(subKey, encrypted)
+	if err != nil {
+		return fmt.Errorf("failed to decrypt json with subkey %s: %w", subKey, err)
 	}
 
 	if err = json.Unmarshal(decrypted, v); err != nil {

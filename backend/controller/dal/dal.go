@@ -709,11 +709,10 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return dalerrs.TranslatePGError(err)
 		}
 	}
-	var payload encryption.EncryptedTimelineColumn
-	err = d.encryptJSON(map[string]interface{}{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]interface{}{
 		"prev_min_replicas": deployment.MinReplicas,
 		"min_replicas":      minReplicas,
-	}, &payload)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload for InsertDeploymentUpdatedEvent: %w", err)
 	}
@@ -783,11 +782,10 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
-	var payload encryption.EncryptedTimelineColumn
-	err = d.encryptJSON(map[string]any{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]any{
 		"min_replicas": int32(minReplicas),
 		"replaced":     replacedDeploymentKey,
-	}, &payload)
+	})
 	if err != nil {
 		return fmt.Errorf("replace deployment failed to encrypt payload: %w", err)
 	}
@@ -1059,8 +1057,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		"error":      log.Error,
 		"stack":      log.Stack,
 	}
-	var encryptedPayload encryption.EncryptedTimelineColumn
-	err := d.encryptJSON(payload, &encryptedPayload)
+	encryptedPayload, err := d.encryptJSON(encryption.TimelineSubKey, payload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
 	}
@@ -1140,14 +1137,13 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if pr, ok := call.ParentRequestKey.Get(); ok {
 		parentRequestKey = optional.Some(pr.String())
 	}
-	var payload encryption.EncryptedTimelineColumn
-	err := d.encryptJSON(map[string]any{
+	payload, err := d.encryptJSON(encryption.TimelineSubKey, map[string]any{
 		"duration_ms": call.Duration.Milliseconds(),
 		"request":     call.Request,
 		"response":    call.Response,
 		"error":       call.Error,
 		"stack":       call.Stack,
-	}, &payload)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to encrypt call payload: %w", err)
 	}

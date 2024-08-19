@@ -149,16 +149,14 @@ func TestKMSEncryptorLocalstack(t *testing.T) {
 	encryptor, err := NewKMSEncryptorGenerateKey(uri, v1client)
 	assert.NoError(t, err)
 
-	var encrypted EncryptedTimelineColumn
-	err = encryptor.Encrypt([]byte("hunter2"), &encrypted)
+	encrypted, err := encryptor.Encrypt(TimelineSubKey, []byte("hunter2"))
 	assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(&encrypted)
+	decrypted, err := encryptor.Decrypt(TimelineSubKey, encrypted)
 	assert.NoError(t, err)
 	assert.Equal(t, "hunter2", string(decrypted))
 
 	// Should fail to decrypt with the wrong subkey
-	wrongSubKey := EncryptedAsyncColumn(encrypted)
-	_, err = encryptor.Decrypt(&wrongSubKey)
+	_, err = encryptor.Decrypt(AsyncSubKey, encrypted)
 	assert.Error(t, err)
 }

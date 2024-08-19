@@ -12,7 +12,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
@@ -116,7 +115,7 @@ type Querier interface {
 	//
 	// "key" is the unique identifier for the FSM execution.
 	StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error)
-	SucceedAsyncCall(ctx context.Context, response encryption.OptionalEncryptedAsyncColumn, iD int64) (bool, error)
+	SucceedAsyncCall(ctx context.Context, response []byte, iD int64) (bool, error)
 	SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)

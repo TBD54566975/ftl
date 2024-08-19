@@ -21,8 +21,7 @@ import (
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
-	var encryptedPayload encryption.EncryptedAsyncColumn
-	err := d.encrypt(payload, &encryptedPayload)
+	encryptedPayload, err := d.encrypt(encryption.AsyncSubKey, payload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload: %w", err)
 	}

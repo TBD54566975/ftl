@@ -16,16 +16,16 @@ import (
 	"github.com/tink-crypto/tink-go/v2/tink"
 )
 
-// Encrypted is an interface for values that contain encrypted data.
-type Encrypted interface {
-	SubKey() string
-	Bytes() []byte
-	Set(data []byte)
-}
+type SubKey string
+
+const (
+	TimelineSubKey SubKey = "timeline"
+	AsyncSubKey    SubKey = "async"
+)
 
 type DataEncryptor interface {
-	Encrypt(cleartext []byte, dest Encrypted) error
-	Decrypt(encrypted Encrypted) ([]byte, error)
+	Encrypt(subKey SubKey, cleartext []byte) ([]byte, error)
+	Decrypt(subKey SubKey, encrypted []byte) ([]byte, error)
 }
 
 // NoOpEncryptorNext does not encrypt and just passes the input as is.
@@ -35,15 +35,12 @@ func NewNoOpEncryptor() NoOpEncryptorNext {
 	return NoOpEncryptorNext{}
 }
 
-var _ DataEncryptor = NoOpEncryptorNext{}
-
-func (n NoOpEncryptorNext) Encrypt(cleartext []byte, dest Encrypted) error {
-	dest.Set(cleartext)
-	return nil
+func (n NoOpEncryptorNext) Encrypt(_ SubKey, cleartext []byte) ([]byte, error) {
+	return cleartext, nil
 }
 
-func (n NoOpEncryptorNext) Decrypt(encrypted Encrypted) ([]byte, error) {
-	return encrypted.Bytes(), nil
+func (n NoOpEncryptorNext) Decrypt(_ SubKey, encrypted []byte) ([]byte, error) {
+	return encrypted, nil
 }
 
 // KMSEncryptor encrypts and decrypts using a KMS key via tink.
@@ -53,8 +50,6 @@ type KMSEncryptor struct {
 	encryptedKeyset []byte
 	cachedDerived   map[SubKey]tink.AEAD
 }
-
-var _ DataEncryptor = &KMSEncryptor{}
 
 func newClientWithAEAD(uri string, kms *awsv1kms.KMS) (tink.AEAD, error) {
 	var client registry.KMSClient
@@ -169,7 +164,7 @@ func (k *KMSEncryptor) getDerivedPrimitive(subKey SubKey) (tink.AEAD, error) {
 		return primitive, nil
 	}
 
-	derived, err := deriveKeyset(k.root, []byte(subKey.SubKey()))
+	derived, err := deriveKeyset(k.root, []byte(subKey))
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive keyset: %w", err)
 	}
@@ -183,28 +178,27 @@ func (k *KMSEncryptor) getDerivedPrimitive(subKey SubKey) (tink.AEAD, error) {
 	return primitive, nil
 }
 
-func (k *KMSEncryptor) Encrypt(cleartext []byte, dest Encrypted) error {
-	primitive, err := k.getDerivedPrimitive(dest)
-	if err != nil {
-		return fmt.Errorf("failed to get derived primitive: %w", err)
-	}
-
-	encrypted, err := primitive.Encrypt(cleartext, nil)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt: %w", err)
-	}
-
-	dest.Set(encrypted)
-	return nil
-}
-
-func (k *KMSEncryptor) Decrypt(encrypted Encrypted) ([]byte, error) {
-	primitive, err := k.getDerivedPrimitive(encrypted)
+func (k *KMSEncryptor) Encrypt(subKey SubKey, cleartext []byte) ([]byte, error) {
+	primitive, err := k.getDerivedPrimitive(subKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get derived primitive: %w", err)
 	}
 
-	decrypted, err := primitive.Decrypt(encrypted.Bytes(), nil)
+	encrypted, err := primitive.Encrypt(cleartext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt: %w", err)
+	}
+
+	return encrypted, nil
+}
+
+func (k *KMSEncryptor) Decrypt(subKey SubKey, encrypted []byte) ([]byte, error) {
+	primitive, err := k.getDerivedPrimitive(subKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get derived primitive: %w", err)
+	}
+
+	decrypted, err := primitive.Decrypt(encrypted, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt: %w", err)
 	}

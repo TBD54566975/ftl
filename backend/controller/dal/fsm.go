@@ -32,11 +32,11 @@ import (
 //
 // Note: no validation of the FSM is performed.
 func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string, destinationState schema.RefKey, request []byte, encrypted bool, retryParams schema.RetryParams) (err error) {
-	var encryptedRequest encryption.EncryptedAsyncColumn
+	var encryptedRequest []byte
 	if encrypted {
-		encryptedRequest = encryption.EncryptedAsyncColumn(request)
+		encryptedRequest = request
 	} else {
-		err = d.encrypt(request, &encryptedRequest)
+		encryptedRequest, err = d.encrypt(encryption.AsyncSubKey, request)
 		if err != nil {
 			return fmt.Errorf("failed to encrypt FSM request: %w", err)
 		}
@@ -146,8 +146,7 @@ func (d *DAL) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKe
 }
 
 func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string, nextState schema.RefKey, request json.RawMessage, requestType schema.Type) error {
-	var encryptedRequest encryption.EncryptedAsyncColumn
-	err := d.encryptJSON(request, &encryptedRequest)
+	encryptedRequest, err := d.encryptJSON(encryption.AsyncSubKey, request)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt FSM request: %w", err)
 	}
