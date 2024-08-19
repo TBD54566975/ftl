@@ -210,16 +210,17 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, conn *stdsql.DB, kmsURL optional.Option[string]) (*DAL, error) {
+func New(ctx context.Context, conn *stdsql.DB, encryptionBuilder encryption.Builder) (*DAL, error) {
 	d := &DAL{
 		db:                sql.NewDB(conn),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
-		kmsURL:            kmsURL,
 	}
 
-	if err := d.setupEncryptor(ctx); err != nil {
+	encryptor, err := encryptionBuilder.Build(ctx, d)
+	if err != nil {
 		return nil, fmt.Errorf("failed to setup encryptor: %w", err)
 	}
+	d.encryptor = encryptor
 
 	return d, nil
 }

@@ -2,9 +2,11 @@ package encryption
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/alecthomas/types/optional"
 	awsv1kms "github.com/aws/aws-sdk-go/service/kms"
 	"github.com/tink-crypto/tink-go-awskms/integration/awskms"
 	"github.com/tink-crypto/tink-go/v2/aead"
@@ -23,26 +25,72 @@ type Encrypted interface {
 	Set(data []byte)
 }
 
+type KeyStoreProvider interface {
+	// EnsureKey asks a provider to check for an encrypted key.
+	// If not available, call the generateKey function to create a new key.
+	// The provider should handle transactions around checking and setting the key, to prevent race conditions.
+	EnsureKey(ctx context.Context, generateKey func() ([]byte, error)) ([]byte, error)
+}
+
+// Builder constructs a DataEncryptor when used with a provider.
+// Use a chain of With* methods to configure the builder.
+type Builder struct {
+	kmsURI optional.Option[string]
+}
+
+func NewBuilder() Builder {
+	return Builder{
+		kmsURI: optional.None[string](),
+	}
+}
+
+// WithKMSURI sets the URI for the KMS key to use. Omitting this call or using None will create a NoOpEncryptor.
+func (b Builder) WithKMSURI(kmsURI optional.Option[string]) Builder {
+	b.kmsURI = kmsURI
+	return b
+}
+
+func (b Builder) Build(ctx context.Context, provider KeyStoreProvider) (DataEncryptor, error) {
+	kmsURI, ok := b.kmsURI.Get()
+	if !ok {
+		return NewNoOpEncryptor(), nil
+	}
+
+	key, err := provider.EnsureKey(ctx, func() ([]byte, error) {
+		return newKey(kmsURI, nil)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to ensure key from provider: %w", err)
+	}
+
+	encryptor, err := NewKMSEncryptorWithKMS(kmsURI, nil, key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create KMS encryptor: %w", err)
+	}
+
+	return encryptor, nil
+}
+
 type DataEncryptor interface {
 	Encrypt(cleartext []byte, dest Encrypted) error
 	Decrypt(encrypted Encrypted) ([]byte, error)
 }
 
-// NoOpEncryptorNext does not encrypt and just passes the input as is.
-type NoOpEncryptorNext struct{}
+// NoOpEncryptor does not encrypt and just passes the input as is.
+type NoOpEncryptor struct{}
 
-func NewNoOpEncryptor() NoOpEncryptorNext {
-	return NoOpEncryptorNext{}
+func NewNoOpEncryptor() NoOpEncryptor {
+	return NoOpEncryptor{}
 }
 
-var _ DataEncryptor = NoOpEncryptorNext{}
+var _ DataEncryptor = NoOpEncryptor{}
 
-func (n NoOpEncryptorNext) Encrypt(cleartext []byte, dest Encrypted) error {
+func (n NoOpEncryptor) Encrypt(cleartext []byte, dest Encrypted) error {
 	dest.Set(cleartext)
 	return nil
 }
 
-func (n NoOpEncryptorNext) Decrypt(encrypted Encrypted) ([]byte, error) {
+func (n NoOpEncryptor) Decrypt(encrypted Encrypted) ([]byte, error) {
 	return encrypted.Bytes(), nil
 }
 
@@ -87,7 +135,7 @@ func newClientWithAEAD(uri string, kms *awsv1kms.KMS) (tink.AEAD, error) {
 	return kekAEAD, nil
 }
 
-func NewKMSEncryptorGenerateKey(uri string, v1client *awsv1kms.KMS) (*KMSEncryptor, error) {
+func newKey(uri string, v1client *awsv1kms.KMS) ([]byte, error) {
 	kekAEAD, err := newClientWithAEAD(uri, v1client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create KMS client: %w", err)
@@ -116,14 +164,7 @@ func NewKMSEncryptorGenerateKey(uri string, v1client *awsv1kms.KMS) (*KMSEncrypt
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt DEK: %w", err)
 	}
-	encryptedKeyset := buf.Bytes()
-
-	return &KMSEncryptor{
-		root:            *handle,
-		kekAEAD:         kekAEAD,
-		encryptedKeyset: encryptedKeyset,
-		cachedDerived:   make(map[SubKey]tink.AEAD),
-	}, nil
+	return buf.Bytes(), nil
 }
 
 func NewKMSEncryptorWithKMS(uri string, v1client *awsv1kms.KMS, encryptedKeyset []byte) (*KMSEncryptor, error) {
