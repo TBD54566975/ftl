@@ -8,7 +8,6 @@ import xyz.block.ftl.Verb;
 
 public class Publisher {
 
-
     @Export
     @TopicDefinition("testTopic")
     interface TestTopic extends Topic<PubSubEvent> {
@@ -32,9 +31,9 @@ public class Publisher {
 
     @Verb
     void publishOne(TestTopic testTopic) throws Exception {
-            var t = java.time.ZonedDateTime.now();
-            Log.infof("Publishing %s", t);
-            testTopic.publish(new PubSubEvent().setTime(t));
+        var t = java.time.ZonedDateTime.now();
+        Log.infof("Publishing %s", t);
+        testTopic.publish(new PubSubEvent().setTime(t));
     }
 
     @Verb
@@ -44,4 +43,3 @@ public class Publisher {
         topic2.publish(new PubSubEvent().setTime(t));
     }
 }
-
