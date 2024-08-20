@@ -13,6 +13,7 @@
 package reflect
 
 import (
+	"container/list"
 	"fmt"
 	"reflect"
 	"strings"
@@ -131,6 +132,11 @@ func copyAny(src any, ptrs map[uintptr]any, copyConf *copyConfig) (dst any) {
 		return src
 	}
 
+	// Special case list.List to handle its internal structure
+	if reflect.TypeOf(src) == reflect.TypeFor[*list.List]() {
+		return copyList(src.(*list.List), ptrs, copyConf)
+	}
+
 	// Look up the corresponding copy function.
 	switch v.Kind() {
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
@@ -146,7 +152,7 @@ func copyAny(src any, ptrs map[uintptr]any, copyConf *copyConfig) (dst any) {
 		dst = copyArray(src, ptrs, copyConf)
 	case reflect.Map:
 		dst = copyMap(src, ptrs, copyConf)
-	case reflect.Ptr, reflect.UnsafePointer:
+	case reflect.Pointer, reflect.UnsafePointer:
 		dst = copyPointer(src, ptrs, copyConf)
 	case reflect.Struct:
 		dst = copyStruct(src, ptrs, copyConf)
@@ -160,10 +166,22 @@ func copyAny(src any, ptrs map[uintptr]any, copyConf *copyConfig) (dst any) {
 	return
 }
 
+func copyList(src *list.List, ptrs map[uintptr]any, copyConf *copyConfig) *list.List {
+	if src == nil {
+		return nil
+	}
+	dst := list.New()
+	for e := src.Front(); e != nil; e = e.Next() {
+		copiedValue := copyAny(e.Value, ptrs, copyConf)
+		dst.PushBack(copiedValue)
+	}
+	return dst
+}
+
 func copyPremitive(src any, ptr map[uintptr]any, copyConf *copyConfig) (dst any) {
 	kind := reflect.ValueOf(src).Kind()
 	switch kind {
-	case reflect.Array, reflect.Chan, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.UnsafePointer:
+	case reflect.Array, reflect.Chan, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice, reflect.Struct, reflect.UnsafePointer:
 		panic(fmt.Sprintf("reflect: internal error: type %v is not a primitive", kind))
 	}
 	dst = src
@@ -225,7 +243,7 @@ func copyPointer(x any, ptrs map[uintptr]any, copyConf *copyConfig) any {
 	t := reflect.TypeOf(x)
 
 	if v.Kind() != reflect.Pointer {
-		panic(fmt.Errorf("reflect: internal error: must be a Pointer or Ptr; got %v", v.Kind()))
+		panic(fmt.Errorf("reflect: internal error: must be a Pointer; got %v", v.Kind()))
 	}
 
 	if v.IsNil() {

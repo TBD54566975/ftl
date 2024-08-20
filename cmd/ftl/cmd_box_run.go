@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/url"
 	"time"
@@ -20,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -58,7 +58,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	}
 
 	// Bring up the DB connection and DAL.
-	conn, err := sql.Open("pgx", config.DSN)
+	conn, err := observability.OpenDBAndInstrument(config.DSN)
 	if err != nil {
 		return fmt.Errorf("failed to bring up DB connection: %w", err)
 	}

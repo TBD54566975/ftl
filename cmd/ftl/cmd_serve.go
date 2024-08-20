@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net"
@@ -148,7 +147,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerCtx = cf.ContextWithSecrets(controllerCtx, sm)
 
 		// Bring up the DB connection and DAL.
-		conn, err := sql.Open("pgx", config.DSN)
+		conn, err := observability.OpenDBAndInstrument(config.DSN)
 		if err != nil {
 			return fmt.Errorf("failed to bring up DB connection: %w", err)
 		}

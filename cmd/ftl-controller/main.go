@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"strconv"
@@ -54,7 +53,7 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	// The FTL controller currently only supports DB as a configuration provider/resolver.
-	conn, err := sql.Open("pgx", cli.ControllerConfig.DSN)
+	conn, err := observability.OpenDBAndInstrument(cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
 
 	encryptionBuilder := encryption.NewBuilder().WithKMSURI(optional.Ptr(cli.ControllerConfig.KMSURI))

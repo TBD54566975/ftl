@@ -12,6 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/observability"
 )
 
 // CreateForDevel creates and migrates a new database for development or testing.
@@ -29,7 +30,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 
 	var conn *stdsql.DB
 	for range 10 {
-		conn, err = stdsql.Open("pgx", noDBDSN.String())
+		conn, err = observability.OpenDBAndInstrument(noDBDSN.String())
 		if err == nil {
 			defer conn.Close()
 			break
@@ -72,7 +73,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 		return nil, err
 	}
 
-	realConn, err := stdsql.Open("pgx", dsn)
+	realConn, err := observability.OpenDBAndInstrument(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
