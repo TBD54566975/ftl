@@ -24,7 +24,6 @@ func buildJavaModule(ctx context.Context, module Module) error {
 	}
 	logger.Infof("Using build command '%s'", module.Config.Build)
 	command := exec.Command(ctx, log.Debug, module.Config.Dir, "bash", "-c", module.Config.Build)
-	command.Env = append(command.Env, "FTL_MODULE_NAME="+module.Config.Module)
 	err := command.RunBuffered(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to build module %q: %w", module.Config.Module, err)
