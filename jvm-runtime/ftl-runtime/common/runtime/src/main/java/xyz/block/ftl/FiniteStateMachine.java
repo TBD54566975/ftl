@@ -4,7 +4,7 @@ public @interface FiniteStateMachine {
 
     String name();
 
-    Class<?> start();
-    Class<?> end();
+    String start();
+    String end();
     Transition[] transitions();
 }

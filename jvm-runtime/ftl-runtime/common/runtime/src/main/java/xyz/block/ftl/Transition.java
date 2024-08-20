@@ -7,6 +7,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({})
 public @interface Transition {
-    Class<?> start();
-    Class<?> end();
+    String start();
+    String end();
 }

@@ -5,39 +5,31 @@ import xyz.block.ftl.Transition;
 import xyz.block.ftl.Verb;
 
 @FiniteStateMachine(name = "SomeMachine",
-        start = ExampleFSM.State1.class,
-        end = ExampleFSM.State4.class,
+        start = "state1",
+        end = "state2",
         transitions = {
-                @Transition(start = ExampleFSM.State1.class, end = ExampleFSM.State2.class),
-                @Transition(start = ExampleFSM.State2.class, end = ExampleFSM.State3.class),
-                @Transition(start = ExampleFSM.State3.class, end = ExampleFSM.State4.class)
+                @Transition(start = "state1", end = "state2"),
+                @Transition(start = "state2", end = "state3"),
+                @Transition(start = "state3", end = "state4")
         }
 )
 public class ExampleFSM {
 
-    public static class State1 {
-        @Verb
-        public void transition() {
-        }
+    @Verb
+    public void state1() {
     }
 
-    public static class State2 {
-        @Verb
-        public void transition() {
-        }
+    @Verb
+    public void state2() {
     }
 
-    public static class State3 {
-        @Verb
-        public void transition(MyTopic topic) {
-        }
+    @Verb
+    public void state3(MyTopic topic) {
     }
 
 
-    public static class State4 {
-        @Verb
-        public void transition() {
-        }
+    @Verb
+    public void state4() {
     }
 
 }
