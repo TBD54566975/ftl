@@ -7,7 +7,6 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -102,8 +101,7 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	var row sql.GetOnlyEncryptionKeyRow
-	row, err = tx.db.GetOnlyEncryptionKey(ctx)
+	row, err := tx.db.GetOnlyEncryptionKey(ctx)
 	if err != nil {
 		if dal.IsNotFound(err) {
 			// No encryption key found, probably using noop.
@@ -119,7 +117,7 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 	}
 	if newTimeline != nil {
 		needsUpdate = true
-		row.VerifyTimeline = optional.Some(*newTimeline)
+		row.VerifyTimeline = optional.Some(newTimeline)
 	}
 
 	newAsync, err := verifySubkey(d.encryptor, row.VerifyAsync)
@@ -128,7 +126,7 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 	}
 	if newAsync != nil {
 		needsUpdate = true
-		row.VerifyAsync = optional.Some(*newAsync)
+		row.VerifyAsync = optional.Some(newAsync)
 	}
 
 	if !needsUpdate {
@@ -149,14 +147,14 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 
 // verifySubkey checks if the subkey is set and if not, sets it to a verification string.
 // returns (nil, nil) if verified and not changed
-func verifySubkey[SK encryption.SubKey](encryptor encryption.DataEncryptor, encrypted optional.Option[encryption.EncryptedColumn[SK]]) (*encryption.EncryptedColumn[SK], error) {
+func verifySubkey[SK encryption.SubKey](encryptor encryption.DataEncryptor, encrypted optional.Option[encryption.EncryptedColumn[SK]]) (encryption.EncryptedColumn[SK], error) {
 	verifyField, ok := encrypted.Get()
 	if !ok {
 		err := encryptor.Encrypt([]byte(verification), &verifyField)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt verification sanity string: %w", err)
 		}
-		return &verifyField, nil
+		return verifyField, nil
 	}
 
 	decrypted, err := encryptor.Decrypt(&verifyField)
