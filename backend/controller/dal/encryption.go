@@ -98,8 +98,7 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 	var tx *Tx
 	tx, err = d.Begin(ctx)
 	if err != nil {
-		err = fmt.Errorf("failed to begin transaction: %w", err)
-		return
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
@@ -108,31 +107,26 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 	if err != nil {
 		if dal.IsNotFound(err) {
 			// No encryption key found, probably using noop.
-			err = nil
-			return
-		} else {
-			err = fmt.Errorf("failed to get encryption row from the db: %w", err)
-			return
+			return nil
 		}
+		return fmt.Errorf("failed to get encryption row from the db: %w", err)
 	}
 
 	up := false
 	up, err = verifySubkey(d.encryptor, row.VerifyTimeline)
 	if err != nil {
-		err = fmt.Errorf("failed to verify timeline subkey: %w", err)
-		return
+		return fmt.Errorf("failed to verify timeline subkey: %w", err)
 	}
 	needsUpdate := up
 
 	up, err = verifySubkey(d.encryptor, row.VerifyAsync)
 	if err != nil {
-		err = fmt.Errorf("failed to verify async subkey: %w", err)
-		return
+		return fmt.Errorf("failed to verify async subkey: %w", err)
 	}
 	needsUpdate = needsUpdate || up
 
 	if !needsUpdate {
-		return
+		return nil
 	}
 
 	if !row.VerifyTimeline.Ok() || !row.VerifyAsync.Ok() {
@@ -141,11 +135,10 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 
 	err = tx.db.UpdateEncryptionVerification(ctx, row.VerifyTimeline, row.VerifyAsync)
 	if err != nil {
-		err = fmt.Errorf("failed to update encryption verification: %w", err)
-		return
+		return fmt.Errorf("failed to update encryption verification: %w", err)
 	}
 
-	return
+	return nil
 }
 
 // verifySubkey checks if the subkey is set and if not, sets it to a verification string.
