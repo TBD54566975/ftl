@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 */.parcel-cache
 *storybook.log
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

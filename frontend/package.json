@@ -10,13 +10,18 @@
     "dev": "vite",
     "lint": "biome check .",
     "lint:fix": "biome format . --write",
+    "test": "playwright test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
   "lint-staged": {
-    "*.(js|cjs|tsx|ts)": ["npm run lint:fix"]
+    "*.(js|cjs|tsx|ts)": [
+      "npm run lint:fix"
+    ]
   },
-  "browserslist": ["> 2%"],
+  "browserslist": [
+    "> 2%"
+  ],
   "source": "index.html",
   "dependencies": {
     "@bufbuild/protoc-gen-es": "1.10.0",
@@ -51,6 +56,7 @@
   "devDependencies": {
     "@biomejs/biome": "1.8.3",
     "@chromatic-com/storybook": "^1.6.1",
+    "@playwright/test": "^1.46.1",
     "@storybook/addon-essentials": "^8.2.7",
     "@storybook/addon-interactions": "^8.2.7",
     "@storybook/addon-links": "^8.2.7",
@@ -62,6 +68,7 @@
     "@storybook/react-vite": "^8.2.7",
     "@storybook/test": "^8.2.7",
     "@tanstack/eslint-plugin-query": "^5.51.15",
+    "@types/node": "^22.4.1",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "buffer": "^6.0.3",

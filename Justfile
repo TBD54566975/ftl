@@ -153,6 +153,9 @@ test-scripts:
     GIT_AUTHOR_EMAIL="no-reply@tbd.email" \
     scripts/tests/test-ensure-frozen-migrations.sh
 
+test-frontend: build-frontend
+  @cd frontend && npx playwright install --with-deps && npm run test
+
 # Lint the frontend
 lint-frontend: build-frontend
   @cd frontend && npm run lint && tsc
