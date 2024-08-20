@@ -2,7 +2,7 @@ import type { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb
 import { verbRefString } from '../verbs/verb.utils'
 
 export const TimelineCall = ({ call }: { call: CallEvent }) => {
-  const title = `${call.sourceVerbRef?.module ? `${verbRefString(call.sourceVerbRef)} -> ` : ''}${verbRefString(call.destinationVerbRef)}`
+  const title = `${call.sourceVerbRef?.module ? `${verbRefString(call.sourceVerbRef)} -> ` : ''}${call.destinationVerbRef ? verbRefString(call.destinationVerbRef) : ''}`
   return (
     <span title={title}>
       {call.sourceVerbRef?.module && (
