@@ -112,18 +112,24 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 		return fmt.Errorf("failed to get encryption row from the db: %w", err)
 	}
 
-	up := false
-	up, err = verifySubkey(d.encryptor, &row.VerifyTimeline)
+	needsUpdate := false
+	newTimeline, err := verifySubkey(d.encryptor, row.VerifyTimeline)
 	if err != nil {
 		return fmt.Errorf("failed to verify timeline subkey: %w", err)
 	}
-	needsUpdate := up
+	if newTimeline != nil {
+		needsUpdate = true
+		row.VerifyTimeline = optional.Some(*newTimeline)
+	}
 
-	up, err = verifySubkey(d.encryptor, &row.VerifyAsync)
+	newAsync, err := verifySubkey(d.encryptor, row.VerifyAsync)
 	if err != nil {
 		return fmt.Errorf("failed to verify async subkey: %w", err)
 	}
-	needsUpdate = needsUpdate || up
+	if newAsync != nil {
+		needsUpdate = true
+		row.VerifyAsync = optional.Some(*newAsync)
+	}
 
 	if !needsUpdate {
 		return nil
@@ -142,26 +148,26 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 }
 
 // verifySubkey checks if the subkey is set and if not, sets it to a verification string.
-// It returns true if the subkey was set.
-func verifySubkey[SK encryption.SubKey](encryptor encryption.DataEncryptor, encrypted *optional.Option[encryption.EncryptedColumn[SK]]) (bool, error) {
+// returns (nil, nil) if verified and not changed
+func verifySubkey[SK encryption.SubKey](encryptor encryption.DataEncryptor, encrypted optional.Option[encryption.EncryptedColumn[SK]]) (*encryption.EncryptedColumn[SK], error) {
 	verifyField, ok := encrypted.Get()
 	if !ok {
 		err := encryptor.Encrypt([]byte(verification), &verifyField)
 		if err != nil {
-			return false, fmt.Errorf("failed to encrypt verification sanity string: %w", err)
+			return nil, fmt.Errorf("failed to encrypt verification sanity string: %w", err)
 		}
-		*encrypted = optional.Some(verifyField)
-		return true, nil
+		return &verifyField, nil
 	}
 
 	decrypted, err := encryptor.Decrypt(&verifyField)
 	if err != nil {
-		return false, fmt.Errorf("failed to decrypt verification sanity string: %w", err)
+		return nil, fmt.Errorf("failed to decrypt verification sanity string: %w", err)
 	}
 
 	if string(decrypted) != verification {
-		return false, fmt.Errorf("decrypted verification string does not match expected value")
+		return nil, fmt.Errorf("decrypted verification string does not match expected value")
 	}
 
-	return false, nil
+	// verified, no need to update
+	return nil, nil
 }
