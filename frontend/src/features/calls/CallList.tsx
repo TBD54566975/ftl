@@ -20,7 +20,7 @@ export const CallList = ({ calls }: { calls: CallEvent[] | undefined }) => {
   }
 
   return (
-    <div className='flex flex-col h-full relative'>
+    <div className='flex flex-col h-full relative min-w-[710px]'>
       <div className='border border-gray-100 dark:border-slate-700 rounded h-full absolute inset-0'>
         <table className={'w-full table-fixed text-gray-600 dark:text-gray-300'}>
           <thead>
