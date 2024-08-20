@@ -1,7 +1,7 @@
 #!/bin/bash
 
 map_to_markdown() {
-  echo 'map("- #\(.number) \(.labels | map("https://github.com/TBD54566975/ftl/labels/\(.name | gsub(" ";"%20"))") | join(" "))")[]'
+  echo 'map("- #\(.number) \(.labels | map(select(.name != "run-all") | map("https://github.com/TBD54566975/ftl/labels/\(.name | gsub(" ";"%20"))") | join(" "))")[]'
 }
 
 list_issues() {
