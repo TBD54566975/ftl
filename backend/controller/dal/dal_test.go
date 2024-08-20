@@ -599,4 +599,24 @@ func TestVerifyEncryption(t *testing.T) {
 		assert.Contains(t, err.Error(), "verification sanity")
 		assert.Contains(t, err.Error(), "verify async")
 	})
+
+	t.Run("SameKeyButEncryptWrongPlainText", func(t *testing.T) {
+		result, err := conn.Exec("DELETE FROM encryption_keys")
+		assert.NoError(t, err)
+		affected, err := result.RowsAffected()
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), affected)
+		dal, err := New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
+		assert.NoError(t, err)
+
+		encrypted := encryption.EncryptedColumn[encryption.TimelineSubKey]{}
+		err = dal.encrypt([]byte("123"), &encrypted)
+		assert.NoError(t, err)
+
+		err = dal.db.UpdateEncryptionVerification(ctx, optional.Some(encrypted), optional.None[encryption.EncryptedAsyncColumn]())
+		assert.NoError(t, err)
+		_, err = New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "string does not match")
+	})
 }
