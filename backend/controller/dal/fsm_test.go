@@ -21,7 +21,7 @@ func TestSendFSMEvent(t *testing.T) {
 	dal, err := New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	_, err = dal.AcquireAsyncCall(ctx)
+	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, dalerrs.ErrNotFound)
 
 	ref := schema.RefKey{Module: "module", Name: "verb"}
@@ -32,7 +32,7 @@ func TestSendFSMEvent(t *testing.T) {
 	assert.IsError(t, err, dalerrs.ErrConflict)
 	assert.EqualError(t, err, "transition already executing: conflict")
 
-	call, err := dal.AcquireAsyncCall(ctx)
+	call, _, err := dal.AcquireAsyncCall(ctx)
 	assert.NoError(t, err)
 	t.Cleanup(func() {
 		err := call.Lease.Release()

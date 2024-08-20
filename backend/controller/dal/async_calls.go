@@ -116,10 +116,10 @@ type AsyncCall struct {
 // AcquireAsyncCall acquires a pending async call to execute.
 //
 // Returns ErrNotFound if there are no async calls to acquire.
-func (d *DAL) AcquireAsyncCall(ctx context.Context) (leaseCtx context.Context, call *AsyncCall, err error) {
+func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx context.Context, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
-		return ctx, nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return nil, ctx, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
@@ -128,22 +128,22 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (leaseCtx context.Context, c
 	if err != nil {
 		err = dalerrs.TranslatePGError(err)
 		if errors.Is(err, dalerrs.ErrNotFound) {
-			return ctx, nil, fmt.Errorf("no pending async calls: %w", dalerrs.ErrNotFound)
+			return nil, ctx, fmt.Errorf("no pending async calls: %w", dalerrs.ErrNotFound)
 		}
-		return ctx, nil, fmt.Errorf("failed to acquire async call: %w", err)
+		return nil, ctx, fmt.Errorf("failed to acquire async call: %w", err)
 	}
 	origin, err := ParseAsyncOrigin(row.Origin)
 	if err != nil {
-		return ctx, nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
+		return nil, ctx, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 
 	decryptedRequest, err := d.decrypt(&row.Request)
 	if err != nil {
-		return ctx, nil, fmt.Errorf("failed to decrypt async call request: %w", err)
+		return nil, ctx, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}
 
 	lease, leaseCtx := d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
-	return leaseCtx, &AsyncCall{
+	return &AsyncCall{
 		ID:                row.AsyncCallID,
 		Verb:              row.Verb,
 		Origin:            origin,
@@ -159,7 +159,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (leaseCtx context.Context, c
 		Backoff:           time.Duration(row.Backoff),
 		MaxBackoff:        time.Duration(row.MaxBackoff),
 		Catching:          row.Catching,
-	}, nil
+	}, leaseCtx, nil
 }
 
 // CompleteAsyncCall completes an async call.

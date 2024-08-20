@@ -1402,7 +1402,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	logger := log.FromContext(ctx)
 	logger.Tracef("Acquiring async call")
 
-	leaseCtx, call, err := s.dal.AcquireAsyncCall(ctx)
+	call, leaseCtx, err := s.dal.AcquireAsyncCall(ctx)
 	if errors.Is(err, dalerrs.ErrNotFound) {
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
