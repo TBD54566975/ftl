@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.arc.Arc;
 import io.quarkus.runtime.annotations.Recorder;
+import xyz.block.ftl.runtime.http.FTLHttpHandler;
+import xyz.block.ftl.runtime.http.HTTPVerbInvoker;
 import xyz.block.ftl.v1.CallRequest;
 
 @Recorder
@@ -34,10 +36,11 @@ public class FTLRecorder {
         }
     }
 
-    public void registerHttpIngress(String module, String verbName) {
+    public void registerHttpIngress(String module, String verbName, boolean base64Encoded) {
         try {
-            Arc.container().instance(VerbRegistry.class).get().register(module, verbName,
-                    Arc.container().instance(FTLHttpHandler.class).get());
+            FTLHttpHandler ftlHttpHandler = Arc.container().instance(FTLHttpHandler.class).get();
+            VerbRegistry verbRegistry = Arc.container().instance(VerbRegistry.class).get();
+            verbRegistry.register(module, verbName, new HTTPVerbInvoker(base64Encoded, ftlHttpHandler));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

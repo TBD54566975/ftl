@@ -16,22 +16,34 @@
 */
 package xyz.block.ftl.java.runtime.it;
 
+import java.nio.charset.StandardCharsets;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.MediaType;
 
 import ftl.echo.EchoClient;
 import ftl.echo.EchoRequest;
 import xyz.block.ftl.Verb;
 
+@Path("/test")
 @ApplicationScoped
 public class FtlJavaRuntimeResource {
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/post")
     public String post(Person person) {
         return "Hello " + person.first() + " " + person.last();
+    }
+
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/bytes")
+    public String bytesHttp(byte[] data) {
+        return "Hello " + new String(data, StandardCharsets.UTF_8);
     }
 
     @Verb
