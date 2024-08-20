@@ -29,6 +29,7 @@
         <version.formatter.plugin>2.24.1</version.formatter.plugin>
         <version.impsort.plugin>1.11.0</version.impsort.plugin>
         <kotlinpoet.version>1.18.1</kotlinpoet.version>
+        <tomlj.version>1.1.1</tomlj.version>
     </properties>
 
     <dependencyManagement>
@@ -71,6 +72,11 @@
                 <version>${grpc.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.tomlj</groupId>
+                <artifactId>tomlj</artifactId>
+                <version>${tomlj.version}</version>
             </dependency>
 
             <dependency>

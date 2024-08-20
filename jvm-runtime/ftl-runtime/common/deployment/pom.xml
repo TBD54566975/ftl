@@ -31,11 +31,14 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-credentials-deployment</artifactId>
         </dependency>
-
         <dependency>
             <groupId>xyz.block.ftl</groupId>
             <artifactId>ftl-jvm-runtime</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.tomlj</groupId>
+            <artifactId>tomlj</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>

@@ -52,10 +52,8 @@ import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
 import io.quarkus.deployment.builditem.ApplicationStartBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
-import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.GeneratedResourceBuildItem;
 import io.quarkus.deployment.builditem.LaunchModeBuildItem;
-import io.quarkus.deployment.builditem.RunTimeConfigBuilderBuildItem;
 import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
@@ -91,7 +89,6 @@ import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.runtime.config.FTLConfigSource;
-import xyz.block.ftl.runtime.config.FTLConfigSourceFactoryBuilder;
 import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.schema.Any;
 import xyz.block.ftl.v1.schema.Array;
@@ -124,7 +121,6 @@ class FtlProcessor {
     private static final Logger log = Logger.getLogger(FtlProcessor.class);
 
     private static final String SCHEMA_OUT = "schema.pb";
-    private static final String FEATURE = "ftl-java-runtime";
     public static final DotName EXPORT = DotName.createSimple(Export.class);
     public static final DotName VERB = DotName.createSimple(Verb.class);
     public static final DotName CRON = DotName.createSimple(Cron.class);
@@ -140,21 +136,6 @@ class FtlProcessor {
     public static final DotName ZONED_DATE_TIME = DotName.createSimple(ZonedDateTime.class);
     public static final DotName NOT_NULL = DotName.createSimple(NotNull.class);
     public static final DotName JSON_NODE = DotName.createSimple(JsonNode.class.getName());
-
-    @BuildStep
-    ModuleNameBuildItem moduleName(ApplicationInfoBuildItem applicationInfoBuildItem, FTLBuildTimeConfig buildTimeConfig) {
-        return new ModuleNameBuildItem(buildTimeConfig.moduleName.orElse(applicationInfoBuildItem.getName()));
-    }
-
-    @BuildStep
-    RunTimeConfigBuilderBuildItem runTimeConfigBuilderBuildItem() {
-        return new RunTimeConfigBuilderBuildItem(FTLConfigSourceFactoryBuilder.class.getName());
-    }
-
-    @BuildStep
-    FeatureBuildItem feature() {
-        return new FeatureBuildItem(FEATURE);
-    }
 
     @BuildStep
     BindableServiceBuildItem verbService() {
