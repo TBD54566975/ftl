@@ -221,6 +221,9 @@ func New(ctx context.Context, conn *stdsql.DB, encryptionBuilder encryption.Buil
 		return nil, fmt.Errorf("failed to setup encryptor: %w", err)
 	}
 	d.encryptor = encryptor
+	if err = d.verifyEncryptor(ctx); err != nil {
+		return nil, fmt.Errorf("failed to verify encryption: %w", err)
+	}
 
 	return d, nil
 }

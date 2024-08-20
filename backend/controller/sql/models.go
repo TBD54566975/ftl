@@ -431,9 +431,11 @@ type DeploymentArtefact struct {
 }
 
 type EncryptionKey struct {
-	ID        int64
-	Key       []byte
-	CreatedAt time.Time
+	ID             int64
+	Key            []byte
+	CreatedAt      time.Time
+	VerifyTimeline encryption.OptionalEncryptedTimelineColumn
+	VerifyAsync    encryption.OptionalEncryptedAsyncColumn
 }
 
 type FsmInstance struct {

@@ -1466,16 +1466,22 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 }
 
 const getOnlyEncryptionKey = `-- name: GetOnlyEncryptionKey :one
-SELECT key
+SELECT key, verify_timeline, verify_async
 FROM encryption_keys
 WHERE id = 1
 `
 
-func (q *Queries) GetOnlyEncryptionKey(ctx context.Context) ([]byte, error) {
+type GetOnlyEncryptionKeyRow struct {
+	Key            []byte
+	VerifyTimeline encryption.OptionalEncryptedTimelineColumn
+	VerifyAsync    encryption.OptionalEncryptedAsyncColumn
+}
+
+func (q *Queries) GetOnlyEncryptionKey(ctx context.Context) (GetOnlyEncryptionKeyRow, error) {
 	row := q.db.QueryRowContext(ctx, getOnlyEncryptionKey)
-	var key []byte
-	err := row.Scan(&key)
-	return key, err
+	var i GetOnlyEncryptionKeyRow
+	err := row.Scan(&i.Key, &i.VerifyTimeline, &i.VerifyAsync)
+	return i, err
 }
 
 const getProcessList = `-- name: GetProcessList :many
@@ -2663,6 +2669,18 @@ func (q *Queries) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const updateEncryptionVerification = `-- name: UpdateEncryptionVerification :exec
+UPDATE encryption_keys
+SET verify_timeline = $1,
+    verify_async = $2
+WHERE id = 1
+`
+
+func (q *Queries) UpdateEncryptionVerification(ctx context.Context, verifyTimeline encryption.OptionalEncryptedTimelineColumn, verifyAsync encryption.OptionalEncryptedAsyncColumn) error {
+	_, err := q.db.ExecContext(ctx, updateEncryptionVerification, verifyTimeline, verifyAsync)
+	return err
 }
 
 const upsertController = `-- name: UpsertController :one
