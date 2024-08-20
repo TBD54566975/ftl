@@ -67,6 +67,6 @@ func (m *CallMetrics) Request(ctx context.Context, verb *schemapb.Ref, startTime
 	msToComplete := timeSinceMS(startTime)
 	m.msToComplete.Record(ctx, msToComplete, metric.WithAttributes(attrs...))
 
-	attrs = append(attrs, attribute.String(callRunTimeBucketAttr, logBucket(2, msToComplete)))
+	attrs = append(attrs, attribute.String(callRunTimeBucketAttr, logBucket(4, msToComplete, optional.Some(3), optional.Some(7))))
 	m.requests.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
