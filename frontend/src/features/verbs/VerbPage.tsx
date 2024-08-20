@@ -47,7 +47,7 @@ export const VerbPage = () => {
   const callEvents = useStreamVerbCalls(module?.name, verb?.verb?.name)
   const calls: CallEvent[] = callEvents.data || []
 
-  if (!module || !verb || callEvents.isLoading) {
+  if (!module || !verb) {
     return (
       <div className='flex justify-center items-center min-h-screen'>
         <Loader />
