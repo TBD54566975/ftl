@@ -29,8 +29,8 @@ export const CallList = ({ calls }: { calls: CallEvent[] | undefined }) => {
               <th className='p-1 text-left border-b w-14 border-gray-100 dark:border-slate-700 flex-none sticky top-0 z-10'>Dur.</th>
               <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none sticky top-0 z-10'>Source</th>
               <th className='p-1 text-left border-b w-40 border-gray-100 dark:border-slate-700 flex-none sticky top-0 z-10'>Destination</th>
-              <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-1 flex-grow sticky top-0 z-10'>Request</th>
-              <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-1 flex-grow sticky top-0 z-10'>Response</th>
+              <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 min-w-[60px] flex-1 flex-grow sticky top-0 z-10'>Request</th>
+              <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 min-w-[70px] flex-1 flex-grow sticky top-0 z-10'>Response</th>
               <th className='p-1 text-left border-b border-gray-100 dark:border-slate-700 flex-1 flex-grow sticky top-0 z-10'>Error</th>
             </tr>
           </thead>
@@ -59,10 +59,10 @@ export const CallList = ({ calls }: { calls: CallEvent[] | undefined }) => {
                   >
                     {call.destinationVerbRef && verbRefString(call.destinationVerbRef)}
                   </td>
-                  <td className='p-1 flex-1 flex-grow truncate' title={call.request}>
+                  <td className='p-1 min-w-[60px] flex-1 flex-grow truncate' title={call.request}>
                     {call.request}
                   </td>
-                  <td className='p-1 flex-1 flex-grow truncate' title={call.response}>
+                  <td className='p-1 min-w-[70px] flex-1 flex-grow truncate' title={call.response}>
                     {call.response}
                   </td>
                   <td className='p-1 flex-1 flex-grow truncate text-red-500' title={call.error}>
