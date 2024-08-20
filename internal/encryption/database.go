@@ -50,7 +50,7 @@ type SubKey interface{ SubKey() string }
 // TimelineSubKey is a type that represents the subkey for logs.
 type TimelineSubKey struct{}
 
-func (TimelineSubKey) SubKey() string { return "logs" }
+func (TimelineSubKey) SubKey() string { return "timeline" }
 
 // AsyncSubKey is a type that represents the subkey for async.
 type AsyncSubKey struct{}
