@@ -113,13 +113,13 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 	}
 
 	up := false
-	up, err = verifySubkey(d.encryptor, row.VerifyTimeline)
+	up, err = verifySubkey(d.encryptor, &row.VerifyTimeline)
 	if err != nil {
 		return fmt.Errorf("failed to verify timeline subkey: %w", err)
 	}
 	needsUpdate := up
 
-	up, err = verifySubkey(d.encryptor, row.VerifyAsync)
+	up, err = verifySubkey(d.encryptor, &row.VerifyAsync)
 	if err != nil {
 		return fmt.Errorf("failed to verify async subkey: %w", err)
 	}
@@ -143,13 +143,14 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 
 // verifySubkey checks if the subkey is set and if not, sets it to a verification string.
 // It returns true if the subkey was set.
-func verifySubkey[SK encryption.SubKey](encryptor encryption.DataEncryptor, encrypted optional.Option[encryption.EncryptedColumn[SK]]) (bool, error) {
+func verifySubkey[SK encryption.SubKey](encryptor encryption.DataEncryptor, encrypted *optional.Option[encryption.EncryptedColumn[SK]]) (bool, error) {
 	verifyField, ok := encrypted.Get()
 	if !ok {
 		err := encryptor.Encrypt([]byte(verification), &verifyField)
 		if err != nil {
 			return false, fmt.Errorf("failed to encrypt verification sanity string: %w", err)
 		}
+		*encrypted = optional.Some(verifyField)
 		return true, nil
 	}
 
