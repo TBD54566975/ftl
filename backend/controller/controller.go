@@ -1414,6 +1414,8 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		}
 		return 0, err
 	}
+	// use originalCtx for things that should are done outside of the lease lifespan
+	originalCtx := ctx
 	ctx = leaseCtx
 
 	// Extract the otel context from the call
@@ -1446,7 +1448,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 				break
 
 			case dal.AsyncOriginPubSub:
-				go s.pubSub.AsyncCallDidCommit(ctx, origin)
+				go s.pubSub.AsyncCallDidCommit(originalCtx, origin)
 
 			default:
 				break
