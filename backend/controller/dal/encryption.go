@@ -117,7 +117,6 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 	}
 
 	up := false
-
 	up, err = verifySubkey(d.encryptor, row.VerifyTimeline)
 	if err != nil {
 		err = fmt.Errorf("failed to verify timeline subkey: %w", err)
