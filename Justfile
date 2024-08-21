@@ -154,7 +154,10 @@ test-scripts:
     scripts/tests/test-ensure-frozen-migrations.sh
 
 test-frontend: build-frontend
-  @cd frontend && npx playwright install --with-deps && npm run test
+  @cd frontend && npm run test
+
+e2e-frontend: build-frontend
+  @cd frontend && npx playwright install --with-deps && npm run e2e
 
 # Lint the frontend
 lint-frontend: build-frontend

@@ -197,6 +197,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: cashapp/activate-hermit@v1
       - run: go-arch-lint check || true
+  console-e2e:
+    name: Console e2e
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Console NPM Install
+        run: just npm-install
+      - name: Console e2e
+        run: just e2e-frontend
   integration-shard:
     name: Shard Integration Tests
     if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
