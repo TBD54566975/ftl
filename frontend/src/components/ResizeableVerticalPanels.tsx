@@ -44,12 +44,14 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
   }
 
   const onDrag = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging) {
-      const newHeight = e.clientY
-      const maxHeight = window.innerHeight - minBottomPanelHeight
-      if (newHeight >= minTopPanelHeight && newHeight <= maxHeight) {
-        setTopPanelHeight(newHeight - 44)
-      }
+    if (!isDragging || !containerRef.current) {
+      return
+    }
+    const containerDims = containerRef.current.getBoundingClientRect()
+    const newHeight = e.clientY - containerDims.top
+    const maxHeight = containerDims.height - minBottomPanelHeight
+    if (newHeight >= minTopPanelHeight && newHeight <= maxHeight) {
+      setTopPanelHeight(newHeight)
     }
   }
 
