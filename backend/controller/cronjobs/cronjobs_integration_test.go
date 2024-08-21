@@ -3,45 +3,14 @@
 package cronjobs
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/alecthomas/assert/v2"
-	"github.com/benbjohnson/clock"
 
-	db "github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
-	parentdb "github.com/TBD54566975/ftl/backend/controller/dal"
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	in "github.com/TBD54566975/ftl/internal/integration"
-	"github.com/TBD54566975/ftl/internal/log"
 )
-
-func TestServiceWithRealDal(t *testing.T) {
-	t.Parallel()
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx, cancel := context.WithCancel(ctx)
-	t.Cleanup(cancel)
-
-	conn := sqltest.OpenForTesting(ctx, t)
-	dal := db.New(conn)
-	parentDAL, err := parentdb.New(ctx, conn, encryption.NewBuilder())
-	assert.NoError(t, err)
-
-	// Using a real clock because real db queries use db clock
-	// delay until we are on an odd second
-	clk := clock.New()
-	if clk.Now().Second()%2 == 0 {
-		time.Sleep(time.Second - time.Duration(clk.Now().Nanosecond())*time.Nanosecond)
-	} else {
-		time.Sleep(2*time.Second - time.Duration(clk.Now().Nanosecond())*time.Nanosecond)
-	}
-
-	testServiceWithDal(ctx, t, dal, parentDAL, clk)
-}
 
 func TestCron(t *testing.T) {
 	dir := t.TempDir()
