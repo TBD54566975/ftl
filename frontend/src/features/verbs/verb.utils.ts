@@ -86,6 +86,16 @@ export const defaultRequest = (verb?: Verb): string => {
   }
 }
 
+export function updateSavedRequestLocalStorage(module?: Module, verb?: Verb, json: string) {
+  if (!module || !verb) {
+    return
+  }
+  const editorTextKey = `${module.name}-${verb.verb?.name}-editor-text`
+  const jsonSchemaKey = `${module.name}-${verb.verb?.name}-json-schema`
+  localStorage.setItem(editorTextKey, json)
+  localStorage.setItem(jsonSchemaKey, verb.jsonRequestSchema)
+}
+
 export const ingress = (verb?: Verb) => {
   return (verb?.verb?.metadata?.find((meta) => meta.value.case === 'ingress')?.value?.value as MetadataIngress) || null
 }

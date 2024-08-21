@@ -7,34 +7,45 @@ import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import type { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils'
 import { VerbFormInput } from './VerbFormInput'
-import { createVerbRequest, defaultRequest, fullRequestPath, httpPopulatedRequestPath, isHttpIngress, requestType, simpleJsonSchema } from './verb.utils'
+import { createVerbRequest, defaultRequest, fullRequestPath, httpPopulatedRequestPath, isHttpIngress, requestType, simpleJsonSchema, updateSavedRequestLocalStorage } from './verb.utils'
 
 export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb }) => {
   const client = useClient(VerbService)
   const [activeTabId, setActiveTabId] = useState('body')
-  const [initialEditorState, setInitialEditorText] = useState<InitialState>({ initialText: '' })
+  const [initialEditorText, setInitialEditorText] = useState<InitialState>({ initialText: '' })
   const [editorText, setEditorText] = useState('')
-  const [initialHeadersState, setInitialHeadersText] = useState<InitialState>({ initialText: '' })
+  const [initialHeadersText, setInitialHeadersText] = useState<InitialState>({ initialText: '' })
   const [headersText, setHeadersText] = useState('')
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  // Saved editor text is associated with the JSON schema of the verb at the time the text
+  // was saved. If the verb schema changes, then that invalidates the previously saved
+  // editor text.
   const editorTextKey = `${module?.name}-${verb?.verb?.name}-editor-text`
+  const jsonSchemaKey = `${module?.name}-${verb?.verb?.name}-json-schema`
+
   const headersTextKey = `${module?.name}-${verb?.verb?.name}-headers-text`
+
+  function chooseInitialEditorValue(verb) {
+    const savedJsonSchema = localStorage.getItem(jsonSchemaKey)
+    const savedEditorValue = localStorage.getItem(editorTextKey)
+    let editorValue: string
+    if (savedEditorValue && savedEditorValue !== '' && savedJsonSchema === verb.jsonRequestSchema) {
+      return savedEditorValue
+    } else {
+      return defaultRequest(verb)
+    }
+  }
 
   useEffect(() => {
     if (verb) {
-      const savedEditorValue = localStorage.getItem(editorTextKey)
-      let editorValue: string
-      if (savedEditorValue != null && savedEditorValue !== '') {
-        editorValue = savedEditorValue
-      } else {
-        editorValue = defaultRequest(verb)
-      }
+      const editorValue = chooseInitialEditorValue(verb)
 
       const schemaString = JSON.stringify(simpleJsonSchema(verb))
       setInitialEditorText({ initialText: editorValue, schema: schemaString })
-      localStorage.setItem(editorTextKey, editorValue)
+
+      updateSavedRequestLocalStorage(module, verb, editorValue)
       handleEditorTextChanged(editorValue)
 
       const savedHeadersValue = localStorage.getItem(headersTextKey)
@@ -52,7 +63,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
 
   const handleEditorTextChanged = (text: string) => {
     setEditorText(text)
-    localStorage.setItem(editorTextKey, text)
+    updateSavedRequestLocalStorage(module, verb, text)
   }
 
   const handleHeadersTextChanged = (text: string) => {
@@ -102,7 +113,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
 
   const bottomText = response ?? error ?? ''
 
-  const bodyEditor = <CodeEditor initialState={initialEditorState} onTextChanged={handleEditorTextChanged} />
+  const bodyEditor = <CodeEditor initialState={initialEditorText} onTextChanged={handleEditorTextChanged} />
   const bodyPanels =
     bottomText === '' ? (
       bodyEditor
@@ -149,7 +160,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
           {activeTabId === 'body' && bodyPanels}
           {activeTabId === 'verbschema' && <CodeEditor initialState={{ initialText: verb?.schema ?? 'what', readonly: true }} />}
           {activeTabId === 'jsonschema' && <CodeEditor initialState={{ initialText: verb?.jsonRequestSchema ?? '', readonly: true }} />}
-          {activeTabId === 'headers' && <CodeEditor initialState={initialHeadersState} onTextChanged={handleHeadersTextChanged} />}
+          {activeTabId === 'headers' && <CodeEditor initialState={initialHeadersText} onTextChanged={handleHeadersTextChanged} />}
         </div>
       </div>
     </div>
