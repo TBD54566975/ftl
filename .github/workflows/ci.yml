@@ -136,6 +136,8 @@ jobs:
         run: npm run lint
       - name: Console Build
         run: just build-frontend
+      - name: Console Test
+        run: just test-frontend
   extension:
     name: VSCode Extension
     runs-on: ubuntu-latest

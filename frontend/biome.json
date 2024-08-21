@@ -18,14 +18,14 @@
         "noArrayIndexKey": "off"
       }
     },
-    "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx", "src/**/*.cjs", "src/**/*.mjs"],
+    "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx", "src/**/*.cjs", "src/**/*.mjs", "tests/**/*.ts"],
     "ignore": ["./node_modules", "./dist", "./src/protos"]
   },
   "formatter": {
     "indentStyle": "space",
     "indentWidth": 2,
     "lineWidth": 160,
-    "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx", "src/**/*.cjs", "src/**/*.mjs"],
+    "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx", "src/**/*.cjs", "src/**/*.mjs", "tests/**/*.ts"],
     "ignore": ["./node_modules", "./dist", "./src/protos"]
   },
   "javascript": {
