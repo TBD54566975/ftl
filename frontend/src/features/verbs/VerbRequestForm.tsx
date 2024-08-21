@@ -102,16 +102,16 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
 
   const bottomText = response ?? error ?? ''
 
-  const bodyEditor =
-    <CodeEditor
-      initialState={initialEditorState}
-      onTextChanged={handleEditorTextChanged}
-    />
-  const bodyPanels = bottomText === '' ? bodyEditor :
-    <ResizableVerticalPanels
-      topPanelContent={bodyEditor}
-      bottomPanelContent={<CodeEditor initialState={{ initialText: bottomText, readonly: true }} onTextChanged={setHeadersText} />}
-    />
+  const bodyEditor = <CodeEditor initialState={initialEditorState} onTextChanged={handleEditorTextChanged} />
+  const bodyPanels =
+    bottomText === '' ? (
+      bodyEditor
+    ) : (
+      <ResizableVerticalPanels
+        topPanelContent={bodyEditor}
+        bottomPanelContent={<CodeEditor initialState={{ initialText: bottomText, readonly: true }} onTextChanged={setHeadersText} />}
+      />
+    )
 
   return (
     <div className='flex flex-col h-full overflow-hidden pt-4'>
