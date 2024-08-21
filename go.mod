@@ -138,7 +138,6 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.4.0
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/serialx/hashring v0.0.0-20200727003509-22c0c7ab6b1b
 	github.com/swaggest/refl v1.3.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.28.0 // indirect
 	golang.org/x/crypto v0.26.0 // indirect

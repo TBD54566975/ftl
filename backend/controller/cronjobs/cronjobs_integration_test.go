@@ -26,6 +26,8 @@ func TestCron(t *testing.T) {
 		in.WithLanguages("go", "java"),
 		in.CopyModule("cron"),
 		in.Deploy("cron"),
+		in.Wait("cron"),
+		in.Sleep(1000000000), //1 second
 		func(t testing.TB, ic in.TestContext) {
 			_, err := os.Stat(tmpFile)
 			assert.NoError(t, err)
