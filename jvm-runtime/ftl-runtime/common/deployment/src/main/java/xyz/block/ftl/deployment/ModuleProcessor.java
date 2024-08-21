@@ -16,31 +16,20 @@ import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.deployment.Capabilities;
-import io.quarkus.deployment.Capability;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.ApplicationArchivesBuildItem;
 import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
-import io.quarkus.deployment.builditem.ApplicationStartBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
-import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.deployment.builditem.RunTimeConfigBuilderBuildItem;
-import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
-import io.quarkus.deployment.builditem.nativeimage.ReflectiveClassBuildItem;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
-import io.quarkus.netty.runtime.virtual.VirtualServerChannel;
-import io.quarkus.vertx.core.deployment.CoreVertxBuildItem;
-import io.quarkus.vertx.core.deployment.EventLoopCountBuildItem;
+import io.quarkus.vertx.http.deployment.RequireSocketHttpBuildItem;
 import io.quarkus.vertx.http.deployment.RequireVirtualHttpBuildItem;
-import io.quarkus.vertx.http.deployment.WebsocketSubProtocolsBuildItem;
-import io.quarkus.vertx.http.runtime.HttpBuildTimeConfig;
-import io.quarkus.vertx.http.runtime.VertxHttpRecorder;
 import xyz.block.ftl.runtime.FTLDatasourceCredentials;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.JsonSerializationConfig;
@@ -166,30 +155,10 @@ public class ModuleProcessor {
                 .setUnremovable().build();
     }
 
-    /**
-     * This is a huge hack that is needed until Quarkus supports both virtual and socket based HTTP
-     */
-    @Record(ExecutionTime.RUNTIME_INIT)
     @BuildStep
-    void openSocket(ApplicationStartBuildItem start,
-            LaunchModeBuildItem launchMode,
-            CoreVertxBuildItem vertx,
-            ShutdownContextBuildItem shutdown,
-            BuildProducer<ReflectiveClassBuildItem> reflectiveClass,
-            HttpBuildTimeConfig httpBuildTimeConfig,
-            java.util.Optional<RequireVirtualHttpBuildItem> requireVirtual,
-            EventLoopCountBuildItem eventLoopCount,
-            List<WebsocketSubProtocolsBuildItem> websocketSubProtocols,
-            Capabilities capabilities,
-            VertxHttpRecorder recorder) throws IOException {
-        reflectiveClass
-                .produce(ReflectiveClassBuildItem.builder(VirtualServerChannel.class)
-                        .build());
-        recorder.startServer(vertx.getVertx(), shutdown,
-                launchMode.getLaunchMode(), true, false,
-                eventLoopCount.getEventLoopCount(),
-                websocketSubProtocols.stream().map(bi -> bi.getWebsocketSubProtocols())
-                        .collect(Collectors.toList()),
-                launchMode.isAuxiliaryApplication(), !capabilities.isPresent(Capability.VERTX_WEBSOCKETS));
+    void openSocket(BuildProducer<RequireVirtualHttpBuildItem> virtual,
+            BuildProducer<RequireSocketHttpBuildItem> socket) throws IOException {
+        socket.produce(RequireSocketHttpBuildItem.MARKER);
+        virtual.produce(RequireVirtualHttpBuildItem.MARKER);
     }
 }
