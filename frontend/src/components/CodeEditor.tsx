@@ -10,7 +10,7 @@ import { autocompletion, closeBrackets, closeBracketsKeymap } from '@codemirror/
 import { atomone } from '@uiw/codemirror-theme-atomone'
 import { githubLight } from '@uiw/codemirror-theme-github'
 
-import { defaultKeymap } from '@codemirror/commands'
+import { defaultKeymap, indentWithTab } from '@codemirror/commands'
 import { handleRefresh, jsonSchemaHover, jsonSchemaLinter, stateExtensions } from 'codemirror-json-schema'
 import { json5, json5ParseLinter } from 'codemirror-json5'
 import { useCallback, useEffect, useRef } from 'react'
@@ -21,7 +21,7 @@ const commonExtensions = [
   bracketMatching(),
   highlightActiveLineGutter(),
   closeBrackets(),
-  keymap.of([...closeBracketsKeymap, ...foldKeymap, ...lintKeymap, ...defaultKeymap]),
+  keymap.of([indentWithTab, ...closeBracketsKeymap, ...foldKeymap, ...lintKeymap, ...defaultKeymap]),
   EditorView.lineWrapping,
   EditorState.tabSize.of(2),
 ]
