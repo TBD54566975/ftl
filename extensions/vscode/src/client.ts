@@ -1,10 +1,5 @@
-import * as vscode from 'vscode'
-import {
-  LanguageClient,
-  LanguageClientOptions,
-  ServerOptions,
-  State,
-} from 'vscode-languageclient/node'
+import type * as vscode from 'vscode'
+import { LanguageClient, type LanguageClientOptions, type ServerOptions, State } from 'vscode-languageclient/node'
 import { FTLStatus } from './status'
 
 export class FTLClient {
@@ -35,12 +30,12 @@ export class FTLClient {
       run: {
         command: `${ftlPath}`,
         args: ['dev', ...flags],
-        options: { cwd: cwd }
+        options: { cwd: cwd },
       },
       debug: {
         command: `${ftlPath}`,
         args: ['dev', ...flags],
-        options: { cwd: cwd }
+        options: { cwd: cwd },
       },
     }
 
@@ -52,14 +47,9 @@ export class FTLClient {
       outputChannel: this.outputChannel,
     }
 
-    this.client = new LanguageClient(
-      this.clientId,
-      this.clientName,
-      serverOptions,
-      clientOptions
-    )
+    this.client = new LanguageClient(this.clientId, this.clientName, serverOptions, clientOptions)
 
-    const options = (this.client.isInDebugMode) ? serverOptions.debug : serverOptions.run
+    const options = this.client.isInDebugMode ? serverOptions.debug : serverOptions.run
     this.outputChannel.appendLine(`Running ${ftlPath} ${options.args?.join(' ')}`)
     console.log(options)
 
@@ -69,11 +59,11 @@ export class FTLClient {
       console.log('Build status', message)
       const state = message.state
 
-      if (state == 'building') {
+      if (state === 'building') {
         FTLStatus.buildRunning(this.statusBarItem)
-      } else if (state == 'success') {
+      } else if (state === 'success') {
         FTLStatus.buildOK(this.statusBarItem)
-      } else if (state == 'failure') {
+      } else if (state === 'failure') {
         FTLStatus.buildError(this.statusBarItem, message.error)
       } else {
         FTLStatus.ftlError(this.statusBarItem, 'Unknown build status from FTL LSP server')
@@ -131,24 +121,25 @@ export class FTLClient {
 
     const timeout = 10000 // 10 seconds
     if (this.isClientStarting) {
-      this.outputChannel.appendLine(`Waiting for client to complete startup before stopping`)
+      this.outputChannel.appendLine('Waiting for client to complete startup before stopping')
       const startWaitTime = Date.now()
       while (this.isClientStarting) {
-        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise((resolve) => setTimeout(resolve, 100))
         if (Date.now() - startWaitTime > timeout) {
-          this.outputChannel.appendLine(`Timeout waiting for client to start`)
+          this.outputChannel.appendLine('Timeout waiting for client to start')
           break
         }
       }
     }
 
     console.log('Stopping client')
-    const serverProcess = this.client!['_serverProcess']
+    // biome-ignore lint/complexity/useLiteralKeys: we need this :)
+    const serverProcess = this.client?.['_serverProcess']
     this.isExpectingStop = true
 
     try {
-      await this.client!.stop()
-      await this.client!.dispose()
+      await this.client?.stop()
+      await this.client?.dispose()
       this.client = undefined
       console.log('Client stopped')
     } catch (error) {
@@ -160,7 +151,7 @@ export class FTLClient {
       try {
         process.kill(serverProcess.pid, 'SIGTERM')
         // Wait a bit to see if the process terminates
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 1000))
 
         if (!serverProcess.killed) {
           console.log('Server process did not terminate with SIGTERM, trying SIGKILL')
@@ -177,7 +168,7 @@ export class FTLClient {
           console.log('Failed to kill server process', killError)
         }
       }
-    } else if (serverProcess && serverProcess.killed) {
+    } else if (serverProcess?.killed) {
       console.log('Server process was already killed')
     }
   }

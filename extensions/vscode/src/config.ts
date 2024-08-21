@@ -1,9 +1,9 @@
-import * as vscode from 'vscode'
-import * as path from 'path'
-import { exec } from 'child_process'
-import { promisify } from 'util'
-import semver from 'semver'
+import { exec } from 'node:child_process'
+import * as path from 'node:path'
+import { promisify } from 'node:util'
 import { lookpath } from 'lookpath'
+import semver from 'semver'
+import * as vscode from 'vscode'
 
 export const MIN_FTL_VERSION = '0.169.0'
 
