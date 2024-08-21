@@ -1429,6 +1429,9 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		if returnErr == nil {
 			// Post-commit notification based on origin
 			switch origin := call.Origin.(type) {
+			case dal.AsyncOriginCron:
+				break
+
 			case dal.AsyncOriginFSM:
 				break
 

@@ -1805,7 +1805,10 @@ WHERE d.min_replicas > 0
       FROM async_calls ac
       WHERE
         ac.cron_job_key = j.key
-        AND ac.scheduled_at > j.last_execution::TIMESTAMPTZ
+        AND (
+          ac.scheduled_at > j.last_execution OR
+          (ac.scheduled_at = j.last_execution AND ac.state IN ('pending', 'executing'))
+        )
     )
   )
 FOR UPDATE SKIP LOCKED

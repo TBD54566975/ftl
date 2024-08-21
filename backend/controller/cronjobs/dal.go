@@ -76,8 +76,8 @@ func cronJobFromRow(c sql.CronJob, d sql.Deployment) model.CronJob {
 	}
 }
 
-// GetUnscheduledCronJobs returns all cron jobs with start_time before provided startTime for
-// deployments with min replicas > 0 with no async calls after last_execution
+// GetUnscheduledCronJobs returns all cron_jobs rows with start_time before provided startTime for
+// deployments with min replicas > 0 with no pending corresponding async_calls after last_execution
 func (d *DAL) GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]model.CronJob, error) {
 	rows, err := d.db.GetUnscheduledCronJobs(ctx, startTime)
 	if err != nil {
@@ -88,7 +88,7 @@ func (d *DAL) GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) (
 	}), nil
 }
 
-// GetCronJobByKey returns a cron job by its key
+// GetCronJobByKey returns a cron_job row by its key
 func (d *DAL) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (model.CronJob, error) {
 	row, err := d.db.GetCronJobByKey(ctx, key)
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
@@ -88,37 +87,36 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context) {
 	logger := log.FromContext(ctx).Scope("cron")
 	logger.Tracef("New deployment; scheduling cron jobs")
-	_, err := s.scheduleCronJobs(ctx)
+	err := s.scheduleCronJobs(ctx)
 	if err != nil {
 		logger.Errorf(err, "failed to schedule cron jobs: %v", err)
 	}
 }
 
 // scheduleCronJobs schedules all cron jobs that are not already scheduled.
-func (s *Service) scheduleCronJobs(ctx context.Context) (dur time.Duration, err error) {
+func (s *Service) scheduleCronJobs(ctx context.Context) (err error) {
 	logger := log.FromContext(ctx).Scope("cron")
 	now := s.clock.Now().UTC()
-	next := now.Add(time.Hour)
 
 	tx, err := s.dal.Begin(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
 	jobs, err := tx.GetUnscheduledCronJobs(ctx, now)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get unscheduled cron jobs: %w", err)
+		return fmt.Errorf("failed to get unscheduled cron jobs: %w", err)
 	}
 	logger.Tracef("Scheduling %d cron jobs", len(jobs))
 	for _, job := range jobs {
 		err = s.scheduleCronJob(ctx, tx, job)
 		if err != nil {
-			return 0, fmt.Errorf("failed to schedule cron job %q: %w", job.Key, err)
+			return fmt.Errorf("failed to schedule cron job %q: %w", job.Key, err)
 		}
 	}
 
-	return next.Sub(now), nil
+	return nil
 }
 
 // OnJobCompletion is called by the controller when a cron job async call completes. We schedule
