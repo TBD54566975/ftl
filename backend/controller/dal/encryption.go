@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -66,10 +68,11 @@ func (d *DAL) EnsureKey(ctx context.Context, generateKey func() ([]byte, error))
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	encryptedKey, err = tx.db.GetOnlyEncryptionKey(ctx)
+	var key []byte
+	row, err := tx.db.GetOnlyEncryptionKey(ctx)
 	if err != nil && dal.IsNotFound(err) {
 		logger.Debugf("No encryption key found, generating a new one")
-		key, err := generateKey()
+		key, err = generateKey()
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate key: %w", err)
 		}
@@ -84,5 +87,85 @@ func (d *DAL) EnsureKey(ctx context.Context, generateKey func() ([]byte, error))
 	}
 
 	logger.Debugf("Encryption key found, using it")
-	return encryptedKey, nil
+
+	return row.Key, nil
+}
+
+const verification = "FTL - Towards a 𝝺-calculus for large-scale systems"
+
+func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
+	var tx *Tx
+	tx, err = d.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+
+	row, err := tx.db.GetOnlyEncryptionKey(ctx)
+	if err != nil {
+		if dal.IsNotFound(err) {
+			// No encryption key found, probably using noop.
+			return nil
+		}
+		return fmt.Errorf("failed to get encryption row from the db: %w", err)
+	}
+
+	needsUpdate := false
+	newTimeline, err := verifySubkey(d.encryptor, row.VerifyTimeline)
+	if err != nil {
+		return fmt.Errorf("failed to verify timeline subkey: %w", err)
+	}
+	if newTimeline != nil {
+		needsUpdate = true
+		row.VerifyTimeline = optional.Some(newTimeline)
+	}
+
+	newAsync, err := verifySubkey(d.encryptor, row.VerifyAsync)
+	if err != nil {
+		return fmt.Errorf("failed to verify async subkey: %w", err)
+	}
+	if newAsync != nil {
+		needsUpdate = true
+		row.VerifyAsync = optional.Some(newAsync)
+	}
+
+	if !needsUpdate {
+		return nil
+	}
+
+	if !row.VerifyTimeline.Ok() || !row.VerifyAsync.Ok() {
+		panic("should be unreachable. verifySubkey should have set the subkey")
+	}
+
+	err = tx.db.UpdateEncryptionVerification(ctx, row.VerifyTimeline, row.VerifyAsync)
+	if err != nil {
+		return fmt.Errorf("failed to update encryption verification: %w", err)
+	}
+
+	return nil
+}
+
+// verifySubkey checks if the subkey is set and if not, sets it to a verification string.
+// returns (nil, nil) if verified and not changed
+func verifySubkey[SK encryption.SubKey](encryptor encryption.DataEncryptor, encrypted optional.Option[encryption.EncryptedColumn[SK]]) (encryption.EncryptedColumn[SK], error) {
+	verifyField, ok := encrypted.Get()
+	if !ok {
+		err := encryptor.Encrypt([]byte(verification), &verifyField)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt verification sanity string: %w", err)
+		}
+		return verifyField, nil
+	}
+
+	decrypted, err := encryptor.Decrypt(&verifyField)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt verification sanity string: %w", err)
+	}
+
+	if string(decrypted) != verification {
+		return nil, fmt.Errorf("decrypted verification string does not match expected value")
+	}
+
+	// verified, no need to update
+	return nil, nil
 }

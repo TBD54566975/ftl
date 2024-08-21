@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/alecthomas/types/optional"
 	awsv1kms "github.com/aws/aws-sdk-go/service/kms"
@@ -99,6 +100,7 @@ type KMSEncryptor struct {
 	root            keyset.Handle
 	kekAEAD         tink.AEAD
 	encryptedKeyset []byte
+	cachedDerivedMu sync.RWMutex
 	cachedDerived   map[SubKey]tink.AEAD
 }
 
@@ -206,7 +208,10 @@ func deriveKeyset(root keyset.Handle, salt []byte) (*keyset.Handle, error) {
 }
 
 func (k *KMSEncryptor) getDerivedPrimitive(subKey SubKey) (tink.AEAD, error) {
-	if primitive, ok := k.cachedDerived[subKey]; ok {
+	k.cachedDerivedMu.RLock()
+	primitive, ok := k.cachedDerived[subKey]
+	k.cachedDerivedMu.RUnlock()
+	if ok {
 		return primitive, nil
 	}
 
@@ -215,12 +220,15 @@ func (k *KMSEncryptor) getDerivedPrimitive(subKey SubKey) (tink.AEAD, error) {
 		return nil, fmt.Errorf("failed to derive keyset: %w", err)
 	}
 
-	primitive, err := aead.New(derived)
+	primitive, err = aead.New(derived)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create primitive: %w", err)
 	}
 
+	k.cachedDerivedMu.Lock()
 	k.cachedDerived[subKey] = primitive
+	k.cachedDerivedMu.Unlock()
+
 	return primitive, nil
 }
 
