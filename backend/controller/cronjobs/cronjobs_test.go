@@ -9,7 +9,6 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/either"
-	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
@@ -18,6 +17,7 @@ import (
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
+	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -35,7 +35,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal := &DAL{db: sql.NewDB(conn)}
 
-	parentDAL, err := parentdal.New(ctx, conn, optional.None[string]())
+	parentDAL, err := parentdal.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
 	moduleName := "initial"
