@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CodeEditor, type InitialState } from '../../components/CodeEditor'
+import { ResizableVerticalPanels } from '../../components/ResizeableVerticalPanels'
 import { useClient } from '../../hooks/use-client'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
@@ -101,8 +102,19 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
 
   const bottomText = response ?? error ?? ''
 
+  const bodyEditor = <CodeEditor initialState={initialEditorState} onTextChanged={handleEditorTextChanged} />
+  const bodyPanels =
+    bottomText === '' ? (
+      bodyEditor
+    ) : (
+      <ResizableVerticalPanels
+        topPanelContent={bodyEditor}
+        bottomPanelContent={<CodeEditor initialState={{ initialText: bottomText, readonly: true }} onTextChanged={setHeadersText} />}
+      />
+    )
+
   return (
-    <div className='flex flex-col h-full overflow-hidden pt-4 px-4'>
+    <div className='flex flex-col h-full overflow-hidden pt-4'>
       <VerbFormInput
         requestType={requestType(verb)}
         initialPath={httpPopulatedRequestPath(module, verb)}
@@ -112,7 +124,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       />
       <div>
         <div className='border-b border-gray-200 dark:border-white/10'>
-          <nav className='-mb-px flex space-x-6' aria-label='Tabs'>
+          <nav className='-mb-px flex space-x-6 pl-4' aria-label='Tabs'>
             {tabs.map((tab) => (
               <button
                 type='button'
@@ -133,16 +145,11 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
         </div>
       </div>
       <div className='flex-1 overflow-hidden'>
-        <div className='h-1/2 overflow-y-scroll'>
-          {activeTabId === 'body' && <CodeEditor initialState={initialEditorState} onTextChanged={handleEditorTextChanged} />}
+        <div className='h-full overflow-y-scroll'>
+          {activeTabId === 'body' && bodyPanels}
           {activeTabId === 'verbschema' && <CodeEditor initialState={{ initialText: verb?.schema ?? 'what', readonly: true }} />}
           {activeTabId === 'jsonschema' && <CodeEditor initialState={{ initialText: verb?.jsonRequestSchema ?? '', readonly: true }} />}
           {activeTabId === 'headers' && <CodeEditor initialState={initialHeadersState} onTextChanged={handleHeadersTextChanged} />}
-        </div>
-
-        <div className='border-b border-gray-200 dark:border-white/10' />
-        <div className='h-1/2 overflow-y-scroll'>
-          <CodeEditor initialState={{ initialText: bottomText, readonly: true }} onTextChanged={setHeadersText} />
         </div>
       </div>
     </div>

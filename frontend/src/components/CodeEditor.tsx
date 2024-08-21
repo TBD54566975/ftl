@@ -78,7 +78,15 @@ export const CodeEditor = ({ initialState, onTextChanged }: { initialState: Init
 
       const state = EditorState.create({
         doc: initialState.initialText,
-        extensions: [commonExtensions, isDarkMode ? atomone : githubLight, json5(), editingExtensions],
+        extensions: [
+          ...commonExtensions,
+          isDarkMode ? atomone : githubLight,
+          json5(),
+          editingExtensions,
+          EditorView.theme({
+            '&': { height: '100%' },
+          }),
+        ],
       })
 
       const view = new EditorView({
@@ -94,5 +102,5 @@ export const CodeEditor = ({ initialState, onTextChanged }: { initialState: Init
     }
   }, [initialState, isDarkMode])
 
-  return <div ref={editorContainerRef} />
+  return <div className='h-full' ref={editorContainerRef} />
 }
