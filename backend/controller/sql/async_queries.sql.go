@@ -13,7 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
-	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 )
 
@@ -74,22 +73,4 @@ func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams
 	var id int64
 	err := row.Scan(&id)
 	return id, err
-}
-
-const isCronJobPending = `-- name: IsCronJobPending :one
-SELECT EXISTS (
-    SELECT 1
-    FROM cron_jobs j
-      INNER JOIN async_calls ac on j.last_async_call_id = ac.id
-    WHERE j.key = $1::cron_job_key
-      AND ac.scheduled_at > $2::TIMESTAMPTZ
-      AND ac.state = 'pending'
-) AS pending
-`
-
-func (q *Queries) IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error) {
-	row := q.db.QueryRowContext(ctx, isCronJobPending, key, startTime)
-	var pending bool
-	err := row.Scan(&pending)
-	return pending, err
 }
