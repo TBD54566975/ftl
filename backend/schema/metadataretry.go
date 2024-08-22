@@ -109,17 +109,21 @@ func (m *MetadataRetry) RetryParams() (RetryParams, error) {
 
 	// min backoff
 	if m.MinBackoff == "" {
-		return RetryParams{}, fmt.Errorf("retry must have a minimum backoff")
+		if params.Count != 0 {
+			return RetryParams{}, fmt.Errorf("retry must have a minimum backoff")
+		}
+		params.MinBackoff = MinBackoffLimit
+	} else {
+		minBackoff, err := parseRetryDuration(m.MinBackoff)
+		if err != nil {
+			return RetryParams{}, fmt.Errorf("could not parse min backoff duration: %w", err)
+		}
+		params.MinBackoff = minBackoff
 	}
-	minBackoff, err := parseRetryDuration(m.MinBackoff)
-	if err != nil {
-		return RetryParams{}, fmt.Errorf("could not parse min backoff duration: %w", err)
-	}
-	params.MinBackoff = minBackoff
 
 	// max backoff
 	if m.MaxBackoff == "" {
-		params.MaxBackoff = max(minBackoff, DefaultMaxBackoff)
+		params.MaxBackoff = max(params.MinBackoff, DefaultMaxBackoff)
 	} else {
 		maxBackoff, err := parseRetryDuration(m.MaxBackoff)
 		if err != nil {

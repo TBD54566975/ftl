@@ -877,8 +877,8 @@ func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, 
 
 func validateRetries(module *Module, retry *MetadataRetry, requestType optional.Option[Type], scopes Scopes, schema optional.Option[*Schema]) (merr []error) {
 	// Validate count
-	if retry.Count != nil && *retry.Count <= 0 {
-		merr = append(merr, errorf(retry, "retry count must be at least 1"))
+	if retry.Count != nil && *retry.Count < 0 {
+		merr = append(merr, errorf(retry, "retry count can not be negative"))
 	}
 
 	// Validate parsing of durations
@@ -893,6 +893,9 @@ func validateRetries(module *Module, retry *MetadataRetry, requestType optional.
 
 	// validate catch
 	if retry.Catch == nil {
+		if retryParams.Count == 0 && retry.MinBackoff != "" {
+			merr = append(merr, errorf(retry, "can not define a backoff duration when retry count is 0 and no catch is declared"))
+		}
 		return
 	}
 	req, ok := requestType.Get()
