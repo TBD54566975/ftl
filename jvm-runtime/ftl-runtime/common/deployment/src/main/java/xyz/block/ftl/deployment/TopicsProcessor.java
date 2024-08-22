@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
-import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
 
@@ -17,10 +17,10 @@ import io.quarkus.deployment.builditem.GeneratedClassBuildItem;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import xyz.block.ftl.Export;
-import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Topic;
 import xyz.block.ftl.TopicDefinition;
 import xyz.block.ftl.runtime.TopicHelper;
+import xyz.block.ftl.v1.schema.Decl;
 
 public class TopicsProcessor {
 
@@ -81,17 +81,18 @@ public class TopicsProcessor {
     }
 
     @BuildStep
-    SubscriptionMetaAnnotationsBuildItem subscriptionAnnotations(CombinedIndexBuildItem combinedIndexBuildItem,
-            ModuleNameBuildItem moduleNameBuildItem) {
-
-        Map<DotName, SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation> annotations = new HashMap<>();
-        for (var subscriptions : combinedIndexBuildItem.getComputingIndex().getAnnotations(Subscription.class)) {
-            if (subscriptions.target().kind() != AnnotationTarget.Kind.CLASS) {
-                continue;
+    public SchemaContributorBuildItem topicSchema(TopicsBuildItem topics) {
+        //register all the topics we are defining in the module definition
+        return new SchemaContributorBuildItem(new Consumer<ModuleBuilder>() {
+            @Override
+            public void accept(ModuleBuilder moduleBuilder) {
+                for (var topic : topics.getTopics().values()) {
+                    moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
+                            .setExport(topic.exported())
+                            .setName(topic.topicName())
+                            .setEvent(moduleBuilder.buildType(topic.eventType(), topic.exported())).build()).build());
+                }
             }
-            annotations.put(subscriptions.target().asClass().name(),
-                    SubscriptionMetaAnnotationsBuildItem.fromJandex(subscriptions, moduleNameBuildItem.getModuleName()));
-        }
-        return new SubscriptionMetaAnnotationsBuildItem(annotations);
+        });
     }
 }

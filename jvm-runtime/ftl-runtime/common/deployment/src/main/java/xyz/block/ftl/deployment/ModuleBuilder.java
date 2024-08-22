@@ -6,26 +6,41 @@ import java.lang.reflect.Modifier;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.IndexView;
+import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.PrimitiveType;
+import org.jboss.jandex.VoidType;
 import org.jetbrains.annotations.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.arc.processor.DotNames;
+import xyz.block.ftl.Config;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.GeneratedRef;
+import xyz.block.ftl.LeaseClient;
+import xyz.block.ftl.Secret;
+import xyz.block.ftl.VerbName;
+import xyz.block.ftl.runtime.FTLRecorder;
+import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
+import xyz.block.ftl.v1.CallRequest;
 import xyz.block.ftl.v1.schema.Any;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
@@ -37,14 +52,16 @@ import xyz.block.ftl.v1.schema.Float;
 import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataAlias;
+import xyz.block.ftl.v1.schema.MetadataCalls;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Optional;
 import xyz.block.ftl.v1.schema.Ref;
 import xyz.block.ftl.v1.schema.Time;
 import xyz.block.ftl.v1.schema.Type;
 import xyz.block.ftl.v1.schema.Unit;
+import xyz.block.ftl.v1.schema.Verb;
 
-public class SchemaBuilder {
+public class ModuleBuilder {
 
     public static final String BUILTIN = "builtin";
 
@@ -56,17 +73,180 @@ public class SchemaBuilder {
     public static final DotName GENERATED_REF = DotName.createSimple(GeneratedRef.class);
     public static final DotName EXPORT = DotName.createSimple(Export.class);
 
-    final IndexView index;
-    final Module.Builder moduleBuilder;
-    final Map<TypeKey, ExistingRef> dataElements = new HashMap<>();
-    final String moduleName;
+    private final IndexView index;
+    private final Module.Builder moduleBuilder;
+    private final Map<TypeKey, ExistingRef> dataElements = new HashMap<>();
+    private final String moduleName;
+    private final Set<String> knownSecrets = new HashSet<>();
+    private final Set<String> knownConfig = new HashSet<>();
+    private final Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics;
+    private final Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients;
+    private final FTLRecorder recorder;
 
-    public SchemaBuilder(IndexView index, String moduleName) {
+    public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
+            Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder) {
         this.index = index;
         this.moduleName = moduleName;
         this.moduleBuilder = Module.newBuilder()
                 .setName(moduleName)
                 .setBuiltin(false);
+        this.knownTopics = knownTopics;
+        this.verbClients = verbClients;
+        this.recorder = recorder;
+    }
+
+    public static @NotNull String methodToName(MethodInfo method) {
+        if (method.hasAnnotation(VerbName.class)) {
+            return method.annotation(VerbName.class).value().asString();
+        }
+        return method.name();
+    }
+
+    public String getModuleName() {
+        return moduleName;
+    }
+
+    public static Class<?> loadClass(org.jboss.jandex.Type param) throws ClassNotFoundException {
+        if (param.kind() == org.jboss.jandex.Type.Kind.PARAMETERIZED_TYPE) {
+            return Class.forName(param.asParameterizedType().name().toString(), false,
+                    Thread.currentThread().getContextClassLoader());
+        } else if (param.kind() == org.jboss.jandex.Type.Kind.CLASS) {
+            return Class.forName(param.name().toString(), false, Thread.currentThread().getContextClassLoader());
+        } else if (param.kind() == org.jboss.jandex.Type.Kind.PRIMITIVE) {
+            switch (param.asPrimitiveType().primitive()) {
+                case BOOLEAN:
+                    return Boolean.TYPE;
+                case BYTE:
+                    return Byte.TYPE;
+                case SHORT:
+                    return Short.TYPE;
+                case INT:
+                    return Integer.TYPE;
+                case LONG:
+                    return Long.TYPE;
+                case FLOAT:
+                    return java.lang.Float.TYPE;
+                case DOUBLE:
+                    return Double.TYPE;
+                case CHAR:
+                    return Character.TYPE;
+                default:
+                    throw new RuntimeException("Unknown primitive type " + param.asPrimitiveType().primitive());
+            }
+        } else if (param.kind() == org.jboss.jandex.Type.Kind.ARRAY) {
+            ArrayType array = param.asArrayType();
+            if (array.componentType().kind() == org.jboss.jandex.Type.Kind.PRIMITIVE) {
+                switch (array.componentType().asPrimitiveType().primitive()) {
+                    case BOOLEAN:
+                        return boolean[].class;
+                    case BYTE:
+                        return byte[].class;
+                    case SHORT:
+                        return short[].class;
+                    case INT:
+                        return int[].class;
+                    case LONG:
+                        return long[].class;
+                    case FLOAT:
+                        return float[].class;
+                    case DOUBLE:
+                        return double[].class;
+                    case CHAR:
+                        return char[].class;
+                    default:
+                        throw new RuntimeException("Unknown primitive type " + param.asPrimitiveType().primitive());
+                }
+            }
+        }
+        throw new RuntimeException("Unknown type " + param.kind());
+
+    }
+
+    public void registerVerbMethod(MethodInfo method, String className,
+            boolean exported, BodyType bodyType, Consumer<Verb.Builder> metadataCallback) {
+        try {
+            List<Class<?>> parameterTypes = new ArrayList<>();
+            List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
+            org.jboss.jandex.Type bodyParamType = null;
+            xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
+            String verbName = ModuleBuilder.methodToName(method);
+            MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
+            for (var param : method.parameters()) {
+                if (param.hasAnnotation(Secret.class)) {
+                    Class<?> paramType = ModuleBuilder.loadClass(param.type());
+                    parameterTypes.add(paramType);
+                    String name = param.annotation(Secret.class).value().asString();
+                    paramMappers.add(new VerbRegistry.SecretSupplier(name, paramType));
+                    if (!knownSecrets.contains(name)) {
+                        addDecls(Decl.newBuilder().setSecret(xyz.block.ftl.v1.schema.Secret.newBuilder()
+                                .setType(buildType(param.type(), false)).setName(name)).build());
+                        knownSecrets.add(name);
+                    }
+                } else if (param.hasAnnotation(Config.class)) {
+                    Class<?> paramType = ModuleBuilder.loadClass(param.type());
+                    parameterTypes.add(paramType);
+                    String name = param.annotation(Config.class).value().asString();
+                    paramMappers.add(new VerbRegistry.ConfigSupplier(name, paramType));
+                    if (!knownConfig.contains(name)) {
+                        addDecls(Decl.newBuilder().setConfig(xyz.block.ftl.v1.schema.Config.newBuilder()
+                                .setType(buildType(param.type(), false)).setName(name)).build());
+                        knownConfig.add(name);
+                    }
+                } else if (knownTopics.containsKey(param.type().name())) {
+                    var topic = knownTopics.get(param.type().name());
+                    Class<?> paramType = ModuleBuilder.loadClass(param.type());
+                    parameterTypes.add(paramType);
+                    paramMappers.add(recorder.topicSupplier(topic.generatedProducer(), verbName));
+                } else if (verbClients.containsKey(param.type().name())) {
+                    var client = verbClients.get(param.type().name());
+                    Class<?> paramType = ModuleBuilder.loadClass(param.type());
+                    parameterTypes.add(paramType);
+                    paramMappers.add(recorder.verbClientSupplier(client.generatedClient()));
+                    callsMetadata.addCalls(Ref.newBuilder().setName(client.name()).setModule(client.module()).build());
+                } else if (FTLDotNames.LEASE_CLIENT.equals(param.type().name())) {
+                    parameterTypes.add(LeaseClient.class);
+                    paramMappers.add(recorder.leaseClientSupplier());
+                } else if (bodyType != BodyType.DISALLOWED && bodyParamType == null) {
+                    bodyParamType = param.type();
+                    Class<?> paramType = ModuleBuilder.loadClass(param.type());
+                    parameterTypes.add(paramType);
+                    //TODO: map and list types
+                    paramMappers.add(new VerbRegistry.BodySupplier(paramType));
+                } else {
+                    throw new RuntimeException("Unknown parameter type " + param.type() + " on FTL method: "
+                            + method.declaringClass().name() + "." + method.name());
+                }
+            }
+            if (bodyParamType == null) {
+                if (bodyType == BodyType.REQUIRED) {
+                    throw new RuntimeException("Missing required payload parameter");
+                }
+                bodyParamType = VoidType.VOID;
+            }
+            if (callsMetadata.getCallsCount() > 0) {
+                verbBuilder.addMetadata(Metadata.newBuilder().setCalls(callsMetadata));
+            }
+
+            //TODO: we need better handling around Optional
+            recorder.registerVerb(moduleName, verbName, method.name(), parameterTypes,
+                    Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers,
+                    method.returnType() == VoidType.VOID);
+            verbBuilder
+                    .setName(verbName)
+                    .setExport(exported)
+                    .setRequest(buildType(bodyParamType, exported))
+                    .setResponse(buildType(method.returnType(), exported));
+
+            if (metadataCallback != null) {
+                metadataCallback.accept(verbBuilder);
+            }
+            addDecls(Decl.newBuilder().setVerb(verbBuilder)
+                    .build());
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to process FTL method " + method.declaringClass().name() + "." + method.name(),
+                    e);
+        }
     }
 
     public Type buildType(org.jboss.jandex.Type type, boolean export) {
@@ -240,7 +420,7 @@ public class SchemaBuilder {
         buildDataElement(data, clazz.superName());
     }
 
-    public SchemaBuilder addDecls(Decl decl) {
+    public ModuleBuilder addDecls(Decl decl) {
         moduleBuilder.addDecls(decl);
         return this;
     }
@@ -257,4 +437,9 @@ public class SchemaBuilder {
 
     }
 
+    public enum BodyType {
+        DISALLOWED,
+        ALLOWED,
+        REQUIRED
+    }
 }

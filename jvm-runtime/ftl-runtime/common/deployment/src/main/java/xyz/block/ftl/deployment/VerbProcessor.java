@@ -10,6 +10,7 @@ import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
 
+import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanGizmoAdaptor;
 import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
@@ -27,8 +28,10 @@ import xyz.block.ftl.VerbClientEmpty;
 import xyz.block.ftl.VerbClientSink;
 import xyz.block.ftl.VerbClientSource;
 import xyz.block.ftl.runtime.VerbClientHelper;
+import xyz.block.ftl.v1.schema.Metadata;
+import xyz.block.ftl.v1.schema.MetadataCronJob;
 
-public class VerbClientsProcessor {
+public class VerbProcessor {
 
     public static final DotName VERB_CLIENT = DotName.createSimple(VerbClient.class);
     public static final DotName VERB_CLIENT_SINK = DotName.createSimple(VerbClientSink.class);
@@ -37,7 +40,7 @@ public class VerbClientsProcessor {
     public static final String TEST_ANNOTATION = "xyz.block.ftl.java.test.FTLManaged";
 
     @BuildStep
-    VerbClientBuildItem handleTopics(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedClients,
+    VerbClientBuildItem handleVerbClients(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedClients,
             BuildProducer<GeneratedBeanBuildItem> generatedBeanBuildItemBuildProducer,
             ModuleNameBuildItem moduleNameBuildItem,
             LaunchModeBuildItem launchModeBuildItem) {
@@ -218,4 +221,34 @@ public class VerbClientsProcessor {
         }
         return new VerbClientBuildItem(clients);
     }
+
+    @BuildStep
+    public void verbsAndCron(CombinedIndexBuildItem index,
+            BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem,
+            BuildProducer<SchemaContributorBuildItem> schemaContributorBuildItemBuildProducer) {
+        var beans = AdditionalBeanBuildItem.builder().setUnremovable();
+        for (var verb : index.getIndex().getAnnotations(FTLDotNames.VERB)) {
+            boolean exported = verb.target().hasAnnotation(FTLDotNames.EXPORT);
+            var method = verb.target().asMethod();
+            String className = method.declaringClass().name().toString();
+            beans.addBeanClass(className);
+            schemaContributorBuildItemBuildProducer.produce(new SchemaContributorBuildItem(moduleBuilder -> moduleBuilder
+                    .registerVerbMethod(method, className, exported, ModuleBuilder.BodyType.ALLOWED, null)));
+        }
+        for (var cron : index.getIndex().getAnnotations(FTLDotNames.CRON)) {
+            var method = cron.target().asMethod();
+            String className = method.declaringClass().name().toString();
+            beans.addBeanClass(className);
+
+            schemaContributorBuildItemBuildProducer
+                    .produce(
+                            new SchemaContributorBuildItem(moduleBuilder -> moduleBuilder.registerVerbMethod(method, className,
+                                    false, ModuleBuilder.BodyType.ALLOWED, (builder -> builder.addMetadata(Metadata.newBuilder()
+                                            .setCronJob(MetadataCronJob.newBuilder().setCron(cron.value().asString()))
+                                            .build())))));
+        }
+        additionalBeanBuildItem.produce(beans.build());
+
+    }
+
 }
