@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/alecthomas/types/optional"
 	awsv1kms "github.com/aws/aws-sdk-go/service/kms"
@@ -17,6 +16,8 @@ import (
 	"github.com/tink-crypto/tink-go/v2/prf"
 	"github.com/tink-crypto/tink-go/v2/testing/fakekms"
 	"github.com/tink-crypto/tink-go/v2/tink"
+
+	"github.com/TBD54566975/ftl/internal/mutex"
 )
 
 // Encrypted is an interface for values that contain encrypted data.
@@ -100,8 +101,7 @@ type KMSEncryptor struct {
 	root            keyset.Handle
 	kekAEAD         tink.AEAD
 	encryptedKeyset []byte
-	cachedDerivedMu sync.RWMutex
-	cachedDerived   map[SubKey]tink.AEAD
+	cachedDerived   *mutex.Mutex[map[SubKey]tink.AEAD]
 }
 
 var _ DataEncryptor = &KMSEncryptor{}
@@ -185,7 +185,7 @@ func NewKMSEncryptorWithKMS(uri string, v1client *awsv1kms.KMS, encryptedKeyset 
 		root:            *handle,
 		kekAEAD:         kekAEAD,
 		encryptedKeyset: encryptedKeyset,
-		cachedDerived:   make(map[SubKey]tink.AEAD),
+		cachedDerived:   mutex.New(map[SubKey]tink.AEAD{}),
 	}, nil
 }
 
@@ -208,9 +208,9 @@ func deriveKeyset(root keyset.Handle, salt []byte) (*keyset.Handle, error) {
 }
 
 func (k *KMSEncryptor) getDerivedPrimitive(subKey SubKey) (tink.AEAD, error) {
-	k.cachedDerivedMu.RLock()
-	primitive, ok := k.cachedDerived[subKey]
-	k.cachedDerivedMu.RUnlock()
+	cachedDerived := k.cachedDerived.Lock()
+	defer k.cachedDerived.Unlock()
+	primitive, ok := cachedDerived[subKey]
 	if ok {
 		return primitive, nil
 	}
@@ -225,10 +225,7 @@ func (k *KMSEncryptor) getDerivedPrimitive(subKey SubKey) (tink.AEAD, error) {
 		return nil, fmt.Errorf("failed to create primitive: %w", err)
 	}
 
-	k.cachedDerivedMu.Lock()
-	k.cachedDerived[subKey] = primitive
-	k.cachedDerivedMu.Unlock()
-
+	cachedDerived[subKey] = primitive
 	return primitive, nil
 }
 
