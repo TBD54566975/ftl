@@ -17,7 +17,7 @@ type Querier interface {
 	GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error)
 	GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]GetUnscheduledCronJobsRow, error)
 	IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error)
-	UpdateCronJobExecution(ctx context.Context, lastExecution time.Time, nextExecution time.Time, key model.CronJobKey) error
+	UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error
 }
 
 var _ Querier = (*Queries)(nil)

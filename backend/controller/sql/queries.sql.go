@@ -440,7 +440,7 @@ WITH updated AS (
   SET state = 'error'::async_call_state,
       error = $7::TEXT
   WHERE id = $8::BIGINT
-  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, cron_job_key
+  RETURNING id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
 )
 INSERT INTO async_calls (
   verb,
@@ -805,7 +805,7 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 }
 
 const getCronJobByKey = `-- name: GetCronJobByKey :one
-SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE j.key = $1::cron_job_key
@@ -830,6 +830,7 @@ func (q *Queries) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (Ge
 		&i.CronJob.NextExecution,
 		&i.CronJob.ModuleName,
 		&i.CronJob.LastExecution,
+		&i.CronJob.LastAsyncCallID,
 		&i.Deployment.ID,
 		&i.Deployment.CreatedAt,
 		&i.Deployment.ModuleID,
@@ -1793,22 +1794,18 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 }
 
 const getUnscheduledCronJobs = `-- name: GetUnscheduledCronJobs :many
-SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE d.min_replicas > 0
   AND j.start_time < $1::TIMESTAMPTZ
   AND (
-    j.last_execution IS NULL
+    j.last_async_call_id IS NULL
     OR NOT EXISTS (
       SELECT 1
       FROM async_calls ac
-      WHERE
-        ac.cron_job_key = j.key
-        AND (
-          ac.scheduled_at > j.last_execution OR
-          (ac.scheduled_at = j.last_execution AND ac.state IN ('pending', 'executing'))
-        )
+      WHERE ac.id = j.last_async_call_id
+        AND ac.state IN ('pending', 'executing')
     )
   )
 FOR UPDATE SKIP LOCKED
@@ -1838,6 +1835,7 @@ func (q *Queries) GetUnscheduledCronJobs(ctx context.Context, startTime time.Tim
 			&i.CronJob.NextExecution,
 			&i.CronJob.ModuleName,
 			&i.CronJob.LastExecution,
+			&i.CronJob.LastAsyncCallID,
 			&i.Deployment.ID,
 			&i.Deployment.CreatedAt,
 			&i.Deployment.ModuleID,
@@ -2166,7 +2164,7 @@ func (q *Queries) KillStaleRunners(ctx context.Context, timeout sqltypes.Duratio
 }
 
 const loadAsyncCall = `-- name: LoadAsyncCall :one
-SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context, cron_job_key
+SELECT id, created_at, lease_id, verb, state, origin, scheduled_at, request, response, error, remaining_attempts, backoff, max_backoff, catch_verb, catching, parent_request_key, trace_context
 FROM async_calls
 WHERE id = $1
 `
@@ -2192,7 +2190,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 		&i.Catching,
 		&i.ParentRequestKey,
 		&i.TraceContext,
-		&i.CronJobKey,
 	)
 	return i, err
 }
@@ -2508,6 +2505,31 @@ func (q *Queries) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key
 	return column_1, err
 }
 
+const updateCronJobExecution = `-- name: UpdateCronJobExecution :exec
+UPDATE cron_jobs
+  SET last_async_call_id = $1::BIGINT,
+    last_execution = $2::TIMESTAMPTZ,
+    next_execution = $3::TIMESTAMPTZ
+  WHERE key = $4::cron_job_key
+`
+
+type UpdateCronJobExecutionParams struct {
+	LastAsyncCallID int64
+	LastExecution   time.Time
+	NextExecution   time.Time
+	Key             model.CronJobKey
+}
+
+func (q *Queries) UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error {
+	_, err := q.db.ExecContext(ctx, updateCronJobExecution,
+		arg.LastAsyncCallID,
+		arg.LastExecution,
+		arg.NextExecution,
+		arg.Key,
+	)
+	return err
+}
+
 const updateEncryptionVerification = `-- name: UpdateEncryptionVerification :exec
 UPDATE encryption_keys
 SET verify_timeline = $1,
@@ -2517,18 +2539,6 @@ WHERE id = 1
 
 func (q *Queries) UpdateEncryptionVerification(ctx context.Context, verifyTimeline encryption.OptionalEncryptedTimelineColumn, verifyAsync encryption.OptionalEncryptedAsyncColumn) error {
 	_, err := q.db.ExecContext(ctx, updateEncryptionVerification, verifyTimeline, verifyAsync)
-	return err
-}
-
-const updateCronJobExecution = `-- name: UpdateCronJobExecution :exec
-UPDATE cron_jobs
-  SET last_execution = $1::TIMESTAMPTZ,
-    next_execution = $2::TIMESTAMPTZ
-  WHERE key = $3::cron_job_key
-`
-
-func (q *Queries) UpdateCronJobExecution(ctx context.Context, lastExecution time.Time, nextExecution time.Time, key model.CronJobKey) error {
-	_, err := q.db.ExecContext(ctx, updateCronJobExecution, lastExecution, nextExecution, key)
 	return err
 }
 

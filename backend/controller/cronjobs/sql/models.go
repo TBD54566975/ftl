@@ -347,7 +347,6 @@ type AsyncCall struct {
 	Catching          bool
 	ParentRequestKey  optional.Option[string]
 	TraceContext      pqtype.NullRawMessage
-	CronJobKey        optional.Option[model.CronJobKey]
 }
 
 type Controller struct {
@@ -360,15 +359,16 @@ type Controller struct {
 }
 
 type CronJob struct {
-	ID            int64
-	Key           model.CronJobKey
-	DeploymentID  int64
-	Verb          string
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	ModuleName    string
-	LastExecution optional.Option[time.Time]
+	ID              int64
+	Key             model.CronJobKey
+	DeploymentID    int64
+	Verb            string
+	Schedule        string
+	StartTime       time.Time
+	NextExecution   time.Time
+	ModuleName      string
+	LastExecution   optional.Option[time.Time]
+	LastAsyncCallID optional.Option[int64]
 }
 
 type Deployment struct {

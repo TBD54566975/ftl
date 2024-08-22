@@ -48,7 +48,7 @@ func (q *Queries) CreateCronJob(ctx context.Context, arg CreateCronJobParams) er
 }
 
 const getCronJobByKey = `-- name: GetCronJobByKey :one
-SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE j.key = $1::cron_job_key
@@ -73,6 +73,7 @@ func (q *Queries) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (Ge
 		&i.CronJob.NextExecution,
 		&i.CronJob.ModuleName,
 		&i.CronJob.LastExecution,
+		&i.CronJob.LastAsyncCallID,
 		&i.Deployment.ID,
 		&i.Deployment.CreatedAt,
 		&i.Deployment.ModuleID,
@@ -85,22 +86,18 @@ func (q *Queries) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (Ge
 }
 
 const getUnscheduledCronJobs = `-- name: GetUnscheduledCronJobs :many
-SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE d.min_replicas > 0
   AND j.start_time < $1::TIMESTAMPTZ
   AND (
-    j.last_execution IS NULL
+    j.last_async_call_id IS NULL
     OR NOT EXISTS (
       SELECT 1
       FROM async_calls ac
-      WHERE
-        ac.cron_job_key = j.key
-        AND (
-          ac.scheduled_at > j.last_execution OR
-          (ac.scheduled_at = j.last_execution AND ac.state IN ('pending', 'executing'))
-        )
+      WHERE ac.id = j.last_async_call_id
+        AND ac.state IN ('pending', 'executing')
     )
   )
 FOR UPDATE SKIP LOCKED
@@ -130,6 +127,7 @@ func (q *Queries) GetUnscheduledCronJobs(ctx context.Context, startTime time.Tim
 			&i.CronJob.NextExecution,
 			&i.CronJob.ModuleName,
 			&i.CronJob.LastExecution,
+			&i.CronJob.LastAsyncCallID,
 			&i.Deployment.ID,
 			&i.Deployment.CreatedAt,
 			&i.Deployment.ModuleID,
@@ -153,12 +151,25 @@ func (q *Queries) GetUnscheduledCronJobs(ctx context.Context, startTime time.Tim
 
 const updateCronJobExecution = `-- name: UpdateCronJobExecution :exec
 UPDATE cron_jobs
-  SET last_execution = $1::TIMESTAMPTZ,
-    next_execution = $2::TIMESTAMPTZ
-  WHERE key = $3::cron_job_key
+  SET last_async_call_id = $1::BIGINT,
+    last_execution = $2::TIMESTAMPTZ,
+    next_execution = $3::TIMESTAMPTZ
+  WHERE key = $4::cron_job_key
 `
 
-func (q *Queries) UpdateCronJobExecution(ctx context.Context, lastExecution time.Time, nextExecution time.Time, key model.CronJobKey) error {
-	_, err := q.db.ExecContext(ctx, updateCronJobExecution, lastExecution, nextExecution, key)
+type UpdateCronJobExecutionParams struct {
+	LastAsyncCallID int64
+	LastExecution   time.Time
+	NextExecution   time.Time
+	Key             model.CronJobKey
+}
+
+func (q *Queries) UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error {
+	_, err := q.db.ExecContext(ctx, updateCronJobExecution,
+		arg.LastAsyncCallID,
+		arg.LastExecution,
+		arg.NextExecution,
+		arg.Key,
+	)
 	return err
 }

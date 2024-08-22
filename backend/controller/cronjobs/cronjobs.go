@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 
 	cronsql "github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
@@ -173,7 +172,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 	}
 
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
-	_, err = tx.db.CreateAsyncCall(ctx, cronsql.CreateAsyncCallParams{
+	id, err := tx.db.CreateAsyncCall(ctx, cronsql.CreateAsyncCallParams{
 		ScheduledAt:       nextAttemptForJob,
 		Verb:              schema.RefKey{Module: job.Verb.Module, Name: job.Verb.Name},
 		Origin:            fmt.Sprintf("cron:%s", job.Key),
@@ -181,7 +180,6 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 		RemainingAttempts: 0,
 		Backoff:           0,
 		MaxBackoff:        0,
-		CronJobKey:        optional.Some(job.Key),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create async call for job %q: %w", job.Key, err)
@@ -191,7 +189,12 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 		return fmt.Errorf("failed to calculate future execution for cron job %q with schedule %q: %w", job.Key, job.Schedule, err)
 	}
 	logger.Tracef("Updating cron job %q with last attempt at %s and next attempt at %s", job.Key, nextAttemptForJob, futureAttemptForJob)
-	err = tx.db.UpdateCronJobExecution(ctx, nextAttemptForJob, futureAttemptForJob, job.Key)
+	err = tx.db.UpdateCronJobExecution(ctx, cronsql.UpdateCronJobExecutionParams{
+		LastAsyncCallID: id,
+		LastExecution:   nextAttemptForJob,
+		NextExecution:   futureAttemptForJob,
+		Key:             job.Key,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to update cron job %q: %w", job.Key, err)
 	}

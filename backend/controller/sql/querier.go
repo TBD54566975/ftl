@@ -117,8 +117,8 @@ type Querier interface {
 	StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error)
 	SucceedAsyncCall(ctx context.Context, response encryption.OptionalEncryptedAsyncColumn, iD int64) (bool, error)
 	SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
+	UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error
 	UpdateEncryptionVerification(ctx context.Context, verifyTimeline encryption.OptionalEncryptedTimelineColumn, verifyAsync encryption.OptionalEncryptedAsyncColumn) error
-	UpdateCronJobExecution(ctx context.Context, lastExecution time.Time, nextExecution time.Time, key model.CronJobKey) error
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.

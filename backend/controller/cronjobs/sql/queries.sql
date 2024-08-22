@@ -5,16 +5,12 @@ FROM cron_jobs j
 WHERE d.min_replicas > 0
   AND j.start_time < sqlc.arg('start_time')::TIMESTAMPTZ
   AND (
-    j.last_execution IS NULL
+    j.last_async_call_id IS NULL
     OR NOT EXISTS (
       SELECT 1
       FROM async_calls ac
-      WHERE
-        ac.cron_job_key = j.key
-        AND (
-          ac.scheduled_at > j.last_execution OR
-          (ac.scheduled_at = j.last_execution AND ac.state IN ('pending', 'executing'))
-        )
+      WHERE ac.id = j.last_async_call_id
+        AND ac.state IN ('pending', 'executing')
     )
   )
 FOR UPDATE SKIP LOCKED;
@@ -39,6 +35,7 @@ INSERT INTO cron_jobs (key, deployment_id, module_name, verb, schedule, start_ti
 
 -- name: UpdateCronJobExecution :exec
 UPDATE cron_jobs
-  SET last_execution = sqlc.arg('last_execution')::TIMESTAMPTZ,
+  SET last_async_call_id = sqlc.arg('last_async_call_id')::BIGINT,
+    last_execution = sqlc.arg('last_execution')::TIMESTAMPTZ,
     next_execution = sqlc.arg('next_execution')::TIMESTAMPTZ
   WHERE key = sqlc.arg('key')::cron_job_key;
