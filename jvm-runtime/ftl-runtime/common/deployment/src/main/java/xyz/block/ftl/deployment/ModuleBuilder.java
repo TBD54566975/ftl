@@ -82,9 +82,11 @@ public class ModuleBuilder {
     private final Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics;
     private final Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients;
     private final FTLRecorder recorder;
+    private final Map<String, String> verbDocs;
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
-            Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder) {
+            Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
+            Map<String, String> verbDocs) {
         this.index = index;
         this.moduleName = moduleName;
         this.moduleBuilder = Module.newBuilder()
@@ -93,6 +95,7 @@ public class ModuleBuilder {
         this.knownTopics = knownTopics;
         this.verbClients = verbClients;
         this.recorder = recorder;
+        this.verbDocs = verbDocs;
     }
 
     public static @NotNull String methodToName(MethodInfo method) {
@@ -236,6 +239,9 @@ public class ModuleBuilder {
                     .setExport(exported)
                     .setRequest(buildType(bodyParamType, exported))
                     .setResponse(buildType(method.returnType(), exported));
+            if (verbDocs.containsKey(verbName)) {
+                verbBuilder.addComments(verbDocs.get(verbName));
+            }
 
             if (metadataCallback != null) {
                 metadataCallback.accept(verbBuilder);
