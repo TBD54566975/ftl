@@ -45,6 +45,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanc
 	// Create an async call for the event.
 	origin := AsyncOriginFSM{FSM: fsm, Key: instanceKey}
 	asyncCallID, err := d.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
+		ScheduledAt:       time.Now(),
 		Verb:              destinationState,
 		Origin:            origin.String(),
 		Request:           encryptedRequest,

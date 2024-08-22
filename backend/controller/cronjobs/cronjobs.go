@@ -174,6 +174,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
 	_, err = tx.db.CreateAsyncCall(ctx, cronsql.CreateAsyncCallParams{
+		ScheduledAt:       nextAttemptForJob,
 		Verb:              schema.RefKey{Module: job.Verb.Module, Name: job.Verb.Name},
 		Origin:            fmt.Sprintf("cron:%s", job.Key),
 		Request:           []byte(`{}`),
@@ -181,7 +182,6 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 		Backoff:           0,
 		MaxBackoff:        0,
 		CronJobKey:        optional.Some(job.Key),
-		ScheduledAt:       nextAttemptForJob,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create async call for job %q: %w", job.Key, err)
