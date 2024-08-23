@@ -46,6 +46,13 @@ public class FtlJavaRuntimeResource {
         return "Hello " + new String(data, StandardCharsets.UTF_8);
     }
 
+    /**
+     * This is a verb FOOO
+     *
+     * @param name
+     * @param echoClient
+     * @return
+     */
     @Verb
     public String hello(String name, EchoClient echoClient) {
         return "Hello " + echoClient.call(new EchoRequest().setName(name)).getMessage();

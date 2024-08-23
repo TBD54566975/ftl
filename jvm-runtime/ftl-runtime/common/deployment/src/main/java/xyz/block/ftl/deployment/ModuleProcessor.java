@@ -5,8 +5,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.Base64;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -107,9 +110,24 @@ public class ModuleProcessor {
             VerbClientBuildItem verbClientBuildItem,
             List<SchemaContributorBuildItem> schemaContributorBuildItems) throws Exception {
         String moduleName = moduleNameBuildItem.getModuleName();
+        Map<String, String> verbDocs = new HashMap<>();
+        try (var input = Thread.currentThread().getContextClassLoader().getResourceAsStream("META-INF/ftl-verbs.txt")) {
+            if (input != null) {
+                var contents = new String(input.readAllBytes(), StandardCharsets.UTF_8).split("\n");
+                for (var content : contents) {
+                    var eq = content.indexOf('=');
+                    if (eq == -1) {
+                        continue;
+                    }
+                    String key = content.substring(0, eq);
+                    String value = new String(Base64.getDecoder().decode(content.substring(eq + 1)), StandardCharsets.UTF_8);
+                    verbDocs.put(key, value);
+                }
+            }
+        }
 
         ModuleBuilder moduleBuilder = new ModuleBuilder(index.getComputingIndex(), moduleName, topicsBuildItem.getTopics(),
-                verbClientBuildItem.getVerbClients(), recorder);
+                verbClientBuildItem.getVerbClients(), recorder, verbDocs);
 
         for (var i : schemaContributorBuildItems) {
             i.getSchemaContributor().accept(moduleBuilder);
