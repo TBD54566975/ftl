@@ -107,6 +107,11 @@ func (m *AsyncCallMetrics) Acquired(ctx context.Context, verb schema.RefKey, cat
 	m.acquired.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
 
+// AcquireFailed should be called if an acquisition failed before any call data could be retrieved.
+func (m *AsyncCallMetrics) AcquireFailed(ctx context.Context, err error) {
+	m.acquired.Add(ctx, 1, metric.WithAttributes(observability.SuccessOrFailureStatusAttr(false)))
+}
+
 func (m *AsyncCallMetrics) Executed(ctx context.Context, verb schema.RefKey, catchVerb optional.Option[schema.RefKey], origin string, scheduledAt time.Time, isCatching bool, maybeFailureMode optional.Option[string]) {
 	attrs := extractAsyncCallAttrs(verb, catchVerb, origin, scheduledAt, isCatching)
 

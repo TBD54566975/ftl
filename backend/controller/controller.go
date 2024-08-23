@@ -1405,7 +1405,11 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
 	} else if err != nil {
-		observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
+		if call == nil {
+			observability.AsyncCalls.AcquireFailed(ctx, err)
+		} else {
+			observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
+		}
 		return 0, err
 	}
 
