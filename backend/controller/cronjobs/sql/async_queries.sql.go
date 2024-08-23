@@ -16,6 +16,19 @@ import (
 	"github.com/alecthomas/types/optional"
 )
 
+const asyncCallQueueDepth = `-- name: AsyncCallQueueDepth :one
+SELECT count(*)
+FROM async_calls
+WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
+`
+
+func (q *Queries) AsyncCallQueueDepth(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, asyncCallQueueDepth)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAsyncCall = `-- name: CreateAsyncCall :one
 INSERT INTO async_calls (
   scheduled_at,

@@ -470,11 +470,6 @@ FROM expired;
 -- name: GetLeaseInfo :one
 SELECT expires_at, metadata FROM leases WHERE key = @key::lease_key;
 
--- name: AsyncCallQueueDepth :one
-SELECT count(*)
-FROM async_calls
-WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc');
-
 -- name: AcquireAsyncCall :one
 -- Reserve a pending async call for execution, returning the associated lease
 -- reservation key and accompanying metadata.

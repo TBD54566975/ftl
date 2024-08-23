@@ -127,19 +127,6 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 	return err
 }
 
-const asyncCallQueueDepth = `-- name: AsyncCallQueueDepth :one
-SELECT count(*)
-FROM async_calls
-WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
-`
-
-func (q *Queries) AsyncCallQueueDepth(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, asyncCallQueueDepth)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
   SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context

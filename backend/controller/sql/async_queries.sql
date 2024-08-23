@@ -24,3 +24,8 @@ VALUES (
   @trace_context::jsonb
 )
 RETURNING id;
+
+-- name: AsyncCallQueueDepth :one
+SELECT count(*)
+FROM async_calls
+WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc');

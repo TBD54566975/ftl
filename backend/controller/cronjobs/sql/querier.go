@@ -12,6 +12,7 @@ import (
 )
 
 type Querier interface {
+	AsyncCallQueueDepth(ctx context.Context) (int64, error)
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
 	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
 	GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error)

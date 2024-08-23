@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 
 	cronsql "github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
@@ -172,12 +174,15 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 	}
 
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
+	refKey := schema.RefKey{Module: job.Verb.Module, Name: job.Verb.Name}
+	origin := fmt.Sprintf("cron:%s", job.Key)
 	id, err := tx.db.CreateAsyncCall(ctx, cronsql.CreateAsyncCallParams{
 		ScheduledAt: nextAttemptForJob,
-		Verb:        schema.RefKey{Module: job.Verb.Module, Name: job.Verb.Name},
-		Origin:      fmt.Sprintf("cron:%s", job.Key),
+		Verb:        refKey,
+		Origin:      origin,
 		Request:     []byte(`{}`),
 	})
+	observability.AsyncCalls.Created(ctx, refKey, optional.None[schema.RefKey](), origin, 0, err)
 	if err != nil {
 		return fmt.Errorf("failed to create async call for job %q: %w", job.Key, err)
 	}
@@ -195,6 +200,11 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 	if err != nil {
 		return fmt.Errorf("failed to update cron job %q: %w", job.Key, err)
 	}
-
+	queueDepth, err := tx.db.AsyncCallQueueDepth(ctx)
+	if err == nil {
+		// Don't error out of an FSM transition just over a queue depth retrieval
+		// error because this is only used for an observability gauge.
+		observability.AsyncCalls.RecordQueueDepth(ctx, queueDepth)
+	}
 	return nil
 }
