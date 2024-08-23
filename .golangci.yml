@@ -137,3 +137,4 @@ issues:
     - "fmt.Sprintf can be replaced with string concatenation"
     - "strings.Title has been deprecated"
     - "error returned from external package is unwrapped.*TranslatePGError"
+    - "struct literal uses unkeyed fields"

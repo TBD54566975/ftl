@@ -39,7 +39,6 @@ type Querier interface {
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
-	EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error)
 	ExpireLeases(ctx context.Context) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
@@ -55,7 +54,7 @@ type Querier interface {
 	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
-	GetCronJobs(ctx context.Context) ([]GetCronJobsRow, error)
+	GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
@@ -83,7 +82,6 @@ type Querier interface {
 	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
 	GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error)
-	GetStaleCronJobs(ctx context.Context, dollar_1 sqltypes.Duration) ([]GetStaleCronJobsRow, error)
 	GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error)
 	// Results may not be ready to be scheduled yet due to event consumption delay
 	// Sorting ensures that brand new events (that may not be ready for consumption)
@@ -91,12 +89,14 @@ type Querier interface {
 	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error)
 	GetTopic(ctx context.Context, dollar_1 int64) (Topic, error)
 	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)
+	GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]GetUnscheduledCronJobsRow, error)
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
 	InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error
 	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error
 	InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error
 	InsertTimelineEvent(ctx context.Context, arg InsertTimelineEventParams) error
 	InsertTimelineLogEvent(ctx context.Context, arg InsertTimelineLogEventParams) error
+	IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error)
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error)
@@ -111,13 +111,13 @@ type Querier interface {
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error)
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
-	StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error)
 	// Start a new FSM transition, populating the destination state and async call ID.
 	//
 	// "key" is the unique identifier for the FSM execution.
 	StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error)
 	SucceedAsyncCall(ctx context.Context, response encryption.OptionalEncryptedAsyncColumn, iD int64) (bool, error)
 	SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
+	UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error
 	UpdateEncryptionVerification(ctx context.Context, verifyTimeline encryption.OptionalEncryptedTimelineColumn, verifyAsync encryption.OptionalEncryptedAsyncColumn) error
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)

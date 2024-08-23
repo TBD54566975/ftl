@@ -106,48 +106,6 @@ func (ns NullControllerState) Value() (driver.Value, error) {
 	return string(ns.ControllerState), nil
 }
 
-type CronJobState string
-
-const (
-	CronJobStateIdle      CronJobState = "idle"
-	CronJobStateExecuting CronJobState = "executing"
-)
-
-func (e *CronJobState) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = CronJobState(s)
-	case string:
-		*e = CronJobState(s)
-	default:
-		return fmt.Errorf("unsupported scan type for CronJobState: %T", src)
-	}
-	return nil
-}
-
-type NullCronJobState struct {
-	CronJobState CronJobState
-	Valid        bool // Valid is true if CronJobState is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullCronJobState) Scan(value interface{}) error {
-	if value == nil {
-		ns.CronJobState, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.CronJobState.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullCronJobState) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.CronJobState), nil
-}
-
 type EventType string
 
 const (
@@ -401,15 +359,16 @@ type Controller struct {
 }
 
 type CronJob struct {
-	ID            int64
-	Key           model.CronJobKey
-	DeploymentID  int64
-	Verb          string
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	State         model.CronJobState
-	ModuleName    string
+	ID              int64
+	Key             model.CronJobKey
+	DeploymentID    int64
+	Verb            string
+	Schedule        string
+	StartTime       time.Time
+	NextExecution   time.Time
+	ModuleName      string
+	LastExecution   optional.Option[time.Time]
+	LastAsyncCallID optional.Option[int64]
 }
 
 type Deployment struct {

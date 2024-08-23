@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/participle/v2"
+	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
@@ -15,14 +16,22 @@ import (
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 type asyncOriginParseRoot struct {
 	Key AsyncOrigin `parser:"@@"`
 }
 
+var asyncOriginLexer = lexer.MustSimple([]lexer.SimpleRule{
+	{"NumberIdent", `[0-9][a-zA-Z0-9_-]*`},
+	{"Ident", `[a-zA-Z_][a-zA-Z0-9_-]*`},
+	{"Punct", `[:.]`},
+})
+
 var asyncOriginParser = participle.MustBuild[asyncOriginParseRoot](
-	participle.Union[AsyncOrigin](AsyncOriginFSM{}, AsyncOriginPubSub{}),
+	participle.Union[AsyncOrigin](AsyncOriginCron{}, AsyncOriginFSM{}, AsyncOriginPubSub{}),
+	participle.Lexer(asyncOriginLexer),
 )
 
 // AsyncOrigin is a sum type representing the originator of an async call.
@@ -34,6 +43,19 @@ type AsyncOrigin interface {
 	Origin() string
 	String() string
 }
+
+// AsyncOriginCron represents the context for the originator of a cron async call.
+//
+// It is in the form cron:<module>.<verb>
+type AsyncOriginCron struct {
+	CronJobKey model.CronJobKey `parser:"'cron' ':' @(~EOF)+"`
+}
+
+var _ AsyncOrigin = AsyncOriginCron{}
+
+func (AsyncOriginCron) asyncOrigin()     {}
+func (a AsyncOriginCron) Origin() string { return "cron" }
+func (a AsyncOriginCron) String() string { return fmt.Sprintf("cron:%s", a.CronJobKey) }
 
 // AsyncOriginFSM represents the context for the originator of an FSM async call.
 //

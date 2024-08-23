@@ -128,6 +128,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		}
 
 		_, err = tx.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
+			ScheduledAt:       time.Now(),
 			Verb:              subscriber.Sink,
 			Origin:            origin.String(),
 			Request:           nextCursor.Payload, // already encrypted

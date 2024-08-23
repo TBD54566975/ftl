@@ -249,9 +249,8 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, cronjobs.Config{Timeout: config.CronJobTimeout}, conn, svc.tasks, svc.callWithRequest)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, conn)
 	svc.cronJobs = cronSvc
-	svc.controllerListListeners = append(svc.controllerListListeners, cronSvc)
 
 	pubSub := pubsub.New(ctx, db, svc.tasks, svc)
 	svc.pubSub = pubSub
@@ -541,7 +540,10 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 		}
 	}
 
-	s.cronJobs.CreatedOrReplacedDeloyment(ctx, newDeploymentKey)
+	err = s.cronJobs.CreatedOrReplacedDeloyment(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not schedule cron jobs: %w", err)
+	}
 
 	return connect.NewResponse(&ftlv1.ReplaceDeployResponse{}), nil
 }
@@ -1403,7 +1405,11 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
 	} else if err != nil {
-		observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
+		if call == nil {
+			observability.AsyncCalls.AcquireFailed(ctx, err)
+		} else {
+			observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
+		}
 		return 0, err
 	}
 
@@ -1430,6 +1436,9 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		if returnErr == nil {
 			// Post-commit notification based on origin
 			switch origin := call.Origin.(type) {
+			case dal.AsyncOriginCron:
+				break
+
 			case dal.AsyncOriginFSM:
 				break
 
@@ -1568,6 +1577,9 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 
 func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
 	switch origin := call.Origin.(type) {
+	case dal.AsyncOriginCron:
+		return &ftlv1.Metadata{}
+
 	case dal.AsyncOriginFSM:
 		return &ftlv1.Metadata{
 			Values: []*ftlv1.Metadata_Pair{
@@ -1595,6 +1607,11 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.Tx, call *dal.A
 
 	// Allow for handling of completion based on origin
 	switch origin := call.Origin.(type) {
+	case dal.AsyncOriginCron:
+		if err := s.cronJobs.OnJobCompletion(ctx, origin.CronJobKey, failed); err != nil {
+			return fmt.Errorf("failed to finalize cron async call: %w", err)
+		}
+
 	case dal.AsyncOriginFSM:
 		if err := s.onAsyncFSMCallCompletion(ctx, tx, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize FSM async call: %w", err)

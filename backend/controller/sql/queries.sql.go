@@ -127,19 +127,6 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 	return err
 }
 
-const asyncCallQueueDepth = `-- name: AsyncCallQueueDepth :one
-SELECT count(*)
-FROM async_calls
-WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
-`
-
-func (q *Queries) AsyncCallQueueDepth(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, asyncCallQueueDepth)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
   SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
@@ -185,61 +172,6 @@ RETURNING id
 // Create a new artefact and return the artefact ID.
 func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error) {
 	row := q.db.QueryRowContext(ctx, createArtefact, digest, content)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
-const createAsyncCall = `-- name: CreateAsyncCall :one
-INSERT INTO async_calls (
-  verb,
-  origin,
-  request,
-  remaining_attempts,
-  backoff,
-  max_backoff,
-  catch_verb,
-  parent_request_key,
-  trace_context
-)
-VALUES (
-  $1,
-  $2,
-  $3,
-  $4,
-  $5::interval,
-  $6::interval,
-  $7,
-  $8,
-  $9::jsonb
-)
-RETURNING id
-`
-
-type CreateAsyncCallParams struct {
-	Verb              schema.RefKey
-	Origin            string
-	Request           encryption.EncryptedAsyncColumn
-	RemainingAttempts int32
-	Backoff           sqltypes.Duration
-	MaxBackoff        sqltypes.Duration
-	CatchVerb         optional.Option[schema.RefKey]
-	ParentRequestKey  optional.Option[string]
-	TraceContext      json.RawMessage
-}
-
-func (q *Queries) CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createAsyncCall,
-		arg.Verb,
-		arg.Origin,
-		arg.Request,
-		arg.RemainingAttempts,
-		arg.Backoff,
-		arg.MaxBackoff,
-		arg.CatchVerb,
-		arg.ParentRequestKey,
-		arg.TraceContext,
-	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -434,49 +366,6 @@ func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (in
 	var count int64
 	err := row.Scan(&count)
 	return count, err
-}
-
-const endCronJob = `-- name: EndCronJob :one
-WITH j AS (
-UPDATE cron_jobs
-  SET state = 'idle',
-    next_execution = $1::TIMESTAMPTZ
-  WHERE key = $2::cron_job_key
-    AND state = 'executing'
-    AND start_time = $3::TIMESTAMPTZ
-  RETURNING id, key, deployment_id, verb, schedule, start_time, next_execution, state, module_name
-)
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
-  FROM j
-  INNER JOIN deployments d on j.deployment_id = d.id
-  LIMIT 1
-`
-
-type EndCronJobRow struct {
-	Key           model.CronJobKey
-	DeploymentKey model.DeploymentKey
-	Module        string
-	Verb          string
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	State         model.CronJobState
-}
-
-func (q *Queries) EndCronJob(ctx context.Context, nextExecution time.Time, key model.CronJobKey, startTime time.Time) (EndCronJobRow, error) {
-	row := q.db.QueryRowContext(ctx, endCronJob, nextExecution, key, startTime)
-	var i EndCronJobRow
-	err := row.Scan(
-		&i.Key,
-		&i.DeploymentKey,
-		&i.Module,
-		&i.Verb,
-		&i.Schedule,
-		&i.StartTime,
-		&i.NextExecution,
-		&i.State,
-	)
-	return i, err
 }
 
 const expireLeases = `-- name: ExpireLeases :one
@@ -902,54 +791,42 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	return items, nil
 }
 
-const getCronJobs = `-- name: GetCronJobs :many
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
+const getCronJobByKey = `-- name: GetCronJobByKey :one
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
-WHERE d.min_replicas > 0
+WHERE j.key = $1::cron_job_key
+FOR UPDATE SKIP LOCKED
 `
 
-type GetCronJobsRow struct {
-	Key           model.CronJobKey
-	DeploymentKey model.DeploymentKey
-	Module        string
-	Verb          string
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	State         model.CronJobState
+type GetCronJobByKeyRow struct {
+	CronJob    CronJob
+	Deployment Deployment
 }
 
-func (q *Queries) GetCronJobs(ctx context.Context) ([]GetCronJobsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getCronJobs)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetCronJobsRow
-	for rows.Next() {
-		var i GetCronJobsRow
-		if err := rows.Scan(
-			&i.Key,
-			&i.DeploymentKey,
-			&i.Module,
-			&i.Verb,
-			&i.Schedule,
-			&i.StartTime,
-			&i.NextExecution,
-			&i.State,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error) {
+	row := q.db.QueryRowContext(ctx, getCronJobByKey, key)
+	var i GetCronJobByKeyRow
+	err := row.Scan(
+		&i.CronJob.ID,
+		&i.CronJob.Key,
+		&i.CronJob.DeploymentID,
+		&i.CronJob.Verb,
+		&i.CronJob.Schedule,
+		&i.CronJob.StartTime,
+		&i.CronJob.NextExecution,
+		&i.CronJob.ModuleName,
+		&i.CronJob.LastExecution,
+		&i.CronJob.LastAsyncCallID,
+		&i.Deployment.ID,
+		&i.Deployment.CreatedAt,
+		&i.Deployment.ModuleID,
+		&i.Deployment.Key,
+		&i.Deployment.Schema,
+		&i.Deployment.Labels,
+		&i.Deployment.MinReplicas,
+	)
+	return i, err
 }
 
 const getDeployment = `-- name: GetDeployment :one
@@ -1777,57 +1654,6 @@ func (q *Queries) GetSchemaForDeployment(ctx context.Context, key model.Deployme
 	return schema, err
 }
 
-const getStaleCronJobs = `-- name: GetStaleCronJobs :many
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule, j.start_time, j.next_execution, j.state
-FROM cron_jobs j
-  INNER JOIN deployments d on j.deployment_id = d.id
-WHERE state = 'executing'
-  AND start_time < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
-`
-
-type GetStaleCronJobsRow struct {
-	Key           model.CronJobKey
-	DeploymentKey model.DeploymentKey
-	Module        string
-	Verb          string
-	Schedule      string
-	StartTime     time.Time
-	NextExecution time.Time
-	State         model.CronJobState
-}
-
-func (q *Queries) GetStaleCronJobs(ctx context.Context, dollar_1 sqltypes.Duration) ([]GetStaleCronJobsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getStaleCronJobs, dollar_1)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetStaleCronJobsRow
-	for rows.Next() {
-		var i GetStaleCronJobsRow
-		if err := rows.Scan(
-			&i.Key,
-			&i.DeploymentKey,
-			&i.Module,
-			&i.Verb,
-			&i.Schedule,
-			&i.StartTime,
-			&i.NextExecution,
-			&i.State,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getSubscription = `-- name: GetSubscription :one
 WITH module AS (
   SELECT id
@@ -1952,6 +1778,70 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 		&i.TraceContext,
 	)
 	return i, err
+}
+
+const getUnscheduledCronJobs = `-- name: GetUnscheduledCronJobs :many
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+FROM cron_jobs j
+  INNER JOIN deployments d on j.deployment_id = d.id
+WHERE d.min_replicas > 0
+  AND j.start_time < $1::TIMESTAMPTZ
+  AND (
+    j.last_async_call_id IS NULL
+    OR NOT EXISTS (
+      SELECT 1
+      FROM async_calls ac
+      WHERE ac.id = j.last_async_call_id
+        AND ac.state IN ('pending', 'executing')
+    )
+  )
+FOR UPDATE SKIP LOCKED
+`
+
+type GetUnscheduledCronJobsRow struct {
+	CronJob    CronJob
+	Deployment Deployment
+}
+
+func (q *Queries) GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]GetUnscheduledCronJobsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getUnscheduledCronJobs, startTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUnscheduledCronJobsRow
+	for rows.Next() {
+		var i GetUnscheduledCronJobsRow
+		if err := rows.Scan(
+			&i.CronJob.ID,
+			&i.CronJob.Key,
+			&i.CronJob.DeploymentID,
+			&i.CronJob.Verb,
+			&i.CronJob.Schedule,
+			&i.CronJob.StartTime,
+			&i.CronJob.NextExecution,
+			&i.CronJob.ModuleName,
+			&i.CronJob.LastExecution,
+			&i.CronJob.LastAsyncCallID,
+			&i.Deployment.ID,
+			&i.Deployment.CreatedAt,
+			&i.Deployment.ModuleID,
+			&i.Deployment.Key,
+			&i.Deployment.Schema,
+			&i.Deployment.Labels,
+			&i.Deployment.MinReplicas,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const insertSubscriber = `-- name: InsertSubscriber :exec
@@ -2222,6 +2112,24 @@ func (q *Queries) InsertTimelineLogEvent(ctx context.Context, arg InsertTimeline
 		arg.Payload,
 	)
 	return err
+}
+
+const isCronJobPending = `-- name: IsCronJobPending :one
+SELECT EXISTS (
+    SELECT 1
+    FROM cron_jobs j
+      INNER JOIN async_calls ac on j.last_async_call_id = ac.id
+    WHERE j.key = $1::cron_job_key
+      AND ac.scheduled_at > $2::TIMESTAMPTZ
+      AND ac.state = 'pending'
+) AS pending
+`
+
+func (q *Queries) IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isCronJobPending, key, startTime)
+	var pending bool
+	err := row.Scan(&pending)
+	return pending, err
 }
 
 const killStaleControllers = `-- name: KillStaleControllers :one
@@ -2510,75 +2418,6 @@ func (q *Queries) SetSubscriptionCursor(ctx context.Context, column1 model.Subsc
 	return err
 }
 
-const startCronJobs = `-- name: StartCronJobs :many
-WITH updates AS (
-  UPDATE cron_jobs
-  SET state = 'executing',
-    start_time = (NOW() AT TIME ZONE 'utc')::TIMESTAMPTZ
-  WHERE key = ANY ($1)
-    AND state = 'idle'
-    AND start_time < next_execution
-    AND (next_execution AT TIME ZONE 'utc') < (NOW() AT TIME ZONE 'utc')::TIMESTAMPTZ
-  RETURNING id, key, state, start_time, next_execution)
-SELECT j.key as key, d.key as deployment_key, j.module_name as module, j.verb, j.schedule,
-  COALESCE(u.start_time, j.start_time) as start_time,
-  COALESCE(u.next_execution, j.next_execution) as next_execution,
-  COALESCE(u.state, j.state) as state,
-  d.min_replicas > 0 as has_min_replicas,
-  CASE WHEN u.key IS NULL THEN FALSE ELSE TRUE END as updated
-FROM cron_jobs j
-  INNER JOIN deployments d on j.deployment_id = d.id
-  LEFT JOIN updates u on j.id = u.id
-WHERE j.key = ANY ($1)
-`
-
-type StartCronJobsRow struct {
-	Key            model.CronJobKey
-	DeploymentKey  model.DeploymentKey
-	Module         string
-	Verb           string
-	Schedule       string
-	StartTime      time.Time
-	NextExecution  time.Time
-	State          model.CronJobState
-	HasMinReplicas bool
-	Updated        bool
-}
-
-func (q *Queries) StartCronJobs(ctx context.Context, keys []string) ([]StartCronJobsRow, error) {
-	rows, err := q.db.QueryContext(ctx, startCronJobs, pq.Array(keys))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []StartCronJobsRow
-	for rows.Next() {
-		var i StartCronJobsRow
-		if err := rows.Scan(
-			&i.Key,
-			&i.DeploymentKey,
-			&i.Module,
-			&i.Verb,
-			&i.Schedule,
-			&i.StartTime,
-			&i.NextExecution,
-			&i.State,
-			&i.HasMinReplicas,
-			&i.Updated,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const startFSMTransition = `-- name: StartFSMTransition :one
 INSERT INTO fsm_instances (
   fsm,
@@ -2669,6 +2508,31 @@ func (q *Queries) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const updateCronJobExecution = `-- name: UpdateCronJobExecution :exec
+UPDATE cron_jobs
+  SET last_async_call_id = $1::BIGINT,
+    last_execution = $2::TIMESTAMPTZ,
+    next_execution = $3::TIMESTAMPTZ
+  WHERE key = $4::cron_job_key
+`
+
+type UpdateCronJobExecutionParams struct {
+	LastAsyncCallID int64
+	LastExecution   time.Time
+	NextExecution   time.Time
+	Key             model.CronJobKey
+}
+
+func (q *Queries) UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error {
+	_, err := q.db.ExecContext(ctx, updateCronJobExecution,
+		arg.LastAsyncCallID,
+		arg.LastExecution,
+		arg.NextExecution,
+		arg.Key,
+	)
+	return err
 }
 
 const updateEncryptionVerification = `-- name: UpdateEncryptionVerification :exec

@@ -1,4 +1,3 @@
-// Package dal provides a data abstraction layer for cron jobs
 package dal
 
 import (
@@ -6,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
+	"github.com/TBD54566975/ftl/backend/controller/observability"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -22,80 +23,114 @@ func New(conn sql.ConnI) *DAL {
 	return &DAL{db: sql.NewDB(conn)}
 }
 
-func cronJobFromRow(row sql.GetCronJobsRow) model.CronJob {
+type Tx struct {
+	*DAL
+}
+
+func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
+	tx, err := d.db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", dalerrs.TranslatePGError(err))
+	}
+	return &Tx{DAL: &DAL{db: tx}}, nil
+}
+
+func (t *Tx) CommitOrRollback(ctx context.Context, err *error) {
+	tx, ok := t.db.(*sql.Tx)
+	if !ok {
+		panic("inconceivable")
+	}
+	tx.CommitOrRollback(ctx, err)
+}
+
+func (t *Tx) Commit(ctx context.Context) error {
+	tx, ok := t.db.(*sql.Tx)
+	if !ok {
+		panic("inconcievable")
+	}
+	err := tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", dalerrs.TranslatePGError(err))
+	}
+	return nil
+}
+
+func (t *Tx) Rollback(ctx context.Context) error {
+	tx, ok := t.db.(*sql.Tx)
+	if !ok {
+		panic("inconcievable")
+	}
+	err := tx.Rollback(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to rollback transaction: %w", dalerrs.TranslatePGError(err))
+	}
+	return nil
+}
+
+func cronJobFromRow(c sql.CronJob, d sql.Deployment) model.CronJob {
 	return model.CronJob{
-		Key:           row.Key,
-		DeploymentKey: row.DeploymentKey,
-		Verb:          schema.Ref{Module: row.Module, Name: row.Verb},
-		Schedule:      row.Schedule,
-		StartTime:     row.StartTime,
-		NextExecution: row.NextExecution,
-		State:         row.State,
+		Key:           c.Key,
+		DeploymentKey: d.Key,
+		Verb:          schema.Ref{Module: c.ModuleName, Name: c.Verb},
+		Schedule:      c.Schedule,
+		StartTime:     c.StartTime,
+		NextExecution: c.NextExecution,
+		LastExecution: c.LastExecution,
 	}
 }
 
-// GetCronJobs returns all cron jobs for deployments with min replicas > 0
-func (d *DAL) GetCronJobs(ctx context.Context) ([]model.CronJob, error) {
-	rows, err := d.db.GetCronJobs(ctx)
+// CreateAsyncCall creates an async_call row and returns its id
+func (d *DAL) CreateAsyncCall(ctx context.Context, params sql.CreateAsyncCallParams) (int64, error) {
+	id, err := d.db.CreateAsyncCall(ctx, params)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create async call: %w", dalerrs.TranslatePGError(err))
+	}
+	observability.AsyncCalls.Created(ctx, params.Verb, optional.None[schema.RefKey](), params.Origin, 0, err)
+	queueDepth, err := d.db.AsyncCallQueueDepth(ctx)
+	if err == nil {
+		// Don't error out of an FSM transition just over a queue depth retrieval
+		// error because this is only used for an observability gauge.
+		observability.AsyncCalls.RecordQueueDepth(ctx, queueDepth)
+	}
+	return id, nil
+}
+
+// GetUnscheduledCronJobs returns all cron_jobs rows with start_time before provided startTime for
+// deployments with min replicas > 0 with no pending corresponding async_calls after last_execution
+func (d *DAL) GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]model.CronJob, error) {
+	rows, err := d.db.GetUnscheduledCronJobs(ctx, startTime)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cron jobs: %w", dalerrs.TranslatePGError(err))
 	}
-	return slices.Map(rows, cronJobFromRow), nil
-}
-
-type AttemptedCronJob struct {
-	DidStartExecution bool
-	HasMinReplicas    bool
-	model.CronJob
-}
-
-// StartCronJobs returns a full list of results so that the caller can update their list of jobs whether or not they successfully updated the row
-func (d *DAL) StartCronJobs(ctx context.Context, jobs []model.CronJob) (attemptedJobs []AttemptedCronJob, err error) {
-	if len(jobs) == 0 {
-		return nil, nil
-	}
-	rows, err := d.db.StartCronJobs(ctx, slices.Map(jobs, func(job model.CronJob) string { return job.Key.String() }))
-	if err != nil {
-		return nil, fmt.Errorf("failed to start cron jobs: %w", dalerrs.TranslatePGError(err))
-	}
-
-	attemptedJobs = []AttemptedCronJob{}
-	for _, row := range rows {
-		job := AttemptedCronJob{
-			CronJob: model.CronJob{
-				Key:           row.Key,
-				DeploymentKey: row.DeploymentKey,
-				Verb:          schema.Ref{Module: row.Module, Name: row.Verb},
-				Schedule:      row.Schedule,
-				StartTime:     row.StartTime,
-				NextExecution: row.NextExecution,
-				State:         row.State,
-			},
-			DidStartExecution: row.Updated,
-			HasMinReplicas:    row.HasMinReplicas,
-		}
-		attemptedJobs = append(attemptedJobs, job)
-	}
-	return attemptedJobs, nil
-}
-
-// EndCronJob sets the status from executing to idle and updates the next execution time
-// Can be called on the successful completion of a job, or if the job failed to execute (error or timeout)
-func (d *DAL) EndCronJob(ctx context.Context, job model.CronJob, next time.Time) (model.CronJob, error) {
-	row, err := d.db.EndCronJob(ctx, next, job.Key, job.StartTime)
-	if err != nil {
-		return model.CronJob{}, fmt.Errorf("failed to end cron job: %w", dalerrs.TranslatePGError(err))
-	}
-	return cronJobFromRow(sql.GetCronJobsRow(row)), nil
-}
-
-// GetStaleCronJobs returns a list of cron jobs that have been executing longer than the duration
-func (d *DAL) GetStaleCronJobs(ctx context.Context, duration time.Duration) ([]model.CronJob, error) {
-	rows, err := d.db.GetStaleCronJobs(ctx, sqltypes.Duration(duration))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get stale cron jobs: %w", dalerrs.TranslatePGError(err))
-	}
-	return slices.Map(rows, func(row sql.GetStaleCronJobsRow) model.CronJob {
-		return cronJobFromRow(sql.GetCronJobsRow(row))
+	return slices.Map(rows, func(r sql.GetUnscheduledCronJobsRow) model.CronJob {
+		return cronJobFromRow(r.CronJob, r.Deployment)
 	}), nil
+}
+
+// GetCronJobByKey returns a cron_job row by its key
+func (d *DAL) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (model.CronJob, error) {
+	row, err := d.db.GetCronJobByKey(ctx, key)
+	if err != nil {
+		return model.CronJob{}, fmt.Errorf("failed to get cron job %q: %w", key, dalerrs.TranslatePGError(err))
+	}
+	return cronJobFromRow(row.CronJob, row.Deployment), nil
+}
+
+// IsCronJobPending returns whether this cron job is executing or scheduled in async_calls
+func (d *DAL) IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error) {
+	pending, err := d.db.IsCronJobPending(ctx, key, startTime)
+	if err != nil {
+		return false, fmt.Errorf("failed to check if cron job %q is pending: %w", key, dalerrs.TranslatePGError(err))
+	}
+	return pending, nil
+}
+
+// UpdateCronJobExecution updates the last_async_call_id, last_execution, and next_execution of
+// the cron job given by the provided key
+func (d *DAL) UpdateCronJobExecution(ctx context.Context, params sql.UpdateCronJobExecutionParams) error {
+	err := d.db.UpdateCronJobExecution(ctx, params)
+	if err != nil {
+		return fmt.Errorf("failed to update cron job %q: %w", params.Key, dalerrs.TranslatePGError(err))
+	}
+	return nil
 }
