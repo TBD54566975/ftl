@@ -1601,7 +1601,7 @@ func (s *Service) reapAsyncCalls(ctx context.Context) (nextInterval time.Duratio
 		if err != nil {
 			return 0, fmt.Errorf("failed to complete zombie async call: %w", err)
 		}
-		// TODO: telemetery
+		observability.AsyncCalls.Executed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, optional.Some("async call lease failed"))
 	}
 
 	if len(calls) == limit {
