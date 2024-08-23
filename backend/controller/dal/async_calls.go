@@ -176,12 +176,24 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
+	return tx.CompleteAsyncCall(ctx, call, result, finalise)
+}
+
+// CompleteAsyncCall completes an async call within an existing transaction.
+//
+// "result" is either a []byte representing the successful response, or a string
+// representing a failure message.
+func (tx *Tx) CompleteAsyncCall(ctx context.Context,
+	call *AsyncCall,
+	result either.Either[[]byte, string],
+	finalise func(tx *Tx, isFinalResult bool) error) (didScheduleAnotherCall bool, err error) {
+
 	isFinalResult := true
 	didScheduleAnotherCall = false
 	switch result := result.(type) {
 	case either.Left[[]byte, string]: // Successful response.
 		var encryptedResult encryption.EncryptedAsyncColumn
-		err := d.encrypt(result.Get(), &encryptedResult)
+		err := tx.encrypt(result.Get(), &encryptedResult)
 		if err != nil {
 			return false, fmt.Errorf("failed to encrypt async call result: %w", err)
 		}
@@ -192,7 +204,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 
 	case either.Right[[]byte, string]: // Failure message.
 		if call.RemainingAttempts > 0 {
-			_, err = d.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
+			_, err = tx.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
 				ID:                call.ID,
 				Error:             result.Get(),
 				RemainingAttempts: call.RemainingAttempts - 1,
@@ -213,7 +225,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 			if call.Catching {
 				scheduledAt = scheduledAt.Add(call.Backoff)
 			}
-			_, err = d.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
+			_, err = tx.db.FailAsyncCallWithRetry(ctx, sql.FailAsyncCallWithRetryParams{
 				ID:                call.ID,
 				Error:             result.Get(),
 				RemainingAttempts: 0,
