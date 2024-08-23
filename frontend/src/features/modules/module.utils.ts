@@ -1,4 +1,16 @@
+import {
+  ArrowDownOnSquareStackIcon,
+  BellAlertIcon,
+  BoltIcon,
+  CircleStackIcon,
+  CodeBracketIcon,
+  CogIcon,
+  LockClosedIcon,
+  RectangleGroupIcon,
+} from '@heroicons/react/24/outline'
+import type { ForwardRefExoticComponent, SVGProps } from 'react'
 import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/ftl_pb'
 import type { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { verbCalls } from '../verbs/verb.utils'
 
@@ -54,4 +66,44 @@ export const deploymentKeyModuleName = (deploymentKey: string) => {
     return deploymentKey.substring(0, lastIndex).replaceAll('dpl-', '')
   }
   return null
+}
+
+interface ModuleTreeChild {
+  name: string
+  href: string
+  icon: ForwardRefExoticComponent<SVGProps<SVGSVGElement> & { title?: string; titleId?: string }>
+  current?: boolean
+}
+
+export interface ModuleTreeItem {
+  name: string
+  href?: string
+  icon: ForwardRefExoticComponent<SVGProps<SVGSVGElement> & { title?: string; titleId?: string }>
+  current: boolean
+  expanded?: boolean
+  children?: ModuleTreeChild[]
+}
+
+export const moduleTreeFromSchema = (schema: PullSchemaResponse[]) => {
+  const tree: ModuleTreeItem[] = []
+
+  for (const module of schema) {
+    tree.push({
+      name: module.moduleName,
+      icon: RectangleGroupIcon,
+      current: false,
+      expanded: module.moduleName === 'echo',
+      children: [
+        { name: 'Data', href: '#', icon: CodeBracketIcon },
+        { name: 'Verb', href: '#', icon: BoltIcon },
+        { name: 'Database', href: '#', icon: CircleStackIcon },
+        { name: 'Config', href: '#', icon: CogIcon },
+        { name: 'Secret', href: '#', icon: LockClosedIcon },
+        { name: 'FSM', href: '#', icon: ArrowDownOnSquareStackIcon },
+        { name: 'Pubsub', href: '#', icon: BellAlertIcon },
+      ],
+    })
+  }
+
+  return tree
 }

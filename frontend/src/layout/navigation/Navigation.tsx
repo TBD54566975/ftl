@@ -1,102 +1,51 @@
-import { ChevronDoubleLeftIcon, ChevronDoubleRightIcon } from '@heroicons/react/24/outline'
-import { Link, NavLink } from 'react-router-dom'
-import { useModules } from '../../api/modules/use-modules'
-import { DarkModeSwitch } from '../../components/DarkModeSwitch'
+import { CubeTransparentIcon, ListBulletIcon, ServerStackIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
+import { NavLink } from 'react-router-dom'
+import { DarkModeSwitch } from '../../components'
 import { classNames } from '../../utils'
-import { navigation } from './navigation-items'
+import { Version } from './Version'
 
-export const Navigation = ({
-  isCollapsed,
-  setIsCollapsed,
-}: {
-  isCollapsed: boolean
-  setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>
-}) => {
-  const modules = useModules()
+const navigation = [
+  { name: 'Events', href: '/events', icon: ListBulletIcon },
+  { name: 'Deployments', href: '/deployments', icon: Square3Stack3DIcon },
+  { name: 'Modules', href: '/modules', icon: Square3Stack3DIcon },
+  { name: 'Graph', href: '/graph', icon: CubeTransparentIcon },
+  { name: 'Infrastructure', href: '/infrastructure', icon: ServerStackIcon },
+]
 
+export const Navigation = () => {
   return (
-    <div className={`hidden sm:block bg-gray-800 flex-shrink-0 h-full ${isCollapsed ? '' : 'w-52'}`}>
-      <aside className={'flex flex-col h-full'}>
-        <div className='flex flex-col h-full overflow-y-auto bg-indigo-700'>
-          <div className='flex grow flex-col overflow-y-auto bg-indigo-700 px-4'>
-            <Link to='/events'>
-              <div className={`${isCollapsed ? '-mx-3' : '-mx-2'} space-y-1`}>
-                <div className='flex shrink-0 items-center p-2 rounded-md hover:bg-indigo-700'>
-                  {!isCollapsed && (
-                    <>
-                      <span className='text-2xl font-medium text-white'>FTL</span>
-                      <span className='px-2 text-pink-400 text-2xl font-medium'>∞</span>
-                      <button title='Minimize' type='button' onClick={() => setIsCollapsed(true)} className='hover:bg-indigo-600 p-1 ml-auto -mr-2 rounded'>
-                        <ChevronDoubleLeftIcon className='h-6 w-6 text-gray-300' />
-                      </button>
-                    </>
-                  )}
-                  {isCollapsed && (
-                    <button
-                      title='Minimize'
-                      type='button'
-                      onClick={() => setIsCollapsed(false)}
-                      className='hover:bg-indigo-600 p-1 rounded w-full flex justify-center'
-                    >
-                      <ChevronDoubleRightIcon className='h-6 w-6 text-gray-300' />
-                    </button>
-                  )}
-                </div>
+    <nav className='bg-indigo-600'>
+      <div className='mx-auto px-4 sm:px-6'>
+        <div className='flex h-16 items-center justify-between'>
+          <div className='flex items-center'>
+            <div>
+              <div className='flex items-baseline space-x-4'>
+                {navigation.map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      classNames(
+                        isActive ? 'bg-indigo-700 text-white' : 'text-white hover:bg-indigo-500 hover:bg-opacity-75',
+                        'rounded-md px-3 py-2 text-sm font-medium flex items-center space-x-2',
+                      )
+                    }
+                  >
+                    <item.icon className='text-lg size-6' />
+                    <span className='hidden md:inline'>{item.name}</span>
+                  </NavLink>
+                ))}
               </div>
-            </Link>
-
-            <nav className='flex flex-1 flex-col pt-4'>
-              <ul className='flex flex-1 flex-col gap-y-7'>
-                <li>
-                  <ul className='-mx-2 space-y-1'>
-                    {navigation.map((item) => (
-                      <li key={item.name}>
-                        <NavLink
-                          to={item.href}
-                          className={({ isActive }) =>
-                            classNames(
-                              isActive ? 'bg-indigo-600 text-white' : 'text-indigo-200 hover:text-white hover:bg-indigo-600',
-                              'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold',
-                              isCollapsed ? 'justify-center' : '',
-                            )
-                          }
-                        >
-                          {({ isActive }) => (
-                            <>
-                              <item.icon
-                                title={item.name}
-                                className={classNames(isActive ? 'text-white' : 'text-indigo-200 group-hover:text-white', 'h-6 w-6 shrink-0')}
-                                aria-hidden='true'
-                              />
-                              {!isCollapsed && item.name && (
-                                <>
-                                  {item.name}
-                                  {['/modules', '/deployments'].includes(item.href) && (
-                                    <span
-                                      id='deployments-count'
-                                      className='ml-auto w-9 min-w-max whitespace-nowrap rounded-full bg-indigo-600 px-2.5 py-0.5 text-center text-xs font-medium leading-5 text-white ring-1 ring-inset ring-indigo-500'
-                                      aria-hidden='true'
-                                    >
-                                      {modules.isSuccess && modules.data.modules.length}
-                                    </span>
-                                  )}
-                                </>
-                              )}
-                            </>
-                          )}
-                        </NavLink>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-                <li className={`pb-2 mt-auto ${isCollapsed ? '-mx-1.5' : ''}`}>
-                  <DarkModeSwitch />
-                </li>
-              </ul>
-            </nav>
+            </div>
+          </div>
+          <div>
+            <div className='ml-4 flex items-center space-x-4'>
+              <Version version='v0.235.0' />
+              <DarkModeSwitch />
+            </div>
           </div>
         </div>
-      </aside>
-    </div>
+      </div>
+    </nav>
   )
 }
