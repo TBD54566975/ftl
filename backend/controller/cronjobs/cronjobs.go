@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	cronsql "github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
-	"github.com/TBD54566975/ftl/backend/controller/observability"
+	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
@@ -21,15 +21,15 @@ import (
 type Service struct {
 	key           model.ControllerKey
 	requestSource string
-	dal           DAL
+	dal           dal.DAL
 	clock         clock.Clock
 }
 
 func New(ctx context.Context, key model.ControllerKey, requestSource string, conn *sql.DB) *Service {
-	return NewForTesting(ctx, key, requestSource, *newDAL(conn), clock.New())
+	return NewForTesting(ctx, key, requestSource, *dal.New(conn), clock.New())
 }
 
-func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, dal DAL, clock clock.Clock) *Service {
+func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, dal dal.DAL, clock clock.Clock) *Service {
 	svc := &Service{
 		key:           key,
 		requestSource: requestSource,
@@ -85,13 +85,14 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 // CreatedOrReplacedDeloyment is called by the responsible controller to its cron service, we can
 // schedule all cron jobs here since the cron_jobs rows are locked within the transaction and the
 // controllers won't step on each other.
-func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context) {
+func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	logger.Tracef("New deployment; scheduling cron jobs")
 	err := s.scheduleCronJobs(ctx)
 	if err != nil {
-		logger.Errorf(err, "failed to schedule cron jobs: %v", err)
+		return fmt.Errorf("failed to schedule cron jobs: %w", err)
 	}
+	return nil
 }
 
 // scheduleCronJobs schedules all cron jobs that are not already scheduled.
@@ -144,10 +145,10 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 }
 
 // scheduleCronJob schedules the next execution of a single cron job.
-func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob) error {
+func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.Tx, job model.CronJob) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	now := s.clock.Now().UTC()
-	pending, err := tx.db.IsCronJobPending(ctx, job.Key, now)
+	pending, err := tx.IsCronJobPending(ctx, job.Key, now)
 	if err != nil {
 		return fmt.Errorf("failed to check if cron job %q is pending: %w", job.Key, err)
 	}
@@ -164,7 +165,6 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 	if t, ok := job.LastExecution.Get(); ok {
 		originTime = t
 	}
-
 	nextAttemptForJob, err := cron.NextAfter(pattern, originTime, false)
 	if err != nil {
 		return fmt.Errorf("failed to calculate next execution for cron job %q with schedule %q: %w", job.Key, job.Schedule, err)
@@ -174,15 +174,13 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 	}
 
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
-	refKey := schema.RefKey{Module: job.Verb.Module, Name: job.Verb.Name}
-	origin := fmt.Sprintf("cron:%s", job.Key)
-	id, err := tx.db.CreateAsyncCall(ctx, cronsql.CreateAsyncCallParams{
+	origin := &parentdal.AsyncOriginCron{CronJobKey: job.Key.String()}
+	id, err := tx.CreateAsyncCall(ctx, cronsql.CreateAsyncCallParams{
 		ScheduledAt: nextAttemptForJob,
-		Verb:        refKey,
-		Origin:      origin,
+		Verb:        schema.RefKey{Module: job.Verb.Module, Name: job.Verb.Name},
+		Origin:      origin.String(),
 		Request:     []byte(`{}`),
 	})
-	observability.AsyncCalls.Created(ctx, refKey, optional.None[schema.RefKey](), origin, 0, err)
 	if err != nil {
 		return fmt.Errorf("failed to create async call for job %q: %w", job.Key, err)
 	}
@@ -191,7 +189,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 		return fmt.Errorf("failed to calculate future execution for cron job %q with schedule %q: %w", job.Key, job.Schedule, err)
 	}
 	logger.Tracef("Updating cron job %q with last attempt at %s and next attempt at %s", job.Key, nextAttemptForJob, futureAttemptForJob)
-	err = tx.db.UpdateCronJobExecution(ctx, cronsql.UpdateCronJobExecutionParams{
+	err = tx.UpdateCronJobExecution(ctx, cronsql.UpdateCronJobExecutionParams{
 		LastAsyncCallID: id,
 		LastExecution:   nextAttemptForJob,
 		NextExecution:   futureAttemptForJob,
@@ -199,12 +197,6 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *Tx, job model.CronJob
 	})
 	if err != nil {
 		return fmt.Errorf("failed to update cron job %q: %w", job.Key, err)
-	}
-	queueDepth, err := tx.db.AsyncCallQueueDepth(ctx)
-	if err == nil {
-		// Don't error out of an FSM transition just over a queue depth retrieval
-		// error because this is only used for an observability gauge.
-		observability.AsyncCalls.RecordQueueDepth(ctx, queueDepth)
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 
@@ -27,7 +28,7 @@ func TestCron(t *testing.T) {
 		in.CopyModule("cron"),
 		in.Deploy("cron"),
 		in.Wait("cron"),
-		in.Sleep(1000000000), //1 second
+		in.Sleep(1*time.Second),
 		func(t testing.TB, ic in.TestContext) {
 			_, err := os.Stat(tmpFile)
 			assert.NoError(t, err)

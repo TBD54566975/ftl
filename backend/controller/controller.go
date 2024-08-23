@@ -540,7 +540,10 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 		}
 	}
 
-	s.cronJobs.CreatedOrReplacedDeloyment(ctx)
+	err = s.cronJobs.CreatedOrReplacedDeloyment(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not schedule cron jobs: %w", err)
+	}
 
 	return connect.NewResponse(&ftlv1.ReplaceDeployResponse{}), nil
 }

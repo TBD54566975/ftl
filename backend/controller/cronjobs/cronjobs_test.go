@@ -11,7 +11,7 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/benbjohnson/clock"
 
-	"github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
@@ -33,11 +33,9 @@ func TestNewCronJobsForModule(t *testing.T) {
 
 	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal := &DAL{db: sql.NewDB(conn)}
-
+	dal := dal.New(conn)
 	parentDAL, err := parentdal.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
-
 	moduleName := "initial"
 	jobsToCreate := newCronJobs(t, moduleName, "* * * * * *", clk, 2) // every minute
 
@@ -45,14 +43,12 @@ func TestNewCronJobsForModule(t *testing.T) {
 		Name: moduleName,
 	}, []parentdal.DeploymentArtefact{}, []parentdal.IngressRoutingEntry{}, jobsToCreate)
 	assert.NoError(t, err)
-
 	err = parentDAL.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
 
 	// Progress so that start_time is valid
 	clk.Add(time.Second)
 	cjs := NewForTesting(ctx, key, "test.com", *dal, clk)
-
 	// All jobs need to be scheduled
 	expectUnscheduledJobs(t, dal, clk, 2)
 	unscheduledJobs, err := dal.GetUnscheduledCronJobs(ctx, clk.Now())
@@ -66,20 +62,17 @@ func TestNewCronJobsForModule(t *testing.T) {
 
 	err = cjs.scheduleCronJobs(ctx)
 	assert.NoError(t, err)
-
 	expectUnscheduledJobs(t, dal, clk, 0)
-
 	for _, job := range jobsToCreate {
 		j, err := dal.GetCronJobByKey(ctx, job.Key)
 		assert.NoError(t, err)
 		assert.Equal(t, job.StartTime, j.StartTime)
 		assert.Equal(t, j.NextExecution, clk.Now().Add(time.Second))
 
-		p, err := dal.db.IsCronJobPending(ctx, job.Key, job.StartTime)
+		p, err := dal.IsCronJobPending(ctx, job.Key, job.StartTime)
 		assert.NoError(t, err)
 		assert.True(t, p)
 	}
-
 	// Now there should be async calls
 	calls := []*parentdal.AsyncCall{}
 	for i, job := range jobsToCreate {
@@ -90,17 +83,14 @@ func TestNewCronJobsForModule(t *testing.T) {
 		assert.Equal(t, call.Request, []byte("{}"))
 		assert.Equal(t, call.QueueDepth, int64(len(jobsToCreate)-i)) // widdling down queue
 
-		p, err := dal.db.IsCronJobPending(ctx, job.Key, job.StartTime)
+		p, err := dal.IsCronJobPending(ctx, job.Key, job.StartTime)
 		assert.NoError(t, err)
 		assert.False(t, p)
 
 		calls = append(calls, call)
 	}
-
 	clk.Add(time.Second)
-
 	expectUnscheduledJobs(t, dal, clk, 0)
-
 	// Complete all calls
 	for _, call := range calls {
 		callResult := either.LeftOf[string]([]byte("{}"))
@@ -109,11 +99,8 @@ func TestNewCronJobsForModule(t *testing.T) {
 		})
 		assert.NoError(t, err)
 	}
-
 	clk.Add(time.Second)
-
 	expectUnscheduledJobs(t, dal, clk, 2)
-
 	// Use the completion handler to schedule the next execution
 	for _, call := range calls {
 		origin, ok := call.Origin.(parentdal.AsyncOriginCron)
@@ -123,9 +110,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 		err = cjs.OnJobCompletion(ctx, cjk, false)
 		assert.NoError(t, err)
 	}
-
 	expectUnscheduledJobs(t, dal, clk, 0)
-
 	for i, job := range jobsToCreate {
 		call, err := parentDAL.AcquireAsyncCall(ctx)
 		assert.NoError(t, err)
@@ -136,13 +121,13 @@ func TestNewCronJobsForModule(t *testing.T) {
 
 		assert.Equal(t, call.ScheduledAt, clk.Now())
 
-		p, err := dal.db.IsCronJobPending(ctx, job.Key, job.StartTime)
+		p, err := dal.IsCronJobPending(ctx, job.Key, job.StartTime)
 		assert.NoError(t, err)
 		assert.False(t, p)
 	}
 }
 
-func expectUnscheduledJobs(t *testing.T, dal *DAL, clk *clock.Mock, count int) {
+func expectUnscheduledJobs(t *testing.T, dal *dal.DAL, clk *clock.Mock, count int) {
 	t.Helper()
 	unscheduledJobs, err := dal.GetUnscheduledCronJobs(context.Background(), clk.Now())
 	assert.NoError(t, err)
