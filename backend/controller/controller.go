@@ -1608,11 +1608,7 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.Tx, call *dal.A
 	// Allow for handling of completion based on origin
 	switch origin := call.Origin.(type) {
 	case dal.AsyncOriginCron:
-		cjk, err := model.ParseCronJobKey(origin.CronJobKey)
-		if err != nil {
-			return fmt.Errorf("failed to parse cron job key: %w", err)
-		}
-		if err := s.cronJobs.OnJobCompletion(ctx, cjk, failed); err != nil {
+		if err := s.cronJobs.OnJobCompletion(ctx, origin.CronJobKey, failed); err != nil {
 			return fmt.Errorf("failed to finalize cron async call: %w", err)
 		}
 

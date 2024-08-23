@@ -105,9 +105,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	for _, call := range calls {
 		origin, ok := call.Origin.(parentdal.AsyncOriginCron)
 		assert.True(t, ok)
-		cjk, err := model.ParseCronJobKey(origin.CronJobKey)
-		assert.NoError(t, err)
-		err = cjs.OnJobCompletion(ctx, cjk, false)
+		err = cjs.OnJobCompletion(ctx, origin.CronJobKey, false)
 		assert.NoError(t, err)
 	}
 	expectUnscheduledJobs(t, dal, clk, 0)

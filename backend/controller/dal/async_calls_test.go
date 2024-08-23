@@ -8,8 +8,10 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 func TestNoCallToAcquire(t *testing.T) {
@@ -23,19 +25,27 @@ func TestNoCallToAcquire(t *testing.T) {
 	assert.EqualError(t, err, "no pending async calls: not found")
 }
 
-func TestParseAsyncOrigin(t *testing.T) {
-	cronKeys := []string{
-		"crn-cron-cron-10pvs393nkv3new4",         // 1:23: exponent has no digits
-		"crn-initial-verb0-3poj0hr6wmtvmz99",     // 1:26: exponent has no digits
-		"crn-initial-verb0Cron-5eq2ivpmuv0lvnoc", // 1:30: exponent has no digits
+func TestParser(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		input    string
+		expected AsyncOrigin
+	}{
+		{"Cron", `cron:crn-initial-verb0Cron-5eq2ivpmuv0lvnoc`, AsyncOriginCron{
+			CronJobKey: model.CronJobKey{
+				Payload: model.CronJobPayload{Module: "initial", Verb: "verb0Cron"},
+				Suffix:  []byte("\xfd7\xe6*\xfcƹ\xe9.\x9c"),
+			}}},
+		{"FSM", `fsm:module.name:key`, AsyncOriginFSM{FSM: schema.RefKey{Module: "module", Name: "name"}, Key: "key"}},
+		{"PubSub", `sub:module.topic`, AsyncOriginPubSub{Subscription: schema.RefKey{Module: "module", Name: "topic"}}},
 	}
-	for _, cronKey := range cronKeys {
-		origin, err := ParseAsyncOrigin("cron:" + cronKey)
-		assert.NoError(t, err)
-		assert.Equal(t, "cron", origin.Origin())
-
-		asyncOrigin, ok := origin.(*AsyncOriginCron)
-		assert.True(t, ok, "origin is not a cron origin")
-		assert.Equal(t, cronKey, asyncOrigin.CronJobKey)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			origin, err := asyncOriginParser.ParseString("", tt.input)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, origin.Key)
+		})
 	}
 }

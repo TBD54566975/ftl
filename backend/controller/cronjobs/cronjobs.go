@@ -174,7 +174,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.Tx, job model.Cro
 	}
 
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
-	origin := &parentdal.AsyncOriginCron{CronJobKey: job.Key.String()}
+	origin := &parentdal.AsyncOriginCron{CronJobKey: job.Key}
 	id, err := tx.CreateAsyncCall(ctx, cronsql.CreateAsyncCallParams{
 		ScheduledAt: nextAttemptForJob,
 		Verb:        schema.RefKey{Module: job.Verb.Module, Name: job.Verb.Name},
