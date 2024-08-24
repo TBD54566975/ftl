@@ -13,10 +13,6 @@ import (
 )
 
 func (d *DAL) encrypt(cleartext []byte, dest encryption.Encrypted) error {
-	if d.encryptor == nil {
-		return fmt.Errorf("encryptor not set")
-	}
-
 	err := d.encryptor.Encrypt(cleartext, dest)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt binary with subkey %s: %w", dest.SubKey(), err)
@@ -26,10 +22,6 @@ func (d *DAL) encrypt(cleartext []byte, dest encryption.Encrypted) error {
 }
 
 func (d *DAL) decrypt(encrypted encryption.Encrypted) ([]byte, error) {
-	if d.encryptor == nil {
-		return nil, fmt.Errorf("encryptor not set")
-	}
-
 	v, err := d.encryptor.Decrypt(encrypted)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt binary with subkey %s: %w", encrypted.SubKey(), err)
@@ -93,9 +85,8 @@ func (d *DAL) EnsureKey(ctx context.Context, generateKey func() ([]byte, error))
 
 const verification = "FTL - Towards a 𝝺-calculus for large-scale systems"
 
-func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
-	var tx *Tx
-	tx, err = d.Begin(ctx)
+func (d *DAL) verifyEncryptor(ctx context.Context, encryptor encryption.DataEncryptor) (err error) {
+	tx, err := d.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -111,7 +102,7 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 	}
 
 	needsUpdate := false
-	newTimeline, err := verifySubkey(d.encryptor, row.VerifyTimeline)
+	newTimeline, err := verifySubkey(encryptor, row.VerifyTimeline)
 	if err != nil {
 		return fmt.Errorf("failed to verify timeline subkey: %w", err)
 	}
@@ -120,7 +111,7 @@ func (d *DAL) verifyEncryptor(ctx context.Context) (err error) {
 		row.VerifyTimeline = optional.Some(newTimeline)
 	}
 
-	newAsync, err := verifySubkey(d.encryptor, row.VerifyAsync)
+	newAsync, err := verifySubkey(encryptor, row.VerifyAsync)
 	if err != nil {
 		return fmt.Errorf("failed to verify async subkey: %w", err)
 	}

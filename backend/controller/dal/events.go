@@ -260,7 +260,7 @@ func (d *DAL) QueryTimeline(ctx context.Context, limit int, filters ...TimelineF
 		deploymentQuery += ` WHERE key = ANY($1::TEXT[])`
 		deploymentArgs = append(deploymentArgs, filter.deployments)
 	}
-	rows, err := d.db.Conn().QueryContext(ctx, deploymentQuery, deploymentArgs...)
+	rows, err := d.Handle.Connection.QueryContext(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
 		return nil, dalerrs.TranslatePGError(err)
 	}
@@ -316,7 +316,7 @@ func (d *DAL) QueryTimeline(ctx context.Context, limit int, filters ...TimelineF
 	q += fmt.Sprintf(" LIMIT %d", limit)
 
 	// Issue query.
-	rows, err = d.db.Conn().QueryContext(ctx, q, args...)
+	rows, err = d.Handle.Connection.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", q, dalerrs.TranslatePGError(err))
 	}

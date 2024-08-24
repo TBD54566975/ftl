@@ -3,7 +3,6 @@ package dal
 
 import (
 	"context"
-	stdsql "database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,7 +17,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/dal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
@@ -210,89 +209,45 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, conn *stdsql.DB, encryptionBuilder encryption.Builder) (*DAL, error) {
-	d := &DAL{
-		db:                sql.NewDB(conn),
+func New(ctx context.Context, conn dal.Connection, encryptionBuilder encryption.Builder) (*DAL, error) {
+	var d *DAL
+	d = &DAL{
+		db: sql.New(conn),
+		Handle: dal.New(conn, func(h *dal.Handle[DAL]) *DAL {
+			return &DAL{
+				Handle:            h,
+				db:                sql.New(h.Connection),
+				encryptor:         d.encryptor,
+				DeploymentChanges: d.DeploymentChanges,
+			}
+		}),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
 	}
-
 	encryptor, err := encryptionBuilder.Build(ctx, d)
 	if err != nil {
-		return nil, fmt.Errorf("failed to setup encryptor: %w", err)
+		return nil, fmt.Errorf("build encryptor: %w", err)
+	}
+	if err := d.verifyEncryptor(ctx, encryptor); err != nil {
+		return nil, fmt.Errorf("verify encryptor: %w", err)
 	}
 	d.encryptor = encryptor
-	if err = d.verifyEncryptor(ctx); err != nil {
-		return nil, fmt.Errorf("failed to verify encryption: %w", err)
-	}
-
 	return d, nil
 }
 
 type DAL struct {
-	db sql.DBI
+	*dal.Handle[DAL]
+	db sql.Querier
 
-	kmsURL    optional.Option[string]
 	encryptor encryption.DataEncryptor
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
 }
 
-// Tx is DAL within a transaction.
-type Tx struct {
-	*DAL
-}
-
-// CommitOrRollback can be used in a defer statement to commit or rollback a
-// transaction depending on whether the enclosing function returned an error.
-//
-//	func myFunc() (err error) {
-//	  tx, err := dal.Begin(ctx)
-//	  if err != nil { return err }
-//	  defer tx.CommitOrRollback(ctx, &err)
-//	  ...
-//	}
-func (t *Tx) CommitOrRollback(ctx context.Context, err *error) {
-	tx, ok := t.db.(*sql.Tx)
-	if !ok {
-		panic("inconceivable")
-	}
-	tx.CommitOrRollback(ctx, err)
-}
-
-func (t *Tx) Commit(ctx context.Context) error {
-	tx, ok := t.db.(*sql.Tx)
-	if !ok {
-		panic("inconcievable")
-	}
-	return tx.Commit(ctx)
-}
-
-func (t *Tx) Rollback(ctx context.Context) error {
-	tx, ok := t.db.(*sql.Tx)
-	if !ok {
-		panic("inconcievable")
-	}
-	return tx.Rollback(ctx)
-}
-
-func (d *DAL) Begin(ctx context.Context) (*Tx, error) {
-	tx, err := d.db.Begin(ctx)
-	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
-	}
-	return &Tx{&DAL{
-		db:                tx,
-		DeploymentChanges: d.DeploymentChanges,
-		kmsURL:            d.kmsURL,
-		encryptor:         d.encryptor,
-	}}, nil
-}
-
 func (d *DAL) GetActiveControllers(ctx context.Context) ([]Controller, error) {
 	controllers, err := d.db.GetActiveControllers(ctx)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return slices.Map(controllers, func(in sql.Controller) Controller {
 		return Controller{
@@ -305,23 +260,23 @@ func (d *DAL) GetActiveControllers(ctx context.Context) ([]Controller, error) {
 func (d *DAL) GetStatus(ctx context.Context) (Status, error) {
 	controllers, err := d.GetActiveControllers(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get control planes: %w", dalerrs.TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get control planes: %w", dal.TranslatePGError(err))
 	}
 	runners, err := d.db.GetActiveRunners(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get active runners: %w", dalerrs.TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get active runners: %w", dal.TranslatePGError(err))
 	}
 	deployments, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get active deployments: %w", dalerrs.TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get active deployments: %w", dal.TranslatePGError(err))
 	}
 	ingressRoutes, err := d.db.GetActiveIngressRoutes(ctx)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get ingress routes: %w", dalerrs.TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get ingress routes: %w", dal.TranslatePGError(err))
 	}
 	routes, err := d.db.GetRoutingTable(ctx, nil)
 	if err != nil {
-		return Status{}, fmt.Errorf("could not get routing table: %w", dalerrs.TranslatePGError(err))
+		return Status{}, fmt.Errorf("could not get routing table: %w", dal.TranslatePGError(err))
 	}
 	statusDeployments, err := slices.MapErr(deployments, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
 		labels := model.Labels{}
@@ -394,7 +349,7 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 	runners := []Runner{}
 	rows, err := d.db.GetRunnersForDeployment(ctx, deployment)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	for _, row := range rows {
 		attrs := model.Labels{}
@@ -415,14 +370,14 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 
 func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err error) {
 	_, err = d.db.UpsertModule(ctx, language, name)
-	return dalerrs.TranslatePGError(err)
+	return dal.TranslatePGError(err)
 }
 
 // GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
 func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
 	have, err := d.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	haveStr := slices.Map(have, func(in sql.GetArtefactDigestsRow) sha256.SHA256 {
 		return sha256.FromBytes(in.Digest)
@@ -434,7 +389,7 @@ func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) 
 func (d *DAL) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
 	sha256digest := sha256.Sum(content)
 	_, err = d.db.CreateArtefact(ctx, sha256digest[:], content)
-	return sha256digest, dalerrs.TranslatePGError(err)
+	return sha256digest, dal.TranslatePGError(err)
 }
 
 type IngressRoutingEntry struct {
@@ -451,7 +406,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	logger := log.FromContext(ctx)
 
 	// Start the parent transaction
-	tx, err := d.db.Begin(ctx)
+	tx, err := d.Begin(ctx)
 	if err != nil {
 		return model.DeploymentKey{}, fmt.Errorf("could not start transaction: %w", err)
 	}
@@ -475,9 +430,9 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	}
 
 	// TODO(aat): "schema" containing language?
-	_, err = tx.UpsertModule(ctx, language, moduleSchema.Name)
+	_, err = tx.db.UpsertModule(ctx, language, moduleSchema.Name)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to upsert module: %w", dalerrs.TranslatePGError(err))
+		return model.DeploymentKey{}, fmt.Errorf("failed to upsert module: %w", dal.TranslatePGError(err))
 	}
 
 	// upsert topics
@@ -486,27 +441,27 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		if !ok {
 			continue
 		}
-		err := tx.UpsertTopic(ctx, sql.UpsertTopicParams{
+		err := tx.db.UpsertTopic(ctx, sql.UpsertTopicParams{
 			Topic:     model.NewTopicKey(moduleSchema.Name, t.Name),
 			Module:    moduleSchema.Name,
 			Name:      t.Name,
 			EventType: t.Event.String(),
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("could not insert topic: %w", dalerrs.TranslatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("could not insert topic: %w", dal.TranslatePGError(err))
 		}
 	}
 
 	deploymentKey := model.NewDeploymentKey(moduleSchema.Name)
 
 	// Create the deployment
-	err = tx.CreateDeployment(ctx, moduleSchema.Name, schemaBytes, deploymentKey)
+	err = tx.db.CreateDeployment(ctx, moduleSchema.Name, schemaBytes, deploymentKey)
 	if err != nil {
-		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", dalerrs.TranslatePGError(err))
+		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", dal.TranslatePGError(err))
 	}
 
 	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
-	artefactDigests, err := tx.GetArtefactDigests(ctx, uploadedDigests)
+	artefactDigests, err := tx.db.GetArtefactDigests(ctx, uploadedDigests)
 	if err != nil {
 		return model.DeploymentKey{}, fmt.Errorf("failed to get artefact digests: %w", err)
 	}
@@ -518,19 +473,19 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	// Associate the artefacts with the deployment
 	for _, row := range artefactDigests {
 		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
-		err = tx.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
+		err = tx.db.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
 			Key:        deploymentKey,
 			ArtefactID: row.ID,
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("failed to associate artefact with deployment: %w", dalerrs.TranslatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to associate artefact with deployment: %w", dal.TranslatePGError(err))
 		}
 	}
 
 	for _, ingressRoute := range ingressRoutes {
-		err = tx.CreateIngressRoute(ctx, sql.CreateIngressRouteParams{
+		err = tx.db.CreateIngressRoute(ctx, sql.CreateIngressRouteParams{
 			Key:    deploymentKey,
 			Method: ingressRoute.Method,
 			Path:   ingressRoute.Path,
@@ -538,14 +493,14 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			Verb:   ingressRoute.Verb,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("failed to create ingress route: %w", dalerrs.TranslatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to create ingress route: %w", dal.TranslatePGError(err))
 		}
 	}
 
 	for _, job := range cronJobs {
 		// Start time must be calculated by the caller rather than generated by db
 		// This ensures that nextExecution is after start time, otherwise the job will never be triggered
-		err := tx.CreateCronJob(ctx, sql.CreateCronJobParams{
+		err := tx.db.CreateCronJob(ctx, sql.CreateCronJobParams{
 			Key:           job.Key,
 			DeploymentKey: deploymentKey,
 			ModuleName:    job.Verb.Module,
@@ -555,7 +510,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 			NextExecution: job.NextExecution,
 		})
 		if err != nil {
-			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", dalerrs.TranslatePGError(err))
+			return model.DeploymentKey{}, fmt.Errorf("failed to create cron job: %w", dal.TranslatePGError(err))
 		}
 	}
 
@@ -565,7 +520,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 func (d *DAL) GetDeployment(ctx context.Context, key model.DeploymentKey) (*model.Deployment, error) {
 	deployment, err := d.db.GetDeployment(ctx, key)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return d.loadDeployment(ctx, deployment)
 }
@@ -587,7 +542,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 		Labels:        attrBytes,
 	})
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return dal.TranslatePGError(err)
 	}
 	if runner.Deployment.Ok() && !deploymentID.Ok() {
 		return fmt.Errorf("deployment %s not found", runner.Deployment)
@@ -611,10 +566,10 @@ func (d *DAL) KillStaleControllers(ctx context.Context, age time.Duration) (int6
 func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 	count, err := d.db.DeregisterRunner(ctx, key)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return dal.TranslatePGError(err)
 	}
 	if count == 0 {
-		return dalerrs.ErrNotFound
+		return dal.ErrNotFound
 	}
 	return nil
 }
@@ -628,24 +583,27 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.D
 		return nil, fmt.Errorf("failed to JSON encode labels: %w", err)
 	}
 	ctx, cancel := context.WithTimeout(ctx, reservationTimeout)
-	tx, err := d.db.Begin(ctx)
+	tx, err := d.Begin(ctx)
 	if err != nil {
 		cancel()
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
-	runner, err := tx.ReserveRunner(ctx, time.Now().Add(reservationTimeout), deployment, jsonLabels)
+	runner, err := tx.db.ReserveRunner(ctx, time.Now().Add(reservationTimeout), deployment, jsonLabels)
 	if err != nil {
 		if rerr := tx.Rollback(context.Background()); rerr != nil {
-			err = errors.Join(err, dalerrs.TranslatePGError(rerr))
+			err = errors.Join(err, dal.TranslatePGError(rerr))
 		}
 		cancel()
-		if dalerrs.IsNotFound(err) {
-			return nil, fmt.Errorf("no idle runners found matching labels %s: %w", jsonLabels, dalerrs.ErrNotFound)
+		if dal.IsNotFound(err) {
+			return nil, fmt.Errorf("no idle runners found matching labels %s: %w", jsonLabels, dal.ErrNotFound)
 		}
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	runnerLabels := model.Labels{}
 	if err := json.Unmarshal(runner.Labels, &runnerLabels); err != nil {
+		if rerr := tx.Rollback(context.Background()); rerr != nil {
+			err = errors.Join(err, dal.TranslatePGError(rerr))
+		}
 		cancel()
 		return nil, fmt.Errorf("failed to JSON decode labels for runner %d: %w", runner.ID, err)
 	}
@@ -666,19 +624,19 @@ func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.D
 var _ Reservation = (*postgresClaim)(nil)
 
 type postgresClaim struct {
-	tx     *sql.Tx
+	tx     *DAL
 	runner Runner
 	cancel context.CancelFunc
 }
 
 func (p *postgresClaim) Commit(ctx context.Context) error {
 	defer p.cancel()
-	return dalerrs.TranslatePGError(p.tx.Commit(ctx))
+	return dal.TranslatePGError(p.tx.Commit(ctx))
 }
 
 func (p *postgresClaim) Rollback(ctx context.Context) error {
 	defer p.cancel()
-	return dalerrs.TranslatePGError(p.tx.Rollback(ctx))
+	return dal.TranslatePGError(p.tx.Rollback(ctx))
 }
 
 func (p *postgresClaim) Runner() Runner { return p.runner }
@@ -686,31 +644,30 @@ func (p *postgresClaim) Runner() Runner { return p.runner }
 // SetDeploymentReplicas activates the given deployment.
 func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int) (err error) {
 	// Start the transaction
-	tx, err := d.db.Begin(ctx)
+	tx, err := d.Begin(ctx)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return dal.TranslatePGError(err)
 	}
-
 	defer tx.CommitOrRollback(ctx, &err)
 
-	deployment, err := d.db.GetDeployment(ctx, key)
+	deployment, err := tx.db.GetDeployment(ctx, key)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return dal.TranslatePGError(err)
 	}
 
-	err = d.db.SetDeploymentDesiredReplicas(ctx, key, int32(minReplicas))
+	err = tx.db.SetDeploymentDesiredReplicas(ctx, key, int32(minReplicas))
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return dal.TranslatePGError(err)
 	}
 	if minReplicas == 0 {
-		err = d.deploymentWillDeactivate(ctx, tx, key)
+		err = tx.deploymentWillDeactivate(ctx, key)
 		if err != nil {
-			return dalerrs.TranslatePGError(err)
+			return dal.TranslatePGError(err)
 		}
 	} else if deployment.MinReplicas == 0 {
-		err = d.deploymentWillActivate(ctx, tx, key)
+		err = tx.deploymentWillActivate(ctx, key)
 		if err != nil {
-			return dalerrs.TranslatePGError(err)
+			return dal.TranslatePGError(err)
 		}
 	}
 	var payload encryption.EncryptedTimelineColumn
@@ -721,12 +678,12 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload for InsertDeploymentUpdatedEvent: %w", err)
 	}
-	err = tx.InsertTimelineDeploymentUpdatedEvent(ctx, sql.InsertTimelineDeploymentUpdatedEventParams{
+	err = tx.db.InsertTimelineDeploymentUpdatedEvent(ctx, sql.InsertTimelineDeploymentUpdatedEventParams{
 		DeploymentKey: key,
 		Payload:       payload,
 	})
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return dal.TranslatePGError(err)
 	}
 
 	return nil
@@ -739,51 +696,51 @@ var ErrReplaceDeploymentAlreadyActive = errors.New("deployment already active")
 // returns ErrReplaceDeploymentAlreadyActive if the new deployment is already active.
 func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.DeploymentKey, minReplicas int) (err error) {
 	// Start the transaction
-	tx, err := d.db.Begin(ctx)
+	tx, err := d.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("replace deployment failed to begin transaction for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
+		return fmt.Errorf("replace deployment failed to begin transaction for %v: %w", newDeploymentKey, dal.TranslatePGError(err))
 	}
 
 	defer tx.CommitOrRollback(ctx, &err)
-	newDeployment, err := tx.GetDeployment(ctx, newDeploymentKey)
+	newDeployment, err := tx.db.GetDeployment(ctx, newDeploymentKey)
 	if err != nil {
-		return fmt.Errorf("replace deployment failed to get deployment for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
+		return fmt.Errorf("replace deployment failed to get deployment for %v: %w", newDeploymentKey, dal.TranslatePGError(err))
 	}
 
 	// must be called before deploymentWillDeactivate for the old deployment
-	err = d.deploymentWillActivate(ctx, tx, newDeploymentKey)
+	err = tx.deploymentWillActivate(ctx, newDeploymentKey)
 	if err != nil {
-		return fmt.Errorf("replace deployment failed willActivate trigger for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
+		return fmt.Errorf("replace deployment failed willActivate trigger for %v: %w", newDeploymentKey, dal.TranslatePGError(err))
 	}
 
 	// If there's an existing deployment, set its desired replicas to 0
 	var replacedDeploymentKey optional.Option[model.DeploymentKey]
-	oldDeployment, err := tx.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
+	oldDeployment, err := tx.db.GetExistingDeploymentForModule(ctx, newDeployment.ModuleName)
 	if err == nil {
 		if oldDeployment.Key.String() == newDeploymentKey.String() {
 			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
 		}
-		err = tx.SetDeploymentDesiredReplicas(ctx, oldDeployment.Key, 0)
+		err = tx.db.SetDeploymentDesiredReplicas(ctx, oldDeployment.Key, 0)
 		if err != nil {
-			return fmt.Errorf("replace deployment failed to set old deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
+			return fmt.Errorf("replace deployment failed to set old deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dal.TranslatePGError(err))
 		}
-		err = tx.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
+		err = tx.db.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
 		if err != nil {
-			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
+			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dal.TranslatePGError(err))
 		}
-		err = d.deploymentWillDeactivate(ctx, tx, oldDeployment.Key)
+		err = d.deploymentWillDeactivate(ctx, oldDeployment.Key)
 		if err != nil {
-			return fmt.Errorf("replace deployment failed willDeactivate trigger from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dalerrs.TranslatePGError(err))
+			return fmt.Errorf("replace deployment failed willDeactivate trigger from %v to %v: %w", oldDeployment.Key, newDeploymentKey, dal.TranslatePGError(err))
 		}
 		replacedDeploymentKey = optional.Some(oldDeployment.Key)
-	} else if !dalerrs.IsNotFound(err) {
+	} else if !dal.IsNotFound(err) {
 		// any error other than not found
-		return fmt.Errorf("replace deployment failed to get existing deployment for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
+		return fmt.Errorf("replace deployment failed to get existing deployment for %v: %w", newDeploymentKey, dal.TranslatePGError(err))
 	} else {
 		// Set the desired replicas for the new deployment
-		err = tx.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
+		err = tx.db.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
 		if err != nil {
-			return fmt.Errorf("replace deployment failed to set replicas for %v: %w", newDeploymentKey, dalerrs.TranslatePGError(err))
+			return fmt.Errorf("replace deployment failed to set replicas for %v: %w", newDeploymentKey, dal.TranslatePGError(err))
 		}
 	}
 
@@ -796,14 +753,14 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		return fmt.Errorf("replace deployment failed to encrypt payload: %w", err)
 	}
 
-	err = tx.InsertTimelineDeploymentCreatedEvent(ctx, sql.InsertTimelineDeploymentCreatedEventParams{
+	err = tx.db.InsertTimelineDeploymentCreatedEvent(ctx, sql.InsertTimelineDeploymentCreatedEventParams{
 		DeploymentKey: newDeploymentKey,
 		Language:      newDeployment.Language,
 		ModuleName:    newDeployment.ModuleName,
 		Payload:       payload,
 	})
 	if err != nil {
-		return fmt.Errorf("replace deployment failed to create event: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("replace deployment failed to create event: %w", dal.TranslatePGError(err))
 	}
 
 	return nil
@@ -813,23 +770,23 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 //
 // when replacing a deployment, this should be called first before calling deploymentWillDeactivate on the old deployment.
 // This allows the new deployment to migrate from the old deployment (such as subscriptions).
-func (d *DAL) deploymentWillActivate(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
-	module, err := tx.GetSchemaForDeployment(ctx, key)
+func (d *DAL) deploymentWillActivate(ctx context.Context, key model.DeploymentKey) error {
+	module, err := d.db.GetSchemaForDeployment(ctx, key)
 	if err != nil {
-		return fmt.Errorf("could not get schema: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("could not get schema: %w", dal.TranslatePGError(err))
 	}
-	err = d.createSubscriptions(ctx, tx, key, module)
+	err = d.createSubscriptions(ctx, key, module)
 	if err != nil {
 		return err
 	}
-	return d.createSubscribers(ctx, tx, key, module)
+	return d.createSubscribers(ctx, key, module)
 }
 
 // deploymentWillDeactivate is called whenever a deployment goes to min_replicas=0.
 //
 // it may be called when min_replicas was already 0
-func (d *DAL) deploymentWillDeactivate(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
-	return d.removeSubscriptionsAndSubscribers(ctx, tx, key)
+func (d *DAL) deploymentWillDeactivate(ctx context.Context, key model.DeploymentKey) error {
+	return d.removeSubscriptionsAndSubscribers(ctx, key)
 }
 
 // GetDeploymentsNeedingReconciliation returns deployments that have a
@@ -837,10 +794,10 @@ func (d *DAL) deploymentWillDeactivate(ctx context.Context, tx *sql.Tx, key mode
 func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconciliation, error) {
 	counts, err := d.db.GetDeploymentsNeedingReconciliation(ctx)
 	if err != nil {
-		if dalerrs.IsNotFound(err) {
+		if dal.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return slices.Map(counts, func(t sql.GetDeploymentsNeedingReconciliationRow) Reconciliation {
 		return Reconciliation{
@@ -857,10 +814,10 @@ func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconc
 func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 	rows, err := d.db.GetActiveDeployments(ctx)
 	if err != nil {
-		if dalerrs.IsNotFound(err) {
+		if dal.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return slices.MapErr(rows, func(in sql.GetActiveDeploymentsRow) (Deployment, error) {
 		return Deployment{
@@ -895,10 +852,10 @@ func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]Deployment, error) {
 	rows, err := d.db.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
-		if dalerrs.IsNotFound(err) {
+		if dal.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return slices.MapErr(rows, func(in sql.GetDeploymentsWithMinReplicasRow) (Deployment, error) {
 		return Deployment{
@@ -915,7 +872,7 @@ func (d *DAL) GetDeploymentsWithMinReplicas(ctx context.Context) ([]Deployment, 
 func (d *DAL) GetActiveDeploymentSchemas(ctx context.Context) ([]*schema.Module, error) {
 	rows, err := d.db.GetActiveDeploymentSchemas(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get active deployments: %w", dalerrs.TranslatePGError(err))
+		return nil, fmt.Errorf("could not get active deployments: %w", dal.TranslatePGError(err))
 	}
 	return slices.MapErr(rows, func(in sql.GetActiveDeploymentSchemasRow) (*schema.Module, error) { return in.Schema, nil })
 }
@@ -937,7 +894,7 @@ type Process struct {
 func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 	rows, err := d.db.GetProcessList(ctx)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return slices.MapErr(rows, func(row sql.GetProcessListRow) (Process, error) {
 		var runner optional.Option[ProcessRunner]
@@ -982,10 +939,10 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 		return nil, fmt.Errorf("could not marshal labels: %w", err)
 	}
 	runners, err := d.db.GetIdleRunners(ctx, jsonb, int64(limit))
-	if dalerrs.IsNotFound(err) {
+	if dal.IsNotFound(err) {
 		return nil, nil
 	} else if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return slices.MapErr(runners, func(row sql.Runner) (Runner, error) {
 		rowLabels := model.Labels{}
@@ -1010,10 +967,10 @@ func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels
 func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string][]Route, error) {
 	routes, err := d.db.GetRoutingTable(ctx, modules)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	if len(routes) == 0 {
-		return nil, fmt.Errorf("no routes found: %w", dalerrs.ErrNotFound)
+		return nil, fmt.Errorf("no routes found: %w", dal.ErrNotFound)
 	}
 	out := make(map[string][]Route, len(routes))
 	for _, route := range routes {
@@ -1033,7 +990,7 @@ func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string
 func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
 	state, err := d.db.GetRunnerState(ctx, runnerKey)
 	if err != nil {
-		return "", dalerrs.TranslatePGError(err)
+		return "", dal.TranslatePGError(err)
 	}
 	return RunnerState(state), nil
 }
@@ -1041,14 +998,14 @@ func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (Ru
 func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {
 	row, err := d.db.GetRunner(ctx, runnerKey)
 	if err != nil {
-		return Runner{}, dalerrs.TranslatePGError(err)
+		return Runner{}, dal.TranslatePGError(err)
 	}
 	return runnerFromDB(row), nil
 }
 
 func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
 	count, err := d.db.ExpireRunnerReservations(ctx)
-	return count, dalerrs.TranslatePGError(err)
+	return count, dal.TranslatePGError(err)
 }
 
 func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
@@ -1068,7 +1025,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 	if err != nil {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
 	}
-	return dalerrs.TranslatePGError(d.db.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
+	return dal.TranslatePGError(d.db.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
 		DeploymentKey: log.DeploymentKey,
 		RequestKey:    requestKey,
 		TimeStamp:     log.Time,
@@ -1086,7 +1043,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 	}
 	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	out.Artefacts = slices.Map(artefacts, func(row sql.GetDeploymentArtefactsRow) *model.Artefact {
 		return &model.Artefact{
@@ -1101,7 +1058,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment sql.GetDeploymentRo
 
 func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr string) error {
 	if err := d.db.CreateRequest(ctx, sql.Origin(key.Payload.Origin), key, addr); err != nil {
-		return dalerrs.TranslatePGError(err)
+		return dal.TranslatePGError(err)
 	}
 	return nil
 }
@@ -1109,10 +1066,10 @@ func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr stri
 func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRoute, error) {
 	routes, err := d.db.GetIngressRoutes(ctx, method)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	if len(routes) == 0 {
-		return nil, dalerrs.ErrNotFound
+		return nil, dal.ErrNotFound
 	}
 	return slices.Map(routes, func(row sql.GetIngressRoutesRow) IngressRoute {
 		return IngressRoute{
@@ -1128,7 +1085,7 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRou
 
 func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {
 	id, err := d.db.UpsertController(ctx, key, addr)
-	return id, dalerrs.TranslatePGError(err)
+	return id, dal.TranslatePGError(err)
 }
 
 func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
@@ -1155,7 +1112,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if err != nil {
 		return fmt.Errorf("failed to encrypt call payload: %w", err)
 	}
-	return dalerrs.TranslatePGError(d.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
+	return dal.TranslatePGError(d.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
 		DeploymentKey:    call.DeploymentKey,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentRequestKey,
@@ -1170,13 +1127,13 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 
 func (d *DAL) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
 	count, err := d.db.DeleteOldTimelineEvents(ctx, sqltypes.Duration(age), eventType)
-	return count, dalerrs.TranslatePGError(err)
+	return count, dal.TranslatePGError(err)
 }
 
 func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
 	rows, err := d.db.GetActiveRunners(ctx)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, dal.TranslatePGError(err)
 	}
 	return slices.Map(rows, func(row sql.GetActiveRunnersRow) Runner {
 		return runnerFromDB(sql.GetRunnerRow(row))
@@ -1184,12 +1141,12 @@ func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {
 }
 
 // Check if a deployment exists that exactly matches the given artefacts and schema.
-func (*DAL) checkForExistingDeployments(ctx context.Context, tx *sql.Tx, moduleSchema *schema.Module, artefacts []DeploymentArtefact) (model.DeploymentKey, error) {
+func (*DAL) checkForExistingDeployments(ctx context.Context, tx *DAL, moduleSchema *schema.Module, artefacts []DeploymentArtefact) (model.DeploymentKey, error) {
 	schemaBytes, err := schema.ModuleToBytes(moduleSchema)
 	if err != nil {
 		return model.DeploymentKey{}, fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	existing, err := tx.GetDeploymentsWithArtefacts(ctx,
+	existing, err := tx.db.GetDeploymentsWithArtefacts(ctx,
 		sha256esToBytes(slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return in.Digest })),
 		schemaBytes,
 		int64(len(artefacts)),
@@ -1209,7 +1166,7 @@ func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 
 type artefactReader struct {
 	id     int64
-	db     sql.DBI
+	db     sql.Querier
 	offset int32
 }
 
@@ -1218,7 +1175,7 @@ func (r *artefactReader) Close() error { return nil }
 func (r *artefactReader) Read(p []byte) (n int, err error) {
 	content, err := r.db.GetArtefactContentRange(context.Background(), r.offset+1, int32(len(p)), r.id)
 	if err != nil {
-		return 0, dalerrs.TranslatePGError(err)
+		return 0, dal.TranslatePGError(err)
 	}
 	copy(p, content)
 	clen := len(content)

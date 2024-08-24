@@ -145,7 +145,7 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 }
 
 // scheduleCronJob schedules the next execution of a single cron job.
-func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.Tx, job model.CronJob) error {
+func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.CronJob) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	now := s.clock.Now().UTC()
 	pending, err := tx.IsCronJobPending(ctx, job.Key, now)

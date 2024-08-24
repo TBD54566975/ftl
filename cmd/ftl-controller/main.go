@@ -61,7 +61,7 @@ func main() {
 	dal, err := dal.New(ctx, conn, encryptionBuilder)
 	kctx.FatalIfErrorf(err)
 
-	configDal, err := cfdal.New(ctx, conn)
+	configDal := cfdal.New(conn)
 	kctx.FatalIfErrorf(err)
 	configProviders := []cf.Provider[cf.Configuration]{cf.NewDBConfigProvider(configDal)}
 	configResolver := cf.NewDBConfigResolver(configDal)

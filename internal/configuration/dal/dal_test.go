@@ -6,22 +6,21 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	libdal "github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 )
 
 func TestDALConfiguration(t *testing.T) {
 	t.Run("ModuleConfiguration", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
+		err := dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
 		assert.NoError(t, err)
 
 		value, err := dal.GetModuleConfiguration(ctx, optional.Some("echo"), "my_config")
@@ -40,11 +39,9 @@ func TestDALConfiguration(t *testing.T) {
 	t.Run("GlobalConfiguration", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
+		err := dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
 		assert.NoError(t, err)
 
 		value, err := dal.GetModuleConfiguration(ctx, optional.None[string](), "my_config")
@@ -64,11 +61,9 @@ func TestDALConfiguration(t *testing.T) {
 	t.Run("SetSameGlobalConfigTwice", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
+		err := dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
 		assert.NoError(t, err)
 
 		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`"hehe"`))
@@ -82,11 +77,9 @@ func TestDALConfiguration(t *testing.T) {
 	t.Run("SetModuleOverridesGlobal", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
+		err := dal.SetModuleConfiguration(ctx, optional.None[string](), "my_config", []byte(`""`))
 		assert.NoError(t, err)
 		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`"hehe"`))
 		assert.NoError(t, err)
@@ -99,11 +92,9 @@ func TestDALConfiguration(t *testing.T) {
 	t.Run("HandlesConflicts", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
+		err := dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
 		assert.NoError(t, err)
 		err = dal.SetModuleConfiguration(ctx, optional.Some("echo"), "my_config", []byte(`""`))
 		assert.NoError(t, err)
@@ -123,11 +114,9 @@ func TestDALSecrets(t *testing.T) {
 	t.Run("ModuleSecret", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example.com")
+		err := dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example.com")
 		assert.NoError(t, err)
 
 		value, err := dal.GetModuleSecretURL(ctx, optional.Some("echo"), "my_secret")
@@ -146,11 +135,9 @@ func TestDALSecrets(t *testing.T) {
 	t.Run("GlobalSecret", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
+		err := dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
 		assert.NoError(t, err)
 
 		value, err := dal.GetModuleSecretURL(ctx, optional.None[string](), "my_secret")
@@ -169,11 +156,9 @@ func TestDALSecrets(t *testing.T) {
 	t.Run("SetSameGlobalSecretTwice", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
+		err := dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
 		assert.NoError(t, err)
 
 		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example2.com")
@@ -187,11 +172,9 @@ func TestDALSecrets(t *testing.T) {
 	t.Run("SetModuleOverridesGlobal", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
+		err := dal.SetModuleSecretURL(ctx, optional.None[string](), "my_secret", "http://example.com")
 		assert.NoError(t, err)
 		err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example2.com")
 		assert.NoError(t, err)
@@ -204,11 +187,9 @@ func TestDALSecrets(t *testing.T) {
 	t.Run("HandlesConflicts", func(t *testing.T) {
 		ctx := log.ContextWithNewDefaultLogger(context.Background())
 		conn := sqltest.OpenForTesting(ctx, t)
-		dal, err := New(ctx, conn)
-		assert.NoError(t, err)
-		assert.NotZero(t, dal)
+		dal := New(conn)
 
-		err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example.com")
+		err := dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example.com")
 		assert.NoError(t, err)
 		err = dal.SetModuleSecretURL(ctx, optional.Some("echo"), "my_secret", "http://example2.com")
 		assert.NoError(t, err)

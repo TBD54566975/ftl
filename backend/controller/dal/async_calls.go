@@ -169,7 +169,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	call *AsyncCall,
 	result either.Either[[]byte, string],
-	finalise func(tx *Tx, isFinalResult bool) error) (didScheduleAnotherCall bool, err error) {
+	finalise func(tx *DAL, isFinalResult bool) error) (didScheduleAnotherCall bool, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
 		return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
