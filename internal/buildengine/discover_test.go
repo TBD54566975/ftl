@@ -139,19 +139,6 @@ func TestDiscoverModules(t *testing.T) {
 		},
 		{
 			Config: moduleconfig.ModuleConfig{
-				Dir:       "testdata/highgoversion",
-				Language:  "go",
-				Realm:     "home",
-				Module:    "highgoversion",
-				Deploy:    []string{"main"},
-				DeployDir: ".ftl",
-				Schema:    "schema.pb",
-				Errors:    "errors.pb",
-				Watch:     []string{"**/*.go", "go.mod", "go.sum", "../../../../go-runtime/ftl/**/*.go"},
-			},
-		},
-		{
-			Config: moduleconfig.ModuleConfig{
 				Dir:       "testdata/integer",
 				Language:  "go",
 				Realm:     "home",

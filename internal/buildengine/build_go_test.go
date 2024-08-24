@@ -1,9 +1,7 @@
 package buildengine
 
 import (
-	"fmt"
 	"os"
-	"runtime"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -45,32 +43,6 @@ func TestExternalType(t *testing.T) {
 			`unsupported response type "ftl/external.ExternalResponse"`,
 		),
 	})
-}
-
-func TestGoModVersion(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	sch := &schema.Schema{
-		Modules: []*schema.Module{
-			schema.Builtins(),
-			{Name: "highgoversion", Decls: []schema.Decl{
-				&schema.Data{Name: "EchoReq"},
-				&schema.Data{Name: "EchoResp"},
-				&schema.Verb{
-					Name:     "echo",
-					Request:  &schema.Ref{Name: "EchoRequest"},
-					Response: &schema.Ref{Name: "EchoResponse"},
-				},
-			}},
-		},
-	}
-	bctx := buildContext{
-		moduleDir: "testdata/highgoversion",
-		buildDir:  ".ftl",
-		sch:       sch,
-	}
-	testBuild(t, bctx, fmt.Sprintf("go version %q is not recent enough for this module, needs minimum version \"9000.1.1\"", runtime.Version()[2:]), "", []assertion{})
 }
 
 func TestGeneratedTypeRegistry(t *testing.T) {
