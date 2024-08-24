@@ -33,10 +33,12 @@ type UserVerbConfig struct {
 // This function is intended to be used by the code generator.
 func NewUserVerbServer(projectName string, moduleName string, handlers ...Handler) plugin.Constructor[ftlv1connect.VerbServiceHandler, UserVerbConfig] {
 	return func(ctx context.Context, uc UserVerbConfig) (context.Context, ftlv1connect.VerbServiceHandler, error) {
+		moduleServiceClient := rpc.Dial(ftlv1connect.NewModuleServiceClient, uc.FTLEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, moduleServiceClient)
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, uc.FTLEndpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 
-		moduleContextSupplier := modulecontext.NewModuleContextSupplier(verbServiceClient)
+		moduleContextSupplier := modulecontext.NewModuleContextSupplier(moduleServiceClient)
 		dynamicCtx, err := modulecontext.NewDynamicContext(ctx, moduleContextSupplier, moduleName)
 		if err != nil {
 			return nil, nil, fmt.Errorf("could not get config: %w", err)
@@ -169,26 +171,6 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 	}), nil
 }
 
-func (m *moduleServer) GetModuleContext(_ context.Context, _ *connect.Request[ftlv1.ModuleContextRequest], _ *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, fmt.Errorf("GetModuleContext not implemented"))
-}
-
-func (m *moduleServer) AcquireLease(context.Context, *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, fmt.Errorf("AcquireLease not implemented"))
-}
-
 func (m *moduleServer) Ping(_ context.Context, _ *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
-}
-
-func (m *moduleServer) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("SendFSMEvent not implemented"))
-}
-
-func (m *moduleServer) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("SetNextFSMEvent not implemented"))
-}
-
-func (m *moduleServer) PublishEvent(context.Context, *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, fmt.Errorf("PublishEvent not implemented"))
 }

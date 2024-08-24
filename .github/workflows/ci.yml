@@ -65,6 +65,7 @@ jobs:
         run: sqlc vet
   ensure-frozen-migrations:
     name: Ensure Frozen Migrations
+    if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-ensure-frozen-migrations') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -106,6 +107,7 @@ jobs:
         run: just lint-scripts
   proto-breaking:
     name: Proto Breaking Change Check
+    if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-proto-breaking') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

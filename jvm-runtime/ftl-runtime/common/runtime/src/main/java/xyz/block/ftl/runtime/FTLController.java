@@ -19,15 +19,7 @@ import io.grpc.stub.StreamObserver;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.LeaseFailedException;
 import xyz.block.ftl.LeaseHandle;
-import xyz.block.ftl.v1.AcquireLeaseRequest;
-import xyz.block.ftl.v1.AcquireLeaseResponse;
-import xyz.block.ftl.v1.CallRequest;
-import xyz.block.ftl.v1.CallResponse;
-import xyz.block.ftl.v1.ModuleContextRequest;
-import xyz.block.ftl.v1.ModuleContextResponse;
-import xyz.block.ftl.v1.PublishEventRequest;
-import xyz.block.ftl.v1.PublishEventResponse;
-import xyz.block.ftl.v1.VerbServiceGrpc;
+import xyz.block.ftl.v1.*;
 import xyz.block.ftl.v1.schema.Ref;
 
 public class FTLController implements LeaseClient {
@@ -39,6 +31,7 @@ public class FTLController implements LeaseClient {
     private boolean waiters = false;
 
     final VerbServiceGrpc.VerbServiceStub verbService;
+    final ModuleServiceGrpc.ModuleServiceStub moduleService;
     final StreamObserver<ModuleContextResponse> moduleObserver = new ModuleObserver();
 
     private static volatile FTLController controller;
@@ -73,8 +66,9 @@ public class FTLController implements LeaseClient {
             channelBuilder.usePlaintext();
         }
         var channel = channelBuilder.build();
+        moduleService = ModuleServiceGrpc.newStub(channel);
+        moduleService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
         verbService = VerbServiceGrpc.newStub(channel);
-        verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
     }
 
     public byte[] getSecret(String secretName) {
@@ -138,7 +132,7 @@ public class FTLController implements LeaseClient {
 
     public void publishEvent(String topic, String callingVerbName, byte[] event) {
         CompletableFuture<?> cf = new CompletableFuture<>();
-        verbService.publishEvent(PublishEventRequest.newBuilder()
+        moduleService.publishEvent(PublishEventRequest.newBuilder()
                 .setCaller(callingVerbName).setBody(ByteString.copyFrom(event))
                 .setTopic(Ref.newBuilder().setModule(moduleName).setName(topic).build()).build(),
                 new StreamObserver<PublishEventResponse>() {
@@ -166,7 +160,7 @@ public class FTLController implements LeaseClient {
 
     public LeaseHandle acquireLease(Duration duration, String... keys) throws LeaseFailedException {
         CompletableFuture<?> cf = new CompletableFuture<>();
-        var client = verbService.acquireLease(new StreamObserver<AcquireLeaseResponse>() {
+        var client = moduleService.acquireLease(new StreamObserver<AcquireLeaseResponse>() {
             @Override
             public void onNext(AcquireLeaseResponse value) {
                 cf.complete(null);
@@ -255,7 +249,7 @@ public class FTLController implements LeaseClient {
                 }
             }
             if (failCount.incrementAndGet() < 5) {
-                verbService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
+                moduleService.getModuleContext(ModuleContextRequest.newBuilder().setModule(moduleName).build(), moduleObserver);
             }
         }
 

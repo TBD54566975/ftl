@@ -229,26 +229,6 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
-func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest], resp *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("module context must be acquired from the controller"))
-}
-
-func (s *Service) AcquireLease(context.Context, *connect.BidiStream[ftlv1.AcquireLeaseRequest, ftlv1.AcquireLeaseResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("leases must be acquired from the controller"))
-}
-
-func (s *Service) SendFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("FSM events must be sent to the controller"))
-}
-
-func (s *Service) SetNextFSMEvent(context.Context, *connect.Request[ftlv1.SendFSMEventRequest]) (*connect.Response[ftlv1.SendFSMEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("FSM events must be set by the controller"))
-}
-
-func (s *Service) PublishEvent(context.Context, *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("topic events must be sent to the controller"))
-}
-
 func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
 	if err, ok := s.registrationFailure.Load().Get(); ok {
 		observability.Deployment.Failure(ctx, optional.None[string]())
