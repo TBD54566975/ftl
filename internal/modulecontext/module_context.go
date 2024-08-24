@@ -184,10 +184,10 @@ type ModuleContextSupplier interface {
 }
 
 type grpcModuleContextSupplier struct {
-	client ftlv1connect.VerbServiceClient
+	client ftlv1connect.ModuleServiceClient
 }
 
-func NewModuleContextSupplier(client ftlv1connect.VerbServiceClient) ModuleContextSupplier {
+func NewModuleContextSupplier(client ftlv1connect.ModuleServiceClient) ModuleContextSupplier {
 	return ModuleContextSupplier(grpcModuleContextSupplier{client})
 }
 

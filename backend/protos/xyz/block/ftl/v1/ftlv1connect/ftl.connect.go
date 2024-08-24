@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_7_0
 const (
 	// VerbServiceName is the fully-qualified name of the VerbService service.
 	VerbServiceName = "xyz.block.ftl.v1.VerbService"
+	// ModuleServiceName is the fully-qualified name of the ModuleService service.
+	ModuleServiceName = "xyz.block.ftl.v1.ModuleService"
 	// ControllerServiceName is the fully-qualified name of the ControllerService service.
 	ControllerServiceName = "xyz.block.ftl.v1.ControllerService"
 	// RunnerServiceName is the fully-qualified name of the RunnerService service.
@@ -41,23 +43,25 @@ const (
 const (
 	// VerbServicePingProcedure is the fully-qualified name of the VerbService's Ping RPC.
 	VerbServicePingProcedure = "/xyz.block.ftl.v1.VerbService/Ping"
-	// VerbServiceGetModuleContextProcedure is the fully-qualified name of the VerbService's
-	// GetModuleContext RPC.
-	VerbServiceGetModuleContextProcedure = "/xyz.block.ftl.v1.VerbService/GetModuleContext"
-	// VerbServiceAcquireLeaseProcedure is the fully-qualified name of the VerbService's AcquireLease
-	// RPC.
-	VerbServiceAcquireLeaseProcedure = "/xyz.block.ftl.v1.VerbService/AcquireLease"
-	// VerbServiceSendFSMEventProcedure is the fully-qualified name of the VerbService's SendFSMEvent
-	// RPC.
-	VerbServiceSendFSMEventProcedure = "/xyz.block.ftl.v1.VerbService/SendFSMEvent"
-	// VerbServiceSetNextFSMEventProcedure is the fully-qualified name of the VerbService's
-	// SetNextFSMEvent RPC.
-	VerbServiceSetNextFSMEventProcedure = "/xyz.block.ftl.v1.VerbService/SetNextFSMEvent"
-	// VerbServicePublishEventProcedure is the fully-qualified name of the VerbService's PublishEvent
-	// RPC.
-	VerbServicePublishEventProcedure = "/xyz.block.ftl.v1.VerbService/PublishEvent"
 	// VerbServiceCallProcedure is the fully-qualified name of the VerbService's Call RPC.
 	VerbServiceCallProcedure = "/xyz.block.ftl.v1.VerbService/Call"
+	// ModuleServicePingProcedure is the fully-qualified name of the ModuleService's Ping RPC.
+	ModuleServicePingProcedure = "/xyz.block.ftl.v1.ModuleService/Ping"
+	// ModuleServiceGetModuleContextProcedure is the fully-qualified name of the ModuleService's
+	// GetModuleContext RPC.
+	ModuleServiceGetModuleContextProcedure = "/xyz.block.ftl.v1.ModuleService/GetModuleContext"
+	// ModuleServiceAcquireLeaseProcedure is the fully-qualified name of the ModuleService's
+	// AcquireLease RPC.
+	ModuleServiceAcquireLeaseProcedure = "/xyz.block.ftl.v1.ModuleService/AcquireLease"
+	// ModuleServiceSendFSMEventProcedure is the fully-qualified name of the ModuleService's
+	// SendFSMEvent RPC.
+	ModuleServiceSendFSMEventProcedure = "/xyz.block.ftl.v1.ModuleService/SendFSMEvent"
+	// ModuleServiceSetNextFSMEventProcedure is the fully-qualified name of the ModuleService's
+	// SetNextFSMEvent RPC.
+	ModuleServiceSetNextFSMEventProcedure = "/xyz.block.ftl.v1.ModuleService/SetNextFSMEvent"
+	// ModuleServicePublishEventProcedure is the fully-qualified name of the ModuleService's
+	// PublishEvent RPC.
+	ModuleServicePublishEventProcedure = "/xyz.block.ftl.v1.ModuleService/PublishEvent"
 	// ControllerServicePingProcedure is the fully-qualified name of the ControllerService's Ping RPC.
 	ControllerServicePingProcedure = "/xyz.block.ftl.v1.ControllerService/Ping"
 	// ControllerServiceProcessListProcedure is the fully-qualified name of the ControllerService's
@@ -137,18 +141,6 @@ const (
 type VerbServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// Get configuration state for the module
-	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.ServerStreamForClient[v1.ModuleContextResponse], error)
-	// Acquire (and renew) a lease for a deployment.
-	//
-	// Returns ResourceExhausted if the lease is held.
-	AcquireLease(context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
-	// Send an event to an FSM.
-	SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
-	// Set the next event for an FSM.
-	SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
-	// Publish an event to a topic.
-	PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
@@ -169,31 +161,6 @@ func NewVerbServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
-		getModuleContext: connect.NewClient[v1.ModuleContextRequest, v1.ModuleContextResponse](
-			httpClient,
-			baseURL+VerbServiceGetModuleContextProcedure,
-			opts...,
-		),
-		acquireLease: connect.NewClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse](
-			httpClient,
-			baseURL+VerbServiceAcquireLeaseProcedure,
-			opts...,
-		),
-		sendFSMEvent: connect.NewClient[v1.SendFSMEventRequest, v1.SendFSMEventResponse](
-			httpClient,
-			baseURL+VerbServiceSendFSMEventProcedure,
-			opts...,
-		),
-		setNextFSMEvent: connect.NewClient[v1.SendFSMEventRequest, v1.SendFSMEventResponse](
-			httpClient,
-			baseURL+VerbServiceSetNextFSMEventProcedure,
-			opts...,
-		),
-		publishEvent: connect.NewClient[v1.PublishEventRequest, v1.PublishEventResponse](
-			httpClient,
-			baseURL+VerbServicePublishEventProcedure,
-			opts...,
-		),
 		call: connect.NewClient[v1.CallRequest, v1.CallResponse](
 			httpClient,
 			baseURL+VerbServiceCallProcedure,
@@ -204,43 +171,13 @@ func NewVerbServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // verbServiceClient implements VerbServiceClient.
 type verbServiceClient struct {
-	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
-	getModuleContext *connect.Client[v1.ModuleContextRequest, v1.ModuleContextResponse]
-	acquireLease     *connect.Client[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
-	sendFSMEvent     *connect.Client[v1.SendFSMEventRequest, v1.SendFSMEventResponse]
-	setNextFSMEvent  *connect.Client[v1.SendFSMEventRequest, v1.SendFSMEventResponse]
-	publishEvent     *connect.Client[v1.PublishEventRequest, v1.PublishEventResponse]
-	call             *connect.Client[v1.CallRequest, v1.CallResponse]
+	ping *connect.Client[v1.PingRequest, v1.PingResponse]
+	call *connect.Client[v1.CallRequest, v1.CallResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.VerbService.Ping.
 func (c *verbServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
 	return c.ping.CallUnary(ctx, req)
-}
-
-// GetModuleContext calls xyz.block.ftl.v1.VerbService.GetModuleContext.
-func (c *verbServiceClient) GetModuleContext(ctx context.Context, req *connect.Request[v1.ModuleContextRequest]) (*connect.ServerStreamForClient[v1.ModuleContextResponse], error) {
-	return c.getModuleContext.CallServerStream(ctx, req)
-}
-
-// AcquireLease calls xyz.block.ftl.v1.VerbService.AcquireLease.
-func (c *verbServiceClient) AcquireLease(ctx context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse] {
-	return c.acquireLease.CallBidiStream(ctx)
-}
-
-// SendFSMEvent calls xyz.block.ftl.v1.VerbService.SendFSMEvent.
-func (c *verbServiceClient) SendFSMEvent(ctx context.Context, req *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
-	return c.sendFSMEvent.CallUnary(ctx, req)
-}
-
-// SetNextFSMEvent calls xyz.block.ftl.v1.VerbService.SetNextFSMEvent.
-func (c *verbServiceClient) SetNextFSMEvent(ctx context.Context, req *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
-	return c.setNextFSMEvent.CallUnary(ctx, req)
-}
-
-// PublishEvent calls xyz.block.ftl.v1.VerbService.PublishEvent.
-func (c *verbServiceClient) PublishEvent(ctx context.Context, req *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error) {
-	return c.publishEvent.CallUnary(ctx, req)
 }
 
 // Call calls xyz.block.ftl.v1.VerbService.Call.
@@ -252,18 +189,6 @@ func (c *verbServiceClient) Call(ctx context.Context, req *connect.Request[v1.Ca
 type VerbServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// Get configuration state for the module
-	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest], *connect.ServerStream[v1.ModuleContextResponse]) error
-	// Acquire (and renew) a lease for a deployment.
-	//
-	// Returns ResourceExhausted if the lease is held.
-	AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error
-	// Send an event to an FSM.
-	SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
-	// Set the next event for an FSM.
-	SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
-	// Publish an event to a topic.
-	PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error)
 	// Issue a synchronous call to a Verb.
 	Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error)
 }
@@ -280,31 +205,6 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
-	verbServiceGetModuleContextHandler := connect.NewServerStreamHandler(
-		VerbServiceGetModuleContextProcedure,
-		svc.GetModuleContext,
-		opts...,
-	)
-	verbServiceAcquireLeaseHandler := connect.NewBidiStreamHandler(
-		VerbServiceAcquireLeaseProcedure,
-		svc.AcquireLease,
-		opts...,
-	)
-	verbServiceSendFSMEventHandler := connect.NewUnaryHandler(
-		VerbServiceSendFSMEventProcedure,
-		svc.SendFSMEvent,
-		opts...,
-	)
-	verbServiceSetNextFSMEventHandler := connect.NewUnaryHandler(
-		VerbServiceSetNextFSMEventProcedure,
-		svc.SetNextFSMEvent,
-		opts...,
-	)
-	verbServicePublishEventHandler := connect.NewUnaryHandler(
-		VerbServicePublishEventProcedure,
-		svc.PublishEvent,
-		opts...,
-	)
 	verbServiceCallHandler := connect.NewUnaryHandler(
 		VerbServiceCallProcedure,
 		svc.Call,
@@ -314,16 +214,6 @@ func NewVerbServiceHandler(svc VerbServiceHandler, opts ...connect.HandlerOption
 		switch r.URL.Path {
 		case VerbServicePingProcedure:
 			verbServicePingHandler.ServeHTTP(w, r)
-		case VerbServiceGetModuleContextProcedure:
-			verbServiceGetModuleContextHandler.ServeHTTP(w, r)
-		case VerbServiceAcquireLeaseProcedure:
-			verbServiceAcquireLeaseHandler.ServeHTTP(w, r)
-		case VerbServiceSendFSMEventProcedure:
-			verbServiceSendFSMEventHandler.ServeHTTP(w, r)
-		case VerbServiceSetNextFSMEventProcedure:
-			verbServiceSetNextFSMEventHandler.ServeHTTP(w, r)
-		case VerbServicePublishEventProcedure:
-			verbServicePublishEventHandler.ServeHTTP(w, r)
 		case VerbServiceCallProcedure:
 			verbServiceCallHandler.ServeHTTP(w, r)
 		default:
@@ -339,28 +229,212 @@ func (UnimplementedVerbServiceHandler) Ping(context.Context, *connect.Request[v1
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.Ping is not implemented"))
 }
 
-func (UnimplementedVerbServiceHandler) GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest], *connect.ServerStream[v1.ModuleContextResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.GetModuleContext is not implemented"))
-}
-
-func (UnimplementedVerbServiceHandler) AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.AcquireLease is not implemented"))
-}
-
-func (UnimplementedVerbServiceHandler) SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.SendFSMEvent is not implemented"))
-}
-
-func (UnimplementedVerbServiceHandler) SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.SetNextFSMEvent is not implemented"))
-}
-
-func (UnimplementedVerbServiceHandler) PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.PublishEvent is not implemented"))
-}
-
 func (UnimplementedVerbServiceHandler) Call(context.Context, *connect.Request[v1.CallRequest]) (*connect.Response[v1.CallResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.VerbService.Call is not implemented"))
+}
+
+// ModuleServiceClient is a client for the xyz.block.ftl.v1.ModuleService service.
+type ModuleServiceClient interface {
+	// Ping service for readiness.
+	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// Get configuration state for the module
+	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest]) (*connect.ServerStreamForClient[v1.ModuleContextResponse], error)
+	// Acquire (and renew) a lease for a deployment.
+	//
+	// Returns ResourceExhausted if the lease is held.
+	AcquireLease(context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
+	// Send an event to an FSM.
+	SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
+	// Set the next event for an FSM.
+	SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
+	// Publish an event to a topic.
+	PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error)
+}
+
+// NewModuleServiceClient constructs a client for the xyz.block.ftl.v1.ModuleService service. By
+// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
+// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
+// connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewModuleServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ModuleServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	return &moduleServiceClient{
+		ping: connect.NewClient[v1.PingRequest, v1.PingResponse](
+			httpClient,
+			baseURL+ModuleServicePingProcedure,
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
+		),
+		getModuleContext: connect.NewClient[v1.ModuleContextRequest, v1.ModuleContextResponse](
+			httpClient,
+			baseURL+ModuleServiceGetModuleContextProcedure,
+			opts...,
+		),
+		acquireLease: connect.NewClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse](
+			httpClient,
+			baseURL+ModuleServiceAcquireLeaseProcedure,
+			opts...,
+		),
+		sendFSMEvent: connect.NewClient[v1.SendFSMEventRequest, v1.SendFSMEventResponse](
+			httpClient,
+			baseURL+ModuleServiceSendFSMEventProcedure,
+			opts...,
+		),
+		setNextFSMEvent: connect.NewClient[v1.SendFSMEventRequest, v1.SendFSMEventResponse](
+			httpClient,
+			baseURL+ModuleServiceSetNextFSMEventProcedure,
+			opts...,
+		),
+		publishEvent: connect.NewClient[v1.PublishEventRequest, v1.PublishEventResponse](
+			httpClient,
+			baseURL+ModuleServicePublishEventProcedure,
+			opts...,
+		),
+	}
+}
+
+// moduleServiceClient implements ModuleServiceClient.
+type moduleServiceClient struct {
+	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
+	getModuleContext *connect.Client[v1.ModuleContextRequest, v1.ModuleContextResponse]
+	acquireLease     *connect.Client[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]
+	sendFSMEvent     *connect.Client[v1.SendFSMEventRequest, v1.SendFSMEventResponse]
+	setNextFSMEvent  *connect.Client[v1.SendFSMEventRequest, v1.SendFSMEventResponse]
+	publishEvent     *connect.Client[v1.PublishEventRequest, v1.PublishEventResponse]
+}
+
+// Ping calls xyz.block.ftl.v1.ModuleService.Ping.
+func (c *moduleServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
+	return c.ping.CallUnary(ctx, req)
+}
+
+// GetModuleContext calls xyz.block.ftl.v1.ModuleService.GetModuleContext.
+func (c *moduleServiceClient) GetModuleContext(ctx context.Context, req *connect.Request[v1.ModuleContextRequest]) (*connect.ServerStreamForClient[v1.ModuleContextResponse], error) {
+	return c.getModuleContext.CallServerStream(ctx, req)
+}
+
+// AcquireLease calls xyz.block.ftl.v1.ModuleService.AcquireLease.
+func (c *moduleServiceClient) AcquireLease(ctx context.Context) *connect.BidiStreamForClient[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse] {
+	return c.acquireLease.CallBidiStream(ctx)
+}
+
+// SendFSMEvent calls xyz.block.ftl.v1.ModuleService.SendFSMEvent.
+func (c *moduleServiceClient) SendFSMEvent(ctx context.Context, req *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
+	return c.sendFSMEvent.CallUnary(ctx, req)
+}
+
+// SetNextFSMEvent calls xyz.block.ftl.v1.ModuleService.SetNextFSMEvent.
+func (c *moduleServiceClient) SetNextFSMEvent(ctx context.Context, req *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
+	return c.setNextFSMEvent.CallUnary(ctx, req)
+}
+
+// PublishEvent calls xyz.block.ftl.v1.ModuleService.PublishEvent.
+func (c *moduleServiceClient) PublishEvent(ctx context.Context, req *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error) {
+	return c.publishEvent.CallUnary(ctx, req)
+}
+
+// ModuleServiceHandler is an implementation of the xyz.block.ftl.v1.ModuleService service.
+type ModuleServiceHandler interface {
+	// Ping service for readiness.
+	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
+	// Get configuration state for the module
+	GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest], *connect.ServerStream[v1.ModuleContextResponse]) error
+	// Acquire (and renew) a lease for a deployment.
+	//
+	// Returns ResourceExhausted if the lease is held.
+	AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error
+	// Send an event to an FSM.
+	SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
+	// Set the next event for an FSM.
+	SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error)
+	// Publish an event to a topic.
+	PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error)
+}
+
+// NewModuleServiceHandler builds an HTTP handler from the service implementation. It returns the
+// path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewModuleServiceHandler(svc ModuleServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	moduleServicePingHandler := connect.NewUnaryHandler(
+		ModuleServicePingProcedure,
+		svc.Ping,
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
+	)
+	moduleServiceGetModuleContextHandler := connect.NewServerStreamHandler(
+		ModuleServiceGetModuleContextProcedure,
+		svc.GetModuleContext,
+		opts...,
+	)
+	moduleServiceAcquireLeaseHandler := connect.NewBidiStreamHandler(
+		ModuleServiceAcquireLeaseProcedure,
+		svc.AcquireLease,
+		opts...,
+	)
+	moduleServiceSendFSMEventHandler := connect.NewUnaryHandler(
+		ModuleServiceSendFSMEventProcedure,
+		svc.SendFSMEvent,
+		opts...,
+	)
+	moduleServiceSetNextFSMEventHandler := connect.NewUnaryHandler(
+		ModuleServiceSetNextFSMEventProcedure,
+		svc.SetNextFSMEvent,
+		opts...,
+	)
+	moduleServicePublishEventHandler := connect.NewUnaryHandler(
+		ModuleServicePublishEventProcedure,
+		svc.PublishEvent,
+		opts...,
+	)
+	return "/xyz.block.ftl.v1.ModuleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case ModuleServicePingProcedure:
+			moduleServicePingHandler.ServeHTTP(w, r)
+		case ModuleServiceGetModuleContextProcedure:
+			moduleServiceGetModuleContextHandler.ServeHTTP(w, r)
+		case ModuleServiceAcquireLeaseProcedure:
+			moduleServiceAcquireLeaseHandler.ServeHTTP(w, r)
+		case ModuleServiceSendFSMEventProcedure:
+			moduleServiceSendFSMEventHandler.ServeHTTP(w, r)
+		case ModuleServiceSetNextFSMEventProcedure:
+			moduleServiceSetNextFSMEventHandler.ServeHTTP(w, r)
+		case ModuleServicePublishEventProcedure:
+			moduleServicePublishEventHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedModuleServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedModuleServiceHandler struct{}
+
+func (UnimplementedModuleServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.Ping is not implemented"))
+}
+
+func (UnimplementedModuleServiceHandler) GetModuleContext(context.Context, *connect.Request[v1.ModuleContextRequest], *connect.ServerStream[v1.ModuleContextResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.GetModuleContext is not implemented"))
+}
+
+func (UnimplementedModuleServiceHandler) AcquireLease(context.Context, *connect.BidiStream[v1.AcquireLeaseRequest, v1.AcquireLeaseResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.AcquireLease is not implemented"))
+}
+
+func (UnimplementedModuleServiceHandler) SendFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.SendFSMEvent is not implemented"))
+}
+
+func (UnimplementedModuleServiceHandler) SetNextFSMEvent(context.Context, *connect.Request[v1.SendFSMEventRequest]) (*connect.Response[v1.SendFSMEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.SetNextFSMEvent is not implemented"))
+}
+
+func (UnimplementedModuleServiceHandler) PublishEvent(context.Context, *connect.Request[v1.PublishEventRequest]) (*connect.Response[v1.PublishEventResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ModuleService.PublishEvent is not implemented"))
 }
 
 // ControllerServiceClient is a client for the xyz.block.ftl.v1.ControllerService service.

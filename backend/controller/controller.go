@@ -166,6 +166,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	g.Go(func() error {
 		return rpc.Serve(ctx, config.Bind,
 			rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
+			rpc.GRPC(ftlv1connect.NewModuleServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),

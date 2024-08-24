@@ -51,7 +51,7 @@ func (r *RealFTL) GetSecret(_ context.Context, name string, dest any) error {
 }
 
 func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) error {
-	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
+	client := rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx)
 	body, err := encoding.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)
@@ -69,7 +69,7 @@ func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) 
 }
 
 func (r *RealFTL) FSMNext(ctx context.Context, fsm, instance string, event any) error {
-	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
+	client := rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx)
 	body, err := encoding.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)
@@ -91,7 +91,7 @@ func (r *RealFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any
 	if topic.Module != caller.Module {
 		return fmt.Errorf("can not publish to another module's topic: %s", topic)
 	}
-	client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
+	client := rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx)
 	body, err := encoding.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)

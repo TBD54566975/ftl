@@ -104,6 +104,17 @@ service VerbService {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 
+  // Issue a synchronous call to a Verb.
+  rpc Call(CallRequest) returns (CallResponse);
+}
+
+// ModuleService is the service that modules use to interact with the Controller.
+service ModuleService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
   // Get configuration state for the module
   rpc GetModuleContext(ModuleContextRequest) returns (stream ModuleContextResponse);
 
@@ -120,9 +131,6 @@ service VerbService {
 
   // Publish an event to a topic.
   rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
-
-  // Issue a synchronous call to a Verb.
-  rpc Call(CallRequest) returns (CallResponse);
 }
 
 enum DeploymentChangeType {

@@ -27,9 +27,43 @@ export const VerbService = {
       idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
+     * Issue a synchronous call to a Verb.
+     *
+     * @generated from rpc xyz.block.ftl.v1.VerbService.Call
+     */
+    call: {
+      name: "Call",
+      I: CallRequest,
+      O: CallResponse,
+      kind: MethodKind.Unary,
+    },
+  }
+} as const;
+
+/**
+ * ModuleService is the service that modules use to interact with the Controller.
+ *
+ * @generated from service xyz.block.ftl.v1.ModuleService
+ */
+export const ModuleService = {
+  typeName: "xyz.block.ftl.v1.ModuleService",
+  methods: {
+    /**
+     * Ping service for readiness.
+     *
+     * @generated from rpc xyz.block.ftl.v1.ModuleService.Ping
+     */
+    ping: {
+      name: "Ping",
+      I: PingRequest,
+      O: PingResponse,
+      kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
+    },
+    /**
      * Get configuration state for the module
      *
-     * @generated from rpc xyz.block.ftl.v1.VerbService.GetModuleContext
+     * @generated from rpc xyz.block.ftl.v1.ModuleService.GetModuleContext
      */
     getModuleContext: {
       name: "GetModuleContext",
@@ -42,7 +76,7 @@ export const VerbService = {
      *
      * Returns ResourceExhausted if the lease is held.
      *
-     * @generated from rpc xyz.block.ftl.v1.VerbService.AcquireLease
+     * @generated from rpc xyz.block.ftl.v1.ModuleService.AcquireLease
      */
     acquireLease: {
       name: "AcquireLease",
@@ -53,7 +87,7 @@ export const VerbService = {
     /**
      * Send an event to an FSM.
      *
-     * @generated from rpc xyz.block.ftl.v1.VerbService.SendFSMEvent
+     * @generated from rpc xyz.block.ftl.v1.ModuleService.SendFSMEvent
      */
     sendFSMEvent: {
       name: "SendFSMEvent",
@@ -64,7 +98,7 @@ export const VerbService = {
     /**
      * Set the next event for an FSM.
      *
-     * @generated from rpc xyz.block.ftl.v1.VerbService.SetNextFSMEvent
+     * @generated from rpc xyz.block.ftl.v1.ModuleService.SetNextFSMEvent
      */
     setNextFSMEvent: {
       name: "SetNextFSMEvent",
@@ -75,23 +109,12 @@ export const VerbService = {
     /**
      * Publish an event to a topic.
      *
-     * @generated from rpc xyz.block.ftl.v1.VerbService.PublishEvent
+     * @generated from rpc xyz.block.ftl.v1.ModuleService.PublishEvent
      */
     publishEvent: {
       name: "PublishEvent",
       I: PublishEventRequest,
       O: PublishEventResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Issue a synchronous call to a Verb.
-     *
-     * @generated from rpc xyz.block.ftl.v1.VerbService.Call
-     */
-    call: {
-      name: "Call",
-      I: CallRequest,
-      O: CallResponse,
       kind: MethodKind.Unary,
     },
   }

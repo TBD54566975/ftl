@@ -161,7 +161,7 @@ type leaseClient struct {
 var _ modulecontext.LeaseClient = &leaseClient{}
 
 func (c *leaseClient) Acquire(ctx context.Context, module string, key []string, ttl time.Duration) error {
-	c.stream = rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx).AcquireLease(ctx)
+	c.stream = rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx).AcquireLease(ctx)
 	req := &ftlv1.AcquireLeaseRequest{Key: key, Module: module, Ttl: durationpb.New(ttl)}
 	if err := c.stream.Send(req); err != nil {
 		if connect.CodeOf(err) == connect.CodeResourceExhausted {
