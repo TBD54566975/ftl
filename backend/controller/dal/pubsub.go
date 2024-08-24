@@ -177,13 +177,13 @@ func (d *DAL) CompleteEventForSubscription(ctx context.Context, module, name str
 
 // ResetSubscription resets the subscription cursor to the topic's head.
 func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err error) {
-	tx, err := d.db.Begin(ctx)
+	tx, err := d.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("could not start transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	subscription, err := tx.GetSubscription(ctx, name, module)
+	subscription, err := tx.db.GetSubscription(ctx, name, module)
 	if err != nil {
 		if dalerrs.IsNotFound(err) {
 			return fmt.Errorf("subscription %s.%s not found", module, name)
@@ -191,7 +191,7 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 		return fmt.Errorf("could not fetch subscription: %w", dalerrs.TranslatePGError(err))
 	}
 
-	topic, err := tx.GetTopic(ctx, subscription.TopicID)
+	topic, err := tx.db.GetTopic(ctx, subscription.TopicID)
 	if err != nil {
 		return fmt.Errorf("could not fetch topic: %w", dalerrs.TranslatePGError(err))
 	}
@@ -201,12 +201,12 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 		return fmt.Errorf("no events published to topic %s", topic.Name)
 	}
 
-	headEvent, err := tx.GetTopicEvent(ctx, headEventID)
+	headEvent, err := tx.db.GetTopicEvent(ctx, headEventID)
 	if err != nil {
 		return fmt.Errorf("could not fetch topic head: %w", dalerrs.TranslatePGError(err))
 	}
 
-	err = tx.SetSubscriptionCursor(ctx, subscription.Key, headEvent.Key)
+	err = tx.db.SetSubscriptionCursor(ctx, subscription.Key, headEvent.Key)
 	if err != nil {
 		return fmt.Errorf("failed to reset subscription: %w", dalerrs.TranslatePGError(err))
 	}
@@ -214,7 +214,7 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 	return nil
 }
 
-func (d *DAL) createSubscriptions(ctx context.Context, tx *sql.Tx, key model.DeploymentKey, module *schema.Module) error {
+func (d *DAL) createSubscriptions(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 	logger := log.FromContext(ctx)
 
 	for _, decl := range module.Decls {
@@ -232,7 +232,7 @@ func (d *DAL) createSubscriptions(ctx context.Context, tx *sql.Tx, key model.Dep
 			continue
 		}
 		subscriptionKey := model.NewSubscriptionKey(module.Name, s.Name)
-		result, err := tx.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
+		result, err := d.db.UpsertSubscription(ctx, sql.UpsertSubscriptionParams{
 			Key:         subscriptionKey,
 			Module:      module.Name,
 			Deployment:  key,
@@ -271,7 +271,7 @@ func hasSubscribers(subscription *schema.Subscription, decls []schema.Decl) bool
 	return false
 }
 
-func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.DeploymentKey, module *schema.Module) error {
+func (d *DAL) createSubscribers(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 	logger := log.FromContext(ctx)
 	for _, decl := range module.Decls {
 		v, ok := decl.(*schema.Verb)
@@ -296,7 +296,7 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 				}
 			}
 			subscriberKey := model.NewSubscriberKey(module.Name, s.Name, v.Name)
-			err = tx.InsertSubscriber(ctx, sql.InsertSubscriberParams{
+			err = d.db.InsertSubscriber(ctx, sql.InsertSubscriberParams{
 				Key:              subscriberKey,
 				Module:           module.Name,
 				SubscriptionName: s.Name,
@@ -316,10 +316,10 @@ func (d *DAL) createSubscribers(ctx context.Context, tx *sql.Tx, key model.Deplo
 	return nil
 }
 
-func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, tx *sql.Tx, key model.DeploymentKey) error {
+func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, key model.DeploymentKey) error {
 	logger := log.FromContext(ctx)
 
-	subscribers, err := tx.DeleteSubscribers(ctx, key)
+	subscribers, err := d.db.DeleteSubscribers(ctx, key)
 	if err != nil {
 		return fmt.Errorf("could not delete old subscribers: %w", dalerrs.TranslatePGError(err))
 	}
@@ -327,7 +327,7 @@ func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, tx *sql.Tx,
 		logger.Debugf("Deleted subscribers for %s: %s", key, strings.Join(slices.Map(subscribers, func(key model.SubscriberKey) string { return key.String() }), ", "))
 	}
 
-	subscriptions, err := tx.DeleteSubscriptions(ctx, key)
+	subscriptions, err := d.db.DeleteSubscriptions(ctx, key)
 	if err != nil {
 		return fmt.Errorf("could not delete old subscriptions: %w", dalerrs.TranslatePGError(err))
 	}

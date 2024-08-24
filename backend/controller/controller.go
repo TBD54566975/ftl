@@ -862,7 +862,7 @@ func (s *Service) SendFSMEvent(ctx context.Context, req *connect.Request[ftlv1.S
 
 // schedules an event for a FSM instance within a db transaction
 // body may already be encrypted, which is denoted by the encrypted flag
-func (s *Service) sendFSMEventInTx(ctx context.Context, tx *dal.Tx, instance *dal.FSMInstance, fsm *schema.FSM, eventType schema.Type, body []byte, encrypted bool) error {
+func (s *Service) sendFSMEventInTx(ctx context.Context, tx *dal.DAL, instance *dal.FSMInstance, fsm *schema.FSM, eventType schema.Type, body []byte, encrypted bool) error {
 	// Populated if we find a matching transition.
 	var destinationRef *schema.Ref
 	var destinationVerb *schema.Verb
@@ -1484,7 +1484,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	}
 
 	queueDepth := call.QueueDepth
-	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx, isFinalResult bool) error {
+	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.DAL, isFinalResult bool) error {
 		return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
 	})
 	if err != nil {
@@ -1556,7 +1556,7 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 		catchResult = either.LeftOf[string](resp.Msg.GetBody())
 	}
 	queueDepth := call.QueueDepth
-	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, catchResult, func(tx *dal.Tx, isFinalResult bool) error {
+	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, catchResult, func(tx *dal.DAL, isFinalResult bool) error {
 		// Exposes the original error to external components such as PubSub and FSM
 		return s.finaliseAsyncCall(ctx, tx, call, originalResult, isFinalResult)
 	})
@@ -1602,7 +1602,7 @@ func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
 	}
 }
 
-func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.Tx, call *dal.AsyncCall, callResult either.Either[[]byte, string], isFinalResult bool) error {
+func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.AsyncCall, callResult either.Either[[]byte, string], isFinalResult bool) error {
 	_, failed := callResult.(either.Right[[]byte, string])
 
 	// Allow for handling of completion based on origin
@@ -1628,7 +1628,7 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.Tx, call *dal.A
 	return nil
 }
 
-func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.Tx, origin dal.AsyncOriginFSM, failed bool, isFinalResult bool) error {
+func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.DAL, origin dal.AsyncOriginFSM, failed bool, isFinalResult bool) error {
 	logger := log.FromContext(ctx).Scope(origin.FSM.String())
 
 	// retrieve the next fsm event and delete it

@@ -94,7 +94,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	// Complete all calls
 	for _, call := range calls {
 		callResult := either.LeftOf[string]([]byte("{}"))
-		_, err = parentDAL.CompleteAsyncCall(ctx, call, callResult, func(tx *parentdal.Tx, isFinalResult bool) error {
+		_, err = parentDAL.CompleteAsyncCall(ctx, call, callResult, func(tx *parentdal.DAL, isFinalResult bool) error {
 			return nil
 		})
 		assert.NoError(t, err)

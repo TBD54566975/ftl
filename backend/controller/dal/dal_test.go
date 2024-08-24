@@ -29,7 +29,7 @@ func TestDAL(t *testing.T) {
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal, err := New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
-	assert.NotZero(t, dal)
+
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
 

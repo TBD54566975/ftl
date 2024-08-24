@@ -11,20 +11,19 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/dal"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func leaseExists(t *testing.T, conn sql.ConnI, idempotencyKey uuid.UUID, key leases.Key) bool {
+func leaseExists(t *testing.T, conn dal.Connection, idempotencyKey uuid.UUID, key leases.Key) bool {
 	t.Helper()
 	var count int
-	err := dalerrs.TranslatePGError(conn.
+	err := dal.TranslatePGError(conn.
 		QueryRowContext(context.Background(), "SELECT COUNT(*) FROM leases WHERE idempotency_key = $1 AND key = $2", idempotencyKey, key).
 		Scan(&count))
-	if errors.Is(err, dalerrs.ErrNotFound) {
+	if errors.Is(err, dal.ErrNotFound) {
 		return false
 	}
 	assert.NoError(t, err)
