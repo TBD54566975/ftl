@@ -24,4 +24,4 @@ spec:
             name: ftl-db-migrate-config
   parallelism: 1
   backoffLimit: 1000
-  ttlSecondsAfterFinished: 300
+  ttlSecondsAfterFinished: 1

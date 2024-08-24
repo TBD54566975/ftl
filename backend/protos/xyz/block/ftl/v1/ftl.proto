@@ -209,24 +209,19 @@ message GetDeploymentResponse {
 
 enum RunnerState {
   // The Runner is waiting for a deployment.
-  RUNNER_IDLE = 0;
-  // The Runner and Controller have agreed that the Runner is reserved.
-  RUNNER_RESERVED = 1;
+  RUNNER_NEW = 0;
   // The Runner is assigned to a deployment.
-  RUNNER_ASSIGNED = 2;
+  RUNNER_ASSIGNED = 1;
   // The Runner is dead.
-  RUNNER_DEAD = 3;
+  RUNNER_DEAD = 2;
 }
 
 message RegisterRunnerRequest {
   string key = 1;
   string endpoint = 2;
-  optional string deployment = 3;
+  string deployment = 3;
   RunnerState state = 4;
   google.protobuf.Struct labels = 5;
-
-  // If present, the reason the Runner is transitioning from ASSIGNED to IDLE.
-  optional string error = 7;
 }
 
 message RegisterRunnerResponse {}
@@ -380,40 +375,6 @@ service ControllerService {
 
   // Reset the cursor for a subscription to the head of its topic.
   rpc ResetSubscription(ResetSubscriptionRequest) returns (ResetSubscriptionResponse);
-}
-
-message DeployRequest {
-  string deployment_key = 1;
-}
-message DeployResponse {}
-
-message TerminateRequest {
-  string deployment_key = 1;
-}
-
-message ReserveRequest {
-  string deployment_key = 1;
-}
-message ReserveResponse {}
-
-// RunnerService is the service that executes Deployments.
-//
-// The Controller will scale the Runner horizontally as required. The Runner will
-// register itself automatically with the ControllerService, which will then
-// assign modules to it.
-service RunnerService {
-  rpc Ping(PingRequest) returns (PingResponse) {
-    option idempotency_level = NO_SIDE_EFFECTS;
-  }
-
-  // Reserve synchronously reserves a Runner for a deployment but does nothing else.
-  rpc Reserve(ReserveRequest) returns (ReserveResponse);
-
-  // Initiate a deployment on this Runner.
-  rpc Deploy(DeployRequest) returns (DeployResponse);
-
-  // Terminate the deployment on this Runner.
-  rpc Terminate(TerminateRequest) returns (RegisterRunnerRequest);
 }
 
 message ConfigRef {

@@ -21,9 +21,6 @@ RUN go mod download -x
 
 COPY . /src/
 
-# Build runner template
-RUN just build-kt-runtime
-
 # Build runner
 RUN just errtrace
 # Reset timestamps so that the build state is reset
@@ -37,7 +34,6 @@ WORKDIR /root/
 
 ENV PATH="/root/jre/bin:$PATH"
 COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
-COPY --from=builder /src/build/template template
 COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments
 # Where the module artifacts are stored

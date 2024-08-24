@@ -220,7 +220,13 @@ func ExpectError(action Action, expectedErrorMsg ...string) Action {
 // Deploy a module from the working directory and wait for it to become available.
 func Deploy(module string) Action {
 	return Chain(
-		Exec("ftl", "deploy", module),
+		func(t testing.TB, ic TestContext) {
+			if ic.kube {
+				Exec("ftl", "deploy", "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0", module)(t, ic)
+			} else {
+				Exec("ftl", "deploy", module)(t, ic)
+			}
+		},
 		Wait(module),
 	)
 }

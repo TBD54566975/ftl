@@ -55,6 +55,7 @@ func deploymentStateFromDeployment(deployment Deployment) (deploymentState, erro
 	return deploymentState{
 		schemaHash:  hasher.Sum(nil),
 		minReplicas: deployment.MinReplicas,
+		Key:         deployment.Key,
 	}, nil
 }
 

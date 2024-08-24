@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sync"
 	"syscall"
@@ -56,6 +57,16 @@ type ActionOrOption any
 func WithLanguages(languages ...string) Option {
 	return func(o *options) {
 		o.languages = languages
+	}
+}
+
+// WithKubernetes is a Run* option that specifies tests should be run on a kube cluster
+//
+// This is only compatible with go tests
+func WithKubernetes() Option {
+	return func(o *options) {
+		o.kube = true
+		o.startController = false
 	}
 }
 
@@ -111,6 +122,7 @@ type options struct {
 	startController bool
 	requireJava     bool
 	envars          map[string]string
+	kube            bool
 }
 
 // Run an integration test.
@@ -159,10 +171,29 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	ctx := log.ContextWithLogger(context.Background(), logger)
 	binDir := filepath.Join(rootDir, "build", "release")
 
+	if opts.kube && len(opts.languages) != 1 && opts.languages[0] != "go" {
+		t.Fatal("Kubernetes tests are only supported for golang")
+	}
+
 	buildOnce.Do(func() {
-		Infof("Building ftl")
-		err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
-		assert.NoError(t, err)
+		if opts.kube {
+			// This command will build a linux/amd64 version of FTL and deploy it to the kube cluster
+			Infof("Building FTL and deploying to kube")
+			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "full-deploy").RunBuffered(ctx)
+			assert.NoError(t, err)
+			if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
+				// If we are already on linux/amd64 we don't need to rebuild, otherwise we now need a native one to interact with the kube cluster
+				Infof("Building FTL for native OS")
+				err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
+				assert.NoError(t, err)
+			}
+			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "wait-for-kube").RunBuffered(ctx)
+			assert.NoError(t, err)
+		} else {
+			Infof("Building ftl")
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
+			assert.NoError(t, err)
+		}
 		if opts.requireJava || slices.Contains(opts.languages, "java") {
 			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java", "-DskipTests", "-B").RunBuffered(ctx)
 			assert.NoError(t, err)
@@ -179,11 +210,12 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			var controller ftlv1connect.ControllerServiceClient
 			var console pbconsoleconnect.ConsoleServiceClient
 			if opts.startController {
-				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
-				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
-
 				Infof("Starting ftl cluster")
 				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
+			}
+			if opts.startController || opts.kube {
+				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
+				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
 			}
 
 			testData := filepath.Join(cwd, "testdata", language)
@@ -200,9 +232,10 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				Verbs:    verbs,
 				realT:    t,
 				language: language,
+				kube:     opts.kube,
 			}
 
-			if opts.startController {
+			if opts.startController || opts.kube {
 				ic.Controller = controller
 				ic.Console = console
 
@@ -264,6 +297,8 @@ type TestContext struct {
 	binDir string
 	// The Language under test
 	language string
+	// If the test is running on kubernetes
+	kube bool
 
 	Controller ftlv1connect.ControllerServiceClient
 	Console    pbconsoleconnect.ConsoleServiceClient

@@ -117,7 +117,8 @@ sql:
           - db_type: "topic_event_key"
             nullable: true
             go_type:
-              type: "optional.Option[model.TopicEventKey]"
+              import: github.com/alecthomas/types/optional
+              type: "Option[model.TopicEventKey]"
           - db_type: "text"
             go_type: "string"
           - db_type: "text"

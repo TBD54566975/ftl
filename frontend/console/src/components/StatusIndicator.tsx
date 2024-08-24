@@ -2,13 +2,13 @@ import type React from 'react'
 import { classNames } from '../utils'
 
 type StatusIndicatorProps = {
-  state: 'success' | 'error' | 'idle'
+  state: 'success' | 'error' | 'new'
   text?: string
 }
 
 export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ state, text }) => {
   const backgrounds = {
-    idle: 'text-gray-500 bg-gray-500/20 dark:bg-gray-100/10',
+    new: 'text-gray-500 bg-gray-500/20 dark:bg-gray-100/10',
     success: 'text-green-500 bg-emerald-500/20 dark:text-green-400 dark:bg-green-400/10 ',
     error: 'text-rose-500 bg-rose-500/20 dark:text-rose-400 dark:bg-rose-400/10',
   }

@@ -239,7 +239,7 @@ func (ns NullOrigin) Value() (driver.Value, error) {
 type RunnerState string
 
 const (
-	RunnerStateIdle     RunnerState = "idle"
+	RunnerStateNew      RunnerState = "new"
 	RunnerStateReserved RunnerState = "reserved"
 	RunnerStateAssigned RunnerState = "assigned"
 	RunnerStateDead     RunnerState = "dead"
@@ -473,7 +473,7 @@ type Runner struct {
 	State              RunnerState
 	Endpoint           string
 	ModuleName         optional.Option[string]
-	DeploymentID       optional.Option[int64]
+	DeploymentID       int64
 	Labels             json.RawMessage
 }
 

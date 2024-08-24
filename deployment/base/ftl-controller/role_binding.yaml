@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: ftl-controller
+    app.kubernetes.io/managed-by: kustomize
+  name: ftl-controller-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: ftl-controller
+subjects:
+- kind: ServiceAccount
+  name: ftl-controller

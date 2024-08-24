@@ -39,11 +39,9 @@ const status = (state: RunnerState) => {
   switch (state) {
     case RunnerState.RUNNER_ASSIGNED:
       return <StatusIndicator state='success' text='Assigned' />
-    case RunnerState.RUNNER_RESERVED:
-      return <StatusIndicator state='success' text='Reserved' />
     case RunnerState.RUNNER_DEAD:
       return <StatusIndicator state='error' text='Dead' />
-    case RunnerState.RUNNER_IDLE:
-      return <StatusIndicator state='idle' text='Idle' />
+    case RunnerState.RUNNER_NEW:
+      return <StatusIndicator state='new' text='New' />
   }
 }

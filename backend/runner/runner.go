@@ -53,12 +53,15 @@ type Config struct {
 	HeartbeatPeriod       time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter       time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
 	RunnerStartDelay      time.Duration   `help:"Time in seconds for a runner to wait before contacting the controller. This can be needed in istio environments to work around initialization races." env:"FTL_RUNNER_START_DELAY" default:"0s"`
+	Deployment            string          `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
 }
 
 func Start(ctx context.Context, config Config) error {
 	if config.Advertise.String() == "" {
 		config.Advertise = config.Bind
 	}
+	ctx, doneFunc := context.WithCancel(ctx)
+	defer doneFunc()
 	hostname, err := os.Hostname()
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)
@@ -106,8 +109,9 @@ func Start(ctx context.Context, config Config) error {
 		forceUpdate:        make(chan struct{}, 16),
 		labels:             labels,
 		deploymentLogQueue: make(chan log.Entry, 10000),
+		cancelFunc:         doneFunc,
 	}
-	svc.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
+	svc.state.Store(ftlv1.RunnerState_RUNNER_NEW)
 
 	go func() {
 		// In some environments we may want a delay before registering the runner
@@ -121,7 +125,6 @@ func Start(ctx context.Context, config Config) error {
 
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
-		rpc.GRPC(ftlv1connect.NewRunnerServiceHandler, svc),
 		rpc.HTTP("/", svc),
 	)
 }
@@ -181,7 +184,6 @@ func manageDeploymentDirectory(logger *log.Logger, config Config) error {
 	return nil
 }
 
-var _ ftlv1connect.RunnerServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 
 type deployment struct {
@@ -204,6 +206,7 @@ type Service struct {
 	registrationFailure atomic.Value[optional.Option[error]]
 	labels              *structpb.Struct
 	deploymentLogQueue  chan log.Entry
+	cancelFunc          func()
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
@@ -218,27 +221,22 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	return connect.NewResponse(response.Msg), nil
 }
 
-func (s *Service) Reserve(ctx context.Context, c *connect.Request[ftlv1.ReserveRequest]) (*connect.Response[ftlv1.ReserveResponse], error) {
-	if !s.state.CompareAndSwap(ftlv1.RunnerState_RUNNER_IDLE, ftlv1.RunnerState_RUNNER_RESERVED) {
-		return nil, fmt.Errorf("can only reserve from IDLE state, not %s", s.state.Load())
-	}
-	return connect.NewResponse(&ftlv1.ReserveResponse{}), nil
-}
-
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
-func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployRequest]) (response *connect.Response[ftlv1.DeployResponse], err error) {
+func (s *Service) deploy(ctx context.Context) error {
+	logger := log.FromContext(ctx)
 	if err, ok := s.registrationFailure.Load().Get(); ok {
 		observability.Deployment.Failure(ctx, optional.None[string]())
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to register runner: %w", err))
+		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to register runner: %w", err))
 	}
 
-	key, err := model.ParseDeploymentKey(req.Msg.DeploymentKey)
+	key, err := model.ParseDeploymentKey(s.config.Deployment)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.None[string]())
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
+		s.cancelFunc()
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
 	}
 
 	observability.Deployment.Started(ctx, key.String())
@@ -251,7 +249,7 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	defer s.lock.Unlock()
 	if s.deployment.Load().Ok() {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return nil, connect.NewError(connect.CodeResourceExhausted, errors.New("already deployed"))
+		return errors.New("already deployed")
 	}
 
 	// Set the state of the Runner, and update the Controller.
@@ -260,42 +258,34 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 		s.forceUpdate <- struct{}{}
 	}
 
-	setState(ftlv1.RunnerState_RUNNER_RESERVED)
-	defer func() {
-		if err != nil {
-			setState(ftlv1.RunnerState_RUNNER_IDLE)
-			s.deployment.Store(optional.None[*deployment]())
-		}
-	}()
-
-	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: req.Msg.DeploymentKey}))
+	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: s.config.Deployment}))
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return nil, err
+		return fmt.Errorf("failed to get deployment: %w", err)
 	}
 	module, err := schema.ModuleFromProto(gdResp.Msg.Schema)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return nil, fmt.Errorf("invalid module: %w", err)
+		return fmt.Errorf("invalid module: %w", err)
 	}
 	deploymentDir := filepath.Join(s.config.DeploymentDir, module.Name, key.String())
 	if s.config.TemplateDir != "" {
 		err = copy.Copy(s.config.TemplateDir, deploymentDir)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
-			return nil, fmt.Errorf("failed to copy template directory: %w", err)
+			return fmt.Errorf("failed to copy template directory: %w", err)
 		}
 	} else {
 		err = os.MkdirAll(deploymentDir, 0700)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
-			return nil, fmt.Errorf("failed to create deployment directory: %w", err)
+			return fmt.Errorf("failed to create deployment directory: %w", err)
 		}
 	}
 	err = download.Artefacts(ctx, s.controllerClient, key, deploymentDir)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return nil, fmt.Errorf("failed to download artefacts: %w", err)
+		return fmt.Errorf("failed to download artefacts: %w", err)
 	}
 
 	verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Attrs(map[string]string{"module": module.Name}))
@@ -314,36 +304,36 @@ func (s *Service) Deploy(ctx context.Context, req *connect.Request[ftlv1.DeployR
 	)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return nil, fmt.Errorf("failed to spawn plugin: %w", err)
+		return fmt.Errorf("failed to spawn plugin: %w", err)
 	}
 
 	dep := s.makeDeployment(cmdCtx, key, deployment)
 	s.deployment.Store(optional.Some(dep))
 
+	logger.Debugf("Deployed %s", key)
 	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
+	context.AfterFunc(ctx, func() {
+		err := s.Terminate()
+		if err != nil {
+			logger := log.FromContext(ctx)
+			logger.Errorf(err, "failed to terminate deployment")
+		}
+	})
 
-	return connect.NewResponse(&ftlv1.DeployResponse{}), nil
+	return nil
 }
 
-func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.TerminateRequest]) (*connect.Response[ftlv1.RegisterRunnerRequest], error) {
+func (s *Service) Terminate() error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	depl, ok := s.deployment.Load().Get()
 	if !ok {
-		return nil, connect.NewError(connect.CodeNotFound, errors.New("no deployment"))
+		return connect.NewError(connect.CodeNotFound, errors.New("no deployment"))
 	}
-	deploymentKey, err := model.ParseDeploymentKey(c.Msg.DeploymentKey)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
-	}
-	if !depl.key.Equal(deploymentKey) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("deployment key mismatch"))
-	}
-
 	// Soft kill.
-	err = depl.plugin.Cmd.Kill(syscall.SIGTERM)
+	err := depl.plugin.Cmd.Kill(syscall.SIGTERM)
 	if err != nil {
-		return nil, fmt.Errorf("failed to kill plugin: %w", err)
+		return fmt.Errorf("failed to kill plugin: %w", err)
 	}
 	// Hard kill after 10 seconds.
 	select {
@@ -352,17 +342,12 @@ func (s *Service) Terminate(ctx context.Context, c *connect.Request[ftlv1.Termin
 		err := depl.plugin.Cmd.Kill(syscall.SIGKILL)
 		if err != nil {
 			// Should we os.Exit(1) here?
-			return nil, fmt.Errorf("failed to kill plugin: %w", err)
+			return fmt.Errorf("failed to kill plugin: %w", err)
 		}
 	}
 	s.deployment.Store(optional.None[*deployment]())
-	s.state.Store(ftlv1.RunnerState_RUNNER_IDLE)
-	return connect.NewResponse(&ftlv1.RegisterRunnerRequest{
-		Key:      s.key.String(),
-		Endpoint: s.config.Advertise.String(),
-		State:    ftlv1.RunnerState_RUNNER_IDLE,
-		Labels:   s.labels,
-	}), nil
+	return nil
+
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -389,7 +374,6 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 
 	// Figure out the appropriate state.
 	state := s.state.Load()
-	var errPtr *string
 	var deploymentKey *string
 	depl, ok := s.deployment.Load().Get()
 	if ok {
@@ -397,34 +381,40 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		deploymentKey = &dkey
 		select {
 		case <-depl.ctx.Done():
-			state = ftlv1.RunnerState_RUNNER_IDLE
+			state = ftlv1.RunnerState_RUNNER_DEAD
 			err := context.Cause(depl.ctx)
-			errStr := err.Error()
-			errPtr = &errStr
 			s.getDeploymentLogger(ctx, depl.key).Errorf(err, "Deployment terminated")
 			s.deployment.Store(optional.None[*deployment]())
-
+			s.cancelFunc()
 		default:
 			state = ftlv1.RunnerState_RUNNER_ASSIGNED
 		}
 		s.state.Store(state)
 	}
 
-	logger.Tracef("Registering with Controller as %s", state)
+	logger.Infof("Registering with Controller as %s for deployment %s", state, s.config.Deployment)
 	err := send(&ftlv1.RegisterRunnerRequest{
 		Key:        s.key.String(),
 		Endpoint:   s.config.Advertise.String(),
 		Labels:     s.labels,
-		Deployment: deploymentKey,
+		Deployment: s.config.Deployment,
 		State:      state,
-		Error:      errPtr,
 	})
 	if err != nil {
 		s.registrationFailure.Store(optional.Some(err))
 		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey), state)
 		return fmt.Errorf("failed to register with Controller: %w", err)
 	}
-	s.registrationFailure.Store(optional.None[error]())
+	if state == ftlv1.RunnerState_RUNNER_NEW {
+		err = s.deploy(ctx)
+		if err != nil {
+			// Deployment failed, we will retry on the next heartbeat
+			// We rely on Deploy to cancel the context if the error is terminal
+			logger.Errorf(err, "Failed to deploy")
+		} else {
+			s.registrationFailure.Store(optional.None[error]())
+		}
+	}
 
 	// Wait for the next heartbeat.
 	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec

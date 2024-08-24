@@ -21,7 +21,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/atomic"
-	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
@@ -45,7 +44,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
-	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -114,7 +112,7 @@ func (c *Config) SetDefaults() {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, conn *sql.DB) error {
+func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, conn *sql.DB, devel bool) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -135,7 +133,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, conn, config, runnerScaling)
+	svc, err := New(ctx, conn, config, devel)
 	if err != nil {
 		return err
 	}
@@ -175,6 +173,9 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 			rpc.PProf(),
 		)
 	})
+	g.Go(func() error {
+		return runnerScaling(ctx, *config.Bind, svc.leasesdal)
+	})
 
 	return g.Wait()
 }
@@ -183,8 +184,7 @@ var _ ftlv1connect.ControllerServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 
 type clients struct {
-	verb   ftlv1connect.VerbServiceClient
-	runner ftlv1connect.RunnerServiceClient
+	verb ftlv1connect.VerbServiceClient
 }
 
 // ControllerListListener is regularly notified of the current list of controllers
@@ -211,15 +211,14 @@ type Service struct {
 	// Complete schema synchronised from the database.
 	schema atomic.Value[*schema.Schema]
 
-	routes        atomic.Value[map[string][]dal.Route]
-	config        Config
-	runnerScaling scaling.RunnerScaling
+	routes atomic.Value[map[string][]dal.Route]
+	config Config
 
 	increaseReplicaFailures map[string]int
 	asyncCallsLock          sync.Mutex
 }
 
-func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling.RunnerScaling) (*Service, error) {
+func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -227,7 +226,6 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 	config.SetDefaults()
 
 	// Override some defaults during development mode.
-	_, devel := runnerScaling.(*localscaling.LocalScaling)
 	if devel {
 		config.RunnerTimeout = time.Second * 5
 		config.ControllerTimeout = time.Second * 5
@@ -248,7 +246,6 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
-		runnerScaling:           runnerScaling,
 		increaseReplicaFailures: map[string]int{},
 	}
 	svc.routes.Store(map[string][]dal.Route{})
@@ -299,9 +296,6 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleControllers, time.Second*2, time.Second*20, time.Second*20))
 	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleRunners, time.Second*2, time.Second, time.Second*10))
 	svc.tasks.Singleton(maybeDevelTask(svc.reapCallEvents, time.Minute*5, time.Minute, time.Minute*30))
-	svc.tasks.Singleton(maybeDevelTask(svc.releaseExpiredReservations, time.Second*2, time.Second, time.Second*20))
-	svc.tasks.Singleton(maybeDevelTask(svc.reconcileDeployments, time.Second*2, time.Second, time.Second*5))
-	svc.tasks.Singleton(maybeDevelTask(svc.reconcileRunners, time.Second*2, time.Second, time.Second*5))
 	svc.tasks.Singleton(maybeDevelTask(svc.reapAsyncCalls, time.Second*5, time.Second, time.Second*5))
 	return svc, nil
 }
@@ -385,12 +379,9 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	})
 	replicas := map[string]int32{}
 	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
-		var deployment *string
-		if d, ok := r.Deployment.Get(); ok {
-			asString := d.String()
-			deployment = &asString
-			replicas[asString]++
-		}
+		asString := r.Deployment.String()
+		deployment := &asString
+		replicas[asString]++
 		labels, err := structpb.NewStruct(r.Labels)
 		if err != nil {
 			return nil, fmt.Errorf("could not marshal attributes for runner %s: %w", r.Key, err)
@@ -584,7 +575,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			initialised = true
 		}
 
-		maybeDeployment, err := msg.DeploymentAsOptional()
+		maybeDeployment, err := model.ParseDeploymentKey(msg.Deployment)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
@@ -627,7 +618,8 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 
 // Check if we can contact the runner.
 func (s *Service) pingRunner(ctx context.Context, endpoint *url.URL) error {
-	client := rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint.String(), log.Error)
+	// TODO: do we really need to ping the runner first thing? We should revisit this later
+	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint.String(), log.Error)
 	retry := backoff.Backoff{}
 	heartbeatCtx, cancel := context.WithTimeout(ctx, s.config.RunnerTimeout)
 	defer cancel()
@@ -1231,8 +1223,7 @@ func (s *Service) clientsForRunner(key model.RunnerKey, endpoint string) clients
 		return clientItem.Value()
 	}
 	client := clients{
-		runner: rpc.Dial(ftlv1connect.NewRunnerServiceClient, endpoint, log.Error),
-		verb:   rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
+		verb: rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
 	}
 	s.clients.Set(key.String(), client, time.Minute)
 	return client
@@ -1247,144 +1238,6 @@ func (s *Service) reapStaleRunners(ctx context.Context) (time.Duration, error) {
 		logger.Debugf("Reaped %d stale runners", count)
 	}
 	return s.config.RunnerTimeout, nil
-}
-
-// Release any expired runner deployment reservations.
-func (s *Service) releaseExpiredReservations(ctx context.Context) (time.Duration, error) {
-	logger := log.FromContext(ctx)
-	count, err := s.dal.ExpireRunnerClaims(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to expire runner reservations: %w", err)
-	} else if count > 0 {
-		logger.Warnf("Expired %d runner reservations", count)
-	}
-	return s.config.DeploymentReservationTimeout, nil
-}
-
-// Attempt to bring the converge the active number of replicas for each
-// deployment with the desired number.
-func (s *Service) reconcileDeployments(ctx context.Context) (time.Duration, error) {
-	reconciliation, err := s.dal.GetDeploymentsNeedingReconciliation(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get deployments needing reconciliation: %w", err)
-	}
-	oldFailures := make(map[string]int)
-	for k, v := range s.increaseReplicaFailures {
-		oldFailures[k] = v
-	}
-
-	var lock sync.Mutex
-	wg, ctx := concurrency.New(ctx, concurrency.WithConcurrencyLimit(4))
-	for _, reconcile := range reconciliation {
-		deploymentLogger := s.getDeploymentLogger(ctx, reconcile.Deployment)
-		deploymentLogger.Debugf("Reconciling %s", reconcile.Deployment)
-		deployment := model.Deployment{
-			Module:   reconcile.Module,
-			Language: reconcile.Language,
-			Key:      reconcile.Deployment,
-		}
-
-		delete(oldFailures, reconcile.Deployment.String())
-
-		require := reconcile.RequiredReplicas - reconcile.AssignedReplicas
-		if require > 0 {
-			deploymentLogger.Debugf("Need %d more runners for %s", require, reconcile.Deployment)
-			wg.Go(func(ctx context.Context) error {
-				observability.Deployment.ReconciliationStart(ctx, reconcile.Module, reconcile.Deployment.String())
-				defer observability.Deployment.ReconciliationComplete(ctx, reconcile.Module, reconcile.Deployment.String())
-
-				if err := s.deploy(ctx, deployment); err != nil {
-					lock.Lock()
-					failureCount := s.increaseReplicaFailures[deployment.Key.String()] + 1
-					s.increaseReplicaFailures[deployment.Key.String()] = failureCount
-					lock.Unlock()
-
-					if failureCount >= 5 {
-						deploymentLogger.Errorf(err, "Failed to increase deployment replicas")
-					} else {
-						deploymentLogger.Debugf("Failed to increase deployment replicas (%d): %s", failureCount, err)
-					}
-					observability.Deployment.ReconciliationFailure(ctx, reconcile.Module, reconcile.Deployment.String())
-				} else {
-					lock.Lock()
-					delete(s.increaseReplicaFailures, deployment.Key.String())
-					lock.Unlock()
-
-					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas+1, reconcile.RequiredReplicas)
-					if reconcile.AssignedReplicas+1 == reconcile.RequiredReplicas {
-						deploymentLogger.Infof("Deployed %s", reconcile.Deployment)
-					}
-					observability.Deployment.ReplicasUpdated(ctx, reconcile.Module, reconcile.Deployment.String(), require)
-				}
-				return nil
-			})
-		} else if require < 0 {
-			observability.Deployment.ReconciliationStart(ctx, reconcile.Module, reconcile.Deployment.String())
-			defer observability.Deployment.ReconciliationComplete(ctx, reconcile.Module, reconcile.Deployment.String())
-
-			deploymentLogger.Debugf("Need %d less runners for %s", -require, reconcile.Deployment)
-			wg.Go(func(ctx context.Context) error {
-				ok, err := s.terminateRandomRunner(ctx, deployment.Key)
-				if err != nil {
-					deploymentLogger.Warnf("Failed to terminate runner: %s", err)
-					observability.Deployment.ReconciliationFailure(ctx, reconcile.Module, reconcile.Deployment.String())
-				} else if ok {
-					deploymentLogger.Debugf("Reconciled %s to %d/%d replicas", reconcile.Deployment, reconcile.AssignedReplicas-1, reconcile.RequiredReplicas)
-					if reconcile.AssignedReplicas-1 == reconcile.RequiredReplicas {
-						deploymentLogger.Infof("Stopped %s", reconcile.Deployment)
-					}
-					observability.Deployment.ReplicasUpdated(ctx, reconcile.Module, reconcile.Deployment.String(), require)
-				} else {
-					deploymentLogger.Warnf("Failed to terminate runner: no runners found")
-					observability.Deployment.ReconciliationFailure(ctx, reconcile.Module, reconcile.Deployment.String())
-				}
-				return nil
-			})
-		}
-	}
-
-	// Clean up old failures, which can happen if a deployment was removed before successfully reconciling.
-	if len(oldFailures) > 0 {
-		lock.Lock()
-		for k := range oldFailures {
-			delete(s.increaseReplicaFailures, k)
-		}
-		lock.Unlock()
-	}
-
-	if err := wg.Wait(); err != nil {
-		return 0, fmt.Errorf("failed to reconcile deployments: %w", err)
-	}
-	return time.Second, nil
-}
-
-// Attempt to bring the number of active runners in line with the number of active deployments.
-func (s *Service) reconcileRunners(ctx context.Context) (time.Duration, error) {
-	activeDeployments, err := s.dal.GetActiveDeployments(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get deployments needing reconciliation: %w", err)
-	}
-
-	totalRunners := s.config.IdleRunners
-	for _, deployment := range activeDeployments {
-		totalRunners += deployment.MinReplicas
-	}
-
-	// It's possible that idles runners will get terminated here, but they will get recreated in the next
-	// reconciliation cycle.
-	idleRunners, err := s.dal.GetIdleRunners(ctx, 16, model.Labels{})
-	if err != nil {
-		return 0, err
-	}
-
-	idleRunnerKeys := slices.Map(idleRunners, func(r dal.Runner) model.RunnerKey { return r.Key })
-
-	err = s.runnerScaling.SetReplicas(ctx, totalRunners, idleRunnerKeys)
-	if err != nil {
-		return 0, err
-	}
-
-	return time.Second, nil
 }
 
 // AsyncCallWasAdded is an optional notification that an async call was added by this controller
@@ -1749,68 +1602,6 @@ func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) 
 		return 0, fmt.Errorf("failed to expire leases: %w", err)
 	}
 	return time.Second * 1, nil
-}
-
-func (s *Service) terminateRandomRunner(ctx context.Context, key model.DeploymentKey) (bool, error) {
-	runners, err := s.dal.GetRunnersForDeployment(ctx, key)
-	if err != nil {
-		return false, fmt.Errorf("failed to get runner for %s: %w", key, err)
-	}
-	if len(runners) == 0 {
-		return false, nil
-	}
-	runner := runners[rand.Intn(len(runners))] //nolint:gosec
-	client := s.clientsForRunner(runner.Key, runner.Endpoint)
-	resp, err := client.runner.Terminate(ctx, connect.NewRequest(&ftlv1.TerminateRequest{DeploymentKey: key.String()}))
-	if err != nil {
-		return false, err
-	}
-	err = s.dal.UpsertRunner(ctx, dal.Runner{
-		Key:      runner.Key,
-		Endpoint: runner.Endpoint,
-		State:    dal.RunnerStateFromProto(resp.Msg.State),
-		Labels:   runner.Labels,
-	})
-	return true, err
-}
-
-func (s *Service) deploy(ctx context.Context, reconcile model.Deployment) error {
-	client, err := s.reserveRunner(ctx, reconcile)
-	if err != nil {
-		return fmt.Errorf("failed to reserve runner for %s: %w", reconcile.Key, err)
-	}
-
-	_, err = client.runner.Deploy(ctx, connect.NewRequest(&ftlv1.DeployRequest{DeploymentKey: reconcile.Key.String()}))
-	if err != nil {
-		return fmt.Errorf("failed to request deploy %s: %w", reconcile.Key, err)
-	}
-
-	return nil
-}
-
-func (s *Service) reserveRunner(ctx context.Context, reconcile model.Deployment) (client clients, err error) {
-	// A timeout context applied to the transaction and the Runner.Reserve() Call.
-	reservationCtx, cancel := context.WithTimeout(ctx, s.config.DeploymentReservationTimeout)
-	defer cancel()
-	claim, err := s.dal.ReserveRunnerForDeployment(reservationCtx, reconcile.Key, s.config.DeploymentReservationTimeout, model.Labels{
-		"languages": []string{reconcile.Language},
-	})
-	if err != nil {
-		return clients{}, fmt.Errorf("failed to claim runners for %s: %w", reconcile.Key, err)
-	}
-
-	err = dal.WithReservation(reservationCtx, claim, func() error {
-		runner := claim.Runner()
-		client = s.clientsForRunner(runner.Key, runner.Endpoint)
-		_, err = client.runner.Reserve(reservationCtx, connect.NewRequest(&ftlv1.ReserveRequest{DeploymentKey: reconcile.Key.String()}))
-		if err != nil {
-			return fmt.Errorf("failed request to reserve a runner for %s at %s: %w", reconcile.Key, claim.Runner().Endpoint, err)
-		}
-
-		return nil
-	})
-
-	return
 }
 
 // Periodically remove stale (ie. have not heartbeat recently) controllers from the database.

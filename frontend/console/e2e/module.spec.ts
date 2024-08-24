@@ -11,5 +11,5 @@ ftlTest('shows verbs for deployment', async ({ page }) => {
   await expect(page).toHaveURL(/\/modules\/echo/)
 
   await expect(page.getByText('Deployment', { exact: true })).toBeVisible()
-  await expect(page.getByText('Deployed dpl-echo')).toBeVisible()
+  await expect(page.getByText('Created Deployment dpl-echo')).toBeVisible()
 })

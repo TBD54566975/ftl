@@ -27,8 +27,6 @@ const (
 	ModuleServiceName = "xyz.block.ftl.v1.ModuleService"
 	// ControllerServiceName is the fully-qualified name of the ControllerService service.
 	ControllerServiceName = "xyz.block.ftl.v1.ControllerService"
-	// RunnerServiceName is the fully-qualified name of the RunnerService service.
-	RunnerServiceName = "xyz.block.ftl.v1.RunnerService"
 	// AdminServiceName is the fully-qualified name of the AdminService service.
 	AdminServiceName = "xyz.block.ftl.v1.AdminService"
 )
@@ -106,14 +104,6 @@ const (
 	// ControllerServiceResetSubscriptionProcedure is the fully-qualified name of the
 	// ControllerService's ResetSubscription RPC.
 	ControllerServiceResetSubscriptionProcedure = "/xyz.block.ftl.v1.ControllerService/ResetSubscription"
-	// RunnerServicePingProcedure is the fully-qualified name of the RunnerService's Ping RPC.
-	RunnerServicePingProcedure = "/xyz.block.ftl.v1.RunnerService/Ping"
-	// RunnerServiceReserveProcedure is the fully-qualified name of the RunnerService's Reserve RPC.
-	RunnerServiceReserveProcedure = "/xyz.block.ftl.v1.RunnerService/Reserve"
-	// RunnerServiceDeployProcedure is the fully-qualified name of the RunnerService's Deploy RPC.
-	RunnerServiceDeployProcedure = "/xyz.block.ftl.v1.RunnerService/Deploy"
-	// RunnerServiceTerminateProcedure is the fully-qualified name of the RunnerService's Terminate RPC.
-	RunnerServiceTerminateProcedure = "/xyz.block.ftl.v1.RunnerService/Terminate"
 	// AdminServicePingProcedure is the fully-qualified name of the AdminService's Ping RPC.
 	AdminServicePingProcedure = "/xyz.block.ftl.v1.AdminService/Ping"
 	// AdminServiceConfigListProcedure is the fully-qualified name of the AdminService's ConfigList RPC.
@@ -891,152 +881,6 @@ func (UnimplementedControllerServiceHandler) PullSchema(context.Context, *connec
 
 func (UnimplementedControllerServiceHandler) ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.ResetSubscription is not implemented"))
-}
-
-// RunnerServiceClient is a client for the xyz.block.ftl.v1.RunnerService service.
-type RunnerServiceClient interface {
-	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// Reserve synchronously reserves a Runner for a deployment but does nothing else.
-	Reserve(context.Context, *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error)
-	// Initiate a deployment on this Runner.
-	Deploy(context.Context, *connect.Request[v1.DeployRequest]) (*connect.Response[v1.DeployResponse], error)
-	// Terminate the deployment on this Runner.
-	Terminate(context.Context, *connect.Request[v1.TerminateRequest]) (*connect.Response[v1.RegisterRunnerRequest], error)
-}
-
-// NewRunnerServiceClient constructs a client for the xyz.block.ftl.v1.RunnerService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewRunnerServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) RunnerServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	return &runnerServiceClient{
-		ping: connect.NewClient[v1.PingRequest, v1.PingResponse](
-			httpClient,
-			baseURL+RunnerServicePingProcedure,
-			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-			connect.WithClientOptions(opts...),
-		),
-		reserve: connect.NewClient[v1.ReserveRequest, v1.ReserveResponse](
-			httpClient,
-			baseURL+RunnerServiceReserveProcedure,
-			opts...,
-		),
-		deploy: connect.NewClient[v1.DeployRequest, v1.DeployResponse](
-			httpClient,
-			baseURL+RunnerServiceDeployProcedure,
-			opts...,
-		),
-		terminate: connect.NewClient[v1.TerminateRequest, v1.RegisterRunnerRequest](
-			httpClient,
-			baseURL+RunnerServiceTerminateProcedure,
-			opts...,
-		),
-	}
-}
-
-// runnerServiceClient implements RunnerServiceClient.
-type runnerServiceClient struct {
-	ping      *connect.Client[v1.PingRequest, v1.PingResponse]
-	reserve   *connect.Client[v1.ReserveRequest, v1.ReserveResponse]
-	deploy    *connect.Client[v1.DeployRequest, v1.DeployResponse]
-	terminate *connect.Client[v1.TerminateRequest, v1.RegisterRunnerRequest]
-}
-
-// Ping calls xyz.block.ftl.v1.RunnerService.Ping.
-func (c *runnerServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
-	return c.ping.CallUnary(ctx, req)
-}
-
-// Reserve calls xyz.block.ftl.v1.RunnerService.Reserve.
-func (c *runnerServiceClient) Reserve(ctx context.Context, req *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error) {
-	return c.reserve.CallUnary(ctx, req)
-}
-
-// Deploy calls xyz.block.ftl.v1.RunnerService.Deploy.
-func (c *runnerServiceClient) Deploy(ctx context.Context, req *connect.Request[v1.DeployRequest]) (*connect.Response[v1.DeployResponse], error) {
-	return c.deploy.CallUnary(ctx, req)
-}
-
-// Terminate calls xyz.block.ftl.v1.RunnerService.Terminate.
-func (c *runnerServiceClient) Terminate(ctx context.Context, req *connect.Request[v1.TerminateRequest]) (*connect.Response[v1.RegisterRunnerRequest], error) {
-	return c.terminate.CallUnary(ctx, req)
-}
-
-// RunnerServiceHandler is an implementation of the xyz.block.ftl.v1.RunnerService service.
-type RunnerServiceHandler interface {
-	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// Reserve synchronously reserves a Runner for a deployment but does nothing else.
-	Reserve(context.Context, *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error)
-	// Initiate a deployment on this Runner.
-	Deploy(context.Context, *connect.Request[v1.DeployRequest]) (*connect.Response[v1.DeployResponse], error)
-	// Terminate the deployment on this Runner.
-	Terminate(context.Context, *connect.Request[v1.TerminateRequest]) (*connect.Response[v1.RegisterRunnerRequest], error)
-}
-
-// NewRunnerServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewRunnerServiceHandler(svc RunnerServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	runnerServicePingHandler := connect.NewUnaryHandler(
-		RunnerServicePingProcedure,
-		svc.Ping,
-		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
-		connect.WithHandlerOptions(opts...),
-	)
-	runnerServiceReserveHandler := connect.NewUnaryHandler(
-		RunnerServiceReserveProcedure,
-		svc.Reserve,
-		opts...,
-	)
-	runnerServiceDeployHandler := connect.NewUnaryHandler(
-		RunnerServiceDeployProcedure,
-		svc.Deploy,
-		opts...,
-	)
-	runnerServiceTerminateHandler := connect.NewUnaryHandler(
-		RunnerServiceTerminateProcedure,
-		svc.Terminate,
-		opts...,
-	)
-	return "/xyz.block.ftl.v1.RunnerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case RunnerServicePingProcedure:
-			runnerServicePingHandler.ServeHTTP(w, r)
-		case RunnerServiceReserveProcedure:
-			runnerServiceReserveHandler.ServeHTTP(w, r)
-		case RunnerServiceDeployProcedure:
-			runnerServiceDeployHandler.ServeHTTP(w, r)
-		case RunnerServiceTerminateProcedure:
-			runnerServiceTerminateHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
-}
-
-// UnimplementedRunnerServiceHandler returns CodeUnimplemented from all methods.
-type UnimplementedRunnerServiceHandler struct{}
-
-func (UnimplementedRunnerServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Ping is not implemented"))
-}
-
-func (UnimplementedRunnerServiceHandler) Reserve(context.Context, *connect.Request[v1.ReserveRequest]) (*connect.Response[v1.ReserveResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Reserve is not implemented"))
-}
-
-func (UnimplementedRunnerServiceHandler) Deploy(context.Context, *connect.Request[v1.DeployRequest]) (*connect.Response[v1.DeployResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Deploy is not implemented"))
-}
-
-func (UnimplementedRunnerServiceHandler) Terminate(context.Context, *connect.Request[v1.TerminateRequest]) (*connect.Response[v1.RegisterRunnerRequest], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.RunnerService.Terminate is not implemented"))
 }
 
 // AdminServiceClient is a client for the xyz.block.ftl.v1.AdminService service.

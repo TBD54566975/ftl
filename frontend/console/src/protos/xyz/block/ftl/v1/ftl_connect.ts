@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcquireLeaseRequest, AcquireLeaseResponse, CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, DeployRequest, DeployResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetConfigRequest, GetConfigResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, GetSecretRequest, GetSecretResponse, ListConfigRequest, ListConfigResponse, ListSecretsRequest, ListSecretsResponse, ModuleContextRequest, ModuleContextResponse, PingRequest, PingResponse, ProcessListRequest, ProcessListResponse, PublishEventRequest, PublishEventResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ReserveRequest, ReserveResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, SendFSMEventRequest, SendFSMEventResponse, SetConfigRequest, SetConfigResponse, SetSecretRequest, SetSecretResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, TerminateRequest, UnsetConfigRequest, UnsetConfigResponse, UnsetSecretRequest, UnsetSecretResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { AcquireLeaseRequest, AcquireLeaseResponse, CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetConfigRequest, GetConfigResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, GetSecretRequest, GetSecretResponse, ListConfigRequest, ListConfigResponse, ListSecretsRequest, ListSecretsResponse, ModuleContextRequest, ModuleContextResponse, PingRequest, PingResponse, ProcessListRequest, ProcessListResponse, PublishEventRequest, PublishEventResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, SendFSMEventRequest, SendFSMEventResponse, SetConfigRequest, SetConfigResponse, SetSecretRequest, SetSecretResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UnsetConfigRequest, UnsetConfigResponse, UnsetSecretRequest, UnsetSecretResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -300,64 +300,6 @@ export const ControllerService = {
       name: "ResetSubscription",
       I: ResetSubscriptionRequest,
       O: ResetSubscriptionResponse,
-      kind: MethodKind.Unary,
-    },
-  }
-} as const;
-
-/**
- * RunnerService is the service that executes Deployments.
- *
- * The Controller will scale the Runner horizontally as required. The Runner will
- * register itself automatically with the ControllerService, which will then
- * assign modules to it.
- *
- * @generated from service xyz.block.ftl.v1.RunnerService
- */
-export const RunnerService = {
-  typeName: "xyz.block.ftl.v1.RunnerService",
-  methods: {
-    /**
-     * @generated from rpc xyz.block.ftl.v1.RunnerService.Ping
-     */
-    ping: {
-      name: "Ping",
-      I: PingRequest,
-      O: PingResponse,
-      kind: MethodKind.Unary,
-      idempotency: MethodIdempotency.NoSideEffects,
-    },
-    /**
-     * Reserve synchronously reserves a Runner for a deployment but does nothing else.
-     *
-     * @generated from rpc xyz.block.ftl.v1.RunnerService.Reserve
-     */
-    reserve: {
-      name: "Reserve",
-      I: ReserveRequest,
-      O: ReserveResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Initiate a deployment on this Runner.
-     *
-     * @generated from rpc xyz.block.ftl.v1.RunnerService.Deploy
-     */
-    deploy: {
-      name: "Deploy",
-      I: DeployRequest,
-      O: DeployResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Terminate the deployment on this Runner.
-     *
-     * @generated from rpc xyz.block.ftl.v1.RunnerService.Terminate
-     */
-    terminate: {
-      name: "Terminate",
-      I: TerminateRequest,
-      O: RegisterRunnerRequest,
       kind: MethodKind.Unary,
     },
   }

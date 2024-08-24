@@ -4,7 +4,6 @@ set shell := ["bash", "-c"]
 WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml"
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
-RUNNER_TEMPLATE_ZIP := "backend/controller/scaling/localscaling/template.zip"
 TIMESTAMP := `date +%s`
 SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template internal/projectinit/scaffolding go-runtime/scaffolding jvm-runtime/java/scaffolding jvm-runtime/kotlin/scaffolding"
@@ -79,7 +78,7 @@ build-sqlc:
   @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} backend/controller/cronjobs/sql/{db.go,models.go,querier.go,queries.sql.go} internal/configuration/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/async_queries.sql backend/controller/cronjobs/sql/queries.sql internal/configuration/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- "just init-db && sqlc generate"
 
 # Build the ZIP files that are embedded in the FTL release binaries
-build-zips: build-kt-runtime
+build-zips:
   @for dir in {{ZIP_DIRS}}; do (cd $dir && mk ../$(basename ${dir}).zip : . -- "rm -f $(basename ${dir}.zip) && zip -q --symlinks -r ../$(basename ${dir}).zip ."); done
 
 # Rebuild frontend
@@ -104,12 +103,6 @@ publish-extension: package-extension
 
 build-intellij-plugin:
   @cd frontend/intellij && gradle buildPlugin
-
-# Kotlin runtime is temporarily disabled; these instructions create a dummy zip in place of the kotlin runtime jar for
-# the runner.
-build-kt-runtime:
-  @mkdir -p build/template/ftl && touch build/template/ftl/temp.txt
-  @cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} .
 
 # Format console code.
 format-frontend:

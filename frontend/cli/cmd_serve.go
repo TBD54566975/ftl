@@ -155,7 +155,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling, conn); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling, conn, true); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}

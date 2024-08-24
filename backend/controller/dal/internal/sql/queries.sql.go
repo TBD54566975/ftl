@@ -353,8 +353,7 @@ func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.Depl
 const deregisterRunner = `-- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead',
-            deployment_id = NULL
+        SET state = 'dead'
         WHERE key = $1::runner_key
         RETURNING 1)
 SELECT COUNT(*)
@@ -363,26 +362,6 @@ FROM matches
 
 func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error) {
 	row := q.db.QueryRowContext(ctx, deregisterRunner, key)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
-const expireRunnerReservations = `-- name: ExpireRunnerReservations :one
-WITH rows AS (
-    UPDATE runners
-        SET state = 'idle',
-            deployment_id = NULL,
-            reservation_timeout = NULL
-        WHERE state = 'reserved'
-            AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
-        RETURNING 1)
-SELECT COUNT(*)
-FROM rows
-`
-
-func (q *Queries) ExpireRunnerReservations(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, expireRunnerReservations)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -676,11 +655,9 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.labels,
                            r.last_seen,
                            r.module_name,
-                           COALESCE(CASE
-                                        WHEN r.deployment_id IS NOT NULL
-                                            THEN d.key END, NULL) AS deployment_key
+                           d.key AS deployment_key
 FROM runners r
-         LEFT JOIN deployments d on d.id = r.deployment_id
+         INNER JOIN deployments d on d.id = r.deployment_id
 WHERE r.state <> 'dead'
 ORDER BY r.key
 `
@@ -692,7 +669,7 @@ type GetActiveRunnersRow struct {
 	Labels        json.RawMessage
 	LastSeen      time.Time
 	ModuleName    optional.Option[string]
-	DeploymentKey optional.Option[string]
+	DeploymentKey model.DeploymentKey
 }
 
 func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error) {
@@ -928,57 +905,6 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 	return items, nil
 }
 
-const getDeploymentsNeedingReconciliation = `-- name: GetDeploymentsNeedingReconciliation :many
-SELECT d.key                 AS deployment_key,
-       m.name                 AS module_name,
-       m.language             AS language,
-       COUNT(r.id)            AS assigned_runners_count,
-       d.min_replicas::BIGINT AS required_runners_count
-FROM deployments d
-         LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
-         JOIN modules m ON d.module_id = m.id
-GROUP BY d.key, d.min_replicas, m.name, m.language
-HAVING COUNT(r.id) <> d.min_replicas
-`
-
-type GetDeploymentsNeedingReconciliationRow struct {
-	DeploymentKey        model.DeploymentKey
-	ModuleName           string
-	Language             string
-	AssignedRunnersCount int64
-	RequiredRunnersCount int64
-}
-
-// Get deployments that have a mismatch between the number of assigned and required replicas.
-func (q *Queries) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error) {
-	rows, err := q.db.QueryContext(ctx, getDeploymentsNeedingReconciliation)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDeploymentsNeedingReconciliationRow
-	for rows.Next() {
-		var i GetDeploymentsNeedingReconciliationRow
-		if err := rows.Scan(
-			&i.DeploymentKey,
-			&i.ModuleName,
-			&i.Language,
-			&i.AssignedRunnersCount,
-			&i.RequiredRunnersCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getDeploymentsWithArtefacts = `-- name: GetDeploymentsWithArtefacts :many
 SELECT d.id, d.created_at, d.key as deployment_key, d.schema, m.name AS module_name
 FROM deployments d
@@ -1139,48 +1065,6 @@ func (q *Queries) GetFSMInstance(ctx context.Context, fsm schema.RefKey, key str
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getIdleRunners = `-- name: GetIdleRunners :many
-SELECT id, key, created, last_seen, reservation_timeout, state, endpoint, module_name, deployment_id, labels
-FROM runners
-WHERE labels @> $1::jsonb
-  AND state = 'idle'
-LIMIT $2
-`
-
-func (q *Queries) GetIdleRunners(ctx context.Context, labels json.RawMessage, limit int64) ([]Runner, error) {
-	rows, err := q.db.QueryContext(ctx, getIdleRunners, labels, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Runner
-	for rows.Next() {
-		var i Runner
-		if err := rows.Scan(
-			&i.ID,
-			&i.Key,
-			&i.Created,
-			&i.LastSeen,
-			&i.ReservationTimeout,
-			&i.State,
-			&i.Endpoint,
-			&i.ModuleName,
-			&i.DeploymentID,
-			&i.Labels,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getIngressRoutes = `-- name: GetIngressRoutes :many
@@ -1495,11 +1379,9 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.labels,
                            r.last_seen,
                            r.module_name,
-                           COALESCE(CASE
-                                        WHEN r.deployment_id IS NOT NULL
-                                            THEN d.key END, NULL) AS deployment_key
+                           d.key AS deployment_key
 FROM runners r
-         LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
+         INNER JOIN deployments d on d.id = r.deployment_id
 WHERE r.key = $1::runner_key
 `
 
@@ -1510,7 +1392,7 @@ type GetRunnerRow struct {
 	Labels        json.RawMessage
 	LastSeen      time.Time
 	ModuleName    optional.Option[string]
-	DeploymentKey optional.Option[string]
+	DeploymentKey model.DeploymentKey
 }
 
 func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error) {
@@ -1558,7 +1440,7 @@ type GetRunnersForDeploymentRow struct {
 	State              RunnerState
 	Endpoint           string
 	ModuleName         optional.Option[string]
-	DeploymentID       optional.Option[int64]
+	DeploymentID       int64
 	Labels             json.RawMessage
 	ID_2               int64
 	CreatedAt          time.Time
@@ -2288,43 +2170,6 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 	return err
 }
 
-const reserveRunner = `-- name: ReserveRunner :one
-UPDATE runners
-SET state               = 'reserved',
-    reservation_timeout = $1::timestamptz,
-    -- If a deployment is not found, then the deployment ID is -1
-    -- and the update will fail due to a FK constraint.
-    deployment_id       = COALESCE((SELECT id
-                                    FROM deployments d
-                                    WHERE d.key = $2::deployment_key
-                                    LIMIT 1), -1)
-WHERE id = (SELECT id
-            FROM runners r
-            WHERE r.state = 'idle'
-              AND r.labels @> $3::jsonb
-            LIMIT 1 FOR UPDATE SKIP LOCKED)
-RETURNING runners.id, runners.key, runners.created, runners.last_seen, runners.reservation_timeout, runners.state, runners.endpoint, runners.module_name, runners.deployment_id, runners.labels
-`
-
-// Find an idle runner and reserve it for the given deployment.
-func (q *Queries) ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels json.RawMessage) (Runner, error) {
-	row := q.db.QueryRowContext(ctx, reserveRunner, reservationTimeout, deploymentKey, labels)
-	var i Runner
-	err := row.Scan(
-		&i.ID,
-		&i.Key,
-		&i.Created,
-		&i.LastSeen,
-		&i.ReservationTimeout,
-		&i.State,
-		&i.Endpoint,
-		&i.ModuleName,
-		&i.DeploymentID,
-		&i.Labels,
-	)
-	return i, err
-}
-
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2
@@ -2546,13 +2391,9 @@ func (q *Queries) UpsertModule(ctx context.Context, language string, name string
 
 const upsertRunner = `-- name: UpsertRunner :one
 WITH deployment_rel AS (
-    SELECT CASE
-               WHEN $5::deployment_key IS NULL
-                   THEN NULL
-               ELSE COALESCE((SELECT id
-                              FROM deployments d
-                              WHERE d.key = $5::deployment_key
-                              LIMIT 1), -1) END AS id)
+    SELECT id FROM deployments d
+             WHERE d.key = $5::deployment_key
+             LIMIT 1)
 INSERT
 INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
 VALUES ($1,
@@ -2564,7 +2405,6 @@ VALUES ($1,
 ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
                                 state         = $3,
                                 labels        = $4,
-                                deployment_id = (SELECT id FROM deployment_rel),
                                 last_seen     = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id
 `
@@ -2574,7 +2414,7 @@ type UpsertRunnerParams struct {
 	Endpoint      string
 	State         RunnerState
 	Labels        json.RawMessage
-	DeploymentKey optional.Option[model.DeploymentKey]
+	DeploymentKey model.DeploymentKey
 }
 
 // Upsert a runner and return the deployment ID that it is assigned to, if any.
@@ -2582,7 +2422,7 @@ type UpsertRunnerParams struct {
 // otherwise we try to retrieve the deployments.id using the key. If
 // there is no corresponding deployment, then the deployment ID is -1
 // and the parent statement will fail due to a foreign key constraint.
-func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (optional.Option[int64], error) {
+func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, upsertRunner,
 		arg.Key,
 		arg.Endpoint,
@@ -2590,7 +2430,7 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (opt
 		arg.Labels,
 		arg.DeploymentKey,
 	)
-	var deployment_id optional.Option[int64]
+	var deployment_id int64
 	err := row.Scan(&deployment_id)
 	return deployment_id, err
 }

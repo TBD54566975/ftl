@@ -73,14 +73,7 @@ func DeploymentArtefactFromProto(in *ftlv1.DeploymentArtefact) (DeploymentArtefa
 }
 
 func runnerFromDB(row dalsql.GetRunnerRow) Runner {
-	var deployment optional.Option[model.DeploymentKey]
-	if name, ok := row.DeploymentKey.Get(); ok {
-		parsed, err := model.ParseDeploymentKey(name)
-		if err != nil {
-			return Runner{}
-		}
-		deployment = optional.Some(parsed)
-	}
+
 	attrs := model.Labels{}
 	if err := json.Unmarshal(row.Labels, &attrs); err != nil {
 		return Runner{}
@@ -90,7 +83,7 @@ func runnerFromDB(row dalsql.GetRunnerRow) Runner {
 		Key:        row.RunnerKey,
 		Endpoint:   row.Endpoint,
 		State:      RunnerState(row.State),
-		Deployment: deployment,
+		Deployment: row.DeploymentKey,
 		Labels:     attrs,
 	}
 }
@@ -101,9 +94,8 @@ type Runner struct {
 	State              RunnerState
 	ReservationTimeout optional.Option[time.Duration]
 	Module             optional.Option[string]
-	// Assigned deployment key, if any.
-	Deployment optional.Option[model.DeploymentKey]
-	Labels     model.Labels
+	Deployment         model.DeploymentKey
+	Labels             model.Labels
 }
 
 func (r Runner) notification() {}
@@ -121,7 +113,7 @@ type RunnerState string
 
 // Runner states.
 const (
-	RunnerStateIdle     = RunnerState(dalsql.RunnerStateIdle)
+	RunnerStateNew      = RunnerState(dalsql.RunnerStateNew)
 	RunnerStateReserved = RunnerState(dalsql.RunnerStateReserved)
 	RunnerStateAssigned = RunnerState(dalsql.RunnerStateAssigned)
 	RunnerStateDead     = RunnerState(dalsql.RunnerStateDead)
@@ -302,14 +294,6 @@ func (d *DAL) GetStatus(ctx context.Context) (Status, error) {
 		return Status{}, err
 	}
 	domainRunners, err := slices.MapErr(runners, func(in dalsql.GetActiveRunnersRow) (Runner, error) {
-		var deployment optional.Option[model.DeploymentKey]
-		if keyStr, ok := in.DeploymentKey.Get(); ok {
-			key, err := model.ParseDeploymentKey(keyStr)
-			if err != nil {
-				return Runner{}, fmt.Errorf("invalid deployment key %q: %w", keyStr, err)
-			}
-			deployment = optional.Some(key)
-		}
 		attrs := model.Labels{}
 		if err := json.Unmarshal(in.Labels, &attrs); err != nil {
 			return Runner{}, fmt.Errorf("invalid attributes JSON for runner %s: %w", in.RunnerKey, err)
@@ -319,7 +303,7 @@ func (d *DAL) GetStatus(ctx context.Context) (Status, error) {
 			Key:        in.RunnerKey,
 			Endpoint:   in.Endpoint,
 			State:      RunnerState(in.State),
-			Deployment: deployment,
+			Deployment: in.DeploymentKey,
 			Labels:     attrs,
 		}, nil
 	})
@@ -366,7 +350,7 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 			Key:        row.Key,
 			Endpoint:   row.Endpoint,
 			State:      RunnerState(row.State),
-			Deployment: optional.Some(deployment),
+			Deployment: deployment,
 			Labels:     attrs,
 		})
 	}
@@ -549,7 +533,7 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 	if err != nil {
 		return libdal.TranslatePGError(err)
 	}
-	if runner.Deployment.Ok() && !deploymentID.Ok() {
+	if deploymentID < 0 {
 		return fmt.Errorf("deployment %s not found", runner.Deployment)
 	}
 	return nil
@@ -577,53 +561,6 @@ func (d *DAL) DeregisterRunner(ctx context.Context, key model.RunnerKey) error {
 		return libdal.ErrNotFound
 	}
 	return nil
-}
-
-// ReserveRunnerForDeployment reserves a runner for the given deployment.
-//
-// It returns a Reservation that must be committed or rolled back.
-func (d *DAL) ReserveRunnerForDeployment(ctx context.Context, deployment model.DeploymentKey, reservationTimeout time.Duration, labels model.Labels) (Reservation, error) {
-	jsonLabels, err := json.Marshal(labels)
-	if err != nil {
-		return nil, fmt.Errorf("failed to JSON encode labels: %w", err)
-	}
-	ctx, cancel := context.WithTimeout(ctx, reservationTimeout)
-	tx, err := d.Begin(ctx)
-	if err != nil {
-		cancel()
-		return nil, libdal.TranslatePGError(err)
-	}
-	runner, err := tx.db.ReserveRunner(ctx, time.Now().Add(reservationTimeout), deployment, jsonLabels)
-	if err != nil {
-		if rerr := tx.Rollback(context.Background()); rerr != nil {
-			err = errors.Join(err, libdal.TranslatePGError(rerr))
-		}
-		cancel()
-		if libdal.IsNotFound(err) {
-			return nil, fmt.Errorf("no idle runners found matching labels %s: %w", jsonLabels, libdal.ErrNotFound)
-		}
-		return nil, libdal.TranslatePGError(err)
-	}
-	runnerLabels := model.Labels{}
-	if err := json.Unmarshal(runner.Labels, &runnerLabels); err != nil {
-		if rerr := tx.Rollback(context.Background()); rerr != nil {
-			err = errors.Join(err, libdal.TranslatePGError(rerr))
-		}
-		cancel()
-		return nil, fmt.Errorf("failed to JSON decode labels for runner %d: %w", runner.ID, err)
-	}
-
-	return &postgresClaim{
-		cancel: cancel,
-		tx:     tx,
-		runner: Runner{
-			Key:        runner.Key,
-			Endpoint:   runner.Endpoint,
-			State:      RunnerState(runner.State),
-			Deployment: optional.Some(deployment),
-			Labels:     runnerLabels,
-		},
-	}, nil
 }
 
 var _ Reservation = (*postgresClaim)(nil)
@@ -794,27 +731,6 @@ func (d *DAL) deploymentWillDeactivate(ctx context.Context, key model.Deployment
 	return d.removeSubscriptionsAndSubscribers(ctx, key)
 }
 
-// GetDeploymentsNeedingReconciliation returns deployments that have a
-// mismatch between the number of assigned and required replicas.
-func (d *DAL) GetDeploymentsNeedingReconciliation(ctx context.Context) ([]Reconciliation, error) {
-	counts, err := d.db.GetDeploymentsNeedingReconciliation(ctx)
-	if err != nil {
-		if libdal.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, libdal.TranslatePGError(err)
-	}
-	return slices.Map(counts, func(t dalsql.GetDeploymentsNeedingReconciliationRow) Reconciliation {
-		return Reconciliation{
-			Deployment:       t.DeploymentKey,
-			Module:           t.ModuleName,
-			Language:         t.Language,
-			AssignedReplicas: int(t.AssignedRunnersCount),
-			RequiredReplicas: int(t.RequiredRunnersCount),
-		}
-	}), nil
-}
-
 // GetActiveDeployments returns all active deployments.
 func (d *DAL) GetActiveDeployments(ctx context.Context) ([]Deployment, error) {
 	rows, err := d.db.GetActiveDeployments(ctx)
@@ -928,43 +844,6 @@ func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 	})
 }
 
-// GetIdleRunners returns up to limit idle runners matching the given labels.
-//
-// "labels" is a single level map of key-value pairs. Values may be scalar or
-// lists of scalars. If a value is a list, it will match the labels if
-// all the values in the list match.
-//
-// e.g. {"languages": ["kotlin"], "arch": "arm64"}' will match a runner with the labels
-// '{"languages": ["go", "kotlin"], "os": "linux", "arch": "amd64", "pid": 1234}'
-//
-// If no runners are available, it will return an empty slice.
-func (d *DAL) GetIdleRunners(ctx context.Context, limit int, labels model.Labels) ([]Runner, error) {
-	jsonb, err := json.Marshal(labels)
-	if err != nil {
-		return nil, fmt.Errorf("could not marshal labels: %w", err)
-	}
-	runners, err := d.db.GetIdleRunners(ctx, jsonb, int64(limit))
-	if libdal.IsNotFound(err) {
-		return nil, nil
-	} else if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	return slices.MapErr(runners, func(row dalsql.Runner) (Runner, error) { //nolint:wrapcheck
-		rowLabels := model.Labels{}
-		err := json.Unmarshal(row.Labels, &rowLabels)
-		if err != nil {
-			return Runner{}, fmt.Errorf("could not unmarshal labels: %w", err)
-		}
-
-		return Runner{
-			Key:      row.Key,
-			Endpoint: row.Endpoint,
-			State:    RunnerState(row.State),
-			Labels:   labels,
-		}, nil
-	})
-}
-
 // GetRoutingTable returns the endpoints for all runners for the given modules,
 // or all routes if modules is empty.
 //
@@ -1006,11 +885,6 @@ func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner,
 		return Runner{}, libdal.TranslatePGError(err)
 	}
 	return runnerFromDB(row), nil
-}
-
-func (d *DAL) ExpireRunnerClaims(ctx context.Context) (int64, error) {
-	count, err := d.db.ExpireRunnerReservations(ctx)
-	return count, libdal.TranslatePGError(err)
 }
 
 func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
