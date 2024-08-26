@@ -11,14 +11,14 @@ function inject() {
 function injectTabs(codeSelector) {
   const nav = codeSelector.querySelector("ul.nav");
 
-  let langs = [];
-  let tabs = [];
+  const langs = [];
+  const tabs = [];
   let currentLang = null;
   codeSelector.childNodes.forEach((element) => {
     let toAdd = null;
 
     if (element.nodeType === Node.COMMENT_NODE) {
-      // if its a comment like <!-- go -->, then set the currentLang to go and add it to langs
+      // if it's a comment like <!-- go -->, then set the currentLang to go and add it to langs
       // end will cancel the currentLang, so you can continue to write common documentation.
       const lang = element.data.trim();
       if (lang === "end") {
@@ -43,7 +43,7 @@ function injectTabs(codeSelector) {
     }
 
     langs.push(toAdd);
-    if (tabs.indexOf(toAdd.lang) === -1) {
+    if (!tabs.includes(toAdd.lang)) {
       tabs.push(toAdd.lang);
     }
   });
@@ -55,21 +55,19 @@ function injectTabs(codeSelector) {
   let selected = tabs[0];
   if (saved) {
     // Only select the saved language if it's in the list.
-    found = tabs.find((lang) => lang === saved);
+    const found = tabs.find((lang) => lang === saved);
     if (found) {
       selected = found;
     }
   }
 
   for (const lang of tabs) {
-    const isSelected = selected === lang;
-
     const li = document.createElement("li");
     li.classList.add("nav-item");
 
     const a = document.createElement("a");
     a.classList.add("nav-link");
-    if (isSelected) {
+    if (selected === lang) {
       a.classList.add("active");
       a.setAttribute("aria-current", "page");
     }
@@ -88,11 +86,8 @@ function injectTabs(codeSelector) {
   }
 
   for (const { lang, element } of langs) {
-    const isSelected = selected === lang;
-    if (element.classList) {
-      if (!isSelected) {
-        element.classList.add("d-none");
-      }
+    if (element.classList && selected !== lang) {
+      element.classList.add("d-none");
     }
   }
 }
@@ -119,12 +114,13 @@ function changeLanguage(lang) {
 
     // Show/hide each element within the codeSelector
     langs.forEach((l) => {
-      if (l.element.classList) {
-        if (l.lang === selected.lang) {
-          l.element.classList.remove("d-none");
-        } else {
-          l.element.classList.add("d-none");
-        }
+      if (!l.element.classList) {
+        return
+      }
+      if (l.lang === selected.lang) {
+        l.element.classList.remove("d-none");
+      } else {
+        l.element.classList.add("d-none");
       }
     });
 
