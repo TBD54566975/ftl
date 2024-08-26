@@ -992,12 +992,10 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 			imports[path.Join("ftl", n.Module)] = "ftl" + n.Module
 
 			for _, tp := range n.TypeParameters {
-				tpRef, err := schema.ParseRef(tp.String())
-				if err != nil {
-					panic(err)
-				}
-				if tpRef.Module != "" && tpRef.Module != m.Name {
-					imports[path.Join("ftl", tpRef.Module)] = "ftl" + tpRef.Module
+				if tpRef, ok := tp.(*schema.Ref); ok {
+					if tpRef.Module != "" && tpRef.Module != m.Name {
+						imports[path.Join("ftl", tpRef.Module)] = "ftl" + tpRef.Module
+					}
 				}
 			}
 
