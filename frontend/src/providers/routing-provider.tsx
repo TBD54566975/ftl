@@ -3,7 +3,9 @@ import { ConsolePage } from '../features/console/ConsolePage'
 import { DeploymentPage } from '../features/deployments/DeploymentPage'
 import { DeploymentsPage } from '../features/deployments/DeploymentsPage'
 import { InfrastructurePage } from '../features/infrastructure/InfrastructurePage'
-import { ModulesPage } from '../features/modules/ModulesPage'
+import { ModulesPage, ModulesPanel } from '../features/modules/ModulesPage'
+import { ModulePanel } from '../features/modules/ModulePanel'
+import { DeclPanel } from '../features/modules/DeclPanel'
 import { TimelinePage } from '../features/timeline/TimelinePage'
 import { VerbPage } from '../features/verbs/VerbPage'
 import { Layout } from '../layout/Layout'
@@ -15,7 +17,9 @@ const router = createBrowserRouter(
       <Route path='/' element={<Layout />}>
         <Route index element={<Navigate to='events' replace />} />
         <Route path='events' element={<TimelinePage />} />
-        <Route path='modules' element={<ModulesPage />} />
+        <Route path='modules' element={<ModulesPage body={<ModulesPanel />} />} />
+        <Route path='modules/:moduleName' element={<ModulesPage body={<ModulePanel />} />} />
+        <Route path='modules/:moduleName/:declCase/:declName' element={<ModulesPage body={<DeclPanel />} />} />
         <Route path='deployments' element={<DeploymentsPage />} />
         <Route path='deployments/:deploymentKey' element={<DeploymentPage />} />
         <Route path='deployments/:deploymentKey/verbs/:verbName' element={<VerbPage />} />
