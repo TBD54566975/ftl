@@ -1027,7 +1027,7 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 	// maps possible aliases with the count of imports that could use the alias
 	possibleImportAliases := map[string]int{}
 	for _, alias := range imports {
-		possibleImportAliases[alias] = possibleImportAliases[alias] + 1
+		possibleImportAliases[alias]++
 	}
 	for _, alias := range widenedAliases {
 		importPath, dirName, ok := goImportForWidenedType(alias)
@@ -1055,7 +1055,7 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 				currentAlias = foldedComponent + "_" + currentAlias
 			}
 			aliasesForImports[importPath] = append(aliasesForImports[importPath], currentAlias)
-			possibleImportAliases[currentAlias] = possibleImportAliases[currentAlias] + 1
+			possibleImportAliases[currentAlias]++
 		}
 	}
 	for importPath, aliases := range aliasesForImports {
