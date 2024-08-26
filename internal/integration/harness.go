@@ -59,6 +59,15 @@ func WithLanguages(languages ...string) Option {
 	}
 }
 
+// WithTestDataDir sets the directory from which to look for test data.
+//
+// Defaults to "testdata/<language>" if not provided.
+func WithTestDataDir(dir string) Option {
+	return func(o *options) {
+		o.testDataDir = dir
+	}
+}
+
 // WithFTLConfig is a Run* option that specifies the FTL config to use.
 //
 // This will set FTL_CONFIG for this test, then pass in the relative
@@ -97,6 +106,7 @@ func WithoutController() Option {
 
 type options struct {
 	languages       []string
+	testDataDir     string
 	ftlConfigPath   string
 	startController bool
 	requireJava     bool
@@ -176,10 +186,15 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
 			}
 
+			testData := filepath.Join(cwd, "testdata", language)
+			if opts.testDataDir != "" {
+				testData = opts.testDataDir
+			}
+
 			ic := TestContext{
 				Context:  ctx,
 				RootDir:  rootDir,
-				testData: filepath.Join(cwd, "testdata", language),
+				testData: testData,
 				workDir:  tmpDir,
 				binDir:   binDir,
 				Verbs:    verbs,
