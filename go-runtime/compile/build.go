@@ -522,7 +522,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 }
 
 // returns the import path and the directory name for a type alias if there is an associated go library
-func goImportForWidenedType(t *schema.TypeAlias) (importPath string, dirName optional.Option[string]) {
+func goImportForWidenedType(t *schema.TypeAlias) (importPath string, dirName optional.Option[string], ok bool) {
 	for _, md := range t.Metadata {
 		md, ok := md.(*schema.MetadataTypeMap)
 		if !ok {
@@ -535,9 +535,10 @@ func goImportForWidenedType(t *schema.TypeAlias) (importPath string, dirName opt
 			if err != nil {
 				panic(err)
 			}
+			return importPath, dirName, true
 		}
 	}
-	return
+	return importPath, dirName, false
 }
 
 func schemaType(t schema.Type) string {
@@ -743,7 +744,10 @@ func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
 			if fqName == "" {
 				continue
 			}
-			im, _ := goImportForWidenedType(d)
+			im, _, ok := goImportForWidenedType(d)
+			if !ok {
+				continue
+			}
 			typ, err := getGoExternalType(imports, fqName)
 			if err != nil {
 				return nil, err
@@ -796,7 +800,10 @@ func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames e
 		case *schema.TypeAlias:
 			for _, m := range d.Metadata {
 				if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
-					im, _ := goImportForWidenedType(d)
+					im, _, ok := goImportForWidenedType(d)
+					if !ok {
+						continue
+					}
 					typ, err := getGoExternalType(imports, m.NativeName)
 					if err != nil {
 						return nil, nil, err
@@ -1025,7 +1032,10 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 		possibleImportAliases[alias] = possibleImportAliases[alias] + 1
 	}
 	for _, alias := range widenedAliases {
-		importPath, dirName := goImportForWidenedType(alias)
+		importPath, dirName, ok := goImportForWidenedType(alias)
+		if !ok {
+			continue
+		}
 
 		pathComponents := strings.Split(importPath, "/")
 		if dirName, ok := dirName.Get(); ok {
