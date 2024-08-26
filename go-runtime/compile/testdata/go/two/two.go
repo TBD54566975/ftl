@@ -2,6 +2,7 @@ package two
 
 import (
 	"context"
+	"ftl/builtin"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
@@ -113,4 +114,9 @@ func transitiveVerbCall(ctx context.Context, req Payload[string]) error {
 func superTransitiveVerbCall(ctx context.Context, req Payload[string]) error {
 	_, err := ftl.Call(ctx, Three, req)
 	return err
+}
+
+//ftl:verb export
+func CatchArray(ctx context.Context, req builtin.CatchRequest[[]TwoEnum]) error {
+	return nil
 }
