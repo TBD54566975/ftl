@@ -9,8 +9,6 @@ function inject() {
 }
 
 function injectTabs(codeSelector) {
-  console.log("Injecting tabs for", codeSelector);
-
   const nav = codeSelector.querySelector("ul.nav");
 
   let langs = [];
@@ -50,17 +48,12 @@ function injectTabs(codeSelector) {
     }
   });
 
-  console.log("xxx Languages found", langs);
-
   // Let us put this in the codeSelector element, so that we later check if the new selected language is in the list first.
   codeSelector.langs = langs;
 
   let saved = localStorage.getItem("code-lang");
   let selected = tabs[0];
   if (saved) {
-    console.log("Saved language", saved);
-    console.log("Languages", langs);
-
     // Only select the saved language if it's in the list.
     found = tabs.find((lang) => lang === saved);
     if (found) {
@@ -68,11 +61,8 @@ function injectTabs(codeSelector) {
     }
   }
 
-  console.log("Selected language", selected);
   for (const lang of tabs) {
-    console.log("Adding tab for", lang);
     const isSelected = selected === lang;
-    console.log("Is selected", isSelected);
 
     const li = document.createElement("li");
     li.classList.add("nav-item");
@@ -112,7 +102,6 @@ function capitalize(str) {
 }
 
 function changeLanguage(lang) {
-  console.log("Changing language to", lang);
   localStorage.setItem("code-lang", lang);
 
   document.querySelectorAll(".code-selector").forEach((codeSelector) => {
@@ -130,10 +119,6 @@ function changeLanguage(lang) {
 
     // Show/hide each element within the codeSelector
     langs.forEach((l) => {
-      console.log("Setting display", l, selected, l.lang === selected.lang);
-      // l.element.style.display = l.lang === selected.lang ? "block" : "none";
-      // addClass and removeClass bootstrap classes
-
       if (l.element.classList) {
         if (l.lang === selected.lang) {
           l.element.classList.remove("d-none");
