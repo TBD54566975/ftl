@@ -13,7 +13,7 @@ jobs:
         with:
           submodules: true
       - name: build_and_deploy
-        uses: shalzz/zola-deploy-action@v0.19.1
+        uses: shalzz/zola-deploy-action@v0.19.2
         env:
           # Target branch
           PAGES_BRANCH: gh-pages
