@@ -1,5 +1,6 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  labels: ["run-all"],
   extends: [
     "config:recommended",
     ":semanticCommits",
@@ -27,11 +28,11 @@
     },
     {
       matchPackageNames: [
-        "openjdk",  // We don't want automatic major version updates, just minors
+        "openjdk", // We don't want automatic major version updates, just minors
       ],
       matchManagers: ["hermit"],
       matchUpdateTypes: ["major"],
-      enabled: false
+      enabled: false,
     },
     {
       matchFileNames: ["**/testdata/**/go.mod"],
@@ -40,7 +41,7 @@
     {
       matchPackageNames: ["eslint", "codemirror", "codemirror-json-schema"],
       enabled: false,
-      paths: ["frontend/**", "extensions/**"],
+      matchFileNames: ["frontend/**", "extensions/**"],
     },
     {
       matchPackageNames: ["connectrpc.com/connect"],
