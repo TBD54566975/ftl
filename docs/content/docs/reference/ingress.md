@@ -23,7 +23,7 @@ type GetRequestPathParams struct {
 }
 
 type GetRequestQueryParams struct {
-    PostID string `json:"postId"`
+	PostID string `json:"postId"`
 }
 
 type GetResponse struct {
@@ -64,9 +64,9 @@ Given the following request verb:
 ```go
 
 type PostBody struct{
-    Title string               `json:"title"`
+	Title string               `json:"title"`
 	Content string             `json:"content"`
-    Tag ftl.Option[string]     `json:"tag"`
+	Tag ftl.Option[string]     `json:"tag"`
 }
 type PostPathParams struct {
 	UserID string             `json:"userId"`

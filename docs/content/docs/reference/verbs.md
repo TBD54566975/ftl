@@ -15,11 +15,22 @@ top = false
 
 ## Defining Verbs
 
+{% code_selector() %}
+
+<!-- go -->
 To declare a Verb, write a normal Go function with the following signature, annotated with the Go [comment directive](https://tip.golang.org/doc/comment#syntax) `//ftl:verb`:
+
+<!-- kotlin -->
+To declare a Verb, write a normal Kotlin function with the following signature, annotated with the Kotlin [annotation](https://kotlinlang.org/docs/annotations.html) `@Verb`:
 
 ```go
 //ftl:verb
 func F(context.Context, In) (Out, error) { }
+```
+
+```kotlin
+@Verb
+fun F(Context, In): Out { }
 ```
 
 eg.
@@ -35,12 +46,44 @@ func Echo(ctx context.Context, in EchoRequest) (EchoResponse, error) {
 }
 ```
 
+```kotlin
+data class EchoRequest
+data class EchoResponse
+
+@Verb
+fun echo(ctx: Context, request: EchoRequest): EchoResponse {
+  // ...
+}
+```
+
 By default verbs are only [visible](../visibility) to other verbs in the same module.
+
+{% end %}
 
 ## Calling Verbs
 
+{% code_selector() %}
+
+<!-- go -->
 To call a verb use `ftl.Call()`. eg.
 
 ```go
 out, err := ftl.Call(ctx, echo.Echo, echo.EchoRequest{})
 ```
+
+<!-- kotlin -->
+To call a verb, import the module's verb client, add it to your verb's signature, then `call()` it. eg.
+
+```kotlin
+import ftl.time.TimeClient
+
+@Verb
+fun echo(req: EchoRequest, time: TimeClient): EchoResponse {
+  val response = time.call()
+  // ...
+}
+
+val response = time.call()
+```
+
+{% end %}
