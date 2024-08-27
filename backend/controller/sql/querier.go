@@ -90,6 +90,7 @@ type Querier interface {
 	GetTopic(ctx context.Context, dollar_1 int64) (Topic, error)
 	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)
 	GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]GetUnscheduledCronJobsRow, error)
+	GetZombieAsyncCalls(ctx context.Context, limit int32) ([]AsyncCall, error)
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
 	InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error
 	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error
