@@ -2,6 +2,7 @@ package dal
 
 import (
 	"context"
+	dbsql "database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -10,8 +11,6 @@ import (
 	"github.com/alecthomas/participle/v2/lexer"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
-
-	dbsql "database/sql"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
