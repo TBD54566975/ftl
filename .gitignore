@@ -21,6 +21,7 @@ examples/**/go.work.sum
 testdata/**/go.work
 testdata/**/go.work.sum
 **/testdata/**/ftl-module-schema/
+**/examples/**/ftl-module-schema/**/*
 go-runtime/schema/testdata/test/test.go
 .cache
 
