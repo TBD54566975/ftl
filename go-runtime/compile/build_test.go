@@ -42,11 +42,20 @@ func TestImportAliases(t *testing.T) {
 		typealias SamePackageDiffDir2 Any
 		+typemap go "github.com/same.dir2.Type"
 
+		// two aliases that are part of the same external package
 		typealias TwoAliasesWithOnePkg1 Any
 		+typemap go "github.com/two/aliaseswithonepkg.Type1"
 
 		typealias TwoAliasesWithOnePkg2 Any
 		+typemap go "github.com/two/aliaseswithonepkg.Type2"
+
+		// references ftl/moduleclash, which is also the name of an external library
+		export data ExampleData {
+			something moduleclash.ExampleType
+		}
+
+		typealias ClashesWithModuleImport Any
+		+typemap go "github.com/ftlmoduleclash.Type2"
 	}
 	`)
 	assert.NoError(t, err)
@@ -62,5 +71,7 @@ func TestImportAliases(t *testing.T) {
 		"github.com/22/numeric":            "_2_numeric",
 		"github.com/same":                  "dir1",
 		"github.com/two/aliaseswithonepkg": "aliaseswithonepkg",
+		"ftl/moduleclash":                  "ftlmoduleclash",
+		"github.com/ftlmoduleclash":        "github_com_ftlmoduleclash",
 	}, imports)
 }
