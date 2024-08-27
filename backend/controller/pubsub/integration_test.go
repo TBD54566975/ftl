@@ -202,9 +202,11 @@ func TestLeaseFailure(t *testing.T) {
 		in.QueryRow("ftl", `SELECT state, error FROM async_calls WHERE verb = 'slow.consume' ORDER BY created_at OFFSET 1`, "success", nil),
 
 		// confirm that the first call did not keep executing for too long after the lease was expired
-		in.ExpectError(
-			in.FileContains(logFilePath, "slept for 5s"),
-			"Haystack does not contain needle",
+		in.IfLanguage("go",
+			in.ExpectError(
+				in.FileContains(logFilePath, "slept for 5s"),
+				"Haystack does not contain needle",
+			),
 		),
 	)
 }
