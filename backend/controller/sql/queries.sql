@@ -566,6 +566,27 @@ SELECT *
 FROM async_calls
 WHERE id = @id;
 
+-- name: GetZombieAsyncCalls :many
+SELECT 
+  id,
+  origin,
+  scheduled_at,
+  verb,
+  catch_verb,
+  request,
+  remaining_attempts,
+  error,
+  backoff,
+  max_backoff,
+  parent_request_key,
+  trace_context,
+  catching
+FROM async_calls
+WHERE state = 'executing'
+  AND lease_id IS NULL
+ORDER BY created_at ASC
+LIMIT sqlc.arg('limit')::INT;
+
 -- name: GetFSMInstance :one
 SELECT *
 FROM fsm_instances

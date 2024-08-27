@@ -298,6 +298,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 	svc.tasks.Singleton(maybeDevelTask(svc.releaseExpiredReservations, time.Second*2, time.Second, time.Second*20))
 	svc.tasks.Singleton(maybeDevelTask(svc.reconcileDeployments, time.Second*2, time.Second, time.Second*5))
 	svc.tasks.Singleton(maybeDevelTask(svc.reconcileRunners, time.Second*2, time.Second, time.Second*5))
+	svc.tasks.Singleton(maybeDevelTask(svc.reapAsyncCalls, time.Second*5, time.Second, time.Second*5))
 	return svc, nil
 }
 
@@ -1401,7 +1402,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	logger := log.FromContext(ctx)
 	logger.Tracef("Acquiring async call")
 
-	call, err := s.dal.AcquireAsyncCall(ctx)
+	leaseCtx, call, err := s.dal.AcquireAsyncCall(ctx)
 	if errors.Is(err, dalerrs.ErrNotFound) {
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
@@ -1413,6 +1414,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		}
 		return 0, err
 	}
+	ctx = leaseCtx
 
 	// Extract the otel context from the call
 	ctx, err = observability.ExtractTraceContextToContext(ctx, call.TraceContext)
@@ -1574,6 +1576,36 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	logger.Debugf("Caught async call %s with %s", call.Verb, catchVerb)
 	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, true, queueDepth, nil)
 	return nil
+}
+
+// fails async calls that have had their leases reaped
+func (s *Service) reapAsyncCalls(ctx context.Context) (nextInterval time.Duration, err error) {
+	tx, err := s.dal.Begin(ctx)
+	if err != nil {
+		return 0, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start transaction: %w", err))
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+
+	limit := 20
+	calls, err := tx.GetZombieAsyncCalls(ctx, 20)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get zombie async calls: %w", err)
+	}
+	for _, call := range calls {
+		callResult := either.RightOf[[]byte]("async call lease expired")
+		_, err := s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx, isFinalResult bool) error {
+			return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
+		})
+		if err != nil {
+			return 0, fmt.Errorf("failed to complete zombie async call: %w", err)
+		}
+		// TODO: telemetery
+	}
+
+	if len(calls) == limit {
+		return 0, nil
+	}
+	return time.Second * 5, nil
 }
 
 func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {

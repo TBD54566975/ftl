@@ -116,10 +116,10 @@ type AsyncCall struct {
 // AcquireAsyncCall acquires a pending async call to execute.
 //
 // Returns ErrNotFound if there are no async calls to acquire.
-func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error) {
+func (d *DAL) AcquireAsyncCall(ctx context.Context) (leaseCtx context.Context, call *AsyncCall, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		return ctx, nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
@@ -128,22 +128,22 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, err error)
 	if err != nil {
 		err = dalerrs.TranslatePGError(err)
 		if errors.Is(err, dalerrs.ErrNotFound) {
-			return nil, fmt.Errorf("no pending async calls: %w", dalerrs.ErrNotFound)
+			return ctx, nil, fmt.Errorf("no pending async calls: %w", dalerrs.ErrNotFound)
 		}
-		return nil, fmt.Errorf("failed to acquire async call: %w", err)
+		return ctx, nil, fmt.Errorf("failed to acquire async call: %w", err)
 	}
 	origin, err := ParseAsyncOrigin(row.Origin)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
+		return ctx, nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 
 	decryptedRequest, err := d.decrypt(&row.Request)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
+		return ctx, nil, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}
 
-	lease, _ := d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
-	return &AsyncCall{
+	lease, leaseCtx := d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
+	return leaseCtx, &AsyncCall{
 		ID:                row.AsyncCallID,
 		Verb:              row.Verb,
 		Origin:            origin,
@@ -260,4 +260,38 @@ func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 		Origin:  origin,
 		Request: request,
 	}, nil
+}
+
+func (d *DAL) GetZombieAsyncCalls(ctx context.Context, limit int) ([]*AsyncCall, error) {
+	rows, err := d.db.GetZombieAsyncCalls(ctx, int32(limit))
+	if err != nil {
+		return nil, dalerrs.TranslatePGError(err)
+	}
+	var calls []*AsyncCall
+	for _, row := range rows {
+		origin, err := ParseAsyncOrigin(row.Origin)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
+		}
+		decryptedRequest, err := d.decrypt(&row.Request)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
+		}
+		calls = append(calls, &AsyncCall{
+			ID:                row.ID,
+			Origin:            origin,
+			ScheduledAt:       row.ScheduledAt,
+			Verb:              row.Verb,
+			CatchVerb:         row.CatchVerb,
+			Request:           decryptedRequest,
+			ParentRequestKey:  row.ParentRequestKey,
+			TraceContext:      row.TraceContext.RawMessage,
+			Error:             row.Error,
+			RemainingAttempts: row.RemainingAttempts,
+			Backoff:           time.Duration(row.Backoff),
+			MaxBackoff:        time.Duration(row.MaxBackoff),
+			Catching:          row.Catching,
+		})
+	}
+	return calls, nil
 }

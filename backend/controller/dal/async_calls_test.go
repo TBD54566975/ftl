@@ -20,7 +20,7 @@ func TestNoCallToAcquire(t *testing.T) {
 	dal, err := New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	_, err = dal.AcquireAsyncCall(ctx)
+	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, dalerrs.ErrNotFound)
 	assert.EqualError(t, err, "no pending async calls: not found")
 }
