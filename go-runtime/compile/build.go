@@ -982,7 +982,8 @@ func goImportFromQualifiedName(qualifiedName string) (importPath string, directo
 func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 	// find all imports
 	imports := map[string]string{}
-	var widenedAliases []*schema.TypeAlias
+	// map from import path to the first dir we see
+	extraImports := map[string]optional.Option[string]{}
 	_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error { //nolint:errcheck
 		switch n := n.(type) {
 		case *schema.Ref:
@@ -1012,7 +1013,9 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 
 		case *schema.TypeAlias:
 			if !aliasesMustBeExported || n.IsExported() {
-				widenedAliases = append(widenedAliases, n)
+				if importPath, dirName, ok := goImportForWidenedType(n); ok && extraImports[importPath] == optional.None[string]() {
+					extraImports[importPath] = dirName
+				}
 			}
 		default:
 		}
@@ -1029,12 +1032,7 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 	for _, alias := range imports {
 		possibleImportAliases[alias]++
 	}
-	for _, alias := range widenedAliases {
-		importPath, dirName, ok := goImportForWidenedType(alias)
-		if !ok {
-			continue
-		}
-
+	for importPath, dirName := range extraImports {
 		pathComponents := strings.Split(importPath, "/")
 		if dirName, ok := dirName.Get(); ok {
 			pathComponents = append(pathComponents, dirName)

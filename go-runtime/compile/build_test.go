@@ -41,19 +41,26 @@ func TestImportAliases(t *testing.T) {
 
 		typealias SamePackageDiffDir2 Any
 		+typemap go "github.com/same.dir2.Type"
+
+		typealias TwoAliasesWithOnePkg1 Any
+		+typemap go "github.com/two/aliaseswithonepkg.Type1"
+
+		typealias TwoAliasesWithOnePkg2 Any
+		+typemap go "github.com/two/aliaseswithonepkg.Type2"
 	}
 	`)
 	assert.NoError(t, err)
 	imports := imports(actual, false)
 	assert.Equal(t, map[string]string{
-		"github.com/one1/foo/bar/package": "one1_foo_bar_package",
-		"github.com/two2/foo/bar/package": "two2_foo_bar_package",
-		"github.com/two2/foo/bar/unique":  "unique",
-		"github.com/some/pkg":             "uniquedir",
-		"github.com/example/path/to/pkg":  "pkg_last",
-		"github.com/last":                 "github_com_last",
-		"github.com/11/numeric":           "_1_numeric",
-		"github.com/22/numeric":           "_2_numeric",
-		"github.com/same":                 "dir1",
+		"github.com/one1/foo/bar/package":  "one1_foo_bar_package",
+		"github.com/two2/foo/bar/package":  "two2_foo_bar_package",
+		"github.com/two2/foo/bar/unique":   "unique",
+		"github.com/some/pkg":              "uniquedir",
+		"github.com/example/path/to/pkg":   "pkg_last",
+		"github.com/last":                  "github_com_last",
+		"github.com/11/numeric":            "_1_numeric",
+		"github.com/22/numeric":            "_2_numeric",
+		"github.com/same":                  "dir1",
+		"github.com/two/aliaseswithonepkg": "aliaseswithonepkg",
 	}, imports)
 }
