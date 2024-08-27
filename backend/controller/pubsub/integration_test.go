@@ -4,6 +4,7 @@ package pubsub
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -166,6 +167,46 @@ func TestExternalPublishRuntimeCheck(t *testing.T) {
 		in.ExpectError(
 			in.Call("subscriber", "publishToExternalModule", in.Obj{}, func(t testing.TB, resp in.Obj) {}),
 			"can not publish to another module's topic",
+		),
+	)
+}
+
+func TestLeaseFailure(t *testing.T) {
+	logFilePath := filepath.Join(t.TempDir(), "pubsub.log")
+	t.Setenv("FSM_LOG_FILE", logFilePath)
+
+	in.Run(t,
+		in.CopyModule("slow"),
+		in.Deploy("slow"),
+
+		// publish 2 events, with the first taking a long time to consume
+		in.Call("slow", "publish", in.Obj{
+			"durations": []int{20, 1},
+		}, func(t testing.TB, resp in.Obj) {}),
+
+		// while it is consuming the first event, force delete the lease in the db
+		in.QueryRow("ftl", `
+			WITH deleted_rows AS (
+				DELETE FROM leases WHERE id = (
+					SELECT lease_id FROM async_calls WHERE verb = 'slow.consume'
+				)
+				RETURNING *
+			)
+			SELECT COUNT(*) FROM deleted_rows;		
+		`, 1),
+
+		in.Sleep(time.Second*7),
+
+		// confirm that the first event failed and the second event succeeded,
+		in.QueryRow("ftl", `SELECT state, error FROM async_calls WHERE verb = 'slow.consume' ORDER BY created_at`, "error", "async call lease expired"),
+		in.QueryRow("ftl", `SELECT state, error FROM async_calls WHERE verb = 'slow.consume' ORDER BY created_at OFFSET 1`, "success", nil),
+
+		// confirm that the first call did not keep executing for too long after the lease was expired
+		in.IfLanguage("go",
+			in.ExpectError(
+				in.FileContains(logFilePath, "slept for 5s"),
+				"Haystack does not contain needle",
+			),
 		),
 	)
 }

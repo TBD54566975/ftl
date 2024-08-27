@@ -56,7 +56,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	assert.Equal(t, len(unscheduledJobs), 2)
 
 	// No async calls yet
-	_, err = parentDAL.AcquireAsyncCall(ctx)
+	_, _, err = parentDAL.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, dalerrs.ErrNotFound)
 	assert.EqualError(t, err, "no pending async calls: not found")
 
@@ -76,7 +76,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	// Now there should be async calls
 	calls := []*parentdal.AsyncCall{}
 	for i, job := range jobsToCreate {
-		call, err := parentDAL.AcquireAsyncCall(ctx)
+		call, _, err := parentDAL.AcquireAsyncCall(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, call.Verb, job.Verb.ToRefKey())
 		assert.Equal(t, call.Origin.String(), fmt.Sprintf("cron:%s", job.Key))
@@ -110,7 +110,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	}
 	expectUnscheduledJobs(t, dal, clk, 0)
 	for i, job := range jobsToCreate {
-		call, err := parentDAL.AcquireAsyncCall(ctx)
+		call, _, err := parentDAL.AcquireAsyncCall(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, call.Verb, job.Verb.ToRefKey())
 		assert.Equal(t, call.Origin.String(), fmt.Sprintf("cron:%s", job.Key))
