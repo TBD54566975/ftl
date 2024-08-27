@@ -2,6 +2,7 @@ package exec
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec" //nolint:depguard
 	"syscall"
@@ -60,6 +61,20 @@ func (c *Cmd) RunBuffered(ctx context.Context) error {
 	if err != nil {
 		log.FromContext(ctx).Infof("%s", outputBuffer.Bytes())
 		return err
+	}
+
+	return nil
+}
+
+// RunStderrError runs the command and captures the output. If the command fails, the stderr is returned as the error message.
+func (c *Cmd) RunStderrError(ctx context.Context) error {
+	errorBuffer := NewCircularBuffer(100)
+
+	c.Cmd.Stdout = nil
+	c.Cmd.Stderr = errorBuffer.WriterAt(ctx, c.level)
+
+	if err := c.Run(); err != nil {
+		return errors.New(string(errorBuffer.Bytes()))
 	}
 
 	return nil

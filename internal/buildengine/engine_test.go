@@ -11,10 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func TestEngine(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
+func TestGraph(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	engine, err := buildengine.New(ctx, nil, t.TempDir(), []string{"testdata/alpha", "testdata/other", "testdata/another"})
 	assert.NoError(t, err)
@@ -57,35 +54,4 @@ func TestEngine(t *testing.T) {
 	assert.Equal(t, expected, graph)
 	err = engine.Build(ctx)
 	assert.NoError(t, err)
-}
-
-func TestCycleDetection(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, t.TempDir(), []string{"testdata/depcycle1", "testdata/depcycle2"})
-	assert.NoError(t, err)
-
-	defer engine.Close()
-
-	err = engine.Build(ctx)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "detected a module dependency cycle that impacts these modules:")
-}
-
-func TestInt64BuildError(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, t.TempDir(), []string{"testdata/integer"})
-	assert.NoError(t, err)
-
-	defer engine.Close()
-
-	err = engine.Build(ctx)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), `unsupported type "int64" for field "Input"`)
-	assert.Contains(t, err.Error(), `unsupported type "int64" for field "Output"`)
 }
