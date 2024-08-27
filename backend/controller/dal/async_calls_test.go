@@ -7,7 +7,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -21,7 +21,7 @@ func TestNoCallToAcquire(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)
-	assert.IsError(t, err, dalerrs.ErrNotFound)
+	assert.IsError(t, err, libdal.ErrNotFound)
 	assert.EqualError(t, err, "no pending async calls: not found")
 }
 

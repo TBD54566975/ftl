@@ -41,12 +41,13 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
+	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -194,6 +195,7 @@ type ControllerListListener interface {
 
 type Service struct {
 	conn               *sql.DB
+	leasesdal          *leasesdal.DAL
 	dal                *dal.DAL
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
@@ -231,14 +233,16 @@ func New(ctx context.Context, conn *sql.DB, config Config, runnerScaling scaling
 		config.ControllerTimeout = time.Second * 5
 	}
 
+	ldb := leasesdal.New(conn)
 	db, err := dal.New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create DAL: %w", err)
 	}
 
 	svc := &Service{
-		tasks:                   scheduledtask.New(ctx, key, db),
+		tasks:                   scheduledtask.New(ctx, key, ldb),
 		dal:                     db,
+		leasesdal:               ldb,
 		conn:                    conn,
 		key:                     key,
 		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
@@ -307,7 +311,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
 	if err != nil {
-		if errors.Is(err, dalerrs.ErrNotFound) {
+		if errors.Is(err, libdal.ErrNotFound) {
 			http.NotFound(w, r)
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 			return
@@ -509,7 +513,7 @@ func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.U
 
 	err = s.dal.SetDeploymentReplicas(ctx, deploymentKey, int(req.Msg.MinReplicas))
 	if err != nil {
-		if errors.Is(err, dalerrs.ErrNotFound) {
+		if errors.Is(err, libdal.ErrNotFound) {
 			logger.Errorf(err, "Deployment not found: %s", deploymentKey)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		}
@@ -531,7 +535,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 
 	err = s.dal.ReplaceDeployment(ctx, newDeploymentKey, int(c.Msg.MinReplicas))
 	if err != nil {
-		if errors.Is(err, dalerrs.ErrNotFound) {
+		if errors.Is(err, libdal.ErrNotFound) {
 			logger.Errorf(err, "Deployment not found: %s", newDeploymentKey)
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		} else if errors.Is(err, dal.ErrReplaceDeploymentAlreadyActive) {
@@ -591,7 +595,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			Deployment: maybeDeployment,
 			Labels:     msg.Labels.AsMap(),
 		})
-		if errors.Is(err, dalerrs.ErrConflict) {
+		if errors.Is(err, libdal.ErrConflict) {
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
 		} else if err != nil {
 			return nil, err
@@ -608,7 +612,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		}
 
 		routes, err := s.dal.GetRoutingTable(ctx, nil)
-		if errors.Is(err, dalerrs.ErrNotFound) {
+		if errors.Is(err, libdal.ErrNotFound) {
 			routes = map[string][]dal.Route{}
 		} else if err != nil {
 			return nil, err
@@ -815,7 +819,7 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
 		}
 		if lease == nil {
-			lease, _, err = s.dal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
+			lease, _, err = s.leasesdal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
 			if err != nil {
 				if errors.Is(err, leases.ErrConflict) {
 					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))
@@ -948,7 +952,7 @@ func (s *Service) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv
 	// Get the current state the instance is transitioning to.
 	_, currentDestinationState, err := tx.GetFSMStates(ctx, fsmKey, req.Msg.Instance)
 	if err != nil {
-		if errors.Is(err, dalerrs.ErrNotFound) {
+		if errors.Is(err, libdal.ErrNotFound) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("fsm instance not found: %w", err))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not get fsm instance: %w", err))
@@ -963,7 +967,7 @@ func (s *Service) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv
 	// Set the next event.
 	err = tx.SetNextFSMEvent(ctx, fsmKey, msg.Instance, nextState.ToRefKey(), msg.Body, eventType)
 	if err != nil {
-		if errors.Is(err, dalerrs.ErrConflict) {
+		if errors.Is(err, libdal.ErrConflict) {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("fsm instance already has its next state set: %w", err))
 		}
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not set next fsm event: %w", err))
@@ -1403,7 +1407,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	logger.Tracef("Acquiring async call")
 
 	call, leaseCtx, err := s.dal.AcquireAsyncCall(ctx)
-	if errors.Is(err, dalerrs.ErrNotFound) {
+	if errors.Is(err, libdal.ErrNotFound) {
 		logger.Tracef("No async calls to execute")
 		return time.Second * 2, nil
 	} else if err != nil {
@@ -1740,7 +1744,7 @@ func (s *Service) resolveFSMEvent(msg *ftlv1.SendFSMEventRequest) (fsm *schema.F
 }
 
 func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {
-	err := s.dal.ExpireLeases(ctx)
+	err := s.leasesdal.ExpireLeases(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to expire leases: %w", err)
 	}
@@ -1972,7 +1976,7 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 // Periodically sync the routing table from the DB.
 func (s *Service) syncRoutes(ctx context.Context) (time.Duration, error) {
 	routes, err := s.dal.GetRoutingTable(ctx, nil)
-	if errors.Is(err, dalerrs.ErrNotFound) {
+	if errors.Is(err, libdal.ErrNotFound) {
 		routes = map[string][]dal.Route{}
 	} else if err != nil {
 		return 0, err

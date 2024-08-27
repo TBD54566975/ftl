@@ -1,9 +1,9 @@
-// Package dal provides common types and functions for domain-specific DALs.
+// Package libdal provides common types and functions for domain-specific DALs.
 //
 // In particular, common error types and error handling function for all
 // domain-specific DALs, e.g. controller DAL and configuration DAL, which all
 // connect to the same underlying DB and maintain the same interface guarantees
-package dal
+package libdal
 
 import (
 	stdsql "database/sql"

@@ -12,18 +12,17 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	"github.com/TBD54566975/ftl/backend/dal"
-	"github.com/TBD54566975/ftl/internal/encryption"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-func leaseExists(t *testing.T, conn dal.Connection, idempotencyKey uuid.UUID, key leases.Key) bool {
+func leaseExists(t *testing.T, conn libdal.Connection, idempotencyKey uuid.UUID, key leases.Key) bool {
 	t.Helper()
 	var count int
-	err := dal.TranslatePGError(conn.
+	err := libdal.TranslatePGError(conn.
 		QueryRowContext(context.Background(), "SELECT COUNT(*) FROM leases WHERE idempotency_key = $1 AND key = $2", idempotencyKey, key).
 		Scan(&count))
-	if errors.Is(err, dal.ErrNotFound) {
+	if errors.Is(err, libdal.ErrNotFound) {
 		return false
 	}
 	assert.NoError(t, err)
@@ -36,11 +35,10 @@ func TestLease(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, encryption.NewBuilder())
-	assert.NoError(t, err)
+	dal := New(conn)
 
 	// TTL is too short, expect an error
-	_, _, err = dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*1, optional.None[any]())
+	_, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*1, optional.None[any]())
 	assert.Error(t, err)
 
 	leasei, leaseCtx, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
@@ -71,8 +69,7 @@ func TestExpireLeases(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, encryption.NewBuilder())
-	assert.NoError(t, err)
+	dal := New(conn)
 
 	leasei, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
 	assert.NoError(t, err)

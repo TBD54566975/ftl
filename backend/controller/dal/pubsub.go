@@ -11,7 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -55,7 +55,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 	})
 	observability.PubSub.Published(ctx, module, topic, caller, err)
 	if err != nil {
-		return dalerrs.TranslatePGError(err)
+		return libdal.TranslatePGError(err)
 	}
 	return nil
 }
@@ -63,7 +63,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 func (d *DAL) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]model.Subscription, error) {
 	rows, err := d.db.GetSubscriptionsNeedingUpdate(ctx)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, libdal.TranslatePGError(err)
 	}
 	return slices.Map(rows, func(row sql.GetSubscriptionsNeedingUpdateRow) model.Subscription {
 		return model.Subscription{
@@ -88,7 +88,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	// also gets a lock on the subscription, and skips any subscriptions locked by others
 	subs, err := tx.db.GetSubscriptionsNeedingUpdate(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("could not get subscriptions to progress: %w", dalerrs.TranslatePGError(err))
+		return 0, fmt.Errorf("could not get subscriptions to progress: %w", libdal.TranslatePGError(err))
 	}
 
 	successful := 0
@@ -96,12 +96,12 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, sqltypes.Duration(eventConsumptionDelay), subscription.Topic, subscription.Cursor)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
-			return 0, fmt.Errorf("failed to get next cursor: %w", dalerrs.TranslatePGError(err))
+			return 0, fmt.Errorf("failed to get next cursor: %w", libdal.TranslatePGError(err))
 		}
 		nextCursorKey, ok := nextCursor.Event.Get()
 		if !ok {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Event.Get", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
-			return 0, fmt.Errorf("could not find event to progress subscription: %w", dalerrs.TranslatePGError(err))
+			return 0, fmt.Errorf("could not find event to progress subscription: %w", libdal.TranslatePGError(err))
 		}
 		if !nextCursor.Ready {
 			logger.Tracef("Skipping subscription %s because event is too new", subscription.Key)
@@ -117,7 +117,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		err = tx.db.BeginConsumingTopicEvent(ctx, subscription.Key, nextCursorKey)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "BeginConsumingTopicEvent", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
-			return 0, fmt.Errorf("failed to progress subscription: %w", dalerrs.TranslatePGError(err))
+			return 0, fmt.Errorf("failed to progress subscription: %w", libdal.TranslatePGError(err))
 		}
 
 		origin := AsyncOriginPubSub{
@@ -142,7 +142,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		observability.AsyncCalls.Created(ctx, subscriber.Sink, subscriber.CatchVerb, origin.String(), int64(subscriber.RetryAttempts), err)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
-			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", dalerrs.TranslatePGError(err))
+			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", libdal.TranslatePGError(err))
 		}
 
 		observability.PubSub.SinkCalled(ctx, subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), subscriber.Sink)
@@ -170,7 +170,7 @@ func subscriptionRef(subscription sql.GetSubscriptionsNeedingUpdateRow) schema.R
 func (d *DAL) CompleteEventForSubscription(ctx context.Context, module, name string) error {
 	err := d.db.CompleteEventForSubscription(ctx, name, module)
 	if err != nil {
-		return fmt.Errorf("failed to complete event for subscription: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("failed to complete event for subscription: %w", libdal.TranslatePGError(err))
 	}
 	return nil
 }
@@ -185,15 +185,15 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 
 	subscription, err := tx.db.GetSubscription(ctx, name, module)
 	if err != nil {
-		if dalerrs.IsNotFound(err) {
+		if libdal.IsNotFound(err) {
 			return fmt.Errorf("subscription %s.%s not found", module, name)
 		}
-		return fmt.Errorf("could not fetch subscription: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("could not fetch subscription: %w", libdal.TranslatePGError(err))
 	}
 
 	topic, err := tx.db.GetTopic(ctx, subscription.TopicID)
 	if err != nil {
-		return fmt.Errorf("could not fetch topic: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("could not fetch topic: %w", libdal.TranslatePGError(err))
 	}
 
 	headEventID, ok := topic.Head.Get()
@@ -203,12 +203,12 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 
 	headEvent, err := tx.db.GetTopicEvent(ctx, headEventID)
 	if err != nil {
-		return fmt.Errorf("could not fetch topic head: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("could not fetch topic head: %w", libdal.TranslatePGError(err))
 	}
 
 	err = tx.db.SetSubscriptionCursor(ctx, subscription.Key, headEvent.Key)
 	if err != nil {
-		return fmt.Errorf("failed to reset subscription: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("failed to reset subscription: %w", libdal.TranslatePGError(err))
 	}
 
 	return nil
@@ -241,7 +241,7 @@ func (d *DAL) createSubscriptions(ctx context.Context, key model.DeploymentKey, 
 			Name:        s.Name,
 		})
 		if err != nil {
-			return fmt.Errorf("could not insert subscription: %w", dalerrs.TranslatePGError(err))
+			return fmt.Errorf("could not insert subscription: %w", libdal.TranslatePGError(err))
 		}
 		if result.Inserted {
 			logger.Debugf("Inserted subscription %s for %s", subscriptionKey, key)
@@ -308,7 +308,7 @@ func (d *DAL) createSubscribers(ctx context.Context, key model.DeploymentKey, mo
 				CatchVerb:        retryParams.Catch,
 			})
 			if err != nil {
-				return fmt.Errorf("could not insert subscriber: %w", dalerrs.TranslatePGError(err))
+				return fmt.Errorf("could not insert subscriber: %w", libdal.TranslatePGError(err))
 			}
 			logger.Debugf("Inserted subscriber %s for %s", subscriberKey, key)
 		}
@@ -321,7 +321,7 @@ func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, key model.D
 
 	subscribers, err := d.db.DeleteSubscribers(ctx, key)
 	if err != nil {
-		return fmt.Errorf("could not delete old subscribers: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("could not delete old subscribers: %w", libdal.TranslatePGError(err))
 	}
 	if len(subscribers) > 0 {
 		logger.Debugf("Deleted subscribers for %s: %s", key, strings.Join(slices.Map(subscribers, func(key model.SubscriberKey) string { return key.String() }), ", "))
@@ -329,7 +329,7 @@ func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, key model.D
 
 	subscriptions, err := d.db.DeleteSubscriptions(ctx, key)
 	if err != nil {
-		return fmt.Errorf("could not delete old subscriptions: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("could not delete old subscriptions: %w", libdal.TranslatePGError(err))
 	}
 	if len(subscriptions) > 0 {
 		logger.Debugf("Deleted subscriptions for %s: %s", key, strings.Join(slices.Map(subscriptions, func(key model.SubscriptionKey) string { return key.String() }), ", "))

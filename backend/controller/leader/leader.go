@@ -24,7 +24,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -177,7 +177,7 @@ func (c *Coordinator[P]) createFollower() (out P, err error) {
 	var urlString string
 	expiry, err := c.leaser.GetLeaseInfo(c.ctx, c.key, &urlString)
 	if err != nil {
-		if errors.Is(err, dalerrs.ErrNotFound) {
+		if errors.Is(err, libdal.ErrNotFound) {
 			return out, fmt.Errorf("could not acquire or find lease for %s", c.key)
 		}
 		return out, fmt.Errorf("could not get lease for %s: %w", c.key, err)

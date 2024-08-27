@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	libdal "github.com/TBD54566975/ftl/backend/dal"
+	libdal "github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 

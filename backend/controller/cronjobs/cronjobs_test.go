@@ -14,7 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/encryption"
@@ -57,7 +57,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 
 	// No async calls yet
 	_, _, err = parentDAL.AcquireAsyncCall(ctx)
-	assert.IsError(t, err, dalerrs.ErrNotFound)
+	assert.IsError(t, err, libdal.ErrNotFound)
 	assert.EqualError(t, err, "no pending async calls: not found")
 
 	err = cjs.scheduleCronJobs(ctx)

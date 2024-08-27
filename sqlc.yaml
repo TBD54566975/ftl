@@ -53,8 +53,7 @@ sql:
             go_type:
               type: "optional.Option[schema.RefKey]"
           - db_type: "schema_type"
-            go_type:
-              type: "Type"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/sql/sqltypes.Type"
           - db_type: "schema_type"
             nullable: true
             go_type:
@@ -163,6 +162,13 @@ sql:
       go:
         <<: *gengo
         out: "internal/configuration/sql"
+  - <<: *daldir
+    queries:
+      - backend/controller/leases/dal/internal/sql/queries.sql
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/leases/dal/internal/sql"
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"

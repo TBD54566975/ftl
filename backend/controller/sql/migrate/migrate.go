@@ -15,7 +15,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -128,8 +128,8 @@ func applyMigration(ctx context.Context, level log.Level, tx *sql.Tx, migration 
 	start := time.Now()
 	logger := log.FromContext(ctx).Scope("migrate")
 	_, err := tx.ExecContext(ctx, "INSERT INTO schema_migrations (version) VALUES ($1)", migration.version)
-	err = dal.TranslatePGError(err)
-	if errors.Is(err, dal.ErrConflict) {
+	err = libdal.TranslatePGError(err)
+	if errors.Is(err, libdal.ErrConflict) {
 		if txerr := tx.Rollback(); txerr != nil {
 			return fmt.Errorf("failed to rollback transaction: %w", txerr)
 		}

@@ -8,8 +8,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/either"
 
+	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -22,14 +23,14 @@ func TestSendFSMEvent(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)
-	assert.IsError(t, err, dalerrs.ErrNotFound)
+	assert.IsError(t, err, libdal.ErrNotFound)
 
 	ref := schema.RefKey{Module: "module", Name: "verb"}
 	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`), false, schema.RetryParams{})
 	assert.NoError(t, err)
 
 	err = dal.StartFSMTransition(ctx, schema.RefKey{Module: "test", Name: "test"}, "invoiceID", ref, []byte(`{}`), false, schema.RetryParams{})
-	assert.IsError(t, err, dalerrs.ErrConflict)
+	assert.IsError(t, err, libdal.ErrConflict)
 	assert.EqualError(t, err, "transition already executing: conflict")
 
 	call, _, err := dal.AcquireAsyncCall(ctx)
@@ -50,13 +51,13 @@ func TestSendFSMEvent(t *testing.T) {
 		Request:    []byte(`{}`),
 		QueueDepth: 2,
 	}
-	assert.Equal(t, expectedCall, call, assert.Exclude[*Lease](), assert.Exclude[time.Time]())
+	assert.Equal(t, expectedCall, call, assert.Exclude[*leasedal.Lease](), assert.Exclude[time.Time]())
 
 	_, err = dal.CompleteAsyncCall(ctx, call, either.LeftOf[string]([]byte(`{}`)), func(tx *DAL, isFinalResult bool) error { return nil })
 	assert.NoError(t, err)
 
 	actual, err := dal.LoadAsyncCall(ctx, call.ID)
 	assert.NoError(t, err)
-	assert.Equal(t, call, actual, assert.Exclude[*Lease](), assert.Exclude[time.Time](), assert.Exclude[int64]())
+	assert.Equal(t, call, actual, assert.Exclude[*leasedal.Lease](), assert.Exclude[time.Time](), assert.Exclude[int64]())
 	assert.Equal(t, call.ID, actual.ID)
 }

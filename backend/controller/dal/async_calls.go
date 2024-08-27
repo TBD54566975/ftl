@@ -12,9 +12,10 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
+	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -95,7 +96,7 @@ func ParseAsyncOrigin(origin string) (AsyncOrigin, error) {
 }
 
 type AsyncCall struct {
-	*Lease           // May be nil
+	*leasedal.Lease  // May be nil
 	ID               int64
 	Origin           AsyncOrigin
 	Verb             schema.RefKey
@@ -127,9 +128,9 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 	ttl := time.Second * 5
 	row, err := tx.db.AcquireAsyncCall(ctx, sqltypes.Duration(ttl))
 	if err != nil {
-		err = dalerrs.TranslatePGError(err)
-		if errors.Is(err, dalerrs.ErrNotFound) {
-			return nil, ctx, fmt.Errorf("no pending async calls: %w", dalerrs.ErrNotFound)
+		err = libdal.TranslatePGError(err)
+		if errors.Is(err, libdal.ErrNotFound) {
+			return nil, ctx, fmt.Errorf("no pending async calls: %w", libdal.ErrNotFound)
 		}
 		return nil, ctx, fmt.Errorf("failed to acquire async call: %w", err)
 	}
@@ -143,7 +144,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 		return nil, ctx, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}
 
-	lease, leaseCtx := d.newLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
+	lease, leaseCtx := d.leasedal.NewLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
 	return &AsyncCall{
 		ID:                row.AsyncCallID,
 		Verb:              row.Verb,
@@ -177,7 +178,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	case *dbsql.DB:
 		tx, err = d.Begin(ctx)
 		if err != nil {
-			return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
+			return false, libdal.TranslatePGError(err) //nolint:wrapcheck
 		}
 		defer tx.CommitOrRollback(ctx, &err)
 	case *dbsql.Tx:
@@ -197,7 +198,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 		}
 		_, err = tx.db.SucceedAsyncCall(ctx, optional.Some(encryptedResult), call.ID)
 		if err != nil {
-			return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
+			return false, libdal.TranslatePGError(err) //nolint:wrapcheck
 		}
 
 	case either.Right[[]byte, string]: // Failure message.
@@ -211,7 +212,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 				ScheduledAt:       time.Now().Add(call.Backoff),
 			})
 			if err != nil {
-				return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
+				return false, libdal.TranslatePGError(err) //nolint:wrapcheck
 			}
 			isFinalResult = false
 			didScheduleAnotherCall = true
@@ -234,14 +235,14 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 				OriginalError:     optional.Some(originalError),
 			})
 			if err != nil {
-				return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
+				return false, libdal.TranslatePGError(err) //nolint:wrapcheck
 			}
 			isFinalResult = false
 			didScheduleAnotherCall = true
 		} else {
 			_, err = tx.db.FailAsyncCall(ctx, result.Get(), call.ID)
 			if err != nil {
-				return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
+				return false, libdal.TranslatePGError(err) //nolint:wrapcheck
 			}
 		}
 	}
@@ -254,7 +255,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 	row, err := d.db.LoadAsyncCall(ctx, id)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, libdal.TranslatePGError(err)
 	}
 	origin, err := ParseAsyncOrigin(row.Origin)
 	if err != nil {
@@ -275,7 +276,7 @@ func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 func (d *DAL) GetZombieAsyncCalls(ctx context.Context, limit int) ([]*AsyncCall, error) {
 	rows, err := d.db.GetZombieAsyncCalls(ctx, int32(limit))
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, libdal.TranslatePGError(err)
 	}
 	var calls []*AsyncCall
 	for _, row := range rows {
