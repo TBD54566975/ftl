@@ -1008,12 +1008,9 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 				break
 			}
 			imports[path.Join("ftl", n.Module)] = "ftl" + n.Module
-
 			for _, tp := range n.TypeParameters {
-				if tpRef, ok := tp.(*schema.Ref); ok {
-					if tpRef.Module != "" && tpRef.Module != m.Name {
-						imports[path.Join("ftl", tpRef.Module)] = "ftl" + tpRef.Module
-					}
+				if tpRef, ok := tp.(*schema.Ref); ok && tpRef.Module != "" && tpRef.Module != m.Name {
+					imports[path.Join("ftl", tpRef.Module)] = "ftl" + tpRef.Module
 				}
 			}
 
@@ -1067,9 +1064,15 @@ func addImports(existingImports map[string]string, newImportPathsAndDirs map[str
 		for i := range len(pathComponents) {
 			runes := []rune(pathComponents[len(pathComponents)-1-i])
 			for i, char := range runes {
-				if !unicode.IsLetter(char) && !(unicode.IsNumber(char) && i > 0) {
+				if !unicode.IsLetter(char) && !unicode.IsNumber(char) {
 					runes[i] = '_'
 				}
+			}
+			if unicode.IsNumber(runes[0]) {
+				newRunes := make([]rune, len(runes)+1)
+				newRunes[0] = '_'
+				copy(newRunes[1:], runes)
+				runes = newRunes
 			}
 			foldedComponent := string(runes)
 			if i == 0 {
