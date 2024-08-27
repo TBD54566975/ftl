@@ -35,7 +35,7 @@ func init() {
 }
 
 func main() {
-	verbConstructor := server.NewUserVerbServer("ftl", "other",
+	verbConstructor := server.NewUserVerbServer("integration", "other",
 		server.HandleCall(other.Echo),
 	)
 	plugin.Start(context.Background(), "other", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
