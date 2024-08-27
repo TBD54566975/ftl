@@ -160,7 +160,7 @@ func DebugShell() Action {
 func Exec(cmd string, args ...string) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Executing (in %s): %s %s", ic.workDir, cmd, shellquote.Join(args...))
-		err := ftlexec.Command(ic, log.Debug, ic.workDir, cmd, args...).RunBuffered(ic)
+		err := ftlexec.Command(ic, log.Debug, ic.workDir, cmd, args...).RunStderrError(ic)
 		assert.NoError(t, err)
 	}
 }
@@ -199,13 +199,15 @@ func ExecWithOutput(cmd string, args []string, capture func(output string)) Acti
 	}
 }
 
-// ExpectError wraps an action and expects it to return an error with the given message.
-func ExpectError(action Action, expectedErrorMsg string) Action {
+// ExpectError wraps an action and expects it to return an error containing the given messages.
+func ExpectError(action Action, expectedErrorMsg ...string) Action {
 	return func(t testing.TB, ic TestContext) {
 		defer func() {
 			if r := recover(); r != nil {
 				if e, ok := r.(TestingError); ok {
-					assert.Contains(t, string(e), expectedErrorMsg)
+					for _, msg := range expectedErrorMsg {
+						assert.Contains(t, string(e), msg)
+					}
 				} else {
 					panic(r)
 				}
