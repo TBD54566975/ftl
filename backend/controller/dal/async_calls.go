@@ -11,6 +11,8 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
+	dbsql "database/sql"
+
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	dalerrs "github.com/TBD54566975/ftl/backend/dal"
@@ -163,6 +165,7 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 }
 
 // CompleteAsyncCall completes an async call.
+// The call will use the existing transaction if d is a transaction. Otherwise it will create and commit a new transaction.
 //
 // "result" is either a []byte representing the successful response, or a string
 // representing a failure message.
@@ -170,23 +173,19 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	call *AsyncCall,
 	result either.Either[[]byte, string],
 	finalise func(tx *DAL, isFinalResult bool) error) (didScheduleAnotherCall bool, err error) {
-	tx, err := d.Begin(ctx)
-	if err != nil {
-		return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
+	var tx *DAL
+	switch d.Connection.(type) {
+	case *dbsql.DB:
+		tx, err = d.Begin(ctx)
+		if err != nil {
+			return false, dalerrs.TranslatePGError(err) //nolint:wrapcheck
+		}
+		defer tx.CommitOrRollback(ctx, &err)
+	case *dbsql.Tx:
+		tx = d
+	default:
+		return false, errors.New("invalid connection type")
 	}
-	defer tx.CommitOrRollback(ctx, &err)
-
-	return tx.CompleteAsyncCall(ctx, call, result, finalise)
-}
-
-// CompleteAsyncCall completes an async call within an existing transaction.
-//
-// "result" is either a []byte representing the successful response, or a string
-// representing a failure message.
-func (tx *Tx) CompleteAsyncCall(ctx context.Context,
-	call *AsyncCall,
-	result either.Either[[]byte, string],
-	finalise func(tx *Tx, isFinalResult bool) error) (didScheduleAnotherCall bool, err error) {
 
 	isFinalResult := true
 	didScheduleAnotherCall = false

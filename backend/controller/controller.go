@@ -1595,7 +1595,7 @@ func (s *Service) reapAsyncCalls(ctx context.Context) (nextInterval time.Duratio
 	}
 	for _, call := range calls {
 		callResult := either.RightOf[[]byte]("async call lease expired")
-		_, err := tx.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.Tx, isFinalResult bool) error {
+		_, err := tx.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.DAL, isFinalResult bool) error {
 			return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
 		})
 		if err != nil {
