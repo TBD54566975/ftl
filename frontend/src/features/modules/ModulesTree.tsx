@@ -1,7 +1,7 @@
 import type { ForwardRefExoticComponent, SVGProps } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react'
-import { ArrowRightCircleIcon, BellIcon, BellAlertIcon, BoltIcon, BookOpenIcon, CircleStackIcon, ChevronRightIcon, Cog6ToothIcon, DocumentDuplicateIcon, LockClosedIcon, NumberedListIcon, SquaresPlusIcon } from '@heroicons/react/24/outline'
+import { ArrowRightCircleIcon, BellIcon, BellAlertIcon, BoltIcon, BookOpenIcon, CircleStackIcon, ChevronRightIcon, CodeBracketSquareIcon, Cog6ToothIcon, DocumentDuplicateIcon, LockClosedIcon, NumberedListIcon, SquaresPlusIcon } from '@heroicons/react/24/outline'
 import { TableCellsIcon } from '@heroicons/react/24/solid'
 import { classNames } from '../../utils'
 import type { ModuleTreeItem } from './module.utils'
@@ -32,7 +32,7 @@ const DeclNode = ({ decl, href }: { decl: Decl, href: string }) => {
   if (!decl.value || !decl.value.case || !decl.value.value) {
     return []
   }
-  const Icon = icons[decl.value.case] || BookOpenIcon
+  const Icon = icons[decl.value.case] || CodeBracketSquareIcon
   return (
     <li className='my-1'>
       <DisclosureButton

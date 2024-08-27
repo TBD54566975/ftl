@@ -74,3 +74,11 @@ export const moduleTreeFromSchema = (schema: PullSchemaResponse[]) => {
   }))
   return tree
 }
+
+export const declFromSchema = (moduleName: string, declName: string, schema: PullSchemaResponse[]) => {
+  const module = schema.find((m) => m.moduleName === moduleName)
+  if (!module?.schema) {
+    return undefined
+  }
+  return module.schema.decls.find((d) => d.value.value?.name === declName)
+}
