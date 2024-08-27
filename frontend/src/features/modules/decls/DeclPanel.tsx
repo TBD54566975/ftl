@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useSchema } from '../../../api/schema/use-schema'
+import { DataPanel } from './DataPanel'
 import { VerbPanel } from './VerbPanel'
 import { declFromSchema } from '../module.utils'
 
@@ -17,8 +18,10 @@ export const DeclPanel = () => {
     return []
   }
 
+  const nameProps = {moduleName, declName}
   switch (decl.value.case) {
-      case 'verb': return <VerbPanel v={decl.value.value} moduleName={moduleName} verbName={declName} />
+      case 'data': return <DataPanel value={decl.value.value} {...nameProps} />
+      case 'verb': return <VerbPanel value={decl.value.value} {...nameProps} />
   }
   return (
     <div className='flex-1 py-2 px-4'>

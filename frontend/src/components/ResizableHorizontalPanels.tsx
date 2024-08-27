@@ -26,9 +26,7 @@ export const ResizableHorizontalPanels: React.FC<ResizableHorizontalPanelsProps>
     setIsDragging(true)
   }
 
-  const stopDragging = () => {
-    setIsDragging(false)
-  }
+  const stopDragging = () => setIsDragging(false)
 
   const onDrag = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging || !containerRef.current) {

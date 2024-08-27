@@ -1,10 +1,5 @@
+import { ExportBadge } from './ExportBadge'
 import type { Ref, Type, Verb } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
-
-const ExportBadge = () => (
-  <span className='text-xs py-0.5 px-1.5 bg-gray-200 dark:bg-gray-900 dark:text-gray-300 rounded-md'>
-    Exported
-  </span>
-)
 
 const DataRef = ({ heading, r }: { heading: string, r: Ref }) => {
   return (
@@ -34,16 +29,16 @@ const IOBlock = ({ heading, t }: { heading: string, t?: Type }) => {
   )
 }
 
-export const VerbPanel = ({ v, moduleName, verbName }: { v: Verb, moduleName: string, verbName: string }) => {
+export const VerbPanel = ({ value, moduleName, declName }: { value: Verb, moduleName: string, declName: string }) => {
   return (
     <div className='flex-1 py-2 px-4'>
-      {v.export ? <div><ExportBadge /></div> : []}
+      {value.export ? <ExportBadge /> : []}
       <div className='inline-block mr-3 align-middle'>
-        <p>verb: {moduleName}.{verbName}</p>
-        {v.comments.length > 0 ? <p className='text-xs my-1'>{v.comments}</p> : []}
+        <p>verb: {moduleName}.{declName}</p>
+        {value.comments.length > 0 ? <p className='text-xs my-1'>{value.comments}</p> : []}
       </div>
-      <IOBlock heading='Request' t={v.request} />
-      <IOBlock heading='Response' t={v.response} />
+      <IOBlock heading='Request' t={value.request} />
+      <IOBlock heading='Response' t={value.response} />
     </div>
   )
 }
