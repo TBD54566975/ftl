@@ -55,6 +55,15 @@ $(
   echo "$issues"
 )
 
+$(
+  issues="$(list_issues --label roadmap)"
+  test -z "$issues" && exit 0
+
+  echo "### https://github.com/TBD54566975/ftl/labels/roadmap"
+  echo
+  echo "$issues"
+)
+
 ### Active and recent issues
 
 $(

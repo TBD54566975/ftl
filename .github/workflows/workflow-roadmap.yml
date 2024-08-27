@@ -1,4 +1,4 @@
-name: Update roadmap issue #728
+name: Update roadmap issues
 on:
   issues:
     types:
@@ -25,7 +25,7 @@ concurrency:
   group: ${{ github.ref }}-workflow-roadmap
   cancel-in-progress: true
 jobs:
-  update-workflow-issue:
+  update-dashboard-issue:
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -34,7 +34,40 @@ jobs:
         with:
           fetch-depth: 1
       - uses: cashapp/activate-hermit@v1
-      - run: update-workflow-issue
+      - run: update-dashboard-issue
+        env:
+          GH_TOKEN: ${{ secrets.FTL_WORKFLOW_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+  update-roadmap-issues:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        label: ["jvm", "dx"] # add if desired: "codebase-health", "core", "infrastructure", "go", "security"
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: cashapp/activate-hermit@v1
+      - run: |
+          declare -A label_to_issue_map=(
+            ["codebase-health"]=2443
+            ["core"]=2442
+            ["infrastructure"]=2441
+            ["go"]=2440
+            ["jvm"]=2439
+            ["security"]=2438
+            ["dx"]=2436
+          )
+
+          issue_number=${label_to_issue_map["${{ matrix.label }}"]}
+
+          if [ -n "$issue_number" ]; then
+            update-roadmap-issues "${{ matrix.label }}" "$issue_number"
+          else
+            echo "No associated issue found for label '${{ matrix.label }}'."
+          fi
         env:
           GH_TOKEN: ${{ secrets.FTL_WORKFLOW_TOKEN }}
           GH_REPO: ${{ github.repository }}
