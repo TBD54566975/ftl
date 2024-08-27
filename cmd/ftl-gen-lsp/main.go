@@ -8,10 +8,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
 	"github.com/alecthomas/kong"
+	"github.com/tliron/kutil/terminal"
 )
 
 type CLI struct {
@@ -63,6 +65,8 @@ func scrapeDocs(hovers []hover) (map[string]string, error) {
 			return nil, fmt.Errorf("failed to read %s: %w", path, err)
 		}
 
+		doc.Content = stripNonGoDocs(doc.Content)
+
 		var content string
 		if len(hover.Select) > 0 {
 			for _, sel := range hover.Select {
@@ -78,6 +82,19 @@ func scrapeDocs(hovers []hover) (map[string]string, error) {
 		}
 
 		items[hover.Match] = content
+
+		// get term width or 80 if not available
+		width := 80
+		if w, _, err := terminal.GetSize(); err == nil {
+			width = w
+		}
+		line := strings.Repeat("-", width)
+		fmt.Print("\x1b[1;34m")
+		fmt.Println(line)
+		fmt.Println(hover.Match)
+		fmt.Println(line)
+		fmt.Print("\x1b[0m")
+		fmt.Println(content)
 	}
 	return items, nil
 }
@@ -131,6 +148,54 @@ func getMarkdownWithTitle(file *os.File) (*Doc, error) {
 	}
 
 	return &Doc{Title: title, Content: string(parts[2])}, nil
+}
+
+var HTMLCommentRegex = regexp.MustCompile(`<!--\w*(.*?)\w*-->`)
+
+// stripNonGoDocs removes non-Go code blocks from the markdown content.
+func stripNonGoDocs(content string) string {
+	lines := strings.Split(content, "\n")
+
+	var currentLang string
+	var collected []string
+	for _, line := range lines {
+		if strings.Contains(line, "code_selector()") {
+			currentLang = ""
+			continue
+		}
+		if line == "{% end %}" {
+			currentLang = ""
+			continue
+		}
+
+		// Grab the language from the HTML comment text
+		values := HTMLCommentRegex.FindStringSubmatch(line)
+		if len(values) > 1 {
+			lang := strings.TrimSpace(values[1])
+			// end starts "common" text block
+			if lang == "end" {
+				currentLang = ""
+			} else {
+				currentLang = lang
+			}
+			continue
+		}
+
+		// Similar, look at the code block
+		if strings.HasPrefix(line, "```") {
+			newLang := strings.TrimPrefix(line, "```")
+			if newLang != "" {
+				currentLang = newLang
+			}
+		}
+
+		// If we're in a Go block or unspecified, collect the line.
+		if currentLang == "go" || currentLang == "" {
+			collected = append(collected, line)
+		}
+	}
+
+	return strings.Join(collected, "\n")
 }
 
 func selector(content, selector string) (string, error) {
