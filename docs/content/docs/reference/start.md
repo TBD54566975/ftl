@@ -15,8 +15,20 @@ top = false
 
 ## Import the runtime
 
+{% code_selector() %}
+
 Some aspects of FTL rely on a runtime which must be imported with:
 
 ```go
 import "github.com/TBD54566975/ftl/go-runtime/ftl"
 ```
+
+```kotlin
+// Declare a verb you want to use:
+import xyz.block.ftl.Verb
+
+// When using the export feature:
+import xyz.block.ftl.Export
+```
+
+{% end %}

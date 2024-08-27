@@ -45,4 +45,3 @@ func Mondays(ctx context.Context) error {
   // ...
 }
 ```
-
