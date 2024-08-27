@@ -779,9 +779,30 @@ func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
 func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames extract.NativeNames) ([]goSumType, []goExternalType, error) {
 	sumTypes := make(map[string]goSumType)
 	externalTypes := make(map[string]sets.Set[string])
+	externalDecls := getRegisteredTypesExternalToModule(module, sch)
+
+	// calculate all imports and aliases
 	imports := imports(module, false)
+	extraImports := map[string]optional.Option[string]{}
+	for _, d := range externalDecls {
+		d, ok := d.resolved.(*schema.TypeAlias)
+		if !ok {
+			continue
+		}
+		for _, m := range d.Metadata {
+			m, ok := m.(*schema.MetadataTypeMap)
+			if !ok || m.Runtime != "go" {
+				continue
+			}
+			if im, dirName, ok := goImportForWidenedType(d); ok && extraImports[im] == optional.None[string]() {
+				extraImports[im] = dirName
+			}
+		}
+	}
+	imports = addImports(imports, extraImports)
+
 	// register sum types from other modules
-	for _, decl := range getRegisteredTypesExternalToModule(module, sch) {
+	for _, decl := range externalDecls {
 		switch d := decl.resolved.(type) {
 		case *schema.Enum:
 			variants := make([]goSumTypeVariant, 0, len(d.Variants))
@@ -1022,8 +1043,12 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 		return next()
 	})
 
-	// add imports for type aliases by looking for the shortest alias that can be used without conflict
+	return addImports(imports, extraImports)
+}
 
+// addImports takes existing imports (mapping import path to pkg alias) and adds new imports by generating aliases
+func addImports(existingImports map[string]string, newImportPathsAndDirs map[string]optional.Option[string]) map[string]string {
+	imports := maps.Clone(existingImports)
 	// maps import path to possible aliases, shortest to longest
 	aliasesForImports := map[string][]string{}
 
@@ -1032,7 +1057,7 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 	for _, alias := range imports {
 		possibleImportAliases[alias]++
 	}
-	for importPath, dirName := range extraImports {
+	for importPath, dirName := range newImportPathsAndDirs {
 		pathComponents := strings.Split(importPath, "/")
 		if dirName, ok := dirName.Get(); ok {
 			pathComponents = append(pathComponents, dirName)
