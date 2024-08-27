@@ -996,6 +996,9 @@ func goImportFromQualifiedName(qualifiedName string) (importPath string, directo
 }
 
 // imports returns a map of import paths to aliases for a module.
+// - hardcoded for time ("stdtime")
+// - prefixed with "ftl" for other modules (eg "ftlfoo")
+// - addImports() is used to generate shortest unique aliases for external packages
 func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 	// find all imports
 	imports := map[string]string{}
@@ -1040,10 +1043,7 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 }
 
 // addImports takes existing imports (mapping import path to pkg alias) and adds new imports by generating aliases
-// aliases are:
-// - hardcoded for time ("stdtime")
-// - prefixed with "ftl" for other modules (eg "ftlfoo")
-// - generated for external types by finding the shortest unique alias that can be used without conflict
+// aliases are generated for external types by finding the shortest unique alias that can be used without conflict:
 func addImports(existingImports map[string]string, newImportPathsAndDirs map[string]optional.Option[string]) map[string]string {
 	imports := maps.Clone(existingImports)
 	// maps import path to possible aliases, shortest to longest
