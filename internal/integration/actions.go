@@ -232,6 +232,14 @@ func Build(modules ...string) Action {
 	return Exec("ftl", args...)
 }
 
+// FtlNew creates a new FTL module
+func FtlNew(language, name string) Action {
+	return func(t testing.TB, ic TestContext) {
+		err := ftlexec.Command(ic, log.Debug, ic.workDir, "ftl", "new", language, ic.workDir, name).RunBuffered(ic)
+		assert.NoError(t, err)
+	}
+}
+
 // Wait for the given module to deploy.
 func Wait(module string) Action {
 	return func(t testing.TB, ic TestContext) {
@@ -327,6 +335,22 @@ func EditFile(module string, editFunc func([]byte) []byte, path ...string) Actio
 		assert.NoError(t, err)
 		contents = editFunc(contents)
 		err = os.WriteFile(file, contents, os.FileMode(0))
+		assert.NoError(t, err)
+	}
+}
+
+// MoveFile moves a file within a module
+func MoveFile(module, from, to string) Action {
+	return func(t testing.TB, ic TestContext) {
+		err := os.Rename(filepath.Join(ic.WorkingDir(), module, from), filepath.Join(ic.WorkingDir(), module, to))
+		assert.NoError(t, err)
+	}
+}
+
+// RemoveDir removes the given directory and all of its contents under the working dir
+func RemoveDir(dir string) Action {
+	return func(t testing.TB, ic TestContext) {
+		err := os.RemoveAll(filepath.Join(ic.WorkingDir(), dir))
 		assert.NoError(t, err)
 	}
 }
