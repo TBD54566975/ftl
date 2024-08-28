@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CodeEditor, type InitialState } from '../../components/CodeEditor'
-import { ResizableVerticalPanels } from '../../components/ResizeableVerticalPanels'
+import { ResizableVerticalPanels } from '../../components/ResizableVerticalPanels'
 import { useClient } from '../../hooks/use-client'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
