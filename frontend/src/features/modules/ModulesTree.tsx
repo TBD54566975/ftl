@@ -16,9 +16,10 @@ import {
 } from '@heroicons/react/24/outline'
 import { TableCellsIcon } from '@heroicons/react/24/solid'
 import type { ForwardRefExoticComponent, SVGProps } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import type { ModuleTreeItem } from './module.utils'
+import { listExpandedModules, toggleModuleExpansion } from './module.utils'
 
 // This could alternatively be an icon, but we'd need to pick a good one.
 const ExportBadge = () => <span className='text-xs py-0.5 px-1.5 bg-gray-200 dark:bg-gray-800 dark:text-gray-300 rounded-md'>Exported</span>
@@ -62,13 +63,7 @@ const DeclNode = ({ decl, href }: { decl: Decl; href: string }) => {
   )
 }
 
-const ModuleSection = ({
-  module,
-  isExpanded,
-  path,
-  params,
-  toggleExpansion,
-}: { module: ModuleTreeItem; isExpanded: boolean; path: string; params: string; toggleExpansion: (m: string) => void }) => {
+const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: ModuleTreeItem; isExpanded: boolean; toggleExpansion: (m: string) => void }) => {
   const navigate = useNavigate()
   return (
     <li key={module.name} id={`module-tree-module-${module.name}`} className='my-2'>
@@ -85,7 +80,7 @@ const ModuleSection = ({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              navigate(`${path}?${params}`)
+              navigate(`/modules/${module.name}`)
             }}
           />
           {module.decls.length === 0 || (
@@ -94,7 +89,7 @@ const ModuleSection = ({
         </DisclosureButton>
         <DisclosurePanel as='ul' className='px-2'>
           {module.decls.map((d, i) => (
-            <DeclNode key={i} decl={d} href={`${path}/${d.value.case}/${d.value.value?.name}?${params}`} />
+            <DeclNode key={i} decl={d} href={`/modules/${module.name}/${d.value.case}/${d.value.value?.name}`} />
           ))}
         </DisclosurePanel>
       </Disclosure>
@@ -103,27 +98,9 @@ const ModuleSection = ({
 }
 
 export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
-  const [searchParams, setSearchParams] = useSearchParams()
   modules.sort((m1, m2) => Number(m1.isBuiltin) - Number(m2.isBuiltin))
 
-  const expandedModules = (searchParams.get('tree_m') || '').split(',')
-
-  function toggleModuleExpansion(moduleName: string) {
-    const expanded = (searchParams.get('tree_m') || '').split(',')
-    const i = expanded.indexOf(moduleName)
-    if (i === -1) {
-      searchParams.set('tree_m', [...expanded, moduleName].join(','))
-    } else {
-      expanded.splice(i, 1)
-      if (expanded.length === 1) {
-        searchParams.delete('tree_m')
-      } else {
-        searchParams.set('tree_m', expanded.join(','))
-      }
-    }
-    setSearchParams(searchParams)
-  }
-
+  const expandedModules = listExpandedModules()
   return (
     <div className='flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900 px-6'>
       <nav className='flex flex-1 flex-col'>
@@ -131,14 +108,7 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
           <li>
             <ul className='-mx-2'>
               {modules.map((m) => (
-                <ModuleSection
-                  key={m.name}
-                  module={m}
-                  isExpanded={expandedModules.includes(m.name)}
-                  path={`/modules/${m.name}`}
-                  params={searchParams.toString()}
-                  toggleExpansion={toggleModuleExpansion}
-                />
+                <ModuleSection key={m.name} module={m} isExpanded={expandedModules.includes(m.name)} toggleExpansion={toggleModuleExpansion} />
               ))}
             </ul>
           </li>

@@ -82,3 +82,16 @@ export const declFromSchema = (moduleName: string, declName: string, schema: Pul
   }
   return module.schema.decls.find((d) => d.value.value?.name === declName)
 }
+
+export const listExpandedModules = () => (localStorage.getItem('tree_m') || '').split(',')
+
+export const toggleModuleExpansion = (moduleName: string) => {
+  const expanded = listExpandedModules()
+  const i = expanded.indexOf(moduleName)
+  if (i === -1) {
+    localStorage.setItem('tree_m', [...expanded, moduleName].join(','))
+  } else {
+    expanded.splice(i, 1)
+    localStorage.setItem('tree_m', expanded.join(','))
+  }
+}
