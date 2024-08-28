@@ -16,7 +16,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { TableCellsIcon } from '@heroicons/react/24/solid'
 import type { ForwardRefExoticComponent, SVGProps } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils'
@@ -43,11 +43,11 @@ const icons: IconMap = {
 type WithExport = { export?: boolean }
 
 const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSelected: boolean }) => {
-  const navigate = useNavigate()
   if (!decl.value || !decl.value.case || !decl.value.value) {
     return []
   }
-  const Icon = icons[decl.value.case] || CodeBracketSquareIcon
+  const navigate = useNavigate()
+  const Icon = useMemo(() => (icons[decl.value.case || ''] || CodeBracketSquareIcon), [decl.value.case])
   return (
     <li className='my-1'>
       <DisclosureButton
@@ -70,7 +70,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
 
 const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: ModuleTreeItem; isExpanded: boolean; toggleExpansion: (m: string) => void }) => {
   const { moduleName, declName } = useParams()
-  const isSelected = moduleName === module.name
+  const isSelected = useMemo(() => moduleName === module.name, [moduleName, module.name])
   const navigate = useNavigate()
   return (
     <li key={module.name} id={`module-tree-module-${module.name}`} className='my-2'>
