@@ -1029,10 +1029,11 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 			}
 
 		case *schema.TypeAlias:
-			if !aliasesMustBeExported || n.IsExported() {
-				if importPath, dirName, ok := goImportForWidenedType(n); ok && extraImports[importPath] == optional.None[string]() {
-					extraImports[importPath] = dirName
-				}
+			if aliasesMustBeExported && !n.IsExported() {
+				return next()
+			}
+			if importPath, dirName, ok := goImportForWidenedType(n); ok && extraImports[importPath] == optional.None[string]() {
+				extraImports[importPath] = dirName
 			}
 		default:
 		}
