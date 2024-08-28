@@ -10,15 +10,15 @@ const useModulesKey = 'modules'
 export const useModules = () => {
   const client = useClient(ConsoleService)
   const queryClient = useQueryClient()
-  const { data: streamingData } = useSchema()
+  const { data: schemaData } = useSchema()
 
   useEffect(() => {
-    if (streamingData) {
+    if (schemaData) {
       queryClient.invalidateQueries({
         queryKey: [useModulesKey],
       })
     }
-  }, [streamingData, queryClient])
+  }, [schemaData, queryClient])
 
   const fetchModules = async (signal: AbortSignal) => {
     try {
@@ -40,6 +40,6 @@ export const useModules = () => {
   return useQuery({
     queryKey: [useModulesKey],
     queryFn: async ({ signal }) => fetchModules(signal),
-    enabled: !!streamingData,
+    enabled: !!schemaData,
   })
 }

@@ -12,7 +12,7 @@ const navigation = [
   { name: 'Infrastructure', href: '/infrastructure', icon: ServerStackIcon },
 ]
 
-export const Navigation = () => {
+export const Navigation = ({ version }: { version?: string }) => {
   return (
     <nav className='bg-indigo-600'>
       <div className='mx-auto px-4 sm:px-6'>
@@ -40,7 +40,7 @@ export const Navigation = () => {
           </div>
           <div>
             <div className='ml-4 flex items-center space-x-4'>
-              <Version version='v0.235.0' />
+              <Version version={version} />
               <DarkModeSwitch />
             </div>
           </div>
