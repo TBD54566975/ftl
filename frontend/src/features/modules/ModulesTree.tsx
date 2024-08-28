@@ -47,7 +47,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
     return []
   }
   const navigate = useNavigate()
-  const Icon = useMemo(() => (icons[decl.value.case || ''] || CodeBracketSquareIcon), [decl.value.case])
+  const Icon = useMemo(() => icons[decl.value.case || ''] || CodeBracketSquareIcon, [decl.value.case])
   return (
     <li className='my-1'>
       <DisclosureButton
