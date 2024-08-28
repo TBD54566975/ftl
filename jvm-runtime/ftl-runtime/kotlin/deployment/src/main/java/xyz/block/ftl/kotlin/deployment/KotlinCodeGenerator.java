@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.squareup.kotlinpoet.AnnotationSpec;
@@ -22,6 +23,8 @@ import com.squareup.kotlinpoet.WildcardTypeName;
 
 import xyz.block.ftl.GeneratedRef;
 import xyz.block.ftl.Subscription;
+import xyz.block.ftl.TypeAlias;
+import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
 import xyz.block.ftl.VerbClientEmpty;
@@ -40,8 +43,34 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
     public static final String CLIENT = "Client";
     public static final String PACKAGE_PREFIX = "ftl.";
 
-    protected void generateTopicSubscription(Module module, Topic data, String packageName, Map<DeclRef, Type> typeAliasMap,
+    @Override
+    protected void generateTypeAliasMapper(String module, String name, String packageName, Optional<String> nativeTypeAlias,
             Path outputDir) throws IOException {
+        String thisType = className(name) + TYPE_MAPPER;
+        TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(thisType)
+                .addAnnotation(AnnotationSpec.builder(TypeAlias.class)
+                        .addMember("name=\"" + name + "\"")
+                        .addMember("module=\"" + module + "\"")
+                        .build())
+                .addModifiers(KModifier.PUBLIC);
+        if (nativeTypeAlias.isEmpty()) {
+            TypeVariableName finalType = TypeVariableName.get("T");
+            typeBuilder.addTypeVariable(finalType);
+            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.bestGuess(TypeAliasMapper.class.getName()),
+                    finalType, new ClassName("kotlin", "String")), CodeBlock.of(""));
+        } else {
+            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.bestGuess(TypeAliasMapper.class.getName()),
+                    ClassName.bestGuess(nativeTypeAlias.get()), new ClassName("kotlin", "String")), CodeBlock.of(""));
+        }
+
+        FileSpec javaFile = FileSpec.builder(packageName, thisType)
+                .addType(typeBuilder.build())
+                .build();
+        javaFile.writeTo(outputDir);
+    }
+
+    protected void generateTopicSubscription(Module module, Topic data, String packageName, Map<DeclRef, Type> typeAliasMap,
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException {
         String thisType = className(data.getName() + "Subscription");
 
         TypeSpec.Builder dataBuilder = TypeSpec.annotationBuilder(ClassName.bestGuess(thisType));
@@ -63,7 +92,8 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         javaFile.writeTo(outputDir);
     }
 
-    protected void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap, Path outputDir)
+    protected void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap,
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
             throws IOException {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(thisType)
@@ -84,7 +114,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
     }
 
     protected void generateDataObject(Module module, Data data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Path outputDir) throws IOException {
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
                 .addAnnotation(
@@ -102,7 +132,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         FunSpec.Builder constructorBuilder = FunSpec.constructorBuilder();
 
         for (var i : data.getFieldsList()) {
-            TypeName dataType = toKotlinTypeName(i.getType(), typeAliasMap);
+            TypeName dataType = toKotlinTypeName(i.getType(), typeAliasMap, nativeTypeAliasMap);
             String name = i.getName();
             var fieldName = toJavaName(name);
             constructorBuilder.addParameter(fieldName, dataType);
@@ -118,7 +148,8 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         javaFile.writeTo(outputDir);
     }
 
-    protected void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap, Path outputDir)
+    protected void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
             throws IOException {
         String thisType = className(verb.getName()) + CLIENT;
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(thisType)
@@ -131,23 +162,23 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
             typeBuilder.addSuperinterface(className(VerbClientEmpty.class), CodeBlock.of(""));
         } else if (verb.getRequest().hasUnit()) {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClientSource.class),
-                    toKotlinTypeName(verb.getResponse(), typeAliasMap)), CodeBlock.of(""));
+                    toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
-                    .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap))
+                    .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE, KModifier.ABSTRACT).build());
         } else if (verb.getResponse().hasUnit()) {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClientSink.class),
-                    toKotlinTypeName(verb.getRequest(), typeAliasMap)), CodeBlock.of(""));
+                    toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
                     .addModifiers(KModifier.OVERRIDE, KModifier.ABSTRACT)
-                    .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap)).build());
+                    .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap)).build());
         } else {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClient.class),
-                    toKotlinTypeName(verb.getRequest(), typeAliasMap),
-                    toKotlinTypeName(verb.getResponse(), typeAliasMap)), CodeBlock.of(""));
+                    toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap),
+                    toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
-                    .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap))
-                    .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap))
+                    .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
+                    .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap))
                     .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE, KModifier.ABSTRACT).build());
         }
 
@@ -172,22 +203,30 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         return new ClassName(clazz.getPackage().getName(), clazz.getSimpleName());
     }
 
-    private TypeName toKotlinTypeName(Type type, Map<DeclRef, Type> typeAliasMap) {
+    private TypeName toKotlinTypeName(Type type, Map<DeclRef, Type> typeAliasMap, Map<DeclRef, String> nativeTypeAliasMap) {
         if (type.hasArray()) {
             return ParameterizedTypeName.get(new ClassName("kotlin.collections", "List"),
-                    toKotlinTypeName(type.getArray().getElement(), typeAliasMap));
+                    toKotlinTypeName(type.getArray().getElement(), typeAliasMap, nativeTypeAliasMap));
         } else if (type.hasString()) {
             return new ClassName("kotlin", "String");
         } else if (type.hasOptional()) {
             // Always box for optional, as normal primities can't be null
-            return toKotlinTypeName(type.getOptional().getType(), typeAliasMap);
+            return toKotlinTypeName(type.getOptional().getType(), typeAliasMap, nativeTypeAliasMap);
         } else if (type.hasRef()) {
             if (type.getRef().getModule().isEmpty()) {
                 return TypeVariableName.get(type.getRef().getName());
             }
             DeclRef key = new DeclRef(type.getRef().getModule(), type.getRef().getName());
+            if (nativeTypeAliasMap.containsKey(key)) {
+                String className = nativeTypeAliasMap.get(key);
+                var idx = className.lastIndexOf('.');
+                if (idx != -1) {
+                    return new ClassName(className.substring(0, idx), className.substring(idx + 1));
+                }
+                return new ClassName("", className);
+            }
             if (typeAliasMap.containsKey(key)) {
-                return toKotlinTypeName(typeAliasMap.get(key), typeAliasMap);
+                return toKotlinTypeName(typeAliasMap.get(key), typeAliasMap, nativeTypeAliasMap);
             }
             var params = type.getRef().getTypeParametersList();
             ClassName className = new ClassName(PACKAGE_PREFIX + type.getRef().getModule(), type.getRef().getName());
@@ -196,13 +235,13 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
             }
             List<TypeName> javaTypes = params.stream()
                     .map(s -> s.hasUnit() ? WildcardTypeName.consumerOf(new ClassName("kotlin", "Any"))
-                            : toKotlinTypeName(s, typeAliasMap))
+                            : toKotlinTypeName(s, typeAliasMap, nativeTypeAliasMap))
                     .toList();
             return ParameterizedTypeName.get(className, javaTypes.toArray(new TypeName[javaTypes.size()]));
         } else if (type.hasMap()) {
             return ParameterizedTypeName.get(new ClassName("kotlin.collections", "Map"),
-                    toKotlinTypeName(type.getMap().getKey(), typeAliasMap),
-                    toKotlinTypeName(type.getMap().getValue(), typeAliasMap));
+                    toKotlinTypeName(type.getMap().getKey(), typeAliasMap, nativeTypeAliasMap),
+                    toKotlinTypeName(type.getMap().getValue(), typeAliasMap, nativeTypeAliasMap));
         } else if (type.hasTime()) {
             return className(ZonedDateTime.class);
         } else if (type.hasInt()) {

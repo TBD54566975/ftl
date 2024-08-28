@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.ParameterizedType;
 import org.jboss.logging.Logger;
 import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
@@ -42,6 +43,7 @@ import xyz.block.ftl.runtime.VerbHandler;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.config.FTLConfigSourceFactoryBuilder;
 import xyz.block.ftl.runtime.http.FTLHttpHandler;
+import xyz.block.ftl.v1.schema.Ref;
 
 public class ModuleProcessor {
 
@@ -108,6 +110,7 @@ public class ModuleProcessor {
             ModuleNameBuildItem moduleNameBuildItem,
             TopicsBuildItem topicsBuildItem,
             VerbClientBuildItem verbClientBuildItem,
+            List<TypeAliasBuildItem> typeAliasBuildItems,
             List<SchemaContributorBuildItem> schemaContributorBuildItems) throws Exception {
         String moduleName = moduleNameBuildItem.getModuleName();
         Map<String, String> verbDocs = new HashMap<>();
@@ -125,9 +128,25 @@ public class ModuleProcessor {
                 }
             }
         }
+        Map<TypeKey, ModuleBuilder.ExistingRef> existingRefs = new HashMap<>();
+        for (var i : typeAliasBuildItems) {
+            String mn;
+            if (i.getModule().isEmpty()) {
+                mn = moduleNameBuildItem.getModuleName();
+            } else {
+                mn = i.getModule();
+            }
+            if (i.getLocalType() instanceof ParameterizedType) {
+                //TODO: we can't handle this yet
+                // existingRefs.put(new TypeKey(i.getLocalType().name().toString(), i.getLocalType().asParameterizedType().arguments().stream().map(i.)), new ModuleBuilder.ExistingRef(Ref.newBuilder().setModule(moduleName).setName(i.getName()).build(), i.isExported()));
+            } else {
+                existingRefs.put(new TypeKey(i.getLocalType().name().toString(), List.of()), new ModuleBuilder.ExistingRef(
+                        Ref.newBuilder().setModule(mn).setName(i.getName()).build(), i.isExported()));
+            }
+        }
 
         ModuleBuilder moduleBuilder = new ModuleBuilder(index.getComputingIndex(), moduleName, topicsBuildItem.getTopics(),
-                verbClientBuildItem.getVerbClients(), recorder, verbDocs);
+                verbClientBuildItem.getVerbClients(), recorder, verbDocs, existingRefs);
 
         for (var i : schemaContributorBuildItems) {
             i.getSchemaContributor().accept(moduleBuilder);

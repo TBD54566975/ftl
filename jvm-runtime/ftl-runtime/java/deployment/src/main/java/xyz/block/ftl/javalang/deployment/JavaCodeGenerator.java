@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -26,6 +27,8 @@ import com.squareup.javapoet.WildcardTypeName;
 
 import xyz.block.ftl.GeneratedRef;
 import xyz.block.ftl.Subscription;
+import xyz.block.ftl.TypeAlias;
+import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
 import xyz.block.ftl.VerbClientEmpty;
@@ -44,8 +47,35 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     public static final String CLIENT = "Client";
     public static final String PACKAGE_PREFIX = "ftl.";
 
-    protected void generateTopicSubscription(Module module, Topic data, String packageName, Map<DeclRef, Type> typeAliasMap,
+    @Override
+    protected void generateTypeAliasMapper(String module, String name, String packageName, Optional<String> nativeTypeAlias,
             Path outputDir) throws IOException {
+        TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(name) + TYPE_MAPPER)
+                .addAnnotation(AnnotationSpec.builder(TypeAlias.class)
+                        .addMember("name", "\"" + name + "\"")
+                        .addMember("module", "\"" + module + "\"")
+                        .build())
+                .addModifiers(Modifier.PUBLIC);
+        if (nativeTypeAlias.isEmpty()) {
+            TypeVariableName finalType = TypeVariableName.get("T");
+            typeBuilder.addTypeVariable(finalType);
+            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(TypeAliasMapper.class),
+                    finalType, ClassName.get(String.class)));
+        } else {
+            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(TypeAliasMapper.class),
+                    ClassName.bestGuess(nativeTypeAlias.get()), ClassName.get(String.class)));
+        }
+        TypeSpec theType = typeBuilder
+                .build();
+
+        JavaFile javaFile = JavaFile.builder(packageName, theType)
+                .build();
+
+        javaFile.writeTo(outputDir);
+    }
+
+    protected void generateTopicSubscription(Module module, Topic data, String packageName, Map<DeclRef, Type> typeAliasMap,
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException {
         String thisType = className(data.getName() + "Subscription");
 
         TypeSpec.Builder dataBuilder = TypeSpec.annotationBuilder(thisType)
@@ -68,7 +98,8 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         javaFile.writeTo(outputDir);
     }
 
-    protected void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap, Path outputDir)
+    protected void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap,
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
             throws IOException {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(thisType)
@@ -89,7 +120,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     }
 
     protected void generateDataObject(Module module, Data data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Path outputDir) throws IOException {
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
                 .addAnnotation(
@@ -106,7 +137,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         Map<String, Runnable> sortedFields = new TreeMap<>();
 
         for (var i : data.getFieldsList()) {
-            TypeName dataType = toAnnotatedJavaTypeName(i.getType(), typeAliasMap);
+            TypeName dataType = toAnnotatedJavaTypeName(i.getType(), typeAliasMap, nativeTypeAliasMap);
             String name = i.getName();
             var fieldName = toJavaName(name);
             dataBuilder.addField(dataType, fieldName, Modifier.PRIVATE);
@@ -150,7 +181,8 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         javaFile.writeTo(outputDir);
     }
 
-    protected void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap, Path outputDir)
+    protected void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
             throws IOException {
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
                 .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
@@ -162,23 +194,23 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             typeBuilder.addSuperinterface(ClassName.get(VerbClientEmpty.class));
         } else if (verb.getRequest().hasUnit()) {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class),
-                    toJavaTypeName(verb.getResponse(), typeAliasMap, true)));
+                    toJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
-                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap))
+                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
         } else if (verb.getResponse().hasUnit()) {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class),
-                    toJavaTypeName(verb.getRequest(), typeAliasMap, true)));
+                    toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID)
-                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value")
+                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
                     .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
         } else {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class),
-                    toJavaTypeName(verb.getRequest(), typeAliasMap, true),
-                    toJavaTypeName(verb.getResponse(), typeAliasMap, true)));
+                    toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true),
+                    toJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
-                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap))
-                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap), "value")
+                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
+                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
                     .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
         }
 
@@ -198,30 +230,35 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         return name;
     }
 
-    private TypeName toAnnotatedJavaTypeName(Type type, Map<DeclRef, Type> typeAliasMap) {
-        var results = toJavaTypeName(type, typeAliasMap, false);
+    private TypeName toAnnotatedJavaTypeName(Type type, Map<DeclRef, Type> typeAliasMap,
+            Map<DeclRef, String> nativeTypeAliasMap) {
+        var results = toJavaTypeName(type, typeAliasMap, nativeTypeAliasMap, false);
         if (type.hasRef() || type.hasArray() || type.hasBytes() || type.hasString() || type.hasMap() || type.hasTime()) {
             return results.annotated(AnnotationSpec.builder(NotNull.class).build());
         }
         return results;
     }
 
-    private TypeName toJavaTypeName(Type type, Map<DeclRef, Type> typeAliasMap, boolean boxPrimitives) {
+    private TypeName toJavaTypeName(Type type, Map<DeclRef, Type> typeAliasMap, Map<DeclRef, String> nativeTypeAliasMap,
+            boolean boxPrimitives) {
         if (type.hasArray()) {
             return ParameterizedTypeName.get(ClassName.get(List.class),
-                    toJavaTypeName(type.getArray().getElement(), typeAliasMap, false));
+                    toJavaTypeName(type.getArray().getElement(), typeAliasMap, nativeTypeAliasMap, false));
         } else if (type.hasString()) {
             return ClassName.get(String.class);
         } else if (type.hasOptional()) {
             // Always box for optional, as normal primities can't be null
-            return toJavaTypeName(type.getOptional().getType(), typeAliasMap, true);
+            return toJavaTypeName(type.getOptional().getType(), typeAliasMap, nativeTypeAliasMap, true);
         } else if (type.hasRef()) {
             if (type.getRef().getModule().isEmpty()) {
                 return TypeVariableName.get(type.getRef().getName());
             }
             DeclRef key = new DeclRef(type.getRef().getModule(), type.getRef().getName());
+            if (nativeTypeAliasMap.containsKey(key)) {
+                return ClassName.bestGuess(nativeTypeAliasMap.get(key));
+            }
             if (typeAliasMap.containsKey(key)) {
-                return toJavaTypeName(typeAliasMap.get(key), typeAliasMap, boxPrimitives);
+                return toJavaTypeName(typeAliasMap.get(key), typeAliasMap, nativeTypeAliasMap, boxPrimitives);
             }
             var params = type.getRef().getTypeParametersList();
             ClassName className = ClassName.get(PACKAGE_PREFIX + type.getRef().getModule(), type.getRef().getName());
@@ -229,13 +266,14 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                 return className;
             }
             List<TypeName> javaTypes = params.stream()
-                    .map(s -> s.hasUnit() ? WildcardTypeName.subtypeOf(Object.class) : toJavaTypeName(s, typeAliasMap, true))
+                    .map(s -> s.hasUnit() ? WildcardTypeName.subtypeOf(Object.class)
+                            : toJavaTypeName(s, typeAliasMap, nativeTypeAliasMap, true))
                     .toList();
             return ParameterizedTypeName.get(className, javaTypes.toArray(new TypeName[javaTypes.size()]));
         } else if (type.hasMap()) {
             return ParameterizedTypeName.get(ClassName.get(Map.class),
-                    toJavaTypeName(type.getMap().getKey(), typeAliasMap, true),
-                    toJavaTypeName(type.getMap().getValue(), typeAliasMap, true));
+                    toJavaTypeName(type.getMap().getKey(), typeAliasMap, nativeTypeAliasMap, true),
+                    toJavaTypeName(type.getMap().getValue(), typeAliasMap, nativeTypeAliasMap, true));
         } else if (type.hasTime()) {
             return ClassName.get(ZonedDateTime.class);
         } else if (type.hasInt()) {

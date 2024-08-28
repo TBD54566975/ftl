@@ -10,6 +10,7 @@ import ftl.gomodule.BoolVerbClient;
 import ftl.gomodule.BytesVerbClient;
 import ftl.gomodule.EmptyVerbClient;
 import ftl.gomodule.ErrorEmptyVerbClient;
+import ftl.gomodule.ExternalTypeVerbClient;
 import ftl.gomodule.FloatVerbClient;
 import ftl.gomodule.IntVerbClient;
 import ftl.gomodule.OptionalBoolVerbClient;
@@ -32,6 +33,7 @@ import ftl.gomodule.TestObjectOptionalFields;
 import ftl.gomodule.TestObjectOptionalFieldsVerbClient;
 import ftl.gomodule.TestObjectVerbClient;
 import ftl.gomodule.TimeVerbClient;
+import web5.sdk.dids.didcore.Did;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
 
@@ -182,6 +184,12 @@ public class TestInvokeGoFromJava {
     @Verb
     public TestObjectOptionalFields optionalTestObjectOptionalFieldsVerb(TestObjectOptionalFields val,
             OptionalTestObjectOptionalFieldsVerbClient client) {
+        return client.call(val);
+    }
+
+    @Export
+    @Verb
+    public Did externalTypeVerb(Did val, ExternalTypeVerbClient client) {
         return client.call(val);
     }
 

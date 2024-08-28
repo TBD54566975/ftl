@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.eclipse.microprofile.config.Config;
@@ -24,6 +25,7 @@ import xyz.block.ftl.v1.schema.Verb;
 public abstract class JVMCodeGenerator implements CodeGenProvider {
 
     public static final String PACKAGE_PREFIX = "ftl.";
+    public static final String TYPE_MAPPER = "TypeAliasMapper";
 
     @Override
     public String providerId() {
@@ -42,6 +44,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
         }
         List<Module> modules = new ArrayList<>();
         Map<DeclRef, Type> typeAliasMap = new HashMap<>();
+        Map<DeclRef, String> nativeTypeAliasMap = new HashMap<>();
         try (Stream<Path> pathStream = Files.list(context.inputDir())) {
             for (var file : pathStream.toList()) {
                 String fileName = file.getFileName().toString();
@@ -50,9 +53,30 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                 }
                 var module = Module.parseFrom(Files.readAllBytes(file));
                 for (var decl : module.getDeclsList()) {
+                    String packageName = PACKAGE_PREFIX + module.getName();
                     if (decl.hasTypeAlias()) {
                         var data = decl.getTypeAlias();
-                        typeAliasMap.put(new DeclRef(module.getName(), data.getName()), data.getType());
+                        boolean handled = false;
+                        for (var md : data.getMetadataList()) {
+                            if (md.hasTypeMap()) {
+                                String runtime = md.getTypeMap().getRuntime();
+                                if (runtime.equals("kotlin") || runtime.equals("java")) {
+                                    nativeTypeAliasMap.put(new DeclRef(module.getName(), data.getName()),
+                                            md.getTypeMap().getNativeName());
+                                    generateTypeAliasMapper(module.getName(), data.getName(), packageName,
+                                            Optional.of(md.getTypeMap().getNativeName()),
+                                            context.outDir());
+                                    handled = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!handled) {
+                            generateTypeAliasMapper(module.getName(), data.getName(), packageName, Optional.empty(),
+                                    context.outDir());
+                            typeAliasMap.put(new DeclRef(module.getName(), data.getName()), data.getType());
+                        }
+
                     }
                 }
                 modules.add(module);
@@ -69,26 +93,27 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                         if (!verb.getExport()) {
                             continue;
                         }
-                        generateVerb(module, verb, packageName, typeAliasMap, context.outDir());
+                        generateVerb(module, verb, packageName, typeAliasMap, nativeTypeAliasMap, context.outDir());
                     } else if (decl.hasData()) {
                         var data = decl.getData();
                         if (!data.getExport()) {
                             continue;
                         }
-                        generateDataObject(module, data, packageName, typeAliasMap, context.outDir());
+                        generateDataObject(module, data, packageName, typeAliasMap, nativeTypeAliasMap, context.outDir());
 
                     } else if (decl.hasEnum()) {
                         var data = decl.getEnum();
                         if (!data.getExport()) {
                             continue;
                         }
-                        generateEnum(module, data, packageName, typeAliasMap, context.outDir());
+                        generateEnum(module, data, packageName, typeAliasMap, nativeTypeAliasMap, context.outDir());
                     } else if (decl.hasTopic()) {
                         var data = decl.getTopic();
                         if (!data.getExport()) {
                             continue;
                         }
-                        generateTopicSubscription(module, data, packageName, typeAliasMap, context.outDir());
+                        generateTopicSubscription(module, data, packageName, typeAliasMap, nativeTypeAliasMap,
+                                context.outDir());
                     }
                 }
             }
@@ -99,17 +124,20 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
         return true;
     }
 
+    protected abstract void generateTypeAliasMapper(String module, String name, String packageName,
+            Optional<String> nativeTypeAlias, Path outputDir) throws IOException;
+
     protected abstract void generateTopicSubscription(Module module, Topic data, String packageName,
-            Map<DeclRef, Type> typeAliasMap, Path outputDir) throws IOException;
+            Map<DeclRef, Type> typeAliasMap, Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
 
     protected abstract void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Path outputDir) throws IOException;
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
 
     protected abstract void generateDataObject(Module module, Data data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Path outputDir) throws IOException;
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
 
     protected abstract void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Path outputDir) throws IOException;
+            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
 
     @Override
     public boolean shouldRun(Path sourceDir, Config config) {
