@@ -31,7 +31,7 @@ export const useSchema = () => {
 
         if (!response.more) {
           const schema = Array.from(schemaMap.values()).sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0)
-          queryClient.setQueryData([streamingSchemaKey], schema)
+          queryClient.setQueryData([streamingSchemaKey], schema ?? [])
         }
       }
     } catch (error) {

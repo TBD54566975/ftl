@@ -34,7 +34,7 @@ func Server(ctx context.Context, timestamp time.Time, publicURL *url.URL, allowO
 		return nil, err
 	}
 
-	err = exec.Command(ctx, log.Debug, path.Join(gitRoot, "frontend"), "npm", "run", "dev").Start()
+	err = exec.Command(ctx, log.Debug, path.Join(gitRoot, "frontend"), "pnpm", "run", "dev").Start()
 	if err != nil {
 		return nil, err
 	}

@@ -131,11 +131,10 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
         uses: ./.github/actions/build-cache
-      - name: Console NPM Install
-        run: just npm-install
+      - name: Console pnpm install
+        run: just pnpm-install
       - name: Console Lint
-        working-directory: frontend
-        run: npm run lint
+        run: just lint-frontend
       - name: Console Build
         run: just build-frontend
       - name: Console Test
@@ -150,12 +149,12 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
         uses: ./.github/actions/build-cache
-      - name: VSCode Extension NPM Install
-        run: just npm-install
-      - name: VSCode Extension Lint
+      - name: VSCode extension pnpm install
+        run: just pnpm-install
+      - name: VSCode extension lint
         working-directory: extensions/vscode
-        run: npm run lint
-      - name: VSCode Extension NPM Build
+        run: pnpm run lint
+      - name: VSCode extension pnpm build
         run: just build-extension
   build-all:
     name: Rebuild All
@@ -210,8 +209,8 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
         uses: ./.github/actions/build-cache
-      - name: Console NPM Install
-        run: just npm-install
+      - name: Console pnpm install
+        run: just pnpm-install
       - name: Console e2e
         run: just e2e-frontend
   integration-shard:

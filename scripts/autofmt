@@ -22,11 +22,11 @@ buf format -w
 # Revert changes to generated files.
 find backend/protos \( -name '*.pb.go' -o -name '*.connect.go' \) -print0 | xargs -0 -r git checkout > /dev/null
 
-(cd frontend && npm install)
+just pnpm-install
 
 (cd backend/protos && buf generate)
 
 echo "Formatting TypeScript..."
-(cd frontend && npm run lint:fix)
+(cd frontend && pnpm run lint:fix)
 
 git diff

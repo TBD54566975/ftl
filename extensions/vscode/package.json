@@ -10,11 +10,11 @@
     "url": "https://github.com/TBD54566975/ftl"
   },
   "engines": {
-    "vscode": "^1.90.2"
+    "vscode": "^1.90.2",
+    "pnpm": ">=9.9.0",
+    "node": ">=22.7.0"
   },
-  "categories": [
-    "Other"
-  ],
+  "categories": ["Other"],
   "activationEvents": [
     "workspaceContains:**/ftl-project.toml",
     "workspaceContains:**/ftl.toml"
@@ -29,9 +29,7 @@
         },
         "ftl.devCommandFlags": {
           "type": "array",
-          "default": [
-            "--recreate"
-          ],
+          "default": ["--recreate"],
           "items": {
             "type": "string"
           },
@@ -39,10 +37,7 @@
         },
         "ftl.automaticallyStartServer": {
           "type": "string",
-          "enum": [
-            "always",
-            "never"
-          ],
+          "enum": ["always", "never"],
           "default": null,
           "description": "Control if and when to automatically start the FTL dev server."
         }
@@ -73,13 +68,13 @@
   },
   "main": "./dist/extension.js",
   "scripts": {
-    "vscode:prepublish": "npm run package",
+    "vscode:prepublish": "pnpm run package",
     "compile": "webpack",
     "watch": "webpack --watch",
     "package": "webpack --mode production --devtool hidden-source-map",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
     "lint": "biome check .",
     "lint:fix": "biome format . --write",
     "test": "vscode-test"
