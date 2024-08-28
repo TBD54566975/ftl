@@ -181,14 +181,6 @@ func stripNonGoDocs(content string) string {
 			continue
 		}
 
-		// Similar, look at the code block
-		if strings.HasPrefix(line, "```") {
-			newLang := strings.TrimPrefix(line, "```")
-			if newLang != "" {
-				currentLang = newLang
-			}
-		}
-
 		// If we're in a Go block or unspecified, collect the line.
 		if currentLang == "go" || currentLang == "" {
 			collected = append(collected, line)
