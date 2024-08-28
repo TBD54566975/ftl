@@ -390,49 +390,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		return stdreflect.Indirect(stdreflect.ValueOf(t)).Type().Name() == kind
 	},
 	"imports": func(m *schema.Module) map[string]string {
-		imports := map[string]string{}
-		_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error { //nolint:errcheck
-			switch n := n.(type) {
-			case *schema.Ref:
-				if n.Module == "" || n.Module == m.Name {
-					break
-				}
-				imports[path.Join("ftl", n.Module)] = "ftl" + n.Module
-
-				for _, tp := range n.TypeParameters {
-					if tpRef, ok := tp.(*schema.Ref); ok {
-						if tpRef.Module != "" && tpRef.Module != m.Name {
-							imports[path.Join("ftl", tpRef.Module)] = "ftl" + tpRef.Module
-						}
-					}
-				}
-
-			case *schema.Time:
-				imports["time"] = "stdtime"
-
-			case *schema.Optional, *schema.Unit:
-				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
-
-			case *schema.Topic:
-				if n.IsExported() {
-					imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
-				}
-
-			case *schema.TypeAlias:
-				if n.IsExported() {
-					if im, _ := getGoExternalTypeForWidenedType(n); im != "" {
-						unquoted, err := strconv.Unquote(im)
-						if err != nil {
-							panic(err)
-						}
-						imports[unquoted] = ""
-					}
-				}
-			default:
-			}
-			return next()
-		})
-		return imports
+		return imports(m, true)
 	},
 	"value": func(v schema.Value) string {
 		switch t := v.(type) {
@@ -547,16 +505,24 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		return str
 	},
 	"typeAliasType": func(m *schema.Module, t *schema.TypeAlias) string {
-		if _, goType := getGoExternalTypeForWidenedType(t); goType != "" {
-			return goType
+		// it is wasteful to calculate imports each time
+		imports := imports(m, false)
+
+		for _, md := range t.Metadata {
+			md, ok := md.(*schema.MetadataTypeMap)
+			if !ok || md.Runtime != "go" {
+				continue
+			}
+			if goType, err := getGoExternalType(imports, md.NativeName); err == nil {
+				return goType
+			}
 		}
 		return genType(m, t.Type)
 	},
 }
 
-func getGoExternalTypeForWidenedType(t *schema.TypeAlias) (_import string, _type string) {
-	var goType string
-	var im string
+// returns the import path and the directory name for a type alias if there is an associated go library
+func goImportForWidenedType(t *schema.TypeAlias) (importPath string, dirName optional.Option[string], ok bool) {
 	for _, md := range t.Metadata {
 		md, ok := md.(*schema.MetadataTypeMap)
 		if !ok {
@@ -565,13 +531,14 @@ func getGoExternalTypeForWidenedType(t *schema.TypeAlias) (_import string, _type
 
 		if md.Runtime == "go" {
 			var err error
-			im, goType, err = getGoExternalType(md.NativeName)
+			importPath, dirName, err = goImportFromQualifiedName(md.NativeName)
 			if err != nil {
 				panic(err)
 			}
+			return importPath, dirName, true
 		}
 	}
-	return im, goType
+	return importPath, dirName, false
 }
 
 func schemaType(t schema.Type) string {
@@ -763,6 +730,7 @@ func getLocalSumTypes(module *schema.Module, nativeNames extract.NativeNames) []
 }
 
 func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
+	imports := imports(module, false)
 	types := make(map[string][]string)
 	for _, d := range module.Decls {
 		switch d := d.(type) {
@@ -776,14 +744,23 @@ func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
 			if fqName == "" {
 				continue
 			}
-			im, typ, err := getGoExternalType(fqName)
+			im, _, ok := goImportForWidenedType(d)
+			if !ok {
+				continue
+			}
+			typ, err := getGoExternalType(imports, fqName)
 			if err != nil {
 				return nil, err
 			}
-			if _, ok := types[im]; !ok {
-				types[im] = []string{}
+
+			importStatement := strconv.Quote(im)
+			if imports[im] != "" {
+				importStatement = imports[im] + " " + importStatement
 			}
-			types[im] = append(types[im], typ)
+			if _, ok := types[importStatement]; !ok {
+				types[importStatement] = []string{}
+			}
+			types[importStatement] = append(types[importStatement], typ)
 		default:
 		}
 	}
@@ -802,8 +779,30 @@ func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
 func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames extract.NativeNames) ([]goSumType, []goExternalType, error) {
 	sumTypes := make(map[string]goSumType)
 	externalTypes := make(map[string]sets.Set[string])
+	externalDecls := getRegisteredTypesExternalToModule(module, sch)
+
+	// calculate all imports and aliases
+	imports := imports(module, false)
+	extraImports := map[string]optional.Option[string]{}
+	for _, d := range externalDecls {
+		d, ok := d.resolved.(*schema.TypeAlias)
+		if !ok {
+			continue
+		}
+		for _, m := range d.Metadata {
+			m, ok := m.(*schema.MetadataTypeMap)
+			if !ok || m.Runtime != "go" {
+				continue
+			}
+			if im, dirName, ok := goImportForWidenedType(d); ok && extraImports[im] == optional.None[string]() {
+				extraImports[im] = dirName
+			}
+		}
+	}
+	imports = addImports(imports, extraImports)
+
 	// register sum types from other modules
-	for _, decl := range getRegisteredTypesExternalToModule(module, sch) {
+	for _, decl := range externalDecls {
 		switch d := decl.resolved.(type) {
 		case *schema.Enum:
 			variants := make([]goSumTypeVariant, 0, len(d.Variants))
@@ -822,14 +821,22 @@ func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames e
 		case *schema.TypeAlias:
 			for _, m := range d.Metadata {
 				if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
-					im, typ, err := getGoExternalType(m.NativeName)
+					im, _, ok := goImportForWidenedType(d)
+					if !ok {
+						continue
+					}
+					typ, err := getGoExternalType(imports, m.NativeName)
 					if err != nil {
 						return nil, nil, err
 					}
-					if _, ok := externalTypes[im]; !ok {
-						externalTypes[im] = sets.NewSet[string]()
+					importStatement := strconv.Quote(im)
+					if imports[im] != "" {
+						importStatement = imports[im] + " " + importStatement
 					}
-					externalTypes[im].Add(typ)
+					if _, ok := externalTypes[importStatement]; !ok {
+						externalTypes[importStatement] = sets.NewSet[string]()
+					}
+					externalTypes[importStatement].Add(typ)
 				}
 			}
 		default:
@@ -888,27 +895,17 @@ func getGoSumType(enum *schema.Enum, nativeNames extract.NativeNames) optional.O
 	})
 }
 
-func getGoExternalType(fqName string) (_import string, _type string, err error) {
-	im, err := goImportFromQualifiedName(fqName)
+func getGoExternalType(imports map[string]string, fqName string) (string, error) {
+	im, _, err := goImportFromQualifiedName(fqName)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
-
-	var pkg string
-	if i := strings.LastIndex(im, " "); i != -1 {
-		// import has an alias and this will be the package
-		pkg = im[:i]
-		im = im[i+1:]
-	}
-	unquoted, err := strconv.Unquote(im)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to unquote import %q: %w", im, err)
-	}
+	pkg := imports[im]
 	if pkg == "" {
-		pkg = unquoted[strings.LastIndex(unquoted, "/")+1:]
+		pkg = im[strings.LastIndex(im, "/")+1:]
 	}
 	typeName := fqName[strings.LastIndex(fqName, ".")+1:]
-	return im, fmt.Sprintf("%s.%s", pkg, typeName), nil
+	return fmt.Sprintf("%s.%s", pkg, typeName), nil
 }
 
 type externalDecl struct {
@@ -978,23 +975,129 @@ func goVerbFromQualifiedName(qualifiedName string) (goVerb, error) {
 	}, nil
 }
 
-// package and directory names are the same (dir=bar, pkg=bar): "github.com/foo/bar.A" => "github.com/foo/bar"
-// package and directory names differ (dir=bar, pkg=baz): "github.com/foo/bar.baz.A" => "baz github.com/foo/bar"
-func goImportFromQualifiedName(qualifiedName string) (string, error) {
+// returns the import path and directory name for an external type
+// package and directory names are the same (dir=bar, pkg=bar): "github.com/foo/bar.A" => "github.com/foo/bar", none
+// package and directory names differ (dir=bar, pkg=baz): "github.com/foo/bar.baz.A" => "github.com/foo/bar", "baz"
+func goImportFromQualifiedName(qualifiedName string) (importPath string, directoryName optional.Option[string], err error) {
 	lastDotIndex := strings.LastIndex(qualifiedName, ".")
 	if lastDotIndex == -1 {
-		return "", fmt.Errorf("invalid qualified type format %q", qualifiedName)
+		return "", optional.None[string](), fmt.Errorf("invalid qualified type format %q", qualifiedName)
 	}
 
 	pkgPath := qualifiedName[:lastDotIndex]
 	pkgName := path.Base(pkgPath)
 
-	importAlias := ""
 	if lastDotIndex = strings.LastIndex(pkgName, "."); lastDotIndex != -1 {
 		pkgName = pkgName[lastDotIndex+1:]
 		pkgPath = pkgPath[:strings.LastIndex(pkgPath, ".")]
-		// package and path differ, so we need to alias the import
-		importAlias = pkgName + " "
+		return pkgPath, optional.Some(pkgName), nil
 	}
-	return fmt.Sprintf("%s%q", importAlias, pkgPath), nil
+	return pkgPath, optional.None[string](), nil
+}
+
+// imports returns a map of import paths to aliases for a module.
+// - hardcoded for time ("stdtime")
+// - prefixed with "ftl" for other modules (eg "ftlfoo")
+// - addImports() is used to generate shortest unique aliases for external packages
+func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
+	// find all imports
+	imports := map[string]string{}
+	// map from import path to the first dir we see
+	extraImports := map[string]optional.Option[string]{}
+	_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error { //nolint:errcheck
+		switch n := n.(type) {
+		case *schema.Ref:
+			if n.Module == "" || n.Module == m.Name {
+				break
+			}
+			imports[path.Join("ftl", n.Module)] = "ftl" + n.Module
+			for _, tp := range n.TypeParameters {
+				if tpRef, ok := tp.(*schema.Ref); ok && tpRef.Module != "" && tpRef.Module != m.Name {
+					imports[path.Join("ftl", tpRef.Module)] = "ftl" + tpRef.Module
+				}
+			}
+
+		case *schema.Time:
+			imports["time"] = "stdtime"
+
+		case *schema.Optional, *schema.Unit:
+			imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
+
+		case *schema.Topic:
+			if n.IsExported() {
+				imports["github.com/TBD54566975/ftl/go-runtime/ftl"] = ""
+			}
+
+		case *schema.TypeAlias:
+			if aliasesMustBeExported && !n.IsExported() {
+				return next()
+			}
+			if importPath, dirName, ok := goImportForWidenedType(n); ok && extraImports[importPath] == optional.None[string]() {
+				extraImports[importPath] = dirName
+			}
+		default:
+		}
+		return next()
+	})
+
+	return addImports(imports, extraImports)
+}
+
+// addImports takes existing imports (mapping import path to pkg alias) and adds new imports by generating aliases
+// aliases are generated for external types by finding the shortest unique alias that can be used without conflict:
+func addImports(existingImports map[string]string, newImportPathsAndDirs map[string]optional.Option[string]) map[string]string {
+	imports := maps.Clone(existingImports)
+	// maps import path to possible aliases, shortest to longest
+	aliasesForImports := map[string][]string{}
+
+	// maps possible aliases with the count of imports that could use the alias
+	possibleImportAliases := map[string]int{}
+	for _, alias := range imports {
+		possibleImportAliases[alias]++
+	}
+	for importPath, dirName := range newImportPathsAndDirs {
+		pathComponents := strings.Split(importPath, "/")
+		if dirName, ok := dirName.Get(); ok {
+			pathComponents = append(pathComponents, dirName)
+		}
+
+		var currentAlias string
+		for i := range len(pathComponents) {
+			runes := []rune(pathComponents[len(pathComponents)-1-i])
+			for i, char := range runes {
+				if !unicode.IsLetter(char) && !unicode.IsNumber(char) {
+					runes[i] = '_'
+				}
+			}
+			if unicode.IsNumber(runes[0]) {
+				newRunes := make([]rune, len(runes)+1)
+				newRunes[0] = '_'
+				copy(newRunes[1:], runes)
+				runes = newRunes
+			}
+			foldedComponent := string(runes)
+			if i == 0 {
+				currentAlias = foldedComponent
+			} else {
+				currentAlias = foldedComponent + "_" + currentAlias
+			}
+			aliasesForImports[importPath] = append(aliasesForImports[importPath], currentAlias)
+			possibleImportAliases[currentAlias]++
+		}
+	}
+	for importPath, aliases := range aliasesForImports {
+		found := false
+		for _, alias := range aliases {
+			if possibleImportAliases[alias] == 1 {
+				imports[importPath] = alias
+				found = true
+				break
+			}
+		}
+		if !found {
+			// no possible alias that is unique, use the last one as no other type will choose the same
+			imports[importPath] = aliases[len(aliases)-1]
+		}
+	}
+	return imports
 }
