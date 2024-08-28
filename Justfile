@@ -26,7 +26,7 @@ errtrace:
 # Clean the build directory
 clean:
   rm -rf build
-  rm -rf frontend/node_modules
+  rm -rf node_modules
   find . -name '*.zip' -exec rm {} \;
   mvn -f jvm-runtime/ftl-runtime clean
 
@@ -82,12 +82,12 @@ build-zips: build-kt-runtime
   @for dir in {{ZIP_DIRS}}; do (cd $dir && mk ../$(basename ${dir}).zip : . -- "rm -f $(basename ${dir}.zip) && zip -q --symlinks -r ../$(basename ${dir}).zip ."); done
 
 # Rebuild frontend
-build-frontend: npm-install
-  @mk {{FRONTEND_OUT}} : frontend/src -- "cd frontend && npm run build"
+build-frontend: pnpm-install
+  @mk {{FRONTEND_OUT}} : frontend/src -- "cd frontend && pnpm run build"
 
 # Rebuild VSCode extension
-build-extension: npm-install
-  @mk {{EXTENSION_OUT}} : extensions/vscode/src extensions/vscode/package.json -- "cd extensions/vscode && rm -f ftl-*.vsix && npm run compile"
+build-extension: pnpm-install
+  @mk {{EXTENSION_OUT}} : extensions/vscode/src extensions/vscode/package.json -- "cd extensions/vscode && rm -f ftl-*.vsix && pnpm run compile"
 
 # Install development version of VSCode extension
 install-extension: build-extension
@@ -107,19 +107,18 @@ build-kt-runtime:
   @mkdir -p build/template/ftl && touch build/template/ftl/temp.txt
   @cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} .
 
-# Install Node dependencies
-# npm install fails intermittently due to network issues, so we retry a few times.
-npm-install:
-  @mk frontend/node_modules : frontend/package.json -- "cd frontend && for i in {1..3}; do npm install && break || sleep 5; done"
-  @mk extensions/vscode/node_modules : extensions/vscode/package.json extensions/vscode/src -- "cd extensions/vscode && for i in {1..3}; do npm install && break || sleep 5; done"
+# Install Node dependencies using pnpm
+# Retry a few times in case of network issues
+pnpm-install:
+  @for i in {1..3}; do pnpm install && break || sleep 5; done
 
 # Regenerate protos
-build-protos: npm-install
+build-protos: pnpm-install
   @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
 
 # Unconditionally rebuild protos
-build-protos-unconditionally: npm-install
+build-protos-unconditionally: pnpm-install
   ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint
   cd backend/protos && buf generate
 
@@ -154,14 +153,14 @@ test-scripts:
     scripts/tests/test-ensure-frozen-migrations.sh
 
 test-frontend: build-frontend
-  @cd frontend && npm run test
+  @cd frontend && pnpm run test
 
 e2e-frontend: build-frontend
-  @cd frontend && npx playwright install --with-deps && npm run e2e
+  @cd frontend && npx playwright install --with-deps && pnpm run e2e
 
 # Lint the frontend
 lint-frontend: build-frontend
-  @cd frontend && npm run lint && tsc
+  @cd frontend && pnpm run lint && tsc
 
 # Lint the backend
 lint-backend:
@@ -237,6 +236,7 @@ grafana:
 grafana-stop:
   docker compose down grafana
 
+# Start storybook server
 storybook:
   #!/bin/bash
-  cd frontend && npm run storybook
+  cd frontend && pnpm run storybook
