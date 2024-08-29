@@ -13,8 +13,8 @@ import {
   LockClosedIcon,
   NumberedListIcon,
   SquaresPlusIcon,
+  TableCellsIcon,
 } from '@heroicons/react/24/outline'
-import { TableCellsIcon } from '@heroicons/react/24/solid'
 import type { ForwardRefExoticComponent, SVGProps } from 'react'
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'

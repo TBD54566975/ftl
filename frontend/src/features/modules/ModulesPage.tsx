@@ -5,6 +5,8 @@ import { ResizableHorizontalPanels } from '../../components/ResizableHorizontalP
 import { ModulesTree } from './ModulesTree'
 import { moduleTreeFromSchema } from './module.utils'
 
+const treeWidthStorageKey = 'tree_w'
+
 export const ModulesPanel = () => {
   return (
     <div className='flex-1 py-2 px-4'>
@@ -16,10 +18,10 @@ export const ModulesPanel = () => {
 export const ModulesPage = ({ body }: { body: React.ReactNode }) => {
   const schema = useSchema()
   const tree = useMemo(() => moduleTreeFromSchema(schema?.data || []), [schema?.data])
-  const [treeWidth, setTreeWidth] = useState(Number(localStorage.getItem('tree_w')) || 300)
+  const [treeWidth, setTreeWidth] = useState(Number(localStorage.getItem(treeWidthStorageKey)) || 300)
 
   function setTreeWidthWithLS(newWidth: number) {
-    localStorage.setItem('tree_w', `${newWidth}`)
+    localStorage.setItem(treeWidthStorageKey, `${newWidth}`)
     setTreeWidth(newWidth)
   }
 
