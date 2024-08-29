@@ -48,7 +48,7 @@ export const ResizableHorizontalPanels: React.FC<ResizableHorizontalPanelsProps>
       <div
         className='cursor-col-resize bg-gray-100 dark:bg-gray-900 hover:bg-indigo-600'
         onMouseDown={startDragging}
-        style={{ width: '3px', cursor: 'col-resize' }}
+        style={{ width: '2px', cursor: 'col-resize' }}
       />
       <div className='flex-1 overflow-auto'>{rightPanelContent}</div>
     </div>

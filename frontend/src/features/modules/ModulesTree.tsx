@@ -16,7 +16,7 @@ import {
   TableCellsIcon,
 } from '@heroicons/react/24/outline'
 import type { ForwardRefExoticComponent, SVGProps } from 'react'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils'
@@ -70,12 +70,19 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
 
 const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: ModuleTreeItem; isExpanded: boolean; toggleExpansion: (m: string) => void }) => {
   const { moduleName, declName } = useParams()
-  const isSelected = useMemo(() => moduleName === module.name, [moduleName, module.name])
   const navigate = useNavigate()
+  const isSelected = useMemo(() => moduleName === module.name, [moduleName, module.name])
+  const selectedRef = useRef<DisclosureButton>()
+  const refProp = isSelected ? { ref: selectedRef } : {}
+
+  // Scroll to the selected module on the first page load
+  useEffect(() => selectedRef.current?.scrollIntoView(), [])
+
   return (
     <li key={module.name} id={`module-tree-module-${module.name}`} className='my-2'>
       <Disclosure as='div' defaultOpen={isExpanded}>
         <DisclosureButton
+          {...refProp}
           className={classNames(
             isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
             'group flex w-full modules-center gap-x-2 space-y-1 rounded-md px-2 text-left text-sm font-medium leading-6',
