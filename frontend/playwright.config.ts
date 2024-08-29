@@ -38,6 +38,6 @@ export default defineConfig({
   webServer: {
     command: 'ftl dev --recreate',
     url: 'http://localhost:8892',
-    reuseExistingServer: true,
+    reuseExistingServer: !process.env.CI,
   },
 });
