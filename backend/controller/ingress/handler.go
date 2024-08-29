@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -30,8 +31,8 @@ func Handle(
 	r *http.Request,
 	call func(context.Context, *connect.Request[ftlv1.CallRequest], optional.Option[model.RequestKey], optional.Option[model.RequestKey], string) (*connect.Response[ftlv1.CallResponse], error),
 ) {
-	logger := log.FromContext(r.Context())
-	logger.Debugf("%s %s", r.Method, r.URL.Path)
+	logger := log.FromContext(r.Context()).Scope(fmt.Sprintf("ingress:%s:%s", r.Method, r.URL.Path))
+	logger.Debugf("Start ingress request")
 	route, err := GetIngressRoute(routes, r.Method, r.URL.Path)
 	if err != nil {
 		if errors.Is(err, dalerrs.ErrNotFound) {
