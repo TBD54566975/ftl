@@ -15,7 +15,7 @@ const navigation = [
 export const Navigation = ({ version }: { version?: string }) => {
   return (
     <nav className='bg-indigo-600'>
-      <div className='mx-auto px-4 sm:px-6'>
+      <div className='mx-auto pl-3 pr-4'>
         <div className='flex h-16 items-center justify-between'>
           <div className='flex items-center'>
             <div>
