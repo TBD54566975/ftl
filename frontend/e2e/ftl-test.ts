@@ -7,8 +7,8 @@ const ftlTest = base.extend<{
   page: async ({ page }, use) => {
     await page.goto('http://localhost:8892/modules')
     await page.waitForFunction(() => {
-      const timeItem = document.querySelector('li#module-tree-item-time');
-      const echoItem = document.querySelector('li#module-tree-item-echo');
+      const timeItem = document.querySelector('li#module-tree-module-time');
+      const echoItem = document.querySelector('li#module-tree-module-echo');
       return timeItem !== null && echoItem !== null;
     });
 
