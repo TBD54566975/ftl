@@ -27,6 +27,7 @@ export const CodeEditor = ({
   schema?: string
   readOnly?: boolean
   onChange?: (text: string) => void
+  // A "Reset" button will be shown if and only if this prop is provided.
   defaultContent?: string
 }) => {
   const { isDarkMode } = useUserPreferences()
