@@ -13,18 +13,20 @@ import { githubLight } from '@uiw/codemirror-theme-github'
 import { defaultKeymap, history, indentWithTab, redo, undo } from '@codemirror/commands'
 import { handleRefresh, jsonSchemaHover, jsonSchemaLinter, stateExtensions } from 'codemirror-json-schema'
 import { json5, json5ParseLinter } from 'codemirror-json5'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUserPreferences } from '../providers/user-preferences-provider'
 
-export const CodeEditor = ({ content, schema, readOnly, onChange }: {
+export const CodeEditor = ({ content, schema, readOnly, onChange, defaultContent }: {
   content: string,
   schema?: string,
   readOnly?: boolean,
-  onChange?: (text: string) => void
+  onChange?: (text: string) => void,
+  defaultContent?: string
 }) => {
   const { isDarkMode } = useUserPreferences()
   const containerRef = useRef(null)
   const viewRef = useRef<EditorView | null>(null)
+  const [lastReset, setLastReset] = useState(Date.now())
 
   useEffect(() => {
     const sch = schema ? JSON.parse(schema) : null
@@ -90,7 +92,7 @@ export const CodeEditor = ({ content, schema, readOnly, onChange }: {
       viewRef.current?.destroy()
       viewRef.current = null
     }
-  }, [schema, readOnly, isDarkMode])
+  }, [lastReset, schema, readOnly, isDarkMode])
 
   useEffect(() => {
     if (viewRef.current && viewRef.current.state.doc.toString() !== content) {
@@ -100,5 +102,16 @@ export const CodeEditor = ({ content, schema, readOnly, onChange }: {
     }
   }, [content])
 
-  return <div className='h-full' ref={containerRef} />
+  function onReset() {
+    if (!onChange || !defaultContent) return
+    onChange(defaultContent)
+    setLastReset(Date.now())
+  }
+
+  return (
+    <div className='h-full'>
+      {defaultContent && <div className='absolute z-10 top-2 text-sm px-2 py-0.5 right-4 cursor-pointer shadow-lg rounded-md bg-gray-300 hover:bg-gray-200 dark:bg-gray-900 hover:dark:bg-gray-700' onClick={onReset}>Reset</div>}
+      <div className='h-full' ref={containerRef} />
+    </div>
+  )
 }
