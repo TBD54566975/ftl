@@ -47,6 +47,29 @@ func TestVerbs(t *testing.T) {
 	assert.Equal(t, knockOnEffects["empty"], "test")
 }
 
+func TestContextExtension(t *testing.T) {
+	ctx1 := ftltest.Context(
+		ftltest.WhenSource(Source, func(ctx context.Context) (Response, error) {
+			return Response{Output: "fake"}, nil
+		}),
+	)
+
+	ctx2 := ftltest.SubContext(
+		ctx1,
+		ftltest.WhenSource(Source, func(ctx context.Context) (Response, error) {
+			return Response{Output: "another fake"}, nil
+		}),
+	)
+
+	sourceResp, err := ftl.CallSource(ctx1, Source)
+	assert.NoError(t, err)
+	assert.Equal(t, Response{Output: "fake"}, sourceResp)
+
+	sourceResp, err = ftl.CallSource(ctx2, Source)
+	assert.NoError(t, err)
+	assert.Equal(t, Response{Output: "another fake"}, sourceResp)
+}
+
 func TestVerbErrors(t *testing.T) {
 	ctx := ftltest.Context(
 		ftltest.WhenVerb(Verb, func(ctx context.Context, req Request) (Response, error) {
