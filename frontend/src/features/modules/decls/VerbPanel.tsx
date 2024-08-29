@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '../../../components/Badge'
 import type { Ref, Type, Verb } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { VerbRequestEditor } from './VerbRequestEditor'
 
 const DataRef = ({ heading, r }: { heading: string; r: Ref }) => {
   const navigate = useNavigate()
@@ -62,6 +63,7 @@ export const VerbPanel = ({ value, moduleName, declName }: { value: Verb; module
   return (
     <div className='h-full'>
       <VerbHeader value={value} moduleName={moduleName} declName={declName} />
+      <VerbRequestEditor moduleName={moduleName} v={value} />
     </div>
   )
 }
