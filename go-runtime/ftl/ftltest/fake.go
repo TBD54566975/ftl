@@ -53,6 +53,10 @@ type subscriber func(context.Context, any) error
 type fakeFTL struct {
 	fsm *fakeFSMManager
 
+	// We store the options used to construct this fake, so they can be
+	// replayed to extend the fake with new options
+	options []Option
+
 	mockMaps      map[uintptr]mapImpl
 	allowMapCalls bool
 	configValues  map[string][]byte
@@ -64,13 +68,14 @@ type fakeFTL struct {
 // type but is not constrained by input/output type like ftl.Map.
 type mapImpl func(context.Context) (any, error)
 
-func contextWithFakeFTL(ctx context.Context) context.Context {
+func contextWithFakeFTL(ctx context.Context, options ...Option) context.Context {
 	fake := &fakeFTL{
 		fsm:           newFakeFSMManager(),
 		mockMaps:      map[uintptr]mapImpl{},
 		allowMapCalls: false,
 		configValues:  map[string][]byte{},
 		secretValues:  map[string][]byte{},
+		options:       options,
 	}
 	ctx = internal.WithContext(ctx, fake)
 	fake.pubSub = newFakePubSub(ctx)

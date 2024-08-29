@@ -25,6 +25,9 @@ import (
 	mcu "github.com/TBD54566975/ftl/internal/testutils/modulecontext"
 )
 
+// Allows tests to mock module reflection
+var moduleGetter = reflection.Module
+
 type OptionsState struct {
 	databases               map[string]modulecontext.Database
 	mockVerbs               map[schema.RefKey]modulecontext.Verb
@@ -45,14 +48,18 @@ type Option struct {
 
 // Context suitable for use in testing FTL verbs with provided options
 func Context(options ...Option) context.Context {
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	module := moduleGetter()
+	return newContext(ctx, module, options...)
+}
+
+func newContext(ctx context.Context, module string, options ...Option) context.Context {
 	state := &OptionsState{
 		databases: make(map[string]modulecontext.Database),
 		mockVerbs: make(map[schema.RefKey]modulecontext.Verb),
 	}
 
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	ctx = contextWithFakeFTL(ctx)
-	name := reflection.Module()
+	ctx = contextWithFakeFTL(ctx, options...)
 
 	sort.Slice(options, func(i, j int) bool {
 		return options[i].rank < options[j].rank
@@ -65,9 +72,20 @@ func Context(options ...Option) context.Context {
 		}
 	}
 
-	builder := modulecontext.NewBuilder(name).AddDatabases(state.databases)
+	builder := modulecontext.NewBuilder(module).AddDatabases(state.databases)
 	builder = builder.UpdateForTesting(state.mockVerbs, state.allowDirectVerbBehavior, newFakeLeaseClient())
+
 	return mcu.MakeDynamic(ctx, builder.Build()).ApplyToContext(ctx)
+}
+
+// SubContext applies the given options to the given context, creating a new
+// context extending the previous one.
+//
+// Does not modify the existing context
+func SubContext(ctx context.Context, options ...Option) context.Context {
+	oldFtl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
+	module := moduleGetter()
+	return newContext(ctx, module, append(oldFtl.options, options...)...)
 }
 
 // WithDefaultProjectFile loads config and secrets from the default project
@@ -113,7 +131,7 @@ func WithProjectFile(path string) Option {
 			if err != nil {
 				return fmt.Errorf("could not set up configs: %w", err)
 			}
-			configs, err := cm.MapForModule(ctx, reflection.Module())
+			configs, err := cm.MapForModule(ctx, moduleGetter())
 			if err != nil {
 				return fmt.Errorf("could not read configs: %w", err)
 			}
@@ -129,7 +147,7 @@ func WithProjectFile(path string) Option {
 			if err != nil {
 				return fmt.Errorf("could not set up secrets: %w", err)
 			}
-			secrets, err := sm.MapForModule(ctx, reflection.Module())
+			secrets, err := sm.MapForModule(ctx, moduleGetter())
 			if err != nil {
 				return fmt.Errorf("could not read secrets: %w", err)
 			}
@@ -156,8 +174,8 @@ func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
-			if config.Module != reflection.Module() {
-				return fmt.Errorf("config %v does not match current module %s", config.Module, reflection.Module())
+			if config.Module != moduleGetter() {
+				return fmt.Errorf("config %v does not match current module %s", config.Module, moduleGetter())
 			}
 			fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
 			if err := fftl.setConfig(config.Name, value); err != nil {
@@ -180,8 +198,8 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
-			if secret.Module != reflection.Module() {
-				return fmt.Errorf("secret %v does not match current module %s", secret.Module, reflection.Module())
+			if secret.Module != moduleGetter() {
+				return fmt.Errorf("secret %v does not match current module %s", secret.Module, moduleGetter())
 			}
 			fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
 			if err := fftl.setSecret(secret.Name, value); err != nil {
@@ -205,7 +223,7 @@ func WithDatabase(dbHandle ftl.Database) Option {
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
 			fftl := internal.FromContext(ctx)
-			originalDSN, err := getDSNFromSecret(fftl, reflection.Module(), dbHandle.Name)
+			originalDSN, err := getDSNFromSecret(fftl, moduleGetter(), dbHandle.Name)
 			if err != nil {
 				return err
 			}
