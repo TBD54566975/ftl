@@ -19,9 +19,13 @@ top = false
 
 Some aspects of FTL rely on a runtime which must be imported with:
 
+<!-- go -->
+
 ```go
 import "github.com/TBD54566975/ftl/go-runtime/ftl"
 ```
+
+<!-- kotlin -->
 
 ```kotlin
 // Declare a verb you want to use:

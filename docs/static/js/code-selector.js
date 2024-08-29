@@ -23,12 +23,6 @@ function injectTabs(codeSelector) {
         currentLang = lang;
         toAdd = { lang, element };
       }
-    } else if (element.tagName === "PRE") {
-      // pre with data-lang attribute
-      const lang = element.getAttribute("data-lang");
-      // code blocks reset the currentLang.
-      currentLang = null;
-      toAdd = { lang, element };
     } else if (currentLang) {
       // if we are in a currentLang, then add the element to it.
       toAdd = { lang: currentLang, element };

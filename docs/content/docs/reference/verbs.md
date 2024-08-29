@@ -20,17 +20,9 @@ top = false
 <!-- go -->
 To declare a Verb, write a normal Go function with the following signature, annotated with the Go [comment directive](https://tip.golang.org/doc/comment#syntax) `//ftl:verb`:
 
-<!-- kotlin -->
-To declare a Verb, write a normal Kotlin function with the following signature, annotated with the Kotlin [annotation](https://kotlinlang.org/docs/annotations.html) `@Verb`:
-
 ```go
 //ftl:verb
 func F(context.Context, In) (Out, error) { }
-```
-
-```kotlin
-@Verb
-fun F(Context, In): Out { }
 ```
 
 eg.
@@ -46,6 +38,16 @@ func Echo(ctx context.Context, in EchoRequest) (EchoResponse, error) {
 }
 ```
 
+<!-- kotlin -->
+To declare a Verb, write a normal Kotlin function with the following signature, annotated with the Kotlin [annotation](https://kotlinlang.org/docs/annotations.html) `@Verb`:
+
+```kotlin
+@Verb
+fun F(Context, In): Out { }
+```
+
+eg.
+
 ```kotlin
 data class EchoRequest
 data class EchoResponse
@@ -56,9 +58,9 @@ fun echo(ctx: Context, request: EchoRequest): EchoResponse {
 }
 ```
 
-By default verbs are only [visible](../visibility) to other verbs in the same module.
-
 {% end %}
+
+By default verbs are only [visible](../visibility) to other verbs in the same module.
 
 ## Calling Verbs
 
