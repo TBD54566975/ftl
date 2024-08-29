@@ -47,13 +47,31 @@ func Defaulted(ctx context.Context, in Timeout) error { /* ... */ }
 
 ## Creating and transitioning instances
 
-To send an event to an fsm instance, call `Send()` on the FSM with the instance's unique key:
+To send an event to an fsm instance, call `Send()` on the FSM with the instance's unique key. The first time you send an event for an instance key, an fsm instance will be created. 
+
+An example of creating an FSM instance and then transitioning it through it's states is shown below:
 
 ```go
-err := payment.Send(ctx, invoiceID, Invoice{Amount: 110})
+err := payment.Send(ctx, invoiceID, Invoice {Amount: 110})
+err = payment.Send(ctx, invoiceID, Recipt {Amount: 110})
 ```
 
-The first time you send an event for an instance key, an fsm instance will be created.
+When an event is sent to the FSM the method to be called is determined by matching the current state and event payload
+type to methods that can transition from the current state and have the same payload type. In the example above the first
+`Send` call will created the FSM, and will call the `Invoiced` method as it is a start state and takes an `Invoice` as
+payload. The second `Send` call will call the `Paid` method as it is a transition from the `Invoiced` state and takes a
+`Receipt` as payload. If the second call had sent a `Timeout` instead of a `Receipt` the FSM would have called the `Defaulted`
+method instead.
+
+It is important to note that in this model the methods both represent a state, and a way to transition into that
+state. This means when a method is invoked it always moves to the corresponding state, consider the following example:
+
+```go
+err := payment.Send(ctx, invoiceID, Invoice {Amount: 110})
+err = payment.Send(ctx, invoiceID, Recipt {Amount: 20})
+```
+
+In this case it would still moved to the `Paid` state even though the customer only paid 20 of the 110.
 
 Sending an event to an FSM is asynchronous. From the time an event is sent until the state function completes execution, the FSM is transitioning. It is invalid to send an event to an FSM that is transitioning.
 
