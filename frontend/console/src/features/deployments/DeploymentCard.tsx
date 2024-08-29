@@ -20,7 +20,7 @@ export const DeploymentCard = ({ deploymentKey, className }: { deploymentKey: st
   }, [modules.data])
 
   return (
-    <Card key={deploymentKey} topBarColor='bg-green-500' className={className} onClick={() => navigate(`/deployments/${deploymentKey}`)}>
+    <Card key={deploymentKey} topBarColor='bg-green-500' className={className} onClick={() => navigate(`/modules/${module?.name}`)}>
       <div className='flex flex-col'>
         <div className='flex items-center'>
           <p className={`truncate flex-grow min-w-0 pr-2 ${deploymentTextColor(deploymentKey)}`}>{deploymentKey}</p>

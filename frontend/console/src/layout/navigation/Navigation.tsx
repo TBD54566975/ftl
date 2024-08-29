@@ -6,7 +6,6 @@ import { Version } from './Version'
 
 const navigation = [
   { name: 'Events', href: '/events', icon: ListBulletIcon },
-  { name: 'Deployments', href: '/deployments', icon: Square3Stack3DIcon },
   { name: 'Modules', href: '/modules', icon: Square3Stack3DIcon },
   { name: 'Graph', href: '/graph', icon: CubeTransparentIcon },
   { name: 'Infrastructure', href: '/infrastructure', icon: ServerStackIcon },
