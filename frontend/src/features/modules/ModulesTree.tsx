@@ -72,7 +72,7 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
   const { moduleName, declName } = useParams()
   const navigate = useNavigate()
   const isSelected = useMemo(() => moduleName === module.name, [moduleName, module.name])
-  const selectedRef = useRef<DisclosureButton>()
+  const selectedRef = useRef<HTMLButtonElement>(null)
   const refProp = isSelected ? { ref: selectedRef } : {}
 
   // Scroll to the selected module on the first page load
