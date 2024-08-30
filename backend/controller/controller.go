@@ -1856,7 +1856,7 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 		return err
 	}
 	initialCount := len(seedDeployments)
-	deploymentChanges := make(chan dal.DeploymentNotification, len(seedDeployments))
+	deploymentChanges := make(chan dal.DeploymentNotification, 32)
 	for _, deployment := range seedDeployments {
 		deploymentChanges <- dal.DeploymentNotification{Message: optional.Some(deployment)}
 	}
