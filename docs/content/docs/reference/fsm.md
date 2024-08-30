@@ -53,7 +53,7 @@ An example of creating an FSM instance and then transitioning it through it's st
 
 ```go
 err := payment.Send(ctx, invoiceID, Invoice {Amount: 110})
-err = payment.Send(ctx, invoiceID, Recipt {Amount: 110})
+err = payment.Send(ctx, invoiceID, Receipt {Amount: 110})
 ```
 
 When an event is sent to the FSM the method to be called is determined by matching the current state and event payload
@@ -68,7 +68,7 @@ state. This means when a method is invoked it always moves to the corresponding 
 
 ```go
 err := payment.Send(ctx, invoiceID, Invoice {Amount: 110})
-err = payment.Send(ctx, invoiceID, Recipt {Amount: 20})
+err = payment.Send(ctx, invoiceID, Receipt {Amount: 20})
 ```
 
 In this case it would still moved to the `Paid` state even though the customer only paid 20 of the 110.
