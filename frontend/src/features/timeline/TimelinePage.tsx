@@ -7,11 +7,13 @@ import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { Timeline } from './Timeline'
 import { TimelineFilterPanel } from './filters/TimelineFilterPanel'
 import { TIME_RANGES, type TimeSettings, TimelineTimeControls } from './filters/TimelineTimeControls'
+import { filtersFromSearchParams } from './filters/filter.utils'
 
 export const TimelinePage = () => {
   const [searchParams] = useSearchParams()
   const [timeSettings, setTimeSettings] = useState<TimeSettings>({ isTailing: true, isPaused: false })
-  const [filters, setFilters] = useState<EventsQuery_Filter[]>([])
+  const [filters, setFilters] = useState<EventsQuery_Filter[]>(filtersFromSearchParams(searchParams))
+  console.log('TimelinePage', filters)
   const [selectedTimeRange, setSelectedTimeRange] = useState(TIME_RANGES.tail)
   const [isTimelinePaused, setIsTimelinePaused] = useState(false)
 

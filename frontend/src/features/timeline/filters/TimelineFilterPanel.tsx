@@ -1,6 +1,7 @@
 import { PhoneIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
 import type React from 'react'
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useModules } from '../../../api/modules/use-modules'
 import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../api/timeline'
 import { EventType, type EventsQuery_Filter, LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
@@ -8,26 +9,12 @@ import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
 import { logLevelBgColor, logLevelColor, logLevelRingColor } from '../../logs/log.utils'
 import { FilterPanelSection } from './FilterPanelSection'
+import { EVENT_TYPES, getSelectedEventTypesFromParam, getSelectedLogLevelFromParam, setFilterOnSearchParamObj } from './filter.utils'
 
 interface EventFilter {
   label: string
   type: EventType
   icon: React.ReactNode
-}
-
-const EVENT_TYPES: Record<string, EventFilter> = {
-  call: { label: 'Call', type: EventType.CALL, icon: <PhoneIcon className='w-4 h-4 text-indigo-600 ml-1' /> },
-  log: { label: 'Log', type: EventType.LOG, icon: <LogLevelBadgeSmall logLevel={LogLevel.INFO} /> },
-  deploymentCreated: {
-    label: 'Deployment Created',
-    type: EventType.DEPLOYMENT_CREATED,
-    icon: <RocketLaunchIcon className='w-4 h-4 text-green-500 ml-1' />,
-  },
-  deploymentUpdated: {
-    label: 'Deployment Updated',
-    type: EventType.DEPLOYMENT_UPDATED,
-    icon: <RocketLaunchIcon className='w-4 h-4 text-indigo-600 ml-1' />,
-  },
 }
 
 const LOG_LEVELS: Record<number, string> = {
@@ -38,16 +25,20 @@ const LOG_LEVELS: Record<number, string> = {
   17: 'Error',
 }
 
+const defaultLogLevel = LogLevel.TRACE
+
 export const TimelineFilterPanel = ({
   onFiltersChanged,
 }: {
   onFiltersChanged: (filters: EventsQuery_Filter[]) => void
 }) => {
   const modules = useModules()
-  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(Object.keys(EVENT_TYPES))
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(getSelectedEventTypesFromParam(searchParams, Object.keys(EVENT_TYPES)))
   const [selectedModules, setSelectedModules] = useState<string[]>([])
   const [previousModules, setPreviousModules] = useState<string[]>([])
-  const [selectedLogLevel, setSelectedLogLevel] = useState<number>(1)
+  //const [selectedLogLevel, setSelectedLogLevel] = useState<number>(getSelectedLogLevelFromParam(searchParams, defaultLogLevel))
+  const [selectedLogLevel, setSelectedLogLevel] = useState<number>(defaultLogLevel)
 
   useEffect(() => {
     if (!modules.isSuccess || modules.data.modules.length === 0) {
@@ -66,7 +57,6 @@ export const TimelineFilterPanel = ({
     const filter: EventsQuery_Filter[] = []
     if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
       const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)
-
       filter.push(eventTypesFilter(selectedTypes))
     }
     if (selectedLogLevel !== LogLevel.TRACE) {
@@ -75,7 +65,16 @@ export const TimelineFilterPanel = ({
 
     filter.push(modulesFilter(selectedModules))
 
+    console.log('onFiltersChanged', filter)
     onFiltersChanged(filter)
+
+    const searchParams2 = setFilterOnSearchParamObj(searchParams, 'eventTypes', selectedEventTypes, Object.keys(EVENT_TYPES).length)
+    if (selectedLogLevel !== defaultLogLevel) {
+      searchParams2.set('logLevel', selectedLogLevel)
+    } else {
+      searchParams2.delete('logLevel')
+    }
+    setSearchParams(searchParams2)
   }, [selectedEventTypes, selectedLogLevel, selectedModules])
 
   const handleTypeChanged = (eventType: string, checked: boolean) => {
@@ -95,6 +94,7 @@ export const TimelineFilterPanel = ({
   }
 
   const handleLogLevelChanged = (logLevel: string) => {
+    console.log('handleLogLevelChanged', Number(logLevel))
     setSelectedLogLevel(Number(logLevel))
   }
 
