@@ -20,6 +20,7 @@ export const ModulesPage = ({ body }: { body: React.ReactNode }) => {
   const tree = useMemo(() => moduleTreeFromSchema(schema?.data || []), [schema?.data])
   const [treeWidth, setTreeWidth] = useState(Number(localStorage.getItem(treeWidthStorageKey)) || 300)
 
+  console.log('schema', schema)
   function setTreeWidthWithLS(newWidth: number) {
     localStorage.setItem(treeWidthStorageKey, `${newWidth}`)
     setTreeWidth(newWidth)
