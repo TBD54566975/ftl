@@ -15,7 +15,7 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: |
-          docker build -t ftl0/ftl-runner:"$GITHUB_SHA" -t ftl0/ftl-runner:latest -f Dockerfile.runner .
+          just build-docker runner
           mkdir -p artifacts/ftl-runner
           docker save -o artifacts/ftl-runner/ftl-runner.tar ftl0/ftl-runner:latest
       - name: Temporarily save Docker image
@@ -34,7 +34,7 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: |
-          docker build -t ftl0/ftl-controller:"$GITHUB_SHA" -t ftl0/ftl-controller:latest -f Dockerfile.controller .
+          just build-docker controller
           mkdir -p artifacts/ftl-controller
           docker save -o artifacts/ftl-controller/ftl-controller.tar ftl0/ftl-controller:latest
       - name: Temporarily save Docker image
@@ -53,7 +53,7 @@ jobs:
         uses: cashapp/activate-hermit@v1
       - name: Build
         run: |
-          docker build -t ftl0/ftl-box:"$GITHUB_SHA" -t ftl0/ftl-box:latest -f Dockerfile.box .
+          just build-docker box
           mkdir -p artifacts/ftl-box
           docker save -o artifacts/ftl-box/ftl-box.tar ftl0/ftl-box:latest
       - name: Temporarily save Docker image
@@ -163,6 +163,8 @@ jobs:
           git push origin main
   vscode-release:
     name: Release VSCode Extension
+    # Disabled for now as it's broken.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

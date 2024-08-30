@@ -201,8 +201,6 @@ debug *args:
 # `just otel-dev` with any args you would pass to `ftl dev`. To stop the otel stream, run
 # `just otel-stop` in a third terminal tab.
 otel-stream:
-  #!/bin/bash
-
   docker run \
     -p ${OTEL_GRPC_PORT}:${OTEL_GRPC_PORT} \
     -p 55679:55679 \
@@ -218,6 +216,7 @@ otel-stop:
 # Run `ftl dev` with the given args after setting the necessary envar.
 otel-dev *args:
   #!/bin/bash
+  set -euo pipefail
 
   export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${OTEL_GRPC_PORT}"
   export OTEL_METRIC_EXPORT_INTERVAL=${OTEL_METRIC_EXPORT_INTERVAL}
@@ -240,3 +239,7 @@ grafana-stop:
 storybook:
   #!/bin/bash
   cd frontend && pnpm run storybook
+
+# Build an FTL Docker image.
+build-docker name:
+  docker build --platform linux/amd64 -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" -t ftl0/ftl-{{name}}:latest -f Dockerfile.{{name}} .
