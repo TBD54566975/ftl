@@ -154,8 +154,8 @@ jobs:
       - name: VSCode extension lint
         working-directory: extensions/vscode
         run: pnpm run lint
-      - name: VSCode extension pnpm build
-        run: just build-extension
+      - name: VSCode extension pnpm build and package
+        run: just package-extension
   plugin:
     name: Intellij Plugin
     if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')

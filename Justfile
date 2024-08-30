@@ -95,11 +95,11 @@ install-extension: build-extension
 
 # Build and package the VSCode extension
 package-extension: build-extension
-  @cd extensions/vscode && vsce package
+  @cd extensions/vscode && vsce package --no-dependencies
 
 # Publish the VSCode extension
 publish-extension: package-extension
-  @cd extensions/vscode && vsce publish
+  @cd extensions/vscode && vsce publish --no-dependencies
 
 build-intellij-plugin:
   @cd extensions/intellij && gradle buildPlugin
