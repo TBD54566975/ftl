@@ -164,6 +164,7 @@ jobs:
   vscode-release:
     name: Release VSCode Extension
     runs-on: ubuntu-latest
+    if: false # Disabled until we figure out pnpm issues...
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
