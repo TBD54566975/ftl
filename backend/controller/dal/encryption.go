@@ -7,7 +7,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -62,7 +62,7 @@ func (d *DAL) EnsureKey(ctx context.Context, generateKey func() ([]byte, error))
 
 	var key []byte
 	row, err := tx.db.GetOnlyEncryptionKey(ctx)
-	if err != nil && dal.IsNotFound(err) {
+	if err != nil && libdal.IsNotFound(err) {
 		logger.Debugf("No encryption key found, generating a new one")
 		key, err = generateKey()
 		if err != nil {
@@ -94,7 +94,7 @@ func (d *DAL) verifyEncryptor(ctx context.Context, encryptor encryption.DataEncr
 
 	row, err := tx.db.GetOnlyEncryptionKey(ctx)
 	if err != nil {
-		if dal.IsNotFound(err) {
+		if libdal.IsNotFound(err) {
 			// No encryption key found, probably using noop.
 			return nil
 		}

@@ -8,18 +8,16 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
-	"github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	cfdal "github.com/TBD54566975/ftl/internal/configuration/dal"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
 )
@@ -56,9 +54,7 @@ func main() {
 	conn, err := observability.OpenDBAndInstrument(cli.ControllerConfig.DSN)
 	kctx.FatalIfErrorf(err)
 
-	encryptionBuilder := encryption.NewBuilder().WithKMSURI(optional.Ptr(cli.ControllerConfig.KMSURI))
-	kctx.FatalIfErrorf(err)
-	dal, err := dal.New(ctx, conn, encryptionBuilder)
+	dal := leasesdal.New(conn)
 	kctx.FatalIfErrorf(err)
 
 	configDal := cfdal.New(conn)

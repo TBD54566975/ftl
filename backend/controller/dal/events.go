@@ -11,7 +11,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -262,7 +262,7 @@ func (d *DAL) QueryTimeline(ctx context.Context, limit int, filters ...TimelineF
 	}
 	rows, err := d.Handle.Connection.QueryContext(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, libdal.TranslatePGError(err)
 	}
 	defer rows.Close() // nolint:errcheck
 	deploymentIDs := []int64{}
@@ -318,7 +318,7 @@ func (d *DAL) QueryTimeline(ctx context.Context, limit int, filters ...TimelineF
 	// Issue query.
 	rows, err = d.Handle.Connection.QueryContext(ctx, q, args...)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", q, dalerrs.TranslatePGError(err))
+		return nil, fmt.Errorf("%s: %w", q, libdal.TranslatePGError(err))
 	}
 	defer rows.Close()
 

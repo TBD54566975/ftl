@@ -13,7 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
 )
@@ -56,7 +56,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanc
 	})
 	observability.AsyncCalls.Created(ctx, destinationState, retryParams.Catch, origin.String(), int64(retryParams.Count), err)
 	if err != nil {
-		return fmt.Errorf("failed to create FSM async call: %w", dalerrs.TranslatePGError(err))
+		return fmt.Errorf("failed to create FSM async call: %w", libdal.TranslatePGError(err))
 	}
 	queueDepth, err := d.db.AsyncCallQueueDepth(ctx)
 	if err == nil {
@@ -73,9 +73,9 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanc
 		AsyncCallID:      asyncCallID,
 	})
 	if err != nil {
-		err = dalerrs.TranslatePGError(err)
-		if errors.Is(err, dalerrs.ErrNotFound) {
-			return fmt.Errorf("transition already executing: %w", dalerrs.ErrConflict)
+		err = libdal.TranslatePGError(err)
+		if errors.Is(err, libdal.ErrNotFound) {
+			return fmt.Errorf("transition already executing: %w", libdal.ErrConflict)
 		}
 		return fmt.Errorf("failed to start FSM transition: %w", err)
 	}
@@ -91,7 +91,7 @@ func (d *DAL) FinishFSMTransition(ctx context.Context, instance *FSMInstance) (*
 	_, err := d.db.FinishFSMTransition(ctx, instance.FSM, instance.Key)
 	observability.FSM.TransitionCompleted(ctx, instance.FSM)
 	if err != nil {
-		return nil, dalerrs.TranslatePGError(err)
+		return nil, libdal.TranslatePGError(err)
 	}
 	return &FSMInstance{
 		Lease:            instance.Lease,
@@ -106,19 +106,19 @@ func (d *DAL) FinishFSMTransition(ctx context.Context, instance *FSMInstance) (*
 func (d *DAL) FailFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.FailFSMInstance(ctx, fsm, instanceKey)
 	observability.FSM.InstanceCompleted(ctx, fsm)
-	return dalerrs.TranslatePGError(err)
+	return libdal.TranslatePGError(err)
 }
 
 func (d *DAL) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) error {
 	_, err := d.db.SucceedFSMInstance(ctx, fsm, instanceKey)
 	observability.FSM.InstanceCompleted(ctx, fsm)
-	return dalerrs.TranslatePGError(err)
+	return libdal.TranslatePGError(err)
 }
 
 func (d *DAL) GetFSMStates(ctx context.Context, fsm schema.RefKey, instanceKey string) (currentState, destinationState optional.Option[schema.RefKey], err error) {
 	instance, err := d.db.GetFSMInstance(ctx, fsm, instanceKey)
 	if err != nil {
-		return optional.None[schema.RefKey](), optional.None[schema.RefKey](), dalerrs.TranslatePGError(err)
+		return optional.None[schema.RefKey](), optional.None[schema.RefKey](), libdal.TranslatePGError(err)
 	}
 	return instance.CurrentState, instance.DestinationState, nil
 }
@@ -133,8 +133,8 @@ type NextFSMEvent struct {
 func (d *DAL) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (optional.Option[NextFSMEvent], error) {
 	next, err := d.db.PopNextFSMEvent(ctx, fsm, instanceKey)
 	if err != nil {
-		err = dalerrs.TranslatePGError(err)
-		if errors.Is(err, dalerrs.ErrNotFound) {
+		err = libdal.TranslatePGError(err)
+		if errors.Is(err, libdal.ErrNotFound) {
 			return optional.None[NextFSMEvent](), nil
 		}
 		return optional.None[NextFSMEvent](), err
@@ -157,11 +157,9 @@ func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKe
 		InstanceKey: instanceKey,
 		Event:       nextState,
 		Request:     encryptedRequest,
-		RequestType: sql.Type{
-			Type: requestType,
-		},
+		RequestType: sqltypes.Type{Type: requestType},
 	})
-	return dalerrs.TranslatePGError(err)
+	return libdal.TranslatePGError(err)
 }
 
 type FSMStatus = sql.FsmStatus
@@ -187,14 +185,14 @@ type FSMInstance struct {
 //
 // The lease must be released by the caller.
 func (d *DAL) AcquireFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) (*FSMInstance, error) {
-	lease, _, err := d.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
+	lease, _, err := d.leasedal.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire FSM lease: %w", err)
 	}
 	row, err := d.db.GetFSMInstance(ctx, fsm, instanceKey)
 	if err != nil {
-		err = dalerrs.TranslatePGError(err)
-		if !errors.Is(err, dalerrs.ErrNotFound) {
+		err = libdal.TranslatePGError(err)
+		if !errors.Is(err, libdal.ErrNotFound) {
 			return nil, err
 		}
 		row.Status = sql.FsmStatusRunning

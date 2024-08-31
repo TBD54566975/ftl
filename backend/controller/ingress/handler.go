@@ -13,7 +13,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -35,7 +35,7 @@ func Handle(
 	logger.Debugf("Start ingress request")
 	route, err := GetIngressRoute(routes, r.Method, r.URL.Path)
 	if err != nil {
-		if errors.Is(err, dalerrs.ErrNotFound) {
+		if errors.Is(err, libdal.ErrNotFound) {
 			http.NotFound(w, r)
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), startTime, optional.Some("route not found"))
 			return

@@ -368,23 +368,6 @@ func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (in
 	return count, err
 }
 
-const expireLeases = `-- name: ExpireLeases :one
-WITH expired AS (
-    DELETE FROM leases
-    WHERE expires_at < NOW() AT TIME ZONE 'utc'
-    RETURNING 1
-)
-SELECT COUNT(*)
-FROM expired
-`
-
-func (q *Queries) ExpireLeases(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, expireLeases)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const expireRunnerReservations = `-- name: ExpireRunnerReservations :one
 WITH rows AS (
     UPDATE runners
@@ -1247,22 +1230,6 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIng
 		return nil, err
 	}
 	return items, nil
-}
-
-const getLeaseInfo = `-- name: GetLeaseInfo :one
-SELECT expires_at, metadata FROM leases WHERE key = $1::lease_key
-`
-
-type GetLeaseInfoRow struct {
-	ExpiresAt time.Time
-	Metadata  pqtype.NullRawMessage
-}
-
-func (q *Queries) GetLeaseInfo(ctx context.Context, key leases.Key) (GetLeaseInfoRow, error) {
-	row := q.db.QueryRowContext(ctx, getLeaseInfo, key)
-	var i GetLeaseInfoRow
-	err := row.Scan(&i.ExpiresAt, &i.Metadata)
-	return i, err
 }
 
 const getModulesByID = `-- name: GetModulesByID :many
@@ -2249,29 +2216,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 	return i, err
 }
 
-const newLease = `-- name: NewLease :one
-INSERT INTO leases (
-  idempotency_key,
-  key,
-  expires_at,
-  metadata
-)
-VALUES (
-  gen_random_uuid(),
-  $1::lease_key,
-  (NOW() AT TIME ZONE 'utc') + $2::interval,
-  $3::JSONB
-)
-RETURNING idempotency_key
-`
-
-func (q *Queries) NewLease(ctx context.Context, key leases.Key, ttl sqltypes.Duration, metadata pqtype.NullRawMessage) (uuid.UUID, error) {
-	row := q.db.QueryRowContext(ctx, newLease, key, ttl, metadata)
-	var idempotency_key uuid.UUID
-	err := row.Scan(&idempotency_key)
-	return idempotency_key, err
-}
-
 const popNextFSMEvent = `-- name: PopNextFSMEvent :one
 DELETE FROM fsm_next_event
 WHERE fsm_instance_id = (
@@ -2344,33 +2288,6 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 	return err
 }
 
-const releaseLease = `-- name: ReleaseLease :one
-DELETE FROM leases
-WHERE idempotency_key = $1 AND key = $2::lease_key
-RETURNING true
-`
-
-func (q *Queries) ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
-	row := q.db.QueryRowContext(ctx, releaseLease, idempotencyKey, key)
-	var column_1 bool
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const renewLease = `-- name: RenewLease :one
-UPDATE leases
-SET expires_at = (NOW() AT TIME ZONE 'utc') + $1::interval
-WHERE idempotency_key = $2 AND key = $3::lease_key
-RETURNING true
-`
-
-func (q *Queries) RenewLease(ctx context.Context, ttl sqltypes.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error) {
-	row := q.db.QueryRowContext(ctx, renewLease, ttl, idempotencyKey, key)
-	var column_1 bool
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const reserveRunner = `-- name: ReserveRunner :one
 UPDATE runners
 SET state               = 'reserved',
@@ -2436,7 +2353,7 @@ type SetNextFSMEventParams struct {
 	InstanceKey string
 	Event       schema.RefKey
 	Request     []byte
-	RequestType Type
+	RequestType sqltypes.Type
 }
 
 func (q *Queries) SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error) {

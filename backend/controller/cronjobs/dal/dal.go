@@ -9,21 +9,21 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
-	"github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type DAL struct {
-	*dal.Handle[DAL]
+	*libdal.Handle[DAL]
 	db sql.Querier
 }
 
-func New(conn dal.Connection) *DAL {
+func New(conn libdal.Connection) *DAL {
 	return &DAL{
 		db: sql.New(conn),
-		Handle: dal.New(conn, func(h *dal.Handle[DAL]) *DAL {
+		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{Handle: h, db: sql.New(h.Connection)}
 		}),
 	}
@@ -45,7 +45,7 @@ func cronJobFromRow(c sql.CronJob, d sql.Deployment) model.CronJob {
 func (d *DAL) CreateAsyncCall(ctx context.Context, params sql.CreateAsyncCallParams) (int64, error) {
 	id, err := d.db.CreateAsyncCall(ctx, params)
 	if err != nil {
-		return 0, fmt.Errorf("failed to create async call: %w", dal.TranslatePGError(err))
+		return 0, fmt.Errorf("failed to create async call: %w", libdal.TranslatePGError(err))
 	}
 	observability.AsyncCalls.Created(ctx, params.Verb, optional.None[schema.RefKey](), params.Origin, 0, err)
 	queueDepth, err := d.db.AsyncCallQueueDepth(ctx)
@@ -62,7 +62,7 @@ func (d *DAL) CreateAsyncCall(ctx context.Context, params sql.CreateAsyncCallPar
 func (d *DAL) GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]model.CronJob, error) {
 	rows, err := d.db.GetUnscheduledCronJobs(ctx, startTime)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cron jobs: %w", dal.TranslatePGError(err))
+		return nil, fmt.Errorf("failed to get cron jobs: %w", libdal.TranslatePGError(err))
 	}
 	return slices.Map(rows, func(r sql.GetUnscheduledCronJobsRow) model.CronJob {
 		return cronJobFromRow(r.CronJob, r.Deployment)
@@ -73,7 +73,7 @@ func (d *DAL) GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) (
 func (d *DAL) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (model.CronJob, error) {
 	row, err := d.db.GetCronJobByKey(ctx, key)
 	if err != nil {
-		return model.CronJob{}, fmt.Errorf("failed to get cron job %q: %w", key, dal.TranslatePGError(err))
+		return model.CronJob{}, fmt.Errorf("failed to get cron job %q: %w", key, libdal.TranslatePGError(err))
 	}
 	return cronJobFromRow(row.CronJob, row.Deployment), nil
 }
@@ -82,7 +82,7 @@ func (d *DAL) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (model.
 func (d *DAL) IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error) {
 	pending, err := d.db.IsCronJobPending(ctx, key, startTime)
 	if err != nil {
-		return false, fmt.Errorf("failed to check if cron job %q is pending: %w", key, dal.TranslatePGError(err))
+		return false, fmt.Errorf("failed to check if cron job %q is pending: %w", key, libdal.TranslatePGError(err))
 	}
 	return pending, nil
 }
@@ -92,7 +92,7 @@ func (d *DAL) IsCronJobPending(ctx context.Context, key model.CronJobKey, startT
 func (d *DAL) UpdateCronJobExecution(ctx context.Context, params sql.UpdateCronJobExecutionParams) error {
 	err := d.db.UpdateCronJobExecution(ctx, params)
 	if err != nil {
-		return fmt.Errorf("failed to update cron job %q: %w", params.Key, dal.TranslatePGError(err))
+		return fmt.Errorf("failed to update cron job %q: %w", params.Key, libdal.TranslatePGError(err))
 	}
 	return nil
 }

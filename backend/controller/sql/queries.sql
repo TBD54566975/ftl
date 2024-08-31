@@ -432,84 +432,6 @@ INSERT INTO timeline (deployment_id, request_id, parent_request_id, type,
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id;
 
--- name: NewLease :one
-INSERT INTO leases (
-  idempotency_key,
-  key,
-  expires_at,
-  metadata
-)
-VALUES (
-  gen_random_uuid(),
-  @key::lease_key,
-  (NOW() AT TIME ZONE 'utc') + @ttl::interval,
-  sqlc.narg('metadata')::JSONB
-)
-RETURNING idempotency_key;
-
--- name: RenewLease :one
-UPDATE leases
-SET expires_at = (NOW() AT TIME ZONE 'utc') + @ttl::interval
-WHERE idempotency_key = @idempotency_key AND key = @key::lease_key
-RETURNING true;
-
--- name: ReleaseLease :one
-DELETE FROM leases
-WHERE idempotency_key = @idempotency_key AND key = @key::lease_key
-RETURNING true;
-
--- name: ExpireLeases :one
-WITH expired AS (
-    DELETE FROM leases
-    WHERE expires_at < NOW() AT TIME ZONE 'utc'
-    RETURNING 1
-)
-SELECT COUNT(*)
-FROM expired;
-
--- name: GetLeaseInfo :one
-SELECT expires_at, metadata FROM leases WHERE key = @key::lease_key;
-
--- name: AcquireAsyncCall :one
--- Reserve a pending async call for execution, returning the associated lease
--- reservation key and accompanying metadata.
-WITH pending_calls AS (
-  SELECT id
-  FROM async_calls
-  WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
-  ORDER BY created_at
-), async_call AS (
-  SELECT id
-  FROM pending_calls
-  LIMIT 1
-  FOR UPDATE SKIP LOCKED
-), lease AS (
-  INSERT INTO leases (idempotency_key, key, expires_at)
-  SELECT gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + @ttl::interval
-  WHERE (SELECT id FROM async_call) IS NOT NULL
-  RETURNING *
-)
-UPDATE async_calls
-SET state = 'executing', lease_id = (SELECT id FROM lease)
-WHERE id = (SELECT id FROM async_call)
-RETURNING
-  id AS async_call_id,
-  (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
-  (SELECT key FROM lease) AS lease_key,
-  (SELECT count(*) FROM pending_calls) AS queue_depth,
-  origin,
-  verb,
-  catch_verb,
-  request,
-  scheduled_at,
-  remaining_attempts,
-  error,
-  backoff,
-  max_backoff,
-  parent_request_key,
-  trace_context,
-  catching;
-
 -- name: SucceedAsyncCall :one
 UPDATE async_calls
 SET
@@ -892,3 +814,43 @@ UPDATE encryption_keys
 SET verify_timeline = $1,
     verify_async = $2
 WHERE id = 1;
+
+-- name: AcquireAsyncCall :one
+-- Reserve a pending async call for execution, returning the associated lease
+-- reservation key and accompanying metadata.
+WITH pending_calls AS (
+  SELECT id
+  FROM async_calls
+  WHERE state = 'pending' AND scheduled_at <= (NOW() AT TIME ZONE 'utc')
+  ORDER BY created_at
+), async_call AS (
+  SELECT id
+  FROM pending_calls
+  LIMIT 1
+  FOR UPDATE SKIP LOCKED
+), lease AS (
+  INSERT INTO leases (idempotency_key, key, expires_at)
+  SELECT gen_random_uuid(), '/system/async_call/' || (SELECT id FROM async_call), (NOW() AT TIME ZONE 'utc') + @ttl::interval
+  WHERE (SELECT id FROM async_call) IS NOT NULL
+  RETURNING *
+)
+UPDATE async_calls
+SET state = 'executing', lease_id = (SELECT id FROM lease)
+WHERE id = (SELECT id FROM async_call)
+RETURNING
+  id AS async_call_id,
+  (SELECT idempotency_key FROM lease) AS lease_idempotency_key,
+  (SELECT key FROM lease) AS lease_key,
+  (SELECT count(*) FROM pending_calls) AS queue_depth,
+  origin,
+  verb,
+  catch_verb,
+  request,
+  scheduled_at,
+  remaining_attempts,
+  error,
+  backoff,
+  max_backoff,
+  parent_request_key,
+  trace_context,
+  catching;

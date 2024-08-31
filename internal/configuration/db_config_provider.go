@@ -6,7 +6,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 )
 
 // DBConfigProvider is a configuration provider that stores configuration in its key.
@@ -34,7 +34,7 @@ func (DBConfigProvider) Key() string         { return "db" }
 func (d DBConfigProvider) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
 	value, err := d.dal.GetModuleConfiguration(ctx, ref.Module, ref.Name)
 	if err != nil {
-		return nil, dalerrs.ErrNotFound
+		return nil, libdal.ErrNotFound
 	}
 	return value, nil
 }

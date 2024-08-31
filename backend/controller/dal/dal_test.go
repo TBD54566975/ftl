@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	dalerrs "github.com/TBD54566975/ftl/backend/dal"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
@@ -90,7 +90,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetMissingDeployment", func(t *testing.T) {
 		_, err := dal.GetDeployment(ctx, model.NewDeploymentKey("invalid"))
-		assert.IsError(t, err, dalerrs.ErrNotFound)
+		assert.IsError(t, err, libdal.ErrNotFound)
 	})
 
 	t.Run("GetMissingArtefacts", func(t *testing.T) {
@@ -121,7 +121,7 @@ func TestDAL(t *testing.T) {
 			State:    RunnerStateIdle,
 		})
 		assert.Error(t, err)
-		assert.IsError(t, err, dalerrs.ErrConflict)
+		assert.IsError(t, err, libdal.ErrConflict)
 	})
 
 	t.Run("GetIdleRunnersForLanguage", func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestDAL(t *testing.T) {
 	t.Run("ReserveRunnerForInvalidDeployment", func(t *testing.T) {
 		_, err := dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey("invalid"), time.Second, labels)
 		assert.Error(t, err)
-		assert.IsError(t, err, dalerrs.ErrNotFound)
+		assert.IsError(t, err, libdal.ErrNotFound)
 		assert.EqualError(t, err, "deployment: not found")
 	})
 
@@ -194,7 +194,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("ReserveRunnerForDeploymentFailsOnInvalidDeployment", func(t *testing.T) {
 		_, err = dal.ReserveRunnerForDeployment(ctx, model.NewDeploymentKey("test"), time.Second, labels)
-		assert.IsError(t, err, dalerrs.ErrNotFound)
+		assert.IsError(t, err, libdal.ErrNotFound)
 	})
 
 	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
@@ -321,7 +321,7 @@ func TestDAL(t *testing.T) {
 			Deployment: optional.Some(model.NewDeploymentKey("test")),
 		})
 		assert.Error(t, err)
-		assert.IsError(t, err, dalerrs.ErrNotFound)
+		assert.IsError(t, err, libdal.ErrNotFound)
 	})
 
 	t.Run("ReleaseRunnerReservation", func(t *testing.T) {
@@ -344,7 +344,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetRoutingTable", func(t *testing.T) {
 		_, err := dal.GetRoutingTable(ctx, []string{deployment.Module})
-		assert.IsError(t, err, dalerrs.ErrNotFound)
+		assert.IsError(t, err, libdal.ErrNotFound)
 	})
 
 	t.Run("DeregisterRunner", func(t *testing.T) {
@@ -354,7 +354,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("DeregisterRunnerFailsOnMissing", func(t *testing.T) {
 		err = dal.DeregisterRunner(ctx, model.NewRunnerKey("localhost", "8080"))
-		assert.IsError(t, err, dalerrs.ErrNotFound)
+		assert.IsError(t, err, libdal.ErrNotFound)
 	})
 
 	t.Run("VerifyDeploymentNotifications", func(t *testing.T) {

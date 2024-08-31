@@ -9,14 +9,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
-	"github.com/google/uuid"
-	"github.com/sqlc-dev/pqtype"
 )
 
 type Querier interface {
@@ -39,7 +36,6 @@ type Querier interface {
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
-	ExpireLeases(ctx context.Context) (int64, error)
 	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
@@ -69,7 +65,6 @@ type Querier interface {
 	GetIdleRunners(ctx context.Context, labels json.RawMessage, limit int64) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
-	GetLeaseInfo(ctx context.Context, key leases.Key) (GetLeaseInfoRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetOnlyEncryptionKey(ctx context.Context) (GetOnlyEncryptionKeyRow, error)
@@ -102,11 +97,8 @@ type Querier interface {
 	KillStaleControllers(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
-	NewLease(ctx context.Context, key leases.Key, ttl sqltypes.Duration, metadata pqtype.NullRawMessage) (uuid.UUID, error)
 	PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (FsmNextEvent, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
-	ReleaseLease(ctx context.Context, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
-	RenewLease(ctx context.Context, ttl sqltypes.Duration, idempotencyKey uuid.UUID, key leases.Key) (bool, error)
 	// Find an idle runner and reserve it for the given deployment.
 	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels json.RawMessage) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
