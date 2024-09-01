@@ -103,10 +103,12 @@ type Router[R Role] interface {
 	List(ctx context.Context) ([]Entry, error)
 }
 
+type ProviderKey string
+
 // Provider is a generic interface for storing and retrieving configuration and secrets.
 type Provider[R Role] interface {
 	Role() R
-	Key() string
+	Key() ProviderKey
 
 	// Store a configuration value and return its key.
 	Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)

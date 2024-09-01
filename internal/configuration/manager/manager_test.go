@@ -35,7 +35,7 @@ func TestManager(t *testing.T) {
 				kcp,
 			})
 		assert.NoError(t, err)
-		testManager(t, ctx, cf, "keychain", "FTL_SECRET_YmF6", []configuration.Entry{
+		testManager(t, ctx, cf, providers.KeychainProviderKey, "FTL_SECRET_YmF6", []configuration.Entry{
 			{Ref: configuration.Ref{Name: "baz"}, Accessor: URL("envar://baz")},
 			{Ref: configuration.Ref{Name: "foo"}, Accessor: URL("inline://ImJhciI")},
 			{Ref: configuration.Ref{Name: "mutable"}, Accessor: URL("keychain://mutable")},
@@ -49,7 +49,7 @@ func TestManager(t *testing.T) {
 				providers.Inline[configuration.Configuration]{},
 			})
 		assert.NoError(t, err)
-		testManager(t, ctx, cf, "inline", "FTL_CONFIG_YmF6", []configuration.Entry{
+		testManager(t, ctx, cf, providers.InlineProviderKey, "FTL_CONFIG_YmF6", []configuration.Entry{
 			{Ref: configuration.Ref{Name: "baz"}, Accessor: URL("envar://baz")},
 			{Ref: configuration.Ref{Name: "foo"}, Accessor: URL("inline://ImJhciI")},
 			{Ref: configuration.Ref{Name: "mutable"}, Accessor: URL("inline://ImhlbGxvIg")},
@@ -119,7 +119,7 @@ func testManager[R configuration.Role](
 	t *testing.T,
 	ctx context.Context,
 	cf *Manager[R],
-	providerKey string,
+	providerKey configuration.ProviderKey,
 	envarName string,
 	expectedListing []configuration.Entry,
 ) {

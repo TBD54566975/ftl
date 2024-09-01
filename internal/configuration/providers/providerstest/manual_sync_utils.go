@@ -51,7 +51,7 @@ func (a *ManualSyncProvider[R]) Role() R {
 	return a.provider.Role()
 }
 
-func (a *ManualSyncProvider[R]) Key() string {
+func (a *ManualSyncProvider[R]) Key() configuration.ProviderKey {
 	return a.provider.Key()
 }
 

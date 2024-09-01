@@ -18,6 +18,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
+const OnePasswordProviderKey configuration.ProviderKey = "op"
+
 // OnePassword is a configuration provider that reads passwords from
 // 1Password vaults via the "op" command line tool.
 type OnePassword struct {
@@ -25,10 +27,24 @@ type OnePassword struct {
 	ProjectName string
 }
 
+func NewOnePassword(vault string, projectName string) OnePassword {
+	return OnePassword{
+		Vault:       vault,
+		ProjectName: projectName,
+	}
+}
+
+func NewOnePasswordFactory(vault string, projectName string) (configuration.ProviderKey, Factory[configuration.Secrets]) {
+	return OnePasswordProviderKey, func(ctx context.Context) (configuration.Provider[configuration.Secrets], error) {
+		return NewOnePassword(vault, projectName), nil
+	}
+}
+
+var _ configuration.Provider[configuration.Secrets] = OnePassword{}
 var _ configuration.AsynchronousProvider[configuration.Secrets] = OnePassword{}
 
-func (OnePassword) Role() configuration.Secrets { return configuration.Secrets{} }
-func (o OnePassword) Key() string               { return "op" }
+func (OnePassword) Role() configuration.Secrets      { return configuration.Secrets{} }
+func (o OnePassword) Key() configuration.ProviderKey { return OnePasswordProviderKey }
 func (o OnePassword) Delete(ctx context.Context, ref configuration.Ref) error {
 	return nil
 }
@@ -110,7 +126,7 @@ func (o OnePassword) Store(ctx context.Context, ref configuration.Ref, value []b
 		return nil, fmt.Errorf("vault name %q contains invalid characters. a-z A-Z 0-9 _ . - are valid", o.Vault)
 	}
 
-	url := &url.URL{Scheme: "op", Host: o.Vault}
+	url := &url.URL{Scheme: string(OnePasswordProviderKey), Host: o.Vault}
 
 	// make sure item exists
 	_, err := o.getItem(ctx, o.Vault)
