@@ -14,7 +14,7 @@ import (
 	"github.com/alecthomas/repr"
 )
 
-func TestLifecycle(t *testing.T) {
+func TestLifecycleJVM(t *testing.T) {
 	in.Run(t,
 		in.WithLanguages("java", "kotlin"),
 		in.GitInit(),
@@ -65,6 +65,7 @@ func TestJVMToGoCall(t *testing.T) {
 		ArrayField:  ftl.Some[[]string]([]string{"foo", "bar"}),
 		MapField:    ftl.Some[map[string]string](map[string]string{"gar": "har"}),
 	}
+
 	tests := []in.SubTest{}
 	tests = append(tests, PairedTest("emptyVerb", func(module string) in.Action {
 		return in.Call(module, "emptyVerb", in.Obj{}, func(t testing.TB, response in.Obj) {
@@ -122,6 +123,7 @@ func TestJVMToGoCall(t *testing.T) {
 
 	tests = append(tests, PairedVerbTest("optionalTestObjectVerb", exampleObject)...)
 	tests = append(tests, PairedVerbTest("optionalTestObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
+	tests = append(tests, PairedVerbTest("externalTypeVerb", "did:web:abc123")...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalIntVerb", ftl.None[int]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalFloatVerb", ftl.None[float64]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalStringVerb", ftl.None[string]())...)

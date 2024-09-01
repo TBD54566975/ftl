@@ -1,6 +1,7 @@
 package xyz.block.ftl.test
 
 import ftl.gomodule.*
+import web5.sdk.dids.didcore.Did
 import xyz.block.ftl.Export
 import xyz.block.ftl.Verb
 import java.time.ZonedDateTime
@@ -154,4 +155,10 @@ fun optionalTestObjectOptionalFieldsVerb(
   client: OptionalTestObjectOptionalFieldsVerbClient
 ): TestObjectOptionalFields {
   return client.call(payload!!)
+}
+
+@Export
+@Verb
+fun externalTypeVerb(did: Did, client: ExternalTypeVerbClient): Did {
+  return client.call(did)
 }

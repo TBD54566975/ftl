@@ -53,11 +53,13 @@ import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataAlias;
 import xyz.block.ftl.v1.schema.MetadataCalls;
+import xyz.block.ftl.v1.schema.MetadataTypeMap;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Optional;
 import xyz.block.ftl.v1.schema.Ref;
 import xyz.block.ftl.v1.schema.Time;
 import xyz.block.ftl.v1.schema.Type;
+import xyz.block.ftl.v1.schema.TypeAlias;
 import xyz.block.ftl.v1.schema.Unit;
 import xyz.block.ftl.v1.schema.Verb;
 
@@ -75,7 +77,7 @@ public class ModuleBuilder {
 
     private final IndexView index;
     private final Module.Builder moduleBuilder;
-    private final Map<TypeKey, ExistingRef> dataElements = new HashMap<>();
+    private final Map<TypeKey, ExistingRef> dataElements;
     private final String moduleName;
     private final Set<String> knownSecrets = new HashSet<>();
     private final Set<String> knownConfig = new HashSet<>();
@@ -86,7 +88,7 @@ public class ModuleBuilder {
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
-            Map<String, String> verbDocs) {
+            Map<String, String> verbDocs, Map<TypeKey, ExistingRef> typeAliases) {
         this.index = index;
         this.moduleName = moduleName;
         this.moduleBuilder = Module.newBuilder()
@@ -96,6 +98,7 @@ public class ModuleBuilder {
         this.verbClients = verbClients;
         this.recorder = recorder;
         this.verbDocs = verbDocs;
+        this.dataElements = new HashMap<>(typeAliases);
     }
 
     public static @NotNull String methodToName(MethodInfo method) {
@@ -435,11 +438,16 @@ public class ModuleBuilder {
         moduleBuilder.build().writeTo(out);
     }
 
-    record ExistingRef(Ref ref, boolean exported) {
-
+    public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported) {
+        moduleBuilder.addDecls(Decl.newBuilder()
+                .setTypeAlias(TypeAlias.newBuilder().setType(buildType(finalS, exported)).setName(name).addMetadata(Metadata
+                        .newBuilder()
+                        .setTypeMap(MetadataTypeMap.newBuilder().setRuntime("java").setNativeName(finalT.toString()).build())
+                        .build()))
+                .build());
     }
 
-    private record TypeKey(String name, List<String> typeParams) {
+    record ExistingRef(Ref ref, boolean exported) {
 
     }
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tbd54566975/web5-go/dids/did"
+
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
@@ -30,11 +32,20 @@ type TestObjectOptionalFields struct {
 	MapField    ftl.Option[map[string]string]
 }
 
+//ftl:typealias
+//ftl:typemap kotlin "web5.sdk.dids.didcore.Did"
+type DID = did.DID
+
 // Test different signatures
 
 //ftl:verb export
 func SourceVerb(ctx context.Context) (string, error) {
 	return "Source Verb", nil
+}
+
+type ExportedType[T any, S any] interface {
+	FTLEncode(d T) (S, error)
+	FTLDecode(in S) (T, error)
 }
 
 //ftl:verb export
@@ -154,4 +165,9 @@ func OptionalTestObjectVerb(ctx context.Context, val ftl.Option[TestObject]) (ft
 //ftl:verb export
 func OptionalTestObjectOptionalFieldsVerb(ctx context.Context, val ftl.Option[TestObjectOptionalFields]) (ftl.Option[TestObjectOptionalFields], error) {
 	return val, nil
+}
+
+//ftl:verb export
+func ExternalTypeVerb(ctx context.Context, did DID) (DID, error) {
+	return did, nil
 }
