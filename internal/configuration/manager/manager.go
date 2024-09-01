@@ -1,4 +1,4 @@
-package configuration
+package manager
 
 import (
 	"bytes"
@@ -11,33 +11,17 @@ import (
 	"strings"
 
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/routers"
 )
-
-// Role of [Manager], either Secrets or Configuration.
-type Role interface {
-	Secrets | Configuration
-}
-
-type Secrets struct{}
-
-func (Secrets) String() string { return "secrets" }
-
-func (Secrets) obfuscator() Obfuscator {
-	return Obfuscator{
-		key: []byte("obfuscatesecrets"), // 16 characters (AES-128), not meant to provide security
-	}
-}
-
-type Configuration struct{}
-
-func (Configuration) String() string { return "configuration" }
 
 // Manager is a high-level configuration manager that abstracts the details of
 // the Router and Provider interfaces.
-type Manager[R Role] struct {
-	providers  map[string]Provider[R]
-	router     Router[R]
-	obfuscator optional.Option[Obfuscator]
+type Manager[R configuration.Role] struct {
+	providers  map[string]configuration.Provider[R]
+	router     configuration.Router[R]
+	obfuscator optional.Option[configuration.Obfuscator]
 	cache      *cache[R]
 }
 
@@ -50,34 +34,34 @@ func ConfigFromEnvironment() []string {
 
 // NewDefaultSecretsManagerFromConfig creates a new secrets manager from
 // the project config found in the config paths.
-func NewDefaultSecretsManagerFromConfig(ctx context.Context, config string, opVault string) (*Manager[Secrets], error) {
-	var cr Router[Secrets] = ProjectConfigResolver[Secrets]{Config: config}
+func NewDefaultSecretsManagerFromConfig(ctx context.Context, config string, opVault string) (*Manager[configuration.Secrets], error) {
+	var cr configuration.Router[configuration.Secrets] = routers.ProjectConfig[configuration.Secrets]{Config: config}
 	return NewSecretsManager(ctx, cr, opVault, config)
 }
 
 // NewDefaultConfigurationManagerFromConfig creates a new configuration manager from
 // the project config found in the config paths.
-func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config string) (*Manager[Configuration], error) {
-	cr := ProjectConfigResolver[Configuration]{Config: config}
+func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config string) (*Manager[configuration.Configuration], error) {
+	cr := routers.ProjectConfig[configuration.Configuration]{Config: config}
 	return NewConfigurationManager(ctx, cr)
 }
 
 // New configuration manager.
-func New[R Role](ctx context.Context, router Router[R], providers []Provider[R]) (*Manager[R], error) {
+func New[R configuration.Role](ctx context.Context, router configuration.Router[R], providers []configuration.Provider[R]) (*Manager[R], error) {
 	m := &Manager[R]{
-		providers: map[string]Provider[R]{},
+		providers: map[string]configuration.Provider[R]{},
 	}
 	for _, p := range providers {
 		m.providers[p.Key()] = p
 	}
-	if provider, ok := any(new(R)).(ObfuscatorProvider); ok {
-		m.obfuscator = optional.Some(provider.obfuscator())
+	if provider, ok := any(new(R)).(configuration.ObfuscatorProvider); ok {
+		m.obfuscator = optional.Some(provider.Obfuscator())
 	}
 	m.router = router
 
-	asyncProviders := []AsynchronousProvider[R]{}
+	asyncProviders := []configuration.AsynchronousProvider[R]{}
 	for _, provider := range m.providers {
-		if sp, ok := any(provider).(AsynchronousProvider[R]); ok {
+		if sp, ok := any(provider).(configuration.AsynchronousProvider[R]); ok {
 			asyncProviders = append(asyncProviders, sp)
 		}
 	}
@@ -92,10 +76,10 @@ func ProviderKeyForAccessor(accessor *url.URL) string {
 
 // getData returns a data value for a configuration from the active providers.
 // The data can be unmarshalled from JSON.
-func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
+func (m *Manager[R]) getData(ctx context.Context, ref configuration.Ref) ([]byte, error) {
 	key, err := m.router.Get(ctx, ref)
 	// Try again at the global scope if the value is not found in module scope.
-	if ref.Module.Ok() && errors.Is(err, ErrNotFound) {
+	if ref.Module.Ok() && errors.Is(err, configuration.ErrNotFound) {
 		ref.Module = optional.None[string]()
 		key, err = m.router.Get(ctx, ref)
 		if err != nil {
@@ -110,12 +94,12 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 	}
 	var data []byte
 	switch provider := provider.(type) {
-	case AsynchronousProvider[R]:
+	case configuration.AsynchronousProvider[R]:
 		data, err = m.cache.load(ref, key)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", ref, err)
 		}
-	case SynchronousProvider[R]:
+	case configuration.SynchronousProvider[R]:
 		data, err = provider.Load(ctx, ref, key)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", ref, err)
@@ -137,7 +121,7 @@ func (m *Manager[R]) getData(ctx context.Context, ref Ref) ([]byte, error) {
 // Get a configuration value from the active providers.
 //
 // "value" must be a pointer to a Go type that can be unmarshalled from JSON.
-func (m *Manager[R]) Get(ctx context.Context, ref Ref, value any) error {
+func (m *Manager[R]) Get(ctx context.Context, ref configuration.Ref, value any) error {
 	data, err := m.getData(ctx, ref)
 	if err != nil {
 		return err
@@ -158,7 +142,7 @@ func (m *Manager[R]) availableProviderKeys() []string {
 }
 
 // Set a configuration value, encoding "value" as JSON before storing it.
-func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) error {
+func (m *Manager[R]) Set(ctx context.Context, pkey string, ref configuration.Ref, value any) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -167,7 +151,7 @@ func (m *Manager[R]) Set(ctx context.Context, pkey string, ref Ref, value any) e
 }
 
 // SetJSON sets a configuration value using raw JSON data.
-func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref Ref, value json.RawMessage) error {
+func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref configuration.Ref, value json.RawMessage) error {
 	if err := checkJSON(value); err != nil {
 		return fmt.Errorf("invalid value for %s, must be JSON: %w", m.router.Role(), err)
 	}
@@ -227,20 +211,20 @@ func (m *Manager[R]) MapForModule(ctx context.Context, module string) (map[strin
 }
 
 // Unset a configuration value in all providers.
-func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref Ref) error {
+func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref configuration.Ref) error {
 	provider, ok := m.providers[pkey]
 	if !ok {
 		pkeys := strings.Join(m.availableProviderKeys(), ", ")
 		return fmt.Errorf("no provider for key %q, specify one of %s", pkey, pkeys)
 	}
-	if err := provider.Delete(ctx, ref); err != nil && !errors.Is(err, ErrNotFound) {
+	if err := provider.Delete(ctx, ref); err != nil && !errors.Is(err, configuration.ErrNotFound) {
 		return err
 	}
 	m.cache.deletedValue(ref, pkey)
 	return m.router.Unset(ctx, ref)
 }
 
-func (m *Manager[R]) List(ctx context.Context) ([]Entry, error) {
+func (m *Manager[R]) List(ctx context.Context) ([]configuration.Entry, error) {
 	return m.router.List(ctx)
 }
 

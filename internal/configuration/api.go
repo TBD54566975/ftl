@@ -71,6 +71,23 @@ func (k *Ref) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// Role of a Provider, Router or Manager. Either Secrets or Configuration.
+type Role interface {
+	Secrets | Configuration
+}
+
+type Secrets struct{}
+
+func (Secrets) String() string { return "secrets" }
+
+func (Secrets) Obfuscator() Obfuscator {
+	return NewObfuscator([]byte("obfuscatesecrets")) // 16 characters (AES-128), not meant to provide security
+}
+
+type Configuration struct{}
+
+func (Configuration) String() string { return "configuration" }
+
 // A Router resolves configuration names to keys that are then used to load
 // values from a Provider.
 //
@@ -105,8 +122,8 @@ type SynchronousProvider[R Role] interface {
 	Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error)
 }
 
-// AsynchronousProvider is an interface for providers that support syncing values.
-// This is recommended if the provider allows batch access, or is expensive to load.
+// AsynchronousProvider is an interface for Provider's that support syncing values.
+// This is recommended if the Provider allows batch access, or is expensive to load.
 type AsynchronousProvider[R Role] interface {
 	Provider[R]
 

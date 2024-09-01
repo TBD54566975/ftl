@@ -1,4 +1,4 @@
-package configuration
+package providers
 
 import (
 	"context"
@@ -13,36 +13,37 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/puzpuzpuz/xsync/v3"
 
+	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-// OnePasswordProvider is a configuration provider that reads passwords from
+// OnePassword is a configuration provider that reads passwords from
 // 1Password vaults via the "op" command line tool.
-type OnePasswordProvider struct {
+type OnePassword struct {
 	Vault       string
 	ProjectName string
 }
 
-var _ AsynchronousProvider[Secrets] = OnePasswordProvider{}
+var _ configuration.AsynchronousProvider[configuration.Secrets] = OnePassword{}
 
-func (OnePasswordProvider) Role() Secrets { return Secrets{} }
-func (o OnePasswordProvider) Key() string { return "op" }
-func (o OnePasswordProvider) Delete(ctx context.Context, ref Ref) error {
+func (OnePassword) Role() configuration.Secrets { return configuration.Secrets{} }
+func (o OnePassword) Key() string               { return "op" }
+func (o OnePassword) Delete(ctx context.Context, ref configuration.Ref) error {
 	return nil
 }
 
-func (o OnePasswordProvider) itemName() string {
+func (o OnePassword) itemName() string {
 	return o.ProjectName + ".secrets"
 }
 
-func (o OnePasswordProvider) SyncInterval() time.Duration {
+func (o OnePassword) SyncInterval() time.Duration {
 	return time.Second * 10
 }
 
 // Sync will fetch all secrets from the 1Password vault and store them in the values map.
 // Do not just sync the o.Vault, instead find all vaults found in entries and sync them.
-func (o OnePasswordProvider) Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref, SyncedValue]) error {
+func (o OnePassword) Sync(ctx context.Context, entries []configuration.Entry, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
 	if len(entries) == 0 {
 		// Do not check for 1Password binary or call 1Password's CLI at all.
 		// Those checks can log unnecessary errors or prompt the user to unlock 1Password.
@@ -64,26 +65,26 @@ func (o OnePasswordProvider) Sync(ctx context.Context, entries []Entry, values *
 		vaults[e.Accessor.Host] = true
 	}
 	// get all secrets from all vaults
-	refs := map[Ref]bool{}
+	refs := map[configuration.Ref]bool{}
 	for vault := range vaults {
 		full, err := o.getItem(ctx, vault)
 		if err != nil {
 			return fmt.Errorf("get item failed: %w", err)
 		}
 		for _, field := range full.Fields {
-			ref, err := ParseRef(field.Label)
+			ref, err := configuration.ParseRef(field.Label)
 			if err != nil {
 				logger.Warnf("invalid field label found in 1Password: %q", field.Label)
 				continue
 			}
 			refs[ref] = true
-			values.Store(ref, SyncedValue{
+			values.Store(ref, configuration.SyncedValue{
 				Value: []byte(field.Value),
 			})
 		}
 	}
 	// delete old values
-	values.Range(func(ref Ref, _ SyncedValue) bool {
+	values.Range(func(ref configuration.Ref, _ configuration.SyncedValue) bool {
 		if _, ok := refs[ref]; !ok {
 			values.Delete(ref)
 		}
@@ -98,7 +99,7 @@ var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)
 //
 // op does not support "create or update" as a single command. Neither does it support specifying an ID on create.
 // Because of this, we need check if the item exists before creating it, and update it if it does.
-func (o OnePasswordProvider) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (o OnePassword) Store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
 	if err := checkOpBinary(); err != nil {
 		return nil, err
 	}
@@ -159,7 +160,7 @@ type entry struct {
 
 // getItem gets the single 1Password item for all project secrets
 // op --format json item get --vault Personal "projectname.secrets"
-func (o OnePasswordProvider) getItem(ctx context.Context, vault string) (*item, error) {
+func (o OnePassword) getItem(ctx context.Context, vault string) (*item, error) {
 	logger := log.FromContext(ctx)
 	args := []string{
 		"item", "get", o.itemName(),
@@ -194,7 +195,7 @@ func (o OnePasswordProvider) getItem(ctx context.Context, vault string) (*item, 
 
 // createItem creates an empty item in the vault based on the project name
 // op item create --category Password --vault FTL --title projectname.secrets
-func (o OnePasswordProvider) createItem(ctx context.Context, vault string) error {
+func (o OnePassword) createItem(ctx context.Context, vault string) error {
 	args := []string{
 		"item", "create",
 		"--category", "Password",
@@ -209,7 +210,7 @@ func (o OnePasswordProvider) createItem(ctx context.Context, vault string) error
 }
 
 // op item edit 'projectname.secrets' 'module.secretname[password]=value with space'
-func (o OnePasswordProvider) storeSecret(ctx context.Context, vault string, ref Ref, secret []byte) error {
+func (o OnePassword) storeSecret(ctx context.Context, vault string, ref configuration.Ref, secret []byte) error {
 	module, ok := ref.Module.Get()
 	if !ok {
 		return fmt.Errorf("module is required for secret: %v", ref)

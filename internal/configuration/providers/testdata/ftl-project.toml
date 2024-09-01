@@ -1,0 +1,17 @@
+name = "testdata"
+
+[global]
+[global.secrets]
+baz = "envar://baz"
+foo = "inline://ImJhciI"
+mutable = "keychain://mutable"
+
+[global.configuration]
+baz = "envar://baz"
+foo = "inline://ImJhciI"
+mutable = "inline://ImhlbGxvIg"
+
+[modules]
+  [modules.echo]
+    [modules.echo.configuration]
+      default = "inline://ImFub255bW91cyI"

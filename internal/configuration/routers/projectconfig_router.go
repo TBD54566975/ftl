@@ -1,4 +1,4 @@
-package configuration
+package routers
 
 import (
 	"context"
@@ -8,23 +8,24 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 
+	"github.com/TBD54566975/ftl/internal/configuration"
 	pc "github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
-// ProjectConfigResolver is parametric Resolver that loads values from either a
+// ProjectConfig is parametric Resolver that loads values from either a
 // project's configuration or secrets maps based on the type parameter.
 //
 // See the [projectconfig] package for details on the configuration file format.
-type ProjectConfigResolver[R Role] struct {
+type ProjectConfig[R configuration.Role] struct {
 	Config string `name:"config" short:"C" help:"Path to FTL project configuration file." env:"FTL_CONFIG" placeholder:"FILE" type:"existingfile"`
 }
 
-var _ Router[Configuration] = ProjectConfigResolver[Configuration]{}
-var _ Router[Secrets] = ProjectConfigResolver[Secrets]{}
+var _ configuration.Router[configuration.Configuration] = ProjectConfig[configuration.Configuration]{}
+var _ configuration.Router[configuration.Secrets] = ProjectConfig[configuration.Secrets]{}
 
-func (p ProjectConfigResolver[R]) Role() R { var r R; return r }
+func (p ProjectConfig[R]) Role() R { var r R; return r }
 
-func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, error) {
+func (p ProjectConfig[R]) Get(ctx context.Context, ref configuration.Ref) (*url.URL, error) {
 	config, err := pc.Load(ctx, p.Config)
 	if err != nil {
 		return nil, err
@@ -35,17 +36,17 @@ func (p ProjectConfigResolver[R]) Get(ctx context.Context, ref Ref) (*url.URL, e
 	}
 	key, ok := mapping[ref.Name]
 	if !ok {
-		return nil, ErrNotFound
+		return nil, configuration.ErrNotFound
 	}
 	return (*url.URL)(key), nil
 }
 
-func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
+func (p ProjectConfig[R]) List(ctx context.Context) ([]configuration.Entry, error) {
 	config, err := pc.Load(ctx, p.Config)
 	if err != nil {
 		return nil, err
 	}
-	entries := []Entry{}
+	entries := []configuration.Entry{}
 	moduleNames := maps.Keys(config.Modules)
 	moduleNames = append(moduleNames, "")
 	for _, moduleName := range moduleNames {
@@ -55,8 +56,8 @@ func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
 			return nil, err
 		}
 		for name, key := range mapping {
-			entries = append(entries, Entry{
-				Ref:      Ref{module, name},
+			entries = append(entries, configuration.Entry{
+				Ref:      configuration.Ref{module, name},
 				Accessor: (*url.URL)(key),
 			})
 		}
@@ -69,7 +70,7 @@ func (p ProjectConfigResolver[R]) List(ctx context.Context) ([]Entry, error) {
 	return entries, nil
 }
 
-func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL) error {
+func (p ProjectConfig[R]) Set(ctx context.Context, ref configuration.Ref, key *url.URL) error {
 	config, err := pc.Load(ctx, p.Config)
 	if err != nil {
 		return err
@@ -82,7 +83,7 @@ func (p ProjectConfigResolver[R]) Set(ctx context.Context, ref Ref, key *url.URL
 	return p.setMapping(config, ref.Module, mapping)
 }
 
-func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
+func (p ProjectConfig[From]) Unset(ctx context.Context, ref configuration.Ref) error {
 	config, err := pc.Load(ctx, p.Config)
 	if err != nil {
 		return err
@@ -95,13 +96,13 @@ func (p ProjectConfigResolver[From]) Unset(ctx context.Context, ref Ref) error {
 	return p.setMapping(config, ref.Module, mapping)
 }
 
-func (p ProjectConfigResolver[R]) getMapping(config pc.Config, module optional.Option[string]) (map[string]*pc.URL, error) {
+func (p ProjectConfig[R]) getMapping(config pc.Config, module optional.Option[string]) (map[string]*pc.URL, error) {
 	var k R
 	get := func(dest pc.ConfigAndSecrets) map[string]*pc.URL {
 		switch any(k).(type) {
-		case Configuration:
+		case configuration.Configuration:
 			return emptyMapIfNil(dest.Config)
-		case Secrets:
+		case configuration.Secrets:
 			return emptyMapIfNil(dest.Secrets)
 		default:
 			panic("unsupported kind")
@@ -127,13 +128,13 @@ func emptyMapIfNil(mapping map[string]*pc.URL) map[string]*pc.URL {
 	return mapping
 }
 
-func (p ProjectConfigResolver[R]) setMapping(config pc.Config, module optional.Option[string], mapping map[string]*pc.URL) error {
+func (p ProjectConfig[R]) setMapping(config pc.Config, module optional.Option[string], mapping map[string]*pc.URL) error {
 	var k R
 	set := func(dest *pc.ConfigAndSecrets, mapping map[string]*pc.URL) {
 		switch any(k).(type) {
-		case Configuration:
+		case configuration.Configuration:
 			dest.Config = mapping
-		case Secrets:
+		case configuration.Secrets:
 			dest.Secrets = mapping
 		}
 	}

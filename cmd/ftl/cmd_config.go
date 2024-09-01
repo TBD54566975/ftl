@@ -13,7 +13,9 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	cf "github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -39,7 +41,7 @@ etc.
 `
 }
 
-func configRefFromRef(ref cf.Ref) *ftlv1.ConfigRef {
+func configRefFromRef(ref configuration.Ref) *ftlv1.ConfigRef {
 	module := ref.Module.Default("")
 	return &ftlv1.ConfigRef{
 		Module: &module,
@@ -71,19 +73,19 @@ func setUpAdminClient(ctx context.Context, config projectconfig.Config) (ctxOut 
 	}
 	if shouldUseLocalClient {
 		// create config and secret managers
-		cr := cf.ProjectConfigResolver[cf.Configuration]{Config: config.Path}
-		cm, err := cf.NewConfigurationManager(ctx, cr)
+		cr := routers.ProjectConfig[configuration.Configuration]{Config: config.Path}
+		cm, err := manager.NewConfigurationManager(ctx, cr)
 		if err != nil {
 			return ctx, client, fmt.Errorf("could not create config manager: %w", err)
 		}
-		ctx = cf.ContextWithConfig(ctx, cm)
+		ctx = manager.ContextWithConfig(ctx, cm)
 
-		sr := cf.ProjectConfigResolver[cf.Secrets]{Config: config.Path}
-		sm, err := cf.NewSecretsManager(ctx, sr, cli.Vault, config.Path)
+		sr := routers.ProjectConfig[configuration.Secrets]{Config: config.Path}
+		sm, err := manager.NewSecretsManager(ctx, sr, cli.Vault, config.Path)
 		if err != nil {
 			return ctx, client, fmt.Errorf("could not create secrets manager: %w", err)
 		}
-		ctx = cf.ContextWithSecrets(ctx, sm)
+		ctx = manager.ContextWithSecrets(ctx, sm)
 
 		return ctx, admin.NewLocalClient(cm, sm), nil
 	}
@@ -115,7 +117,7 @@ func (s *configListCmd) Run(ctx context.Context, projConfig projectconfig.Config
 }
 
 type configGetCmd struct {
-	Ref cf.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
+	Ref configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
 func (s *configGetCmd) Help() string {
@@ -140,9 +142,9 @@ func (s *configGetCmd) Run(ctx context.Context, projConfig projectconfig.Config)
 }
 
 type configSetCmd struct {
-	JSON  bool    `help:"Assume input value is JSON."`
-	Ref   cf.Ref  `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
-	Value *string `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
+	JSON  bool              `help:"Assume input value is JSON."`
+	Ref   configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
+	Value *string           `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
 }
 
 func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, projConfig projectconfig.Config) error {
@@ -189,7 +191,7 @@ func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, projConfig proj
 }
 
 type configUnsetCmd struct {
-	Ref cf.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
+	Ref configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
 func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, projConfig projectconfig.Config) error {
@@ -235,7 +237,7 @@ func (s *configImportCmd) Run(ctx context.Context, cmd *configCmd, projConfig pr
 		return fmt.Errorf("could not parse JSON: %w", err)
 	}
 	for refPath, value := range entries {
-		ref, err := cf.ParseRef(refPath)
+		ref, err := configuration.ParseRef(refPath)
 		if err != nil {
 			return fmt.Errorf("could not parse ref %q: %w", refPath, err)
 		}

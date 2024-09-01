@@ -1,4 +1,4 @@
-package configuration
+package routers
 
 import (
 	"context"
@@ -7,31 +7,32 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/dal"
 )
 
-// DBSecretResolver loads values a project's secrets from the given database.
-type DBSecretResolver struct {
-	dal DBSecretResolverDAL
+// DatabaseSecrets loads values a project's secrets from the given database.
+type DatabaseSecrets struct {
+	dal DatabaseSecretsDAL
 }
 
-type DBSecretResolverDAL interface {
+type DatabaseSecretsDAL interface {
 	GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error)
 	ListModuleSecrets(ctx context.Context) ([]dal.ModuleSecret, error)
 	SetModuleSecretURL(ctx context.Context, module optional.Option[string], name string, url string) error
 	UnsetModuleSecret(ctx context.Context, module optional.Option[string], name string) error
 }
 
-// DBSecretResolver should only be used for secrets
-var _ Router[Secrets] = DBSecretResolver{}
+// DatabaseSecrets should only be used for secrets
+var _ configuration.Router[configuration.Secrets] = DatabaseSecrets{}
 
-func NewDBSecretResolver(db DBSecretResolverDAL) DBSecretResolver {
-	return DBSecretResolver{dal: db}
+func NewDatabaseSecrets(db DatabaseSecretsDAL) DatabaseSecrets {
+	return DatabaseSecrets{dal: db}
 }
 
-func (d DBSecretResolver) Role() Secrets { return Secrets{} }
+func (d DatabaseSecrets) Role() configuration.Secrets { return configuration.Secrets{} }
 
-func (d DBSecretResolver) Get(ctx context.Context, ref Ref) (*url.URL, error) {
+func (d DatabaseSecrets) Get(ctx context.Context, ref configuration.Ref) (*url.URL, error) {
 	u, err := d.dal.GetModuleSecretURL(ctx, ref.Module, ref.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secret URL: %w", err)
@@ -43,19 +44,19 @@ func (d DBSecretResolver) Get(ctx context.Context, ref Ref) (*url.URL, error) {
 	return url, nil
 }
 
-func (d DBSecretResolver) List(ctx context.Context) ([]Entry, error) {
+func (d DatabaseSecrets) List(ctx context.Context) ([]configuration.Entry, error) {
 	secrets, err := d.dal.ListModuleSecrets(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not list module secrets: %w", err)
 	}
-	entries := make([]Entry, len(secrets))
+	entries := make([]configuration.Entry, len(secrets))
 	for i, s := range secrets {
 		url, err := url.Parse(s.Url)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse secret URL: %w", err)
 		}
-		entries[i] = Entry{
-			Ref: Ref{
+		entries[i] = configuration.Entry{
+			Ref: configuration.Ref{
 				Module: s.Module,
 				Name:   s.Name,
 			},
@@ -65,7 +66,7 @@ func (d DBSecretResolver) List(ctx context.Context) ([]Entry, error) {
 	return entries, nil
 }
 
-func (d DBSecretResolver) Set(ctx context.Context, ref Ref, key *url.URL) error {
+func (d DatabaseSecrets) Set(ctx context.Context, ref configuration.Ref, key *url.URL) error {
 	err := d.dal.SetModuleSecretURL(ctx, ref.Module, ref.Name, key.String())
 	if err != nil {
 		return fmt.Errorf("failed to set secret URL: %w", err)
@@ -73,7 +74,7 @@ func (d DBSecretResolver) Set(ctx context.Context, ref Ref, key *url.URL) error 
 	return nil
 }
 
-func (d DBSecretResolver) Unset(ctx context.Context, ref Ref) error {
+func (d DatabaseSecrets) Unset(ctx context.Context, ref configuration.Ref) error {
 	err := d.dal.UnsetModuleSecret(ctx, ref.Module, ref.Name)
 	if err != nil {
 		return fmt.Errorf("failed to unset secret: %w", err)

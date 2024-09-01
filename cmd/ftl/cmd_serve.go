@@ -25,7 +25,9 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/bind"
-	cf "github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -131,20 +133,20 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		// create config manager for controller
-		cr := cf.ProjectConfigResolver[cf.Configuration]{Config: projConfig.Path}
-		cm, err := cf.NewConfigurationManager(controllerCtx, cr)
+		cr := routers.ProjectConfig[configuration.Configuration]{Config: projConfig.Path}
+		cm, err := manager.NewConfigurationManager(controllerCtx, cr)
 		if err != nil {
 			return fmt.Errorf("could not create config manager: %w", err)
 		}
-		controllerCtx = cf.ContextWithConfig(controllerCtx, cm)
+		controllerCtx = manager.ContextWithConfig(controllerCtx, cm)
 
 		// create secrets manager for controller
-		sr := cf.ProjectConfigResolver[cf.Secrets]{Config: projConfig.Path}
-		sm, err := cf.NewSecretsManager(controllerCtx, sr, cli.Vault, projConfig.Path)
+		sr := routers.ProjectConfig[configuration.Secrets]{Config: projConfig.Path}
+		sm, err := manager.NewSecretsManager(controllerCtx, sr, cli.Vault, projConfig.Path)
 		if err != nil {
 			return fmt.Errorf("could not create secrets manager: %w", err)
 		}
-		controllerCtx = cf.ContextWithSecrets(controllerCtx, sm)
+		controllerCtx = manager.ContextWithSecrets(controllerCtx, sm)
 
 		// Bring up the DB connection and DAL.
 		conn, err := observability.OpenDBAndInstrument(config.DSN)

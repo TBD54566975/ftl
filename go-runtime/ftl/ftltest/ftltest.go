@@ -18,7 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
-	cf "github.com/TBD54566975/ftl/internal/configuration"
+	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	pc "github.com/TBD54566975/ftl/internal/projectconfig"

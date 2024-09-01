@@ -4,7 +4,7 @@
 //
 // These tests will clean up before and after itself.
 
-package configuration
+package providers
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -61,7 +62,7 @@ func Test1PasswordProvider(t *testing.T) {
 	vauldId, err := createVault(ctx)
 	assert.NoError(t, err)
 
-	provider := OnePasswordProvider{
+	provider := OnePassword{
 		ProjectName: "unittest",
 		Vault:       vauldId,
 	}
@@ -75,7 +76,7 @@ func Test1PasswordProvider(t *testing.T) {
 	  "password": "hun\\ter🪤"
 	}`)
 
-	ref := Ref{Module: optional.Some("mod"), Name: "example"}
+	ref := configuration.Ref{Module: optional.Some("mod"), Name: "example"}
 
 	err = provider.createItem(ctx, vault)
 	assert.NoError(t, err)
