@@ -8,7 +8,8 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/internal/configuration/sql"
+	"github.com/TBD54566975/ftl/internal/configuration/dal/internal/sql"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type DAL struct {
@@ -43,12 +44,16 @@ func (d *DAL) UnsetModuleConfiguration(ctx context.Context, module optional.Opti
 	return libdal.TranslatePGError(err)
 }
 
-func (d *DAL) ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfiguration, error) {
+type ModuleConfiguration sql.ModuleConfiguration
+
+func (d *DAL) ListModuleConfiguration(ctx context.Context) ([]ModuleConfiguration, error) {
 	l, err := d.db.ListModuleConfiguration(ctx)
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
-	return l, nil
+	return slices.Map(l, func(t sql.ModuleConfiguration) ModuleConfiguration {
+		return ModuleConfiguration(t)
+	}), nil
 }
 
 func (d *DAL) GetModuleSecretURL(ctx context.Context, module optional.Option[string], name string) (string, error) {

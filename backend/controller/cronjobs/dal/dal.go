@@ -7,7 +7,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/cronjobs/sql"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -41,9 +41,11 @@ func cronJobFromRow(c sql.CronJob, d sql.Deployment) model.CronJob {
 	}
 }
 
+type CreateAsyncCallParams sql.CreateAsyncCallParams
+
 // CreateAsyncCall creates an async_call row and returns its id
-func (d *DAL) CreateAsyncCall(ctx context.Context, params sql.CreateAsyncCallParams) (int64, error) {
-	id, err := d.db.CreateAsyncCall(ctx, params)
+func (d *DAL) CreateAsyncCall(ctx context.Context, params CreateAsyncCallParams) (int64, error) {
+	id, err := d.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams(params))
 	if err != nil {
 		return 0, fmt.Errorf("failed to create async call: %w", libdal.TranslatePGError(err))
 	}
@@ -87,10 +89,12 @@ func (d *DAL) IsCronJobPending(ctx context.Context, key model.CronJobKey, startT
 	return pending, nil
 }
 
+type UpdateCronJobExecutionParams sql.UpdateCronJobExecutionParams
+
 // UpdateCronJobExecution updates the last_async_call_id, last_execution, and next_execution of
 // the cron job given by the provided key
-func (d *DAL) UpdateCronJobExecution(ctx context.Context, params sql.UpdateCronJobExecutionParams) error {
-	err := d.db.UpdateCronJobExecution(ctx, params)
+func (d *DAL) UpdateCronJobExecution(ctx context.Context, params UpdateCronJobExecutionParams) error {
+	err := d.db.UpdateCronJobExecution(ctx, sql.UpdateCronJobExecutionParams(params))
 	if err != nil {
 		return fmt.Errorf("failed to update cron job %q: %w", params.Key, libdal.TranslatePGError(err))
 	}
