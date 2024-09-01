@@ -3,17 +3,17 @@ sql:
   - &daldir
     engine: "postgresql"
     queries:
-      - backend/controller/sql/queries.sql
-      - backend/controller/sql/async_queries.sql
+      - backend/controller/dal/internal/sql/queries.sql
+      - backend/controller/dal/internal/sql/async_queries.sql
       # FIXME: Until we fully decouple cron from the controller, we need to include the cron queries here
-      - backend/controller/cronjobs/sql/queries.sql
+      - backend/controller/cronjobs/dal/internal/sql/queries.sql
     schema: "backend/controller/sql/schema"
     database:
       uri: postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret
     gen:
       go: &gengo
         package: "sql"
-        out: "backend/controller/sql"
+        out: "backend/controller/dal/internal/sql"
         emit_interface: true
         query_parameter_limit: 3
         overrides:
@@ -150,18 +150,18 @@ sql:
       - postgresql-no-seq-scan
   - <<: *daldir
     queries:
-      - backend/controller/cronjobs/sql/queries.sql
-      - backend/controller/sql/async_queries.sql
+      - backend/controller/cronjobs/dal/internal/sql/queries.sql
+      - backend/controller/dal/internal/sql/async_queries.sql
     gen:
       go:
         <<: *gengo
-        out: "backend/controller/cronjobs/sql"
+        out: "backend/controller/cronjobs/dal/internal/sql"
   - <<: *daldir
-    queries: "internal/configuration/sql/queries.sql"
+    queries: "internal/configuration/dal/internal/sql/queries.sql"
     gen:
       go:
         <<: *gengo
-        out: "internal/configuration/sql"
+        out: "internal/configuration/dal/internal/sql"
   - <<: *daldir
     queries:
       - backend/controller/leases/dal/internal/sql/queries.sql

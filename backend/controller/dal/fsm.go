@@ -9,9 +9,9 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
+	sql2 "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
-	"github.com/TBD54566975/ftl/backend/controller/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -44,7 +44,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanc
 
 	// Create an async call for the event.
 	origin := AsyncOriginFSM{FSM: fsm, Key: instanceKey}
-	asyncCallID, err := d.db.CreateAsyncCall(ctx, sql.CreateAsyncCallParams{
+	asyncCallID, err := d.db.CreateAsyncCall(ctx, sql2.CreateAsyncCallParams{
 		ScheduledAt:       time.Now(),
 		Verb:              destinationState,
 		Origin:            origin.String(),
@@ -66,7 +66,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanc
 	}
 
 	// Start a transition.
-	instance, err := d.db.StartFSMTransition(ctx, sql.StartFSMTransitionParams{
+	instance, err := d.db.StartFSMTransition(ctx, sql2.StartFSMTransitionParams{
 		Fsm:              fsm,
 		Key:              instanceKey,
 		DestinationState: destinationState,
@@ -152,7 +152,7 @@ func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKe
 	if err != nil {
 		return fmt.Errorf("failed to encrypt FSM request: %w", err)
 	}
-	_, err = d.db.SetNextFSMEvent(ctx, sql.SetNextFSMEventParams{
+	_, err = d.db.SetNextFSMEvent(ctx, sql2.SetNextFSMEventParams{
 		Fsm:         fsm,
 		InstanceKey: instanceKey,
 		Event:       nextState,
@@ -162,12 +162,12 @@ func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKe
 	return libdal.TranslatePGError(err)
 }
 
-type FSMStatus = sql.FsmStatus
+type FSMStatus = sql2.FsmStatus
 
 const (
-	FSMStatusRunning   = sql.FsmStatusRunning
-	FSMStatusCompleted = sql.FsmStatusCompleted
-	FSMStatusFailed    = sql.FsmStatusFailed
+	FSMStatusRunning   = sql2.FsmStatusRunning
+	FSMStatusCompleted = sql2.FsmStatusCompleted
+	FSMStatusFailed    = sql2.FsmStatusFailed
 )
 
 type FSMInstance struct {
@@ -195,7 +195,7 @@ func (d *DAL) AcquireFSMInstance(ctx context.Context, fsm schema.RefKey, instanc
 		if !errors.Is(err, libdal.ErrNotFound) {
 			return nil, err
 		}
-		row.Status = sql.FsmStatusRunning
+		row.Status = sql2.FsmStatusRunning
 	}
 	return &FSMInstance{
 		Lease:            lease,

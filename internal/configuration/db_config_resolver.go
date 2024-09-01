@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/TBD54566975/ftl/internal/configuration/sql"
+	"github.com/TBD54566975/ftl/internal/configuration/dal"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -14,7 +14,7 @@ type DBConfigResolver struct {
 }
 
 type DBConfigResolverDAL interface {
-	ListModuleConfiguration(ctx context.Context) ([]sql.ModuleConfiguration, error)
+	ListModuleConfiguration(ctx context.Context) ([]dal.ModuleConfiguration, error)
 }
 
 // DBConfigResolver should only be used for config, not secrets
@@ -35,7 +35,7 @@ func (d DBConfigResolver) List(ctx context.Context) ([]Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return slices.Map(configs, func(c sql.ModuleConfiguration) Entry {
+	return slices.Map(configs, func(c dal.ModuleConfiguration) Entry {
 		return Entry{
 			Ref: Ref{
 				Module: c.Module,
