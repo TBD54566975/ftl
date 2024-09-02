@@ -163,8 +163,6 @@ jobs:
           git push origin main
   vscode-release:
     name: Release VSCode Extension
-    # Disabled for now as it's broken.
-    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
