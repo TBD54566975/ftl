@@ -9,7 +9,7 @@ require (
 	github.com/BurntSushi/toml v1.4.0
 	github.com/TBD54566975/golang-tools v0.2.1
 	github.com/TBD54566975/scaffolder v1.1.0
-	github.com/XSAM/otelsql v0.32.0
+	github.com/XSAM/otelsql v0.33.0
 	github.com/alecthomas/assert/v2 v2.10.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
 	github.com/alecthomas/chroma/v2 v2.14.0
@@ -21,29 +21,29 @@ require (
 	github.com/amacneil/dbmate/v2 v2.20.0
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2 v1.30.4
-	github.com/aws/aws-sdk-go-v2/config v1.27.30
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.29
+	github.com/aws/aws-sdk-go-v2/config v1.27.31
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.30
 	github.com/aws/aws-sdk-go-v2/service/kms v1.35.5
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.6
 	github.com/aws/smithy-go v1.20.4
 	github.com/beevik/etree v1.4.1
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/deckarep/golang-set/v2 v2.6.0
-	github.com/docker/docker v27.1.2+incompatible
+	github.com/docker/docker v27.2.0+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/cronexpr v1.1.2
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.6.0
-	github.com/jellydator/ttlcache/v3 v3.2.1
+	github.com/jellydator/ttlcache/v3 v3.3.0
 	github.com/jpillora/backoff v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/mattn/go-isatty v0.0.20
 	github.com/multiformats/go-base36 v0.2.0
 	github.com/otiai10/copy v1.14.0
 	github.com/radovskyb/watcher v1.0.7
-	github.com/rs/cors v1.11.0
+	github.com/rs/cors v1.11.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/swaggest/jsonschema-go v0.3.72
