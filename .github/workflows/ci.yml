@@ -156,6 +156,23 @@ jobs:
         run: pnpm run lint
       - name: VSCode extension pnpm build
         run: just build-extension
+  plugin:
+    name: Intellij Plugin
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+        with:
+          cache: true
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Install Java
+        run: java -version
+      - name: Build Intellij Plugin
+        run: just build-intellij-plugin
   build-all:
     name: Rebuild All
     if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')

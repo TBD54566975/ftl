@@ -101,6 +101,9 @@ package-extension: build-extension
 publish-extension: package-extension
   @cd extensions/vscode && vsce publish
 
+build-intellij-plugin:
+  @cd extensions/intellij && gradle buildPlugin
+
 # Kotlin runtime is temporarily disabled; these instructions create a dummy zip in place of the kotlin runtime jar for
 # the runner.
 build-kt-runtime:

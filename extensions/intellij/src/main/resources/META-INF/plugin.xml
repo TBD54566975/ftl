@@ -1,0 +1,48 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+  <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+  <id>xyz.block.ftl.intellij</id>
+
+  <!-- Public plugin name should be written in Title Case.
+       Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+  <name>FTL</name>
+
+  <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+  <vendor email="ftl-support@block.xyz" url="https://tbd54566975.github.io/ftl/">FTL</vendor>
+
+  <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+       Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+       Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+  <description><![CDATA[
+    Support for the FTL LSP Server
+    - Basic completion of go directives
+    - start/stop/restart of the LSP
+    - lsp terminal output (auto scroll/clear buffer/soft wrap)
+    - settings panel for LSP server command configuration and project working directory
+  ]]></description>
+
+  <!-- Product and plugin compatibility requirements.
+       Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.ultimate</depends>
+
+  <!-- Extension points defined by the plugin.
+       Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="FTL" anchor="bottom"
+        factoryClass="xyz.block.ftl.intellij.toolWindow.FTLMessagesToolWindowFactory"/>
+
+    <!-- LSP -->
+    <platform.lsp.serverSupportProvider
+        implementation="xyz.block.ftl.intellij.FTLLspServerSupportProvider"/>
+
+    <applicationService
+        serviceImplementation="xyz.block.ftl.intellij.FTLSettingsComponent"/>
+
+    <applicationConfigurable
+        parentId="tools"
+        instance="xyz.block.ftl.intellij.FTLSettingsConfigurable"
+        id="org.intellij.sdk.settings.AppSettingsConfigurable"
+        displayName="FTL"/>
+  </extensions>
+</idea-plugin>
