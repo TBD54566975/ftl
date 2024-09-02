@@ -30,6 +30,9 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
+const TestPort = "9892"
+const TestIngressPort = "9891"
+
 func integrationTestTimeout() time.Duration {
 	timeout := optional.Zero(os.Getenv("FTL_INTEGRATION_TEST_TIMEOUT")).Default("5s")
 	d, err := time.ParseDuration(timeout)
@@ -199,23 +202,24 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			assert.NoError(t, err)
 		}
 	})
+	t.Setenv("FTL_ENDPOINT", "http://127.0.0.1:"+TestPort)
 
 	for _, language := range opts.languages {
 		ctx, done := context.WithCancel(ctx)
 		t.Run(language, func(t *testing.T) {
 			tmpDir := initWorkDir(t, cwd, opts)
 
-			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
+			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:"+TestPort, log.Debug)
 
 			var controller ftlv1connect.ControllerServiceClient
 			var console pbconsoleconnect.ConsoleServiceClient
 			if opts.startController {
 				Infof("Starting ftl cluster")
-				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
+				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--db-port", "15433", "--recreate", "--bind", "http://127.0.0.1:"+TestIngressPort)
 			}
 			if opts.startController || opts.kube {
-				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
-				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
+				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:"+TestPort, log.Debug)
+				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:"+TestPort, log.Debug)
 			}
 
 			testData := filepath.Join(cwd, "testdata", language)

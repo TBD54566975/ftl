@@ -160,7 +160,9 @@ func DebugShell() Action {
 func Exec(cmd string, args ...string) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Executing (in %s): %s %s", ic.workDir, cmd, shellquote.Join(args...))
-		err := ftlexec.Command(ic, log.Debug, ic.workDir, cmd, args...).RunStderrError(ic)
+		command := ftlexec.Command(ic, log.Debug, ic.workDir, cmd, args...)
+		command.Env = append(command.Env, "FTL_ENDPOINT=http://127.0.0.1:"+TestPort)
+		err := command.RunStderrError(ic)
 		assert.NoError(t, err)
 	}
 }
@@ -181,6 +183,7 @@ func ExecWithExpectedOutput(want string, cmd string, args ...string) Action {
 func ExecWithExpectedError(want string, cmd string, args ...string) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Executing: %s %s", cmd, shellquote.Join(args...))
+		t.Setenv("FTL_ENDPOINT", "http://127.0.0.1:"+TestPort)
 		output, err := ftlexec.Capture(ic, ic.workDir, cmd, args...)
 		assert.Error(t, err)
 		assert.Contains(t, string(output), want)
@@ -222,9 +225,9 @@ func Deploy(module string) Action {
 	return Chain(
 		func(t testing.TB, ic TestContext) {
 			if ic.kube {
-				Exec("ftl", "deploy", "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0", module)(t, ic)
+				Exec("ftl", "deploy", "--endpoint", "http://127.0.0.1:"+TestPort, "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0", module)(t, ic)
 			} else {
-				Exec("ftl", "deploy", module)(t, ic)
+				Exec("ftl", "deploy", "--endpoint", "http://127.0.0.1:"+TestPort, module)
 			}
 		},
 		Wait(module),
@@ -527,7 +530,7 @@ func JsonData(t testing.TB, body interface{}) []byte {
 func HttpCall(method string, path string, headers map[string][]string, body []byte, onResponse func(t testing.TB, resp *HTTPResponse)) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("HTTP %s %s", method, path)
-		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:8891"))
+		baseURL, err := url.Parse(fmt.Sprintf("http://localhost:" + TestIngressPort))
 		assert.NoError(t, err)
 
 		u, err := baseURL.Parse(path)
