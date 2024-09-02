@@ -12,15 +12,20 @@ import (
 )
 
 type ObfuscatorProvider interface {
-	obfuscator() Obfuscator
+	Obfuscator() Obfuscator
 }
 
-// Obfuscator hides and reveals a value, but does not provide real security
-// instead the aim of this Obfuscator is to make values not easily human readable
+// Obfuscator hides and reveals a value, but does not provide real security.
+//
+// # Instead, the aim of this Obfuscator is to make values not easily human-readable
 //
 // Obfuscation is done by XOR-ing the input with the AES key. Length of key must be 16, 24 or 32 bytes (corresponding to AES-128, AES-192 or AES-256 keys).
 type Obfuscator struct {
 	key []byte
+}
+
+func NewObfuscator(key []byte) Obfuscator {
+	return Obfuscator{key: key}
 }
 
 // Obfuscate takes a value and returns an obfuscated value (encoded in base64)

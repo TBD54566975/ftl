@@ -1,4 +1,4 @@
-package configuration
+package routers
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
+	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/dal"
 )
 
@@ -17,8 +18,8 @@ func (mockDBConfigResolverDAL) ListModuleConfiguration(ctx context.Context) ([]d
 
 func TestDBConfigResolverList(t *testing.T) {
 	ctx := context.Background()
-	resolver := NewDBConfigResolver(mockDBConfigResolverDAL{})
-	expected := []Entry{}
+	resolver := NewDatabaseConfig(mockDBConfigResolverDAL{})
+	expected := []configuration.Entry{}
 
 	entries, err := resolver.List(ctx)
 	assert.Equal(t, entries, expected)

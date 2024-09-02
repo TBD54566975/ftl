@@ -11,14 +11,15 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
-	cf "github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type AdminService struct {
 	schr SchemaRetriever
-	cm   *cf.Manager[cf.Configuration]
-	sm   *cf.Manager[cf.Secrets]
+	cm   *manager.Manager[configuration.Configuration]
+	sm   *manager.Manager[configuration.Secrets]
 }
 
 var _ ftlv1connect.AdminServiceHandler = (*AdminService)(nil)
@@ -27,7 +28,7 @@ type SchemaRetriever interface {
 	GetActiveSchema(ctx context.Context) (*schema.Schema, error)
 }
 
-func NewAdminService(cm *cf.Manager[cf.Configuration], sm *cf.Manager[cf.Secrets], schr SchemaRetriever) *AdminService {
+func NewAdminService(cm *manager.Manager[configuration.Configuration], sm *manager.Manager[configuration.Secrets], schr SchemaRetriever) *AdminService {
 	return &AdminService{
 		schr: schr,
 		cm:   cm,
@@ -141,7 +142,7 @@ func (s *AdminService) SecretsList(ctx context.Context, req *connect.Request[ftl
 	}
 	secrets := []*ftlv1.ListSecretsResponse_Secret{}
 	for _, secret := range listing {
-		if req.Msg.Provider != nil && cf.ProviderKeyForAccessor(secret.Accessor) != secretProviderKey(req.Msg.Provider) {
+		if req.Msg.Provider != nil && manager.ProviderKeyForAccessor(secret.Accessor) != secretProviderKey(req.Msg.Provider) {
 			// Skip secrets that don't match the provider in the request
 			continue
 		}
@@ -231,11 +232,11 @@ func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftl
 	return connect.NewResponse(&ftlv1.UnsetSecretResponse{}), nil
 }
 
-func refFromConfigRef(cr *ftlv1.ConfigRef) cf.Ref {
-	return cf.NewRef(cr.GetModule(), cr.GetName())
+func refFromConfigRef(cr *ftlv1.ConfigRef) configuration.Ref {
+	return configuration.NewRef(cr.GetModule(), cr.GetName())
 }
 
-func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool, ref cf.Ref, value json.RawMessage) error {
+func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool, ref configuration.Ref, value json.RawMessage) error {
 	logger := log.FromContext(ctx)
 
 	// Globals aren't in the module schemas, so we have nothing to validate against.

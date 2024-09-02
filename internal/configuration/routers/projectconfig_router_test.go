@@ -1,4 +1,4 @@
-package configuration
+package routers_test
 
 import (
 	"context"
@@ -10,6 +10,10 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
+	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
@@ -46,19 +50,19 @@ func TestGetGlobal(t *testing.T) {
 	})
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cf, err := New(ctx,
-		ProjectConfigResolver[Configuration]{Config: config},
-		[]Provider[Configuration]{
-			EnvarProvider[Configuration]{},
-			InlineProvider[Configuration]{},
+	cf, err := manager.New[configuration.Configuration](ctx,
+		routers.ProjectConfig[configuration.Configuration]{Config: config},
+		[]configuration.Provider[configuration.Configuration]{
+			providers.Envar[configuration.Configuration]{},
+			providers.Inline[configuration.Configuration]{},
 		})
 	assert.NoError(t, err)
 
 	var got *url.URL
 	want := URL("inline://qwertyqwerty")
-	err = cf.Set(ctx, "inline", Ref{Module: optional.None[string](), Name: "default"}, want)
+	err = cf.Set(ctx, "inline", configuration.Ref{Module: optional.None[string](), Name: "default"}, want)
 	assert.NoError(t, err)
-	err = cf.Get(ctx, Ref{Module: optional.Some[string]("somemodule"), Name: "default"}, &got)
+	err = cf.Get(ctx, configuration.Ref{Module: optional.Some[string]("somemodule"), Name: "default"}, &got)
 	assert.NoError(t, err)
 
 	// Get should return `want` even though it was only set globally
@@ -70,19 +74,27 @@ func setAndAssert(t *testing.T, module string, config string) {
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cf, err := New(ctx,
-		ProjectConfigResolver[Configuration]{Config: config},
-		[]Provider[Configuration]{
-			EnvarProvider[Configuration]{},
-			InlineProvider[Configuration]{},
+	cf, err := manager.New[configuration.Configuration](ctx,
+		routers.ProjectConfig[configuration.Configuration]{Config: config},
+		[]configuration.Provider[configuration.Configuration]{
+			providers.Envar[configuration.Configuration]{},
+			providers.Inline[configuration.Configuration]{},
 		})
 	assert.NoError(t, err)
 
 	var got *url.URL
 	want := URL("inline://asdfasdf")
-	err = cf.Set(ctx, "inline", Ref{Module: optional.Some[string](module), Name: "default"}, want)
+	err = cf.Set(ctx, "inline", configuration.Ref{Module: optional.Some[string](module), Name: "default"}, want)
 	assert.NoError(t, err)
-	err = cf.Get(ctx, Ref{Module: optional.Some[string](module), Name: "default"}, &got)
+	err = cf.Get(ctx, configuration.Ref{Module: optional.Some[string](module), Name: "default"}, &got)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
+}
+
+func URL(s string) *url.URL {
+	u, err := url.Parse(s)
+	if err != nil {
+		panic(err)
+	}
+	return u
 }

@@ -10,6 +10,9 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	cf "github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
+	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -49,14 +52,14 @@ func TestAdminNoValidationWithNoSchema(t *testing.T) {
 	config := tempConfigPath(t, "testdata/ftl-project.toml", "admin")
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cm, err := cf.NewConfigurationManager(ctx, cf.ProjectConfigResolver[cf.Configuration]{Config: config})
+	cm, err := manager.NewConfigurationManager(ctx, routers.ProjectConfig[cf.Configuration]{Config: config})
 	assert.NoError(t, err)
 
-	sm, err := cf.New(ctx,
-		cf.ProjectConfigResolver[cf.Secrets]{Config: config},
+	sm, err := manager.New(ctx,
+		routers.ProjectConfig[cf.Secrets]{Config: config},
 		[]cf.Provider[cf.Secrets]{
-			cf.EnvarProvider[cf.Secrets]{},
-			cf.InlineProvider[cf.Secrets]{},
+			providers.Envar[cf.Secrets]{},
+			providers.Inline[cf.Secrets]{},
 		})
 	assert.NoError(t, err)
 

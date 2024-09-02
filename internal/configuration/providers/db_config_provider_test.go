@@ -1,4 +1,4 @@
-package configuration
+package providers
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/internal/configuration"
 )
 
 var b = []byte(`""`)
@@ -27,23 +29,23 @@ func (mockDBConfigProviderDAL) UnsetModuleConfiguration(ctx context.Context, mod
 
 func TestDBConfigProvider(t *testing.T) {
 	ctx := context.Background()
-	provider := NewDBConfigProvider(mockDBConfigProviderDAL{})
+	provider := NewDatabaseConfig(mockDBConfigProviderDAL{})
 
-	gotBytes, err := provider.Load(ctx, Ref{
+	gotBytes, err := provider.Load(ctx, configuration.Ref{
 		Module: optional.Some("module"),
 		Name:   "configname",
 	}, &url.URL{Scheme: "db"})
 	assert.NoError(t, err)
 	assert.Equal(t, b, gotBytes)
 
-	gotURL, err := provider.Store(ctx, Ref{
+	gotURL, err := provider.Store(ctx, configuration.Ref{
 		Module: optional.Some("module"),
 		Name:   "configname",
 	}, b)
 	assert.NoError(t, err)
 	assert.Equal(t, &url.URL{Scheme: "db"}, gotURL)
 
-	err = provider.Delete(ctx, Ref{
+	err = provider.Delete(ctx, configuration.Ref{
 		Module: optional.Some("module"),
 		Name:   "configname",
 	})
@@ -53,23 +55,23 @@ func TestDBConfigProvider(t *testing.T) {
 func TestDBConfigProvider_Global(t *testing.T) {
 	t.Run("works", func(t *testing.T) {
 		ctx := context.Background()
-		provider := NewDBConfigProvider(mockDBConfigProviderDAL{})
+		provider := NewDatabaseConfig(mockDBConfigProviderDAL{})
 
-		gotBytes, err := provider.Load(ctx, Ref{
+		gotBytes, err := provider.Load(ctx, configuration.Ref{
 			Module: optional.None[string](),
 			Name:   "configname",
 		}, &url.URL{Scheme: "db"})
 		assert.NoError(t, err)
 		assert.Equal(t, b, gotBytes)
 
-		gotURL, err := provider.Store(ctx, Ref{
+		gotURL, err := provider.Store(ctx, configuration.Ref{
 			Module: optional.None[string](),
 			Name:   "configname",
 		}, b)
 		assert.NoError(t, err)
 		assert.Equal(t, &url.URL{Scheme: "db"}, gotURL)
 
-		err = provider.Delete(ctx, Ref{
+		err = provider.Delete(ctx, configuration.Ref{
 			Module: optional.None[string](),
 			Name:   "configname",
 		})

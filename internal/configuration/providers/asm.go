@@ -1,4 +1,4 @@
-package configuration
+package providers
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/leader"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -20,9 +21,9 @@ import (
 type asmClient interface {
 	name() string
 	syncInterval() time.Duration
-	sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error
-	store(ctx context.Context, ref Ref, value []byte) (*url.URL, error)
-	delete(ctx context.Context, ref Ref) error
+	sync(ctx context.Context, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error
+	store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error)
+	delete(ctx context.Context, ref configuration.Ref) error
 }
 
 // ASM implements a Provider for AWS Secrets Manager (ASM).
@@ -34,7 +35,7 @@ type ASM struct {
 	coordinator *leader.Coordinator[asmClient]
 }
 
-var _ AsynchronousProvider[Secrets] = &ASM{}
+var _ configuration.AsynchronousProvider[configuration.Secrets] = &ASM{}
 
 func NewASM(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser) *ASM {
 	return newASMForTesting(ctx, secretsClient, advertise, leaser, optional.None[asmClient]())
@@ -68,15 +69,15 @@ func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client,
 	}
 }
 
-func asmURLForRef(ref Ref) *url.URL {
+func asmURLForRef(ref configuration.Ref) *url.URL {
 	return &url.URL{
 		Scheme: "asm",
 		Host:   ref.String(),
 	}
 }
 
-func (ASM) Role() Secrets {
-	return Secrets{}
+func (ASM) Role() configuration.Secrets {
+	return configuration.Secrets{}
 }
 
 func (ASM) Key() string {
@@ -92,7 +93,7 @@ func (a *ASM) SyncInterval() time.Duration {
 	return client.syncInterval()
 }
 
-func (a *ASM) Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref, SyncedValue]) error {
+func (a *ASM) Sync(ctx context.Context, entries []configuration.Entry, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
 	client, err := a.coordinator.Get()
 	if err != nil {
 		return fmt.Errorf("could not coordinate ASM: %w", err)
@@ -105,7 +106,7 @@ func (a *ASM) Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref
 }
 
 // Store and if the secret already exists, update it.
-func (a *ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (a *ASM) Store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
 	client, err := a.coordinator.Get()
 	if err != nil {
 		return nil, err
@@ -117,7 +118,7 @@ func (a *ASM) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error
 	return url, nil
 }
 
-func (a *ASM) Delete(ctx context.Context, ref Ref) error {
+func (a *ASM) Delete(ctx context.Context, ref configuration.Ref) error {
 	client, err := a.coordinator.Get()
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package configuration
+package providers
 
 import (
 	"context"
@@ -6,18 +6,20 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+
+	"github.com/TBD54566975/ftl/internal/configuration"
 )
 
-// EnvarProvider is a configuration provider that reads secrets or configuration
+// Envar is a configuration provider that reads secrets or configuration
 // from environment variables.
-type EnvarProvider[R Role] struct{}
+type Envar[R configuration.Role] struct{}
 
-var _ SynchronousProvider[Configuration] = EnvarProvider[Configuration]{}
+var _ configuration.SynchronousProvider[configuration.Configuration] = Envar[configuration.Configuration]{}
 
-func (EnvarProvider[R]) Role() R     { var r R; return r }
-func (EnvarProvider[R]) Key() string { return "envar" }
+func (Envar[R]) Role() R     { var r R; return r }
+func (Envar[R]) Key() string { return "envar" }
 
-func (e EnvarProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]byte, error) {
+func (e Envar[R]) Load(ctx context.Context, ref configuration.Ref, key *url.URL) ([]byte, error) {
 	// FTL_<type>_[<module>]_<name> where <module> and <name> are base64 encoded.
 	envar := e.key(ref)
 
@@ -25,20 +27,20 @@ func (e EnvarProvider[R]) Load(ctx context.Context, ref Ref, key *url.URL) ([]by
 	if ok {
 		return base64.RawURLEncoding.DecodeString(value)
 	}
-	return nil, fmt.Errorf("environment variable %q is not set: %w", envar, ErrNotFound)
+	return nil, fmt.Errorf("environment variable %q is not set: %w", envar, configuration.ErrNotFound)
 }
 
-func (e EnvarProvider[R]) Delete(ctx context.Context, ref Ref) error {
+func (e Envar[R]) Delete(ctx context.Context, ref configuration.Ref) error {
 	return nil
 }
 
-func (e EnvarProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (e Envar[R]) Store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
 	envar := e.key(ref)
 	fmt.Printf("%s=%s\n", envar, base64.RawURLEncoding.EncodeToString(value))
 	return &url.URL{Scheme: "envar", Host: ref.Name}, nil
 }
 
-func (e EnvarProvider[R]) key(ref Ref) string {
+func (e Envar[R]) key(ref configuration.Ref) string {
 	key := e.prefix()
 	if m, ok := ref.Module.Get(); ok {
 		key += base64.RawURLEncoding.EncodeToString([]byte(m)) + "_"
@@ -47,13 +49,13 @@ func (e EnvarProvider[R]) key(ref Ref) string {
 	return key
 }
 
-func (EnvarProvider[R]) prefix() string {
+func (Envar[R]) prefix() string {
 	var k R
 	switch any(k).(type) {
-	case Configuration:
+	case configuration.Configuration:
 		return "FTL_CONFIG_"
 
-	case Secrets:
+	case configuration.Secrets:
 		return "FTL_SECRET_"
 
 	default:
@@ -64,7 +66,7 @@ func (EnvarProvider[R]) prefix() string {
 // I don't think there's a need to parse environment variables, but let's keep
 // this around for a bit just in case, as it was a PITA to write.
 //
-// func (e EnvarProvider[R]) entryForEnvar(env string) (Entry, error) {
+// func (e Envar[R]) entryForEnvar(env string) (Entry, error) {
 // 	parts := strings.SplitN(env, "=", 2)
 // 	if !strings.HasPrefix(parts[0], e.prefix()) {
 // 		return Entry{}, fmt.Errorf("invalid environment variable %q", parts[0])

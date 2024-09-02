@@ -254,6 +254,7 @@ jobs:
       - name: Extract test cases
         id: extract-tests
         run: |
+          set -euo pipefail
           # shellcheck disable=SC2046
           echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build integration' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
   integration-run:
@@ -281,8 +282,9 @@ jobs:
         run: go mod download
       - name: Run ${{ matrix.test }}
         run: |
+          set -euo pipefail
           # shellcheck disable=SC2046
-          go test -v -race -tags integration -run ${{ matrix.test }} $(git grep -l '^//go:build integration' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
+          go test -v -race -tags integration -run '^${{ matrix.test }}$' $(git grep -l '^//go:build integration' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
   integration-success:
     name: Integration Success
     needs: [integration-run]

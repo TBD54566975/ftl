@@ -1,4 +1,4 @@
-package configuration
+package providers
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/aws/smithy-go"
 	"github.com/puzpuzpuz/xsync/v3"
 
+	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -42,16 +43,16 @@ func (l *asmLeader) syncInterval() time.Duration {
 }
 
 // sync retrieves all secrets from ASM and updates the cache
-func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedValue]) error {
-	previous := map[Ref]SyncedValue{}
-	values.Range(func(ref Ref, value SyncedValue) bool {
+func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
+	previous := map[configuration.Ref]configuration.SyncedValue{}
+	values.Range(func(ref configuration.Ref, value configuration.SyncedValue) bool {
 		previous[ref] = value
 		return true
 	})
-	seen := map[Ref]bool{}
+	seen := map[configuration.Ref]bool{}
 
 	// get list of secrets
-	refsToLoad := map[Ref]time.Time{}
+	refsToLoad := map[configuration.Ref]time.Time{}
 	nextToken := optional.None[string]()
 	for {
 		out, err := l.client.ListSecrets(ctx, &secretsmanager.ListSecretsInput{
@@ -68,14 +69,14 @@ func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedVal
 			return s.DeletedDate == nil
 		})
 		for _, s := range activeSecrets {
-			ref, err := ParseRef(*s.Name)
+			ref, err := configuration.ParseRef(*s.Name)
 			if err != nil {
 				return fmt.Errorf("unable to parse ref from ASM secret: %w", err)
 			}
 			seen[ref] = true
 
 			// check if we already have the value from previous sync
-			if pValue, ok := previous[ref]; ok && pValue.VersionToken == optional.Some[VersionToken](*s.LastChangedDate) {
+			if pValue, ok := previous[ref]; ok && pValue.VersionToken == optional.Some[configuration.VersionToken](*s.LastChangedDate) {
 				continue
 			}
 			refsToLoad[ref] = *s.LastChangedDate
@@ -116,7 +117,7 @@ func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedVal
 			return fmt.Errorf("unable to get batch of secret values from ASM: %w", err)
 		}
 		for _, s := range out.SecretValues {
-			ref, err := ParseRef(*s.Name)
+			ref, err := configuration.ParseRef(*s.Name)
 			if err != nil {
 				return fmt.Errorf("unable to parse ref: %w", err)
 			}
@@ -125,9 +126,9 @@ func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedVal
 				return fmt.Errorf("secret for %s in ASM is not a string", ref)
 			}
 			data := unwrapComments([]byte(*s.SecretString))
-			values.Store(ref, SyncedValue{
+			values.Store(ref, configuration.SyncedValue{
 				Value:        data,
-				VersionToken: optional.Some[VersionToken](refsToLoad[ref]),
+				VersionToken: optional.Some[configuration.VersionToken](refsToLoad[ref]),
 			})
 			delete(refsToLoad, ref)
 		}
@@ -136,7 +137,7 @@ func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[Ref, SyncedVal
 }
 
 // store and if the secret already exists, update it.
-func (l *asmLeader) store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (l *asmLeader) store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
 	valueWithComments := aws.String(string(wrapWithComments(value, defaultSecretModificationWarning)))
 	_, err := l.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 		Name:         aws.String(ref.String()),
@@ -163,7 +164,7 @@ func (l *asmLeader) store(ctx context.Context, ref Ref, value []byte) (*url.URL,
 	return asmURLForRef(ref), nil
 }
 
-func (l *asmLeader) delete(ctx context.Context, ref Ref) error {
+func (l *asmLeader) delete(ctx context.Context, ref configuration.Ref) error {
 	var t = true
 	_, err := l.client.DeleteSecret(ctx, &secretsmanager.DeleteSecretInput{
 		SecretId:                   aws.String(ref.String()),

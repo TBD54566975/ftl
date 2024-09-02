@@ -14,7 +14,10 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	cf "github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
+	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -22,14 +25,14 @@ func TestAdminService(t *testing.T) {
 	config := tempConfigPath(t, "testdata/ftl-project.toml", "admin")
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cm, err := cf.NewConfigurationManager(ctx, cf.ProjectConfigResolver[cf.Configuration]{Config: config})
+	cm, err := manager.NewConfigurationManager(ctx, routers.ProjectConfig[configuration.Configuration]{Config: config})
 	assert.NoError(t, err)
 
-	sm, err := cf.New(ctx,
-		cf.ProjectConfigResolver[cf.Secrets]{Config: config},
-		[]cf.Provider[cf.Secrets]{
-			cf.EnvarProvider[cf.Secrets]{},
-			cf.InlineProvider[cf.Secrets]{},
+	sm, err := manager.New(ctx,
+		routers.ProjectConfig[configuration.Secrets]{Config: config},
+		[]configuration.Provider[configuration.Secrets]{
+			providers.Envar[configuration.Secrets]{},
+			providers.Inline[configuration.Secrets]{},
 		})
 	assert.NoError(t, err)
 	admin := NewAdminService(cm, sm, &diskSchemaRetriever{})
@@ -39,20 +42,20 @@ func TestAdminService(t *testing.T) {
 	assert.NoError(t, err)
 
 	testAdminConfigs(t, ctx, "FTL_CONFIG_YmFy", admin, []expectedEntry{
-		{Ref: cf.Ref{Name: "bar"}, Value: string(expectedEnvarValue)},
-		{Ref: cf.Ref{Name: "foo"}, Value: `"foobar"`},
-		{Ref: cf.Ref{Name: "mutable"}, Value: `"helloworld"`},
-		{Ref: cf.Ref{Module: optional.Some[string]("echo"), Name: "default"}, Value: `"anonymous"`},
+		{Ref: configuration.Ref{Name: "bar"}, Value: string(expectedEnvarValue)},
+		{Ref: configuration.Ref{Name: "foo"}, Value: `"foobar"`},
+		{Ref: configuration.Ref{Name: "mutable"}, Value: `"helloworld"`},
+		{Ref: configuration.Ref{Module: optional.Some[string]("echo"), Name: "default"}, Value: `"anonymous"`},
 	})
 
 	testAdminSecrets(t, ctx, "FTL_SECRET_YmFy", admin, []expectedEntry{
-		{Ref: cf.Ref{Name: "bar"}, Value: string(expectedEnvarValue)},
-		{Ref: cf.Ref{Name: "foo"}, Value: `"foobarsecret"`},
+		{Ref: configuration.Ref{Name: "bar"}, Value: string(expectedEnvarValue)},
+		{Ref: configuration.Ref{Name: "foo"}, Value: `"foobarsecret"`},
 	})
 }
 
 type expectedEntry struct {
-	Ref   cf.Ref
+	Ref   configuration.Ref
 	Value string
 }
 
@@ -204,14 +207,14 @@ func TestAdminValidation(t *testing.T) {
 	config := tempConfigPath(t, "testdata/ftl-project.toml", "admin")
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cm, err := cf.NewConfigurationManager(ctx, cf.ProjectConfigResolver[cf.Configuration]{Config: config})
+	cm, err := manager.NewConfigurationManager(ctx, routers.ProjectConfig[configuration.Configuration]{Config: config})
 	assert.NoError(t, err)
 
-	sm, err := cf.New(ctx,
-		cf.ProjectConfigResolver[cf.Secrets]{Config: config},
-		[]cf.Provider[cf.Secrets]{
-			cf.EnvarProvider[cf.Secrets]{},
-			cf.InlineProvider[cf.Secrets]{},
+	sm, err := manager.New(ctx,
+		routers.ProjectConfig[configuration.Secrets]{Config: config},
+		[]configuration.Provider[configuration.Secrets]{
+			providers.Envar[configuration.Secrets]{},
+			providers.Inline[configuration.Secrets]{},
 		})
 	assert.NoError(t, err)
 	admin := NewAdminService(cm, sm, &mockSchemaRetriever{})

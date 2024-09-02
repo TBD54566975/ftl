@@ -4,16 +4,19 @@ package frontend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/cors"
 	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -21,15 +24,24 @@ var proxyURL, _ = url.Parse("http://localhost:5173") //nolint:errcheck
 var proxy = httputil.NewSingleHostReverseProxy(proxyURL)
 
 func Server(ctx context.Context, timestamp time.Time, publicURL *url.URL, allowOrigin *url.URL) (http.Handler, error) {
-	logger := log.FromContext(ctx)
-	logger.Debugf("Building console...")
-
 	gitRoot, ok := internal.GitRoot("").Get()
 	if !ok {
 		return nil, fmt.Errorf("failed to find Git root")
 	}
 
-	err := exec.Command(ctx, log.Debug, gitRoot, "just", "build-frontend").RunBuffered(ctx)
+	// Lock the frontend directory to prevent concurrent builds.
+	release, err := flock.Acquire(ctx, filepath.Join(gitRoot, ".frontend.lock"), 2*time.Minute)
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire lock: %w", err)
+	}
+
+	logger := log.FromContext(ctx)
+	logger.Debugf("Building console...")
+
+	err = exec.Command(ctx, log.Debug, gitRoot, "just", "build-frontend").RunBuffered(ctx)
+	if lerr := release(); lerr != nil {
+		return nil, errors.Join(fmt.Errorf("failed to release lock: %w", lerr))
+	}
 	if err != nil {
 		return nil, err
 	}

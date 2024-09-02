@@ -1,6 +1,6 @@
 //go:build !release
 
-package configuration
+package providerstest
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
 	"github.com/puzpuzpuz/xsync/v3"
+
+	"github.com/TBD54566975/ftl/internal/configuration"
 )
 
 type manualSyncBlock struct {
@@ -19,15 +21,15 @@ type manualSyncBlock struct {
 // ManualSyncProvider prevents normal syncs by returning a very high sync interval
 // when syncAndWait() is called, it starts returning a 0 sync interval  and then then blocks until sync completes.
 // See why we didn't use mock clocks to schedule syncs here: https://github.com/TBD54566975/ftl/issues/2092
-type ManualSyncProvider[R Role] struct {
+type ManualSyncProvider[R configuration.Role] struct {
 	syncRequested atomic.Value[optional.Option[manualSyncBlock]]
 
-	provider AsynchronousProvider[R]
+	provider configuration.AsynchronousProvider[R]
 }
 
-var _ AsynchronousProvider[Secrets] = &ManualSyncProvider[Secrets]{}
+var _ configuration.AsynchronousProvider[configuration.Secrets] = &ManualSyncProvider[configuration.Secrets]{}
 
-func NewManualSyncProvider[R Role](provider AsynchronousProvider[R]) *ManualSyncProvider[R] {
+func NewManualSyncProvider[R configuration.Role](provider configuration.AsynchronousProvider[R]) *ManualSyncProvider[R] {
 	return &ManualSyncProvider[R]{
 		provider: provider,
 	}
@@ -53,11 +55,11 @@ func (a *ManualSyncProvider[R]) Key() string {
 	return a.provider.Key()
 }
 
-func (a *ManualSyncProvider[R]) Store(ctx context.Context, ref Ref, value []byte) (*url.URL, error) {
+func (a *ManualSyncProvider[R]) Store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
 	return a.provider.Store(ctx, ref, value) //nolint:wrapcheck
 }
 
-func (a *ManualSyncProvider[R]) Delete(ctx context.Context, ref Ref) error {
+func (a *ManualSyncProvider[R]) Delete(ctx context.Context, ref configuration.Ref) error {
 	return a.provider.Delete(ctx, ref) //nolint:wrapcheck
 }
 
@@ -70,7 +72,7 @@ func (a *ManualSyncProvider[R]) SyncInterval() time.Duration {
 	return time.Hour * 24 * 365
 }
 
-func (a *ManualSyncProvider[R]) Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref, SyncedValue]) error {
+func (a *ManualSyncProvider[R]) Sync(ctx context.Context, entries []configuration.Entry, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
 	err := a.provider.Sync(ctx, entries, values)
 
 	if block, ok := a.syncRequested.Load().Get(); ok {
