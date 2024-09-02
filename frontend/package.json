@@ -27,7 +27,7 @@
   "browserslist": ["> 2%"],
   "source": "index.html",
   "dependencies": {
-    "@bufbuild/protobuf": "^1.1.0",
+    "@bufbuild/protobuf": "^2.0.0",
     "@bufbuild/protoc-gen-es": "1.10.0",
     "@codemirror/autocomplete": "^6.18.0",
     "@codemirror/commands": "^6.5.0",
