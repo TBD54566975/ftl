@@ -1,4 +1,4 @@
-# Contribution Guide
+**** Contribution Guide
 
 There are many ways to be an open source contributor, and we're here to help you on your way! You may:
 
@@ -76,13 +76,14 @@ Additional points of note:
 Many changes are relatively straightforward and don't require a design, but more complex changes should be covered by a design document. Once a DRI (Directly Responsible Individual, a Cash term) is selected, our process for creating and reviewing designs is the following. The DRI:
 
 1. Does some initial thinking and comes up with a rough approach.
-2. Schedules a short (30-60 minute) design session with the rest of the team to do a basic check that the idea is sane, and pick up any obvious issues.
-   - Not everyone needs to attend, but those who can should.
-   - Focus on the larger points, minor issues will naturally fall out during implementation.
-   - Avoid bikeshedding.
-3. Writes the design doc.
-4. Send the doc to the team for async review via HackMD comments.
-5. Once approved by @alecthomas, implement!
+2. Discuss the design with the team, and particularly the DRI for the subsystem that the change will affect.
+3. If the design seems broadly sound and useful, continue on to write the design doc.
+4. A day or two before the weekly sync, send out the design doc for review.
+5. Address any comments by changing the design or discussion.
+6. Add the design review to the weekly sync meeting. The sync meeting is a good opportunity to discuss the design with the team and address any last feedback.
+7. Once approved by the DRI for that subsystem and the DRI for FTL (if necessary), implement!
+
+ **Reviewers should avoid bikeshedding.**
 
 Of course, feel free to bounce ideas off anyone on the team at any time.
 
