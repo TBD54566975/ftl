@@ -42,7 +42,11 @@
       enabled: false,
     },
     {
-      matchPackageNames: ["eslint", "codemirror", "codemirror-json-schema"],
+      matchPackageNames: [
+        "@bufbuild/protobuf", // We can't update this until we update buf
+        "codemirror", 
+        "codemirror-json-schema",
+      ],
       enabled: false,
       matchFileNames: ["frontend/**", "extensions/**"],
     },
