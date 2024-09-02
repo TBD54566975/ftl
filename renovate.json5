@@ -9,6 +9,9 @@
     "group:allNonMajor",
     "schedule:earlyMondays",
   ],
+  lockFileMaintenance: {
+    enabled: true, // Automatically update lock files like pnpm-lock.yaml
+  },
   packageRules: [
     {
       matchUpdateTypes: ["minor", "patch"],
