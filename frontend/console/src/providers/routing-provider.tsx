@@ -24,7 +24,8 @@ const router = createBrowserRouter(
         <Route path='deployments/:deploymentKey' element={<DeploymentPage />} />
         <Route path='deployments/:deploymentKey/verbs/:verbName' element={<VerbPage />} />
         <Route path='graph' element={<ConsolePage />} />
-        <Route path='infrastructure' element={<InfrastructurePage />} />
+        <Route path='infrastructure' element={<Navigate to='infrastructure/controllers' replace />} />
+        <Route path='infrastructure/*' element={<InfrastructurePage />} />
       </Route>
 
       <Route path='*' element={<NotFoundPage />} />
