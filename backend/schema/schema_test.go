@@ -46,6 +46,12 @@ module todo {
     when Time
   }
 
+  export data PersonalInfo {
+    name Encrypted<String>
+    age Encrypted<Int>
+    photo Encrypted<Bytes>
+  }
+
   export verb create(todo.CreateRequest) todo.CreateResponse
     +calls todo.destroy
 	+database calls todo.testdb
@@ -437,7 +443,7 @@ func TestParsing(t *testing.T) {
 						+retry 0 catch test.catch
 					verb catch(builtin.CatchRequest<Any>) Unit
 
-					fsm FSM 
+					fsm FSM
 						+ retry 10 1s 10s
 					{
 						start test.A
@@ -650,7 +656,7 @@ func TestParsing(t *testing.T) {
 			input: `
 				module test {
 					export topic topicA test.eventA
-				
+
 					topic topicB test.eventB
 
 					subscription subA1 test.topicA
@@ -1075,6 +1081,15 @@ var testSchema = MustValidate(&Schema{
 					Fields: []*Field{
 						{Name: "name", Type: &String{}},
 						{Name: "when", Type: &Time{}},
+					},
+				},
+				&Data{
+					Name:   "PersonalInfo",
+					Export: true,
+					Fields: []*Field{
+						{Name: "name", Type: &Encrypted{Type: &String{}}},
+						{Name: "age", Type: &Encrypted{Type: &Int{}}},
+						{Name: "photo", Type: &Encrypted{Type: &Bytes{}}},
 					},
 				},
 				&Verb{Name: "create",

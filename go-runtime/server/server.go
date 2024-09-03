@@ -127,6 +127,7 @@ type moduleServer struct {
 }
 
 func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (response *connect.Response[ftlv1.CallResponse], err error) {
+	fmt.Printf("moduleServer Call %v\n", req)
 	logger := log.FromContext(ctx)
 	// Recover from panics and return an error ftlv1.CallResponse.
 	defer func() {
@@ -151,6 +152,8 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("verb %s.%s not found", req.Msg.Verb.Module, req.Msg.Verb.Name))
 	}
 
+	fmt.Printf("moduleServer got handler %v\n", handler)
+
 	metadata := map[internal.MetadataKey]string{}
 	if req.Msg.Metadata != nil {
 		for _, pair := range req.Msg.Metadata.Values {
@@ -158,13 +161,20 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 		}
 	}
 
+	fmt.Printf("moduleServer got metadata %v\n", metadata)
+
 	respdata, err := handler.fn(ctx, req.Msg.Body, metadata)
 	if err != nil {
+
+		fmt.Printf("moduleServer got error %v\n", err)
+
 		// This makes me slightly ill.
 		return connect.NewResponse(&ftlv1.CallResponse{
 			Response: &ftlv1.CallResponse_Error_{Error: &ftlv1.CallResponse_Error{Message: err.Error()}},
 		}), nil
 	}
+
+	fmt.Printf("moduleServer got respdata %v\n", respdata)
 
 	return connect.NewResponse(&ftlv1.CallResponse{
 		Response: &ftlv1.CallResponse_Body{Body: respdata},

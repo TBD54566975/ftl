@@ -1022,6 +1022,8 @@ func (s *Service) callWithRequest(
 		return nil, err
 	}
 
+	fmt.Printf("---------- validate call body ok: %v\n", req.Msg.Body)
+
 	module := verbRef.Module
 	routes, ok := s.routes.Load()[module]
 	if !ok {
@@ -1079,7 +1081,9 @@ func (s *Service) callWithRequest(
 	ctx = rpc.WithVerbs(ctx, append(callers, verbRef))
 	headers.AddCaller(req.Header(), schema.RefFromProto(req.Msg.Verb))
 
+	fmt.Printf("---------- about to call verb: %v\n", req.Msg.Body)
 	response, err := client.verb.Call(ctx, req)
+	fmt.Printf("----- verb call done: %v\n", response)
 	var resp *connect.Response[ftlv1.CallResponse]
 	var maybeResponse optional.Option[*ftlv1.CallResponse]
 	if err == nil {

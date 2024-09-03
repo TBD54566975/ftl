@@ -207,14 +207,20 @@ type Service struct {
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
+	fmt.Printf("Call: %v\n", req)
 	deployment, ok := s.deployment.Load().Get()
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("no deployment"))
 	}
+
+	fmt.Printf("Deployment: %v\n", deployment)
 	response, err := deployment.plugin.Client.Call(ctx, req)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeOf(err), err)
 	}
+
+	fmt.Printf("Response: %v\n", response)
+
 	return connect.NewResponse(response.Msg), nil
 }
 

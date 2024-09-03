@@ -73,7 +73,9 @@ func extractData(pass *analysis.Pass, node *ast.TypeSpec, named *types.Named) op
 			fieldErrors = true
 			continue
 		}
+		fmt.Printf("\n------------------- calling extract type name: %s\n", name)
 		if ft, ok := common.ExtractType(pass, f.Type).Get(); ok {
+			fmt.Println("ok")
 			// Check if field is exported
 			if unicode.IsLower(rune(name[0])) {
 				name = f.Names[0].Name
@@ -106,6 +108,8 @@ func extractData(pass *analysis.Pass, node *ast.TypeSpec, named *types.Named) op
 				Metadata: metadata,
 			})
 		} else {
+			fmt.Println("not ok")
+			panic("not ok")
 			common.TokenErrorf(pass, f.Pos(), name, "unsupported type %q for field %q", pass.TypesInfo.TypeOf(f.Type), name)
 			fieldErrors = true
 		}

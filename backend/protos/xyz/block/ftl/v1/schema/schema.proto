@@ -64,6 +64,11 @@ message Decl {
   }
 }
 
+message Encrypted {
+  optional Position pos = 1;
+  optional Type type = 2;
+}
+
 message Enum {
   optional Position pos = 1;
   repeated string comments = 2;
@@ -306,6 +311,7 @@ message Type {
     Unit unit = 10;
     Ref ref = 11;
     Optional optional = 12;
+    Encrypted encrypted = 13;
   }
 }
 

@@ -80,12 +80,14 @@ func TypeFromProto(s *schemapb.Type) Type {
 		return mapToSchema(s.Map)
 	case *schemapb.Type_Optional:
 		return &Optional{Pos: posFromProto(s.Optional.Pos), Type: TypeFromProto(s.Optional.Type)}
+	case *schemapb.Type_Encrypted:
+		return &Encrypted{Pos: posFromProto(s.Encrypted.Pos), Type: TypeFromProto(s.Encrypted.Type)}
 	case *schemapb.Type_Unit:
 		return &Unit{Pos: posFromProto(s.Unit.Pos)}
 	case *schemapb.Type_Any:
 		return &Any{Pos: posFromProto(s.Any.Pos)}
 	}
-	panic(fmt.Sprintf("unhandled type: %T", s.Value))
+	panic(fmt.Sprintf("unhandled type to decode: %T", s.Value))
 }
 
 func valueToSchema(v *schemapb.Value) Value {

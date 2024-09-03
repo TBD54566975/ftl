@@ -168,8 +168,11 @@ func TypeToProto(t Type) *schemapb.Type {
 
 	case *Optional:
 		return &schemapb.Type{Value: &schemapb.Type_Optional{Optional: t.ToProto().(*schemapb.Optional)}}
+
+	case *Encrypted:
+		return &schemapb.Type{Value: &schemapb.Type_Encrypted{Encrypted: t.ToProto().(*schemapb.Encrypted)}}
 	}
-	panic(fmt.Sprintf("unhandled type: %T", t))
+	panic(fmt.Sprintf("unhandled type to encode: %T", t))
 }
 
 func valueToProto(v Value) *schemapb.Value {

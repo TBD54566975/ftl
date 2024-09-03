@@ -229,6 +229,12 @@ func validateJSONValue(fieldType Type, path path, value any, sch *Schema, opts *
 		} else {
 			return validateJSONValue(fieldType.Type, path, value, sch, opts)
 		}
+
+	case *Encrypted:
+		fmt.Printf("pre json validate encrypted: %v\n", value)
+		err := validateJSONValue(fieldType.Type, path, value, sch, opts)
+		fmt.Printf("json validate encrypted: %v\n", err)
+		return err
 	}
 
 	if !typeMatches {

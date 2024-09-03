@@ -23,7 +23,8 @@ var (
 	// FtlUnitTypePath is the path to the FTL unit type.
 	FtlUnitTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Unit"
 	// FtlOptionTypePath is the path to the FTL option type.
-	FtlOptionTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
+	FtlOptionTypePath    = "github.com/TBD54566975/ftl/go-runtime/ftl.Option"
+	FtlEncryptedTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Encrypted"
 
 	extractorRegistery = xsync.NewMapOf[reflect.Type, ExtractDeclFunc[schema.Decl, ast.Node]]()
 )
@@ -222,8 +223,11 @@ func IsPathInModule(pkg *types.Package, path string) bool {
 
 // ExtractType extracts the schema type for the given node.
 func ExtractType(pass *analysis.Pass, node ast.Node) optional.Option[schema.Type] {
+	fmt.Printf("**** pass %v, node %v node type %T\n", pass, node, node)
 	tnode := GetTypeInfoForNode(node, pass.TypesInfo)
+	fmt.Printf("tnode %v\n", tnode)
 	externalType := extractExternalType(pass, node)
+	fmt.Printf("externalType %v\n", externalType)
 	if externalType.Ok() {
 		return externalType
 	}
@@ -289,6 +293,7 @@ func ExtractType(pass *analysis.Pass, node ast.Node) optional.Option[schema.Type
 		return extractRef(pass, typ)
 
 	case *ast.SelectorExpr: // selector expression e.g. ftl.Unit, ftl.Option, foo.Bar
+		fmt.Printf("SelectorExpr %v\n", typ)
 		return extractSelectorType(pass, node, typ)
 
 	case *ast.IndexListExpr: // parameterized data with multiple indices, e.g. Data[T any, V any]
@@ -310,24 +315,32 @@ func ExtractType(pass *analysis.Pass, node ast.Node) optional.Option[schema.Type
 		return optional.Some[schema.Type](ref)
 
 	case *ast.IndexExpr: // parameterized struct with a single index, e.g. ftl.Option[string], Data[string]
+		fmt.Printf("1 IndexExpr %v\n", typ)
 		t, ok := ExtractType(pass, typ.X).Get()
 		if !ok {
 			return optional.None[schema.Type]()
 		}
+		fmt.Printf("2 IndexExpr %v\n", typ.Index)
 		idx, ok := ExtractType(pass, typ.Index).Get()
 		if !ok {
 			return optional.None[schema.Type]()
 		}
+		fmt.Printf("3 IndexExpr %T\n", t)
 		switch s := t.(type) {
 		case *schema.Ref:
 			s.TypeParameters = []schema.Type{idx}
 		case *schema.Optional:
 			s.Type = idx
+		case *schema.Encrypted:
+			s.Type = idx
 		default:
+			fmt.Printf("none IndexExpr %T\n", t)
 			return optional.None[schema.Type]()
 		}
 		return optional.Some[schema.Type](t)
 	}
+
+	fmt.Printf("returning none\n")
 
 	return optional.None[schema.Type]()
 }
@@ -364,6 +377,11 @@ func extractSelectorType(pass *analysis.Pass, node ast.Node, typ *ast.SelectorEx
 				return optional.Some[schema.Type](&schema.Optional{
 					Pos: GoPosToSchemaPos(pass.Fset, node.Pos()),
 				})
+			case FtlEncryptedTypePath:
+				fmt.Printf("todo Encrypted type\n")
+				return optional.Some[schema.Type](&schema.Encrypted{
+					Pos: GoPosToSchemaPos(pass.Fset, node.Pos()),
+				})
 
 			default: // Data ref
 				if IsPathInModule(pass.Pkg, path) {
@@ -372,7 +390,7 @@ func extractSelectorType(pass *analysis.Pass, node ast.Node, typ *ast.SelectorEx
 				}
 
 				if IsExternalType(path) {
-					NoEndColumnErrorf(pass, node.Pos(), "unsupported external type %q; see FTL docs on using external types: %s",
+					NoEndColumnErrorf(pass, node.Pos(), "111 unsupported external type %q; see FTL docs on using external types: %s",
 						path+"."+typ.Sel.Name, "tbd54566975.github.io/ftl/docs/reference/externaltypes/")
 					return optional.None[schema.Type]()
 				}
@@ -456,7 +474,7 @@ func extractRef(pass *analysis.Pass, node ast.Node) optional.Option[schema.Type]
 
 	nodePath := obj.Pkg().Path()
 	if !IsPathInModule(pass.Pkg, nodePath) && IsExternalType(nodePath) {
-		NoEndColumnErrorf(pass, node.Pos(), "unsupported external type %q; see FTL docs on using external types: %s",
+		NoEndColumnErrorf(pass, node.Pos(), "u222 nsupported external type %q; see FTL docs on using external types: %s",
 			GetNativeName(obj), "tbd54566975.github.io/ftl/docs/reference/externaltypes/")
 		return optional.None[schema.Type]()
 	}
@@ -661,7 +679,8 @@ func IsExternalType(path string) bool {
 	return !strings.HasPrefix(path, "ftl/") &&
 		path != "time.Time" &&
 		path != FtlUnitTypePath &&
-		path != FtlOptionTypePath
+		path != FtlOptionTypePath &&
+		path != FtlEncryptedTypePath
 }
 
 // GetDeclTypeName returns the name of the declaration type, e.g. "verb" for *schema.Verb.

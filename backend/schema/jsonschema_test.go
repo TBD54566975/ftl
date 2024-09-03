@@ -33,6 +33,9 @@ var jsonSchemaSample = &Schema{
 					{Name: "stringEnumRef", Type: &Ref{Module: "foo", Name: "StringEnum"}},
 					{Name: "intEnumRef", Type: &Ref{Module: "foo", Name: "IntEnum"}},
 					{Name: "typeEnumRef", Type: &Ref{Module: "foo", Name: "TypeEnum"}},
+					{Name: "encryptedString", Type: &Encrypted{Type: &String{}}},
+					{Name: "encryptedBytes", Type: &Encrypted{Type: &Bytes{}}},
+					{Name: "encryptedInt", Type: &Encrypted{Type: &Int{}}},
 				},
 			},
 			&Data{
@@ -100,7 +103,10 @@ func TestDataToJSONSchema(t *testing.T) {
     "keyValue",
     "stringEnumRef",
     "intEnumRef",
-    "typeEnumRef"
+    "typeEnumRef",
+    "encryptedString",
+    "encryptedBytes",
+    "encryptedInt"
   ],
   "additionalProperties": false,
   "definitions": {
@@ -210,6 +216,15 @@ func TestDataToJSONSchema(t *testing.T) {
     },
     "bool": {
       "type": "boolean"
+    },
+    "encryptedBytes": {
+      "type": "bytes"
+    },
+    "encryptedInt": {
+      "type": "integer"
+    },
+    "encryptedString": {
+      "type": "string"
     },
     "float": {
       "type": "number"

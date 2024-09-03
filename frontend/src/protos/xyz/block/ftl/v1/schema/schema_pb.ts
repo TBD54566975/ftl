@@ -453,6 +453,49 @@ export class Decl extends Message<Decl> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.Encrypted
+ */
+export class Encrypted extends Message<Encrypted> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Type type = 2;
+   */
+  type?: Type;
+
+  constructor(data?: PartialMessage<Encrypted>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.Encrypted";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "type", kind: "message", T: Type, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Encrypted {
+    return new Encrypted().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Encrypted {
+    return new Encrypted().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Encrypted {
+    return new Encrypted().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Encrypted | PlainMessage<Encrypted> | undefined, b: Encrypted | PlainMessage<Encrypted> | undefined): boolean {
+    return proto3.util.equals(Encrypted, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Enum
  */
 export class Enum extends Message<Enum> {
@@ -2335,6 +2378,12 @@ export class Type extends Message<Type> {
      */
     value: Optional;
     case: "optional";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.Encrypted encrypted = 13;
+     */
+    value: Encrypted;
+    case: "encrypted";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Type>) {
@@ -2357,6 +2406,7 @@ export class Type extends Message<Type> {
     { no: 10, name: "unit", kind: "message", T: Unit, oneof: "value" },
     { no: 11, name: "ref", kind: "message", T: Ref, oneof: "value" },
     { no: 12, name: "optional", kind: "message", T: Optional, oneof: "value" },
+    { no: 13, name: "encrypted", kind: "message", T: Encrypted, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Type {

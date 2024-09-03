@@ -15,6 +15,7 @@ var defaultName = ftl.Config[string]("default")
 // An echo request.
 type EchoRequest struct {
 	Name ftl.Option[string] `json:"name"`
+	Age  ftl.Encrypted[int] `json:"age"`
 }
 
 type EchoResponse struct {
@@ -30,5 +31,8 @@ func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 		return EchoResponse{}, err
 	}
 
-	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s!", req.Name.Default(defaultName.Get(ctx)), tresp.Time)}, nil
+	return EchoResponse{Message: fmt.Sprintf("Hello, %s!!! It is %s .. age %d!",
+		req.Name.Default(defaultName.Get(ctx)), tresp.Time),
+		req.Age.Decrypt(ctx),
+	}, nil
 }

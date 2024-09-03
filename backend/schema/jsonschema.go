@@ -183,6 +183,11 @@ func nodeToJSSchema(node Node, refs map[RefKey]*Ref) *jsonschema.Schema {
 			{TypeObject: &jsonschema.Schema{Type: &jsonschema.Type{SimpleTypes: &null}}},
 		}}
 
+	case *Encrypted:
+		return &jsonschema.Schema{
+			Type: &jsonschema.Type{SimpleTypes: nodeToJSSchema(node.Type, refs).Type.SimpleTypes},
+		}
+
 	case *TypeParameter:
 		return &jsonschema.Schema{}
 

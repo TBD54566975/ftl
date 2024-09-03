@@ -30,6 +30,7 @@ func TestMonomorphisation(t *testing.T) {
 		{typ: &Map{Key: &Ref{Module: "builtin", Name: "Test"}, Value: &Ref{Module: "builtin", Name: "Test"}}},
 		{typ: &Optional{Type: &String{}}},
 		{typ: &Optional{Type: &Ref{Module: "builtin", Name: "Test"}}},
+		{typ: &Encrypted{Type: &String{}}},
 		{typ: &Any{}},
 	}
 

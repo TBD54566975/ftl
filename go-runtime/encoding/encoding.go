@@ -19,6 +19,9 @@ import (
 var (
 	optionMarshaler   = reflect.TypeFor[OptionMarshaler]()
 	optionUnmarshaler = reflect.TypeFor[OptionUnmarshaler]()
+
+	genericMarshaler   = reflect.TypeFor[GenericMarshaler]()
+	genericUnmarshaler = reflect.TypeFor[GenericUnmarshaler]()
 )
 
 type OptionMarshaler interface {
@@ -26,6 +29,14 @@ type OptionMarshaler interface {
 }
 type OptionUnmarshaler interface {
 	Unmarshal(d *json.Decoder, isNull bool, decode func(d *json.Decoder, v reflect.Value) error) error
+}
+
+type GenericMarshaler interface {
+	Marshal(w *bytes.Buffer, encode func(v reflect.Value, w *bytes.Buffer) error) error
+}
+
+type GenericUnmarshaler interface {
+	Unmarshal(d *json.Decoder, decode func(d *json.Decoder, v reflect.Value) error) error
 }
 
 func Marshal(v any) ([]byte, error) {
@@ -238,6 +249,7 @@ func Unmarshal(data []byte, v any) error {
 }
 
 func decodeValue(d *json.Decoder, v reflect.Value) error {
+	fmt.Printf("''''''''''''''------- decodeValue: %s", v.Type())
 	if !v.CanSet() {
 		return fmt.Errorf("cannot set value: %s", v.Type())
 	}
@@ -250,6 +262,7 @@ func decodeValue(d *json.Decoder, v reflect.Value) error {
 	// Special-case types
 	switch {
 	case reflection.IsKnownExternalType(t):
+		fmt.Println("------- decodeValue: IsKnownExternalType")
 		// external types use the stdlib JSON decoding
 		fallthrough
 
@@ -257,10 +270,12 @@ func decodeValue(d *json.Decoder, v reflect.Value) error {
 		return d.Decode(v.Addr().Interface())
 
 	case v.CanAddr() && v.Addr().Type().Implements(optionUnmarshaler):
+		fmt.Println("------- decodeValue: optionUnmarshaler")
 		v = v.Addr()
 		fallthrough
 
 	case t.Implements(optionUnmarshaler):
+		fmt.Println("------- decodeValue: 2 optionUnmarshaler")
 		if v.IsNil() {
 			v.Set(reflect.New(t.Elem()))
 		}
@@ -270,7 +285,16 @@ func decodeValue(d *json.Decoder, v reflect.Value) error {
 		}, func(d *json.Decoder) error {
 			return dec.Unmarshal(d, false, decodeValue)
 		})
+
+	case t.Implements(genericMarshaler):
+		fmt.Println("------- decodeValue: 3 unmarshaler")
+		dec := v.Interface().(GenericUnmarshaler) //nolint:forcetypeassert
+		return dec.Unmarshal(d, decodeValue)
 	}
+
+	fmt.Printf("??? implements genericUnmarshaler: %t\n", t.Implements(genericMarshaler))
+	fmt.Printf("??? implements optionUnmarshaler: %t\n", t.Implements(optionUnmarshaler))
+	fmt.Printf("------- decodeValue: switch: %s\n", v.Kind())
 
 	switch v.Kind() {
 	case reflect.Struct:
