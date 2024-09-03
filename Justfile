@@ -245,8 +245,7 @@ grafana-stop:
 
 # Start storybook server
 storybook:
-  #!/bin/bash
-  cd frontend && pnpm run storybook
+  @cd {{CONSOLE_ROOT}} && pnpm run storybook
 
 # Build an FTL Docker image.
 build-docker name:
