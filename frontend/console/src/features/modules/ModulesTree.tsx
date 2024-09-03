@@ -92,7 +92,6 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
           <BookOpenIcon aria-hidden='true' className='size-4 my-1 shrink-0 ' />
           {module.name}
           <ArrowRightCircleIcon
-            id={`${module.name}-module-link`}
             className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600'
             onClick={(e) => {
               e.preventDefault()
