@@ -1,16 +1,16 @@
 import { expect, ftlTest } from './ftl-test'
 
 ftlTest.beforeEach(async ({ page }) => {
-  const deploymentsNavItem = page.getByRole('link', { name: 'Deployments' })
-  await deploymentsNavItem.click()
+  const modulesNavItem = page.getByRole('link', { name: 'Modules' })
+  await modulesNavItem.click()
 
-  const deploymentEcho = page.getByText('dpl-echo')
-  await deploymentEcho.click()
+  const moduleEcho = page.getByRole('button', { name: 'echo' })
+  await moduleEcho.click()
 
-  const verbEcho = page.getByText('echo', { exact: true })
+  const verbEcho = page.getByRole('button', { name: 'echo Exported' })
   await verbEcho.click()
 
-  await expect(page).toHaveURL(/\/deployments\/dpl-echo-[^/]+\/verbs\/echo/)
+  await expect(page).toHaveURL(/\/modules\/echo\/verb\/echo/)
 })
 
 ftlTest('shows verb form', async ({ page }) => {

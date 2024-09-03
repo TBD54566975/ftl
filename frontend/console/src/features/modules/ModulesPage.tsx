@@ -2,17 +2,14 @@ import type React from 'react'
 import { useMemo, useState } from 'react'
 import { useSchema } from '../../api/schema/use-schema'
 import { ResizableHorizontalPanels } from '../../components/ResizableHorizontalPanels'
+import { DeploymentsPage } from '../deployments/DeploymentsPage'
 import { ModulesTree } from './ModulesTree'
 import { moduleTreeFromSchema } from './module.utils'
 
 const treeWidthStorageKey = 'tree_w'
 
 export const ModulesPanel = () => {
-  return (
-    <div className='flex-1 py-2 px-4'>
-      <p>Content</p>
-    </div>
-  )
+  return <DeploymentsPage />
 }
 
 export const ModulesPage = ({ body }: { body: React.ReactNode }) => {

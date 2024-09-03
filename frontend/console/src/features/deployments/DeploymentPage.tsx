@@ -1,26 +1,20 @@
-import { RocketLaunchIcon } from '@heroicons/react/24/outline'
-import { useContext, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
 import { modulesFilter } from '../../api/timeline'
 import { Badge } from '../../components/Badge'
 import { Card } from '../../components/Card'
 import { Page } from '../../layout'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
-import { deploymentKeyModuleName } from '../modules/module.utils'
 import { Timeline } from '../timeline/Timeline'
 import { isCron, isExported, isHttpIngress } from '../verbs/verb.utils'
 
 const timeSettings = { isTailing: true, isPaused: false }
 
-export const DeploymentPage = () => {
-  const navigate = useNavigate()
-  const { deploymentKey } = useParams()
+export const DeploymentPage = ({ moduleName }: { moduleName: string }) => {
   const modules = useModules()
-  const notification = useContext(NotificationsContext)
-  const navgation = useNavigate()
+  const navigate = useNavigate()
   const [module, setModule] = useState<Module | undefined>()
 
   const filters = useMemo(() => {
@@ -30,41 +24,21 @@ export const DeploymentPage = () => {
   }, [module?.deploymentKey])
 
   useEffect(() => {
-    if (modules.isSuccess && modules.data.modules.length > 0 && deploymentKey) {
-      let module = modules.data.modules.find((module) => module.deploymentKey === deploymentKey)
-      if (!module) {
-        const moduleName = deploymentKeyModuleName(deploymentKey)
-        if (moduleName) {
-          module = modules.data.modules.find((module) => module.name === moduleName)
-          navgation(`/deployments/${module?.deploymentKey}`)
-          notification.showNotification({
-            title: 'Showing latest deployment',
-            message: `The previous deployment of ${module?.deploymentKey} was not found. Showing the latest deployment of ${module?.name} instead.`,
-            type: NotificationType.Info,
-          })
-          setModule(module)
-        }
-      } else {
-        setModule(module)
-      }
+    if (modules.isSuccess && modules.data.modules.length > 0) {
+      const module = modules.data.modules.find((module) => module.name === moduleName)
+      setModule(module)
     }
-  }, [modules.data, deploymentKey])
+  }, [modules.data, moduleName])
 
   return (
     <SidePanelProvider>
       <Page>
-        <Page.Header icon={<RocketLaunchIcon />} title={module?.deploymentKey || 'Loading...'} breadcrumbs={[{ label: 'Deployments', link: '/deployments' }]} />
-
         <Page.Body className='flex'>
           <div className=''>
             <div className='flex-1 h-1/2 p-4 overflow-y-scroll'>
               <div className='grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4'>
                 {module?.verbs.map((verb) => (
-                  <Card
-                    key={verb.verb?.name}
-                    topBarColor='bg-green-500'
-                    onClick={() => navigate(`/deployments/${module.deploymentKey}/verbs/${verb.verb?.name}`)}
-                  >
+                  <Card key={verb.verb?.name} topBarColor='bg-green-500' onClick={() => navigate(`/modules/${module.name}/verb/${verb.verb?.name}`)}>
                     <p className='trucate text-sm overflow-hidden'>{verb.verb?.name}</p>
                     {badges(verb).length > 0 && (
                       <div className='pt-1 space-x-1'>

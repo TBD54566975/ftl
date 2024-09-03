@@ -1,4 +1,3 @@
-import { RocketLaunchIcon } from '@heroicons/react/24/outline'
 import { useModules } from '../../api/modules/use-modules'
 import { Page } from '../../layout'
 import { DeploymentCard } from './DeploymentCard'
@@ -12,7 +11,6 @@ export const DeploymentsPage = () => {
 
   return (
     <Page>
-      <Page.Header icon={<RocketLaunchIcon />} title='Deployments' />
       <Page.Body className='flex'>
         {modules.isLoading && <div>Loading...</div>}
         {modules.isSuccess && (

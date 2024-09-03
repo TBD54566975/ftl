@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useSchema } from '../../../api/schema/use-schema'
+import { VerbPage } from '../../verbs/VerbPage'
 import { declFromSchema } from '../module.utils'
 import { DataPanel } from './DataPanel'
-import { VerbPanel } from './VerbPanel'
 
 export const DeclPanel = () => {
   const { moduleName, declCase, declName } = useParams()
@@ -23,7 +23,7 @@ export const DeclPanel = () => {
     case 'data':
       return <DataPanel value={decl.value.value} {...nameProps} />
     case 'verb':
-      return <VerbPanel value={decl.value.value} {...nameProps} />
+      return <VerbPage {...nameProps} />
   }
   return (
     <div className='flex-1 py-2 px-4'>
