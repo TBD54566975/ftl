@@ -7,7 +7,7 @@ ftlTest.beforeEach(async ({ page }) => {
   const moduleEcho = page.getByRole('button', { name: 'echo' })
   await moduleEcho.click()
 
-  const verbEcho = page.getByRole('button', { name: 'echo Exported' })
+  const verbEcho = page.locator('div#decl-echo')
   await verbEcho.click()
 
   await expect(page).toHaveURL(/\/modules\/echo\/verb\/echo/)
