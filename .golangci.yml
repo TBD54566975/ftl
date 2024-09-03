@@ -59,13 +59,14 @@ linters:
     - nolintlint
     - protogetter
     - thelper
+    - perfsprint
 
 linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
   govet:
     enable:
-      - 'shadow'
+      - "shadow"
   dupl:
     threshold: 100
   goconst:
