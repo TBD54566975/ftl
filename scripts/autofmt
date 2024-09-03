@@ -27,6 +27,6 @@ just pnpm-install
 (cd backend/protos && buf generate)
 
 echo "Formatting TypeScript..."
-(cd frontend && pnpm run lint:fix)
+just format-frontend
 
 git diff

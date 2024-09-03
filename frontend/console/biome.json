@@ -1,0 +1,29 @@
+{
+  "extends": ["../../biome.json"],
+  "linter": {
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "src/**/*.cjs",
+      "src/**/*.mjs",
+      "tests/**/*.ts",
+      "e2e/**/*.ts"
+    ],
+    "ignore": ["./node_modules", "./dist", "./src/protos"]
+  },
+  "formatter": {
+    "include": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "src/**/*.cjs",
+      "src/**/*.mjs",
+      "tests/**/*.ts",
+      "e2e/**/*.ts"
+    ],
+    "ignore": ["./node_modules", "./dist", "./src/protos"]
+  }
+}

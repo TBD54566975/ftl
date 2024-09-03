@@ -9,10 +9,10 @@ pre-push:
     lint-backend:
       run: just lint-backend
     build-frontend:
-      root: frontend/
+      root: frontend/console/
       run: just build-frontend
     lint-frontend:
-      root: frontend/
+      root: frontend/console/
       run: just lint-frontend
     ensure-frozen-migrations:
       run: just ensure-frozen-migrations

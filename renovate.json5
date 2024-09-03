@@ -44,11 +44,11 @@
     {
       matchPackageNames: [
         "@bufbuild/protobuf", // We can't update this until we update buf
-        "codemirror", 
+        "codemirror",
         "codemirror-json-schema",
       ],
       enabled: false,
-      matchFileNames: ["frontend/**", "extensions/**"],
+      matchFileNames: ["frontend/console/**", "extensions/**"],
     },
     {
       matchPackageNames: ["connectrpc.com/connect"],

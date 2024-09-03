@@ -8,10 +8,11 @@ RUNNER_TEMPLATE_ZIP := "backend/controller/scaling/localscaling/template.zip"
 TIMESTAMP := `date +%s`
 SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template internal/projectinit/scaffolding go-runtime/scaffolding jvm-runtime/java/scaffolding jvm-runtime/kotlin/scaffolding"
-FRONTEND_OUT := "frontend/dist/index.html"
+CONSOLE_ROOT := "frontend/console"
+FRONTEND_OUT := "{{CONSOLE_ROOT}}/dist/index.html"
 EXTENSION_OUT := "extensions/vscode/dist/extension.js"
 PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
-PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go frontend/src/protos/xyz/block/ftl/v1/console/console_pb.ts frontend/src/protos/xyz/block/ftl/v1/ftl_pb.ts frontend/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts frontend/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
+PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/console/console_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/ftl_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
 
 _help:
   @just -l
@@ -83,7 +84,7 @@ build-zips: build-kt-runtime
 
 # Rebuild frontend
 build-frontend: pnpm-install
-  @mk {{FRONTEND_OUT}} : frontend/src -- "cd frontend && pnpm run build"
+  @mk {{FRONTEND_OUT}} : {{CONSOLE_ROOT}}/src -- "cd {{CONSOLE_ROOT}} && pnpm run build"
 
 # Rebuild VSCode extension
 build-extension: pnpm-install
@@ -109,6 +110,10 @@ build-intellij-plugin:
 build-kt-runtime:
   @mkdir -p build/template/ftl && touch build/template/ftl/temp.txt
   @cd build/template && zip -q --symlinks -r ../../{{RUNNER_TEMPLATE_ZIP}} .
+
+# Format console code.
+format-frontend:
+  cd {{CONSOLE_ROOT}} && pnpm run lint:fix
 
 # Install Node dependencies using pnpm
 # Retry a few times in case of network issues
@@ -156,14 +161,14 @@ test-scripts:
     scripts/tests/test-ensure-frozen-migrations.sh
 
 test-frontend: build-frontend
-  @cd frontend && pnpm run test
+  @cd {{CONSOLE_ROOT}} && pnpm run test
 
 e2e-frontend: build-frontend
-  @cd frontend && npx playwright install --with-deps && pnpm run e2e
+  @cd {{CONSOLE_ROOT}} && npx playwright install --with-deps && pnpm run e2e
 
 # Lint the frontend
 lint-frontend: build-frontend
-  @cd frontend && pnpm run lint && tsc
+  @cd {{CONSOLE_ROOT}} && pnpm run lint && tsc
 
 # Lint the backend
 lint-backend:

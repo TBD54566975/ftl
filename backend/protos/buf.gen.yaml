@@ -7,8 +7,8 @@ plugins:
     out: .
     opt: paths=source_relative
   - plugin: es
-    out: ../../frontend/src/protos
+    out: ../../frontend/console/src/protos
     opt: target=ts
   - plugin: connect-es
-    out: ../../frontend/src/protos
+    out: ../../frontend/console/src/protos
     opt: target=ts
