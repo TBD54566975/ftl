@@ -50,10 +50,10 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
   const Icon = useMemo(() => icons[decl.value.case || ''] || CodeBracketSquareIcon, [decl.value.case])
   return (
     <li className='my-1'>
-      <DisclosureButton
+      <div
         className={classNames(
           isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
-          'group flex items-center gap-x-2 rounded-md pl-4 pr-2 text-sm font-light leading-6 w-full',
+          'group flex items-center gap-x-2 rounded-md pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer',
         )}
         onClick={(e) => {
           e.preventDefault()
@@ -63,7 +63,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
         <Icon aria-hidden='true' className='size-4 shrink-0' />
         {decl.value.value.name}
         {(decl.value.value as WithExport).export === true ? <ExportBadge /> : []}
-      </DisclosureButton>
+      </div>
     </li>
   )
 }
