@@ -158,7 +158,7 @@ This will automatically create a migration file in `backend/controller/sql/schem
 
 ## VSCode extension
 
-The preferred way to develop the FTL VSCode extension is to open a VSCode instance in the `extensions/vscode` directory. This will load the extension in a new VSCode window. From there, the `launch.json` and `tasks.json` files are configured to run the extension in a new window.
+The preferred way to develop the FTL VSCode extension is to open a VSCode instance in the `frontend/vscode` directory. This will load the extension in a new VSCode window. From there, the `launch.json` and `tasks.json` files are configured to run the extension in a new window.
 
 ### Building the extension
 
@@ -174,7 +174,7 @@ To package the extension, run:
 just package-extension
 ```
 
-This will create a `.vsix` file in the `extensions/vscode` directory.
+This will create a `.vsix` file in the `frontend/vscode` directory.
 
 ### Publishing the extension
 

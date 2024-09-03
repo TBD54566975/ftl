@@ -1,3 +1,3 @@
 packages:
   - "frontend/console"
-  - "extensions/vscode"
+  - "frontend/vscode"

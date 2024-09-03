@@ -152,7 +152,7 @@ jobs:
       - name: VSCode extension pnpm install
         run: just pnpm-install
       - name: VSCode extension lint
-        working-directory: extensions/vscode
+        working-directory: frontend/vscode
         run: pnpm run lint
       - name: VSCode extension pnpm build and package
         run: just package-extension

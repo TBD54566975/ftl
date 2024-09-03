@@ -176,8 +176,8 @@ jobs:
           set -euo pipefail
           version="$(git describe --tags --abbrev=0 | sed 's/^v//')"
           echo "Publishing version $version"
-          jq --arg version "$version" '.version = $version' extensions/vscode/package.json > extensions/vscode/package.json.tmp
-          mv extensions/vscode/package.json.tmp extensions/vscode/package.json
+          jq --arg version "$version" '.version = $version' frontend/vscode/package.json > frontend/vscode/package.json.tmp
+          mv frontend/vscode/package.json.tmp frontend/vscode/package.json
           just publish-extension
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

@@ -6,7 +6,7 @@ settings:
 
 importers:
 
-  extensions/vscode:
+  frontend/vscode:
     dependencies:
       lookpath:
         specifier: ^1.2.2
