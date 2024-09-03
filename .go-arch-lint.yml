@@ -16,7 +16,7 @@ components:
   rust-runtime: { in: rust-runtime/** }
   runner: { in: backend/runner/** }
   ftl-runner-cmd: { in: cmd/ftl-runner/** }
-  frontend: { in: frontend/** }
+  frontend: { in: frontend/console/** }
   ftl-gen-lsp-cmd: { in: cmd/ftl-gen-lsp/** }
   ftl-initdb-cmd: { in: cmd/ftl-initdb/** }
   ftl-schema-cmd: { in: cmd/ftl-schema/** }

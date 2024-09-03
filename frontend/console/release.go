@@ -1,6 +1,6 @@
 //go:build release
 
-package frontend
+package console
 
 import (
 	"context"
