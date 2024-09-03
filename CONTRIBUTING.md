@@ -1,4 +1,4 @@
-**** Contribution Guide
+\*\*\*\* Contribution Guide
 
 There are many ways to be an open source contributor, and we're here to help you on your way! You may:
 
@@ -73,6 +73,8 @@ Additional points of note:
 
 ### Design process
 
+All of our design documents live in [HackMD](https://hackmd.io/@ftl). Create new design documents from the [FTL Design Doc Template](https://hackmd.io/team/ftl?nav=overview&template=e98dd2c1-636d-402d-95a9-4dba73ca333a).
+
 Many changes are relatively straightforward and don't require a design, but more complex changes should be covered by a design document. Once a DRI (Directly Responsible Individual, a Cash term) is selected, our process for creating and reviewing designs is the following. The DRI:
 
 1. Does some initial thinking and comes up with a rough approach.
@@ -83,7 +85,7 @@ Many changes are relatively straightforward and don't require a design, but more
 6. Add the design review to the weekly sync meeting. The sync meeting is a good opportunity to discuss the design with the team and address any last feedback.
 7. Once approved by the DRI for that subsystem and the DRI for FTL (if necessary), implement!
 
- **Reviewers should avoid bikeshedding.**
+**Reviewers should avoid bikeshedding.**
 
 Of course, feel free to bounce ideas off anyone on the team at any time.
 
