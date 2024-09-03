@@ -3,7 +3,12 @@ import { useParams } from 'react-router-dom'
 import { useSchema } from '../../../api/schema/use-schema'
 import { VerbPage } from '../../verbs/VerbPage'
 import { declFromSchema } from '../module.utils'
+import { ConfigPanel } from './ConfigPanel'
 import { DataPanel } from './DataPanel'
+import { DatabasePanel } from './DatabasePanel'
+import { EnumPanel } from './EnumPanel'
+import { SecretPanel } from './SecretPanel'
+import { TypeAliasPanel } from './TypeAliasPanel'
 
 export const DeclPanel = () => {
   const { moduleName, declCase, declName } = useParams()
@@ -20,8 +25,18 @@ export const DeclPanel = () => {
 
   const nameProps = { moduleName, declName }
   switch (decl.value.case) {
+    case 'config':
+      return <ConfigPanel value={decl.value.value} {...nameProps} />
     case 'data':
       return <DataPanel value={decl.value.value} {...nameProps} />
+    case 'database':
+      return <DatabasePanel value={decl.value.value} {...nameProps} />
+    case 'enum':
+      return <EnumPanel value={decl.value.value} {...nameProps} />
+    case 'secret':
+      return <SecretPanel value={decl.value.value} {...nameProps} />
+    case 'typeAlias':
+      return <TypeAliasPanel value={decl.value.value} {...nameProps} />
     case 'verb':
       return <VerbPage {...nameProps} />
   }
