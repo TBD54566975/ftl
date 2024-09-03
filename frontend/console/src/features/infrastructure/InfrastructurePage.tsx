@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useStatus } from '../../api/status/use-status'
 import { Tabs } from '../../components/Tabs'
 import { ControllersList } from './ControllersList'
@@ -9,7 +9,8 @@ import { RunnersList } from './RunnersList'
 
 export const InfrastructurePage = () => {
   const status = useStatus()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const [tabs, setTabs] = useState([
     { name: 'Controllers', id: 'controllers' },
@@ -41,30 +42,31 @@ export const InfrastructurePage = () => {
     )
   }, [status.data])
 
-  const handleTabClick = (tabId: string) => {
-    setSearchParams({ tab: tabId })
-  }
+  const currentTab = location.pathname.split('/').pop()
 
-  const currentTab = searchParams.get('tab') || tabs[0].id
   const renderTabContent = () => {
     switch (currentTab) {
       case 'controllers':
-        return <ControllersList />
+        return <ControllersList controllers={status.data?.controllers || []} />
       case 'runners':
-        return <RunnersList />
+        return <RunnersList runners={status.data?.runners || []} />
       case 'deployments':
-        return <DeploymentsList />
+        return <DeploymentsList deployments={status.data?.deployments || []} />
       case 'routes':
-        return <RoutesList />
+        return <RoutesList routes={status.data?.routes || []} />
       default:
         return <></>
     }
   }
 
+  const handleTabClick = (tabId: string) => {
+    navigate(`/infrastructure/${tabId}`)
+  }
+
   return (
     <div className='px-6'>
       <Tabs tabs={tabs} initialTabId={currentTab} onTabClick={handleTabClick} />
-      <div className='mt-4'>{renderTabContent()}</div>
+      <div className='mt-2'>{renderTabContent()}</div>
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { expect, ftlTest } from './ftl-test'
 ftlTest('shows infrastructure', async ({ page }) => {
   const infrastructureNavItem = page.getByRole('link', { name: 'Infrastructure' })
   await infrastructureNavItem.click()
-  await expect(page).toHaveURL(/\/infrastructure$/)
+  await expect(page).toHaveURL(/\/infrastructure\/controllers$/)
 
   const controllersTab = await page.getByRole('button', { name: 'Controllers' })
   await expect(controllersTab).toBeVisible()

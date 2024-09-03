@@ -18,7 +18,8 @@ const router = createBrowserRouter(
         <Route path='modules/:moduleName' element={<ModulesPage body={<ModulePanel />} />} />
         <Route path='modules/:moduleName/:declCase/:declName' element={<ModulesPage body={<DeclPanel />} />} />
         <Route path='graph' element={<ConsolePage />} />
-        <Route path='infrastructure' element={<InfrastructurePage />} />
+        <Route path='infrastructure' element={<Navigate to='infrastructure/controllers' replace />} />
+        <Route path='infrastructure/*' element={<InfrastructurePage />} />
       </Route>
 
       <Route path='*' element={<NotFoundPage />} />
