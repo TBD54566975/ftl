@@ -51,6 +51,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
   return (
     <li className='my-1'>
       <div
+        id={`decl-${decl.value.value.name}`}
         className={classNames(
           isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
           'group flex items-center gap-x-2 rounded-md pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer',
