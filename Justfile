@@ -10,7 +10,7 @@ SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template internal/projectinit/scaffolding go-runtime/scaffolding jvm-runtime/java/scaffolding jvm-runtime/kotlin/scaffolding"
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := "{{CONSOLE_ROOT}}/dist/index.html"
-EXTENSION_OUT := "extensions/vscode/dist/extension.js"
+EXTENSION_OUT := "frontend/vscode/dist/extension.js"
 PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/console/console_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/ftl_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
 
@@ -88,22 +88,22 @@ build-frontend: pnpm-install
 
 # Rebuild VSCode extension
 build-extension: pnpm-install
-  @mk {{EXTENSION_OUT}} : extensions/vscode/src extensions/vscode/package.json -- "cd extensions/vscode && rm -f ftl-*.vsix && pnpm run compile"
+  @mk {{EXTENSION_OUT}} : frontend/vscode/src frontend/vscode/package.json -- "cd frontend/vscode && rm -f ftl-*.vsix && pnpm run compile"
 
 # Install development version of VSCode extension
 install-extension: build-extension
-  @cd extensions/vscode && vsce package && code --install-extension ftl-*.vsix
+  @cd frontend/vscode && vsce package && code --install-extension ftl-*.vsix
 
 # Build and package the VSCode extension
 package-extension: build-extension
-  @cd extensions/vscode && vsce package --no-dependencies
+  @cd frontend/vscode && vsce package --no-dependencies
 
 # Publish the VSCode extension
 publish-extension: package-extension
-  @cd extensions/vscode && vsce publish --no-dependencies
+  @cd frontend/vscode && vsce publish --no-dependencies
 
 build-intellij-plugin:
-  @cd extensions/intellij && gradle buildPlugin
+  @cd frontend/intellij && gradle buildPlugin
 
 # Kotlin runtime is temporarily disabled; these instructions create a dummy zip in place of the kotlin runtime jar for
 # the runner.

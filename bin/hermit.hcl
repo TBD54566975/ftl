@@ -6,6 +6,6 @@ env = {
   "OTEL_GRPC_PORT": "4317",
   "OTEL_HTTP_PORT": "4318",
   "OTEL_METRIC_EXPORT_INTERVAL": "5000",
-  "PATH": "${HERMIT_ENV}/scripts:${HERMIT_ENV}/frontend/console/node_modules/.bin:${HERMIT_ENV}/extensions/vscode/node_modules/.bin:${PATH}",
+  "PATH": "${HERMIT_ENV}/scripts:${HERMIT_ENV}/frontend/console/node_modules/.bin:${HERMIT_ENV}/frontend/vscode/node_modules/.bin:${PATH}",
 }
 sources = ["env:///bin/packages", "https://github.com/cashapp/hermit-packages.git"]
