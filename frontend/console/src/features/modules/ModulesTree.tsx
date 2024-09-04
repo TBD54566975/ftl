@@ -6,6 +6,7 @@ import {
   CircleArrowRight02Icon,
   CodeIcon,
   DatabaseIcon,
+  FileExportIcon,
   FlowIcon,
   FunctionIcon,
   type HugeiconsProps,
@@ -22,8 +23,7 @@ import { classNames } from '../../utils'
 import type { ModuleTreeItem } from './module.utils'
 import { addModuleToLocalStorageIfMissing, listExpandedModulesFromLocalStorage, toggleModuleExpansionInLocalStorage } from './module.utils'
 
-// This could alternatively be an icon, but we'd need to pick a good one.
-const ExportBadge = () => <span className='text-xs py-0.5 px-1.5 bg-gray-200 dark:bg-gray-800 dark:text-gray-300 rounded-md'>Exported</span>
+const ExportedIcon = () => <FileExportIcon className='size-4 text-indigo-500 -ml-1' />
 
 type IconMap = Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>>
 const icons: IconMap = {
@@ -62,7 +62,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
       >
         <Icon aria-hidden='true' className='size-4 shrink-0' />
         {decl.value.value.name}
-        {(decl.value.value as WithExport).export === true ? <ExportBadge /> : []}
+        {(decl.value.value as WithExport).export === true ? <ExportedIcon /> : []}
       </div>
     </li>
   )
