@@ -71,10 +71,6 @@ WHERE a.id = @id;
 -- name: UpsertRunner :one
 -- Upsert a runner and return the deployment ID that it is assigned to, if any.
 WITH deployment_rel AS (
--- If the deployment key is null, then deployment_rel.id will be null,
--- otherwise we try to retrieve the deployments.id using the key. If
--- there is no corresponding deployment, then the deployment ID is -1
--- and the parent statement will fail due to a foreign key constraint.
     SELECT id FROM deployments d
              WHERE d.key = sqlc.arg('deployment_key')::deployment_key
              LIMIT 1)
@@ -95,8 +91,7 @@ RETURNING deployment_id;
 -- name: KillStaleRunners :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead',
-        deployment_id = NULL
+        SET state = 'dead'
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)

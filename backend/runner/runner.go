@@ -313,7 +313,7 @@ func (s *Service) deploy(ctx context.Context) error {
 	logger.Debugf("Deployed %s", key)
 	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
 	context.AfterFunc(ctx, func() {
-		err := s.Terminate()
+		err := s.Close()
 		if err != nil {
 			logger := log.FromContext(ctx)
 			logger.Errorf(err, "failed to terminate deployment")
@@ -323,7 +323,7 @@ func (s *Service) deploy(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) Terminate() error {
+func (s *Service) Close() error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	depl, ok := s.deployment.Load().Get()

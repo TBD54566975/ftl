@@ -2,6 +2,7 @@ package scaling
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"time"
 
@@ -32,6 +33,9 @@ func BeginGrpcScaling(ctx context.Context, url url.URL, leaser leases.Leaser, ha
 			}(lease)
 			// If we get it then we take over runner scaling
 			runGrpcScaling(leaseContext, url, handler)
+		} else if !errors.Is(err, leases.ErrConflict) {
+			logger := log.FromContext(ctx)
+			logger.Errorf(err, "Failed to acquire lease")
 		}
 		select {
 		case <-ctx.Done():

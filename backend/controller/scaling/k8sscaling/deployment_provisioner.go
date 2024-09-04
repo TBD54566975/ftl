@@ -19,7 +19,6 @@ package k8sscaling
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -104,7 +103,7 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 		return nil
 	}
 	logger := log.FromContext(ctx)
-	logger.Infof("handling schema change for %s", msg.DeploymentKey)
+	logger.Infof("Handling schema change for %s", msg.DeploymentKey)
 	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
 	deployment, err := deploymentClient.Get(ctx, msg.DeploymentKey, v1.GetOptions{})
 	deploymentExists := true
@@ -143,12 +142,6 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 }
 
 func (r *DeploymentProvisioner) thisContainerImage(ctx context.Context) (string, error) {
-	// This is only used for testing to enable local development outside of a cluster
-	// Which is why it is not a proper kong flag
-	testContainerImage := os.Getenv("FTL_TEST_CONTAINER_IMAGE")
-	if testContainerImage != "" {
-		return testContainerImage, nil
-	}
 	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
 	thisDeployment, err := deploymentClient.Get(ctx, thisDeploymentName, v1.GetOptions{})
 	if err != nil {
@@ -162,6 +155,7 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	if dep.Runtime == nil {
 		return nil
 	}
+	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
 	logger := log.FromContext(ctx)
 	logger.Infof("creating new kube deployment %s", name)
 	thisImage, err := r.thisContainerImage(ctx)
@@ -187,8 +181,18 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	}
 	runnerImage := strings.ReplaceAll(ourImage, "controller", "runner")
 
+	thisDeployment, err := deploymentClient.Get(ctx, thisDeploymentName, v1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get deployment %s: %w", thisDeploymentName, err)
+	}
 	deployment.Name = name
+	deployment.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: thisDeploymentName, UID: thisDeployment.UID}}
 	deployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("%s:%s", runnerImage, ourVersion)
+	deployment.Spec.Selector = &v1.LabelSelector{MatchLabels: map[string]string{"app": name}}
+	if deployment.Spec.Template.ObjectMeta.Labels == nil {
+		deployment.Spec.Template.ObjectMeta.Labels = map[string]string{}
+	}
+	deployment.Spec.Template.ObjectMeta.Labels["app"] = name
 	changes, err := r.syncDeployment(ctx, thisImage, deployment, dep)
 	if err != nil {
 		return err
@@ -201,7 +205,6 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	}
 	deployment.Labels[deploymentLabel] = name
 
-	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
 	_, err = deploymentClient.Create(ctx, deployment, v1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create deployment %s: %w", deployment.Name, err)

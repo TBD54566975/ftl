@@ -108,10 +108,6 @@ type Querier interface {
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
-	// If the deployment key is null, then deployment_rel.id will be null,
-	// otherwise we try to retrieve the deployments.id using the key. If
-	// there is no corresponding deployment, then the deployment ID is -1
-	// and the parent statement will fail due to a foreign key constraint.
 	UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int64, error)
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error)
 	UpsertTopic(ctx context.Context, arg UpsertTopicParams) error

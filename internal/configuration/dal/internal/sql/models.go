@@ -465,16 +465,15 @@ type Request struct {
 }
 
 type Runner struct {
-	ID                 int64
-	Key                model.RunnerKey
-	Created            time.Time
-	LastSeen           time.Time
-	ReservationTimeout optional.Option[time.Time]
-	State              RunnerState
-	Endpoint           string
-	ModuleName         optional.Option[string]
-	DeploymentID       int64
-	Labels             json.RawMessage
+	ID           int64
+	Key          model.RunnerKey
+	Created      time.Time
+	LastSeen     time.Time
+	State        RunnerState
+	Endpoint     string
+	ModuleName   optional.Option[string]
+	DeploymentID int64
+	Labels       json.RawMessage
 }
 
 type Timeline struct {

@@ -618,7 +618,6 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 
 // Check if we can contact the runner.
 func (s *Service) pingRunner(ctx context.Context, endpoint *url.URL) error {
-	// TODO: do we really need to ping the runner first thing? We should revisit this later
 	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint.String(), log.Error)
 	retry := backoff.Backoff{}
 	heartbeatCtx, cancel := context.WithTimeout(ctx, s.config.RunnerTimeout)

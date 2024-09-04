@@ -1424,7 +1424,7 @@ func (q *Queries) GetRunnerState(ctx context.Context, key model.RunnerKey) (Runn
 }
 
 const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, r.key, created, last_seen, reservation_timeout, state, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas
+SELECT r.id, r.key, created, last_seen, state, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
@@ -1432,23 +1432,22 @@ WHERE state = 'assigned'
 `
 
 type GetRunnersForDeploymentRow struct {
-	ID                 int64
-	Key                model.RunnerKey
-	Created            time.Time
-	LastSeen           time.Time
-	ReservationTimeout optional.Option[time.Time]
-	State              RunnerState
-	Endpoint           string
-	ModuleName         optional.Option[string]
-	DeploymentID       int64
-	Labels             json.RawMessage
-	ID_2               int64
-	CreatedAt          time.Time
-	ModuleID           int64
-	Key_2              model.DeploymentKey
-	Schema             *schema.Module
-	Labels_2           json.RawMessage
-	MinReplicas        int32
+	ID           int64
+	Key          model.RunnerKey
+	Created      time.Time
+	LastSeen     time.Time
+	State        RunnerState
+	Endpoint     string
+	ModuleName   optional.Option[string]
+	DeploymentID int64
+	Labels       json.RawMessage
+	ID_2         int64
+	CreatedAt    time.Time
+	ModuleID     int64
+	Key_2        model.DeploymentKey
+	Schema       *schema.Module
+	Labels_2     json.RawMessage
+	MinReplicas  int32
 }
 
 func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error) {
@@ -1465,7 +1464,6 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.Deploym
 			&i.Key,
 			&i.Created,
 			&i.LastSeen,
-			&i.ReservationTimeout,
 			&i.State,
 			&i.Endpoint,
 			&i.ModuleName,
@@ -2052,8 +2050,7 @@ func (q *Queries) KillStaleControllers(ctx context.Context, timeout sqltypes.Dur
 const killStaleRunners = `-- name: KillStaleRunners :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead',
-        deployment_id = NULL
+        SET state = 'dead'
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
@@ -2418,10 +2415,6 @@ type UpsertRunnerParams struct {
 }
 
 // Upsert a runner and return the deployment ID that it is assigned to, if any.
-// If the deployment key is null, then deployment_rel.id will be null,
-// otherwise we try to retrieve the deployments.id using the key. If
-// there is no corresponding deployment, then the deployment ID is -1
-// and the parent statement will fail due to a foreign key constraint.
 func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, upsertRunner,
 		arg.Key,

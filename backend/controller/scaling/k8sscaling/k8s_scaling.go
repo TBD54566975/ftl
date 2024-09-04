@@ -28,14 +28,14 @@ func NewK8sScaling(ctx context.Context, controller url.URL, leaser leases.Leaser
 		// if we're not in a cluster, use the kubeconfig
 		config, err = clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
 		if err != nil {
-			panic(err.Error())
+			return fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
 	}
 	// creates the clientset
 	clientset, err := kubernetes.NewForConfig(config)
 
 	if err != nil {
-		panic(err.Error())
+		return fmt.Errorf("failed to create clientset: %w", err)
 	}
 
 	namespace, err := getCurrentNamespace()
@@ -56,11 +56,10 @@ func NewK8sScaling(ctx context.Context, controller url.URL, leaser leases.Leaser
 
 func getCurrentNamespace() (string, error) {
 	namespaceFile := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-	if _, err := os.Stat(namespaceFile); err == nil {
-		namespace, err := os.ReadFile(namespaceFile)
-		if err != nil {
-			return "", fmt.Errorf("failed to read namespace file: %w", err)
-		}
+	namespace, err := os.ReadFile(namespaceFile)
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to read namespace file: %w", err)
+	} else if err == nil {
 		return string(namespace), nil
 	}
 
