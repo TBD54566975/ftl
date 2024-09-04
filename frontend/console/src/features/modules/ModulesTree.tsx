@@ -1,21 +1,20 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react'
 import {
-  ArrowRightCircleIcon,
-  BellAlertIcon,
-  BellIcon,
-  BoltIcon,
-  BookOpenIcon,
-  ChevronRightIcon,
-  CircleStackIcon,
-  CodeBracketSquareIcon,
-  Cog6ToothIcon,
-  DocumentDuplicateIcon,
-  LockClosedIcon,
-  NumberedListIcon,
-  SquaresPlusIcon,
-  TableCellsIcon,
-} from '@heroicons/react/24/outline'
-import type { ForwardRefExoticComponent, SVGProps } from 'react'
+  AnonymousIcon,
+  ArrowRight01Icon,
+  BubbleChatIcon,
+  CircleArrowRight02Icon,
+  CodeIcon,
+  DatabaseIcon,
+  FlowIcon,
+  FunctionIcon,
+  type HugeiconsProps,
+  LeftToRightListNumberIcon,
+  MessageIncoming02Icon,
+  PackageIcon,
+  Settings02Icon,
+  SquareLock02Icon,
+} from 'hugeicons-react'
 import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
@@ -26,18 +25,18 @@ import { addModuleToLocalStorageIfMissing, listExpandedModulesFromLocalStorage, 
 // This could alternatively be an icon, but we'd need to pick a good one.
 const ExportBadge = () => <span className='text-xs py-0.5 px-1.5 bg-gray-200 dark:bg-gray-800 dark:text-gray-300 rounded-md'>Exported</span>
 
-type IconMap = Record<string, ForwardRefExoticComponent<SVGProps<SVGSVGElement> & { title?: string; titleId?: string }>>
+type IconMap = Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>>
 const icons: IconMap = {
-  config: Cog6ToothIcon,
-  data: TableCellsIcon,
-  database: CircleStackIcon,
-  enum: NumberedListIcon,
-  fsm: SquaresPlusIcon,
-  topic: BellIcon,
-  typeAlias: DocumentDuplicateIcon,
-  secret: LockClosedIcon,
-  subscription: BellAlertIcon,
-  verb: BoltIcon,
+  config: Settings02Icon,
+  data: CodeIcon,
+  database: DatabaseIcon,
+  enum: LeftToRightListNumberIcon,
+  fsm: FlowIcon,
+  topic: BubbleChatIcon,
+  typeAlias: AnonymousIcon,
+  secret: SquareLock02Icon,
+  subscription: MessageIncoming02Icon,
+  verb: FunctionIcon,
 }
 
 type WithExport = { export?: boolean }
@@ -47,7 +46,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
     return []
   }
   const navigate = useNavigate()
-  const Icon = useMemo(() => icons[decl.value.case || ''] || CodeBracketSquareIcon, [decl.value.case])
+  const Icon = useMemo(() => icons[decl.value.case || ''] || CodeIcon, [decl.value.case])
   return (
     <li className='my-1'>
       <div
@@ -90,9 +89,9 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
           )}
           onClick={() => toggleExpansion(module.name)}
         >
-          <BookOpenIcon aria-hidden='true' className='size-4 my-1 shrink-0 ' />
+          <PackageIcon aria-hidden='true' className='size-4 my-1 shrink-0 ' />
           {module.name}
-          <ArrowRightCircleIcon
+          <CircleArrowRight02Icon
             className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600'
             onClick={(e) => {
               e.preventDefault()
@@ -101,7 +100,7 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
             }}
           />
           {module.decls.length === 0 || (
-            <ChevronRightIcon aria-hidden='true' className='ml-auto h-4 w-4 shrink-0 group-data-[open]:rotate-90 group-data-[open]:text-gray-500' />
+            <ArrowRight01Icon aria-hidden='true' className='ml-auto h-4 w-4 shrink-0 group-data-[open]:rotate-90 group-data-[open]:text-gray-500' />
           )}
         </DisclosureButton>
         <DisclosurePanel as='ul' className='px-2'>

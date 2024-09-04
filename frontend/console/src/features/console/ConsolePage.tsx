@@ -1,4 +1,4 @@
-import { CubeTransparentIcon } from '@heroicons/react/24/outline'
+import { CubeIcon } from 'hugeicons-react'
 import { useState } from 'react'
 import { type NavigateFunction, useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
@@ -25,7 +25,7 @@ export const ConsolePage = () => {
 
   return (
     <Page>
-      <Page.Header icon={<CubeTransparentIcon />} title='Console' />
+      <Page.Header icon={<CubeIcon />} title='Console' />
       <Page.Body className='flex h-full'>
         <ResizablePanels
           mainContent={<GraphPane onTapped={setSelectedNode} />}

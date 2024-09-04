@@ -1,4 +1,4 @@
-import { ListBulletIcon, PhoneArrowDownLeftIcon, PhoneIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
+import { Call02Icon, CallIncoming04Icon, Menu01Icon, Rocket01Icon } from 'hugeicons-react'
 import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { LogLevelBadgeSmall } from '../logs/LogLevelBadgeSmall'
 
@@ -8,20 +8,16 @@ export const TimelineIcon = ({ event }: { event: Event }) => {
     switch (event.entry.case) {
       case 'call': {
         const textColor = event.entry.value.error ? 'text-red-600' : 'text-indigo-600'
-        return event.entry.value.sourceVerbRef ? (
-          <PhoneIcon className={`${style} ${textColor}`} />
-        ) : (
-          <PhoneArrowDownLeftIcon className={`${style} ${textColor}`} />
-        )
+        return event.entry.value.sourceVerbRef ? <Call02Icon className={`${style} ${textColor}`} /> : <CallIncoming04Icon className={`${style} ${textColor}`} />
       }
       case 'deploymentCreated':
-        return <RocketLaunchIcon className='h4 w-4 text-green-500' />
+        return <Rocket01Icon className='h4 w-4 text-green-500' />
       case 'deploymentUpdated':
-        return <RocketLaunchIcon className='h4 w-4 text-indigo-600' />
+        return <Rocket01Icon className='h4 w-4 text-indigo-600' />
       case 'log':
         return <LogLevelBadgeSmall logLevel={event.entry.value.logLevel} />
       default:
-        return <ListBulletIcon className={`${style}`} />
+        return <Menu01Icon className={`${style}`} />
     }
   }
 

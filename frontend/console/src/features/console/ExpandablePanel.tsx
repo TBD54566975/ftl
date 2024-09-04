@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { ArrowDown01Icon, ArrowRight01Icon } from 'hugeicons-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 
@@ -24,7 +24,7 @@ export const ExpandablePanel: React.FC<ExpandablePanelProps> = ({ icon: Icon, ti
   return (
     <div className='border-b border-gray-300 dark:border-gray-700'>
       <div className='bg-gray-100 dark:bg-gray-700 flex items-center cursor-pointer' onClick={toggleExpansion}>
-        {isExpanded ? <ChevronDownIcon className='h-3 w-3 m-1' /> : <ChevronRightIcon className='h-3 w-3  m-1' />}
+        {isExpanded ? <ArrowDown01Icon className='size-4 m-1' /> : <ArrowRight01Icon className='size-4  m-1' />}
         {Icon ? <Icon className='h-4 w-4 mr-2' /> : null}
         <span className='text-xs py-1'>{title}</span>
       </div>

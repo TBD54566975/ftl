@@ -1,4 +1,4 @@
-import { ListBulletIcon } from '@heroicons/react/24/outline'
+import { ListViewIcon } from 'hugeicons-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Page } from '../../layout'
@@ -35,7 +35,7 @@ export const TimelinePage = () => {
   return (
     <SidePanelProvider>
       <Page>
-        <Page.Header icon={<ListBulletIcon />} title='Events'>
+        <Page.Header icon={<ListViewIcon className='size-5' />} title='Events'>
           <TimelineTimeControls selectedTimeRange={selectedTimeRange} isTimelinePaused={isTimelinePaused} onTimeSettingsChange={handleTimeSettingsChanged} />
         </Page.Header>
         <Page.Body className='flex'>
