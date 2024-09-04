@@ -83,7 +83,6 @@ func runnerFromDB(row dalsql.GetRunnerRow) Runner {
 	return Runner{
 		Key:        row.RunnerKey,
 		Endpoint:   row.Endpoint,
-		State:      RunnerState(row.State),
 		Deployment: row.DeploymentKey,
 		Labels:     attrs,
 	}
@@ -92,7 +91,6 @@ func runnerFromDB(row dalsql.GetRunnerRow) Runner {
 type Runner struct {
 	Key                model.RunnerKey
 	Endpoint           string
-	State              RunnerState
 	ReservationTimeout optional.Option[time.Duration]
 	Module             optional.Option[string]
 	Deployment         model.DeploymentKey
@@ -108,23 +106,6 @@ type Reconciliation struct {
 
 	AssignedReplicas int
 	RequiredReplicas int
-}
-
-type RunnerState string
-
-// Runner states.
-const (
-	RunnerStateNew      = RunnerState(dalsql.RunnerStateNew)
-	RunnerStateAssigned = RunnerState(dalsql.RunnerStateAssigned)
-	RunnerStateDead     = RunnerState(dalsql.RunnerStateDead)
-)
-
-func RunnerStateFromProto(state ftlv1.RunnerState) RunnerState {
-	return RunnerState(strings.ToLower(strings.TrimPrefix(state.String(), "RUNNER_")))
-}
-
-func (s RunnerState) ToProto() ftlv1.RunnerState {
-	return ftlv1.RunnerState(ftlv1.RunnerState_value["RUNNER_"+strings.ToUpper(string(s))])
 }
 
 type ControllerState string
@@ -191,16 +172,6 @@ func (r Route) String() string {
 }
 
 func (r Route) notification() {}
-
-func WithReservation(ctx context.Context, reservation Reservation, fn func() error) error {
-	if err := fn(); err != nil {
-		if rerr := reservation.Rollback(ctx); rerr != nil {
-			err = errors.Join(err, rerr)
-		}
-		return err
-	}
-	return reservation.Commit(ctx)
-}
 
 func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service) *DAL {
 	var d *DAL
@@ -295,7 +266,6 @@ func (d *DAL) GetStatus(ctx context.Context) (Status, error) {
 		return Runner{
 			Key:        in.RunnerKey,
 			Endpoint:   in.Endpoint,
-			State:      RunnerState(in.State),
 			Deployment: in.DeploymentKey,
 			Labels:     attrs,
 		}, nil
@@ -342,7 +312,6 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 		runners = append(runners, Runner{
 			Key:        row.Key,
 			Endpoint:   row.Endpoint,
-			State:      RunnerState(row.State),
 			Deployment: deployment,
 			Labels:     attrs,
 		})
@@ -519,7 +488,6 @@ func (d *DAL) UpsertRunner(ctx context.Context, runner Runner) error {
 	deploymentID, err := d.db.UpsertRunner(ctx, dalsql.UpsertRunnerParams{
 		Key:           runner.Key,
 		Endpoint:      runner.Endpoint,
-		State:         dalsql.RunnerState(runner.State),
 		DeploymentKey: runner.Deployment,
 		Labels:        attrBytes,
 	})
@@ -862,14 +830,6 @@ func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string
 		})
 	}
 	return out, nil
-}
-
-func (d *DAL) GetRunnerState(ctx context.Context, runnerKey model.RunnerKey) (RunnerState, error) {
-	state, err := d.db.GetRunnerState(ctx, runnerKey)
-	if err != nil {
-		return "", libdal.TranslatePGError(err)
-	}
-	return RunnerState(state), nil
 }
 
 func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {

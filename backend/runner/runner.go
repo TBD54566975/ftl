@@ -106,12 +106,18 @@ func Start(ctx context.Context, config Config) error {
 		key:                key,
 		config:             config,
 		controllerClient:   controllerClient,
-		forceUpdate:        make(chan struct{}, 16),
 		labels:             labels,
 		deploymentLogQueue: make(chan log.Entry, 10000),
 		cancelFunc:         doneFunc,
 	}
-	svc.state.Store(ftlv1.RunnerState_RUNNER_NEW)
+	err = svc.deploy(ctx)
+	if err != nil {
+		// If we fail to deploy we just exit
+		// Kube or local scaling will start a new instance to continue
+		// This approach means we don't have to handle error states internally
+		// It is managed externally by the scaling system
+		return err
+	}
 
 	go func() {
 		// In some environments we may want a delay before registering the runner
@@ -194,11 +200,9 @@ type deployment struct {
 }
 
 type Service struct {
-	key         model.RunnerKey
-	lock        sync.Mutex
-	state       atomic.Value[ftlv1.RunnerState]
-	forceUpdate chan struct{}
-	deployment  atomic.Value[optional.Option[*deployment]]
+	key        model.RunnerKey
+	lock       sync.Mutex
+	deployment atomic.Value[optional.Option[*deployment]]
 
 	config           Config
 	controllerClient ftlv1connect.ControllerServiceClient
@@ -252,12 +256,6 @@ func (s *Service) deploy(ctx context.Context) error {
 		return errors.New("already deployed")
 	}
 
-	// Set the state of the Runner, and update the Controller.
-	setState := func(state ftlv1.RunnerState) {
-		s.state.Store(state)
-		s.forceUpdate <- struct{}{}
-	}
-
 	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: s.config.Deployment}))
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
@@ -309,9 +307,7 @@ func (s *Service) deploy(ctx context.Context) error {
 
 	dep := s.makeDeployment(cmdCtx, key, deployment)
 	s.deployment.Store(optional.Some(dep))
-
 	logger.Debugf("Deployed %s", key)
-	setState(ftlv1.RunnerState_RUNNER_ASSIGNED)
 	context.AfterFunc(ctx, func() {
 		err := s.Close()
 		if err != nil {
@@ -373,7 +369,6 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	logger := log.FromContext(ctx)
 
 	// Figure out the appropriate state.
-	state := s.state.Load()
 	var deploymentKey *string
 	depl, ok := s.deployment.Load().Get()
 	if ok {
@@ -381,53 +376,38 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		deploymentKey = &dkey
 		select {
 		case <-depl.ctx.Done():
-			state = ftlv1.RunnerState_RUNNER_DEAD
 			err := context.Cause(depl.ctx)
 			s.getDeploymentLogger(ctx, depl.key).Errorf(err, "Deployment terminated")
 			s.deployment.Store(optional.None[*deployment]())
 			s.cancelFunc()
+			return nil
 		default:
-			state = ftlv1.RunnerState_RUNNER_ASSIGNED
 		}
-		s.state.Store(state)
 	}
 
-	logger.Debugf("Registering with Controller as %s for deployment %s", state, s.config.Deployment)
+	logger.Tracef("Registering with Controller for deployment %s", s.config.Deployment)
 	err := send(&ftlv1.RegisterRunnerRequest{
 		Key:        s.key.String(),
 		Endpoint:   s.config.Advertise.String(),
 		Labels:     s.labels,
 		Deployment: s.config.Deployment,
-		State:      state,
 	})
 	if err != nil {
 		s.registrationFailure.Store(optional.Some(err))
-		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey), state)
+		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey))
 		return fmt.Errorf("failed to register with Controller: %w", err)
-	}
-	if state == ftlv1.RunnerState_RUNNER_NEW {
-		err = s.deploy(ctx)
-		if err != nil {
-			// Deployment failed, we will retry on the next heartbeat
-			// We rely on Deploy to cancel the context if the error is terminal
-			logger.Errorf(err, "Failed to deploy")
-		} else {
-			s.registrationFailure.Store(optional.None[error]())
-		}
 	}
 
 	// Wait for the next heartbeat.
 	delay := s.config.HeartbeatPeriod + time.Duration(rand.Intn(int(s.config.HeartbeatJitter))) //nolint:gosec
 	logger.Tracef("Registered with Controller, next heartbeat in %s", delay)
-	observability.Runner.Registered(ctx, optional.Ptr(deploymentKey), state)
+	observability.Runner.Registered(ctx, optional.Ptr(deploymentKey))
 	select {
 	case <-ctx.Done():
 		err = context.Cause(ctx)
 		s.registrationFailure.Store(optional.Some(err))
-		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey), state)
+		observability.Runner.RegistrationFailure(ctx, optional.Ptr(deploymentKey))
 		return err
-
-	case <-s.forceUpdate:
 
 	case <-time.After(delay):
 	}
@@ -486,7 +466,7 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 }
 
 func (s *Service) healthCheck(writer http.ResponseWriter, request *http.Request) {
-	if s.state.Load() == ftlv1.RunnerState_RUNNER_ASSIGNED {
+	if s.deployment.Load().Ok() {
 		writer.WriteHeader(http.StatusOK)
 		return
 	}

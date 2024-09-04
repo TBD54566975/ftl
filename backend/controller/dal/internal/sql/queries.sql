@@ -75,55 +75,49 @@ WITH deployment_rel AS (
              WHERE d.key = sqlc.arg('deployment_key')::deployment_key
              LIMIT 1)
 INSERT
-INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
+INTO runners (key, endpoint, labels, deployment_id, last_seen)
 VALUES ($1,
         $2,
         $3,
-        $4,
         (SELECT id FROM deployment_rel),
         NOW() AT TIME ZONE 'utc')
 ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
-                                state         = $3,
-                                labels        = $4,
+                                labels        = $3,
                                 last_seen     = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id;
 
 -- name: KillStaleRunners :one
 WITH matches AS (
-    UPDATE runners
-        SET state = 'dead'
-        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
+    DELETE FROM runners
+        WHERE last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
 FROM matches;
 
 -- name: DeregisterRunner :one
 WITH matches AS (
-    UPDATE runners
-        SET state = 'dead'
+    DELETE FROM runners
         WHERE key = sqlc.arg('key')::runner_key
         RETURNING 1)
 SELECT COUNT(*)
 FROM matches;
 
 -- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
+SELECT DISTINCT ON (r.key) r.key AS runner_key,
                            r.endpoint,
-                           r.state,
                            r.labels,
                            r.last_seen,
                            r.module_name,
                            d.key AS deployment_key
 FROM runners r
          INNER JOIN deployments d on d.id = r.deployment_id
-WHERE r.state <> 'dead'
 ORDER BY r.key;
 
 -- name: GetActiveDeployments :many
 SELECT sqlc.embed(d), m.name AS module_name, m.language, COUNT(r.id) AS replicas
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
-  LEFT JOIN runners r ON d.id = r.deployment_id AND r.state = 'assigned'
+  LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0
 GROUP BY d.id, m.name, m.language;
 
@@ -148,7 +142,7 @@ SELECT d.min_replicas,
        r.endpoint,
        r.labels AS runner_labels
 FROM deployments d
-         LEFT JOIN runners r on d.id = r.deployment_id AND r.state != 'dead'
+         LEFT JOIN runners r on d.id = r.deployment_id
 WHERE d.min_replicas > 0
 ORDER BY d.key;
 
@@ -166,15 +160,9 @@ WHERE m.name = $1
   AND min_replicas > 0
 LIMIT 1;
 
--- name: GetRunnerState :one
-SELECT state
-FROM runners
-WHERE key = sqlc.arg('key')::runner_key;
-
 -- name: GetRunner :one
 SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
                            r.endpoint,
-                           r.state,
                            r.labels,
                            r.last_seen,
                            r.module_name,
@@ -187,13 +175,12 @@ WHERE r.key = sqlc.arg('key')::runner_key;
 SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
-WHERE state = 'assigned'
-  AND (COALESCE(cardinality(sqlc.arg('modules')::TEXT[]), 0) = 0
+WHERE (COALESCE(cardinality(sqlc.arg('modules')::TEXT[]), 0) = 0
     OR module_name = ANY (sqlc.arg('modules')::TEXT[]));
 
 -- name: GetRouteForRunner :one
 -- Retrieve routing information for a runner.
-SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key, r.state
+SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
 WHERE r.key = sqlc.arg('key')::runner_key;
@@ -202,8 +189,7 @@ WHERE r.key = sqlc.arg('key')::runner_key;
 SELECT *
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
-WHERE state = 'assigned'
-  AND d.key = sqlc.arg('key')::deployment_key;
+WHERE d.key = sqlc.arg('key')::deployment_key;
 
 -- name: CreateRequest :exec
 INSERT INTO requests (origin, "key", source_addr)
@@ -243,8 +229,7 @@ SELECT r.key AS runner_key, d.key AS deployment_key, endpoint, ir.path, ir.modul
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
          INNER JOIN deployments d ON ir.deployment_id = d.id
-WHERE r.state = 'assigned'
-  AND ir.method = $1;
+WHERE ir.method = $1;
 
 -- name: GetActiveIngressRoutes :many
 SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path
@@ -522,8 +507,8 @@ VALUES (
 WITH runner_count AS (
   SELECT count(r.deployment_id) as runner_count,
          r.deployment_id as deployment
-        FROM runners r WHERE r.state = 'assigned'
-        GROUP BY deployment HAVING count(r.deployment_id) > 0
+        FROM runners r
+        GROUP BY deployment
 )
 SELECT
   subs.key::subscription_key as key,

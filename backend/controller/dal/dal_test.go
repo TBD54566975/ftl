@@ -15,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -108,22 +107,9 @@ func TestDAL(t *testing.T) {
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
-			State:      RunnerStateNew,
 			Deployment: deploymentKey,
 		})
 		assert.NoError(t, err)
-	})
-
-	t.Run("RegisterRunnerFailsOnDuplicate", func(t *testing.T) {
-		err = dal.UpsertRunner(ctx, Runner{
-			Key:        model.NewRunnerKey("localhost", "8080"),
-			Labels:     labels,
-			Endpoint:   "http://localhost:8080",
-			State:      RunnerStateNew,
-			Deployment: deploymentKey,
-		})
-		assert.Error(t, err)
-		assert.IsError(t, err, libdal.ErrConflict)
 	})
 
 	expectedRunner := Runner{
@@ -143,7 +129,6 @@ func TestDAL(t *testing.T) {
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
-			State:      RunnerStateAssigned,
 			Deployment: deploymentKey,
 		})
 		assert.NoError(t, err)
@@ -156,7 +141,6 @@ func TestDAL(t *testing.T) {
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
-			State:      RunnerStateAssigned,
 			Deployment: deploymentKey,
 		}}, runners)
 	})
@@ -183,7 +167,6 @@ func TestDAL(t *testing.T) {
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
-			State:      RunnerStateAssigned,
 			Deployment: model.NewDeploymentKey("test"),
 		})
 		assert.Error(t, err)
@@ -272,9 +255,4 @@ func artefactContent(t testing.TB, artefacts []*model.Artefact) [][]byte {
 		a.Content = nil
 	}
 	return result
-}
-
-func TestRunnerStateFromProto(t *testing.T) {
-	state := ftlv1.RunnerState_RUNNER_NEW
-	assert.Equal(t, RunnerStateNew, RunnerStateFromProto(state))
 }

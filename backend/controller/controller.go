@@ -399,7 +399,6 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		return &ftlv1.StatusResponse_Runner{
 			Key:        r.Key.String(),
 			Endpoint:   r.Endpoint,
-			State:      r.State.ToProto(),
 			Deployment: deployment,
 			Labels:     labels,
 		}, nil
@@ -589,7 +588,6 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		err = s.dal.UpsertRunner(ctx, dal.Runner{
 			Key:        runnerKey,
 			Endpoint:   msg.Endpoint,
-			State:      dal.RunnerStateFromProto(msg.State),
 			Deployment: deploymentKey,
 			Labels:     msg.Labels.AsMap(),
 		})

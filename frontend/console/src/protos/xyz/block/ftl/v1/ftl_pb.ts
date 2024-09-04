@@ -34,38 +34,6 @@ proto3.util.setEnumType(DeploymentChangeType, "xyz.block.ftl.v1.DeploymentChange
 ]);
 
 /**
- * @generated from enum xyz.block.ftl.v1.RunnerState
- */
-export enum RunnerState {
-  /**
-   * The Runner is waiting for a deployment.
-   *
-   * @generated from enum value: RUNNER_NEW = 0;
-   */
-  RUNNER_NEW = 0,
-
-  /**
-   * The Runner is assigned to a deployment.
-   *
-   * @generated from enum value: RUNNER_ASSIGNED = 1;
-   */
-  RUNNER_ASSIGNED = 1,
-
-  /**
-   * The Runner is dead.
-   *
-   * @generated from enum value: RUNNER_DEAD = 2;
-   */
-  RUNNER_DEAD = 2,
-}
-// Retrieve enum metadata with: proto3.getEnumType(RunnerState)
-proto3.util.setEnumType(RunnerState, "xyz.block.ftl.v1.RunnerState", [
-  { no: 0, name: "RUNNER_NEW" },
-  { no: 1, name: "RUNNER_ASSIGNED" },
-  { no: 2, name: "RUNNER_DEAD" },
-]);
-
-/**
  * @generated from enum xyz.block.ftl.v1.ConfigProvider
  */
 export enum ConfigProvider {
@@ -1538,11 +1506,6 @@ export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
   deployment = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.RunnerState state = 4;
-   */
-  state = RunnerState.RUNNER_NEW;
-
-  /**
    * @generated from field: google.protobuf.Struct labels = 5;
    */
   labels?: Struct;
@@ -1558,7 +1521,6 @@ export class RegisterRunnerRequest extends Message<RegisterRunnerRequest> {
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
     { no: 5, name: "labels", kind: "message", T: Struct },
   ]);
 
@@ -2023,11 +1985,6 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
   endpoint = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.RunnerState state = 4;
-   */
-  state = RunnerState.RUNNER_NEW;
-
-  /**
    * @generated from field: optional string deployment = 5;
    */
   deployment?: string;
@@ -2048,7 +2005,6 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "languages", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "state", kind: "enum", T: proto3.getEnumType(RunnerState) },
     { no: 5, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "labels", kind: "message", T: Struct },
   ]);

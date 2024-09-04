@@ -190,50 +190,6 @@ func (ns NullOrigin) Value() (driver.Value, error) {
 	return string(ns.Origin), nil
 }
 
-type RunnerState string
-
-const (
-	RunnerStateNew      RunnerState = "new"
-	RunnerStateReserved RunnerState = "reserved"
-	RunnerStateAssigned RunnerState = "assigned"
-	RunnerStateDead     RunnerState = "dead"
-)
-
-func (e *RunnerState) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = RunnerState(s)
-	case string:
-		*e = RunnerState(s)
-	default:
-		return fmt.Errorf("unsupported scan type for RunnerState: %T", src)
-	}
-	return nil
-}
-
-type NullRunnerState struct {
-	RunnerState RunnerState
-	Valid       bool // Valid is true if RunnerState is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullRunnerState) Scan(value interface{}) error {
-	if value == nil {
-		ns.RunnerState, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.RunnerState.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullRunnerState) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.RunnerState), nil
-}
-
 type TopicSubscriptionState string
 
 const (

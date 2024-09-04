@@ -324,8 +324,7 @@ func (q *Queries) DeleteSubscriptions(ctx context.Context, deployment model.Depl
 
 const deregisterRunner = `-- name: DeregisterRunner :one
 WITH matches AS (
-    UPDATE runners
-        SET state = 'dead'
+    DELETE FROM runners
         WHERE key = $1::runner_key
         RETURNING 1)
 SELECT COUNT(*)
@@ -529,7 +528,7 @@ const getActiveDeployments = `-- name: GetActiveDeployments :many
 SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language, COUNT(r.id) AS replicas
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
-  LEFT JOIN runners r ON d.id = r.deployment_id AND r.state = 'assigned'
+  LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0
 GROUP BY d.id, m.name, m.language
 `
@@ -620,23 +619,20 @@ func (q *Queries) GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngres
 }
 
 const getActiveRunners = `-- name: GetActiveRunners :many
-SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
+SELECT DISTINCT ON (r.key) r.key AS runner_key,
                            r.endpoint,
-                           r.state,
                            r.labels,
                            r.last_seen,
                            r.module_name,
                            d.key AS deployment_key
 FROM runners r
          INNER JOIN deployments d on d.id = r.deployment_id
-WHERE r.state <> 'dead'
 ORDER BY r.key
 `
 
 type GetActiveRunnersRow struct {
 	RunnerKey     model.RunnerKey
 	Endpoint      string
-	State         RunnerState
 	Labels        json.RawMessage
 	LastSeen      time.Time
 	ModuleName    optional.Option[string]
@@ -655,7 +651,6 @@ func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, 
 		if err := rows.Scan(
 			&i.RunnerKey,
 			&i.Endpoint,
-			&i.State,
 			&i.Labels,
 			&i.LastSeen,
 			&i.ModuleName,
@@ -1043,8 +1038,7 @@ SELECT r.key AS runner_key, d.key AS deployment_key, endpoint, ir.path, ir.modul
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
          INNER JOIN deployments d ON ir.deployment_id = d.id
-WHERE r.state = 'assigned'
-  AND ir.method = $1
+WHERE ir.method = $1
 `
 
 type GetIngressRoutesRow struct {
@@ -1172,7 +1166,7 @@ SELECT d.min_replicas,
        r.endpoint,
        r.labels AS runner_labels
 FROM deployments d
-         LEFT JOIN runners r on d.id = r.deployment_id AND r.state != 'dead'
+         LEFT JOIN runners r on d.id = r.deployment_id
 WHERE d.min_replicas > 0
 ORDER BY d.key
 `
@@ -1252,7 +1246,7 @@ func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.Subscriptio
 }
 
 const getRouteForRunner = `-- name: GetRouteForRunner :one
-SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key, r.state
+SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
 WHERE r.key = $1::runner_key
@@ -1263,7 +1257,6 @@ type GetRouteForRunnerRow struct {
 	RunnerKey     model.RunnerKey
 	ModuleName    optional.Option[string]
 	DeploymentKey optional.Option[model.DeploymentKey]
-	State         RunnerState
 }
 
 // Retrieve routing information for a runner.
@@ -1275,7 +1268,6 @@ func (q *Queries) GetRouteForRunner(ctx context.Context, key model.RunnerKey) (G
 		&i.RunnerKey,
 		&i.ModuleName,
 		&i.DeploymentKey,
-		&i.State,
 	)
 	return i, err
 }
@@ -1284,8 +1276,7 @@ const getRoutingTable = `-- name: GetRoutingTable :many
 SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key
 FROM runners r
          LEFT JOIN deployments d on r.deployment_id = d.id
-WHERE state = 'assigned'
-  AND (COALESCE(cardinality($1::TEXT[]), 0) = 0
+WHERE (COALESCE(cardinality($1::TEXT[]), 0) = 0
     OR module_name = ANY ($1::TEXT[]))
 `
 
@@ -1327,7 +1318,6 @@ func (q *Queries) GetRoutingTable(ctx context.Context, modules []string) ([]GetR
 const getRunner = `-- name: GetRunner :one
 SELECT DISTINCT ON (r.key) r.key                                   AS runner_key,
                            r.endpoint,
-                           r.state,
                            r.labels,
                            r.last_seen,
                            r.module_name,
@@ -1340,7 +1330,6 @@ WHERE r.key = $1::runner_key
 type GetRunnerRow struct {
 	RunnerKey     model.RunnerKey
 	Endpoint      string
-	State         RunnerState
 	Labels        json.RawMessage
 	LastSeen      time.Time
 	ModuleName    optional.Option[string]
@@ -1353,7 +1342,6 @@ func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunner
 	err := row.Scan(
 		&i.RunnerKey,
 		&i.Endpoint,
-		&i.State,
 		&i.Labels,
 		&i.LastSeen,
 		&i.ModuleName,
@@ -1362,25 +1350,11 @@ func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunner
 	return i, err
 }
 
-const getRunnerState = `-- name: GetRunnerState :one
-SELECT state
-FROM runners
-WHERE key = $1::runner_key
-`
-
-func (q *Queries) GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error) {
-	row := q.db.QueryRowContext(ctx, getRunnerState, key)
-	var state RunnerState
-	err := row.Scan(&state)
-	return state, err
-}
-
 const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, r.key, created, last_seen, state, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas
+SELECT r.id, r.key, created, last_seen, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
-WHERE state = 'assigned'
-  AND d.key = $1::deployment_key
+WHERE d.key = $1::deployment_key
 `
 
 type GetRunnersForDeploymentRow struct {
@@ -1388,7 +1362,6 @@ type GetRunnersForDeploymentRow struct {
 	Key          model.RunnerKey
 	Created      time.Time
 	LastSeen     time.Time
-	State        RunnerState
 	Endpoint     string
 	ModuleName   optional.Option[string]
 	DeploymentID int64
@@ -1416,7 +1389,6 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.Deploym
 			&i.Key,
 			&i.Created,
 			&i.LastSeen,
-			&i.State,
 			&i.Endpoint,
 			&i.ModuleName,
 			&i.DeploymentID,
@@ -1486,8 +1458,8 @@ const getSubscriptionsNeedingUpdate = `-- name: GetSubscriptionsNeedingUpdate :m
 WITH runner_count AS (
   SELECT count(r.deployment_id) as runner_count,
          r.deployment_id as deployment
-        FROM runners r WHERE r.state = 'assigned'
-        GROUP BY deployment HAVING count(r.deployment_id) > 0
+        FROM runners r
+        GROUP BY deployment
 )
 SELECT
   subs.key::subscription_key as key,
@@ -1795,9 +1767,8 @@ func (q *Queries) KillStaleControllers(ctx context.Context, timeout sqltypes.Dur
 
 const killStaleRunners = `-- name: KillStaleRunners :one
 WITH matches AS (
-    UPDATE runners
-        SET state = 'dead'
-        WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
+    DELETE FROM runners
+        WHERE last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
 FROM matches
@@ -2123,19 +2094,17 @@ func (q *Queries) UpsertModule(ctx context.Context, language string, name string
 const upsertRunner = `-- name: UpsertRunner :one
 WITH deployment_rel AS (
     SELECT id FROM deployments d
-             WHERE d.key = $5::deployment_key
+             WHERE d.key = $4::deployment_key
              LIMIT 1)
 INSERT
-INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
+INTO runners (key, endpoint, labels, deployment_id, last_seen)
 VALUES ($1,
         $2,
         $3,
-        $4,
         (SELECT id FROM deployment_rel),
         NOW() AT TIME ZONE 'utc')
 ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
-                                state         = $3,
-                                labels        = $4,
+                                labels        = $3,
                                 last_seen     = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id
 `
@@ -2143,7 +2112,6 @@ RETURNING deployment_id
 type UpsertRunnerParams struct {
 	Key           model.RunnerKey
 	Endpoint      string
-	State         RunnerState
 	Labels        json.RawMessage
 	DeploymentKey model.DeploymentKey
 }
@@ -2153,7 +2121,6 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int
 	row := q.db.QueryRowContext(ctx, upsertRunner,
 		arg.Key,
 		arg.Endpoint,
-		arg.State,
 		arg.Labels,
 		arg.DeploymentKey,
 	)
