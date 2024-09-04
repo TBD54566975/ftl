@@ -1,4 +1,4 @@
-import { ChevronRightIcon } from '@heroicons/react/20/solid'
+import { ArrowRight02Icon } from 'hugeicons-react'
 import type React from 'react'
 import { classNames } from '../utils'
 
@@ -33,7 +33,7 @@ const Header = ({
                     <a href={crumb.link || '#'} className='text-lg mr-2 hover:text-indigo-500'>
                       {crumb.label}
                     </a>
-                    <ChevronRightIcon className='mt-0.5 h-5 w-5' />
+                    <ArrowRight02Icon className='mt-0.5 h-5 w-5' />
                   </div>
                 </li>
               ))}

@@ -1,4 +1,4 @@
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { Cancel01Icon } from 'hugeicons-react'
 
 interface Props {
   onClick: () => void
@@ -7,7 +7,7 @@ interface Props {
 export const CloseButton = ({ onClick }: Props) => {
   return (
     <button type='button' onClick={onClick} className='rounded-sm hover:bg-gray-200 dark:hover:bg-slate-500'>
-      <XMarkIcon className={'h-5 w-5'} />
+      <Cancel01Icon className={'h-5 w-5'} />
     </button>
   )
 }

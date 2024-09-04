@@ -1,13 +1,13 @@
 import {
-  ArrowRightEndOnRectangleIcon,
-  ArrowRightStartOnRectangleIcon,
-  ArrowTopRightOnSquareIcon,
-  ArrowsRightLeftIcon,
-  BoltIcon,
-  CodeBracketIcon,
-  Cog6ToothIcon,
-  LockClosedIcon,
-} from '@heroicons/react/24/outline'
+  ArrowLeftRightIcon,
+  CodeSquareIcon,
+  FunctionIcon,
+  InboxDownloadIcon,
+  InboxUploadIcon,
+  LinkSquare02Icon,
+  Settings02Icon,
+  SquareLock02Icon,
+} from 'hugeicons-react'
 import type { NavigateFunction } from 'react-router-dom'
 import { CodeBlock } from '../../../components'
 import { RightPanelAttribute } from '../../../components/RightPanelAttribute'
@@ -20,7 +20,7 @@ export const modulePanels = (allModules: Module[], module: Module, navigate: Nav
 
   if (module.verbs && module.verbs.length > 0) {
     panels.push({
-      icon: BoltIcon,
+      icon: FunctionIcon,
       title: 'Verbs',
       expanded: true,
       children: module.verbs?.map((v) => (
@@ -31,7 +31,7 @@ export const modulePanels = (allModules: Module[], module: Module, navigate: Nav
             className='flex items-center space-x-2 hover:text-indigo-400 py-1 px-2 rounded'
             onClick={() => navigate(`/deployments/${module.deploymentKey}/verbs/${v.verb?.name}`)}
           >
-            <ArrowTopRightOnSquareIcon className='size-4' />
+            <LinkSquare02Icon className='size-4' />
           </button>
         </div>
       )),
@@ -40,7 +40,7 @@ export const modulePanels = (allModules: Module[], module: Module, navigate: Nav
 
   if (module.secrets && module.secrets.length > 0) {
     panels.push({
-      icon: LockClosedIcon,
+      icon: SquareLock02Icon,
       title: 'Secrets',
       expanded: false,
       children: module.secrets.map((s, index) => (
@@ -51,7 +51,7 @@ export const modulePanels = (allModules: Module[], module: Module, navigate: Nav
 
   if (module.configs && module.configs.length > 0) {
     panels.push({
-      icon: Cog6ToothIcon,
+      icon: Settings02Icon,
       title: 'Configs',
       expanded: false,
       children: module.configs.map((c) => <RightPanelAttribute key={c.config?.name} name={c.config?.name} value={c.config?.type?.value?.case} />),
@@ -59,21 +59,21 @@ export const modulePanels = (allModules: Module[], module: Module, navigate: Nav
   }
 
   panels.push({
-    icon: ArrowsRightLeftIcon,
+    icon: ArrowLeftRightIcon,
     title: 'Relationships',
     expanded: false,
     children: (
       <div className='flex flex-col space-y-2'>
         {callsIn(allModules, module)?.flatMap((inCall) => (
           <div key={`in-${inCall.module}-${inCall.verb}`} className='flex items-center space-x-2'>
-            <ArrowRightEndOnRectangleIcon className='h-4 w-4 text-green-600' />
+            <InboxDownloadIcon className='h-4 w-4 text-green-600' />
             <div className='truncate text-xs'>{`${inCall?.module}.${inCall?.verb}`}</div>
           </div>
         ))}
         {callsOut(module)?.map((out, outIndex) =>
           out?.calls.map((call, callIndex) => (
             <div key={`out-${outIndex}-${call?.module}.${call?.name}-${callIndex}`} className='flex items-center space-x-2'>
-              <ArrowRightStartOnRectangleIcon className='h-4 w-4 text-blue-600' />
+              <InboxUploadIcon className='h-4 w-4 text-blue-600' />
               <div className='truncate text-xs'>{`${call?.module}.${call?.name}`}</div>
             </div>
           )),
@@ -83,7 +83,7 @@ export const modulePanels = (allModules: Module[], module: Module, navigate: Nav
   })
 
   panels.push({
-    icon: CodeBracketIcon,
+    icon: CodeSquareIcon,
     title: 'Schema',
     expanded: false,
     children: (

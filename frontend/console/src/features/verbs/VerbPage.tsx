@@ -1,4 +1,4 @@
-import { BoltIcon } from '@heroicons/react/24/outline'
+import { FunctionIcon } from 'hugeicons-react'
 import { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
@@ -52,7 +52,7 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
 
   const header = (
     <div className='flex items-center gap-2 px-2 py-2'>
-      <BoltIcon className='h-5 w-5 text-indigo-600' />
+      <FunctionIcon className='h-5 w-5 text-indigo-500' />
       <div className='flex flex-col min-w-0'>Verb</div>
     </div>
   )

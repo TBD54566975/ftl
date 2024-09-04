@@ -1,5 +1,6 @@
 import { Switch } from '@headlessui/react'
-import { MoonIcon, SunIcon } from '@heroicons/react/20/solid'
+
+import { Moon02Icon, Sun03Icon } from 'hugeicons-react'
 import { useUserPreferences } from '../providers/user-preferences-provider'
 import { classNames } from '../utils/react.utils'
 
@@ -19,10 +20,10 @@ export const DarkModeSwitch = () => {
         aria-hidden='true'
         className={classNames(
           isDarkMode ? 'translate-x-5' : 'translate-x-0',
-          'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white dark:bg-indigo-600 shadow ring-0 transition duration-200 ease-in-out',
+          'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-gray-50 dark:bg-indigo-600 shadow ring-0 transition duration-200 ease-in-out',
         )}
       >
-        {isDarkMode ? <MoonIcon className='text-white p-0.5' /> : <SunIcon className='text-indigo-600 p-0.5' />}
+        {isDarkMode ? <Moon02Icon className='text-white size-5 p-0.5' /> : <Sun03Icon className='text-indigo-500 size-5 p-0.5' />}
       </span>
     </Switch>
   )

@@ -1,6 +1,5 @@
 import { Transition } from '@headlessui/react'
-import { XMarkIcon } from '@heroicons/react/20/solid'
-import { CheckCircleIcon, ExclamationCircleIcon, ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import { Alert02Icon, AlertCircleIcon, Cancel02Icon, CheckmarkCircle02Icon, InformationCircleIcon } from 'hugeicons-react'
 import { Fragment, useContext } from 'react'
 import { NotificationType, NotificationsContext } from '../providers/notifications-provider'
 import { textColor } from '../utils'
@@ -26,11 +25,11 @@ export const Notification = () => {
   const icon = () => {
     switch (notification?.type) {
       case NotificationType.Success:
-        return <CheckCircleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
+        return <CheckmarkCircle02Icon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
       case NotificationType.Error:
-        return <ExclamationTriangleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
+        return <Alert02Icon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
       case NotificationType.Warning:
-        return <ExclamationCircleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
+        return <AlertCircleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
       case NotificationType.Info:
         return <InformationCircleIcon className={`h-6 w-6 ${iconColor()}`} aria-hidden='true' />
       default:
@@ -68,7 +67,7 @@ export const Notification = () => {
                     }}
                   >
                     <span className='sr-only'>Close</span>
-                    <XMarkIcon className='h-5 w-5' aria-hidden='true' />
+                    <Cancel02Icon className='h-5 w-5' aria-hidden='true' />
                   </button>
                 </div>
               </div>

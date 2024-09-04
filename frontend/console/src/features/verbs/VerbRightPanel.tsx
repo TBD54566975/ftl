@@ -1,4 +1,4 @@
-import { ArrowRightStartOnRectangleIcon } from '@heroicons/react/24/outline'
+import { InboxUploadIcon } from 'hugeicons-react'
 import { RightPanelAttribute } from '../../components/RightPanelAttribute'
 import type { Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { ExpandablePanelProps } from '../console/ExpandablePanel'
@@ -29,7 +29,7 @@ export const verbPanels = (verb?: Verb) => {
       expanded: true,
       children: calls?.map((c, index) => (
         <div key={`verb-call-${index}-${c.module}-${c.name}`} className='flex items-center space-x-2 space-y-1'>
-          <ArrowRightStartOnRectangleIcon className='h-4 w-4 text-blue-600' />
+          <InboxUploadIcon className='h-4 w-4 text-blue-600' />
           <div className='truncate text-xs'>{`${c?.module}.${c?.name}`}</div>
         </div>
       )),

@@ -1,4 +1,4 @@
-import { ListBulletIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
+import { CellsIcon, ListViewIcon } from 'hugeicons-react'
 
 export const NotFoundPage = () => {
   return (
@@ -14,9 +14,7 @@ export const NotFoundPage = () => {
           <ul className='-mt-6 divide-y divide-gray-900/5 border-b border-gray-900/5'>
             <li className='relative flex gap-x-6 py-6'>
               <div className='flex h-10 w-10 flex-none items-center justify-center rounded-lg shadow-sm ring-1 ring-gray-900/10'>
-                <div className='h-6 w-6 text-indigo-600'>
-                  <ListBulletIcon />
-                </div>
+                <ListViewIcon className='size-5 text-indigo-600' />
               </div>
               <div className='flex-auto'>
                 <h3 className='text-sm font-semibold leading-6 text-gray-900'>
@@ -39,18 +37,16 @@ export const NotFoundPage = () => {
             </li>
             <li className='relative flex gap-x-6 py-6'>
               <div className='flex h-10 w-10 flex-none items-center justify-center rounded-lg shadow-sm ring-1 ring-gray-900/10'>
-                <div className='h-6 w-6 text-indigo-600'>
-                  <Square3Stack3DIcon />
-                </div>
+                <CellsIcon className='size-5 text-indigo-600' />
               </div>
               <div className='flex-auto'>
                 <h3 className='text-sm font-semibold leading-6 text-gray-900'>
-                  <a href='/deployments'>
+                  <a href='/modules'>
                     <span className='absolute inset-0' aria-hidden='true' />
-                    Deployments
+                    Modules
                   </a>
                 </h3>
-                <p className='mt-0 text-sm leading-6 text-gray-600'>View and filter FTL events.</p>
+                <p className='mt-0 text-sm leading-6 text-gray-600'>View FTL modules.</p>
               </div>
               <div className='flex-none self-center'>
                 <svg className='h-5 w-5 text-gray-400' viewBox='0 0 20 20' fill='currentColor' aria-hidden='true'>

@@ -1,14 +1,14 @@
-import { CubeTransparentIcon, ListBulletIcon, ServerStackIcon, Square3Stack3DIcon } from '@heroicons/react/24/outline'
+import { CellsIcon, Database01Icon, ListViewIcon, WorkflowSquare06Icon } from 'hugeicons-react'
 import { NavLink } from 'react-router-dom'
 import { DarkModeSwitch } from '../../components'
 import { classNames } from '../../utils'
 import { Version } from './Version'
 
 const navigation = [
-  { name: 'Events', href: '/events', icon: ListBulletIcon },
-  { name: 'Modules', href: '/modules', icon: Square3Stack3DIcon },
-  { name: 'Graph', href: '/graph', icon: CubeTransparentIcon },
-  { name: 'Infrastructure', href: '/infrastructure', icon: ServerStackIcon },
+  { name: 'Events', href: '/events', icon: ListViewIcon },
+  { name: 'Modules', href: '/modules', icon: CellsIcon },
+  { name: 'Graph', href: '/graph', icon: WorkflowSquare06Icon },
+  { name: 'Infrastructure', href: '/infrastructure', icon: Database01Icon },
 ]
 
 export const Navigation = ({ version }: { version?: string }) => {
@@ -30,7 +30,7 @@ export const Navigation = ({ version }: { version?: string }) => {
                       )
                     }
                   >
-                    <item.icon className='text-lg size-6' />
+                    <item.icon className='text-lg size-5' />
                     <span className='hidden md:inline'>{item.name}</span>
                   </NavLink>
                 ))}

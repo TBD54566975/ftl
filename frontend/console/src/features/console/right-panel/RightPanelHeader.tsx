@@ -1,11 +1,11 @@
-import { BoltIcon, Cog6ToothIcon, CubeIcon, LockClosedIcon, RectangleGroupIcon } from '@heroicons/react/24/outline'
+import { CellsIcon, FunctionIcon, PackageIcon, Settings02Icon, SquareLock02Icon } from 'hugeicons-react'
 import { Config, Module, Secret, Verb } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { FTLNode } from '../../graph/GraphPane'
 
 export const headerForNode = (node: FTLNode | null) => {
   if (!node) {
     return header({
-      IconComponent: CubeIcon,
+      IconComponent: CellsIcon,
       content: <div className='text-sm font-medium truncate'>Root</div>,
     })
   }
@@ -34,7 +34,7 @@ const header = ({ IconComponent, content }: { IconComponent: React.ElementType; 
 
 const moduleHeader = (module: Module) => {
   return header({
-    IconComponent: RectangleGroupIcon,
+    IconComponent: PackageIcon,
     content: (
       <>
         <div className='text-sm font-medium truncate'>{module.name}</div>
@@ -50,7 +50,7 @@ const moduleHeader = (module: Module) => {
 
 const verbHeader = (verb: Verb) => {
   return header({
-    IconComponent: BoltIcon,
+    IconComponent: FunctionIcon,
     content: (
       <>
         <div className='text-sm font-medium truncate'>{verb.verb?.name}</div>
@@ -66,7 +66,7 @@ const verbHeader = (verb: Verb) => {
 
 const secretHeader = (secret: Secret) => {
   return header({
-    IconComponent: LockClosedIcon,
+    IconComponent: SquareLock02Icon,
     content: (
       <>
         <div className='text-sm font-medium truncate'>Secret</div>
@@ -82,7 +82,7 @@ const secretHeader = (secret: Secret) => {
 
 const configHeader = (config: Config) => {
   return header({
-    IconComponent: Cog6ToothIcon,
+    IconComponent: Settings02Icon,
     content: (
       <>
         <div className='text-sm font-medium truncate'>{config.config?.name}</div>
