@@ -14,7 +14,9 @@
     "pnpm": ">=9.9.0",
     "node": ">=22.7.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [
     "workspaceContains:**/ftl-project.toml",
     "workspaceContains:**/ftl.toml"
@@ -29,7 +31,9 @@
         },
         "ftl.devCommandFlags": {
           "type": "array",
-          "default": ["--recreate"],
+          "default": [
+            "--recreate"
+          ],
           "items": {
             "type": "string"
           },
@@ -37,7 +41,10 @@
         },
         "ftl.automaticallyStartServer": {
           "type": "string",
-          "enum": ["always", "never"],
+          "enum": [
+            "always",
+            "never"
+          ],
           "default": null,
           "description": "Control if and when to automatically start the FTL dev server."
         }
@@ -80,7 +87,6 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.8.3",
     "@types/mocha": "^10.0.6",
     "@types/node": "20.x",
     "@types/semver": "^7.5.8",

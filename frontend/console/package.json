@@ -64,7 +64,6 @@
     "type-fest": "^4.18.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.8.3",
     "@chromatic-com/storybook": "^1.6.1",
     "@playwright/test": "^1.46.1",
     "@storybook/addon-essentials": "^8.2.7",
