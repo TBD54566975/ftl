@@ -100,7 +100,7 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction) (err error) {
+func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string) (err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return err
 	}
@@ -246,7 +246,11 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	}
 
 	logger.Debugf("Compiling")
-	return exec.Command(ctx, log.Debug, mainDir, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
+	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to compile: %w", err)
+	}
+	return nil
 }
 
 // CleanStubs removes all generated stubs.

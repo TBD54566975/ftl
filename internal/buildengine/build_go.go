@@ -8,8 +8,8 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 )
 
-func buildGoModule(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, transaction ModifyFilesTransaction) error {
-	if err := compile.Build(ctx, projectRootDir, module.Config.Dir, sch, transaction); err != nil {
+func buildGoModule(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, transaction ModifyFilesTransaction, buildEnv []string) error {
+	if err := compile.Build(ctx, projectRootDir, module.Config.Dir, sch, transaction, buildEnv); err != nil {
 		return CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", module.Config.Module, err)}
 	}
 	return nil

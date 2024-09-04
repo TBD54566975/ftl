@@ -31,6 +31,10 @@ func Capture(ctx context.Context, dir, exe string, args ...string) ([]byte, erro
 }
 
 func Command(ctx context.Context, level log.Level, dir, exe string, args ...string) *Cmd {
+	return CommandWithEnv(ctx, level, dir, []string{}, exe, args...)
+}
+
+func CommandWithEnv(ctx context.Context, level log.Level, dir string, env []string, exe string, args ...string) *Cmd {
 	logger := log.FromContext(ctx)
 	pgid, err := syscall.Getpgid(0)
 	if err != nil {
@@ -38,6 +42,7 @@ func Command(ctx context.Context, level log.Level, dir, exe string, args ...stri
 	}
 	logger.Tracef("exec: cd %s && %s %s", shellquote.Join(dir), exe, shellquote.Join(args...))
 	cmd := exec.CommandContext(ctx, exe, args...)
+	cmd.Env = append(cmd.Env, env...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pgid:    pgid,
 		Setpgid: true,

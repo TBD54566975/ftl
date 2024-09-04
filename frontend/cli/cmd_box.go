@@ -87,11 +87,10 @@ func init() {
 }
 
 type boxCmd struct {
-	BaseImage   string   `help:"Name of the ftl-box Docker image to use as a base." default:"ftl0/ftl-box:${version}"`
-	Parallelism int      `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
-	Compose     string   `help:"Path to a compose file to generate."`
-	Name        string   `arg:"" help:"Name of the project."`
-	Dirs        []string `arg:"" help:"Base directories containing modules (defaults to modules in project config)." type:"existingdir" optional:""`
+	BaseImage string   `help:"Name of the ftl-box Docker image to use as a base." default:"ftl0/ftl-box:${version}"`
+	Compose   string   `help:"Path to a compose file to generate."`
+	Name      string   `arg:"" help:"Name of the project."`
+	Build     buildCmd `embed:""`
 }
 
 func (b *boxCmd) Help() string {
@@ -117,13 +116,13 @@ Bring the box down:
 }
 
 func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig projectconfig.Config) error {
-	if len(b.Dirs) == 0 {
-		b.Dirs = projConfig.AbsModuleDirs()
+	if len(b.Build.Dirs) == 0 {
+		b.Build.Dirs = projConfig.AbsModuleDirs()
 	}
-	if len(b.Dirs) == 0 {
+	if len(b.Build.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Dirs, buildengine.Parallelism(b.Parallelism))
+	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Build.Dirs, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
 	if err != nil {
 		return err
 	}

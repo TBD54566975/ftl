@@ -75,6 +75,7 @@ type Engine struct {
 	parallelism      int
 	listener         Listener
 	modulesToBuild   *xsync.MapOf[string, bool]
+	buildEnv         []string
 }
 
 type Option func(o *Engine)
@@ -82,6 +83,12 @@ type Option func(o *Engine)
 func Parallelism(n int) Option {
 	return func(o *Engine) {
 		o.parallelism = n
+	}
+}
+
+func BuildEnv(env []string) Option {
+	return func(o *Engine) {
+		o.buildEnv = env
 	}
 }
 
@@ -698,7 +705,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir))
+	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir), e.buildEnv)
 	if err != nil {
 		return err
 	}

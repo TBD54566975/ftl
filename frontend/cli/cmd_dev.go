@@ -18,21 +18,20 @@ import (
 )
 
 type devCmd struct {
-	Parallelism    int           `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
-	Dirs           []string      `arg:"" help:"Base directories containing modules." type:"existingdir" optional:""`
 	Watch          time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
 	NoServe        bool          `help:"Do not start the FTL server." default:"false"`
 	Lsp            bool          `help:"Run the language server." default:"false"`
 	ServeCmd       serveCmd      `embed:""`
 	InitDB         bool          `help:"Initialize the database and exit." default:"false"`
 	languageServer *lsp.Server
+	Build          buildCmd `embed:""`
 }
 
 func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	if len(d.Dirs) == 0 {
-		d.Dirs = projConfig.AbsModuleDirs()
+	if len(d.Build.Dirs) == 0 {
+		d.Build.Dirs = projConfig.AbsModuleDirs()
 	}
-	if len(d.Dirs) == 0 {
+	if len(d.Build.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
 
@@ -78,7 +77,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		case <-controllerReady:
 		}
 
-		opts := []buildengine.Option{buildengine.Parallelism(d.Parallelism)}
+		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv)}
 		if d.Lsp {
 			d.languageServer = lsp.NewServer(ctx)
 			opts = append(opts, buildengine.WithListener(d.languageServer))
@@ -88,7 +87,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			})
 		}
 
-		engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Dirs, opts...)
+		engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Build.Dirs, opts...)
 		if err != nil {
 			return err
 		}
