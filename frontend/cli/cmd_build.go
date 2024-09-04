@@ -13,6 +13,7 @@ import (
 type buildCmd struct {
 	Parallelism int      `short:"j" help:"Number of modules to build in parallel." default:"${numcpu}"`
 	Dirs        []string `arg:"" help:"Base directories containing modules (defaults to modules in project config)." type:"existingdir" optional:""`
+	BuildEnv    []string `help:"Environment variables to set for the build."`
 }
 
 func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig projectconfig.Config) error {
@@ -22,7 +23,7 @@ func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServic
 	if len(b.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Dirs, buildengine.Parallelism(b.Parallelism))
+	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Dirs, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
 	if err != nil {
 		return err
 	}
