@@ -1,7 +1,10 @@
 import { CellsIcon, Database01Icon, ListViewIcon, WorkflowSquare06Icon } from 'hugeicons-react'
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { DarkModeSwitch } from '../../components'
+import { CommandPalette } from '../../features/command-pallete/CommandPalette'
 import { classNames } from '../../utils'
+import { SearchInput } from './SearchInput'
 import { Version } from './Version'
 
 const navigation = [
@@ -12,6 +15,8 @@ const navigation = [
 ]
 
 export const Navigation = ({ version }: { version?: string }) => {
+  const [isCommandPalleteOpen, setIsCommandPalleteOpen] = useState(false)
+
   return (
     <nav className='bg-indigo-600'>
       <div className='mx-auto pl-3 pr-4'>
@@ -37,8 +42,10 @@ export const Navigation = ({ version }: { version?: string }) => {
               </div>
             </div>
           </div>
+          <SearchInput onFocus={() => setIsCommandPalleteOpen(true)} />
+          <CommandPalette isOpen={isCommandPalleteOpen} onClose={() => setIsCommandPalleteOpen(false)} />
           <div>
-            <div className='ml-4 flex items-center space-x-4'>
+            <div className='ml-2 flex items-center space-x-4'>
               <Version version={version} />
               <DarkModeSwitch />
             </div>

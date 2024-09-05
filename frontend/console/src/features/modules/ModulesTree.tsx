@@ -1,43 +1,13 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react'
-import {
-  AnonymousIcon,
-  ArrowRight01Icon,
-  BubbleChatIcon,
-  CircleArrowRight02Icon,
-  CodeIcon,
-  DatabaseIcon,
-  FileExportIcon,
-  FlowIcon,
-  FunctionIcon,
-  type HugeiconsProps,
-  LeftToRightListNumberIcon,
-  MessageIncoming02Icon,
-  PackageIcon,
-  Settings02Icon,
-  SquareLock02Icon,
-} from 'hugeicons-react'
+import { ArrowRight01Icon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils'
 import type { ModuleTreeItem } from './module.utils'
-import { addModuleToLocalStorageIfMissing, listExpandedModulesFromLocalStorage, toggleModuleExpansionInLocalStorage } from './module.utils'
+import { addModuleToLocalStorageIfMissing, declIcons, declUrl, listExpandedModulesFromLocalStorage, toggleModuleExpansionInLocalStorage } from './module.utils'
 
 const ExportedIcon = () => <FileExportIcon className='size-4 text-indigo-500 -ml-1' />
-
-type IconMap = Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>>
-const icons: IconMap = {
-  config: Settings02Icon,
-  data: CodeIcon,
-  database: DatabaseIcon,
-  enum: LeftToRightListNumberIcon,
-  fsm: FlowIcon,
-  topic: BubbleChatIcon,
-  typeAlias: AnonymousIcon,
-  secret: SquareLock02Icon,
-  subscription: MessageIncoming02Icon,
-  verb: FunctionIcon,
-}
 
 type WithExport = { export?: boolean }
 
@@ -59,7 +29,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
     }
   }, [isSelected])
 
-  const Icon = useMemo(() => icons[decl.value.case || ''] || CodeIcon, [decl.value.case])
+  const Icon = useMemo(() => declIcons[decl.value.case || ''] || CodeIcon, [decl.value.case])
   return (
     <li className='my-1'>
       <div
@@ -126,12 +96,7 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
         </DisclosureButton>
         <DisclosurePanel as='ul' className='px-2'>
           {module.decls.map((d, i) => (
-            <DeclNode
-              key={i}
-              decl={d}
-              href={`/modules/${module.name}/${d.value.case}/${d.value.value?.name}`}
-              isSelected={isSelected && declName === d.value.value?.name}
-            />
+            <DeclNode key={i} decl={d} href={declUrl(module.name, d)} isSelected={isSelected && declName === d.value.value?.name} />
           ))}
         </DisclosurePanel>
       </Disclosure>
