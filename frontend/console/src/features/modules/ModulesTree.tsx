@@ -46,10 +46,24 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
     return []
   }
   const navigate = useNavigate()
+  const declRef = useRef<HTMLDivElement>(null)
+
+  // Scroll to the selected decl on page load
+  useEffect(() => {
+    if (isSelected && declRef.current) {
+      const { top } = declRef.current.getBoundingClientRect()
+      const { innerHeight } = window
+      if (top < 64 || top > innerHeight) {
+        declRef.current.scrollIntoView()
+      }
+    }
+  }, [isSelected])
+
   const Icon = useMemo(() => icons[decl.value.case || ''] || CodeIcon, [decl.value.case])
   return (
     <li className='my-1'>
       <div
+        ref={declRef}
         id={`decl-${decl.value.value.name}`}
         className={classNames(
           isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
@@ -72,17 +86,24 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
   const { moduleName, declName } = useParams()
   const navigate = useNavigate()
   const isSelected = useMemo(() => moduleName === module.name, [moduleName, module.name])
-  const selectedRef = useRef<HTMLButtonElement>(null)
-  const refProp = isSelected ? { ref: selectedRef } : {}
+  const moduleRef = useRef<HTMLButtonElement>(null)
 
-  // Scroll to the selected module on the first page load
-  useEffect(() => selectedRef.current?.scrollIntoView(), [])
+  // Scroll to the selected module on page load
+  useEffect(() => {
+    if (isSelected && !declName && moduleRef.current) {
+      const { top } = moduleRef.current.getBoundingClientRect()
+      const { innerHeight } = window
+      if (top < 64 || top > innerHeight) {
+        moduleRef.current.scrollIntoView()
+      }
+    }
+  }, [moduleName]) // moduleName is the selected module; module.name is the one being rendered
 
   return (
     <li key={module.name} id={`module-tree-module-${module.name}`} className='my-2'>
       <Disclosure as='div' defaultOpen={isExpanded}>
         <DisclosureButton
-          {...refProp}
+          ref={moduleRef}
           className={classNames(
             isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
             'group flex w-full modules-center gap-x-2 space-y-1 rounded-md px-2 text-left text-sm font-medium leading-6',
