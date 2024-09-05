@@ -34,6 +34,18 @@ export const paletteItems = (schema: PullSchemaResponse[]): PaletteItem[] => {
         subtitle: `${module.moduleName}.${decl.value.value.name}`,
         url: declUrl(module.moduleName, decl),
       })
+
+      if (decl.value.case === 'data') {
+        for (const field of decl.value.value.fields) {
+          items.push({
+            id: `${module.moduleName}-${decl.value.value.name}-${field.name}`,
+            icon: declIcons[decl.value.case],
+            title: field.name,
+            subtitle: `${module.moduleName}.${decl.value.value.name}.${field.name}`,
+            url: declUrl(module.moduleName, decl),
+          })
+        }
+      }
     }
   }
 
