@@ -64,9 +64,7 @@ export const EnumPanel = ({ value, moduleName, declName }: { value: Enum; module
   return (
     <div className='py-2 px-4'>
       <PanelHeader exported={value.export} comments={value.comments}>
-        <p>
-          {enumType(value)} Enum: {moduleName}.{declName}
-        </p>
+        {enumType(value)} Enum: {moduleName}.{declName}
       </PanelHeader>
       <div className='mt-8'>
         <div className='mb-2'>Variants</div>

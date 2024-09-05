@@ -5,9 +5,7 @@ export const DatabasePanel = ({ value, moduleName, declName }: { value: Database
   return (
     <div className='py-2 px-4'>
       <PanelHeader exported={false} comments={value.comments}>
-        <p>
-          Database: {moduleName}.{declName}
-        </p>
+        Database: {moduleName}.{declName}
       </PanelHeader>
       <div className='text-sm my-4'>Type: {value.type}</div>
     </div>

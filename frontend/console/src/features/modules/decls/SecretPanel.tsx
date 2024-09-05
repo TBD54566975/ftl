@@ -6,9 +6,7 @@ export const SecretPanel = ({ value, moduleName, declName }: { value: Secret; mo
   return (
     <div className='py-2 px-4'>
       <PanelHeader exported={false} comments={value.comments}>
-        <p>
-          Secret: {moduleName}.{declName}
-        </p>
+        Secret: {moduleName}.{declName}
       </PanelHeader>
       <div className='text-sm my-4'>
         Type: <TypeEl t={value.type} />

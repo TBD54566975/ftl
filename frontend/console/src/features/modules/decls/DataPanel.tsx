@@ -7,19 +7,12 @@ export const DataPanel = ({ value, moduleName, declName }: { value: Data; module
   return (
     <div className='py-2 px-4'>
       <PanelHeader exported={value.export} comments={value.comments}>
-        <p>
-          data: {moduleName}.{declName}
-          {maybeTypeParams}
-        </p>
+        data: {moduleName}.{declName}
+        {maybeTypeParams}
       </PanelHeader>
       {value.fields.length === 0 || <div className='mt-8 mb-3'>Fields</div>}
       <div className='text-xs font-mono inline-grid grid-cols-2 gap-x-4 gap-y-2' style={{ gridTemplateColumns: 'auto auto' }}>
-        {value.fields.map((f, i) => [
-          <span key={`field-name-${i}`}>{f.name}</span>,
-          <span key={`field-type-${i}`}>
-            <TypeEl t={f.type} />
-          </span>,
-        ])}
+        {value.fields.map((f, i) => [<span key={`field-name-${i}`}>{f.name}</span>, <TypeEl key={`field-type-${i}`} t={f.type} />])}
       </div>
     </div>
   )

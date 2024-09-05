@@ -16,10 +16,15 @@ export const DeclLink = ({ moduleName, declName }: { moduleName?: string; declNa
 
   const str = moduleName ? `${moduleName}.${declName}` : declName
 
-  return !decl ? (
-    str
-  ) : (
-    <Link className='rounded-md cursor-pointer hover:bg-gray-100 hover:dark:bg-gray-700 p-1 -m-1' to={`/modules/${moduleName}/${decl.value.case}/${declName}`}>
+  if (!decl) {
+    return str
+  }
+
+  return (
+    <Link
+      className='rounded-md cursor-pointer text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 hover:dark:bg-gray-700 p-1 -m-1'
+      to={`/modules/${moduleName}/${decl.value.case}/${declName}`}
+    >
       {str}
     </Link>
   )

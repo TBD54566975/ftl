@@ -6,9 +6,7 @@ export const TypeAliasPanel = ({ value, moduleName, declName }: { value: TypeAli
   return (
     <div className='py-2 px-4'>
       <PanelHeader exported={value.export} comments={value.comments}>
-        <p>
-          Type Alias: {moduleName}.{declName}
-        </p>
+        Type Alias: {moduleName}.{declName}
       </PanelHeader>
       <div className='text-sm my-4'>
         Underlying type: <TypeEl t={value.type} />

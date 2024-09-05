@@ -6,9 +6,7 @@ export const ConfigPanel = ({ value, moduleName, declName }: { value: Config; mo
   return (
     <div className='py-2 px-4'>
       <PanelHeader exported={false} comments={value.comments}>
-        <p>
-          Config: {moduleName}.{declName}
-        </p>
+        Config: {moduleName}.{declName}
       </PanelHeader>
       <div className='text-sm my-4'>
         Type: <TypeEl t={value.type} />
