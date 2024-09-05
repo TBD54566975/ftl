@@ -5,7 +5,7 @@ import { TypeEl } from './TypeEl'
 
 const VariantComments = ({ comments, fullRow }: { comments?: string[]; fullRow?: boolean }) => {
   if (!comments) {
-    return []
+    return
   }
   return comments.map((c, i) => (
     <div key={i} className={classNames('text-gray-500 dark:text-gray-400 mb-0.5', fullRow ? 'col-start-1 col-end-3' : '')}>
@@ -17,7 +17,7 @@ const VariantComments = ({ comments, fullRow }: { comments?: string[]; fullRow?:
 const VariantValue = ({ name, value }: { name?: string; value?: Value }) => {
   const v = value?.value.value?.value
   if (v === undefined) {
-    return []
+    return
   }
   const valueText = value?.value.case === 'intValue' ? v.toString() : `"${v}"`
   return (

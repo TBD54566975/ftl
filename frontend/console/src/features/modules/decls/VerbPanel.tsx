@@ -24,7 +24,7 @@ const ioBlockClassName =
   'rounded-md inline-block align-middle w-40 bg-gray-200 dark:bg-gray-900 my-3 mr-3 py-1 px-2 hover:bg-gray-100 hover:cursor-pointer hover:dark:bg-gray-700'
 const IOBlock = ({ heading, t }: { heading: string; t?: Type }) => {
   if (!t) {
-    return []
+    return
   }
   if (t.value.case === 'ref') {
     return <DataRef heading={heading} r={t.value.value} />

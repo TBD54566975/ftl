@@ -14,13 +14,13 @@ export const DeclPanel = () => {
   const { moduleName, declCase, declName } = useParams()
   if (!moduleName || !declName) {
     // Should be impossible, but validate anyway for type safety
-    return []
+    return
   }
 
   const schema = useSchema()
   const decl = useMemo(() => declFromSchema(moduleName, declName, schema?.data || []), [schema?.data, moduleName, declCase, declName])
   if (!decl) {
-    return []
+    return
   }
 
   const nameProps = { moduleName, declName }

@@ -5,17 +5,14 @@ import { DeclLink } from './DeclLink'
 // `TypeParameter` message, which just has a simple string param name without
 // any higher level type information.
 const TypeParams = ({ types }: { types?: (Type | undefined)[] }) => {
-  if (!types) {
-    return []
-  }
-  const definedTypes = types.filter((t) => t !== undefined)
-  if (definedTypes.length === 0) {
-    return []
+  const definedTypes = types?.filter((t) => t !== undefined)
+  if (!definedTypes || definedTypes.length === 0) {
+    return
   }
   return (
     <span>
       <span>{'<'}</span>
-      {definedTypes.map((t, i) => [<TypeEl key='t' t={t} />, i === types.length - 1 ? '' : ', '])}
+      {definedTypes.map((t, i) => [<TypeEl key='t' t={t} />, i === definedTypes.length - 1 ? '' : ', '])}
       <span>{'>'}</span>
     </span>
   )
