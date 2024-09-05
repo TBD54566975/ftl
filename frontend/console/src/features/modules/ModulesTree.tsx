@@ -23,7 +23,11 @@ import { classNames } from '../../utils'
 import type { ModuleTreeItem } from './module.utils'
 import { addModuleToLocalStorageIfMissing, listExpandedModulesFromLocalStorage, toggleModuleExpansionInLocalStorage } from './module.utils'
 
-const ExportedIcon = () => <FileExportIcon className='size-4 text-indigo-500 -ml-1' />
+const ExportedIcon = () => (
+  <span className='w-4' title='Exported'>
+    <FileExportIcon className='size-4 text-indigo-500 -ml-1' />
+  </span>
+)
 
 type IconMap = Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>>
 const icons: IconMap = {
@@ -67,14 +71,14 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
         id={`decl-${decl.value.value.name}`}
         className={classNames(
           isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
-          'group flex items-center gap-x-2 rounded-md pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer',
+          'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer',
         )}
         onClick={(e) => {
           e.preventDefault()
           navigate(href)
         }}
       >
-        <Icon aria-hidden='true' className='size-4 shrink-0' />
+        <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
         {decl.value.value.name}
         {(decl.value.value as WithExport).export === true ? <ExportedIcon /> : []}
       </div>
@@ -106,11 +110,11 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
           ref={moduleRef}
           className={classNames(
             isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
-            'group flex w-full modules-center gap-x-2 space-y-1 rounded-md px-2 text-left text-sm font-medium leading-6',
+            'group flex w-full modules-center gap-x-2 space-y-1 text-left text-sm font-medium leading-6',
           )}
           onClick={() => toggleExpansion(module.name)}
         >
-          <PackageIcon aria-hidden='true' className='size-4 my-1 shrink-0 ' />
+          <PackageIcon aria-hidden='true' className='size-4 my-1 ml-3 shrink-0' />
           {module.name}
           <CircleArrowRight02Icon
             className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -121,10 +125,10 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
             }}
           />
           {module.decls.length === 0 || (
-            <ArrowRight01Icon aria-hidden='true' className='ml-auto h-4 w-4 shrink-0 group-data-[open]:rotate-90 group-data-[open]:text-gray-500' />
+            <ArrowRight01Icon aria-hidden='true' className='ml-auto mr-2 h-4 w-4 shrink-0 group-data-[open]:rotate-90 group-data-[open]:text-gray-500' />
           )}
         </DisclosureButton>
-        <DisclosurePanel as='ul' className='px-2'>
+        <DisclosurePanel as='ul'>
           {module.decls.map((d, i) => (
             <DeclNode
               key={i}
@@ -149,16 +153,12 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
 
   const expandedModules = listExpandedModulesFromLocalStorage()
   return (
-    <div className='flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900 px-6'>
-      <nav className='flex flex-1 flex-col'>
-        <ul className='flex flex-1 flex-col gap-y-7'>
-          <li>
-            <ul className='-mx-2'>
-              {modules.map((m) => (
-                <ModuleSection key={m.name} module={m} isExpanded={expandedModules.includes(m.name)} toggleExpansion={toggleModuleExpansionInLocalStorage} />
-              ))}
-            </ul>
-          </li>
+    <div className={'flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'}>
+      <nav>
+        <ul>
+          {modules.map((m) => (
+            <ModuleSection key={m.name} module={m} isExpanded={expandedModules.includes(m.name)} toggleExpansion={toggleModuleExpansionInLocalStorage} />
+          ))}
         </ul>
       </nav>
     </div>
