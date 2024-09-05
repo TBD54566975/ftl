@@ -24,6 +24,7 @@ const ShutdownGracePeriod = time.Second * 5
 type serverOptions struct {
 	mux             *http.ServeMux
 	reflectionPaths []string
+	healthCheck     http.HandlerFunc
 }
 
 type Option func(*serverOptions)
@@ -46,6 +47,12 @@ func GRPC[Iface, Impl Pingable](constructor GRPCServerConstructor[Iface], impl I
 func PProf() Option {
 	return func(so *serverOptions) {
 		gaphttp.RegisterPprof(so.mux)
+	}
+}
+
+func HealthCheck(check http.HandlerFunc) Option {
+	return func(options *serverOptions) {
+		options.healthCheck = check
 	}
 }
 
@@ -75,15 +82,16 @@ type Server struct {
 func NewServer(ctx context.Context, listen *url.URL, options ...Option) (*Server, error) {
 	opts := &serverOptions{
 		mux: http.NewServeMux(),
+		healthCheck: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
 	}
-
-	opts.mux.Handle("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
 
 	for _, option := range options {
 		option(opts)
 	}
+
+	opts.mux.Handle("/healthz", opts.healthCheck)
 
 	// Register reflection services.
 	reflector := grpcreflect.NewStaticReflector(opts.reflectionPaths...)

@@ -126,6 +126,7 @@ func Start(ctx context.Context, config Config) error {
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.HTTP("/", svc),
+		rpc.HealthCheck(svc.healthCheck),
 	)
 }
 
@@ -483,4 +484,12 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 
 	sink := newDeploymentLogsSink(s.deploymentLogQueue)
 	return log.FromContext(ctx).AddSink(sink).Attrs(attrs)
+}
+
+func (s *Service) healthCheck(writer http.ResponseWriter, request *http.Request) {
+	if s.state.Load() == ftlv1.RunnerState_RUNNER_ASSIGNED {
+		writer.WriteHeader(http.StatusOK)
+		return
+	}
+	writer.WriteHeader(http.StatusServiceUnavailable)
 }
