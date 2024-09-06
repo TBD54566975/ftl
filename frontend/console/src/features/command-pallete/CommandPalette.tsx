@@ -1,6 +1,7 @@
 import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions, Dialog, DialogBackdrop, DialogPanel } from '@headlessui/react'
+import Fuse from 'fuse.js'
 import { ArrowRight01Icon, CellsIcon } from 'hugeicons-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSchema } from '../../api/schema/use-schema'
 import { type PaletteItem, paletteItems } from './command-palette.utils'
@@ -15,6 +16,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
   const { data: schemaData } = useSchema()
   const [query, setQuery] = useState('')
   const [items, setItems] = useState<PaletteItem[]>([])
+  const [filteredItems, setFilteredItems] = useState<PaletteItem[]>([])
 
   useEffect(() => {
     if (schemaData) {
@@ -23,7 +25,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
     }
   }, [schemaData])
 
-  const filteredItems = query === '' ? [] : items.filter((item) => item.title.toLowerCase().includes(query.toLowerCase()))
+  const fuse = useMemo(() => {
+    return new Fuse(items, {
+      keys: ['title', { name: 'subtitle', weight: 1 }],
+      minMatchCharLength: 2,
+      fieldNormWeight: 2,
+    })
+  }, [items])
+
+  useEffect(() => {
+    if (query === '') {
+      setFilteredItems([])
+    } else {
+      const results = fuse.search(query).map((result) => result.item)
+      setFilteredItems(results)
+    }
+  }, [query, fuse])
 
   const handleClose = () => {
     onClose()

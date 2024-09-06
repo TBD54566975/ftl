@@ -52,6 +52,7 @@
     "codemirror-json-schema": "0.7.0",
     "codemirror-json5": "^1.0.3",
     "fnv1a": "^1.1.1",
+    "fuse.js": "^7.0.0",
     "highlight.js": "^11.8.0",
     "hugeicons-react": "^0.3.0",
     "json-schema-faker": "0.5.6",
