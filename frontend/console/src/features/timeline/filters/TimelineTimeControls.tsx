@@ -1,7 +1,7 @@
 import { Timestamp } from '@bufbuild/protobuf'
-import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Transition } from '@headlessui/react'
+import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
 import { Backward02Icon, Forward02Icon, PauseIcon, PlayIcon, Tick02Icon, UnfoldLessIcon } from 'hugeicons-react'
-import { Fragment, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { bgColor, borderColor, classNames, formatTimestampShort, formatTimestampTime, panelColor, textColor } from '../../../utils'
 
 interface TimeRange {
@@ -109,58 +109,52 @@ export const TimelineTimeControls = ({
         )}
 
         <Listbox value={selected} onChange={handleRangeChanged}>
-          {({ open }) => (
-            <>
-              <div className='relative w-40 mr-2 mt-0.5 items-center'>
-                <ListboxButton
-                  className={`relative w-full cursor-pointer rounded-md ${bgColor} ${textColor} py-1 pl-3 pr-10 text-xs text-left shadow-sm ring-1 ring-inset ${borderColor} focus:outline-none focus:ring-2 focus:ring-indigo-600`}
-                >
-                  <span className='block truncate'>{selected.label}</span>
-                  <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2'>
-                    <UnfoldLessIcon className='h-5 w-5 text-gray-400' aria-hidden='true' />
-                  </span>
-                </ListboxButton>
+          <div className='relative w-40 mr-2 mt-0.5 items-center'>
+            <ListboxButton
+              className={`relative w-full cursor-pointer rounded-md ${bgColor} ${textColor} py-1 pl-3 pr-10 text-xs text-left shadow-sm ring-1 ring-inset ${borderColor} focus:outline-none focus:ring-2 focus:ring-indigo-600`}
+            >
+              <span className='block truncate'>{selected.label}</span>
+              <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2'>
+                <UnfoldLessIcon className='h-5 w-5 text-gray-400' aria-hidden='true' />
+              </span>
+            </ListboxButton>
 
-                <Transition show={open} as={Fragment} leave='transition ease-in duration-100' leaveFrom='opacity-100' leaveTo='opacity-0'>
-                  <ListboxOptions
-                    className={`absolute z-10 max-h-60 w-full overflow-auto rounded-md ${panelColor} py-1 text-xs shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none`}
+            <ListboxOptions
+              anchor='bottom'
+              transition
+              className={`z-10 mt-1 w-40 rounded-md ${panelColor} py-1 text-xs shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none`}
+            >
+              {Object.keys(TIME_RANGES).map((key) => {
+                const timeRange = TIME_RANGES[key]
+                return (
+                  <ListboxOption
+                    key={key}
+                    className={({ focus }) => classNames(focus ? 'bg-indigo-600 text-white' : textColor, 'relative cursor-pointer select-none py-2 pl-3 pr-9')}
+                    value={timeRange}
                   >
-                    {Object.keys(TIME_RANGES).map((key) => {
-                      const timeRange = TIME_RANGES[key]
-                      return (
-                        <ListboxOption
-                          key={key}
-                          className={({ focus }) =>
-                            classNames(focus ? 'bg-indigo-600 text-white' : `${textColor}`, 'relative cursor-pointer select-none py-2 pl-3 pr-9')
-                          }
-                          value={timeRange}
-                        >
-                          {({ selected, focus }) => (
-                            <>
-                              <span className={classNames(selected ? 'font-semibold' : 'font-normal', 'block truncate')}>{timeRange.label}</span>
+                    {({ selected, focus }) => (
+                      <>
+                        <span className={classNames(selected ? 'font-semibold' : 'font-normal', 'block truncate')}>{timeRange.label}</span>
 
-                              {selected ? (
-                                <span className={classNames(focus ? 'text-white' : 'text-indigo-600', 'absolute inset-y-0 right-0 flex items-center pr-2')}>
-                                  <Tick02Icon className='h-4 w-4' aria-hidden='true' />
-                                </span>
-                              ) : null}
-                            </>
-                          )}
-                        </ListboxOption>
-                      )
-                    })}
-                  </ListboxOptions>
-                </Transition>
-              </div>
-            </>
-          )}
+                        {selected ? (
+                          <span className={classNames(focus ? 'text-white' : 'text-indigo-600', 'absolute inset-y-0 right-0 flex items-center pr-2')}>
+                            <Tick02Icon className='h-4 w-4' aria-hidden='true' />
+                          </span>
+                        ) : null}
+                      </>
+                    )}
+                  </ListboxOption>
+                )
+              })}
+            </ListboxOptions>
+          </div>
         </Listbox>
         {isTailing && (
           <span className={`isolate inline-flex rounded-md shadow-sm h-6 ${textColor} ${isPaused ? bgColor : 'bg-indigo-600 text-white'} `}>
             <button
               type='button'
               onClick={() => setIsPaused(!isPaused)}
-              className={`relative inline-flex items-center rounded-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:text-gray-600 hover:bg-gray-50 dark:hover:text-gray-300 dark:hover:bg-indigo-700 focus:z-10`}
+              className={`relative inline-flex items-center rounded-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:text-gray-600 hover:bg-gray-50 dark:hover:text-gray-300 dark:hover:bg-indigo-700`}
             >
               {isPaused ? <PlayIcon className='w-4 h-4' /> : <PauseIcon className='w-4 h-4' />}
             </button>
@@ -171,14 +165,14 @@ export const TimelineTimeControls = ({
             <button
               type='button'
               onClick={handleTimeBackward}
-              className={`relative inline-flex items-center rounded-l-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700 focus:z-10`}
+              className={`relative inline-flex items-center rounded-l-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700`}
             >
               <Backward02Icon className='w-4 h-4' />
             </button>
             <button
               type='button'
               onClick={handleTimeForward}
-              className={`relative -ml-px inline-flex items-center rounded-r-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700 focus:z-10`}
+              className={`relative -ml-px inline-flex items-center rounded-r-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700`}
             >
               <Forward02Icon className='w-4 h-4' />
             </button>
