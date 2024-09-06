@@ -1,3 +1,16 @@
+import {
+  AnonymousIcon,
+  BubbleChatIcon,
+  CodeIcon,
+  DatabaseIcon,
+  FlowIcon,
+  FunctionIcon,
+  type HugeiconsProps,
+  LeftToRightListNumberIcon,
+  MessageIncoming02Icon,
+  Settings02Icon,
+  SquareLock02Icon,
+} from 'hugeicons-react'
 import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/ftl_pb'
 import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
@@ -102,3 +115,19 @@ export const addModuleToLocalStorageIfMissing = (moduleName?: string) => {
     localStorage.setItem('tree_m', [...expanded, moduleName].join(','))
   }
 }
+
+type IconMap = Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>>
+export const declIcons: IconMap = {
+  config: Settings02Icon,
+  data: CodeIcon,
+  database: DatabaseIcon,
+  enum: LeftToRightListNumberIcon,
+  fsm: FlowIcon,
+  topic: BubbleChatIcon,
+  typeAlias: AnonymousIcon,
+  secret: SquareLock02Icon,
+  subscription: MessageIncoming02Icon,
+  verb: FunctionIcon,
+}
+
+export const declUrl = (moduleName: string, decl: Decl) => `/modules/${moduleName}/${decl.value.case}/${decl.value.value?.name}`
