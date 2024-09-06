@@ -103,9 +103,7 @@ type QueryParamRequest struct {
 
 //ftl:ingress http GET /queryparams
 func Query(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, QueryParamRequest]) (builtin.HttpResponse[string, string], error) {
-	return builtin.HttpResponse[string, string]{
-		Body: ftl.Some(req.Query.Foo.Default("No value")),
-	}, nil
+	return builtin.HttpSuccess[string](200, req.Query.Foo.Default("No value")), nil
 }
 
 //ftl:ingress http GET /html
@@ -138,7 +136,7 @@ func Int(ctx context.Context, req builtin.HttpRequest[int, ftl.Unit, ftl.Unit]) 
 
 //ftl:ingress http POST /float
 func Float(ctx context.Context, req builtin.HttpRequest[float64, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[float64, string], error) {
-	return builtin.HttpResponse[float64, string]{Body: ftl.Some(req.Body)}, nil
+	return builtin.HttpSuccess[string](200, req.Body), nil
 }
 
 //ftl:ingress http POST /bool
@@ -148,10 +146,7 @@ func Bool(ctx context.Context, req builtin.HttpRequest[bool, ftl.Unit, ftl.Unit]
 
 //ftl:ingress http GET /error
 func Error(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[ftl.Unit, string], error) {
-	return builtin.HttpResponse[ftl.Unit, string]{
-		Status: 500,
-		Error:  ftl.Some("Error from FTL"),
-	}, nil
+	return builtin.HttpError[ftl.Unit](500, "Error from FTL"), nil
 }
 
 //ftl:ingress http POST /array/string

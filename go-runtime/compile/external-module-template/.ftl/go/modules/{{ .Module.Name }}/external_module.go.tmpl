@@ -93,3 +93,17 @@ func init() {
   )
 }
 {{- end}}
+{{- if eq .Module.Name "builtin"}}
+
+// A helper for successful HttpResponse
+//
+func HttpSuccess[E any, B any](code int, body B) HttpResponse[B, E] {
+  return HttpResponse[B, E]{Status: code, Body: ftl.Some(body)}
+}
+
+// A helper for HttpResponse with error
+//
+func HttpError[B any, E any](code int, e E) HttpResponse[B, E] {
+  return HttpResponse[B, E]{Status: code, Error: ftl.Some(e)}
+}
+{{- end}}
