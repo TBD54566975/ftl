@@ -9,7 +9,7 @@ TIMESTAMP := `date +%s`
 SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template internal/projectinit/scaffolding go-runtime/scaffolding jvm-runtime/java/scaffolding jvm-runtime/kotlin/scaffolding"
 CONSOLE_ROOT := "frontend/console"
-FRONTEND_OUT := "{{CONSOLE_ROOT}}/dist/index.html"
+FRONTEND_OUT := "frontend/console/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
 PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
 PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/console/console_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/ftl_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts {{CONSOLE_ROOT}}/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
@@ -84,7 +84,7 @@ build-zips: build-kt-runtime
 
 # Rebuild frontend
 build-frontend: pnpm-install
-  @mk {{FRONTEND_OUT}} : {{CONSOLE_ROOT}}/src -- "cd {{CONSOLE_ROOT}} && pnpm run build"
+  @mk {{FRONTEND_OUT}} : {{CONSOLE_ROOT}}/package.json {{CONSOLE_ROOT}}/src -- "cd {{CONSOLE_ROOT}} && pnpm run build"
 
 # Rebuild VSCode extension
 build-extension: pnpm-install
@@ -116,9 +116,8 @@ format-frontend:
   cd {{CONSOLE_ROOT}} && pnpm run lint:fix
 
 # Install Node dependencies using pnpm
-# Retry a few times in case of network issues
 pnpm-install:
-  @for i in {1..3}; do pnpm install && break || sleep 5; done
+  @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install" && break || sleep 5; done
 
 # Regenerate protos
 build-protos: pnpm-install
