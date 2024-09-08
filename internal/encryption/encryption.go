@@ -73,6 +73,9 @@ func (b Builder) Build(ctx context.Context, provider KeyStoreProvider) (DataEncr
 	return encryptor, nil
 }
 
+// DataEncryptor is an interface for encrypting and decrypting data.
+// Does not actually store anything encrypted, just provides functions against `Encrypted` implementations.
+// Each implementation should be thread-safe.
 type DataEncryptor interface {
 	Encrypt(cleartext []byte, dest Encrypted) error
 	Decrypt(encrypted Encrypted) ([]byte, error)

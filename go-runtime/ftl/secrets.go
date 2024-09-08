@@ -36,3 +36,9 @@ func (s SecretValue[T]) Get(ctx context.Context) (out T) {
 	}
 	return
 }
+
+var _ = Secret("yo")
+
+struct {
+	ssn ftl.Encrypted[int]
+}
