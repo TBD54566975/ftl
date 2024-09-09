@@ -7,7 +7,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestEdges(t *testing.T) {
+func TestRGEdges(t *testing.T) {
 	t.Run("returns incoming edges", func(t *testing.T) {
 		g := infra.NewResourceGraph()
 		deployment, _ := g.AddNode(&infra.Deployment{}, g.Root(), nil)
@@ -34,7 +34,7 @@ func TestEdges(t *testing.T) {
 	})
 }
 
-func TestQueries(t *testing.T) {
+func TestRGQueries(t *testing.T) {
 	t.Run("queries by module", func(t *testing.T) {
 		g := infra.NewResourceGraph()
 		_, _ = g.AddNode(infra.NewModule("A", "dep1"), g.Root(), nil)
