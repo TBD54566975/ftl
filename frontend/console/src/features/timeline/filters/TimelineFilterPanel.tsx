@@ -63,6 +63,12 @@ export const TimelineFilterPanel = ({
   }, [modules.data])
 
   useEffect(() => {
+
+    console.log("------------------------------------")
+    console.log("selectedEventTypes", selectedEventTypes)
+    console.log("selectedLogLevel", selectedLogLevel)
+    console.log("selectedModules", selectedModules)
+
     const filter: EventsQuery_Filter[] = []
     if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
       const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)
@@ -74,6 +80,8 @@ export const TimelineFilterPanel = ({
     }
 
     filter.push(modulesFilter(selectedModules))
+
+    console.log("filter", JSON.stringify(filter))
 
     onFiltersChanged(filter)
   }, [selectedEventTypes, selectedLogLevel, selectedModules])
@@ -131,9 +139,8 @@ export const TimelineFilterPanel = ({
                 <li key={key} onClick={() => handleLogLevelChanged(key)} className='relative flex gap-x-2 cursor-pointer'>
                   <div className='relative flex h-5 w-3 flex-none items-center justify-center'>
                     <div
-                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${
-                        selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
-                      } rounded-full ring-1`}
+                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
+                        } rounded-full ring-1`}
                     />
                   </div>
                   <p className='flex-auto text-sm leading-5 text-gray-500'>
