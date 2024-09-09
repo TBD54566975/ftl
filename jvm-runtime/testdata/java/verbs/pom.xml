@@ -13,6 +13,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>xyz.block</groupId>
+            <artifactId>web5-dids</artifactId>
+            <version>2.0.1-debug1</version>
+        </dependency>
+        <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-orm</artifactId>
         </dependency>
