@@ -12,12 +12,24 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration"
 )
 
+const KeychainProviderKey configuration.ProviderKey = "keychain"
+
 type Keychain struct{}
 
 var _ configuration.SynchronousProvider[configuration.Secrets] = Keychain{}
 
-func (Keychain) Role() configuration.Secrets { return configuration.Secrets{} }
-func (k Keychain) Key() string               { return "keychain" }
+func NewKeychain() Keychain {
+	return Keychain{}
+}
+
+func NewKeychainFactory() (configuration.ProviderKey, Factory[configuration.Secrets]) {
+	return KeychainProviderKey, func(ctx context.Context) (configuration.Provider[configuration.Secrets], error) {
+		return NewKeychain(), nil
+	}
+}
+
+func (Keychain) Role() configuration.Secrets      { return configuration.Secrets{} }
+func (k Keychain) Key() configuration.ProviderKey { return KeychainProviderKey }
 
 func (k Keychain) Load(ctx context.Context, ref configuration.Ref, key *url.URL) ([]byte, error) {
 	value, err := keyring.Get(k.serviceName(ref), key.Host)
@@ -35,7 +47,7 @@ func (k Keychain) Store(ctx context.Context, ref configuration.Ref, value []byte
 	if err != nil {
 		return nil, fmt.Errorf("failed to set keychain entry for %q: %w", ref, err)
 	}
-	return &url.URL{Scheme: "keychain", Host: ref.Name}, nil
+	return &url.URL{Scheme: string(KeychainProviderKey), Host: ref.Name}, nil
 }
 
 func (k Keychain) Delete(ctx context.Context, ref configuration.Ref) error {

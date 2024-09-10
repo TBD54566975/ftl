@@ -10,14 +10,24 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration"
 )
 
+const EnvarProviderKey configuration.ProviderKey = "envar"
+
 // Envar is a configuration provider that reads secrets or configuration
 // from environment variables.
 type Envar[R configuration.Role] struct{}
 
 var _ configuration.SynchronousProvider[configuration.Configuration] = Envar[configuration.Configuration]{}
 
-func (Envar[R]) Role() R     { var r R; return r }
-func (Envar[R]) Key() string { return "envar" }
+func NewEnvarFactory[R configuration.Role]() (configuration.ProviderKey, Factory[R]) {
+	return EnvarProviderKey, func(ctx context.Context) (configuration.Provider[R], error) {
+		return NewEnvar[R](), nil
+	}
+}
+
+func NewEnvar[R configuration.Role]() Envar[R] { return Envar[R]{} }
+
+func (Envar[R]) Role() R                        { var r R; return r }
+func (Envar[R]) Key() configuration.ProviderKey { return EnvarProviderKey }
 
 func (e Envar[R]) Load(ctx context.Context, ref configuration.Ref, key *url.URL) ([]byte, error) {
 	// FTL_<type>_[<module>]_<name> where <module> and <name> are base64 encoded.
@@ -37,7 +47,7 @@ func (e Envar[R]) Delete(ctx context.Context, ref configuration.Ref) error {
 func (e Envar[R]) Store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
 	envar := e.key(ref)
 	fmt.Printf("%s=%s\n", envar, base64.RawURLEncoding.EncodeToString(value))
-	return &url.URL{Scheme: "envar", Host: ref.Name}, nil
+	return &url.URL{Scheme: string(EnvarProviderKey), Host: ref.Name}, nil
 }
 
 func (e Envar[R]) key(ref configuration.Ref) string {

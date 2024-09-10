@@ -19,7 +19,7 @@ import (
 // Manager is a high-level configuration manager that abstracts the details of
 // the Router and Provider interfaces.
 type Manager[R configuration.Role] struct {
-	providers  map[string]configuration.Provider[R]
+	providers  map[configuration.ProviderKey]configuration.Provider[R]
 	router     configuration.Router[R]
 	obfuscator optional.Option[configuration.Obfuscator]
 	cache      *cache[R]
@@ -49,7 +49,7 @@ func NewDefaultConfigurationManagerFromConfig(ctx context.Context, config string
 // New configuration manager.
 func New[R configuration.Role](ctx context.Context, router configuration.Router[R], providers []configuration.Provider[R]) (*Manager[R], error) {
 	m := &Manager[R]{
-		providers: map[string]configuration.Provider[R]{},
+		providers: map[configuration.ProviderKey]configuration.Provider[R]{},
 	}
 	for _, p := range providers {
 		m.providers[p.Key()] = p
@@ -70,8 +70,8 @@ func New[R configuration.Role](ctx context.Context, router configuration.Router[
 	return m, nil
 }
 
-func ProviderKeyForAccessor(accessor *url.URL) string {
-	return accessor.Scheme
+func ProviderKeyForAccessor(accessor *url.URL) configuration.ProviderKey {
+	return configuration.ProviderKey(accessor.Scheme)
 }
 
 // getData returns a data value for a configuration from the active providers.
@@ -136,13 +136,13 @@ func (m *Manager[R]) Get(ctx context.Context, ref configuration.Ref, value any) 
 func (m *Manager[R]) availableProviderKeys() []string {
 	keys := make([]string, 0, len(m.providers))
 	for k := range m.providers {
-		keys = append(keys, "--"+k)
+		keys = append(keys, "--"+string(k))
 	}
 	return keys
 }
 
 // Set a configuration value, encoding "value" as JSON before storing it.
-func (m *Manager[R]) Set(ctx context.Context, pkey string, ref configuration.Ref, value any) error {
+func (m *Manager[R]) Set(ctx context.Context, pkey configuration.ProviderKey, ref configuration.Ref, value any) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -151,7 +151,7 @@ func (m *Manager[R]) Set(ctx context.Context, pkey string, ref configuration.Ref
 }
 
 // SetJSON sets a configuration value using raw JSON data.
-func (m *Manager[R]) SetJSON(ctx context.Context, pkey string, ref configuration.Ref, value json.RawMessage) error {
+func (m *Manager[R]) SetJSON(ctx context.Context, pkey configuration.ProviderKey, ref configuration.Ref, value json.RawMessage) error {
 	if err := checkJSON(value); err != nil {
 		return fmt.Errorf("invalid value for %s, must be JSON: %w", m.router.Role(), err)
 	}
@@ -211,7 +211,7 @@ func (m *Manager[R]) MapForModule(ctx context.Context, module string) (map[strin
 }
 
 // Unset a configuration value in all providers.
-func (m *Manager[R]) Unset(ctx context.Context, pkey string, ref configuration.Ref) error {
+func (m *Manager[R]) Unset(ctx context.Context, pkey configuration.ProviderKey, ref configuration.Ref) error {
 	provider, ok := m.providers[pkey]
 	if !ok {
 		pkeys := strings.Join(m.availableProviderKeys(), ", ")

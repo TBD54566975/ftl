@@ -27,7 +27,7 @@ type listProvider interface {
 }
 
 type updateCacheEvent struct {
-	key string
+	key configuration.ProviderKey
 	ref configuration.Ref
 	// value is nil when the value was deleted
 	value optional.Option[[]byte]
@@ -39,7 +39,7 @@ type updateCacheEvent struct {
 // Sync happens periodically.
 // Updates do not go through the cache, but the cache is notified after the update occurs.
 type cache[R configuration.Role] struct {
-	providers map[string]*cacheProvider[R]
+	providers map[configuration.ProviderKey]*cacheProvider[R]
 
 	// list provider is used to determine which providers are expected to have values, and therefore need to be synced
 	listProvider listProvider
@@ -50,7 +50,7 @@ type cache[R configuration.Role] struct {
 }
 
 func newCache[R configuration.Role](ctx context.Context, providers []configuration.AsynchronousProvider[R], listProvider listProvider) *cache[R] {
-	cacheProviders := make(map[string]*cacheProvider[R], len(providers))
+	cacheProviders := make(map[configuration.ProviderKey]*cacheProvider[R], len(providers))
 	for _, provider := range providers {
 		cacheProviders[provider.Key()] = &cacheProvider[R]{
 			provider:   provider,
@@ -73,7 +73,7 @@ func newCache[R configuration.Role](ctx context.Context, providers []configurati
 // load is called by the manager to get a value from the cache
 func (c *cache[R]) load(ref configuration.Ref, key *url.URL) ([]byte, error) {
 	providerKey := ProviderKeyForAccessor(key)
-	provider, ok := c.providers[key.Scheme]
+	provider, ok := c.providers[configuration.ProviderKey(key.Scheme)]
 	if !ok {
 		return nil, fmt.Errorf("no cache provider for key %q", providerKey)
 	}
@@ -103,7 +103,7 @@ func (c *cache[R]) updatedValue(ref configuration.Ref, value []byte, accessor *u
 }
 
 // deletedValue should be called when a value is deleted in the provider
-func (c *cache[R]) deletedValue(ref configuration.Ref, pkey string) {
+func (c *cache[R]) deletedValue(ref configuration.Ref, pkey configuration.ProviderKey) {
 	if _, ok := c.providers[pkey]; !ok {
 		// not syncing this provider
 		return

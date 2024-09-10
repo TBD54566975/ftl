@@ -13,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -94,17 +95,17 @@ func (s *AdminService) ConfigGet(ctx context.Context, req *connect.Request[ftlv1
 	return connect.NewResponse(&ftlv1.GetConfigResponse{Value: vb}), nil
 }
 
-func configProviderKey(p *ftlv1.ConfigProvider) string {
+func configProviderKey(p *ftlv1.ConfigProvider) configuration.ProviderKey {
 	if p == nil {
 		return ""
 	}
 	switch *p {
 	case ftlv1.ConfigProvider_CONFIG_INLINE:
-		return "inline"
+		return providers.InlineProviderKey
 	case ftlv1.ConfigProvider_CONFIG_ENVAR:
-		return "envar"
+		return providers.EnvarProviderKey
 	case ftlv1.ConfigProvider_CONFIG_DB:
-		return "db"
+		return providers.DatabaseConfigProviderKey
 	}
 	return ""
 }
@@ -188,21 +189,21 @@ func (s *AdminService) SecretGet(ctx context.Context, req *connect.Request[ftlv1
 	return connect.NewResponse(&ftlv1.GetSecretResponse{Value: vb}), nil
 }
 
-func secretProviderKey(p *ftlv1.SecretProvider) string {
+func secretProviderKey(p *ftlv1.SecretProvider) configuration.ProviderKey {
 	if p == nil {
 		return ""
 	}
 	switch *p {
 	case ftlv1.SecretProvider_SECRET_INLINE:
-		return "inline"
+		return providers.InlineProviderKey
 	case ftlv1.SecretProvider_SECRET_ENVAR:
-		return "envar"
+		return providers.EnvarProviderKey
 	case ftlv1.SecretProvider_SECRET_KEYCHAIN:
-		return "keychain"
+		return providers.KeychainProviderKey
 	case ftlv1.SecretProvider_SECRET_OP:
-		return "op"
+		return providers.OnePasswordProviderKey
 	case ftlv1.SecretProvider_SECRET_ASM:
-		return "asm"
+		return providers.ASMProviderKey
 	}
 	return ""
 }
