@@ -74,6 +74,17 @@ func (g *ResourceGraph) delNode(node *ResourceNode) {
 	g.nodes = filter(g.nodes, node)
 }
 
+func (g *ResourceGraph) DelNode(node *ResourceNode) {
+	if len(g.Out(node)) > 0 {
+		panic("trying to remove a node with children")
+	}
+
+	for _, e := range g.In(node) {
+		g.DelEdge(e)
+	}
+	g.delNode(node)
+}
+
 func (g *ResourceGraph) AddNode(properties map[string]string, parent *ResourceNode, constraints []Constraint) (*ResourceNode, *ResourceEdge) {
 	node := &ResourceNode{Properties: properties}
 	g.nodes = append(g.nodes, node)
@@ -129,6 +140,8 @@ func (g *ResourceGraph) Merge(o *ResourceGraph) {
 		existing := g.ById(n.Id())
 		if existing == nil {
 			g.nodes = append(g.nodes, n)
+		} else {
+			mergeProperties(existing, n)
 		}
 		edges = append(edges, o.fromEdges[n]...)
 	}
@@ -138,6 +151,15 @@ func (g *ResourceGraph) Merge(o *ResourceGraph) {
 		to := g.ById(e.To.Id())
 		if g.Edge(from, to) == nil {
 			g.AddEdge(from, to, e.Constraints)
+		} else {
+			// TODO: Clever edge merge stuff
 		}
+	}
+}
+
+func mergeProperties(to, from *ResourceNode) {
+	// TODO: Clever node merge stuff
+	for k, v := range from.Properties {
+		to.Properties[k] = v
 	}
 }

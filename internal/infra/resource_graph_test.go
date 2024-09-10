@@ -51,7 +51,7 @@ func TestRGDeployment(t *testing.T) {
 		moduleA.Properties["state"] = "planning"
 
 		assert.DeepEqual(t, infra.Rules.ApplyAll(g), []string{
-			"provision [module,A,depid]",
+			"run provision-module [module,A,depid]",
 		})
 	})
 	t.Run("deploys more complex plan", func(t *testing.T) {
@@ -67,9 +67,75 @@ func TestRGDeployment(t *testing.T) {
 		g.Merge(deployGraph)
 
 		assert.DeepEqual(t, infra.Rules.ApplyAll(g), []string{
-			"provision [database,A,depid]",
-			"provision [module,A,depid]",
-			"provision [module,B,depid]",
+			"run provision-database [database,A,depid]",
+			"run provision-module [module,A,depid]",
+			"run provision-module [module,B,depid]",
 		})
+	})
+	t.Run("supports concurrent deploys", func(t *testing.T) {
+		deployment := "depid"
+		g := infra.NewResourceGraph()
+
+		deployGraph1 := infra.NewResourceGraph()
+		moduleB, _ := deployGraph1.AddNode(map[string]string{"kind": "module", "module": "B", "deployment": deployment, "state": "planning"}, g.Root(), nil)
+		moduleA, _ := deployGraph1.AddNode(map[string]string{"kind": "module", "module": "A", "deployment": deployment, "state": "planning"}, g.Root(), nil)
+		deployGraph1.AddEdge(moduleB, moduleA, nil)
+		_, _ = deployGraph1.AddNode(map[string]string{"kind": "database", "module": "A", "deployment": deployment, "state": "planning"}, moduleA, nil)
+
+		// deploy a change to moduleB requiring a DB
+		deployGraph2 := infra.NewResourceGraph()
+		moduleB2, _ := deployGraph2.AddNode(map[string]string{"kind": "module", "module": "B", "deployment": deployment, "state": "planning"}, g.Root(), nil)
+		_, _ = deployGraph2.AddNode(map[string]string{"kind": "database", "module": "B", "deployment": deployment, "state": "planning"}, moduleB2, nil)
+
+		g.Merge(deployGraph1)
+		g.Merge(deployGraph2)
+
+		assert.DeepEqual(t, infra.Rules.ApplyAll(g), []string{
+			"run provision-database [database,A,depid]",
+			"run provision-module [module,A,depid]",
+			"run provision-database [database,B,depid]",
+			"run provision-module [module,B,depid]",
+		})
+	})
+	t.Run("deploys module removal", func(t *testing.T) {
+		deployment := "depid"
+		g := infra.NewResourceGraph()
+
+		dg := infra.NewResourceGraph()
+		b, _ := dg.AddNode(map[string]string{"kind": "module", "module": "B", "deployment": deployment, "state": "planning"}, g.Root(), nil)
+		_, _ = dg.AddNode(map[string]string{"kind": "database", "module": "B", "deployment": deployment, "state": "planning"}, b, nil)
+
+		g.Merge(dg)
+		infra.Rules.ApplyAll(g)
+
+		dg = infra.NewResourceGraph()
+		_, _ = dg.AddNode(map[string]string{"kind": "module", "module": "B", "deployment": deployment, "state": "outdated"}, g.Root(), nil)
+		g.Merge(dg)
+
+		assert.DeepEqual(t, infra.Rules.ApplyAll(g), []string{
+			"run delete-module [module,B,depid]",
+			"outdate [database,B,depid]",
+			"run delete-database [database,B,depid]",
+			"delete [database,B,depid]",
+			"delete [module,B,depid]",
+		})
+	})
+	t.Run("does not remove a module with dependencies", func(t *testing.T) {
+		deployment := "depid"
+		g := infra.NewResourceGraph()
+
+		dg := infra.NewResourceGraph()
+		moduleB, _ := dg.AddNode(map[string]string{"kind": "module", "module": "B", "deployment": deployment, "state": "planning"}, g.Root(), nil)
+		moduleA, _ := dg.AddNode(map[string]string{"kind": "module", "module": "A", "deployment": deployment, "state": "planning"}, g.Root(), nil)
+		dg.AddEdge(moduleB, moduleA, nil)
+
+		g.Merge(dg)
+		infra.Rules.ApplyAll(g)
+
+		dg = infra.NewResourceGraph()
+		_, _ = dg.AddNode(map[string]string{"kind": "module", "module": "A", "deployment": deployment, "state": "outdated"}, g.Root(), nil)
+		g.Merge(dg)
+
+		assert.Equal(t, len(infra.Rules.ApplyAll(g)), 0)
 	})
 }

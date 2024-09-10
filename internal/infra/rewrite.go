@@ -38,14 +38,48 @@ func (r *RuleSet) ApplyAll(graph *ResourceGraph) []string {
 }
 
 // Matchers
-var NextToDeploy = func(node *ResourceNode, graph *ResourceGraph) bool {
-	for _, out := range graph.Out(node) {
-		if out.To.Properties["state"] != "ready" {
-			return false
+func NextToDeploy(kind string) Matcher {
+	return func(node *ResourceNode, graph *ResourceGraph) bool {
+		for _, out := range graph.Out(node) {
+			if out.To.Properties["state"] != "ready" {
+				return false
+			}
 		}
-	}
 
-	return node.Properties["state"] == "planning"
+		return node.Properties["state"] == "planning" && node.Properties["kind"] == kind
+	}
+}
+
+func NextToRemove(kind string) Matcher {
+	return func(node *ResourceNode, graph *ResourceGraph) bool {
+		for _, in := range graph.In(node) {
+			if in.From.Properties["kind"] != "FTL" && in.From.Properties["state"] != "removed" {
+				return false
+			}
+		}
+
+		return node.Properties["state"] == "outdated" && node.Properties["kind"] == kind
+	}
+}
+
+func NextToMarkOutdated() Matcher {
+	return func(node *ResourceNode, graph *ResourceGraph) bool {
+		incoming := graph.In(node)
+		isOutdated := len(incoming) > 0
+		for _, in := range incoming {
+			if in.From.Properties["state"] != "removed" {
+				isOutdated = false
+			}
+		}
+
+		return node.Properties["state"] == "ready" && isOutdated
+	}
+}
+
+func NextToClear() Matcher {
+	return func(node *ResourceNode, graph *ResourceGraph) bool {
+		return node.Properties["state"] == "removed" && len(graph.Out(node)) == 0
+	}
 }
 
 func ByModule(name string) Matcher {
@@ -56,11 +90,46 @@ func ByModule(name string) Matcher {
 
 // Rules
 var Rules = RuleSet{{
-	Name:    "provision",
-	Matcher: NextToDeploy,
+	Name:    "run provision-module",
+	Matcher: NextToDeploy("module"),
 	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
-		// TODO: start provisioner, and transition to "provisioning"
 		hits[0].Properties["state"] = "ready"
 		return hits[0].Id(), nil
+	},
+}, {
+	Name:    "run provision-database",
+	Matcher: NextToDeploy("database"),
+	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
+		hits[0].Properties["state"] = "ready"
+		return hits[0].Id(), nil
+	},
+}, {
+	Name:    "run delete-database",
+	Matcher: NextToRemove("database"),
+	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
+		hits[0].Properties["state"] = "removed"
+		return hits[0].Id(), nil
+	},
+}, {
+	Name:    "run delete-module",
+	Matcher: NextToRemove("module"),
+	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
+		hits[0].Properties["state"] = "removed"
+		return hits[0].Id(), nil
+	},
+}, {
+	Name:    "outdate",
+	Matcher: NextToMarkOutdated(),
+	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
+		hits[0].Properties["state"] = "outdated"
+		return hits[0].Id(), nil
+	},
+}, {
+	Name:    "delete",
+	Matcher: NextToClear(),
+	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
+		id := hits[0].Id()
+		graph.DelNode(hits[0])
+		return id, nil
 	},
 }}
