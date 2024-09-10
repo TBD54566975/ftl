@@ -294,4 +294,43 @@
             </build>
         </profile>
     </profiles>
+
+  <repositories>
+    <repository>
+      <id>tbd-oss-thirdparty</id>
+      <name>tbd-oss-thirdparty</name>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-thirdparty-maven2/</url>
+    </repository>
+    <repository>
+      <id>tbd-oss-snapshots</id>
+      <name>tbd-oss-snapshots</name>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-snapshots-maven2/</url>
+    </repository>
+  </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+        <id>tbd-oss-thirdparty</id>
+        <name>tbd-oss-thirdparty</name>
+        <releases>
+            <enabled>true</enabled>
+        </releases>
+        <snapshots>
+            <enabled>false</enabled>
+        </snapshots>
+        <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-thirdparty-maven2/</url>
+        </pluginRepository>
+    </pluginRepositories>
 </project>
