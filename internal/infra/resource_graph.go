@@ -9,7 +9,7 @@ type ResourceNode struct {
 	Properties map[string]string
 }
 
-func (n *ResourceNode) Id() string {
+func (n *ResourceNode) ID() string {
 	return "[" + n.Properties["kind"] + "," + n.Properties["module"] + "," + n.Properties["deployment"] + "]"
 }
 
@@ -104,19 +104,27 @@ func (g *ResourceGraph) Out(node *ResourceNode) []*ResourceEdge {
 	return g.fromEdges[node]
 }
 
-func (g *ResourceGraph) ById(id string) *ResourceNode {
+func (g *ResourceGraph) ByID(id string) *ResourceNode {
 	for _, v := range g.nodes {
-		if v.Id() == id {
+		if v.ID() == id {
 			return v
 		}
 	}
 	return nil
 }
 
-func (g *ResourceGraph) Find(matcher Matcher) []*ResourceNode {
+func (g *ResourceGraph) Find(matchers ...Matcher) []*ResourceNode {
 	var result []*ResourceNode
 	for _, v := range g.nodes {
-		if matcher(v, g) {
+		hit := true
+		for _, matcher := range matchers {
+			if !matcher(v, g) {
+				hit = false
+				break
+			}
+		}
+
+		if hit {
 			result = append(result, v)
 		}
 	}
@@ -133,27 +141,27 @@ func filter[T comparable](from []T, value T) []T {
 	return res
 }
 
-// Merge other graph o to g. This is a destructive operation on o
-func (g *ResourceGraph) Merge(o *ResourceGraph) {
+// Deploy other graph o to g. This is a destructive operation on o
+func (g *ResourceGraph) Deploy(o *ResourceGraph) {
 	var edges []*ResourceEdge
 	for _, n := range o.nodes {
-		existing := g.ById(n.Id())
+		existing := g.ByID(n.ID())
 		if existing == nil {
 			g.nodes = append(g.nodes, n)
 		} else {
 			mergeProperties(existing, n)
 		}
 		edges = append(edges, o.fromEdges[n]...)
+		edges = append(edges, o.toEdges[n]...)
 	}
 
 	for _, e := range edges {
-		from := g.ById(e.From.Id())
-		to := g.ById(e.To.Id())
+		from := g.ByID(e.From.ID())
+		to := g.ByID(e.To.ID())
 		if g.Edge(from, to) == nil {
 			g.AddEdge(from, to, e.Constraints)
-		} else {
-			// TODO: Clever edge merge stuff
 		}
+		// TODO: Clever edge merge stuff
 	}
 }
 

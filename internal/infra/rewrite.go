@@ -37,7 +37,8 @@ func (r *RuleSet) ApplyAll(graph *ResourceGraph) []string {
 	return result
 }
 
-// Matchers
+//// Matchers
+
 func NextToDeploy(kind string) Matcher {
 	return func(node *ResourceNode, graph *ResourceGraph) bool {
 		for _, out := range graph.Out(node) {
@@ -88,47 +89,85 @@ func ByModule(name string) Matcher {
 	}
 }
 
-// Rules
+func ByKind(kind string) Matcher {
+	return func(node *ResourceNode, graph *ResourceGraph) bool {
+		return node.Properties["kind"] == kind
+	}
+}
+
+//// Transition Rules
+
 var Rules = RuleSet{{
 	Name:    "run provision-module",
 	Matcher: NextToDeploy("module"),
 	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
+		// update previous modules
+		previous := graph.Find(ByModule(hits[0].Properties["module"]), ByKind("module"))
+		for _, n := range previous {
+			if n == hits[0] {
+				continue
+			}
+
+			// TODO: Clever constraint checks
+			fulfills := true
+			for _, e := range graph.In(n) {
+				for _, c := range e.Constraints {
+					if c.Key == "requires" {
+						if hits[0].Properties["cap"] != c.Value {
+							fulfills = false
+						}
+					}
+				}
+			}
+			if !fulfills {
+				continue
+			}
+
+			for _, e := range graph.In(n) {
+				if e.From.Properties["kind"] != "FTL" {
+					graph.AddEdge(e.From, hits[0], e.Constraints)
+					graph.DelEdge(e)
+				}
+				n.Properties["state"] = "outdated"
+			}
+		}
+
 		hits[0].Properties["state"] = "ready"
-		return hits[0].Id(), nil
+		return hits[0].ID(), nil
 	},
 }, {
 	Name:    "run provision-database",
 	Matcher: NextToDeploy("database"),
 	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
 		hits[0].Properties["state"] = "ready"
-		return hits[0].Id(), nil
+		return hits[0].ID(), nil
 	},
 }, {
 	Name:    "run delete-database",
 	Matcher: NextToRemove("database"),
 	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
 		hits[0].Properties["state"] = "removed"
-		return hits[0].Id(), nil
+		return hits[0].ID(), nil
 	},
 }, {
 	Name:    "run delete-module",
 	Matcher: NextToRemove("module"),
 	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
 		hits[0].Properties["state"] = "removed"
-		return hits[0].Id(), nil
+		return hits[0].ID(), nil
 	},
 }, {
 	Name:    "outdate",
 	Matcher: NextToMarkOutdated(),
 	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
 		hits[0].Properties["state"] = "outdated"
-		return hits[0].Id(), nil
+		return hits[0].ID(), nil
 	},
 }, {
 	Name:    "delete",
 	Matcher: NextToClear(),
 	Handler: func(hits []*ResourceNode, graph *ResourceGraph) (string, error) {
-		id := hits[0].Id()
+		id := hits[0].ID()
 		graph.DelNode(hits[0])
 		return id, nil
 	},
