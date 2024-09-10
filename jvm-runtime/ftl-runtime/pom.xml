@@ -425,6 +425,7 @@
     <!-- specifies where the project artifacts should be distributed or deployed.
          tells Maven where to deploy your project's artifacts when you run mvn deploy -->
     <distributionManagement>
+        <!-- primary release repository. not being used yet -->
         <repository>
             <uniqueVersion>false</uniqueVersion>
             <id>tbd-oss-releases</id>
@@ -432,6 +433,7 @@
             <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-releases-maven2</url>
             <layout>default</layout>
         </repository>
+        <!-- primary snapshot repository for all "*-SNAPSHOT" artifacts. not yet being used -->
         <snapshotRepository>
             <uniqueVersion>false</uniqueVersion>
             <id>tbd-oss-snapshots</id>
