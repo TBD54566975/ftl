@@ -1,1 +1,0 @@
-* ask ALR about tbd-oss-thirdparty. Specifically, what process or mechanism mirrors the web5 kt dependencies into this maven repository?
