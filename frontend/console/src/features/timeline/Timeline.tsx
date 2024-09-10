@@ -19,10 +19,15 @@ import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUp
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
-export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings; filters: EventsQuery_Filter[] }) => {
-  const [searchParams, setSearchParams] = useSearchParams()
+type TimelineProps = {
+  timeSettings: TimeSettings,
+  filters: EventsQuery_Filter[],
+  setFilter: (filter: EventsQuery_Filter) => void,
+  clearFilter: (key: string) => void,
+}
+
+export const Timeline = ({ timeSettings, filters, setFilter, clearFilter }: TimelineProps) => {
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
-  const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
 
   let eventFilters = filters
   if (timeSettings.newerThan || timeSettings.olderThan) {
@@ -30,7 +35,6 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
   }
 
   const streamTimeline = timeSettings.isTailing && !timeSettings.isPaused
-
   const timeline = useTimeline(streamTimeline, eventFilters)
 
   useEffect(() => {
@@ -40,10 +44,11 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
   }, [isOpen])
 
   const handlePanelClosed = () => {
-    const newParams = new URLSearchParams(searchParams.toString())
-    newParams.delete('id')
-    setSearchParams(newParams)
-    setSelectedEntry(null)
+    // const newParams = new URLSearchParams(searchParams.toString())
+    // newParams.delete('id')
+    // setSearchParams(newParams)
+    // setSelectedEntry(null)
+    setFilter(
   }
 
   const handleEntryClicked = (entry: Event) => {
@@ -69,7 +74,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
         break
     }
     setSelectedEntry(entry)
-    setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
+    // setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
   }
 
   const deploymentKey = (event: Event) => {
@@ -113,9 +118,8 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
             {entries.map((entry) => (
               <tr
                 key={entry.id.toString()}
-                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${
-                  selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
-                } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
+                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
+                  } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
                 onClick={() => handleEntryClicked(entry)}
               >
                 <td className='w-8 flex-none flex items-center justify-center'>

@@ -1,7 +1,7 @@
 import { Timestamp } from "@bufbuild/protobuf";
 import { EventsQuery_DeploymentFilter, EventsQuery_EventTypeFilter, EventsQuery_Filter, EventsQuery_LogLevelFilter, EventsQuery_TimeFilter, EventType, LogLevel } from "../../protos/xyz/block/ftl/v1/console/console_pb";
 import { eventTypesFilter, logLevelFilter, modulesFilter, specificEventIdFilter } from "../../api/timeline";
-import { TimeSettings } from "../../features/timeline/filters/TimelineTimeControls";
+import { TIME_RANGES, TimeRange, TimeSettings } from "../../features/timeline/filters/TimelineTimeControls";
 
 enum UrlKeys {
   ID = 'id',
@@ -34,8 +34,12 @@ range
 
 // TODO: type TimeState = Range | Tail;
 
+// Hides the complexity of the URLSearchParams API and protobuf types.
 export class TimelineUrlState {
-  time: TimeSettings = { isTailing: true, isPaused: false };
+  isTailing = true;
+  isPaused = false;
+  timeRange: TimeRange = TIME_RANGES.tail;
+
   filters: EventsQuery_Filter[] = [];
 
   constructor(params: URLSearchParams) {
@@ -67,7 +71,8 @@ export class TimelineUrlState {
       }
     }
 
-    console.log('todo: handle time range')
+    this.timeRange = this.calculateTimeRange();
+
     // If we're loading a specific event, we don't want to tail.
     //     setSelectedTimeRange(TIME_RANGES['5m'])
     //     setIsTimelinePaused(true)
@@ -79,36 +84,38 @@ export class TimelineUrlState {
 
     for (const filter of this.filters) {
       const ff = filter.filter;
-      console.log('ff', ff)
-      console.log('ff instanceof EventsQuery_LogLevelFilter', ff instanceof EventsQuery_LogLevelFilter)
-      console.log('ff instanceof EventsQuery_DeploymentFilter', ff.value instanceof EventsQuery_DeploymentFilter)
       if (ff.value instanceof EventsQuery_LogLevelFilter) {
         const logLevel = logEnumToValue(ff.value.logLevel);
         if (logLevel) {
           params.set('log', logLevel);
+        } else {
+          console.error('Unknown log level:', ff.value.logLevel);
         }
       } else if (ff.value instanceof EventsQuery_DeploymentFilter) {
-        console.log('todo: handle deployment filter')
         const modules = ff.value.deployments.join(',');
-        if (modules) {
-          params.set('modules', modules);
-        }
+        params.set('modules', modules);
       } else if (ff.value instanceof EventsQuery_EventTypeFilter) {
         const eventTypes = ff.value.eventTypes
           .map((type) => eventTypeEnumToValue(type))
           .filter((type) => type !== undefined);
         if (eventTypes.length !== 0) {
           params.set('types', eventTypes.join(','));
+        } else {
+          console.error('No event types in event type filter');
         }
       } else if (ff.value instanceof EventsQuery_TimeFilter) {
         const newerThan = ff.value.newerThan;
         if (newerThan) {
           params.set('before', newerThan.toDate().toISOString());
+        } else {
+          console.error('No newerThan in time filter');
         }
 
         const olderThan = ff.value.olderThan;
         if (olderThan) {
           params.set('after', olderThan.toDate().toISOString());
+        } else {
+          console.error('No olderThan in time filter');
         }
       }
     }
@@ -128,6 +135,22 @@ export class TimelineUrlState {
     }
 
     return params;
+  }
+
+  calculateTimeRange(): TimeRange {
+    // Since we don't have the originally stated time range, we can make a guess based on the time range given.
+    // If the user has modified the time range, we'll just use that as an injected "Custom (X minutes)" option in
+    // the dropdown.
+    if (this.time.olderThan && this.time.newerThan) {
+      const ms = this.time.newerThan.toDate().getTime() - this.time.olderThan.toDate().getTime();
+
+      return {
+        label: 'Custom',
+        value: ms,
+      };
+    }
+
+    return TIME_RANGES.tail;
   }
 }
 
@@ -175,12 +198,16 @@ function eventTypeEnumToValue(type: EventType): string | undefined {
 
 export class NicerURLSearchParams extends URLSearchParams {
   toString(): string {
-    // sort automatically
+    // sort automatically for more predictable URLs
     this.sort();
 
-    const s = super.toString();
+    let s = super.toString();
 
     // we don't want to encode commas in the URL, so we replace '%2C' with ','
-    return s.replace(/%2C/g, ',');
+    s = s.replace(/%2C/g, ',');
+    // similar with : and %3A in dates
+    s = s.replace(/%3A/g, ':');
+
+    return s;
   }
 }

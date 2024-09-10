@@ -7,26 +7,17 @@ import { Timeline } from './Timeline'
 import { TimelineFilterPanel } from './filters/TimelineFilterPanel'
 import { TIME_RANGES, type TimeSettings, TimelineTimeControls } from './filters/TimelineTimeControls'
 import { TimelineUrlState } from '../../api/timeline/timeline-url-state'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export const TimelinePage = () => {
   const [searchParams, setSearchParams] = useSearchParams()
-  const params = new TimelineUrlState(searchParams)
-  const newParams = params.getSearchParams()
-  // console.log('searchParams', searchParams.toString())
-  // if (newParams.toString() !== searchParams.toString()) {
-  //   setSearchParams(newParams)
-  // }
-  useEffect(() => {
-    if (newParams.toString() !== searchParams.toString()) {
-      setSearchParams(newParams)
-    }
-  }, [newParams.toString()])
+  const [state] = useState(new TimelineUrlState(searchParams))
 
-  const selectedTimeRange = TIME_RANGES.tail
-  const isTimelinePaused = false
-  const timeSettings = params.time
-  const filters = params.filters
+  console.warn('searchParams', searchParams.toString())
+  console.warn('state', state.getSearchParams().toString())
+
+  const timeSettings = state.time
+  const filters = state.filters
 
   // const [timeSettings, setTimeSettings] = useState<TimeSettings>(params.time)
   // const [filters, setFilters] = useState<EventsQuery_Filter[]>([])
@@ -43,22 +34,22 @@ export const TimelinePage = () => {
 
   const handleTimeSettingsChanged = (settings: TimeSettings) => {
     // setTimeSettings(settings)
-    params.time = settings
-    setSearchParams(params.getSearchParams())
+    state.time = settings
+    setSearchParams(state.getSearchParams())
   }
 
   const handleFiltersChanged = (filters: EventsQuery_Filter[]) => {
     // setFilters(filters)
-    params.filters = filters
-    console.log('params.filters', JSON.stringify(params.filters))
-    setSearchParams(params.getSearchParams())
+    state.filters = filters
+    console.log('params.filters', JSON.stringify(state.filters))
+    setSearchParams(state.getSearchParams())
   }
 
   return (
     <SidePanelProvider>
       <Page>
         <Page.Header icon={<ListViewIcon className='size-5' />} title='Events'>
-          <TimelineTimeControls selectedTimeRange={selectedTimeRange} isTimelinePaused={isTimelinePaused} onTimeSettingsChange={handleTimeSettingsChanged} />
+          <TimelineTimeControls selectedTimeRange={state.timeRange} isTimelinePaused={state.time.isPaused} onTimeSettingsChange={handleTimeSettingsChanged} />
         </Page.Header>
         <Page.Body className='flex'>
           <div className='sticky top-0 flex-none overflow-y-auto'>
