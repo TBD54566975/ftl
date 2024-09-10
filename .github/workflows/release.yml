@@ -164,7 +164,7 @@ jobs:
           # Maven deploy lifecycle will build, run tests, verify, sign, and deploy
           mvn \
             deploy \
-              -P ossrh,sign-artifacts \
+              -P ossrh,release \
               --batch-mode \
               --settings .maven_settings.xml
         env:

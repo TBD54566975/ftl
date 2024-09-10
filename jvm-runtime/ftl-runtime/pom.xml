@@ -273,11 +273,6 @@
             </plugins>
         </pluginManagement>
         <plugins>
-            <!-- generates a JAR file containing the source code of the project -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-            </plugin>
             <!-- handles the deployment of the project's artifacts to a remote repository -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -368,18 +363,21 @@
                 </plugins>
             </build>
         </profile>
-        <!-- used to sign artifacts during the build process. It activates the sign-maven-plugin, 
-             which automatically signs the project's artifacts. This is typically required when 
-             deploying to Maven Central or other repositories that mandate signed artifacts for 
-             security and authenticity verification. Activate this profile when you need to create 
-             signed releases, usually in conjunction with the deployment to public repositories. -->
+
         <profile>
-            <id>sign-artifacts</id>
+            <!-- Profile for releasing artifacts to Maven Central -->
+            <id>release</id>
             <build>
                 <plugins>
+                    <!-- produce signed artifacts -->
                     <plugin>
                         <groupId>org.simplify4u.plugins</groupId>
                         <artifactId>sign-maven-plugin</artifactId>
+                    </plugin>
+                    <!-- generates a JAR file containing the source code of the project -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
                     </plugin>
                 </plugins>
             </build>
