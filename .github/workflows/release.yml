@@ -161,7 +161,6 @@ jobs:
       - name: Build, Test, and Deploy to Maven Central
         working-directory: ./jvm-runtime/ftl-runtime
         run: |
-          echo $(git describe --tags)
           # Maven deploy lifecycle will build, run tests, verify, sign, and deploy
           mvn \
             deploy \
