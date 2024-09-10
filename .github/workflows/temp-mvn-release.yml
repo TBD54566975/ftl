@@ -1,0 +1,42 @@
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+name: Release
+jobs:
+  create-jvm-releases:
+    name: Release JVM Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+
+      - uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Set Version
+        run: mvn versions:set -DnewVersion=${{ github.ref_name }}
+
+      - name: Build, Test, and Deploy to Maven Central
+        run: |
+          echo $(git describe --tags)
+          # Maven deploy lifecycle will build, run tests, verify, sign, and deploy
+          mvn \
+            deploy \
+              -P ossrh,sign-artifacts \
+              --batch-mode \
+              --settings .maven_settings.xml
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SIGN_KEY_PASS: ${{ secrets.GPG_SECRET_PASSPHRASE }}
+          SIGN_KEY: ${{ secrets.GPG_SECRET_KEY }}
