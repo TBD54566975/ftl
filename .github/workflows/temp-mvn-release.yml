@@ -25,6 +25,7 @@ jobs:
 
       - name: Set Version
         run: mvn versions:set -DnewVersion=${{ github.ref_name }}
+        working-directory: ./jvm-runtime/ftl-runtime
 
       - name: Build, Test, and Deploy to Maven Central
         run: |
@@ -35,6 +36,7 @@ jobs:
               -P ossrh,sign-artifacts \
               --batch-mode \
               --settings .maven_settings.xml
+        working-directory: ./jvm-runtime/ftl-runtime
         env:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
