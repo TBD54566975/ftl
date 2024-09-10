@@ -155,9 +155,11 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Set Version
+        working-directory: ./jvm-runtime/ftl-runtime
         run: mvn versions:set -DnewVersion=${{ github.ref_name }}
 
       - name: Build, Test, and Deploy to Maven Central
+        working-directory: ./jvm-runtime/ftl-runtime
         run: |
           echo $(git describe --tags)
           # Maven deploy lifecycle will build, run tests, verify, sign, and deploy
