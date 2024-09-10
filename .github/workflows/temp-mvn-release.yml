@@ -1,9 +1,9 @@
+name: Temp JVM Publish Workflow
+
 on:
   push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
-  workflow_dispatch:
-name: Release
+    branches:
+      - jvm-publish
 jobs:
   create-jvm-releases:
     name: Release JVM Artifacts
