@@ -32,6 +32,9 @@ type TestObjectOptionalFields struct {
 	MapField    ftl.Option[map[string]string]
 }
 
+type TestEmptyObject struct {
+}
+
 //ftl:typealias
 //ftl:typemap kotlin "web5.sdk.dids.didcore.Did"
 type DID = did.DID
@@ -115,6 +118,21 @@ func TestObjectOptionalFieldsVerb(ctx context.Context, val TestObjectOptionalFie
 	return val, nil
 }
 
+//ftl:verb export
+func TestObjectOptionalFieldsSinkVerb(ctx context.Context, val TestObjectOptionalFields) error {
+	return nil
+}
+
+//ftl:verb export
+func TestEmptyObjectVerb(ctx context.Context, val TestEmptyObject) (TestEmptyObject, error) {
+	return val, nil
+}
+
+//ftl:verb export
+func TestEmptyObjectSinkVerb(ctx context.Context, val TestEmptyObject) error {
+	return nil
+}
+
 // Now optional versions of all of the above
 
 //ftl:verb export
@@ -164,6 +182,11 @@ func OptionalTestObjectVerb(ctx context.Context, val ftl.Option[TestObject]) (ft
 
 //ftl:verb export
 func OptionalTestObjectOptionalFieldsVerb(ctx context.Context, val ftl.Option[TestObjectOptionalFields]) (ftl.Option[TestObjectOptionalFields], error) {
+	return val, nil
+}
+
+//ftl:verb export
+func OptionalTestEmptyObjectVerb(ctx context.Context, val ftl.Option[TestEmptyObject]) (ftl.Option[TestEmptyObject], error) {
 	return val, nil
 }
 

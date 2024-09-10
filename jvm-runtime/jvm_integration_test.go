@@ -55,6 +55,7 @@ func TestJVMToGoCall(t *testing.T) {
 		ArrayField:  []string{"foo", "bar"},
 		MapField:    map[string]string{"gar": "har"},
 	}
+	exampleEmptyObject := TestEmptyObject{}
 	exampleOptionalFieldsObject := TestObjectOptionalFields{
 		IntField:    ftl.Some[int](43),
 		FloatField:  ftl.Some[float64](.2),
@@ -104,6 +105,7 @@ func TestJVMToGoCall(t *testing.T) {
 		})
 	})...)
 	tests = append(tests, PairedVerbTest("testObjectVerb", exampleObject)...)
+	tests = append(tests, PairedVerbTest("testEmptyObjectVerb", exampleEmptyObject)...)
 	tests = append(tests, PairedVerbTest("testObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
 	tests = append(tests, PairedVerbTest("optionalIntVerb", -3)...)
 	tests = append(tests, PairedVerbTest("optionalFloatVerb", -7.6)...)
@@ -138,9 +140,9 @@ func TestJVMToGoCall(t *testing.T) {
 	in.Run(t,
 		in.WithLanguages("kotlin", "java"),
 		in.CopyModuleWithLanguage("gomodule", "go"),
-		in.CopyModule("passthrough"),
+		in.CopyModule("javamodule"),
 		in.Deploy("gomodule"),
-		in.Deploy("passthrough"),
+		in.Deploy("javamodule"),
 		in.SubTests(tests...),
 	)
 }
@@ -164,7 +166,7 @@ func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTes
 		},
 		{
 			Name:   name + "-jvm",
-			Action: testFunc("passthrough"),
+			Action: testFunc("javamodule"),
 		},
 	}
 }
@@ -195,6 +197,8 @@ type TestObject struct {
 	ArrayField  []string          `json:"arrayField"`
 	MapField    map[string]string `json:"mapField"`
 }
+
+type TestEmptyObject struct{}
 
 type TestObjectOptionalFields struct {
 	IntField    ftl.Option[int]               `json:"intField"`

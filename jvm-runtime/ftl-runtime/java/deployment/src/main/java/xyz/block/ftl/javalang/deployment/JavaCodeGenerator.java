@@ -182,7 +182,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     }
 
     protected void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, Boolean> canBeEmptyDataMap, Path outputDir)
             throws IOException {
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
                 .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
@@ -190,6 +190,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                         .addMember("module", "\"" + module.getName() + "\"")
                         .build())
                 .addModifiers(Modifier.PUBLIC);
+        DeclRef requestDeclRef = new DeclRef(verb.getRequest().getRef().getModule(), verb.getRequest().getRef().getName());
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
             typeBuilder.addSuperinterface(ClassName.get(VerbClientEmpty.class));
         } else if (verb.getRequest().hasUnit()) {
@@ -204,6 +205,11 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID)
                     .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
                     .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+
+            if (canBeEmptyDataMap.getOrDefault(requestDeclRef, false)) {
+                //Request is a data object that can be empty, so produce a call method that takes no arguments
+                typeBuilder.addSuperinterface(ClassName.get(VerbClientEmpty.class));
+            }
         } else {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class),
                     toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true),
@@ -212,14 +218,19 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
                     .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+
+            if (canBeEmptyDataMap.getOrDefault(requestDeclRef, false)) {
+                //Request is a data object that can be empty, so produce a call method that takes no arguments
+                typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class),
+                        toJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true)));
+                typeBuilder.addMethod(MethodSpec.methodBuilder("call")
+                        .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
+                        .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+            }
         }
 
-        TypeSpec helloWorld = typeBuilder
+        JavaFile javaFile = JavaFile.builder(packageName, typeBuilder.build())
                 .build();
-
-        JavaFile javaFile = JavaFile.builder(packageName, helloWorld)
-                .build();
-
         javaFile.writeTo(outputDir);
     }
 

@@ -149,7 +149,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
     }
 
     protected void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, Boolean> canBeEmptyDataMap, Path outputDir)
             throws IOException {
         String thisType = className(verb.getName()) + CLIENT;
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(thisType)
@@ -158,6 +158,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
                         .addMember("module=\"" + module.getName() + "\"")
                         .build())
                 .addModifiers(KModifier.PUBLIC);
+        DeclRef requestDeclRef = new DeclRef(verb.getRequest().getRef().getModule(), verb.getRequest().getRef().getName());
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
             typeBuilder.addSuperinterface(className(VerbClientEmpty.class), CodeBlock.of(""));
         } else if (verb.getRequest().hasUnit()) {
@@ -172,6 +173,11 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
             typeBuilder.addFunction(FunSpec.builder("call")
                     .addModifiers(KModifier.OVERRIDE, KModifier.ABSTRACT)
                     .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap)).build());
+
+            if (canBeEmptyDataMap.getOrDefault(requestDeclRef, false)) {
+                //Request is a data object that can be empty, so produce a call method that takes no arguments
+                typeBuilder.addSuperinterface(className(VerbClientEmpty.class), CodeBlock.of(""));
+            }
         } else {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClient.class),
                     toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap),
@@ -180,6 +186,15 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
                     .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap))
                     .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE, KModifier.ABSTRACT).build());
+
+            if (canBeEmptyDataMap.getOrDefault(requestDeclRef, false)) {
+                //Request is a data object that can be empty, so produce a call method that takes no arguments
+                typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClientSource.class),
+                        toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
+                typeBuilder.addFunction(FunSpec.builder("call")
+                        .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
+                        .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE, KModifier.ABSTRACT).build());
+            }
         }
 
         FileSpec javaFile = FileSpec.builder(packageName, thisType)

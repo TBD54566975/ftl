@@ -45,6 +45,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
         List<Module> modules = new ArrayList<>();
         Map<DeclRef, Type> typeAliasMap = new HashMap<>();
         Map<DeclRef, String> nativeTypeAliasMap = new HashMap<>();
+        Map<DeclRef, Boolean> canBeEmptyDataMap = new HashMap<>();
         try (Stream<Path> pathStream = Files.list(context.inputDir())) {
             for (var file : pathStream.toList()) {
                 String fileName = file.getFileName().toString();
@@ -77,6 +78,12 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                             typeAliasMap.put(new DeclRef(module.getName(), data.getName()), data.getType());
                         }
 
+                    } else if (decl.hasData()) {
+                        var data = decl.getData();
+                        if (data.getFieldsList().isEmpty()
+                                || data.getFieldsList().stream().allMatch(f -> f.getType().hasOptional())) {
+                            canBeEmptyDataMap.put(new DeclRef(module.getName(), data.getName()), true);
+                        }
                     }
                 }
                 modules.add(module);
@@ -93,7 +100,8 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                         if (!verb.getExport()) {
                             continue;
                         }
-                        generateVerb(module, verb, packageName, typeAliasMap, nativeTypeAliasMap, context.outDir());
+                        generateVerb(module, verb, packageName, typeAliasMap, nativeTypeAliasMap, canBeEmptyDataMap,
+                                context.outDir());
                     } else if (decl.hasData()) {
                         var data = decl.getData();
                         if (!data.getExport()) {
@@ -137,7 +145,8 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
             Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
 
     protected abstract void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, Boolean> canBeEmptyDataMap, Path outputDir)
+            throws IOException;
 
     @Override
     public boolean shouldRun(Path sourceDir, Config config) {

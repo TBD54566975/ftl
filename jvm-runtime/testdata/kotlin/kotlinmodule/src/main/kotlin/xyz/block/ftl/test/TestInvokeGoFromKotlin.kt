@@ -90,7 +90,34 @@ fun testObjectOptionalFieldsVerb(
   payload: TestObjectOptionalFields,
   client: TestObjectOptionalFieldsVerbClient
 ): TestObjectOptionalFields {
-  return client.call(payload)
+  val call1 = client.call()
+  val call2 = client.call(payload)
+  return call2
+}
+
+@Export
+@Verb
+fun testObjectOptionalFieldsSinkVerb(
+  payload: TestObjectOptionalFields,
+  client: TestObjectOptionalFieldsSinkVerbClient
+) {
+  client.call()
+  client.call(payload)
+}
+
+@Export
+@Verb
+fun testEmptyObjectVerb(payload: TestEmptyObject, client: TestEmptyObjectVerbClient): TestEmptyObject {
+  val call1 = client.call()
+  val call2 = client.call(payload)
+  return call2
+}
+
+@Export
+@Verb
+fun testEmptyObjectSinkVerb(payload: TestEmptyObject, client: TestEmptyObjectSinkVerbClient) {
+  client.call()
+  client.call(payload)
 }
 
 // now the same again but with option return / input types

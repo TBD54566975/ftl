@@ -28,8 +28,12 @@ import ftl.gomodule.SourceVerbClient;
 import ftl.gomodule.StringArrayVerbClient;
 import ftl.gomodule.StringMapVerbClient;
 import ftl.gomodule.StringVerbClient;
+import ftl.gomodule.TestEmptyObject;
+import ftl.gomodule.TestEmptyObjectSinkVerbClient;
+import ftl.gomodule.TestEmptyObjectVerbClient;
 import ftl.gomodule.TestObject;
 import ftl.gomodule.TestObjectOptionalFields;
+import ftl.gomodule.TestObjectOptionalFieldsSinkVerbClient;
 import ftl.gomodule.TestObjectOptionalFieldsVerbClient;
 import ftl.gomodule.TestObjectVerbClient;
 import ftl.gomodule.TimeVerbClient;
@@ -121,7 +125,33 @@ public class TestInvokeGoFromJava {
     @Verb
     public @NotNull TestObjectOptionalFields testObjectOptionalFieldsVerb(@NotNull TestObjectOptionalFields val,
             TestObjectOptionalFieldsVerbClient client) {
-        return client.call(val);
+        TestObjectOptionalFields call1 = client.call();
+        TestObjectOptionalFields call2 = client.call(val);
+        return call2;
+    }
+
+    @Export
+    @Verb
+    public void testObjectOptionalFieldsSinkVerb(@NotNull TestObjectOptionalFields val,
+            TestObjectOptionalFieldsSinkVerbClient client) {
+        client.call();
+        client.call(val);
+    }
+
+    @Export
+    @Verb
+    public @NotNull TestEmptyObject testEmptyObjectVerb(@NotNull TestEmptyObject val,
+            TestEmptyObjectVerbClient client) {
+        TestEmptyObject call1 = client.call();
+        TestEmptyObject call2 = client.call(val);
+        return call2;
+    }
+
+    @Export
+    @Verb
+    public void testEmptyObjectSinkVerb(@NotNull TestEmptyObject val, TestEmptyObjectSinkVerbClient client) {
+        client.call();
+        client.call(val);
     }
 
     // now the same again but with option return / input types
