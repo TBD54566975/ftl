@@ -18,6 +18,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
+const ASMProviderKey configuration.ProviderKey = "asm"
+
 type asmClient interface {
 	name() string
 	syncInterval() time.Duration
@@ -36,6 +38,12 @@ type ASM struct {
 }
 
 var _ configuration.AsynchronousProvider[configuration.Secrets] = &ASM{}
+
+func NewASMFactory(secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser) (configuration.ProviderKey, Factory[configuration.Secrets]) {
+	return ASMProviderKey, func(ctx context.Context) (configuration.Provider[configuration.Secrets], error) {
+		return NewASM(ctx, secretsClient, advertise, leaser), nil
+	}
+}
 
 func NewASM(ctx context.Context, secretsClient *secretsmanager.Client, advertise *url.URL, leaser leases.Leaser) *ASM {
 	return newASMForTesting(ctx, secretsClient, advertise, leaser, optional.None[asmClient]())
@@ -58,7 +66,7 @@ func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client,
 	coordinator := leader.NewCoordinator[asmClient](
 		ctx,
 		advertise,
-		leases.SystemKey("asm"),
+		leases.SystemKey(string(ASMProviderKey)),
 		leaser,
 		time.Second*10,
 		leaderFactory,
@@ -71,7 +79,7 @@ func newASMForTesting(ctx context.Context, secretsClient *secretsmanager.Client,
 
 func asmURLForRef(ref configuration.Ref) *url.URL {
 	return &url.URL{
-		Scheme: "asm",
+		Scheme: string(ASMProviderKey),
 		Host:   ref.String(),
 	}
 }
@@ -80,8 +88,8 @@ func (ASM) Role() configuration.Secrets {
 	return configuration.Secrets{}
 }
 
-func (ASM) Key() string {
-	return "asm"
+func (*ASM) Key() configuration.ProviderKey {
+	return ASMProviderKey
 }
 
 func (a *ASM) SyncInterval() time.Duration {
