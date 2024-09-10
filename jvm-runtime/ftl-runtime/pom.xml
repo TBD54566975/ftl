@@ -10,7 +10,6 @@
     <description>Towards a 𝝺-calculus for large-scale systems</description>
     <url>https://tbd54566975.github.io/ftl/</url>
 
-    <!-- SCM -->
     <scm>
         <connection>scm:git:git://github.com/TBD54566975/ftl.git</connection>
         <!-- This has to be HTTPS, not git://, for maven-release-plugin to do AUTH correctly -->
@@ -19,7 +18,6 @@
         <tag>HEAD</tag>
     </scm>
 
-    <!-- Developers -->
     <developers>
         <developer>
             <id>TBD54566975</id>
@@ -28,13 +26,11 @@
         </developer>
     </developers>
 
-    <!-- Issues -->
     <issueManagement>
         <system>github</system>
         <url>https://github.com/TBD54566975/ftl/issues</url>
     </issueManagement>
 
-    <!-- Licenses -->
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -277,26 +273,15 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <!-- generates a JAR file containing the source code of the project -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
             </plugin>
+            <!-- handles the deployment of the project's artifacts to a remote repository -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.jetbrains.dokka</groupId>
-                <artifactId>dokka-maven-plugin</artifactId>
-                <version>1.9.20</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>javadocJar</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
@@ -383,6 +368,11 @@
                 </plugins>
             </build>
         </profile>
+        <!-- used to sign artifacts during the build process. It activates the sign-maven-plugin, 
+             which automatically signs the project's artifacts. This is typically required when 
+             deploying to Maven Central or other repositories that mandate signed artifacts for 
+             security and authenticity verification. Activate this profile when you need to create 
+             signed releases, usually in conjunction with the deployment to public repositories. -->
         <profile>
             <id>sign-artifacts</id>
             <build>
@@ -394,6 +384,10 @@
                 </plugins>
             </build>
         </profile>
+        <!-- used to deploy artifacts to Maven Central via OSSRH (OSS Repository Hosting).
+             It configures the nexus-staging-maven-plugin for automated deployment and release,
+             and sets up the distribution management for both snapshot and release repositories.
+             Activate this profile when deploying open-source projects to Maven Central. -->
         <profile>
             <!-- https://central.sonatype.org/publish/publish-maven/#deployment -->
             <id>ossrh</id>
@@ -412,6 +406,8 @@
                     </plugin>
                 </plugins>
             </build>
+            <!-- specifies where the project artifacts should be distributed or deployed. -->
+            <!-- tells Maven where to deploy your project's artifacts when you run mvn deploy -->
             <distributionManagement>
                 <snapshotRepository>
                     <id>ossrh-snapshots</id>
@@ -426,6 +422,8 @@
         </profile>
     </profiles>
 
+    <!-- specifies where the project artifacts should be distributed or deployed.
+         tells Maven where to deploy your project's artifacts when you run mvn deploy -->
     <distributionManagement>
         <repository>
             <uniqueVersion>false</uniqueVersion>
@@ -443,7 +441,10 @@
         </snapshotRepository>
     </distributionManagement>
 
+    <!-- additional repositories that we can pull dependencies from -->
     <repositories>
+        <!-- mirror for all third-party dependencies. acts as a redundancy that we can failover to if third-party deps become
+             unavailable -->
         <repository>
             <id>tbd-oss-thirdparty</id>
             <name>tbd-oss-thirdparty</name>
@@ -455,6 +456,7 @@
             </snapshots>
             <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-thirdparty-maven2/</url>
         </repository>
+        <!-- snapshot repository. -->
         <repository>
             <id>tbd-oss-snapshots</id>
             <name>tbd-oss-snapshots</name>
@@ -468,6 +470,7 @@
         </repository>
     </repositories>
 
+    <!-- additional repositories that we can pull plugins from -->
     <pluginRepositories>
         <pluginRepository>
         <id>tbd-oss-thirdparty</id>
