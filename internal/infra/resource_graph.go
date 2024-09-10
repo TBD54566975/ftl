@@ -6,7 +6,11 @@ type Constraint struct {
 }
 
 type ResourceNode struct {
-	Resource Resource
+	Properties map[string]string
+}
+
+func (n *ResourceNode) Id() string {
+	return "[" + n.Properties["kind"] + "," + n.Properties["module"] + "," + n.Properties["deployment"] + "]"
 }
 
 type ResourceEdge struct {
@@ -17,9 +21,8 @@ type ResourceEdge struct {
 
 type ResourceGraph struct {
 	// queries
-	nodeByModule map[string][]*ResourceNode
-	fromEdges    map[*ResourceNode][]*ResourceEdge
-	toEdges      map[*ResourceNode][]*ResourceEdge
+	fromEdges map[*ResourceNode][]*ResourceEdge
+	toEdges   map[*ResourceNode][]*ResourceEdge
 
 	// data
 	root  *ResourceNode
@@ -27,11 +30,10 @@ type ResourceGraph struct {
 }
 
 func NewResourceGraph() *ResourceGraph {
-	ftl := &ResourceNode{Resource: &FTL{}}
+	ftl := &ResourceNode{Properties: map[string]string{"kind": "FTL"}}
 	return &ResourceGraph{
-		nodeByModule: map[string][]*ResourceNode{},
-		fromEdges:    map[*ResourceNode][]*ResourceEdge{},
-		toEdges:      map[*ResourceNode][]*ResourceEdge{},
+		fromEdges: map[*ResourceNode][]*ResourceEdge{},
+		toEdges:   map[*ResourceNode][]*ResourceEdge{},
 
 		nodes: []*ResourceNode{ftl},
 		root:  ftl,
@@ -50,6 +52,15 @@ func (g *ResourceGraph) AddEdge(from, to *ResourceNode, constraints []Constraint
 	return edge
 }
 
+func (g *ResourceGraph) Edge(from, to *ResourceNode) *ResourceEdge {
+	for _, e := range g.fromEdges[from] {
+		if e.To == to {
+			return e
+		}
+	}
+	return nil
+}
+
 func (g *ResourceGraph) DelEdge(edge *ResourceEdge) {
 	g.fromEdges[edge.From] = filter(g.fromEdges[edge.From], edge)
 	g.toEdges[edge.To] = filter(g.toEdges[edge.To], edge)
@@ -61,13 +72,11 @@ func (g *ResourceGraph) DelEdge(edge *ResourceEdge) {
 
 func (g *ResourceGraph) delNode(node *ResourceNode) {
 	g.nodes = filter(g.nodes, node)
-	g.nodeByModule[node.Resource.Id().Module] = filter(g.nodeByModule[node.Resource.Id().Module], node)
 }
 
-func (g *ResourceGraph) AddNode(resource Resource, parent *ResourceNode, constraints []Constraint) (*ResourceNode, *ResourceEdge) {
-	node := &ResourceNode{Resource: resource}
+func (g *ResourceGraph) AddNode(properties map[string]string, parent *ResourceNode, constraints []Constraint) (*ResourceNode, *ResourceEdge) {
+	node := &ResourceNode{Properties: properties}
 	g.nodes = append(g.nodes, node)
-	g.nodeByModule[node.Resource.Id().Module] = append(g.nodeByModule[node.Resource.Id().Module], node)
 	edge := g.AddEdge(parent, node, constraints)
 	return node, edge
 }
@@ -84,17 +93,23 @@ func (g *ResourceGraph) Out(node *ResourceNode) []*ResourceEdge {
 	return g.fromEdges[node]
 }
 
-func (g *ResourceGraph) QueryModule(name string) []*ResourceNode {
-	return g.nodeByModule[name]
-}
-
-func (g *ResourceGraph) ById(id ResourceID) *ResourceNode {
+func (g *ResourceGraph) ById(id string) *ResourceNode {
 	for _, v := range g.nodes {
-		if v.Resource.Id() == id {
+		if v.Id() == id {
 			return v
 		}
 	}
 	return nil
+}
+
+func (g *ResourceGraph) Find(matcher Matcher) []*ResourceNode {
+	var result []*ResourceNode
+	for _, v := range g.nodes {
+		if matcher(v, g) {
+			result = append(result, v)
+		}
+	}
+	return result
 }
 
 func filter[T comparable](from []T, value T) []T {
@@ -105,4 +120,24 @@ func filter[T comparable](from []T, value T) []T {
 		}
 	}
 	return res
+}
+
+// Merge other graph o to g. This is a destructive operation on o
+func (g *ResourceGraph) Merge(o *ResourceGraph) {
+	var edges []*ResourceEdge
+	for _, n := range o.nodes {
+		existing := g.ById(n.Id())
+		if existing == nil {
+			g.nodes = append(g.nodes, n)
+		}
+		edges = append(edges, o.fromEdges[n]...)
+	}
+
+	for _, e := range edges {
+		from := g.ById(e.From.Id())
+		to := g.ById(e.To.Id())
+		if g.Edge(from, to) == nil {
+			g.AddEdge(from, to, e.Constraints)
+		}
+	}
 }

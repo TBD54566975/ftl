@@ -3,12 +3,17 @@ package infra
 import (
 	"context"
 	"errors"
+	"strings"
 )
 
 type ResourceID struct {
 	Kind       string
 	Module     string
 	Deployment string
+}
+
+func (r ResourceID) String() string {
+	return "[" + strings.Join([]string{r.Kind, r.Module, r.Deployment}, ",") + "]"
 }
 
 type Resource interface {
