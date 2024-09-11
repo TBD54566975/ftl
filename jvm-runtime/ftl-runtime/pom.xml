@@ -7,6 +7,37 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Ftl Java Runtime - Parent</name>
+    <description>Towards a 𝝺-calculus for large-scale systems</description>
+    <url>https://tbd54566975.github.io/ftl/</url>
+
+    <scm>
+        <connection>scm:git:git://github.com/TBD54566975/ftl.git</connection>
+        <!-- This has to be HTTPS, not git://, for maven-release-plugin to do AUTH correctly -->
+        <developerConnection>scm:git:https://github.com/TBD54566975/ftl.git</developerConnection>
+        <url>https://github.com/TBD54566975/ftl</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <developers>
+        <developer>
+            <id>TBD54566975</id>
+            <name>Block, Inc.</name>
+            <email>releases@tbd.email</email>
+        </developer>
+    </developers>
+
+    <issueManagement>
+        <system>github</system>
+        <url>https://github.com/TBD54566975/ftl/issues</url>
+    </issueManagement>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 
     <modules>
         <module>common</module>
@@ -207,8 +238,47 @@
                     <artifactId>quarkus-extension-maven-plugin</artifactId>
                     <version>${quarkus.version}</version>
                 </plugin>
+                <plugin>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>2.8.2</version>
+                    <configuration>
+                        <deployAtEnd>true</deployAtEnd>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.simplify4u.plugins</groupId>
+                    <artifactId>sign-maven-plugin</artifactId>
+                    <version>1.1.0</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>sign</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <!-- handles the deployment of the project's artifacts to a remote repository -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+            </plugin>
+        </plugins>
     </build>
 
 
@@ -293,5 +363,74 @@
                 </plugins>
             </build>
         </profile>
+
+        <profile>
+            <!-- Profile for releasing artifacts to Maven Central -->
+            <id>release</id>
+            <build>
+                <plugins>
+                    <!-- produce signed artifacts -->
+                    <plugin>
+                        <groupId>org.simplify4u.plugins</groupId>
+                        <artifactId>sign-maven-plugin</artifactId>
+                    </plugin>
+                    <!-- generates a JAR file containing the source code of the project -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.jetbrains.dokka</groupId>
+                        <artifactId>dokka-maven-plugin</artifactId>
+                        <version>1.9.20</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>javadocJar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- used to deploy artifacts to Maven Central via OSSRH (OSS Repository Hosting).
+             It configures the nexus-staging-maven-plugin for automated deployment and release,
+             and sets up the distribution management for both snapshot and release repositories.
+             Activate this profile when deploying open-source projects to Maven Central. -->
+        <profile>
+            <!-- https://central.sonatype.org/publish/publish-maven/#deployment -->
+            <id>ossrh</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.13</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>ossrh-releases</serverId>
+                            <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+            <!-- specifies where the project artifacts should be distributed or deployed. -->
+            <!-- tells Maven where to deploy your project's artifacts when you run mvn deploy -->
+            <distributionManagement>
+                <snapshotRepository>
+                    <id>ossrh-snapshots</id>
+                    <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+                </snapshotRepository>
+                <!-- Sonatype's OSSRH - replicates to Maven Central within 30min of publish -->
+                <repository>
+                    <id>ossrh-releases</id>
+                    <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+                </repository>
+            </distributionManagement>
+        </profile>
     </profiles>
+
 </project>

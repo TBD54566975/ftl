@@ -114,7 +114,7 @@ jobs:
           docker tag ftl0/ftl-box:latest ftl0/ftl-box:"$GITHUB_SHA"
           docker tag ftl0/ftl-box:latest ftl0/ftl-box:"$version"
           docker push -a ftl0/ftl-box
-  create-release:
+  create-go-release:
     name: Release Go Binaries
     runs-on: ubuntu-latest
     steps:
@@ -136,10 +136,47 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           FTL_HOMEBREW_TOKEN: ${{ secrets.FTL_HOMEBREW_TOKEN }}
+  create-jvm-releases:
+    name: Release JVM Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+
+      - uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Set Version
+        working-directory: ./jvm-runtime/ftl-runtime
+        run: mvn versions:set -DnewVersion=${{ github.ref_name }}
+
+      - name: Build, Test, and Deploy to Maven Central
+        working-directory: ./jvm-runtime/ftl-runtime
+        run: |
+          # Maven deploy lifecycle will build, run tests, verify, sign, and deploy
+          mvn \
+            deploy \
+              -P ossrh,release \
+              --batch-mode \
+              --settings .maven_settings.xml
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SIGN_KEY_PASS: ${{ secrets.GPG_SECRET_PASSPHRASE }}
+          SIGN_KEY: ${{ secrets.GPG_SECRET_KEY }}
+
   hermit-release:
     name: Release Hermit
     runs-on: ubuntu-latest
-    needs: [create-release]
+    needs: [create-go-release]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
