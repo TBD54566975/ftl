@@ -557,10 +557,9 @@ const getActiveDeployments = `-- name: GetActiveDeployments :many
 SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language, COUNT(r.id) AS replicas
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
-  JOIN runners r ON d.id = r.deployment_id
+  LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0 AND r.state = 'assigned'
 GROUP BY d.id, m.name, m.language
-HAVING COUNT(r.id) > 0
 `
 
 type GetActiveDeploymentsRow struct {
