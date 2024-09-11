@@ -392,7 +392,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 		s.state.Store(state)
 	}
 
-	logger.Infof("Registering with Controller as %s for deployment %s", state, s.config.Deployment)
+	logger.Tracef("Registering with Controller as %s for deployment %s", state, s.config.Deployment)
 	err := send(&ftlv1.RegisterRunnerRequest{
 		Key:        s.key.String(),
 		Endpoint:   s.config.Advertise.String(),
