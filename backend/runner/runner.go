@@ -126,7 +126,6 @@ func Start(ctx context.Context, config Config) error {
 	return rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 		rpc.HTTP("/", svc),
-		rpc.HealthCheck(svc.healthCheck),
 	)
 }
 
