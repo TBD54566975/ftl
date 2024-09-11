@@ -71,17 +71,9 @@ WHERE a.id = @id;
 -- name: UpsertRunner :one
 -- Upsert a runner and return the deployment ID that it is assigned to, if any.
 WITH deployment_rel AS (
--- If the deployment key is null, then deployment_rel.id will be null,
--- otherwise we try to retrieve the deployments.id using the key. If
--- there is no corresponding deployment, then the deployment ID is -1
--- and the parent statement will fail due to a foreign key constraint.
-    SELECT CASE
-               WHEN sqlc.narg('deployment_key')::deployment_key IS NULL
-                   THEN NULL
-               ELSE COALESCE((SELECT id
-                              FROM deployments d
-                              WHERE d.key = sqlc.narg('deployment_key')::deployment_key
-                              LIMIT 1), -1) END AS id)
+    SELECT id FROM deployments d
+             WHERE d.key = sqlc.arg('deployment_key')::deployment_key
+             LIMIT 1)
 INSERT
 INTO runners (key, endpoint, state, labels, deployment_id, last_seen)
 VALUES ($1,
@@ -93,15 +85,13 @@ VALUES ($1,
 ON CONFLICT (key) DO UPDATE SET endpoint      = $2,
                                 state         = $3,
                                 labels        = $4,
-                                deployment_id = (SELECT id FROM deployment_rel),
                                 last_seen     = NOW() AT TIME ZONE 'utc'
 RETURNING deployment_id;
 
 -- name: KillStaleRunners :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead',
-        deployment_id = NULL
+        SET state = 'dead'
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
         RETURNING 1)
 SELECT COUNT(*)
@@ -110,8 +100,7 @@ FROM matches;
 -- name: DeregisterRunner :one
 WITH matches AS (
     UPDATE runners
-        SET state = 'dead',
-            deployment_id = NULL
+        SET state = 'dead'
         WHERE key = sqlc.arg('key')::runner_key
         RETURNING 1)
 SELECT COUNT(*)
@@ -124,11 +113,9 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.labels,
                            r.last_seen,
                            r.module_name,
-                           COALESCE(CASE
-                                        WHEN r.deployment_id IS NOT NULL
-                                            THEN d.key END, NULL) AS deployment_key
+                           d.key AS deployment_key
 FROM runners r
-         LEFT JOIN deployments d on d.id = r.deployment_id
+         INNER JOIN deployments d on d.id = r.deployment_id
 WHERE r.state <> 'dead'
 ORDER BY r.key;
 
@@ -166,13 +153,6 @@ FROM deployments d
 WHERE d.min_replicas > 0
 ORDER BY d.key;
 
--- name: GetIdleRunners :many
-SELECT *
-FROM runners
-WHERE labels @> sqlc.arg('labels')::jsonb
-  AND state = 'idle'
-LIMIT sqlc.arg('limit');
-
 -- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
 SET min_replicas = $2
@@ -187,38 +167,6 @@ WHERE m.name = $1
   AND min_replicas > 0
 LIMIT 1;
 
--- name: GetDeploymentsNeedingReconciliation :many
--- Get deployments that have a mismatch between the number of assigned and required replicas.
-SELECT d.key                 AS deployment_key,
-       m.name                 AS module_name,
-       m.language             AS language,
-       COUNT(r.id)            AS assigned_runners_count,
-       d.min_replicas::BIGINT AS required_runners_count
-FROM deployments d
-         LEFT JOIN runners r ON d.id = r.deployment_id AND r.state <> 'dead'
-         JOIN modules m ON d.module_id = m.id
-GROUP BY d.key, d.min_replicas, m.name, m.language
-HAVING COUNT(r.id) <> d.min_replicas;
-
-
--- name: ReserveRunner :one
--- Find an idle runner and reserve it for the given deployment.
-UPDATE runners
-SET state               = 'reserved',
-    reservation_timeout = sqlc.arg('reservation_timeout')::timestamptz,
-    -- If a deployment is not found, then the deployment ID is -1
-    -- and the update will fail due to a FK constraint.
-    deployment_id       = COALESCE((SELECT id
-                                    FROM deployments d
-                                    WHERE d.key = sqlc.arg('deployment_key')::deployment_key
-                                    LIMIT 1), -1)
-WHERE id = (SELECT id
-            FROM runners r
-            WHERE r.state = 'idle'
-              AND r.labels @> sqlc.arg('labels')::jsonb
-            LIMIT 1 FOR UPDATE SKIP LOCKED)
-RETURNING runners.*;
-
 -- name: GetRunnerState :one
 SELECT state
 FROM runners
@@ -231,11 +179,9 @@ SELECT DISTINCT ON (r.key) r.key                                   AS runner_key
                            r.labels,
                            r.last_seen,
                            r.module_name,
-                           COALESCE(CASE
-                                        WHEN r.deployment_id IS NOT NULL
-                                            THEN d.key END, NULL) AS deployment_key
+                           d.key AS deployment_key
 FROM runners r
-         LEFT JOIN deployments d on d.id = r.deployment_id OR r.deployment_id IS NULL
+         INNER JOIN deployments d on d.id = r.deployment_id
 WHERE r.key = sqlc.arg('key')::runner_key;
 
 -- name: GetRoutingTable :many
@@ -259,18 +205,6 @@ FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE state = 'assigned'
   AND d.key = sqlc.arg('key')::deployment_key;
-
--- name: ExpireRunnerReservations :one
-WITH rows AS (
-    UPDATE runners
-        SET state = 'idle',
-            deployment_id = NULL,
-            reservation_timeout = NULL
-        WHERE state = 'reserved'
-            AND reservation_timeout < (NOW() AT TIME ZONE 'utc')
-        RETURNING 1)
-SELECT COUNT(*)
-FROM rows;
 
 -- name: InsertTimelineLogEvent :exec
 INSERT INTO timeline (

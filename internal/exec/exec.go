@@ -42,6 +42,7 @@ func CommandWithEnv(ctx context.Context, level log.Level, dir string, env []stri
 	}
 	logger.Tracef("exec: cd %s && %s %s", shellquote.Join(dir), exe, shellquote.Join(args...))
 	cmd := exec.CommandContext(ctx, exe, args...)
+	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, env...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pgid:    pgid,
@@ -51,7 +52,6 @@ func CommandWithEnv(ctx context.Context, level log.Level, dir string, env []stri
 	output := logger.WriterAt(level)
 	cmd.Stdout = output
 	cmd.Stderr = output
-	cmd.Env = os.Environ()
 	return &Cmd{cmd, level}
 }
 

@@ -6,7 +6,6 @@ package sql
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
@@ -36,7 +35,6 @@ type Querier interface {
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
-	ExpireRunnerReservations(ctx context.Context) (int64, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
 	FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
@@ -55,14 +53,11 @@ type Querier interface {
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
-	// Get deployments that have a mismatch between the number of assigned and required replicas.
-	GetDeploymentsNeedingReconciliation(ctx context.Context) ([]GetDeploymentsNeedingReconciliationRow, error)
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, schema []byte, count int64) ([]GetDeploymentsWithArtefactsRow, error)
 	GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error)
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
 	GetFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (FsmInstance, error)
-	GetIdleRunners(ctx context.Context, labels json.RawMessage, limit int64) ([]Runner, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
@@ -99,8 +94,6 @@ type Querier interface {
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
 	PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (FsmNextEvent, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
-	// Find an idle runner and reserve it for the given deployment.
-	ReserveRunner(ctx context.Context, reservationTimeout time.Time, deploymentKey model.DeploymentKey, labels json.RawMessage) (Runner, error)
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error)
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
@@ -115,11 +108,7 @@ type Querier interface {
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
-	// If the deployment key is null, then deployment_rel.id will be null,
-	// otherwise we try to retrieve the deployments.id using the key. If
-	// there is no corresponding deployment, then the deployment ID is -1
-	// and the parent statement will fail due to a foreign key constraint.
-	UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (optional.Option[int64], error)
+	UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int64, error)
 	UpsertSubscription(ctx context.Context, arg UpsertSubscriptionParams) (UpsertSubscriptionRow, error)
 	UpsertTopic(ctx context.Context, arg UpsertTopicParams) error
 }

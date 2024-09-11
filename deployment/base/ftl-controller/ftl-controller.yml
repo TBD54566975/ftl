@@ -14,9 +14,11 @@ spec:
       labels:
         app: ftl-controller
     spec:
+      serviceAccountName: ftl-controller
       containers:
         - name: app
           image: ftl0/ftl-controller
+          imagePullPolicy: Always
           env:
             - name: MY_POD_IP
               valueFrom:

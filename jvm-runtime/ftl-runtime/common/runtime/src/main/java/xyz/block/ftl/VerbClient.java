@@ -5,8 +5,6 @@ package xyz.block.ftl;
  *
  * The sink source and empty interfaces allow for different call signatures.
  *
- * TODO: should these be top level
- *
  * @param <P> The verb parameter type
  * @param <R> The verb return type
  */

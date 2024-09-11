@@ -1,12 +1,11 @@
 package ftlv1
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/alecthomas/types/optional"
 
-	model "github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 func ArtefactToProto(artefact *model.Artefact) *DeploymentArtefact {
@@ -58,15 +57,4 @@ func (m *Metadata) Delete(key string) {
 		}
 	}
 	m.Values = out
-}
-
-func (r *RegisterRunnerRequest) DeploymentAsOptional() (optional.Option[model.DeploymentKey], error) {
-	if r.Deployment == nil {
-		return optional.None[model.DeploymentKey](), nil
-	}
-	key, err := model.ParseDeploymentKey(*r.Deployment)
-	if err != nil {
-		return optional.None[model.DeploymentKey](), fmt.Errorf("invalid deployment key: %w", err)
-	}
-	return optional.Some(key), nil
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
 	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
-	"github.com/TBD54566975/ftl/backend/controller/scaling"
+	"github.com/TBD54566975/ftl/backend/controller/scaling/k8sscaling"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	cfdal "github.com/TBD54566975/ftl/internal/configuration/dal"
@@ -45,10 +45,6 @@ func main() {
 	)
 	cli.ControllerConfig.SetDefaults()
 
-	if cli.ControllerConfig.KMSURI == nil {
-		kctx.Fatalf("KMSURI is required")
-	}
-
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.LogConfig))
 	err = observability.Init(ctx, false, "", "ftl-controller", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
@@ -78,6 +74,6 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	ctx = manager.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, scaling.NewK8sScaling(), conn)
+	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling, conn, false)
 	kctx.FatalIfErrorf(err)
 }

@@ -65,7 +65,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 
 	wg := errgroup.Group{}
 	wg.Go(func() error {
-		return controller.Start(ctx, config, runnerScaling, conn)
+		return controller.Start(ctx, config, runnerScaling, conn, false)
 	})
 
 	// Wait for the controller to come up.
