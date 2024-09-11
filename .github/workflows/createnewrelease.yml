@@ -1,6 +1,6 @@
 on:
   workflow_dispatch:
-name: Auto-version
+name: Manually Create New Release
 jobs:
   semver-tag:
     name: Conventional Commits Auto-version
