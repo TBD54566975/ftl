@@ -17,25 +17,18 @@ import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCreatedDetails.tsx'
 import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUpdatedDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
-import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
+import { useTimelineState } from '../../api/timeline/use-timeline-state.ts'
 
-type TimelineProps = {
-  timeSettings: TimeSettings,
-  filters: EventsQuery_Filter[],
-  setFilter: (filter: EventsQuery_Filter) => void,
-  clearFilter: (key: string) => void,
-}
-
-export const Timeline = ({ timeSettings, filters, setFilter, clearFilter }: TimelineProps) => {
+// export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings; filters: EventsQuery_Filter[] }) => {
+export const Timeline = () => {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
+  const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
 
-  let eventFilters = filters
-  if (timeSettings.newerThan || timeSettings.olderThan) {
-    eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
-  }
+  const [timelineState, setTimelineState] = useTimelineState();
+  const streamTimeline = timelineState.isTailing && !timelineState.isPaused
 
-  const streamTimeline = timeSettings.isTailing && !timeSettings.isPaused
-  const timeline = useTimeline(streamTimeline, eventFilters)
+  const timeline = useTimeline(streamTimeline, timelineState.getFilters())
 
   useEffect(() => {
     if (!isOpen) {
@@ -44,11 +37,10 @@ export const Timeline = ({ timeSettings, filters, setFilter, clearFilter }: Time
   }, [isOpen])
 
   const handlePanelClosed = () => {
-    // const newParams = new URLSearchParams(searchParams.toString())
-    // newParams.delete('id')
-    // setSearchParams(newParams)
-    // setSelectedEntry(null)
-    setFilter(
+    const newParams = new URLSearchParams(searchParams.toString())
+    newParams.delete('id')
+    setSearchParams(newParams)
+    setSelectedEntry(null)
   }
 
   const handleEntryClicked = (entry: Event) => {
@@ -74,7 +66,7 @@ export const Timeline = ({ timeSettings, filters, setFilter, clearFilter }: Time
         break
     }
     setSelectedEntry(entry)
-    // setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
+    setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
   }
 
   const deploymentKey = (event: Event) => {

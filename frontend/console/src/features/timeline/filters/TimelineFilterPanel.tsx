@@ -8,6 +8,7 @@ import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
 import { logLevelBgColor, logLevelColor, logLevelRingColor } from '../../logs/log.utils'
 import { FilterPanelSection } from './FilterPanelSection'
+import { useTimelineState } from '../../../api/timeline/use-timeline-state'
 
 interface EventFilter {
   label: string
@@ -44,9 +45,10 @@ export const TimelineFilterPanel = ({
   onFiltersChanged: (filters: EventsQuery_Filter[]) => void
 }) => {
   const modules = useModules()
+  const [timelineState, setTimelineState] = useTimelineState()
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(Object.keys(EVENT_TYPES))
-  const [selectedModules, setSelectedModules] = useState<string[]>([])
-  const [previousModules, setPreviousModules] = useState<string[]>([])
+  const [selectedModules, setSelectedModules] = useState<string[]>(timelineState.modules)
+  const [previousModules, setPreviousModules] = useState<string[]>(timelineState.modules)
   const [selectedLogLevel, setSelectedLogLevel] = useState<number>(1)
 
   useEffect(() => {
@@ -57,33 +59,28 @@ export const TimelineFilterPanel = ({
     const addedModules = newModules.filter((name) => !previousModules.includes(name))
 
     if (addedModules.length > 0) {
-      setSelectedModules((prevSelected) => [...prevSelected, ...addedModules])
+      // setSelectedModules((prevSelected) => [...prevSelected, ...addedModules])
+      // timelineState.modules = [...previousModules, ...addedModules]
+      // setTimelineState(timelineState)
     }
     setPreviousModules(newModules)
   }, [modules.data])
 
   useEffect(() => {
+    // const filter: EventsQuery_Filter[] = []
+    // if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
+    //   const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)
 
-    console.log("------------------------------------")
-    console.log("selectedEventTypes", selectedEventTypes)
-    console.log("selectedLogLevel", selectedLogLevel)
-    console.log("selectedModules", selectedModules)
+    //   filter.push(eventTypesFilter(selectedTypes))
+    // }
+    // if (selectedLogLevel !== LogLevel.TRACE) {
+    //   filter.push(logLevelFilter(selectedLogLevel))
+    // }
 
-    const filter: EventsQuery_Filter[] = []
-    if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
-      const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)
+    // filter.push(modulesFilter(selectedModules))
 
-      filter.push(eventTypesFilter(selectedTypes))
-    }
-    if (selectedLogLevel !== LogLevel.TRACE) {
-      filter.push(logLevelFilter(selectedLogLevel))
-    }
+    // onFiltersChanged(filter)
 
-    filter.push(modulesFilter(selectedModules))
-
-    console.log("filter", JSON.stringify(filter))
-
-    onFiltersChanged(filter)
   }, [selectedEventTypes, selectedLogLevel, selectedModules])
 
   const handleTypeChanged = (eventType: string, checked: boolean) => {
@@ -103,7 +100,9 @@ export const TimelineFilterPanel = ({
   }
 
   const handleLogLevelChanged = (logLevel: string) => {
-    setSelectedLogLevel(Number(logLevel))
+    // setSelectedLogLevel(Number(logLevel))
+    timelineState.logLevel = Number(logLevel) as LogLevel
+    setTimelineState(timelineState)
   }
 
   return (
@@ -139,7 +138,7 @@ export const TimelineFilterPanel = ({
                 <li key={key} onClick={() => handleLogLevelChanged(key)} className='relative flex gap-x-2 cursor-pointer'>
                   <div className='relative flex h-5 w-3 flex-none items-center justify-center'>
                     <div
-                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
+                      className={`${timelineState.logLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${timelineState.logLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
                         } rounded-full ring-1`}
                     />
                   </div>

@@ -1,7 +1,7 @@
 import { Timestamp } from "@bufbuild/protobuf";
 import { EventsQuery_DeploymentFilter, EventsQuery_EventTypeFilter, EventsQuery_Filter, EventsQuery_LogLevelFilter, EventsQuery_TimeFilter, EventType, LogLevel } from "../../protos/xyz/block/ftl/v1/console/console_pb";
-import { eventTypesFilter, logLevelFilter, modulesFilter, specificEventIdFilter } from "../../api/timeline";
-import { TIME_RANGES, TimeRange, TimeSettings } from "../../features/timeline/filters/TimelineTimeControls";
+import { eventTypesFilter, logLevelFilter, modulesFilter, specificEventIdFilter, timeFilter } from "../../api/timeline";
+import { TIME_RANGES, TimeRange } from "../../features/timeline/filters/TimelineTimeControls";
 
 enum UrlKeys {
   ID = 'id',
@@ -35,43 +35,49 @@ range
 // TODO: type TimeState = Range | Tail;
 
 // Hides the complexity of the URLSearchParams API and protobuf types.
-export class TimelineUrlState {
+export class TimelineState {
   isTailing = true;
   isPaused = false;
   timeRange: TimeRange = TIME_RANGES.tail;
-
-  filters: EventsQuery_Filter[] = [];
+  olderThan?: Timestamp;
+  newerThan?: Timestamp;
+  modules: string[] = [];
+  logLevel?: LogLevel;
+  eventTypes: EventType[] = [];
+  eventId?: bigint;
 
   constructor(params: URLSearchParams) {
+    // Quietly ignore invalid values from the user's URL...
     for (const [key, value] of params.entries()) {
       if (key === UrlKeys.ID) {
-        this.filters.push(specificEventIdFilter(BigInt(value)));
+        this.eventId = BigInt(value);
       } else if (key === UrlKeys.MODULES) {
-        this.filters.push(modulesFilter(value.split(',')));
+        this.modules = value.split(',');
       } else if (key === UrlKeys.LOG) {
         const enumValue = logValueToEnum(value)
         if (enumValue) {
-          this.filters.push(logLevelFilter(enumValue));
+          this.logLevel = enumValue;
         }
       } else if (key === UrlKeys.TYPES) {
         const types = value.split(',')
           .map((type) => eventTypeValueToEnum(type))
           .filter((type) => type !== undefined);
         if (types.length !== 0) {
-          this.filters.push(eventTypesFilter(types as EventType[]));
+          this.eventTypes = types
         }
       } else if (key === UrlKeys.PAUSED) {
-        this.time.isPaused = value === '1';
+        this.isPaused = value === '1';
       } else if (key === UrlKeys.TAIL) {
-        this.time.isTailing = value === '1';
+        this.isTailing = value === '1';
       } else if (key === UrlKeys.AFTER) {
-        this.time.olderThan = Timestamp.fromDate(new Date(value));
+        this.olderThan = Timestamp.fromDate(new Date(value));
       } else if (key === UrlKeys.BEFORE) {
-        this.time.newerThan = Timestamp.fromDate(new Date(value));
+        this.newerThan = Timestamp.fromDate(new Date(value));
       }
     }
 
-    this.timeRange = this.calculateTimeRange();
+    // TODO
+    // this.timeRange = this.calculateTimeRange();
 
     // If we're loading a specific event, we don't want to tail.
     //     setSelectedTimeRange(TIME_RANGES['5m'])
@@ -79,79 +85,81 @@ export class TimelineUrlState {
     //
   }
 
+  getFilters(): EventsQuery_Filter[] {
+    const filters: EventsQuery_Filter[] = [];
+    if (this.eventId) {
+      filters.push(specificEventIdFilter(this.eventId));
+    }
+    if (this.modules.length > 0) {
+      filters.push(modulesFilter(this.modules));
+    }
+    if (this.logLevel) {
+      filters.push(logLevelFilter(this.logLevel));
+    }
+    if (this.eventTypes.length > 0) {
+      filters.push(eventTypesFilter(this.eventTypes));
+    }
+    if (this.olderThan || this.newerThan) {
+      filters.push(timeFilter(this.olderThan, this.newerThan));
+    }
+    return filters;
+  }
+
   getSearchParams() {
     const params = new NicerURLSearchParams();
 
-    for (const filter of this.filters) {
-      const ff = filter.filter;
-      if (ff.value instanceof EventsQuery_LogLevelFilter) {
-        const logLevel = logEnumToValue(ff.value.logLevel);
-        if (logLevel) {
-          params.set('log', logLevel);
-        } else {
-          console.error('Unknown log level:', ff.value.logLevel);
-        }
-      } else if (ff.value instanceof EventsQuery_DeploymentFilter) {
-        const modules = ff.value.deployments.join(',');
-        params.set('modules', modules);
-      } else if (ff.value instanceof EventsQuery_EventTypeFilter) {
-        const eventTypes = ff.value.eventTypes
-          .map((type) => eventTypeEnumToValue(type))
-          .filter((type) => type !== undefined);
-        if (eventTypes.length !== 0) {
-          params.set('types', eventTypes.join(','));
-        } else {
-          console.error('No event types in event type filter');
-        }
-      } else if (ff.value instanceof EventsQuery_TimeFilter) {
-        const newerThan = ff.value.newerThan;
-        if (newerThan) {
-          params.set('before', newerThan.toDate().toISOString());
-        } else {
-          console.error('No newerThan in time filter');
-        }
-
-        const olderThan = ff.value.olderThan;
-        if (olderThan) {
-          params.set('after', olderThan.toDate().toISOString());
-        } else {
-          console.error('No olderThan in time filter');
-        }
+    if (this.eventId) {
+      params.set(UrlKeys.ID, this.eventId.toString());
+    }
+    if (this.modules.length > 0) {
+      params.set(UrlKeys.MODULES, this.modules.join(','));
+    }
+    if (this.logLevel) {
+      const logString = logEnumToValue(this.logLevel);
+      if (logString) {
+        params.set(UrlKeys.LOG, logString);
       }
     }
-
-    if (this.time.isPaused) {
-      params.set('paused', '1');
+    if (this.eventTypes.length > 0) {
+      const eventTypes = this.eventTypes
+        .map((type) => eventTypeEnumToValue(type))
+        .filter((type) => type !== undefined);
+      if (eventTypes.length !== 0) {
+        params.set(UrlKeys.TYPES, eventTypes.join(','));
+      }
     }
-    // tailing is on by default, so we only need to set it if it's off.
-    if (!this.time.isTailing) {
-      params.set('tail', '0');
+    if (this.olderThan) {
+      params.set(UrlKeys.AFTER, this.olderThan.toDate().toISOString());
     }
-    if (this.time.olderThan) {
-      params.set('after', this.time.olderThan.toDate().toISOString());
+    if (this.newerThan) {
+      params.set(UrlKeys.BEFORE, this.newerThan.toDate().toISOString());
     }
-    if (this.time.newerThan) {
-      params.set('before', this.time.newerThan.toDate().toISOString());
+    if (this.isPaused) {
+      params.set(UrlKeys.PAUSED, '1');
+    }
+    // // tailing is on by default, so we only need to set it if it's off.
+    if (!this.isTailing) {
+      params.set(UrlKeys.TAIL, '0');
     }
 
     return params;
   }
 
-  calculateTimeRange(): TimeRange {
-    // Since we don't have the originally stated time range, we can make a guess based on the time range given.
-    // If the user has modified the time range, we'll just use that as an injected "Custom (X minutes)" option in
-    // the dropdown.
-    if (this.time.olderThan && this.time.newerThan) {
-      const ms = this.time.newerThan.toDate().getTime() - this.time.olderThan.toDate().getTime();
+  // calculateTimeRange(): TimeRange {
+  //   // Since we don't have the originally stated time range, we can make a guess based on the time range given.
+  //   // If the user has modified the time range, we'll just use that as an injected "Custom (X minutes)" option in
+  //   // the dropdown.
+  //   if (this.time.olderThan && this.time.newerThan) {
+  //     const ms = this.time.newerThan.toDate().getTime() - this.time.olderThan.toDate().getTime();
 
-      return {
-        label: 'Custom',
-        value: ms,
-      };
-    }
+  //     return {
+  //       label: 'Custom',
+  //       value: ms,
+  //     };
+  //   }
 
-    return TIME_RANGES.tail;
-  }
+  //   return TIME_RANGES.tail;
+  // }
 }
 
 function logValueToEnum(value: string): LogLevel | undefined {

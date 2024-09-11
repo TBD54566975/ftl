@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { NicerURLSearchParams, TimelineUrlState } from "./timeline-url-state";
+import { NicerURLSearchParams, TimelineState } from "./timeline-state";
 //
 const testCases = [
   {
@@ -50,8 +50,8 @@ const testCases = [
 describe("timeline url state", () => {
   testCases.forEach(({ description, params, expected }) => {
     test(description, () => {
-      const timelineUrlState = new TimelineUrlState(params);
-      expect(timelineUrlState.getSearchParams().toString()).toEqual(expected);
+      const timelineState = new TimelineState(params);
+      expect(timelineState.getSearchParams().toString()).toEqual(expected);
     });
   });
 });
