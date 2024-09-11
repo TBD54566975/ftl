@@ -20,7 +20,7 @@ export const useTimeline = (isStreaming: boolean, filters: EventsQuery_Filter[],
 
   const fetchTimeline = async ({ signal }: { signal: AbortSignal }) => {
     try {
-      console.debug('fetching timeline')
+      console.debug('fetching timeline filters:', JSON.stringify(filters))
       const response = await client.getEvents({ filters, limit, order }, { signal })
       return response.events
     } catch (error) {
@@ -35,8 +35,7 @@ export const useTimeline = (isStreaming: boolean, filters: EventsQuery_Filter[],
 
   const streamTimeline = async ({ signal }: { signal: AbortSignal }) => {
     try {
-      console.debug('streaming timeline')
-      console.debug('filters:', filters)
+      console.debug('streaming timeline filters:', JSON.stringify(filters))
       for await (const response of client.streamEvents({ updateInterval: { seconds: BigInt(1) }, query: { limit, filters, order } }, { signal })) {
         if (response.events) {
           const prev = queryClient.getQueryData<Event[]>(queryKey) ?? []
@@ -54,6 +53,8 @@ export const useTimeline = (isStreaming: boolean, filters: EventsQuery_Filter[],
       }
     }
   }
+
+  // console.log('useTimeline queryKey', JSON.stringify(queryKey))
 
   return useQuery({
     queryKey: queryKey,

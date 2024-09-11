@@ -8,6 +8,7 @@ import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
 import { logLevelBgColor, logLevelColor, logLevelRingColor } from '../../logs/log.utils'
 import { FilterPanelSection } from './FilterPanelSection'
+import { TimelineState } from '../../../api/timeline/timeline-state'
 
 interface EventFilter {
   label: string
@@ -30,6 +31,21 @@ const EVENT_TYPES: Record<string, EventFilter> = {
   },
 }
 
+function eventTypeToKey(type: EventType): string {
+  switch (type) {
+    case EventType.CALL:
+      return 'call'
+    case EventType.LOG:
+      return 'log'
+    case EventType.DEPLOYMENT_CREATED:
+      return 'deploymentCreated'
+    case EventType.DEPLOYMENT_UPDATED:
+      return 'deploymentUpdated'
+    default:
+      return 'Unknown'
+  }
+}
+
 const LOG_LEVELS: Record<number, string> = {
   1: 'Trace',
   5: 'Debug',
@@ -40,14 +56,16 @@ const LOG_LEVELS: Record<number, string> = {
 
 export const TimelineFilterPanel = ({
   onFiltersChanged,
+  timelineState,
 }: {
-  onFiltersChanged: (filters: EventsQuery_Filter[]) => void
+  onFiltersChanged: (filters: EventsQuery_Filter[]) => void,
+  timelineState: TimelineState,
 }) => {
   const modules = useModules()
-  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(Object.keys(EVENT_TYPES))
-  const [selectedModules, setSelectedModules] = useState<string[]>([])
-  const [previousModules, setPreviousModules] = useState<string[]>([])
-  const [selectedLogLevel, setSelectedLogLevel] = useState<number>(1)
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(timelineState.eventTypes.map(eventTypeToKey))
+  const [selectedModules, setSelectedModules] = useState<string[]>(timelineState.modules)
+  const [previousModules, setPreviousModules] = useState<string[]>(timelineState.modules)
+  const [selectedLogLevel, setSelectedLogLevel] = useState<number>(timelineState.logLevel)
 
   useEffect(() => {
     if (!modules.isSuccess || modules.data.modules.length === 0) {
@@ -65,6 +83,7 @@ export const TimelineFilterPanel = ({
   useEffect(() => {
     const filter: EventsQuery_Filter[] = []
     if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
+      console.log('selectedEventTypes', JSON.stringify(selectedEventTypes))
       const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)
 
       filter.push(eventTypesFilter(selectedTypes))
@@ -131,9 +150,8 @@ export const TimelineFilterPanel = ({
                 <li key={key} onClick={() => handleLogLevelChanged(key)} className='relative flex gap-x-2 cursor-pointer'>
                   <div className='relative flex h-5 w-3 flex-none items-center justify-center'>
                     <div
-                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${
-                        selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
-                      } rounded-full ring-1`}
+                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
+                        } rounded-full ring-1`}
                     />
                   </div>
                   <p className='flex-auto text-sm leading-5 text-gray-500'>

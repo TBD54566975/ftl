@@ -4,7 +4,7 @@ import { Backward02Icon, Forward02Icon, PauseIcon, PlayIcon, Tick02Icon, UnfoldL
 import { useEffect, useState } from 'react'
 import { bgColor, borderColor, classNames, formatTimestampShort, formatTimestampTime, panelColor, textColor } from '../../../utils'
 
-interface TimeRange {
+export interface TimeRange {
   label: string
   value: number
 }

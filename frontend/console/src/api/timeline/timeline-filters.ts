@@ -81,6 +81,10 @@ export const timeFilter = (olderThan: Timestamp | undefined, newerThan: Timestam
   return filter
 }
 
+export const specificEventIdFilter = (id: bigint): EventsQuery_Filter => {
+  return eventIdFilter({ lowerThan: id, higherThan: id })
+}
+
 export const eventIdFilter = ({
   lowerThan,
   higherThan,

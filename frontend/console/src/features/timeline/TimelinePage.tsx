@@ -7,28 +7,44 @@ import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { Timeline } from './Timeline'
 import { TimelineFilterPanel } from './filters/TimelineFilterPanel'
 import { TIME_RANGES, type TimeSettings, TimelineTimeControls } from './filters/TimelineTimeControls'
+import { newTimelineStateFromFilters, TimelineState } from '../../api/timeline/timeline-state'
 
 export const TimelinePage = () => {
-  const [searchParams] = useSearchParams()
-  const [timeSettings, setTimeSettings] = useState<TimeSettings>({ isTailing: true, isPaused: false })
-  const [filters, setFilters] = useState<EventsQuery_Filter[]>([])
-  const [selectedTimeRange, setSelectedTimeRange] = useState(TIME_RANGES.tail)
-  const [isTimelinePaused, setIsTimelinePaused] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const timelineState = new TimelineState(searchParams)
+  console.log('--- timelinePage: timelineState', JSON.stringify(timelineState))
+  const [timeSettings, setTimeSettings] = useState<TimeSettings>({ isTailing: timelineState.isTailing, isPaused: timelineState.isPaused })
+  const [filters, setFilters] = useState<EventsQuery_Filter[]>(timelineState.getFilters())
+  const [selectedTimeRange, setSelectedTimeRange] = useState(TIME_RANGES.tail) // TODO: timelineState.getTimeRange()
+  const [isTimelinePaused, setIsTimelinePaused] = useState(timelineState.isPaused)
 
-  const initialEventId = searchParams.get('id')
   useEffect(() => {
-    if (initialEventId) {
+    console.warn('TimelinePage: searchParams changed', searchParams.toString())
+  }, [searchParams])
+
+  useEffect(() => {
+    if (timelineState.eventId) {
       // if we're loading a specific event, we don't want to tail.
       setSelectedTimeRange(TIME_RANGES['5m'])
       setIsTimelinePaused(true)
     }
   }, [])
 
+  useEffect(() => {
+    console.log('TimelinePage: filters, timeSettings, isTimelinePaused changed', JSON.stringify(filters), JSON.stringify(timeSettings), isTimelinePaused)
+    const timelineState = new TimelineState(searchParams)
+    timelineState.updateFromTimeSettings(timeSettings)
+    timelineState.updateFromFilters(filters)
+    timelineState.isPaused = isTimelinePaused
+    setSearchParams(timelineState.getSearchParams())
+  }, [filters, timeSettings, isTimelinePaused])
+
   const handleTimeSettingsChanged = (settings: TimeSettings) => {
     setTimeSettings(settings)
   }
 
   const handleFiltersChanged = (filters: EventsQuery_Filter[]) => {
+    console.log('got new filters', JSON.stringify(filters))
     setFilters(filters)
   }
 
@@ -40,7 +56,7 @@ export const TimelinePage = () => {
         </Page.Header>
         <Page.Body className='flex'>
           <div className='sticky top-0 flex-none overflow-y-auto'>
-            <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
+            <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} timelineState={timelineState} />
           </div>
           <div className='flex-grow overflow-y-scroll'>
             <Timeline timeSettings={timeSettings} filters={filters} />

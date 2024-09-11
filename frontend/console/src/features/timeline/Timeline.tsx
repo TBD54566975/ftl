@@ -42,7 +42,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
   const handlePanelClosed = () => {
     const newParams = new URLSearchParams(searchParams.toString())
     newParams.delete('id')
-    setSearchParams(newParams)
+    //setSearchParams(newParams)
     setSelectedEntry(null)
   }
 
@@ -69,7 +69,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
         break
     }
     setSelectedEntry(entry)
-    setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
+    //setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
   }
 
   const deploymentKey = (event: Event) => {
@@ -113,9 +113,8 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
             {entries.map((entry) => (
               <tr
                 key={entry.id.toString()}
-                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${
-                  selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
-                } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
+                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
+                  } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
                 onClick={() => handleEntryClicked(entry)}
               >
                 <td className='w-8 flex-none flex items-center justify-center'>
