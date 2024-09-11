@@ -95,9 +95,6 @@ func (r *DeploymentProvisioner) HandleSchemaChange(ctx context.Context, msg *ftl
 	return err
 }
 func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
-	if !msg.More {
-		defer r.deleteMissingDeployments(ctx)
-	}
 	if msg.DeploymentKey == "" {
 		// Builtins don't have deployments
 		return nil
@@ -130,13 +127,8 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 		}
 	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
 		delete(r.KnownModules, msg.ModuleName)
-		if deploymentExists {
-			logger.Infof("deleting deployment %s", msg.ModuleName)
-			err := deploymentClient.Delete(ctx, msg.ModuleName, v1.DeleteOptions{})
-			if err != nil {
-				return fmt.Errorf("failed to delete deployment %s: %w", msg.ModuleName, err)
-			}
-		}
+		logger.Infof("removing deployment %s", msg.ModuleName)
+		r.deleteMissingDeployments(ctx)
 	}
 	return nil
 }
