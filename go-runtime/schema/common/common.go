@@ -67,6 +67,19 @@ func NewDeclExtractor[T schema.Decl, N ast.Node](name string, extractFunc Extrac
 	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractDeclsFunc[T, N](extractFunc))
 }
 
+// NewResourceDeclExtractor creates a new schema declaration extractor to extract resources, e.g. Database, Subscription,
+// Topics.
+//
+// Resources are extracted on the basis of their underlying type, e.g. ftl.PostgresDatabaseHandle, rather than
+// an FTL directive.
+func NewResourceDeclExtractor[T schema.Decl](name string, extractFunc ExtractResourceDeclFunc[T], typePaths ...string) *analysis.Analyzer {
+	type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
+	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractResourceDeclsFunc[T](extractFunc, typePaths...))
+}
+
+// ExtractResourceDeclFunc extracts a schema declaration from the given node, providing the path to the underlying resource type.
+type ExtractResourceDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.TypeSpec, typePath string) optional.Option[T]
+
 // ExtractCallDeclFunc extracts a schema declaration from the given node.
 type ExtractCallDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.GenDecl, callExpr *ast.CallExpr, callPath string) optional.Option[T]
 
@@ -119,6 +132,48 @@ func runExtractDeclsFunc[T schema.Decl, N ast.Node](extractFunc ExtractDeclFunc[
 				MarkSchemaDecl(pass, obj, decl)
 			} else {
 				MarkFailedExtraction(pass, obj)
+			}
+		})
+		return NewExtractorResult(pass), nil
+	}
+}
+
+func runExtractResourceDeclsFunc[T schema.Decl](extractFunc ExtractResourceDeclFunc[T], typePaths ...string) func(pass *analysis.Pass) (interface{}, error) {
+	return func(pass *analysis.Pass) (interface{}, error) {
+		nodeFilter := []ast.Node{
+			(*ast.TypeSpec)(nil),
+		}
+		in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
+		in.Preorder(nodeFilter, func(n ast.Node) {
+			node := n.(*ast.TypeSpec) //nolint:forcetypeassert
+			obj, ok := GetObjectForNode(pass.TypesInfo, n).Get()
+			if !ok {
+				return
+			}
+			if obj != nil && !IsPathInModule(pass.Pkg, obj.Pkg().Path()) {
+				return
+			}
+
+			typeObj, ok := GetObjectForNode(pass.TypesInfo, node.Type).Get()
+			if !ok {
+				return
+			}
+			if typeObj.Pkg() == nil {
+				return
+			}
+			typePath := typeObj.Pkg().Path() + "." + typeObj.Name()
+			var matchesType bool
+			for _, path := range typePaths {
+				if typePath == path {
+					matchesType = true
+				}
+			}
+			if !matchesType {
+				return
+			}
+			decl := extractFunc(pass, obj, node, typePath)
+			if d, ok := decl.Get(); ok {
+				MarkSchemaDecl(pass, obj, d)
 			}
 		})
 		return NewExtractorResult(pass), nil

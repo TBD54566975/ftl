@@ -10,6 +10,14 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
+//type TestdbClient struct {
+//	*sql.DB
+//}
+//
+//type DbHandle = *sql.DB
+//
+//type TestDb = DbHandle
+
 var defaultName = ftl.Config[string]("default")
 
 // An echo request.
@@ -24,8 +32,8 @@ type EchoResponse struct {
 // Echo returns a greeting with the current time.
 //
 //ftl:verb export
-func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
-	tresp, err := ftl.Call(ctx, time.Time, time.TimeRequest{})
+func Echo(ctx context.Context, req EchoRequest, tc time.TimeClient) (EchoResponse, error) {
+	tresp, err := tc(ctx, time.TimeRequest{})
 	if err != nil {
 		return EchoResponse{}, err
 	}

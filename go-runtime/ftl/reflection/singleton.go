@@ -44,6 +44,14 @@ func GetDiscriminatorByVariant(variant reflect.Type) optional.Option[reflect.Typ
 	return singletonTypeRegistry.getDiscriminatorByVariant(variant)
 }
 
+func GetDatabase(ref Ref) ReflectedDatabaseHandle {
+	return singletonTypeRegistry.databases[ref]
+}
+
+func CallVerb(ref Ref) VerbExec {
+	return singletonTypeRegistry.verbCalls[ref].Exec
+}
+
 // IsSumTypeDiscriminator returns true if the given type is a sum type discriminator.
 func IsSumTypeDiscriminator(discriminator reflect.Type) bool {
 	return singletonTypeRegistry.isSumTypeDiscriminator(discriminator)

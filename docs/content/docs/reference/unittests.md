@@ -95,8 +95,15 @@ ctx := ftltest.Context(
 ```
 
 ### Calls
-By default, `ftl.Call(...)` will fail.
+Use `ftltest.Call(...)` (or `ftltest.CallSource(...)`, `ftltest.CallSink(...)`, `ftltest.CallEmpty(...)`) to invoke your 
+verb. These test helpers accept the verb function itself and the request (if applicable) as parameters, any resources 
+(e.g. verb clients) included in your verb signature need not be provided. At runtime, FTL automatically provides these 
+resources to your verb, and using `ftltest.Call(...)` rather than direct invocations simulates this behavior.
 
+```go
+// Call a verb
+resp, err := ftltest.Call(ctx, ExampleVerb, Request{Param: "Test"})
+```
 You can inject fakes for verbs:
 ```go
 ctx := ftltest.Context(

@@ -10,7 +10,7 @@ import (
 	{{.}}
 {{- end}}
 )
-{{- if or .SumTypes .ExternalTypes }}
+{{- if or .SumTypes .ExternalTypes $verbs }}
 
 func init() {
 	reflection.Register(
@@ -24,6 +24,16 @@ func init() {
 {{- range .ExternalTypes}}
 		reflection.ExternalType(*new({{.TypeName}})),
 {{- end}}
+{{- range $verbs}}
+		reflection.ProvideResourcesForVerb(
+            {{.TypeName}},
+            {{- range .Resources}}
+                {{- with getVerbClient . }}
+            server.VerbClient[{{.TypeName}}, {{.Request.TypeName}}, {{.Response.TypeName}}](),
+                {{- end }}
+			{{- end}}
+		),
+{{- end}}
 	)
 }
 {{- end}}
@@ -31,15 +41,7 @@ func init() {
 func main() {
 	verbConstructor := server.NewUserVerbServer("{{.ProjectName}}", "{{$name}}",
 {{- range $verbs }}
-	{{- if and .HasRequest .HasResponse}}
-		server.HandleCall({{.TypeName}}),
-	{{- else if .HasRequest}}
-		server.HandleSink({{.TypeName}}),
-	{{- else if .HasResponse}}
-		server.HandleSource({{.TypeName}}),
-	{{- else}}
-		server.HandleEmpty({{.TypeName}}),
-	{{- end}}
+		server.HandleCall[{{.Request.TypeName}}, {{.Response.TypeName}}]({{.TypeName}}),
 {{- end}}
 	)
 	plugin.Start(context.Background(), "{{$name}}", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)

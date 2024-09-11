@@ -4,7 +4,6 @@ import (
 	"context"
 	"ftl/builtin"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 )
 
@@ -61,14 +60,8 @@ func Three(ctx context.Context, req Payload[string]) (Payload[string], error) {
 }
 
 //ftl:verb export
-func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
-	return ftl.Call(ctx, Two, req)
-}
-
-//ftl:verb export
-func CallsTwoAndThree(ctx context.Context, req Payload[string]) (Payload[string], error) {
-	err := transitiveVerbCall(ctx, req)
-	return Payload[string]{}, err
+func CallsTwo(ctx context.Context, req Payload[string], tc TwoClient) (Payload[string], error) {
+	return tc(ctx, req)
 }
 
 //ftl:verb export
@@ -101,20 +94,6 @@ type TransitiveAliasType lib.NonFTLType
 type TransitiveAliasAlias = lib.NonFTLType
 
 type TransitiveAlias lib.NonFTLType
-
-func transitiveVerbCall(ctx context.Context, req Payload[string]) error {
-	_, err := ftl.Call(ctx, Two, req)
-	if err != nil {
-		return err
-	}
-	err = superTransitiveVerbCall(ctx, req)
-	return err
-}
-
-func superTransitiveVerbCall(ctx context.Context, req Payload[string]) error {
-	_, err := ftl.Call(ctx, Three, req)
-	return err
-}
 
 //ftl:verb export
 func CatchArray(ctx context.Context, req builtin.CatchRequest[[]TwoEnum]) error {

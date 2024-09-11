@@ -72,6 +72,9 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 	for obj, fact := range common.GetAllFactsOfType[*common.MaybeTypeEnumVariant](pass) {
 		nativeNames[fact.Variant] = common.GetNativeName(obj)
 	}
+	for obj, fact := range common.GetAllFactsOfType[*common.IncludeNativeName](pass) {
+		nativeNames[fact.Node] = common.GetNativeName(obj)
+	}
 	fnCalls, verbCalls := getCalls(pass)
 	return Result{
 		ModuleName:     moduleName,

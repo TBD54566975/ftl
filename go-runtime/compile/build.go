@@ -77,6 +77,24 @@ func (c mainModuleContext) generateMainImports() []string {
 
 	for _, v := range c.Verbs {
 		imports.Add(v.importStatement())
+		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
+		if v.Request.TypeName == "ftl.Unit" || v.Response.TypeName == "ftl.Unit" {
+			imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl"`)
+		}
+		for _, r := range v.Resources {
+			if c, ok := r.(verbClient); ok {
+				imports.Add(c.importStatement())
+				if c.Request.TypeName == "ftl.Unit" || c.Response.TypeName == "ftl.Unit" {
+					imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl"`)
+				}
+				if im, ok := c.Request.ImportPath.Get(); ok {
+					imports.Add(im)
+				}
+				if im, ok := c.Response.ImportPath.Get(); ok {
+					imports.Add(im)
+				}
+			}
+		}
 	}
 	for _, st := range c.MainCtx.SumTypes {
 		imports.Add(st.importStatement())
@@ -99,6 +117,9 @@ func (c mainModuleContext) generateTypesImports() []string {
 	if len(c.TypesCtx.SumTypes) > 0 || len(c.TypesCtx.ExternalTypes) > 0 {
 		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
 	}
+	if len(c.Verbs) > 0 {
+		imports.Add(`"context"`)
+	}
 	for _, st := range c.TypesCtx.SumTypes {
 		// if import path is more than 2 dirs deep, it's a subpackage
 		if len(strings.Split(st.importPath, "/")) > 2 {
@@ -117,6 +138,28 @@ func (c mainModuleContext) generateTypesImports() []string {
 	for _, et := range c.TypesCtx.ExternalTypes {
 		imports.Add(et.importStatement())
 	}
+	for _, v := range c.Verbs {
+		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
+		for _, r := range v.Resources {
+			if c, ok := r.(verbClient); ok {
+				if len(strings.Split(c.importPath, "/")) > 2 {
+					imports.Add(c.importStatement())
+				}
+
+				imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
+				if c.Request.TypeName == "ftl.Unit" || c.Response.TypeName == "ftl.Unit" {
+					imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl"`)
+				}
+				if im, ok := c.Request.ImportPath.Get(); ok {
+					imports.Add(im)
+				}
+				if im, ok := c.Response.ImportPath.Get(); ok {
+					imports.Add(im)
+				}
+			}
+		}
+	}
+
 	return formatGoImports(imports.ToSlice())
 }
 
@@ -160,12 +203,16 @@ func (n nativeType) TypeName() string {
 }
 
 type goVerb struct {
-	HasRequest   bool
-	HasResponse  bool
-	RequestName  string
-	ResponseName string
+	Request   goRequestResponse
+	Response  goRequestResponse
+	Resources []verbResource
 
 	nativeType
+}
+
+type goRequestResponse struct {
+	TypeName   string
+	ImportPath optional.Option[string]
 }
 
 func (g goVerb) getNativeType() nativeType { return g.nativeType }
@@ -192,6 +239,16 @@ type goSumTypeVariant struct {
 	Type       string
 	SchemaType schema.Type
 }
+
+type verbResource interface {
+	resource()
+}
+
+type verbClient struct {
+	goVerb
+}
+
+func (v verbClient) resource() {}
 
 type ModifyFilesTransaction interface {
 	Begin() error
@@ -517,6 +574,7 @@ func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName s
 		},
 	}
 
+	visited := sets.NewSet[string]()
 	err := schema.Visit(b.mainModule, func(node schema.Node, next func() error) error {
 		maybeGoType, isLocal, err := b.getGoType(b.mainModule.Name, node)
 		if err != nil {
@@ -526,14 +584,10 @@ func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName s
 		if !ok {
 			return next()
 		}
-		nt := gotype.getNativeType()
-		b.imports = addImports(b.imports, nt)
-		// update with the resolved directory name, if necessary
-		if dirName, ok := b.imports[nt.importPath]; ok {
-			if existingDirName, ok := nt.directoryName.Get(); !ok || existingDirName != dirName {
-				gotype.setDirectoryName(dirName)
-			}
+		if visited.Contains(gotype.getNativeType().TypeName()) {
+			return next()
 		}
+		visited.Add(gotype.getNativeType().TypeName())
 
 		switch n := gotype.(type) {
 		case goVerb:
@@ -575,8 +629,7 @@ func (b *mainModuleContextBuilder) getGoType(moduleName string, node schema.Node
 		if !ok {
 			return optional.None[goType](), b.visitingMainModule(moduleName), nil
 		}
-		gt, local, err := b.getGoType(n.Module, resolved)
-		return gt, local, err
+		return b.getGoType(n.Module, resolved)
 
 	case *schema.Verb:
 		if !b.visitingMainModule(moduleName) {
@@ -634,7 +687,7 @@ func (b *mainModuleContextBuilder) processSumType(moduleName string, enum *schem
 		}, nil
 	}
 
-	nt, err := nativeTypeFromQualifiedName(b.nativeNames[enum])
+	nt, err := b.getNativeType(b.nativeNames[enum])
 	if err != nil {
 		return goSumType{}, err
 	}
@@ -671,25 +724,80 @@ func (b *mainModuleContextBuilder) processExternalTypeAlias(alias *schema.TypeAl
 }
 
 func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error) {
+	var resources []verbResource
+	for _, m := range verb.Metadata {
+		switch md := m.(type) {
+		case *schema.MetadataCalls:
+			for _, call := range md.Calls {
+				resolved, ok := b.sch.Resolve(call).Get()
+				if !ok {
+					return goVerb{}, fmt.Errorf("failed to resolve %s client, used by %s.%s", call,
+						b.mainModule.Name, verb.Name)
+				}
+				callee, ok := resolved.(*schema.Verb)
+				if !ok {
+					return goVerb{}, fmt.Errorf("%s.%s uses %s client, but %s is not a verb",
+						b.mainModule.Name, verb.Name, call, call)
+				}
+				calleeNativeName, ok := b.nativeNames[call]
+				if !ok {
+					return goVerb{}, fmt.Errorf("missing native name for verb client %s", call)
+				}
+				calleeverb, err := b.getGoVerb(calleeNativeName, callee)
+				if err != nil {
+					return goVerb{}, err
+				}
+				resources = append(resources, verbClient{
+					calleeverb,
+				})
+			}
+		default:
+			// TODO: implement other resources
+		}
+	}
+
 	nativeName, ok := b.nativeNames[verb]
 	if !ok {
 		return goVerb{}, fmt.Errorf("missing native name for verb %s", verb.Name)
 	}
+	return b.getGoVerb(nativeName, verb, resources...)
+}
 
-	nt, err := nativeTypeFromQualifiedName(nativeName)
+func (b *mainModuleContextBuilder) getGoVerb(nativeName string, verb *schema.Verb, resources ...verbResource) (goVerb, error) {
+	nt, err := b.getNativeType(nativeName)
 	if err != nil {
 		return goVerb{}, err
 	}
-	goverb := goVerb{
+	return goVerb{
 		nativeType: nt,
+		Request:    b.getGoRequestResponse(verb.Response),
+		Response:   b.getGoRequestResponse(verb.Request),
+		Resources:  resources,
+	}, nil
+}
+
+func (b *mainModuleContextBuilder) getGoRequestResponse(reqResp schema.Type) goRequestResponse {
+	r := goRequestResponse{
+		TypeName: genType(b.mainModule, reqResp),
 	}
-	if _, ok := verb.Request.(*schema.Unit); !ok {
-		goverb.HasRequest = true
+	if ref, ok := reqResp.(*schema.Ref); ok {
+		r.TypeName = ref.ToRefKey().String()
+		r.ImportPath = optional.Some(strconv.Quote("ftl/" + ref.Module))
 	}
-	if _, ok := verb.Response.(*schema.Unit); !ok {
-		goverb.HasResponse = true
+	return r
+}
+
+func (b *mainModuleContextBuilder) getNativeType(qualifiedName string) (nativeType, error) {
+	nt, err := nativeTypeFromQualifiedName(qualifiedName)
+	if err != nil {
+		return nativeType{}, err
 	}
-	return goverb, nil
+	// we already have a directory name for this import path
+	if existingDirName, ok := b.imports[nt.importPath]; ok && existingDirName != nt.pkg {
+		nt.directoryName = optional.Some(existingDirName)
+	}
+	b.imports = addImports(b.imports, nt)
+	return nt, nil
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{
@@ -781,6 +889,12 @@ var scaffoldFuncs = scaffolder.FuncMap{
 			return fmt.Sprintf("%s.%s", nt.pkg, nt.Name)
 		}
 		return genType(m, t.Type)
+	},
+	"getVerbClient": func(resource verbResource) *verbClient {
+		if c, ok := resource.(verbClient); ok {
+			return &c
+		}
+		return nil
 	},
 }
 
@@ -1065,6 +1179,10 @@ func addImports(existingImports map[string]string, newTypes ...nativeType) map[s
 		possibleImportAliases[alias]++
 	}
 	for _, nt := range newTypes {
+		if _, ok := imports[nt.importPath]; ok {
+			continue
+		}
+
 		importPath := nt.importPath
 		dirName := nt.directoryName
 		pathComponents := strings.Split(importPath, "/")

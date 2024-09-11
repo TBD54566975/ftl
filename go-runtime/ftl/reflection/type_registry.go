@@ -1,8 +1,10 @@
 package reflection
 
 import (
+	"database/sql"
 	"reflect"
 
+	"github.com/alecthomas/types/once"
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -17,6 +19,8 @@ type TypeRegistry struct {
 	variantsToDiscriminators map[reflect.Type]reflect.Type
 	fsm                      map[string]ReflectedFSM
 	externalTypes            map[reflect.Type]struct{}
+	verbCalls                map[Ref]verbCall
+	databases                map[Ref]ReflectedDatabaseHandle
 }
 
 type sumTypeVariant struct {
@@ -50,6 +54,18 @@ type ReflectedFSM struct {
 	Schema      *schema.FSM
 }
 
+type DBType int
+
+const (
+	DBTypePostgres DBType = iota
+)
+
+type ReflectedDatabaseHandle struct {
+	Name   string
+	DBType DBType
+	DB     *once.Handle[*sql.DB]
+}
+
 // FSM adds a finite state machine to the type registry.
 func FSM(name string, transitions ...Transition) Registree {
 	return func(t *TypeRegistry) { t.registerFSM(name, transitions) }
@@ -63,6 +79,16 @@ func ExternalType(goType any) Registree {
 	}
 }
 
+func Database(module string, name string, init func(ref Ref) ReflectedDatabaseHandle) Registree {
+	return func(t *TypeRegistry) {
+		ref := Ref{
+			Module: module,
+			Name:   name,
+		}
+		t.databases[ref] = init(ref)
+	}
+}
+
 // newTypeRegistry creates a new [TypeRegistry] for instantiating types by their qualified
 // name at runtime.
 func newTypeRegistry(options ...Registree) *TypeRegistry {
@@ -71,6 +97,8 @@ func newTypeRegistry(options ...Registree) *TypeRegistry {
 		variantsToDiscriminators: map[reflect.Type]reflect.Type{},
 		fsm:                      map[string]ReflectedFSM{},
 		externalTypes:            map[reflect.Type]struct{}{},
+		verbCalls:                map[Ref]verbCall{},
+		databases:                map[Ref]ReflectedDatabaseHandle{},
 	}
 	for _, o := range options {
 		o(t)

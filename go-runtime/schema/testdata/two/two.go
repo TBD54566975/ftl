@@ -10,6 +10,13 @@ import (
 	"ftl/builtin"
 )
 
+//type BlahDb = ftl.PostgresDatabaseHandle
+//
+////ftl:verb export
+//func BlahBlah(ctx context.Context, req Payload[string], tc TwoClient, db BlahDb) (Payload[string], error) {
+//	return Payload[string]{}, nil
+//}
+
 //ftl:enum export
 type TwoEnum string
 
@@ -63,14 +70,8 @@ func Three(ctx context.Context, req Payload[string]) (Payload[string], error) {
 }
 
 //ftl:verb export
-func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
-	return ftl.Call(ctx, Two, req)
-}
-
-//ftl:verb export
-func CallsTwoAndThree(ctx context.Context, req Payload[string]) (Payload[string], error) {
-	err := transitiveVerbCall(ctx, req)
-	return Payload[string]{}, err
+func CallsTwo(ctx context.Context, req Payload[string], tc TwoClient) (Payload[string], error) {
+	return tc(ctx, req)
 }
 
 //ftl:verb export
@@ -106,20 +107,6 @@ type TransitiveAlias lib.NonFTLType
 
 //ftl:typealias
 type BackoffAlias libbackoff.Backoff
-
-func transitiveVerbCall(ctx context.Context, req Payload[string]) error {
-	_, err := ftl.Call(ctx, Two, req)
-	if err != nil {
-		return err
-	}
-	err = superTransitiveVerbCall(ctx, req)
-	return err
-}
-
-func superTransitiveVerbCall(ctx context.Context, req Payload[string]) error {
-	_, err := ftl.Call(ctx, Three, req)
-	return err
-}
 
 type PaymentState string
 
