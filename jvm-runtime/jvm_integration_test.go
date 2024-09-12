@@ -65,6 +65,12 @@ func TestJVMToGoCall(t *testing.T) {
 		ArrayField:  ftl.Some[[]string]([]string{"foo", "bar"}),
 		MapField:    ftl.Some[map[string]string](map[string]string{"gar": "har"}),
 	}
+	parameterizedObject := ParameterizedType[string]{
+		Value:  "foo",
+		Array:  []string{"foo"},
+		Option: ftl.Some[string]("foo"),
+		Map:    map[string]string{"foo": "bar"},
+	}
 
 	tests := []in.SubTest{}
 	tests = append(tests, PairedTest("emptyVerb", func(module string) in.Action {
@@ -139,11 +145,12 @@ func TestJVMToGoCall(t *testing.T) {
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
 
 	in.Run(t,
-		in.WithLanguages("kotlin", "java"),
 		in.CopyModuleWithLanguage("gomodule", "go"),
-		in.CopyModule("passthrough"),
+		in.CopyModuleWithLanguage("javamodule", "java"),
+		in.CopyModuleWithLanguage("kotlinmodule", "kotlin"),
 		in.Deploy("gomodule"),
-		in.Deploy("passthrough"),
+		in.Deploy("javamodule"),
+		in.Deploy("kotlinmodule"),
 		in.SubTests(tests...),
 	)
 }
@@ -166,8 +173,12 @@ func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTes
 			Action: testFunc("gomodule"),
 		},
 		{
-			Name:   name + "-jvm",
-			Action: testFunc("passthrough"),
+			Name:   name + "-java",
+			Action: testFunc("javamodule"),
+		},
+		{
+			Name:   name + "-kotlin",
+			Action: testFunc("kotlinmodule"),
 		},
 	}
 }
@@ -208,4 +219,11 @@ type TestObjectOptionalFields struct {
 	TimeField   ftl.Option[time.Time]         `json:"timeField"`
 	ArrayField  ftl.Option[[]string]          `json:"arrayField"`
 	MapField    ftl.Option[map[string]string] `json:"mapField"`
+}
+
+type ParameterizedType[T any] struct {
+	Value  T             `json:"value"`
+	Array  []T           `json:"array"`
+	Option ftl.Option[T] `json:"option"`
+	Map    map[string]T  `json:"map"`
 }
