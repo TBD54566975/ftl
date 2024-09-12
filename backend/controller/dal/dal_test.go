@@ -130,7 +130,6 @@ func TestDAL(t *testing.T) {
 		Key:        runnerID,
 		Labels:     labels,
 		Endpoint:   "http://localhost:8080",
-		State:      RunnerStateReserved,
 		Deployment: deploymentKey,
 	}
 

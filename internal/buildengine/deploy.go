@@ -96,7 +96,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 
 	if waitForDeployOnline {
 		logger.Debugf("Waiting for deployment %s to become ready", resp.Msg.DeploymentKey)
-		err = checkReadiness(ctx, client, resp.Msg.DeploymentKey, replicas)
+		err = checkReadiness(ctx, client, resp.Msg.DeploymentKey, replicas, moduleSchema)
 		if err != nil {
 			return err
 		}
@@ -235,10 +235,17 @@ func relToCWD(path string) string {
 	return rel
 }
 
-func checkReadiness(ctx context.Context, client DeployClient, deploymentKey string, replicas int32) error {
-	ticker := time.NewTicker(time.Second)
+func checkReadiness(ctx context.Context, client DeployClient, deploymentKey string, replicas int32, schema *schemapb.Module) error {
+	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
 
+	hasVerbs := false
+	for _, dec := range schema.Decls {
+		if dec.GetVerb() != nil {
+			hasVerbs = true
+			break
+		}
+	}
 	for {
 		select {
 		case <-ticker.C:
@@ -250,7 +257,17 @@ func checkReadiness(ctx context.Context, client DeployClient, deploymentKey stri
 			for _, deployment := range status.Msg.Deployments {
 				if deployment.Key == deploymentKey {
 					if deployment.Replicas >= replicas {
-						return nil
+						if hasVerbs {
+							// Also verify the routing table is ready
+							for _, route := range status.Msg.Routes {
+								if route.Deployment == deploymentKey {
+									return nil
+								}
+							}
+
+						} else {
+							return nil
+						}
 					}
 				}
 			}
