@@ -111,6 +111,7 @@ func TestJVMToGoCall(t *testing.T) {
 	})...)
 	tests = append(tests, PairedVerbTest("testObjectVerb", exampleObject)...)
 	tests = append(tests, PairedVerbTest("testObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
+	// TODO turn on when https://github.com/TBD54566975/ftl/issues/2651 is fixed
 	//tests = append(tests, PairedVerbTest("objectMapVerb", map[string]TestObject{"hello": exampleObject})...)
 	tests = append(tests, PairedVerbTest("objectArrayVerb", []TestObject{exampleObject})...)
 	tests = append(tests, PairedVerbTest("parameterizedObjectVerb", parameterizedObject)...)
