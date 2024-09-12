@@ -73,6 +73,27 @@ fun stringMapVerb(payload: Map<String, String>, client: StringMapVerbClient): Ma
 }
 
 @Export
+@xyz.block.ftl.Verb
+fun objectMapVerb(`val`: Map<String, TestObject>, client: ObjectMapVerbClient): Map<String, TestObject> {
+  return client.call(`val`)
+}
+
+@Export
+@xyz.block.ftl.Verb
+fun objectArrayVerb(`val`: List<TestObject>, client: ObjectArrayVerbClient): List<TestObject> {
+  return client.call(`val`)
+}
+
+@Export
+@xyz.block.ftl.Verb
+fun parameterizedObjectVerb(
+  `val`: ParameterizedType<String>,
+  client: ParameterizedObjectVerbClient
+): ParameterizedType<String> {
+  return client.call(`val`)
+}
+
+@Export
 @Verb
 fun timeVerb(instant: ZonedDateTime, client: TimeVerbClient): ZonedDateTime {
   return client.call(instant)

@@ -13,6 +13,8 @@ import ftl.gomodule.ErrorEmptyVerbClient;
 import ftl.gomodule.ExternalTypeVerbClient;
 import ftl.gomodule.FloatVerbClient;
 import ftl.gomodule.IntVerbClient;
+import ftl.gomodule.ObjectArrayVerbClient;
+import ftl.gomodule.ObjectMapVerbClient;
 import ftl.gomodule.OptionalBoolVerbClient;
 import ftl.gomodule.OptionalBytesVerbClient;
 import ftl.gomodule.OptionalFloatVerbClient;
@@ -23,6 +25,8 @@ import ftl.gomodule.OptionalStringVerbClient;
 import ftl.gomodule.OptionalTestObjectOptionalFieldsVerbClient;
 import ftl.gomodule.OptionalTestObjectVerbClient;
 import ftl.gomodule.OptionalTimeVerbClient;
+import ftl.gomodule.ParameterizedObjectVerbClient;
+import ftl.gomodule.ParameterizedType;
 import ftl.gomodule.SinkVerbClient;
 import ftl.gomodule.SourceVerbClient;
 import ftl.gomodule.StringArrayVerbClient;
@@ -102,6 +106,25 @@ public class TestInvokeGoFromJava {
     @Export
     @Verb
     public @NotNull Map<String, String> stringMapVerb(@NotNull Map<String, String> val, StringMapVerbClient client) {
+        return client.call(val);
+    }
+
+    @Export
+    @Verb
+    public @NotNull Map<String, TestObject> objectMapVerb(@NotNull Map<String, TestObject> val, ObjectMapVerbClient client) {
+        return client.call(val);
+    }
+
+    @Export
+    @Verb
+    public @NotNull List<TestObject> objectArrayVerb(@NotNull List<TestObject> val, ObjectArrayVerbClient client) {
+        return client.call(val);
+    }
+
+    @Export
+    @Verb
+    public @NotNull ParameterizedType<String> parameterizedObjectVerb(@NotNull ParameterizedType<String> val,
+            ParameterizedObjectVerbClient client) {
         return client.call(val);
     }
 
