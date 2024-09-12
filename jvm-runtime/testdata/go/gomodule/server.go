@@ -32,6 +32,13 @@ type TestObjectOptionalFields struct {
 	MapField    ftl.Option[map[string]string]
 }
 
+type ParameterizedType[T any] struct {
+	Value  T
+	Array  []T
+	Option ftl.Option[T]
+	Map    map[string]T
+}
+
 //ftl:typealias
 //ftl:typemap kotlin "web5.sdk.dids.didcore.Did"
 type DID = did.DID
@@ -97,6 +104,21 @@ func StringArrayVerb(ctx context.Context, val []string) ([]string, error) {
 
 //ftl:verb export
 func StringMapVerb(ctx context.Context, val map[string]string) (map[string]string, error) {
+	return val, nil
+}
+
+//ftl:verb export
+func ObjectMapVerb(ctx context.Context, val map[string]TestObject) (map[string]TestObject, error) {
+	return val, nil
+}
+
+//ftl:verb export
+func ObjectArrayVerb(ctx context.Context, val []TestObject) ([]TestObject, error) {
+	return val, nil
+}
+
+//ftl:verb export
+func ParameterizedObjectVerb(ctx context.Context, val ParameterizedType[string]) (ParameterizedType[string], error) {
 	return val, nil
 }
 
