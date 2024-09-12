@@ -93,7 +93,8 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 	successful := 0
 	for _, subscription := range subs {
-		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, sqltypes.Duration(eventConsumptionDelay), subscription.Topic, subscription.Cursor)
+		var nextCursor sql2.GetNextEventForSubscriptionRow
+		nextCursor, err = tx.db.GetNextEventForSubscription(ctx, sqltypes.Duration(eventConsumptionDelay), subscription.Topic, subscription.Cursor)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
 			return 0, fmt.Errorf("failed to get next cursor: %w", libdal.TranslatePGError(err))
@@ -107,8 +108,8 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			logger.Tracef("Skipping subscription %s because event is too new", subscription.Key)
 			continue
 		}
-
-		subscriber, err := tx.db.GetRandomSubscriber(ctx, subscription.Key)
+		var subscriber sql2.GetRandomSubscriberRow
+		subscriber, err = tx.db.GetRandomSubscriber(ctx, subscription.Key)
 		if err != nil {
 			logger.Tracef("no subscriber for subscription %s", subscription.Key)
 			continue
@@ -152,7 +153,8 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	if successful > 0 {
 		// If no async calls were successfully created, then there is no need to
 		// potentially increment the queue depth gauge.
-		queueDepth, err := tx.db.AsyncCallQueueDepth(ctx)
+		var queueDepth int64
+		queueDepth, err = tx.db.AsyncCallQueueDepth(ctx)
 		if err == nil {
 			// Don't error out of progressing subscriptions just over a queue depth
 			// retrieval error because this is only used for an observability gauge.

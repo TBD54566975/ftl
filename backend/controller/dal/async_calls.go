@@ -192,7 +192,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	switch result := result.(type) {
 	case either.Left[[]byte, string]: // Successful response.
 		var encryptedResult encryption.EncryptedAsyncColumn
-		err := tx.encrypt(result.Get(), &encryptedResult)
+		err = tx.encrypt(result.Get(), &encryptedResult)
 		if err != nil {
 			return false, fmt.Errorf("failed to encrypt async call result: %w", err)
 		}
@@ -246,7 +246,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 			}
 		}
 	}
-	if err := finalise(tx, isFinalResult); err != nil {
+	if err = finalise(tx, isFinalResult); err != nil {
 		return false, err
 	}
 	return didScheduleAnotherCall, nil
