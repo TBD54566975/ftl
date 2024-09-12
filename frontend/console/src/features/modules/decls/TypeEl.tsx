@@ -18,6 +18,15 @@ const TypeParams = ({ types }: { types?: (Type | undefined)[] }) => {
   )
 }
 
+export const RefLink = ({ r }: { r: Ref }) => {
+  return (
+    <span>
+      <DeclLink moduleName={r.module} declName={r.name} />
+      <TypeParams types={r.typeParameters} />
+    </span>
+  )
+}
+
 export const TypeEl = ({ t }: { t?: Type }) => {
   if (!t) {
     return ''
@@ -51,12 +60,7 @@ export const TypeEl = ({ t }: { t?: Type }) => {
         </span>
       )
     case 'ref':
-      return (
-        <span>
-          <DeclLink moduleName={(v as Ref).module} declName={(v as Ref).name} />
-          <TypeParams types={(v as Ref).typeParameters} />
-        </span>
-      )
+      return <RefLink r={v as Ref} />
     default:
       return t.value.case || ''
   }
