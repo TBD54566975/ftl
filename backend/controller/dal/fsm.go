@@ -36,7 +36,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanc
 	if encrypted {
 		encryptedRequest = encryption.EncryptedAsyncColumn(request)
 	} else {
-		err = d.encrypt(request, &encryptedRequest)
+		err = d.encryption.Encrypt(request, &encryptedRequest)
 		if err != nil {
 			return fmt.Errorf("failed to encrypt FSM request: %w", err)
 		}
@@ -148,7 +148,7 @@ func (d *DAL) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKe
 
 func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string, nextState schema.RefKey, request json.RawMessage, requestType schema.Type) error {
 	var encryptedRequest encryption.EncryptedAsyncColumn
-	err := d.encryptJSON(request, &encryptedRequest)
+	err := d.encryption.EncryptJSON(request, &encryptedRequest)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt FSM request: %w", err)
 	}
@@ -185,7 +185,7 @@ type FSMInstance struct {
 //
 // The lease must be released by the caller.
 func (d *DAL) AcquireFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) (*FSMInstance, error) {
-	lease, _, err := d.leasedal.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
+	lease, _, err := d.leaseDAL.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire FSM lease: %w", err)
 	}

@@ -139,12 +139,12 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 		return nil, ctx, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 
-	decryptedRequest, err := d.decrypt(&row.Request)
+	decryptedRequest, err := d.encryption.Decrypt(&row.Request)
 	if err != nil {
 		return nil, ctx, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}
 
-	lease, leaseCtx := d.leasedal.NewLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
+	lease, leaseCtx := d.leaseDAL.NewLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
 	return &AsyncCall{
 		ID:                row.AsyncCallID,
 		Verb:              row.Verb,
@@ -192,7 +192,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	switch result := result.(type) {
 	case either.Left[[]byte, string]: // Successful response.
 		var encryptedResult encryption.EncryptedAsyncColumn
-		err := tx.encrypt(result.Get(), &encryptedResult)
+		err := tx.encryption.Encrypt(result.Get(), &encryptedResult)
 		if err != nil {
 			return false, fmt.Errorf("failed to encrypt async call result: %w", err)
 		}
@@ -261,7 +261,7 @@ func (d *DAL) LoadAsyncCall(ctx context.Context, id int64) (*AsyncCall, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
-	request, err := d.decrypt(&row.Request)
+	request, err := d.encryption.Decrypt(&row.Request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
 	}
@@ -284,7 +284,7 @@ func (d *DAL) GetZombieAsyncCalls(ctx context.Context, limit int) ([]*AsyncCall,
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 		}
-		decryptedRequest, err := d.decrypt(&row.Request)
+		decryptedRequest, err := d.encryption.Decrypt(&row.Request)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt async call request: %w", err)
 		}

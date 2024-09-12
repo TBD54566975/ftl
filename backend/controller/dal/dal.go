@@ -16,12 +16,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
+	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -201,40 +202,33 @@ func WithReservation(ctx context.Context, reservation Reservation, fn func() err
 	return reservation.Commit(ctx)
 }
 
-func New(ctx context.Context, conn libdal.Connection, encryptionBuilder encryption.Builder) (*DAL, error) {
+func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service) *DAL {
 	var d *DAL
 	d = &DAL{
-		leasedal: leasedal.New(conn),
-		db:       dalsql.New(conn),
+		leaseDAL:   leasedal.New(conn),
+		db:         dalsql.New(conn),
+		encryption: encryption,
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
 				db:                dalsql.New(h.Connection),
-				leasedal:          leasedal.New(h.Connection),
-				encryptor:         d.encryptor,
+				leaseDAL:          leasedal.New(h.Connection),
+				encryption:        d.encryption,
 				DeploymentChanges: d.DeploymentChanges,
 			}
 		}),
 		DeploymentChanges: pubsub.New[DeploymentNotification](),
 	}
-	encryptor, err := encryptionBuilder.Build(ctx, d)
-	if err != nil {
-		return nil, fmt.Errorf("build encryptor: %w", err)
-	}
-	if err := d.verifyEncryptor(ctx, encryptor); err != nil {
-		return nil, fmt.Errorf("verify encryptor: %w", err)
-	}
-	d.encryptor = encryptor
-	return d, nil
+
+	return d
 }
 
 type DAL struct {
 	*libdal.Handle[DAL]
 	db dalsql.Querier
 
-	leasedal *leasedal.DAL
-
-	encryptor encryption.DataEncryptor
+	leaseDAL   *leasedal.DAL
+	encryption *encryption.Service
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
@@ -611,8 +605,8 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return libdal.TranslatePGError(err)
 		}
 	}
-	var payload encryption.EncryptedTimelineColumn
-	err = d.encryptJSON(map[string]interface{}{
+	var payload ftlencryption.EncryptedTimelineColumn
+	err = d.encryption.EncryptJSON(map[string]interface{}{
 		"prev_min_replicas": deployment.MinReplicas,
 		"min_replicas":      minReplicas,
 	}, &payload)
@@ -685,8 +679,8 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
-	var payload encryption.EncryptedTimelineColumn
-	err = d.encryptJSON(map[string]any{
+	var payload ftlencryption.EncryptedTimelineColumn
+	err = d.encryption.EncryptJSON(map[string]any{
 		"min_replicas": int32(minReplicas),
 		"replaced":     replacedDeploymentKey,
 	}, &payload)
@@ -898,8 +892,8 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		"error":      log.Error,
 		"stack":      log.Stack,
 	}
-	var encryptedPayload encryption.EncryptedTimelineColumn
-	err := d.encryptJSON(payload, &encryptedPayload)
+	var encryptedPayload ftlencryption.EncryptedTimelineColumn
+	err := d.encryption.EncryptJSON(payload, &encryptedPayload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
 	}
@@ -979,8 +973,8 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if pr, ok := call.ParentRequestKey.Get(); ok {
 		parentRequestKey = optional.Some(pr.String())
 	}
-	var payload encryption.EncryptedTimelineColumn
-	err := d.encryptJSON(map[string]any{
+	var payload ftlencryption.EncryptedTimelineColumn
+	err := d.encryption.EncryptJSON(map[string]any{
 		"duration_ms": call.Duration.Milliseconds(),
 		"request":     call.Request,
 		"response":    call.Response,

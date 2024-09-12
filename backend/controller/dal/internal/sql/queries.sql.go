@@ -246,16 +246,6 @@ func (q *Queries) CreateIngressRoute(ctx context.Context, arg CreateIngressRoute
 	return err
 }
 
-const createOnlyEncryptionKey = `-- name: CreateOnlyEncryptionKey :exec
-INSERT INTO encryption_keys (id, key)
-VALUES (1, $1)
-`
-
-func (q *Queries) CreateOnlyEncryptionKey(ctx context.Context, key []byte) error {
-	_, err := q.db.ExecContext(ctx, createOnlyEncryptionKey, key)
-	return err
-}
-
 const createRequest = `-- name: CreateRequest :exec
 INSERT INTO requests (origin, "key", source_addr)
 VALUES ($1, $2, $3)
@@ -1189,25 +1179,6 @@ func (q *Queries) GetNextEventForSubscription(ctx context.Context, consumptionDe
 		&i.TraceContext,
 		&i.Ready,
 	)
-	return i, err
-}
-
-const getOnlyEncryptionKey = `-- name: GetOnlyEncryptionKey :one
-SELECT key, verify_timeline, verify_async
-FROM encryption_keys
-WHERE id = 1
-`
-
-type GetOnlyEncryptionKeyRow struct {
-	Key            []byte
-	VerifyTimeline encryption.OptionalEncryptedTimelineColumn
-	VerifyAsync    encryption.OptionalEncryptedAsyncColumn
-}
-
-func (q *Queries) GetOnlyEncryptionKey(ctx context.Context) (GetOnlyEncryptionKeyRow, error) {
-	row := q.db.QueryRowContext(ctx, getOnlyEncryptionKey)
-	var i GetOnlyEncryptionKeyRow
-	err := row.Scan(&i.Key, &i.VerifyTimeline, &i.VerifyAsync)
 	return i, err
 }
 
@@ -2348,18 +2319,6 @@ func (q *Queries) UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobE
 		arg.NextExecution,
 		arg.Key,
 	)
-	return err
-}
-
-const updateEncryptionVerification = `-- name: UpdateEncryptionVerification :exec
-UPDATE encryption_keys
-SET verify_timeline = $1,
-    verify_async = $2
-WHERE id = 1
-`
-
-func (q *Queries) UpdateEncryptionVerification(ctx context.Context, verifyTimeline encryption.OptionalEncryptedTimelineColumn, verifyAsync encryption.OptionalEncryptedAsyncColumn) error {
-	_, err := q.db.ExecContext(ctx, updateEncryptionVerification, verifyTimeline, verifyAsync)
 	return err
 }
 

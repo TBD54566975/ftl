@@ -38,6 +38,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
@@ -54,7 +55,7 @@ import (
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/cors"
-	"github.com/TBD54566975/ftl/internal/encryption"
+	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
@@ -231,12 +232,13 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	ldb := leasesdal.New(conn)
-	db, err := dal.New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
+	encryptionSrv, err := encryption.New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create DAL: %w", err)
+		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
 	}
 
+	db := dal.New(ctx, conn, encryptionSrv)
+	ldb := leasesdal.New(conn)
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, ldb),
 		dal:                     db,

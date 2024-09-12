@@ -13,11 +13,12 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
+	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
@@ -27,8 +28,10 @@ import (
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, encryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
 	assert.NoError(t, err)
+
+	dal := New(ctx, conn, encryption)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
@@ -291,8 +294,10 @@ func TestDAL(t *testing.T) {
 func TestCreateArtefactConflict(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, encryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
 	assert.NoError(t, err)
+
+	dal := New(ctx, conn, encryption)
 
 	idch := make(chan sha256.SHA256, 2)
 
@@ -368,8 +373,10 @@ func assertEventsEqual(t *testing.T, expected, actual []TimelineEvent) {
 func TestDeleteOldEvents(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, encryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
 	assert.NoError(t, err)
+
+	dal := New(ctx, conn, encryption)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSha sha256.SHA256
@@ -457,83 +464,5 @@ func TestDeleteOldEvents(t *testing.T) {
 		count, err = dal.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(0), count)
-	})
-}
-
-func TestVerifyEncryption(t *testing.T) {
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	conn := sqltest.OpenForTesting(ctx, t)
-	uri := "fake-kms://CK6YwYkBElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEJy4TIQgfCuwxA3ZZgChp_wYARABGK6YwYkBIAE"
-
-	t.Run("DeleteVerificationColumns", func(t *testing.T) {
-		dal, err := New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
-		assert.NoError(t, err)
-
-		// check that there are columns set in encryption_keys
-		row, err := dal.db.GetOnlyEncryptionKey(ctx)
-		assert.NoError(t, err)
-		assert.NotZero(t, row.VerifyTimeline.Ok())
-		assert.NotZero(t, row.VerifyAsync.Ok())
-
-		// delete the columns to see if they are recreated
-		err = dal.db.UpdateEncryptionVerification(ctx, optional.None[encryption.EncryptedTimelineColumn](), optional.None[encryption.EncryptedAsyncColumn]())
-		assert.NoError(t, err)
-
-		dal, err = New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
-		assert.NoError(t, err)
-
-		row, err = dal.db.GetOnlyEncryptionKey(ctx)
-		assert.NoError(t, err)
-		assert.NotZero(t, row.VerifyTimeline.Ok())
-		assert.NotZero(t, row.VerifyAsync.Ok())
-	})
-
-	t.Run("DifferentKey", func(t *testing.T) {
-		_, err := New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
-		assert.NoError(t, err)
-
-		differentKey := "fake-kms://CJP7ksIKElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEJWT3z-xdW23HO7hc9vF3YoYARABGJP7ksIKIAE"
-		_, err = New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(differentKey)))
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "decryption failed")
-	})
-
-	t.Run("SameKeyButWrongTimelineVerification", func(t *testing.T) {
-		dal, err := New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
-		assert.NoError(t, err)
-
-		err = dal.db.UpdateEncryptionVerification(ctx, optional.Some[encryption.EncryptedTimelineColumn]([]byte("123")), optional.None[encryption.EncryptedAsyncColumn]())
-		assert.NoError(t, err)
-		_, err = New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "verification sanity")
-		assert.Contains(t, err.Error(), "verify timeline")
-
-		err = dal.db.UpdateEncryptionVerification(ctx, optional.None[encryption.EncryptedTimelineColumn](), optional.Some[encryption.EncryptedAsyncColumn]([]byte("123")))
-		assert.NoError(t, err)
-		_, err = New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "verification sanity")
-		assert.Contains(t, err.Error(), "verify async")
-	})
-
-	t.Run("SameKeyButEncryptWrongPlainText", func(t *testing.T) {
-		result, err := conn.Exec("DELETE FROM encryption_keys")
-		assert.NoError(t, err)
-		affected, err := result.RowsAffected()
-		assert.NoError(t, err)
-		assert.Equal(t, int64(1), affected)
-		dal, err := New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
-		assert.NoError(t, err)
-
-		encrypted := encryption.EncryptedColumn[encryption.TimelineSubKey]{}
-		err = dal.encrypt([]byte("123"), &encrypted)
-		assert.NoError(t, err)
-
-		err = dal.db.UpdateEncryptionVerification(ctx, optional.Some(encrypted), optional.None[encryption.EncryptedAsyncColumn]())
-		assert.NoError(t, err)
-		_, err = New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "string does not match")
 	})
 }

@@ -2,54 +2,30 @@ package dal
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/alecthomas/types/optional"
-
+	"github.com/TBD54566975/ftl/backend/controller/encryption/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/alecthomas/types/optional"
 )
 
-func (d *DAL) encrypt(cleartext []byte, dest encryption.Encrypted) error {
-	err := d.encryptor.Encrypt(cleartext, dest)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt binary with subkey %s: %w", dest.SubKey(), err)
-	}
-
-	return nil
+type DAL struct {
+	*libdal.Handle[DAL]
+	db sql.Querier
 }
 
-func (d *DAL) decrypt(encrypted encryption.Encrypted) ([]byte, error) {
-	v, err := d.encryptor.Decrypt(encrypted)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt binary with subkey %s: %w", encrypted.SubKey(), err)
+func New(ctx context.Context, conn libdal.Connection) *DAL {
+	return &DAL{
+		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
+			return &DAL{
+				Handle: h,
+				db:     sql.New(h.Connection),
+			}
+		}),
+		db: sql.New(conn),
 	}
-
-	return v, nil
-}
-
-func (d *DAL) encryptJSON(v any, dest encryption.Encrypted) error {
-	serialized, err := json.Marshal(v)
-	if err != nil {
-		return fmt.Errorf("failed to marshal JSON: %w", err)
-	}
-
-	return d.encrypt(serialized, dest)
-}
-
-func (d *DAL) decryptJSON(encrypted encryption.Encrypted, v any) error { //nolint:unparam
-	decrypted, err := d.decrypt(encrypted)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt json with subkey %s: %w", encrypted.SubKey(), err)
-	}
-
-	if err = json.Unmarshal(decrypted, v); err != nil {
-		return fmt.Errorf("failed to unmarshal JSON: %w", err)
-	}
-
-	return nil
 }
 
 func (d *DAL) EnsureKey(ctx context.Context, generateKey func() ([]byte, error)) (encryptedKey []byte, err error) {
@@ -85,7 +61,7 @@ func (d *DAL) EnsureKey(ctx context.Context, generateKey func() ([]byte, error))
 
 const verification = "FTL - Towards a 𝝺-calculus for large-scale systems"
 
-func (d *DAL) verifyEncryptor(ctx context.Context, encryptor encryption.DataEncryptor) (err error) {
+func (d *DAL) VerifyEncryptor(ctx context.Context, encryptor encryption.DataEncryptor) (err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)

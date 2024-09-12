@@ -29,7 +29,6 @@ type Querier interface {
 	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
-	CreateOnlyEncryptionKey(ctx context.Context, key []byte) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
 	DeleteOldTimelineEvents(ctx context.Context, timeout sqltypes.Duration, type_ EventType) (int64, error)
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
@@ -62,7 +61,6 @@ type Querier interface {
 	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
-	GetOnlyEncryptionKey(ctx context.Context) (GetOnlyEncryptionKeyRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error)
 	// Retrieve routing information for a runner.
@@ -105,7 +103,6 @@ type Querier interface {
 	SucceedAsyncCall(ctx context.Context, response encryption.OptionalEncryptedAsyncColumn, iD int64) (bool, error)
 	SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
 	UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error
-	UpdateEncryptionVerification(ctx context.Context, verifyTimeline encryption.OptionalEncryptedTimelineColumn, verifyAsync encryption.OptionalEncryptedAsyncColumn) error
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.
