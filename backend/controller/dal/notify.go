@@ -97,7 +97,7 @@ func (d *DAL) PollDeployments(ctx context.Context) {
 				d.DeploymentChanges.Publish(DeploymentNotification{
 					Message: optional.Some(deployment),
 				})
-			} else if !bytes.Equal(previousState.schemaHash, state.schemaHash) || previousState.minReplicas != state.minReplicas {
+			} else if !bytes.Equal(previousState.schemaHash, state.schemaHash) || previousState.minReplicas != state.minReplicas || !bytes.Equal(previousState.Key.Suffix, state.Key.Suffix) {
 				logger.Tracef("Changed deployment: %s", name)
 				d.DeploymentChanges.Publish(DeploymentNotification{
 					Message: optional.Some(deployment),

@@ -3,6 +3,7 @@
 package k8sscaling_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -17,6 +18,13 @@ func TestKubeScaling(t *testing.T) {
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 			assert.Equal(t, "Hello, Bob!!!", response)
+		}),
+		in.EditFile("echo", func(content []byte) []byte {
+			return []byte(strings.ReplaceAll(string(content), "Hello", "Bye"))
+		}, "echo.go"),
+		in.Deploy("echo"),
+		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
+			assert.Equal(t, "Bye, Bob!!!", response)
 		}),
 	)
 }
