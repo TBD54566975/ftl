@@ -76,6 +76,7 @@ type Querier interface {
 	// Results may not be ready to be scheduled yet due to event consumption delay
 	// Sorting ensures that brand new events (that may not be ready for consumption)
 	// don't prevent older events from being consumed
+	// We also make sure that the subscription belongs to a deployment that has at least one runner
 	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error)
 	GetTopic(ctx context.Context, dollar_1 int64) (Topic, error)
 	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)

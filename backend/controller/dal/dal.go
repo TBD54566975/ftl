@@ -114,7 +114,6 @@ type RunnerState string
 // Runner states.
 const (
 	RunnerStateNew      = RunnerState(dalsql.RunnerStateNew)
-	RunnerStateReserved = RunnerState(dalsql.RunnerStateReserved)
 	RunnerStateAssigned = RunnerState(dalsql.RunnerStateAssigned)
 	RunnerStateDead     = RunnerState(dalsql.RunnerStateDead)
 )

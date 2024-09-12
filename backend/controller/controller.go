@@ -575,7 +575,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			initialised = true
 		}
 
-		maybeDeployment, err := model.ParseDeploymentKey(msg.Deployment)
+		deploymentKey, err := model.ParseDeploymentKey(msg.Deployment)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
@@ -583,7 +583,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			Key:        runnerKey,
 			Endpoint:   msg.Endpoint,
 			State:      dal.RunnerStateFromProto(msg.State),
-			Deployment: maybeDeployment,
+			Deployment: deploymentKey,
 			Labels:     msg.Labels.AsMap(),
 		})
 		if errors.Is(err, libdal.ErrConflict) {
@@ -601,7 +601,6 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			}()
 			deferredDeregistration = true
 		}
-
 		routes, err := s.dal.GetRoutingTable(ctx, nil)
 		if errors.Is(err, libdal.ErrNotFound) {
 			routes = map[string][]dal.Route{}
@@ -687,21 +686,13 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 		return connect.NewResponse(&ftlv1.PingResponse{}), nil
 	}
 
-	// Check if all required deployments are active.
-	modules, err := s.dal.GetActiveDeployments(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// It's not actually ready until it is in the routes table
+	routes := s.routes.Load()
 	var missing []string
-nextModule:
 	for _, module := range s.config.WaitFor {
-		for _, m := range modules {
-			replicas, ok := m.Replicas.Get()
-			if ok && replicas > 0 && m.Module == module {
-				continue nextModule
-			}
+		if _, ok := routes[module]; !ok {
+			missing = append(missing, module)
 		}
-		missing = append(missing, module)
 	}
 	if len(missing) == 0 {
 		return connect.NewResponse(&ftlv1.PingResponse{}), nil

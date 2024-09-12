@@ -35,6 +35,9 @@ func TestLease(t *testing.T) {
 					Verb: &schemapb.Ref{Module: "leases", Name: "acquire"},
 					Body: []byte("{}"),
 				}))
+				if err != nil {
+					return err
+				}
 				assert.NoError(t, err)
 				if respErr := resp.Msg.GetError(); respErr != nil {
 					return fmt.Errorf("received error on first call: %v", respErr)
