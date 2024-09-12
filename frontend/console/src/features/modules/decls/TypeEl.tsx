@@ -18,7 +18,10 @@ const TypeParams = ({ types }: { types?: (Type | undefined)[] }) => {
   )
 }
 
-export const RefLink = ({ r }: { r: Ref }) => {
+export const RefLink = ({ r }: { r?: Ref }) => {
+  if (!r) {
+    return
+  }
   return (
     <span>
       <DeclLink moduleName={r.module} declName={r.name} />
