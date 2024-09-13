@@ -34,6 +34,9 @@ func (o Obfuscator) Obfuscate(input []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not create cypher for obfuscation: %w", err)
 	}
+	if len(input) > 64*1024*1024 {
+		return nil, errors.New("value too large")
+	}
 	ciphertext := make([]byte, aes.BlockSize+len(input))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
