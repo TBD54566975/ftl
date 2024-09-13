@@ -232,12 +232,12 @@ func (k *KMSEncryptor) getDerivedPrimitive(subKey SubKey) (tink.AEAD, error) {
 func (k *KMSEncryptor) Encrypt(cleartext []byte, dest Encrypted) error {
 	primitive, err := k.getDerivedPrimitive(dest)
 	if err != nil {
-		return fmt.Errorf("failed to get derived primitive: %w", err)
+		return fmt.Errorf("%s: failed to get derived primitive: %w", dest.SubKey(), err)
 	}
 
 	encrypted, err := primitive.Encrypt(cleartext, nil)
 	if err != nil {
-		return fmt.Errorf("failed to encrypt: %w", err)
+		return fmt.Errorf("%s: failed to encrypt: %w", dest.SubKey(), err)
 	}
 
 	dest.Set(encrypted)
@@ -247,12 +247,12 @@ func (k *KMSEncryptor) Encrypt(cleartext []byte, dest Encrypted) error {
 func (k *KMSEncryptor) Decrypt(encrypted Encrypted) ([]byte, error) {
 	primitive, err := k.getDerivedPrimitive(encrypted)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get derived primitive: %w", err)
+		return nil, fmt.Errorf("%s: failed to get derived primitive: %w", encrypted.SubKey(), err)
 	}
 
 	decrypted, err := primitive.Decrypt(encrypted.Bytes(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt: %w", err)
+		return nil, fmt.Errorf("%s: failed to decrypt: %w", encrypted.SubKey(), err)
 	}
 
 	return decrypted, nil

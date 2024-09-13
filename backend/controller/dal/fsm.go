@@ -34,7 +34,7 @@ import (
 func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string, destinationState schema.RefKey, request []byte, encrypted bool, retryParams schema.RetryParams) (err error) {
 	var encryptedRequest encryption.EncryptedAsyncColumn
 	if encrypted {
-		encryptedRequest = encryption.EncryptedAsyncColumn(request)
+		encryptedRequest.Set(request)
 	} else {
 		err = d.encryption.Encrypt(request, &encryptedRequest)
 		if err != nil {
@@ -139,9 +139,16 @@ func (d *DAL) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKe
 		}
 		return optional.None[NextFSMEvent](), err
 	}
+
+	var decryptedRequest json.RawMessage
+	err = d.encryption.DecryptJSON(&next.Request, &decryptedRequest)
+	if err != nil {
+		return optional.None[NextFSMEvent](), fmt.Errorf("failed to decrypt FSM request: %w", err)
+	}
+
 	return optional.Some(NextFSMEvent{
 		DestinationState: next.NextState,
-		Request:          next.Request,
+		Request:          decryptedRequest,
 		RequestType:      next.RequestType,
 	}), nil
 }

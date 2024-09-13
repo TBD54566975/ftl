@@ -414,7 +414,7 @@ type FsmNextEvent struct {
 	CreatedAt     time.Time
 	FsmInstanceID int64
 	NextState     schema.RefKey
-	Request       []byte
+	Request       encryption.EncryptedAsyncColumn
 	RequestType   sqltypes.Type
 }
 
@@ -505,7 +505,7 @@ type TopicEvent struct {
 	CreatedAt    time.Time
 	Key          model.TopicEventKey
 	TopicID      int64
-	Payload      []byte
+	Payload      encryption.EncryptedAsyncColumn
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
 	TraceContext pqtype.NullRawMessage
