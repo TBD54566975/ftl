@@ -394,7 +394,7 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	existingDeployment, err := d.checkForExistingDeployments(ctx, tx, moduleSchema, artefacts)
+	existingDeployment, err := tx.checkForExistingDeployments(ctx, tx, moduleSchema, artefacts)
 	if err != nil {
 		return model.DeploymentKey{}, err
 	} else if !existingDeployment.IsZero() {
@@ -663,7 +663,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		if err != nil {
 			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
 		}
-		err = d.deploymentWillDeactivate(ctx, oldDeployment.Key)
+		err = tx.deploymentWillDeactivate(ctx, oldDeployment.Key)
 		if err != nil {
 			return fmt.Errorf("replace deployment failed willDeactivate trigger from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
 		}
