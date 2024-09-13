@@ -10,13 +10,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
-	"github.com/google/uuid"
 	"github.com/sqlc-dev/pqtype"
 )
 
@@ -322,13 +320,6 @@ func (ns NullTopicSubscriptionState) Value() (driver.Value, error) {
 	return string(ns.TopicSubscriptionState), nil
 }
 
-type Artefact struct {
-	ID        int64
-	CreatedAt time.Time
-	Digest    []byte
-	Content   []byte
-}
-
 type AsyncCall struct {
 	ID                int64
 	CreatedAt         time.Time
@@ -381,22 +372,6 @@ type Deployment struct {
 	MinReplicas int32
 }
 
-type DeploymentArtefact struct {
-	ArtefactID   int64
-	DeploymentID int64
-	CreatedAt    time.Time
-	Executable   bool
-	Path         string
-}
-
-type EncryptionKey struct {
-	ID             int64
-	Key            []byte
-	CreatedAt      time.Time
-	VerifyTimeline encryption.OptionalEncryptedTimelineColumn
-	VerifyAsync    encryption.OptionalEncryptedAsyncColumn
-}
-
 type FsmInstance struct {
 	ID               int64
 	CreatedAt        time.Time
@@ -418,62 +393,10 @@ type FsmNextEvent struct {
 	RequestType   sqltypes.Type
 }
 
-type IngressRoute struct {
-	Method       string
-	Path         string
-	DeploymentID int64
-	Module       string
-	Verb         string
-}
-
-type Lease struct {
-	ID             int64
-	IdempotencyKey uuid.UUID
-	Key            leases.Key
-	CreatedAt      time.Time
-	ExpiresAt      time.Time
-	Metadata       pqtype.NullRawMessage
-}
-
 type Module struct {
 	ID       int64
 	Language string
 	Name     string
-}
-
-type ModuleConfiguration struct {
-	ID        int64
-	CreatedAt time.Time
-	Module    optional.Option[string]
-	Name      string
-	Value     json.RawMessage
-}
-
-type ModuleSecret struct {
-	ID        int64
-	CreatedAt time.Time
-	Module    optional.Option[string]
-	Name      string
-	Url       string
-}
-
-type Request struct {
-	ID         int64
-	Origin     Origin
-	Key        model.RequestKey
-	SourceAddr string
-}
-
-type Runner struct {
-	ID           int64
-	Key          model.RunnerKey
-	Created      time.Time
-	LastSeen     time.Time
-	State        RunnerState
-	Endpoint     string
-	ModuleName   optional.Option[string]
-	DeploymentID int64
-	Labels       json.RawMessage
 }
 
 type Timeline struct {
@@ -509,19 +432,6 @@ type TopicEvent struct {
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
 	TraceContext pqtype.NullRawMessage
-}
-
-type TopicSubscriber struct {
-	ID                   int64
-	Key                  model.SubscriberKey
-	CreatedAt            time.Time
-	TopicSubscriptionsID int64
-	DeploymentID         int64
-	Sink                 schema.RefKey
-	RetryAttempts        int32
-	Backoff              sqltypes.Duration
-	MaxBackoff           sqltypes.Duration
-	CatchVerb            optional.Option[schema.RefKey]
 }
 
 type TopicSubscription struct {

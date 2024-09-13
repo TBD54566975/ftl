@@ -357,6 +357,30 @@ func (q *Queries) DeregisterRunner(ctx context.Context, key model.RunnerKey) (in
 	return count, err
 }
 
+const dummyQueryTimeline = `-- name: DummyQueryTimeline :one
+SELECT id, time_stamp, deployment_id, request_id, type, custom_key_1, custom_key_2, custom_key_3, custom_key_4, payload, parent_request_id FROM timeline WHERE id = $1
+`
+
+// This is a dummy query to ensure that the Timeline model is generated.
+func (q *Queries) DummyQueryTimeline(ctx context.Context, id int64) (Timeline, error) {
+	row := q.db.QueryRowContext(ctx, dummyQueryTimeline, id)
+	var i Timeline
+	err := row.Scan(
+		&i.ID,
+		&i.TimeStamp,
+		&i.DeploymentID,
+		&i.RequestID,
+		&i.Type,
+		&i.CustomKey1,
+		&i.CustomKey2,
+		&i.CustomKey3,
+		&i.CustomKey4,
+		&i.Payload,
+		&i.ParentRequestID,
+	)
+	return i, err
+}
+
 const failAsyncCall = `-- name: FailAsyncCall :one
 UPDATE async_calls
 SET
