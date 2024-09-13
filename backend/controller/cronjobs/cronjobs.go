@@ -17,7 +17,6 @@ import (
 	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
-	// ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 )
 
 type Service struct {
