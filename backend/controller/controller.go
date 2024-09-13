@@ -253,7 +253,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, conn)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryptionSrv, conn)
 	svc.cronJobs = cronSvc
 
 	pubSub := pubsub.New(ctx, db, svc.tasks, svc)

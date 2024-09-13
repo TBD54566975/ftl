@@ -98,6 +98,11 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
 			return 0, fmt.Errorf("failed to get next cursor: %w", libdal.TranslatePGError(err))
 		}
+		payload, ok := nextCursor.Payload.Get()
+		if !ok {
+			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Payload.Get", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
+			return 0, fmt.Errorf("could not find payload to progress subscription: %w", libdal.TranslatePGError(err))
+		}
 		nextCursorKey, ok := nextCursor.Event.Get()
 		if !ok {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Event.Get", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
@@ -131,7 +136,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			ScheduledAt:       time.Now(),
 			Verb:              subscriber.Sink,
 			Origin:            origin.String(),
-			Request:           nextCursor.Payload, // already encrypted
+			Request:           payload, // already encrypted
 			RemainingAttempts: subscriber.RetryAttempts,
 			Backoff:           subscriber.Backoff,
 			MaxBackoff:        subscriber.MaxBackoff,

@@ -1159,7 +1159,7 @@ LIMIT 1
 
 type GetNextEventForSubscriptionRow struct {
 	Event        optional.Option[model.TopicEventKey]
-	Payload      []byte
+	Payload      encryption.OptionalEncryptedAsyncColumn
 	CreatedAt    optional.Option[time.Time]
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
@@ -2127,7 +2127,7 @@ type PublishEventForTopicParams struct {
 	Module       string
 	Topic        string
 	Caller       string
-	Payload      []byte
+	Payload      encryption.EncryptedAsyncColumn
 	RequestKey   string
 	TraceContext json.RawMessage
 }
@@ -2172,7 +2172,7 @@ type SetNextFSMEventParams struct {
 	Fsm         schema.RefKey
 	InstanceKey string
 	Event       schema.RefKey
-	Request     []byte
+	Request     encryption.EncryptedAsyncColumn
 	RequestType sqltypes.Type
 }
 
