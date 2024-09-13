@@ -47,6 +47,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
+	"github.com/TBD54566975/ftl/backend/controller/timeline"
+	timelinedal "github.com/TBD54566975/ftl/backend/controller/timeline/dal"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
@@ -145,7 +147,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	sm := cf.SecretsFromContext(ctx)
 
 	admin := admin.NewAdminService(cm, sm, svc.dal)
-	console := console.NewService(svc.dal)
+	console := console.NewService(svc.dal, svc.timeline)
 
 	ingressHandler := http.Handler(svc)
 	if len(config.AllowOrigins) > 0 {
@@ -204,6 +206,7 @@ type Service struct {
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
 	pubSub                  *pubsub.Manager
+	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
 	// Map from runnerKey.String() to client.
@@ -232,12 +235,12 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	encryptionSrv, err := encryption.New(ctx, conn, api.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
+	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
 	}
 
-	db := dal.New(ctx, conn, encryptionSrv)
+	db := dal.New(ctx, conn, encryption)
 	ldb := leasesdal.New(conn)
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, ldb),
@@ -245,7 +248,6 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 		leasesdal:               ldb,
 		conn:                    conn,
 		key:                     key,
-		deploymentLogsSink:      newDeploymentLogsSink(ctx, db),
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
 		increaseReplicaFailures: map[string]int{},
@@ -253,11 +255,16 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryptionSrv, conn)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, conn)
 	svc.cronJobs = cronSvc
 
 	pubSub := pubsub.New(ctx, db, svc.tasks, svc)
 	svc.pubSub = pubSub
+
+	timelineSvc := timeline.New(ctx, conn, encryption)
+	svc.timeline = timelineSvc
+
+	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 
 	go svc.syncSchema(ctx)
 
@@ -456,15 +463,12 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		err = s.dal.InsertLogEvent(ctx, &dal.LogEvent{
-			RequestKey:    requestKey,
+		err = s.timeline.RecordLog(ctx, &timeline.Log{
 			DeploymentKey: deploymentKey,
-			Time:          msg.TimeStamp.AsTime(),
-			Level:         msg.LogLevel,
-			Attributes:    msg.Attributes,
-			Message:       msg.Message,
-			Error:         optional.Ptr(msg.Error),
+			RequestKey:    requestKey,
+			Msg:           msg,
 		})
+
 		if err != nil {
 			return nil, err
 		}
@@ -1077,16 +1081,16 @@ func (s *Service) callWithRequest(
 	} else {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 	}
-	s.recordCall(ctx, &Call{
-		deploymentKey:    route.Deployment,
-		requestKey:       requestKey,
-		parentRequestKey: parentKey,
-		startTime:        start,
-		destVerb:         verbRef,
-		callers:          callers,
-		callError:        optional.Nil(err),
-		request:          req.Msg,
-		response:         maybeResponse,
+	s.timeline.RecordCall(ctx, &timeline.Call{
+		DeploymentKey:    route.Deployment,
+		RequestKey:       requestKey,
+		ParentRequestKey: parentKey,
+		StartTime:        start,
+		DestVerb:         verbRef,
+		Callers:          callers,
+		CallError:        optional.Nil(err),
+		Request:          req.Msg,
+		Response:         maybeResponse,
 	})
 	return resp, err
 }
@@ -1817,7 +1821,7 @@ func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
 		return time.Hour, nil
 	}
 
-	removed, err := s.dal.DeleteOldEvents(ctx, dal.EventTypeCall, *s.config.EventLogRetention)
+	removed, err := s.timeline.DeleteOldEvents(ctx, timelinedal.EventTypeCall, *s.config.EventLogRetention)
 	if err != nil {
 		return 0, fmt.Errorf("failed to prune call events: %w", err)
 	}

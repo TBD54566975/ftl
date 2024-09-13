@@ -880,32 +880,6 @@ func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner,
 	return runnerFromDB(row), nil
 }
 
-func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
-	var requestKey optional.Option[string]
-	if name, ok := log.RequestKey.Get(); ok {
-		requestKey = optional.Some(name.String())
-	}
-
-	payload := map[string]any{
-		"message":    log.Message,
-		"attributes": log.Attributes,
-		"error":      log.Error,
-		"stack":      log.Stack,
-	}
-	var encryptedPayload api.EncryptedTimelineColumn
-	err := d.encryption.EncryptJSON(payload, &encryptedPayload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt log payload: %w", err)
-	}
-	return libdal.TranslatePGError(d.db.InsertTimelineLogEvent(ctx, dalsql.InsertTimelineLogEventParams{
-		DeploymentKey: log.DeploymentKey,
-		RequestKey:    requestKey,
-		TimeStamp:     log.Time,
-		Level:         log.Level,
-		Payload:       encryptedPayload,
-	}))
-}
-
 func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymentRow) (*model.Deployment, error) {
 	out := &model.Deployment{
 		Module:   deployment.ModuleName,
@@ -958,48 +932,6 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]IngressRou
 func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {
 	id, err := d.db.UpsertController(ctx, key, addr)
 	return id, libdal.TranslatePGError(err)
-}
-
-func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
-	var sourceModule, sourceVerb optional.Option[string]
-	if sr, ok := call.SourceVerb.Get(); ok {
-		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
-	}
-	var requestKey optional.Option[string]
-	if rn, ok := call.RequestKey.Get(); ok {
-		requestKey = optional.Some(rn.String())
-	}
-	var parentRequestKey optional.Option[string]
-	if pr, ok := call.ParentRequestKey.Get(); ok {
-		parentRequestKey = optional.Some(pr.String())
-	}
-	var payload api.EncryptedTimelineColumn
-	err := d.encryption.EncryptJSON(map[string]any{
-		"duration_ms": call.Duration.Milliseconds(),
-		"request":     call.Request,
-		"response":    call.Response,
-		"error":       call.Error,
-		"stack":       call.Stack,
-	}, &payload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt call payload: %w", err)
-	}
-	return libdal.TranslatePGError(d.db.InsertTimelineCallEvent(ctx, dalsql.InsertTimelineCallEventParams{
-		DeploymentKey:    call.DeploymentKey,
-		RequestKey:       requestKey,
-		ParentRequestKey: parentRequestKey,
-		TimeStamp:        call.Time,
-		SourceModule:     sourceModule,
-		SourceVerb:       sourceVerb,
-		DestModule:       call.DestVerb.Module,
-		DestVerb:         call.DestVerb.Name,
-		Payload:          payload,
-	}))
-}
-
-func (d *DAL) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
-	count, err := d.db.DeleteOldTimelineEvents(ctx, sqltypes.Duration(age), eventType)
-	return count, libdal.TranslatePGError(err)
 }
 
 func (d *DAL) GetActiveRunners(ctx context.Context) ([]Runner, error) {

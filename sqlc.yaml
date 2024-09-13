@@ -178,6 +178,38 @@ sql:
       go:
         <<: *gengo
         out: "backend/controller/encryption/dal/internal/sql"
+  - <<: *daldir
+    queries:
+      - backend/controller/timeline/dal/internal/sql/queries.sql
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/timeline/dal/internal/sql"
+        overrides:
+          - db_type: "encrypted_timeline"
+            go_type: "github.com/TBD54566975/ftl/internal/encryption.EncryptedTimelineColumn"
+          - db_type: "encrypted_timeline"
+            nullable: true
+            go_type: "github.com/TBD54566975/ftl/internal/encryption.OptionalEncryptedTimelineColumn"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              type: "optional.Option[time.Time]"
+          - db_type: "pg_catalog.interval"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/sql/sqltypes.Duration"
+          - db_type: "pg_catalog.interval"
+            nullable: true
+            go_type:
+              type: "optional.Option[sqltypes.Duration]"
+          - db_type: "text"
+            go_type: "string"
+          - db_type: "text"
+            nullable: true
+            go_type:
+              import: "github.com/alecthomas/types/optional"
+              type: "Option[string]"
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"
