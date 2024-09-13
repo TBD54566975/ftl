@@ -7,6 +7,7 @@ import { ConfigPanel } from './ConfigPanel'
 import { DataPanel } from './DataPanel'
 import { DatabasePanel } from './DatabasePanel'
 import { EnumPanel } from './EnumPanel'
+import { FsmPanel } from './FsmPanel'
 import { SecretPanel } from './SecretPanel'
 import { SubscriptionPanel } from './SubscriptionPanel'
 import { TopicPanel } from './TopicPanel'
@@ -35,6 +36,8 @@ export const DeclPanel = () => {
       return <DatabasePanel value={decl.value.value} {...nameProps} />
     case 'enum':
       return <EnumPanel value={decl.value.value} {...nameProps} />
+    case 'fsm':
+      return <FsmPanel value={decl.value.value} {...nameProps} />
     case 'secret':
       return <SecretPanel value={decl.value.value} {...nameProps} />
     case 'subscription':
