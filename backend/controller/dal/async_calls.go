@@ -139,6 +139,8 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 		return nil, ctx, fmt.Errorf("failed to parse origin key %q: %w", row.Origin, err)
 	}
 
+	fmt.Println("row.Request", row.Request)
+
 	decryptedRequest, err := d.encryption.Decrypt(&row.Request)
 	if err != nil {
 		return nil, ctx, fmt.Errorf("failed to decrypt async call request: %w", err)

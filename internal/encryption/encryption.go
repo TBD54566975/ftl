@@ -88,6 +88,7 @@ func NewNoOpEncryptor() NoOpEncryptor {
 var _ DataEncryptor = NoOpEncryptor{}
 
 func (n NoOpEncryptor) Encrypt(cleartext []byte, dest Encrypted) error {
+	fmt.Println("no op encryptor")
 	dest.Set(cleartext)
 	return nil
 }

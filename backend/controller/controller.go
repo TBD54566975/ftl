@@ -232,12 +232,12 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	encryptionSrv, err := encryption.New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
+	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
 	}
 
-	db := dal.New(ctx, conn, encryptionSrv)
+	db := dal.New(ctx, conn, encryption)
 	ldb := leasesdal.New(conn)
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, ldb),
@@ -253,7 +253,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
 
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, conn)
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, conn, encryption)
 	svc.cronJobs = cronSvc
 
 	pubSub := pubsub.New(ctx, db, svc.tasks, svc)

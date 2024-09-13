@@ -8,6 +8,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -17,16 +18,25 @@ import (
 
 type DAL struct {
 	*libdal.Handle[DAL]
-	db sql.Querier
+	db         sql.Querier
+	encryption *encryption.Service
 }
 
-func New(conn libdal.Connection) *DAL {
-	return &DAL{
+func New(conn libdal.Connection, encryption *encryption.Service) *DAL {
+	var d *DAL
+	d = &DAL{
 		db: sql.New(conn),
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
-			return &DAL{Handle: h, db: sql.New(h.Connection)}
+			return &DAL{
+				Handle:     h,
+				db:         sql.New(h.Connection),
+				encryption: d.encryption,
+			}
 		}),
+		encryption: encryption,
 	}
+
+	return d
 }
 
 func cronJobFromRow(c sql.CronJob, d sql.Deployment) model.CronJob {

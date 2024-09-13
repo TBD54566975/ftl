@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
@@ -34,10 +35,11 @@ func TestNewCronJobsForModule(t *testing.T) {
 
 	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal := dal.New(conn)
 
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
+	uri := "fake-kms://CK6YwYkBElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEJy4TIQgfCuwxA3ZZgChp_wYARABGK6YwYkBIAE"
+	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Some(uri)))
 	assert.NoError(t, err)
+	dal := dal.New(conn, encryption)
 
 	parentDAL := parentdal.New(ctx, conn, encryption)
 	moduleName := "initial"
@@ -52,7 +54,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 
 	// Progress so that start_time is valid
 	clk.Add(time.Second)
-	cjs := NewForTesting(ctx, key, "test.com", *dal, clk)
+	cjs := NewForTesting(ctx, key, "test.com", *dal, encryption, clk)
 	// All jobs need to be scheduled
 	expectUnscheduledJobs(t, dal, clk, 2)
 	unscheduledJobs, err := dal.GetUnscheduledCronJobs(ctx, clk.Now())
@@ -84,6 +86,9 @@ func TestNewCronJobsForModule(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, call.Verb, job.Verb.ToRefKey())
 		assert.Equal(t, call.Origin.String(), fmt.Sprintf("cron:%s", job.Key))
+
+		// err = encryption.DecryptJSON(&call.Request, &schema.CronJobRequest{})
+		// assert.NoError(t, err)
 		assert.Equal(t, call.Request, []byte("{}"))
 		assert.Equal(t, call.QueueDepth, int64(len(jobsToCreate)-i)) // widdling down queue
 

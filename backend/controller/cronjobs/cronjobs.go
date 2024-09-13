@@ -10,30 +10,35 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
+	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	// ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 )
 
 type Service struct {
 	key           model.ControllerKey
 	requestSource string
 	dal           dal.DAL
+	encryption    *encryption.Service
 	clock         clock.Clock
 }
 
-func New(ctx context.Context, key model.ControllerKey, requestSource string, conn *sql.DB) *Service {
-	return NewForTesting(ctx, key, requestSource, *dal.New(conn), clock.New())
+func New(ctx context.Context, key model.ControllerKey, requestSource string, conn *sql.DB, encryption *encryption.Service) *Service {
+	return NewForTesting(ctx, key, requestSource, *dal.New(conn, encryption), encryption, clock.New())
 }
 
-func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, dal dal.DAL, clock clock.Clock) *Service {
+func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, dal dal.DAL, encryption *encryption.Service, clock clock.Clock) *Service {
 	svc := &Service{
 		key:           key,
 		requestSource: requestSource,
 		dal:           dal,
 		clock:         clock,
+		encryption:    encryption,
 	}
 	return svc
 }
@@ -172,13 +177,19 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 		nextAttemptForJob = now
 	}
 
+	var encryptedResult ftlencryption.EncryptedAsyncColumn
+	type Empty struct{}
+	err = s.encryption.EncryptJSON(Empty{}, &encryptedResult)
+	fmt.Println("TOOOOOOOOOOOODOOOOOOOO")
+	fmt.Printf("encryptedResult: %v", encryptedResult)
+
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
 	origin := &parentdal.AsyncOriginCron{CronJobKey: job.Key}
 	id, err := tx.CreateAsyncCall(ctx, dal.CreateAsyncCallParams{
 		ScheduledAt: nextAttemptForJob,
 		Verb:        schema.RefKey{Module: job.Verb.Module, Name: job.Verb.Name},
 		Origin:      origin.String(),
-		Request:     []byte(`{}`),
+		Request:     encryptedResult,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create async call for job %q: %w", job.Key, err)
