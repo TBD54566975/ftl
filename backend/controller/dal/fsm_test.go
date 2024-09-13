@@ -8,19 +8,22 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/either"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
+	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestSendFSMEvent(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal, err := New(ctx, conn, encryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
 	assert.NoError(t, err)
+
+	dal := New(ctx, conn, encryption)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, libdal.ErrNotFound)

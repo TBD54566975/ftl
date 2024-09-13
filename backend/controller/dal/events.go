@@ -348,7 +348,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
-			if err := d.decryptJSON(&row.Payload, &jsonPayload); err != nil {
+			if err := d.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt log event: %w", err)
 			}
 
@@ -370,7 +370,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := d.decryptJSON(&row.Payload, &jsonPayload); err != nil {
+			if err := d.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			var sourceVerb optional.Option[schema.Ref]
@@ -395,7 +395,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 
 		case sql.EventTypeDeploymentCreated:
 			var jsonPayload eventDeploymentCreatedJSON
-			if err := d.decryptJSON(&row.Payload, &jsonPayload); err != nil {
+			if err := d.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentCreatedEvent{
@@ -410,7 +410,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 
 		case sql.EventTypeDeploymentUpdated:
 			var jsonPayload eventDeploymentUpdatedJSON
-			if err := d.decryptJSON(&row.Payload, &jsonPayload); err != nil {
+			if err := d.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			out = append(out, &DeploymentUpdatedEvent{

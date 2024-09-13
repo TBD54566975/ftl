@@ -13,11 +13,12 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
-	"github.com/TBD54566975/ftl/internal/encryption"
+	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -34,8 +35,11 @@ func TestNewCronJobsForModule(t *testing.T) {
 	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal := dal.New(conn)
-	parentDAL, err := parentdal.New(ctx, conn, encryption.NewBuilder())
+
+	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
 	assert.NoError(t, err)
+
+	parentDAL := parentdal.New(ctx, conn, encryption)
 	moduleName := "initial"
 	jobsToCreate := newCronJobs(t, moduleName, "* * * * * *", clk, 2) // every minute
 

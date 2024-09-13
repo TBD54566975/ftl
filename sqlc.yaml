@@ -170,6 +170,13 @@ sql:
       go:
         <<: *gengo
         out: "backend/controller/leases/dal/internal/sql"
+  - <<: *daldir
+    queries:
+      - backend/controller/encryption/dal/internal/sql/queries.sql
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/encryption/dal/internal/sql"
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"
