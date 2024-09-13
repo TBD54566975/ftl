@@ -8,6 +8,8 @@ import { DataPanel } from './DataPanel'
 import { DatabasePanel } from './DatabasePanel'
 import { EnumPanel } from './EnumPanel'
 import { SecretPanel } from './SecretPanel'
+import { SubscriptionPanel } from './SubscriptionPanel'
+import { TopicPanel } from './TopicPanel'
 import { TypeAliasPanel } from './TypeAliasPanel'
 
 export const DeclPanel = () => {
@@ -35,6 +37,10 @@ export const DeclPanel = () => {
       return <EnumPanel value={decl.value.value} {...nameProps} />
     case 'secret':
       return <SecretPanel value={decl.value.value} {...nameProps} />
+    case 'subscription':
+      return <SubscriptionPanel value={decl.value.value} {...nameProps} />
+    case 'topic':
+      return <TopicPanel value={decl.value.value} {...nameProps} />
     case 'typeAlias':
       return <TypeAliasPanel value={decl.value.value} {...nameProps} />
     case 'verb':
