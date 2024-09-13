@@ -34,6 +34,8 @@ type Querier interface {
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
+	// This is a dummy query to ensure that the Timeline model is generated.
+	DummyQueryTimeline(ctx context.Context, id int64) (Timeline, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
 	FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)

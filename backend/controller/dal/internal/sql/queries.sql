@@ -780,3 +780,7 @@ RETURNING
   parent_request_key,
   trace_context,
   catching;
+
+-- name: DummyQueryTimeline :one
+-- This is a dummy query to ensure that the Timeline model is generated.
+SELECT * FROM timeline WHERE id = @id;
