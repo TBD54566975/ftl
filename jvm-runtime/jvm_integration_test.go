@@ -146,6 +146,7 @@ func TestJVMToGoCall(t *testing.T) {
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
 
 	in.Run(t,
+		in.WithJavaBuild(),
 		in.CopyModuleWithLanguage("gomodule", "go"),
 		in.CopyModuleWithLanguage("javamodule", "java"),
 		in.CopyModuleWithLanguage("kotlinmodule", "kotlin"),
