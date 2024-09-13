@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 
 export function useTimelineState() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const timelineState = useMemo(() => new TimelineState(searchParams), [searchParams]);
+  const timelineState = useMemo(() => new TimelineState(searchParams, []), [searchParams]);
 
   return [
     timelineState,

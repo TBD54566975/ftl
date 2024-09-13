@@ -50,7 +50,7 @@ const testCases = [
 describe("timeline url state", () => {
   testCases.forEach(({ description, params, expected }) => {
     test(description, () => {
-      const timelineState = new TimelineState(params);
+      const timelineState = new TimelineState(params, []);
       expect(timelineState.getSearchParams().toString()).toEqual(expected);
     });
   });

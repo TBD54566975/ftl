@@ -8,10 +8,12 @@ import { Timeline } from './Timeline'
 import { TimelineFilterPanel } from './filters/TimelineFilterPanel'
 import { TIME_RANGES, type TimeSettings, TimelineTimeControls } from './filters/TimelineTimeControls'
 import { newTimelineStateFromFilters, TimelineState } from '../../api/timeline/timeline-state'
+import { useModules } from '../../api/modules/use-modules'
 
 export const TimelinePage = () => {
+  const modules = useModules()
   const [searchParams, setSearchParams] = useSearchParams()
-  const timelineState = new TimelineState(searchParams)
+  const timelineState = new TimelineState(searchParams, modules.data?.modules)
   console.log('--- timelinePage: timelineState', JSON.stringify(timelineState))
   const [timeSettings, setTimeSettings] = useState<TimeSettings>({ isTailing: timelineState.isTailing, isPaused: timelineState.isPaused })
   const [filters, setFilters] = useState<EventsQuery_Filter[]>(timelineState.getFilters())
@@ -31,20 +33,21 @@ export const TimelinePage = () => {
   }, [])
 
   useEffect(() => {
-    console.log('TimelinePage: filters, timeSettings, isTimelinePaused changed', JSON.stringify(filters), JSON.stringify(timeSettings), isTimelinePaused)
-    const timelineState = new TimelineState(searchParams)
+    console.log('yassssuuuuuuuuu TimelinePage: filters, timeSettings, isTimelinePaused changed', JSON.stringify(filters), JSON.stringify(timeSettings), isTimelinePaused)
+    console.log('modules.data?.modules', modules.data?.modules)
+    const timelineState = new TimelineState(searchParams, modules.data?.modules)
     timelineState.updateFromTimeSettings(timeSettings)
     timelineState.updateFromFilters(filters)
     timelineState.isPaused = isTimelinePaused
     setSearchParams(timelineState.getSearchParams())
-  }, [filters, timeSettings, isTimelinePaused])
+  }, [filters, timeSettings, isTimelinePaused, modules.data?.modules])
 
   const handleTimeSettingsChanged = (settings: TimeSettings) => {
     setTimeSettings(settings)
   }
 
   const handleFiltersChanged = (filters: EventsQuery_Filter[]) => {
-    console.log('got new filters', JSON.stringify(filters))
+    console.log('got new filters', filters)
     setFilters(filters)
   }
 

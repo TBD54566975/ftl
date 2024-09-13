@@ -58,27 +58,31 @@ export const TimelineFilterPanel = ({
   onFiltersChanged,
   timelineState,
 }: {
-  onFiltersChanged: (filters: EventsQuery_Filter[]) => void,
-  timelineState: TimelineState,
+  onFiltersChanged: (filters: EventsQuery_Filter[]) => void
+  timelineState: TimelineState
 }) => {
-  const modules = useModules()
+  const modules = timelineState.knownModules
   const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(timelineState.eventTypes.map(eventTypeToKey))
-  const [selectedModules, setSelectedModules] = useState<string[]>(timelineState.modules)
-  const [previousModules, setPreviousModules] = useState<string[]>(timelineState.modules)
+  const [selectedModules, setSelectedModules] = useState<string[]>(timelineState.getModules())
   const [selectedLogLevel, setSelectedLogLevel] = useState<number>(timelineState.logLevel)
 
-  useEffect(() => {
-    if (!modules.isSuccess || modules.data.modules.length === 0) {
-      return
-    }
-    const newModules = modules.data.modules.map((module) => module.deploymentKey)
-    const addedModules = newModules.filter((name) => !previousModules.includes(name))
+  // useEffect(() => {
+  //   console.log('modules', JSON.stringify(modules))
+  //   // if (!modules.isSuccess || modules.data.modules.length === 0) {
+  //   //   return
+  //   // }
+  //   // const newModules = modules.data.modules.map((module) => module.deploymentKey)
+  //   // const addedModules = newModules.filter((name) => !previousModules.includes(name))
 
-    if (addedModules.length > 0) {
-      setSelectedModules((prevSelected) => [...prevSelected, ...addedModules])
-    }
-    setPreviousModules(newModules)
-  }, [modules.data])
+  //   // if (addedModules.length > 0) {
+  //   //   setSelectedModules((prevSelected) => [...prevSelected, ...addedModules])
+  //   // }
+  //   // setPreviousModules(newModules)
+
+  //   // modules.data are possible modules to choose from
+  //   //
+
+  // }, [modules.data])
 
   useEffect(() => {
     const filter: EventsQuery_Filter[] = []
@@ -117,6 +121,12 @@ export const TimelineFilterPanel = ({
     setSelectedLogLevel(Number(logLevel))
   }
 
+  console.group('modules')
+  console.log('selected', timelineState.modules)
+  console.log('for view getModules', timelineState.getModules())
+  console.log('known', timelineState.knownModules)
+  console.groupEnd()
+
   return (
     <div className='flex-shrink-0 w-52'>
       <div className='w-full'>
@@ -150,8 +160,9 @@ export const TimelineFilterPanel = ({
                 <li key={key} onClick={() => handleLogLevelChanged(key)} className='relative flex gap-x-2 cursor-pointer'>
                   <div className='relative flex h-5 w-3 flex-none items-center justify-center'>
                     <div
-                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
-                        } rounded-full ring-1`}
+                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${
+                        selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
+                      } rounded-full ring-1`}
                     />
                   </div>
                   <p className='flex-auto text-sm leading-5 text-gray-500'>
@@ -162,12 +173,12 @@ export const TimelineFilterPanel = ({
             </ul>
           </FilterPanelSection>
 
-          {modules.isSuccess && (
+          {modules !== undefined && (
             <FilterPanelSection title='Modules'>
               <div className='relative flex items-center mb-2'>
                 <button
                   type='button'
-                  onClick={() => setSelectedModules(modules.data.modules.map((module) => module.deploymentKey))}
+                  onClick={() => setSelectedModules(modules.map((module) => module.deploymentKey))}
                   className='text-indigo-600 cursor-pointer hover:text-indigo-500'
                 >
                   Select All
@@ -177,7 +188,7 @@ export const TimelineFilterPanel = ({
                   Deselect All
                 </button>
               </div>
-              {modules.data.modules.map((module) => (
+              {modules.map((module) => (
                 <div key={module.deploymentKey} className='relative flex items-start'>
                   <div className='flex h-6 items-center'>
                     <input

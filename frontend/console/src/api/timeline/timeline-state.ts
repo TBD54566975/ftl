@@ -1,5 +1,5 @@
 import { Timestamp } from "@bufbuild/protobuf";
-import { EventsQuery_DeploymentFilter, EventsQuery_EventTypeFilter, EventsQuery_Filter, EventsQuery_LogLevelFilter, EventsQuery_TimeFilter, EventType, LogLevel } from "../../protos/xyz/block/ftl/v1/console/console_pb";
+import { EventsQuery_DeploymentFilter, EventsQuery_EventTypeFilter, EventsQuery_Filter, EventsQuery_LogLevelFilter, EventsQuery_TimeFilter, EventType, LogLevel, Module } from "../../protos/xyz/block/ftl/v1/console/console_pb";
 import { eventTypesFilter, logLevelFilter, modulesFilter, specificEventIdFilter, timeFilter } from "./timeline-filters";
 import { TIME_RANGES, TimeRange, TimeSettings } from "../../features/timeline/filters/TimelineTimeControls";
 
@@ -34,6 +34,8 @@ range
 
 // TODO: type TimeState = Range | Tail;
 
+type Modules = string[] | 'all';
+
 // Hides the complexity of the URLSearchParams API and protobuf types.
 export class TimelineState {
   isTailing = true;
@@ -41,13 +43,16 @@ export class TimelineState {
   timeRange: TimeRange = TIME_RANGES.tail;
   olderThan?: Timestamp;
   newerThan?: Timestamp;
-  modules: string[] = [];
+  modules: Modules = 'all';
+  knownModules?: Module[] = [];
   logLevel: LogLevel = LogLevel.TRACE;
   // eventTypes: EventType[] = [EventType.CALL, EventType.LOG, EventType.DEPLOYMENT_CREATED, EventType.DEPLOYMENT_UPDATED]
   eventTypes: EventType[] = [];
   eventId?: bigint;
 
-  constructor(params: URLSearchParams) {
+  constructor(params: URLSearchParams, knownModules: Module[] | undefined) {
+    this.knownModules = knownModules;
+
     // Quietly ignore invalid values from the user's URL...
     for (const [key, value] of params.entries()) {
       if (key === UrlKeys.ID) {
@@ -91,7 +96,11 @@ export class TimelineState {
     if (this.eventId) {
       filters.push(specificEventIdFilter(this.eventId));
     }
-    if (this.modules.length > 0) {
+    if (this.modules === 'all') {
+      if (this.knownModules) {
+        filters.push(modulesFilter(this.knownModules.map((module) => module.deploymentKey)));
+      }
+    } else if (this.modules.length > 0) {
       filters.push(modulesFilter(this.modules));
     }
     if (this.logLevel) {
@@ -112,7 +121,7 @@ export class TimelineState {
     if (this.eventId) {
       params.set(UrlKeys.ID, this.eventId.toString());
     }
-    if (this.modules.length > 0) {
+    if (this.modules !== 'all' && this.modules.length > 0) {
       params.set(UrlKeys.MODULES, this.modules.join(','));
     }
     if (this.logLevel) {
@@ -148,6 +157,13 @@ export class TimelineState {
     return params;
   }
 
+  getModules() {
+    if (this.modules === 'all') {
+      return this.knownModules?.map((module) => module.deploymentKey) ?? [];
+    }
+    return this.modules;
+  }
+
   updateFromTimeSettings(timeSettings: TimeSettings) {
     this.olderThan = timeSettings.olderThan;
     this.newerThan = timeSettings.newerThan;
@@ -156,8 +172,8 @@ export class TimelineState {
   }
 
   updateFromFilters(filters: EventsQuery_Filter[]) {
-    this.logLevel = undefined;
-    this.modules = [];
+    this.logLevel = LogLevel.TRACE;
+    this.modules = 'all'
     this.eventTypes = [];
     this.olderThan = undefined;
     this.newerThan = undefined;
@@ -187,35 +203,6 @@ export class TimelineState {
       }
     }
   }
-}
-
-export function newTimelineStateFromFilters(filters: EventsQuery_Filter[]): TimelineState {
-  const state = new TimelineState(new NicerURLSearchParams());
-  for (const filter of filters) {
-    switch (filter.filter.case) {
-      case 'logLevel':
-        state.logLevel = filter.filter.value.logLevel;
-        break;
-      case 'deployments':
-        state.modules = filter.filter.value.deployments;
-        break;
-      case 'eventTypes':
-        state.eventTypes = filter.filter.value.eventTypes;
-        break;
-      case 'time':
-        state.olderThan = filter.filter.value.olderThan;
-        state.newerThan = filter.filter.value.newerThan;
-        break;
-      case 'id':
-        // Only support one ID at a time for now.
-        state.eventId = filter.filter.value.higherThan;
-        break;
-      default:
-        console.error('Unknown filter type:', filter);
-    }
-  }
-
-  return state;
 }
 
 function logValueToEnum(value: string): LogLevel | undefined {
