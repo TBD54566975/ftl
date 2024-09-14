@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
@@ -17,11 +18,11 @@ import (
 )
 
 type Service struct {
-	dal dal.DAL
+	dal *dal.DAL
 }
 
 func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service) *Service {
-	return &Service{dal: *dal.New(conn, encryption)}
+	return &Service{dal: dal.New(conn, encryption)}
 }
 
 type Log struct {
@@ -54,8 +55,7 @@ type Call struct {
 	DestVerb         *schema.Ref
 	Callers          []*schema.Ref
 	Request          *ftlv1.CallRequest
-	Response         optional.Option[*ftlv1.CallResponse]
-	CallError        optional.Option[error]
+	Response         either.Either[*ftlv1.CallResponse, error]
 }
 
 func (s *Service) RecordCall(ctx context.Context, call *Call) {
@@ -69,14 +69,17 @@ func (s *Service) RecordCall(ctx context.Context, call *Call) {
 	var stack optional.Option[string]
 	var responseBody []byte
 
-	if callError, ok := call.CallError.Get(); ok {
-		errorStr = optional.Some(callError.Error())
-	} else if response, ok := call.Response.Get(); ok {
-		responseBody = response.GetBody()
-		if callError := response.GetError(); callError != nil {
+	switch response := call.Response.(type) {
+	case either.Left[*ftlv1.CallResponse, error]:
+		resp := response.Get()
+		responseBody = resp.GetBody()
+		if callError := resp.GetError(); callError != nil {
 			errorStr = optional.Some(callError.Message)
 			stack = optional.Ptr(callError.Stack)
 		}
+	case either.Right[*ftlv1.CallResponse, error]:
+		callError := response.Get()
+		errorStr = optional.Some(callError.Error())
 	}
 
 	err := s.dal.InsertCallEvent(ctx, &dal.CallEvent{

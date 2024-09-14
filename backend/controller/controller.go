@@ -235,7 +235,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
+	encryption, err := encryption.New(ctx, conn, api.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
 	}
@@ -1073,12 +1073,13 @@ func (s *Service) callWithRequest(
 
 	response, err := client.verb.Call(ctx, req)
 	var resp *connect.Response[ftlv1.CallResponse]
-	var maybeResponse optional.Option[*ftlv1.CallResponse]
+	var callResponse either.Either[*ftlv1.CallResponse, error]
 	if err == nil {
 		resp = connect.NewResponse(response.Msg)
-		maybeResponse = optional.Some(resp.Msg)
+		callResponse = either.LeftOf[error](resp.Msg)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.None[string]())
 	} else {
+		callResponse = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 	}
 	s.timeline.RecordCall(ctx, &timeline.Call{
@@ -1088,9 +1089,8 @@ func (s *Service) callWithRequest(
 		StartTime:        start,
 		DestVerb:         verbRef,
 		Callers:          callers,
-		CallError:        optional.Nil(err),
 		Request:          req.Msg,
-		Response:         maybeResponse,
+		Response:         callResponse,
 	})
 	return resp, err
 }

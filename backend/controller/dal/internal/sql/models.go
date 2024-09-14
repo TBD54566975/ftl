@@ -355,20 +355,6 @@ type Module struct {
 	Name     string
 }
 
-type Timeline struct {
-	ID              int64
-	TimeStamp       time.Time
-	DeploymentID    int64
-	RequestID       optional.Option[int64]
-	Type            EventType
-	CustomKey1      optional.Option[string]
-	CustomKey2      optional.Option[string]
-	CustomKey3      optional.Option[string]
-	CustomKey4      optional.Option[string]
-	Payload         api.EncryptedTimelineColumn
-	ParentRequestID optional.Option[string]
-}
-
 type Topic struct {
 	ID        int64
 	Key       model.TopicKey

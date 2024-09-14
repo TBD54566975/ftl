@@ -9,8 +9,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	"github.com/TBD54566975/ftl/internal/encryption"
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 )
 
@@ -90,7 +91,7 @@ VALUES (
 `
 
 type InsertTimelineCallEventParams struct {
-	DeploymentKey    interface{}
+	DeploymentKey    model.DeploymentKey
 	RequestKey       optional.Option[string]
 	ParentRequestKey optional.Option[string]
 	TimeStamp        time.Time
@@ -98,7 +99,7 @@ type InsertTimelineCallEventParams struct {
 	SourceVerb       optional.Option[string]
 	DestModule       string
 	DestVerb         string
-	Payload          encryption.EncryptedTimelineColumn
+	Payload          api.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error {
@@ -141,11 +142,11 @@ VALUES (
 `
 
 type InsertTimelineLogEventParams struct {
-	DeploymentKey interface{}
+	DeploymentKey model.DeploymentKey
 	RequestKey    optional.Option[string]
 	TimeStamp     time.Time
 	Level         int32
-	Payload       encryption.EncryptedTimelineColumn
+	Payload       api.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineLogEvent(ctx context.Context, arg InsertTimelineLogEventParams) error {

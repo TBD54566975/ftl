@@ -7,16 +7,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
+
 	controllerdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/optional"
 )
 
 func TestTimelineDAL(t *testing.T) {

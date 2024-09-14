@@ -5,12 +5,11 @@
 package sql
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"fmt"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/alecthomas/types/optional"
 )
 
@@ -62,12 +61,12 @@ type Timeline struct {
 	ID              int64
 	TimeStamp       time.Time
 	DeploymentID    int64
-	RequestID       sql.NullInt64
+	RequestID       optional.Option[int64]
 	Type            EventType
 	CustomKey1      optional.Option[string]
 	CustomKey2      optional.Option[string]
 	CustomKey3      optional.Option[string]
 	CustomKey4      optional.Option[string]
-	Payload         encryption.EncryptedTimelineColumn
+	Payload         api.EncryptedTimelineColumn
 	ParentRequestID optional.Option[string]
 }

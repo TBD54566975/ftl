@@ -7,6 +7,8 @@ sql:
       - backend/controller/dal/internal/sql/async_queries.sql
       # FIXME: Until we fully decouple cron from the controller, we need to include the cron queries here
       - backend/controller/cronjobs/dal/internal/sql/queries.sql
+      # Some of the timeline entries happen within a controller transaction, so we need to include them here
+      - backend/controller/timeline/dal/internal/sql/deployment_queries.sql
     schema: "backend/controller/sql/schema"
     database:
       uri: postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret
@@ -181,35 +183,11 @@ sql:
   - <<: *daldir
     queries:
       - backend/controller/timeline/dal/internal/sql/queries.sql
+      - backend/controller/timeline/dal/internal/sql/deployment_queries.sql
     gen:
       go:
         <<: *gengo
         out: "backend/controller/timeline/dal/internal/sql"
-        overrides:
-          - db_type: "encrypted_timeline"
-            go_type: "github.com/TBD54566975/ftl/internal/encryption.EncryptedTimelineColumn"
-          - db_type: "encrypted_timeline"
-            nullable: true
-            go_type: "github.com/TBD54566975/ftl/internal/encryption.OptionalEncryptedTimelineColumn"
-          - db_type: "timestamptz"
-            go_type: "time.Time"
-          - db_type: "timestamptz"
-            nullable: true
-            go_type:
-              type: "optional.Option[time.Time]"
-          - db_type: "pg_catalog.interval"
-            go_type: "github.com/TBD54566975/ftl/backend/controller/sql/sqltypes.Duration"
-          - db_type: "pg_catalog.interval"
-            nullable: true
-            go_type:
-              type: "optional.Option[sqltypes.Duration]"
-          - db_type: "text"
-            go_type: "string"
-          - db_type: "text"
-            nullable: true
-            go_type:
-              import: "github.com/alecthomas/types/optional"
-              type: "Option[string]"
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"
