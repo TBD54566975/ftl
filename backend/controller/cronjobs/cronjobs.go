@@ -11,10 +11,10 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	encryptionsvc "github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -178,7 +178,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
 	origin := &parentdal.AsyncOriginCron{CronJobKey: job.Key}
-	var request encryption.EncryptedColumn[encryption.AsyncSubKey]
+	var request api.EncryptedColumn[api.AsyncSubKey]
 	err = s.encryption.Encrypt([]byte(`{}`), &request)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt request for job %q: %w", job.Key, err)

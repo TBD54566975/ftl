@@ -13,11 +13,11 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -191,7 +191,7 @@ func (d *DAL) CompleteAsyncCall(ctx context.Context,
 	didScheduleAnotherCall = false
 	switch result := result.(type) {
 	case either.Left[[]byte, string]: // Successful response.
-		var encryptedResult encryption.EncryptedAsyncColumn
+		var encryptedResult api.EncryptedAsyncColumn
 		err := tx.encryption.Encrypt(result.Get(), &encryptedResult)
 		if err != nil {
 			return false, fmt.Errorf("failed to encrypt async call result: %w", err)

@@ -1,4 +1,4 @@
-package encryption
+package api
 
 import (
 	"testing"

@@ -8,8 +8,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -19,7 +19,7 @@ func TestEncryptionService(t *testing.T) {
 	uri := "fake-kms://CK6YwYkBElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEJy4TIQgfCuwxA3ZZgChp_wYARABGK6YwYkBIAE"
 
 	t.Run("EncryptDecryptJSON", func(t *testing.T) {
-		service, err := New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Some(uri)))
+		service, err := New(ctx, conn, api.NewBuilder().WithKMSURI(optional.Some(uri)))
 		assert.NoError(t, err)
 
 		type TestStruct struct {
@@ -28,7 +28,7 @@ func TestEncryptionService(t *testing.T) {
 		}
 
 		original := TestStruct{Name: "John Doe", Age: 30}
-		var encrypted ftlencryption.EncryptedTimelineColumn
+		var encrypted api.EncryptedTimelineColumn
 		err = service.EncryptJSON(original, &encrypted)
 		assert.NoError(t, err)
 
@@ -40,11 +40,11 @@ func TestEncryptionService(t *testing.T) {
 	})
 
 	t.Run("EncryptDecryptBinary", func(t *testing.T) {
-		service, err := New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Some(uri)))
+		service, err := New(ctx, conn, api.NewBuilder().WithKMSURI(optional.Some(uri)))
 		assert.NoError(t, err)
 
 		original := []byte("Hello, World!")
-		var encrypted ftlencryption.EncryptedTimelineColumn
+		var encrypted api.EncryptedTimelineColumn
 		err = service.Encrypt(original, &encrypted)
 		assert.NoError(t, err)
 
