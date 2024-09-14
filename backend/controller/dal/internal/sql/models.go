@@ -104,50 +104,6 @@ func (ns NullControllerState) Value() (driver.Value, error) {
 	return string(ns.ControllerState), nil
 }
 
-type EventType string
-
-const (
-	EventTypeCall              EventType = "call"
-	EventTypeLog               EventType = "log"
-	EventTypeDeploymentCreated EventType = "deployment_created"
-	EventTypeDeploymentUpdated EventType = "deployment_updated"
-)
-
-func (e *EventType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = EventType(s)
-	case string:
-		*e = EventType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for EventType: %T", src)
-	}
-	return nil
-}
-
-type NullEventType struct {
-	EventType EventType
-	Valid     bool // Valid is true if EventType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullEventType) Scan(value interface{}) error {
-	if value == nil {
-		ns.EventType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.EventType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullEventType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.EventType), nil
-}
-
 type FsmStatus string
 
 const (
@@ -397,20 +353,6 @@ type Module struct {
 	ID       int64
 	Language string
 	Name     string
-}
-
-type Timeline struct {
-	ID              int64
-	TimeStamp       time.Time
-	DeploymentID    int64
-	RequestID       optional.Option[int64]
-	Type            EventType
-	CustomKey1      optional.Option[string]
-	CustomKey2      optional.Option[string]
-	CustomKey3      optional.Option[string]
-	CustomKey4      optional.Option[string]
-	Payload         api.EncryptedTimelineColumn
-	ParentRequestID optional.Option[string]
 }
 
 type Topic struct {

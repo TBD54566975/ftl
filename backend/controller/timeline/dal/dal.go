@@ -10,12 +10,105 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
+	"github.com/TBD54566975/ftl/backend/controller/timeline/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
+
+type DAL struct {
+	*libdal.Handle[DAL]
+	db         sql.Querier
+	encryption *encryption.Service
+}
+
+func New(conn libdal.Connection, encryption *encryption.Service) *DAL {
+	var d *DAL
+	d = &DAL{
+		db:         sql.New(conn),
+		encryption: encryption,
+		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
+			return &DAL{
+				Handle:     h,
+				db:         sql.New(h.Connection),
+				encryption: d.encryption,
+			}
+		}),
+	}
+	return d
+}
+
+func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
+	var requestKey optional.Option[string]
+	if name, ok := log.RequestKey.Get(); ok {
+		requestKey = optional.Some(name.String())
+	}
+
+	payload := map[string]any{
+		"message":    log.Message,
+		"attributes": log.Attributes,
+		"error":      log.Error,
+		"stack":      log.Stack,
+	}
+	var encryptedPayload ftlencryption.EncryptedTimelineColumn
+	err := d.encryption.EncryptJSON(payload, &encryptedPayload)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt log payload: %w", err)
+	}
+	return libdal.TranslatePGError(d.db.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
+		DeploymentKey: log.DeploymentKey,
+		RequestKey:    requestKey,
+		TimeStamp:     log.Time,
+		Level:         log.Level,
+		Payload:       encryptedPayload,
+	}))
+}
+
+func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
+	var sourceModule, sourceVerb optional.Option[string]
+	if sr, ok := call.SourceVerb.Get(); ok {
+		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
+	}
+	var requestKey optional.Option[string]
+	if rn, ok := call.RequestKey.Get(); ok {
+		requestKey = optional.Some(rn.String())
+	}
+	var parentRequestKey optional.Option[string]
+	if pr, ok := call.ParentRequestKey.Get(); ok {
+		parentRequestKey = optional.Some(pr.String())
+	}
+	var payload ftlencryption.EncryptedTimelineColumn
+	err := d.encryption.EncryptJSON(map[string]any{
+		"duration_ms": call.Duration.Milliseconds(),
+		"request":     call.Request,
+		"response":    call.Response,
+		"error":       call.Error,
+		"stack":       call.Stack,
+	}, &payload)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt call payload: %w", err)
+	}
+	return libdal.TranslatePGError(d.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
+		DeploymentKey:    call.DeploymentKey,
+		RequestKey:       requestKey,
+		ParentRequestKey: parentRequestKey,
+		TimeStamp:        call.Time,
+		SourceModule:     sourceModule,
+		SourceVerb:       sourceVerb,
+		DestModule:       call.DestVerb.Module,
+		DestVerb:         call.DestVerb.Name,
+		Payload:          payload,
+	}))
+}
+
+func (d *DAL) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
+	count, err := d.db.DeleteOldTimelineEvents(ctx, sqltypes.Duration(age), eventType)
+	return count, libdal.TranslatePGError(err)
+}
 
 type EventType = sql.EventType
 

@@ -7,6 +7,8 @@ sql:
       - backend/controller/dal/internal/sql/async_queries.sql
       # FIXME: Until we fully decouple cron from the controller, we need to include the cron queries here
       - backend/controller/cronjobs/dal/internal/sql/queries.sql
+      # Some of the timeline entries happen within a controller transaction, so we need to include them here
+      - backend/controller/timeline/dal/internal/sql/deployment_queries.sql
     schema: "backend/controller/sql/schema"
     database:
       uri: postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret
@@ -178,6 +180,14 @@ sql:
       go:
         <<: *gengo
         out: "backend/controller/encryption/dal/internal/sql"
+  - <<: *daldir
+    queries:
+      - backend/controller/timeline/dal/internal/sql/queries.sql
+      - backend/controller/timeline/dal/internal/sql/deployment_queries.sql
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/timeline/dal/internal/sql"
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"

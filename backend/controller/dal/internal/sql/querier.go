@@ -30,12 +30,9 @@ type Querier interface {
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
-	DeleteOldTimelineEvents(ctx context.Context, timeout sqltypes.Duration, type_ EventType) (int64, error)
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
-	// This is a dummy query to ensure that the Timeline model is generated.
-	DummyQueryTimeline(ctx context.Context, id int64) (Timeline, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
 	FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
@@ -83,11 +80,8 @@ type Querier interface {
 	GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]GetUnscheduledCronJobsRow, error)
 	GetZombieAsyncCalls(ctx context.Context, limit int32) ([]AsyncCall, error)
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
-	InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error
 	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error
 	InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error
-	InsertTimelineEvent(ctx context.Context, arg InsertTimelineEventParams) error
-	InsertTimelineLogEvent(ctx context.Context, arg InsertTimelineLogEventParams) error
 	IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error)
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, timeout sqltypes.Duration) (int64, error)
