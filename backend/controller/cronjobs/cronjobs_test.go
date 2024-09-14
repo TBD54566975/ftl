@@ -15,11 +15,11 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
-	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -37,7 +37,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	dal := dal.New(conn)
 
 	uri := "fake-kms://CK6YwYkBElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEJy4TIQgfCuwxA3ZZgChp_wYARABGK6YwYkBIAE"
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder().WithKMSURI(optional.Some(uri)))
+	encryption, err := encryption.New(ctx, conn, api.NewBuilder().WithKMSURI(optional.Some(uri)))
 	assert.NoError(t, err)
 
 	parentDAL := parentdal.New(ctx, conn, encryption)

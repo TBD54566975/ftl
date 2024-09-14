@@ -9,18 +9,18 @@ import (
 	"github.com/alecthomas/types/either"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestSendFSMEvent(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, api.NewBuilder())
 	assert.NoError(t, err)
 
 	dal := New(ctx, conn, encryption)

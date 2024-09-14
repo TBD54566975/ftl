@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/dal"
 	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/internal/encryption"
 )
 
 type Service struct {
-	encryptor encryption.DataEncryptor
+	encryptor api.DataEncryptor
 }
 
-func New(ctx context.Context, conn libdal.Connection, encryptionBuilder encryption.Builder) (*Service, error) {
+func New(ctx context.Context, conn libdal.Connection, encryptionBuilder api.Builder) (*Service, error) {
 	d := dal.New(ctx, conn)
 
 	encryptor, err := encryptionBuilder.Build(ctx, d)
@@ -30,7 +30,7 @@ func New(ctx context.Context, conn libdal.Connection, encryptionBuilder encrypti
 }
 
 // EncryptJSON encrypts the given JSON object and stores it in the provided destination.
-func (s *Service) EncryptJSON(v any, dest encryption.Encrypted) error {
+func (s *Service) EncryptJSON(v any, dest api.Encrypted) error {
 	serialized, err := json.Marshal(v)
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
@@ -40,7 +40,7 @@ func (s *Service) EncryptJSON(v any, dest encryption.Encrypted) error {
 }
 
 // DecryptJSON decrypts the given encrypted object and stores it in the provided destination.
-func (s *Service) DecryptJSON(encrypted encryption.Encrypted, v any) error {
+func (s *Service) DecryptJSON(encrypted api.Encrypted, v any) error {
 	decrypted, err := s.Decrypt(encrypted)
 	if err != nil {
 		return fmt.Errorf("failed to decrypt json with subkey %s: %w", encrypted.SubKey(), err)
@@ -53,7 +53,7 @@ func (s *Service) DecryptJSON(encrypted encryption.Encrypted, v any) error {
 	return nil
 }
 
-func (s *Service) Encrypt(cleartext []byte, dest encryption.Encrypted) error {
+func (s *Service) Encrypt(cleartext []byte, dest api.Encrypted) error {
 	err := s.encryptor.Encrypt(cleartext, dest)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt binary with subkey %s: %w", dest.SubKey(), err)
@@ -62,7 +62,7 @@ func (s *Service) Encrypt(cleartext []byte, dest encryption.Encrypted) error {
 	return nil
 }
 
-func (s *Service) Decrypt(encrypted encryption.Encrypted) ([]byte, error) {
+func (s *Service) Decrypt(encrypted api.Encrypted) ([]byte, error) {
 	v, err := s.encryptor.Decrypt(encrypted)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt binary with subkey %s: %w", encrypted.SubKey(), err)

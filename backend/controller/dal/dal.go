@@ -17,12 +17,12 @@ import (
 
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -605,7 +605,7 @@ func (d *DAL) SetDeploymentReplicas(ctx context.Context, key model.DeploymentKey
 			return libdal.TranslatePGError(err)
 		}
 	}
-	var payload ftlencryption.EncryptedTimelineColumn
+	var payload api.EncryptedTimelineColumn
 	err = d.encryption.EncryptJSON(map[string]interface{}{
 		"prev_min_replicas": deployment.MinReplicas,
 		"min_replicas":      minReplicas,
@@ -679,7 +679,7 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		}
 	}
 
-	var payload ftlencryption.EncryptedTimelineColumn
+	var payload api.EncryptedTimelineColumn
 	err = d.encryption.EncryptJSON(map[string]any{
 		"min_replicas": int32(minReplicas),
 		"replaced":     replacedDeploymentKey,
@@ -892,7 +892,7 @@ func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
 		"error":      log.Error,
 		"stack":      log.Stack,
 	}
-	var encryptedPayload ftlencryption.EncryptedTimelineColumn
+	var encryptedPayload api.EncryptedTimelineColumn
 	err := d.encryption.EncryptJSON(payload, &encryptedPayload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
@@ -973,7 +973,7 @@ func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
 	if pr, ok := call.ParentRequestKey.Get(); ok {
 		parentRequestKey = optional.Some(pr.String())
 	}
-	var payload ftlencryption.EncryptedTimelineColumn
+	var payload api.EncryptedTimelineColumn
 	err := d.encryption.EncryptJSON(map[string]any{
 		"duration_ms": call.Duration.Milliseconds(),
 		"request":     call.Request,

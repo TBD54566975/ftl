@@ -10,12 +10,12 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	sql2 "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 )
 
 // StartFSMTransition sends an event to an executing instance of an FSM.
@@ -32,7 +32,7 @@ import (
 //
 // Note: no validation of the FSM is performed.
 func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanceKey string, destinationState schema.RefKey, request []byte, encrypted bool, retryParams schema.RetryParams) (err error) {
-	var encryptedRequest encryption.EncryptedAsyncColumn
+	var encryptedRequest api.EncryptedAsyncColumn
 	if encrypted {
 		encryptedRequest.Set(request)
 	} else {
@@ -154,7 +154,7 @@ func (d *DAL) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKe
 }
 
 func (d *DAL) SetNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string, nextState schema.RefKey, request json.RawMessage, requestType schema.Type) error {
-	var encryptedRequest encryption.EncryptedAsyncColumn
+	var encryptedRequest api.EncryptedAsyncColumn
 	err := d.encryption.EncryptJSON(request, &encryptedRequest)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt FSM request: %w", err)

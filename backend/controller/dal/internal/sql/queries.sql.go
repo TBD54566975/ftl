@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
@@ -68,7 +68,7 @@ type AcquireAsyncCallRow struct {
 	Origin              string
 	Verb                schema.RefKey
 	CatchVerb           optional.Option[schema.RefKey]
-	Request             encryption.EncryptedAsyncColumn
+	Request             api.EncryptedAsyncColumn
 	ScheduledAt         time.Time
 	RemainingAttempts   int32
 	Error               optional.Option[string]
@@ -1183,7 +1183,7 @@ LIMIT 1
 
 type GetNextEventForSubscriptionRow struct {
 	Event        optional.Option[model.TopicEventKey]
-	Payload      encryption.OptionalEncryptedAsyncColumn
+	Payload      api.OptionalEncryptedAsyncColumn
 	CreatedAt    optional.Option[time.Time]
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
@@ -1841,7 +1841,7 @@ type InsertTimelineCallEventParams struct {
 	SourceVerb       optional.Option[string]
 	DestModule       string
 	DestVerb         string
-	Payload          encryption.EncryptedTimelineColumn
+	Payload          api.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error {
@@ -1884,7 +1884,7 @@ type InsertTimelineDeploymentCreatedEventParams struct {
 	DeploymentKey model.DeploymentKey
 	Language      string
 	ModuleName    string
-	Payload       encryption.EncryptedTimelineColumn
+	Payload       api.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error {
@@ -1922,7 +1922,7 @@ type InsertTimelineDeploymentUpdatedEventParams struct {
 	DeploymentKey model.DeploymentKey
 	Language      string
 	ModuleName    string
-	Payload       encryption.EncryptedTimelineColumn
+	Payload       api.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error {
@@ -1952,7 +1952,7 @@ type InsertTimelineEventParams struct {
 	CustomKey2      optional.Option[string]
 	CustomKey3      optional.Option[string]
 	CustomKey4      optional.Option[string]
-	Payload         encryption.EncryptedTimelineColumn
+	Payload         api.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineEvent(ctx context.Context, arg InsertTimelineEventParams) error {
@@ -1999,7 +1999,7 @@ type InsertTimelineLogEventParams struct {
 	RequestKey    optional.Option[string]
 	TimeStamp     time.Time
 	Level         int32
-	Payload       encryption.EncryptedTimelineColumn
+	Payload       api.EncryptedTimelineColumn
 }
 
 func (q *Queries) InsertTimelineLogEvent(ctx context.Context, arg InsertTimelineLogEventParams) error {
@@ -2151,7 +2151,7 @@ type PublishEventForTopicParams struct {
 	Module       string
 	Topic        string
 	Caller       string
-	Payload      encryption.EncryptedAsyncColumn
+	Payload      api.EncryptedAsyncColumn
 	RequestKey   string
 	TraceContext json.RawMessage
 }
@@ -2196,7 +2196,7 @@ type SetNextFSMEventParams struct {
 	Fsm         schema.RefKey
 	InstanceKey string
 	Event       schema.RefKey
-	Request     encryption.EncryptedAsyncColumn
+	Request     api.EncryptedAsyncColumn
 	RequestType sqltypes.Type
 }
 
@@ -2294,7 +2294,7 @@ WHERE id = $2
 RETURNING true
 `
 
-func (q *Queries) SucceedAsyncCall(ctx context.Context, response encryption.OptionalEncryptedAsyncColumn, iD int64) (bool, error) {
+func (q *Queries) SucceedAsyncCall(ctx context.Context, response api.OptionalEncryptedAsyncColumn, iD int64) (bool, error) {
 	row := q.db.QueryRowContext(ctx, succeedAsyncCall, response, iD)
 	var column_1 bool
 	err := row.Scan(&column_1)

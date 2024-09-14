@@ -14,11 +14,11 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	ftlencryption "github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
@@ -28,7 +28,7 @@ import (
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, api.NewBuilder())
 	assert.NoError(t, err)
 
 	dal := New(ctx, conn, encryption)
@@ -294,7 +294,7 @@ func TestDAL(t *testing.T) {
 func TestCreateArtefactConflict(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, api.NewBuilder())
 	assert.NoError(t, err)
 
 	dal := New(ctx, conn, encryption)
@@ -373,7 +373,7 @@ func assertEventsEqual(t *testing.T, expected, actual []TimelineEvent) {
 func TestDeleteOldEvents(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, api.NewBuilder())
 	assert.NoError(t, err)
 
 	dal := New(ctx, conn, encryption)

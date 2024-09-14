@@ -7,13 +7,13 @@ package sql
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/internal/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 )
 
 type Querier interface {
 	CreateOnlyEncryptionKey(ctx context.Context, key []byte) error
 	GetOnlyEncryptionKey(ctx context.Context) (GetOnlyEncryptionKeyRow, error)
-	UpdateEncryptionVerification(ctx context.Context, verifyTimeline encryption.OptionalEncryptedTimelineColumn, verifyAsync encryption.OptionalEncryptedAsyncColumn) error
+	UpdateEncryptionVerification(ctx context.Context, verifyTimeline api.OptionalEncryptedTimelineColumn, verifyAsync api.OptionalEncryptedAsyncColumn) error
 }
 
 var _ Querier = (*Queries)(nil)

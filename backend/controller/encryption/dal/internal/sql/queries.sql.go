@@ -8,7 +8,7 @@ package sql
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/internal/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 )
 
 const createOnlyEncryptionKey = `-- name: CreateOnlyEncryptionKey :exec
@@ -29,8 +29,8 @@ WHERE id = 1
 
 type GetOnlyEncryptionKeyRow struct {
 	Key            []byte
-	VerifyTimeline encryption.OptionalEncryptedTimelineColumn
-	VerifyAsync    encryption.OptionalEncryptedAsyncColumn
+	VerifyTimeline api.OptionalEncryptedTimelineColumn
+	VerifyAsync    api.OptionalEncryptedAsyncColumn
 }
 
 func (q *Queries) GetOnlyEncryptionKey(ctx context.Context) (GetOnlyEncryptionKeyRow, error) {
@@ -47,7 +47,7 @@ SET verify_timeline = $1,
 WHERE id = 1
 `
 
-func (q *Queries) UpdateEncryptionVerification(ctx context.Context, verifyTimeline encryption.OptionalEncryptedTimelineColumn, verifyAsync encryption.OptionalEncryptedAsyncColumn) error {
+func (q *Queries) UpdateEncryptionVerification(ctx context.Context, verifyTimeline api.OptionalEncryptedTimelineColumn, verifyAsync api.OptionalEncryptedAsyncColumn) error {
 	_, err := q.db.ExecContext(ctx, updateEncryptionVerification, verifyTimeline, verifyAsync)
 	return err
 }

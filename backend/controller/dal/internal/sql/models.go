@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
 	"github.com/sqlc-dev/pqtype"
@@ -328,8 +328,8 @@ type AsyncCall struct {
 	State             AsyncCallState
 	Origin            string
 	ScheduledAt       time.Time
-	Request           encryption.EncryptedAsyncColumn
-	Response          encryption.OptionalEncryptedAsyncColumn
+	Request           api.EncryptedAsyncColumn
+	Response          api.OptionalEncryptedAsyncColumn
 	Error             optional.Option[string]
 	RemainingAttempts int32
 	Backoff           sqltypes.Duration
@@ -389,7 +389,7 @@ type FsmNextEvent struct {
 	CreatedAt     time.Time
 	FsmInstanceID int64
 	NextState     schema.RefKey
-	Request       encryption.EncryptedAsyncColumn
+	Request       api.EncryptedAsyncColumn
 	RequestType   sqltypes.Type
 }
 
@@ -409,7 +409,7 @@ type Timeline struct {
 	CustomKey2      optional.Option[string]
 	CustomKey3      optional.Option[string]
 	CustomKey4      optional.Option[string]
-	Payload         encryption.EncryptedTimelineColumn
+	Payload         api.EncryptedTimelineColumn
 	ParentRequestID optional.Option[string]
 }
 
@@ -428,7 +428,7 @@ type TopicEvent struct {
 	CreatedAt    time.Time
 	Key          model.TopicEventKey
 	TopicID      int64
-	Payload      encryption.EncryptedAsyncColumn
+	Payload      api.EncryptedAsyncColumn
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
 	TraceContext pqtype.NullRawMessage

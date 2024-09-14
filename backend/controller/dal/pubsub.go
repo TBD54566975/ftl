@@ -9,11 +9,11 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	sql2 "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -21,7 +21,7 @@ import (
 )
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
-	var encryptedPayload encryption.EncryptedAsyncColumn
+	var encryptedPayload api.EncryptedAsyncColumn
 	err := d.encryption.Encrypt(payload, &encryptedPayload)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt payload: %w", err)

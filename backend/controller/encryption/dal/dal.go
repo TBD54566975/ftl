@@ -6,9 +6,9 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/internal/encryption"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -62,7 +62,7 @@ func (d *DAL) EnsureKey(ctx context.Context, generateKey func() ([]byte, error))
 
 const verification = "FTL - Towards a 𝝺-calculus for large-scale systems"
 
-func (d *DAL) VerifyEncryptor(ctx context.Context, encryptor encryption.DataEncryptor) (err error) {
+func (d *DAL) VerifyEncryptor(ctx context.Context, encryptor api.DataEncryptor) (err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -115,11 +115,11 @@ func (d *DAL) VerifyEncryptor(ctx context.Context, encryptor encryption.DataEncr
 
 // verifySubkey checks if the subkey is set and if not, sets it to a verification string.
 // returns (nil, nil) if verified and not changed
-func verifySubkey[SK encryption.SubKey](
-	encryptor encryption.DataEncryptor,
-	encrypted optional.Option[encryption.EncryptedColumn[SK]],
-) (optional.Option[encryption.EncryptedColumn[SK]], error) {
-	type EC = encryption.EncryptedColumn[SK]
+func verifySubkey[SK api.SubKey](
+	encryptor api.DataEncryptor,
+	encrypted optional.Option[api.EncryptedColumn[SK]],
+) (optional.Option[api.EncryptedColumn[SK]], error) {
+	type EC = api.EncryptedColumn[SK]
 
 	verifyField, ok := encrypted.Get()
 	if !ok {

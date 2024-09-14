@@ -1,6 +1,6 @@
 //go:build integration
 
-package encryption
+package api
 
 import (
 	"context"
