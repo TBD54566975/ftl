@@ -196,7 +196,7 @@ INSERT INTO requests (origin, "key", source_addr)
 VALUES ($1, $2, $3);
 
 -- name: UpsertController :one
-INSERT INTO controller (key, endpoint)
+INSERT INTO controllers (key, endpoint)
 VALUES ($1, $2)
 ON CONFLICT (key) DO UPDATE SET state     = 'live',
                                 endpoint  = $2,
@@ -206,7 +206,7 @@ RETURNING id;
 -- name: KillStaleControllers :one
 -- Mark any controller entries that haven't been updated recently as dead.
 WITH matches AS (
-    UPDATE controller
+    UPDATE controllers
         SET state = 'dead'
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - sqlc.arg('timeout')::INTERVAL
         RETURNING 1)
@@ -215,7 +215,7 @@ FROM matches;
 
 -- name: GetActiveControllers :many
 SELECT *
-FROM controller c
+FROM controllers c
 WHERE c.state <> 'dead'
 ORDER BY c.key;
 

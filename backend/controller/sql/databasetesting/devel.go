@@ -92,7 +92,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 				DELETE FROM leases
 				RETURNING 1
 			), deleted_controllers AS (
-				DELETE FROM controller
+				DELETE FROM controllers
 				RETURNING 1
 			), deleted_runners AS (
 				DELETE FROM runners
