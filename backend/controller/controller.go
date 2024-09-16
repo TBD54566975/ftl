@@ -180,6 +180,8 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		return runnerScaling(ctx, *config.Bind, svc.leasesdal)
 	})
 
+	go svc.dal.PollDeployments(ctx)
+
 	return g.Wait()
 }
 
@@ -1669,8 +1671,6 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 	// Subscribe to deployment changes.
 	s.dal.DeploymentChanges.Subscribe(deploymentChanges)
 	defer s.dal.DeploymentChanges.Unsubscribe(deploymentChanges)
-
-	go s.dal.PollDeployments(ctx)
 
 	for {
 		select {
