@@ -157,7 +157,7 @@ public class ModuleProcessor {
             moduleBuilder.writeTo(out);
         }
 
-        output = outputTargetBuildItem.getOutputDirectory().resolve("main");
+        output = outputTargetBuildItem.getOutputDirectory().resolve("launch");
         try (var out = Files.newOutputStream(output)) {
             out.write(
                     """

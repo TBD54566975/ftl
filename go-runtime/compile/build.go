@@ -100,7 +100,7 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string) (err error) {
+func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return err
 	}
@@ -246,9 +246,23 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	}
 
 	logger.Debugf("Compiling")
-	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", "build", "-o", "../../main", ".").RunBuffered(ctx)
+	args := []string{"build", "-o", "../../main", "."}
+	if devMode {
+		args = []string{"build", "-gcflags=all=-N -l", "-o", "../../main", "."}
+	}
+	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunBuffered(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to compile: %w", err)
+	}
+	err = os.WriteFile(filepath.Join(mainDir, "../../launch"), []byte(`#!/bin/bash
+	if [ -n "$FTL_DEBUG_PORT" ]; then
+	    dlv --listen=localhost:$FTL_DEBUG_PORT --headless=true --api-version=2 --accept-multiclient --allow-non-terminal-interactive --log exec --continue ./main
+	else
+		exec ./main
+	fi
+	`), 0750)
+	if err != nil {
+		return err
 	}
 	return nil
 }

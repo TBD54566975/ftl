@@ -69,7 +69,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), func(ctx context.Context, m map[string]int) {
+			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), func(ctx context.Context, m map[string]*localdebug.DebugInfo) {
 				localdebug.SyncIDEDebugIntegrations(ctx, d.Build.Dirs[0], m)
 			})
 		})
@@ -82,7 +82,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		case <-controllerReady:
 		}
 
-		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv)}
+		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(true)}
 		if d.Lsp {
 			d.languageServer = lsp.NewServer(ctx)
 			opts = append(opts, buildengine.WithListener(d.languageServer))

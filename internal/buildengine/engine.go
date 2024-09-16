@@ -76,6 +76,7 @@ type Engine struct {
 	listener         Listener
 	modulesToBuild   *xsync.MapOf[string, bool]
 	buildEnv         []string
+	devMode          bool
 }
 
 type Option func(o *Engine)
@@ -96,6 +97,13 @@ func BuildEnv(env []string) Option {
 func WithListener(listener Listener) Option {
 	return func(o *Engine) {
 		o.listener = listener
+	}
+}
+
+// WithListener sets the event listener for the Engine.
+func WithDevMode(devMode bool) Option {
+	return func(o *Engine) {
+		o.devMode = devMode
 	}
 }
 
@@ -709,7 +717,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir), e.buildEnv)
+	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir), e.buildEnv, e.devMode)
 	if err != nil {
 		return err
 	}

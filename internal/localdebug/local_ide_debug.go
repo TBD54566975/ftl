@@ -29,6 +29,14 @@ const jvmDebugConfig = `<component name="ProjectRunConfigurationManager">
   </configuration>
 </component>`
 
+const golangDebugConfig = `<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="%s" type="GoRemoteDebugConfigurationType" factoryName="Go Remote" port="%d">
+    <option name="disconnectOption" value="LEAVE" />
+    <disconnect value="LEAVE" />
+    <method v="2" />
+  </configuration>
+</component>`
+
 func init() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT)
@@ -49,7 +57,7 @@ var lock = sync.Mutex{}
 var paths = map[string]bool{}
 
 // This is a bit of a hack to prove out the concept of local debugging.
-func SyncIDEDebugIntegrations(cxt context.Context, projectPath string, ports map[string]int) {
+func SyncIDEDebugIntegrations(cxt context.Context, projectPath string, ports map[string]*DebugInfo) {
 	lock.Lock()
 	defer lock.Unlock()
 	if projectPath == "" {
@@ -58,7 +66,7 @@ func SyncIDEDebugIntegrations(cxt context.Context, projectPath string, ports map
 	handleIntellij(cxt, projectPath, ports)
 }
 
-func handleIntellij(cxt context.Context, path string, ports map[string]int) {
+func handleIntellij(cxt context.Context, path string, ports map[string]*DebugInfo) {
 	logger := log.FromContext(cxt)
 	ideaPath := findIdeaFolder(path)
 	if ideaPath == "" {
@@ -77,7 +85,8 @@ func handleIntellij(cxt context.Context, path string, ports map[string]int) {
 	}
 	for _, entry := range entries {
 		if strings.HasPrefix(entry.Name(), "FTL.") && strings.HasSuffix(entry.Name(), ".xml") {
-			if ports[entry.Name()[4:(len(entry.Name())-4)]] > 0 {
+			debugInfo := ports[entry.Name()[4:(len(entry.Name())-4)]]
+			if debugInfo != nil {
 				continue
 			} else {
 				// old FTL entry, remove it
@@ -87,12 +96,22 @@ func handleIntellij(cxt context.Context, path string, ports map[string]int) {
 		}
 	}
 	for k, v := range ports {
-		name := filepath.Join(runConfig, "FTL."+k+".xml")
-		err := os.WriteFile(name, []byte(fmt.Sprintf(jvmDebugConfig, "FT𝝺 - "+k, v, v)), 0644)
-		paths[name] = true
-		if err != nil {
-			logger.Errorf(err, "could not create FTL Java Config")
-			return
+		if v.Language == "java" || v.Language == "kotlin" {
+			name := filepath.Join(runConfig, "FTL."+k+".xml")
+			err := os.WriteFile(name, []byte(fmt.Sprintf(jvmDebugConfig, "FT𝝺 JVM - "+k, v.Port, v.Port)), 0644)
+			paths[name] = true
+			if err != nil {
+				logger.Errorf(err, "could not create FTL Java Config")
+				return
+			}
+		} else if v.Language == "go" {
+			name := filepath.Join(runConfig, "FTL."+k+".xml")
+			err := os.WriteFile(name, []byte(fmt.Sprintf(golangDebugConfig, "FT𝝺 GO - "+k, v.Port)), 0644)
+			paths[name] = true
+			if err != nil {
+				logger.Errorf(err, "could not create FTL Go Config")
+				return
+			}
 		}
 	}
 }
@@ -116,4 +135,9 @@ func findIdeaFolder(startPath string) string {
 	}
 
 	return ""
+}
+
+type DebugInfo struct {
+	Port     int
+	Language string
 }

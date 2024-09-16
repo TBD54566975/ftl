@@ -18,6 +18,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/runner"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -30,8 +31,9 @@ type localScaling struct {
 	// Module -> Deployments -> info
 	runners map[string]map[string]*deploymentInfo
 	// Module -> Port
-	debugPorts     map[string]int
-	runnerCallback func(context.Context, map[string]int)
+	debugPorts     map[string]*localdebug.DebugInfo
+	runnerCallback func(context.Context, map[string]*localdebug.DebugInfo)
+	// Module -> Port, most recent runner is present in the map
 
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
@@ -69,13 +71,14 @@ type deploymentInfo struct {
 	module   string
 	replicas int32
 	key      string
+	language string
 }
 type runnerInfo struct {
 	cancelFunc context.CancelFunc
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, runnerDebugCallback func(ctx context.Context, javaRunners map[string]int)) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, runnerDebugCallback func(ctx context.Context, javaRunners map[string]*localdebug.DebugInfo)) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -86,7 +89,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		lock:                sync.Mutex{},
 		cacheDir:            cacheDir,
 		runners:             map[string]map[string]*deploymentInfo{},
-		debugPorts:          map[string]int{},
+		debugPorts:          map[string]*localdebug.DebugInfo{},
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
 		prevRunnerSuffix:    -1,
@@ -112,7 +115,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 	}
 	deploymentRunners := moduleDeployments[msg.DeploymentKey]
 	if deploymentRunners == nil {
-		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: msg.DeploymentKey, module: msg.ModuleName}
+		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: msg.DeploymentKey, module: msg.ModuleName, language: msg.Schema.Runtime.Language}
 		moduleDeployments[msg.DeploymentKey] = deploymentRunners
 	}
 
@@ -146,7 +149,17 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 
 	bind := l.portAllocator.Next()
-	debug := l.portAllocator.NextPort()
+	var debug *localdebug.DebugInfo
+	debugPort := 0
+	if l.debugPorts[info.module] != nil {
+		debug = l.debugPorts[info.module]
+	} else {
+		debug = &localdebug.DebugInfo{
+			Language: info.language,
+			Port:     l.portAllocator.NextPort(),
+		}
+	}
+	debugPort = debug.Port
 
 	keySuffix := l.prevRunnerSuffix + 1
 	l.prevRunnerSuffix = keySuffix
@@ -156,7 +169,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		ControllerEndpoint: controllerEndpoint,
 		Key:                model.NewLocalRunnerKey(keySuffix),
 		Deployment:         deploymentKey,
-		DebugPort:          debug,
+		DebugPort:          debugPort,
 	}
 	l.debugPorts[info.module] = debug
 	if l.runnerCallback != nil {

@@ -30,6 +30,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -57,7 +58,7 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 	return s.run(ctx, projConfig, optional.None[chan bool](), nil)
 }
 
-func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], runnerCallback func(context.Context, map[string]int)) error {
+func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], runnerCallback func(context.Context, map[string]*localdebug.DebugInfo)) error {
 	logger := log.FromContext(ctx)
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 

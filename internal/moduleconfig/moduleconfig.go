@@ -174,7 +174,7 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 			config.DeployDir = ".ftl"
 		}
 		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"main"}
+			config.Deploy = []string{"main", "launch"}
 		}
 		if len(config.Watch) == 0 {
 			config.Watch = []string{"**/*.go", "go.mod", "go.sum"}

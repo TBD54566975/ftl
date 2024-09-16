@@ -301,7 +301,7 @@ func (s *Service) deploy(ctx context.Context) error {
 		log.FromContext(ctx).GetLevel(),
 		gdResp.Msg.Schema.Name,
 		deploymentDir,
-		"./main",
+		"./launch",
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars(
 			envVars...,
