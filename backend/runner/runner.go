@@ -54,6 +54,7 @@ type Config struct {
 	HeartbeatJitter       time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
 	RunnerStartDelay      time.Duration   `help:"Time in seconds for a runner to wait before contacting the controller. This can be needed in istio environments to work around initialization races." env:"FTL_RUNNER_START_DELAY" default:"0s"`
 	Deployment            string          `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
+	DebugPort             int             `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -287,6 +288,13 @@ func (s *Service) deploy(ctx context.Context) error {
 		return fmt.Errorf("failed to download artefacts: %w", err)
 	}
 
+	envVars := []string{"FTL_ENDPOINT=" + s.config.ControllerEndpoint.String(),
+		"FTL_CONFIG=" + strings.Join(s.config.Config, ","),
+		"FTL_OBSERVABILITY_ENDPOINT=" + s.config.ControllerEndpoint.String()}
+	if s.config.DebugPort > 0 {
+		envVars = append(envVars, fmt.Sprintf("FTL_DEBUG_PORT=%d", s.config.DebugPort))
+	}
+
 	verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Attrs(map[string]string{"module": module.Name}))
 	deployment, cmdCtx, err := plugin.Spawn(
 		unstoppable.Context(verbCtx),
@@ -296,9 +304,7 @@ func (s *Service) deploy(ctx context.Context) error {
 		"./main",
 		ftlv1connect.NewVerbServiceClient,
 		plugin.WithEnvars(
-			"FTL_ENDPOINT="+s.config.ControllerEndpoint.String(),
-			"FTL_CONFIG="+strings.Join(s.config.Config, ","),
-			"FTL_OBSERVABILITY_ENDPOINT="+s.config.ControllerEndpoint.String(),
+			envVars...,
 		),
 	)
 	if err != nil {

@@ -29,6 +29,9 @@ type localScaling struct {
 	cacheDir string
 	// Module -> Deployments -> info
 	runners map[string]map[string]*deploymentInfo
+	// Module -> Port
+	debugPorts     map[string]int
+	runnerCallback func(context.Context, map[string]int)
 
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
@@ -63,6 +66,7 @@ func (l *localScaling) GetEndpointForDeployment(ctx context.Context, module stri
 
 type deploymentInfo struct {
 	runner   optional.Option[runnerInfo]
+	module   string
 	replicas int32
 	key      string
 }
@@ -71,16 +75,18 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, runnerDebugCallback func(ctx context.Context, javaRunners map[string]int)) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return nil, err
 	}
 	local := localScaling{
+		runnerCallback:      runnerDebugCallback,
 		lock:                sync.Mutex{},
 		cacheDir:            cacheDir,
 		runners:             map[string]map[string]*deploymentInfo{},
+		debugPorts:          map[string]int{},
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
 		prevRunnerSuffix:    -1,
@@ -106,7 +112,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 	}
 	deploymentRunners := moduleDeployments[msg.DeploymentKey]
 	if deploymentRunners == nil {
-		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: msg.DeploymentKey}
+		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: msg.DeploymentKey, module: msg.ModuleName}
 		moduleDeployments[msg.DeploymentKey] = deploymentRunners
 	}
 
@@ -121,6 +127,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 }
 
 func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *deploymentInfo) error {
+
 	// Must be called under lock
 	logger := log.FromContext(ctx)
 	if deploymentRunners.replicas > 0 && !deploymentRunners.runner.Ok() {
@@ -139,6 +146,8 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 
 	bind := l.portAllocator.Next()
+	debug := l.portAllocator.NextPort()
+
 	keySuffix := l.prevRunnerSuffix + 1
 	l.prevRunnerSuffix = keySuffix
 
@@ -147,6 +156,11 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		ControllerEndpoint: controllerEndpoint,
 		Key:                model.NewLocalRunnerKey(keySuffix),
 		Deployment:         deploymentKey,
+		DebugPort:          debug,
+	}
+	l.debugPorts[info.module] = debug
+	if l.runnerCallback != nil {
+		l.runnerCallback(ctx, l.debugPorts)
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)
@@ -174,6 +188,12 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		l.lock.Lock()
 		defer l.lock.Unlock()
 		info.runner = optional.None[runnerInfo]()
+		if l.debugPorts[info.module] == debug {
+			delete(l.debugPorts, info.module)
+			if l.runnerCallback != nil {
+				l.runnerCallback(ctx, l.debugPorts)
+			}
+		}
 		err = l.reconcileRunners(ctx, info)
 		if err != nil {
 			logger.Errorf(err, "Failed to reconcile runners")

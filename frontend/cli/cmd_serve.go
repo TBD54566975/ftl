@@ -54,10 +54,10 @@ const ftlContainerName = "ftl-db-1"
 const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
 func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	return s.run(ctx, projConfig, optional.None[chan bool]())
+	return s.run(ctx, projConfig, optional.None[chan bool](), nil)
 }
 
-func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool]) error {
+func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], runnerCallback func(context.Context, map[string]int)) error {
 	logger := log.FromContext(ctx)
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
@@ -114,7 +114,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerAddresses = append(controllerAddresses, bindAllocator.Next())
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, runnerCallback)
 	if err != nil {
 		return err
 	}
