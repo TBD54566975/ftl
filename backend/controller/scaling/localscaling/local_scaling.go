@@ -21,6 +21,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
+var _ scaling.RunnerScaling = &localScaling{}
+
 type localScaling struct {
 	lock     sync.Mutex
 	cacheDir string
@@ -33,10 +35,40 @@ type localScaling struct {
 	prevRunnerSuffix int
 }
 
+func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
+	scaling.BeginGrpcScaling(ctx, endpoint, leaser, l.handleSchemaChange)
+	return nil
+}
+
+func (l *localScaling) GetEndpointForDeployment(module string, deployment string) (url.URL, error) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	mod := l.runners[module]
+	if mod == nil {
+		return url.URL{}, fmt.Errorf("module %s not found", module)
+	}
+	dep := mod[deployment]
+	if dep == nil {
+		return url.URL{}, fmt.Errorf("deployment %s not found", module)
+	}
+	for i := range dep.runners {
+		return url.URL{
+			Scheme: "http",
+			Host:   fmt.Sprintf("localhost:%s", dep.runners[i].port),
+		}, nil
+
+	}
+	return url.URL{}, fmt.Errorf("runner for deployment %s not found", module)
+}
+
 type deploymentInfo struct {
-	runners  map[string]context.CancelFunc
+	runners  map[string]runnerInfo
 	replicas int32
 	key      string
+}
+type runnerInfo struct {
+	cancelFunc context.CancelFunc
+	port       string
 }
 
 func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL) (scaling.RunnerScaling, error) {
@@ -54,10 +86,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		prevRunnerSuffix:    -1,
 	}
 
-	return func(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
-		scaling.BeginGrpcScaling(ctx, endpoint, leaser, local.handleSchemaChange)
-		return nil
-	}, nil
+	return &local, nil
 }
 
 func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
@@ -77,7 +106,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 	}
 	deploymentRunners := moduleDeployments[msg.DeploymentKey]
 	if deploymentRunners == nil {
-		deploymentRunners = &deploymentInfo{runners: map[string]context.CancelFunc{}, key: msg.DeploymentKey}
+		deploymentRunners = &deploymentInfo{runners: map[string]runnerInfo{}, key: msg.DeploymentKey}
 		moduleDeployments[msg.DeploymentKey] = deploymentRunners
 	}
 
@@ -103,8 +132,8 @@ func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *
 			}
 		}
 	} else if existing > deploymentRunners.replicas {
-		for _, cancelFunc := range deploymentRunners.runners {
-			cancelFunc()
+		for _, r := range deploymentRunners.runners {
+			r.cancelFunc()
 			existing--
 		}
 	}
@@ -139,7 +168,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
 
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
-	info.runners[config.Key.String()] = cancel
+	info.runners[config.Key.String()] = runnerInfo{cancelFunc: cancel, port: bind.Port()}
 
 	go func() {
 		logger.Debugf("Starting runner: %s", config.Key)

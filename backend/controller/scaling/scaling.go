@@ -16,7 +16,11 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
-type RunnerScaling func(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error
+type RunnerScaling interface {
+	Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error
+
+	GetEndpointForDeployment(module string, deployment string) (url.URL, error)
+}
 
 func BeginGrpcScaling(ctx context.Context, url url.URL, leaser leases.Leaser, handler func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error) {
 	leaseTimeout := time.Second * 20

@@ -3,6 +3,20 @@ kind: ConfigMap
 metadata:
   name: ftl-controller-deployment-config
 data:
+  serviceTemplate: |-
+    apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app: "(replaced)"
+      name: "(replaced)"
+    spec:
+      ports:
+        - name: verbs
+          protocol: TCP
+          port: 8893
+          targetPort: 8893
+      type: ClusterIP
   deploymentTemplate: |-
     apiVersion: apps/v1
     kind: Deployment

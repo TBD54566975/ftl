@@ -177,7 +177,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		)
 	})
 	g.Go(func() error {
-		return runnerScaling(ctx, *config.Bind, svc.leasesdal)
+		return runnerScaling.Start(ctx, *config.Bind, svc.leasesdal)
 	})
 
 	go svc.dal.PollDeployments(ctx)
@@ -609,13 +609,10 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			}()
 			deferredDeregistration = true
 		}
-		routes, err := s.dal.GetRoutingTable(ctx, nil)
-		if errors.Is(err, libdal.ErrNotFound) {
-			routes = map[string][]dal.Route{}
-		} else if err != nil {
-			return nil, err
+		_, err = s.syncRoutes(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not sync routes: %w", err)
 		}
-		s.routes.Store(routes)
 	}
 	if stream.Err() != nil {
 		return nil, stream.Err()

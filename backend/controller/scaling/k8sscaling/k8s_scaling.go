@@ -15,10 +15,12 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-var _ = (scaling.RunnerScaling)(NewK8sScaling)
+var _ scaling.RunnerScaling = &k8sScaling{}
 
-func NewK8sScaling(ctx context.Context, controller url.URL, leaser leases.Leaser) error {
+type k8sScaling struct {
+}
 
+func (k k8sScaling) Start(ctx context.Context, controller url.URL, leaser leases.Leaser) error {
 	logger := log.FromContext(ctx).Scope("K8sScaling")
 	ctx = log.ContextWithLogger(ctx, logger)
 	// creates the in-cluster config
@@ -52,6 +54,15 @@ func NewK8sScaling(ctx context.Context, controller url.URL, leaser leases.Leaser
 	}
 	scaling.BeginGrpcScaling(ctx, controller, leaser, deploymentReconciler.HandleSchemaChange)
 	return nil
+}
+
+func (k k8sScaling) GetEndpointForDeployment(module string, deployment string) (url.URL, error) {
+	return url.URL{Scheme: "http",
+		Host: deployment}, nil
+}
+
+func NewK8sScaling() scaling.RunnerScaling {
+	return &k8sScaling{}
 }
 
 func getCurrentNamespace() (string, error) {
