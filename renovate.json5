@@ -12,6 +12,7 @@
   lockFileMaintenance: {
     enabled: true, // Automatically update lock files like pnpm-lock.yaml
   },
+  postUpdateOptions: ["gomodTidy"],
   packageRules: [
     {
       matchUpdateTypes: ["minor", "patch"],
