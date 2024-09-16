@@ -457,7 +457,7 @@ func (q *Queries) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, ke
 
 const getActiveControllers = `-- name: GetActiveControllers :many
 SELECT id, key, created, last_seen, state, endpoint
-FROM controller c
+FROM controllers c
 WHERE c.state <> 'dead'
 ORDER BY c.key
 `
@@ -1749,7 +1749,7 @@ func (q *Queries) IsCronJobPending(ctx context.Context, key model.CronJobKey, st
 
 const killStaleControllers = `-- name: KillStaleControllers :one
 WITH matches AS (
-    UPDATE controller
+    UPDATE controllers
         SET state = 'dead'
         WHERE state <> 'dead' AND last_seen < (NOW() AT TIME ZONE 'utc') - $1::INTERVAL
         RETURNING 1)
@@ -2062,7 +2062,7 @@ func (q *Queries) UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobE
 }
 
 const upsertController = `-- name: UpsertController :one
-INSERT INTO controller (key, endpoint)
+INSERT INTO controllers (key, endpoint)
 VALUES ($1, $2)
 ON CONFLICT (key) DO UPDATE SET state     = 'live',
                                 endpoint  = $2,
