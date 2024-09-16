@@ -139,7 +139,7 @@ test-readme *args:
 
 # Run "go mod tidy" on all packages including tests
 tidy:
-  find . -name go.mod -execdir go mod tidy \;
+  find . -name go.mod -print -execdir go mod tidy \;
 
 # Check for changes in existing SQL migrations compared to main
 ensure-frozen-migrations:
