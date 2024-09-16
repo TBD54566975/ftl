@@ -20,7 +20,8 @@ jobs:
         run: docker compose up -d --wait
       - name: Test
         run: |
-          go-test-annotate ${{ (github.event_name == 'pull_request' && github.event.action != 'enqueued' && !contains( github.event.pull_request.labels.*.name, 'run-all')) && '-short' || '' }}
+          go-test-annotate
+          # go-test-annotate ${{ (github.event_name == 'pull_request' && github.event.action != 'enqueued' && !contains( github.event.pull_request.labels.*.name, 'run-all')) && '-short' || '' }}
   test-readme:
     name: Test README
     runs-on: ubuntu-latest
