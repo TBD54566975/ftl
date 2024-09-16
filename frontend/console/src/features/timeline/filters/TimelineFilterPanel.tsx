@@ -1,7 +1,6 @@
 import { Call02Icon, Rocket01Icon } from 'hugeicons-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
-import { useModules } from '../../../api/modules/use-modules'
 import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../api/timeline'
 import { EventType, type EventsQuery_Filter, LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { textColor } from '../../../utils'

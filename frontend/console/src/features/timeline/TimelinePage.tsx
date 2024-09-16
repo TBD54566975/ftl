@@ -1,14 +1,14 @@
 import { ListViewIcon } from 'hugeicons-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useModules } from '../../api/modules/use-modules'
+import { TimelineState } from '../../api/timeline/timeline-state'
 import { Page } from '../../layout'
 import type { EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { Timeline } from './Timeline'
 import { TimelineFilterPanel } from './filters/TimelineFilterPanel'
 import { TIME_RANGES, type TimeSettings, TimelineTimeControls } from './filters/TimelineTimeControls'
-import { newTimelineStateFromFilters, TimelineState } from '../../api/timeline/timeline-state'
-import { useModules } from '../../api/modules/use-modules'
 
 export const TimelinePage = () => {
   const modules = useModules()
@@ -33,7 +33,12 @@ export const TimelinePage = () => {
   }, [])
 
   useEffect(() => {
-    console.log('yassssuuuuuuuuu TimelinePage: filters, timeSettings, isTimelinePaused changed', JSON.stringify(filters), JSON.stringify(timeSettings), isTimelinePaused)
+    console.log(
+      'yassssuuuuuuuuu TimelinePage: filters, timeSettings, isTimelinePaused changed',
+      JSON.stringify(filters),
+      JSON.stringify(timeSettings),
+      isTimelinePaused,
+    )
     console.log('modules.data?.modules', modules.data?.modules)
     const timelineState = new TimelineState(searchParams, modules.data?.modules)
     timelineState.updateFromTimeSettings(timeSettings)

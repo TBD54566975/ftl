@@ -2,6 +2,7 @@ import type { Timestamp } from '@bufbuild/protobuf'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { timeFilter, useTimeline } from '../../api/timeline/index.ts'
+import { TimelineState } from '../../api/timeline/timeline-state.ts'
 import { Loader } from '../../components/Loader.tsx'
 import type { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
@@ -19,10 +20,17 @@ import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUp
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
-export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings; filters: EventsQuery_Filter[] }) => {
-  const [searchParams, setSearchParams] = useSearchParams()
+type NewType = {
+  timeSettings: TimeSettings
+  filters: EventsQuery_Filter[]
+  onFiltersChanged: (filters: EventsQuery_Filter[]) => void
+  timelineState: TimelineState
+}
+
+export const Timeline = ({ timeSettings, filters }: NewType) => {
+  const [searchParams] = useSearchParams()
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
-  const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
+  // const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
 
   let eventFilters = filters
   if (timeSettings.newerThan || timeSettings.olderThan) {
@@ -113,8 +121,9 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
             {entries.map((entry) => (
               <tr
                 key={entry.id.toString()}
-                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
-                  } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
+                className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${
+                  selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
+                } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
                 onClick={() => handleEntryClicked(entry)}
               >
                 <td className='w-8 flex-none flex items-center justify-center'>
