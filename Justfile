@@ -39,8 +39,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-frontend build-generate build-sqlc build-zips lsp-generate build-java
-  @just build ftl ftl-controller ftl-runner ftl-initdb
+build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java
 
 # Run "go generate" on all packages
 build-generate:
@@ -51,16 +50,21 @@ build-generate:
 build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
+  set -x
 
   if [ "${FTL_DEBUG:-}" = "true" ]; then
     for tool in $@; do go build -o "{{RELEASE}}/$tool" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
   else
-    for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
+    for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
   fi
 
 # Build all backend binaries
 build-backend:
   just build ftl ftl-controller ftl-runner
+
+# Build all backend tests
+build-backend-tests:
+  go test -run ^NONE -tags integration ./...
 
 build-java *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}

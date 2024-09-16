@@ -7,7 +7,6 @@ import (
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -18,7 +17,7 @@ import (
 func TestNoCallToAcquire(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, api.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
 	dal := New(ctx, conn, encryption)

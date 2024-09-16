@@ -19,7 +19,7 @@ func TestEncryptionService(t *testing.T) {
 	uri := "fake-kms://CK6YwYkBElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEJy4TIQgfCuwxA3ZZgChp_wYARABGK6YwYkBIAE"
 
 	t.Run("EncryptDecryptJSON", func(t *testing.T) {
-		service, err := New(ctx, conn, api.NewBuilder().WithKMSURI(optional.Some(uri)))
+		service, err := New(ctx, conn, NewBuilder().WithKMSURI(optional.Some(uri)))
 		assert.NoError(t, err)
 
 		type TestStruct struct {
@@ -40,7 +40,7 @@ func TestEncryptionService(t *testing.T) {
 	})
 
 	t.Run("EncryptDecryptBinary", func(t *testing.T) {
-		service, err := New(ctx, conn, api.NewBuilder().WithKMSURI(optional.Some(uri)))
+		service, err := New(ctx, conn, NewBuilder().WithKMSURI(optional.Some(uri)))
 		assert.NoError(t, err)
 
 		original := []byte("Hello, World!")
