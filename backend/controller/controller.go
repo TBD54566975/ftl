@@ -135,7 +135,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, conn, config, devel)
+	svc, err := New(ctx, conn, config, devel, runnerScaling)
 	if err != nil {
 		return err
 	}
@@ -221,9 +221,10 @@ type Service struct {
 
 	increaseReplicaFailures map[string]int
 	asyncCallsLock          sync.Mutex
+	runnerScaling           scaling.RunnerScaling
 }
 
-func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service, error) {
+func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerScaling scaling.RunnerScaling) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -252,6 +253,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
 		increaseReplicaFailures: map[string]int{},
+		runnerScaling:           runnerScaling,
 	}
 	svc.routes.Store(map[string][]dal.Route{})
 	svc.schema.Store(&schema.Schema{})
@@ -1756,11 +1758,25 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 
 // Periodically sync the routing table from the DB.
 func (s *Service) syncRoutes(ctx context.Context) (time.Duration, error) {
+	logger := log.FromContext(ctx)
 	routes, err := s.dal.GetRoutingTable(ctx, nil)
 	if errors.Is(err, libdal.ErrNotFound) {
 		routes = map[string][]dal.Route{}
 	} else if err != nil {
 		return 0, err
+	}
+	// TODO: This currently keeps a route table entry per runner, even for situations when the load balancing
+	// is being routed through a service. Long terms we don't really want this, however as this will all need to
+	// be changed when we get rolling deployments in place, we can leave this for now.
+	for k, v := range routes {
+		for i := range v {
+			deployment, err := s.runnerScaling.GetEndpointForDeployment(k, v[i].Deployment.String())
+			if err != nil {
+				logger.Errorf(err, "Failed to get updated endpoint for deployment %s", v[i].Deployment.String())
+				continue
+			}
+			v[i].Endpoint = deployment.String()
+		}
 	}
 	s.routes.Store(routes)
 	return time.Second, nil
