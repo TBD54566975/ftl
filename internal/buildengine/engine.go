@@ -100,7 +100,7 @@ func WithListener(listener Listener) Option {
 	}
 }
 
-// WithListener sets the event listener for the Engine.
+// WithDevMode sets the engine to dev mode.
 func WithDevMode(devMode bool) Option {
 	return func(o *Engine) {
 		o.devMode = devMode

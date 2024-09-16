@@ -68,9 +68,10 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return errors.New(ftlRunningErrorMsg)
 		}
 
+		ideDebugSync := localdebug.NewIDEIntegration(ctx, d.Build.Dirs[0])
 		g.Go(func() error {
 			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), func(ctx context.Context, m map[string]*localdebug.DebugInfo) {
-				localdebug.SyncIDEDebugIntegrations(ctx, d.Build.Dirs[0], m)
+				ideDebugSync.SyncIDEDebugIntegrations(m)
 			})
 		})
 	}

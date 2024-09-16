@@ -255,14 +255,14 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		return fmt.Errorf("failed to compile: %w", err)
 	}
 	err = os.WriteFile(filepath.Join(mainDir, "../../launch"), []byte(`#!/bin/bash
-	if [ -n "$FTL_DEBUG_PORT" ]; then
+	if [ -n "$FTL_DEBUG_PORT" ] && command -v dlv &> /dev/null ; then
 	    dlv --listen=localhost:$FTL_DEBUG_PORT --headless=true --api-version=2 --accept-multiclient --allow-non-terminal-interactive --log exec --continue ./main
 	else
 		exec ./main
 	fi
-	`), 0750)
+	`), 0770) // #nosec
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write launch script: %w", err)
 	}
 	return nil
 }
