@@ -218,7 +218,7 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 
 	service.Name = name
 	service.Labels["app"] = name
-	deployment.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: thisDeploymentName, UID: deployment.UID}}
+	service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: thisDeploymentName, UID: deployment.UID}}
 	service.Spec.Selector = map[string]string{"app": name}
 	_, err = r.Client.CoreV1().Services(r.Namespace).Create(ctx, service, v1.CreateOptions{})
 	if err != nil {
@@ -369,6 +369,15 @@ func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
 				logger.Errorf(err, "failed to delete deployment %s", deployment.Name)
 			}
 
+			// With owner references the service should be deleted automatically
+			// However there was a bug so we need this in prod for a bit to clean up
+			logger.Infof("deleting service %s", deployment.Name)
+			err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, deployment.Name, v1.DeleteOptions{})
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					logger.Errorf(err, "failed to delete service %s", deployment.Name)
+				}
+			}
 		}
 	}
 }
