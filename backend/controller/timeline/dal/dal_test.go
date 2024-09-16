@@ -12,7 +12,6 @@ import (
 
 	controllerdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -23,7 +22,7 @@ import (
 func TestTimelineDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
 	dal := New(conn, encryption)
@@ -157,7 +156,7 @@ func assertEventsEqual(t *testing.T, expected, actual []TimelineEvent) {
 func TestDeleteOldEvents(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encryption, err := encryption.New(ctx, conn, ftlencryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
 	dal := New(conn, encryption)

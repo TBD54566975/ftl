@@ -39,7 +39,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
@@ -237,7 +236,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool) (*Service
 		config.ControllerTimeout = time.Second * 5
 	}
 
-	encryption, err := encryption.New(ctx, conn, api.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
+	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Ptr(config.KMSURI)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
 	}

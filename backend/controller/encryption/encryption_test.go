@@ -1,15 +1,17 @@
-package api
+package encryption
 
 import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 )
 
 func TestNoOpEncryptor(t *testing.T) {
 	encryptor := NoOpEncryptor{}
 
-	var encrypted EncryptedTimelineColumn
+	var encrypted api.EncryptedTimelineColumn
 	err := encryptor.Encrypt([]byte("hunter2"), &encrypted)
 	assert.NoError(t, err)
 
@@ -29,7 +31,7 @@ func TestKMSEncryptorFakeKMS(t *testing.T) {
 	encryptor, err := NewKMSEncryptorWithKMS(uri, nil, key)
 	assert.NoError(t, err)
 
-	var encrypted EncryptedTimelineColumn
+	var encrypted api.EncryptedTimelineColumn
 	err = encryptor.Encrypt([]byte("hunter2"), &encrypted)
 	assert.NoError(t, err)
 
@@ -37,7 +39,7 @@ func TestKMSEncryptorFakeKMS(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "hunter2", string(decrypted))
 
-	wrongSubKey := EncryptedAsyncColumn(encrypted)
+	wrongSubKey := api.EncryptedAsyncColumn(encrypted)
 	// Should fail to decrypt with the wrong subkey
 	_, err = encryptor.Decrypt(&wrongSubKey)
 	assert.Error(t, err)

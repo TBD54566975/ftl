@@ -1,6 +1,6 @@
 //go:build integration
 
-package api
+package encryption
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -152,7 +153,7 @@ func TestKMSEncryptorLocalstack(t *testing.T) {
 	encryptor, err := NewKMSEncryptorWithKMS(uri, v1client, key)
 	assert.NoError(t, err)
 
-	var encrypted EncryptedTimelineColumn
+	var encrypted api.EncryptedTimelineColumn
 	err = encryptor.Encrypt([]byte("hunter2"), &encrypted)
 	assert.NoError(t, err)
 
@@ -161,7 +162,7 @@ func TestKMSEncryptorLocalstack(t *testing.T) {
 	assert.Equal(t, "hunter2", string(decrypted))
 
 	// Should fail to decrypt with the wrong subkey
-	wrongSubKey := EncryptedAsyncColumn(encrypted)
+	wrongSubKey := api.EncryptedAsyncColumn(encrypted)
 	_, err = encryptor.Decrypt(&wrongSubKey)
 	assert.Error(t, err)
 }
