@@ -3,20 +3,17 @@ package observability
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/alecthomas/types/optional"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/observability"
 )
 
 const (
-	runnerMeterName          = "ftl.runner"
-	runnerStateNameAttribute = "ftl.runner.state.name"
+	runnerMeterName = "ftl.runner"
 )
 
 type RunnerMetrics struct {
@@ -55,24 +52,18 @@ func initRunnerMetrics() (*RunnerMetrics, error) {
 	return result, nil
 }
 
-func (m *RunnerMetrics) Registered(ctx context.Context, key optional.Option[string], state ftlv1.RunnerState) {
+func (m *RunnerMetrics) Registered(ctx context.Context, key optional.Option[string]) {
 	m.registrationHeartbeats.Add(ctx, 1, metric.WithAttributes(
 		attribute.String(observability.RunnerDeploymentKeyAttribute, key.Default("unknown")),
-		attribute.String(runnerStateNameAttribute, runnerStateToString(state)),
 	))
 }
 
-func (m *RunnerMetrics) RegistrationFailure(ctx context.Context, key optional.Option[string], state ftlv1.RunnerState) {
+func (m *RunnerMetrics) RegistrationFailure(ctx context.Context, key optional.Option[string]) {
 	m.registrationFailures.Add(ctx, 1, metric.WithAttributes(
 		attribute.String(observability.RunnerDeploymentKeyAttribute, key.Default("unknown")),
-		attribute.String(runnerStateNameAttribute, runnerStateToString(state)),
 	))
 }
 
 func (m *RunnerMetrics) StartupFailed(ctx context.Context) {
 	m.startupFailures.Add(ctx, 1)
-}
-
-func runnerStateToString(state ftlv1.RunnerState) string {
-	return strings.ToLower(strings.TrimPrefix(state.String(), "RUNNER_"))
 }

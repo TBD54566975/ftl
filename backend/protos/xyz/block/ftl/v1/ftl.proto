@@ -207,20 +207,10 @@ message GetDeploymentResponse {
   repeated DeploymentArtefact artefacts = 2;
 }
 
-enum RunnerState {
-  // The Runner is waiting for a deployment.
-  RUNNER_NEW = 0;
-  // The Runner is assigned to a deployment.
-  RUNNER_ASSIGNED = 1;
-  // The Runner is dead.
-  RUNNER_DEAD = 2;
-}
-
 message RegisterRunnerRequest {
   string key = 1;
   string endpoint = 2;
   string deployment = 3;
-  RunnerState state = 4;
   google.protobuf.Struct labels = 5;
 }
 
@@ -262,7 +252,6 @@ message StatusResponse {
     string key = 1;
     repeated string languages = 2;
     string endpoint = 3;
-    RunnerState state = 4;
     optional string deployment = 5;
     google.protobuf.Struct labels = 6;
   }

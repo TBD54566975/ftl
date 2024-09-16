@@ -66,7 +66,6 @@ type Querier interface {
 	GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error)
 	GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error)
 	GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error)
-	GetRunnerState(ctx context.Context, key model.RunnerKey) (RunnerState, error)
 	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
 	GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error)
 	GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error)
