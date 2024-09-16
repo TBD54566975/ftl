@@ -39,6 +39,7 @@ const thisDeploymentName = "ftl-controller"
 const deploymentLabel = "ftl-deployment"
 const configMapName = "ftl-controller-deployment-config"
 const deploymentTemplate = "deploymentTemplate"
+const serviceTemplate = "serviceTemplate"
 
 // DeploymentProvisioner reconciles a Foo object
 type DeploymentProvisioner struct {
@@ -167,9 +168,13 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 		return fmt.Errorf("failed to get configMap %s: %w", configMapName, err)
 	}
 	data := cm.Data[deploymentTemplate]
-	deployment, err := decodeBytesToTDeployment([]byte(data))
+	deployment, err := decodeBytesToDeployment([]byte(data))
 	if err != nil {
 		return fmt.Errorf("failed to decode deployment from configMap %s: %w", configMapName, err)
+	}
+	service, err := decodeBytesToService([]byte(cm.Data[serviceTemplate]))
+	if err != nil {
+		return fmt.Errorf("failed to decode service from configMap %s: %w", configMapName, err)
 	}
 	ourVersion, err := extractTag(thisImage)
 	if err != nil {
@@ -205,15 +210,26 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	}
 	deployment.Labels[deploymentLabel] = name
 
-	_, err = deploymentClient.Create(ctx, deployment, v1.CreateOptions{})
+	deployment, err = deploymentClient.Create(ctx, deployment, v1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create deployment %s: %w", deployment.Name, err)
 	}
 	logger.Infof("created kube deployment %s", name)
+
+	service.Name = name
+	service.Labels["app"] = name
+	deployment.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: thisDeploymentName, UID: deployment.UID}}
+	service.Spec.Selector = map[string]string{"app": name}
+	_, err = r.Client.CoreV1().Services(r.Namespace).Create(ctx, service, v1.CreateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to create service %s: %w", deployment.Name, err)
+	}
+
 	return nil
 
 }
-func decodeBytesToTDeployment(bytes []byte) (*kubeapps.Deployment, error) {
+
+func decodeBytesToDeployment(bytes []byte) (*kubeapps.Deployment, error) {
 	deployment := kubeapps.Deployment{}
 	decodingScheme := runtime.NewScheme()
 	decoderCodecFactory := serializer.NewCodecFactory(decodingScheme)
@@ -223,6 +239,18 @@ func decodeBytesToTDeployment(bytes []byte) (*kubeapps.Deployment, error) {
 		return nil, fmt.Errorf("failed to decode deployment: %w", err)
 	}
 	return &deployment, nil
+}
+
+func decodeBytesToService(bytes []byte) (*kubecore.Service, error) {
+	service := kubecore.Service{}
+	decodingScheme := runtime.NewScheme()
+	decoderCodecFactory := serializer.NewCodecFactory(decodingScheme)
+	decoder := decoderCodecFactory.UniversalDecoder()
+	err := runtime.DecodeInto(decoder, bytes, &service)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode service: %w", err)
+	}
+	return &service, nil
 }
 
 func (r *DeploymentProvisioner) handleExistingDeployment(ctx context.Context, deployment *kubeapps.Deployment, ftlDeployment *schemapb.Module) error {

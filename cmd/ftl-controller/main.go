@@ -74,6 +74,6 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	ctx = manager.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling, conn, false)
+	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling(), conn, false)
 	kctx.FatalIfErrorf(err)
 }
