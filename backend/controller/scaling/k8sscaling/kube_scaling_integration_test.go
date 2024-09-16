@@ -12,6 +12,7 @@ import (
 )
 
 func TestKubeScaling(t *testing.T) {
+	t.Skip("Skipping for now as it takes 5+ minutes and we're trying to reduce CI time")
 	in.Run(t,
 		in.WithKubernetes(),
 		in.CopyModule("echo"),

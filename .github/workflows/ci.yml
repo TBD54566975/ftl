@@ -65,7 +65,7 @@ jobs:
         run: sqlc vet
   ensure-frozen-migrations:
     name: Ensure Frozen Migrations
-    if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-ensure-frozen-migrations') }}
+    # if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-ensure-frozen-migrations') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -107,7 +107,7 @@ jobs:
         run: just lint-scripts
   proto-breaking:
     name: Proto Breaking Change Check
-    if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-proto-breaking') }}
+    # if: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'skip-proto-breaking') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -158,7 +158,7 @@ jobs:
         run: just package-extension
   plugin:
     name: Intellij Plugin
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -175,7 +175,7 @@ jobs:
         run: just build-intellij-plugin
   build-all:
     name: Rebuild All
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -217,7 +217,7 @@ jobs:
       - run: go-arch-lint check || true
   docker-build-controller:
     name: Build Controller Docker Image
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -226,7 +226,7 @@ jobs:
       - run: just build-docker controller
   docker-build-runner:
     name: Build Runner Docker Image
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -235,7 +235,7 @@ jobs:
       - run: just build-docker runner
   docker-build-box:
     name: Build Box Docker Image
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -244,7 +244,7 @@ jobs:
       - run: just build-docker box
   console-e2e:
     name: Console e2e
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -259,7 +259,7 @@ jobs:
         run: just e2e-frontend
   integration-shard:
     name: Shard Integration Tests
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.extract-tests.outputs.matrix }}
@@ -276,7 +276,7 @@ jobs:
           echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build integration' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
   integration-run:
     name: Integration Test
-    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     needs: integration-shard
     runs-on: ubuntu-latest
     strategy:
