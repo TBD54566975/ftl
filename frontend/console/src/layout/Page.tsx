@@ -1,4 +1,3 @@
-import { ArrowRight02Icon } from 'hugeicons-react'
 import type React from 'react'
 import { classNames } from '../utils'
 

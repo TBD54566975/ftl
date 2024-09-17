@@ -1,4 +1,3 @@
-import { ListViewIcon } from 'hugeicons-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Page } from '../../layout'

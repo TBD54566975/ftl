@@ -1,4 +1,3 @@
-import { CubeIcon } from 'hugeicons-react'
 import { useState } from 'react'
 import { type NavigateFunction, useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
