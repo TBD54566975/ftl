@@ -448,7 +448,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				}
 			}
 		case change := <-schemaChanges:
-			if change.ChangeType != ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED {
+			if change.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
+				continue
+			}
+			existingHash, ok := moduleHashes[change.Name]
+			if !ok {
 				continue
 			}
 
@@ -460,7 +464,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				continue
 			}
 
-			if bytes.Equal(hash, moduleHashes[change.Name]) {
+			if bytes.Equal(hash, existingHash) {
 				logger.Tracef("schema for %s has not changed", change.Name)
 				continue
 			}

@@ -13,6 +13,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	sets "github.com/deckarep/golang-set/v2"
+	xmaps "golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
@@ -597,12 +598,10 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		if oldDeployment.Key.String() == newDeploymentKey.String() {
 			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
 		}
-		// Note that we don't set the desired replicas to 0 here, as we want to keep the old deployment running until the new one is ready
 		err = tx.db.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
 		if err != nil {
 			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
 		}
-		// The old deployment is still deactivated, we want to hold messages until the new deployment is ready
 		err = tx.deploymentWillDeactivate(ctx, oldDeployment.Key)
 		if err != nil {
 			return fmt.Errorf("replace deployment failed willDeactivate trigger from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
@@ -692,11 +691,18 @@ func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 	if err != nil {
 		return nil, err
 	}
-	sch, err := schema.ValidateSchema(&schema.Schema{
-		Modules: slices.Map(deployments, func(d Deployment) *schema.Module {
-			return d.Schema
-		}),
-	})
+
+	schemaMap := map[string]*schema.Module{}
+	for _, dep := range deployments {
+		if _, ok := schemaMap[dep.Module]; !ok {
+			// We only take the older ones
+			// If new ones exist they are not live yet
+			// Or the old ones would be gone
+			schemaMap[dep.Module] = dep.Schema
+		}
+	}
+	fullSchema := &schema.Schema{Modules: xmaps.Values(schemaMap)}
+	sch, err := schema.ValidateSchema(fullSchema)
 	if err != nil {
 		return nil, fmt.Errorf("could not validate schema: %w", err)
 	}

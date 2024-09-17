@@ -37,6 +37,7 @@ func TestKubeScaling(t *testing.T) {
 					in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 						if !strings.Contains(response, "Bob") {
 							failure.Store(fmt.Errorf("unexpected response: %s", response))
+							return
 						}
 					})(t, ic)
 				}

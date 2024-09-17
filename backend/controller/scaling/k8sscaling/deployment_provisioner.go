@@ -46,10 +46,9 @@ type DeploymentProvisioner struct {
 	Client           *kubernetes.Clientset
 	MyDeploymentName string
 	Namespace        string
-	// Map of modules to known deployments
-	// This needs to be re-done when we have proper rolling deployments
-	KnownModules map[string]string
-	FTLEndpoint  string
+	// Map of known deployments
+	KnownDeployments map[string]bool
+	FTLEndpoint      string
 }
 
 func (r *DeploymentProvisioner) updateDeployment(ctx context.Context, name string, mod func(deployment *kubeapps.Deployment)) error {
@@ -122,7 +121,7 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 		// Note that a change is now currently usually and add and a delete
 		// As it should really be called a module changed, not a deployment changed
 		// This will need to be fixed as part of the support for rolling deployments
-		r.KnownModules[msg.ModuleName] = msg.DeploymentKey
+		r.KnownDeployments[msg.DeploymentKey] = true
 		if deploymentExists {
 			logger.Infof("updating deployment %s", msg.DeploymentKey)
 			return r.handleExistingDeployment(ctx, deployment, msg.Schema)
@@ -130,10 +129,10 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 			return r.handleNewDeployment(ctx, msg.Schema, msg.DeploymentKey)
 		}
 	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-		delete(r.KnownModules, msg.ModuleName)
+		delete(r.KnownDeployments, msg.DeploymentKey)
 		if deploymentExists {
 			logger.Infof("deleting deployment %s", msg.ModuleName)
-			err := deploymentClient.Delete(ctx, msg.ModuleName, v1.DeleteOptions{})
+			err := deploymentClient.Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to delete deployment %s: %w", msg.ModuleName, err)
 			}
@@ -357,14 +356,10 @@ func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
 		logger.Errorf(err, "failed to list deployments")
 		return
 	}
-	knownDeployments := map[string]bool{}
-	for _, deployment := range r.KnownModules {
-		knownDeployments[deployment] = true
-	}
 
 	for _, deployment := range list.Items {
-		if !knownDeployments[deployment.Name] {
-			logger.Infof("deleting deployment %s", deployment.Name)
+		if !r.KnownDeployments[deployment.Name] {
+			logger.Infof("deleting deployment %s as it is not a known module", deployment.Name)
 			err := deploymentClient.Delete(ctx, deployment.Name, v1.DeleteOptions{})
 			if err != nil {
 				logger.Errorf(err, "failed to delete deployment %s", deployment.Name)

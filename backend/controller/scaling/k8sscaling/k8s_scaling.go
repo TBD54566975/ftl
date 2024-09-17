@@ -36,10 +36,10 @@ func (k k8sScaling) Start(ctx context.Context, controller url.URL, leaser leases
 	}
 	logger.Infof("using namespace %s", namespace)
 	deploymentReconciler := &DeploymentProvisioner{
-		Client:       clientset,
-		Namespace:    namespace,
-		KnownModules: map[string]string{},
-		FTLEndpoint:  controller.String(),
+		Client:           clientset,
+		Namespace:        namespace,
+		KnownDeployments: map[string]bool{},
+		FTLEndpoint:      controller.String(),
 	}
 	scaling.BeginGrpcScaling(ctx, controller, leaser, deploymentReconciler.HandleSchemaChange)
 	return nil

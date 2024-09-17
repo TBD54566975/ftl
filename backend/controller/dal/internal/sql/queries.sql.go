@@ -929,7 +929,7 @@ SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replica
 FROM deployments d
   INNER JOIN modules m on d.module_id = m.id
 WHERE min_replicas > 0
-ORDER BY d.key
+ORDER BY d.created_at,d.key
 `
 
 type GetDeploymentsWithMinReplicasRow struct {

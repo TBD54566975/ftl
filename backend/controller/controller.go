@@ -1767,6 +1767,7 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 	old := s.routes.Load()
 	newRoutes := map[string]Route{}
 	for _, v := range deployments {
+		logger.Tracef("processing deployment %s for route table", v.Key.String())
 		// Deployments are in order, oldest to newest
 		// If we see a newer one overwrite an old one that means the new one is read
 		// And we set its replicas to zero
@@ -1784,15 +1785,17 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 				// Kube deployments can take a while to come up, so we don't want to add them to the routing table until they are ready.
 				_, err := s.clientsForEndpoint(targetEndpoint).verb.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
 				if err != nil {
-					logger.Warnf("Unable to ping %s, not adding to route table", v.Key.String())
+					logger.Tracef("Unable to ping %s, not adding to route table", v.Key.String())
 					continue
 				}
+				logger.Debugf("Adding %s to route table", v.Key.String())
 			}
 			if prev, ok := newRoutes[v.Module]; ok {
 				// We have already seen a route for this module, the existing route must be an old one
 				// as the deployments are in order
 				// We have a new route ready to go, so we can just set the old one to 0 replicas
 				// Do this in a TX so it doesn't happen until the route table is updated
+				logger.Debugf("Setting %s to zero replicas", v.Key.String())
 				err := tx.SetDeploymentReplicas(ctx, prev.Deployment, 0)
 				if err != nil {
 					logger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
