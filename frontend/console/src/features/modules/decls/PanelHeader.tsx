@@ -3,7 +3,7 @@ import { Badge } from '../../../components/Badge'
 
 export const PanelHeader = ({ children, exported, comments }: { children?: ReactNode; exported: boolean; comments?: string[] }) => {
   return (
-    <div className='flex-1'>
+    <div className='flex-1 mb-8'>
       {exported && (
         <div className='mb-2'>
           <Badge name='Exported' />
