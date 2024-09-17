@@ -256,7 +256,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	}
 	err = os.WriteFile(filepath.Join(mainDir, "../../launch"), []byte(`#!/bin/bash
 	if [ -n "$FTL_DEBUG_PORT" ] && command -v dlv &> /dev/null ; then
-	    dlv --listen=localhost:$FTL_DEBUG_PORT --headless=true --api-version=2 --accept-multiclient --allow-non-terminal-interactive --log exec --continue ./main
+	    dlv --listen=localhost:$FTL_DEBUG_PORT --headless=true --api-version=2 --accept-multiclient --allow-non-terminal-interactive exec --continue ./main
 	else
 		exec ./main
 	fi

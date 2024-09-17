@@ -11,7 +11,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/lsp"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -68,11 +67,8 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return errors.New(ftlRunningErrorMsg)
 		}
 
-		ideDebugSync := localdebug.NewIDEIntegration(ctx, d.Build.Dirs[0])
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), func(ctx context.Context, m map[string]*localdebug.DebugInfo) {
-				ideDebugSync.SyncIDEDebugIntegrations(m)
-			})
+			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady))
 		})
 	}
 

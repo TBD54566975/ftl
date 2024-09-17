@@ -30,7 +30,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/observability"
@@ -55,10 +54,11 @@ const ftlContainerName = "ftl-db-1"
 const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
 func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	return s.run(ctx, projConfig, optional.None[chan bool](), nil)
+	return s.run(ctx, projConfig, optional.None[chan bool]())
 }
 
-func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], runnerCallback func(context.Context, map[string]*localdebug.DebugInfo)) error {
+func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool]) error {
+	print("PATH " + projConfig.Path)
 	logger := log.FromContext(ctx)
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 
@@ -115,7 +115,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerAddresses = append(controllerAddresses, bindAllocator.Next())
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, runnerCallback)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path)
 	if err != nil {
 		return err
 	}

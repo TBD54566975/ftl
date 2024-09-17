@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -21,10 +20,6 @@ const jvmDebugConfig = `<component name="ProjectRunConfigurationManager">
     <option name="HOST" value="localhost" />
     <option name="PORT" value="%d" />
     <option name="AUTO_RESTART" value="false" />
-    <RunnerSettings RunnerId="Debug">
-      <option name="DEBUG_PORT" value="%d" />
-      <option name="LOCAL" value="false" />
-    </RunnerSettings>
     <method v="2" />
   </configuration>
 </component>`
@@ -38,10 +33,7 @@ const golangDebugConfig = `<component name="ProjectRunConfigurationManager">
 </component>`
 
 type IDEIntegration struct {
-	cxt         context.Context
 	projectPath string
-	lock        sync.Mutex
-	paths       map[string]bool
 }
 
 type DebugInfo struct {
@@ -49,33 +41,65 @@ type DebugInfo struct {
 	Language string
 }
 
-func NewIDEIntegration(cxt context.Context, projectPath string) *IDEIntegration {
-	ret := &IDEIntegration{cxt: cxt, projectPath: projectPath, lock: sync.Mutex{}, paths: map[string]bool{}}
-	go func() {
-		<-cxt.Done()
-		ret.lock.Lock()
-		defer ret.lock.Unlock()
-		for p := range ret.paths {
-			_ = os.Remove(p)
-		}
-	}()
+func NewIDEIntegration(projectPath string) *IDEIntegration {
+	ret := &IDEIntegration{projectPath: projectPath}
 	return ret
 }
 
 // SyncIDEDebugIntegrations will sync the local IDE debug configurations for the given project path.
 // This is a bit of a hack to prove out the concept of local debugging.
-func (r *IDEIntegration) SyncIDEDebugIntegrations(ports map[string]*DebugInfo) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+func (r *IDEIntegration) SyncIDEDebugIntegrations(ctx context.Context, ports map[string]*DebugInfo) {
 	if r.projectPath == "" {
 		return
 	}
-	r.handleIntellij(ports)
-	r.handleVSCode(ports)
+	r.handleIntellij(ctx, ports)
+	r.handleVSCode(ctx, ports)
 }
 
-func (r *IDEIntegration) handleIntellij(ports map[string]*DebugInfo) {
-	logger := log.FromContext(r.cxt)
+// GetExistingDebugPort will return the existing debug ports for the given project name
+// based on VSCode configurations.
+// VSCode configurations are always created, so there is no need to look at intellij
+func (r *IDEIntegration) GetExistingDebugPort(ctx context.Context, module string) int {
+	if r.projectPath == "" {
+		return 0
+	}
+	logger := log.FromContext(ctx)
+	vscode := r.findFolder(".vscode", true)
+	launchJSON := filepath.Join(vscode, "launch.json")
+	contents := map[string]any{}
+	var configurations []any
+	if _, err := os.Stat(launchJSON); err == nil {
+		file, err := os.ReadFile(launchJSON)
+		if err != nil {
+			logger.Errorf(err, "could not read launch.json")
+			return 0
+		}
+		err = json.Unmarshal(file, &contents)
+		if err != nil {
+			logger.Errorf(err, "could not read launch.json")
+			return 0
+		}
+		configurations = contents["configurations"].([]any) //nolint:forcetypeassert
+		if configurations == nil {
+			configurations = []any{}
+		}
+		for _, config := range configurations {
+			name := config.(map[string]any)["name"].(string) //nolint:forcetypeassert
+			if strings.HasPrefix(name, "FT𝝺") && strings.HasSuffix(name, "- "+module) {
+				ret, ok := config.(map[string]any)["port"].(float64)
+				if !ok {
+					logger.Warnf("could not read port from launch.json")
+					return 0
+				}
+				return int(ret)
+			}
+		}
+	}
+	return 0
+}
+
+func (r *IDEIntegration) handleIntellij(ctx context.Context, ports map[string]*DebugInfo) {
+	logger := log.FromContext(ctx)
 	ideaPath := r.findFolder(".idea", false)
 	if ideaPath == "" {
 		return
@@ -104,8 +128,7 @@ func (r *IDEIntegration) handleIntellij(ports map[string]*DebugInfo) {
 	for k, v := range ports {
 		if v.Language == "java" || v.Language == "kotlin" {
 			name := filepath.Join(runConfig, "FTL."+k+".xml")
-			err := os.WriteFile(name, []byte(fmt.Sprintf(jvmDebugConfig, "FT𝝺 JVM - "+k, v.Port, v.Port)), 0600)
-			r.paths[name] = true
+			err := os.WriteFile(name, []byte(fmt.Sprintf(jvmDebugConfig, "FT𝝺 JVM - "+k, v.Port)), 0600)
 			if err != nil {
 				logger.Errorf(err, "could not create FTL Java Config")
 				return
@@ -113,7 +136,6 @@ func (r *IDEIntegration) handleIntellij(ports map[string]*DebugInfo) {
 		} else if v.Language == "go" {
 			name := filepath.Join(runConfig, "FTL."+k+".xml")
 			err := os.WriteFile(name, []byte(fmt.Sprintf(golangDebugConfig, "FT𝝺 GO - "+k, v.Port)), 0600)
-			r.paths[name] = true
 			if err != nil {
 				logger.Errorf(err, "could not create FTL Go Config")
 				return
@@ -137,9 +159,8 @@ func (r *IDEIntegration) findFolder(folder string, allowNonExistent bool) string
 			// Reached the project.toml file, we don't go outside of the project
 			if allowNonExistent {
 				return searchPath
-			} else {
-				return ""
 			}
+			return ""
 		}
 		parentPath := filepath.Dir(currentPath)
 		if parentPath == currentPath {
@@ -151,8 +172,8 @@ func (r *IDEIntegration) findFolder(folder string, allowNonExistent bool) string
 	return ""
 }
 
-func (r *IDEIntegration) handleVSCode(ports map[string]*DebugInfo) {
-	logger := log.FromContext(r.cxt)
+func (r *IDEIntegration) handleVSCode(ctx context.Context, ports map[string]*DebugInfo) {
+	logger := log.FromContext(ctx)
 	vscode := r.findFolder(".vscode", true)
 	err := os.MkdirAll(vscode, 0600)
 	if err != nil {
@@ -230,7 +251,7 @@ func (r *IDEIntegration) handleVSCode(ports map[string]*DebugInfo) {
 		}
 	}
 	contents["configurations"] = configurations
-	data, err := json.Marshal(contents)
+	data, err := json.MarshalIndent(contents, "", "  ")
 	if err != nil {
 		logger.Errorf(err, "could not marshal launch.json")
 		return

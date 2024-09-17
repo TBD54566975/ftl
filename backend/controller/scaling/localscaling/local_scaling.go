@@ -31,14 +31,14 @@ type localScaling struct {
 	// Module -> Deployments -> info
 	runners map[string]map[string]*deploymentInfo
 	// Module -> Port
-	debugPorts     map[string]*localdebug.DebugInfo
-	runnerCallback func(context.Context, map[string]*localdebug.DebugInfo)
+	debugPorts map[string]*localdebug.DebugInfo
 	// Module -> Port, most recent runner is present in the map
 
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
 
 	prevRunnerSuffix int
+	ideSupport       optional.Option[localdebug.IDEIntegration]
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
@@ -78,14 +78,13 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, runnerDebugCallback func(ctx context.Context, javaRunners map[string]*localdebug.DebugInfo)) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return nil, err
 	}
 	local := localScaling{
-		runnerCallback:      runnerDebugCallback,
 		lock:                sync.Mutex{},
 		cacheDir:            cacheDir,
 		runners:             map[string]map[string]*deploymentInfo{},
@@ -93,6 +92,9 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
 		prevRunnerSuffix:    -1,
+	}
+	if configPath != "" {
+		local.ideSupport = optional.Ptr(localdebug.NewIDEIntegration(configPath))
 	}
 
 	return &local, nil
@@ -147,13 +149,23 @@ func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *
 
 func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, info *deploymentInfo) error {
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
+	logger := log.FromContext(ctx)
 
 	bind := l.portAllocator.Next()
 	var debug *localdebug.DebugInfo
 	debugPort := 0
 	if l.debugPorts[info.module] != nil {
 		debug = l.debugPorts[info.module]
-	} else {
+	} else if ide, ok := l.ideSupport.Get(); ok {
+		existingDebugPort := ide.GetExistingDebugPort(ctx, info.module)
+		if existingDebugPort != 0 {
+			debug = &localdebug.DebugInfo{
+				Language: info.language,
+				Port:     existingDebugPort,
+			}
+		}
+	}
+	if debug == nil {
 		debug = &localdebug.DebugInfo{
 			Language: info.language,
 			Port:     l.portAllocator.NextPort(),
@@ -172,8 +184,8 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		DebugPort:          debugPort,
 	}
 	l.debugPorts[info.module] = debug
-	if l.runnerCallback != nil {
-		l.runnerCallback(ctx, l.debugPorts)
+	if ide, ok := l.ideSupport.Get(); ok {
+		ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)
@@ -186,7 +198,6 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	config.HeartbeatPeriod = time.Second
 	config.HeartbeatJitter = time.Millisecond * 100
 
-	logger := log.FromContext(ctx)
 	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
 
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
@@ -203,9 +214,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		info.runner = optional.None[runnerInfo]()
 		if l.debugPorts[info.module] == debug {
 			delete(l.debugPorts, info.module)
-			if l.runnerCallback != nil {
-				l.runnerCallback(ctx, l.debugPorts)
-			}
+			// We don't actively clean up the run configuration, they are used on next start
 		}
 		err = l.reconcileRunners(ctx, info)
 		if err != nil {
