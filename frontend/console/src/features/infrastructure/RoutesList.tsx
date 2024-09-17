@@ -17,7 +17,6 @@ export const RoutesList = ({ routes }: { routes: StatusResponse_Route[] }) => {
           <div className='flex gap-x-4 items-center w-1/2 justify-end'>
             <div className='flex flex-wrap gap-1 justify-end'>
               <AttributeBadge name='deployment' value={route.deployment} />
-              <AttributeBadge name='runner' value={route.runner} />
             </div>
           </div>
         </div>

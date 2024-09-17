@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
@@ -26,7 +27,7 @@ var _ scaling.RunnerScaling = &localScaling{}
 type localScaling struct {
 	lock     sync.Mutex
 	cacheDir string
-	// Module -> Deployments -> Runners -> Cancel Func
+	// Module -> Deployments -> info
 	runners map[string]map[string]*deploymentInfo
 
 	portAllocator       *bind.BindAllocator
@@ -40,29 +41,28 @@ func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser lease
 	return nil
 }
 
-func (l *localScaling) GetEndpointForDeployment(module string, deployment string) (url.URL, error) {
+func (l *localScaling) GetEndpointForDeployment(ctx context.Context, module string, deployment string) (optional.Option[url.URL], error) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
 	mod := l.runners[module]
 	if mod == nil {
-		return url.URL{}, fmt.Errorf("module %s not found", module)
+		return optional.None[url.URL](), fmt.Errorf("module %s not found", module)
 	}
 	dep := mod[deployment]
 	if dep == nil {
-		return url.URL{}, fmt.Errorf("deployment %s not found", module)
+		return optional.None[url.URL](), fmt.Errorf("deployment %s not found", module)
 	}
-	for i := range dep.runners {
-		return url.URL{
+	if r, ok := dep.runner.Get(); ok {
+		return optional.Some(url.URL{
 			Scheme: "http",
-			Host:   fmt.Sprintf("localhost:%s", dep.runners[i].port),
-		}, nil
-
+			Host:   fmt.Sprintf("localhost:%s", r.port),
+		}), nil
 	}
-	return url.URL{}, fmt.Errorf("runner for deployment %s not found", module)
+	return optional.None[url.URL](), nil
 }
 
 type deploymentInfo struct {
-	runners  map[string]runnerInfo
+	runner   optional.Option[runnerInfo]
 	replicas int32
 	key      string
 }
@@ -106,7 +106,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 	}
 	deploymentRunners := moduleDeployments[msg.DeploymentKey]
 	if deploymentRunners == nil {
-		deploymentRunners = &deploymentInfo{runners: map[string]runnerInfo{}, key: msg.DeploymentKey}
+		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: msg.DeploymentKey}
 		moduleDeployments[msg.DeploymentKey] = deploymentRunners
 	}
 
@@ -123,19 +123,14 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *deploymentInfo) error {
 	// Must be called under lock
 	logger := log.FromContext(ctx)
-	existing := int32(len(deploymentRunners.runners))
-	if existing < deploymentRunners.replicas {
-		for i := existing; i < deploymentRunners.replicas; i++ {
-			if err := l.startRunner(ctx, deploymentRunners.key, deploymentRunners); err != nil {
-				logger.Errorf(err, "Failed to start runner")
-				return err
-			}
+	if deploymentRunners.replicas > 0 && !deploymentRunners.runner.Ok() {
+		if err := l.startRunner(ctx, deploymentRunners.key, deploymentRunners); err != nil {
+			logger.Errorf(err, "Failed to start runner")
+			return err
 		}
-	} else if existing > deploymentRunners.replicas {
-		for _, r := range deploymentRunners.runners {
-			r.cancelFunc()
-			existing--
-		}
+	} else if deploymentRunners.replicas == 0 && deploymentRunners.runner.Ok() {
+		deploymentRunners.runner.MustGet().cancelFunc()
+		deploymentRunners.runner = optional.None[runnerInfo]()
 	}
 	return nil
 }
@@ -168,7 +163,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
 
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
-	info.runners[config.Key.String()] = runnerInfo{cancelFunc: cancel, port: bind.Port()}
+	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port()})
 
 	go func() {
 		logger.Debugf("Starting runner: %s", config.Key)
@@ -178,7 +173,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		}
 		l.lock.Lock()
 		defer l.lock.Unlock()
-		delete(info.runners, config.Key.String())
+		info.runner = optional.None[runnerInfo]()
 		err = l.reconcileRunners(ctx, info)
 		if err != nil {
 			logger.Errorf(err, "Failed to reconcile runners")

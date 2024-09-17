@@ -62,9 +62,6 @@ type Querier interface {
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
 	GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error)
-	// Retrieve routing information for a runner.
-	GetRouteForRunner(ctx context.Context, key model.RunnerKey) (GetRouteForRunnerRow, error)
-	GetRoutingTable(ctx context.Context, modules []string) ([]GetRoutingTableRow, error)
 	GetRunner(ctx context.Context, key model.RunnerKey) (GetRunnerRow, error)
 	GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error)
 	GetSchemaForDeployment(ctx context.Context, key model.DeploymentKey) (*schema.Module, error)

@@ -171,20 +171,6 @@ FROM runners r
          INNER JOIN deployments d on d.id = r.deployment_id
 WHERE r.key = sqlc.arg('key')::runner_key;
 
--- name: GetRoutingTable :many
-SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key
-FROM runners r
-         LEFT JOIN deployments d on r.deployment_id = d.id
-WHERE (COALESCE(cardinality(sqlc.arg('modules')::TEXT[]), 0) = 0
-    OR module_name = ANY (sqlc.arg('modules')::TEXT[]));
-
--- name: GetRouteForRunner :one
--- Retrieve routing information for a runner.
-SELECT endpoint, r.key AS runner_key, r.module_name, d.key deployment_key
-FROM runners r
-         LEFT JOIN deployments d on r.deployment_id = d.id
-WHERE r.key = sqlc.arg('key')::runner_key;
-
 -- name: GetRunnersForDeployment :many
 SELECT *
 FROM runners r

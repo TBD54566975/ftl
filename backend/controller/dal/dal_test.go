@@ -112,13 +112,6 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	expectedRunner := Runner{
-		Key:        runnerID,
-		Labels:     labels,
-		Endpoint:   "http://localhost:8080",
-		Deployment: deploymentKey,
-	}
-
 	t.Run("SetDeploymentReplicas", func(t *testing.T) {
 		err := dal.SetDeploymentReplicas(ctx, deploymentKey, 1)
 		assert.NoError(t, err)
@@ -151,17 +144,6 @@ func TestDAL(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("GetRoutingTable", func(t *testing.T) {
-		routes, err := dal.GetRoutingTable(ctx, []string{deployment.Module})
-		assert.NoError(t, err)
-		assert.Equal(t, []Route{{
-			Module:     "test",
-			Runner:     expectedRunner.Key,
-			Deployment: deploymentKey,
-			Endpoint:   expectedRunner.Endpoint,
-		}}, routes[deployment.Module])
-	})
-
 	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
 		err := dal.UpsertRunner(ctx, Runner{
 			Key:        runnerID,
@@ -171,11 +153,6 @@ func TestDAL(t *testing.T) {
 		})
 		assert.Error(t, err)
 		assert.IsError(t, err, libdal.ErrConstraint)
-	})
-
-	t.Run("GetRoutingTable", func(t *testing.T) {
-		_, err := dal.GetRoutingTable(ctx, []string{"non-existent"})
-		assert.IsError(t, err, libdal.ErrNotFound)
 	})
 
 	t.Run("DeregisterRunner", func(t *testing.T) {
