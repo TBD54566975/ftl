@@ -23,24 +23,12 @@ type k8sScaling struct {
 func (k k8sScaling) Start(ctx context.Context, controller url.URL, leaser leases.Leaser) error {
 	logger := log.FromContext(ctx).Scope("K8sScaling")
 	ctx = log.ContextWithLogger(ctx, logger)
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-
-	if err != nil {
-		// if we're not in a cluster, use the kubeconfig
-		config, err = clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
-		if err != nil {
-			return fmt.Errorf("failed to get kubeconfig: %w", err)
-		}
-	}
-	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-
+	clientset, err := CreateClientSet()
 	if err != nil {
 		return fmt.Errorf("failed to create clientset: %w", err)
 	}
 
-	namespace, err := getCurrentNamespace()
+	namespace, err := GetCurrentNamespace()
 	if err != nil {
 		// Nothing we can do here, if we don't have a namespace we have no runners
 		return fmt.Errorf("failed to get current namespace: %w", err)
@@ -56,6 +44,25 @@ func (k k8sScaling) Start(ctx context.Context, controller url.URL, leaser leases
 	return nil
 }
 
+func CreateClientSet() (*kubernetes.Clientset, error) {
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+
+	if err != nil {
+		// if we're not in a cluster, use the kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
+		}
+	}
+	// creates the clientset
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client set: %w", err)
+	}
+	return clientset, nil
+}
+
 func (k k8sScaling) GetEndpointForDeployment(module string, deployment string) (url.URL, error) {
 	return url.URL{Scheme: "http",
 		Host: deployment}, nil
@@ -65,7 +72,7 @@ func NewK8sScaling() scaling.RunnerScaling {
 	return &k8sScaling{}
 }
 
-func getCurrentNamespace() (string, error) {
+func GetCurrentNamespace() (string, error) {
 	namespaceFile := "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 	namespace, err := os.ReadFile(namespaceFile)
 	if err != nil && !os.IsNotExist(err) {

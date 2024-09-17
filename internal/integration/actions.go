@@ -1,9 +1,10 @@
-//go:build integration
+//go:build integration || infrastructure
 
 package integration
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -23,6 +24,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 	"github.com/kballard/go-shellquote"
 	"github.com/otiai10/copy"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/TBD54566975/scaffolder"
 
@@ -221,7 +223,7 @@ func ExpectError(action Action, expectedErrorMsg ...string) Action {
 func Deploy(module string) Action {
 	return Chain(
 		func(t testing.TB, ic TestContext) {
-			if ic.kube {
+			if ic.kubeClient != nil {
 				Exec("ftl", "deploy", "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0", module)(t, ic)
 			} else {
 				Exec("ftl", "deploy", module)(t, ic)
@@ -384,6 +386,13 @@ func Call[Req any, Resp any](module, verb string, request Req, check func(t test
 		if check != nil {
 			check(t, response)
 		}
+	}
+}
+
+// VerifyKubeState lets you test the current kube state
+func VerifyKubeState(check func(ctx context.Context, t testing.TB, namespace string, client *kubernetes.Clientset)) Action {
+	return func(t testing.TB, ic TestContext) {
+		check(ic.Context, t, ic.kubeNamespace, ic.kubeClient)
 	}
 }
 

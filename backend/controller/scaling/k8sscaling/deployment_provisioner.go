@@ -218,12 +218,13 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 
 	service.Name = name
 	service.Labels["app"] = name
-	service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: thisDeploymentName, UID: deployment.UID}}
+	service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: name, UID: deployment.UID}}
 	service.Spec.Selector = map[string]string{"app": name}
 	_, err = r.Client.CoreV1().Services(r.Namespace).Create(ctx, service, v1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create service %s: %w", deployment.Name, err)
 	}
+	logger.Infof("created kube service %s", name)
 
 	return nil
 
