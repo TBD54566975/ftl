@@ -102,7 +102,7 @@ export const TimelineTimeControls = ({
   return (
     <>
       {newerThan && (
-        <div title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`} className='text-xs font-roboto-mono mr-2 text-gray-400 pl-5 mt-2'>
+        <div title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`} className='text-xs font-roboto-mono mr-2 text-gray-400 pl-4 mt-2'>
           {formatTimestampTime(olderThan)} - {formatTimestampTime(newerThan)}
         </div>
       )}
