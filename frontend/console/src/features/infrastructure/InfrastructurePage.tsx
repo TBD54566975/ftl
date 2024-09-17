@@ -64,7 +64,7 @@ export const InfrastructurePage = () => {
   }
 
   return (
-    <div className='px-6'>
+    <div className='h-full overflow-auto px-6'>
       <Tabs tabs={tabs} initialTabId={currentTab} onTabClick={handleTabClick} />
       <div className='mt-2'>{renderTabContent()}</div>
     </div>
