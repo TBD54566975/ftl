@@ -10,43 +10,50 @@ enum UrlKeys {
   MODULES = 'modules',
   LOG = 'log',
   TYPES = 'types',
-  PAUSED = 'paused',
-  TAIL = 'tail',
+  TAIL = 'tail', // tail=live (default) or tail=paused
+  PAST = 'past', // past=15m, on refresh, will be converted to "now-15m" instead of a fixed time range
   AFTER = 'after',
   BEFORE = 'before',
 }
 
-// spitballing the different time states
-// desc       | tail   | paused | olderThan | newerThan
-// -----------|--------|--------|-----------|----------
-// last 5m    | false  | NA     | now - 5m  | now
-// tail pause | true   | true   | NA        | NA
-// tailing    | true   | false  | NA        | NA
+export interface PresetTimeRange {
+  label: string
+  value?: number
+}
 
-/* states:
-live paused
-live tailing
-range
-*/
+export const PRESET_TIME_RANGES: Record<string, TimeRange> = {
+  tail: { label: 'Live tail' },
+  '5m': { label: '5 minutes', value: 5 * 60 * 1000 },
+  '15m': { label: '15 minutes', value: 15 * 60 * 1000 },
+  '30m': { label: '30 minutes', value: 30 * 60 * 1000 },
+  '1h': { label: '1 hour', value: 60 * 60 * 1000 },
+  '24h': { label: '24 hours', value: 24 * 60 * 60 * 1000 },
+}
 
-// type Range = {
-//   olderThan?: Timestamp;
-//   newerThan?: Timestamp;
-// }
+type TimeStateLive = {
+  kind: 'live'
+  paused: boolean
+}
 
-// TODO: type TimeState = Range | Tail;
+// TODO: Track the time when the user paused the timeline, so that it can be converted to a fixed time range for the URL
+type TimeStatePast = {
+  kind: 'past'
+  milliseconds: number
+}
 
-// type SelectedModules = string[] | 'all'
-type SelectedModules = string[]
+type TimeStateRange = {
+  kind: 'range'
+  // For now let us require both start and end time
+  newerThan: Timestamp
+  olderThan: Timestamp
+}
 
-// Hides the complexity of the URLSearchParams API and protobuf types.
+type TimeState = TimeStateLive | TimeStatePast | TimeStateRange
+
 export type TimelineState = {
-  isTailing: boolean
-  isPaused: boolean
-  timeRange: TimeRange
-  olderThan?: Timestamp
-  newerThan?: Timestamp
-  modules: SelectedModules
+  time: TimeState
+  // Deployment key
+  modules: string[]
   knownModules?: Module[]
   logLevel: LogLevel
   // eventTypes: EventType[] = [EventType.CALL, EventType.LOG, EventType.DEPLOYMENT_CREATED, EventType.DEPLOYMENT_UPDATED]
@@ -56,17 +63,19 @@ export type TimelineState = {
 
 export function newTimelineState(params: URLSearchParams, knownModules: Module[] | undefined): TimelineState {
   const state: TimelineState = {
-    isTailing: true,
-    isPaused: false,
-    timeRange: TIME_RANGES.tail,
-    olderThan: undefined,
-    newerThan: undefined,
+    time: { kind: 'live', paused: false },
     modules: [],
     knownModules,
     logLevel: LogLevel.TRACE,
     eventTypes: [],
     eventId: undefined,
   }
+
+  let isLive = false
+  const collectedTimeRange: {
+    newerThan?: Timestamp
+    olderThan?: Timestamp
+  } = {}
 
   // Quietly ignore invalid values from the user's URL...
   for (const [key, value] of params.entries()) {
@@ -87,19 +96,40 @@ export function newTimelineState(params: URLSearchParams, knownModules: Module[]
       if (types.length !== 0) {
         state.eventTypes = types
       }
-    } else if (key === UrlKeys.PAUSED) {
-      state.isPaused = value === '1'
     } else if (key === UrlKeys.TAIL) {
-      state.isTailing = value === '1'
+      isLive = true
+      switch (value) {
+        case 'live':
+          state.time = { kind: 'live', paused: false }
+          break
+        case 'paused':
+          state.time = { kind: 'live', paused: true }
+          break
+        default:
+          console.error(`Unknown tail value: ${value}`)
+      }
+    } else if (key === UrlKeys.PAST) {
+      const preset = PRESET_TIME_RANGES[value]
+      if (preset) {
+        state.time = { kind: 'live', paused: false }
+        collectedTimeRange.newerThan = Timestamp.fromDate(new Date(Date.now() - preset.value))
+      } else {
+        console.error(`Unknown past value: ${value}`)
+      }
     } else if (key === UrlKeys.AFTER) {
-      state.olderThan = Timestamp.fromDate(new Date(value))
+      collectedTimeRange.newerThan = Timestamp.fromDate(new Date(value))
     } else if (key === UrlKeys.BEFORE) {
-      state.newerThan = Timestamp.fromDate(new Date(value))
+      collectedTimeRange.olderThan = Timestamp.fromDate(new Date(value))
     }
   }
 
-  // TODO
-  // this.timeRange = this.calculateTimeRange();
+  if (collectedTimeRange.newerThan !== undefined && collectedTimeRange.olderThan !== undefined) {
+    state.time = {
+      kind: 'range',
+      newerThan: collectedTimeRange.newerThan,
+      olderThan: collectedTimeRange.olderThan,
+    }
+  }
 
   // If we're loading a specific event, we don't want to tail.
   //     setSelectedTimeRange(TIME_RANGES['5m'])
@@ -123,8 +153,14 @@ export function getFilters(state: TimelineState): EventsQuery_Filter[] {
   if (state.eventTypes.length > 0) {
     filters.push(eventTypesFilter(state.eventTypes))
   }
-  if (state.olderThan || state.newerThan) {
-    filters.push(timeFilter(state.olderThan, state.newerThan))
+  if (state.time.kind === 'range') {
+    filters.push(timeFilter(state.time.olderThan, state.time.newerThan))
+  }
+  if (state.time.kind === 'past') {
+    const now = new Date()
+    const olderThan = Timestamp.fromDate(now)
+    const newerThan = Timestamp.fromDate(new Date(now.getTime() - state.time.milliseconds))
+    filters.push(timeFilter(olderThan, newerThan))
   }
   return filters
 }
@@ -150,18 +186,21 @@ export function getSearchParams(state: TimelineState): NicerURLSearchParams {
       params.set(UrlKeys.TYPES, eventTypes.join(','))
     }
   }
-  if (state.olderThan) {
-    params.set(UrlKeys.AFTER, state.olderThan.toDate().toISOString())
-  }
-  if (state.newerThan) {
-    params.set(UrlKeys.BEFORE, state.newerThan.toDate().toISOString())
-  }
-  if (state.isPaused) {
-    params.set(UrlKeys.PAUSED, '1')
-  }
-  // Tailing is on by default, so we only need to set it if it's off.
-  if (!state.isTailing) {
-    params.set(UrlKeys.TAIL, '0')
+
+  switch (state.time.kind) {
+    case 'live':
+      params.set(UrlKeys.TAIL, state.time.paused ? 'paused' : 'live')
+      break
+    case 'range':
+      if (state.time.newerThan) {
+        params.set(UrlKeys.AFTER, state.time.newerThan.toDate().toISOString())
+      }
+      if (state.time.olderThan) {
+        params.set(UrlKeys.BEFORE, state.time.olderThan.toDate().toISOString())
+      }
+      break
+    default:
+      console.error(`Unknown time kind: ${state.time}`)
   }
 
   console.log('params', params.toString())
@@ -177,15 +216,6 @@ export function isModuleSelected(state: TimelineState, deploymentKey: string): b
   return state.modules.includes(deploymentKey)
 }
 
-export function setTimeSettings(oldState: TimelineState, timeSettings: TimeSettings): TimelineState {
-  const state = { ...oldState }
-  state.olderThan = timeSettings.olderThan
-  state.newerThan = timeSettings.newerThan
-  state.isTailing = timeSettings.isTailing
-  state.isPaused = timeSettings.isPaused
-  return state
-}
-
 export function setKnownModules(oldState: TimelineState, modules?: Module[]): TimelineState {
   const state = { ...oldState }
   if (modules) {
@@ -193,31 +223,6 @@ export function setKnownModules(oldState: TimelineState, modules?: Module[]): Ti
   }
   return state
 }
-
-// function addOrUpdateFilter(oldState: TimelineState, filter: EventsQuery_Filter): TimelineState {
-//   const state = { ...oldState }
-//   switch (filter.filter.case) {
-//     case 'logLevel':
-//       state.logLevel = filter.filter.value.logLevel
-//       break
-//     case 'deployments':
-//       state.modules = filter.filter.value.deployments
-//       break
-//     case 'eventTypes':
-//       state.eventTypes = filter.filter.value.eventTypes
-//       break
-//     case 'time':
-//       state.olderThan = filter.filter.value.olderThan
-//       state.newerThan = filter.filter.value.newerThan
-//       break
-//     case 'id':
-//       state.eventId = filter.filter.value.higherThan
-//       break
-//     default:
-//       console.error('Unknown filter type while addOrUpdateFilter', filter)
-//   }
-//   return state
-// }
 
 export function isLogLevelSelected(state: TimelineState, level: LogLevel): boolean {
   return state.logLevel <= level
@@ -299,6 +304,36 @@ function eventTypeEnumToValue(type: EventType): string | undefined {
       return 'deploymentUpdated'
     default:
       return undefined
+  }
+}
+
+type HistoryRange = { kind: 'preset'; key: string } | { kind: 'custom'; newerThan: Timestamp; olderThan: Timestamp } | { kind: 'live' }
+
+// A helper to work out if the given range matches a known preset.
+export function getHistoryRange(state: TimelineState): HistoryRange {
+  switch (state.time.kind) {
+    case 'live':
+      return { kind: 'live' }
+    case 'range':
+      if (!(state.time.newerThan && state.time.olderThan)) {
+        console.warn('Invalid history range: both newerThan and olderThan must be set:', state.time)
+        return { kind: 'live' }
+      }
+
+      {
+        const newerThan = state.time.newerThan.toDate()
+        const olderThan = state.time.olderThan.toDate()
+        const ms = olderThan.getTime() - newerThan.getTime()
+
+        // check if the range matches a known preset in PRESET_TIME_RANGES
+        for (const [key, range] of Object.entries(PRESET_TIME_RANGES)) {
+          if (range.value * 1000 === ms) {
+            return { kind: 'preset', key }
+          }
+        }
+      }
+
+      return { kind: 'custom', newerThan: state.time.newerThan, olderThan: state.time.olderThan }
   }
 }
 

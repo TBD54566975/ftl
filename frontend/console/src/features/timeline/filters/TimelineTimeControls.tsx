@@ -3,108 +3,92 @@ import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headless
 import { Backward02Icon, Forward02Icon, PauseIcon, PlayIcon, Tick02Icon, UnfoldLessIcon } from 'hugeicons-react'
 import { useEffect, useState } from 'react'
 import { bgColor, borderColor, classNames, formatTimestampShort, formatTimestampTime, panelColor, textColor } from '../../../utils'
-
-export interface TimeRange {
-  label: string
-  value: number
-}
-
-export const TIME_RANGES: Record<string, TimeRange> = {
-  tail: { label: 'Live tail', value: 0 },
-  '5m': { label: 'Past 5 minutes', value: 5 * 60 * 1000 },
-  '15m': { label: 'Past 15 minutes', value: 15 * 60 * 1000 },
-  '30m': { label: 'Past 30 minutes', value: 30 * 60 * 1000 },
-  '1h': { label: 'Past 1 hour', value: 60 * 60 * 1000 },
-  '24h': { label: 'Past 24 hours', value: 24 * 60 * 60 * 1000 },
-}
-
-export interface TimeSettings {
-  isTailing: boolean
-  isPaused: boolean
-  olderThan?: Timestamp
-  newerThan?: Timestamp
-}
+import { PRESET_TIME_RANGES, TimelineState } from '../../../api/timeline/timeline-state'
 
 export const TimelineTimeControls = ({
-  onTimeSettingsChange,
-  selectedTimeRange,
-  isTimelinePaused,
+  timelineState,
+  setTimelineState,
 }: {
-  onTimeSettingsChange: (settings: TimeSettings) => void
-  selectedTimeRange: TimeRange
-  isTimelinePaused: boolean
+  timelineState: TimelineState
+  setTimelineState: (state: TimelineState) => void
 }) => {
-  const [selected, setSelected] = useState(selectedTimeRange)
-  const [isPaused, setIsPaused] = useState(isTimelinePaused)
-  const [newerThan, setNewerThan] = useState<Timestamp | undefined>()
+  // const [selected, setSelected] = useState(selectedTimeRange)
+  // const [isPaused, setIsPaused] = useState(isTimelinePaused)
+  // const [newerThan, setNewerThan] = useState<Timestamp | undefined>()
 
-  const isTailing = selected.value === TIME_RANGES.tail.value
+  // const isTailing = selected.value === TIME_RANGES.tail.value
 
-  useEffect(() => {
-    handleRangeChanged(selectedTimeRange)
-    setIsPaused(isTimelinePaused)
-  }, [selectedTimeRange, isTimelinePaused])
+  // useEffect(() => {
+  //   handleRangeChanged(selectedTimeRange)
+  //   setIsPaused(isTimelinePaused)
+  // }, [selectedTimeRange, isTimelinePaused])
 
-  useEffect(() => {
-    if (isTailing) {
-      onTimeSettingsChange({ isTailing, isPaused })
-      return
-    }
+  // useEffect(() => {
+  //   if (isTailing) {
+  //     onTimeSettingsChange({ isTailing, isPaused })
+  //     return
+  //   }
 
-    if (newerThan) {
-      const startTime = (newerThan.toDate() ?? new Date()).getTime()
-      const olderThanDate = new Date(startTime + selected.value)
+  //   if (newerThan) {
+  //     const startTime = (newerThan.toDate() ?? new Date()).getTime()
+  //     const olderThanDate = new Date(startTime + selected.value)
 
-      onTimeSettingsChange({
-        isTailing,
-        isPaused,
-        olderThan: Timestamp.fromDate(olderThanDate),
-        newerThan: newerThan,
-      })
-    }
-  }, [selected, isPaused, newerThan])
+  //     onTimeSettingsChange({
+  //       isTailing,
+  //       isPaused,
+  //       olderThan: Timestamp.fromDate(olderThanDate),
+  //       newerThan: newerThan,
+  //     })
+  //   }
+  // }, [selected, isPaused, newerThan])
 
-  const handleRangeChanged = (range: TimeRange) => {
-    setSelected(range)
+  // const handleRangeChanged = (range: TimeRange) => {
+  //   setSelected(range)
 
-    if (range.value === TIME_RANGES.tail.value) {
-      setNewerThan(undefined)
-      setIsPaused(false)
-    } else {
-      const newerThanDate = new Date(new Date().getTime() - range.value)
-      setNewerThan(Timestamp.fromDate(newerThanDate))
-    }
-  }
+  //   if (range.value === TIME_RANGES.tail.value) {
+  //     setNewerThan(undefined)
+  //     setIsPaused(false)
+  //   } else {
+  //     const newerThanDate = new Date(new Date().getTime() - range.value)
+  //     setNewerThan(Timestamp.fromDate(newerThanDate))
+  //   }
+  // }
 
-  const handleTimeBackward = () => {
-    if (!newerThan) {
-      return
-    }
-    const newerThanDate = new Date(newerThan.toDate().getTime() - selected.value)
-    setNewerThan(Timestamp.fromDate(newerThanDate))
-  }
+  // const handleTimeBackward = () => {
+  //   if (!newerThan) {
+  //     return
+  //   }
+  //   const newerThanDate = new Date(newerThan.toDate().getTime() - selected.value)
+  //   setNewerThan(Timestamp.fromDate(newerThanDate))
+  // }
 
-  const handleTimeForward = () => {
-    if (!newerThan) {
-      return
-    }
-    const newerThanTime = newerThan.toDate().getTime()
-    const newerThanDate = new Date(newerThanTime + selected.value)
-    const maxNewTime = new Date().getTime() - selected.value
-    if (newerThanDate.getTime() > maxNewTime) {
-      setNewerThan(Timestamp.fromDate(new Date(maxNewTime)))
-    } else {
-      setNewerThan(Timestamp.fromDate(newerThanDate))
-    }
-  }
+  // const handleTimeForward = () => {
+  //   if (!newerThan) {
+  //     return
+  //   }
+  //   const newerThanTime = newerThan.toDate().getTime()
+  //   const newerThanDate = new Date(newerThanTime + selected.value)
+  //   const maxNewTime = new Date().getTime() - selected.value
+  //   if (newerThanDate.getTime() > maxNewTime) {
+  //     setNewerThan(Timestamp.fromDate(new Date(maxNewTime)))
+  //   } else {
+  //     setNewerThan(Timestamp.fromDate(newerThanDate))
+  //   }
+  // }
 
-  const olderThan = newerThan ? Timestamp.fromDate(new Date(newerThan.toDate().getTime() - selected.value)) : undefined
+  // const olderThan = newerThan ? Timestamp.fromDate(new Date(newerThan.toDate().getTime() - selected.value)) : undefined
+
+  const dropdownOptions = { ...PRESET_TIME_RANGES }
+
   return (
     <>
       <div className='flex items-center h-6'>
-        {newerThan && (
-          <span title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`} className='text-xs font-roboto-mono mr-2 text-gray-400'>
-            {formatTimestampTime(olderThan)} - {formatTimestampTime(newerThan)}
+        {timelineState.time.kind === 'history' && (
+          <span
+            title={`${formatTimestampShort(timelineState.time.newerThan)} - ${formatTimestampShort(timelineState.time.olderThan)}`}
+            className='text-xs font-roboto-mono mr-2 text-gray-400'
+          >
+            {formatTimestampTime(timelineState.time.newerThan)} - {formatTimestampTime(timelineState.time.olderThan)}
           </span>
         )}
 
