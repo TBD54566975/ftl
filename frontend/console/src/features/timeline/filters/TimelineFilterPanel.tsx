@@ -7,7 +7,7 @@ import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
 import { logLevelBgColor, logLevelColor, logLevelRingColor } from '../../logs/log.utils'
 import { FilterPanelSection } from './FilterPanelSection'
-import { TimelineState } from '../../../api/timeline/timeline-state'
+import { getModules, isEventTypeSelected, isLogLevelSelected, isModuleSelected, TimelineState } from '../../../api/timeline/timeline-state'
 
 interface EventFilter {
   label: string
@@ -30,40 +30,27 @@ const EVENT_TYPES: Record<string, EventFilter> = {
   },
 }
 
-function eventTypeToKey(type: EventType): string {
-  switch (type) {
-    case EventType.CALL:
-      return 'call'
-    case EventType.LOG:
-      return 'log'
-    case EventType.DEPLOYMENT_CREATED:
-      return 'deploymentCreated'
-    case EventType.DEPLOYMENT_UPDATED:
-      return 'deploymentUpdated'
-    default:
-      return 'Unknown'
-  }
-}
-
-const LOG_LEVELS: Record<number, string> = {
-  1: 'Trace',
-  5: 'Debug',
-  9: 'Info',
-  13: 'Warn',
-  17: 'Error',
-}
+// An array of tuples of log level and its name
+const LOG_LEVELS: [LogLevel, string][] = [
+  [LogLevel.TRACE, 'Trace'],
+  [LogLevel.DEBUG, 'Debug'],
+  [LogLevel.INFO, 'Info'],
+  [LogLevel.WARN, 'Warn'],
+  [LogLevel.ERROR, 'Error'],
+]
 
 export const TimelineFilterPanel = ({
-  onFiltersChanged,
   timelineState,
+  setTimelineState,
 }: {
-  onFiltersChanged: (filters: EventsQuery_Filter[]) => void
   timelineState: TimelineState
+  setTimelineState: (state: TimelineState) => void
 }) => {
-  const modules = timelineState.knownModules
-  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(timelineState.eventTypes.map(eventTypeToKey))
-  const [selectedModules, setSelectedModules] = useState<string[]>(timelineState.getModules())
-  const [selectedLogLevel, setSelectedLogLevel] = useState<number>(timelineState.logLevel)
+  // const modules = timelineState.knownModules
+
+  // const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(timelineState.eventTypes.map(eventTypeToKey))
+  // const [selectedModules, setSelectedModules] = useState<string[]>(timelineState.getModules())
+  // const [selectedLogLevel, setSelectedLogLevel] = useState<number>(timelineState.logLevel)
 
   // useEffect(() => {
   //   console.log('modules', JSON.stringify(modules))
@@ -83,48 +70,61 @@ export const TimelineFilterPanel = ({
 
   // }, [modules.data])
 
-  useEffect(() => {
-    const filter: EventsQuery_Filter[] = []
-    if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
-      console.log('selectedEventTypes', JSON.stringify(selectedEventTypes))
-      const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)
+  // useEffect(() => {
+  //   const filter: EventsQuery_Filter[] = []
+  //   if (selectedEventTypes.length !== Object.keys(EVENT_TYPES).length) {
+  //     console.log('selectedEventTypes', JSON.stringify(selectedEventTypes))
+  //     const selectedTypes = selectedEventTypes.map((key) => EVENT_TYPES[key].type)
 
-      filter.push(eventTypesFilter(selectedTypes))
-    }
-    if (selectedLogLevel !== LogLevel.TRACE) {
-      filter.push(logLevelFilter(selectedLogLevel))
-    }
+  //     filter.push(eventTypesFilter(selectedTypes))
+  //   }
+  //   if (selectedLogLevel !== LogLevel.TRACE) {
+  //     filter.push(logLevelFilter(selectedLogLevel))
+  //   }
 
-    filter.push(modulesFilter(selectedModules))
+  //   filter.push(modulesFilter(selectedModules))
 
-    onFiltersChanged(filter)
-  }, [selectedEventTypes, selectedLogLevel, selectedModules])
+  //   onFiltersChanged(filter)
+  // }, [selectedEventTypes, selectedLogLevel, selectedModules])
 
   const handleTypeChanged = (eventType: string, checked: boolean) => {
+    console.log('TODO handleTypeChanged', eventType, checked)
     if (checked) {
-      setSelectedEventTypes((prev) => [...prev, eventType])
+      // setSelectedEventTypes((prev) => [...prev, eventType])
     } else {
-      setSelectedEventTypes((prev) => prev.filter((filter) => filter !== eventType))
+      // setSelectedEventTypes((prev) => prev.filter((filter) => filter !== eventType))
     }
   }
 
   const handleModuleChanged = (deploymentKey: string, checked: boolean) => {
-    if (checked) {
-      setSelectedModules((prev) => [...prev, deploymentKey])
-    } else {
-      setSelectedModules((prev) => prev.filter((filter) => filter !== deploymentKey))
-    }
+    console.log('TODO handleModuleChanged', deploymentKey, checked)
+    // if (checked) {
+    //   setSelectedModules((prev) => [...prev, deploymentKey])
+    // } else {
+    //   setSelectedModules((prev) => prev.filter((filter) => filter !== deploymentKey))
+    // }
   }
 
-  const handleLogLevelChanged = (logLevel: string) => {
-    setSelectedLogLevel(Number(logLevel))
+  const handleLogLevelChanged = (logLevel: LogLevel) => {
+    setTimelineState({ ...timelineState, logLevel })
   }
 
-  console.group('modules')
-  console.log('selected', timelineState.modules)
-  console.log('for view getModules', timelineState.getModules())
-  console.log('known', timelineState.knownModules)
-  console.groupEnd()
+  // console.group('modules')
+  // console.log('selected', timelineState.modules)
+  // console.log('for view getModules', timelineState.getModules())
+  // console.log('known', timelineState.knownModules)
+  // console.groupEnd()
+  //
+
+  const selectAllModules = () => {
+    console.log('TODO selectAllModules')
+    // setSelectedModules(timelineState.getModules())
+  }
+
+  const clearSelectedModules = () => {
+    console.log('TODO selectNoneModules')
+    // setSelectedModules([])
+  }
 
   return (
     <div className='flex-shrink-0 w-52'>
@@ -138,7 +138,7 @@ export const TimelineFilterPanel = ({
                     id={`event-type-${key}`}
                     name={`event-type-${key}`}
                     type='checkbox'
-                    checked={selectedEventTypes.includes(key)}
+                    checked={isEventTypeSelected(timelineState, key)}
                     onChange={(e) => handleTypeChanged(key, e.target.checked)}
                     className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
                   />
@@ -155,46 +155,42 @@ export const TimelineFilterPanel = ({
 
           <FilterPanelSection title='Log level'>
             <ul className='space-y-1'>
-              {Object.keys(LOG_LEVELS).map((key) => (
-                <li key={key} onClick={() => handleLogLevelChanged(key)} className='relative flex gap-x-2 cursor-pointer'>
+              {LOG_LEVELS.map(([level, label]) => (
+                <li key={level} onClick={() => handleLogLevelChanged(level)} className='relative flex gap-x-2 cursor-pointer'>
                   <div className='relative flex h-5 w-3 flex-none items-center justify-center'>
                     <div
-                      className={`${selectedLogLevel <= Number(key) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${
-                        selectedLogLevel <= Number(key) ? `${logLevelBgColor[Number(key)]} ${logLevelRingColor[Number(key)]}` : 'bg-gray-300 ring-gray-300'
+                      className={`${isLogLevelSelected(timelineState, level) ? 'h-2.5 w-2.5' : 'h-0.5 w-0.5'} ${
+                        isLogLevelSelected(timelineState, level) ? `${logLevelBgColor[Number(level)]} ${logLevelRingColor[level]}` : 'bg-gray-300 ring-gray-300'
                       } rounded-full ring-1`}
                     />
                   </div>
                   <p className='flex-auto text-sm leading-5 text-gray-500'>
-                    <span className={`${logLevelColor[Number(key)]} flex`}>{LOG_LEVELS[Number(key)]}</span>
+                    <span className={`${logLevelColor[level]} flex`}>{label}</span>
                   </p>
                 </li>
               ))}
             </ul>
           </FilterPanelSection>
 
-          {modules !== undefined && (
+          {timelineState.modules !== undefined && (
             <FilterPanelSection title='Modules'>
               <div className='relative flex items-center mb-2'>
-                <button
-                  type='button'
-                  onClick={() => setSelectedModules(modules.map((module) => module.deploymentKey))}
-                  className='text-indigo-600 cursor-pointer hover:text-indigo-500'
-                >
+                <button type='button' onClick={selectAllModules} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
                   Select All
                 </button>
                 <span className='px-1 text-indigo-700'>|</span>
-                <button type='button' onClick={() => setSelectedModules([])} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
+                <button type='button' onClick={clearSelectedModules} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
                   Deselect All
                 </button>
               </div>
-              {modules.map((module) => (
+              {getModules(timelineState).map((module) => (
                 <div key={module.deploymentKey} className='relative flex items-start'>
                   <div className='flex h-6 items-center'>
                     <input
                       id={`module-${module.deploymentKey}`}
                       name={`module-${module.deploymentKey}`}
                       type='checkbox'
-                      checked={selectedModules.includes(module.deploymentKey)}
+                      checked={isModuleSelected(timelineState, module.deploymentKey)}
                       onChange={(e) => handleModuleChanged(module.deploymentKey, e.target.checked)}
                       className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
                     />

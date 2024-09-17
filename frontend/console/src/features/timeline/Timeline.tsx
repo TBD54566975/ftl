@@ -2,7 +2,7 @@ import type { Timestamp } from '@bufbuild/protobuf'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { timeFilter, useTimeline } from '../../api/timeline/index.ts'
-import { TimelineState } from '../../api/timeline/timeline-state.ts'
+import { getFilters, TimelineState } from '../../api/timeline/timeline-state.ts'
 import { Loader } from '../../components/Loader.tsx'
 import type { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
@@ -20,42 +20,45 @@ import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUp
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
-type NewType = {
+type TimelineProps = {
   timeSettings: TimeSettings
-  filters: EventsQuery_Filter[]
-  onFiltersChanged: (filters: EventsQuery_Filter[]) => void
   timelineState: TimelineState
+  setTimelineState: (state: TimelineState) => void
 }
 
-export const Timeline = ({ timeSettings, filters }: NewType) => {
-  const [searchParams] = useSearchParams()
+export const Timeline = ({ timeSettings, timelineState, setTimelineState }: TimelineProps) => {
+  // const [searchParams] = useSearchParams()
   const { openPanel, closePanel, isOpen } = useContext(SidePanelContext)
   // const [selectedEntry, setSelectedEntry] = useState<Event | null>(null)
 
-  let eventFilters = filters
+  // let eventFilters = filters
   if (timeSettings.newerThan || timeSettings.olderThan) {
-    eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
+    // eventFilters = [timeFilter(timeSettings.olderThan, timeSettings.newerThan), ...filters]
+    console.log('TODO: Implement time filter')
   }
 
   const streamTimeline = timeSettings.isTailing && !timeSettings.isPaused
 
-  const timeline = useTimeline(streamTimeline, eventFilters)
+  const timeline = useTimeline(streamTimeline, getFilters(timelineState))
 
   useEffect(() => {
     if (!isOpen) {
-      setSelectedEntry(null)
+      // setSelectedEntry(null)
+      setTimelineState({ ...timelineState, eventId: undefined })
     }
   }, [isOpen])
 
   const handlePanelClosed = () => {
-    const newParams = new URLSearchParams(searchParams.toString())
-    newParams.delete('id')
+    // const newParams = new URLSearchParams(searchParams.toString())
+    // newParams.delete('id')
     //setSearchParams(newParams)
-    setSelectedEntry(null)
+    // setSelectedEntry(null)
+    setTimelineState({ ...timelineState, eventId: undefined })
   }
 
   const handleEntryClicked = (entry: Event) => {
-    if (selectedEntry === entry) {
+    if (timelineState.eventId === entry.id) {
+      // User has clicked on the same event, close the panel
       closePanel()
       return
     }
@@ -76,8 +79,9 @@ export const Timeline = ({ timeSettings, filters }: NewType) => {
       default:
         break
     }
-    setSelectedEntry(entry)
+    // setSelectedEntry(entry)
     //setSearchParams({ ...Object.fromEntries(searchParams.entries()), id: entry.id.toString() })
+    setTimelineState({ ...timelineState, eventId: entry.id })
   }
 
   const deploymentKey = (event: Event) => {
@@ -122,7 +126,7 @@ export const Timeline = ({ timeSettings, filters }: NewType) => {
               <tr
                 key={entry.id.toString()}
                 className={`flex border-b border-gray-100 dark:border-slate-700 text-xs font-roboto-mono ${
-                  selectedEntry?.id === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
+                  timelineState?.eventId === entry.id ? 'bg-indigo-50 dark:bg-slate-700' : panelColor
                 } relative flex cursor-pointer hover:bg-indigo-50 dark:hover:bg-slate-700`}
                 onClick={() => handleEntryClicked(entry)}
               >

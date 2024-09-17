@@ -36,174 +36,198 @@ range
 
 // TODO: type TimeState = Range | Tail;
 
-type Modules = string[] | 'all'
+type SelectedModules = string[] | 'all'
 
 // Hides the complexity of the URLSearchParams API and protobuf types.
-export class TimelineState {
-  isTailing = true
-  isPaused = false
-  timeRange: TimeRange = TIME_RANGES.tail
+export type TimelineState = {
+  isTailing: boolean
+  isPaused: boolean
+  timeRange: TimeRange
   olderThan?: Timestamp
   newerThan?: Timestamp
-  modules: Modules = 'all'
-  knownModules?: Module[] = []
-  logLevel: LogLevel = LogLevel.TRACE
+  modules: SelectedModules
+  knownModules?: Module[]
+  logLevel: LogLevel
   // eventTypes: EventType[] = [EventType.CALL, EventType.LOG, EventType.DEPLOYMENT_CREATED, EventType.DEPLOYMENT_UPDATED]
-  eventTypes: EventType[] = []
+  eventTypes: EventType[]
   eventId?: bigint
+}
 
-  constructor(params: URLSearchParams, knownModules: Module[] | undefined) {
-    this.knownModules = knownModules
+export function newTimelineState(params: URLSearchParams, knownModules: Module[] | undefined): TimelineState {
+  const state: TimelineState = {
+    isTailing: true,
+    isPaused: false,
+    timeRange: TIME_RANGES.tail,
+    olderThan: undefined,
+    newerThan: undefined,
+    modules: 'all',
+    knownModules,
+    logLevel: LogLevel.TRACE,
+    eventTypes: [],
+    eventId: undefined,
+  }
 
-    // Quietly ignore invalid values from the user's URL...
-    for (const [key, value] of params.entries()) {
-      if (key === UrlKeys.ID) {
-        this.eventId = BigInt(value)
-      } else if (key === UrlKeys.MODULES) {
-        this.modules = value.split(',')
-      } else if (key === UrlKeys.LOG) {
-        const enumValue = logValueToEnum(value)
-        if (enumValue) {
-          this.logLevel = enumValue
-        }
-      } else if (key === UrlKeys.TYPES) {
-        const types = value
-          .split(',')
-          .map((type) => eventTypeValueToEnum(type))
-          .filter((type) => type !== undefined)
-        if (types.length !== 0) {
-          this.eventTypes = types
-        }
-      } else if (key === UrlKeys.PAUSED) {
-        this.isPaused = value === '1'
-      } else if (key === UrlKeys.TAIL) {
-        this.isTailing = value === '1'
-      } else if (key === UrlKeys.AFTER) {
-        this.olderThan = Timestamp.fromDate(new Date(value))
-      } else if (key === UrlKeys.BEFORE) {
-        this.newerThan = Timestamp.fromDate(new Date(value))
+  // Quietly ignore invalid values from the user's URL...
+  for (const [key, value] of params.entries()) {
+    if (key === UrlKeys.ID) {
+      state.eventId = BigInt(value)
+    } else if (key === UrlKeys.MODULES) {
+      state.modules = value.split(',')
+    } else if (key === UrlKeys.LOG) {
+      const enumValue = logValueToEnum(value)
+      if (enumValue) {
+        state.logLevel = enumValue
       }
-    }
-
-    // TODO
-    // this.timeRange = this.calculateTimeRange();
-
-    // If we're loading a specific event, we don't want to tail.
-    //     setSelectedTimeRange(TIME_RANGES['5m'])
-    //     setIsTimelinePaused(true)
-    //
-  }
-
-  getFilters(): EventsQuery_Filter[] {
-    const filters: EventsQuery_Filter[] = []
-    if (this.eventId) {
-      filters.push(specificEventIdFilter(this.eventId))
-    }
-    if (this.modules === 'all') {
-      if (this.knownModules) {
-        filters.push(modulesFilter(this.knownModules.map((module) => module.deploymentKey)))
+    } else if (key === UrlKeys.TYPES) {
+      const types = value
+        .split(',')
+        .map((type) => eventTypeValueToEnum(type))
+        .filter((type) => type !== undefined)
+      if (types.length !== 0) {
+        state.eventTypes = types
       }
-    } else if (this.modules.length > 0) {
-      filters.push(modulesFilter(this.modules))
-    }
-    if (this.logLevel) {
-      filters.push(logLevelFilter(this.logLevel))
-    }
-    if (this.eventTypes.length > 0) {
-      filters.push(eventTypesFilter(this.eventTypes))
-    }
-    if (this.olderThan || this.newerThan) {
-      filters.push(timeFilter(this.olderThan, this.newerThan))
-    }
-    return filters
-  }
-
-  getSearchParams() {
-    const params = new NicerURLSearchParams()
-
-    if (this.eventId) {
-      params.set(UrlKeys.ID, this.eventId.toString())
-    }
-    if (this.modules !== 'all' && this.modules.length > 0) {
-      params.set(UrlKeys.MODULES, this.modules.join(','))
-    }
-    if (this.logLevel) {
-      const logString = logEnumToValue(this.logLevel)
-      if (logString) {
-        params.set(UrlKeys.LOG, logString)
-      }
-    }
-    if (this.eventTypes.length > 0) {
-      const eventTypes = this.eventTypes.map((type) => eventTypeEnumToValue(type)).filter((type) => type !== undefined)
-      if (eventTypes.length !== 0) {
-        params.set(UrlKeys.TYPES, eventTypes.join(','))
-      }
-    }
-    if (this.olderThan) {
-      params.set(UrlKeys.AFTER, this.olderThan.toDate().toISOString())
-    }
-    if (this.newerThan) {
-      params.set(UrlKeys.BEFORE, this.newerThan.toDate().toISOString())
-    }
-    if (this.isPaused) {
-      params.set(UrlKeys.PAUSED, '1')
-    }
-    // // tailing is on by default, so we only need to set it if it's off.
-    if (!this.isTailing) {
-      params.set(UrlKeys.TAIL, '0')
-    }
-
-    console.log('params', params.toString())
-
-    return params
-  }
-
-  getModules() {
-    if (this.modules === 'all') {
-      return this.knownModules?.map((module) => module.deploymentKey) ?? []
-    }
-    return this.modules
-  }
-
-  updateFromTimeSettings(timeSettings: TimeSettings) {
-    this.olderThan = timeSettings.olderThan
-    this.newerThan = timeSettings.newerThan
-    this.isTailing = timeSettings.isTailing
-    this.isPaused = timeSettings.isPaused
-  }
-
-  updateFromFilters(filters: EventsQuery_Filter[]) {
-    this.logLevel = LogLevel.TRACE
-    this.modules = 'all'
-    this.eventTypes = []
-    this.olderThan = undefined
-    this.newerThan = undefined
-    this.eventId = undefined
-
-    for (const filter of filters) {
-      switch (filter.filter.case) {
-        case 'logLevel':
-          this.logLevel = filter.filter.value.logLevel
-          break
-        case 'deployments':
-          this.modules = filter.filter.value.deployments
-          break
-        case 'eventTypes':
-          this.eventTypes = filter.filter.value.eventTypes
-          break
-        case 'time':
-          this.olderThan = filter.filter.value.olderThan
-          this.newerThan = filter.filter.value.newerThan
-          break
-        case 'id':
-          // Only support one ID at a time for now.
-          this.eventId = filter.filter.value.higherThan
-          break
-        default:
-          console.error('Unknown filter case', filter.filter.case)
-      }
+    } else if (key === UrlKeys.PAUSED) {
+      state.isPaused = value === '1'
+    } else if (key === UrlKeys.TAIL) {
+      state.isTailing = value === '1'
+    } else if (key === UrlKeys.AFTER) {
+      state.olderThan = Timestamp.fromDate(new Date(value))
+    } else if (key === UrlKeys.BEFORE) {
+      state.newerThan = Timestamp.fromDate(new Date(value))
     }
   }
+
+  // TODO
+  // this.timeRange = this.calculateTimeRange();
+
+  // If we're loading a specific event, we don't want to tail.
+  //     setSelectedTimeRange(TIME_RANGES['5m'])
+  //     setIsTimelinePaused(true)
+  //
+
+  return state
+}
+
+export function getFilters(state: TimelineState): EventsQuery_Filter[] {
+  const filters: EventsQuery_Filter[] = []
+  if (state.eventId) {
+    filters.push(specificEventIdFilter(state.eventId))
+  }
+  if (state.modules === 'all') {
+    if (state.knownModules) {
+      filters.push(modulesFilter(state.knownModules.map((module) => module.deploymentKey)))
+    }
+  } else if (state.modules.length > 0) {
+    filters.push(modulesFilter(state.modules))
+  }
+  if (state.logLevel) {
+    filters.push(logLevelFilter(state.logLevel))
+  }
+  if (state.eventTypes.length > 0) {
+    filters.push(eventTypesFilter(state.eventTypes))
+  }
+  if (state.olderThan || state.newerThan) {
+    filters.push(timeFilter(state.olderThan, state.newerThan))
+  }
+  return filters
+}
+
+export function getSearchParams(state: TimelineState): NicerURLSearchParams {
+  const params = new NicerURLSearchParams()
+
+  if (state.eventId) {
+    params.set(UrlKeys.ID, state.eventId.toString())
+  }
+  if (state.modules !== 'all' && state.modules.length > 0) {
+    params.set(UrlKeys.MODULES, state.modules.join(','))
+  }
+  if (state.logLevel !== LogLevel.TRACE) {
+    const logString = logEnumToValue(state.logLevel)
+    if (logString) {
+      params.set(UrlKeys.LOG, logString)
+    }
+  }
+  if (state.eventTypes.length > 0) {
+    const eventTypes = state.eventTypes.map((type) => eventTypeEnumToValue(type)).filter((type) => type !== undefined)
+    if (eventTypes.length !== 0) {
+      params.set(UrlKeys.TYPES, eventTypes.join(','))
+    }
+  }
+  if (state.olderThan) {
+    params.set(UrlKeys.AFTER, state.olderThan.toDate().toISOString())
+  }
+  if (state.newerThan) {
+    params.set(UrlKeys.BEFORE, state.newerThan.toDate().toISOString())
+  }
+  if (state.isPaused) {
+    params.set(UrlKeys.PAUSED, '1')
+  }
+  // // tailing is on by default, so we only need to set it if it's off.
+  if (!state.isTailing) {
+    params.set(UrlKeys.TAIL, '0')
+  }
+
+  console.log('params', params.toString())
+
+  return params
+}
+
+export function getModules(state: TimelineState): Module[] {
+  if (state.modules === 'all') {
+    return state.knownModules || []
+  }
+
+  return state.knownModules?.filter((module) => state.modules.includes(module.deploymentKey)) || []
+}
+
+export function isModuleSelected(state: TimelineState, deploymentKey: string): boolean {
+  return state.modules === 'all' || state.modules.includes(deploymentKey)
+}
+
+export function setTimeSettings(oldState: TimelineState, timeSettings: TimeSettings): TimelineState {
+  const state = { ...oldState }
+  state.olderThan = timeSettings.olderThan
+  state.newerThan = timeSettings.newerThan
+  state.isTailing = timeSettings.isTailing
+  state.isPaused = timeSettings.isPaused
+  return state
+}
+
+export function setKnownModules(oldState: TimelineState, modules?: Module[]): TimelineState {
+  const state = { ...oldState }
+  if (modules) {
+    state.knownModules = modules
+  }
+  return state
+}
+
+// function addOrUpdateFilter(oldState: TimelineState, filter: EventsQuery_Filter): TimelineState {
+//   const state = { ...oldState }
+//   switch (filter.filter.case) {
+//     case 'logLevel':
+//       state.logLevel = filter.filter.value.logLevel
+//       break
+//     case 'deployments':
+//       state.modules = filter.filter.value.deployments
+//       break
+//     case 'eventTypes':
+//       state.eventTypes = filter.filter.value.eventTypes
+//       break
+//     case 'time':
+//       state.olderThan = filter.filter.value.olderThan
+//       state.newerThan = filter.filter.value.newerThan
+//       break
+//     case 'id':
+//       state.eventId = filter.filter.value.higherThan
+//       break
+//     default:
+//       console.error('Unknown filter type while addOrUpdateFilter', filter)
+//   }
+//   return state
+// }
+
+export function isLogLevelSelected(state: TimelineState, level: LogLevel): boolean {
+  return state.logLevel <= level
 }
 
 function logValueToEnum(value: string): LogLevel | undefined {
@@ -240,15 +264,30 @@ function logEnumToValue(level: LogLevel): string | undefined {
   }
 }
 
+export function isEventTypeSelected(state: TimelineState, type: EventType | string): boolean {
+  if (typeof type === 'string') {
+    console.log('isEventTypeSelected for string', type)
+    const enumType = eventTypeValueToEnum(type)
+    if (!enumType) {
+      console.warn('Unknown event type', type)
+      return false
+    }
+
+    return state.eventTypes.includes(enumType)
+  }
+
+  return state.eventTypes.includes(type)
+}
+
 function eventTypeValueToEnum(value: string): EventType | undefined {
   switch (value) {
     case 'log':
       return EventType.LOG
     case 'call':
       return EventType.CALL
-    case 'created':
+    case 'deploymentCreated':
       return EventType.DEPLOYMENT_CREATED
-    case 'updated':
+    case 'deploymentUpdated':
       return EventType.DEPLOYMENT_UPDATED
     default:
       return undefined
@@ -262,14 +301,15 @@ function eventTypeEnumToValue(type: EventType): string | undefined {
     case EventType.CALL:
       return 'call'
     case EventType.DEPLOYMENT_CREATED:
-      return 'created'
+      return 'deploymentCreated'
     case EventType.DEPLOYMENT_UPDATED:
-      return 'updated'
+      return 'deploymentUpdated'
     default:
       return undefined
   }
 }
 
+// A custom URLSearchParams class that removes unnecessary encoding to make the URL more readable for humons.
 export class NicerURLSearchParams extends URLSearchParams {
   toString(): string {
     // sort automatically for more predictable URLs
