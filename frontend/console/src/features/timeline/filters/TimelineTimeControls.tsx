@@ -1,9 +1,8 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
 import { Backward02Icon, Forward02Icon, PauseIcon, PlayIcon, Tick02Icon, UnfoldLessIcon } from 'hugeicons-react'
-import { useEffect, useState } from 'react'
 import { bgColor, borderColor, classNames, formatTimestampShort, formatTimestampTime, panelColor, textColor } from '../../../utils'
-import { PRESET_TIME_RANGES, TimelineState } from '../../../api/timeline/timeline-state'
+import { getHistoryRange, PRESET_TIME_RANGES, type TimelineState } from '../../../api/timeline/timeline-state'
 
 export const TimelineTimeControls = ({
   timelineState,
@@ -78,12 +77,44 @@ export const TimelineTimeControls = ({
 
   // const olderThan = newerThan ? Timestamp.fromDate(new Date(newerThan.toDate().getTime() - selected.value)) : undefined
 
+  let selected = PRESET_TIME_RANGES.tail
   const dropdownOptions = { ...PRESET_TIME_RANGES }
+  const historyRange = getHistoryRange(timelineState)
+  switch (historyRange.kind) {
+    case 'preset':
+      dropdownOptions.custom = PRESET_TIME_RANGES[historyRange.preset]
+      break
+    case 'custom':
+      selected = dropdownOptions.custom
+      dropdownOptions.custom = {
+        label: 'Custom',
+        value: historyRange,
+      }
+      break
+  }
+
+  // let customTimeRange = undefined
+  // switch (timelineState.time.kind) {
+  //   case 'live':
+  //     customTimeRange = PRESET_TIME_RANGES.tail
+  //     break
+  //   case 'past': {
+  //     customTimeRange = PRESET_TIME_RANGES[timelineState.time.preset]
+  //     // "Past " + timelineState.time.label
+  //     customTimeRange.label = `Past ${customTimeRange.label}`
+  //     if (!customTimeRange) {
+  //       console.error('Invalid preset time range', timelineState.time.preset)
+  //     }
+  //     break
+  //   }
+  //   case 'range':
+  //     const preset = getPresetForDuration(timelineState)
+  // }
 
   return (
     <>
       <div className='flex items-center h-6'>
-        {timelineState.time.kind === 'history' && (
+        {timelineState.time.kind === 'range' && (
           <span
             title={`${formatTimestampShort(timelineState.time.newerThan)} - ${formatTimestampShort(timelineState.time.olderThan)}`}
             className='text-xs font-roboto-mono mr-2 text-gray-400'
@@ -108,7 +139,7 @@ export const TimelineTimeControls = ({
               transition
               className={`z-10 mt-1 w-40 rounded-md ${panelColor} py-1 text-xs shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none`}
             >
-              {Object.keys(TIME_RANGES).map((key) => {
+              {dropdownOptions.map((key) => {
                 const timeRange = TIME_RANGES[key]
                 return (
                   <ListboxOption

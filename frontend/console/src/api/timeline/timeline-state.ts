@@ -38,7 +38,7 @@ type TimeStateLive = {
 // TODO: Track the time when the user paused the timeline, so that it can be converted to a fixed time range for the URL
 type TimeStatePast = {
   kind: 'past'
-  milliseconds: number
+  preset: string
 }
 
 type TimeStateRange = {
@@ -307,33 +307,51 @@ function eventTypeEnumToValue(type: EventType): string | undefined {
   }
 }
 
-type HistoryRange = { kind: 'preset'; key: string } | { kind: 'custom'; newerThan: Timestamp; olderThan: Timestamp } | { kind: 'live' }
+type HistoryRange =
+  | { kind: 'past'; preset: string }
+  | { kind: 'history'; preset: string }
+  | { kind: 'custom'; newerThan: Timestamp; olderThan: Timestamp }
+  | { kind: 'live' }
+  | { kind: 'other' }
+
+function getPresetForDuration(milliseconds: number): string | undefined {
+  for (const [key, range] of Object.entries(PRESET_TIME_RANGES)) {
+    if (range.milliseconds === milliseconds) {
+      return key
+    }
+  }
+}
 
 // A helper to work out if the given range matches a known preset.
 export function getHistoryRange(state: TimelineState): HistoryRange {
   switch (state.time.kind) {
     case 'live':
       return { kind: 'live' }
+    case 'past': {
+      const preset = PRESET_TIME_RANGES[state.time.preset]
+      if (!preset) {
+        console.warn('Invalid preset:', state.time.preset)
+        return { kind: 'other' }
+      }
+      return { kind: 'past', preset }
+    }
     case 'range':
       if (!(state.time.newerThan && state.time.olderThan)) {
         console.warn('Invalid history range: both newerThan and olderThan must be set:', state.time)
-        return { kind: 'live' }
+        return { kind: 'other' }
       }
 
       {
         const newerThan = state.time.newerThan.toDate()
         const olderThan = state.time.olderThan.toDate()
         const ms = olderThan.getTime() - newerThan.getTime()
-
-        // check if the range matches a known preset in PRESET_TIME_RANGES
-        for (const [key, range] of Object.entries(PRESET_TIME_RANGES)) {
-          if (range.value * 1000 === ms) {
-            return { kind: 'preset', key }
-          }
+        const preset = getPresetForDuration(ms)
+        if (preset) {
+          return { kind: 'preset', key: preset }
         }
-      }
 
-      return { kind: 'custom', newerThan: state.time.newerThan, olderThan: state.time.olderThan }
+        return { kind: 'custom', newerThan: state.time.newerThan, olderThan: state.time.olderThan }
+      }
   }
 }
 
