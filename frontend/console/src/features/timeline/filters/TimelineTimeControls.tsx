@@ -102,12 +102,14 @@ export const TimelineTimeControls = ({
   return (
     <>
       {newerThan && (
-        <div title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`} className='text-xs font-roboto-mono mr-2 text-gray-400 pl-4 mt-2'>
+        <div
+          title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`}
+          className='text-xs font-roboto-mono mr-2 text-gray-400 pl-4 mt-2'
+        >
           {formatTimestampTime(olderThan)} - {formatTimestampTime(newerThan)}
         </div>
       )}
       <div className='flex items-center h-6 pl-2 mt-2'>
-
         <Listbox value={selected} onChange={handleRangeChanged}>
           <div className='relative w-full mr-1 mt-0.5 items-center'>
             <ListboxButton
