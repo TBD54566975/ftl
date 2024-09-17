@@ -597,14 +597,12 @@ func (d *DAL) ReplaceDeployment(ctx context.Context, newDeploymentKey model.Depl
 		if oldDeployment.Key.String() == newDeploymentKey.String() {
 			return fmt.Errorf("replace deployment failed: deployment already exists from %v to %v: %w", oldDeployment.Key, newDeploymentKey, ErrReplaceDeploymentAlreadyActive)
 		}
-		err = tx.db.SetDeploymentDesiredReplicas(ctx, oldDeployment.Key, 0)
-		if err != nil {
-			return fmt.Errorf("replace deployment failed to set old deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
-		}
+		// Note that we don't set the desired replicas to 0 here, as we want to keep the old deployment running until the new one is ready
 		err = tx.db.SetDeploymentDesiredReplicas(ctx, newDeploymentKey, int32(minReplicas))
 		if err != nil {
 			return fmt.Errorf("replace deployment failed to set new deployment replicas from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))
 		}
+		// The old deployment is still deactivated, we want to hold messages until the new deployment is ready
 		err = tx.deploymentWillDeactivate(ctx, oldDeployment.Key)
 		if err != nil {
 			return fmt.Errorf("replace deployment failed willDeactivate trigger from %v to %v: %w", oldDeployment.Key, newDeploymentKey, libdal.TranslatePGError(err))

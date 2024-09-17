@@ -531,6 +531,7 @@ FROM deployments d
   LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0
 GROUP BY d.id, m.name, m.language
+ORDER BY d.created_at
 `
 
 type GetActiveDeploymentsRow struct {

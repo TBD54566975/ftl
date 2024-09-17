@@ -119,7 +119,8 @@ FROM deployments d
   JOIN modules m ON d.module_id = m.id
   LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0
-GROUP BY d.id, m.name, m.language;
+GROUP BY d.id, m.name, m.language
+ORDER BY d.created_at;
 
 -- name: GetDeploymentsWithMinReplicas :many
 SELECT sqlc.embed(d), m.name AS module_name, m.language
