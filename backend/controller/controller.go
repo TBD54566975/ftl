@@ -548,7 +548,7 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 }
 
 func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStream[ftlv1.RegisterRunnerRequest]) (*connect.Response[ftlv1.RegisterRunnerResponse], error) {
-	initialised := false
+
 	deferredDeregistration := false
 
 	logger := log.FromContext(ctx)
@@ -568,14 +568,6 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 
 		runnerStr := fmt.Sprintf("%s (%s)", endpoint, runnerKey)
 		logger.Tracef("Heartbeat received from runner %s", runnerStr)
-
-		if !initialised {
-			err = s.pingRunner(ctx, endpoint)
-			if err != nil {
-				return nil, fmt.Errorf("runner callback failed: %w", err)
-			}
-			initialised = true
-		}
 
 		deploymentKey, err := model.ParseDeploymentKey(msg.Deployment)
 		if err != nil {
@@ -611,19 +603,6 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		return nil, stream.Err()
 	}
 	return connect.NewResponse(&ftlv1.RegisterRunnerResponse{}), nil
-}
-
-// Check if we can contact the runner.
-func (s *Service) pingRunner(ctx context.Context, endpoint *url.URL) error {
-	client := rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint.String(), log.Error)
-	retry := backoff.Backoff{}
-	heartbeatCtx, cancel := context.WithTimeout(ctx, s.config.RunnerTimeout)
-	defer cancel()
-	err := rpc.Wait(heartbeatCtx, retry, client)
-	if err != nil {
-		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to connect to runner: %w", err))
-	}
-	return nil
 }
 
 func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentRequest]) (*connect.Response[ftlv1.GetDeploymentResponse], error) {
