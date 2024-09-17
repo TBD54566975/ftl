@@ -25,7 +25,6 @@ export const ConsolePage = () => {
 
   return (
     <Page>
-      <Page.Header icon={<CubeIcon />} title='Console' />
       <Page.Body className='flex h-full'>
         <ResizablePanels
           mainContent={<GraphPane onTapped={setSelectedNode} />}
