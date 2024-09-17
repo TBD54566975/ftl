@@ -12,5 +12,5 @@ export const DeclSnippet = ({ decl }: { decl: Decl }) => {
     case 'typeAlias':
       return <TypeAliasSnippet value={decl.value.value} />
   }
-  return <div className='flex-1 py-2 px-4'>under construction: {decl.value.case}</div>
+  return <div>under construction: {decl.value.case}</div>
 }
