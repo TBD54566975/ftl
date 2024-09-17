@@ -55,7 +55,7 @@ build +tools: build-protos build-zips build-frontend
   if [ "${FTL_DEBUG:-}" = "true" ]; then
     for tool in $@; do go build -o "{{RELEASE}}/$tool" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
   else
-    for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
+    for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
   fi
 
 # Build all backend binaries
@@ -64,7 +64,7 @@ build-backend:
 
 # Build all backend tests
 build-backend-tests:
-  go test -run ^NONE -tags integration ./...
+  go test -run ^NONE -tags integration,infrastructure ./...
 
 build-java *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}
@@ -132,6 +132,13 @@ integration-tests *test:
   set -euo pipefail
   testName=${1:-}
   for i in {1..3}; do go test -fullpath -count 1 -v -tags integration -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build integration' | xargs -I {} dirname './{}') && break; done
+
+# Run integration test(s)
+infrastructure-tests *test:
+  #!/bin/bash
+  set -euo pipefail
+  testName=${1:-}
+  for i in {1..3}; do go test -fullpath -count 1 -v -tags infrastructure -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build infrastructure' | xargs -I {} dirname './{}') && break; done
 
 # Run README doc tests
 test-readme *args:

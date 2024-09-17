@@ -1,4 +1,4 @@
-//go:build integration
+//go:build infrastructure
 
 package k8sscaling_test
 

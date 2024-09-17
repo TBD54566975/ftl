@@ -303,6 +303,51 @@ jobs:
           set -euo pipefail
           # shellcheck disable=SC2046
           go test -v -race -tags integration -run '^${{ matrix.test }}$' $(git grep -l '^//go:build integration' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
+  infrastructure-shard:
+    name: Shard Infrastructure Tests
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.extract-tests.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+      - name: Extract test cases
+        id: extract-tests
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2046
+          echo "matrix={\"test\":$(jq -c -n '$ARGS.positional' --args $(git grep -l '^//go:build infrastructure' | xargs grep '^func Test' | awk '{print $2}' | cut -d'(' -f1))}" >> "$GITHUB_OUTPUT"
+  infrastructure-run:
+    name: Infrastructure Test
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    needs: infrastructure-shard
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{fromJson(needs.infrastructure-shard.outputs.matrix)}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+        with:
+          cache: true
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose --profile integration up -d --wait
+      - name: Create DB
+        run: just init-db
+      - name: Download Go Modules
+        run: go mod download
+      - name: Run ${{ matrix.test }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2046
+          go test -v -race -tags infrastructure -run '^${{ matrix.test }}$' $(git grep -l '^//go:build infrastructure' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
   integration-success:
     name: Integration Success
     needs: [integration-run]
