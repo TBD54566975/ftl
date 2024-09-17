@@ -30,26 +30,27 @@ type CLI struct {
 	Authenticators map[string]string `help:"Authenticators to use for FTL endpoints." mapsep:"," env:"FTL_AUTHENTICATORS" placeholder:"HOST=EXE,…"`
 	Insecure       bool              `help:"Skip TLS certificate verification. Caution: susceptible to machine-in-the-middle attacks."`
 
-	Ping     pingCmd     `cmd:"" help:"Ping the FTL cluster."`
-	Status   statusCmd   `cmd:"" help:"Show FTL status."`
-	Init     initCmd     `cmd:"" help:"Initialize a new FTL project."`
-	New      newCmd      `cmd:"" help:"Create a new FTL module."`
-	Dev      devCmd      `cmd:"" help:"Develop FTL modules. Will start the FTL cluster, build and deploy all modules found in the specified directories, and watch for changes."`
-	PS       psCmd       `cmd:"" help:"List deployments."`
-	Serve    serveCmd    `cmd:"" help:"Start the FTL server."`
-	Call     callCmd     `cmd:"" help:"Call an FTL function."`
-	Update   updateCmd   `cmd:"" help:"Update a deployment."`
-	Kill     killCmd     `cmd:"" help:"Kill a deployment."`
-	Schema   schemaCmd   `cmd:"" help:"FTL schema commands."`
-	Build    buildCmd    `cmd:"" help:"Build all modules found in the specified directories."`
-	Box      boxCmd      `cmd:"" help:"Build a self-contained Docker container for running a set of module."`
-	BoxRun   boxRunCmd   `cmd:"" hidden:"" help:"Run FTL inside an ftl-in-a-box container"`
-	Deploy   deployCmd   `cmd:"" help:"Build and deploy all modules found in the specified directories."`
-	Migrate  migrateCmd  `cmd:"" help:"Run a database migration, if required, based on the migration table."`
-	Download downloadCmd `cmd:"" help:"Download a deployment."`
-	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
-	Config   configCmd   `cmd:"" help:"Manage configuration."`
-	Pubsub   pubsubCmd   `cmd:"" help:"Manage pub/sub."`
+	Interactive interactiveCmd `cmd:"" help:"Interactive mode." default:""`
+	Ping        pingCmd        `cmd:"" help:"Ping the FTL cluster."`
+	Status      statusCmd      `cmd:"" help:"Show FTL status."`
+	Init        initCmd        `cmd:"" help:"Initialize a new FTL project."`
+	New         newCmd         `cmd:"" help:"Create a new FTL module."`
+	Dev         devCmd         `cmd:"" help:"Develop FTL modules. Will start the FTL cluster, build and deploy all modules found in the specified directories, and watch for changes."`
+	PS          psCmd          `cmd:"" help:"List deployments."`
+	Serve       serveCmd       `cmd:"" help:"Start the FTL server."`
+	Call        callCmd        `cmd:"" help:"Call an FTL function."`
+	Update      updateCmd      `cmd:"" help:"Update a deployment."`
+	Kill        killCmd        `cmd:"" help:"Kill a deployment."`
+	Schema      schemaCmd      `cmd:"" help:"FTL schema commands."`
+	Build       buildCmd       `cmd:"" help:"Build all modules found in the specified directories."`
+	Box         boxCmd         `cmd:"" help:"Build a self-contained Docker container for running a set of module."`
+	BoxRun      boxRunCmd      `cmd:"" hidden:"" help:"Run FTL inside an ftl-in-a-box container"`
+	Deploy      deployCmd      `cmd:"" help:"Build and deploy all modules found in the specified directories."`
+	Migrate     migrateCmd     `cmd:"" help:"Run a database migration, if required, based on the migration table."`
+	Download    downloadCmd    `cmd:"" help:"Download a deployment."`
+	Secret      secretCmd      `cmd:"" help:"Manage secrets."`
+	Config      configCmd      `cmd:"" help:"Manage configuration."`
+	Pubsub      pubsubCmd      `cmd:"" help:"Manage pub/sub."`
 
 	// Specify the 1Password vault to access secrets from.
 	Vault string `name:"opvault" help:"1Password vault to be used for secrets. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." placeholder:"VAULT"`
@@ -103,12 +104,6 @@ func main() {
 
 	os.Setenv("FTL_CONFIG", configPath)
 
-	config, err := projectconfig.Load(ctx, configPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		kctx.Fatalf(err.Error())
-	}
-	kctx.Bind(config)
-
 	// Handle signals.
 	sigch := make(chan os.Signal, 1)
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
@@ -120,6 +115,19 @@ func main() {
 		os.Exit(0)
 	}()
 
+	config, err := projectconfig.Load(ctx, configPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		kctx.FatalIfErrorf(err)
+	}
+	ctx = bindContext(ctx, kctx, config)
+
+	err = kctx.Run(ctx)
+	kctx.FatalIfErrorf(err)
+}
+
+func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config) context.Context {
+	kctx.Bind(projectConfig)
+
 	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
 	kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
@@ -130,7 +138,5 @@ func main() {
 
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
-
-	err = kctx.Run(ctx)
-	kctx.FatalIfErrorf(err)
+	return ctx
 }

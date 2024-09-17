@@ -1,3 +1,4 @@
+/.ftl-project/
 .hermit/
 .vscode/*
 !/.vscode/settings.json
