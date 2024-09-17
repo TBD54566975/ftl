@@ -39,7 +39,11 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java
+build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java generate-kube-migrations
+
+# Update the kube config map with the latest schema migrations
+generate-kube-migrations:
+    just k8s update-schema
 
 # Run "go generate" on all packages
 build-generate:

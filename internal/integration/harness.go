@@ -1,4 +1,4 @@
-//go:build integration
+//go:build integration || infrastructure
 
 package integration
 
@@ -20,7 +20,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 	"github.com/otiai10/copy"
+	"k8s.io/client-go/kubernetes"
 
+	"github.com/TBD54566975/ftl/backend/controller/scaling/k8sscaling"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -175,6 +177,8 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		t.Fatal("Kubernetes tests are only supported for golang")
 	}
 
+	var kubeClient *kubernetes.Clientset
+	var kubeNamespace string
 	buildOnce.Do(func() {
 		if opts.kube {
 			// This command will build a linux/amd64 version of FTL and deploy it to the kube cluster
@@ -188,6 +192,10 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				assert.NoError(t, err)
 			}
 			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "wait-for-kube").RunBuffered(ctx)
+			assert.NoError(t, err)
+			kubeClient, err = k8sscaling.CreateClientSet()
+			assert.NoError(t, err)
+			kubeNamespace, err = k8sscaling.GetCurrentNamespace()
 			assert.NoError(t, err)
 		} else {
 			Infof("Building ftl")
@@ -224,15 +232,16 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			}
 
 			ic := TestContext{
-				Context:  ctx,
-				RootDir:  rootDir,
-				testData: testData,
-				workDir:  tmpDir,
-				binDir:   binDir,
-				Verbs:    verbs,
-				realT:    t,
-				language: language,
-				kube:     opts.kube,
+				Context:       ctx,
+				RootDir:       rootDir,
+				testData:      testData,
+				workDir:       tmpDir,
+				binDir:        binDir,
+				Verbs:         verbs,
+				realT:         t,
+				language:      language,
+				kubeClient:    kubeClient,
+				kubeNamespace: kubeNamespace,
 			}
 
 			if opts.startController || opts.kube {
@@ -297,8 +306,9 @@ type TestContext struct {
 	binDir string
 	// The Language under test
 	language string
-	// If the test is running on kubernetes
-	kube bool
+	// Set if the test is running on kubernetes
+	kubeClient    *kubernetes.Clientset
+	kubeNamespace string
 
 	Controller ftlv1connect.ControllerServiceClient
 	Console    pbconsoleconnect.ConsoleServiceClient

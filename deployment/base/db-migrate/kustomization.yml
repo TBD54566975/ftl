@@ -22,3 +22,7 @@ configMapGenerator:
   - ./schema/20240820011612_encryption_verification.sql
   - ./schema/20240902030242_remove_notify.sql
   - ./schema/20240903043046_enforce_runner_deployment.sql
+  - ./schema/20240913035022_encrypted_fsm_next_request.sql
+  - ./schema/20240913041619_encrypted_topic_events_payload.sql
+  - ./schema/20240916015906_remove_runner_state.sql
+  - ./schema/20240916190209_rename_controller_to_controllers.sql
