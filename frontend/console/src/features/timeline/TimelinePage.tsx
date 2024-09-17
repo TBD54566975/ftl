@@ -19,15 +19,10 @@ export const TimelinePage = () => {
   const [isTimelinePaused, setIsTimelinePaused] = useState(timelineState.isPaused)
 
   useEffect(() => {
-    console.log('TODO TimelinePage: modules changed', modules.data?.modules)
+    setTimelineState({ ...timelineState, knownModules: modules.data?.modules })
   }, [modules.data?.modules])
 
   useEffect(() => {
-    console.warn('TODO TimelinePage: searchParams changed', searchParams.toString())
-  }, [searchParams])
-
-  useEffect(() => {
-    console.log('TimelinePage: timelineState changed', timelineState)
     setSearchParams(getSearchParams(timelineState))
   }, [timelineState])
 

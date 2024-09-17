@@ -2,12 +2,12 @@ import { Call02Icon, Rocket01Icon } from 'hugeicons-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { eventTypesFilter, logLevelFilter, modulesFilter } from '../../../api/timeline'
+import { TimelineState, getModules, isEventTypeSelected, isLogLevelSelected, isModuleSelected } from '../../../api/timeline/timeline-state'
 import { EventType, type EventsQuery_Filter, LogLevel } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { textColor } from '../../../utils'
 import { LogLevelBadgeSmall } from '../../logs/LogLevelBadgeSmall'
 import { logLevelBgColor, logLevelColor, logLevelRingColor } from '../../logs/log.utils'
 import { FilterPanelSection } from './FilterPanelSection'
-import { getModules, isEventTypeSelected, isLogLevelSelected, isModuleSelected, TimelineState } from '../../../api/timeline/timeline-state'
 
 interface EventFilter {
   label: string
@@ -30,7 +30,6 @@ const EVENT_TYPES: Record<string, EventFilter> = {
   },
 }
 
-// An array of tuples of log level and its name
 const LOG_LEVELS: [LogLevel, string][] = [
   [LogLevel.TRACE, 'Trace'],
   [LogLevel.DEBUG, 'Debug'],
@@ -90,10 +89,17 @@ export const TimelineFilterPanel = ({
   const handleTypeChanged = (eventType: string, checked: boolean) => {
     console.log('TODO handleTypeChanged', eventType, checked)
     if (checked) {
-      // setSelectedEventTypes((prev) => [...prev, eventType])
+      setTimelineState({ ...timelineState, eventTypes: [...timelineState.eventTypes, EVENT_TYPES[eventType].type] })
     } else {
-      // setSelectedEventTypes((prev) => prev.filter((filter) => filter !== eventType))
+      setTimelineState({
+        ...timelineState,
+        eventTypes: timelineState.eventTypes.filter((type) => type !== EVENT_TYPES[eventType].type),
+      })
     }
+  }
+
+  const handleLogLevelChanged = (logLevel: LogLevel) => {
+    setTimelineState({ ...timelineState, logLevel })
   }
 
   const handleModuleChanged = (deploymentKey: string, checked: boolean) => {
@@ -103,27 +109,23 @@ export const TimelineFilterPanel = ({
     // } else {
     //   setSelectedModules((prev) => prev.filter((filter) => filter !== deploymentKey))
     // }
-  }
 
-  const handleLogLevelChanged = (logLevel: LogLevel) => {
-    setTimelineState({ ...timelineState, logLevel })
+    if (checked) {
+      setTimelineState({ ...timelineState, modules: [...timelineState.modules, deploymentKey] })
+    } else {
+      setTimelineState({
+        ...timelineState,
+        modules: timelineState.modules.filter((module) => module !== deploymentKey),
+      })
+    }
   }
-
-  // console.group('modules')
-  // console.log('selected', timelineState.modules)
-  // console.log('for view getModules', timelineState.getModules())
-  // console.log('known', timelineState.knownModules)
-  // console.groupEnd()
-  //
 
   const selectAllModules = () => {
-    console.log('TODO selectAllModules')
-    // setSelectedModules(timelineState.getModules())
+    setTimelineState({ ...timelineState, modules: getModules(timelineState).map((module) => module.deploymentKey) })
   }
 
   const clearSelectedModules = () => {
-    console.log('TODO selectNoneModules')
-    // setSelectedModules([])
+    setTimelineState({ ...timelineState, modules: [] })
   }
 
   return (
@@ -172,38 +174,36 @@ export const TimelineFilterPanel = ({
             </ul>
           </FilterPanelSection>
 
-          {timelineState.modules !== undefined && (
-            <FilterPanelSection title='Modules'>
-              <div className='relative flex items-center mb-2'>
-                <button type='button' onClick={selectAllModules} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
-                  Select All
-                </button>
-                <span className='px-1 text-indigo-700'>|</span>
-                <button type='button' onClick={clearSelectedModules} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
-                  Deselect All
-                </button>
-              </div>
-              {getModules(timelineState).map((module) => (
-                <div key={module.deploymentKey} className='relative flex items-start'>
-                  <div className='flex h-6 items-center'>
-                    <input
-                      id={`module-${module.deploymentKey}`}
-                      name={`module-${module.deploymentKey}`}
-                      type='checkbox'
-                      checked={isModuleSelected(timelineState, module.deploymentKey)}
-                      onChange={(e) => handleModuleChanged(module.deploymentKey, e.target.checked)}
-                      className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
-                    />
-                  </div>
-                  <div className='ml-2 text-sm leading-6 w-full'>
-                    <label htmlFor={`module-${module.deploymentKey}`} className={`${textColor} flex cursor-pointer`}>
-                      {module.name}
-                    </label>
-                  </div>
+          <FilterPanelSection title='Modules' loading={timelineState.knownModules === undefined}>
+            <div className='relative flex items-center mb-2'>
+              <button type='button' onClick={selectAllModules} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
+                Select All
+              </button>
+              <span className='px-1 text-indigo-700'>|</span>
+              <button type='button' onClick={clearSelectedModules} className='text-indigo-600 cursor-pointer hover:text-indigo-500'>
+                Deselect All
+              </button>
+            </div>
+            {timelineState.knownModules?.map((module) => (
+              <div key={module.deploymentKey} className='relative flex items-start'>
+                <div className='flex h-6 items-center'>
+                  <input
+                    id={`module-${module.deploymentKey}`}
+                    name={`module-${module.deploymentKey}`}
+                    type='checkbox'
+                    checked={isModuleSelected(timelineState, module.deploymentKey)}
+                    onChange={(e) => handleModuleChanged(module.deploymentKey, e.target.checked)}
+                    className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer'
+                  />
                 </div>
-              ))}
-            </FilterPanelSection>
-          )}
+                <div className='ml-2 text-sm leading-6 w-full'>
+                  <label htmlFor={`module-${module.deploymentKey}`} className={`${textColor} flex cursor-pointer`}>
+                    {module.name}
+                  </label>
+                </div>
+              </div>
+            ))}
+          </FilterPanelSection>
         </div>
       </div>
     </div>

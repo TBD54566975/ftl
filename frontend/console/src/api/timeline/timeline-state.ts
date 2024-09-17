@@ -36,7 +36,8 @@ range
 
 // TODO: type TimeState = Range | Tail;
 
-type SelectedModules = string[] | 'all'
+// type SelectedModules = string[] | 'all'
+type SelectedModules = string[]
 
 // Hides the complexity of the URLSearchParams API and protobuf types.
 export type TimelineState = {
@@ -60,7 +61,7 @@ export function newTimelineState(params: URLSearchParams, knownModules: Module[]
     timeRange: TIME_RANGES.tail,
     olderThan: undefined,
     newerThan: undefined,
-    modules: 'all',
+    modules: [],
     knownModules,
     logLevel: LogLevel.TRACE,
     eventTypes: [],
@@ -113,11 +114,7 @@ export function getFilters(state: TimelineState): EventsQuery_Filter[] {
   if (state.eventId) {
     filters.push(specificEventIdFilter(state.eventId))
   }
-  if (state.modules === 'all') {
-    if (state.knownModules) {
-      filters.push(modulesFilter(state.knownModules.map((module) => module.deploymentKey)))
-    }
-  } else if (state.modules.length > 0) {
+  if (state.modules.length > 0) {
     filters.push(modulesFilter(state.modules))
   }
   if (state.logLevel) {
@@ -138,7 +135,7 @@ export function getSearchParams(state: TimelineState): NicerURLSearchParams {
   if (state.eventId) {
     params.set(UrlKeys.ID, state.eventId.toString())
   }
-  if (state.modules !== 'all' && state.modules.length > 0) {
+  if (state.modules.length > 0) {
     params.set(UrlKeys.MODULES, state.modules.join(','))
   }
   if (state.logLevel !== LogLevel.TRACE) {
@@ -162,7 +159,7 @@ export function getSearchParams(state: TimelineState): NicerURLSearchParams {
   if (state.isPaused) {
     params.set(UrlKeys.PAUSED, '1')
   }
-  // // tailing is on by default, so we only need to set it if it's off.
+  // Tailing is on by default, so we only need to set it if it's off.
   if (!state.isTailing) {
     params.set(UrlKeys.TAIL, '0')
   }
@@ -173,15 +170,11 @@ export function getSearchParams(state: TimelineState): NicerURLSearchParams {
 }
 
 export function getModules(state: TimelineState): Module[] {
-  if (state.modules === 'all') {
-    return state.knownModules || []
-  }
-
   return state.knownModules?.filter((module) => state.modules.includes(module.deploymentKey)) || []
 }
 
 export function isModuleSelected(state: TimelineState, deploymentKey: string): boolean {
-  return state.modules === 'all' || state.modules.includes(deploymentKey)
+  return state.modules.includes(deploymentKey)
 }
 
 export function setTimeSettings(oldState: TimelineState, timeSettings: TimeSettings): TimelineState {
