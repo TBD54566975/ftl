@@ -30,7 +30,7 @@ export const RefLink = ({ r }: { r?: Ref }) => {
   )
 }
 
-export const TypeEl = ({ t }: { t?: Type }) => {
+export const TypeElContents = ({ t }: { t?: Type }) => {
   if (!t) {
     return ''
   }
@@ -67,4 +67,12 @@ export const TypeEl = ({ t }: { t?: Type }) => {
     default:
       return t.value.case || ''
   }
+}
+
+export const TypeEl = ({ t }: { t?: Type }) => {
+  return (
+    <span className='font-mono'>
+      <TypeElContents t={t} />
+    </span>
+  )
 }
