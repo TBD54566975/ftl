@@ -32,11 +32,15 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
-func integrationTestTimeout() time.Duration {
+func (i TestContext) integrationTestTimeout() time.Duration {
 	timeout := optional.Zero(os.Getenv("FTL_INTEGRATION_TEST_TIMEOUT")).Default("5s")
 	d, err := time.ParseDuration(timeout)
 	if err != nil {
 		panic(err)
+	}
+	if i.kubeClient != nil {
+		// kube can be slow, give it some time
+		return d * 5
 	}
 	return d
 }
@@ -326,7 +330,7 @@ func (i TestContext) WorkingDir() string { return i.workDir }
 
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
-	waitCtx, done := context.WithTimeout(i, integrationTestTimeout())
+	waitCtx, done := context.WithTimeout(i, i.integrationTestTimeout())
 	defer done()
 	for {
 		err := i.runAssertionOnce(t, assertion)

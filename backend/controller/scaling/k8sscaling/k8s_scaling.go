@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/alecthomas/types/optional"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -63,9 +64,12 @@ func CreateClientSet() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func (k k8sScaling) GetEndpointForDeployment(module string, deployment string) (url.URL, error) {
-	return url.URL{Scheme: "http",
-		Host: deployment}, nil
+func (k k8sScaling) GetEndpointForDeployment(ctx context.Context, module string, deployment string) (optional.Option[url.URL], error) {
+	// TODO: hard coded port? It's hard to deal with as we might not have the lease
+	// I think requiring this port is fine for now
+	return optional.Some(url.URL{Scheme: "http",
+		Host: fmt.Sprintf("%s:8893", deployment),
+	}), nil
 }
 
 func NewK8sScaling() scaling.RunnerScaling {

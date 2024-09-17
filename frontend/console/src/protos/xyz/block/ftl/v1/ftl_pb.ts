@@ -2164,17 +2164,12 @@ export class StatusResponse_Route extends Message<StatusResponse_Route> {
   module = "";
 
   /**
-   * @generated from field: string runner = 2;
-   */
-  runner = "";
-
-  /**
-   * @generated from field: string deployment = 3;
+   * @generated from field: string deployment = 2;
    */
   deployment = "";
 
   /**
-   * @generated from field: string endpoint = 4;
+   * @generated from field: string endpoint = 3;
    */
   endpoint = "";
 
@@ -2187,9 +2182,8 @@ export class StatusResponse_Route extends Message<StatusResponse_Route> {
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse.Route";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "runner", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Route {

@@ -150,7 +150,6 @@ type Status struct {
 	Runners       []Runner
 	Deployments   []Deployment
 	IngressRoutes []IngressRouteEntry
-	Routes        []Route
 }
 
 // A Reservation of a Runner.
@@ -159,19 +158,6 @@ type Reservation interface {
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }
-
-type Route struct {
-	Module     string
-	Runner     model.RunnerKey
-	Deployment model.DeploymentKey
-	Endpoint   string
-}
-
-func (r Route) String() string {
-	return fmt.Sprintf("%s -> %s (%s)", r.Deployment, r.Runner, r.Endpoint)
-}
-
-func (r Route) notification() {}
 
 func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service) *DAL {
 	var d *DAL
@@ -235,10 +221,6 @@ func (d *DAL) GetStatus(ctx context.Context) (Status, error) {
 	if err != nil {
 		return Status{}, fmt.Errorf("could not get ingress routes: %w", libdal.TranslatePGError(err))
 	}
-	routes, err := d.db.GetRoutingTable(ctx, nil)
-	if err != nil {
-		return Status{}, fmt.Errorf("could not get routing table: %w", libdal.TranslatePGError(err))
-	}
 	statusDeployments, err := slices.MapErr(deployments, func(in dalsql.GetActiveDeploymentsRow) (Deployment, error) {
 		labels := model.Labels{}
 		err = json.Unmarshal(in.Deployment.Labels, &labels)
@@ -284,14 +266,6 @@ func (d *DAL) GetStatus(ctx context.Context) (Status, error) {
 				Verb:       in.Verb,
 				Method:     in.Method,
 				Path:       in.Path,
-			}
-		}),
-		Routes: slices.Map(routes, func(row dalsql.GetRoutingTableRow) Route {
-			return Route{
-				Module:     row.ModuleName.MustGet(),
-				Runner:     row.RunnerKey,
-				Deployment: row.DeploymentKey.MustGet(),
-				Endpoint:   row.Endpoint,
 			}
 		}),
 	}, nil
@@ -803,33 +777,6 @@ func (d *DAL) GetProcessList(ctx context.Context) ([]Process, error) {
 			Runner:      runner,
 		}, nil
 	})
-}
-
-// GetRoutingTable returns the endpoints for all runners for the given modules,
-// or all routes if modules is empty.
-//
-// Returns route map keyed by module.
-func (d *DAL) GetRoutingTable(ctx context.Context, modules []string) (map[string][]Route, error) {
-	routes, err := d.db.GetRoutingTable(ctx, modules)
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	if len(routes) == 0 {
-		return nil, fmt.Errorf("no routes found: %w", libdal.ErrNotFound)
-	}
-	out := make(map[string][]Route, len(routes))
-	for _, route := range routes {
-		// This is guaranteed to be non-nil by the query, but sqlc doesn't quite understand that.
-		moduleName := route.ModuleName.MustGet()
-		deploymentKey := route.DeploymentKey.MustGet()
-		out[moduleName] = append(out[moduleName], Route{
-			Module:     moduleName,
-			Deployment: deploymentKey,
-			Runner:     route.RunnerKey,
-			Endpoint:   route.Endpoint,
-		})
-	}
-	return out, nil
 }
 
 func (d *DAL) GetRunner(ctx context.Context, runnerKey model.RunnerKey) (Runner, error) {

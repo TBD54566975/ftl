@@ -278,9 +278,8 @@ message StatusResponse {
 
   message Route {
     string module = 1;
-    string runner = 2;
-    string deployment = 3;
-    string endpoint = 4;
+    string deployment = 2;
+    string endpoint = 3;
   }
   repeated Route routes = 5;
 }

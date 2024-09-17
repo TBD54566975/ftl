@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
@@ -216,7 +215,7 @@ type Service struct {
 	// Complete schema synchronised from the database.
 	schema atomic.Value[*schema.Schema]
 
-	routes atomic.Value[map[string][]dal.Route]
+	routes atomic.Value[map[string]Route]
 	config Config
 
 	increaseReplicaFailures map[string]int
@@ -255,7 +254,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		increaseReplicaFailures: map[string]int{},
 		runnerScaling:           runnerScaling,
 	}
-	svc.routes.Store(map[string][]dal.Route{})
+	svc.routes.Store(map[string]Route{})
 	svc.schema.Store(&schema.Schema{})
 
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, conn)
@@ -377,17 +376,12 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		return nil, fmt.Errorf("could not get status: %w", err)
 	}
 	sroutes := s.routes.Load()
-	routes := slices.FlatMap(maps.Values(sroutes), func(routes []dal.Route) (out []*ftlv1.StatusResponse_Route) {
-		out = make([]*ftlv1.StatusResponse_Route, len(routes))
-		for i, route := range routes {
-			out[i] = &ftlv1.StatusResponse_Route{
-				Module:     route.Module,
-				Runner:     route.Runner.String(),
-				Deployment: route.Deployment.String(),
-				Endpoint:   route.Endpoint,
-			}
+	routes := slices.Map(maps.Values(sroutes), func(route Route) (out *ftlv1.StatusResponse_Route) {
+		return &ftlv1.StatusResponse_Route{
+			Module:     route.Module,
+			Deployment: route.Deployment.String(),
+			Endpoint:   route.Endpoint,
 		}
-		return out
 	})
 	replicas := map[string]int32{}
 	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
@@ -1013,13 +1007,12 @@ func (s *Service) callWithRequest(
 	}
 
 	module := verbRef.Module
-	routes, ok := s.routes.Load()[module]
+	route, ok := s.routes.Load()[module]
 	if !ok {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
 	}
-	route := routes[rand.Intn(len(routes))] //nolint:gosec
-	client := s.clientsForRunner(route.Runner, route.Endpoint)
+	client := s.clientsForEndpoint(route.Endpoint)
 
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
@@ -1210,16 +1203,16 @@ func (s *Service) getDeployment(ctx context.Context, key string) (*model.Deploym
 	return deployment, nil
 }
 
-// Return or create the RunnerService and VerbService clients for a Runner.
-func (s *Service) clientsForRunner(key model.RunnerKey, endpoint string) clients {
-	clientItem := s.clients.Get(key.String())
+// Return or create the RunnerService and VerbService clients for an endpoint.
+func (s *Service) clientsForEndpoint(endpoint string) clients {
+	clientItem := s.clients.Get(endpoint)
 	if clientItem != nil {
 		return clientItem.Value()
 	}
 	client := clients{
 		verb: rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
 	}
-	s.clients.Set(key.String(), client, time.Minute)
+	s.clients.Set(endpoint, client, time.Minute)
 	return client
 }
 
@@ -1759,26 +1752,35 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 // Periodically sync the routing table from the DB.
 func (s *Service) syncRoutes(ctx context.Context) (time.Duration, error) {
 	logger := log.FromContext(ctx)
-	routes, err := s.dal.GetRoutingTable(ctx, nil)
+	deployments, err := s.dal.GetActiveDeployments(ctx)
 	if errors.Is(err, libdal.ErrNotFound) {
-		routes = map[string][]dal.Route{}
+		deployments = []dal.Deployment{}
 	} else if err != nil {
 		return 0, err
 	}
-	// TODO: This currently keeps a route table entry per runner, even for situations when the load balancing
-	// is being routed through a service. Long terms we don't really want this, however as this will all need to
-	// be changed when we get rolling deployments in place, we can leave this for now.
-	for k, v := range routes {
-		for i := range v {
-			deployment, err := s.runnerScaling.GetEndpointForDeployment(k, v[i].Deployment.String())
-			if err != nil {
-				logger.Errorf(err, "Failed to get updated endpoint for deployment %s", v[i].Deployment.String())
-				continue
+	old := s.routes.Load()
+	newRoutes := map[string]Route{}
+	for _, v := range deployments {
+		optURI, err := s.runnerScaling.GetEndpointForDeployment(ctx, v.Module, v.Key.String())
+		if err != nil {
+			logger.Errorf(err, "Failed to get updated endpoint for deployment %s", v.Key.String())
+			continue
+		} else if uri, ok := optURI.Get(); ok {
+			// Check if this is a new route
+			targetEndpoint := uri.String()
+			if _, ok := old[v.Module]; !ok {
+				// If it is a new route we only add it if we can ping it
+				// Kube deployments can take a while to come up, so we don't want to add them to the routing table until they are ready.
+				_, err := s.clientsForEndpoint(targetEndpoint).verb.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+				if err != nil {
+					logger.Warnf("Unable to ping %s, not adding to route table", v.Key.String())
+					continue
+				}
 			}
-			v[i].Endpoint = deployment.String()
+			newRoutes[v.Module] = Route{Module: v.Module, Deployment: v.Key, Endpoint: targetEndpoint}
 		}
 	}
-	s.routes.Store(routes)
+	s.routes.Store(newRoutes)
 	return time.Second, nil
 }
 
@@ -1881,4 +1883,14 @@ func makeBackoff(min, max time.Duration) backoff.Backoff {
 		Jitter: true,
 		Factor: 2,
 	}
+}
+
+type Route struct {
+	Module     string
+	Deployment model.DeploymentKey
+	Endpoint   string
+}
+
+func (r Route) String() string {
+	return fmt.Sprintf("%s -> %s", r.Deployment, r.Endpoint)
 }
