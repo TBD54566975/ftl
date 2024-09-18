@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1beta1.provisioner;
+
+import "xyz/block/ftl/v1/ftl.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner;provisioner";
+option java_multiple_files = true;
+
+// ResourceProperty is an implementation specific property of the resource populated at creation time
+message ResourceProperty {
+  string resource_id = 1;
+  string key = 2;
+  string value = 3;
+}
+
+// Resource is an abstract resource extracted from FTL Schema.
+message Resource {
+  // id unique within the module
+  string resource_id = 1;
+  // potential implementation specific properties populated
+  // when the resource was created
+  repeated ResourceProperty properties = 2;
+  // direct downstream dependencies this Resource depends on
+  repeated Resource dependencies = 3;
+
+  // Resource types
+
+  message FtlCluster {}
+  message PostgresResource {}
+  message MysqlResource {}
+
+  oneof resource {
+    FtlCluster ftl = 101;
+    PostgresResource postgres = 102;
+    MysqlResource mysql = 103;
+  }
+}
+
+message ProvisionRequest {
+  string ftl_cluster_id = 1;
+  string module = 2;
+
+  // The resource FTL thinks exists currently
+  repeated Resource existing_resources = 3;
+
+  // The resource FTL would like to exist after this provisioning run.
+  // This includes all new, existing, and changes resources in this change.
+  repeated Resource desired_resources = 4;
+}
+
+message ProvisionResponse {
+  enum ProvisionResponseStatus {
+    UNKNOWN = 0;
+    SUBMITTED = 1;
+    NO_CHANGES = 2;
+  }
+
+  string provisioning_token = 1;
+  ProvisionResponseStatus status = 2;
+}
+
+message StatusRequest {
+  string provisioning_token = 1;
+}
+
+message StatusResponse {
+  enum ProvisioningStatus {
+    UNKNOWN = 0;
+    RUNNING = 1;
+    SUCCEEDED = 2;
+    FAILED = 3;
+  }
+
+  ProvisioningStatus status = 1;
+  string error_message = 2;
+  repeated ResourceProperty properties = 3;
+}
+
+service ProvisionerPluginService {
+  rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse);
+
+  rpc Provision(ProvisionRequest) returns (ProvisionResponse);
+
+  rpc Status(StatusRequest) returns (StatusResponse);
+}
