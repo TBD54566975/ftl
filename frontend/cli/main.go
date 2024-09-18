@@ -19,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/status"
 )
 
 type CLI struct {
@@ -29,6 +30,7 @@ type CLI struct {
 
 	Authenticators map[string]string `help:"Authenticators to use for FTL endpoints." mapsep:"," env:"FTL_AUTHENTICATORS" placeholder:"HOST=EXE,…"`
 	Insecure       bool              `help:"Skip TLS certificate verification. Caution: susceptible to machine-in-the-middle attacks."`
+	Plain          bool              `help:"Use a plain console with no color or status line." env:"FTL_PLAIN"`
 
 	Interactive interactiveCmd `cmd:"" help:"Interactive mode." default:""`
 	Ping        pingCmd        `cmd:"" help:"Ping the FTL cluster."`
@@ -59,6 +61,7 @@ type CLI struct {
 var cli CLI
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
 	kctx := kong.Parse(&cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
 		kong.Configuration(kongtoml.Loader, ".ftl.toml", "~/.ftl.toml"),
@@ -79,12 +82,14 @@ func main() {
 		},
 	)
 
+	if !cli.Plain {
+		sm := status.NewStatusManager(ctx)
+		ctx = sm.IntoContext(ctx)
+	}
 	rpc.InitialiseClients(cli.Authenticators, cli.Insecure)
 
 	// Set some envars for child processes.
 	os.Setenv("LOG_LEVEL", cli.LogConfig.Level.String())
-
-	ctx, cancel := context.WithCancel(context.Background())
 
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)

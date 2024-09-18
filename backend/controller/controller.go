@@ -65,6 +65,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/internal/status"
 )
 
 // CommonConfig between the production controller and development server.
@@ -1753,7 +1754,7 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 		// Which is what makes as a deployment 'live' from a clients POV
 		optURI, err := s.runnerScaling.GetEndpointForDeployment(ctx, v.Module, v.Key.String())
 		if err != nil {
-			deploymentLogger.Errorf(err, "Failed to get updated endpoint for deployment %s", v.Key.String())
+			deploymentLogger.Debugf("Failed to get updated endpoint for deployment %s", v.Key.String())
 			continue
 		} else if uri, ok := optURI.Get(); ok {
 			// Check if this is a new route
@@ -1767,6 +1768,7 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 					continue
 				}
 				deploymentLogger.Infof("Deployed %s", v.Key.String())
+				status.UpdateModuleState(ctx, v.Module, status.BuildStateDeployed)
 			}
 			if prev, ok := newRoutes[v.Module]; ok {
 				// We have already seen a route for this module, the existing route must be an old one

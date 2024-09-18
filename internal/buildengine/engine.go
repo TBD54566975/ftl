@@ -25,6 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/internal/status"
 )
 
 type CompilerBuildError struct {
@@ -450,6 +451,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
+					status.UpdateModuleState(ctx, config.Module, status.BuildStateFailed)
 					logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
 				} else {
 					didUpdateDeployments = true
@@ -580,6 +582,8 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		}
 		e.moduleMetas.Store(name, moduleMeta{module: module})
 		mustBuild[name] = true
+
+		status.UpdateModuleState(ctx, name, status.BuildStateWaiting)
 	}
 	graph, err := e.Graph(moduleNames...)
 	if err != nil {
@@ -706,6 +710,7 @@ func (e *Engine) mustSchema(ctx context.Context, moduleName string, builtModules
 //
 // Assumes that all dependencies have been built and are available in "built".
 func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
+	status.UpdateModuleState(ctx, moduleName, status.BuildStateBuilding)
 	meta, ok := e.moduleMetas.Load(moduleName)
 	if !ok {
 		return fmt.Errorf("module %q not found", moduleName)
@@ -726,6 +731,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if err != nil {
 		return fmt.Errorf("could not load schema for module %q: %w", config.Module, err)
 	}
+	status.UpdateModuleState(ctx, moduleName, status.BuildStateBuilt)
 	schemas <- moduleSchema
 	return nil
 }
