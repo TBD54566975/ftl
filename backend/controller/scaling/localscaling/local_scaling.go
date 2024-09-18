@@ -33,7 +33,6 @@ type localScaling struct {
 	// Module -> Port
 	debugPorts map[string]*localdebug.DebugInfo
 	// Module -> Port, most recent runner is present in the map
-
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
 
@@ -78,7 +77,7 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -88,12 +87,12 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		lock:                sync.Mutex{},
 		cacheDir:            cacheDir,
 		runners:             map[string]map[string]*deploymentInfo{},
-		debugPorts:          map[string]*localdebug.DebugInfo{},
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
 		prevRunnerSuffix:    -1,
+		debugPorts:          map[string]*localdebug.DebugInfo{},
 	}
-	if configPath != "" {
+	if enableIDEIntegration && configPath != "" {
 		local.ideSupport = optional.Ptr(localdebug.NewIDEIntegration(configPath))
 	}
 
@@ -132,7 +131,6 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 }
 
 func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *deploymentInfo) error {
-
 	// Must be called under lock
 	logger := log.FromContext(ctx)
 	if deploymentRunners.replicas > 0 && !deploymentRunners.runner.Ok() {
@@ -154,24 +152,15 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	bind := l.portAllocator.Next()
 	var debug *localdebug.DebugInfo
 	debugPort := 0
-	if l.debugPorts[info.module] != nil {
-		debug = l.debugPorts[info.module]
-	} else if ide, ok := l.ideSupport.Get(); ok {
-		existingDebugPort := ide.GetExistingDebugPort(ctx, info.module)
-		if existingDebugPort != 0 {
-			debug = &localdebug.DebugInfo{
-				Language: info.language,
-				Port:     existingDebugPort,
-			}
-		}
-	}
-	if debug == nil {
+	if ide, ok := l.ideSupport.Get(); ok {
 		debug = &localdebug.DebugInfo{
 			Language: info.language,
 			Port:     l.portAllocator.NextPort(),
 		}
+		l.debugPorts[info.module] = debug
+		ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
+		debugPort = debug.Port
 	}
-	debugPort = debug.Port
 
 	keySuffix := l.prevRunnerSuffix + 1
 	l.prevRunnerSuffix = keySuffix
@@ -182,10 +171,6 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		Key:                model.NewLocalRunnerKey(keySuffix),
 		Deployment:         deploymentKey,
 		DebugPort:          debugPort,
-	}
-	l.debugPorts[info.module] = debug
-	if ide, ok := l.ideSupport.Get(); ok {
-		ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)

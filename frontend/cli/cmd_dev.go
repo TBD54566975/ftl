@@ -68,7 +68,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady))
+			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), true)
 		})
 	}
 

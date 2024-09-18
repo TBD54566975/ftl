@@ -56,48 +56,6 @@ func (r *IDEIntegration) SyncIDEDebugIntegrations(ctx context.Context, ports map
 	r.handleVSCode(ctx, ports)
 }
 
-// GetExistingDebugPort will return the existing debug ports for the given project name
-// based on VSCode configurations.
-// VSCode configurations are always created, so there is no need to look at intellij
-func (r *IDEIntegration) GetExistingDebugPort(ctx context.Context, module string) int {
-	if r.projectPath == "" {
-		return 0
-	}
-	logger := log.FromContext(ctx)
-	vscode := r.findFolder(".vscode", true)
-	launchJSON := filepath.Join(vscode, "launch.json")
-	contents := map[string]any{}
-	var configurations []any
-	if _, err := os.Stat(launchJSON); err == nil {
-		file, err := os.ReadFile(launchJSON)
-		if err != nil {
-			logger.Errorf(err, "could not read launch.json")
-			return 0
-		}
-		err = json.Unmarshal(file, &contents)
-		if err != nil {
-			logger.Errorf(err, "could not read launch.json")
-			return 0
-		}
-		configurations = contents["configurations"].([]any) //nolint:forcetypeassert
-		if configurations == nil {
-			configurations = []any{}
-		}
-		for _, config := range configurations {
-			name := config.(map[string]any)["name"].(string) //nolint:forcetypeassert
-			if strings.HasPrefix(name, "FT𝝺") && strings.HasSuffix(name, "- "+module) {
-				ret, ok := config.(map[string]any)["port"].(float64)
-				if !ok {
-					logger.Warnf("could not read port from launch.json")
-					return 0
-				}
-				return int(ret)
-			}
-		}
-	}
-	return 0
-}
-
 func (r *IDEIntegration) handleIntellij(ctx context.Context, ports map[string]*DebugInfo) {
 	logger := log.FromContext(ctx)
 	ideaPath := r.findFolder(".idea", false)
