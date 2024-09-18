@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/kong"
 	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
@@ -13,10 +15,15 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
+var cli struct {
+	log.Config `prefix:"log-"`
+}
+
 // For locally testing the provisioners.
 // You should add the provisioner being tested to your PATH before running this
 func main() {
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	kong.Parse(&cli)
+	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.Config))
 
 	client, ctx, err := plugin.Spawn(
 		ctx,
