@@ -481,3 +481,79 @@ proto3.util.setEnumType(StatusResponse_ProvisioningStatus, "xyz.block.ftl.v1beta
   { no: 3, name: "FAILED" },
 ]);
 
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.PlanRequest
+ */
+export class PlanRequest extends Message<PlanRequest> {
+  /**
+   * @generated from field: xyz.block.ftl.v1beta1.provisioner.ProvisionRequest provisioning = 1;
+   */
+  provisioning?: ProvisionRequest;
+
+  constructor(data?: PartialMessage<PlanRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.PlanRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "provisioning", kind: "message", T: ProvisionRequest },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PlanRequest {
+    return new PlanRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PlanRequest {
+    return new PlanRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PlanRequest {
+    return new PlanRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PlanRequest | PlainMessage<PlanRequest> | undefined, b: PlanRequest | PlainMessage<PlanRequest> | undefined): boolean {
+    return proto3.util.equals(PlanRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.PlanResponse
+ */
+export class PlanResponse extends Message<PlanResponse> {
+  /**
+   * a detailed, implementation specific, plan of changes this deployment would do
+   *
+   * @generated from field: string plan = 1;
+   */
+  plan = "";
+
+  constructor(data?: PartialMessage<PlanResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.PlanResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "plan", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PlanResponse {
+    return new PlanResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PlanResponse {
+    return new PlanResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PlanResponse {
+    return new PlanResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PlanResponse | PlainMessage<PlanResponse> | undefined, b: PlanResponse | PlainMessage<PlanResponse> | undefined): boolean {
+    return proto3.util.equals(PlanResponse, a, b);
+  }
+}
+

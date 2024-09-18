@@ -36,7 +36,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	resp, err := client.Client.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
+
+	req := &provisioner.ProvisionRequest{
 		FtlClusterId:      "ftl-test-1",
 		Module:            "test-module",
 		ExistingResources: []*provisioner.Resource{},
@@ -54,7 +55,19 @@ func main() {
 				}},
 			}},
 		}},
+	}
+
+	plan, err := client.Client.Plan(ctx, connect.NewRequest(&provisioner.PlanRequest{
+		Provisioning: req,
 	}))
+	if err != nil {
+		panic(err)
+	}
+	println("### PLAN ###")
+	println(plan.Msg.Plan)
+
+	println("### EXECUTION ###")
+	resp, err := client.Client.Provision(ctx, connect.NewRequest(req))
 	if err != nil {
 		panic(err)
 	}
@@ -62,6 +75,7 @@ func main() {
 		println("no changes")
 		return
 	}
+
 	retry := backoff.Backoff{
 		Min:    100 * time.Millisecond,
 		Max:    5 * time.Second,

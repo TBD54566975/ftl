@@ -77,10 +77,21 @@ message StatusResponse {
   repeated ResourceProperty properties = 3;
 }
 
+message PlanRequest {
+  ProvisionRequest provisioning = 1;
+}
+
+message PlanResponse {
+  // a detailed, implementation specific, plan of changes this deployment would do
+  string plan = 1;
+}
+
 service ProvisionerPluginService {
   rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse);
 
   rpc Provision(ProvisionRequest) returns (ProvisionResponse);
+
+  rpc Plan(PlanRequest) returns (PlanResponse);
 
   rpc Status(StatusRequest) returns (StatusResponse);
 }
