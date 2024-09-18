@@ -4,10 +4,12 @@ package k8sscaling_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/atomic"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -15,6 +17,9 @@ import (
 )
 
 func TestKubeScaling(t *testing.T) {
+	failure := atomic.Value[error]{}
+	done := atomic.Value[bool]{}
+	done.Store(false)
 	in.Run(t,
 		in.WithKubernetes(),
 		in.CopyModule("echo"),
@@ -25,10 +30,28 @@ func TestKubeScaling(t *testing.T) {
 		in.EditFile("echo", func(content []byte) []byte {
 			return []byte(strings.ReplaceAll(string(content), "Hello", "Bye"))
 		}, "echo.go"),
+		func(t testing.TB, ic in.TestContext) {
+			// Hit the verb constantly to test rolling updates.
+			go func() {
+				for !done.Load() {
+					in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
+						if !strings.Contains(response, "Bob") {
+							failure.Store(fmt.Errorf("unexpected response: %s", response))
+							return
+						}
+					})(t, ic)
+				}
+			}()
+		},
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 			assert.Equal(t, "Bye, Bob!!!", response)
 		}),
+		func(t testing.TB, ic in.TestContext) {
+			done.Store(true)
+			err := failure.Load()
+			assert.NoError(t, err)
+		},
 		in.VerifyKubeState(func(ctx context.Context, t testing.TB, namespace string, client *kubernetes.Clientset) {
 			deps, err := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
 			assert.NoError(t, err)

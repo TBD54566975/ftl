@@ -1,7 +1,6 @@
 package dal
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding"
@@ -72,7 +71,7 @@ func (d *DAL) PollDeployments(ctx context.Context) {
 		deployments, err := d.GetDeploymentsWithMinReplicas(ctx)
 		if err != nil {
 			if ctx.Err() == context.Canceled {
-				logger.Debugf("Polling stopped: %v", ctx.Err())
+				logger.Tracef("Polling stopped: %v", ctx.Err())
 				return
 			}
 			logger.Errorf(err, "failed to get deployments when polling")
@@ -88,16 +87,16 @@ func (d *DAL) PollDeployments(ctx context.Context) {
 				logger.Errorf(err, "failed to compute deployment state")
 				continue
 			}
+			deploymentName := deployment.Key.String()
+			currentDeployments[deploymentName] = state
 
-			currentDeployments[name] = state
-
-			previousState, exists := previousDeployments[name]
+			previousState, exists := previousDeployments[deploymentName]
 			if !exists {
 				logger.Tracef("New deployment: %s", name)
 				d.DeploymentChanges.Publish(DeploymentNotification{
 					Message: optional.Some(deployment),
 				})
-			} else if !bytes.Equal(previousState.schemaHash, state.schemaHash) || previousState.minReplicas != state.minReplicas || !bytes.Equal(previousState.Key.Suffix, state.Key.Suffix) {
+			} else if previousState.minReplicas != state.minReplicas {
 				logger.Tracef("Changed deployment: %s", name)
 				d.DeploymentChanges.Publish(DeploymentNotification{
 					Message: optional.Some(deployment),

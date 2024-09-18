@@ -1729,7 +1729,7 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 }
 
 // Periodically sync the routing table from the DB.
-func (s *Service) syncRoutes(ctx context.Context) (time.Duration, error) {
+func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error) {
 	logger := log.FromContext(ctx)
 	deployments, err := s.dal.GetActiveDeployments(ctx)
 	if errors.Is(err, libdal.ErrNotFound) {
@@ -1737,9 +1737,21 @@ func (s *Service) syncRoutes(ctx context.Context) (time.Duration, error) {
 	} else if err != nil {
 		return 0, err
 	}
+	tx, err := s.dal.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to start transaction %w", err)
+	}
+	defer tx.CommitOrRollback(ctx, &err)
+
 	old := s.routes.Load()
 	newRoutes := map[string]Route{}
 	for _, v := range deployments {
+		logger.Tracef("processing deployment %s for route table", v.Key.String())
+		// Deployments are in order, oldest to newest
+		// If we see a newer one overwrite an old one that means the new one is read
+		// And we set its replicas to zero
+		// It may seem a bit odd to do this here but this is where we are actually updating the routing table
+		// Which is what makes as a deployment 'live' from a clients POV
 		optURI, err := s.runnerScaling.GetEndpointForDeployment(ctx, v.Module, v.Key.String())
 		if err != nil {
 			logger.Errorf(err, "Failed to get updated endpoint for deployment %s", v.Key.String())
@@ -1747,13 +1759,25 @@ func (s *Service) syncRoutes(ctx context.Context) (time.Duration, error) {
 		} else if uri, ok := optURI.Get(); ok {
 			// Check if this is a new route
 			targetEndpoint := uri.String()
-			if _, ok := old[v.Module]; !ok {
+			if oldRoute, oldRouteExists := old[v.Module]; !oldRouteExists || oldRoute.Deployment.String() != v.Key.String() {
 				// If it is a new route we only add it if we can ping it
 				// Kube deployments can take a while to come up, so we don't want to add them to the routing table until they are ready.
 				_, err := s.clientsForEndpoint(targetEndpoint).verb.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
 				if err != nil {
-					logger.Warnf("Unable to ping %s, not adding to route table", v.Key.String())
+					logger.Tracef("Unable to ping %s, not adding to route table", v.Key.String())
 					continue
+				}
+				logger.Debugf("Adding %s to route table", v.Key.String())
+			}
+			if prev, ok := newRoutes[v.Module]; ok {
+				// We have already seen a route for this module, the existing route must be an old one
+				// as the deployments are in order
+				// We have a new route ready to go, so we can just set the old one to 0 replicas
+				// Do this in a TX so it doesn't happen until the route table is updated
+				logger.Debugf("Setting %s to zero replicas", v.Key.String())
+				err := tx.SetDeploymentReplicas(ctx, prev.Deployment, 0)
+				if err != nil {
+					logger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
 				}
 			}
 			newRoutes[v.Module] = Route{Module: v.Module, Deployment: v.Key, Endpoint: targetEndpoint}
