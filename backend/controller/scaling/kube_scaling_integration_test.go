@@ -1,11 +1,12 @@
 //go:build infrastructure
 
-package k8sscaling_test
+package scaling_test
 
 import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -20,6 +21,8 @@ func TestKubeScaling(t *testing.T) {
 	failure := atomic.Value[error]{}
 	done := atomic.Value[bool]{}
 	done.Store(false)
+	routineStopped := sync.WaitGroup{}
+	routineStopped.Add(1)
 	in.Run(t,
 		in.WithKubernetes(),
 		in.CopyModule("echo"),
@@ -33,6 +36,7 @@ func TestKubeScaling(t *testing.T) {
 		func(t testing.TB, ic in.TestContext) {
 			// Hit the verb constantly to test rolling updates.
 			go func() {
+				defer routineStopped.Done()
 				for !done.Load() {
 					in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 						if !strings.Contains(response, "Bob") {
@@ -49,6 +53,7 @@ func TestKubeScaling(t *testing.T) {
 		}),
 		func(t testing.TB, ic in.TestContext) {
 			done.Store(true)
+			routineStopped.Wait()
 			err := failure.Load()
 			assert.NoError(t, err)
 		},
