@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alecthomas/types/optional"
+
 	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/alecthomas/types/optional"
 )
 
 type LogEvent struct {

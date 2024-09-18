@@ -3,8 +3,9 @@ package timeline
 import (
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 type DeploymentCreatedEvent struct {
