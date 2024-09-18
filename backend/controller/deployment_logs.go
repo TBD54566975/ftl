@@ -71,7 +71,7 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				errorStr = optional.Some(entry.Error.Error())
 			}
 
-			err = d.timeline.InsertLogEvent(ctx, &timeline.LogEvent{
+			err = d.timeline.InsertLogEvent(ctx, &timeline.Log{
 				RequestKey:    request,
 				DeploymentKey: deployment,
 				Time:          entry.Time,

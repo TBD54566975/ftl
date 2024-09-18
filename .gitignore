@@ -13,6 +13,7 @@ deploy/
 reflex.conf
 /logs/
 /node_modules
+package-lock.json
 *.tsbuildinfo
 generated_ftl_module.go
 *.zip

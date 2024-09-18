@@ -3,7 +3,7 @@ package timeline
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/alecthomas/types/either"
@@ -36,7 +36,6 @@ type CallEvent struct {
 func (e *CallEvent) GetID() int64 { return e.ID }
 func (e *CallEvent) event()       {}
 
-// The internal JSON payload of a call event.
 type eventCallJSON struct {
 	DurationMS int64                   `json:"duration_ms"`
 	Request    json.RawMessage         `json:"request"`
@@ -56,8 +55,63 @@ type Call struct {
 	Response         either.Either[*ftlv1.CallResponse, error]
 }
 
-func (s *Service) RecordCall(ctx context.Context, call *Call) {
+func (s *Service) InsertCallEvent(ctx context.Context, call *Call) {
 	logger := log.FromContext(ctx)
+	callEvent := callToCallEvent(call)
+
+	var sourceModule, sourceVerb optional.Option[string]
+	if sr, ok := callEvent.SourceVerb.Get(); ok {
+		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
+	}
+
+	var requestKey optional.Option[string]
+	if rn, ok := callEvent.RequestKey.Get(); ok {
+		requestKey = optional.Some(rn.String())
+	}
+
+	var parentRequestKey optional.Option[string]
+	if pr, ok := callEvent.ParentRequestKey.Get(); ok {
+		parentRequestKey = optional.Some(pr.String())
+	}
+
+	callJSON := eventCallJSON{
+		DurationMS: callEvent.Duration.Milliseconds(),
+		Request:    callEvent.Request,
+		Response:   callEvent.Response,
+		Error:      callEvent.Error,
+		Stack:      callEvent.Stack,
+	}
+
+	data, err := json.Marshal(callJSON)
+	if err != nil {
+		logger.Errorf(err, "failed to marshal call event")
+		return
+	}
+
+	var payload ftlencryption.EncryptedTimelineColumn
+	err = s.encryption.EncryptJSON(json.RawMessage(data), &payload)
+	if err != nil {
+		logger.Errorf(err, "failed to encrypt call event")
+		return
+	}
+
+	err = libdal.TranslatePGError(s.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
+		DeploymentKey:    call.DeploymentKey,
+		RequestKey:       requestKey,
+		ParentRequestKey: parentRequestKey,
+		TimeStamp:        callEvent.Time,
+		SourceModule:     sourceModule,
+		SourceVerb:       sourceVerb,
+		DestModule:       callEvent.DestVerb.Module,
+		DestVerb:         callEvent.DestVerb.Name,
+		Payload:          payload,
+	}))
+	if err != nil {
+		logger.Errorf(err, "failed to insert call event")
+	}
+}
+
+func callToCallEvent(call *Call) *CallEvent {
 	var sourceVerb optional.Option[schema.Ref]
 	if len(call.Callers) > 0 {
 		sourceVerb = optional.Some(*call.Callers[0])
@@ -80,7 +134,7 @@ func (s *Service) RecordCall(ctx context.Context, call *Call) {
 		errorStr = optional.Some(callError.Error())
 	}
 
-	err := s.insertCallEvent(ctx, &CallEvent{
+	return &CallEvent{
 		Time:             call.StartTime,
 		DeploymentKey:    call.DeploymentKey,
 		RequestKey:       optional.Some(call.RequestKey),
@@ -92,45 +146,41 @@ func (s *Service) RecordCall(ctx context.Context, call *Call) {
 		Response:         responseBody,
 		Error:            errorStr,
 		Stack:            stack,
-	})
-	if err != nil {
-		logger.Errorf(err, "failed to record call")
 	}
 }
 
-func (s *Service) insertCallEvent(ctx context.Context, call *CallEvent) error {
-	var sourceModule, sourceVerb optional.Option[string]
-	if sr, ok := call.SourceVerb.Get(); ok {
-		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
+func callEventToCall(event *CallEvent) *Call {
+	var response either.Either[*ftlv1.CallResponse, error]
+	if eventErr, ok := event.Error.Get(); ok {
+		response = either.RightOf[*ftlv1.CallResponse](errors.New(eventErr))
+	} else {
+		response = either.LeftOf[error](&ftlv1.CallResponse{
+			Response: &ftlv1.CallResponse_Body{
+				Body: event.Response,
+			},
+		})
 	}
-	var requestKey optional.Option[string]
-	if rn, ok := call.RequestKey.Get(); ok {
-		requestKey = optional.Some(rn.String())
+
+	var requestKey model.RequestKey
+	if key, ok := event.RequestKey.Get(); ok {
+		requestKey = key
+	} else {
+		requestKey = model.RequestKey{}
 	}
-	var parentRequestKey optional.Option[string]
-	if pr, ok := call.ParentRequestKey.Get(); ok {
-		parentRequestKey = optional.Some(pr.String())
+
+	callers := []*schema.Ref{}
+	if ref, ok := event.SourceVerb.Get(); ok {
+		callers = []*schema.Ref{&ref}
 	}
-	var payload ftlencryption.EncryptedTimelineColumn
-	err := s.encryption.EncryptJSON(map[string]any{
-		"duration_ms": call.Duration.Milliseconds(),
-		"request":     call.Request,
-		"response":    call.Response,
-		"error":       call.Error,
-		"stack":       call.Stack,
-	}, &payload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt call payload: %w", err)
-	}
-	return libdal.TranslatePGError(s.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
-		DeploymentKey:    call.DeploymentKey,
+
+	return &Call{
+		DeploymentKey:    event.DeploymentKey,
 		RequestKey:       requestKey,
-		ParentRequestKey: parentRequestKey,
-		TimeStamp:        call.Time,
-		SourceModule:     sourceModule,
-		SourceVerb:       sourceVerb,
-		DestModule:       call.DestVerb.Module,
-		DestVerb:         call.DestVerb.Name,
-		Payload:          payload,
-	}))
+		ParentRequestKey: event.ParentRequestKey,
+		StartTime:        event.Time,
+		DestVerb:         &event.DestVerb,
+		Callers:          callers,
+		Request:          &ftlv1.CallRequest{Body: event.Request},
+		Response:         response,
+	}
 }

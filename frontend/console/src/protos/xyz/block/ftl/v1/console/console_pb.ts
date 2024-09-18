@@ -35,6 +35,11 @@ export enum EventType {
    * @generated from enum value: EVENT_TYPE_DEPLOYMENT_UPDATED = 4;
    */
   DEPLOYMENT_UPDATED = 4,
+
+  /**
+   * @generated from enum value: EVENT_TYPE_INGRESS = 5;
+   */
+  INGRESS = 5,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EventType)
 proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
@@ -43,6 +48,7 @@ proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
   { no: 2, name: "EVENT_TYPE_CALL" },
   { no: 3, name: "EVENT_TYPE_DEPLOYMENT_CREATED" },
   { no: 4, name: "EVENT_TYPE_DEPLOYMENT_UPDATED" },
+  { no: 5, name: "EVENT_TYPE_INGRESS" },
 ]);
 
 /**
@@ -366,6 +372,115 @@ export class DeploymentUpdatedEvent extends Message<DeploymentUpdatedEvent> {
 
   static equals(a: DeploymentUpdatedEvent | PlainMessage<DeploymentUpdatedEvent> | undefined, b: DeploymentUpdatedEvent | PlainMessage<DeploymentUpdatedEvent> | undefined): boolean {
     return proto3.util.equals(DeploymentUpdatedEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.IngressEvent
+ */
+export class IngressEvent extends Message<IngressEvent> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: optional string request_key = 2;
+   */
+  requestKey?: string;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb_ref = 3;
+   */
+  verbRef?: Ref;
+
+  /**
+   * @generated from field: string method = 4;
+   */
+  method = "";
+
+  /**
+   * @generated from field: string path = 5;
+   */
+  path = "";
+
+  /**
+   * @generated from field: int32 status_code = 7;
+   */
+  statusCode = 0;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 8;
+   */
+  timeStamp?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Duration duration = 9;
+   */
+  duration?: Duration;
+
+  /**
+   * @generated from field: string request = 10;
+   */
+  request = "";
+
+  /**
+   * @generated from field: string request_header = 11;
+   */
+  requestHeader = "";
+
+  /**
+   * @generated from field: string response = 12;
+   */
+  response = "";
+
+  /**
+   * @generated from field: string response_header = 13;
+   */
+  responseHeader = "";
+
+  /**
+   * @generated from field: optional string error = 14;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<IngressEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.IngressEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "verb_ref", kind: "message", T: Ref },
+    { no: 4, name: "method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "status_code", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 8, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 9, name: "duration", kind: "message", T: Duration },
+    { no: 10, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "request_header", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 12, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 13, name: "response_header", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 14, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IngressEvent {
+    return new IngressEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): IngressEvent {
+    return new IngressEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): IngressEvent {
+    return new IngressEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: IngressEvent | PlainMessage<IngressEvent> | undefined, b: IngressEvent | PlainMessage<IngressEvent> | undefined): boolean {
+    return proto3.util.equals(IngressEvent, a, b);
   }
 }
 
@@ -1390,6 +1505,12 @@ export class Event extends Message<Event> {
      */
     value: DeploymentUpdatedEvent;
     case: "deploymentUpdated";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.IngressEvent ingress = 7;
+     */
+    value: IngressEvent;
+    case: "ingress";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Event>) {
@@ -1406,6 +1527,7 @@ export class Event extends Message<Event> {
     { no: 4, name: "call", kind: "message", T: CallEvent, oneof: "entry" },
     { no: 5, name: "deployment_created", kind: "message", T: DeploymentCreatedEvent, oneof: "entry" },
     { no: 6, name: "deployment_updated", kind: "message", T: DeploymentUpdatedEvent, oneof: "entry" },
+    { no: 7, name: "ingress", kind: "message", T: IngressEvent, oneof: "entry" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {

@@ -448,6 +448,38 @@ func eventDALToProto(event timeline.TimelineEvent) *pbconsole.Event {
 			},
 		}
 
+	case *timeline.IngressEvent:
+		var requestKey *string
+		if r, ok := event.RequestKey.Get(); ok {
+			rstr := r.String()
+			requestKey = &rstr
+		}
+
+		return &pbconsole.Event{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.Event_Ingress{
+				Ingress: &pbconsole.IngressEvent{
+					DeploymentKey: event.DeploymentKey.String(),
+					RequestKey:    requestKey,
+					VerbRef: &schemapb.Ref{
+						Module: event.Verb.Module,
+						Name:   event.Verb.Name,
+					},
+					Method:         event.Method,
+					Path:           event.Path,
+					StatusCode:     int32(event.StatusCode),
+					TimeStamp:      timestamppb.New(event.Time),
+					Duration:       durationpb.New(event.Duration),
+					Request:        string(event.Request),
+					RequestHeader:  string(event.RequestHeader),
+					Response:       string(event.Response),
+					ResponseHeader: string(event.ResponseHeader),
+					Error:          event.Error.Ptr(),
+				},
+			},
+		}
+
 	default:
 		panic(fmt.Errorf("unknown event type %T", event))
 	}
