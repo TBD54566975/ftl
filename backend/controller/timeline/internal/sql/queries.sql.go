@@ -117,6 +117,66 @@ func (q *Queries) InsertTimelineCallEvent(ctx context.Context, arg InsertTimelin
 	return err
 }
 
+const insertTimelineIngressEvent = `-- name: InsertTimelineIngressEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  parent_request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  custom_key_3,
+  custom_key_4,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments WHERE deployments.key = $1::deployment_key),
+  (CASE
+      WHEN $2::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT)
+    END),
+  (CASE
+      WHEN $3::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $3::TEXT)
+    END),
+  $4::TIMESTAMPTZ,
+  'ingress',
+  $5::TEXT,
+  $6::TEXT,
+  $7::TEXT,
+  $8::TEXT,
+  $9
+)
+`
+
+type InsertTimelineIngressEventParams struct {
+	DeploymentKey     model.DeploymentKey
+	RequestKey        optional.Option[string]
+	ParentRequestKey  optional.Option[string]
+	TimeStamp         time.Time
+	Source            optional.Option[string]
+	DestinationModule optional.Option[string]
+	IngressType       string
+	HttpMethod        optional.Option[string]
+	Payload           api.EncryptedTimelineColumn
+}
+
+func (q *Queries) InsertTimelineIngressEvent(ctx context.Context, arg InsertTimelineIngressEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelineIngressEvent,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.ParentRequestKey,
+		arg.TimeStamp,
+		arg.Source,
+		arg.DestinationModule,
+		arg.IngressType,
+		arg.HttpMethod,
+		arg.Payload,
+	)
+	return err
+}
+
 const insertTimelineLogEvent = `-- name: InsertTimelineLogEvent :exec
 INSERT INTO timeline (
   deployment_id,

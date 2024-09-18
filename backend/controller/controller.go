@@ -46,7 +46,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
-	timelinedal "github.com/TBD54566975/ftl/backend/controller/timeline/dal"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
@@ -1836,7 +1835,7 @@ func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
 		return time.Hour, nil
 	}
 
-	removed, err := s.timeline.DeleteOldEvents(ctx, timelinedal.EventTypeCall, *s.config.EventLogRetention)
+	removed, err := s.timeline.DeleteOldEvents(ctx, timeline.EventTypeCall, *s.config.EventLogRetention)
 	if err != nil {
 		return 0, fmt.Errorf("failed to prune call events: %w", err)
 	}

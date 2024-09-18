@@ -8,7 +8,6 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
-	timelinedal "github.com/TBD54566975/ftl/backend/controller/timeline/dal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -59,11 +58,6 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 			}
 			deployment = dep
 
-			var errorStr optional.Option[string]
-			if entry.Error != nil {
-				errorStr = optional.Some(entry.Error.Error())
-			}
-
 			var request optional.Option[model.RequestKey]
 			if reqStr, ok := entry.Attributes["request"]; ok {
 				req, err := model.ParseRequestKey(reqStr)
@@ -72,7 +66,12 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				}
 			}
 
-			err = d.timeline.InsertLogEvent(ctx, &timelinedal.LogEvent{
+			var errorStr optional.Option[string]
+			if entry.Error != nil {
+				errorStr = optional.Some(entry.Error.Error())
+			}
+
+			err = d.timeline.InsertLogEvent(ctx, &timeline.LogEvent{
 				RequestKey:    request,
 				DeploymentKey: deployment,
 				Time:          entry.Time,

@@ -1,189 +1,20 @@
-package dal
+package timeline
 
 import (
 	"context"
 	stdsql "database/sql"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	"github.com/TBD54566975/ftl/backend/controller/timeline/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
-
-type DAL struct {
-	*libdal.Handle[DAL]
-	db         sql.Querier
-	encryption *encryption.Service
-}
-
-func New(conn libdal.Connection, encryption *encryption.Service) *DAL {
-	var d *DAL
-	d = &DAL{
-		db:         sql.New(conn),
-		encryption: encryption,
-		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
-			return &DAL{
-				Handle:     h,
-				db:         sql.New(h.Connection),
-				encryption: d.encryption,
-			}
-		}),
-	}
-	return d
-}
-
-func (d *DAL) InsertLogEvent(ctx context.Context, log *LogEvent) error {
-	var requestKey optional.Option[string]
-	if name, ok := log.RequestKey.Get(); ok {
-		requestKey = optional.Some(name.String())
-	}
-
-	payload := map[string]any{
-		"message":    log.Message,
-		"attributes": log.Attributes,
-		"error":      log.Error,
-		"stack":      log.Stack,
-	}
-	var encryptedPayload ftlencryption.EncryptedTimelineColumn
-	err := d.encryption.EncryptJSON(payload, &encryptedPayload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt log payload: %w", err)
-	}
-	return libdal.TranslatePGError(d.db.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
-		DeploymentKey: log.DeploymentKey,
-		RequestKey:    requestKey,
-		TimeStamp:     log.Time,
-		Level:         log.Level,
-		Payload:       encryptedPayload,
-	}))
-}
-
-func (d *DAL) InsertCallEvent(ctx context.Context, call *CallEvent) error {
-	var sourceModule, sourceVerb optional.Option[string]
-	if sr, ok := call.SourceVerb.Get(); ok {
-		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
-	}
-	var requestKey optional.Option[string]
-	if rn, ok := call.RequestKey.Get(); ok {
-		requestKey = optional.Some(rn.String())
-	}
-	var parentRequestKey optional.Option[string]
-	if pr, ok := call.ParentRequestKey.Get(); ok {
-		parentRequestKey = optional.Some(pr.String())
-	}
-	var payload ftlencryption.EncryptedTimelineColumn
-	err := d.encryption.EncryptJSON(map[string]any{
-		"duration_ms": call.Duration.Milliseconds(),
-		"request":     call.Request,
-		"response":    call.Response,
-		"error":       call.Error,
-		"stack":       call.Stack,
-	}, &payload)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt call payload: %w", err)
-	}
-	return libdal.TranslatePGError(d.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
-		DeploymentKey:    call.DeploymentKey,
-		RequestKey:       requestKey,
-		ParentRequestKey: parentRequestKey,
-		TimeStamp:        call.Time,
-		SourceModule:     sourceModule,
-		SourceVerb:       sourceVerb,
-		DestModule:       call.DestVerb.Module,
-		DestVerb:         call.DestVerb.Name,
-		Payload:          payload,
-	}))
-}
-
-func (d *DAL) DeleteOldEvents(ctx context.Context, eventType EventType, age time.Duration) (int64, error) {
-	count, err := d.db.DeleteOldTimelineEvents(ctx, sqltypes.Duration(age), eventType)
-	return count, libdal.TranslatePGError(err)
-}
-
-type EventType = sql.EventType
-
-// Supported event types.
-const (
-	EventTypeLog               = sql.EventTypeLog
-	EventTypeCall              = sql.EventTypeCall
-	EventTypeDeploymentCreated = sql.EventTypeDeploymentCreated
-	EventTypeDeploymentUpdated = sql.EventTypeDeploymentUpdated
-)
-
-// TimelineEvent types.
-//
-//sumtype:decl
-type TimelineEvent interface {
-	GetID() int64
-	event()
-}
-
-type LogEvent struct {
-	ID            int64
-	DeploymentKey model.DeploymentKey
-	RequestKey    optional.Option[model.RequestKey]
-	Time          time.Time
-	Level         int32
-	Attributes    map[string]string
-	Message       string
-	Error         optional.Option[string]
-	Stack         optional.Option[string]
-}
-
-func (e *LogEvent) GetID() int64 { return e.ID }
-func (e *LogEvent) event()       {}
-
-type CallEvent struct {
-	ID               int64
-	DeploymentKey    model.DeploymentKey
-	RequestKey       optional.Option[model.RequestKey]
-	ParentRequestKey optional.Option[model.RequestKey]
-	Time             time.Time
-	SourceVerb       optional.Option[schema.Ref]
-	DestVerb         schema.Ref
-	Duration         time.Duration
-	Request          json.RawMessage
-	Response         json.RawMessage
-	Error            optional.Option[string]
-	Stack            optional.Option[string]
-}
-
-func (e *CallEvent) GetID() int64 { return e.ID }
-func (e *CallEvent) event()       {}
-
-type DeploymentCreatedEvent struct {
-	ID                 int64
-	DeploymentKey      model.DeploymentKey
-	Time               time.Time
-	Language           string
-	ModuleName         string
-	MinReplicas        int
-	ReplacedDeployment optional.Option[model.DeploymentKey]
-}
-
-func (e *DeploymentCreatedEvent) GetID() int64 { return e.ID }
-func (e *DeploymentCreatedEvent) event()       {}
-
-type DeploymentUpdatedEvent struct {
-	ID              int64
-	DeploymentKey   model.DeploymentKey
-	Time            time.Time
-	MinReplicas     int
-	PrevMinReplicas int
-}
-
-func (e *DeploymentUpdatedEvent) GetID() int64 { return e.ID }
-func (e *DeploymentUpdatedEvent) event()       {}
 
 type eventFilterCall struct {
 	sourceModule optional.Option[string]
@@ -202,6 +33,12 @@ type eventFilter struct {
 	idHigherThan int64
 	idLowerThan  int64
 	descending   bool
+}
+
+type eventRow struct {
+	sql.Timeline
+	DeploymentKey model.DeploymentKey
+	RequestKey    optional.Option[model.RequestKey]
 }
 
 type TimelineFilter func(query *eventFilter)
@@ -266,39 +103,7 @@ func FilterDescending() TimelineFilter {
 	}
 }
 
-// The internal JSON payload of a call event.
-type eventCallJSON struct {
-	DurationMS int64                   `json:"duration_ms"`
-	Request    json.RawMessage         `json:"request"`
-	Response   json.RawMessage         `json:"response"`
-	Error      optional.Option[string] `json:"error,omitempty"`
-	Stack      optional.Option[string] `json:"stack,omitempty"`
-}
-
-type eventLogJSON struct {
-	Message    string                  `json:"message"`
-	Attributes map[string]string       `json:"attributes"`
-	Error      optional.Option[string] `json:"error,omitempty"`
-	Stack      optional.Option[string] `json:"stack,omitempty"`
-}
-
-type eventDeploymentCreatedJSON struct {
-	MinReplicas        int                                  `json:"min_replicas"`
-	ReplacedDeployment optional.Option[model.DeploymentKey] `json:"replaced,omitempty"`
-}
-
-type eventDeploymentUpdatedJSON struct {
-	MinReplicas     int `json:"min_replicas"`
-	PrevMinReplicas int `json:"prev_min_replicas"`
-}
-
-type eventRow struct {
-	sql.Timeline
-	DeploymentKey model.DeploymentKey
-	RequestKey    optional.Option[model.RequestKey]
-}
-
-func (d *DAL) QueryTimeline(ctx context.Context, limit int, filters ...TimelineFilter) ([]TimelineEvent, error) {
+func (s *Service) QueryTimeline(ctx context.Context, limit int, filters ...TimelineFilter) ([]TimelineEvent, error) {
 	if limit < 1 {
 		return nil, fmt.Errorf("limit must be >= 1, got %d", limit)
 	}
@@ -353,7 +158,7 @@ func (d *DAL) QueryTimeline(ctx context.Context, limit int, filters ...TimelineF
 		deploymentQuery += ` WHERE key = ANY($1::TEXT[])`
 		deploymentArgs = append(deploymentArgs, filter.deployments)
 	}
-	rows, err := d.Handle.Connection.QueryContext(ctx, deploymentQuery, deploymentArgs...)
+	rows, err := s.Handle.Connection.QueryContext(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
@@ -409,20 +214,20 @@ func (d *DAL) QueryTimeline(ctx context.Context, limit int, filters ...TimelineF
 	q += fmt.Sprintf(" LIMIT %d", limit)
 
 	// Issue query.
-	rows, err = d.Handle.Connection.QueryContext(ctx, q, args...)
+	rows, err = s.Handle.Connection.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", q, libdal.TranslatePGError(err))
 	}
 	defer rows.Close()
 
-	events, err := d.transformRowsToTimelineEvents(deploymentKeys, rows)
+	events, err := s.transformRowsToTimelineEvents(deploymentKeys, rows)
 	if err != nil {
 		return nil, err
 	}
 	return events, nil
 }
 
-func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.DeploymentKey, rows *stdsql.Rows) ([]TimelineEvent, error) {
+func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.DeploymentKey, rows *stdsql.Rows) ([]TimelineEvent, error) {
 	var out []TimelineEvent
 	for rows.Next() {
 		row := eventRow{}
@@ -441,7 +246,7 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 		switch row.Type {
 		case sql.EventTypeLog:
 			var jsonPayload eventLogJSON
-			if err := d.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt log event: %w", err)
 			}
 
@@ -458,12 +263,11 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 				Attributes:    jsonPayload.Attributes,
 				Message:       jsonPayload.Message,
 				Error:         jsonPayload.Error,
-				Stack:         jsonPayload.Stack,
 			})
 
 		case sql.EventTypeCall:
 			var jsonPayload eventCallJSON
-			if err := d.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
 			}
 			var sourceVerb optional.Option[schema.Ref]
@@ -488,8 +292,8 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 
 		case sql.EventTypeDeploymentCreated:
 			var jsonPayload eventDeploymentCreatedJSON
-			if err := d.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
-				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt deployment created event: %w", err)
 			}
 			out = append(out, &DeploymentCreatedEvent{
 				ID:                 row.ID,
@@ -503,8 +307,8 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 
 		case sql.EventTypeDeploymentUpdated:
 			var jsonPayload eventDeploymentUpdatedJSON
-			if err := d.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
-				return nil, fmt.Errorf("failed to decrypt call event: %w", err)
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt deployment updated event: %w", err)
 			}
 			out = append(out, &DeploymentUpdatedEvent{
 				ID:              row.ID,
@@ -512,6 +316,17 @@ func (d *DAL) transformRowsToTimelineEvents(deploymentKeys map[int64]model.Deplo
 				Time:            row.TimeStamp,
 				MinReplicas:     jsonPayload.MinReplicas,
 				PrevMinReplicas: jsonPayload.PrevMinReplicas,
+			})
+
+		case sql.EventTypeIngress:
+			var jsonPayload eventIngressJSON
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt ingress event: %w", err)
+			}
+			out = append(out, &DeploymentUpdatedEvent{
+				ID:            row.ID,
+				DeploymentKey: row.DeploymentKey,
+				Time:          row.TimeStamp,
 			})
 
 		default:

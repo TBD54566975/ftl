@@ -17,6 +17,7 @@ type Querier interface {
 	InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error
 	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error
 	InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error
+	InsertTimelineIngressEvent(ctx context.Context, arg InsertTimelineIngressEventParams) error
 	InsertTimelineLogEvent(ctx context.Context, arg InsertTimelineLogEventParams) error
 }
 

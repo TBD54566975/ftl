@@ -1,4 +1,4 @@
-package dal
+package timeline
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ func TestTimelineDAL(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	dal := New(conn, encryption)
+	timeline := New(ctx, conn, encryption)
 	controllerDAL := controllerdal.New(ctx, conn, encryption)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
@@ -73,7 +73,7 @@ func TestTimelineDAL(t *testing.T) {
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		err = dal.InsertCallEvent(ctx, callEvent)
+		err = timeline.insertCallEvent(ctx, callEvent)
 		assert.NoError(t, err)
 	})
 
@@ -86,7 +86,7 @@ func TestTimelineDAL(t *testing.T) {
 		Message:       "A log entry",
 	}
 	t.Run("InsertLogEntry", func(t *testing.T) {
-		err = dal.InsertLogEvent(ctx, logEvent)
+		err = timeline.InsertLogEvent(ctx, logEvent)
 		assert.NoError(t, err)
 	})
 
@@ -97,37 +97,37 @@ func TestTimelineDAL(t *testing.T) {
 
 	t.Run("QueryEvents", func(t *testing.T) {
 		t.Run("Limit", func(t *testing.T) {
-			events, err := dal.QueryTimeline(ctx, 1)
+			events, err := timeline.QueryTimeline(ctx, 1)
 			assert.NoError(t, err)
 			assert.Equal(t, 1, len(events))
 		})
 
 		t.Run("NoFilters", func(t *testing.T) {
-			events, err := dal.QueryTimeline(ctx, 1000)
+			events, err := timeline.QueryTimeline(ctx, 1000)
 			assert.NoError(t, err)
 			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
-			events, err := dal.QueryTimeline(ctx, 1000, FilterDeployments(deploymentKey))
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterDeployments(deploymentKey))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
-			events, err := dal.QueryTimeline(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []TimelineEvent{callEvent}, events)
 		})
 
 		t.Run("ByLogLevel", func(t *testing.T) {
-			events, err := dal.QueryTimeline(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []TimelineEvent{logEvent}, events)
 		})
 
 		t.Run("ByRequests", func(t *testing.T) {
-			events, err := dal.QueryTimeline(ctx, 1000, FilterRequests(requestKey))
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterRequests(requestKey))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []TimelineEvent{callEvent, logEvent}, events)
 		})
@@ -135,7 +135,7 @@ func TestTimelineDAL(t *testing.T) {
 }
 
 func normaliseEvents(events []TimelineEvent) []TimelineEvent {
-	for i := range len(events) {
+	for i := range events {
 		event := events[i]
 		re := reflect.Indirect(reflect.ValueOf(event))
 		f := re.FieldByName("Time")
@@ -159,7 +159,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	dal := New(conn, encryption)
+	timeline := New(ctx, conn, encryption)
 	controllerDAL := controllerdal.New(ctx, conn, encryption)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
@@ -192,7 +192,7 @@ func TestDeleteOldEvents(t *testing.T) {
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		err = dal.InsertCallEvent(ctx, callEvent)
+		err = timeline.insertCallEvent(ctx, callEvent)
 		assert.NoError(t, err)
 	})
 	// hour old event
@@ -205,7 +205,7 @@ func TestDeleteOldEvents(t *testing.T) {
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		err = dal.InsertCallEvent(ctx, callEvent)
+		err = timeline.insertCallEvent(ctx, callEvent)
 		assert.NoError(t, err)
 	})
 
@@ -219,7 +219,7 @@ func TestDeleteOldEvents(t *testing.T) {
 		Message:       "A log entry",
 	}
 	t.Run("InsertLogEntry", func(t *testing.T) {
-		err = dal.InsertLogEvent(ctx, logEvent)
+		err = timeline.InsertLogEvent(ctx, logEvent)
 		assert.NoError(t, err)
 	})
 	// hour old event
@@ -232,20 +232,20 @@ func TestDeleteOldEvents(t *testing.T) {
 		Message:       "A log entry",
 	}
 	t.Run("InsertLogEntry", func(t *testing.T) {
-		err = dal.InsertLogEvent(ctx, logEvent)
+		err = timeline.InsertLogEvent(ctx, logEvent)
 		assert.NoError(t, err)
 	})
 
 	t.Run("DeleteOldEvents", func(t *testing.T) {
-		count, err := dal.DeleteOldEvents(ctx, EventTypeCall, 2*24*time.Hour)
+		count, err := timeline.DeleteOldEvents(ctx, EventTypeCall, 2*24*time.Hour)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), count)
 
-		count, err = dal.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
+		count, err = timeline.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(2), count)
 
-		count, err = dal.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
+		count, err = timeline.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(0), count)
 	})
