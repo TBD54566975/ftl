@@ -157,7 +157,7 @@ func findRDSSubnetGroup(resource *provisioner.Resource) (string, error) {
 	key := "aws:ftl-cluster:rds-subnet-group"
 	for _, dep := range resource.Dependencies {
 		if _, ok := dep.Resource.(*provisioner.Resource_Ftl); ok {
-			for _, p := range dep.Properties {
+			for _, p := range dep.OutProperties {
 				if p.Key == key {
 					return p.Value, nil
 				}
