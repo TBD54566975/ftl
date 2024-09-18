@@ -363,7 +363,7 @@ public class ModuleBuilder {
                 } else if (paramType.name().equals(DotName.createSimple(Map.class))) {
                     return Type.newBuilder().setMap(xyz.block.ftl.v1.schema.Map.newBuilder()
                             .setKey(buildType(paramType.arguments().get(0), export))
-                            .setValue(buildType(paramType.arguments().get(0), export)))
+                            .setValue(buildType(paramType.arguments().get(1), export)))
                             .build();
                 } else if (paramType.name().equals(DotNames.OPTIONAL)) {
                     //TODO: optional kinda sucks
