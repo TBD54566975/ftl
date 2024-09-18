@@ -58,20 +58,29 @@ export class ResourceProperty extends Message<ResourceProperty> {
 }
 
 /**
+ * Resource is an abstract resource extracted from FTL Schema.
+ *
  * @generated from message xyz.block.ftl.v1beta1.provisioner.Resource
  */
 export class Resource extends Message<Resource> {
   /**
+   * id unique within the module
+   *
    * @generated from field: string resource_id = 1;
    */
   resourceId = "";
 
   /**
+   * potential implementation specific properties populated
+   * when the resource was created
+   *
    * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.ResourceProperty properties = 2;
    */
   properties: ResourceProperty[] = [];
 
   /**
+   * direct downstream dependencies this Resource depends on
+   *
    * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.Resource dependencies = 3;
    */
   dependencies: Resource[] = [];
@@ -133,8 +142,6 @@ export class Resource extends Message<Resource> {
 }
 
 /**
- * Base FTL Cluster
- *
  * @generated from message xyz.block.ftl.v1beta1.provisioner.Resource.FtlCluster
  */
 export class Resource_FtlCluster extends Message<Resource_FtlCluster> {
@@ -166,8 +173,6 @@ export class Resource_FtlCluster extends Message<Resource_FtlCluster> {
 }
 
 /**
- * Databases
- *
  * @generated from message xyz.block.ftl.v1beta1.provisioner.Resource.PostgresResource
  */
 export class Resource_PostgresResource extends Message<Resource_PostgresResource> {

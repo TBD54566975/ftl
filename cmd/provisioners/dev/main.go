@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/jpillora/backoff"
+
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/jpillora/backoff"
 )
 
 // For locally testing the provisioners.

@@ -14,7 +14,7 @@ message ResourceProperty {
   string value = 3;
 }
 
-// Resource is an abstract resource extracted from FTL Schema. 
+// Resource is an abstract resource extracted from FTL Schema.
 message Resource {
   // id unique within the module
   string resource_id = 1;
@@ -29,7 +29,7 @@ message Resource {
   message FtlCluster {}
   message PostgresResource {}
   message MysqlResource {}
-  
+
   oneof resource {
     FtlCluster ftl = 101;
     PostgresResource postgres = 102;
@@ -43,7 +43,7 @@ message ProvisionRequest {
 
   // The resource FTL thinks exists currently
   repeated Resource existing_resources = 3;
-  
+
   // The resource FTL would like to exist after this provisioning run
   repeated Resource new_resources = 4;
 }
@@ -80,6 +80,6 @@ service ProvisionerPluginService {
   rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse);
 
   rpc Provision(ProvisionRequest) returns (ProvisionResponse);
-  
+
   rpc Status(StatusRequest) returns (StatusResponse);
 }
