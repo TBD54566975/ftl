@@ -40,6 +40,9 @@ const (
 	// ProvisionerPluginServiceProvisionProcedure is the fully-qualified name of the
 	// ProvisionerPluginService's Provision RPC.
 	ProvisionerPluginServiceProvisionProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService/Provision"
+	// ProvisionerPluginServicePlanProcedure is the fully-qualified name of the
+	// ProvisionerPluginService's Plan RPC.
+	ProvisionerPluginServicePlanProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService/Plan"
 	// ProvisionerPluginServiceStatusProcedure is the fully-qualified name of the
 	// ProvisionerPluginService's Status RPC.
 	ProvisionerPluginServiceStatusProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService/Status"
@@ -50,6 +53,7 @@ const (
 type ProvisionerPluginServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error)
+	Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error)
 	Status(context.Context, *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error)
 }
 
@@ -74,6 +78,11 @@ func NewProvisionerPluginServiceClient(httpClient connect.HTTPClient, baseURL st
 			baseURL+ProvisionerPluginServiceProvisionProcedure,
 			opts...,
 		),
+		plan: connect.NewClient[provisioner.PlanRequest, provisioner.PlanResponse](
+			httpClient,
+			baseURL+ProvisionerPluginServicePlanProcedure,
+			opts...,
+		),
 		status: connect.NewClient[provisioner.StatusRequest, provisioner.StatusResponse](
 			httpClient,
 			baseURL+ProvisionerPluginServiceStatusProcedure,
@@ -86,6 +95,7 @@ func NewProvisionerPluginServiceClient(httpClient connect.HTTPClient, baseURL st
 type provisionerPluginServiceClient struct {
 	ping      *connect.Client[v1.PingRequest, v1.PingResponse]
 	provision *connect.Client[provisioner.ProvisionRequest, provisioner.ProvisionResponse]
+	plan      *connect.Client[provisioner.PlanRequest, provisioner.PlanResponse]
 	status    *connect.Client[provisioner.StatusRequest, provisioner.StatusResponse]
 }
 
@@ -99,6 +109,11 @@ func (c *provisionerPluginServiceClient) Provision(ctx context.Context, req *con
 	return c.provision.CallUnary(ctx, req)
 }
 
+// Plan calls xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Plan.
+func (c *provisionerPluginServiceClient) Plan(ctx context.Context, req *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
+	return c.plan.CallUnary(ctx, req)
+}
+
 // Status calls xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Status.
 func (c *provisionerPluginServiceClient) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
 	return c.status.CallUnary(ctx, req)
@@ -109,6 +124,7 @@ func (c *provisionerPluginServiceClient) Status(ctx context.Context, req *connec
 type ProvisionerPluginServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error)
+	Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error)
 	Status(context.Context, *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error)
 }
 
@@ -128,6 +144,11 @@ func NewProvisionerPluginServiceHandler(svc ProvisionerPluginServiceHandler, opt
 		svc.Provision,
 		opts...,
 	)
+	provisionerPluginServicePlanHandler := connect.NewUnaryHandler(
+		ProvisionerPluginServicePlanProcedure,
+		svc.Plan,
+		opts...,
+	)
 	provisionerPluginServiceStatusHandler := connect.NewUnaryHandler(
 		ProvisionerPluginServiceStatusProcedure,
 		svc.Status,
@@ -139,6 +160,8 @@ func NewProvisionerPluginServiceHandler(svc ProvisionerPluginServiceHandler, opt
 			provisionerPluginServicePingHandler.ServeHTTP(w, r)
 		case ProvisionerPluginServiceProvisionProcedure:
 			provisionerPluginServiceProvisionHandler.ServeHTTP(w, r)
+		case ProvisionerPluginServicePlanProcedure:
+			provisionerPluginServicePlanHandler.ServeHTTP(w, r)
 		case ProvisionerPluginServiceStatusProcedure:
 			provisionerPluginServiceStatusHandler.ServeHTTP(w, r)
 		default:
@@ -156,6 +179,10 @@ func (UnimplementedProvisionerPluginServiceHandler) Ping(context.Context, *conne
 
 func (UnimplementedProvisionerPluginServiceHandler) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Provision is not implemented"))
+}
+
+func (UnimplementedProvisionerPluginServiceHandler) Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Plan is not implemented"))
 }
 
 func (UnimplementedProvisionerPluginServiceHandler) Status(context.Context, *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {

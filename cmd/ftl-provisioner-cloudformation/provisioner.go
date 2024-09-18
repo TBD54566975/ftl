@@ -22,12 +22,19 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 )
 
-type CloudformationProvisioner struct{}
+type CloudformationProvisioner struct {
+	client *cloudformation.Client
+}
 
 var _ provisionerconnect.ProvisionerPluginServiceHandler = (*CloudformationProvisioner)(nil)
 
 func NewCloudformationProvisioner(ctx context.Context, config struct{}) (context.Context, *CloudformationProvisioner, error) {
-	return ctx, &CloudformationProvisioner{}, nil
+	client, err := createClient(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create cloudformation client: %w", err)
+	}
+
+	return ctx, &CloudformationProvisioner{client: client}, nil
 }
 
 func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -35,51 +42,18 @@ func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1
 }
 
 func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
-	client, err := createClient(ctx)
+	res, updated, err := c.createChangeSet(ctx, req.Msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cloudformation client: %w", err)
-	}
-
-	stackName := sanitize(req.Msg.FtlClusterId) + "-" + sanitize(req.Msg.Module)
-	changeSetName := sanitize(stackName) + strconv.FormatInt(time.Now().Unix(), 10)
-
-	template := goformation.NewTemplate()
-	for _, resource := range req.Msg.DesiredResources {
-		if err := resourceToCF(req.Msg.FtlClusterId, req.Msg.Module, template, resource); err != nil {
-			return nil, err
-		}
-	}
-
-	bytes, err := template.JSON()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cloudformation template: %w", err)
-	}
-	jsonStr := string(bytes)
-
-	if err := ensureStackExists(ctx, client, stackName); err != nil {
-		return nil, fmt.Errorf("failed to verify the stack exists: %w", err)
-	}
-
-	res, err := client.CreateChangeSet(ctx, &cloudformation.CreateChangeSetInput{
-		StackName:     &stackName,
-		ChangeSetName: &changeSetName,
-		TemplateBody:  &jsonStr,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create change-set: %w", err)
-	}
-	updated, err := waitChangeSetReady(ctx, client, changeSetName, stackName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to wait for change-set to become ready: %w", err)
+		return nil, err
 	}
 	if !updated {
 		return connect.NewResponse(&provisioner.ProvisionResponse{
 			Status: provisioner.ProvisionResponse_NO_CHANGES,
 		}), nil
 	}
-	_, err = client.ExecuteChangeSet(ctx, &cloudformation.ExecuteChangeSetInput{
-		ChangeSetName: &changeSetName,
-		StackName:     &stackName,
+	_, err = c.client.ExecuteChangeSet(ctx, &cloudformation.ExecuteChangeSetInput{
+		ChangeSetName: res.Id,
+		StackName:     res.StackId,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute change-set: %w", err)
@@ -89,6 +63,55 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 		Status:            provisioner.ProvisionResponse_SUBMITTED,
 		ProvisioningToken: *res.StackId,
 	}), nil
+}
+
+func (c *CloudformationProvisioner) createChangeSet(ctx context.Context, req *provisioner.ProvisionRequest) (*cloudformation.CreateChangeSetOutput, bool, error) {
+	stack := stackName(req)
+	changeSet := generateChangeSetName(stack)
+	templateStr, err := createTemplate(req)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to create cloudformation template: %w", err)
+	}
+	if err := ensureStackExists(ctx, c.client, stack); err != nil {
+		return nil, false, fmt.Errorf("failed to verify the stack exists: %w", err)
+	}
+
+	res, err := c.client.CreateChangeSet(ctx, &cloudformation.CreateChangeSetInput{
+		StackName:     &stack,
+		ChangeSetName: &changeSet,
+		TemplateBody:  &templateStr,
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to create change-set: %w", err)
+	}
+	updated, err := waitChangeSetReady(ctx, c.client, changeSet, stack)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to wait for change-set to become ready: %w", err)
+	}
+	return res, updated, nil
+}
+
+func stackName(req *provisioner.ProvisionRequest) string {
+	return sanitize(req.FtlClusterId) + "-" + sanitize(req.Module)
+}
+
+func generateChangeSetName(stack string) string {
+	return sanitize(stack) + strconv.FormatInt(time.Now().Unix(), 10)
+}
+
+func createTemplate(req *provisioner.ProvisionRequest) (string, error) {
+	template := goformation.NewTemplate()
+	for _, resource := range req.DesiredResources {
+		if err := resourceToCF(req.FtlClusterId, req.Module, template, resource); err != nil {
+			return "", err
+		}
+	}
+
+	bytes, err := template.JSON()
+	if err != nil {
+		return "", fmt.Errorf("failed to create cloudformation template: %w", err)
+	}
+	return string(bytes), nil
 }
 
 func resourceToCF(cluster, module string, template *goformation.Template, resource *provisioner.Resource) error {
@@ -134,7 +157,7 @@ func findRDSSubnetGroup(resource *provisioner.Resource) (string, error) {
 	key := "aws:ftl-cluster:rds-subnet-group"
 	for _, dep := range resource.Dependencies {
 		if _, ok := dep.Resource.(*provisioner.Resource_Ftl); ok {
-			for _, p := range dep.Properties {
+			for _, p := range dep.OutProperties {
 				if p.Key == key {
 					return p.Value, nil
 				}

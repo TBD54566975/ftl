@@ -5,234 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
-
-/**
- * ResourceProperty is an implementation specific property of the resource populated at creation time
- *
- * @generated from message xyz.block.ftl.v1beta1.provisioner.ResourceProperty
- */
-export class ResourceProperty extends Message<ResourceProperty> {
-  /**
-   * @generated from field: string resource_id = 1;
-   */
-  resourceId = "";
-
-  /**
-   * @generated from field: string key = 2;
-   */
-  key = "";
-
-  /**
-   * @generated from field: string value = 3;
-   */
-  value = "";
-
-  constructor(data?: PartialMessage<ResourceProperty>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.ResourceProperty";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "resource_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResourceProperty {
-    return new ResourceProperty().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResourceProperty {
-    return new ResourceProperty().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResourceProperty {
-    return new ResourceProperty().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ResourceProperty | PlainMessage<ResourceProperty> | undefined, b: ResourceProperty | PlainMessage<ResourceProperty> | undefined): boolean {
-    return proto3.util.equals(ResourceProperty, a, b);
-  }
-}
-
-/**
- * Resource is an abstract resource extracted from FTL Schema.
- *
- * @generated from message xyz.block.ftl.v1beta1.provisioner.Resource
- */
-export class Resource extends Message<Resource> {
-  /**
-   * id unique within the module
-   *
-   * @generated from field: string resource_id = 1;
-   */
-  resourceId = "";
-
-  /**
-   * potential implementation specific properties populated
-   * when the resource was created
-   *
-   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.ResourceProperty properties = 2;
-   */
-  properties: ResourceProperty[] = [];
-
-  /**
-   * direct downstream dependencies this Resource depends on
-   *
-   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.Resource dependencies = 3;
-   */
-  dependencies: Resource[] = [];
-
-  /**
-   * @generated from oneof xyz.block.ftl.v1beta1.provisioner.Resource.resource
-   */
-  resource: {
-    /**
-     * @generated from field: xyz.block.ftl.v1beta1.provisioner.Resource.FtlCluster ftl = 101;
-     */
-    value: Resource_FtlCluster;
-    case: "ftl";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1beta1.provisioner.Resource.PostgresResource postgres = 102;
-     */
-    value: Resource_PostgresResource;
-    case: "postgres";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1beta1.provisioner.Resource.MysqlResource mysql = 103;
-     */
-    value: Resource_MysqlResource;
-    case: "mysql";
-  } | { case: undefined; value?: undefined } = { case: undefined };
-
-  constructor(data?: PartialMessage<Resource>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.Resource";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "resource_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "properties", kind: "message", T: ResourceProperty, repeated: true },
-    { no: 3, name: "dependencies", kind: "message", T: Resource, repeated: true },
-    { no: 101, name: "ftl", kind: "message", T: Resource_FtlCluster, oneof: "resource" },
-    { no: 102, name: "postgres", kind: "message", T: Resource_PostgresResource, oneof: "resource" },
-    { no: 103, name: "mysql", kind: "message", T: Resource_MysqlResource, oneof: "resource" },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource {
-    return new Resource().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Resource {
-    return new Resource().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Resource {
-    return new Resource().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Resource | PlainMessage<Resource> | undefined, b: Resource | PlainMessage<Resource> | undefined): boolean {
-    return proto3.util.equals(Resource, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1beta1.provisioner.Resource.FtlCluster
- */
-export class Resource_FtlCluster extends Message<Resource_FtlCluster> {
-  constructor(data?: PartialMessage<Resource_FtlCluster>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.Resource.FtlCluster";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource_FtlCluster {
-    return new Resource_FtlCluster().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Resource_FtlCluster {
-    return new Resource_FtlCluster().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Resource_FtlCluster {
-    return new Resource_FtlCluster().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Resource_FtlCluster | PlainMessage<Resource_FtlCluster> | undefined, b: Resource_FtlCluster | PlainMessage<Resource_FtlCluster> | undefined): boolean {
-    return proto3.util.equals(Resource_FtlCluster, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1beta1.provisioner.Resource.PostgresResource
- */
-export class Resource_PostgresResource extends Message<Resource_PostgresResource> {
-  constructor(data?: PartialMessage<Resource_PostgresResource>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.Resource.PostgresResource";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource_PostgresResource {
-    return new Resource_PostgresResource().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Resource_PostgresResource {
-    return new Resource_PostgresResource().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Resource_PostgresResource {
-    return new Resource_PostgresResource().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Resource_PostgresResource | PlainMessage<Resource_PostgresResource> | undefined, b: Resource_PostgresResource | PlainMessage<Resource_PostgresResource> | undefined): boolean {
-    return proto3.util.equals(Resource_PostgresResource, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1beta1.provisioner.Resource.MysqlResource
- */
-export class Resource_MysqlResource extends Message<Resource_MysqlResource> {
-  constructor(data?: PartialMessage<Resource_MysqlResource>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.Resource.MysqlResource";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource_MysqlResource {
-    return new Resource_MysqlResource().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Resource_MysqlResource {
-    return new Resource_MysqlResource().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Resource_MysqlResource {
-    return new Resource_MysqlResource().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Resource_MysqlResource | PlainMessage<Resource_MysqlResource> | undefined, b: Resource_MysqlResource | PlainMessage<Resource_MysqlResource> | undefined): boolean {
-    return proto3.util.equals(Resource_MysqlResource, a, b);
-  }
-}
+import { Resource, ResourceProperty } from "./resource_pb.js";
 
 /**
  * @generated from message xyz.block.ftl.v1beta1.provisioner.ProvisionRequest
@@ -405,19 +178,27 @@ export class StatusRequest extends Message<StatusRequest> {
  */
 export class StatusResponse extends Message<StatusResponse> {
   /**
-   * @generated from field: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningStatus status = 1;
+   * @generated from oneof xyz.block.ftl.v1beta1.provisioner.StatusResponse.status
    */
-  status = StatusResponse_ProvisioningStatus.UNKNOWN;
-
-  /**
-   * @generated from field: string error_message = 2;
-   */
-  errorMessage = "";
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.ResourceProperty properties = 3;
-   */
-  properties: ResourceProperty[] = [];
+  status: {
+    /**
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningRunning running = 1;
+     */
+    value: StatusResponse_ProvisioningRunning;
+    case: "running";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningFailed failed = 2;
+     */
+    value: StatusResponse_ProvisioningFailed;
+    case: "failed";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess success = 3;
+     */
+    value: StatusResponse_ProvisioningSuccess;
+    case: "success";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<StatusResponse>) {
     super();
@@ -427,9 +208,9 @@ export class StatusResponse extends Message<StatusResponse> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.StatusResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "status", kind: "enum", T: proto3.getEnumType(StatusResponse_ProvisioningStatus) },
-    { no: 2, name: "error_message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "properties", kind: "message", T: ResourceProperty, repeated: true },
+    { no: 1, name: "running", kind: "message", T: StatusResponse_ProvisioningRunning, oneof: "status" },
+    { no: 2, name: "failed", kind: "message", T: StatusResponse_ProvisioningFailed, oneof: "status" },
+    { no: 3, name: "success", kind: "message", T: StatusResponse_ProvisioningSuccess, oneof: "status" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse {
@@ -450,34 +231,183 @@ export class StatusResponse extends Message<StatusResponse> {
 }
 
 /**
- * @generated from enum xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningStatus
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningRunning
  */
-export enum StatusResponse_ProvisioningStatus {
-  /**
-   * @generated from enum value: UNKNOWN = 0;
-   */
-  UNKNOWN = 0,
+export class StatusResponse_ProvisioningRunning extends Message<StatusResponse_ProvisioningRunning> {
+  constructor(data?: PartialMessage<StatusResponse_ProvisioningRunning>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
 
-  /**
-   * @generated from enum value: RUNNING = 1;
-   */
-  RUNNING = 1,
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningRunning";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
 
-  /**
-   * @generated from enum value: SUCCEEDED = 2;
-   */
-  SUCCEEDED = 2,
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_ProvisioningRunning {
+    return new StatusResponse_ProvisioningRunning().fromBinary(bytes, options);
+  }
 
-  /**
-   * @generated from enum value: FAILED = 3;
-   */
-  FAILED = 3,
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_ProvisioningRunning {
+    return new StatusResponse_ProvisioningRunning().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_ProvisioningRunning {
+    return new StatusResponse_ProvisioningRunning().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse_ProvisioningRunning | PlainMessage<StatusResponse_ProvisioningRunning> | undefined, b: StatusResponse_ProvisioningRunning | PlainMessage<StatusResponse_ProvisioningRunning> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_ProvisioningRunning, a, b);
+  }
 }
-// Retrieve enum metadata with: proto3.getEnumType(StatusResponse_ProvisioningStatus)
-proto3.util.setEnumType(StatusResponse_ProvisioningStatus, "xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningStatus", [
-  { no: 0, name: "UNKNOWN" },
-  { no: 1, name: "RUNNING" },
-  { no: 2, name: "SUCCEEDED" },
-  { no: 3, name: "FAILED" },
-]);
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningFailed
+ */
+export class StatusResponse_ProvisioningFailed extends Message<StatusResponse_ProvisioningFailed> {
+  /**
+   * @generated from field: string error_message = 1;
+   */
+  errorMessage = "";
+
+  constructor(data?: PartialMessage<StatusResponse_ProvisioningFailed>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningFailed";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "error_message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_ProvisioningFailed {
+    return new StatusResponse_ProvisioningFailed().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_ProvisioningFailed {
+    return new StatusResponse_ProvisioningFailed().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_ProvisioningFailed {
+    return new StatusResponse_ProvisioningFailed().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse_ProvisioningFailed | PlainMessage<StatusResponse_ProvisioningFailed> | undefined, b: StatusResponse_ProvisioningFailed | PlainMessage<StatusResponse_ProvisioningFailed> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_ProvisioningFailed, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess
+ */
+export class StatusResponse_ProvisioningSuccess extends Message<StatusResponse_ProvisioningSuccess> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.ResourceProperty properties = 3;
+   */
+  properties: ResourceProperty[] = [];
+
+  constructor(data?: PartialMessage<StatusResponse_ProvisioningSuccess>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 3, name: "properties", kind: "message", T: ResourceProperty, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_ProvisioningSuccess {
+    return new StatusResponse_ProvisioningSuccess().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StatusResponse_ProvisioningSuccess {
+    return new StatusResponse_ProvisioningSuccess().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StatusResponse_ProvisioningSuccess {
+    return new StatusResponse_ProvisioningSuccess().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StatusResponse_ProvisioningSuccess | PlainMessage<StatusResponse_ProvisioningSuccess> | undefined, b: StatusResponse_ProvisioningSuccess | PlainMessage<StatusResponse_ProvisioningSuccess> | undefined): boolean {
+    return proto3.util.equals(StatusResponse_ProvisioningSuccess, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.PlanRequest
+ */
+export class PlanRequest extends Message<PlanRequest> {
+  /**
+   * @generated from field: xyz.block.ftl.v1beta1.provisioner.ProvisionRequest provisioning = 1;
+   */
+  provisioning?: ProvisionRequest;
+
+  constructor(data?: PartialMessage<PlanRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.PlanRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "provisioning", kind: "message", T: ProvisionRequest },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PlanRequest {
+    return new PlanRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PlanRequest {
+    return new PlanRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PlanRequest {
+    return new PlanRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PlanRequest | PlainMessage<PlanRequest> | undefined, b: PlanRequest | PlainMessage<PlanRequest> | undefined): boolean {
+    return proto3.util.equals(PlanRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.PlanResponse
+ */
+export class PlanResponse extends Message<PlanResponse> {
+  /**
+   * a detailed, implementation specific, plan of changes this deployment would do
+   *
+   * @generated from field: string plan = 1;
+   */
+  plan = "";
+
+  constructor(data?: PartialMessage<PlanResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.PlanResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "plan", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PlanResponse {
+    return new PlanResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PlanResponse {
+    return new PlanResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PlanResponse {
+    return new PlanResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PlanResponse | PlainMessage<PlanResponse> | undefined, b: PlanResponse | PlainMessage<PlanResponse> | undefined): boolean {
+    return proto3.util.equals(PlanResponse, a, b);
+  }
+}
 

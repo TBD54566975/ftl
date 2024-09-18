@@ -36,25 +36,38 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	resp, err := client.Client.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
+
+	req := &provisioner.ProvisionRequest{
 		FtlClusterId:      "ftl-test-1",
 		Module:            "test-module",
 		ExistingResources: []*provisioner.Resource{},
 		DesiredResources: []*provisioner.Resource{{
 			ResourceId: "foodb",
 			Resource: &provisioner.Resource_Postgres{
-				Postgres: &provisioner.Resource_PostgresResource{},
+				Postgres: &provisioner.PostgresResource{},
 			},
 			Dependencies: []*provisioner.Resource{{
 				// Fetch these properties properly from the cluster
 				Resource: &provisioner.Resource_Ftl{},
-				Properties: []*provisioner.ResourceProperty{{
+				OutProperties: []*provisioner.ResourceProperty{{
 					Key:   "aws:ftl-cluster:rds-subnet-group",
 					Value: "aurora-postgres-subnet-group",
 				}},
 			}},
 		}},
+	}
+
+	plan, err := client.Client.Plan(ctx, connect.NewRequest(&provisioner.PlanRequest{
+		Provisioning: req,
 	}))
+	if err != nil {
+		panic(err)
+	}
+	println("### PLAN ###")
+	println(plan.Msg.Plan)
+
+	println("### EXECUTION ###")
+	resp, err := client.Client.Provision(ctx, connect.NewRequest(req))
 	if err != nil {
 		panic(err)
 	}
@@ -62,6 +75,7 @@ func main() {
 		println("no changes")
 		return
 	}
+
 	retry := backoff.Backoff{
 		Min:    100 * time.Millisecond,
 		Max:    5 * time.Second,
@@ -75,12 +89,11 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		if status.Msg.Status == provisioner.StatusResponse_FAILED {
-			panic(status.Msg.ErrorMessage)
-		}
-		if status.Msg.Status != provisioner.StatusResponse_RUNNING {
+		if fail, ok := status.Msg.Status.(*provisioner.StatusResponse_Failed); ok {
+			panic(fail.Failed.ErrorMessage)
+		} else if success, ok := status.Msg.Status.(*provisioner.StatusResponse_Success); ok {
 			println("finished!")
-			for _, p := range status.Msg.Properties {
+			for _, p := range success.Success.Properties {
 				println("  ", p.ResourceId, "\t", p.Key, "\t", p.Value)
 			}
 			break

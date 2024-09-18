@@ -66,19 +66,29 @@ func success(stack *types.Stack) (*connect.Response[provisioner.StatusResponse],
 		return nil, err
 	}
 	return connect.NewResponse(&provisioner.StatusResponse{
-		Status:     provisioner.StatusResponse_SUCCEEDED,
-		Properties: props,
+		Status: &provisioner.StatusResponse_Success{
+			Success: &provisioner.StatusResponse_ProvisioningSuccess{
+				Properties: props,
+			},
+		},
 	}), nil
 }
 
 func running() (*connect.Response[provisioner.StatusResponse], error) {
-	return connect.NewResponse(&provisioner.StatusResponse{Status: provisioner.StatusResponse_RUNNING}), nil
+	return connect.NewResponse(&provisioner.StatusResponse{
+		Status: &provisioner.StatusResponse_Running{
+			Running: &provisioner.StatusResponse_ProvisioningRunning{},
+		},
+	}), nil
 }
 
 func failure(stack *types.Stack) (*connect.Response[provisioner.StatusResponse], error) {
 	return connect.NewResponse(&provisioner.StatusResponse{
-		Status:       provisioner.StatusResponse_FAILED,
-		ErrorMessage: *stack.StackStatusReason,
+		Status: &provisioner.StatusResponse_Failed{
+			Failed: &provisioner.StatusResponse_ProvisioningFailed{
+				ErrorMessage: *stack.StackStatusReason,
+			},
+		},
 	}), nil
 }
 
