@@ -44,8 +44,9 @@ message ProvisionRequest {
   // The resource FTL thinks exists currently
   repeated Resource existing_resources = 3;
 
-  // The resource FTL would like to exist after this provisioning run
-  repeated Resource new_resources = 4;
+  // The resource FTL would like to exist after this provisioning run.
+  // This includes all new, existing, and changes resources in this change.
+  repeated Resource desired_resources = 4;
 }
 
 message ProvisionResponse {

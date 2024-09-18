@@ -10,11 +10,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/cmd/provisioners/ftl-provisioner-cloudformation/cfutil"
 )
 
 func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
-	client, err := cfutil.CreateClient(ctx)
+	client, err := createClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cloudformation client: %w", err)
 	}
@@ -86,7 +85,7 @@ func failure(stack *types.Stack) (*connect.Response[provisioner.StatusResponse],
 func propertiesFromOutput(outputs []types.Output) ([]*provisioner.ResourceProperty, error) {
 	var result []*provisioner.ResourceProperty
 	for _, output := range outputs {
-		key, err := cfutil.DecodeOutputKey(output)
+		key, err := decodeOutputKey(output)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode output key: %w", err)
 		}

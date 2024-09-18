@@ -18,7 +18,7 @@ import (
 func main() {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	client, ctx, err := plugin.Spawn[provisionerconnect.ProvisionerPluginServiceClient](
+	client, ctx, err := plugin.Spawn(
 		ctx,
 		log.Debug,
 		"ftl-provisioner-cloudformation",
@@ -33,7 +33,7 @@ func main() {
 		FtlClusterId:      "ftl-test-1",
 		Module:            "test-module",
 		ExistingResources: []*provisioner.Resource{},
-		NewResources: []*provisioner.Resource{{
+		DesiredResources: []*provisioner.Resource{{
 			ResourceId: "foodb",
 			Resource: &provisioner.Resource_Postgres{
 				Postgres: &provisioner.Resource_PostgresResource{},

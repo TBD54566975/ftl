@@ -1,4 +1,4 @@
-package cfutil
+package main
 
 import (
 	"context"
@@ -16,10 +16,10 @@ import (
 	"github.com/jpillora/backoff"
 )
 
-// EnsureStackExists and if not, creates an empty stack with the givent name
+// ensureStackExists and if not, creates an empty stack with the given name
 //
 // Returns, when the stack is ready
-func EnsureStackExists(ctx context.Context, client *cloudformation.Client, name string) error {
+func ensureStackExists(ctx context.Context, client *cloudformation.Client, name string) error {
 	_, err := client.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
 		StackName: &name,
 	})
@@ -52,8 +52,8 @@ func EnsureStackExists(ctx context.Context, client *cloudformation.Client, name 
 	return nil
 }
 
-// WaitChangeSetReady returns when the given changeset either became ready, or resulted into no changes error.
-func WaitChangeSetReady(ctx context.Context, client *cloudformation.Client, changeSet, stack string) (hadChanges bool, err error) {
+// waitChangeSetReady returns when the given changeset either became ready, or resulted into no changes error.
+func waitChangeSetReady(ctx context.Context, client *cloudformation.Client, changeSet, stack string) (hadChanges bool, err error) {
 	retry := backoff.Backoff{
 		Min:    100 * time.Millisecond,
 		Max:    5 * time.Second,
@@ -75,7 +75,10 @@ func WaitChangeSetReady(ctx context.Context, client *cloudformation.Client, chan
 					ChangeSetName: &changeSet,
 					StackName:     &stack,
 				})
-				return false, fmt.Errorf("failed to delete change-set: %w", err)
+				if err != nil {
+					return false, fmt.Errorf("failed to delete change-set: %w", err)
+				}
+				return false, nil
 			}
 			return false, errors.New(*desc.StatusReason)
 		}
@@ -86,8 +89,8 @@ func WaitChangeSetReady(ctx context.Context, client *cloudformation.Client, chan
 	}
 }
 
-// CreateClient for interacting with Cloudformation
-func CreateClient(ctx context.Context) (*cloudformation.Client, error) {
+// createClient for interacting with Cloudformation
+func createClient(ctx context.Context) (*cloudformation.Client, error) {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load default aws config: %w", err)
@@ -107,8 +110,8 @@ type CloudformationOutputKey struct {
 	PropertyName string `json:"p"`
 }
 
-// DecodeOutputKey reads the structured CloudformationOutputKey from the given stack output
-func DecodeOutputKey(output types.Output) (*CloudformationOutputKey, error) {
+// decodeOutputKey reads the structured CloudformationOutputKey from the given stack output
+func decodeOutputKey(output types.Output) (*CloudformationOutputKey, error) {
 	rawKey := *output.OutputKey
 	bytes, err := base58.Decode(rawKey)
 	if err != nil {
@@ -121,10 +124,10 @@ func DecodeOutputKey(output types.Output) (*CloudformationOutputKey, error) {
 	return &key, nil
 }
 
-// AddOutput to the given goformation.Outputs
+// addOutput to the given goformation.Outputs
 //
 // Encodes the given CloudformationOutputKey, and uses the goformation value as the value.
-func AddOutput(to goformation.Outputs, value interface{}, key *CloudformationOutputKey) {
+func addOutput(to goformation.Outputs, value any, key *CloudformationOutputKey) {
 	desc := string(outputKeyJSON(key))
 	to[base58.Encode(outputKeyJSON(key))] = goformation.Output{
 		Value:       value,

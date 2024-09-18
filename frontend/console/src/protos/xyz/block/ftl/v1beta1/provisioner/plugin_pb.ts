@@ -256,11 +256,12 @@ export class ProvisionRequest extends Message<ProvisionRequest> {
   existingResources: Resource[] = [];
 
   /**
-   * The resource FTL would like to exist after this provisioning run
+   * The resource FTL would like to exist after this provisioning run.
+   * This includes all new, existing, and changes resources in this change.
    *
-   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.Resource new_resources = 4;
+   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.Resource desired_resources = 4;
    */
-  newResources: Resource[] = [];
+  desiredResources: Resource[] = [];
 
   constructor(data?: PartialMessage<ProvisionRequest>) {
     super();
@@ -273,7 +274,7 @@ export class ProvisionRequest extends Message<ProvisionRequest> {
     { no: 1, name: "ftl_cluster_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "existing_resources", kind: "message", T: Resource, repeated: true },
-    { no: 4, name: "new_resources", kind: "message", T: Resource, repeated: true },
+    { no: 4, name: "desired_resources", kind: "message", T: Resource, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProvisionRequest {

@@ -16,12 +16,26 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/cmd/provisioners/ftl-provisioner-cloudformation/cfutil"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/common/plugin"
 )
 
+type CloudformationProvisioner struct{}
+
+var _ provisionerconnect.ProvisionerPluginServiceHandler = (*CloudformationProvisioner)(nil)
+
+func NewCloudformationProvisioner(ctx context.Context, config struct{}) (context.Context, *CloudformationProvisioner, error) {
+	return ctx, &CloudformationProvisioner{}, nil
+}
+
+func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+	return &connect.Response[ftlv1.PingResponse]{}, nil
+}
+
 func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
-	client, err := cfutil.CreateClient(ctx)
+	client, err := createClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cloudformation client: %w", err)
 	}
@@ -30,7 +44,7 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	changeSetName := sanitize(stackName) + strconv.FormatInt(time.Now().Unix(), 10)
 
 	template := goformation.NewTemplate()
-	for _, resource := range req.Msg.NewResources {
+	for _, resource := range req.Msg.DesiredResources {
 		if err := resourceToCF(req.Msg.FtlClusterId, req.Msg.Module, template, resource); err != nil {
 			return nil, err
 		}
@@ -42,7 +56,7 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	}
 	jsonStr := string(bytes)
 
-	if err := cfutil.EnsureStackExists(ctx, client, stackName); err != nil {
+	if err := ensureStackExists(ctx, client, stackName); err != nil {
 		return nil, fmt.Errorf("failed to verify the stack exists: %w", err)
 	}
 
@@ -54,7 +68,7 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	if err != nil {
 		return nil, fmt.Errorf("failed to create change-set: %w", err)
 	}
-	updated, err := cfutil.WaitChangeSetReady(ctx, client, changeSetName, stackName)
+	updated, err := waitChangeSetReady(ctx, client, changeSetName, stackName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to wait for change-set to become ready: %w", err)
 	}
@@ -103,11 +117,11 @@ func resourceToCF(cluster, module string, template *goformation.Template, resour
 			DBClusterIdentifier: ptr(goformation.Ref(clusterID)),
 			Tags:                ftlTags(cluster, module),
 		}
-		cfutil.AddOutput(template.Outputs, goformation.GetAtt(clusterID, "Endpoint.Address"), &cfutil.CloudformationOutputKey{
+		addOutput(template.Outputs, goformation.GetAtt(clusterID, "Endpoint.Address"), &CloudformationOutputKey{
 			ResourceID:   resource.ResourceId,
 			PropertyName: "db:endpoint-write",
 		})
-		cfutil.AddOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &cfutil.CloudformationOutputKey{
+		addOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &CloudformationOutputKey{
 			ResourceID:   resource.ResourceId,
 			PropertyName: "db:endpoint-read",
 		})
@@ -165,3 +179,15 @@ func sanitize(name string) string {
 	}
 	return string(s[:j])
 }
+
+func main() {
+	plugin.Start(
+		context.Background(),
+		"ftl-provisioner-cloudformation",
+		NewCloudformationProvisioner,
+		"",
+		provisionerconnect.NewProvisionerPluginServiceHandler,
+	)
+}
+
+func ptr[T any](s T) *T { return &s }
