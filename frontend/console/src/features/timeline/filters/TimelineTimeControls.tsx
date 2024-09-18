@@ -101,20 +101,22 @@ export const TimelineTimeControls = ({
   const olderThan = newerThan ? Timestamp.fromDate(new Date(newerThan.toDate().getTime() - selected.value)) : undefined
   return (
     <>
-      <div className='flex items-center h-6'>
-        {newerThan && (
-          <span title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`} className='text-xs font-roboto-mono mr-2 text-gray-400'>
-            {formatTimestampTime(olderThan)} - {formatTimestampTime(newerThan)}
-          </span>
-        )}
-
+      {newerThan && (
+        <div
+          title={`${formatTimestampShort(olderThan)} - ${formatTimestampShort(newerThan)}`}
+          className='text-xs font-roboto-mono mr-2 text-gray-400 pl-4 mt-2'
+        >
+          {formatTimestampTime(olderThan)} - {formatTimestampTime(newerThan)}
+        </div>
+      )}
+      <div className='flex items-center h-6 pl-2 mt-2'>
         <Listbox value={selected} onChange={handleRangeChanged}>
-          <div className='relative w-40 mr-2 mt-0.5 items-center'>
+          <div className='relative w-full mr-1 mt-0.5 items-center'>
             <ListboxButton
-              className={`relative w-full cursor-pointer rounded-md ${bgColor} ${textColor} py-1 pl-3 pr-10 text-xs text-left shadow-sm ring-1 ring-inset ${borderColor} focus:outline-none focus:ring-2 focus:ring-indigo-600`}
+              className={`relative w-full cursor-pointer rounded-md ${bgColor} ${textColor} py-1 pl-2 pr-10 text-xs text-left shadow-sm ring-1 ring-inset ${borderColor} focus:outline-none focus:ring-2 focus:ring-indigo-600`}
             >
               <span className='block truncate'>{selected.label}</span>
-              <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2'>
+              <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1'>
                 <UnfoldLessIcon className='h-5 w-5 text-gray-400' aria-hidden='true' />
               </span>
             </ListboxButton>
@@ -165,14 +167,14 @@ export const TimelineTimeControls = ({
             <button
               type='button'
               onClick={handleTimeBackward}
-              className={`relative inline-flex items-center rounded-l-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700`}
+              className={`relative inline-flex items-center rounded-l-md px-1.5 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700`}
             >
               <Backward02Icon className='w-4 h-4' />
             </button>
             <button
               type='button'
               onClick={handleTimeForward}
-              className={`relative -ml-px inline-flex items-center rounded-r-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700`}
+              className={`relative -ml-px inline-flex items-center rounded-r-md px-1.5 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:bg-gray-50 dark:hover:bg-indigo-700`}
             >
               <Forward02Icon className='w-4 h-4' />
             </button>

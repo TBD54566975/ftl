@@ -1,4 +1,3 @@
-import { ListViewIcon } from 'hugeicons-react'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Page } from '../../layout'
@@ -35,11 +34,9 @@ export const TimelinePage = () => {
   return (
     <SidePanelProvider>
       <Page>
-        <Page.Header icon={<ListViewIcon className='size-5' />} title='Events'>
-          <TimelineTimeControls selectedTimeRange={selectedTimeRange} isTimelinePaused={isTimelinePaused} onTimeSettingsChange={handleTimeSettingsChanged} />
-        </Page.Header>
         <Page.Body className='flex'>
           <div className='sticky top-0 flex-none overflow-y-auto'>
+            <TimelineTimeControls selectedTimeRange={selectedTimeRange} isTimelinePaused={isTimelinePaused} onTimeSettingsChange={handleTimeSettingsChanged} />
             <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
           </div>
           <div className='flex-grow overflow-y-scroll'>

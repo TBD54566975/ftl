@@ -1,51 +1,5 @@
-import { ArrowRight02Icon } from 'hugeicons-react'
 import type React from 'react'
 import { classNames } from '../utils'
-
-interface Breadcrumb {
-  label: string
-  link?: string
-}
-
-const Header = ({
-  icon,
-  title,
-  children,
-  breadcrumbs,
-  className,
-}: {
-  icon?: React.ReactNode
-  title: string
-  children?: React.ReactNode
-  breadcrumbs?: Breadcrumb[]
-  className?: string
-}) => {
-  return (
-    <div className={classNames(className, 'flex-none w-full z-10 shadow dark:shadow-md flex justify-between items-center py-2 px-4 text-gray-70')}>
-      <div className='flex items-center'>
-        <span className='mt-1 text-indigo-500 mr-2 mb-1 h-5 w-5'>{icon}</span>
-        {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav className='flex pr-2' aria-label='Breadcrumb'>
-            <ol className='flex items-center space-x-2'>
-              {breadcrumbs.map((crumb, index) => (
-                <li key={index}>
-                  <div className='flex items-center'>
-                    <a href={crumb.link || '#'} className='text-lg mr-2 hover:text-indigo-500'>
-                      {crumb.label}
-                    </a>
-                    <ArrowRight02Icon className='mt-0.5 h-5 w-5' />
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </nav>
-        )}
-        <span className='text-lg'>{title}</span>
-      </div>
-      {children}
-    </div>
-  )
-}
 
 const Body: React.FC<{
   className?: string
@@ -64,7 +18,6 @@ export const Page: React.FC<{
   style?: React.CSSProperties
   children?: React.ReactNode
 }> & {
-  Header: typeof Header
   Body: typeof Body
 } = ({ className, style, children }) => {
   return (
@@ -74,5 +27,4 @@ export const Page: React.FC<{
   )
 }
 
-Page.Header = Header
 Page.Body = Body
