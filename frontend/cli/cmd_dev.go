@@ -29,10 +29,6 @@ type devCmd struct {
 }
 
 func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	if !cli.Plain {
-		sm := status.NewStatusManager(ctx)
-		ctx = sm.IntoContext(ctx)
-	}
 
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()

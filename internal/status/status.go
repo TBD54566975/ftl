@@ -66,6 +66,7 @@ type terminalStatusManager struct {
 	moduleStates     map[string]BuildState
 	height           int
 	width            int
+	exitWait         sync.WaitGroup
 }
 
 type statusKey struct{}
@@ -80,7 +81,8 @@ func NewStatusManager(ctx context.Context) StatusManager {
 	if err != nil {
 		return &noopStatusManager{}
 	}
-	sm := &terminalStatusManager{statusLock: sync.RWMutex{}, moduleStates: map[string]BuildState{}, height: height, width: width}
+	sm := &terminalStatusManager{statusLock: sync.RWMutex{}, moduleStates: map[string]BuildState{}, height: height, width: width, exitWait: sync.WaitGroup{}}
+	sm.exitWait.Add(1)
 	sm.old = os.Stdout
 	sm.oldErr = os.Stderr
 	sm.read, sm.write, err = os.Pipe()
@@ -107,14 +109,17 @@ func NewStatusManager(ctx context.Context) StatusManager {
 	}()
 
 	go func() {
+		defer sm.exitWait.Done()
 		current := ""
-		for !sm.closed.Load() {
+		for {
+
 			buf := bytes.Buffer{}
 			rawData := make([]byte, 104)
 			n, err := sm.read.Read(rawData)
 			if err != nil {
-				// Not much we can do here
-				sm.Close()
+				if current != "" {
+					sm.writeLine(current)
+				}
 				return
 			}
 			buf.Write(rawData[:n])
@@ -140,7 +145,6 @@ func NewStatusManager(ctx context.Context) StatusManager {
 					current += string(d)
 				}
 			}
-
 		}
 	}()
 
@@ -195,8 +199,9 @@ func (r *terminalStatusManager) NewStatus(message string) StatusLine {
 }
 
 func (r *terminalStatusManager) newStatusInternal(line *terminalStatusLine) {
-	r.clearStatusMessages()
-	r.underlyingWrite("\n")
+	if r.closed.Load() {
+		return
+	}
 	for i, l := range r.lines {
 		if l.priority < line.priority {
 			r.lines = slices.Insert(r.lines, i, line)
@@ -226,12 +231,17 @@ func (r *terminalStatusManager) SetModuleState(module string, state BuildState) 
 
 func (r *terminalStatusManager) Close() {
 	r.statusLock.Lock()
-	defer r.statusLock.Unlock()
 	r.clearStatusMessages()
-	r.closed.Store(true)
+	r.totalStatusLines = 0
+	r.lines = []*terminalStatusLine{}
+	r.statusLock.Unlock()
 	os.Stdout = r.old // restoring the real stdout
 	os.Stderr = r.oldErr
+	r.closed.Store(true)
+	_ = r.write.Close() //nolint:errcheck
+	r.exitWait.Wait()
 }
+
 func (r *terminalStatusManager) writeLine(s string) {
 	if r.height < 7 || r.width < 20 || r.height-r.totalStatusLines < 5 {
 		// Not enough space to draw anything
@@ -293,7 +303,6 @@ func (r *terminalStatusManager) redrawStatus() {
 func (r *terminalStatusManager) recalculateLines() {
 
 	if len(r.moduleStates) > 0 && r.moduleLine != nil {
-
 		entryLength := 0
 		keys := []string{}
 		for k := range r.moduleStates {
@@ -364,10 +373,6 @@ func countLinesAtPos(s string, cursorPos int, width int) int {
 		}
 	}
 	return lines
-}
-
-func (r *noopStatusManager) Close() {
-
 }
 
 type terminalStatusLine struct {
