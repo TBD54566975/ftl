@@ -10,7 +10,7 @@ components:
   protos: { in: backend/protos/** }
   schema: { in: backend/schema/** }
   ftl: { in: . }
-  ftl-cmd: { in: cmd/ftl/** }
+  ftl-cmd: { in: frontend/cli/ftl/** }
   go-runtime: { in: go-runtime/** }
   jvm-runtime: { in: jvm-runtime/** }
   rust-runtime: { in: rust-runtime/** }

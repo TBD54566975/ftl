@@ -54,13 +54,16 @@ build-generate:
 build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
-  set -x
 
-  if [ "${FTL_DEBUG:-}" = "true" ]; then
-    for tool in $@; do go build -o "{{RELEASE}}/$tool" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
-  else
-    for tool in $@; do mk "{{RELEASE}}/$tool" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./cmd/$tool"; done
-  fi
+  for tool in $@; do
+    path="cmd/$tool"
+    test "$tool" = "ftl" && path="frontend/cli"
+    if [ "${FTL_DEBUG:-}" = "true" ]; then
+      go build -o "{{RELEASE}}/$tool" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./$path"
+    else
+      mk "{{RELEASE}}/$tool" : !(build|integration|infrastructure|node_modules|Procfile*|Dockerfile*) -- go build -o "{{RELEASE}}/$tool" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./$path"
+    fi
+  done
 
 # Build all backend binaries
 build-backend:
