@@ -82,22 +82,9 @@ export class Resource extends Message<Resource> {
   outProperties: ResourceProperty[] = [];
 
   /**
-   * direct downstream dependencies this Resource depends on
-   *
-   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.Resource dependencies = 3;
-   */
-  dependencies: Resource[] = [];
-
-  /**
    * @generated from oneof xyz.block.ftl.v1beta1.provisioner.Resource.resource
    */
   resource: {
-    /**
-     * @generated from field: xyz.block.ftl.v1beta1.provisioner.FtlClusterResource ftl = 101;
-     */
-    value: FtlClusterResource;
-    case: "ftl";
-  } | {
     /**
      * @generated from field: xyz.block.ftl.v1beta1.provisioner.PostgresResource postgres = 102;
      */
@@ -121,8 +108,6 @@ export class Resource extends Message<Resource> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "resource_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "out_properties", kind: "message", T: ResourceProperty, repeated: true },
-    { no: 3, name: "dependencies", kind: "message", T: Resource, repeated: true },
-    { no: 101, name: "ftl", kind: "message", T: FtlClusterResource, oneof: "resource" },
     { no: 102, name: "postgres", kind: "message", T: PostgresResource, oneof: "resource" },
     { no: 103, name: "mysql", kind: "message", T: MysqlResource, oneof: "resource" },
   ]);
@@ -141,37 +126,6 @@ export class Resource extends Message<Resource> {
 
   static equals(a: Resource | PlainMessage<Resource> | undefined, b: Resource | PlainMessage<Resource> | undefined): boolean {
     return proto3.util.equals(Resource, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1beta1.provisioner.FtlClusterResource
- */
-export class FtlClusterResource extends Message<FtlClusterResource> {
-  constructor(data?: PartialMessage<FtlClusterResource>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.FtlClusterResource";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FtlClusterResource {
-    return new FtlClusterResource().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FtlClusterResource {
-    return new FtlClusterResource().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FtlClusterResource {
-    return new FtlClusterResource().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: FtlClusterResource | PlainMessage<FtlClusterResource> | undefined, b: FtlClusterResource | PlainMessage<FtlClusterResource> | undefined): boolean {
-    return proto3.util.equals(FtlClusterResource, a, b);
   }
 }
 

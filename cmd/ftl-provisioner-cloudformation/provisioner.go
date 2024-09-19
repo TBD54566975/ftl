@@ -106,8 +106,8 @@ func generateChangeSetName(stack string) string {
 
 func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionRequest) (string, error) {
 	template := goformation.NewTemplate()
-	for _, resource := range req.DesiredResources {
-		if err := c.resourceToCF(req.FtlClusterId, req.Module, template, resource); err != nil {
+	for _, resourceCtx := range req.DesiredResources {
+		if err := c.resourceToCF(req.FtlClusterId, req.Module, template, resourceCtx.Resource); err != nil {
 			return "", err
 		}
 	}

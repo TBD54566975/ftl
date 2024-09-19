@@ -8,6 +8,53 @@ import { Message, proto3 } from "@bufbuild/protobuf";
 import { Resource, ResourceProperty } from "./resource_pb.js";
 
 /**
+ * ResourceContext is the context used to create a new resource
+ * This includes the direct dependencies of the new resource, that can impact
+ * the resource creation.
+ *
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.ResourceContext
+ */
+export class ResourceContext extends Message<ResourceContext> {
+  /**
+   * @generated from field: xyz.block.ftl.v1beta1.provisioner.Resource resource = 1;
+   */
+  resource?: Resource;
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.Resource dependencies = 2;
+   */
+  dependencies: Resource[] = [];
+
+  constructor(data?: PartialMessage<ResourceContext>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.ResourceContext";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "resource", kind: "message", T: Resource },
+    { no: 2, name: "dependencies", kind: "message", T: Resource, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResourceContext {
+    return new ResourceContext().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResourceContext {
+    return new ResourceContext().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResourceContext {
+    return new ResourceContext().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ResourceContext | PlainMessage<ResourceContext> | undefined, b: ResourceContext | PlainMessage<ResourceContext> | undefined): boolean {
+    return proto3.util.equals(ResourceContext, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1beta1.provisioner.ProvisionRequest
  */
 export class ProvisionRequest extends Message<ProvisionRequest> {
@@ -32,9 +79,9 @@ export class ProvisionRequest extends Message<ProvisionRequest> {
    * The resource FTL would like to exist after this provisioning run.
    * This includes all new, existing, and changes resources in this change.
    *
-   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.Resource desired_resources = 4;
+   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.ResourceContext desired_resources = 4;
    */
-  desiredResources: Resource[] = [];
+  desiredResources: ResourceContext[] = [];
 
   constructor(data?: PartialMessage<ProvisionRequest>) {
     super();
@@ -47,7 +94,7 @@ export class ProvisionRequest extends Message<ProvisionRequest> {
     { no: 1, name: "ftl_cluster_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "existing_resources", kind: "message", T: Resource, repeated: true },
-    { no: 4, name: "desired_resources", kind: "message", T: Resource, repeated: true },
+    { no: 4, name: "desired_resources", kind: "message", T: ResourceContext, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProvisionRequest {

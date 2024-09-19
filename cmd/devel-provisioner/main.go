@@ -42,10 +42,12 @@ func main() {
 		FtlClusterId:      "ftl-test-1",
 		Module:            "test-module",
 		ExistingResources: []*provisioner.Resource{},
-		DesiredResources: []*provisioner.Resource{{
-			ResourceId: "foodb",
-			Resource: &provisioner.Resource_Postgres{
-				Postgres: &provisioner.PostgresResource{},
+		DesiredResources: []*provisioner.ResourceContext{{
+			Resource: &provisioner.Resource{
+				ResourceId: "foodb",
+				Resource: &provisioner.Resource_Postgres{
+					Postgres: &provisioner.PostgresResource{},
+				},
 			},
 		}},
 	}

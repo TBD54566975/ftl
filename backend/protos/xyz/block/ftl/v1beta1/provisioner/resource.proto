@@ -24,19 +24,13 @@ message Resource {
   // when the resource was created
   repeated ResourceProperty out_properties = 2;
 
-  // direct downstream dependencies this Resource depends on
-  repeated Resource dependencies = 3;
-
   oneof resource {
-    FtlClusterResource ftl = 101;
     PostgresResource postgres = 102;
     MysqlResource mysql = 103;
   }
 }
 
 // Resource types
-
-message FtlClusterResource {}
 
 message PostgresResource {}
 
