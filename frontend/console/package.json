@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "engines": {
+    "npm": "please-use-pnpm",
+    "yarn": "please-use-pnpm",
     "pnpm": ">=9.9.0",
     "node": ">=22.7.0"
   },
@@ -56,6 +58,7 @@
     "highlight.js": "^11.8.0",
     "hugeicons-react": "^0.3.0",
     "json-schema-faker": "0.5.6",
+    "please-use-pnpm": "^1.1.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "6.26.2",
