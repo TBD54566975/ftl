@@ -18,16 +18,28 @@ import (
 
 type BuildState string
 
-const BuildStateWaiting BuildState = "\u001B[93mwaiting"
-const BuildStateBuilding BuildState = "\u001B[94mbuilding"
-const BuildStateBuilt BuildState = "\u001B[92mbuilt"
-const BuildStateDeploying BuildState = "\u001B[94mdeploying"
-const BuildStateDeployed BuildState = "\u001B[92mdeployed"
-const BuildStateFailed BuildState = "\u001B[91mfailed"
-const buildStateMaxLength = len(BuildStateDeploying)
+const BuildStateWaiting BuildState = " 🚦️"
+const BuildStateBuilding BuildState = " 🏗️"
+const BuildStateBuilt BuildState = "📦️️"
+const BuildStateDeploying BuildState = " 🚚️"
+const BuildStateDeployed BuildState = " ✅️️"
+const BuildStateFailed BuildState = "💥"
 
 var _ StatusManager = &terminalStatusManager{}
 var _ StatusLine = &terminalStatusLine{}
+
+var buildColors map[BuildState]string
+
+func init() {
+	buildColors = map[BuildState]string{
+		BuildStateWaiting:   "\u001B[93m",
+		BuildStateBuilding:  "\u001B[94m",
+		BuildStateBuilt:     "\u001B[94m",
+		BuildStateDeploying: "\u001B[94m",
+		BuildStateDeployed:  "\u001B[92m",
+		BuildStateFailed:    "\u001B[91m",
+	}
+}
 
 type StatusManager interface {
 	Close()
@@ -156,8 +168,10 @@ func (r *terminalStatusManager) clearStatusMessages() {
 	if r.totalStatusLines == 0 {
 		return
 	}
-	r.gotoLine(r.height - r.totalStatusLines + 1)
-	r.underlyingWrite("\033[J")
+	for i := range r.totalStatusLines {
+		r.gotoLine(r.height - r.totalStatusLines + 1 + i)
+		r.underlyingWrite("\033[K")
+	}
 }
 
 func (r *terminalStatusManager) IntoContext(ctx context.Context) context.Context {
@@ -211,9 +225,10 @@ func (r *terminalStatusManager) SetModuleState(module string, state BuildState) 
 }
 
 func (r *terminalStatusManager) Close() {
-	r.closed.Store(true)
-	_ = r.write.Close()
+	r.statusLock.Lock()
+	defer r.statusLock.Unlock()
 	r.clearStatusMessages()
+	r.closed.Store(true)
 	os.Stdout = r.old // restoring the real stdout
 	os.Stderr = r.oldErr
 }
@@ -282,9 +297,7 @@ func (r *terminalStatusManager) recalculateLines() {
 		entryLength := 0
 		keys := []string{}
 		for k := range r.moduleStates {
-			// We use the max length rather than the actual length to avoid flickering
-			// ANSI control characters are 5 bytes long
-			thisLength := len(k) + buildStateMaxLength + 4 - 5 // 4 is the length of the ": " and the two trailing spaces
+			thisLength := len(k) + 8
 			if thisLength > entryLength {
 				entryLength = thisLength
 			}
@@ -297,11 +310,12 @@ func (r *terminalStatusManager) recalculateLines() {
 		}
 		slices.Sort(keys)
 		for i, k := range keys {
-			if i%perLine == 0 {
+			if i%perLine == 0 && i > 0 {
 				msg += "\n"
 			}
-			pad := strings.Repeat(" ", entryLength-len(k)-len(r.moduleStates[k])-4+5)
-			msg += "\u001B[97m" + k + ": " + string(r.moduleStates[k]) + "\u001B[39m  " + pad
+			pad := strings.Repeat(" ", entryLength-len(k)-8)
+			state := r.moduleStates[k]
+			msg += pad + buildColors[state] + k + ": " + string(state) + "\u001B[39m"
 		}
 		r.moduleLine.message = msg
 	}
@@ -314,6 +328,10 @@ func (r *terminalStatusManager) recalculateLines() {
 	}
 	if total > 0 {
 		total++
+	}
+	if total > r.totalStatusLines {
+		r.gotoLine(r.height - r.totalStatusLines)
+		r.underlyingWrite(strings.Repeat("\n", total-r.totalStatusLines))
 	}
 	r.totalStatusLines = total
 	r.redrawStatus()

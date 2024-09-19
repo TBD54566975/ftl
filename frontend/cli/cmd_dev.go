@@ -55,7 +55,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		return nil
 	}
 	sm := status.FromContext(ctx)
-	starting := sm.NewStatus("Starting FTL Server…")
+	starting := sm.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {

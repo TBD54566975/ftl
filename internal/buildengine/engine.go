@@ -534,6 +534,7 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 		return e.buildWithCallback(ctx, func(buildCtx context.Context, module Module) error {
 			buildGroup.Go(func() error {
 				e.modulesToBuild.Store(module.Config.Module, false)
+				status.UpdateModuleState(ctx, module.Config.Module, status.BuildStateDeploying)
 				return Deploy(buildCtx, module, replicas, waitForDeployOnline, e.client)
 			})
 			return nil
