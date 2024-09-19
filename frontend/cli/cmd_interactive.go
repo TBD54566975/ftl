@@ -17,6 +17,7 @@ import (
 )
 
 var _ readline.AutoCompleter = &FTLCompletion{}
+var errExitTrap = errors.New("exit trap")
 
 type interactiveCmd struct {
 }
@@ -32,6 +33,8 @@ func (i *interactiveCmd) Run(ctx context.Context, k *kong.Kong, projectConfig pr
 		return fmt.Errorf("init readline: %w", err)
 	}
 	l.CaptureExitSignal()
+	// Overload the exit function to avoid exiting the process
+	k.Exit = func(i int) { panic(errExitTrap) }
 	for {
 		line, err := l.Readline()
 		if errors.Is(err, readline.ErrInterrupt) {
@@ -51,18 +54,27 @@ func (i *interactiveCmd) Run(ctx context.Context, k *kong.Kong, projectConfig pr
 			errorf("%s", err)
 			continue
 		}
-		kctx, err := k.Parse(args)
-		if err != nil {
-			errorf("%s", err)
-			continue
-		}
-		subctx := bindContext(ctx, kctx, projectConfig, app)
+		defer func() {
+			// Catch Exit() and continue the loop
+			if r := recover(); r != nil {
+				if r == errExitTrap { //nolint:errorlint
+					return
+				}
+				panic(r)
+			}
+			kctx, err := k.Parse(args)
+			if err != nil {
+				errorf("%s", err)
+				return
+			}
+			subctx := bindContext(ctx, kctx, projectConfig, app)
 
-		err = kctx.Run(subctx)
-		if err != nil {
-			errorf("error: %s", err)
-			continue
-		}
+			err = kctx.Run(subctx)
+			if err != nil {
+				errorf("error: %s", err)
+				return
+			}
+		}()
 	}
 	return nil
 }
