@@ -237,6 +237,19 @@ Once Grafana is running, you can start FTL with otel enabled:
 just otel-dev
 ```
 
+## Testing local changes
+
+To use your locally built FTL in a separate project, you can start live rebuild with
+```sh
+just live-rebuild
+```
+
+Then, in a separate terminal, you can use the locall build FTL to test your changes against a separate FTL project by running the locally build FTL from the root of this project:
+```sh
+${FTL_HOME}/build/release/ftl dev
+```
+where `FTL_HOME` is the root of this repository.
+
 ## Useful links
 
 - [VSCode extension samples](https://github.com/microsoft/vscode-extension-samples)
