@@ -30,7 +30,12 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 	in.Preorder(nodeFilter, func(n ast.Node) {
 		node := n.(*ast.TypeSpec) //nolint:forcetypeassert
 
-		iType, ok := pass.TypesInfo.TypeOf(node.Type).Underlying().(*types.Interface)
+		typ := pass.TypesInfo.TypeOf(node.Type)
+		if typ == nil {
+			return
+		}
+
+		iType, ok := typ.Underlying().(*types.Interface)
 		if !ok {
 			return
 		}
