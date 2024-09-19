@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"strings"
 	"time"
 
@@ -187,6 +187,7 @@ type DAL struct {
 
 	leaseDAL   *leasedal.DAL
 	encryption *encryption.Service
+	registry   artefacts.Registry
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
@@ -297,25 +298,6 @@ func (d *DAL) GetRunnersForDeployment(ctx context.Context, deployment model.Depl
 func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err error) {
 	_, err = d.db.UpsertModule(ctx, language, name)
 	return libdal.TranslatePGError(err)
-}
-
-// GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
-func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
-	have, err := d.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	haveStr := slices.Map(have, func(in dalsql.GetArtefactDigestsRow) sha256.SHA256 {
-		return sha256.FromBytes(in.Digest)
-	})
-	return sets.NewSet(digests...).Difference(sets.NewSet(haveStr...)).ToSlice(), nil
-}
-
-// CreateArtefact inserts a new artefact into the database and returns its ID.
-func (d *DAL) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
-	sha256digest := sha256.Sum(content)
-	_, err = d.db.CreateArtefact(ctx, sha256digest[:], content)
-	return sha256digest, libdal.TranslatePGError(err)
 }
 
 type IngressRoutingEntry struct {
@@ -798,16 +780,17 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymen
 		Key:      deployment.Deployment.Key,
 		Schema:   deployment.Deployment.Schema,
 	}
-	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
+	darts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
-	out.Artefacts = slices.Map(artefacts, func(row dalsql.GetDeploymentArtefactsRow) *model.Artefact {
+	out.Artefacts = slices.Map(darts, func(row dalsql.GetDeploymentArtefactsRow) *model.Artefact {
+		key := artefacts.MakeKey(row.ID, row.Digest)
 		return &model.Artefact{
 			Path:       row.Path,
 			Executable: row.Executable,
-			Content:    &artefactReader{id: row.ID, db: d.db},
-			Digest:     sha256.FromBytes(row.Digest),
+			Content:    d.registry.Download(ctx, key),
+			Digest:     key.Digest,
 		}
 	})
 	return out, nil
@@ -877,26 +860,4 @@ func (*DAL) checkForExistingDeployments(ctx context.Context, tx *DAL, moduleSche
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
-}
-
-type artefactReader struct {
-	id     int64
-	db     dalsql.Querier
-	offset int32
-}
-
-func (r *artefactReader) Close() error { return nil }
-
-func (r *artefactReader) Read(p []byte) (n int, err error) {
-	content, err := r.db.GetArtefactContentRange(context.Background(), r.offset+1, int32(len(p)), r.id)
-	if err != nil {
-		return 0, libdal.TranslatePGError(err)
-	}
-	copy(p, content)
-	clen := len(content)
-	r.offset += int32(clen)
-	if clen == 0 {
-		err = io.EOF
-	}
-	return clen, err
 }
