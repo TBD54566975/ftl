@@ -48,43 +48,149 @@ type ExternalModuleContext struct {
 	Replacements []*modfile.Replace
 }
 
-type goVerb struct {
-	Name        string
-	Package     string
-	MustImport  string
-	HasRequest  bool
-	HasResponse bool
-}
-
 type mainModuleContext struct {
 	GoVersion          string
 	FTLVersion         string
 	Name               string
-	ProjectName        string
 	SharedModulesPaths []string
 	Verbs              []goVerb
 	Replacements       []*modfile.Replace
-	SumTypes           []goSumType
-	LocalSumTypes      []goSumType
-	ExternalTypes      []goExternalType
-	LocalExternalTypes []goExternalType
+	MainCtx            mainFileContext
+	TypesCtx           typesFileContext
 }
 
-type goSumType struct {
-	Discriminator string
-	Variants      []goSumTypeVariant
-	fqName        string
+func (c mainModuleContext) withImports() mainModuleContext {
+	c.MainCtx.Imports = c.generateMainImports()
+	c.TypesCtx.Imports = c.generateTypesImports()
+	return c
 }
+
+func (c mainModuleContext) generateMainImports() []string {
+	imports := sets.NewSet[string]()
+	imports.Add(`"context"`)
+	imports.Add(`"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"`)
+	imports.Add(`"github.com/TBD54566975/ftl/common/plugin"`)
+	imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
+	if len(c.MainCtx.SumTypes) > 0 || len(c.MainCtx.ExternalTypes) > 0 {
+		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
+	}
+
+	for _, v := range c.Verbs {
+		imports.Add(v.importStatement())
+	}
+	for _, st := range c.MainCtx.SumTypes {
+		imports.Add(st.importStatement())
+
+		for _, v := range st.Variants {
+			if i := strings.LastIndex(v.Type, "."); i != -1 {
+				lessTypeName := strings.TrimSuffix(v.Type, v.Type[i:])
+				imports.Add(strconv.Quote(lessTypeName))
+			}
+		}
+	}
+	for _, e := range c.MainCtx.ExternalTypes {
+		imports.Add(e.importStatement())
+	}
+	return formatGoImports(imports.ToSlice())
+}
+
+func (c mainModuleContext) generateTypesImports() []string {
+	imports := sets.NewSet[string]()
+	if len(c.TypesCtx.SumTypes) > 0 || len(c.TypesCtx.ExternalTypes) > 0 {
+		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
+	}
+	for _, st := range c.TypesCtx.SumTypes {
+		// if import path is more than 2 dirs deep, it's a subpackage
+		if len(strings.Split(st.importPath, "/")) > 2 {
+			imports.Add(st.importStatement())
+		}
+		for _, v := range st.Variants {
+			if i := strings.LastIndex(v.Type, "."); i != -1 {
+				lessTypeName := strings.TrimSuffix(v.Type, v.Type[i:])
+				// if import path is more than 2 dirs deep, it's a subpackage
+				if len(strings.Split(lessTypeName, "/")) > 2 {
+					imports.Add(strconv.Quote(lessTypeName))
+				}
+			}
+		}
+	}
+	for _, et := range c.TypesCtx.ExternalTypes {
+		imports.Add(et.importStatement())
+	}
+	return formatGoImports(imports.ToSlice())
+}
+
+type mainFileContext struct {
+	Imports []string
+
+	ProjectName   string
+	SumTypes      []goSumType
+	ExternalTypes []goExternalType
+}
+
+type typesFileContext struct {
+	Imports []string
+
+	SumTypes      []goSumType
+	ExternalTypes []goExternalType
+}
+
+type goType interface {
+	getNativeType() nativeType
+	setDirectoryName(s string)
+}
+
+type nativeType struct {
+	Name       string
+	pkg        string
+	importPath string
+	// empty if package and directory names are the same
+	directoryName optional.Option[string]
+}
+
+func (n nativeType) importStatement() string {
+	if _, ok := n.directoryName.Get(); ok {
+		return fmt.Sprintf("%s %q", n.pkg, n.importPath)
+	}
+	return strconv.Quote(n.importPath)
+}
+
+func (n nativeType) TypeName() string {
+	return n.pkg + "." + n.Name
+}
+
+type goVerb struct {
+	HasRequest   bool
+	HasResponse  bool
+	RequestName  string
+	ResponseName string
+
+	nativeType
+}
+
+func (g goVerb) getNativeType() nativeType { return g.nativeType }
+func (g goVerb) setDirectoryName(n string) { g.directoryName = optional.Some(n) }
+
+type goExternalType struct {
+	nativeType
+}
+
+func (g goExternalType) getNativeType() nativeType { return g.nativeType }
+func (g goExternalType) setDirectoryName(n string) { g.directoryName = optional.Some(n) }
+
+type goSumType struct {
+	Variants []goSumTypeVariant
+
+	nativeType
+}
+
+func (g goSumType) getNativeType() nativeType { return g.nativeType }
+func (g goSumType) setDirectoryName(n string) { g.directoryName = optional.Some(n) }
 
 type goSumTypeVariant struct {
 	Name       string
 	Type       string
 	SchemaType schema.Type
-}
-
-type goExternalType struct {
-	Import string
-	Types  []string
 }
 
 type ModifyFilesTransaction interface {
@@ -182,47 +288,13 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	}
 
 	logger.Debugf("Generating main module")
-	goVerbs := make([]goVerb, 0, len(result.Module.Decls))
-	for _, decl := range result.Module.Decls {
-		verb, ok := decl.(*schema.Verb)
-		if !ok {
-			continue
-		}
-		nativeName, ok := result.NativeNames[verb]
-		if !ok {
-			return fmt.Errorf("missing native name for verb %s", verb.Name)
-		}
-
-		goverb, err := goVerbFromQualifiedName(nativeName)
-		if err != nil {
-			return err
-		}
-		if _, ok := verb.Request.(*schema.Unit); !ok {
-			goverb.HasRequest = true
-		}
-		if _, ok := verb.Response.(*schema.Unit); !ok {
-			goverb.HasResponse = true
-		}
-		goVerbs = append(goVerbs, goverb)
-	}
-	localExternalTypes, err := getLocalExternalTypes(result.Module)
+	mctx, err := buildMainModuleContext(sch, result, goModVersion, ftlVersion, projectName, sharedModulesPaths,
+		replacements)
 	if err != nil {
 		return err
 	}
-	allSumTypes, allExternalTypes, err := getRegisteredTypes(result.Module, sch, result.NativeNames)
-	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mainModuleContext{
-		GoVersion:          goModVersion,
-		FTLVersion:         ftlVersion,
-		Name:               result.Module.Name,
-		ProjectName:        projectName,
-		SharedModulesPaths: sharedModulesPaths,
-		Verbs:              goVerbs,
-		Replacements:       replacements,
-		SumTypes:           allSumTypes,
-		LocalSumTypes:      getLocalSumTypes(result.Module, result.NativeNames),
-		ExternalTypes:      allExternalTypes,
-		LocalExternalTypes: localExternalTypes,
-	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
+	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mctx, scaffolder.Exclude("^go.mod$"),
+		scaffolder.Functions(funcs)); err != nil {
 		return err
 	}
 
@@ -404,6 +476,222 @@ func SyncGeneratedStubReferences(ctx context.Context, projectRootDir string, stu
 	return nil
 }
 
+type mainModuleContextBuilder struct {
+	sch         *schema.Schema
+	mainModule  *schema.Module
+	nativeNames extract.NativeNames
+	imports     map[string]string
+}
+
+func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVersion, ftlVersion, projectName string,
+	sharedModulesPaths []string, replacements []*modfile.Replace) (mainModuleContext, error) {
+	combinedSch := &schema.Schema{
+		Modules: append(sch.Modules, result.Module),
+	}
+	builder := &mainModuleContextBuilder{
+		sch:         combinedSch,
+		mainModule:  result.Module,
+		nativeNames: result.NativeNames,
+		imports:     imports(result.Module, false),
+	}
+	return builder.build(goModVersion, ftlVersion, projectName, sharedModulesPaths, replacements)
+}
+
+func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName string,
+	sharedModulesPaths []string, replacements []*modfile.Replace) (mainModuleContext, error) {
+	ctx := mainModuleContext{
+		GoVersion:          goModVersion,
+		FTLVersion:         ftlVersion,
+		Name:               b.mainModule.Name,
+		SharedModulesPaths: sharedModulesPaths,
+		Replacements:       replacements,
+		Verbs:              make([]goVerb, 0, len(b.mainModule.Decls)),
+		MainCtx: mainFileContext{
+			ProjectName:   projectName,
+			SumTypes:      []goSumType{},
+			ExternalTypes: []goExternalType{},
+		},
+		TypesCtx: typesFileContext{
+			SumTypes:      []goSumType{},
+			ExternalTypes: []goExternalType{},
+		},
+	}
+
+	err := schema.Visit(b.mainModule, func(node schema.Node, next func() error) error {
+		maybeGoType, isLocal, err := b.getGoType(b.mainModule.Name, node)
+		if err != nil {
+			return err
+		}
+		gotype, ok := maybeGoType.Get()
+		if !ok {
+			return next()
+		}
+		nt := gotype.getNativeType()
+		b.imports = addImports(b.imports, nt)
+		// update with the resolved directory name, if necessary
+		if dirName, ok := b.imports[nt.importPath]; ok {
+			if existingDirName, ok := nt.directoryName.Get(); !ok || existingDirName != dirName {
+				gotype.setDirectoryName(dirName)
+			}
+		}
+
+		switch n := gotype.(type) {
+		case goVerb:
+			ctx.Verbs = append(ctx.Verbs, n)
+		case goSumType:
+			if isLocal {
+				ctx.TypesCtx.SumTypes = append(ctx.TypesCtx.SumTypes, n)
+			}
+			ctx.MainCtx.SumTypes = append(ctx.MainCtx.SumTypes, n)
+		case goExternalType:
+			if isLocal {
+				ctx.TypesCtx.ExternalTypes = append(ctx.TypesCtx.ExternalTypes, n)
+			}
+			ctx.MainCtx.ExternalTypes = append(ctx.MainCtx.ExternalTypes, n)
+		}
+		return next()
+	})
+	if err != nil {
+		return mainModuleContext{}, fmt.Errorf("failed to build main module context: %w", err)
+	}
+
+	slices.SortFunc(ctx.MainCtx.SumTypes, func(a, b goSumType) int {
+		return strings.Compare(a.TypeName(), b.TypeName())
+	})
+	slices.SortFunc(ctx.TypesCtx.SumTypes, func(a, b goSumType) int {
+		return strings.Compare(a.TypeName(), b.TypeName())
+	})
+
+	return ctx.withImports(), nil
+}
+
+func (b *mainModuleContextBuilder) getGoType(moduleName string, node schema.Node) (gotype optional.Option[goType], isLocal bool, err error) {
+	switch n := node.(type) {
+	case *schema.Ref:
+		if n.Module != "" && n.Module != b.mainModule.Name {
+			return optional.None[goType](), b.visitingMainModule(moduleName), nil
+		}
+		resolved, ok := b.sch.Resolve(n).Get()
+		if !ok {
+			return optional.None[goType](), b.visitingMainModule(moduleName), nil
+		}
+		gt, local, err := b.getGoType(n.Module, resolved)
+		return gt, local, err
+
+	case *schema.Verb:
+		if !b.visitingMainModule(moduleName) {
+			return optional.None[goType](), b.visitingMainModule(moduleName), nil
+		}
+		goverb, err := b.processVerb(n)
+		if err != nil {
+			return optional.None[goType](), b.visitingMainModule(moduleName), err
+		}
+		return optional.Some[goType](goverb), b.visitingMainModule(moduleName), nil
+
+	case *schema.Enum:
+		if n.IsValueEnum() {
+			return optional.None[goType](), b.visitingMainModule(moduleName), nil
+		}
+		st, err := b.processSumType(moduleName, n)
+		if err != nil {
+			return optional.None[goType](), b.visitingMainModule(moduleName), err
+		}
+		return optional.Some[goType](st), b.visitingMainModule(moduleName), nil
+
+	case *schema.TypeAlias:
+		if len(n.Metadata) == 0 {
+			return optional.None[goType](), b.visitingMainModule(moduleName), nil
+		}
+		return b.processExternalTypeAlias(n), b.visitingMainModule(moduleName), nil
+
+	default:
+	}
+	return optional.None[goType](), b.visitingMainModule(moduleName), nil
+}
+
+func (b *mainModuleContextBuilder) visitingMainModule(moduleName string) bool {
+	return moduleName == b.mainModule.Name
+}
+
+func (b *mainModuleContextBuilder) processSumType(moduleName string, enum *schema.Enum) (goSumType, error) {
+	variants := make([]goSumTypeVariant, 0, len(enum.Variants))
+	if !b.visitingMainModule(moduleName) {
+		for _, v := range enum.Variants {
+			variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+				Name:       moduleName + "." + v.Name,
+				Type:       "ftl/" + moduleName + "." + v.Name,
+				SchemaType: v.Value.(*schema.TypeValue).Value,
+			})
+		}
+		return goSumType{
+			Variants: variants,
+			nativeType: nativeType{
+				Name:          enum.Name,
+				pkg:           moduleName,
+				importPath:    "ftl/" + moduleName,
+				directoryName: optional.None[string](),
+			},
+		}, nil
+	}
+
+	nt, err := nativeTypeFromQualifiedName(b.nativeNames[enum])
+	if err != nil {
+		return goSumType{}, err
+	}
+
+	for _, v := range enum.Variants {
+		nativeName := b.nativeNames[v]
+		lastSlash := strings.LastIndex(nativeName, "/")
+		variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+			Name:       nativeName[lastSlash+1:],
+			Type:       nativeName,
+			SchemaType: v.Value.(*schema.TypeValue).Value,
+		})
+	}
+
+	return goSumType{
+		Variants:   variants,
+		nativeType: nt,
+	}, nil
+}
+
+func (b *mainModuleContextBuilder) processExternalTypeAlias(alias *schema.TypeAlias) optional.Option[goType] {
+	for _, m := range alias.Metadata {
+		if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
+			nt, ok := nativeTypeForWidenedType(alias)
+			if !ok {
+				continue
+			}
+			return optional.Some[goType](goExternalType{
+				nativeType: nt,
+			})
+		}
+	}
+	return optional.None[goType]()
+}
+
+func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error) {
+	nativeName, ok := b.nativeNames[verb]
+	if !ok {
+		return goVerb{}, fmt.Errorf("missing native name for verb %s", verb.Name)
+	}
+
+	nt, err := nativeTypeFromQualifiedName(nativeName)
+	if err != nil {
+		return goVerb{}, err
+	}
+	goverb := goVerb{
+		nativeType: nt,
+	}
+	if _, ok := verb.Request.(*schema.Unit); !ok {
+		goverb.HasRequest = true
+	}
+	if _, ok := verb.Response.(*schema.Unit); !ok {
+		goverb.HasResponse = true
+	}
+	return goverb, nil
+}
+
 var scaffoldFuncs = scaffolder.FuncMap{
 	"comment": schema.EncodeComments,
 	"type":    genType,
@@ -446,51 +734,6 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		return false
 	},
-	"mainImports": func(ctx mainModuleContext) []string {
-		imports := sets.NewSet[string]()
-		for _, v := range ctx.Verbs {
-			imports.Add(strings.TrimPrefix(v.MustImport, "ftl/"))
-		}
-		for _, st := range ctx.SumTypes {
-			if i := strings.LastIndex(st.fqName, "."); i != -1 {
-				lessTypeName := strings.TrimSuffix(st.fqName, st.fqName[i:])
-				imports.Add(strings.TrimPrefix(lessTypeName, "ftl/"))
-			}
-			for _, v := range st.Variants {
-				if i := strings.LastIndex(v.Type, "."); i != -1 {
-					lessTypeName := strings.TrimSuffix(v.Type, v.Type[i:])
-					imports.Add(strings.TrimPrefix(lessTypeName, "ftl/"))
-				}
-			}
-		}
-		out := imports.ToSlice()
-		slices.Sort(out)
-		return out
-	},
-	"typesImports": func(ctx mainModuleContext) []string {
-		imports := sets.NewSet[string]()
-		for _, st := range ctx.LocalSumTypes {
-			if i := strings.LastIndex(st.fqName, "."); i != -1 {
-				lessTypeName := strings.TrimSuffix(st.fqName, st.fqName[i:])
-				// subpackage
-				if len(strings.Split(lessTypeName, "/")) > 2 {
-					imports.Add(lessTypeName)
-				}
-			}
-			for _, v := range st.Variants {
-				if i := strings.LastIndex(v.Type, "."); i != -1 {
-					lessTypeName := strings.TrimSuffix(v.Type, v.Type[i:])
-					// subpackage
-					if len(strings.Split(lessTypeName, "/")) > 2 {
-						imports.Add(lessTypeName)
-					}
-				}
-			}
-		}
-		out := imports.ToSlice()
-		slices.Sort(out)
-		return out
-	},
 	"schemaType": schemaType,
 	// A standalone enum variant is one that is purely an alias to a type and does not appear
 	// elsewhere in the schema.
@@ -526,24 +769,23 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		return str
 	},
 	"typeAliasType": func(m *schema.Module, t *schema.TypeAlias) string {
-		// it is wasteful to calculate imports each time
-		imports := imports(m, false)
-
 		for _, md := range t.Metadata {
 			md, ok := md.(*schema.MetadataTypeMap)
 			if !ok || md.Runtime != "go" {
 				continue
 			}
-			if goType, err := getGoExternalType(imports, md.NativeName); err == nil {
-				return goType
+			nt, err := nativeTypeFromQualifiedName(md.NativeName)
+			if err != nil {
+				return ""
 			}
+			return fmt.Sprintf("%s.%s", nt.pkg, nt.Name)
 		}
 		return genType(m, t.Type)
 	},
 }
 
 // returns the import path and the directory name for a type alias if there is an associated go library
-func goImportForWidenedType(t *schema.TypeAlias) (importPath string, dirName optional.Option[string], ok bool) {
+func nativeTypeForWidenedType(t *schema.TypeAlias) (nt nativeType, ok bool) {
 	for _, md := range t.Metadata {
 		md, ok := md.(*schema.MetadataTypeMap)
 		if !ok {
@@ -552,14 +794,14 @@ func goImportForWidenedType(t *schema.TypeAlias) (importPath string, dirName opt
 
 		if md.Runtime == "go" {
 			var err error
-			importPath, dirName, err = goImportFromQualifiedName(md.NativeName)
+			goType, err := nativeTypeFromQualifiedName(md.NativeName)
 			if err != nil {
 				panic(err)
 			}
-			return importPath, dirName, true
+			return goType, true
 		}
 	}
-	return importPath, dirName, false
+	return nt, false
 }
 
 func schemaType(t schema.Type) string {
@@ -732,288 +974,32 @@ func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error)
 	return os.WriteFile(config.Abs().Errors, elBytes, 0600)
 }
 
-func getLocalSumTypes(module *schema.Module, nativeNames extract.NativeNames) []goSumType {
-	sumTypes := make(map[string]goSumType)
-	for _, d := range module.Decls {
-		e, ok := d.(*schema.Enum)
-		if !ok {
-			continue
-		}
-		if e.IsValueEnum() {
-			continue
-		}
-		if st, ok := getGoSumType(e, nativeNames).Get(); ok {
-			enumFqName := nativeNames[e]
-			sumTypes[enumFqName] = st
-		}
-	}
-	return maps.Values(sumTypes)
-}
-
-func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
-	imports := imports(module, false)
-	types := make(map[string][]string)
-	for _, d := range module.Decls {
-		switch d := d.(type) {
-		case *schema.TypeAlias:
-			var fqName string
-			for _, m := range d.Metadata {
-				if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
-					fqName = m.NativeName
-				}
-			}
-			if fqName == "" {
-				continue
-			}
-			im, _, ok := goImportForWidenedType(d)
-			if !ok {
-				continue
-			}
-			typ, err := getGoExternalType(imports, fqName)
-			if err != nil {
-				return nil, err
-			}
-
-			importStatement := strconv.Quote(im)
-			if imports[im] != "" {
-				importStatement = imports[im] + " " + importStatement
-			}
-			if _, ok := types[importStatement]; !ok {
-				types[importStatement] = []string{}
-			}
-			types[importStatement] = append(types[importStatement], typ)
-		default:
-		}
-	}
-	var out []goExternalType
-	for im, types := range types {
-		out = append(out, goExternalType{
-			Import: im,
-			Types:  types,
-		})
-	}
-	return out, nil
-}
-
-// getRegisteredTypesExternalToModule returns all sum types and external types that are not defined in the given module.
-// These are the types that must be registered in the main module.
-func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames extract.NativeNames) ([]goSumType, []goExternalType, error) {
-	sumTypes := make(map[string]goSumType)
-	externalTypes := make(map[string]sets.Set[string])
-	externalDecls := getRegisteredTypesExternalToModule(module, sch)
-
-	// calculate all imports and aliases
-	imports := imports(module, false)
-	extraImports := map[string]optional.Option[string]{}
-	for _, d := range externalDecls {
-		d, ok := d.resolved.(*schema.TypeAlias)
-		if !ok {
-			continue
-		}
-		for _, m := range d.Metadata {
-			m, ok := m.(*schema.MetadataTypeMap)
-			if !ok || m.Runtime != "go" {
-				continue
-			}
-			if im, dirName, ok := goImportForWidenedType(d); ok && extraImports[im] == optional.None[string]() {
-				extraImports[im] = dirName
-			}
-		}
-	}
-	imports = addImports(imports, extraImports)
-
-	// register sum types from other modules
-	for _, decl := range externalDecls {
-		switch d := decl.resolved.(type) {
-		case *schema.Enum:
-			variants := make([]goSumTypeVariant, 0, len(d.Variants))
-			for _, v := range d.Variants {
-				variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
-					Name:       decl.ref.Module + "." + v.Name,
-					Type:       "ftl/" + decl.ref.Module + "." + v.Name,
-					SchemaType: v.Value.(*schema.TypeValue).Value,
-				})
-			}
-			stFqName := decl.ref.Module + "." + decl.ref.Name
-			sumTypes[decl.ref.ToRefKey().String()] = goSumType{
-				Discriminator: stFqName,
-				Variants:      variants,
-			}
-		case *schema.TypeAlias:
-			for _, m := range d.Metadata {
-				if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
-					im, _, ok := goImportForWidenedType(d)
-					if !ok {
-						continue
-					}
-					typ, err := getGoExternalType(imports, m.NativeName)
-					if err != nil {
-						return nil, nil, err
-					}
-					importStatement := strconv.Quote(im)
-					if imports[im] != "" {
-						importStatement = imports[im] + " " + importStatement
-					}
-					if _, ok := externalTypes[importStatement]; !ok {
-						externalTypes[importStatement] = sets.NewSet[string]()
-					}
-					externalTypes[importStatement].Add(typ)
-				}
-			}
-		default:
-		}
-	}
-	for _, d := range getLocalSumTypes(module, nativeNames) {
-		sumTypes[d.fqName] = d
-	}
-	stOut := maps.Values(sumTypes)
-	slices.SortFunc(stOut, func(a, b goSumType) int {
-		return strings.Compare(a.Discriminator, b.Discriminator)
-	})
-
-	localExternalTypes, err := getLocalExternalTypes(module)
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, et := range localExternalTypes {
-		if _, ok := externalTypes[et.Import]; !ok {
-			externalTypes[et.Import] = sets.NewSet[string]()
-		}
-		externalTypes[et.Import].Append(et.Types...)
-	}
-
-	var etOut []goExternalType
-	for im, types := range externalTypes {
-		etOut = append(etOut, goExternalType{
-			Import: im,
-			Types:  types.ToSlice(),
-		})
-	}
-
-	return stOut, etOut, nil
-}
-
-func getGoSumType(enum *schema.Enum, nativeNames extract.NativeNames) optional.Option[goSumType] {
-	if enum.IsValueEnum() {
-		return optional.None[goSumType]()
-	}
-	variants := make([]goSumTypeVariant, 0, len(enum.Variants))
-	for _, v := range enum.Variants {
-		nativeName := nativeNames[v]
-		lastSlash := strings.LastIndex(nativeName, "/")
-		variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
-			Name:       nativeName[lastSlash+1:],
-			Type:       nativeName,
-			SchemaType: v.Value.(*schema.TypeValue).Value,
-		})
-	}
-	stFqName := nativeNames[enum]
-	lastSlash := strings.LastIndex(stFqName, "/")
-	return optional.Some(goSumType{
-		Discriminator: stFqName[lastSlash+1:],
-		Variants:      variants,
-		fqName:        stFqName,
-	})
-}
-
-func getGoExternalType(imports map[string]string, fqName string) (string, error) {
-	im, _, err := goImportFromQualifiedName(fqName)
-	if err != nil {
-		return "", err
-	}
-	pkg := imports[im]
-	if pkg == "" {
-		pkg = im[strings.LastIndex(im, "/")+1:]
-	}
-	typeName := fqName[strings.LastIndex(fqName, ".")+1:]
-	return fmt.Sprintf("%s.%s", pkg, typeName), nil
-}
-
-type externalDecl struct {
-	ref      *schema.Ref
-	resolved schema.Decl
-}
-
-// getRegisteredTypesExternalToModule returns all sum types and external types that are not defined in the given module.
-// These types must be registered in the main module.
-func getRegisteredTypesExternalToModule(module *schema.Module, sch *schema.Schema) []externalDecl {
-	combinedSch := schema.Schema{
-		Modules: append(sch.Modules, module),
-	}
-	var externalTypes []externalDecl
-	err := schema.Visit(&combinedSch, func(n schema.Node, next func() error) error {
-		ref, ok := n.(*schema.Ref)
-		if !ok {
-			return next()
-		}
-
-		decl, ok := sch.Resolve(ref).Get()
-		if !ok {
-			return next()
-		}
-		switch d := decl.(type) {
-		case *schema.Enum:
-			if ref.Module != "" && ref.Module != module.Name {
-				return next()
-			}
-			if d.IsValueEnum() {
-				return next()
-			}
-			externalTypes = append(externalTypes, externalDecl{
-				ref:      ref,
-				resolved: d,
-			})
-		case *schema.TypeAlias:
-			if len(d.Metadata) == 0 {
-				return next()
-			}
-			externalTypes = append(externalTypes, externalDecl{
-				ref:      ref,
-				resolved: d,
-			})
-		default:
-		}
-		return next()
-	})
-	if err != nil {
-		panic(fmt.Sprintf("failed to resolve external types and sum types external to the module schema: %v", err))
-	}
-	return externalTypes
-}
-
-func goVerbFromQualifiedName(qualifiedName string) (goVerb, error) {
+// returns the import path and directory name for a Go type
+// package and directory names are the same (dir=bar, pkg=bar): "github.com/foo/bar.A" => "github.com/foo/bar", none
+// package and directory names differ (dir=bar, pkg=baz): "github.com/foo/bar.baz.A" => "github.com/foo/bar", "baz"
+func nativeTypeFromQualifiedName(qualifiedName string) (nativeType, error) {
 	lastDotIndex := strings.LastIndex(qualifiedName, ".")
 	if lastDotIndex == -1 {
-		return goVerb{}, fmt.Errorf("invalid qualified type format %q", qualifiedName)
+		return nativeType{}, fmt.Errorf("invalid qualified type format %q", qualifiedName)
 	}
+
 	pkgPath := qualifiedName[:lastDotIndex]
 	typeName := qualifiedName[lastDotIndex+1:]
 	pkgName := path.Base(pkgPath)
-	return goVerb{
-		Name:       typeName,
-		Package:    pkgName,
-		MustImport: pkgPath,
-	}, nil
-}
-
-// returns the import path and directory name for an external type
-// package and directory names are the same (dir=bar, pkg=bar): "github.com/foo/bar.A" => "github.com/foo/bar", none
-// package and directory names differ (dir=bar, pkg=baz): "github.com/foo/bar.baz.A" => "github.com/foo/bar", "baz"
-func goImportFromQualifiedName(qualifiedName string) (importPath string, directoryName optional.Option[string], err error) {
-	lastDotIndex := strings.LastIndex(qualifiedName, ".")
-	if lastDotIndex == -1 {
-		return "", optional.None[string](), fmt.Errorf("invalid qualified type format %q", qualifiedName)
-	}
-
-	pkgPath := qualifiedName[:lastDotIndex]
-	pkgName := path.Base(pkgPath)
+	dirName := optional.None[string]()
 
 	if lastDotIndex = strings.LastIndex(pkgName, "."); lastDotIndex != -1 {
+		dirName = optional.Some(pkgName[:lastDotIndex])
 		pkgName = pkgName[lastDotIndex+1:]
 		pkgPath = pkgPath[:strings.LastIndex(pkgPath, ".")]
-		return pkgPath, optional.Some(pkgName), nil
 	}
-	return pkgPath, optional.None[string](), nil
+
+	return nativeType{
+		Name:          typeName,
+		pkg:           pkgName,
+		importPath:    pkgPath,
+		directoryName: dirName,
+	}, nil
 }
 
 // imports returns a map of import paths to aliases for a module.
@@ -1024,7 +1010,7 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 	// find all imports
 	imports := map[string]string{}
 	// map from import path to the first dir we see
-	extraImports := map[string]optional.Option[string]{}
+	extraImports := map[string]nativeType{}
 	_ = schema.VisitExcludingMetadataChildren(m, func(n schema.Node, next func() error) error { //nolint:errcheck
 		switch n := n.(type) {
 		case *schema.Ref:
@@ -1053,20 +1039,22 @@ func imports(m *schema.Module, aliasesMustBeExported bool) map[string]string {
 			if aliasesMustBeExported && !n.IsExported() {
 				return next()
 			}
-			if importPath, dirName, ok := goImportForWidenedType(n); ok && extraImports[importPath] == optional.None[string]() {
-				extraImports[importPath] = dirName
+			if nt, ok := nativeTypeForWidenedType(n); ok {
+				if existing, ok := extraImports[nt.importPath]; !ok || !existing.directoryName.Ok() {
+					extraImports[nt.importPath] = nt
+				}
 			}
 		default:
 		}
 		return next()
 	})
 
-	return addImports(imports, extraImports)
+	return addImports(imports, maps.Values(extraImports)...)
 }
 
 // addImports takes existing imports (mapping import path to pkg alias) and adds new imports by generating aliases
 // aliases are generated for external types by finding the shortest unique alias that can be used without conflict:
-func addImports(existingImports map[string]string, newImportPathsAndDirs map[string]optional.Option[string]) map[string]string {
+func addImports(existingImports map[string]string, newTypes ...nativeType) map[string]string {
 	imports := maps.Clone(existingImports)
 	// maps import path to possible aliases, shortest to longest
 	aliasesForImports := map[string][]string{}
@@ -1076,10 +1064,12 @@ func addImports(existingImports map[string]string, newImportPathsAndDirs map[str
 	for _, alias := range imports {
 		possibleImportAliases[alias]++
 	}
-	for importPath, dirName := range newImportPathsAndDirs {
+	for _, nt := range newTypes {
+		importPath := nt.importPath
+		dirName := nt.directoryName
 		pathComponents := strings.Split(importPath, "/")
-		if dirName, ok := dirName.Get(); ok {
-			pathComponents = append(pathComponents, dirName)
+		if _, ok := dirName.Get(); ok {
+			pathComponents = append(pathComponents, nt.pkg)
 		}
 
 		var currentAlias string
@@ -1120,5 +1110,39 @@ func addImports(existingImports map[string]string, newImportPathsAndDirs map[str
 			imports[importPath] = aliases[len(aliases)-1]
 		}
 	}
+	return imports
+}
+
+func formatGoImports(imports []string) []string {
+	getPriority := func(path string) int {
+		if strings.HasPrefix(path, "\"ftl/") {
+			return 2
+		}
+		// stdlib imports don't contain a dot (e.g., "fmt", "strings")
+		if !strings.Contains(path, ".") {
+			return 0
+		}
+		return 1
+	}
+
+	slices.SortFunc(imports, func(i, j string) int {
+		priorityI := getPriority(i)
+		priorityJ := getPriority(j)
+		if priorityI != priorityJ {
+			return priorityI - priorityJ
+		}
+		return strings.Compare(i, j)
+	})
+
+	// add newlines between import groupings
+	previousPriority := -1
+	for i, imp := range imports {
+		currentPriority := getPriority(imp)
+		if currentPriority != previousPriority && previousPriority != -1 {
+			imports[i-1] = fmt.Sprintf("%s\n", imports[i-1])
+		}
+		previousPriority = currentPriority
+	}
+
 	return imports
 }
