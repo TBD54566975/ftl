@@ -34,7 +34,7 @@ func init() {
 	buildColors = map[BuildState]string{
 		BuildStateWaiting:   "\u001B[93m",
 		BuildStateBuilding:  "\u001B[94m",
-		BuildStateBuilt:     "\u001B[94m",
+		BuildStateBuilt:     "\u001B[92m",
 		BuildStateDeploying: "\u001B[94m",
 		BuildStateDeployed:  "\u001B[92m",
 		BuildStateFailed:    "\u001B[91m",
