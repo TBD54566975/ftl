@@ -7,61 +7,7 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3 } from "@bufbuild/protobuf";
 
 /**
- * ResourceProperty is an implementation specific property of the resource populated at creation time
- *
- * @generated from message xyz.block.ftl.v1beta1.provisioner.ResourceProperty
- */
-export class ResourceProperty extends Message<ResourceProperty> {
-  /**
-   * @generated from field: string resource_id = 1;
-   */
-  resourceId = "";
-
-  /**
-   * @generated from field: string key = 2;
-   */
-  key = "";
-
-  /**
-   * @generated from field: string value = 3;
-   */
-  value = "";
-
-  constructor(data?: PartialMessage<ResourceProperty>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.ResourceProperty";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "resource_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "value", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ResourceProperty {
-    return new ResourceProperty().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ResourceProperty {
-    return new ResourceProperty().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ResourceProperty {
-    return new ResourceProperty().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ResourceProperty | PlainMessage<ResourceProperty> | undefined, b: ResourceProperty | PlainMessage<ResourceProperty> | undefined): boolean {
-    return proto3.util.equals(ResourceProperty, a, b);
-  }
-}
-
-/**
  * Resource is an abstract resource extracted from FTL Schema.
- *
- * we use convention of prefixing field names with out_ if they are populated
- * by the provisioning engine
  *
  * @generated from message xyz.block.ftl.v1beta1.provisioner.Resource
  */
@@ -72,14 +18,6 @@ export class Resource extends Message<Resource> {
    * @generated from field: string resource_id = 1;
    */
   resourceId = "";
-
-  /**
-   * Additional implementation specific properties populated
-   * when the resource was created
-   *
-   * @generated from field: repeated xyz.block.ftl.v1beta1.provisioner.ResourceProperty out_properties = 2;
-   */
-  outProperties: ResourceProperty[] = [];
 
   /**
    * @generated from oneof xyz.block.ftl.v1beta1.provisioner.Resource.resource
@@ -107,7 +45,6 @@ export class Resource extends Message<Resource> {
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.Resource";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "resource_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "out_properties", kind: "message", T: ResourceProperty, repeated: true },
     { no: 102, name: "postgres", kind: "message", T: PostgresResource, oneof: "resource" },
     { no: 103, name: "mysql", kind: "message", T: MysqlResource, oneof: "resource" },
   ]);
@@ -133,6 +70,18 @@ export class Resource extends Message<Resource> {
  * @generated from message xyz.block.ftl.v1beta1.provisioner.PostgresResource
  */
 export class PostgresResource extends Message<PostgresResource> {
+  /**
+   * fields populated after the resource has been created
+   *
+   * @generated from field: string out_read_endpoint = 101;
+   */
+  outReadEndpoint = "";
+
+  /**
+   * @generated from field: string out_write_endpoint = 102;
+   */
+  outWriteEndpoint = "";
+
   constructor(data?: PartialMessage<PostgresResource>) {
     super();
     proto3.util.initPartial(data, this);
@@ -141,6 +90,8 @@ export class PostgresResource extends Message<PostgresResource> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.PostgresResource";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 101, name: "out_read_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 102, name: "out_write_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PostgresResource {
@@ -164,6 +115,18 @@ export class PostgresResource extends Message<PostgresResource> {
  * @generated from message xyz.block.ftl.v1beta1.provisioner.MysqlResource
  */
 export class MysqlResource extends Message<MysqlResource> {
+  /**
+   * fields populated after the resource has been created
+   *
+   * @generated from field: string out_read_endpoint = 101;
+   */
+  outReadEndpoint = "";
+
+  /**
+   * @generated from field: string out_write_endpoint = 102;
+   */
+  outWriteEndpoint = "";
+
   constructor(data?: PartialMessage<MysqlResource>) {
     super();
     proto3.util.initPartial(data, this);
@@ -172,6 +135,8 @@ export class MysqlResource extends Message<MysqlResource> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.MysqlResource";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 101, name: "out_read_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 102, name: "out_write_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MysqlResource {

@@ -22,6 +22,11 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 )
 
+const (
+	PropertyDBReadEndpoint  = "db:read_endpoint"
+	PropertyDBWriteEndpoint = "db:write_endpoint"
+)
+
 type Config struct {
 	DatabaseSubnetGroupARN string `help:"ARN for the subnet group to be used to create Databases in" env:"FTL_PROVISIONER_CF_DB_SUBNET_GROUP"`
 }
@@ -143,11 +148,11 @@ func (c *CloudformationProvisioner) resourceToCF(cluster, module string, templat
 		}
 		addOutput(template.Outputs, goformation.GetAtt(clusterID, "Endpoint.Address"), &CloudformationOutputKey{
 			ResourceID:   resource.ResourceId,
-			PropertyName: "db:endpoint-write",
+			PropertyName: PropertyDBWriteEndpoint,
 		})
 		addOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &CloudformationOutputKey{
 			ResourceID:   resource.ResourceId,
-			PropertyName: "db:endpoint-read",
+			PropertyName: PropertyDBReadEndpoint,
 		})
 		return nil
 	}

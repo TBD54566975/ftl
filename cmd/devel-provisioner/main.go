@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -38,18 +39,18 @@ func main() {
 		panic(err)
 	}
 
+	desired := []*provisioner.Resource{{
+		ResourceId: "foobardb",
+		Resource: &provisioner.Resource_Postgres{
+			Postgres: &provisioner.PostgresResource{},
+		},
+	}}
+
 	req := &provisioner.ProvisionRequest{
 		FtlClusterId:      "ftl-test-1",
 		Module:            "test-module",
 		ExistingResources: []*provisioner.Resource{},
-		DesiredResources: []*provisioner.ResourceContext{{
-			Resource: &provisioner.Resource{
-				ResourceId: "foodb",
-				Resource: &provisioner.Resource_Postgres{
-					Postgres: &provisioner.PostgresResource{},
-				},
-			},
-		}},
+		DesiredResources:  inContext(desired),
 	}
 
 	plan, err := client.Client.Plan(ctx, connect.NewRequest(&provisioner.PlanRequest{
@@ -80,6 +81,7 @@ func main() {
 		println("polling: " + resp.Msg.ProvisioningToken)
 		status, err := client.Client.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
 			ProvisioningToken: resp.Msg.ProvisioningToken,
+			DesiredResources:  desired,
 		}))
 		if err != nil {
 			panic(err)
@@ -88,12 +90,24 @@ func main() {
 			panic(fail.Failed.ErrorMessage)
 		} else if success, ok := status.Msg.Status.(*provisioner.StatusResponse_Success); ok {
 			println("finished!")
-			for _, p := range success.Success.Properties {
-				println("  ", p.ResourceId, "\t", p.Key, "\t", p.Value)
+			for _, r := range success.Success.UpdatedResources {
+				jsn, err := json.MarshalIndent(r, "", "  ")
+				if err != nil {
+					panic(err)
+				}
+				println(string(jsn))
 			}
 			break
 		}
 		time.Sleep(retry.Duration())
 	}
 	println("done")
+}
+
+func inContext(resources []*provisioner.Resource) []*provisioner.ResourceContext {
+	var result []*provisioner.ResourceContext
+	for _, r := range resources {
+		result = append(result, &provisioner.ResourceContext{Resource: r})
+	}
+	return result
 }

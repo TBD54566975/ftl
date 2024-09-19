@@ -41,6 +41,11 @@ message ProvisionResponse {
 
 message StatusRequest {
   string provisioning_token = 1;
+
+  // The set of desired_resources used to initiate this provisioning request
+  // We need this as input here, so we can populate any resource fields in them
+  // when the provisioning finishes
+  repeated Resource desired_resources = 2;
 }
 
 message StatusResponse {
@@ -51,7 +56,9 @@ message StatusResponse {
   }
 
   message ProvisioningSuccess {
-    repeated ResourceProperty properties = 3;
+    // Some fields in the resources might have been populated
+    // during the provisioning. The new state is returned here
+    repeated Resource updated_resources = 1;
   }
 
   oneof status {
