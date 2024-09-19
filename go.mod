@@ -43,6 +43,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/multiformats/go-base36 v0.2.0
 	github.com/otiai10/copy v1.14.0
+	github.com/posener/complete v1.2.3
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.11.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
@@ -127,7 +128,6 @@ require (
 	github.com/petermattis/goid v0.0.0-20240813172612-4fcff4a6cae7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
-	github.com/posener/complete v1.2.3 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab // indirect
 	github.com/sasha-s/go-deadlock v0.3.5 // indirect

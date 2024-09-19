@@ -132,14 +132,15 @@ func main() {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		kctx.FatalIfErrorf(err)
 	}
-	ctx = bindContext(ctx, kctx, config)
+	ctx = bindContext(ctx, kctx, config, app)
 
 	err = kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
 }
 
-func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config) context.Context {
+func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong) context.Context {
 	kctx.Bind(projectConfig)
+	kctx.Bind(app)
 
 	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
