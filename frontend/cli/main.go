@@ -12,6 +12,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	kongtoml "github.com/alecthomas/kong-toml"
+	kongcompletion "github.com/jotaen/kong-completion"
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -32,27 +33,28 @@ type CLI struct {
 	Insecure       bool              `help:"Skip TLS certificate verification. Caution: susceptible to machine-in-the-middle attacks."`
 	Plain          bool              `help:"Use a plain console with no color or status line." env:"FTL_PLAIN"`
 
-	Interactive interactiveCmd `cmd:"" help:"Interactive mode." default:""`
-	Ping        pingCmd        `cmd:"" help:"Ping the FTL cluster."`
-	Status      statusCmd      `cmd:"" help:"Show FTL status."`
-	Init        initCmd        `cmd:"" help:"Initialize a new FTL project."`
-	New         newCmd         `cmd:"" help:"Create a new FTL module."`
-	Dev         devCmd         `cmd:"" help:"Develop FTL modules. Will start the FTL cluster, build and deploy all modules found in the specified directories, and watch for changes."`
-	PS          psCmd          `cmd:"" help:"List deployments."`
-	Serve       serveCmd       `cmd:"" help:"Start the FTL server."`
-	Call        callCmd        `cmd:"" help:"Call an FTL function."`
-	Update      updateCmd      `cmd:"" help:"Update a deployment."`
-	Kill        killCmd        `cmd:"" help:"Kill a deployment."`
-	Schema      schemaCmd      `cmd:"" help:"FTL schema commands."`
-	Build       buildCmd       `cmd:"" help:"Build all modules found in the specified directories."`
-	Box         boxCmd         `cmd:"" help:"Build a self-contained Docker container for running a set of module."`
-	BoxRun      boxRunCmd      `cmd:"" hidden:"" help:"Run FTL inside an ftl-in-a-box container"`
-	Deploy      deployCmd      `cmd:"" help:"Build and deploy all modules found in the specified directories."`
-	Migrate     migrateCmd     `cmd:"" help:"Run a database migration, if required, based on the migration table."`
-	Download    downloadCmd    `cmd:"" help:"Download a deployment."`
-	Secret      secretCmd      `cmd:"" help:"Manage secrets."`
-	Config      configCmd      `cmd:"" help:"Manage configuration."`
-	Pubsub      pubsubCmd      `cmd:"" help:"Manage pub/sub."`
+	Interactive interactiveCmd            `cmd:"" help:"Interactive mode." default:""`
+	Ping        pingCmd                   `cmd:"" help:"Ping the FTL cluster."`
+	Status      statusCmd                 `cmd:"" help:"Show FTL status."`
+	Init        initCmd                   `cmd:"" help:"Initialize a new FTL project."`
+	New         newCmd                    `cmd:"" help:"Create a new FTL module."`
+	Dev         devCmd                    `cmd:"" help:"Develop FTL modules. Will start the FTL cluster, build and deploy all modules found in the specified directories, and watch for changes."`
+	PS          psCmd                     `cmd:"" help:"List deployments."`
+	Serve       serveCmd                  `cmd:"" help:"Start the FTL server."`
+	Call        callCmd                   `cmd:"" help:"Call an FTL function."`
+	Update      updateCmd                 `cmd:"" help:"Update a deployment."`
+	Kill        killCmd                   `cmd:"" help:"Kill a deployment."`
+	Schema      schemaCmd                 `cmd:"" help:"FTL schema commands."`
+	Build       buildCmd                  `cmd:"" help:"Build all modules found in the specified directories."`
+	Box         boxCmd                    `cmd:"" help:"Build a self-contained Docker container for running a set of module."`
+	BoxRun      boxRunCmd                 `cmd:"" hidden:"" help:"Run FTL inside an ftl-in-a-box container"`
+	Deploy      deployCmd                 `cmd:"" help:"Build and deploy all modules found in the specified directories."`
+	Migrate     migrateCmd                `cmd:"" help:"Run a database migration, if required, based on the migration table."`
+	Download    downloadCmd               `cmd:"" help:"Download a deployment."`
+	Secret      secretCmd                 `cmd:"" help:"Manage secrets."`
+	Config      configCmd                 `cmd:"" help:"Manage configuration."`
+	Pubsub      pubsubCmd                 `cmd:"" help:"Manage pub/sub."`
+	Completion  kongcompletion.Completion `cmd:"" help:"Outputs shell code for initialising tab completions."`
 
 	// Specify the 1Password vault to access secrets from.
 	Vault string `name:"opvault" help:"1Password vault to be used for secrets. The name of the 1Password item will be the <ref> and the secret will be stored in the password field." placeholder:"VAULT"`
@@ -62,7 +64,8 @@ var cli CLI
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	kctx := kong.Parse(&cli,
+
+	app := kong.Must(&cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
 		kong.Configuration(kongtoml.Loader, ".ftl.toml", "~/.ftl.toml"),
 		kong.ShortUsageOnError(),
@@ -81,6 +84,11 @@ func main() {
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 		},
 	)
+	kongcompletion.Register(app)
+	kctx, err := app.Parse(os.Args[1:])
+	if err != nil {
+		panic(err)
+	}
 
 	if !cli.Plain {
 		sm := status.NewStatusManager(ctx)
