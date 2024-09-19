@@ -18,17 +18,20 @@ message Resource {
 
 // Resource types
 //
-// we use convention of prefixing field names with out_ if they are populated
-// after being provisioned by the provisioning engine
+// any output created by the provisioner is stored in a field called "output"
 
 message PostgresResource {
-  // fields populated after the resource has been created
-  string out_read_endpoint = 101;
-  string out_write_endpoint = 102;
+  message PostgresResourceOutput {
+    string read_endpoint = 1;
+    string write_endpoint = 2;
+  }
+  PostgresResourceOutput output = 1;
 }
 
 message MysqlResource {
-  // fields populated after the resource has been created
-  string out_read_endpoint = 101;
-  string out_write_endpoint = 102;
+  message MysqlResourceOutput {
+    string read_endpoint = 1;
+    string write_endpoint = 2;
+  }
+  MysqlResourceOutput output = 1;
 }
