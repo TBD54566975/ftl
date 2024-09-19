@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"reflect"
 	"testing"
 	"time"
@@ -42,7 +43,7 @@ func TestTimeline(t *testing.T) {
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = controllerDAL.CreateArtefact(ctx, testContent)
+		testSha, err = controllerDAL.Registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 
@@ -209,7 +210,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = controllerDAL.CreateArtefact(ctx, testContent)
+		testSha, err = controllerDAL.Registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 

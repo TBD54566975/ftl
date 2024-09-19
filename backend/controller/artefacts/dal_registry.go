@@ -10,6 +10,7 @@ import (
 )
 
 type ArtefactRow struct {
+	ID     int64
 	Digest []byte
 }
 
@@ -20,11 +21,11 @@ type DAL interface {
 }
 
 type DALRegistry struct {
-	dal DAL
+	db DAL
 }
 
-func NewDALRegistry(dal DAL) *DALRegistry {
-	return &DALRegistry{dal: dal}
+func NewDALRegistry(db DAL) *DALRegistry {
+	return &DALRegistry{db: db}
 }
 
 func MakeKey(id int64, digest []byte) ArtefactKey {
@@ -32,7 +33,7 @@ func MakeKey(id int64, digest []byte) ArtefactKey {
 }
 
 func (r *DALRegistry) GetMissingDigests(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
-	have, err := r.dal.GetArtefactDigests(ctx, sha256esToBytes(digests))
+	have, err := r.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
@@ -44,12 +45,12 @@ func (r *DALRegistry) GetMissingDigests(ctx context.Context, digests []sha256.SH
 
 func (r *DALRegistry) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
 	sha256digest := sha256.Sum(artefact.Content)
-	_, err := r.dal.CreateArtefact(ctx, sha256digest[:], artefact.Content)
+	_, err := r.db.CreateArtefact(ctx, sha256digest[:], artefact.Content)
 	return sha256digest, libdal.TranslatePGError(err)
 }
 
 func (r *DALRegistry) Download(_ context.Context, key ArtefactKey) io.ReadCloser {
-	return &dalArtefactStream{dal: r.dal, id: key.id}
+	return &dalArtefactStream{dal: r.db, id: key.id}
 }
 
 type dalArtefactStream struct {

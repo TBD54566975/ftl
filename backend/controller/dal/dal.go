@@ -160,12 +160,18 @@ type Reservation interface {
 	Rollback(ctx context.Context) error
 }
 
+type artefactDAL struct {
+	db dalsql.Querier
+}
+
 func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service) *DAL {
 	var d *DAL
+	db := dalsql.New(conn)
 	d = &DAL{
 		leaseDAL:   leasedal.New(conn),
-		db:         dalsql.New(conn),
+		db:         db,
 		encryption: encryption,
+		Registry:   artefacts.NewDALRegistry(&artefactDAL{db: db}),
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
@@ -181,13 +187,39 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 	return d
 }
 
+func (d *artefactDAL) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]artefacts.ArtefactRow, error) {
+	results, err := d.db.GetArtefactDigests(ctx, digests)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve artefact digests: %w", err)
+	}
+	return slices.Map(results, func(in dalsql.GetArtefactDigestsRow) artefacts.ArtefactRow {
+		return artefacts.ArtefactRow{ID: in.ID, Digest: in.Digest}
+	}), nil
+}
+
+func (d *artefactDAL) CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error) {
+	id, err := d.db.CreateArtefact(ctx, digest, content)
+	if err != nil {
+		return id, fmt.Errorf("could not create artefact: %w", err)
+	}
+	return id, nil
+}
+
+func (d *artefactDAL) GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error) {
+	bytes, err := d.db.GetArtefactContentRange(ctx, start, count, iD)
+	if err != nil {
+		return nil, fmt.Errorf("could not retrieve artefact content range: %w", err)
+	}
+	return bytes, nil
+}
+
 type DAL struct {
 	*libdal.Handle[DAL]
 	db dalsql.Querier
 
 	leaseDAL   *leasedal.DAL
 	encryption *encryption.Service
-	registry   artefacts.Registry
+	Registry   artefacts.Registry
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
@@ -789,7 +821,7 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymen
 		return &model.Artefact{
 			Path:       row.Path,
 			Executable: row.Executable,
-			Content:    d.registry.Download(ctx, key),
+			Content:    d.Registry.Download(ctx, key),
 			Digest:     key.Digest,
 		}
 	})
