@@ -20,7 +20,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/status"
 )
 
 type CLI struct {
@@ -90,10 +89,6 @@ func main() {
 		panic(err)
 	}
 
-	if !cli.Plain {
-		sm := status.NewStatusManager(ctx)
-		ctx = sm.IntoContext(ctx)
-	}
 	rpc.InitialiseClients(cli.Authenticators, cli.Insecure)
 
 	// Set some envars for child processes.
