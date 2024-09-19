@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1beta1.provisioner;
+
+import "xyz/block/ftl/v1/ftl.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner;provisioner";
+option java_multiple_files = true;
+
+service ProvisionerService {
+  rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Create a deployment.
+  rpc CreateDeployment(xyz.block.ftl.v1.CreateDeploymentRequest) returns (xyz.block.ftl.v1.CreateDeploymentResponse);
+}
