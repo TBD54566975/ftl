@@ -332,7 +332,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-	ingress.Handle(start, sch, requestKey, routes, w, r, s.callWithRequest)
+	ingress.Handle(start, sch, requestKey, routes, w, r, s.timeline, s.callWithRequest)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
@@ -459,10 +459,14 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		err = s.timeline.RecordLog(ctx, &timeline.Log{
+		err = s.timeline.InsertLogEvent(ctx, &timeline.Log{
 			DeploymentKey: deploymentKey,
 			RequestKey:    requestKey,
-			Msg:           msg,
+			Time:          msg.TimeStamp.AsTime(),
+			Level:         msg.LogLevel,
+			Attributes:    msg.Attributes,
+			Message:       msg.Message,
+			Error:         optional.Ptr(msg.Error),
 		})
 
 		if err != nil {
@@ -1052,7 +1056,7 @@ func (s *Service) callWithRequest(
 		callResponse = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 	}
-	s.timeline.RecordCall(ctx, &timeline.Call{
+	s.timeline.InsertCallEvent(ctx, &timeline.Call{
 		DeploymentKey:    route.Deployment,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentKey,

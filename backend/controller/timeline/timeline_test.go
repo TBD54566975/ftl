@@ -3,6 +3,10 @@ package timeline
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/url"
 	"reflect"
 	"testing"
 	"time"
@@ -19,7 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
-func TestTimelineDAL(t *testing.T) {
+func TestTimeline(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
@@ -72,21 +76,60 @@ func TestTimelineDAL(t *testing.T) {
 		Response:      []byte(`{"time":"now"}`),
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
+
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		err = timeline.insertCallEvent(ctx, callEvent)
+		call := callEventToCall(callEvent)
+		timeline.InsertCallEvent(ctx, call)
 		assert.NoError(t, err)
 	})
 
 	logEvent := &LogEvent{
-		Time:          time.Now().Round(time.Millisecond),
-		DeploymentKey: deploymentKey,
-		RequestKey:    optional.Some(requestKey),
-		Level:         int32(log.Warn),
-		Attributes:    map[string]string{"attr": "value"},
-		Message:       "A log entry",
+		Log: Log{
+			Time:          time.Now().Round(time.Millisecond),
+			DeploymentKey: deploymentKey,
+			RequestKey:    optional.Some(requestKey),
+			Level:         int32(log.Warn),
+			Attributes:    map[string]string{"attr": "value"},
+			Message:       "A log entry",
+		},
 	}
 	t.Run("InsertLogEntry", func(t *testing.T) {
-		err = timeline.InsertLogEvent(ctx, logEvent)
+		err = timeline.InsertLogEvent(ctx, &logEvent.Log)
+		assert.NoError(t, err)
+	})
+
+	ingressEvent := &IngressEvent{
+		DeploymentKey:  deploymentKey,
+		RequestKey:     optional.Some(requestKey),
+		Verb:           schema.Ref{},
+		Method:         "GET",
+		Path:           "/echo",
+		StatusCode:     200,
+		Time:           time.Now().Round(time.Millisecond),
+		Request:        []byte(`{"request":"body"}`),
+		RequestHeader:  json.RawMessage(`{"request":["header"]}`),
+		Response:       []byte(`{"response":"body"}`),
+		ResponseHeader: json.RawMessage(`{"response":["header"]}`),
+	}
+
+	t.Run("InsertHTTPIngressEvent", func(t *testing.T) {
+		timeline.InsertHTTPIngress(ctx, &Ingress{
+			DeploymentKey: ingressEvent.DeploymentKey,
+			RequestKey:    ingressEvent.RequestKey.MustGet(),
+			StartTime:     ingressEvent.Time,
+			Verb:          &ingressEvent.Verb,
+			Request: &http.Request{
+				Method: ingressEvent.Method,
+				URL:    &url.URL{Path: ingressEvent.Path},
+				Body:   io.NopCloser(bytes.NewReader(ingressEvent.Request)),
+				Header: http.Header(map[string][]string{"request": {"header"}}),
+			},
+			Response: &http.Response{
+				StatusCode: ingressEvent.StatusCode,
+				Body:       io.NopCloser(bytes.NewReader(ingressEvent.Response)),
+				Header:     http.Header(map[string][]string{"response": {"header"}}),
+			},
+		})
 		assert.NoError(t, err)
 	})
 
@@ -105,13 +148,13 @@ func TestTimelineDAL(t *testing.T) {
 		t.Run("NoFilters", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000)
 			assert.NoError(t, err)
-			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, FilterDeployments(deploymentKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
@@ -129,7 +172,7 @@ func TestTimelineDAL(t *testing.T) {
 		t.Run("ByRequests", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, FilterRequests(requestKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []TimelineEvent{callEvent, logEvent}, events)
+			assertEventsEqual(t, []TimelineEvent{callEvent, logEvent, ingressEvent}, events)
 		})
 	})
 }
@@ -191,8 +234,10 @@ func TestDeleteOldEvents(t *testing.T) {
 		Response:      []byte(`{"time": "now"}`),
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
+
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		err = timeline.insertCallEvent(ctx, callEvent)
+		call := callEventToCall(callEvent)
+		timeline.InsertCallEvent(ctx, call)
 		assert.NoError(t, err)
 	})
 	// hour old event
@@ -205,34 +250,40 @@ func TestDeleteOldEvents(t *testing.T) {
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		err = timeline.insertCallEvent(ctx, callEvent)
+		call := callEventToCall(callEvent)
+		timeline.InsertCallEvent(ctx, call)
 		assert.NoError(t, err)
 	})
 
 	// week old event
 	logEvent := &LogEvent{
-		Time:          time.Now().Add(-24 * 7 * time.Hour).Round(time.Millisecond),
-		DeploymentKey: deploymentKey,
-		RequestKey:    optional.Some(requestKey),
-		Level:         int32(log.Warn),
-		Attributes:    map[string]string{"attr": "value"},
-		Message:       "A log entry",
+		Log: Log{
+			Time:          time.Now().Add(-24 * 7 * time.Hour).Round(time.Millisecond),
+			DeploymentKey: deploymentKey,
+			RequestKey:    optional.Some(requestKey),
+			Level:         int32(log.Warn),
+			Attributes:    map[string]string{"attr": "value"},
+			Message:       "A log entry",
+		},
 	}
 	t.Run("InsertLogEntry", func(t *testing.T) {
-		err = timeline.InsertLogEvent(ctx, logEvent)
+		err = timeline.InsertLogEvent(ctx, &logEvent.Log)
 		assert.NoError(t, err)
 	})
+
 	// hour old event
 	logEvent = &LogEvent{
-		Time:          time.Now().Add(-1 * time.Hour).Round(time.Millisecond),
-		DeploymentKey: deploymentKey,
-		RequestKey:    optional.Some(requestKey),
-		Level:         int32(log.Warn),
-		Attributes:    map[string]string{"attr": "value"},
-		Message:       "A log entry",
+		Log: Log{
+			Time:          time.Now().Add(-1 * time.Hour).Round(time.Millisecond),
+			DeploymentKey: deploymentKey,
+			RequestKey:    optional.Some(requestKey),
+			Level:         int32(log.Warn),
+			Attributes:    map[string]string{"attr": "value"},
+			Message:       "A log entry",
+		},
 	}
 	t.Run("InsertLogEntry", func(t *testing.T) {
-		err = timeline.InsertLogEvent(ctx, logEvent)
+		err = timeline.InsertLogEvent(ctx, &logEvent.Log)
 		assert.NoError(t, err)
 	})
 

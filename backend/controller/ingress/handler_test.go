@@ -14,7 +14,10 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
@@ -68,6 +71,11 @@ func TestIngress(t *testing.T) {
 	}
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	conn := sqltest.OpenForTesting(ctx, t)
+	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
+	assert.NoError(t, err)
+
+	timelineSrv := timeline.New(ctx, conn, encryption)
 
 	for _, test := range []struct {
 		name       string
@@ -100,7 +108,7 @@ func TestIngress(t *testing.T) {
 			req := httptest.NewRequest(test.method, test.path, bytes.NewBuffer(test.payload)).WithContext(ctx)
 			req.URL.RawQuery = test.query.Encode()
 			reqKey := model.NewRequestKey(model.OriginIngress, "test")
-			ingress.Handle(time.Now(), sch, reqKey, routes, rec, req, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], requestKey optional.Option[model.RequestKey], parentRequestKey optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
+			ingress.Handle(time.Now(), sch, reqKey, routes, rec, req, timelineSrv, func(ctx context.Context, r *connect.Request[ftlv1.CallRequest], requestKey optional.Option[model.RequestKey], parentRequestKey optional.Option[model.RequestKey], requestSource string) (*connect.Response[ftlv1.CallResponse], error) {
 				body, err := encoding.Marshal(response)
 				assert.NoError(t, err)
 				return connect.NewResponse(&ftlv1.CallResponse{Response: &ftlv1.CallResponse_Body{Body: body}}), nil

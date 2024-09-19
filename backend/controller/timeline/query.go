@@ -255,14 +255,16 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				return nil, fmt.Errorf("invalid log level: %q: %w", row.CustomKey1.MustGet(), err)
 			}
 			out = append(out, &LogEvent{
-				ID:            row.ID,
-				DeploymentKey: row.DeploymentKey,
-				RequestKey:    row.RequestKey,
-				Time:          row.TimeStamp,
-				Level:         int32(level),
-				Attributes:    jsonPayload.Attributes,
-				Message:       jsonPayload.Message,
-				Error:         jsonPayload.Error,
+				ID: row.ID,
+				Log: Log{
+					DeploymentKey: row.DeploymentKey,
+					RequestKey:    row.RequestKey,
+					Time:          row.TimeStamp,
+					Level:         int32(level),
+					Attributes:    jsonPayload.Attributes,
+					Message:       jsonPayload.Message,
+					Error:         jsonPayload.Error,
+				},
 			})
 
 		case sql.EventTypeCall:
@@ -323,10 +325,21 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
 				return nil, fmt.Errorf("failed to decrypt ingress event: %w", err)
 			}
-			out = append(out, &DeploymentUpdatedEvent{
-				ID:            row.ID,
-				DeploymentKey: row.DeploymentKey,
-				Time:          row.TimeStamp,
+			out = append(out, &IngressEvent{
+				ID:             row.ID,
+				DeploymentKey:  row.DeploymentKey,
+				RequestKey:     row.RequestKey,
+				Verb:           schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
+				Method:         jsonPayload.Method,
+				Path:           jsonPayload.Path,
+				StatusCode:     jsonPayload.StatusCode,
+				Time:           row.TimeStamp,
+				Duration:       time.Duration(jsonPayload.DurationMS) * time.Millisecond,
+				Request:        jsonPayload.Request,
+				RequestHeader:  jsonPayload.RequestHeader,
+				Response:       jsonPayload.Response,
+				ResponseHeader: jsonPayload.ResponseHeader,
+				Error:          jsonPayload.Error,
 			})
 
 		default:
