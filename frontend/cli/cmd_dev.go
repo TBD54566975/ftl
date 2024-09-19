@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/lsp"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/status"
 )
 
 type devCmd struct {
@@ -28,6 +29,7 @@ type devCmd struct {
 }
 
 func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
+
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
 	}
@@ -52,7 +54,8 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		fmt.Println(dsn)
 		return nil
 	}
-
+	sm := status.FromContext(ctx)
+	starting := sm.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
@@ -78,6 +81,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return nil
 		case <-controllerReady:
 		}
+		starting.Close()
 
 		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(true)}
 		if d.Lsp {
