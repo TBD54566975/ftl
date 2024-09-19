@@ -32,6 +32,7 @@ func main() {
 		".",
 		"ftl-provisioner-cloudformation",
 		provisionerconnect.NewProvisionerPluginServiceClient,
+		plugin.WithEnvars("FTL_PROVISIONER_CF_DB_SUBNET_GROUP=aurora-postgres-subnet-group"),
 	)
 	if err != nil {
 		panic(err)
@@ -46,14 +47,6 @@ func main() {
 			Resource: &provisioner.Resource_Postgres{
 				Postgres: &provisioner.PostgresResource{},
 			},
-			Dependencies: []*provisioner.Resource{{
-				// Fetch these properties properly from the cluster
-				Resource: &provisioner.Resource_Ftl{},
-				OutProperties: []*provisioner.ResourceProperty{{
-					Key:   "aws:ftl-cluster:rds-subnet-group",
-					Value: "aurora-postgres-subnet-group",
-				}},
-			}},
 		}},
 	}
 

@@ -22,19 +22,24 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 )
 
+type Config struct {
+	DatabaseSubnetGroupARN string `help:"ARN for the subnet group to be used to create Databases in" env:"FTL_PROVISIONER_CF_DB_SUBNET_GROUP"`
+}
+
 type CloudformationProvisioner struct {
 	client *cloudformation.Client
+	confg  *Config
 }
 
 var _ provisionerconnect.ProvisionerPluginServiceHandler = (*CloudformationProvisioner)(nil)
 
-func NewCloudformationProvisioner(ctx context.Context, config struct{}) (context.Context, *CloudformationProvisioner, error) {
+func NewCloudformationProvisioner(ctx context.Context, config Config) (context.Context, *CloudformationProvisioner, error) {
 	client, err := createClient(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create cloudformation client: %w", err)
 	}
 
-	return ctx, &CloudformationProvisioner{client: client}, nil
+	return ctx, &CloudformationProvisioner{client: client, confg: &config}, nil
 }
 
 func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -68,7 +73,7 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 func (c *CloudformationProvisioner) createChangeSet(ctx context.Context, req *provisioner.ProvisionRequest) (*cloudformation.CreateChangeSetOutput, bool, error) {
 	stack := stackName(req)
 	changeSet := generateChangeSetName(stack)
-	templateStr, err := createTemplate(req)
+	templateStr, err := c.createTemplate(req)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to create cloudformation template: %w", err)
 	}
@@ -99,10 +104,10 @@ func generateChangeSetName(stack string) string {
 	return sanitize(stack) + strconv.FormatInt(time.Now().Unix(), 10)
 }
 
-func createTemplate(req *provisioner.ProvisionRequest) (string, error) {
+func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionRequest) (string, error) {
 	template := goformation.NewTemplate()
 	for _, resource := range req.DesiredResources {
-		if err := resourceToCF(req.FtlClusterId, req.Module, template, resource); err != nil {
+		if err := c.resourceToCF(req.FtlClusterId, req.Module, template, resource); err != nil {
 			return "", err
 		}
 	}
@@ -114,19 +119,15 @@ func createTemplate(req *provisioner.ProvisionRequest) (string, error) {
 	return string(bytes), nil
 }
 
-func resourceToCF(cluster, module string, template *goformation.Template, resource *provisioner.Resource) error {
+func (c *CloudformationProvisioner) resourceToCF(cluster, module string, template *goformation.Template, resource *provisioner.Resource) error {
 	if _, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
-		subnetGroup, err := findRDSSubnetGroup(resource)
-		if err != nil {
-			return err
-		}
 		clusterID := cloudformationResourceID(resource.ResourceId, "cluster")
 		instanceID := cloudformationResourceID(resource.ResourceId, "instance")
 		template.Resources[clusterID] = &rds.DBCluster{
 			Engine:                   ptr("aurora-postgresql"),
 			MasterUsername:           ptr("root"),
 			ManageMasterUserPassword: ptr(true),
-			DBSubnetGroupName:        ptr(subnetGroup),
+			DBSubnetGroupName:        ptr(c.confg.DatabaseSubnetGroupARN),
 			EngineMode:               ptr("provisioned"),
 			ServerlessV2ScalingConfiguration: &rds.DBCluster_ServerlessV2ScalingConfiguration{
 				MinCapacity: ptr(0.5),
@@ -151,20 +152,6 @@ func resourceToCF(cluster, module string, template *goformation.Template, resour
 		return nil
 	}
 	return errors.New("unsupported resource type")
-}
-
-func findRDSSubnetGroup(resource *provisioner.Resource) (string, error) {
-	key := "aws:ftl-cluster:rds-subnet-group"
-	for _, dep := range resource.Dependencies {
-		if _, ok := dep.Resource.(*provisioner.Resource_Ftl); ok {
-			for _, p := range dep.OutProperties {
-				if p.Key == key {
-					return p.Value, nil
-				}
-			}
-		}
-	}
-	return "", errors.New("can not create a database, as property was not found: " + key)
 }
 
 func ftlTags(cluster, module string) []tags.Tag {
