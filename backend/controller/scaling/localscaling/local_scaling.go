@@ -18,6 +18,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/runner"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
@@ -29,11 +30,14 @@ type localScaling struct {
 	cacheDir string
 	// Module -> Deployments -> info
 	runners map[string]map[string]*deploymentInfo
-
+	// Module -> Port
+	debugPorts map[string]*localdebug.DebugInfo
+	// Module -> Port, most recent runner is present in the map
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
 
 	prevRunnerSuffix int
+	ideSupport       optional.Option[localdebug.IDEIntegration]
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
@@ -63,15 +67,17 @@ func (l *localScaling) GetEndpointForDeployment(ctx context.Context, module stri
 
 type deploymentInfo struct {
 	runner   optional.Option[runnerInfo]
+	module   string
 	replicas int32
 	key      string
+	language string
 }
 type runnerInfo struct {
 	cancelFunc context.CancelFunc
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -84,6 +90,10 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		portAllocator:       portAllocator,
 		controllerAddresses: controllerAddresses,
 		prevRunnerSuffix:    -1,
+		debugPorts:          map[string]*localdebug.DebugInfo{},
+	}
+	if enableIDEIntegration && configPath != "" {
+		local.ideSupport = optional.Ptr(localdebug.NewIDEIntegration(configPath))
 	}
 
 	return &local, nil
@@ -106,7 +116,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 	}
 	deploymentRunners := moduleDeployments[msg.DeploymentKey]
 	if deploymentRunners == nil {
-		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: msg.DeploymentKey}
+		deploymentRunners = &deploymentInfo{runner: optional.None[runnerInfo](), key: msg.DeploymentKey, module: msg.ModuleName, language: msg.Schema.Runtime.Language}
 		moduleDeployments[msg.DeploymentKey] = deploymentRunners
 	}
 
@@ -137,8 +147,21 @@ func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *
 
 func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, info *deploymentInfo) error {
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
+	logger := log.FromContext(ctx)
 
 	bind := l.portAllocator.Next()
+	var debug *localdebug.DebugInfo
+	debugPort := 0
+	if ide, ok := l.ideSupport.Get(); ok {
+		debug = &localdebug.DebugInfo{
+			Language: info.language,
+			Port:     l.portAllocator.NextPort(),
+		}
+		l.debugPorts[info.module] = debug
+		ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)
+		debugPort = debug.Port
+	}
+
 	keySuffix := l.prevRunnerSuffix + 1
 	l.prevRunnerSuffix = keySuffix
 
@@ -147,6 +170,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		ControllerEndpoint: controllerEndpoint,
 		Key:                model.NewLocalRunnerKey(keySuffix),
 		Deployment:         deploymentKey,
+		DebugPort:          debugPort,
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)
@@ -159,7 +183,6 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	config.HeartbeatPeriod = time.Second
 	config.HeartbeatJitter = time.Millisecond * 100
 
-	logger := log.FromContext(ctx)
 	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
 
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
@@ -174,6 +197,10 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		l.lock.Lock()
 		defer l.lock.Unlock()
 		info.runner = optional.None[runnerInfo]()
+		if l.debugPorts[info.module] == debug {
+			delete(l.debugPorts, info.module)
+			// We don't actively clean up the run configuration, they are used on next start
+		}
 		err = l.reconcileRunners(ctx, info)
 		if err != nil {
 			logger.Errorf(err, "Failed to reconcile runners")

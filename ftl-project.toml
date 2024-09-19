@@ -3,6 +3,7 @@ module-dirs = ["examples/go"]
 ftl-min-version = ""
 hermit = false
 no-git = false
+disable-ide-integration = true
 
 [global]
   [global.configuration]

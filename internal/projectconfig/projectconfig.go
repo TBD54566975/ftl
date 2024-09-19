@@ -29,14 +29,15 @@ type Config struct {
 	// Path to the config file.
 	Path string `toml:"-"`
 
-	Name          string                      `toml:"name,omitempty"`
-	Global        ConfigAndSecrets            `toml:"global,omitempty"`
-	Modules       map[string]ConfigAndSecrets `toml:"modules,omitempty"`
-	ModuleDirs    []string                    `toml:"module-dirs,omitempty"`
-	Commands      Commands                    `toml:"commands,omitempty"`
-	FTLMinVersion string                      `toml:"ftl-min-version,omitempty"`
-	Hermit        bool                        `toml:"hermit,omitempty"`
-	NoGit         bool                        `toml:"no-git,omitempty"`
+	Name                  string                      `toml:"name,omitempty"`
+	Global                ConfigAndSecrets            `toml:"global,omitempty"`
+	Modules               map[string]ConfigAndSecrets `toml:"modules,omitempty"`
+	ModuleDirs            []string                    `toml:"module-dirs,omitempty"`
+	Commands              Commands                    `toml:"commands,omitempty"`
+	FTLMinVersion         string                      `toml:"ftl-min-version,omitempty"`
+	Hermit                bool                        `toml:"hermit,omitempty"`
+	NoGit                 bool                        `toml:"no-git,omitempty"`
+	DisableIDEIntegration bool                        `toml:"disable-ide-integration,omitempty"`
 }
 
 // Root directory of the project.

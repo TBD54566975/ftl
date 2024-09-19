@@ -167,14 +167,14 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 			config.GeneratedSchemaDir = "src/main/ftl-module-schema"
 		}
 		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"main", "quarkus-app"}
+			config.Deploy = []string{"quarkus-app", "launch"}
 		}
 	case "go":
 		if config.DeployDir == "" {
 			config.DeployDir = ".ftl"
 		}
 		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"main"}
+			config.Deploy = []string{"main", "launch"}
 		}
 		if len(config.Watch) == 0 {
 			config.Watch = []string{"**/*.go", "go.mod", "go.sum"}

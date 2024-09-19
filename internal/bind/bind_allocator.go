@@ -30,7 +30,7 @@ func NewBindAllocator(url *url.URL) (*BindAllocator, error) {
 	}, nil
 }
 
-func (b *BindAllocator) Next() *url.URL {
+func (b *BindAllocator) NextPort() int {
 	var l *net.TCPListener
 	var err error
 	for {
@@ -42,8 +42,12 @@ func (b *BindAllocator) Next() *url.URL {
 		}
 		_ = l.Close()
 
-		newURL := *b.baseURL
-		newURL.Host = net.JoinHostPort(b.baseURL.Hostname(), strconv.Itoa(int(b.port.Load())))
-		return &newURL
+		return int(b.port.Load())
 	}
+}
+
+func (b *BindAllocator) Next() *url.URL {
+	newURL := *b.baseURL
+	newURL.Host = net.JoinHostPort(b.baseURL.Hostname(), strconv.Itoa(b.NextPort()))
+	return &newURL
 }

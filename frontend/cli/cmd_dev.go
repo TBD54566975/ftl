@@ -67,7 +67,9 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return errors.New(ftlRunningErrorMsg)
 		}
 
-		g.Go(func() error { return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady)) })
+		g.Go(func() error {
+			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), true)
+		})
 	}
 
 	g.Go(func() error {
@@ -77,7 +79,7 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		case <-controllerReady:
 		}
 
-		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv)}
+		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(true)}
 		if d.Lsp {
 			d.languageServer = lsp.NewServer(ctx)
 			opts = append(opts, buildengine.WithListener(d.languageServer))
