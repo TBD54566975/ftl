@@ -1,17 +1,17 @@
-package api
+package identity
 
 import "context"
 
 type KeyPair interface {
-	Signer() (IdentitySigner, error)
-	Verifier() (IdentityVerifier, error)
+	Signer() (Signer, error)
+	Verifier() (Verifier, error)
 }
 
-type IdentityVerifier interface {
+type Verifier interface {
 	Verify(signedData SignedData) error
 }
 
-type IdentitySigner interface {
+type Signer interface {
 	Sign(data []byte) (*SignedData, error)
 }
 
@@ -20,7 +20,7 @@ type SignedData struct {
 	Signature []byte
 }
 
-type IdentityKeyStoreProvider interface {
+type KeyStoreProvider interface {
 	// EnsureKey asks a provider to check for an identity key.
 	// If not available, call the generateKey function to create a new key.
 	// The provider should handle transactions around checking and setting the key, to prevent race conditions.
