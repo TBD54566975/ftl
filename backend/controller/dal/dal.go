@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"strings"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	xmaps "golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"

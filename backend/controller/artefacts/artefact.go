@@ -2,8 +2,9 @@ package artefacts
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/internal/sha256"
 	"io"
+
+	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 // Metadata container for an artefact's metadata

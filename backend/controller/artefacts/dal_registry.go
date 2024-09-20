@@ -2,11 +2,13 @@ package artefacts
 
 import (
 	"context"
+	"io"
+
+	sets "github.com/deckarep/golang-set/v2"
+
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
-	sets "github.com/deckarep/golang-set/v2"
-	"io"
 )
 
 type ArtefactRow struct {
