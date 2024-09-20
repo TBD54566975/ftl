@@ -1,4 +1,3 @@
-import type { Timestamp } from '@bufbuild/protobuf'
 import { useContext, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { timeFilter, useTimeline } from '../../api/timeline/index.ts'
@@ -56,7 +55,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
 
     switch (entry.entry?.case) {
       case 'call':
-        openPanel(<TimelineCallDetails timestamp={entry.timeStamp as Timestamp} event={entry} />, handlePanelClosed)
+        openPanel(<TimelineCallDetails event={entry} />, handlePanelClosed)
         break
       case 'log':
         openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />, handlePanelClosed)
@@ -68,7 +67,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
         openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />, handlePanelClosed)
         break
       case 'ingress':
-        openPanel(<TimelineIngressDetails timestamp={entry.timeStamp as Timestamp} event={entry} />, handlePanelClosed)
+        openPanel(<TimelineIngressDetails event={entry} />, handlePanelClosed)
         break
       default:
         break
