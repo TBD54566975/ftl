@@ -1,6 +1,6 @@
 builds:
   - id: ftl
-    main: ./frontend/cli/ftl
+    main: ./frontend/cli
     binary: ftl
     env:
       - CGO_ENABLED=0
