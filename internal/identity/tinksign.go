@@ -10,13 +10,13 @@ import (
 	"github.com/tink-crypto/tink-go/v2/tink"
 )
 
-var _ Signer = &KMSIdentitySigner{}
+var _ Signer = &TinkSigner{}
 
-type KMSIdentitySigner struct {
+type TinkSigner struct {
 	signer tink.Signer
 }
 
-func (k KMSIdentitySigner) Sign(data []byte) (*SignedData, error) {
+func (k TinkSigner) Sign(data []byte) (*SignedData, error) {
 	bytes, err := k.signer.Sign(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign data: %w", err)
@@ -28,13 +28,13 @@ func (k KMSIdentitySigner) Sign(data []byte) (*SignedData, error) {
 	}, nil
 }
 
-var _ Verifier = &KMSIdentityVerifier{}
+var _ Verifier = &TinkVerifier{}
 
-type KMSIdentityVerifier struct {
+type TinkVerifier struct {
 	verifier tink.Verifier
 }
 
-func (k KMSIdentityVerifier) Verify(signedData SignedData) error {
+func (k TinkVerifier) Verify(signedData SignedData) error {
 	err := k.verifier.Verify(signedData.Signature, signedData.Data)
 	if err != nil {
 		return fmt.Errorf("failed to verify signature: %w", err)
@@ -55,7 +55,7 @@ func (t TinkKeyPair) Signer() (Signer, error) {
 		return nil, fmt.Errorf("failed to create signer: %w", err)
 	}
 
-	return KMSIdentitySigner{
+	return TinkSigner{
 		signer: signer,
 	}, nil
 }
@@ -71,14 +71,18 @@ func (t TinkKeyPair) Verifier() (Verifier, error) {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
 	}
 
-	return &KMSIdentityVerifier{
+	return &TinkVerifier{
 		verifier: verifier,
 	}, nil
 }
 
-// TODO encrypt with KMS
-// For now dump the key into the db as plaintext
-func newKeyPair() (*TinkKeyPair, error) {
+// TODO: Remove this
+func (t TinkKeyPair) Handle() keyset.Handle {
+	return t.keysetHandle
+}
+
+// NewKeyPair creates a new key pair using Tink's ED25519 key template
+func NewKeyPair() (*TinkKeyPair, error) {
 	keysetHandle, err := keyset.NewHandle(signature.ED25519KeyTemplate())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create keyset handle: %w", err)

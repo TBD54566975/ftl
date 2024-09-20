@@ -8,44 +8,34 @@ package sql
 import (
 	"context"
 
-	"github.com/alecthomas/types/optional"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 )
 
 const createOnlyIdentityKey = `-- name: CreateOnlyIdentityKey :exec
-INSERT INTO identity_keys (id, key)
-VALUES (1, $1)
+INSERT INTO identity_keys (id, private, public, verify_signature)
+VALUES (1, $1, $2, $3)
 `
 
-func (q *Queries) CreateOnlyIdentityKey(ctx context.Context, key []byte) error {
-	_, err := q.db.ExecContext(ctx, createOnlyIdentityKey, key)
+func (q *Queries) CreateOnlyIdentityKey(ctx context.Context, private api.EncryptedIdentityColumn, public []byte, verifySignature []byte) error {
+	_, err := q.db.ExecContext(ctx, createOnlyIdentityKey, private, public, verifySignature)
 	return err
 }
 
 const getOnlyIdentityKey = `-- name: GetOnlyIdentityKey :one
-SELECT key, verify_signature
+SELECT private, public, verify_signature
 FROM identity_keys
 WHERE id = 1
 `
 
 type GetOnlyIdentityKeyRow struct {
-	Key             []byte
-	VerifySignature optional.Option[string]
+	Private         api.EncryptedIdentityColumn
+	Public          []byte
+	VerifySignature []byte
 }
 
 func (q *Queries) GetOnlyIdentityKey(ctx context.Context) (GetOnlyIdentityKeyRow, error) {
 	row := q.db.QueryRowContext(ctx, getOnlyIdentityKey)
 	var i GetOnlyIdentityKeyRow
-	err := row.Scan(&i.Key, &i.VerifySignature)
+	err := row.Scan(&i.Private, &i.Public, &i.VerifySignature)
 	return i, err
-}
-
-const updateIdentityVerification = `-- name: UpdateIdentityVerification :exec
-UPDATE identity_keys
-SET verify_signature = $1
-WHERE id = 1
-`
-
-func (q *Queries) UpdateIdentityVerification(ctx context.Context, verifySignature optional.Option[string]) error {
-	_, err := q.db.ExecContext(ctx, updateIdentityVerification, verifySignature)
-	return err
 }

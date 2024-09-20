@@ -7,13 +7,12 @@ package sql
 import (
 	"context"
 
-	"github.com/alecthomas/types/optional"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 )
 
 type Querier interface {
-	CreateOnlyIdentityKey(ctx context.Context, key []byte) error
+	CreateOnlyIdentityKey(ctx context.Context, private api.EncryptedIdentityColumn, public []byte, verifySignature []byte) error
 	GetOnlyIdentityKey(ctx context.Context) (GetOnlyIdentityKeyRow, error)
-	UpdateIdentityVerification(ctx context.Context, verifySignature optional.Option[string]) error
 }
 
 var _ Querier = (*Queries)(nil)

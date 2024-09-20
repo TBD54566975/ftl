@@ -37,7 +37,7 @@ func (e *EncryptedColumn[SK]) Scan(src interface{}) error {
 
 type EncryptedTimelineColumn = EncryptedColumn[TimelineSubKey]
 type EncryptedAsyncColumn = EncryptedColumn[AsyncSubKey]
-type EncryptedIdentityKey = EncryptedColumn[IdentityKeySubKey]
+type EncryptedIdentityColumn = EncryptedColumn[IdentityKeySubKey]
 
 type OptionalEncryptedTimelineColumn = optional.Option[EncryptedTimelineColumn]
 type OptionalEncryptedAsyncColumn = optional.Option[EncryptedAsyncColumn]
