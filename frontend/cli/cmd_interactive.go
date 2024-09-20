@@ -54,14 +54,16 @@ func (i *interactiveCmd) Run(ctx context.Context, k *kong.Kong, projectConfig pr
 			errorf("%s", err)
 			continue
 		}
-		defer func() {
-			// Catch Exit() and continue the loop
-			if r := recover(); r != nil {
-				if r == errExitTrap { //nolint:errorlint
-					return
+		func() {
+			defer func() {
+				// Catch Exit() and continue the loop
+				if r := recover(); r != nil {
+					if r == errExitTrap { //nolint:errorlint
+						return
+					}
+					panic(r)
 				}
-				panic(r)
-			}
+			}()
 			kctx, err := k.Parse(args)
 			if err != nil {
 				errorf("%s", err)
