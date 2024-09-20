@@ -250,6 +250,9 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	if devMode {
 		args = []string{"build", "-gcflags=all=-N -l", "-o", "../../main", "."}
 	}
+	// We have seen lots of upstream HTTP/2 failures that make CI unstable.
+	// Disable HTTP/2 for now during the build. This can probably be removed later
+	buildEnv = append(buildEnv, "GODEBUG=http2client=0")
 	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunBuffered(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to compile: %w", err)
