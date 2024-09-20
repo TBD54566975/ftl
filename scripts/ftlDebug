@@ -1,0 +1,13 @@
+#!/bin/bash
+# Note that this does not seem to work in intellij, as it can't handle dlv without --continue
+# VS Code works great though
+set -euo pipefail
+ftldir="$(dirname "$(readlink -f "$0")")/.."
+name="ftl"
+dest="${ftldir}/build/devel"
+src="./cmd/${name}"
+if [ "${name}" = "ftl" ]; then
+  src="./frontend/cli"
+fi
+mkdir -p "$dest"
+(cd "${ftldir}/${src}" && dlv debug --headless --listen=:2345 --api-version=2 --log --accept-multiclient -- "$@" )
