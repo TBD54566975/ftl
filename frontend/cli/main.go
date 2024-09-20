@@ -17,10 +17,10 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	"github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/status"
 )
 
 type CLI struct {
@@ -92,7 +92,7 @@ func main() {
 	}
 
 	if !cli.Plain {
-		sm := status.NewStatusManager(ctx)
+		sm := console.NewStatusManager(ctx)
 		ctx = sm.IntoContext(ctx)
 		defer sm.Close()
 	}
@@ -101,13 +101,6 @@ func main() {
 	// Set some envars for child processes.
 	os.Setenv("LOG_LEVEL", cli.LogConfig.Level.String())
 
-	logger := log.Configure(os.Stderr, cli.LogConfig)
-	ctx = log.ContextWithLogger(ctx, logger)
-
-	if cli.Insecure {
-		logger.Warnf("--insecure skips TLS certificate verification")
-	}
-
 	configPath := cli.ConfigFlag
 	if configPath == "" {
 		var ok bool
@@ -115,6 +108,13 @@ func main() {
 		if !ok {
 			kctx.Fatalf("could not determine default config path, either place an ftl-project.toml file in the root of your project, use --config=FILE, or set the FTL_CONFIG envar")
 		}
+	}
+
+	logger := log.Configure(os.Stderr, cli.LogConfig)
+	ctx = log.ContextWithLogger(ctx, logger)
+
+	if cli.Insecure {
+		logger.Warnf("--insecure skips TLS certificate verification")
 	}
 
 	os.Setenv("FTL_CONFIG", configPath)
@@ -140,6 +140,8 @@ func main() {
 	kctx.FatalIfErrorf(err)
 }
 
+var _ console.KongContextBinder = bindContext
+
 func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong) context.Context {
 	kctx.Bind(projectConfig)
 	kctx.Bind(app)
@@ -154,5 +156,6 @@ func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectc
 
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
+	kctx.BindTo(bindContext, (*console.KongContextBinder)(nil))
 	return ctx
 }

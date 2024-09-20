@@ -9,7 +9,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	console "github.com/TBD54566975/ftl/internal/status"
+	"github.com/TBD54566975/ftl/internal/console"
 )
 
 type statusCmd struct {

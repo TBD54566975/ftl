@@ -1,4 +1,4 @@
-package status
+package console
 
 import (
 	"bytes"
@@ -13,8 +13,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/alecthomas/atomic"
+	"github.com/alecthomas/kong"
 	"github.com/tidwall/pretty"
 	"golang.org/x/term"
+
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 type BuildState string
@@ -72,6 +75,8 @@ type terminalStatusManager struct {
 	height           int
 	width            int
 	exitWait         sync.WaitGroup
+	console          bool
+	consoleRefresh   func()
 }
 
 type statusKey struct{}
@@ -158,7 +163,6 @@ func NewStatusManager(ctx context.Context) StatusManager {
 		sm.Close()
 	}()
 	return sm
-
 }
 
 func UpdateModuleState(ctx context.Context, module string, state BuildState) {
@@ -182,16 +186,18 @@ func (r *terminalStatusManager) gotoCoords(line int, col int) {
 	r.underlyingWrite(fmt.Sprintf("\033[%d;%dH", line, col))
 }
 
-func (r *terminalStatusManager) gotoLine(line int) {
-	r.gotoCoords(line, 0)
-}
 func (r *terminalStatusManager) clearStatusMessages() {
 	if r.totalStatusLines == 0 {
 		return
 	}
-	for i := range r.totalStatusLines {
-		r.gotoLine(r.height - r.totalStatusLines + 1 + i)
-		r.underlyingWrite("\033[K")
+	count := r.totalStatusLines
+	if r.console {
+		count--
+		// Don't clear the console line
+		r.underlyingWrite("\u001B[1A")
+	}
+	for range count {
+		r.underlyingWrite("\033[2K\u001B[1A")
 	}
 }
 
@@ -260,11 +266,6 @@ func (r *terminalStatusManager) Close() {
 }
 
 func (r *terminalStatusManager) writeLine(s string) {
-	if r.height < 7 || r.width < 20 || r.height-r.totalStatusLines < 5 {
-		// Not enough space to draw anything
-		r.underlyingWrite(s + "\n")
-		return
-	}
 	r.statusLock.RLock()
 	defer r.statusLock.RUnlock()
 
@@ -273,32 +274,15 @@ func (r *terminalStatusManager) writeLine(s string) {
 		return
 	}
 	r.clearStatusMessages()
-	r.gotoLine(r.height - r.totalStatusLines)
 	r.underlyingWrite("\n" + s)
-	for range r.totalStatusLines {
-		r.underlyingWrite("\n")
-	}
-	if r.totalStatusLines == 0 {
-		r.underlyingWrite("\n")
-	}
-	r.gotoLine(r.height)
 	r.redrawStatus()
 
 }
 func (r *terminalStatusManager) redrawStatus() {
-	if r.height < 7 || r.width < 20 || r.height-r.totalStatusLines < 5 {
-		// Not enough space to draw anything
-		return
-	}
-
 	if r.totalStatusLines == 0 || r.closed.Load() {
 		return
 	}
-	// If the console is tiny we don't do this
-	r.clearStatusMessages()
-	r.gotoLine(r.height - r.totalStatusLines)
-
-	r.underlyingWrite("\n--\n")
+	r.underlyingWrite("\n\n")
 	for i := len(r.lines) - 1; i >= 0; i-- {
 		msg := r.lines[i].message
 		if msg != "" {
@@ -314,7 +298,12 @@ func (r *terminalStatusManager) redrawStatus() {
 			}
 		}
 	}
-
+	if r.console {
+		r.underlyingWrite("\n")
+	}
+	if r.consoleRefresh != nil {
+		r.consoleRefresh()
+	}
 }
 
 func (r *terminalStatusManager) recalculateLines() {
@@ -335,13 +324,20 @@ func (r *terminalStatusManager) recalculateLines() {
 			perLine = 1
 		}
 		slices.Sort(keys)
+		multiLine := false
 		for i, k := range keys {
 			if i%perLine == 0 && i > 0 {
 				msg += "\n"
+				multiLine = true
 			}
 			pad := strings.Repeat(" ", entryLength-len(k)-moduleStatusPadding+2)
 			state := r.moduleStates[k]
 			msg += pad + buildColors[state] + k + ": " + string(state) + "\u001B[39m"
+		}
+		if !multiLine {
+			// For multi-line messages we don't want to trim the message as we want to line up the columns
+			// For a single line this just looks weird
+			msg = strings.TrimSpace(msg)
 		}
 		r.moduleLine.message = msg
 	}
@@ -355,10 +351,10 @@ func (r *terminalStatusManager) recalculateLines() {
 	if total > 0 {
 		total++
 	}
-	if total > r.totalStatusLines {
-		r.gotoLine(r.height - r.totalStatusLines)
-		r.underlyingWrite(strings.Repeat("\n", total-r.totalStatusLines))
+	if r.console {
+		total++
 	}
+	r.clearStatusMessages()
 	r.totalStatusLines = total
 	r.redrawStatus()
 }
@@ -418,4 +414,26 @@ func (r *terminalStatusLine) SetMessage(message string) {
 	defer r.manager.statusLock.Unlock()
 	r.message = message
 	r.manager.recalculateLines()
+}
+
+func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder) {
+	sm := FromContext(ctx)
+	if tsm, ok := sm.(*terminalStatusManager); ok {
+		tsm.console = true
+		go func() {
+
+			err := RunInteractiveConsole(ctx, k, projectConfig, binder, func(f func()) {
+				tsm.statusLock.Lock()
+				defer tsm.statusLock.Unlock()
+				tsm.consoleRefresh = f
+			})
+			if err != nil {
+				fmt.Printf("\033[31mError: %s\033[0m\n", err)
+				return
+			}
+		}()
+		tsm.statusLock.Lock()
+		defer tsm.statusLock.Unlock()
+		tsm.recalculateLines()
+	}
 }
