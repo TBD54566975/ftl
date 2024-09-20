@@ -25,6 +25,10 @@ const BuildStateDeploying BuildState = " 🚚️"
 const BuildStateDeployed BuildState = " ✅️️"
 const BuildStateFailed BuildState = "💥"
 
+// moduleStatusPadding is the padding between module status entries
+// it accounts for the colon, space and the emoji
+const moduleStatusPadding = 10
+
 var _ StatusManager = &terminalStatusManager{}
 var _ StatusLine = &terminalStatusLine{}
 
@@ -306,7 +310,7 @@ func (r *terminalStatusManager) recalculateLines() {
 		entryLength := 0
 		keys := []string{}
 		for k := range r.moduleStates {
-			thisLength := len(k) + 8
+			thisLength := len(k) + moduleStatusPadding
 			if thisLength > entryLength {
 				entryLength = thisLength
 			}
@@ -322,7 +326,7 @@ func (r *terminalStatusManager) recalculateLines() {
 			if i%perLine == 0 && i > 0 {
 				msg += "\n"
 			}
-			pad := strings.Repeat(" ", entryLength-len(k)-8)
+			pad := strings.Repeat(" ", entryLength-len(k)-moduleStatusPadding+2)
 			state := r.moduleStates[k]
 			msg += pad + buildColors[state] + k + ": " + string(state) + "\u001B[39m"
 		}
