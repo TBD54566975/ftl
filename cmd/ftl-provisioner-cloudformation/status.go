@@ -103,16 +103,16 @@ func updateResources(outputs []types.Output, update []*provisioner.Resource) err
 				if postgres, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
 					switch key.PropertyName {
 					case PropertyDBReadEndpoint:
-						postgres.Postgres.OutReadEndpoint = *output.OutputValue
+						postgres.Postgres.Output.ReadEndpoint = *output.OutputValue
 					case PropertyDBWriteEndpoint:
-						postgres.Postgres.OutWriteEndpoint = *output.OutputValue
+						postgres.Postgres.Output.WriteEndpoint = *output.OutputValue
 					}
 				} else if mysql, ok := resource.Resource.(*provisioner.Resource_Mysql); ok {
 					switch key.PropertyName {
 					case PropertyDBReadEndpoint:
-						mysql.Mysql.OutReadEndpoint = *output.OutputValue
+						mysql.Mysql.Output.ReadEndpoint = *output.OutputValue
 					case PropertyDBWriteEndpoint:
-						mysql.Mysql.OutWriteEndpoint = *output.OutputValue
+						mysql.Mysql.Output.WriteEndpoint = *output.OutputValue
 					}
 				}
 			}
