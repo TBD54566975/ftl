@@ -47,18 +47,23 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 
 	logger.Debugf("Calling %s", c.Verb)
 
+	return callVerb(ctx, client, ctlCli, c.Verb, requestJSON)
+}
+
+func callVerb(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli ftlv1connect.ControllerServiceClient, verb reflection.Ref, requestJSON []byte) error {
+	logger := log.FromContext(ctx)
 	// otherwise, we have a match so call the verb
 	resp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{
-		Verb: c.Verb.ToProto(),
+		Verb: verb.ToProto(),
 		Body: requestJSON,
 	}))
 
 	if cerr := new(connect.Error); errors.As(err, &cerr) && cerr.Code() == connect.CodeNotFound {
-		suggestions, err := c.findSuggestions(ctx, ctlCli)
+		suggestions, err := findSuggestions(ctx, ctlCli, verb)
 
 		// if we have suggestions, return a helpful error message. otherwise continue to the original error
 		if err == nil {
-			return fmt.Errorf("verb not found: %s\n\nDid you mean one of these?\n%s", c.Verb, strings.Join(suggestions, "\n"))
+			return fmt.Errorf("verb not found: %s\n\nDid you mean one of these?\n%s", verb, strings.Join(suggestions, "\n"))
 		}
 	}
 	if err != nil {
@@ -80,7 +85,7 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 // findSuggestions looks up the schema and finds verbs that are similar to the one that was not found
 // it uses the levenshtein distance to determine similarity - if the distance is less than 40% of the length of the verb,
 // it returns an error if no closely matching suggestions are found
-func (c *callCmd) findSuggestions(ctx context.Context, client ftlv1connect.ControllerServiceClient) ([]string, error) {
+func findSuggestions(ctx context.Context, client ftlv1connect.ControllerServiceClient, verb reflection.Ref) ([]string, error) {
 	logger := log.FromContext(ctx)
 
 	// lookup the verbs
@@ -104,7 +109,7 @@ func (c *callCmd) findSuggestions(ctx context.Context, client ftlv1connect.Contr
 	for _, module := range modules {
 		for _, v := range module.Verbs() {
 			verbName := fmt.Sprintf("%s.%s", module.Name, v.Name)
-			if verbName == fmt.Sprintf("%s.%s", c.Verb.Module, c.Verb.Name) {
+			if verbName == fmt.Sprintf("%s.%s", verb.Module, verb.Name) {
 				break
 			}
 
@@ -115,7 +120,7 @@ func (c *callCmd) findSuggestions(ctx context.Context, client ftlv1connect.Contr
 	suggestions := []string{}
 
 	logger.Debugf("Found %d verbs", len(verbs))
-	needle := fmt.Sprintf("%s.%s", c.Verb.Module, c.Verb.Name)
+	needle := fmt.Sprintf("%s.%s", verb.Module, verb.Name)
 
 	// only consider suggesting verbs that are within 40% of the length of the needle
 	distanceThreshold := int(float64(len(needle))*0.4) + 1

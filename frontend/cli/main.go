@@ -42,6 +42,7 @@ type CLI struct {
 	PS          psCmd                     `cmd:"" help:"List deployments."`
 	Serve       serveCmd                  `cmd:"" help:"Start the FTL server."`
 	Call        callCmd                   `cmd:"" help:"Call an FTL function."`
+	Replay      replayCmd                 `cmd:"" help:"Call an FTL function with the same request body as the last invocation."`
 	Update      updateCmd                 `cmd:"" help:"Update a deployment."`
 	Kill        killCmd                   `cmd:"" help:"Kill a deployment."`
 	Schema      schemaCmd                 `cmd:"" help:"FTL schema commands."`
