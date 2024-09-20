@@ -6,13 +6,14 @@ import (
 	"net/url"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/kong"
+	"golang.org/x/sync/errgroup"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/alecthomas/kong"
-	"golang.org/x/sync/errgroup"
 )
 
 type Config struct {
