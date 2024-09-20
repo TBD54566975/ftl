@@ -12,7 +12,6 @@ import (
 
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
-	sets "github.com/deckarep/golang-set/v2"
 	xmaps "golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 
