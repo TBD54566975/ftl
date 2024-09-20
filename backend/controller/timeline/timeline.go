@@ -18,6 +18,7 @@ const (
 	EventTypeCall              = sql.EventTypeCall
 	EventTypeDeploymentCreated = sql.EventTypeDeploymentCreated
 	EventTypeDeploymentUpdated = sql.EventTypeDeploymentUpdated
+	EventTypeIngress           = sql.EventTypeIngress
 )
 
 // TimelineEvent types.

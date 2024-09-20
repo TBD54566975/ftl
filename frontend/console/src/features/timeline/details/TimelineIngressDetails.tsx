@@ -1,23 +1,20 @@
 import type { Timestamp } from '@bufbuild/protobuf'
-import { useContext, useEffect, useState } from 'react'
+import { useContext } from 'react'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
-import type { IngressEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Event, IngressEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
+import { TraceGraph } from '../../traces/TraceGraph'
 import { verbRefString } from '../../verbs/verb.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-export const TimelineIngressDetails = ({ timestamp, ingress }: { timestamp?: Timestamp; ingress: IngressEvent }) => {
+export const TimelineIngressDetails = ({ timestamp, event }: { timestamp?: Timestamp; event: Event }) => {
   const { closePanel } = useContext(SidePanelContext)
-  const [selectedIngress, setSelectedIngress] = useState(ingress)
 
-  useEffect(() => {
-    setSelectedIngress(ingress)
-  }, [ingress])
-
+  const ingress = event.entry.value as IngressEvent
   return (
     <div className='p-4'>
       <div className='flex items-center justify-between'>
@@ -34,34 +31,38 @@ export const TimelineIngressDetails = ({ timestamp, ingress }: { timestamp?: Tim
         <CloseButton onClick={closePanel} />
       </div>
 
-      <div className='text-sm pt-2'>Request</div>
-      <CodeBlock code={JSON.stringify(JSON.parse(selectedIngress.request), null, 2)} language='json' />
+      <div className='mt-4'>
+        <TraceGraph requestKey={ingress.requestKey} selectedEventId={event.id} />
+      </div>
 
-      {selectedIngress.response !== 'null' && (
+      <div className='text-sm pt-2'>Request</div>
+      <CodeBlock code={JSON.stringify(JSON.parse(ingress.request), null, 2)} language='json' />
+
+      {ingress.response !== 'null' && (
         <>
           <div className='text-sm pt-2'>Response</div>
-          <CodeBlock code={JSON.stringify(JSON.parse(selectedIngress.response), null, 2)} language='json' />
+          <CodeBlock code={JSON.stringify(JSON.parse(ingress.response), null, 2)} language='json' />
         </>
       )}
 
-      {selectedIngress.requestHeader !== 'null' && (
+      {ingress.requestHeader !== 'null' && (
         <>
           <div className='text-sm pt-2'>Request Header</div>
-          <CodeBlock code={JSON.stringify(JSON.parse(selectedIngress.requestHeader), null, 2)} language='json' />
+          <CodeBlock code={JSON.stringify(JSON.parse(ingress.requestHeader), null, 2)} language='json' />
         </>
       )}
 
-      {selectedIngress.responseHeader !== 'null' && (
+      {ingress.responseHeader !== 'null' && (
         <>
           <div className='text-sm pt-2'>Response Header</div>
-          <CodeBlock code={JSON.stringify(JSON.parse(selectedIngress.responseHeader), null, 2)} language='json' />
+          <CodeBlock code={JSON.stringify(JSON.parse(ingress.responseHeader), null, 2)} language='json' />
         </>
       )}
 
-      {selectedIngress.error && (
+      {ingress.error && (
         <>
           <h3 className='pt-4'>Error</h3>
-          <CodeBlock code={selectedIngress.error} language='text' />
+          <CodeBlock code={ingress.error} language='text' />
         </>
       )}
 
@@ -69,25 +70,25 @@ export const TimelineIngressDetails = ({ timestamp, ingress }: { timestamp?: Tim
 
       <ul className='pt-4 space-y-2'>
         <li>
-          <AttributeBadge name='Status' value={selectedIngress.statusCode.toString()} />
+          <AttributeBadge name='Status' value={ingress.statusCode.toString()} />
         </li>
         <li>
-          <AttributeBadge name='Method' value={selectedIngress.method} />
+          <AttributeBadge name='Method' value={ingress.method} />
         </li>
         <li>
-          <AttributeBadge name='Path' value={selectedIngress.path} />
+          <AttributeBadge name='Path' value={ingress.path} />
         </li>
-        {selectedIngress.requestKey && (
+        {ingress.requestKey && (
           <li>
-            <AttributeBadge name='Request' value={selectedIngress.requestKey} />
+            <AttributeBadge name='Request' value={ingress.requestKey} />
           </li>
         )}
         <li>
-          <AttributeBadge name='Duration' value={formatDuration(selectedIngress.duration)} />
+          <AttributeBadge name='Duration' value={formatDuration(ingress.duration)} />
         </li>
-        {selectedIngress.verbRef && (
+        {ingress.verbRef && (
           <li>
-            <AttributeBadge name='Verb' value={verbRefString(selectedIngress.verbRef)} />
+            <AttributeBadge name='Verb' value={verbRefString(ingress.verbRef)} />
           </li>
         )}
       </ul>

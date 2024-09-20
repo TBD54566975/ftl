@@ -1,24 +1,20 @@
 import type { Timestamp } from '@bufbuild/protobuf'
-import { useContext, useEffect, useState } from 'react'
+import { useContext } from 'react'
 import { AttributeBadge } from '../../../components/AttributeBadge'
 import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
-import type { CallEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { CallEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
-import { RequestGraph } from '../../requests/RequestGraph'
+import { TraceGraph } from '../../traces/TraceGraph'
 import { verbRefString } from '../../verbs/verb.utils'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
-export const TimelineCallDetails = ({ timestamp, call }: { timestamp?: Timestamp; call: CallEvent }) => {
+export const TimelineCallDetails = ({ timestamp, event }: { timestamp?: Timestamp; event: Event }) => {
   const { closePanel } = useContext(SidePanelContext)
-  const [selectedCall, setSelectedCall] = useState(call)
 
-  useEffect(() => {
-    setSelectedCall(call)
-  }, [call])
-
+  const call = event.entry.value as CallEvent
   return (
     <div className='p-4'>
       <div className='flex items-center justify-between'>
@@ -35,28 +31,28 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp?: Timestamp
         <CloseButton onClick={closePanel} />
       </div>
 
-      <div className='pt-4'>
-        <RequestGraph call={selectedCall} setSelectedCall={setSelectedCall} />
+      <div className='mt-4'>
+        <TraceGraph requestKey={call.requestKey} selectedEventId={event.id} />
       </div>
 
       <div className='text-sm pt-2'>Request</div>
-      <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.request), null, 2)} language='json' />
+      <CodeBlock code={JSON.stringify(JSON.parse(call.request), null, 2)} language='json' />
 
-      {selectedCall.response !== 'null' && (
+      {call.response !== 'null' && (
         <>
           <div className='text-sm pt-2'>Response</div>
-          <CodeBlock code={JSON.stringify(JSON.parse(selectedCall.response), null, 2)} language='json' />
+          <CodeBlock code={JSON.stringify(JSON.parse(call.response), null, 2)} language='json' />
         </>
       )}
 
-      {selectedCall.error && (
+      {call.error && (
         <>
           <h3 className='pt-4'>Error</h3>
-          <CodeBlock code={selectedCall.error} language='text' />
-          {selectedCall.stack && (
+          <CodeBlock code={call.error} language='text' />
+          {call.stack && (
             <>
               <h3 className='pt-4'>Stack</h3>
-              <CodeBlock code={selectedCall.stack} language='text' />
+              <CodeBlock code={call.stack} language='text' />
             </>
           )}
         </>
@@ -65,22 +61,22 @@ export const TimelineCallDetails = ({ timestamp, call }: { timestamp?: Timestamp
       <DeploymentCard className='mt-4' deploymentKey={call.deploymentKey} />
 
       <ul className='pt-4 space-y-2'>
-        {selectedCall.requestKey && (
+        {call.requestKey && (
           <li>
-            <AttributeBadge name='Request' value={selectedCall.requestKey} />
+            <AttributeBadge name='Request' value={call.requestKey} />
           </li>
         )}
         <li>
-          <AttributeBadge name='Duration' value={formatDuration(selectedCall.duration)} />
+          <AttributeBadge name='Duration' value={formatDuration(call.duration)} />
         </li>
-        {selectedCall.destinationVerbRef && (
+        {call.destinationVerbRef && (
           <li>
-            <AttributeBadge name='Destination' value={verbRefString(selectedCall.destinationVerbRef)} />
+            <AttributeBadge name='Destination' value={verbRefString(call.destinationVerbRef)} />
           </li>
         )}
-        {selectedCall.sourceVerbRef && (
+        {call.sourceVerbRef && (
           <li>
-            <AttributeBadge name='Source' value={verbRefString(selectedCall.sourceVerbRef)} />
+            <AttributeBadge name='Source' value={verbRefString(call.sourceVerbRef)} />
           </li>
         )}
       </ul>
