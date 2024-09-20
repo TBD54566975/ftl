@@ -155,7 +155,7 @@ jobs:
 
       - name: Set Version
         working-directory: ./jvm-runtime/ftl-runtime
-        run: mvn versions:set -DnewVersion=${{ github.ref_name }}
+        run: mvn versions:set -DnewVersion="$(echo ${{ github.ref_name }} | sed s/v//)"
 
       - name: Build, Test, and Deploy to Maven Central
         working-directory: ./jvm-runtime/ftl-runtime
