@@ -135,6 +135,14 @@ func NewStatusManager(ctx context.Context) StatusManager {
 			buf.Write(rawData[:n])
 			for buf.Len() > 0 {
 				d, s, err := buf.ReadRune()
+				if d == 0 {
+					// Null byte, we are done
+					// we keep running though as there may be more data on exit
+					// that we handle on a best effort basis
+					sm.writeLine(current)
+					sm.exitWait.Done()
+					continue
+				}
 				if err != nil {
 					// EOF, need to read more data
 					break
@@ -261,7 +269,8 @@ func (r *terminalStatusManager) Close() {
 	os.Stdout = r.old // restoring the real stdout
 	os.Stderr = r.oldErr
 	r.closed.Store(true)
-	_ = r.write.Close() //nolint:errcheck
+	// We send a null byte to the write pipe to unblock the read
+	_, _ = r.write.Write([]byte{0}) //nolint:errcheck
 	r.exitWait.Wait()
 }
 
@@ -282,20 +291,10 @@ func (r *terminalStatusManager) redrawStatus() {
 	if r.totalStatusLines == 0 || r.closed.Load() {
 		return
 	}
-	r.underlyingWrite("\n\n")
 	for i := len(r.lines) - 1; i >= 0; i-- {
 		msg := r.lines[i].message
 		if msg != "" {
-			r.underlyingWrite(msg)
-			if i > 0 {
-				// If there is any more messages to print we add a newline
-				for j := range i {
-					if r.lines[j].message != "" {
-						r.underlyingWrite("\n")
-						break
-					}
-				}
-			}
+			r.underlyingWrite("\n" + msg)
 		}
 	}
 	if r.console {
@@ -308,7 +307,9 @@ func (r *terminalStatusManager) redrawStatus() {
 
 func (r *terminalStatusManager) recalculateLines() {
 
+	total := 0
 	if len(r.moduleStates) > 0 && r.moduleLine != nil {
+		total++
 		entryLength := 0
 		keys := []string{}
 		for k := range r.moduleStates {
@@ -329,6 +330,7 @@ func (r *terminalStatusManager) recalculateLines() {
 			if i%perLine == 0 && i > 0 {
 				msg += "\n"
 				multiLine = true
+				total++
 			}
 			pad := strings.Repeat(" ", entryLength-len(k)-moduleStatusPadding+2)
 			state := r.moduleStates[k]
@@ -341,15 +343,11 @@ func (r *terminalStatusManager) recalculateLines() {
 		}
 		r.moduleLine.message = msg
 	}
-	total := 0
 	for _, i := range r.lines {
-		if i.message != "" {
+		if i.message != "" && i != r.moduleLine {
 			total++
 			total += countLines(i.message, r.width)
 		}
-	}
-	if total > 0 {
-		total++
 	}
 	if r.console {
 		total++
@@ -364,15 +362,12 @@ func (r *terminalStatusManager) underlyingWrite(messages string) {
 }
 
 func countLines(s string, width int) int {
-	return countLinesAtPos(s, 0, width)
-}
-
-func countLinesAtPos(s string, cursorPos int, width int) int {
 	if s == "" {
 		return 0
 	}
 	lines := 0
-	curLength := cursorPos
+	curLength := 0
+	// TODO: count unicode characters properly
 	for i := range s {
 		if s[i] == '\n' {
 			lines++
@@ -398,7 +393,6 @@ func (r *terminalStatusLine) Close() {
 	r.manager.statusLock.Lock()
 	defer r.manager.statusLock.Unlock()
 
-	r.manager.clearStatusMessages()
 	for i := range r.manager.lines {
 		if r.manager.lines[i] == r {
 			r.manager.lines = append(r.manager.lines[:i], r.manager.lines[i+1:]...)
