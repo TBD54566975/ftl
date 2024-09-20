@@ -1,5 +1,5 @@
 name = "ftl"
-module-dirs = ["examples/go"]
+module-dirs = ["examples/go", "exemplar"]
 ftl-min-version = ""
 hermit = false
 no-git = false
@@ -14,6 +14,9 @@ disable-ide-integration = true
   [modules.echo]
     [modules.echo.configuration]
       default = "inline://ImFub255bW91cyI"
+  [modules.relay]
+    [modules.relay.secrets]
+      FTL_DSN_RELAY_EXEMPLARDB = "inline://OUNUTlo3ekxuZjZPSmpxZmNyazR3d3ZZN1NINSs4K2MwdzdPNjQ1b0dLVHB4MVJZVExNK1J3dFhlWEFDMUZEWUMzRVZzTFhIYWcyVzdQSk1wV01tcjBRVUJFMTduaGFpQjArRTNydlZpeldTMllmTmk4SWI4YmdnRkVOQksvRW0zNEtuR05nNGFJV1krUXk0VUFHZjI4ckhscWo4"
   [modules.test]
     [modules.test.configuration]
     [modules.test.secrets]
