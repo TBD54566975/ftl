@@ -63,7 +63,7 @@ func (r *IDEIntegration) handleIntellij(ctx context.Context, ports map[string]*D
 		return
 	}
 	runConfig := filepath.Join(ideaPath, "runConfigurations")
-	err := os.MkdirAll(runConfig, 0600)
+	err := os.MkdirAll(runConfig, 0770) // #nosec
 	if err != nil {
 		logger.Errorf(err, "could not create runConfigurations directory")
 		return
@@ -86,14 +86,14 @@ func (r *IDEIntegration) handleIntellij(ctx context.Context, ports map[string]*D
 	for k, v := range ports {
 		if v.Language == "java" || v.Language == "kotlin" {
 			name := filepath.Join(runConfig, "FTL."+k+".xml")
-			err := os.WriteFile(name, []byte(fmt.Sprintf(jvmDebugConfig, "FT𝝺 JVM - "+k, v.Port)), 0600)
+			err := os.WriteFile(name, []byte(fmt.Sprintf(jvmDebugConfig, "FT𝝺 JVM - "+k, v.Port)), 0660) // #nosec
 			if err != nil {
 				logger.Errorf(err, "could not create FTL Java Config")
 				return
 			}
 		} else if v.Language == "go" {
 			name := filepath.Join(runConfig, "FTL."+k+".xml")
-			err := os.WriteFile(name, []byte(fmt.Sprintf(golangDebugConfig, "FT𝝺 GO - "+k, v.Port)), 0600)
+			err := os.WriteFile(name, []byte(fmt.Sprintf(golangDebugConfig, "FT𝝺 GO - "+k, v.Port)), 0660) // #nosec
 			if err != nil {
 				logger.Errorf(err, "could not create FTL Go Config")
 				return
@@ -133,7 +133,7 @@ func (r *IDEIntegration) findFolder(folder string, allowNonExistent bool) string
 func (r *IDEIntegration) handleVSCode(ctx context.Context, ports map[string]*DebugInfo) {
 	logger := log.FromContext(ctx)
 	vscode := r.findFolder(".vscode", true)
-	err := os.MkdirAll(vscode, 0600)
+	err := os.MkdirAll(vscode, 0770) // #nosec
 	if err != nil {
 		logger.Errorf(err, "could not create .vscode directory")
 		return
@@ -214,7 +214,7 @@ func (r *IDEIntegration) handleVSCode(ctx context.Context, ports map[string]*Deb
 		logger.Errorf(err, "could not marshal launch.json")
 		return
 	}
-	err = os.WriteFile(launchJSON, data, 0600)
+	err = os.WriteFile(launchJSON, data, 0660) // #nosec
 	if err != nil {
 		logger.Errorf(err, "could not write launch.json")
 		return
