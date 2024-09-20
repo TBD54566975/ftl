@@ -29,9 +29,11 @@ go-runtime/schema/testdata/test/test.go
 # Leaving old _ftl for now to avoid old stuff getting checked in
 **/testdata/**/_ftl
 **/examples/**/_ftl
+**/exemplar/**/_ftl
 **/types.ftl.go
 **/testdata/**/.ftl
 **/examples/**/.ftl
+**/exemplar/**/.ftl
 /.ftl
 
 buildengine/.gitignore
