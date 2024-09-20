@@ -56,7 +56,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
 
     switch (entry.entry?.case) {
       case 'call':
-        openPanel(<TimelineCallDetails timestamp={entry.timeStamp as Timestamp} call={entry.entry.value} />, handlePanelClosed)
+        openPanel(<TimelineCallDetails timestamp={entry.timeStamp as Timestamp} event={entry} />, handlePanelClosed)
         break
       case 'log':
         openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />, handlePanelClosed)
@@ -68,7 +68,7 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
         openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />, handlePanelClosed)
         break
       case 'ingress':
-        openPanel(<TimelineIngressDetails timestamp={entry.timeStamp as Timestamp} ingress={entry.entry.value} />, handlePanelClosed)
+        openPanel(<TimelineIngressDetails timestamp={entry.timeStamp as Timestamp} event={entry} />, handlePanelClosed)
         break
       default:
         break
