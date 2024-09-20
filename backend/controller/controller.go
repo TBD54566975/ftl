@@ -537,6 +537,12 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("deployment not found"))
 		} else if errors.Is(err, dal.ErrReplaceDeploymentAlreadyActive) {
 			logger.Infof("Reusing deployment: %s", newDeploymentKey)
+			dep, err := s.dal.GetDeployment(ctx, newDeploymentKey)
+			if err == nil {
+				status.UpdateModuleState(ctx, dep.Module, status.BuildStateDeployed)
+			} else {
+				logger.Errorf(err, "Failed to get deployment from database: %s", newDeploymentKey)
+			}
 		} else {
 			logger.Errorf(err, "Could not replace deployment: %s", newDeploymentKey)
 			return nil, fmt.Errorf("could not replace deployment: %w", err)

@@ -7,6 +7,9 @@ var _ StatusLine = &noopStatusLine{}
 
 type noopStatusManager struct{}
 
+func (r *noopStatusManager) Close() {
+}
+
 func (r *noopStatusManager) SetModuleState(module string, state BuildState) {
 
 }
