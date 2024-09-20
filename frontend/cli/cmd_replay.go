@@ -17,6 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/status"
 )
 
 type replayCmd struct {
@@ -97,6 +98,8 @@ func (c *replayCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClie
 	}
 	requestJSON := events.Msg.GetEvents()[0].GetCall().Request
 
-	logger.Infof("Calling %s with body:\n%s", c.Verb, requestJSON)
+	logger.Infof("Calling %s with body:", c.Verb)
+	status.PrintJSON(ctx, []byte(requestJSON))
+	logger.Infof("Response:")
 	return callVerb(ctx, client, ctlCli, c.Verb, []byte(requestJSON))
 }

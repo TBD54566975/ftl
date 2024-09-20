@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/alecthomas/atomic"
+	"github.com/tidwall/pretty"
 	"golang.org/x/term"
 )
 
@@ -163,6 +164,18 @@ func NewStatusManager(ctx context.Context) StatusManager {
 func UpdateModuleState(ctx context.Context, module string, state BuildState) {
 	sm := FromContext(ctx)
 	sm.SetModuleState(module, state)
+}
+
+// PrintJSON prints a json string to the terminal
+// It probably doesn't belong here, but it will be moved later with the interactive terminal work
+func PrintJSON(ctx context.Context, json []byte) {
+	sm := FromContext(ctx)
+	if _, ok := sm.(*terminalStatusManager); ok {
+		// ANSI enabled
+		fmt.Printf("%s\n", pretty.Color(pretty.Pretty(json), nil))
+	} else {
+		fmt.Printf("%s\n", json)
+	}
 }
 
 func (r *terminalStatusManager) gotoCoords(line int, col int) {

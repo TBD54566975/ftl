@@ -49,6 +49,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/sqlc-dev/pqtype v0.3.0
 	github.com/swaggest/jsonschema-go v0.3.72
+	github.com/tidwall/pretty v1.2.1
 	github.com/tink-crypto/tink-go-awskms v0.0.0-20230616072154-ba4f9f22c3e9
 	github.com/tink-crypto/tink-go/v2 v2.2.0
 	github.com/titanous/json5 v1.0.0
