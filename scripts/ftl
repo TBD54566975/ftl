@@ -3,5 +3,9 @@ set -euo pipefail
 ftldir="$(dirname "$(readlink -f "$0")")/.."
 name="$(basename "$0")"
 dest="${ftldir}/build/devel"
+src="./cmd/${name}"
+if [ "${name}" = "ftl" ]; then
+  src="./frontend/cli"
+fi
 mkdir -p "$dest"
-(cd "${ftldir}/cmd/${name}" && "${ftldir}/bin/go" build -ldflags="-s -w -buildid=" -o "$dest/${name}" ./) && exec "$dest/${name}" "$@"
+(cd "${ftldir}/${src}" && "${ftldir}/bin/go" build -ldflags="-s -w -buildid=" -o "$dest/${name}" .) && exec "$dest/${name}" "$@"

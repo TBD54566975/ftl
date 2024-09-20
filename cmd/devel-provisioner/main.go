@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -32,29 +33,37 @@ func main() {
 		".",
 		"ftl-provisioner-cloudformation",
 		provisionerconnect.NewProvisionerPluginServiceClient,
+		plugin.WithEnvars("FTL_PROVISIONER_CF_DB_SUBNET_GROUP=aurora-postgres-subnet-group"),
 	)
 	if err != nil {
 		panic(err)
 	}
-	resp, err := client.Client.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
+
+	desired := []*provisioner.Resource{{
+		ResourceId: "foobardb",
+		Resource: &provisioner.Resource_Postgres{
+			Postgres: &provisioner.PostgresResource{},
+		},
+	}}
+
+	req := &provisioner.ProvisionRequest{
 		FtlClusterId:      "ftl-test-1",
 		Module:            "test-module",
 		ExistingResources: []*provisioner.Resource{},
-		DesiredResources: []*provisioner.Resource{{
-			ResourceId: "foodb",
-			Resource: &provisioner.Resource_Postgres{
-				Postgres: &provisioner.Resource_PostgresResource{},
-			},
-			Dependencies: []*provisioner.Resource{{
-				// Fetch these properties properly from the cluster
-				Resource: &provisioner.Resource_Ftl{},
-				Properties: []*provisioner.ResourceProperty{{
-					Key:   "aws:ftl-cluster:rds-subnet-group",
-					Value: "aurora-postgres-subnet-group",
-				}},
-			}},
-		}},
+		DesiredResources:  inContext(desired),
+	}
+
+	plan, err := client.Client.Plan(ctx, connect.NewRequest(&provisioner.PlanRequest{
+		Provisioning: req,
 	}))
+	if err != nil {
+		panic(err)
+	}
+	println("### PLAN ###")
+	println(plan.Msg.Plan)
+
+	println("### EXECUTION ###")
+	resp, err := client.Client.Provision(ctx, connect.NewRequest(req))
 	if err != nil {
 		panic(err)
 	}
@@ -62,6 +71,7 @@ func main() {
 		println("no changes")
 		return
 	}
+
 	retry := backoff.Backoff{
 		Min:    100 * time.Millisecond,
 		Max:    5 * time.Second,
@@ -71,21 +81,33 @@ func main() {
 		println("polling: " + resp.Msg.ProvisioningToken)
 		status, err := client.Client.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
 			ProvisioningToken: resp.Msg.ProvisioningToken,
+			DesiredResources:  desired,
 		}))
 		if err != nil {
 			panic(err)
 		}
-		if status.Msg.Status == provisioner.StatusResponse_FAILED {
-			panic(status.Msg.ErrorMessage)
-		}
-		if status.Msg.Status != provisioner.StatusResponse_RUNNING {
+		if fail, ok := status.Msg.Status.(*provisioner.StatusResponse_Failed); ok {
+			panic(fail.Failed.ErrorMessage)
+		} else if success, ok := status.Msg.Status.(*provisioner.StatusResponse_Success); ok {
 			println("finished!")
-			for _, p := range status.Msg.Properties {
-				println("  ", p.ResourceId, "\t", p.Key, "\t", p.Value)
+			for _, r := range success.Success.UpdatedResources {
+				jsn, err := json.MarshalIndent(r, "", "  ")
+				if err != nil {
+					panic(err)
+				}
+				println(string(jsn))
 			}
 			break
 		}
 		time.Sleep(retry.Duration())
 	}
 	println("done")
+}
+
+func inContext(resources []*provisioner.Resource) []*provisioner.ResourceContext {
+	var result []*provisioner.ResourceContext
+	for _, r := range resources {
+		result = append(result, &provisioner.ResourceContext{Resource: r})
+	}
+	return result
 }

@@ -76,7 +76,7 @@ func waitChangeSetReady(ctx context.Context, client *cloudformation.Client, chan
 					StackName:     &stack,
 				})
 				if err != nil {
-					return false, fmt.Errorf("failed to delete change-set: %w", err)
+					return false, fmt.Errorf("failed to delete change-set %s: %w", changeSet, err)
 				}
 				return false, nil
 			}

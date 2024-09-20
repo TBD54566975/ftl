@@ -46,7 +46,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
-	timelinedal "github.com/TBD54566975/ftl/backend/controller/timeline/dal"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
@@ -66,6 +65,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/internal/status"
 )
 
 // CommonConfig between the production controller and development server.
@@ -332,7 +332,7 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-	ingress.Handle(start, sch, requestKey, routes, w, r, s.callWithRequest)
+	ingress.Handle(start, sch, requestKey, routes, w, r, s.timeline, s.callWithRequest)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
@@ -459,10 +459,14 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		err = s.timeline.RecordLog(ctx, &timeline.Log{
+		err = s.timeline.InsertLogEvent(ctx, &timeline.Log{
 			DeploymentKey: deploymentKey,
 			RequestKey:    requestKey,
-			Msg:           msg,
+			Time:          msg.TimeStamp.AsTime(),
+			Level:         msg.LogLevel,
+			Attributes:    msg.Attributes,
+			Message:       msg.Message,
+			Error:         optional.Ptr(msg.Error),
 		})
 
 		if err != nil {
@@ -1052,7 +1056,7 @@ func (s *Service) callWithRequest(
 		callResponse = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 	}
-	s.timeline.RecordCall(ctx, &timeline.Call{
+	s.timeline.InsertCallEvent(ctx, &timeline.Call{
 		DeploymentKey:    route.Deployment,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentKey,
@@ -1730,7 +1734,6 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 
 // Periodically sync the routing table from the DB.
 func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error) {
-	logger := log.FromContext(ctx)
 	deployments, err := s.dal.GetActiveDeployments(ctx)
 	if errors.Is(err, libdal.ErrNotFound) {
 		deployments = []dal.Deployment{}
@@ -1746,7 +1749,8 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 	old := s.routes.Load()
 	newRoutes := map[string]Route{}
 	for _, v := range deployments {
-		logger.Tracef("processing deployment %s for route table", v.Key.String())
+		deploymentLogger := s.getDeploymentLogger(ctx, v.Key)
+		deploymentLogger.Tracef("processing deployment %s for route table", v.Key.String())
 		// Deployments are in order, oldest to newest
 		// If we see a newer one overwrite an old one that means the new one is read
 		// And we set its replicas to zero
@@ -1754,7 +1758,7 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 		// Which is what makes as a deployment 'live' from a clients POV
 		optURI, err := s.runnerScaling.GetEndpointForDeployment(ctx, v.Module, v.Key.String())
 		if err != nil {
-			logger.Errorf(err, "Failed to get updated endpoint for deployment %s", v.Key.String())
+			deploymentLogger.Debugf("Failed to get updated endpoint for deployment %s", v.Key.String())
 			continue
 		} else if uri, ok := optURI.Get(); ok {
 			// Check if this is a new route
@@ -1764,20 +1768,21 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 				// Kube deployments can take a while to come up, so we don't want to add them to the routing table until they are ready.
 				_, err := s.clientsForEndpoint(targetEndpoint).verb.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
 				if err != nil {
-					logger.Tracef("Unable to ping %s, not adding to route table", v.Key.String())
+					deploymentLogger.Tracef("Unable to ping %s, not adding to route table", v.Key.String())
 					continue
 				}
-				logger.Debugf("Adding %s to route table", v.Key.String())
+				deploymentLogger.Infof("Deployed %s", v.Key.String())
+				status.UpdateModuleState(ctx, v.Module, status.BuildStateDeployed)
 			}
 			if prev, ok := newRoutes[v.Module]; ok {
 				// We have already seen a route for this module, the existing route must be an old one
 				// as the deployments are in order
 				// We have a new route ready to go, so we can just set the old one to 0 replicas
 				// Do this in a TX so it doesn't happen until the route table is updated
-				logger.Debugf("Setting %s to zero replicas", v.Key.String())
+				deploymentLogger.Debugf("Setting %s to zero replicas", v.Key.String())
 				err := tx.SetDeploymentReplicas(ctx, prev.Deployment, 0)
 				if err != nil {
-					logger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
+					deploymentLogger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
 				}
 			}
 			newRoutes[v.Module] = Route{Module: v.Module, Deployment: v.Key, Endpoint: targetEndpoint}
@@ -1836,7 +1841,7 @@ func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
 		return time.Hour, nil
 	}
 
-	removed, err := s.timeline.DeleteOldEvents(ctx, timelinedal.EventTypeCall, *s.config.EventLogRetention)
+	removed, err := s.timeline.DeleteOldEvents(ctx, timeline.EventTypeCall, *s.config.EventLogRetention)
 	if err != nil {
 		return 0, fmt.Errorf("failed to prune call events: %w", err)
 	}

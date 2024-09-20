@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/lsp"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/status"
 )
 
 type devCmd struct {
@@ -28,6 +29,11 @@ type devCmd struct {
 }
 
 func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
+	if !cli.Plain {
+		sm := status.NewStatusManager(ctx)
+		ctx = sm.IntoContext(ctx)
+	}
+
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
 	}
@@ -52,7 +58,8 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 		fmt.Println(dsn)
 		return nil
 	}
-
+	sm := status.FromContext(ctx)
+	starting := sm.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
@@ -67,7 +74,9 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return errors.New(ftlRunningErrorMsg)
 		}
 
-		g.Go(func() error { return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady)) })
+		g.Go(func() error {
+			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), true)
+		})
 	}
 
 	g.Go(func() error {
@@ -76,8 +85,9 @@ func (d *devCmd) Run(ctx context.Context, projConfig projectconfig.Config) error
 			return nil
 		case <-controllerReady:
 		}
+		starting.Close()
 
-		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv)}
+		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(true)}
 		if d.Lsp {
 			d.languageServer = lsp.NewServer(ctx)
 			opts = append(opts, buildengine.WithListener(d.languageServer))

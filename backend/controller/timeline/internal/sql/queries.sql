@@ -53,6 +53,33 @@ VALUES (
   sqlc.arg('payload')
 );
 
+-- name: InsertTimelineIngressEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  custom_key_3,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
+  (
+    CASE
+      WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT LIMIT 1)
+    END
+  ),
+  sqlc.arg('time_stamp')::TIMESTAMPTZ,
+  'ingress',
+  sqlc.arg('module')::TEXT,
+  sqlc.arg('verb')::TEXT,
+  sqlc.arg('ingress_type')::TEXT,
+  sqlc.arg('payload')
+);
+
 -- name: DeleteOldTimelineEvents :one
 WITH deleted AS (
     DELETE FROM timeline

@@ -22,12 +22,29 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 )
 
-type CloudformationProvisioner struct{}
+const (
+	PropertyDBReadEndpoint  = "db:read_endpoint"
+	PropertyDBWriteEndpoint = "db:write_endpoint"
+)
+
+type Config struct {
+	DatabaseSubnetGroupARN string `help:"ARN for the subnet group to be used to create Databases in" env:"FTL_PROVISIONER_CF_DB_SUBNET_GROUP"`
+}
+
+type CloudformationProvisioner struct {
+	client *cloudformation.Client
+	confg  *Config
+}
 
 var _ provisionerconnect.ProvisionerPluginServiceHandler = (*CloudformationProvisioner)(nil)
 
-func NewCloudformationProvisioner(ctx context.Context, config struct{}) (context.Context, *CloudformationProvisioner, error) {
-	return ctx, &CloudformationProvisioner{}, nil
+func NewCloudformationProvisioner(ctx context.Context, config Config) (context.Context, *CloudformationProvisioner, error) {
+	client, err := createClient(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create cloudformation client: %w", err)
+	}
+
+	return ctx, &CloudformationProvisioner{client: client, confg: &config}, nil
 }
 
 func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -35,51 +52,18 @@ func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1
 }
 
 func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
-	client, err := createClient(ctx)
+	res, updated, err := c.createChangeSet(ctx, req.Msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create cloudformation client: %w", err)
-	}
-
-	stackName := sanitize(req.Msg.FtlClusterId) + "-" + sanitize(req.Msg.Module)
-	changeSetName := sanitize(stackName) + strconv.FormatInt(time.Now().Unix(), 10)
-
-	template := goformation.NewTemplate()
-	for _, resource := range req.Msg.DesiredResources {
-		if err := resourceToCF(req.Msg.FtlClusterId, req.Msg.Module, template, resource); err != nil {
-			return nil, err
-		}
-	}
-
-	bytes, err := template.JSON()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cloudformation template: %w", err)
-	}
-	jsonStr := string(bytes)
-
-	if err := ensureStackExists(ctx, client, stackName); err != nil {
-		return nil, fmt.Errorf("failed to verify the stack exists: %w", err)
-	}
-
-	res, err := client.CreateChangeSet(ctx, &cloudformation.CreateChangeSetInput{
-		StackName:     &stackName,
-		ChangeSetName: &changeSetName,
-		TemplateBody:  &jsonStr,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create change-set: %w", err)
-	}
-	updated, err := waitChangeSetReady(ctx, client, changeSetName, stackName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to wait for change-set to become ready: %w", err)
+		return nil, err
 	}
 	if !updated {
 		return connect.NewResponse(&provisioner.ProvisionResponse{
 			Status: provisioner.ProvisionResponse_NO_CHANGES,
 		}), nil
 	}
-	_, err = client.ExecuteChangeSet(ctx, &cloudformation.ExecuteChangeSetInput{
-		ChangeSetName: &changeSetName,
-		StackName:     &stackName,
+	_, err = c.client.ExecuteChangeSet(ctx, &cloudformation.ExecuteChangeSetInput{
+		ChangeSetName: res.Id,
+		StackName:     res.StackId,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute change-set: %w", err)
@@ -91,19 +75,64 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	}), nil
 }
 
-func resourceToCF(cluster, module string, template *goformation.Template, resource *provisioner.Resource) error {
-	if _, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
-		subnetGroup, err := findRDSSubnetGroup(resource)
-		if err != nil {
-			return err
+func (c *CloudformationProvisioner) createChangeSet(ctx context.Context, req *provisioner.ProvisionRequest) (*cloudformation.CreateChangeSetOutput, bool, error) {
+	stack := stackName(req)
+	changeSet := generateChangeSetName(stack)
+	templateStr, err := c.createTemplate(req)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to create cloudformation template: %w", err)
+	}
+	if err := ensureStackExists(ctx, c.client, stack); err != nil {
+		return nil, false, fmt.Errorf("failed to verify the stack exists: %w", err)
+	}
+
+	res, err := c.client.CreateChangeSet(ctx, &cloudformation.CreateChangeSetInput{
+		StackName:     &stack,
+		ChangeSetName: &changeSet,
+		TemplateBody:  &templateStr,
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to create change-set: %w", err)
+	}
+	updated, err := waitChangeSetReady(ctx, c.client, changeSet, stack)
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to wait for change-set to become ready: %w", err)
+	}
+	return res, updated, nil
+}
+
+func stackName(req *provisioner.ProvisionRequest) string {
+	return sanitize(req.FtlClusterId) + "-" + sanitize(req.Module)
+}
+
+func generateChangeSetName(stack string) string {
+	return sanitize(stack) + strconv.FormatInt(time.Now().Unix(), 10)
+}
+
+func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionRequest) (string, error) {
+	template := goformation.NewTemplate()
+	for _, resourceCtx := range req.DesiredResources {
+		if err := c.resourceToCF(req.FtlClusterId, req.Module, template, resourceCtx.Resource); err != nil {
+			return "", err
 		}
+	}
+
+	bytes, err := template.JSON()
+	if err != nil {
+		return "", fmt.Errorf("failed to create cloudformation template: %w", err)
+	}
+	return string(bytes), nil
+}
+
+func (c *CloudformationProvisioner) resourceToCF(cluster, module string, template *goformation.Template, resource *provisioner.Resource) error {
+	if _, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
 		clusterID := cloudformationResourceID(resource.ResourceId, "cluster")
 		instanceID := cloudformationResourceID(resource.ResourceId, "instance")
 		template.Resources[clusterID] = &rds.DBCluster{
 			Engine:                   ptr("aurora-postgresql"),
 			MasterUsername:           ptr("root"),
 			ManageMasterUserPassword: ptr(true),
-			DBSubnetGroupName:        ptr(subnetGroup),
+			DBSubnetGroupName:        ptr(c.confg.DatabaseSubnetGroupARN),
 			EngineMode:               ptr("provisioned"),
 			ServerlessV2ScalingConfiguration: &rds.DBCluster_ServerlessV2ScalingConfiguration{
 				MinCapacity: ptr(0.5),
@@ -119,29 +148,15 @@ func resourceToCF(cluster, module string, template *goformation.Template, resour
 		}
 		addOutput(template.Outputs, goformation.GetAtt(clusterID, "Endpoint.Address"), &CloudformationOutputKey{
 			ResourceID:   resource.ResourceId,
-			PropertyName: "db:endpoint-write",
+			PropertyName: PropertyDBWriteEndpoint,
 		})
 		addOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &CloudformationOutputKey{
 			ResourceID:   resource.ResourceId,
-			PropertyName: "db:endpoint-read",
+			PropertyName: PropertyDBReadEndpoint,
 		})
 		return nil
 	}
 	return errors.New("unsupported resource type")
-}
-
-func findRDSSubnetGroup(resource *provisioner.Resource) (string, error) {
-	key := "aws:ftl-cluster:rds-subnet-group"
-	for _, dep := range resource.Dependencies {
-		if _, ok := dep.Resource.(*provisioner.Resource_Ftl); ok {
-			for _, p := range dep.Properties {
-				if p.Key == key {
-					return p.Value, nil
-				}
-			}
-		}
-	}
-	return "", errors.New("can not create a database, as property was not found: " + key)
 }
 
 func ftlTags(cluster, module string) []tags.Tag {

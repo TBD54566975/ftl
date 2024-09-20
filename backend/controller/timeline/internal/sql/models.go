@@ -20,6 +20,7 @@ const (
 	EventTypeLog               EventType = "log"
 	EventTypeDeploymentCreated EventType = "deployment_created"
 	EventTypeDeploymentUpdated EventType = "deployment_updated"
+	EventTypeIngress           EventType = "ingress"
 )
 
 func (e *EventType) Scan(src interface{}) error {

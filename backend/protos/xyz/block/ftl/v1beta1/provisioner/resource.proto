@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1beta1.provisioner;
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner;provisioner";
+option java_multiple_files = true;
+
+// Resource is an abstract resource extracted from FTL Schema.
+message Resource {
+  // id unique within the module
+  string resource_id = 1;
+
+  oneof resource {
+    PostgresResource postgres = 102;
+    MysqlResource mysql = 103;
+  }
+}
+
+// Resource types
+//
+// any output created by the provisioner is stored in a field called "output"
+
+message PostgresResource {
+  message PostgresResourceOutput {
+    string read_endpoint = 1;
+    string write_endpoint = 2;
+  }
+  PostgresResourceOutput output = 1;
+}
+
+message MysqlResource {
+  message MysqlResourceOutput {
+    string read_endpoint = 1;
+    string write_endpoint = 2;
+  }
+  MysqlResourceOutput output = 1;
+}

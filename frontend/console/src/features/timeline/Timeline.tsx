@@ -12,10 +12,12 @@ import { TimelineCall } from './TimelineCall.tsx'
 import { TimelineDeploymentCreated } from './TimelineDeploymentCreated.tsx'
 import { TimelineDeploymentUpdated } from './TimelineDeploymentUpdated.tsx'
 import { TimelineIcon } from './TimelineIcon.tsx'
+import { TimelineIngress } from './TimelineIngress.tsx'
 import { TimelineLog } from './TimelineLog.tsx'
 import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCreatedDetails.tsx'
 import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUpdatedDetails.tsx'
+import { TimelineIngressDetails } from './details/TimelineIngressDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
@@ -65,6 +67,9 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
       case 'deploymentUpdated':
         openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />, handlePanelClosed)
         break
+      case 'ingress':
+        openPanel(<TimelineIngressDetails timestamp={entry.timeStamp as Timestamp} ingress={entry.entry.value} />, handlePanelClosed)
+        break
       default:
         break
     }
@@ -82,6 +87,8 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
         return event.entry.value.key
       case 'deploymentUpdated':
         return event.entry.value.key
+      case 'ingress':
+        return event.entry.value.deploymentKey
       default:
         return ''
     }
@@ -136,6 +143,8 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
                         return <TimelineDeploymentCreated deployment={entry.entry.value} />
                       case 'deploymentUpdated':
                         return <TimelineDeploymentUpdated deployment={entry.entry.value} />
+                      case 'ingress':
+                        return <TimelineIngress ingress={entry.entry.value} />
                     }
                   })()}
                 </td>

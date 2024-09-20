@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../../v1/ftl_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
-import { ProvisionRequest, ProvisionResponse, StatusRequest, StatusResponse } from "./plugin_pb.js";
+import { PlanRequest, PlanResponse, ProvisionRequest, ProvisionResponse, StatusRequest, StatusResponse } from "./plugin_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService
@@ -29,6 +29,15 @@ export const ProvisionerPluginService = {
       name: "Provision",
       I: ProvisionRequest,
       O: ProvisionResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Plan
+     */
+    plan: {
+      name: "Plan",
+      I: PlanRequest,
+      O: PlanResponse,
       kind: MethodKind.Unary,
     },
     /**

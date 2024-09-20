@@ -1,4 +1,4 @@
-import { Call02Icon, Rocket01Icon } from 'hugeicons-react'
+import { Call02Icon, PackageReceiveIcon, Rocket01Icon } from 'hugeicons-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { useModules } from '../../../api/modules/use-modules'
@@ -16,7 +16,7 @@ interface EventFilter {
 }
 
 const EVENT_TYPES: Record<string, EventFilter> = {
-  call: { label: 'Call', type: EventType.CALL, icon: <Call02Icon className='w-4 h-4 text-indigo-600 ml-1' /> },
+  call: { label: 'Call', type: EventType.CALL, icon: <Call02Icon className='w-4 h-4 text-indigo-500 ml-1' /> },
   log: { label: 'Log', type: EventType.LOG, icon: <LogLevelBadgeSmall logLevel={LogLevel.INFO} /> },
   deploymentCreated: {
     label: 'Deployment Created',
@@ -26,8 +26,9 @@ const EVENT_TYPES: Record<string, EventFilter> = {
   deploymentUpdated: {
     label: 'Deployment Updated',
     type: EventType.DEPLOYMENT_UPDATED,
-    icon: <Rocket01Icon className='w-4 h-4 text-indigo-600 ml-1' />,
+    icon: <Rocket01Icon className='w-4 h-4 text-indigo-500 ml-1' />,
   },
+  ingress: { label: 'Ingress', type: EventType.INGRESS, icon: <PackageReceiveIcon className='w-4 h-4 text-indigo-500 ml-1' /> },
 }
 
 const LOG_LEVELS: Record<number, string> = {

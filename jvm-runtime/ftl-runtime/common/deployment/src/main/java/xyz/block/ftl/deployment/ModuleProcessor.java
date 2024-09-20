@@ -157,11 +157,14 @@ public class ModuleProcessor {
             moduleBuilder.writeTo(out);
         }
 
-        output = outputTargetBuildItem.getOutputDirectory().resolve("main");
+        output = outputTargetBuildItem.getOutputDirectory().resolve("launch");
         try (var out = Files.newOutputStream(output)) {
             out.write(
                     """
                             #!/bin/bash
+                            if [ -n "$FTL_DEBUG_PORT" ]; then
+                                FTL_JVM_OPTS="$FTL_JVM_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:$FTL_DEBUG_PORT"
+                            fi
                             exec java $FTL_JVM_OPTS -jar quarkus-app/quarkus-run.jar"""
                             .getBytes(StandardCharsets.UTF_8));
         }

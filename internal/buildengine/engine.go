@@ -25,6 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/internal/status"
 )
 
 type CompilerBuildError struct {
@@ -76,6 +77,7 @@ type Engine struct {
 	listener         Listener
 	modulesToBuild   *xsync.MapOf[string, bool]
 	buildEnv         []string
+	devMode          bool
 }
 
 type Option func(o *Engine)
@@ -96,6 +98,13 @@ func BuildEnv(env []string) Option {
 func WithListener(listener Listener) Option {
 	return func(o *Engine) {
 		o.listener = listener
+	}
+}
+
+// WithDevMode sets the engine to dev mode.
+func WithDevMode(devMode bool) Option {
+	return func(o *Engine) {
+		o.devMode = devMode
 	}
 }
 
@@ -442,6 +451,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
+					status.UpdateModuleState(ctx, config.Module, status.BuildStateFailed)
 					logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
 				} else {
 					didUpdateDeployments = true
@@ -524,6 +534,7 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 		return e.buildWithCallback(ctx, func(buildCtx context.Context, module Module) error {
 			buildGroup.Go(func() error {
 				e.modulesToBuild.Store(module.Config.Module, false)
+				status.UpdateModuleState(ctx, module.Config.Module, status.BuildStateDeploying)
 				return Deploy(buildCtx, module, replicas, waitForDeployOnline, e.client)
 			})
 			return nil
@@ -572,6 +583,8 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		}
 		e.moduleMetas.Store(name, moduleMeta{module: module})
 		mustBuild[name] = true
+
+		status.UpdateModuleState(ctx, name, status.BuildStateWaiting)
 	}
 	graph, err := e.Graph(moduleNames...)
 	if err != nil {
@@ -698,6 +711,7 @@ func (e *Engine) mustSchema(ctx context.Context, moduleName string, builtModules
 //
 // Assumes that all dependencies have been built and are available in "built".
 func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
+	status.UpdateModuleState(ctx, moduleName, status.BuildStateBuilding)
 	meta, ok := e.moduleMetas.Load(moduleName)
 	if !ok {
 		return fmt.Errorf("module %q not found", moduleName)
@@ -709,7 +723,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir), e.buildEnv)
+	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir), e.buildEnv, e.devMode)
 	if err != nil {
 		return err
 	}
@@ -718,6 +732,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if err != nil {
 		return fmt.Errorf("could not load schema for module %q: %w", config.Module, err)
 	}
+	status.UpdateModuleState(ctx, moduleName, status.BuildStateBuilt)
 	schemas <- moduleSchema
 	return nil
 }
