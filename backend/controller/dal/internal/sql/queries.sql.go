@@ -161,22 +161,6 @@ func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string,
 	return err
 }
 
-const createArtefact = `-- name: CreateArtefact :one
-INSERT INTO artefacts (digest, content)
-VALUES ($1, $2)
-ON CONFLICT (digest)
-DO UPDATE SET digest = EXCLUDED.digest
-RETURNING id
-`
-
-// Create a new artefact and return the artefact ID.
-func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createArtefact, digest, content)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const createCronJob = `-- name: CreateCronJob :exec
 INSERT INTO cron_jobs (key, deployment_id, module_name, verb, schedule, start_time, next_execution)
   VALUES (
@@ -657,54 +641,6 @@ func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, 
 			&i.ModuleName,
 			&i.DeploymentKey,
 		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getArtefactContentRange = `-- name: GetArtefactContentRange :one
-SELECT SUBSTRING(a.content FROM $1 FOR $2)::BYTEA AS content
-FROM artefacts a
-WHERE a.id = $3
-`
-
-func (q *Queries) GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error) {
-	row := q.db.QueryRowContext(ctx, getArtefactContentRange, start, count, iD)
-	var content []byte
-	err := row.Scan(&content)
-	return content, err
-}
-
-const getArtefactDigests = `-- name: GetArtefactDigests :many
-SELECT id, digest
-FROM artefacts
-WHERE digest = ANY ($1::bytea[])
-`
-
-type GetArtefactDigestsRow struct {
-	ID     int64
-	Digest []byte
-}
-
-// Return the digests that exist in the database.
-func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getArtefactDigests, pq.Array(digests))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetArtefactDigestsRow
-	for rows.Next() {
-		var i GetArtefactDigestsRow
-		if err := rows.Scan(&i.ID, &i.Digest); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -23,8 +23,6 @@ type Querier interface {
 	AsyncCallQueueDepth(ctx context.Context) (int64, error)
 	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
-	// Create a new artefact and return the artefact ID.
-	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
 	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
@@ -43,9 +41,6 @@ type Querier interface {
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
 	GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngressRoutesRow, error)
 	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
-	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
-	// Return the digests that exist in the database.
-	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
 	GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
 	// Get all artefacts matching the given digests.

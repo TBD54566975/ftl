@@ -207,7 +207,7 @@ type Service struct {
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
 	pubSub                  *pubsub.Manager
-	registry                artefacts.Registry
+	registry                *artefacts.Service
 	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
@@ -264,6 +264,8 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 	pubSub := pubsub.New(ctx, db, svc.tasks, svc)
 	svc.pubSub = pubSub
+
+	svc.registry = artefacts.New(ctx, conn)
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
@@ -1082,7 +1084,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return nil, err
 	}
-	need, err := s.registry.GetMissingDigests(ctx, byteDigests)
+	_, need, err := s.registry.GetDigestsKeys(ctx, byteDigests)
 	if err != nil {
 		return nil, err
 	}

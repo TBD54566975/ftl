@@ -18,26 +18,12 @@ WHERE id = ANY (@ids::BIGINT[]);
 INSERT INTO deployments (module_id, "schema", "key")
 VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, @key::deployment_key);
 
--- name: GetArtefactDigests :many
--- Return the digests that exist in the database.
-SELECT id, digest
-FROM artefacts
-WHERE digest = ANY (@digests::bytea[]);
-
 -- name: GetDeploymentArtefacts :many
 -- Get all artefacts matching the given digests.
 SELECT da.created_at, artefact_id AS id, executable, path, digest, executable
 FROM deployment_artefacts da
          INNER JOIN artefacts ON artefacts.id = da.artefact_id
 WHERE deployment_id = $1;
-
--- name: CreateArtefact :one
--- Create a new artefact and return the artefact ID.
-INSERT INTO artefacts (digest, content)
-VALUES ($1, $2)
-ON CONFLICT (digest)
-DO UPDATE SET digest = EXCLUDED.digest
-RETURNING id;
 
 -- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
@@ -62,11 +48,6 @@ WHERE EXISTS (SELECT 1
                 AND d.schema = @schema::BYTEA
               HAVING COUNT(*) = @count::BIGINT -- Number of unique digests provided
 );
-
--- name: GetArtefactContentRange :one
-SELECT SUBSTRING(a.content FROM @start FOR @count)::BYTEA AS content
-FROM artefacts a
-WHERE a.id = @id;
 
 -- name: UpsertRunner :one
 -- Upsert a runner and return the deployment ID that it is assigned to, if any.

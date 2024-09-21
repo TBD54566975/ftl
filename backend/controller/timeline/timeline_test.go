@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"io"
 	"net/http"
 	"net/url"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"reflect"
 	"testing"
 	"time"
@@ -31,6 +31,7 @@ func TestTimeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
+	registry := artefacts.New(ctx, conn)
 	controllerDAL := controllerdal.New(ctx, conn, encryption)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
@@ -43,7 +44,7 @@ func TestTimeline(t *testing.T) {
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = controllerDAL.Registry.Upload(ctx, artefacts.Artefact{Content: testContent})
+		testSha, err = registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 
@@ -204,13 +205,14 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
+	registry := artefacts.New(ctx, conn)
 	controllerDAL := controllerdal.New(ctx, conn, encryption)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = controllerDAL.Registry.Upload(ctx, artefacts.Artefact{Content: testContent})
+		testSha, err = registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 

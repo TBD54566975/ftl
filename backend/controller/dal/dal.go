@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -159,10 +158,6 @@ type Reservation interface {
 	Rollback(ctx context.Context) error
 }
 
-type artefactDAL struct {
-	db dalsql.Querier
-}
-
 func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service) *DAL {
 	var d *DAL
 	db := dalsql.New(conn)
@@ -170,13 +165,14 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 		leaseDAL:   leasedal.New(conn),
 		db:         db,
 		encryption: encryption,
-		Registry:   artefacts.NewDALRegistry(&artefactDAL{db: db}),
+		registry:   artefacts.New(ctx, conn),
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
 				db:                dalsql.New(h.Connection),
 				leaseDAL:          leasedal.New(h.Connection),
 				encryption:        d.encryption,
+				registry:          artefacts.New(ctx, h.Connection),
 				DeploymentChanges: d.DeploymentChanges,
 			}
 		}),
@@ -186,39 +182,13 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 	return d
 }
 
-func (d *artefactDAL) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]artefacts.ArtefactRow, error) {
-	results, err := d.db.GetArtefactDigests(ctx, digests)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve artefact digests: %w", err)
-	}
-	return slices.Map(results, func(in dalsql.GetArtefactDigestsRow) artefacts.ArtefactRow {
-		return artefacts.ArtefactRow{ID: in.ID, Digest: in.Digest}
-	}), nil
-}
-
-func (d *artefactDAL) CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error) {
-	id, err := d.db.CreateArtefact(ctx, digest, content)
-	if err != nil {
-		return id, fmt.Errorf("could not create artefact: %w", err)
-	}
-	return id, nil
-}
-
-func (d *artefactDAL) GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error) {
-	bytes, err := d.db.GetArtefactContentRange(ctx, start, count, iD)
-	if err != nil {
-		return nil, fmt.Errorf("could not retrieve artefact content range: %w", err)
-	}
-	return bytes, nil
-}
-
 type DAL struct {
 	*libdal.Handle[DAL]
 	db dalsql.Querier
 
 	leaseDAL   *leasedal.DAL
 	encryption *encryption.Service
-	Registry   artefacts.Registry
+	registry   *artefacts.Service
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *pubsub.Topic[DeploymentNotification]
@@ -399,19 +369,21 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", libdal.TranslatePGError(err))
 	}
 
-	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) []byte { return in.Digest[:] })
-	artefactDigests, err := tx.db.GetArtefactDigests(ctx, uploadedDigests)
+	uploadedDigests := slices.Map(artefacts, func(in DeploymentArtefact) sha256.SHA256 { return sha256.FromBytes(in.Digest[:]) })
+	keys, missing, err := tx.registry.GetDigestsKeys(ctx, uploadedDigests)
 	if err != nil {
 		return model.DeploymentKey{}, fmt.Errorf("failed to get artefact digests: %w", err)
 	}
-	if len(artefactDigests) != len(artefacts) {
-		missingDigests := strings.Join(slices.Map(artefacts, func(in DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return model.DeploymentKey{}, fmt.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+	if len(missing) > 0 {
+		m := slices.Reduce(missing, "", func(join string, in sha256.SHA256) string {
+			return fmt.Sprintf("%s, %s", join, in.String())
+		})
+		return model.DeploymentKey{}, fmt.Errorf("missing digests %s", m)
 	}
 
 	// Associate the artefacts with the deployment
-	for _, row := range artefactDigests {
-		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
+	for _, row := range keys {
+		artefact := artefactsByDigest[row.Digest]
 		err = tx.db.AssociateArtefactWithDeployment(ctx, dalsql.AssociateArtefactWithDeploymentParams{
 			Key:        deploymentKey,
 			ArtefactID: row.ID,
@@ -815,15 +787,22 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymen
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
-	out.Artefacts = slices.Map(darts, func(row dalsql.GetDeploymentArtefactsRow) *model.Artefact {
-		key := artefacts.MakeKey(row.ID, row.Digest)
+	out.Artefacts, err = slices.MapErr(darts, func(row dalsql.GetDeploymentArtefactsRow) (*model.Artefact, error) {
+		digest := sha256.FromBytes(row.Digest)
+		content, err := d.registry.Download(ctx, digest)
+		if err != nil {
+			return nil, fmt.Errorf("artefact download failed: %w", libdal.TranslatePGError(err))
+		}
 		return &model.Artefact{
 			Path:       row.Path,
 			Executable: row.Executable,
-			Content:    d.Registry.Download(ctx, key),
-			Digest:     key.Digest,
-		}
+			Content:    content,
+			Digest:     digest,
+		}, nil
 	})
+	if err != nil {
+		return nil, fmt.Errorf("an artefact download failed: %w", err)
+	}
 	return out, nil
 }
 
