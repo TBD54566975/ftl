@@ -190,6 +190,12 @@ func PrintJSON(ctx context.Context, json []byte) {
 	}
 }
 
+func IsANSITerminal(ctx context.Context) bool {
+	sm := FromContext(ctx)
+	_, ok := sm.(*terminalStatusManager)
+	return ok
+}
+
 func (r *terminalStatusManager) gotoCoords(line int, col int) {
 	r.underlyingWrite(fmt.Sprintf("\033[%d;%dH", line, col))
 }

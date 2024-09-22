@@ -109,6 +109,9 @@ func main() {
 			kctx.Fatalf("could not determine default config path, either place an ftl-project.toml file in the root of your project, use --config=FILE, or set the FTL_CONFIG envar")
 		}
 	}
+	if console.IsANSITerminal(ctx) {
+		cli.LogConfig.Color = true
+	}
 
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx = log.ContextWithLogger(ctx, logger)
