@@ -7,7 +7,7 @@ import (
 )
 
 func TestBasics(t *testing.T) {
-	keyPair, err := NewTinkKeyPair()
+	keyPair, err := GenerateTinkKeyPair()
 	assert.NoError(t, err)
 
 	signer, err := keyPair.Signer()

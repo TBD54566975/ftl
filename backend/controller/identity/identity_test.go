@@ -7,8 +7,6 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	// encryptiondal "github.com/TBD54566975/ftl/backend/controller/encryption/dal"
-
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -27,7 +25,11 @@ func TestIdentity(t *testing.T) {
 
 	service, err := New(ctx, encryption, conn)
 	assert.NoError(t, err)
+	signedData, err := service.Sign([]byte("test"))
+	assert.NoError(t, err)
 
-	service.ensureIdentity(ctx)
-
+	service, err = New(ctx, encryption, conn)
+	assert.NoError(t, err)
+	err = service.Verify(*signedData)
+	assert.NoError(t, err)
 }

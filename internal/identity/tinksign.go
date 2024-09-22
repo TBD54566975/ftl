@@ -99,8 +99,8 @@ func (t TinkKeyPair) Handle() keyset.Handle {
 	return t.keysetHandle
 }
 
-// NewTinkKeyPair creates a new key pair using Tink's ED25519 key template
-func NewTinkKeyPair() (*TinkKeyPair, error) {
+// GenerateTinkKeyPair creates a new key pair using Tink's ED25519 key template
+func GenerateTinkKeyPair() (*TinkKeyPair, error) {
 	keysetHandle, err := keyset.NewHandle(signature.ED25519KeyTemplate())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create keyset handle: %w", err)
@@ -109,4 +109,10 @@ func NewTinkKeyPair() (*TinkKeyPair, error) {
 	return &TinkKeyPair{
 		keysetHandle: *keysetHandle,
 	}, nil
+}
+
+func NewTinkKeyPair(handle keyset.Handle) *TinkKeyPair {
+	return &TinkKeyPair{
+		keysetHandle: handle,
+	}
 }
