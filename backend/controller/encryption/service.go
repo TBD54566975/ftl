@@ -32,9 +32,15 @@ func New(ctx context.Context, conn libdal.Connection, encryptionBuilder Builder)
 	return &Service{encryptor: encryptor}, nil
 }
 
-func (s *Service) AEAD() tink.AEAD {
-	// This is a temporary workaround until we can refactor the code to use the AEAD interface.
-	return s.encryptor.(*KMSEncryptor).kekAEAD
+// AEAD returns the AEAD instance used by the encryptor.
+// TODO: Remove this method once we have a better way to handle this.
+func (s *Service) AEAD() (tink.AEAD, error) {
+	kmsEncryptor, ok := s.encryptor.(*KMSEncryptor)
+	if !ok {
+		return nil, fmt.Errorf("encryptor is not of type *KMSEncryptor")
+	}
+
+	return kmsEncryptor.kekAEAD, nil
 }
 
 // EncryptJSON encrypts the given JSON object and stores it in the provided destination.

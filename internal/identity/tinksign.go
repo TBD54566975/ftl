@@ -94,6 +94,7 @@ func (t TinkKeyPair) Public() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Handle returns the keyset handle.
 // TODO: Remove this. We don't want to expose the private key.
 func (t TinkKeyPair) Handle() keyset.Handle {
 	return t.keysetHandle
