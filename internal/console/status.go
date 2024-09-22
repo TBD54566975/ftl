@@ -410,7 +410,7 @@ func (r *terminalStatusLine) SetMessage(message string) {
 	r.manager.recalculateLines()
 }
 
-func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder) {
+func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, cancel context.CancelFunc) {
 	sm := FromContext(ctx)
 	if tsm, ok := sm.(*terminalStatusManager); ok {
 		tsm.console = true
@@ -420,7 +420,7 @@ func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 				tsm.statusLock.Lock()
 				defer tsm.statusLock.Unlock()
 				tsm.consoleRefresh = f
-			})
+			}, cancel)
 			if err != nil {
 				fmt.Printf("\033[31mError: %s\033[0m\n", err)
 				return

@@ -19,14 +19,15 @@ import (
 var _ readline.AutoCompleter = &FTLCompletion{}
 var errExitTrap = errors.New("exit trap")
 
-type KongContextBinder func(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong) context.Context
+type KongContextBinder func(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context
 
-func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, refreshFunction func(func())) error {
+func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, refreshFunction func(func()), cancelContext context.CancelFunc) error {
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          "\033[32m>\033[0m ",
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
 		AutoComplete:    &FTLCompletion{app: k},
+		Listener:        &ExitListener{cancel: cancelContext},
 	})
 	if refreshFunction != nil {
 		refreshFunction(l.Refresh)
@@ -34,6 +35,9 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 	if err != nil {
 		return fmt.Errorf("init readline: %w", err)
 	}
+	context.AfterFunc(ctx, func() {
+		_ = l.Close()
+	})
 	l.CaptureExitSignal()
 	// Overload the exit function to avoid exiting the process
 	k.Exit = func(i int) { panic(errExitTrap) }
@@ -63,7 +67,6 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 					if r == errExitTrap { //nolint:errorlint
 						return
 					}
-					panic(r)
 				}
 			}()
 			kctx, err := k.Parse(args)
@@ -71,16 +74,31 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 				errorf("%s", err)
 				return
 			}
-			subctx := binder(ctx, kctx, projectConfig, k)
+			subctx := binder(ctx, kctx, projectConfig, k, cancelContext)
 
 			err = kctx.Run(subctx)
 			if err != nil {
 				errorf("error: %s", err)
 				return
 			}
+			// Force a status refresh
+			println("")
 		}()
 	}
 	return nil
+}
+
+var _ readline.Listener = &ExitListener{}
+
+type ExitListener struct {
+	cancel context.CancelFunc
+}
+
+func (e ExitListener) OnChange(line []rune, pos int, key rune) (newLine []rune, newPos int, ok bool) {
+	if key == readline.CharInterrupt {
+		e.cancel()
+	}
+	return line, pos, true
 }
 
 func errorf(format string, args ...any) {

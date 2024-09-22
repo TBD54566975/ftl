@@ -134,7 +134,7 @@ func main() {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		kctx.FatalIfErrorf(err)
 	}
-	ctx = bindContext(ctx, kctx, config, app)
+	ctx = bindContext(ctx, kctx, config, app, cancel)
 
 	err = kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
@@ -142,7 +142,7 @@ func main() {
 
 var _ console.KongContextBinder = bindContext
 
-func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong) context.Context {
+func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context {
 	kctx.Bind(projectConfig)
 	kctx.Bind(app)
 
@@ -157,5 +157,6 @@ func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectc
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
 	kctx.BindTo(bindContext, (*console.KongContextBinder)(nil))
+	kctx.BindTo(cancel, (*context.CancelFunc)(nil))
 	return ctx
 }
