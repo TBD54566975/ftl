@@ -38,12 +38,12 @@ func New(ctx context.Context, encryption *encryptionsvc.Service, conn *sql.DB) (
 
 const verificationText = "My voice is my passport, verify me."
 
-func (s Service) ensureIdentity(ctx context.Context) error {
+func (s Service) ensureIdentity(ctx context.Context) (err error) {
 	tx, err := s.dal.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer tx.CommitOrRollback(ctx, &err)
 
 	_, err = s.dal.GetOnlyIdentityKey(ctx)
 	if err != nil {
@@ -51,46 +51,66 @@ func (s Service) ensureIdentity(ctx context.Context) error {
 			return fmt.Errorf("failed to get only identity key: %w", err)
 		}
 
-		// Not found! Generate a new identity key
-		pair, err := internalidentity.NewKeyPair()
+		err = s.generateAndSaveIdentity(ctx, tx)
 		if err != nil {
-			return fmt.Errorf("failed to generate key pair: %w", err)
+			return fmt.Errorf("failed to generate and save identity: %w", err)
 		}
+	}
 
-		signer, err := pair.Signer()
-		if err != nil {
-			return fmt.Errorf("failed to create signer: %w", err)
-		}
+	return nil
+}
 
-		signed, err := signer.Sign([]byte(verificationText))
-		if err != nil {
-			return fmt.Errorf("failed to sign verification: %w", err)
-		}
+func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error {
+	// Not found! Generate a new identity key
+	pair, err := internalidentity.NewKeyPair()
+	if err != nil {
+		return fmt.Errorf("failed to generate key pair: %w", err)
+	}
 
-		verifier, err := pair.Verifier()
-		if err != nil {
-			return fmt.Errorf("failed to create verifier: %w", err)
-		}
+	signer, err := pair.Signer()
+	if err != nil {
+		return fmt.Errorf("failed to create signer: %w", err)
+	}
 
-		// For total sanity, verify immediately
-		if err = verifier.Verify(*signed); err != nil {
-			return fmt.Errorf("failed to verify signed verification: %w", err)
-		}
+	signed, err := signer.Sign([]byte(verificationText))
+	if err != nil {
+		return fmt.Errorf("failed to sign verification: %w", err)
+	}
 
-		// This is what i need to do via interfaces/generics
-		handle := pair.Handle()
-		buf := new(bytes.Buffer)
-		writer := keyset.NewBinaryWriter(buf)
-		aead := s.encryption.AEAD()
-		handle.Write(writer, aead)
-		var encryptedIdentityColumn api.EncryptedIdentityColumn
-		s.encryption.EncryptKeyPair(pair, &encryptedIdentityColumn)
+	verifier, err := pair.Verifier()
+	if err != nil {
+		return fmt.Errorf("failed to create verifier: %w", err)
+	}
 
-		fmt.Println("buf: ", buf.Bytes())
-		panic("stop")
+	// For total sanity, verify immediately
+	if err = verifier.Verify(*signed); err != nil {
+		return fmt.Errorf("failed to verify signed verification: %w", err)
+	}
 
-		// var encryptedIdentity api.EncryptedIdentityColumn
-		// encrypted, err := s.encryption.Encrypt()
+	// TODO: Make this support different encryptors.
+	// Might need to refactor internal/identity to access controller encryption types.
+	// It's a bit tricky because you can't take out the private key from the keyset without
+	// encrypting it with the AEAD.
+	handle := pair.Handle()
+	buf := new(bytes.Buffer)
+	writer := keyset.NewBinaryWriter(buf)
+	aead := s.encryption.AEAD()
+	handle.Write(writer, aead)
+	encryptedIdentityColumn := api.EncryptedIdentityColumn{}
+	encryptedIdentityColumn.Scan(buf.Bytes())
+
+	public, err := pair.Public()
+	if err != nil {
+		return fmt.Errorf("failed to get public key: %w", err)
+	}
+
+	encryptedIdentity := &dal.EncryptedIdentity{
+		Private:         encryptedIdentityColumn,
+		Public:          public,
+		VerifySignature: signed.Signature,
+	}
+	if err := s.dal.CreateOnlyIdentityKey(ctx, *encryptedIdentity); err != nil {
+		return fmt.Errorf("failed to create only identity key: %w", err)
 	}
 
 	return nil

@@ -11,7 +11,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/internal/dal"
 	"github.com/TBD54566975/ftl/backend/libdal"
-	internalidentity "github.com/TBD54566975/ftl/internal/identity"
 )
 
 type Service struct {
@@ -36,13 +35,6 @@ func New(ctx context.Context, conn libdal.Connection, encryptionBuilder Builder)
 func (s *Service) AEAD() tink.AEAD {
 	// This is a temporary workaround until we can refactor the code to use the AEAD interface.
 	return s.encryptor.(*KMSEncryptor).kekAEAD
-}
-
-func (s *Service) EncryptIdentityKey(keyPair internalidentity.KeyPair, dest api.Encrypted) error {
-	// Get the AEAD if it is a KMSEncryptor
-	if kmsEncryptor, ok := s.encryptor.(*KMSEncryptor); ok {
-		kmsEncryptor.kekAEAD
-	}
 }
 
 // EncryptJSON encrypts the given JSON object and stores it in the provided destination.

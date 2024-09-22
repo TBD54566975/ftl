@@ -1,9 +1,8 @@
 package identity
 
 import (
+	"bytes"
 	"fmt"
-
-	// "github.com/aws/aws-sdk-go/service/kms"
 
 	"github.com/tink-crypto/tink-go/v2/keyset"
 	"github.com/tink-crypto/tink-go/v2/signature"
@@ -26,6 +25,10 @@ func (k TinkSigner) Sign(data []byte) (*SignedData, error) {
 		Data:      data,
 		Signature: bytes,
 	}, nil
+}
+
+func (k TinkSigner) Public() ([]byte, error) {
+	panic("implement me")
 }
 
 var _ Verifier = &TinkVerifier{}
@@ -76,7 +79,22 @@ func (t TinkKeyPair) Verifier() (Verifier, error) {
 	}, nil
 }
 
-// TODO: Remove this
+func (t TinkKeyPair) Public() ([]byte, error) {
+	publicHandle, err := t.keysetHandle.Public()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get public keyset from keyset handle: %w", err)
+	}
+
+	buf := new(bytes.Buffer)
+	writer := keyset.NewBinaryWriter(buf)
+	if err := publicHandle.WriteWithNoSecrets(writer); err != nil {
+		return nil, fmt.Errorf("failed to write public keyset to buffer: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// TODO: Remove this. We don't want to expose the private key.
 func (t TinkKeyPair) Handle() keyset.Handle {
 	return t.keysetHandle
 }
