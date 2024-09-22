@@ -62,7 +62,7 @@ func (s Service) ensureIdentity(ctx context.Context) (err error) {
 
 func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error {
 	// Not found! Generate a new identity key
-	pair, err := internalidentity.NewKeyPair()
+	pair, err := internalidentity.NewTinkKeyPair()
 	if err != nil {
 		return fmt.Errorf("failed to generate key pair: %w", err)
 	}
