@@ -219,17 +219,11 @@ debug *args:
 # `just otel-dev` with any args you would pass to `ftl dev`. To stop the otel stream, run
 # `just otel-stop` in a third terminal tab.
 otel-stream:
-  docker run \
-    -p ${OTEL_GRPC_PORT}:${OTEL_GRPC_PORT} \
-    -p 55679:55679 \
-    otel/opentelemetry-collector:0.104.0 2>&1 | sed 's/\([A-Z].* #\)/\
-  \1/g'
+  docker compose --profile infra up otel-collector
 
-# Stop the docker container running otel.
-otel-container-id := `docker ps -f ancestor=otel/opentelemetry-collector:0.104.0 | tail -1 | cut -d " " -f1`
-
+# Stop the otel collector container.
 otel-stop:
-  docker stop "{{otel-container-id}}"
+  docker compose --profile infra down otel-collector
 
 # Run `ftl dev` with the given args after setting the necessary envar.
 otel-dev *args:
