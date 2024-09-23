@@ -1,197 +1,113 @@
 package buildengine
 
-import (
-	"bufio"
-	"context"
-	"fmt"
-	"go/parser"
-	"go/token"
-	"io/fs"
-	"os"
-	"path/filepath"
-	"regexp"
-	"sort"
-	"strconv"
-	"strings"
+// TODO: remove this file
 
-	"golang.org/x/exp/maps"
+// func extractDependencies(module Module) ([]string, error) {
+// 	switch module.Config.Language {
+// 	case "go":
+// 		// return extractGoFTLImports(module.Config.Module, module.Config.Dir)
 
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/walk"
-)
+// 	case "java", "kotlin":
+// 		return extractJVMFTLImports(module.Config.Module, module.Config.Dir)
 
-// UpdateDependencies finds the dependencies for a module and returns a
-// Module with those dependencies populated.
-func UpdateDependencies(ctx context.Context, module Module) (Module, error) {
-	logger := log.FromContext(ctx)
-	logger.Debugf("Extracting dependencies for %q", module.Config.Module)
-	dependencies, err := extractDependencies(module)
-	if err != nil {
-		return Module{}, err
-	}
-	containsBuiltin := false
-	for _, dep := range dependencies {
-		if dep == "builtin" {
-			containsBuiltin = true
-			break
-		}
-	}
-	if !containsBuiltin {
-		dependencies = append(dependencies, "builtin")
-	}
+// 	case "rust":
+// 		return extractRustFTLImports(module.Config.Module, module.Config.Dir)
 
-	out := module.CopyWithDependencies(dependencies)
-	return out, nil
-}
+// 	default:
+// 		return nil, fmt.Errorf("unsupported language: %s", module.Config.Language)
+// 	}
+// }
 
-func extractDependencies(module Module) ([]string, error) {
-	switch module.Config.Language {
-	case "go":
-		return extractGoFTLImports(module.Config.Module, module.Config.Dir)
+// func extractKotlinFTLImports(self, dir string) ([]string, error) {
+// 	dependencies := map[string]bool{}
+// 	kotlinImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
 
-	case "java", "kotlin":
-		return extractJVMFTLImports(module.Config.Module, module.Config.Dir)
+// 	err := filepath.WalkDir(filepath.Join(dir, "src/main/kotlin"), func(path string, d fs.DirEntry, err error) error {
+// 		if err != nil {
+// 			return err
+// 		}
+// 		if d.IsDir() || !(strings.HasSuffix(path, ".kt") || strings.HasSuffix(path, ".kts")) {
+// 			return nil
+// 		}
+// 		file, err := os.Open(path)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		defer file.Close()
 
-	case "rust":
-		return extractRustFTLImports(module.Config.Module, module.Config.Dir)
+// 		scanner := bufio.NewScanner(file)
+// 		for scanner.Scan() {
+// 			matches := kotlinImportRegex.FindStringSubmatch(scanner.Text())
+// 			if len(matches) > 1 {
+// 				module := strings.Split(matches[1], ".")[0]
+// 				if module == self {
+// 					continue
+// 				}
+// 				dependencies[module] = true
+// 			}
+// 		}
+// 		return scanner.Err()
+// 	})
 
-	default:
-		return nil, fmt.Errorf("unsupported language: %s", module.Config.Language)
-	}
-}
+// 	if err != nil {
+// 		return nil, fmt.Errorf("%s: failed to extract dependencies from Kotlin module: %w", self, err)
+// 	}
+// 	modules := maps.Keys(dependencies)
+// 	sort.Strings(modules)
+// 	return modules, nil
+// }
 
-func extractGoFTLImports(moduleName, dir string) ([]string, error) {
-	dependencies := map[string]bool{}
-	fset := token.NewFileSet()
-	err := walk.WalkDir(dir, func(path string, d fs.DirEntry) error {
-		if !d.IsDir() {
-			return nil
-		}
-		if strings.HasPrefix(d.Name(), "_") || d.Name() == "testdata" {
-			return walk.ErrSkip
-		}
-		pkgs, err := parser.ParseDir(fset, path, nil, parser.ImportsOnly)
-		if pkgs == nil {
-			return err
-		}
-		for _, pkg := range pkgs {
-			for _, file := range pkg.Files {
-				for _, imp := range file.Imports {
-					path, err := strconv.Unquote(imp.Path.Value)
-					if err != nil {
-						continue
-					}
-					if !strings.HasPrefix(path, "ftl/") {
-						continue
-					}
-					module := strings.Split(strings.TrimPrefix(path, "ftl/"), "/")[0]
-					if module == moduleName {
-						continue
-					}
-					dependencies[module] = true
-				}
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", moduleName, err)
-	}
-	modules := maps.Keys(dependencies)
-	sort.Strings(modules)
-	return modules, nil
-}
+// func extractJVMFTLImports(self, dir string) ([]string, error) {
+// 	dependencies := map[string]bool{}
+// 	// We also attempt to look at kotlin files
+// 	// As the Java module supports both
+// 	kotin, kotlinErr := extractKotlinFTLImports(self, dir)
+// 	if kotlinErr == nil {
+// 		// We don't really care about the error case, its probably a Java project
+// 		for _, imp := range kotin {
+// 			dependencies[imp] = true
+// 		}
+// 	}
+// 	javaImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
 
-func extractKotlinFTLImports(self, dir string) ([]string, error) {
-	dependencies := map[string]bool{}
-	kotlinImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
+// 	err := filepath.WalkDir(filepath.Join(dir, "src/main/java"), func(path string, d fs.DirEntry, err error) error {
+// 		if err != nil {
+// 			return fmt.Errorf("failed to walk directory: %w", err)
+// 		}
+// 		if d.IsDir() || !(strings.HasSuffix(path, ".java")) {
+// 			return nil
+// 		}
+// 		file, err := os.Open(path)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to open file: %w", err)
+// 		}
+// 		defer file.Close()
 
-	err := filepath.WalkDir(filepath.Join(dir, "src/main/kotlin"), func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() || !(strings.HasSuffix(path, ".kt") || strings.HasSuffix(path, ".kts")) {
-			return nil
-		}
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
+// 		scanner := bufio.NewScanner(file)
+// 		for scanner.Scan() {
+// 			matches := javaImportRegex.FindStringSubmatch(scanner.Text())
+// 			if len(matches) > 1 {
+// 				module := strings.Split(matches[1], ".")[0]
+// 				if module == self {
+// 					continue
+// 				}
+// 				dependencies[module] = true
+// 			}
+// 		}
+// 		return scanner.Err()
+// 	})
 
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			matches := kotlinImportRegex.FindStringSubmatch(scanner.Text())
-			if len(matches) > 1 {
-				module := strings.Split(matches[1], ".")[0]
-				if module == self {
-					continue
-				}
-				dependencies[module] = true
-			}
-		}
-		return scanner.Err()
-	})
+// 	// We only error out if they both failed
+// 	if err != nil && kotlinErr != nil {
+// 		return nil, fmt.Errorf("%s: failed to extract dependencies from Java module: %w", self, err)
+// 	}
+// 	modules := maps.Keys(dependencies)
+// 	sort.Strings(modules)
+// 	return modules, nil
+// }
 
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to extract dependencies from Kotlin module: %w", self, err)
-	}
-	modules := maps.Keys(dependencies)
-	sort.Strings(modules)
-	return modules, nil
-}
+// func extractRustFTLImports(self, dir string) ([]string, error) {
+// 	fmt.Fprintf(os.Stderr, "RUST TODO extractRustFTLImports\n")
 
-func extractJVMFTLImports(self, dir string) ([]string, error) {
-	dependencies := map[string]bool{}
-	// We also attempt to look at kotlin files
-	// As the Java module supports both
-	kotin, kotlinErr := extractKotlinFTLImports(self, dir)
-	if kotlinErr == nil {
-		// We don't really care about the error case, its probably a Java project
-		for _, imp := range kotin {
-			dependencies[imp] = true
-		}
-	}
-	javaImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
-
-	err := filepath.WalkDir(filepath.Join(dir, "src/main/java"), func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to walk directory: %w", err)
-		}
-		if d.IsDir() || !(strings.HasSuffix(path, ".java")) {
-			return nil
-		}
-		file, err := os.Open(path)
-		if err != nil {
-			return fmt.Errorf("failed to open file: %w", err)
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			matches := javaImportRegex.FindStringSubmatch(scanner.Text())
-			if len(matches) > 1 {
-				module := strings.Split(matches[1], ".")[0]
-				if module == self {
-					continue
-				}
-				dependencies[module] = true
-			}
-		}
-		return scanner.Err()
-	})
-
-	// We only error out if they both failed
-	if err != nil && kotlinErr != nil {
-		return nil, fmt.Errorf("%s: failed to extract dependencies from Java module: %w", self, err)
-	}
-	modules := maps.Keys(dependencies)
-	sort.Strings(modules)
-	return modules, nil
-}
-
-func extractRustFTLImports(self, dir string) ([]string, error) {
-	fmt.Fprintf(os.Stderr, "RUST TODO extractRustFTLImports\n")
-
-	return nil, nil
-}
+// 	return nil, nil
+// }

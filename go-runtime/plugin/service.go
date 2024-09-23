@@ -146,7 +146,6 @@ func (s *Service) CreateModule(ctx context.Context, req *connect.Request[languag
 
 // Extract dependencies for a module
 func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[languagepb.DependenciesRequest]) (*connect.Response[languagepb.DependenciesResponse], error) {
-	log.FromContext(ctx).Infof("Received GetDependencies")
 	deps, err := compile.ExtractDependencies(req.Msg.Metadata.Name, req.Msg.Path)
 	if err != nil {
 		return nil, err

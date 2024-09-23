@@ -150,7 +150,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, bindA
 		return nil, fmt.Errorf("could not find modules: %w", err)
 	}
 	for _, module := range modules {
-		module, err = UpdateDependencies(ctx, module)
+		module, err = e.updateDependencies(ctx, module)
 		if err != nil {
 			return nil, err
 		}
@@ -163,6 +163,36 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, bindA
 	schemaSync := e.startSchemaSync(ctx)
 	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync, rpc.AlwaysRetry())
 	return e, nil
+}
+
+// updateDependencies finds the dependencies for a module and returns a
+// Module with those dependencies populated.
+func (e *Engine) updateDependencies(ctx context.Context, module Module) (Module, error) {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Extracting dependencies for %q", module.Config.Module)
+
+	plugin, err := e.pluginForModule(ctx, module.Config.Module, module.Config.Dir)
+	if err != nil {
+		return Module{}, fmt.Errorf("could get plugin for %s to extract dependencies: %w", module.Config.Module, err)
+	}
+
+	dependencies, err := plugin.GetDependencies(ctx)
+	if err != nil {
+		return Module{}, err
+	}
+	containsBuiltin := false
+	for _, dep := range dependencies {
+		if dep == "builtin" {
+			containsBuiltin = true
+			break
+		}
+	}
+	if !containsBuiltin {
+		dependencies = append(dependencies, "builtin")
+	}
+
+	out := module.CopyWithDependencies(dependencies)
+	return out, nil
 }
 
 // Sync module schema changes from the FTL controller, as well as from manual

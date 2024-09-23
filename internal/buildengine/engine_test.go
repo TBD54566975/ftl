@@ -2,18 +2,25 @@ package buildengine_test
 
 import (
 	"context"
+	"net/url"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 func TestGraph(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	engine, err := buildengine.New(ctx, nil, t.TempDir(), []string{"testdata/alpha", "testdata/other", "testdata/another"})
+	// TODO: make it an parameter with a default
+	initialBind, err := url.Parse("http://192.0.0.1:47231")
+	assert.NoError(t, err)
+	bindAllocator, err := bind.NewBindAllocator(initialBind)
+	assert.NoError(t, err)
+	engine, err := buildengine.New(ctx, nil, bindAllocator, t.TempDir(), []string{"testdata/alpha", "testdata/other", "testdata/another"})
 	assert.NoError(t, err)
 
 	defer engine.Close()
