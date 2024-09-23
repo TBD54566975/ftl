@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
@@ -40,7 +41,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
+	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
@@ -54,18 +55,19 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
+	status "github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	internalobservability "github.com/TBD54566975/ftl/internal/observability"
 	ftlreflect "github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/internal/status"
 )
 
 // CommonConfig between the production controller and development server.
@@ -100,6 +102,8 @@ type Config struct {
 	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
+	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
+	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 	CommonConfig
 }
 
@@ -110,6 +114,16 @@ func (c *Config) SetDefaults() {
 	if c.Advertise == nil {
 		c.Advertise = c.Bind
 	}
+}
+
+func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
+	conn, err := internalobservability.OpenDBAndInstrument(c.DSN)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open DB connection: %w", err)
+	}
+	conn.SetMaxIdleConns(c.MaxIdleDBConnections)
+	conn.SetMaxOpenConns(c.MaxOpenDBConnections)
+	return conn, nil
 }
 
 // Start the Controller. Blocks until the context is cancelled.
@@ -147,7 +161,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	admin := admin.NewAdminService(cm, sm, svc.dal)
 	console := console.NewService(svc.dal, svc.timeline)
 
-	ingressHandler := http.Handler(svc)
+	ingressHandler := otelhttp.NewHandler(http.Handler(svc), "ftl.ingress")
 	if len(config.AllowOrigins) > 0 {
 		ingressHandler = cors.Middleware(
 			slices.Map(config.AllowOrigins, func(u *url.URL) string { return u.String() }),
@@ -175,7 +189,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		)
 	})
 	g.Go(func() error {
-		return runnerScaling.Start(ctx, *config.Bind, svc.leasesdal)
+		return runnerScaling.Start(ctx, *config.Bind, svc.dbleaser)
 	})
 
 	go svc.dal.PollDeployments(ctx)
@@ -198,7 +212,7 @@ type ControllerListListener interface {
 
 type Service struct {
 	conn               *sql.DB
-	leasesdal          *leasesdal.DAL
+	dbleaser           *dbleaser.DatabaseLeaser
 	dal                *dal.DAL
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
@@ -242,11 +256,11 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	}
 
 	db := dal.New(ctx, conn, encryption)
-	ldb := leasesdal.New(conn)
+	ldb := dbleaser.NewDatabaseLeaser(conn)
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, ldb),
 		dal:                     db,
-		leasesdal:               ldb,
+		dbleaser:                ldb,
 		conn:                    conn,
 		key:                     key,
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
@@ -313,7 +327,6 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
 	if err != nil {
 		if errors.Is(err, libdal.ErrNotFound) {
@@ -788,7 +801,7 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
 		}
 		if lease == nil {
-			lease, _, err = s.leasesdal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
+			lease, _, err = s.dbleaser.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
 			if err != nil {
 				if errors.Is(err, leases.ErrConflict) {
 					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))
@@ -961,6 +974,8 @@ func (s *Service) callWithRequest(
 	sourceAddress string,
 ) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
+	ctx, span := observability.Calls.BeginSpan(ctx, req.Msg.Verb)
+	defer span.End()
 
 	if req.Msg.Verb == nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: missing verb"))
@@ -1573,7 +1588,7 @@ func (s *Service) resolveFSMEvent(msg *ftlv1.SendFSMEventRequest) (fsm *schema.F
 }
 
 func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {
-	err := s.leasesdal.ExpireLeases(ctx)
+	err := s.dbleaser.ExpireLeases(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to expire leases: %w", err)
 	}

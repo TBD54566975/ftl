@@ -1,4 +1,4 @@
-package status
+package console
 
 import (
 	"bytes"
@@ -13,7 +13,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/alecthomas/atomic"
+	"github.com/alecthomas/kong"
+	"github.com/tidwall/pretty"
 	"golang.org/x/term"
+
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 type BuildState string
@@ -71,6 +75,8 @@ type terminalStatusManager struct {
 	height           int
 	width            int
 	exitWait         sync.WaitGroup
+	console          bool
+	consoleRefresh   func()
 }
 
 type statusKey struct{}
@@ -113,8 +119,8 @@ func NewStatusManager(ctx context.Context) StatusManager {
 	}()
 
 	go func() {
-		defer sm.exitWait.Done()
 		current := ""
+		closed := false
 		for {
 
 			buf := bytes.Buffer{}
@@ -124,11 +130,25 @@ func NewStatusManager(ctx context.Context) StatusManager {
 				if current != "" {
 					sm.writeLine(current)
 				}
+				if !closed {
+					sm.exitWait.Done()
+				}
 				return
 			}
 			buf.Write(rawData[:n])
 			for buf.Len() > 0 {
 				d, s, err := buf.ReadRune()
+				if d == 0 {
+					// Null byte, we are done
+					// we keep running though as there may be more data on exit
+					// that we handle on a best effort basis
+					sm.writeLine(current)
+					if !closed {
+						sm.exitWait.Done()
+						closed = true
+					}
+					continue
+				}
 				if err != nil {
 					// EOF, need to read more data
 					break
@@ -157,7 +177,6 @@ func NewStatusManager(ctx context.Context) StatusManager {
 		sm.Close()
 	}()
 	return sm
-
 }
 
 func UpdateModuleState(ctx context.Context, module string, state BuildState) {
@@ -165,20 +184,40 @@ func UpdateModuleState(ctx context.Context, module string, state BuildState) {
 	sm.SetModuleState(module, state)
 }
 
+// PrintJSON prints a json string to the terminal
+// It probably doesn't belong here, but it will be moved later with the interactive terminal work
+func PrintJSON(ctx context.Context, json []byte) {
+	sm := FromContext(ctx)
+	if _, ok := sm.(*terminalStatusManager); ok {
+		// ANSI enabled
+		fmt.Printf("%s\n", pretty.Color(pretty.Pretty(json), nil))
+	} else {
+		fmt.Printf("%s\n", json)
+	}
+}
+
+func IsANSITerminal(ctx context.Context) bool {
+	sm := FromContext(ctx)
+	_, ok := sm.(*terminalStatusManager)
+	return ok
+}
+
 func (r *terminalStatusManager) gotoCoords(line int, col int) {
 	r.underlyingWrite(fmt.Sprintf("\033[%d;%dH", line, col))
 }
 
-func (r *terminalStatusManager) gotoLine(line int) {
-	r.gotoCoords(line, 0)
-}
 func (r *terminalStatusManager) clearStatusMessages() {
 	if r.totalStatusLines == 0 {
 		return
 	}
-	for i := range r.totalStatusLines {
-		r.gotoLine(r.height - r.totalStatusLines + 1 + i)
-		r.underlyingWrite("\033[K")
+	count := r.totalStatusLines
+	if r.console {
+		count--
+		// Don't clear the console line
+		r.underlyingWrite("\u001B[1A")
+	}
+	for range count {
+		r.underlyingWrite("\033[2K\u001B[1A")
 	}
 }
 
@@ -242,16 +281,12 @@ func (r *terminalStatusManager) Close() {
 	os.Stdout = r.old // restoring the real stdout
 	os.Stderr = r.oldErr
 	r.closed.Store(true)
-	_ = r.write.Close() //nolint:errcheck
+	// We send a null byte to the write pipe to unblock the read
+	_, _ = r.write.Write([]byte{0}) //nolint:errcheck
 	r.exitWait.Wait()
 }
 
 func (r *terminalStatusManager) writeLine(s string) {
-	if r.height < 7 || r.width < 20 || r.height-r.totalStatusLines < 5 {
-		// Not enough space to draw anything
-		r.underlyingWrite(s + "\n")
-		return
-	}
 	r.statusLock.RLock()
 	defer r.statusLock.RUnlock()
 
@@ -260,53 +295,33 @@ func (r *terminalStatusManager) writeLine(s string) {
 		return
 	}
 	r.clearStatusMessages()
-	r.gotoLine(r.height - r.totalStatusLines)
 	r.underlyingWrite("\n" + s)
-	for range r.totalStatusLines {
-		r.underlyingWrite("\n")
-	}
-	if r.totalStatusLines == 0 {
-		r.underlyingWrite("\n")
-	}
-	r.gotoLine(r.height)
 	r.redrawStatus()
 
 }
 func (r *terminalStatusManager) redrawStatus() {
-	if r.height < 7 || r.width < 20 || r.height-r.totalStatusLines < 5 {
-		// Not enough space to draw anything
-		return
-	}
-
 	if r.totalStatusLines == 0 || r.closed.Load() {
 		return
 	}
-	// If the console is tiny we don't do this
-	r.clearStatusMessages()
-	r.gotoLine(r.height - r.totalStatusLines)
-
-	r.underlyingWrite("\n--\n")
 	for i := len(r.lines) - 1; i >= 0; i-- {
 		msg := r.lines[i].message
 		if msg != "" {
-			r.underlyingWrite(msg)
-			if i > 0 {
-				// If there is any more messages to print we add a newline
-				for j := range i {
-					if r.lines[j].message != "" {
-						r.underlyingWrite("\n")
-						break
-					}
-				}
-			}
+			r.underlyingWrite("\n" + msg)
 		}
 	}
-
+	if r.console {
+		r.underlyingWrite("\n")
+	}
+	if r.consoleRefresh != nil {
+		r.consoleRefresh()
+	}
 }
 
 func (r *terminalStatusManager) recalculateLines() {
 
+	total := 0
 	if len(r.moduleStates) > 0 && r.moduleLine != nil {
+		total++
 		entryLength := 0
 		keys := []string{}
 		for k := range r.moduleStates {
@@ -322,30 +337,34 @@ func (r *terminalStatusManager) recalculateLines() {
 			perLine = 1
 		}
 		slices.Sort(keys)
+		multiLine := false
 		for i, k := range keys {
 			if i%perLine == 0 && i > 0 {
 				msg += "\n"
+				multiLine = true
+				total++
 			}
 			pad := strings.Repeat(" ", entryLength-len(k)-moduleStatusPadding+2)
 			state := r.moduleStates[k]
 			msg += pad + buildColors[state] + k + ": " + string(state) + "\u001B[39m"
 		}
+		if !multiLine {
+			// For multi-line messages we don't want to trim the message as we want to line up the columns
+			// For a single line this just looks weird
+			msg = strings.TrimSpace(msg)
+		}
 		r.moduleLine.message = msg
 	}
-	total := 0
 	for _, i := range r.lines {
-		if i.message != "" {
+		if i.message != "" && i != r.moduleLine {
 			total++
 			total += countLines(i.message, r.width)
 		}
 	}
-	if total > 0 {
+	if r.console {
 		total++
 	}
-	if total > r.totalStatusLines {
-		r.gotoLine(r.height - r.totalStatusLines)
-		r.underlyingWrite(strings.Repeat("\n", total-r.totalStatusLines))
-	}
+	r.clearStatusMessages()
 	r.totalStatusLines = total
 	r.redrawStatus()
 }
@@ -355,15 +374,12 @@ func (r *terminalStatusManager) underlyingWrite(messages string) {
 }
 
 func countLines(s string, width int) int {
-	return countLinesAtPos(s, 0, width)
-}
-
-func countLinesAtPos(s string, cursorPos int, width int) int {
 	if s == "" {
 		return 0
 	}
 	lines := 0
-	curLength := cursorPos
+	curLength := 0
+	// TODO: count unicode characters properly
 	for i := range s {
 		if s[i] == '\n' {
 			lines++
@@ -389,7 +405,6 @@ func (r *terminalStatusLine) Close() {
 	r.manager.statusLock.Lock()
 	defer r.manager.statusLock.Unlock()
 
-	r.manager.clearStatusMessages()
 	for i := range r.manager.lines {
 		if r.manager.lines[i] == r {
 			r.manager.lines = append(r.manager.lines[:i], r.manager.lines[i+1:]...)
@@ -405,4 +420,26 @@ func (r *terminalStatusLine) SetMessage(message string) {
 	defer r.manager.statusLock.Unlock()
 	r.message = message
 	r.manager.recalculateLines()
+}
+
+func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, cancel context.CancelFunc) {
+	sm := FromContext(ctx)
+	if tsm, ok := sm.(*terminalStatusManager); ok {
+		tsm.console = true
+		go func() {
+
+			err := RunInteractiveConsole(ctx, k, projectConfig, binder, func(f func()) {
+				tsm.statusLock.Lock()
+				defer tsm.statusLock.Unlock()
+				tsm.consoleRefresh = f
+			}, cancel)
+			if err != nil {
+				fmt.Printf("\033[31mError: %s\033[0m\n", err)
+				return
+			}
+		}()
+		tsm.statusLock.Lock()
+		defer tsm.statusLock.Unlock()
+		tsm.recalculateLines()
+	}
 }

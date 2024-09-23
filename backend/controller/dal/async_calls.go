@@ -14,7 +14,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
+	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"

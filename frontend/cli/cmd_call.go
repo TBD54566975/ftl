@@ -17,6 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	status "github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -77,7 +78,7 @@ func callVerb(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli
 		return fmt.Errorf("verb error: %s", resp.Error.Message)
 
 	case *ftlv1.CallResponse_Body:
-		fmt.Println(string(resp.Body))
+		status.PrintJSON(ctx, resp.Body)
 	}
 	return nil
 }

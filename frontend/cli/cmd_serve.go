@@ -89,15 +89,14 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
 
+	err := observability.Init(ctx, false, "", "ftl-serve", ftl.Version, s.ObservabilityConfig)
+	if err != nil {
+		return fmt.Errorf("observability init failed: %w", err)
+	}
 	// Bring up the DB and DAL.
 	dsn, err := s.setupDB(ctx, s.DatabaseImage)
 	if err != nil {
 		return err
-	}
-
-	err = observability.Init(ctx, false, "", "ftl-serve", ftl.Version, s.ObservabilityConfig)
-	if err != nil {
-		return fmt.Errorf("observability init failed: %w", err)
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
@@ -149,7 +148,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerCtx = manager.ContextWithSecrets(controllerCtx, sm)
 
 		// Bring up the DB connection and DAL.
-		conn, err := observability.OpenDBAndInstrument(config.DSN)
+		conn, err := config.OpenDBAndInstrument()
 		if err != nil {
 			return fmt.Errorf("failed to bring up DB connection: %w", err)
 		}

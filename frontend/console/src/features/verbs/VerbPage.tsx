@@ -6,7 +6,7 @@ import { useStreamVerbCalls } from '../../api/timeline/stream-verb-calls'
 import { Loader } from '../../components/Loader'
 import { ResizablePanels } from '../../components/ResizablePanels'
 import { Page } from '../../layout'
-import type { CallEvent, Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { CallList } from '../calls/CallList'
@@ -40,7 +40,7 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
   }, [modules.data, moduleName])
 
   const callEvents = useStreamVerbCalls(module?.name, verb?.verb?.name)
-  const calls: CallEvent[] = callEvents.data || []
+  const calls = callEvents.data || []
 
   if (!module || !verb) {
     return (

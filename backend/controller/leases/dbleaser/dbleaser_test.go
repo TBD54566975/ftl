@@ -1,4 +1,4 @@
-package dal
+package dbleaser
 
 import (
 	"context"
@@ -35,7 +35,7 @@ func TestLease(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal := New(conn)
+	dal := NewDatabaseLeaser(conn)
 
 	// TTL is too short, expect an error
 	_, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*1, optional.None[any]())
@@ -69,7 +69,7 @@ func TestExpireLeases(t *testing.T) {
 	}
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	dal := New(conn)
+	dal := NewDatabaseLeaser(conn)
 
 	leasei, _, err := dal.AcquireLease(ctx, leases.SystemKey("test"), time.Second*5, optional.None[any]())
 	assert.NoError(t, err)

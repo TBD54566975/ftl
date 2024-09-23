@@ -12,7 +12,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 
-	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs/internal/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
