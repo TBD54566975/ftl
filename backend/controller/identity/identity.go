@@ -79,7 +79,12 @@ func (s Service) getKeyPair(ctx context.Context) (internalidentity.KeyPair, erro
 	}
 
 	reader := keyset.NewBinaryReader(bytes.NewReader(identity.Private.Bytes()))
-	handle, err := keyset.Read(reader, s.encryption.AEAD())
+	aead, err := s.encryption.AEAD()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get AEAD: %w", err)
+	}
+
+	handle, err := keyset.Read(reader, aead)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read keyset: %w", err)
 	}
@@ -149,7 +154,10 @@ func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error
 	handle := pair.Handle()
 	buf := new(bytes.Buffer)
 	writer := keyset.NewBinaryWriter(buf)
-	aead := s.encryption.AEAD()
+	aead, err := s.encryption.AEAD()
+	if err != nil {
+		return fmt.Errorf("failed to get AEAD: %w", err)
+	}
 	if err := handle.Write(writer, aead); err != nil {
 		return fmt.Errorf("failed to write keyset: %w", err)
 	}
