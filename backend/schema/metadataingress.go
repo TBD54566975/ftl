@@ -57,12 +57,12 @@ func ingressPathComponentListToSchema(s []*schemapb.IngressPathComponent) []Ingr
 		switch n := n.Value.(type) {
 		case *schemapb.IngressPathComponent_IngressPathLiteral:
 			out = append(out, &IngressPathLiteral{
-				Pos:  posFromProto(n.IngressPathLiteral.Pos),
+				Pos:  PosFromProto(n.IngressPathLiteral.Pos),
 				Text: n.IngressPathLiteral.Text,
 			})
 		case *schemapb.IngressPathComponent_IngressPathParameter:
 			out = append(out, &IngressPathParameter{
-				Pos:  posFromProto(n.IngressPathParameter.Pos),
+				Pos:  PosFromProto(n.IngressPathParameter.Pos),
 				Name: n.IngressPathParameter.Name,
 			})
 		}

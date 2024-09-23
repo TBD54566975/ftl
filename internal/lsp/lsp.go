@@ -15,7 +15,7 @@ import (
 	glspServer "github.com/tliron/glsp/server"
 	"github.com/tliron/kutil/version"
 
-	"github.com/TBD54566975/ftl/backend/schema"
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	ftlErrors "github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -70,7 +70,7 @@ func (s *Server) Run() error {
 	return nil
 }
 
-type errSet []*schema.Error
+type errSet []*languagepb.Error
 
 // OnBuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
 // Also emit an FTL message to set the status.
@@ -107,7 +107,7 @@ func (s *Server) post(err error) {
 			continue
 		}
 
-		var ce *schema.Error
+		var ce *languagepb.Error
 		var cbe buildengine.CompilerBuildError
 		if errors.As(e, &ce) {
 			filename := ce.Pos.Filename
@@ -134,23 +134,24 @@ func publishPositionalErrors(errByFilename map[string]errSet, s *Server) {
 			sourceName := "ftl"
 			var severity protocol.DiagnosticSeverity
 
-			switch e.Level {
-			case schema.ERROR:
-				severity = protocol.DiagnosticSeverityError
-			case schema.WARN:
-				severity = protocol.DiagnosticSeverityWarning
-			case schema.INFO:
-				severity = protocol.DiagnosticSeverityInformation
-			}
+			// TODO: bring this back
+			// switch e.Level {
+			// case schema.ERROR:
+			// 	severity = protocol.DiagnosticSeverityError
+			// case schema.WARN:
+			// 	severity = protocol.DiagnosticSeverityWarning
+			// case schema.INFO:
+			// 	severity = protocol.DiagnosticSeverityInformation
+			// }
 
 			// If the end column is not set, set it to the length of the word.
 			if e.EndColumn <= pp.Column {
-				length, err := getLineOrWordLength(filename, pp.Line, pp.Column, false)
+				length, err := getLineOrWordLength(filename, int(pp.Line), int(pp.Column), false)
 				if err != nil {
 					s.logger.Errorf(err, "Failed to get line or word length")
 					continue
 				}
-				e.EndColumn = pp.Column + length
+				e.EndColumn = pp.Column + int64(length)
 			}
 
 			diagnostics = append(diagnostics, protocol.Diagnostic{

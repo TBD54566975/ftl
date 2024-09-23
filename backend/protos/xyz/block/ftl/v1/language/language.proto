@@ -1,0 +1,161 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1.language;
+
+import "xyz/block/ftl/v1/schema/schema.proto";
+import "xyz/block/ftl/v1/ftl.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language;languagepb";
+option java_multiple_files = true;
+
+enum LogLevel {
+  DEBUG = 0;
+  INFO = 1;
+  WARN = 2;
+  ERROR = 3;
+}
+
+// Log message from the language service.
+message LogMessage {
+  string message = 1;
+  LogLevel level = 2;
+}
+
+message Metadata {
+  message Pair {
+    string key = 1;
+    string value = 2;
+  }
+  // Universal metadata
+  string name = 1;
+
+  // Language metadata contains any metadata specific to a specific language.
+  repeated Pair LanguageMetadata = 2;
+}
+
+// Request to create a new module.
+message CreateModuleRequest {
+  string name = 1;
+  string path = 2;
+}
+
+// Response to a create module request.
+message CreateModuleResponse {
+  }
+
+message DependenciesRequest {
+  string path = 1;
+  Metadata metadata = 2;
+}
+
+message DependenciesResponse {
+  repeated string modules = 1;
+}
+
+// Response to a dependency extraction request.
+message DependencyUpdate {
+  repeated string modules = 1;
+}
+
+message MetadataUpdatedRequest {
+  Metadata metadata = 1;
+}
+
+message MetadataUpdatedResponse {
+
+}
+
+message SchemaUpdatedRequest {
+  schema.Schema schema = 1;
+}
+
+message SchemaUpdatedResponse {
+  
+}
+
+message Error {
+  enum ErrorLevel {
+    INFO = 0;
+    WARN = 1;
+    ERROR = 2;
+  }
+
+  string msg = 1;
+  schema.Position pos = 2;
+  int64 endColumn = 3;
+  ErrorLevel level = 4;
+}
+
+message ErrorList {
+  repeated Error errors = 1;
+}
+
+// Request to build a module.
+message BuildRequest {
+  // the root path for the module
+  string path = 1;
+  // the root path for the FTL project
+  string project_path = 2;
+  // indicates whether to watch for changes to the module
+  bool watch = 3;
+
+  Metadata metadata = 4;
+  schema.Schema schema = 5;
+}
+
+// Response to a build request.
+message BuildResult {
+  // module schema for the built module
+  // only set if the build was successful
+  optional schema.Module module = 1;
+  // paths for files/directories to be deployed
+  repeated string deploy = 2;
+  // errors and warnings encountered during the build
+  ErrorList errors = 3;
+  
+  // TODO: dockerfile or docker image name...
+  // TODO: add a way to return what schema / metadata version this was based on
+}
+
+// Every type of message that can be streamed from the language service for a build.
+message BuildEvent {
+  oneof event {
+    DependencyUpdate dependency_update = 1;
+    BuildResult build_result = 2;
+    LogMessage log_message = 3;
+  }
+}
+
+// LanguageService allows a plugin to add support for a programming language.
+service LanguageService {
+  // Ping service for readiness.
+  rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Generates files for a new empty module with the requested name
+  rpc CreateModule(CreateModuleRequest) returns (CreateModuleResponse);
+
+  // Extract dependencies for a module
+  rpc GetDependencies(DependenciesRequest) returns (DependenciesResponse);
+
+  // MetadataUpdated is called whenever the metadata for a module is updated.
+  rpc MetadataUpdated(MetadataUpdatedRequest) returns (MetadataUpdatedResponse);
+
+  // SchemaUpdated is called whenever the relevant part of a schema is updated.
+  //
+  // The schema is not the full schema, rather it only modules in this module's dependency graph.
+  // It does not contain the schema for this plugin's module.
+  // 
+  // Language plugins should hold on to the latest schema they have seen.
+  // SchemaUpdated is called:
+  // - after ExtractDependencies and before Build (if there are any dependencies)
+  // - when a dependant module is updated
+  // - when the module's dependancies change
+  rpc SchemaUpdated(SchemaUpdatedRequest) returns (SchemaUpdatedResponse);
+
+  // Build the module
+  // The request can also indicate whether the plugin should watch for changes to the module and automatically rebuild
+  // The response stream can send LogMessages and BuildResults, and ends with a BuildResponse
+  rpc Build(BuildRequest) returns (stream BuildEvent);
+}

@@ -49,7 +49,7 @@ func (s *Subscription) ToProto() proto.Message {
 
 func SubscriptionFromProto(s *schemapb.Subscription) *Subscription {
 	return &Subscription{
-		Pos: posFromProto(s.Pos),
+		Pos: PosFromProto(s.Pos),
 
 		Name:     s.Name,
 		Topic:    RefFromProto(s.Topic),

@@ -21,7 +21,9 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/console"
+	"github.com/TBD54566975/ftl/internal/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -66,7 +68,9 @@ type Listener interface {
 // Engine for building a set of modules.
 type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
+	bindAllocator    *bind.BindAllocator
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
+	modulePlugins    *xsync.MapOf[string, *languageplugin.LanguagePlugin]
 	projectRoot      string
 	moduleDirs       []string
 	watcher          *Watcher
@@ -115,13 +119,15 @@ func WithDevMode(devMode bool) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, bindAllocator *bind.BindAllocator, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
+		bindAllocator:    bindAllocator,
 		projectRoot:      projectRoot,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
+		modulePlugins:    xsync.NewMapOf[string, *languageplugin.LanguagePlugin](),
 		watcher:          NewWatcher(),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
@@ -563,29 +569,50 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 type buildCallback func(ctx context.Context, module Module) error
 
 func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, moduleNames ...string) error {
-	mustBuild := map[string]bool{}
+
 	if len(moduleNames) == 0 {
 		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
 			moduleNames = append(moduleNames, name)
 			return true
 		})
 	}
+
+	mustBuildChan := make(chan string, len(moduleNames))
+	wg := errgroup.Group{}
 	for _, name := range moduleNames {
-		meta, ok := e.moduleMetas.Load(name)
-		if !ok {
-			return fmt.Errorf("module %q not found", name)
-		}
-		// Update dependencies before building.
-		var err error
-		module, err := UpdateDependencies(ctx, meta.module)
-		if err != nil {
-			return err
-		}
-		e.moduleMetas.Store(name, moduleMeta{module: module})
+		wg.Go(func() error {
+			meta, ok := e.moduleMetas.Load(name)
+			if !ok {
+				return fmt.Errorf("module %q not found", name)
+			}
+
+			plugin, err := e.pluginForModule(ctx, name, meta.module.Config.Dir)
+			if err != nil {
+				return err
+			}
+
+			deps, err := plugin.GetDependencies(ctx)
+			if err != nil {
+				return fmt.Errorf("could not get dependencies for %s: %w", name, err)
+			}
+			module := meta.module.CopyWithDependencies(deps)
+
+			e.moduleMetas.Store(name, moduleMeta{module: module})
+			mustBuildChan <- name
+			return nil
+		})
+	}
+	if err := wg.Wait(); err != nil {
+		return err
+	}
+	close(mustBuildChan)
+	mustBuild := map[string]bool{}
+	for name := range mustBuildChan {
 		mustBuild[name] = true
 
 		console.UpdateModuleState(ctx, name, console.BuildStateWaiting)
 	}
+
 	graph, err := e.Graph(moduleNames...)
 	if err != nil {
 		return err
@@ -719,11 +746,16 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 
 	sch := &schema.Schema{Modules: maps.Values(builtModules)}
 
+	// TODO: think about this: does a listener make sense now that a plugin can initial builds?
 	if e.listener != nil {
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir), e.buildEnv, e.devMode)
+	plugin, err := e.pluginForModule(ctx, moduleName, meta.module.Config.Dir)
+	if err != nil {
+		return err
+	}
+	err = build(ctx, plugin, e.projectRoot, sch, meta.module, e.buildEnv, e.devMode)
 	if err != nil {
 		return err
 	}
@@ -767,4 +799,19 @@ func (e *Engine) gatherSchemas(
 	})
 
 	return nil
+}
+
+// pluginForModule returns the language plugin for a module.
+// If one is not already loaded, it will be created (which can take some time).
+func (e *Engine) pluginForModule(ctx context.Context, moduleName string, path string) (*languageplugin.LanguagePlugin, error) {
+	plugin, ok := e.modulePlugins.Load(moduleName)
+	if ok {
+		// TODO: check state
+		return plugin, nil
+	}
+	plugin, err := languageplugin.New(ctx, path, e.bindAllocator.Next())
+	if err != nil {
+		return nil, err
+	}
+	return plugin, nil
 }

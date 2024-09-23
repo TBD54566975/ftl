@@ -32,6 +32,7 @@ const JavaBuildToolGradle string = "gradle"
 // ModuleConfig is the configuration for an FTL module.
 //
 // Module config files are currently TOML.
+// TODO: remove lots of these fields
 type ModuleConfig struct {
 	// Dir is the absolute path to the root of the module.
 	Dir string `toml:"-"`
@@ -126,9 +127,6 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 	if config.Realm == "" {
 		config.Realm = "home"
-	}
-	if config.Schema == "" {
-		config.Schema = "schema.pb"
 	}
 	if config.Errors == "" {
 		config.Errors = "errors.pb"

@@ -20,14 +20,12 @@ import (
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -199,6 +197,19 @@ type ModifyFilesTransaction interface {
 	End() error
 }
 
+// TODO: remove
+type DummyTransaction struct{}
+
+func (DummyTransaction) Begin() error {
+	return nil
+}
+func (DummyTransaction) ModifiedFiles(paths ...string) error {
+	return nil
+}
+func (DummyTransaction) End() error {
+	return nil
+}
+
 const buildDirName = ".ftl"
 
 func buildDir(moduleDir string) string {
@@ -206,9 +217,9 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (err error) {
+func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (module optional.Option[*schema.Module], buildErrs []*builderrors.Error, err error) {
 	if err := filesTransaction.Begin(); err != nil {
-		return err
+		return module, nil, err
 	}
 	defer func() {
 		if terr := filesTransaction.End(); terr != nil {
@@ -218,12 +229,12 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 
 	replacements, goModVersion, err := updateGoModule(filepath.Join(moduleDir, "go.mod"))
 	if err != nil {
-		return err
+		return module, nil, err
 	}
 
 	goVersion := runtime.Version()[2:]
 	if semver.Compare("v"+goVersion, "v"+goModVersion) < 0 {
-		return fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
+		return module, buildErrs, fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
 	}
 
 	ftlVersion := ""
@@ -235,14 +246,14 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	if pcpath, ok := projectconfig.DefaultConfigPath().Get(); ok {
 		pc, err := projectconfig.Load(ctx, pcpath)
 		if err != nil {
-			return fmt.Errorf("failed to load project config: %w", err)
+			return module, nil, fmt.Errorf("failed to load project config: %w", err)
 		}
 		projectName = pc.Name
 	}
 
 	config, err := moduleconfig.LoadModuleConfig(moduleDir)
 	if err != nil {
-		return fmt.Errorf("failed to load module config: %w", err)
+		return module, nil, fmt.Errorf("failed to load module config: %w", err)
 	}
 
 	logger := log.FromContext(ctx)
@@ -251,7 +262,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	buildDir := buildDir(moduleDir)
 	err = os.MkdirAll(buildDir, 0750)
 	if err != nil {
-		return fmt.Errorf("failed to create build directory: %w", err)
+		return module, nil, fmt.Errorf("failed to create build directory: %w", err)
 	}
 
 	var sharedModulesPaths []string
@@ -266,36 +277,30 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		GoVersion:          goModVersion,
 		SharedModulesPaths: sharedModulesPaths,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
-		return fmt.Errorf("failed to scaffold zip: %w", err)
+		return module, nil, fmt.Errorf("failed to scaffold zip: %w", err)
 	}
 
 	logger.Debugf("Extracting schema")
 	result, err := extract.Extract(config.Dir)
 	if err != nil {
-		return err
+		return module, nil, err
 	}
-
-	if err = writeSchemaErrors(config, result.Errors); err != nil {
-		return fmt.Errorf("failed to write schema errors: %w", err)
-	}
-	if schema.ContainsTerminalError(result.Errors) {
+	if builderrors.ContainsTerminalError(result.Errors) {
 		// Only bail if schema errors contain elements at level ERROR.
 		// If errors are only at levels below ERROR (e.g. INFO, WARN), the schema can still be used.
-		return nil
-	}
-	if err = writeSchema(config, result.Module); err != nil {
-		return fmt.Errorf("failed to write schema: %w", err)
+		return optional.None[*schema.Module](), result.Errors, nil
 	}
 
 	logger.Debugf("Generating main module")
-	mctx, err := buildMainModuleContext(sch, result, goModVersion, ftlVersion, projectName, sharedModulesPaths,
-		replacements)
+	mctx, err := buildMainModuleContext(sch, result, goModVersion, ftlVersion, projectName, sharedModulesPaths, replacements)
+
+	err = internal.ScaffoldZip(buildTemplateFiles(),
+		moduleDir,
+		mctx,
+		scaffolder.Exclude("^go.mod$"),
+		scaffolder.Functions(funcs))
 	if err != nil {
-		return err
-	}
-	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mctx, scaffolder.Exclude("^go.mod$"),
-		scaffolder.Functions(funcs)); err != nil {
-		return err
+		return module, nil, err
 	}
 
 	logger.Debugf("Tidying go.mod files")
@@ -314,7 +319,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
 	if err := wg.Wait(); err != nil {
-		return err
+		return module, nil, err
 	}
 
 	logger.Debugf("Compiling")
@@ -327,7 +332,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	buildEnv = append(buildEnv, "GODEBUG=http2client=0")
 	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunBuffered(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to compile: %w", err)
+		return module, nil, fmt.Errorf("failed to compile: %w", err)
 	}
 	err = os.WriteFile(filepath.Join(mainDir, "../../launch"), []byte(`#!/bin/bash
 	if [ -n "$FTL_DEBUG_PORT" ] && command -v dlv &> /dev/null ; then
@@ -337,9 +342,9 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	fi
 	`), 0770) // #nosec
 	if err != nil {
-		return fmt.Errorf("failed to write launch script: %w", err)
+		return module, nil, fmt.Errorf("failed to write launch script: %w", err)
 	}
-	return nil
+	return optional.Some(result.Module), result.Errors, nil
 }
 
 // CleanStubs removes all generated stubs.
@@ -938,46 +943,262 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 	return true
 }
 
-func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error {
-	modulepb := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-	// If user has overridden GOOS and GOARCH we want to use those values.
-	goos, ok := os.LookupEnv("GOOS")
-	if !ok {
-		goos = runtime.GOOS
-	}
-	goarch, ok := os.LookupEnv("GOARCH")
-	if !ok {
-		goarch = runtime.GOARCH
-	}
-
-	modulepb.Runtime = &schemapb.ModuleRuntime{
-		CreateTime: timestamppb.Now(),
-		Language:   "go",
-		Os:         &goos,
-		Arch:       &goarch,
-	}
-	schemaBytes, err := proto.Marshal(module.ToProto())
-	if err != nil {
-		return fmt.Errorf("failed to marshal schema: %w", err)
-	}
-	return os.WriteFile(config.Abs().Schema, schemaBytes, 0600)
-}
-
-func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error) error {
-	el := schema.ErrorList{
-		Errors: errors,
-	}
-	elBytes, err := proto.Marshal(el.ToProto())
-	if err != nil {
-		return fmt.Errorf("failed to marshal errors: %w", err)
-	}
-	return os.WriteFile(config.Abs().Errors, elBytes, 0600)
-}
-
 // returns the import path and directory name for a Go type
 // package and directory names are the same (dir=bar, pkg=bar): "github.com/foo/bar.A" => "github.com/foo/bar", none
 // package and directory names differ (dir=bar, pkg=baz): "github.com/foo/bar.baz.A" => "github.com/foo/bar", "baz"
 func nativeTypeFromQualifiedName(qualifiedName string) (nativeType, error) {
+	// =======
+	// func getLocalSumTypes(module *schema.Module, nativeNames extract.NativeNames) []goSumType {
+	// 	sumTypes := make(map[string]goSumType)
+	// 	for _, d := range module.Decls {
+	// 		e, ok := d.(*schema.Enum)
+	// 		if !ok {
+	// 			continue
+	// 		}
+	// 		if e.IsValueEnum() {
+	// 			continue
+	// 		}
+	// 		if st, ok := getGoSumType(e, nativeNames).Get(); ok {
+	// 			enumFqName := nativeNames[e]
+	// 			sumTypes[enumFqName] = st
+	// 		}
+	// 	}
+	// 	return maps.Values(sumTypes)
+	// }
+
+	// func getLocalExternalTypes(module *schema.Module) ([]goExternalType, error) {
+	// 	imports := imports(module, false)
+	// 	types := make(map[string][]string)
+	// 	for _, d := range module.Decls {
+	// 		switch d := d.(type) {
+	// 		case *schema.TypeAlias:
+	// 			var fqName string
+	// 			for _, m := range d.Metadata {
+	// 				if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
+	// 					fqName = m.NativeName
+	// 				}
+	// 			}
+	// 			if fqName == "" {
+	// 				continue
+	// 			}
+	// 			im, _, ok := goImportForWidenedType(d)
+	// 			if !ok {
+	// 				continue
+	// 			}
+	// 			typ, err := getGoExternalType(imports, fqName)
+	// 			if err != nil {
+	// 				return nil, err
+	// 			}
+
+	// 			importStatement := strconv.Quote(im)
+	// 			if imports[im] != "" {
+	// 				importStatement = imports[im] + " " + importStatement
+	// 			}
+	// 			if _, ok := types[importStatement]; !ok {
+	// 				types[importStatement] = []string{}
+	// 			}
+	// 			types[importStatement] = append(types[importStatement], typ)
+	// 		default:
+	// 		}
+	// 	}
+	// 	var out []goExternalType
+	// 	for im, types := range types {
+	// 		out = append(out, goExternalType{
+	// 			Import: im,
+	// 			Types:  types,
+	// 		})
+	// 	}
+	// 	return out, nil
+	// }
+
+	// // getRegisteredTypesExternalToModule returns all sum types and external types that are not defined in the given module.
+	// // These are the types that must be registered in the main module.
+	// func getRegisteredTypes(module *schema.Module, sch *schema.Schema, nativeNames extract.NativeNames) ([]goSumType, []goExternalType, error) {
+	// 	sumTypes := make(map[string]goSumType)
+	// 	externalTypes := make(map[string]sets.Set[string])
+	// 	externalDecls := getRegisteredTypesExternalToModule(module, sch)
+
+	// 	// calculate all imports and aliases
+	// 	imports := imports(module, false)
+	// 	extraImports := map[string]optional.Option[string]{}
+	// 	for _, d := range externalDecls {
+	// 		d, ok := d.resolved.(*schema.TypeAlias)
+	// 		if !ok {
+	// 			continue
+	// 		}
+	// 		for _, m := range d.Metadata {
+	// 			m, ok := m.(*schema.MetadataTypeMap)
+	// 			if !ok || m.Runtime != "go" {
+	// 				continue
+	// 			}
+	// 			if im, dirName, ok := goImportForWidenedType(d); ok && extraImports[im] == optional.None[string]() {
+	// 				extraImports[im] = dirName
+	// 			}
+	// 		}
+	// 	}
+	// 	imports = addImports(imports, extraImports)
+
+	// 	// register sum types from other modules
+	// 	for _, decl := range externalDecls {
+	// 		switch d := decl.resolved.(type) {
+	// 		case *schema.Enum:
+	// 			variants := make([]goSumTypeVariant, 0, len(d.Variants))
+	// 			for _, v := range d.Variants {
+	// 				variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+	// 					Name:       decl.ref.Module + "." + v.Name,
+	// 					Type:       "ftl/" + decl.ref.Module + "." + v.Name,
+	// 					SchemaType: v.Value.(*schema.TypeValue).Value,
+	// 				})
+	// 			}
+	// 			stFqName := decl.ref.Module + "." + decl.ref.Name
+	// 			sumTypes[decl.ref.ToRefKey().String()] = goSumType{
+	// 				Discriminator: stFqName,
+	// 				Variants:      variants,
+	// 			}
+	// 		case *schema.TypeAlias:
+	// 			for _, m := range d.Metadata {
+	// 				if m, ok := m.(*schema.MetadataTypeMap); ok && m.Runtime == "go" {
+	// 					im, _, ok := goImportForWidenedType(d)
+	// 					if !ok {
+	// 						continue
+	// 					}
+	// 					typ, err := getGoExternalType(imports, m.NativeName)
+	// 					if err != nil {
+	// 						return nil, nil, err
+	// 					}
+	// 					importStatement := strconv.Quote(im)
+	// 					if imports[im] != "" {
+	// 						importStatement = imports[im] + " " + importStatement
+	// 					}
+	// 					if _, ok := externalTypes[importStatement]; !ok {
+	// 						externalTypes[importStatement] = sets.NewSet[string]()
+	// 					}
+	// 					externalTypes[importStatement].Add(typ)
+	// 				}
+	// 			}
+	// 		default:
+	// 		}
+	// 	}
+	// 	for _, d := range getLocalSumTypes(module, nativeNames) {
+	// 		sumTypes[d.fqName] = d
+	// 	}
+	// 	stOut := maps.Values(sumTypes)
+	// 	slices.SortFunc(stOut, func(a, b goSumType) int {
+	// 		return strings.Compare(a.Discriminator, b.Discriminator)
+	// 	})
+
+	// 	localExternalTypes, err := getLocalExternalTypes(module)
+	// 	if err != nil {
+	// 		return nil, nil, err
+	// 	}
+	// 	for _, et := range localExternalTypes {
+	// 		if _, ok := externalTypes[et.Import]; !ok {
+	// 			externalTypes[et.Import] = sets.NewSet[string]()
+	// 		}
+	// 		externalTypes[et.Import].Append(et.Types...)
+	// 	}
+
+	// 	var etOut []goExternalType
+	// 	for im, types := range externalTypes {
+	// 		etOut = append(etOut, goExternalType{
+	// 			Import: im,
+	// 			Types:  types.ToSlice(),
+	// 		})
+	// 	}
+
+	// 	return stOut, etOut, nil
+	// }
+
+	// func getGoSumType(enum *schema.Enum, nativeNames extract.NativeNames) optional.Option[goSumType] {
+	// 	if enum.IsValueEnum() {
+	// 		return optional.None[goSumType]()
+	// 	}
+	// 	variants := make([]goSumTypeVariant, 0, len(enum.Variants))
+	// 	for _, v := range enum.Variants {
+	// 		nativeName := nativeNames[v]
+	// 		lastSlash := strings.LastIndex(nativeName, "/")
+	// 		variants = append(variants, goSumTypeVariant{ //nolint:forcetypeassert
+	// 			Name:       nativeName[lastSlash+1:],
+	// 			Type:       nativeName,
+	// 			SchemaType: v.Value.(*schema.TypeValue).Value,
+	// 		})
+	// 	}
+	// 	stFqName := nativeNames[enum]
+	// 	lastSlash := strings.LastIndex(stFqName, "/")
+	// 	return optional.Some(goSumType{
+	// 		Discriminator: stFqName[lastSlash+1:],
+	// 		Variants:      variants,
+	// 		fqName:        stFqName,
+	// 	})
+	// }
+
+	// func getGoExternalType(imports map[string]string, fqName string) (string, error) {
+	// 	im, _, err := goImportFromQualifiedName(fqName)
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
+	// 	pkg := imports[im]
+	// 	if pkg == "" {
+	// 		pkg = im[strings.LastIndex(im, "/")+1:]
+	// 	}
+	// 	typeName := fqName[strings.LastIndex(fqName, ".")+1:]
+	// 	return fmt.Sprintf("%s.%s", pkg, typeName), nil
+	// }
+
+	// type externalDecl struct {
+	// 	ref      *schema.Ref
+	// 	resolved schema.Decl
+	// }
+
+	// // getRegisteredTypesExternalToModule returns all sum types and external types that are not defined in the given module.
+	// // These types must be registered in the main module.
+	// func getRegisteredTypesExternalToModule(module *schema.Module, sch *schema.Schema) []externalDecl {
+	// 	combinedSch := schema.Schema{
+	// 		Modules: append(sch.Modules, module),
+	// 	}
+	// 	var externalTypes []externalDecl
+	// 	err := schema.Visit(&combinedSch, func(n schema.Node, next func() error) error {
+	// 		ref, ok := n.(*schema.Ref)
+	// 		if !ok {
+	// 			return next()
+	// 		}
+
+	// 		decl, ok := sch.Resolve(ref).Get()
+	// 		if !ok {
+	// 			return next()
+	// 		}
+	// 		switch d := decl.(type) {
+	// 		case *schema.Enum:
+	// 			if ref.Module != "" && ref.Module != module.Name {
+	// 				return next()
+	// 			}
+	// 			if d.IsValueEnum() {
+	// 				return next()
+	// 			}
+	// 			externalTypes = append(externalTypes, externalDecl{
+	// 				ref:      ref,
+	// 				resolved: d,
+	// 			})
+	// 		case *schema.TypeAlias:
+	// 			if len(d.Metadata) == 0 {
+	// 				return next()
+	// 			}
+	// 			externalTypes = append(externalTypes, externalDecl{
+	// 				ref:      ref,
+	// 				resolved: d,
+	// 			})
+	// 		default:
+	// 		}
+	// 		return next()
+	// 	})
+	// 	if err != nil {
+	// 		panic(fmt.Sprintf("failed to resolve external types and sum types external to the module schema: %v", err))
+	// 	}
+	// 	return externalTypes
+	// }
+
+	// func goVerbFromQualifiedName(qualifiedName string) (goVerb, error) {
+	// >>>>>>> 85e5a625 (begin adding language plugins)
 	lastDotIndex := strings.LastIndex(qualifiedName, ".")
 	if lastDotIndex == -1 {
 		return nativeType{}, fmt.Errorf("invalid qualified type format %q", qualifiedName)

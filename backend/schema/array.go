@@ -34,7 +34,7 @@ func (a *Array) ToProto() proto.Message {
 
 func arrayToSchema(s *schemapb.Array) *Array {
 	return &Array{
-		Pos:     posFromProto(s.Pos),
+		Pos:     PosFromProto(s.Pos),
 		Element: TypeFromProto(s.Element),
 	}
 }

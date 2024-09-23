@@ -35,11 +35,11 @@ func SyncStubReferences(ctx context.Context, projectRoot string, moduleNames []s
 }
 
 func generateGoStubs(ctx context.Context, projectRoot string, modules []*schema.Module, moduleConfigs []moduleconfig.ModuleConfig) error {
-	sch := &schema.Schema{Modules: modules}
-	err := compile.GenerateStubsForModules(ctx, projectRoot, moduleConfigs, sch)
-	if err != nil {
-		return fmt.Errorf("failed to generate go stubs: %w", err)
-	}
+	// sch := &schema.Schema{Modules: modules}
+	// err := compile.GenerateStubsForModules(ctx, projectRoot, moduleConfigs, sch)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to generate go stubs: %w", err)
+	// }
 	return nil
 }
 

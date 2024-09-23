@@ -34,6 +34,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/typeenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/verb"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 )
 
 // Extractors contains all schema extractors that will run.
@@ -102,7 +103,7 @@ type Result struct {
 	// NativeNames maps schema nodes to their native Go names.
 	NativeNames NativeNames
 	// Errors is a list of errors encountered during schema extraction.
-	Errors []*schema.Error
+	Errors []*builderrors.Error
 }
 
 // Extract statically parses Go FTL module source into a schema.Module
@@ -138,7 +139,7 @@ type refResult struct {
 
 type combinedData struct {
 	module *schema.Module
-	errs   []*schema.Error
+	errs   []*builderrors.Error
 
 	nativeNames         NativeNames
 	functionCalls       map[types.Object]sets.Set[types.Object]
@@ -165,7 +166,7 @@ func newCombinedData(diagnostics []analysis.SimpleDiagnostic) *combinedData {
 	}
 }
 
-func (cd *combinedData) error(err *schema.Error) {
+func (cd *combinedData) error(err *builderrors.Error) {
 	cd.errs = append(cd.errs, err)
 }
 
@@ -184,7 +185,7 @@ func (cd *combinedData) toResult() Result {
 	cd.module.AddDecls(maps.Keys(cd.extractedDecls))
 	cd.updateDeclVisibility()
 	cd.propagateTypeErrors()
-	schema.SortErrorsByPosition(cd.errs)
+	builderrors.SortErrorsByPosition(cd.errs)
 	return Result{
 		Module:      cd.module,
 		NativeNames: cd.nativeNames,
@@ -210,11 +211,11 @@ func (cd *combinedData) validateDecl(decl schema.Decl, obj types.Object) {
 	typename := common.GetDeclTypeName(decl)
 	typeKey := fmt.Sprintf("%s-%s", typename, decl.GetName())
 	if value, ok := cd.typeUniqueness[typeKey]; ok && value.A != obj {
-		cd.error(schema.Errorf(decl.Position(), decl.Position().Column,
+		cd.error(builderrors.Errorf(decl.Position().ToErrorPos(),
 			"duplicate %s declaration for %q; already declared at %q", typename,
 			cd.module.Name+"."+decl.GetName(), value.B))
 	} else if value, ok := cd.globalUniqueness[decl.GetName()]; ok && value.A != obj {
-		cd.error(schema.Errorf(decl.Position(), decl.Position().Column,
+		cd.error(builderrors.Errorf(decl.Position().ToErrorPos(),
 			"schema declaration with name %q already exists for module %q; previously declared at %q",
 			decl.GetName(), cd.module.Name, value.B))
 	}
@@ -267,22 +268,22 @@ func (cd *combinedData) propagateTypeErrors() {
 			switch pt := p.(type) {
 			case *schema.Verb:
 				if pt.Request == n {
-					cd.error(schema.Errorf(pt.Request.Position(), pt.Request.Position().Column,
+					cd.error(builderrors.Errorf(pt.Request.Position().ToErrorPos(),
 						"unsupported request type %q", refNativeName))
 				}
 				if pt.Response == n {
-					cd.error(schema.Errorf(pt.Response.Position(), pt.Response.Position().Column,
+					cd.error(builderrors.Errorf(pt.Request.Position().ToErrorPos(),
 						"unsupported response type %q", refNativeName))
 				}
 			case *schema.Field:
-				cd.error(schema.Errorf(pt.Position(), pt.Position().Column, "unsupported type %q for "+
+				cd.error(builderrors.Errorf(pt.Position().ToErrorPos(), "unsupported type %q for "+
 					"field %q", refNativeName, pt.Name))
 			default:
-				cd.error(schema.Errorf(p.Position(), p.Position().Column, "unsupported type %q",
+				cd.error(builderrors.Errorf(pt.Position().ToErrorPos(), "unsupported type %q",
 					refNativeName))
 			}
 		case widened:
-			cd.error(schema.Warnf(n.Position(), n.Position().Column, "external type %q will be "+
+			cd.error(builderrors.Warnf(n.Position().ToErrorPos(), "external type %q will be "+
 				"widened to Any", result.fqName.MustGet()))
 		}
 
@@ -347,8 +348,10 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 			if len(d.Metadata) > 0 {
 				fqName, err := goQualifiedNameForWidenedType(obj, d.Metadata)
 				if err != nil {
-					cd.error(&schema.Error{Pos: d.Position(), EndColumn: d.Pos.Column,
-						Msg: err.Error(), Level: schema.ERROR})
+					cd.error(&builderrors.Error{
+						Pos:   d.Position().ToErrorPos(),
+						Msg:   err.Error(),
+						Level: builderrors.ERROR})
 				}
 				cd.refResults[schema.RefKey{Module: moduleName, Name: d.Name}] = refResult{typ: widened, obj: obj,
 					fqName: optional.Some(fqName)}
@@ -371,7 +374,7 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 	}
 
 	result := cd.toResult()
-	if schema.ContainsTerminalError(result.Errors) {
+	if builderrors.ContainsTerminalError(result.Errors) {
 		return result, nil
 	}
 	return result, schema.ValidateModule(result.Module) //nolint:wrapcheck
@@ -414,17 +417,16 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 	})
 }
 
-func diagnosticsToSchemaErrors(diagnostics []analysis.SimpleDiagnostic) []*schema.Error {
+func diagnosticsToSchemaErrors(diagnostics []analysis.SimpleDiagnostic) []*builderrors.Error {
 	if len(diagnostics) == 0 {
 		return nil
 	}
-	errors := make([]*schema.Error, 0, len(diagnostics))
+	errors := make([]*builderrors.Error, 0, len(diagnostics))
 	for _, d := range diagnostics {
-		errors = append(errors, &schema.Error{
-			Pos:       simplePosToSchemaPos(d.Pos),
-			EndColumn: d.End.Column,
-			Msg:       d.Message,
-			Level:     common.DiagnosticCategory(d.Category).ToErrorLevel(),
+		errors = append(errors, &builderrors.Error{
+			Pos:   simplePosToErrorPos(d.Pos, d.End.Column),
+			Msg:   d.Message,
+			Level: common.DiagnosticCategory(d.Category).ToErrorLevel(),
 		})
 	}
 	return errors
@@ -453,11 +455,12 @@ func goQualifiedNameForWidenedType(obj types.Object, metadata []schema.Metadata)
 	return nativeName, nil
 }
 
-func simplePosToSchemaPos(pos analysis.SimplePosition) schema.Position {
-	return schema.Position{
-		Filename: pos.Filename,
-		Offset:   pos.Offset,
-		Line:     pos.Line,
-		Column:   pos.Column,
+func simplePosToErrorPos(pos analysis.SimplePosition, endColumn int) builderrors.Position {
+	return builderrors.Position{
+		Filename:    pos.Filename,
+		Offset:      pos.Offset,
+		Line:        pos.Line,
+		StartColumn: pos.Column,
+		EndColumn:   endColumn,
 	}
 }

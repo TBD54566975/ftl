@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/TBD54566975/ftl/internal/walk"
 	"github.com/bmatcuk/doublestar/v4"
 )
 
@@ -70,7 +71,7 @@ func ComputeFileHashes(module Module) (FileHashes, error) {
 	rootDirs := computeRootDirs(config.Dir, config.Watch)
 
 	for _, rootDir := range rootDirs {
-		err := WalkDir(rootDir, func(srcPath string, entry fs.DirEntry) error {
+		err := walk.WalkDir(rootDir, func(srcPath string, entry fs.DirEntry) error {
 			if entry.IsDir() {
 				return nil
 			}

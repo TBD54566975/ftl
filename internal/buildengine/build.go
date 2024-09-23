@@ -9,10 +9,12 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
+	"github.com/TBD54566975/ftl/internal/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
@@ -22,11 +24,13 @@ const BuildLockTimeout = time.Minute
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func Build(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) error {
-	return buildModule(ctx, projectRootDir, sch, module, filesTransaction, buildEnv, devMode)
-}
 
-func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) error {
+// TODO: clean up...and what is build env and dev mode used for here?
+// func Build(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) error {
+// 	return buildModule(ctx, projectRootDir, sch, module, filesTransaction, buildEnv, devMode)
+// }
+
+func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectRootDir string, sch *schema.Schema, module Module, buildEnv []string, devMode bool) error {
 	release, err := flock.Acquire(ctx, filepath.Join(module.Config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
 		return err
@@ -44,15 +48,19 @@ func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema,
 
 	startTime := time.Now()
 
-	switch module.Config.Language {
-	case "go":
-		err = buildGoModule(ctx, projectRootDir, sch, module, filesTransaction, buildEnv, devMode)
-	case "java", "kotlin":
-		err = buildJavaModule(ctx, module)
-	case "rust":
-		err = buildRustModule(ctx, sch, module)
-	default:
-		return fmt.Errorf("unknown language %q", module.Config.Language)
+	// switch module.Config.Language {
+	// case "go":
+	// 	err = buildGoModule(ctx, projectRootDir, sch, module, filesTransaction, buildEnv, devMode)
+	// case "java", "kotlin":
+	// 	err = buildJavaModule(ctx, module)
+	// case "rust":
+	// 	err = buildRustModule(ctx, sch, module)
+	// default:
+	// 	return fmt.Errorf("unknown language %q", module.Config.Language)
+
+	result, err := plugin.Build(ctx, sch, projectRootDir)
+	if err != nil {
+		return fmt.Errorf("failed to build module: %w", err)
 	}
 
 	var errs []error
@@ -60,13 +68,13 @@ func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema,
 		errs = append(errs, err)
 	}
 	// read runtime-specific build errors from the build directory
-	errorList, err := loadProtoErrors(module.Config.Abs())
-	if err != nil {
-		return fmt.Errorf("failed to read build errors for module: %w", err)
-	}
-	schema.SortErrorsByPosition(errorList.Errors)
-	for _, e := range errorList.Errors {
-		if e.Level == schema.WARN {
+	// errorList, err := loadProtoErrors(module.Config.Abs())
+	// if err != nil {
+	// 	return fmt.Errorf("failed to read build errors for module: %w", err)
+	// }
+
+	for _, e := range result.Errors {
+		if e.Level == builderrors.WARN {
 			logger.Log(log.Entry{Level: log.Warn, Message: e.Error(), Error: e})
 			continue
 		}
@@ -82,19 +90,18 @@ func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema,
 	return nil
 }
 
-func loadProtoErrors(config moduleconfig.AbsModuleConfig) (*schema.ErrorList, error) {
+func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]*builderrors.Error, error) {
 	if _, err := os.Stat(config.Errors); errors.Is(err, os.ErrNotExist) {
-		return &schema.ErrorList{Errors: make([]*schema.Error, 0)}, nil
+		return make([]*builderrors.Error, 0), nil
 	}
-
 	content, err := os.ReadFile(config.Errors)
 	if err != nil {
 		return nil, err
 	}
-	errorspb := &schemapb.ErrorList{}
+	errorspb := &languagepb.ErrorList{}
 	err = proto.Unmarshal(content, errorspb)
 	if err != nil {
 		return nil, err
 	}
-	return schema.ErrorListFromProto(errorspb), nil
+	return languagepb.ErrorsFromProto(errorspb), nil
 }

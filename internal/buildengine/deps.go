@@ -17,6 +17,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/walk"
 )
 
 // UpdateDependencies finds the dependencies for a module and returns a
@@ -62,12 +63,12 @@ func extractDependencies(module Module) ([]string, error) {
 func extractGoFTLImports(moduleName, dir string) ([]string, error) {
 	dependencies := map[string]bool{}
 	fset := token.NewFileSet()
-	err := WalkDir(dir, func(path string, d fs.DirEntry) error {
+	err := walk.WalkDir(dir, func(path string, d fs.DirEntry) error {
 		if !d.IsDir() {
 			return nil
 		}
 		if strings.HasPrefix(d.Name(), "_") || d.Name() == "testdata" {
-			return ErrSkip
+			return walk.ErrSkip
 		}
 		pkgs, err := parser.ParseDir(fset, path, nil, parser.ImportsOnly)
 		if pkgs == nil {

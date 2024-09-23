@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -191,7 +192,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.NoError(t, err)
 	for _, e := range r.Errors {
 		// only warns
-		assert.True(t, e.Level == schema.WARN)
+		assert.True(t, e.Level == builderrors.WARN)
 	}
 	actual := schema.Normalise(r.Module)
 	expected := `module two {

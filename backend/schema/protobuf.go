@@ -22,7 +22,7 @@ var typesWithRuntime = map[string]bool{
 func ProtobufSchema() string {
 	messages := map[string]string{}
 	generateMessage(reflect.TypeFor[Schema](), messages)
-	generateMessage(reflect.TypeFor[ErrorList](), messages)
+	// generateMessage(reflect.TypeFor[ErrorList](), messages)
 	keys := maps.Keys(messages)
 	slices.Sort(keys)
 	w := &strings.Builder{}
@@ -136,13 +136,14 @@ func generateStruct(t reflect.Type, messages map[string]string) {
 // generateWellKnownNestedEnums generates the well-known nested enums for a given reflect.Type.
 // Reflection cannot discover type aliased enums, so they need to get generated manually.
 func generateWellKnownNestedEnums(t reflect.Type, w *strings.Builder) {
-	if (t == reflect.TypeOf(Error{})) {
-		fmt.Fprintf(w, "  enum %s {\n", reflect.TypeOf(ErrorLevel(0)).Name())
-		fmt.Fprintf(w, "    INFO = %d;\n", INFO)
-		fmt.Fprintf(w, "    WARN = %d;\n", WARN)
-		fmt.Fprintf(w, "    ERROR = %d;\n", ERROR)
-		fmt.Fprintf(w, "  }\n")
-	}
+	// TODO: clean up
+	// if (t == reflect.TypeOf(Error{})) {
+	// 	fmt.Fprintf(w, "  enum %s {\n", reflect.TypeOf(ErrorLevel(0)).Name())
+	// 	fmt.Fprintf(w, "    INFO = %d;\n", INFO)
+	// 	fmt.Fprintf(w, "    WARN = %d;\n", WARN)
+	// 	fmt.Fprintf(w, "    ERROR = %d;\n", ERROR)
+	// 	fmt.Fprintf(w, "  }\n")
+	// }
 }
 
 func generateUnion(t reflect.Type, messages map[string]string) {
@@ -179,10 +180,11 @@ func generateProtoType(t reflect.Type) string {
 	case reflect.String:
 		return "string"
 	case reflect.Int:
-		// determine if t is a well-known type aliased enum
-		if t == reflect.TypeOf(ErrorLevel(0)) {
-			return t.Name()
-		}
+		// TODO: clean up
+		// // determine if t is a well-known type aliased enum
+		// if t == reflect.TypeOf(ErrorLevel(0)) {
+		// 	return t.Name()
+		// }
 		return "int64"
 	case reflect.Bool:
 		return "bool"

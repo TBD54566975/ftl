@@ -24,7 +24,7 @@ type FSM struct {
 
 func FSMFromProto(pb *schemapb.FSM) *FSM {
 	return &FSM{
-		Pos:         posFromProto(pb.Pos),
+		Pos:         PosFromProto(pb.Pos),
 		Name:        pb.Name,
 		Start:       slices.Map(pb.Start, RefFromProto),
 		Transitions: slices.Map(pb.Transitions, FSMTransitionFromProto),
@@ -156,7 +156,7 @@ type FSMTransition struct {
 
 func FSMTransitionFromProto(pb *schemapb.FSMTransition) *FSMTransition {
 	return &FSMTransition{
-		Pos:  posFromProto(pb.Pos),
+		Pos:  PosFromProto(pb.Pos),
 		From: RefFromProto(pb.From),
 		To:   RefFromProto(pb.To),
 	}

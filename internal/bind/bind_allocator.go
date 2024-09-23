@@ -34,15 +34,15 @@ func (b *BindAllocator) NextPort() int {
 	var l *net.TCPListener
 	var err error
 	for {
-		b.port.Add(1)
-		l, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP(b.baseURL.Hostname()), Port: int(b.port.Load())})
+		port := b.port.Add(1)
+		l, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP(b.baseURL.Hostname()), Port: int(port)})
 
 		if err != nil {
 			continue
 		}
 		_ = l.Close()
 
-		return int(b.port.Load())
+		return int(port)
 	}
 }
 

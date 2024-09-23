@@ -39,7 +39,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java generate-kube-migrations
+build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java build-go generate-kube-migrations
 
 # Update the kube config map with the latest schema migrations
 generate-kube-migrations:
@@ -75,6 +75,17 @@ build-backend-tests:
 
 build-java *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}
+
+# Build ftl-language-go
+build-go: build-protos
+  #!/bin/bash
+  shopt -s extglob
+
+  if [ "${FTL_DEBUG:-}" = "true" ]; then
+    go build -o "{{RELEASE}}/ftl-language-go" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/plugin"
+  else
+    mk "{{RELEASE}}/ftl-language-go" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-go" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/plugin"
+  fi
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
 

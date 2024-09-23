@@ -1,4 +1,4 @@
-package buildengine
+package walk
 
 import (
 	"bufio"

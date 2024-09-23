@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
@@ -23,7 +25,16 @@ func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServic
 	if len(b.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Dirs, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
+	// TODO: make a better default and make it an parameter with a default
+	initialBind, err := url.Parse("http://192.0.0.1:47231")
+	if err != nil {
+		return fmt.Errorf("failed to parse initial bind: %w", err)
+	}
+	bindAllocator, err := bind.NewBindAllocator(initialBind)
+	if err != nil {
+		return fmt.Errorf("failed to create bind allocator: %w", err)
+	}
+	engine, err := buildengine.New(ctx, client, bindAllocator, projConfig.Root(), b.Dirs, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
 	if err != nil {
 		return err
 	}

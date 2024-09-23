@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/walk"
 )
 
 // DiscoverModules recursively loads all modules under the given directories
@@ -39,7 +40,7 @@ func discoverModules(dirs ...string) ([]Module, error) {
 	}
 	out := []Module{}
 	for _, dir := range dirs {
-		err := WalkDir(dir, func(path string, d fs.DirEntry) error {
+		err := walk.WalkDir(dir, func(path string, d fs.DirEntry) error {
 			if filepath.Base(path) != "ftl.toml" {
 				return nil
 			}
@@ -49,7 +50,7 @@ func discoverModules(dirs ...string) ([]Module, error) {
 				return err
 			}
 			out = append(out, module)
-			return ErrSkip
+			return walk.ErrSkip
 		})
 		if err != nil {
 			return nil, err

@@ -25,10 +25,11 @@ import (
 )
 
 type boxRunCmd struct {
-	Recreate          bool          `help:"Recreate the database."`
-	DSN               string        `help:"DSN for the database." default:"postgres://postgres:secret@localhost:5432/ftl?sslmode=disable" env:"FTL_CONTROLLER_DSN"`
-	IngressBind       *url.URL      `help:"Bind address for the ingress server." default:"http://0.0.0.0:8891" env:"FTL_INGRESS_BIND"`
-	Bind              *url.URL      `help:"Bind address for the FTL controller." default:"http://0.0.0.0:8892" env:"FTL_BIND"`
+	Recreate    bool     `help:"Recreate the database."`
+	DSN         string   `help:"DSN for the database." default:"postgres://postgres:secret@localhost:5432/ftl?sslmode=disable" env:"FTL_CONTROLLER_DSN"`
+	IngressBind *url.URL `help:"Bind address for the ingress server." default:"http://0.0.0.0:8891" env:"FTL_INGRESS_BIND"`
+	Bind        *url.URL `help:"Bind address for the FTL controller." default:"http://0.0.0.0:8892" env:"FTL_BIND"`
+	// TODO: update
 	RunnerBase        *url.URL      `help:"Base bind address for FTL runners." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
 	Dir               string        `arg:"" help:"Directory to scan for precompiled modules." default:"."`
 	ControllerTimeout time.Duration `help:"Timeout for Controller start." default:"30s"`
@@ -48,11 +49,12 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	config.SetDefaults()
 
 	// Start the controller.
-	runnerPortAllocator, err := bind.NewBindAllocator(b.RunnerBase)
+	bindAllocator, err := bind.NewBindAllocator(b.RunnerBase)
 	if err != nil {
 		return fmt.Errorf("failed to create runner port allocator: %w", err)
 	}
-	runnerScaling, err := localscaling.NewLocalScaling(runnerPortAllocator, []*url.URL{b.Bind}, "", false)
+
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, []*url.URL{b.Bind}, "", false)
 	if err != nil {
 		return fmt.Errorf("failed to create runner autoscaler: %w", err)
 	}
@@ -76,7 +78,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), []string{b.Dir})
+	engine, err := buildengine.New(ctx, client, bindAllocator, projConfig.Root(), []string{b.Dir})
 	if err != nil {
 		return fmt.Errorf("failed to create build engine: %w", err)
 	}

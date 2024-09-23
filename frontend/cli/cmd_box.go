@@ -2,21 +2,12 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"text/template"
 
-	"github.com/otiai10/copy"
-
-	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/exec"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
@@ -116,94 +107,94 @@ Bring the box down:
 }
 
 func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig projectconfig.Config) error {
-	if len(b.Build.Dirs) == 0 {
-		b.Build.Dirs = projConfig.AbsModuleDirs()
-	}
-	if len(b.Build.Dirs) == 0 {
-		return errors.New("no directories specified")
-	}
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Build.Dirs, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
-	if err != nil {
-		return err
-	}
-	if err := os.Setenv("GOOS", "linux"); err != nil {
-		return fmt.Errorf("failed to set GOOS: %w", err)
-	}
-	if err := os.Setenv("GOARCH", "amd64"); err != nil {
-		return fmt.Errorf("failed to set GOARCH: %w", err)
-	}
-	if err := engine.Build(ctx); err != nil {
-		return fmt.Errorf("build failed: %w", err)
-	}
+	// if len(b.Build.Dirs) == 0 {
+	// 	b.Build.Dirs = projConfig.AbsModuleDirs()
+	// }
+	// if len(b.Build.Dirs) == 0 {
+	// 	return errors.New("no directories specified")
+	// }
+	// engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Build.Dirs, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
+	// if err != nil {
+	// 	return err
+	// }
+	// if err := os.Setenv("GOOS", "linux"); err != nil {
+	// 	return fmt.Errorf("failed to set GOOS: %w", err)
+	// }
+	// if err := os.Setenv("GOARCH", "amd64"); err != nil {
+	// 	return fmt.Errorf("failed to set GOARCH: %w", err)
+	// }
+	// if err := engine.Build(ctx); err != nil {
+	// 	return fmt.Errorf("build failed: %w", err)
+	// }
 
-	workDir, err := os.MkdirTemp("", "ftl-box-")
-	if err != nil {
-		return fmt.Errorf("failed to create temporary directory: %w", err)
-	}
-	defer os.RemoveAll(workDir) //nolint:errcheck
-	logger := log.FromContext(ctx)
-	logger.Debugf("Copying")
-	if err := engine.Each(func(m buildengine.Module) error {
-		config := m.Config.Abs()
-		destDir := filepath.Join(workDir, "modules", config.Module)
+	// workDir, err := os.MkdirTemp("", "ftl-box-")
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create temporary directory: %w", err)
+	// }
+	// defer os.RemoveAll(workDir) //nolint:errcheck
+	// logger := log.FromContext(ctx)
+	// logger.Debugf("Copying")
+	// if err := engine.Each(func(m buildengine.Module) error {
+	// 	config := m.Config.Abs()
+	// 	destDir := filepath.Join(workDir, "modules", config.Module)
 
-		// Copy deployment artefacts.
-		files, err := buildengine.FindFilesToDeploy(config)
-		if err != nil {
-			return err
-		}
-		files = append(files, filepath.Join(config.Dir, "ftl.toml"))
-		files = append(files, config.Schema)
-		for _, file := range files {
-			relFile, err := filepath.Rel(config.Dir, file)
-			if err != nil {
-				return err
-			}
-			destFile := filepath.Join(destDir, relFile)
-			logger.Debugf(" %s -> %s", file, destFile)
-			if err := copy.Copy(file, destFile); err != nil {
-				return fmt.Errorf("failed to copy %s to %s: %w", file, destFile, err)
-			}
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-	baseImage := b.BaseImage
-	baseImageParts := strings.Split(baseImage, ":")
-	if len(baseImageParts) == 2 {
-		version := baseImageParts[1]
-		if !ftl.IsRelease(version) {
-			version = "latest"
-		}
-		baseImage = baseImageParts[0] + ":" + version
-	}
-	err = writeFile(filepath.Join(workDir, "Dockerfile"), boxDockerFile, struct{ BaseImage string }{BaseImage: baseImage})
-	if err != nil {
-		return fmt.Errorf("failed to write Dockerfile: %w", err)
-	}
-	err = writeFile(filepath.Join(workDir, "ftl-project.toml"), boxftlProjectFile, nil)
-	if err != nil {
-		return fmt.Errorf("failed to write ftl-project.toml: %w", err)
-	}
-	logger.Infof("Building image %s", b.Name)
-	err = exec.Command(ctx, log.Debug, workDir, "docker", "build", "-t", b.Name, "--progress=plain", "--platform=linux/amd64", ".").RunBuffered(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to build image: %w", err)
-	}
-	if b.Compose != "" {
-		err = writeFile(b.Compose, boxComposeFile, struct {
-			Name   string
-			GOARCH string
-		}{
-			Name:   b.Name,
-			GOARCH: runtime.GOARCH,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to write compose file: %w", err)
-		}
-		logger.Infof("Wrote compose file %s", b.Compose)
-	}
+	// 	// Copy deployment artefacts.
+	// 	files, err := buildengine.FindFilesToDeploy(config)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	files = append(files, filepath.Join(config.Dir, "ftl.toml"))
+	// 	files = append(files, config.Schema)
+	// 	for _, file := range files {
+	// 		relFile, err := filepath.Rel(config.Dir, file)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		destFile := filepath.Join(destDir, relFile)
+	// 		logger.Debugf(" %s -> %s", file, destFile)
+	// 		if err := copy.Copy(file, destFile); err != nil {
+	// 			return fmt.Errorf("failed to copy %s to %s: %w", file, destFile, err)
+	// 		}
+	// 	}
+	// 	return nil
+	// }); err != nil {
+	// 	return err
+	// }
+	// baseImage := b.BaseImage
+	// baseImageParts := strings.Split(baseImage, ":")
+	// if len(baseImageParts) == 2 {
+	// 	version := baseImageParts[1]
+	// 	if !ftl.IsRelease(version) {
+	// 		version = "latest"
+	// 	}
+	// 	baseImage = baseImageParts[0] + ":" + version
+	// }
+	// err = writeFile(filepath.Join(workDir, "Dockerfile"), boxDockerFile, struct{ BaseImage string }{BaseImage: baseImage})
+	// if err != nil {
+	// 	return fmt.Errorf("failed to write Dockerfile: %w", err)
+	// }
+	// err = writeFile(filepath.Join(workDir, "ftl-project.toml"), boxftlProjectFile, nil)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to write ftl-project.toml: %w", err)
+	// }
+	// logger.Infof("Building image %s", b.Name)
+	// err = exec.Command(ctx, log.Debug, workDir, "docker", "build", "-t", b.Name, "--progress=plain", "--platform=linux/amd64", ".").RunBuffered(ctx)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to build image: %w", err)
+	// }
+	// if b.Compose != "" {
+	// 	err = writeFile(b.Compose, boxComposeFile, struct {
+	// 		Name   string
+	// 		GOARCH string
+	// 	}{
+	// 		Name:   b.Name,
+	// 		GOARCH: runtime.GOARCH,
+	// 	})
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to write compose file: %w", err)
+	// 	}
+	// 	logger.Infof("Wrote compose file %s", b.Compose)
+	// }
 	return nil
 }
 
