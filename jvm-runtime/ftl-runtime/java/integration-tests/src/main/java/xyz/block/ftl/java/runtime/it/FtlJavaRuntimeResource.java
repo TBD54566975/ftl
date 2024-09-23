@@ -35,12 +35,11 @@ public class FtlJavaRuntimeResource {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/post")
-    public String post(Person person) {
-        return "Hello " + person.first() + " " + person.last();
+    public String post(Person person, HelloClient helloClient) {
+        return helloClient.call(person.first() + " " + person.last());
     }
 
     @POST
-    @Consumes(MediaType.APPLICATION_JSON)
     @Path("/bytes")
     public String bytesHttp(byte[] data) {
         return "Hello " + new String(data, StandardCharsets.UTF_8);
