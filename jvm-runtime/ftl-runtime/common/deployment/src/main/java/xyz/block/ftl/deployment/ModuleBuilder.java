@@ -93,8 +93,7 @@ public class ModuleBuilder {
         this.moduleName = moduleName;
         this.moduleBuilder = Module.newBuilder()
                 .setName(moduleName)
-                .setBuiltin(false)
-                .addAllComments(comments.getOrDefault(moduleName, List.of()));
+                .setBuiltin(false);
         this.knownTopics = knownTopics;
         this.verbClients = verbClients;
         this.recorder = recorder;
