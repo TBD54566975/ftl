@@ -8,7 +8,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	"github.com/TBD54566975/ftl/backend/controller/encryption/dal"
+	"github.com/TBD54566975/ftl/backend/controller/encryption/internal/dal"
 	"github.com/TBD54566975/ftl/backend/libdal"
 )
 

@@ -175,11 +175,11 @@ sql:
         out: "backend/controller/leases/dal/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/encryption/dal/internal/sql/queries.sql
+      - backend/controller/encryption/internal/sql/queries.sql
     gen:
       go:
         <<: *gengo
-        out: "backend/controller/encryption/dal/internal/sql"
+        out: "backend/controller/encryption/internal/sql"
   - <<: *daldir
     queries:
       - backend/controller/timeline/internal/sql/queries.sql
