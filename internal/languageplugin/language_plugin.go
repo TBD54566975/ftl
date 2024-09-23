@@ -46,7 +46,6 @@ type LanguagePlugin struct {
 	// TODO: add a way to remember the state of the last schema we sent to the plugin
 }
 
-// TODO: pass in address incrementor so we can relaunch as needed? Or have a way for this plugin to declare that it has errored...
 func New(ctx context.Context, path string, bind *url.URL) (*LanguagePlugin, error) {
 	config, err := moduleconfig.LoadModuleConfig(path)
 	if err != nil {
