@@ -5,14 +5,14 @@ import (
 	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	"github.com/TBD54566975/ftl/backend/controller/encryption/dal/internal/sql"
+	encryptionsql "github.com/TBD54566975/ftl/backend/controller/encryption/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type DAL struct {
 	*libdal.Handle[DAL]
-	db sql.Querier
+	db encryptionsql.Querier
 }
 
 func New(ctx context.Context, conn libdal.Connection) *DAL {
@@ -20,10 +20,10 @@ func New(ctx context.Context, conn libdal.Connection) *DAL {
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle: h,
-				db:     sql.New(h.Connection),
+				db:     encryptionsql.New(h.Connection),
 			}
 		}),
-		db: sql.New(conn),
+		db: encryptionsql.New(conn),
 	}
 }
 
