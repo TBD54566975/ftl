@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -78,6 +79,7 @@ type Engine struct {
 	modulesToBuild   *xsync.MapOf[string, bool]
 	buildEnv         []string
 	devMode          bool
+	startTime        optional.Option[time.Time]
 }
 
 type Option func(o *Engine)
@@ -105,6 +107,13 @@ func WithListener(listener Listener) Option {
 func WithDevMode(devMode bool) Option {
 	return func(o *Engine) {
 		o.devMode = devMode
+	}
+}
+
+// WithStartTime sets the start time to report total startup time
+func WithStartTime(startTime time.Time) Option {
+	return func(o *Engine) {
+		o.startTime = optional.Some(startTime)
 	}
 }
 
@@ -368,7 +377,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		logger.Errorf(err, "initial deploy failed")
 		e.reportBuildFailed(err)
 	} else {
-		logger.Infof("All modules deployed, watching for changes...")
+		if start, ok := e.startTime.Get(); ok {
+			logger.Infof("All modules deployed in %s, watching for changes...", time.Since(start).String())
+		} else {
+			logger.Infof("All modules deployed, watching for changes...")
+		}
 		e.reportSuccess()
 	}
 
