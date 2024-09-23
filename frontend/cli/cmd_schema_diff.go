@@ -18,8 +18,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/modulewatcher"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -88,14 +88,14 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 	pb := &schema.Schema{}
 	found := false
 	tried := ""
-	modules, err := buildengine.DiscoverModules(ctx, projectConfig.AbsModuleDirs())
+	modules, err := modulewatcher.DiscoverModules(ctx, projectConfig.AbsModuleDirs())
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover modules %w", err)
 	}
-	for _, moduleSettings := range modules {
-		mod, err := schema.ModuleFromProtoFile(moduleSettings.Config.Abs().Schema())
+	for _, config := range modules {
+		mod, err := schema.ModuleFromProtoFile(config.Abs().Schema())
 		if err != nil {
-			tried += fmt.Sprintf(" failed to read schema file %s; did you run ftl build?", moduleSettings.Config.Abs().Schema)
+			tried += fmt.Sprintf(" failed to read schema file %s; did you run ftl build?", config.Abs().Schema)
 		} else {
 			found = true
 			pb.Modules = append(pb.Modules, mod)

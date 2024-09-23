@@ -25,6 +25,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/modulewatcher"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -72,7 +73,7 @@ type Engine struct {
 	modulePlugins    *xsync.MapOf[string, *languageplugin.LanguagePlugin]
 	projectRoot      string
 	moduleDirs       []string
-	watcher          *Watcher
+	watcher          *modulewatcher.Watcher
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
@@ -127,7 +128,7 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, bindA
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
 		modulePlugins:    xsync.NewMapOf[string, *languageplugin.LanguagePlugin](),
-		watcher:          NewWatcher(),
+		watcher:          modulewatcher.New("ftl.toml"),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
 		parallelism:      runtime.NumCPU(),
@@ -145,11 +146,15 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, bindA
 		return nil, fmt.Errorf("failed to clean stubs: %w", err)
 	}
 
-	modules, err := DiscoverModules(ctx, moduleDirs)
+	configs, err := modulewatcher.DiscoverModules(ctx, moduleDirs)
 	if err != nil {
 		return nil, fmt.Errorf("could not find modules: %w", err)
 	}
-	for _, module := range modules {
+	for _, config := range configs {
+		module := Module{
+			Config:       config,
+			Dependencies: []string{},
+		}
 		module, err = e.updateDependencies(ctx, module)
 		if err != nil {
 			return nil, err
@@ -385,7 +390,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		close(schemaChanges)
 	}()
 
-	watchEvents := make(chan WatchEvent, 128)
+	watchEvents := make(chan modulewatcher.WatchEvent, 128)
 	topic, err := e.watcher.Watch(ctx, period, e.moduleDirs)
 	if err != nil {
 		return err
@@ -441,10 +446,10 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			didUpdateDeployments = false
 		case event := <-watchEvents:
 			switch event := event.(type) {
-			case WatchEventModuleAdded:
-				config := event.Module.Config
+			case modulewatcher.WatchEventModuleAdded:
+				config := event.Config
 				if _, exists := e.moduleMetas.Load(config.Module); !exists {
-					e.moduleMetas.Store(config.Module, moduleMeta{module: event.Module})
+					e.moduleMetas.Store(config.Module, moduleMeta{module: Module{Config: event.Config, Dependencies: []string{}}})
 					didError = false
 					err := e.BuildAndDeploy(ctx, 1, true, config.Module)
 					if err != nil {
@@ -455,25 +460,21 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 						didUpdateDeployments = true
 					}
 				}
-			case WatchEventModuleRemoved:
-				config := event.Module.Config
-
-				err := terminateModuleDeployment(ctx, e.client, config.Module)
+			case modulewatcher.WatchEventModuleRemoved:
+				err := terminateModuleDeployment(ctx, e.client, event.Config.Module)
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
-					logger.Errorf(err, "terminate %s failed", config.Module)
+					logger.Errorf(err, "terminate %s failed", event.Config.Module)
 				} else {
 					didUpdateDeployments = true
 				}
 
-				e.moduleMetas.Delete(config.Module)
-			case WatchEventModuleChanged:
-				config := event.Module.Config
-
-				meta, ok := e.moduleMetas.Load(config.Module)
+				e.moduleMetas.Delete(event.Config.Module)
+			case modulewatcher.WatchEventModuleChanged:
+				meta, ok := e.moduleMetas.Load(event.Config.Module)
 				if !ok {
-					logger.Warnf("module %q not found", config.Module)
+					logger.Warnf("module %q not found", event.Config.Module)
 					continue
 				}
 
@@ -482,12 +483,12 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					continue // Skip this event as it's outdated
 				}
 				didError = false
-				err := e.BuildAndDeploy(ctx, 1, true, config.Module)
+				err := e.BuildAndDeploy(ctx, 1, true, event.Config.Module)
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
-					console.UpdateModuleState(ctx, config.Module, console.BuildStateFailed)
-					logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
+					console.UpdateModuleState(ctx, event.Config.Module, console.BuildStateFailed)
+					logger.Errorf(err, "build and deploy failed for module %q", event.Config.Module)
 				} else {
 					didUpdateDeployments = true
 				}

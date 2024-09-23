@@ -53,7 +53,7 @@ type ModuleConfig struct {
 	// Errors is the name of the error file relative to the DeployDir.
 	Errors string `toml:"errors"`
 	// Watch is the list of files to watch for changes.
-	Watch []string `toml:"watch"`
+	// Watch []string `toml:"watch"`
 
 	Go     ModuleGoConfig     `toml:"go,optional"`
 	Kotlin ModuleKotlinConfig `toml:"kotlin,optional"`
@@ -113,10 +113,6 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 		}
 		return out
 	})
-	// Watch paths are allowed to be outside the deploy directory.
-	clone.Watch = slices.Map(clone.Watch, func(p string) string {
-		return filepath.Clean(filepath.Join(clone.Dir, p))
-	})
 	return AbsModuleConfig(clone)
 }
 
@@ -140,18 +136,18 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 				if config.DeployDir == "" {
 					config.DeployDir = "target"
 				}
-				if len(config.Watch) == 0 {
-					config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
-				}
+				// if len(config.Watch) == 0 {
+				// 	config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
+				// }
 			} else if config.Java.BuildTool == JavaBuildToolGradle || fileExists(buildGradle) || fileExists(buildGradleKts) {
 				config.Java.BuildTool = JavaBuildToolGradle
 				config.Build = "gradle build"
 				if config.DeployDir == "" {
 					config.DeployDir = "build"
 				}
-				if len(config.Watch) == 0 {
-					config.Watch = []string{"pom.xml", "src/**", "build/generated"}
-				}
+				// if len(config.Watch) == 0 {
+				// 	config.Watch = []string{"pom.xml", "src/**", "build/generated"}
+				// }
 			} else {
 				return fmt.Errorf("could not find JVM build file in %s", moduleDir)
 			}
@@ -170,14 +166,14 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		if len(config.Deploy) == 0 {
 			config.Deploy = []string{"main", "launch"}
 		}
-		if len(config.Watch) == 0 {
-			config.Watch = []string{"**/*.go", "go.mod", "go.sum"}
-			watches, err := replacementWatches(moduleDir, config.DeployDir)
-			if err != nil {
-				return err
-			}
-			config.Watch = append(config.Watch, watches...)
-		}
+		// if len(config.Watch) == 0 {
+		// 	config.Watch = []string{"**/*.go", "go.mod", "go.sum"}
+		// 	watches, err := replacementWatches(moduleDir, config.DeployDir)
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// 	config.Watch = append(config.Watch, watches...)
+		// }
 
 	case "rust":
 		if config.Build == "" {
@@ -189,9 +185,9 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 		if len(config.Deploy) == 0 {
 			config.Deploy = []string{"main"}
 		}
-		if len(config.Watch) == 0 {
-			config.Watch = []string{"**/*.rs", "Cargo.toml", "Cargo.lock"}
-		}
+		// if len(config.Watch) == 0 {
+		// 	config.Watch = []string{"**/*.rs", "Cargo.toml", "Cargo.lock"}
+		// }
 	}
 
 	// Do some validation.

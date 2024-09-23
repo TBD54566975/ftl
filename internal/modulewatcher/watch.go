@@ -1,8 +1,9 @@
-package buildengine
+package modulewatcher
 
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -10,22 +11,24 @@ import (
 
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // A WatchEvent is an event that occurs when a module is added, removed, or
 // changed.
 type WatchEvent interface{ watchEvent() }
 
-type WatchEventModuleAdded struct{ Module Module }
+type WatchEventModuleAdded struct{ Config moduleconfig.ModuleConfig }
 
 func (WatchEventModuleAdded) watchEvent() {}
 
-type WatchEventModuleRemoved struct{ Module Module }
+type WatchEventModuleRemoved struct{ Config moduleconfig.ModuleConfig }
 
 func (WatchEventModuleRemoved) watchEvent() {}
 
 type WatchEventModuleChanged struct {
-	Module Module
+	Config moduleconfig.ModuleConfig
 	Change FileChangeType
 	Path   string
 	Time   time.Time
@@ -35,11 +38,13 @@ func (WatchEventModuleChanged) watchEvent() {}
 
 type moduleHashes struct {
 	Hashes FileHashes
-	Module Module
+	Config moduleconfig.ModuleConfig
 }
 
 type Watcher struct {
 	isWatching bool
+
+	patterns []string
 
 	// use mutex whenever accessing / modifying existingModules or moduleTransactions
 	mutex              sync.Mutex
@@ -47,7 +52,7 @@ type Watcher struct {
 	moduleTransactions map[string][]*modifyFilesTransaction
 }
 
-func NewWatcher() *Watcher {
+func New(patterns ...string) *Watcher {
 	svc := &Watcher{
 		existingModules:    map[string]moduleHashes{},
 		moduleTransactions: map[string][]*modifyFilesTransaction{},
@@ -94,34 +99,34 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 				continue
 			}
 
-			modulesByDir := maps.FromSlice(modules, func(module Module) (string, Module) {
-				return module.Config.Dir, module
+			modulesByDir := maps.FromSlice(modules, func(config moduleconfig.ModuleConfig) (string, moduleconfig.ModuleConfig) {
+				return config.Dir, config
 			})
 
 			w.mutex.Lock()
 			// Trigger events for removed modules.
 			for _, existingModule := range w.existingModules {
-				if transactions, ok := w.moduleTransactions[existingModule.Module.Config.Dir]; ok && len(transactions) > 0 {
+				if transactions, ok := w.moduleTransactions[existingModule.Config.Dir]; ok && len(transactions) > 0 {
 					// Skip modules that currently have transactions
 					continue
 				}
-				existingConfig := existingModule.Module.Config
+				existingConfig := existingModule.Config
 				if _, haveModule := modulesByDir[existingConfig.Dir]; !haveModule {
-					logger.Debugf("removed %q", existingModule.Module.Config.Module)
-					topic.Publish(WatchEventModuleRemoved{Module: existingModule.Module})
+					logger.Debugf("removed %q", existingModule.Config.Module)
+					topic.Publish(WatchEventModuleRemoved{Config: existingModule.Config})
 					delete(w.existingModules, existingConfig.Dir)
 				}
 			}
 
 			// Compare the modules to the existing modules.
-			for _, module := range modulesByDir {
-				config := module.Config
+			for _, config := range modulesByDir {
 				if transactions, ok := w.moduleTransactions[config.Dir]; ok && len(transactions) > 0 {
 					// Skip modules that currently have transactions
 					continue
 				}
 				existingModule, haveExistingModule := w.existingModules[config.Dir]
-				hashes, err := ComputeFileHashes(module)
+				absPatterns := absolutePatterns(config, w.patterns)
+				hashes, err := computeFileHashes(config, absPatterns)
 				if err != nil {
 					logger.Tracef("error computing file hashes for %s: %v", config.Dir, err)
 					continue
@@ -133,13 +138,13 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 						continue
 					}
 					logger.Debugf("changed %q: %c%s", config.Module, changeType, path)
-					topic.Publish(WatchEventModuleChanged{Module: existingModule.Module, Change: changeType, Path: path, Time: time.Now()})
-					w.existingModules[config.Dir] = moduleHashes{Hashes: hashes, Module: existingModule.Module}
+					topic.Publish(WatchEventModuleChanged{Config: existingModule.Config, Change: changeType, Path: path, Time: time.Now()})
+					w.existingModules[config.Dir] = moduleHashes{Hashes: hashes, Config: existingModule.Config}
 					continue
 				}
 				logger.Debugf("added %q", config.Module)
-				topic.Publish(WatchEventModuleAdded{Module: module})
-				w.existingModules[config.Dir] = moduleHashes{Hashes: hashes, Module: module}
+				topic.Publish(WatchEventModuleAdded{Config: config})
+				w.existingModules[config.Dir] = moduleHashes{Hashes: hashes, Config: config}
 			}
 			w.mutex.Unlock()
 		}
@@ -213,8 +218,10 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 		return nil
 	}
 
+	absPatterns := absolutePatterns(moduleHashes.Config, t.watcher.patterns)
+
 	for _, path := range paths {
-		hash, matched, err := ComputeFileHash(moduleHashes.Module.Config.Dir, path, moduleHashes.Module.Config.Watch)
+		hash, matched, err := computeFileHash(moduleHashes.Config.Dir, path, absPatterns)
 		if err != nil {
 			return err
 		}
@@ -227,4 +234,11 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 	t.watcher.existingModules[t.moduleDir] = moduleHashes
 
 	return nil
+}
+
+func absolutePatterns(config moduleconfig.ModuleConfig, patterns []string) []string {
+	// Watch paths are allowed to be outside the deploy directory.
+	return slices.Map(patterns, func(p string) string {
+		return filepath.Clean(filepath.Join(config.Dir, p))
+	})
 }
