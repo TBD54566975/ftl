@@ -64,7 +64,7 @@ func (c *Cmd) RunBuffered(ctx context.Context) error {
 
 	err := c.Run()
 	if err != nil {
-		log.FromContext(ctx).Infof("%s", outputBuffer.Bytes())
+		log.FromContext(ctx).Errorf(err, "%s", outputBuffer.Bytes())
 		return err
 	}
 
