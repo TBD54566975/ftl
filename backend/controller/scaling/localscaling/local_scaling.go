@@ -139,7 +139,12 @@ func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *
 			return err
 		}
 	} else if deploymentRunners.replicas == 0 && deploymentRunners.runner.Ok() {
-		deploymentRunners.runner.MustGet().cancelFunc()
+		go func() {
+			// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
+			// so we add a slight delay here
+			time.Sleep(time.Second * 10)
+			deploymentRunners.runner.MustGet().cancelFunc()
+		}()
 		deploymentRunners.runner = optional.None[runnerInfo]()
 	}
 	return nil
