@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/trace"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -26,12 +27,15 @@ const (
 type CallMetrics struct {
 	requests     metric.Int64Counter
 	msToComplete metric.Int64Histogram
+	callTracer   trace.Tracer
 }
 
 func initCallMetrics() (*CallMetrics, error) {
+	provider := otel.GetTracerProvider()
 	result := &CallMetrics{
 		requests:     noop.Int64Counter{},
 		msToComplete: noop.Int64Histogram{},
+		callTracer:   provider.Tracer(callMeterName),
 	}
 
 	var err error
@@ -52,6 +56,12 @@ func initCallMetrics() (*CallMetrics, error) {
 	return result, nil
 }
 
+func (m *CallMetrics) BeginSpan(ctx context.Context, verb *schemapb.Ref) (context.Context, trace.Span) {
+	attrs := []attribute.KeyValue{
+		attribute.String(callVerbRefAttr, schema.RefFromProto(verb).String()),
+	}
+	return m.callTracer.Start(ctx, callMeterName, trace.WithAttributes(attrs...))
+}
 func (m *CallMetrics) Request(ctx context.Context, verb *schemapb.Ref, startTime time.Time, maybeFailureMode optional.Option[string]) {
 	attrs := []attribute.KeyValue{
 		attribute.String(observability.ModuleNameAttribute, verb.Module),

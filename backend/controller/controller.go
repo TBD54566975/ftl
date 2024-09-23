@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
@@ -160,7 +161,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	admin := admin.NewAdminService(cm, sm, svc.dal)
 	console := console.NewService(svc.dal, svc.timeline)
 
-	ingressHandler := http.Handler(svc)
+	ingressHandler := otelhttp.NewHandler(http.Handler(svc), "ftl.ingress")
 	if len(config.AllowOrigins) > 0 {
 		ingressHandler = cors.Middleware(
 			slices.Map(config.AllowOrigins, func(u *url.URL) string { return u.String() }),
@@ -326,7 +327,6 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-
 	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
 	if err != nil {
 		if errors.Is(err, libdal.ErrNotFound) {
@@ -974,6 +974,8 @@ func (s *Service) callWithRequest(
 	sourceAddress string,
 ) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
+	ctx, span := observability.Calls.BeginSpan(ctx, req.Msg.Verb)
+	defer span.End()
 
 	if req.Msg.Verb == nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: missing verb"))
