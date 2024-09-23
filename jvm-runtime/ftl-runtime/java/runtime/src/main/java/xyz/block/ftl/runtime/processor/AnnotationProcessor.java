@@ -19,12 +19,17 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.VariableElement;
 import javax.tools.Diagnostic;
 import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
+import xyz.block.ftl.Config;
+import xyz.block.ftl.Export;
+import xyz.block.ftl.Secret;
 import xyz.block.ftl.Verb;
 
 /**
@@ -43,7 +48,7 @@ public class AnnotationProcessor implements Processor {
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return Set.of(Verb.class.getName());
+        return Set.of(Verb.class.getName(), Export.class.getName());
     }
 
     @Override
@@ -59,10 +64,35 @@ public class AnnotationProcessor implements Processor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         //TODO: @VerbName, HTTP, CRON etc
-        roundEnv.getElementsAnnotatedWith(Verb.class)
+        roundEnv.getElementsAnnotatedWithAny(Set.of(Verb.class, Export.class))
                 .forEach(element -> {
                     Optional<String> javadoc = getJavadoc(element);
-                    javadoc.ifPresent(doc -> saved.put(element.getSimpleName().toString(), doc));
+
+                    javadoc.ifPresent(doc -> {
+                        String key = element.getSimpleName().toString();
+
+                        if (element.getKind() == ElementKind.METHOD) {
+                            saved.put("verb." + key, doc);
+                        } else if (element.getKind() == ElementKind.CLASS) {
+                            saved.put("data." + key, doc);
+                        } else if (element.getKind() == ElementKind.ENUM) {
+                            saved.put("enum." + key, doc);
+                        }
+
+                        if (element.getKind() == ElementKind.METHOD) {
+                            var executableElement = (ExecutableElement) element;
+                            executableElement.getParameters().forEach(param -> {
+                                Config config = param.getAnnotation(Config.class);
+                                if (config != null) {
+                                    saved.put("config." + config.value(), extractCommentForParam(doc, param));
+                                }
+                                Secret secret = param.getAnnotation(Secret.class);
+                                if (secret != null) {
+                                    saved.put("secret." + secret.value(), extractCommentForParam(doc, param));
+                                }
+                            });
+                        }
+                    });
                 });
 
         if (roundEnv.processingOver()) {
@@ -115,6 +145,22 @@ public class AnnotationProcessor implements Processor {
         return Optional.of(REMOVE_LEADING_SPACE.matcher(docComment)
                 .replaceAll("")
                 .trim());
+    }
+
+    /**
+     * Read the @param tag in a JavaDoc comment to extract Config and Secret comments
+     */
+    private String extractCommentForParam(String doc, VariableElement param) {
+        String variableName = param.getSimpleName().toString();
+        int startIdx = doc.indexOf("@param " + variableName + " ");
+        if (startIdx != -1) {
+            int endIndex = doc.indexOf("\n", startIdx);
+            if (endIndex == -1) {
+                endIndex = doc.length();
+            }
+            return doc.substring(startIdx + variableName.length() + 8, endIndex);
+        }
+        return null;
     }
 
 }
