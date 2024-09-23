@@ -191,13 +191,6 @@ sql:
         out: "backend/controller/encryption/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/identity/dal/internal/sql/queries.sql
-    gen:
-      go:
-        <<: *gengo
-        out: "backend/controller/identity/dal/internal/sql"
-  - <<: *daldir
-    queries:
       - backend/controller/timeline/internal/sql/queries.sql
       - backend/controller/timeline/internal/sql/deployment_queries.sql
     gen:
