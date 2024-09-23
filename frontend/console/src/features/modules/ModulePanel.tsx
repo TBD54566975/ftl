@@ -16,5 +16,9 @@ export const ModulePanel = () => {
 
   if (!module) return
 
-  return <Schema schema={module.schema} />
+  return (
+    <div className='mt-4 mx-4'>
+      <Schema schema={module.schema} />
+    </div>
+  )
 }

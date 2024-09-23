@@ -1,11 +1,11 @@
 import { DeclLink } from '../decls/DeclLink'
 
-export const UnderlyingType = ({ token }: { token: string }) => {
+export const UnderlyingType = ({ token, containerRect }: { token: string; containerRect?: DOMRect }) => {
   if (token.match(/^\[.+\]$/)) {
     // Handles lists: [elementType]
     return (
       <span className='text-green-700 dark:text-green-400'>
-        [<UnderlyingType token={token.slice(1, token.length - 1)} />]
+        [<UnderlyingType token={token.slice(1, token.length - 1)} containerRect={containerRect} />]
       </span>
     )
   }
@@ -15,7 +15,7 @@ export const UnderlyingType = ({ token }: { token: string }) => {
     return (
       <span className='text-green-700 dark:text-green-400'>
         {'{'}
-        <UnderlyingType token={token.slice(1, token.length - 1)} />:
+        <UnderlyingType token={token.slice(1, token.length - 1)} containerRect={containerRect} />:
       </span>
     )
   }
@@ -24,7 +24,7 @@ export const UnderlyingType = ({ token }: { token: string }) => {
     // Handles last token of map: {KeyType: ValueType}
     return (
       <span className='text-green-700 dark:text-green-400'>
-        <UnderlyingType token={token.slice(0, token.length - 1)} />
+        <UnderlyingType token={token.slice(0, token.length - 1)} containerRect={containerRect} />
         {'}'}
       </span>
     )
@@ -34,7 +34,7 @@ export const UnderlyingType = ({ token }: { token: string }) => {
     // Handles optional: elementType?
     return (
       <span className='text-green-700 dark:text-green-400'>
-        <UnderlyingType token={token.slice(0, token.length - 1)} />?
+        <UnderlyingType token={token.slice(0, token.length - 1)} containerRect={containerRect} />?
       </span>
     )
   }
@@ -43,7 +43,7 @@ export const UnderlyingType = ({ token }: { token: string }) => {
     // Handles closing parens in param list of verb signature: verb echo(inputType) outputType
     return (
       <span>
-        <UnderlyingType token={token.slice(0, token.length - 1)} />)
+        <UnderlyingType token={token.slice(0, token.length - 1)} containerRect={containerRect} />)
       </span>
     )
   }
@@ -57,7 +57,12 @@ export const UnderlyingType = ({ token }: { token: string }) => {
   const declName = maybeSplitRef[1].split('<')[0]
   const primaryTypeEl = (
     <span className='text-green-700 dark:text-green-400'>
-      <DeclLink moduleName={moduleName} declName={declName.split(/[,>]/)[0]} textColors='font-bold text-green-700 dark:text-green-400' />
+      <DeclLink
+        moduleName={moduleName}
+        declName={declName.split(/[,>]/)[0]}
+        textColors='font-bold text-green-700 dark:text-green-400'
+        containerRect={containerRect}
+      />
       {[',', '>'].includes(declName.slice(-1)) ? declName.slice(-1) : ''}
     </span>
   )
@@ -69,7 +74,10 @@ export const UnderlyingType = ({ token }: { token: string }) => {
     <span className='text-green-700 dark:text-green-400'>
       {primaryTypeEl}
       {'<'}
-      <UnderlyingType token={maybeSplitRef.length === 2 ? maybeSplitRef[1].split('<')[1] : `${maybeSplitRef[1].split('<')[1]}.${maybeSplitRef.slice(2)}`} />
+      <UnderlyingType
+        token={maybeSplitRef.length === 2 ? maybeSplitRef[1].split('<')[1] : `${maybeSplitRef[1].split('<')[1]}.${maybeSplitRef.slice(2)}`}
+        containerRect={containerRect}
+      />
     </span>
   )
 }
