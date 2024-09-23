@@ -67,9 +67,12 @@ func verbSchemaString(sch *schema.Schema, verb *schema.Verb) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = visitNode(sch, verb.Response, &verbString)
-	if err != nil {
-		return "", err
+	// Don't print the response if it's the same as the request.
+	if !verb.Response.Equal(verb.Request) {
+		err = visitNode(sch, verb.Response, &verbString)
+		if err != nil {
+			return "", err
+		}
 	}
 	verbString += verb.String()
 	return verbString, nil
