@@ -40,7 +40,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
+	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
@@ -175,7 +175,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		)
 	})
 	g.Go(func() error {
-		return runnerScaling.Start(ctx, *config.Bind, svc.leasesdal)
+		return runnerScaling.Start(ctx, *config.Bind, svc.dbleaser)
 	})
 
 	go svc.dal.PollDeployments(ctx)
@@ -198,7 +198,7 @@ type ControllerListListener interface {
 
 type Service struct {
 	conn               *sql.DB
-	leasesdal          *leasesdal.DAL
+	dbleaser           *dbleaser.DatabaseLeaser
 	dal                *dal.DAL
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
@@ -242,11 +242,11 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	}
 
 	db := dal.New(ctx, conn, encryption)
-	ldb := leasesdal.New(conn)
+	ldb := dbleaser.NewDatabaseLeaser(conn)
 	svc := &Service{
 		tasks:                   scheduledtask.New(ctx, key, ldb),
 		dal:                     db,
-		leasesdal:               ldb,
+		dbleaser:                ldb,
 		conn:                    conn,
 		key:                     key,
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
@@ -788,7 +788,7 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
 		}
 		if lease == nil {
-			lease, _, err = s.leasesdal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
+			lease, _, err = s.dbleaser.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
 			if err != nil {
 				if errors.Is(err, leases.ErrConflict) {
 					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))
@@ -1573,7 +1573,7 @@ func (s *Service) resolveFSMEvent(msg *ftlv1.SendFSMEventRequest) (fsm *schema.F
 }
 
 func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {
-	err := s.leasesdal.ExpireLeases(ctx)
+	err := s.dbleaser.ExpireLeases(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to expire leases: %w", err)
 	}

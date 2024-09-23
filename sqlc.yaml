@@ -168,11 +168,11 @@ sql:
         out: "internal/configuration/dal/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/leases/dal/internal/sql/queries.sql
+      - backend/controller/leases/dbleaser/internal/sql/queries.sql
     gen:
       go:
         <<: *gengo
-        out: "backend/controller/leases/dal/internal/sql"
+        out: "backend/controller/leases/dbleaser/internal/sql"
   - <<: *daldir
     queries:
       - backend/controller/encryption/dal/internal/sql/queries.sql

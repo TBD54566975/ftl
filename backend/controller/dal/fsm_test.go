@@ -9,7 +9,7 @@ import (
 	"github.com/alecthomas/types/either"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
+	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"

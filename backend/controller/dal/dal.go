@@ -19,7 +19,7 @@ import (
 	dalsql "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
-	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
+	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -163,14 +163,14 @@ type Reservation interface {
 func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service) *DAL {
 	var d *DAL
 	d = &DAL{
-		leaseDAL:   leasedal.New(conn),
+		leaseDAL:   leasedal.NewDatabaseLeaser(conn),
 		db:         dalsql.New(conn),
 		encryption: encryption,
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
 				db:                dalsql.New(h.Connection),
-				leaseDAL:          leasedal.New(h.Connection),
+				leaseDAL:          leasedal.NewDatabaseLeaser(h.Connection),
 				encryption:        d.encryption,
 				DeploymentChanges: d.DeploymentChanges,
 			}
@@ -185,7 +185,7 @@ type DAL struct {
 	*libdal.Handle[DAL]
 	db dalsql.Querier
 
-	leaseDAL   *leasedal.DAL
+	leaseDAL   *leasedal.DatabaseLeaser
 	encryption *encryption.Service
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
