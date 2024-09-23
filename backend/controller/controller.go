@@ -61,6 +61,7 @@ import (
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
+	internalobservability "github.com/TBD54566975/ftl/internal/observability"
 	ftlreflect "github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
@@ -100,6 +101,8 @@ type Config struct {
 	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
+	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
+	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 	CommonConfig
 }
 
@@ -110,6 +113,16 @@ func (c *Config) SetDefaults() {
 	if c.Advertise == nil {
 		c.Advertise = c.Bind
 	}
+}
+
+func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
+	conn, err := internalobservability.OpenDBAndInstrument(c.DSN)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open DB connection: %w", err)
+	}
+	conn.SetMaxIdleConns(c.MaxIdleDBConnections)
+	conn.SetMaxOpenConns(c.MaxOpenDBConnections)
+	return conn, nil
 }
 
 // Start the Controller. Blocks until the context is cancelled.

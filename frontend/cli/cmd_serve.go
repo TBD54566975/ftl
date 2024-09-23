@@ -148,7 +148,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerCtx = manager.ContextWithSecrets(controllerCtx, sm)
 
 		// Bring up the DB connection and DAL.
-		conn, err := observability.OpenDBAndInstrument(config.DSN)
+		conn, err := config.OpenDBAndInstrument()
 		if err != nil {
 			return fmt.Errorf("failed to bring up DB connection: %w", err)
 		}
