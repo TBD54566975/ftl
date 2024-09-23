@@ -131,11 +131,17 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
 		delete(r.KnownDeployments, msg.DeploymentKey)
 		if deploymentExists {
-			logger.Infof("deleting deployment %s", msg.ModuleName)
-			err := deploymentClient.Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
-			if err != nil {
-				return fmt.Errorf("failed to delete deployment %s: %w", msg.ModuleName, err)
-			}
+			go func() {
+
+				// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
+				// so we add a slight delay here
+				time.Sleep(time.Second * 10)
+				logger.Infof("deleting deployment %s", msg.ModuleName)
+				err := deploymentClient.Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
+				if err != nil {
+					logger.Errorf(err, "failed to delete deployment %s", msg.ModuleName)
+				}
+			}()
 		}
 	}
 	return nil
