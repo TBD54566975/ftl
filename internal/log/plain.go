@@ -51,7 +51,11 @@ func (t *plainSink) Log(entry Entry) error {
 	// Add scope if required
 	scope, exists := entry.Attributes[scopeKey]
 	if exists {
-		prefix += entry.Level.String() + ":" + scope + ": "
+		if t.isaTTY {
+			prefix += entry.Level.String() + ":\u001B[35m" + scope + "\u001B[0m: "
+		} else {
+			prefix += entry.Level.String() + ":" + scope + ": "
+		}
 	} else {
 		prefix += entry.Level.String() + ": "
 	}
@@ -59,7 +63,7 @@ func (t *plainSink) Log(entry Entry) error {
 	// Print
 	var err error
 	if t.isaTTY {
-		_, err = fmt.Fprintf(t.w, "%s%s%s\x1b[0m\n", colours[entry.Level], prefix, entry.Message)
+		_, err = fmt.Fprintf(t.w, "%s%s%s%s\x1b[0m\n", colours[entry.Level], prefix, colours[entry.Level], entry.Message)
 	} else {
 		_, err = fmt.Fprintf(t.w, "%s%s\n", prefix, entry.Message)
 	}

@@ -54,6 +54,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
+	status "github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -65,7 +66,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/internal/status"
 )
 
 // CommonConfig between the production controller and development server.
