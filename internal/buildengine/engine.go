@@ -828,12 +828,14 @@ func (e *Engine) gatherSchemas(
 // pluginForModule returns the language plugin for a module.
 // If one is not already loaded, it will be created (which can take some time).
 func (e *Engine) pluginForModule(ctx context.Context, moduleName string, path string) (*languageplugin.LanguagePlugin, error) {
-	plugin, ok := e.modulePlugins.Load(moduleName)
-	if ok {
-		// TODO: check state
-		return plugin, nil
-	}
-	plugin, err := languageplugin.New(ctx, path, e.bindAllocator.Next())
+	var err error
+	plugin, _ := e.modulePlugins.LoadOrCompute(moduleName, func() *languageplugin.LanguagePlugin {
+		new, innerErr := languageplugin.New(ctx, path, e.bindAllocator.Next())
+		if innerErr != nil {
+			err = innerErr
+		}
+		return new
+	})
 	if err != nil {
 		return nil, err
 	}
