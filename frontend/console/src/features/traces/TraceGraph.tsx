@@ -35,7 +35,7 @@ const EventBlock = ({
     barColor = 'bg-indigo-500'
     eventTarget = `${event.destinationVerbRef?.module}.${event.destinationVerbRef?.name}`
   } else if (event instanceof IngressEvent) {
-    barColor = 'bg-blue-500'
+    barColor = 'bg-yellow-500'
     eventTarget = event.path
   }
 

@@ -16,8 +16,7 @@ export const CallList = ({ calls }: { calls: Event[] | undefined }) => {
       return
     }
     setSelectedCallId(event.id)
-    const call = event.entry.value as CallEvent
-    openPanel(<TimelineCallDetails timestamp={call.timeStamp} event={event} />)
+    openPanel(<TimelineCallDetails event={event} />)
   }
 
   return (

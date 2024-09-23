@@ -5,6 +5,7 @@ import { ModulePanel } from '../features/modules/ModulePanel'
 import { ModulesPage, ModulesPanel } from '../features/modules/ModulesPage'
 import { DeclPanel } from '../features/modules/decls/DeclPanel'
 import { TimelinePage } from '../features/timeline/TimelinePage'
+import { TracesPage } from '../features/traces/TracesPage'
 import { Layout } from '../layout/Layout'
 import { NotFoundPage } from '../layout/NotFoundPage'
 
@@ -20,6 +21,7 @@ const router = createBrowserRouter(
         <Route path='graph' element={<ConsolePage />} />
         <Route path='infrastructure' element={<Navigate to='infrastructure/controllers' replace />} />
         <Route path='infrastructure/*' element={<InfrastructurePage />} />
+        <Route path='traces/:requestKey' element={<TracesPage />} />
       </Route>
 
       <Route path='*' element={<NotFoundPage />} />

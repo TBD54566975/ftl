@@ -18,7 +18,7 @@ export const TimelinePage = () => {
   useEffect(() => {
     if (initialEventId) {
       // if we're loading a specific event, we don't want to tail.
-      setSelectedTimeRange(TIME_RANGES['5m'])
+      setSelectedTimeRange(TIME_RANGES['24h'])
       setIsTimelinePaused(true)
     }
   }, [])
