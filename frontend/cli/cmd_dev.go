@@ -30,7 +30,7 @@ type devCmd struct {
 }
 
 func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig.Config, cancel context.CancelFunc) error {
-
+	startTime := time.Now()
 	console.LaunchEmbeddedConsole(ctx, k, projConfig, bindContext, cancel)
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
@@ -85,7 +85,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 		}
 		starting.Close()
 
-		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(true)}
+		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(true), buildengine.WithStartTime(startTime)}
 		if d.Lsp {
 			d.languageServer = lsp.NewServer(ctx)
 			opts = append(opts, buildengine.WithListener(d.languageServer))
