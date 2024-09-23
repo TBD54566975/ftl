@@ -119,8 +119,8 @@ func NewStatusManager(ctx context.Context) StatusManager {
 	}()
 
 	go func() {
-		defer sm.exitWait.Done()
 		current := ""
+		closed := false
 		for {
 
 			buf := bytes.Buffer{}
@@ -129,6 +129,9 @@ func NewStatusManager(ctx context.Context) StatusManager {
 			if err != nil {
 				if current != "" {
 					sm.writeLine(current)
+				}
+				if !closed {
+					sm.exitWait.Done()
 				}
 				return
 			}
@@ -140,7 +143,10 @@ func NewStatusManager(ctx context.Context) StatusManager {
 					// we keep running though as there may be more data on exit
 					// that we handle on a best effort basis
 					sm.writeLine(current)
-					sm.exitWait.Done()
+					if !closed {
+						sm.exitWait.Done()
+						closed = true
+					}
 					continue
 				}
 				if err != nil {
