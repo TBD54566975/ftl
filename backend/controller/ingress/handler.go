@@ -105,7 +105,7 @@ func Handle(
 			return
 		}
 		var responseBody []byte
-
+		var rawBody []byte
 		if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
 			var response HTTPResponse
 			if err := json.Unmarshal(msg.Body, &response); err != nil {
@@ -115,7 +115,7 @@ func Handle(
 				recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusInternalServerError, err.Error())
 				return
 			}
-
+			rawBody = response.Body
 			var responseHeaders http.Header
 			responseBody, responseHeaders, err = ResponseForVerb(sch, verb, response)
 			if err != nil {
@@ -146,11 +146,12 @@ func Handle(
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			ingressEvent.Response.Header.Set("Content-Type", "application/json; charset=utf-8")
 			responseBody = msg.Body
+			rawBody = responseBody
 		}
 		_, err = w.Write(responseBody)
 		if err == nil {
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.None[string]())
-			ingressEvent.Response.Body = io.NopCloser(strings.NewReader(string(responseBody)))
+			ingressEvent.Response.Body = io.NopCloser(strings.NewReader(string(rawBody)))
 			timelineService.InsertHTTPIngress(r.Context(), &ingressEvent)
 		} else {
 			logger.Errorf(err, "could not write response body")
