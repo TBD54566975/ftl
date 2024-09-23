@@ -1,12 +1,11 @@
 package xyz.block.ftl.java.runtime.it;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.HashMap;
 import java.util.function.Function;
 
 import jakarta.inject.Inject;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,8 @@ import ftl.echo.EchoRequest;
 import ftl.echo.EchoResponse;
 import io.quarkus.test.common.WithTestResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
 import xyz.block.ftl.VerbClientSink;
@@ -41,14 +42,6 @@ public class FtlJavaRuntimeResourceTest {
     @FTLManaged
     @Inject
     BytesClient bytesClient;
-
-    @FTLManaged
-    @Inject
-    PostClient postClient;
-
-    @FTLManaged
-    @Inject
-    BytesHTTPClient bytesHttpClient;
 
     @Test
     public void testHelloEndpoint() {
@@ -76,45 +69,31 @@ public class FtlJavaRuntimeResourceTest {
 
     @Test
     public void testHttpPost() {
-        HttpRequest<Person> request = new HttpRequest<Person>()
-                .setMethod("POST")
-                .setPath("/test/post")
-                .setQuery(new HashMap<>())
-                .setPathParameters(new HashMap<>())
-                .setHeaders(new HashMap<>())
-                .setBody(new Person("Stuart", "Douglas"));
-        HttpResponse<String, String> response = postClient.call(request);
-        Assertions.assertEquals("Hello Stuart Douglas", response.getBody());
+        RestAssured.with().body(new Person("Stuart", "Douglas"))
+                .contentType(ContentType.JSON)
+                .post("/test/post")
+                .then()
+                .statusCode(200)
+                .body(Matchers.equalTo("Hello Stuart Douglas"));
     }
 
     @Test
     public void testHttpBytes() {
-        HttpRequest<byte[]> request = new HttpRequest<byte[]>()
-                .setMethod("POST")
-                .setPath("/test/bytes")
-                .setQuery(new HashMap<>())
-                .setPathParameters(new HashMap<>())
-                .setHeaders(new HashMap<>())
-                .setBody("Stuart Douglas".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        HttpResponse<String, String> response = bytesHttpClient.call(request);
-        Assertions.assertArrayEquals("Hello Stuart Douglas".getBytes(StandardCharsets.UTF_8),
-                Base64.getDecoder().decode(response.getBody()));
+
+        RestAssured.with().body("Stuart Douglas".getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                .contentType(ContentType.JSON)
+                .post("/test/bytes")
+                .then()
+                .statusCode(200)
+                .body(Matchers.equalTo("Hello Stuart Douglas"));
     }
 
     @VerbClientDefinition(name = "publish")
     interface PublishVerbClient extends VerbClientSink<Person> {
     }
 
-    @VerbClientDefinition(name = "hello")
-    interface HelloClient extends VerbClient<String, String> {
-    }
-
     @VerbClientDefinition(name = "bytes")
     interface BytesClient extends VerbClient<byte[], byte[]> {
-    }
-
-    @VerbClientDefinition(name = "post")
-    interface PostClient extends VerbClient<HttpRequest<Person>, HttpResponse<String, String>> {
     }
 
     @VerbClientDefinition(name = "bytesHttp")

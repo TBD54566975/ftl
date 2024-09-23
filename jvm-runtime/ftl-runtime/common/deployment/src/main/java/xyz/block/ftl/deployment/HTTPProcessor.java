@@ -39,7 +39,7 @@ import xyz.block.ftl.v1.schema.Unit;
 public class HTTPProcessor {
 
     @BuildStep
-    @Record(ExecutionTime.RUNTIME_INIT)
+    @Record(ExecutionTime.STATIC_INIT)
     public MethodScannerBuildItem methodScanners(TopicsBuildItem topics,
             VerbClientBuildItem verbClients, FTLRecorder recorder) {
         return new MethodScannerBuildItem(new MethodScanner() {
