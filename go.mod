@@ -44,7 +44,6 @@ require (
 	github.com/multiformats/go-base36 v0.2.0
 	github.com/otiai10/copy v1.14.0
 	github.com/posener/complete v1.2.3
-	github.com/posener/complete/v2 v2.1.0
 	github.com/radovskyb/watcher v1.0.7
 	github.com/rs/cors v1.11.1
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
