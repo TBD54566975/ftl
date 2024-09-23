@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/alecthomas/types/optional"
 
@@ -47,10 +46,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 
 	sch := &schema.Schema{}
 	for _, m := range modules {
-		schemaPath := m.Config.Abs().Schema
-		if r, ok := s.deployRoot.Get(); ok {
-			schemaPath = filepath.Join(r, m.Config.Module, m.Config.DeployDir, m.Config.Schema)
-		}
+		schemaPath := m.Config.Abs().Schema()
 
 		module, err := schema.ModuleFromProtoFile(schemaPath)
 		if err != nil {

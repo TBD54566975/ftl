@@ -49,7 +49,7 @@ type ModuleConfig struct {
 	// GeneratedSchemaDir is the directory to generate protobuf schema files into. These can be picked up by language specific build tools
 	GeneratedSchemaDir string `toml:"generated-schema-dir"`
 	// Schema is the name of the schema file relative to the DeployDir.
-	Schema string `toml:"schema"`
+	// Schema string `toml:"schema"`
 	// Errors is the name of the error file relative to the DeployDir.
 	Errors string `toml:"errors"`
 	// Watch is the list of files to watch for changes.
@@ -101,10 +101,6 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 		if !strings.HasPrefix(clone.GeneratedSchemaDir, clone.Dir) {
 			panic(fmt.Sprintf("generated-schema-dir %q is not beneath module directory %q", clone.GeneratedSchemaDir, clone.Dir))
 		}
-	}
-	clone.Schema = filepath.Clean(filepath.Join(clone.DeployDir, clone.Schema))
-	if !strings.HasPrefix(clone.Schema, clone.DeployDir) {
-		panic(fmt.Sprintf("schema %q is not beneath deploy directory %q", clone.Schema, clone.DeployDir))
 	}
 	clone.Errors = filepath.Clean(filepath.Join(clone.DeployDir, clone.Errors))
 	if !strings.HasPrefix(clone.Errors, clone.DeployDir) {
@@ -329,4 +325,8 @@ func parseImports(filePath string) ([]string, error) {
 		imports = append(imports, trimmedPath)
 	}
 	return imports, nil
+}
+
+func (c AbsModuleConfig) Schema() string {
+	return filepath.Join(c.DeployDir, "schema.pb")
 }

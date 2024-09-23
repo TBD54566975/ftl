@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -755,14 +754,9 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if err != nil {
 		return err
 	}
-	err = build(ctx, plugin, e.projectRoot, sch, meta.module, e.buildEnv, e.devMode)
+	moduleSchema, err := build(ctx, plugin, e.projectRoot, sch, meta.module, e.buildEnv, e.devMode)
 	if err != nil {
 		return err
-	}
-	config := meta.module.Config
-	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(config.Dir, config.DeployDir, config.Schema))
-	if err != nil {
-		return fmt.Errorf("could not load schema for module %q: %w", config.Module, err)
 	}
 	console.UpdateModuleState(ctx, moduleName, console.BuildStateBuilt)
 	schemas <- moduleSchema

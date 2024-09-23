@@ -24,16 +24,10 @@ const BuildLockTimeout = time.Minute
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-
-// TODO: clean up...and what is build env and dev mode used for here?
-// func Build(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) error {
-// 	return buildModule(ctx, projectRootDir, sch, module, filesTransaction, buildEnv, devMode)
-// }
-
-func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectRootDir string, sch *schema.Schema, module Module, buildEnv []string, devMode bool) error {
+func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectRootDir string, sch *schema.Schema, module Module, buildEnv []string, devMode bool) (*schema.Module, error) {
 	release, err := flock.Acquire(ctx, filepath.Join(module.Config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer release() //nolint:errcheck
 	logger := log.FromContext(ctx).Scope(module.Config.Module)
@@ -41,7 +35,7 @@ func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectRo
 
 	// clear the deploy directory before extracting schema
 	if err := os.RemoveAll(module.Config.Abs().DeployDir); err != nil {
-		return fmt.Errorf("failed to clear errors: %w", err)
+		return nil, fmt.Errorf("failed to clear errors: %w", err)
 	}
 
 	logger.Infof("Building module")
@@ -60,13 +54,10 @@ func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectRo
 
 	result, err := plugin.Build(ctx, sch, projectRootDir)
 	if err != nil {
-		return fmt.Errorf("failed to build module: %w", err)
+		return nil, fmt.Errorf("failed to build module: %w", err)
 	}
 
 	var errs []error
-	if err != nil {
-		errs = append(errs, err)
-	}
 	// read runtime-specific build errors from the build directory
 	// errorList, err := loadProtoErrors(module.Config.Abs())
 	// if err != nil {
@@ -82,12 +73,20 @@ func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectRo
 	}
 
 	if len(errs) > 0 {
-		return errors.Join(errs...)
+		return nil, errors.Join(errs...)
 	}
 
 	logger.Infof("Module built (%.2fs)", time.Since(startTime).Seconds())
 
-	return nil
+	// write schema proto to deploy directory
+	schemaBytes, err := proto.Marshal(result.Schema.ToProto())
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal schema: %w", err)
+	}
+	if err := os.WriteFile(module.Config.Abs().Schema(), schemaBytes, 0600); err != nil {
+		return nil, fmt.Errorf("failed to write schema: %w", err)
+	}
+	return result.Schema, nil
 }
 
 func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]*builderrors.Error, error) {
