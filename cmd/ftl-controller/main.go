@@ -50,7 +50,7 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	// The FTL controller currently only supports DB as a cf provider/resolver.
-	conn, err := observability.OpenDBAndInstrument(cli.ControllerConfig.DSN)
+	conn, err := cli.ControllerConfig.OpenDBAndInstrument()
 	kctx.FatalIfErrorf(err)
 
 	dal := dbleaser.NewDatabaseLeaser(conn)

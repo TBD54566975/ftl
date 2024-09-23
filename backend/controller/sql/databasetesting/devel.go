@@ -77,6 +77,8 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+	realConn.SetMaxIdleConns(20)
+	realConn.SetMaxOpenConns(20)
 	// Reset transient state in the database to a clean state for development purposes.
 	// This includes things like resetting the state of async calls, leases,
 	// controller/runner registration, etc. but not anything more.
