@@ -244,7 +244,7 @@ To use your locally built FTL in a separate project, you can start live rebuild 
 just live-rebuild
 ```
 
-Then, in a separate terminal, you can use the locall build FTL to test your changes against a separate FTL project by running the locally build FTL from the root of this project:
+Then, in a separate terminal, you can use the locally built FTL to test your changes against a separate FTL project by running the locally built FTL from the root of this project:
 ```sh
 ${FTL_HOME}/build/release/ftl dev
 ```
