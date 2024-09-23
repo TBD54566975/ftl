@@ -7,13 +7,19 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/leases"
 	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
+	"github.com/TBD54566975/ftl/backend/controller/pubsub"
+	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 func TestSendFSMEvent(t *testing.T) {
@@ -22,7 +28,9 @@ func TestSendFSMEvent(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	dal := New(ctx, conn, encryption)
+	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
+	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	dal := New(ctx, conn, encryption, pubSub)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, libdal.ErrNotFound)
@@ -46,7 +54,7 @@ func TestSendFSMEvent(t *testing.T) {
 	expectedCall := &AsyncCall{
 		ID:   1,
 		Verb: ref,
-		Origin: AsyncOriginFSM{
+		Origin: async.AsyncOriginFSM{
 			FSM: schema.RefKey{Module: "test", Name: "test"},
 			Key: "invoiceID",
 		},

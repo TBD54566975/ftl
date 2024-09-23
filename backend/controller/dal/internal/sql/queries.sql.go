@@ -129,9 +129,9 @@ func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg Assoc
 
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
-  SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
-  FROM topic_events
-  WHERE "key" = $2::topic_event_key
+    SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
+    FROM topic_events
+    WHERE "key" = $2::topic_event_key
 )
 UPDATE topic_subscriptions
 SET state = 'executing',
@@ -146,14 +146,14 @@ func (q *Queries) BeginConsumingTopicEvent(ctx context.Context, subscription mod
 
 const completeEventForSubscription = `-- name: CompleteEventForSubscription :exec
 WITH module AS (
-  SELECT id
-  FROM modules
-  WHERE name = $2::TEXT
+    SELECT id
+    FROM modules
+    WHERE name = $2::TEXT
 )
 UPDATE topic_subscriptions
 SET state = 'idle'
 WHERE name = $1::TEXT
-      AND module_id = (SELECT id FROM module)
+  AND module_id = (SELECT id FROM module)
 `
 
 func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string, module string) error {
@@ -259,9 +259,9 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 const deleteSubscribers = `-- name: DeleteSubscribers :many
 DELETE FROM topic_subscribers
 WHERE deployment_id IN (
-  SELECT deployments.id
-  FROM deployments
-  WHERE deployments.key = $1::deployment_key
+    SELECT deployments.id
+    FROM deployments
+    WHERE deployments.key = $1::deployment_key
 )
 RETURNING topic_subscribers.key
 `
@@ -292,9 +292,9 @@ func (q *Queries) DeleteSubscribers(ctx context.Context, deployment model.Deploy
 const deleteSubscriptions = `-- name: DeleteSubscriptions :many
 DELETE FROM topic_subscriptions
 WHERE deployment_id IN (
-  SELECT deployments.id
-  FROM deployments
-  WHERE deployments.key = $1::deployment_key
+    SELECT deployments.id
+    FROM deployments
+    WHERE deployments.key = $1::deployment_key
 )
 RETURNING topic_subscriptions.key
 `
@@ -1113,21 +1113,21 @@ func (q *Queries) GetModulesByID(ctx context.Context, ids []int64) ([]Module, er
 
 const getNextEventForSubscription = `-- name: GetNextEventForSubscription :one
 WITH cursor AS (
-  SELECT
-    created_at,
-    id
-  FROM topic_events
-  WHERE "key" = $3::topic_event_key
+    SELECT
+        created_at,
+        id
+    FROM topic_events
+    WHERE "key" = $3::topic_event_key
 )
 SELECT events."key" as event,
-        events.payload,
-        events.created_at,
-        events.caller,
-        events.request_key,
-        events.trace_context,
-        NOW() - events.created_at >= $1::interval AS ready
+       events.payload,
+       events.created_at,
+       events.caller,
+       events.request_key,
+       events.trace_context,
+       NOW() - events.created_at >= $1::interval AS ready
 FROM topics
-LEFT JOIN topic_events as events ON events.topic_id = topics.id
+         LEFT JOIN topic_events as events ON events.topic_id = topics.id
 WHERE topics.key = $2::topic_key
   AND (events.created_at, events.id) > (SELECT COALESCE(MAX(cursor.created_at), '1900-01-01'), COALESCE(MAX(cursor.id), 0) FROM cursor)
 ORDER BY events.created_at, events.id
@@ -1137,7 +1137,7 @@ LIMIT 1
 type GetNextEventForSubscriptionRow struct {
 	Event        optional.Option[model.TopicEventKey]
 	Payload      api.OptionalEncryptedAsyncColumn
-	CreatedAt    optional.Option[time.Time]
+	CreatedAt    sqltypes.OptionalTime
 	Caller       optional.Option[string]
 	RequestKey   optional.Option[string]
 	TraceContext pqtype.NullRawMessage
@@ -1213,13 +1213,13 @@ func (q *Queries) GetProcessList(ctx context.Context) ([]GetProcessListRow, erro
 
 const getRandomSubscriber = `-- name: GetRandomSubscriber :one
 SELECT
-  subscribers.sink as sink,
-  subscribers.retry_attempts as retry_attempts,
-  subscribers.backoff as backoff,
-  subscribers.max_backoff as max_backoff,
-  subscribers.catch_verb as catch_verb
+    subscribers.sink as sink,
+    subscribers.retry_attempts as retry_attempts,
+    subscribers.backoff as backoff,
+    subscribers.max_backoff as max_backoff,
+    subscribers.catch_verb as catch_verb
 FROM topic_subscribers as subscribers
-JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
+         JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
 WHERE topic_subscriptions.key = $1::subscription_key
 ORDER BY RANDOM()
 LIMIT 1
@@ -1358,14 +1358,14 @@ func (q *Queries) GetSchemaForDeployment(ctx context.Context, key model.Deployme
 
 const getSubscription = `-- name: GetSubscription :one
 WITH module AS (
-  SELECT id
-  FROM modules
-  WHERE name = $2::TEXT
+    SELECT id
+    FROM modules
+    WHERE name = $2::TEXT
 )
 SELECT id, key, created_at, topic_id, module_id, deployment_id, name, cursor, state
 FROM topic_subscriptions
 WHERE name = $1::TEXT
-      AND module_id = (SELECT id FROM module)
+  AND module_id = (SELECT id FROM module)
 `
 
 func (q *Queries) GetSubscription(ctx context.Context, column1 string, column2 string) (TopicSubscription, error) {
@@ -1387,25 +1387,25 @@ func (q *Queries) GetSubscription(ctx context.Context, column1 string, column2 s
 
 const getSubscriptionsNeedingUpdate = `-- name: GetSubscriptionsNeedingUpdate :many
 WITH runner_count AS (
-  SELECT count(r.deployment_id) as runner_count,
-         r.deployment_id as deployment
-        FROM runners r
-        GROUP BY deployment
+    SELECT count(r.deployment_id) as runner_count,
+           r.deployment_id as deployment
+    FROM runners r
+    GROUP BY deployment
 )
 SELECT
-  subs.key::subscription_key as key,
-  curser.key as cursor,
-  topics.key::topic_key as topic,
-  subs.name
+    subs.key::subscription_key as key,
+    curser.key as cursor,
+    topics.key::topic_key as topic,
+    subs.name
 FROM topic_subscriptions subs
-JOIN runner_count on subs.deployment_id = runner_count.deployment
-LEFT JOIN topics ON subs.topic_id = topics.id
-LEFT JOIN topic_events curser ON subs.cursor = curser.id
+         JOIN runner_count on subs.deployment_id = runner_count.deployment
+         LEFT JOIN topics ON subs.topic_id = topics.id
+         LEFT JOIN topic_events curser ON subs.cursor = curser.id
 WHERE subs.cursor IS DISTINCT FROM topics.head
   AND subs.state = 'idle'
 ORDER BY curser.created_at
 LIMIT 3
-FOR UPDATE OF subs SKIP LOCKED
+    FOR UPDATE OF subs SKIP LOCKED
 `
 
 type GetSubscriptionsNeedingUpdateRow struct {
@@ -1606,31 +1606,31 @@ func (q *Queries) GetZombieAsyncCalls(ctx context.Context, limit int32) ([]Async
 
 const insertSubscriber = `-- name: InsertSubscriber :exec
 INSERT INTO topic_subscribers (
-  key,
-  topic_subscriptions_id,
-  deployment_id,
-  sink,
-  retry_attempts,
-  backoff,
-  max_backoff,
-  catch_verb
+    key,
+    topic_subscriptions_id,
+    deployment_id,
+    sink,
+    retry_attempts,
+    backoff,
+    max_backoff,
+    catch_verb
 )
 VALUES (
-  $1::subscriber_key,
-  (
-    SELECT topic_subscriptions.id as id
-    FROM topic_subscriptions
-    INNER JOIN modules ON topic_subscriptions.module_id = modules.id
-    WHERE modules.name = $2::TEXT
-      AND topic_subscriptions.name = $3::TEXT
-  ),
-  (SELECT id FROM deployments WHERE key = $4::deployment_key),
-  $5,
-  $6,
-  $7::interval,
-  $8::interval,
-  $9
-)
+           $1::subscriber_key,
+           (
+               SELECT topic_subscriptions.id as id
+               FROM topic_subscriptions
+                        INNER JOIN modules ON topic_subscriptions.module_id = modules.id
+               WHERE modules.name = $2::TEXT
+                 AND topic_subscriptions.name = $3::TEXT
+           ),
+           (SELECT id FROM deployments WHERE key = $4::deployment_key),
+           $5,
+           $6,
+           $7::interval,
+           $8::interval,
+           $9
+       )
 `
 
 type InsertSubscriberParams struct {
@@ -1775,21 +1775,21 @@ INSERT INTO topic_events (
     payload,
     request_key,
     trace_context
-  )
-VALUES (
-  $1::topic_event_key,
-  (
-    SELECT topics.id
-    FROM topics
-    INNER JOIN modules ON topics.module_id = modules.id
-    WHERE modules.name = $2::TEXT
-      AND topics.name = $3::TEXT
-  ),
-  $4::TEXT,
-  $5,
-  $6::TEXT,
-  $7::jsonb
 )
+VALUES (
+           $1::topic_event_key,
+           (
+               SELECT topics.id
+               FROM topics
+                        INNER JOIN modules ON topics.module_id = modules.id
+               WHERE modules.name = $2::TEXT
+                 AND topics.name = $3::TEXT
+           ),
+           $4::TEXT,
+           $5,
+           $6::TEXT,
+           $7::jsonb
+       )
 `
 
 type PublishEventForTopicParams struct {
@@ -1861,9 +1861,9 @@ func (q *Queries) SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams
 
 const setSubscriptionCursor = `-- name: SetSubscriptionCursor :exec
 WITH event AS (
-  SELECT id, created_at, key, topic_id, payload
-  FROM topic_events
-  WHERE "key" = $2::topic_event_key
+    SELECT id, created_at, key, topic_id, payload
+    FROM topic_events
+    WHERE "key" = $2::topic_event_key
 )
 UPDATE topic_subscriptions
 SET cursor = (SELECT id FROM event)
@@ -2062,34 +2062,34 @@ func (q *Queries) UpsertRunner(ctx context.Context, arg UpsertRunnerParams) (int
 
 const upsertSubscription = `-- name: UpsertSubscription :one
 INSERT INTO topic_subscriptions (
-  key,
-  topic_id,
-  module_id,
-  deployment_id,
-  name)
+    key,
+    topic_id,
+    module_id,
+    deployment_id,
+    name)
 VALUES (
-  $1::subscription_key,
-  (
-    SELECT topics.id as id
-    FROM topics
-    INNER JOIN modules ON topics.module_id = modules.id
-    WHERE modules.name = $2::TEXT
-      AND topics.name = $3::TEXT
-  ),
-  (SELECT id FROM modules WHERE name = $4::TEXT),
-  (SELECT id FROM deployments WHERE key = $5::deployment_key),
-  $6::TEXT
-)
+           $1::subscription_key,
+           (
+               SELECT topics.id as id
+               FROM topics
+                        INNER JOIN modules ON topics.module_id = modules.id
+               WHERE modules.name = $2::TEXT
+                 AND topics.name = $3::TEXT
+           ),
+           (SELECT id FROM modules WHERE name = $4::TEXT),
+           (SELECT id FROM deployments WHERE key = $5::deployment_key),
+           $6::TEXT
+       )
 ON CONFLICT (name, module_id) DO
-UPDATE SET
-  topic_id = excluded.topic_id,
-  deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
+    UPDATE SET
+               topic_id = excluded.topic_id,
+               deployment_id = (SELECT id FROM deployments WHERE key = $5::deployment_key)
 RETURNING
-  id,
-  CASE
-    WHEN xmax = 0 THEN true
-    ELSE false
-  END AS inserted
+    id,
+    CASE
+        WHEN xmax = 0 THEN true
+        ELSE false
+        END AS inserted
 `
 
 type UpsertSubscriptionParams struct {
@@ -2123,14 +2123,14 @@ func (q *Queries) UpsertSubscription(ctx context.Context, arg UpsertSubscription
 const upsertTopic = `-- name: UpsertTopic :exec
 INSERT INTO topics (key, module_id, name, type)
 VALUES (
-  $1::topic_key,
-  (SELECT id FROM modules WHERE name = $2::TEXT LIMIT 1),
-  $3::TEXT,
-  $4::TEXT
-)
+           $1::topic_key,
+           (SELECT id FROM modules WHERE name = $2::TEXT LIMIT 1),
+           $3::TEXT,
+           $4::TEXT
+       )
 ON CONFLICT (name, module_id) DO
-UPDATE SET
-  type = $4::TEXT
+    UPDATE SET
+    type = $4::TEXT
 RETURNING id
 `
 

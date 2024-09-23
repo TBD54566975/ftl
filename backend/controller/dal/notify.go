@@ -3,40 +3,20 @@ package dal
 import (
 	"context"
 	"crypto/sha256"
-	"encoding"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/alecthomas/types/optional"
 	"github.com/jpillora/backoff"
 
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
-// NotificationPayload is a row from the database.
-//
-//sumtype:decl
-type NotificationPayload interface{ notification() }
-
-// A Notification from the database.
-type Notification[T NotificationPayload, Key any, KeyP interface {
-	*Key
-	encoding.TextUnmarshaler
-}] struct {
-	Deleted optional.Option[Key] // If present the object was deleted.
-	Message optional.Option[T]
-}
-
-func (n Notification[T, Key, KeyP]) String() string {
-	if key, ok := n.Deleted.Get(); ok {
-		return fmt.Sprintf("deleted %v", key)
-	}
-	return fmt.Sprintf("message %v", n.Message)
-}
-
 // DeploymentNotification is a notification from the database when a deployment changes.
-type DeploymentNotification = Notification[Deployment, model.DeploymentKey, *model.DeploymentKey]
+type DeploymentNotification = dalmodel.Notification[dalmodel.Deployment, model.DeploymentKey, *model.DeploymentKey]
 
 type deploymentState struct {
 	Key         model.DeploymentKey
@@ -44,7 +24,7 @@ type deploymentState struct {
 	minReplicas int
 }
 
-func deploymentStateFromDeployment(deployment Deployment) (deploymentState, error) {
+func deploymentStateFromDeployment(deployment dalmodel.Deployment) (deploymentState, error) {
 	hasher := sha256.New()
 	data := []byte(deployment.Schema.String())
 	if _, err := hasher.Write(data); err != nil {
@@ -70,7 +50,7 @@ func (d *DAL) PollDeployments(ctx context.Context) {
 
 		deployments, err := d.GetDeploymentsWithMinReplicas(ctx)
 		if err != nil {
-			if ctx.Err() == context.Canceled {
+			if errors.Is(ctx.Err(), context.Canceled) {
 				logger.Tracef("Polling stopped: %v", ctx.Err())
 				return
 			}

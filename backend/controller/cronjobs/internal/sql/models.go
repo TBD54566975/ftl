@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/alecthomas/types/optional"
@@ -22,7 +23,7 @@ type CronJob struct {
 	StartTime       time.Time
 	NextExecution   time.Time
 	ModuleName      string
-	LastExecution   optional.Option[time.Time]
+	LastExecution   sqltypes.OptionalTime
 	LastAsyncCallID optional.Option[int64]
 }
 

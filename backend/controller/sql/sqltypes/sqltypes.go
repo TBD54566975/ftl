@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -64,3 +65,5 @@ func (t Type) Value() (driver.Value, error) {
 	}
 	return data, nil
 }
+
+type OptionalTime = optional.Option[time.Time]

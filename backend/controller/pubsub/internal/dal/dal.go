@@ -8,9 +8,11 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	sql2 "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/async"
+	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
+	dalsql "github.com/TBD54566975/ftl/backend/controller/pubsub/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -19,6 +21,26 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
+
+type DAL struct {
+	*libdal.Handle[DAL]
+	db         dalsql.Querier
+	encryption *encryption.Service
+}
+
+func New(conn libdal.Connection, encryption *encryption.Service) *DAL {
+	return &DAL{
+		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
+			return &DAL{
+				Handle:     h,
+				db:         dalsql.New(h.Connection),
+				encryption: encryption,
+			}
+		}),
+		db:         dalsql.New(conn),
+		encryption: encryption,
+	}
+}
 
 func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
 	var encryptedPayload api.EncryptedAsyncColumn
@@ -44,7 +66,7 @@ func (d *DAL) PublishEventForTopic(ctx context.Context, module, topic, caller st
 		return fmt.Errorf("failed to get request key: %w", err)
 	}
 
-	err = d.db.PublishEventForTopic(ctx, sql2.PublishEventForTopicParams{
+	err = d.db.PublishEventForTopic(ctx, dalsql.PublishEventForTopicParams{
 		Key:          model.NewTopicEventKey(module, topic),
 		Module:       module,
 		Topic:        topic,
@@ -65,7 +87,7 @@ func (d *DAL) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]model.Subscr
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
-	return slices.Map(rows, func(row sql2.GetSubscriptionsNeedingUpdateRow) model.Subscription {
+	return slices.Map(rows, func(row dalsql.GetSubscriptionsNeedingUpdateRow) model.Subscription {
 		return model.Subscription{
 			Name:   row.Name,
 			Key:    row.Key,
@@ -125,14 +147,14 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			return 0, fmt.Errorf("failed to progress subscription: %w", libdal.TranslatePGError(err))
 		}
 
-		origin := AsyncOriginPubSub{
+		origin := async.AsyncOriginPubSub{
 			Subscription: schema.RefKey{
 				Module: subscription.Key.Payload.Module,
 				Name:   subscription.Key.Payload.Name,
 			},
 		}
 
-		_, err = tx.db.CreateAsyncCall(ctx, sql2.CreateAsyncCallParams{
+		_, err = tx.db.CreateAsyncCall(ctx, dalsql.CreateAsyncCallParams{
 			ScheduledAt:       time.Now(),
 			Verb:              subscriber.Sink,
 			Origin:            origin.String(),
@@ -168,7 +190,7 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 	return successful, nil
 }
 
-func subscriptionRef(subscription sql2.GetSubscriptionsNeedingUpdateRow) schema.RefKey {
+func subscriptionRef(subscription dalsql.GetSubscriptionsNeedingUpdateRow) schema.RefKey {
 	return schema.RefKey{Module: subscription.Key.Payload.Module, Name: subscription.Name}
 }
 
@@ -219,7 +241,7 @@ func (d *DAL) ResetSubscription(ctx context.Context, module, name string) (err e
 	return nil
 }
 
-func (d *DAL) createSubscriptions(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
+func (d *DAL) CreateSubscriptions(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 	logger := log.FromContext(ctx)
 
 	for _, decl := range module.Decls {
@@ -237,7 +259,7 @@ func (d *DAL) createSubscriptions(ctx context.Context, key model.DeploymentKey, 
 			continue
 		}
 		subscriptionKey := model.NewSubscriptionKey(module.Name, s.Name)
-		result, err := d.db.UpsertSubscription(ctx, sql2.UpsertSubscriptionParams{
+		result, err := d.db.UpsertSubscription(ctx, dalsql.UpsertSubscriptionParams{
 			Key:         subscriptionKey,
 			Module:      module.Name,
 			Deployment:  key,
@@ -276,7 +298,7 @@ func hasSubscribers(subscription *schema.Subscription, decls []schema.Decl) bool
 	return false
 }
 
-func (d *DAL) createSubscribers(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
+func (d *DAL) CreateSubscribers(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 	logger := log.FromContext(ctx)
 	for _, decl := range module.Decls {
 		v, ok := decl.(*schema.Verb)
@@ -301,7 +323,7 @@ func (d *DAL) createSubscribers(ctx context.Context, key model.DeploymentKey, mo
 				}
 			}
 			subscriberKey := model.NewSubscriberKey(module.Name, s.Name, v.Name)
-			err = d.db.InsertSubscriber(ctx, sql2.InsertSubscriberParams{
+			err = d.db.InsertSubscriber(ctx, dalsql.InsertSubscriberParams{
 				Key:              subscriberKey,
 				Module:           module.Name,
 				SubscriptionName: s.Name,
@@ -321,7 +343,7 @@ func (d *DAL) createSubscribers(ctx context.Context, key model.DeploymentKey, mo
 	return nil
 }
 
-func (d *DAL) removeSubscriptionsAndSubscribers(ctx context.Context, key model.DeploymentKey) error {
+func (d *DAL) RemoveSubscriptionsAndSubscribers(ctx context.Context, key model.DeploymentKey) error {
 	logger := log.FromContext(ctx)
 
 	subscribers, err := d.db.DeleteSubscribers(ctx, key)
