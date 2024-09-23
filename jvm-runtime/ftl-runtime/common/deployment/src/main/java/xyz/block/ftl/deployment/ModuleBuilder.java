@@ -85,6 +85,7 @@ public class ModuleBuilder {
     private final Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients;
     private final FTLRecorder recorder;
     private final Map<String, Iterable<String>> comments;
+    private final List<ValidationFailure> validationFailures = new ArrayList<>();
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
@@ -301,6 +302,11 @@ public class ModuleBuilder {
             case CLASS -> {
                 var clazz = type.asClassType();
                 var info = index.getClassByName(clazz.name());
+                if (info.enclosingClass() != null && !Modifier.isStatic(info.flags())) {
+                    // proceed as normal, we fail at the end
+                    validationFailures.add(new ValidationFailure(clazz.name().toString(),
+                            "Inner classes must be static"));
+                }
 
                 PrimitiveType unboxed = PrimitiveType.unbox(clazz);
                 if (unboxed != null) {
@@ -445,6 +451,14 @@ public class ModuleBuilder {
     }
 
     public void writeTo(OutputStream out) throws IOException {
+        if (!validationFailures.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (var failure : validationFailures) {
+                sb.append("Validation failure: ").append(failure.className).append(": ").append(failure.message)
+                        .append("\n");
+            }
+            throw new RuntimeException(sb.toString());
+        }
         moduleBuilder.build().writeTo(out);
     }
 
@@ -465,5 +479,8 @@ public class ModuleBuilder {
         DISALLOWED,
         ALLOWED,
         REQUIRED
+    }
+
+    record ValidationFailure(String className, String message) {
     }
 }
