@@ -1,4 +1,4 @@
-package dal
+package dbleaser
 
 import (
 	"context"
@@ -12,21 +12,21 @@ import (
 	"github.com/sqlc-dev/pqtype"
 
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	"github.com/TBD54566975/ftl/backend/controller/leases/dal/internal/sql"
+	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-type DAL struct {
-	*libdal.Handle[DAL]
+type DatabaseLeaser struct {
+	*libdal.Handle[DatabaseLeaser]
 	db sql.Querier
 }
 
-func New(conn libdal.Connection) *DAL {
-	return &DAL{
-		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
-			return &DAL{
+func NewDatabaseLeaser(conn libdal.Connection) *DatabaseLeaser {
+	return &DatabaseLeaser{
+		Handle: libdal.New(conn, func(h *libdal.Handle[DatabaseLeaser]) *DatabaseLeaser {
+			return &DatabaseLeaser{
 				Handle: h,
 				db:     sql.New(h.Connection),
 			}
@@ -35,7 +35,7 @@ func New(conn libdal.Connection) *DAL {
 	}
 }
 
-var _ leases.Leaser = (*DAL)(nil)
+var _ leases.Leaser = (*DatabaseLeaser)(nil)
 
 // Lease represents a lease that is held by a controller.
 type Lease struct {
@@ -101,7 +101,7 @@ func (l *Lease) Release() error {
 // Will return leases.ErrConflict (not libdal.ErrConflict) if the lease is already held by another controller.
 //
 // The returned context will be cancelled when the lease fails to renew.
-func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata optional.Option[any]) (leases.Lease, context.Context, error) {
+func (d *DatabaseLeaser) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duration, metadata optional.Option[any]) (leases.Lease, context.Context, error) {
 	if ttl < time.Second*5 {
 		return nil, nil, fmt.Errorf("lease TTL must be at least 5 seconds")
 	}
@@ -126,7 +126,7 @@ func (d *DAL) AcquireLease(ctx context.Context, key leases.Key, ttl time.Duratio
 }
 
 // NewLease creates a new lease for the given key.
-func (d *DAL) NewLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) (*Lease, context.Context) {
+func (d *DatabaseLeaser) NewLease(ctx context.Context, key leases.Key, idempotencyKey uuid.UUID, ttl time.Duration) (*Lease, context.Context) {
 	ctx, cancelCtx := context.WithCancel(ctx)
 	lease := &Lease{
 		idempotencyKey: idempotencyKey,
@@ -143,7 +143,7 @@ func (d *DAL) NewLease(ctx context.Context, key leases.Key, idempotencyKey uuid.
 // GetLeaseInfo returns the metadata and expiry time for the lease with the given key.
 //
 // metadata should be a pointer to the type that metadata should be unmarshaled into.
-func (d *DAL) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (expiry time.Time, err error) {
+func (d *DatabaseLeaser) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (expiry time.Time, err error) {
 	l, err := d.db.GetLeaseInfo(ctx, key)
 	if err != nil {
 		return expiry, libdal.TranslatePGError(err)
@@ -157,7 +157,7 @@ func (d *DAL) GetLeaseInfo(ctx context.Context, key leases.Key, metadata any) (e
 }
 
 // ExpireLeases expires (deletes) all leases that have expired.
-func (d *DAL) ExpireLeases(ctx context.Context) error {
+func (d *DatabaseLeaser) ExpireLeases(ctx context.Context) error {
 	count, err := d.db.ExpireLeases(ctx)
 	// TODO: Return and log the actual lease keys?
 	if count > 0 {
