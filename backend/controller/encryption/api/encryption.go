@@ -21,5 +21,4 @@ type KeyStoreProvider interface {
 type DataEncryptor interface {
 	Encrypt(cleartext []byte, dest Encrypted) error
 	Decrypt(encrypted Encrypted) ([]byte, error)
-	// EncryptIdentityKey(keyPair internalidentity.KeyPair, dest api.Encrypted) error
 }
