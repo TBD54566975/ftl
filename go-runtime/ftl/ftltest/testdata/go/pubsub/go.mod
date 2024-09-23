@@ -14,6 +14,7 @@ require (
 	connectrpc.com/otelconnect v0.7.1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/TBD54566975/scaffolder v1.1.0 // indirect
+	github.com/XSAM/otelsql v0.34.0 // indirect
 	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/repr v0.4.0 // indirect
