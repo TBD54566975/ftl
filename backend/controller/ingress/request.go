@@ -11,13 +11,13 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // BuildRequestBody extracts the HttpRequest body from an HTTP request.
-func BuildRequestBody(route *dal.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
+func BuildRequestBody(route *model.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
 	verb := &schema.Verb{}
 	err := sch.ResolveToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	"github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
@@ -240,7 +240,7 @@ func TestBuildRequestBody(t *testing.T) {
 			}
 			r, err := http.NewRequest(test.method, requestURL, bytes.NewReader(body)) //nolint:noctx
 			assert.NoError(t, err)
-			requestBody, err := BuildRequestBody(&dal.IngressRoute{
+			requestBody, err := BuildRequestBody(&model.IngressRoute{
 				Path:   test.routePath,
 				Module: "test",
 				Verb:   test.verb,

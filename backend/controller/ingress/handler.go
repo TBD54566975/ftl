@@ -13,7 +13,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
@@ -29,7 +29,7 @@ func Handle(
 	startTime time.Time,
 	sch *schema.Schema,
 	requestKey model.RequestKey,
-	routes []dal.IngressRoute,
+	routes []dalmodel.IngressRoute,
 	w http.ResponseWriter,
 	r *http.Request,
 	timelineService *timeline.Service,

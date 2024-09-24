@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
-	clock "github.com/benbjohnson/clock"
+	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -37,7 +37,7 @@ type descriptor struct {
 // run.
 type Job func(ctx context.Context) (time.Duration, error)
 
-type DALFunc func(ctx context.Context, all bool) ([]dal.Controller, error)
+type DALFunc func(ctx context.Context, all bool) ([]dalmodel.Controller, error)
 
 // Scheduler is a task scheduler for the controller.
 //

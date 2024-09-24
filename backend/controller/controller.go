@@ -35,9 +35,11 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
+	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
@@ -207,7 +209,7 @@ type clients struct {
 // ControllerListListener is regularly notified of the current list of controllers
 // This is often used to update a hash ring to distribute work.
 type ControllerListListener interface {
-	UpdatedControllerList(ctx context.Context, controllers []dal.Controller)
+	UpdatedControllerList(ctx context.Context, controllers []dalmodel.Controller)
 }
 
 type Service struct {
@@ -219,7 +221,7 @@ type Service struct {
 
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
-	pubSub                  *pubsub.Manager
+	pubSub                  *pubsub.Service
 	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
@@ -255,11 +257,11 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
 	}
 
-	db := dal.New(ctx, conn, encryption)
 	ldb := dbleaser.NewDatabaseLeaser(conn)
+	scheduler := scheduledtask.New(ctx, key, ldb)
+
 	svc := &Service{
-		tasks:                   scheduledtask.New(ctx, key, ldb),
-		dal:                     db,
+		tasks:                   scheduler,
 		dbleaser:                ldb,
 		conn:                    conn,
 		key:                     key,
@@ -274,8 +276,10 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, conn)
 	svc.cronJobs = cronSvc
 
-	pubSub := pubsub.New(ctx, db, svc.tasks, svc)
+	pubSub := pubsub.New(conn, encryption, svc.tasks, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
+
+	svc.dal = dal.New(ctx, conn, encryption, pubSub)
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
@@ -397,7 +401,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		}
 	})
 	replicas := map[string]int32{}
-	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
+	protoRunners, err := slices.MapErr(status.Runners, func(r dalmodel.Runner) (*ftlv1.StatusResponse_Runner, error) {
 		asString := r.Deployment.String()
 		deployment := &asString
 		replicas[asString]++
@@ -415,7 +419,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	if err != nil {
 		return nil, err
 	}
-	deployments, err := slices.MapErr(status.Deployments, func(d dal.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
+	deployments, err := slices.MapErr(status.Deployments, func(d dalmodel.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
 		labels, err := structpb.NewStruct(d.Labels)
 		if err != nil {
 			return nil, fmt.Errorf("could not marshal attributes for deployment %s: %w", d.Key.String(), err)
@@ -434,7 +438,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		return nil, err
 	}
 	resp := &ftlv1.StatusResponse{
-		Controllers: slices.Map(status.Controllers, func(c dal.Controller) *ftlv1.StatusResponse_Controller {
+		Controllers: slices.Map(status.Controllers, func(c dalmodel.Controller) *ftlv1.StatusResponse_Controller {
 			return &ftlv1.StatusResponse_Controller{
 				Key:      c.Key.String(),
 				Endpoint: c.Endpoint,
@@ -443,7 +447,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		}),
 		Runners:     protoRunners,
 		Deployments: deployments,
-		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
+		IngressRoutes: slices.Map(status.IngressRoutes, func(r dalmodel.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
 			return &ftlv1.StatusResponse_IngressRoute{
 				DeploymentKey: r.Deployment.String(),
 				Verb:          &schemapb.Ref{Module: r.Module, Name: r.Verb},
@@ -596,7 +600,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
-		err = s.dal.UpsertRunner(ctx, dal.Runner{
+		err = s.dal.UpsertRunner(ctx, dalmodel.Runner{
 			Key:        runnerKey,
 			Endpoint:   msg.Endpoint,
 			Deployment: deploymentKey,
@@ -959,7 +963,7 @@ func (s *Service) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv
 
 func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
 	// Publish the event.
-	err := s.dal.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
+	err := s.pubSub.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
 	}
@@ -1117,14 +1121,14 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
 	logger := log.FromContext(ctx)
 
-	artefacts := make([]dal.DeploymentArtefact, len(req.Msg.Artefacts))
+	artefacts := make([]dalmodel.DeploymentArtefact, len(req.Msg.Artefacts))
 	for i, artefact := range req.Msg.Artefacts {
 		digest, err := sha256.ParseSHA256(artefact.Digest)
 		if err != nil {
 			logger.Errorf(err, "Invalid digest %s", artefact.Digest)
 			return nil, fmt.Errorf("invalid digest: %w", err)
 		}
-		artefacts[i] = dal.DeploymentArtefact{
+		artefacts[i] = dalmodel.DeploymentArtefact{
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 			Digest:     digest,
@@ -1167,7 +1171,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 }
 
 func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ftlv1.ResetSubscriptionRequest]) (*connect.Response[ftlv1.ResetSubscriptionResponse], error) {
-	err := s.dal.ResetSubscription(ctx, req.Msg.Subscription.Module, req.Msg.Subscription.Name)
+	err := s.pubSub.ResetSubscription(ctx, req.Msg.Subscription.Module, req.Msg.Subscription.Name)
 	if err != nil {
 		return nil, fmt.Errorf("could not reset subscription: %w", err)
 	}
@@ -1289,13 +1293,13 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		if returnErr == nil {
 			// Post-commit notification based on origin
 			switch origin := call.Origin.(type) {
-			case dal.AsyncOriginCron:
+			case async.AsyncOriginCron:
 				break
 
-			case dal.AsyncOriginFSM:
+			case async.AsyncOriginFSM:
 				break
 
-			case dal.AsyncOriginPubSub:
+			case async.AsyncOriginPubSub:
 				go s.pubSub.AsyncCallDidCommit(originalCtx, origin)
 
 			default:
@@ -1460,10 +1464,10 @@ func (s *Service) reapAsyncCalls(ctx context.Context) (nextInterval time.Duratio
 
 func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
 	switch origin := call.Origin.(type) {
-	case dal.AsyncOriginCron:
+	case async.AsyncOriginCron:
 		return &ftlv1.Metadata{}
 
-	case dal.AsyncOriginFSM:
+	case async.AsyncOriginFSM:
 		return &ftlv1.Metadata{
 			Values: []*ftlv1.Metadata_Pair{
 				{
@@ -1477,7 +1481,7 @@ func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
 			},
 		}
 
-	case dal.AsyncOriginPubSub:
+	case async.AsyncOriginPubSub:
 		return &ftlv1.Metadata{}
 
 	default:
@@ -1490,18 +1494,18 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 
 	// Allow for handling of completion based on origin
 	switch origin := call.Origin.(type) {
-	case dal.AsyncOriginCron:
+	case async.AsyncOriginCron:
 		if err := s.cronJobs.OnJobCompletion(ctx, origin.CronJobKey, failed); err != nil {
 			return fmt.Errorf("failed to finalize cron async call: %w", err)
 		}
 
-	case dal.AsyncOriginFSM:
+	case async.AsyncOriginFSM:
 		if err := s.onAsyncFSMCallCompletion(ctx, tx, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize FSM async call: %w", err)
 		}
 
-	case dal.AsyncOriginPubSub:
-		if err := s.pubSub.OnCallCompletion(ctx, tx, origin, failed, isFinalResult); err != nil {
+	case async.AsyncOriginPubSub:
+		if err := s.pubSub.OnCallCompletion(ctx, tx.Connection, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize pubsub async call: %w", err)
 		}
 
@@ -1511,7 +1515,7 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 	return nil
 }
 
-func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.DAL, origin dal.AsyncOriginFSM, failed bool, isFinalResult bool) error {
+func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.DAL, origin async.AsyncOriginFSM, failed bool, isFinalResult bool) error {
 	logger := log.FromContext(ctx).Scope(origin.FSM.String())
 
 	// retrieve the next fsm event and delete it
@@ -1757,7 +1761,7 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error) {
 	deployments, err := s.dal.GetActiveDeployments(ctx)
 	if errors.Is(err, libdal.ErrNotFound) {
-		deployments = []dal.Deployment{}
+		deployments = []dalmodel.Deployment{}
 	} else if err != nil {
 		return 0, err
 	}

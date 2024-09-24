@@ -8,8 +8,8 @@ import (
 
 	"github.com/benbjohnson/clock"
 
+	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/internal/dal"
-	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	encryptionsvc "github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -177,7 +177,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 	}
 
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
-	origin := &parentdal.AsyncOriginCron{CronJobKey: job.Key}
+	origin := &async.AsyncOriginCron{CronJobKey: job.Key}
 	var request api.EncryptedColumn[api.AsyncSubKey]
 	err = s.encryption.Encrypt([]byte(`{}`), &request)
 	if err != nil {

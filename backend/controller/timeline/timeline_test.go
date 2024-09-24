@@ -15,7 +15,11 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	controllerdal "github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/pubsub"
+	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -30,7 +34,9 @@ func TestTimeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
-	controllerDAL := controllerdal.New(ctx, conn, encryption)
+	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
+	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 
@@ -49,7 +55,7 @@ func TestTimeline(t *testing.T) {
 	module := &schema.Module{Name: "test"}
 	var deploymentKey model.DeploymentKey
 	t.Run("CreateDeployment", func(t *testing.T) {
-		deploymentKey, err = controllerDAL.CreateDeployment(ctx, "go", module, []controllerdal.DeploymentArtefact{{
+		deploymentKey, err = controllerDAL.CreateDeployment(ctx, "go", module, []dalmodel.DeploymentArtefact{{
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
@@ -203,7 +209,9 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
-	controllerDAL := controllerdal.New(ctx, conn, encryption)
+	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
+	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSha sha256.SHA256
@@ -216,7 +224,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	module := &schema.Module{Name: "test"}
 	var deploymentKey model.DeploymentKey
 	t.Run("CreateDeployment", func(t *testing.T) {
-		deploymentKey, err = controllerDAL.CreateDeployment(ctx, "go", module, []controllerdal.DeploymentArtefact{{
+		deploymentKey, err = controllerDAL.CreateDeployment(ctx, "go", module, []dalmodel.DeploymentArtefact{{
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
