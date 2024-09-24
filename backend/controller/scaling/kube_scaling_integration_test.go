@@ -5,6 +5,7 @@ package scaling_test
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -23,12 +24,30 @@ func TestKubeScaling(t *testing.T) {
 	done.Store(false)
 	routineStopped := sync.WaitGroup{}
 	routineStopped.Add(1)
+	echoDeployment := map[string]string{}
 	in.Run(t,
 		in.WithKubernetes(),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
+		in.CopyModule("naughty"),
+		in.Deploy("naughty"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 			assert.Equal(t, "Hello, Bob!!!", response)
+		}),
+		in.VerifyKubeState(func(ctx context.Context, t testing.TB, namespace string, client *kubernetes.Clientset) {
+			deps, err := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
+			assert.NoError(t, err)
+			for _, dep := range deps.Items {
+				if strings.HasPrefix(dep.Name, "dpl-echo") {
+					echoDeployment["name"] = dep.Name
+				}
+			}
+			assert.NotEqual(t, "", echoDeployment["name"])
+		}),
+		in.Call("naughty", "beNaughty", echoDeployment, func(t testing.TB, response string) {
+			// If istio is not present we should be able to ping the echo service directly.
+			// Istio should prevent this
+			assert.Equal(t, strconv.FormatBool(false), response)
 		}),
 		in.EditFile("echo", func(content []byte) []byte {
 			return []byte(strings.ReplaceAll(string(content), "Hello", "Bye"))
@@ -62,12 +81,12 @@ func TestKubeScaling(t *testing.T) {
 			assert.NoError(t, err)
 			depCount := 0
 			for _, dep := range deps.Items {
-				if strings.HasPrefix(dep.Name, "dpl-echo") || strings.HasPrefix(dep.Name, "dpl-time") {
+				if strings.HasPrefix(dep.Name, "dpl-echo") {
 					depCount++
 					service, err := client.CoreV1().Services(namespace).Get(ctx, dep.Name, v1.GetOptions{})
 					assert.NoError(t, err)
-					assert.Equal(t, 1, len(service.OwnerReferences))
-					assert.Equal(t, dep.UID, service.OwnerReferences[0].UID)
+					assert.Equal(t, 1, len(dep.OwnerReferences))
+					assert.Equal(t, service.UID, dep.OwnerReferences[0].UID)
 				}
 			}
 			assert.Equal(t, 1, depCount)
