@@ -7,9 +7,9 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/buildengine"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/modulewatcher"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
@@ -39,14 +39,14 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 	if err != nil {
 		return nil, fmt.Errorf("could not load project config: %w", err)
 	}
-	modules, err := buildengine.DiscoverModules(ctx, projConfig.AbsModuleDirs())
+	modules, err := modulewatcher.DiscoverModules(ctx, projConfig.AbsModuleDirs())
 	if err != nil {
 		return nil, fmt.Errorf("could not discover modules: %w", err)
 	}
 
 	sch := &schema.Schema{}
 	for _, m := range modules {
-		schemaPath := m.Config.Abs().Schema()
+		schemaPath := m.Abs().Schema()
 
 		module, err := schema.ModuleFromProtoFile(schemaPath)
 		if err != nil {

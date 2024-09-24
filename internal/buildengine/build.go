@@ -9,14 +9,12 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 const BuildLockTimeout = time.Minute
@@ -52,7 +50,8 @@ func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectRo
 	// default:
 	// 	return fmt.Errorf("unknown language %q", module.Config.Language)
 
-	result, err := plugin.Build(ctx, sch, projectRootDir)
+	// TODO: remove devmode and change it to watchAfterwards?
+	result, err := plugin.Build(ctx, sch, projectRootDir, devMode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build module: %w", err)
 	}
@@ -89,18 +88,18 @@ func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectRo
 	return result.Schema, nil
 }
 
-func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]*builderrors.Error, error) {
-	if _, err := os.Stat(config.Errors); errors.Is(err, os.ErrNotExist) {
-		return make([]*builderrors.Error, 0), nil
-	}
-	content, err := os.ReadFile(config.Errors)
-	if err != nil {
-		return nil, err
-	}
-	errorspb := &languagepb.ErrorList{}
-	err = proto.Unmarshal(content, errorspb)
-	if err != nil {
-		return nil, err
-	}
-	return languagepb.ErrorsFromProto(errorspb), nil
-}
+// func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]*builderrors.Error, error) {
+// 	if _, err := os.Stat(config.Errors); errors.Is(err, os.ErrNotExist) {
+// 		return make([]*builderrors.Error, 0), nil
+// 	}
+// 	content, err := os.ReadFile(config.Errors)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	errorspb := &languagepb.ErrorList{}
+// 	err = proto.Unmarshal(content, errorspb)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return languagepb.ErrorsFromProto(errorspb), nil
+// }

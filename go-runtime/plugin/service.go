@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -20,6 +21,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/modulewatcher"
 	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/types/pubsub"
 )
@@ -40,6 +42,10 @@ func (schemaUpdatedEvent) updateEvent() {}
 type MetadataUpdatedEvent struct {
 	metadata *metadata
 }
+
+type filesUpdatedEvent struct{}
+
+func (filesUpdatedEvent) updateEvent() {}
 
 func (MetadataUpdatedEvent) updateEvent() {}
 
@@ -198,13 +204,22 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[languagepb.Bui
 		},
 	})
 
+	if req.Msg.Watch {
+		// TODO: we need the watcher so we can get file change transactions
+		if err := watchFiles(ctx, buildCtx, events); err != nil {
+			return err
+		}
+	}
+
 	// Initial build
 	if err := buildAndSend(ctx, stream, buildCtx); err != nil {
 		return err
 	}
 	if !req.Msg.Watch {
+		log.FromContext(ctx).Infof("Build call ending - not watching")
 		return nil
 	}
+
 	// Watch for changes and build as needed
 	for {
 		select {
@@ -214,11 +229,44 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[languagepb.Bui
 				return err
 			}
 		case <-ctx.Done():
+			log.FromContext(ctx).Infof("Build call ending - ctx cancelled")
 			return nil
 		}
 	}
 }
 
+func watchFiles(ctx context.Context, buildCtx buildContext, events chan updateEvent) error {
+	// TODO: add back patterns from module config via grpc
+	// TODO: do we need to stop the watcher when the build call ends? or is that automatic?
+	watcher := modulewatcher.New("**/*.go", "go.mod", "go.sum")
+	watchTopic, err := watcher.Watch(ctx, time.Second, []string{buildCtx.path})
+	if err != nil {
+		return fmt.Errorf("could not watch for file changes: %w", err)
+	}
+	log.FromContext(ctx).Infof("Watching for file changes: %s", buildCtx.path)
+	watchEvents := make(chan modulewatcher.WatchEvent, 32)
+	watchTopic.Subscribe(watchEvents)
+	go func() {
+		for {
+			select {
+			case e := <-watchEvents:
+				log.FromContext(ctx).Infof("file changes e: %v", e)
+				if _, ok := e.(modulewatcher.WatchEventModuleChanged); ok {
+					// TODO: ignore ftl.toml changes?
+					log.FromContext(ctx).Infof("Found file changes: %s", buildCtx.path)
+					events <- filesUpdatedEvent{}
+				}
+			// case <-time.After(1 * time.Second):
+			// 	log.FromContext(ctx).Infof("idling")
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return nil
+}
+
+// TODO: explain
 func processAllPendingEvents(buildCtx buildContext, events chan updateEvent, firstEvent updateEvent) buildContext {
 	buildCtx = buildCtx.processEvent(firstEvent)
 	// process any other events in the queue

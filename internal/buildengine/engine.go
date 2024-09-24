@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"net/url"
 	"runtime"
 	"strings"
 	"time"
@@ -51,6 +52,46 @@ type schemaChange struct {
 type moduleMeta struct {
 	module             Module
 	lastBuildStartTime time.Time
+	plugin             *languageplugin.LanguagePlugin
+}
+
+func newModuleMeta(ctx context.Context, config moduleconfig.ModuleConfig, bind *url.URL) (moduleMeta, error) {
+	plugin, err := languageplugin.NewWithConfig(ctx, bind, config)
+	if err != nil {
+		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
+	}
+	return moduleMeta{
+		module: Module{
+			Config:       config,
+			Dependencies: []string{},
+		},
+		plugin: plugin,
+	}, nil
+}
+
+// copyWithUpdatedDependencies finds the dependencies for a module and returns a
+// copy with those dependencies populated.
+func (m moduleMeta) copyWithUpdatedDependencies(ctx context.Context) (moduleMeta, error) {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Extracting dependencies for %q", m.module.Config.Module)
+
+	dependencies, err := m.plugin.GetDependencies(ctx)
+	if err != nil {
+		return moduleMeta{}, err
+	}
+	containsBuiltin := false
+	for _, dep := range dependencies {
+		if dep == "builtin" {
+			containsBuiltin = true
+			break
+		}
+	}
+	if !containsBuiltin {
+		dependencies = append(dependencies, "builtin")
+	}
+
+	m.module = m.module.CopyWithDependencies(dependencies)
+	return m, nil
 }
 
 type Listener interface {
@@ -70,7 +111,6 @@ type Engine struct {
 	client           ftlv1connect.ControllerServiceClient
 	bindAllocator    *bind.BindAllocator
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
-	modulePlugins    *xsync.MapOf[string, *languageplugin.LanguagePlugin]
 	projectRoot      string
 	moduleDirs       []string
 	watcher          *modulewatcher.Watcher
@@ -127,7 +167,6 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, bindA
 		projectRoot:      projectRoot,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
-		modulePlugins:    xsync.NewMapOf[string, *languageplugin.LanguagePlugin](),
 		watcher:          modulewatcher.New("ftl.toml"),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
@@ -150,17 +189,25 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, bindA
 	if err != nil {
 		return nil, fmt.Errorf("could not find modules: %w", err)
 	}
+
+	wg := &errgroup.Group{}
 	for _, config := range configs {
-		module := Module{
-			Config:       config,
-			Dependencies: []string{},
-		}
-		module, err = e.updateDependencies(ctx, module)
-		if err != nil {
-			return nil, err
-		}
-		e.moduleMetas.Store(module.Config.Module, moduleMeta{module: module})
-		e.modulesToBuild.Store(module.Config.Module, true)
+		wg.Go(func() error {
+			meta, err := newModuleMeta(ctx, config, bindAllocator.Next())
+			if err != nil {
+				return err
+			}
+			meta, err = meta.copyWithUpdatedDependencies(ctx)
+			if err != nil {
+				return err
+			}
+			e.moduleMetas.Store(config.Module, meta)
+			e.modulesToBuild.Store(config.Module, true)
+			return nil
+		})
+	}
+	if err := wg.Wait(); err != nil {
+		return nil, err
 	}
 	if client == nil {
 		return e, nil
@@ -168,36 +215,6 @@ func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, bindA
 	schemaSync := e.startSchemaSync(ctx)
 	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync, rpc.AlwaysRetry())
 	return e, nil
-}
-
-// updateDependencies finds the dependencies for a module and returns a
-// Module with those dependencies populated.
-func (e *Engine) updateDependencies(ctx context.Context, module Module) (Module, error) {
-	logger := log.FromContext(ctx)
-	logger.Debugf("Extracting dependencies for %q", module.Config.Module)
-
-	plugin, err := e.pluginForModule(ctx, module.Config.Module, module.Config.Dir)
-	if err != nil {
-		return Module{}, fmt.Errorf("could get plugin for %s to extract dependencies: %w", module.Config.Module, err)
-	}
-
-	dependencies, err := plugin.GetDependencies(ctx)
-	if err != nil {
-		return Module{}, err
-	}
-	containsBuiltin := false
-	for _, dep := range dependencies {
-		if dep == "builtin" {
-			containsBuiltin = true
-			break
-		}
-	}
-	if !containsBuiltin {
-		dependencies = append(dependencies, "builtin")
-	}
-
-	out := module.CopyWithDependencies(dependencies)
-	return out, nil
 }
 
 // Sync module schema changes from the FTL controller, as well as from manual
@@ -449,9 +466,19 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			case modulewatcher.WatchEventModuleAdded:
 				config := event.Config
 				if _, exists := e.moduleMetas.Load(config.Module); !exists {
-					e.moduleMetas.Store(config.Module, moduleMeta{module: Module{Config: event.Config, Dependencies: []string{}}})
+					// TODO: this was a fast func before, but now we are initializing a plugin here which could be slow...
+					meta, err := newModuleMeta(ctx, config, e.bindAllocator.Next())
+					if err != nil {
+						return err
+					}
+					// TODO: we werent getting deps before. should we now?
+					// meta, err = meta.copyWithUpdatedDependencies(ctx)
+					// if err != nil {
+					// 	return err
+					// }
+					e.moduleMetas.Store(config.Module, meta)
 					didError = false
-					err := e.BuildAndDeploy(ctx, 1, true, config.Module)
+					err = e.BuildAndDeploy(ctx, 1, true, config.Module)
 					if err != nil {
 						didError = true
 						e.reportBuildFailed(err)
@@ -616,18 +643,12 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 				return fmt.Errorf("module %q not found", name)
 			}
 
-			plugin, err := e.pluginForModule(ctx, name, meta.module.Config.Dir)
-			if err != nil {
-				return err
-			}
-
-			deps, err := plugin.GetDependencies(ctx)
+			meta, err := meta.copyWithUpdatedDependencies(ctx)
 			if err != nil {
 				return fmt.Errorf("could not get dependencies for %s: %w", name, err)
 			}
-			module := meta.module.CopyWithDependencies(deps)
 
-			e.moduleMetas.Store(name, moduleMeta{module: module})
+			e.moduleMetas.Store(name, meta)
 			mustBuildChan <- name
 			return nil
 		})
@@ -781,11 +802,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	plugin, err := e.pluginForModule(ctx, moduleName, meta.module.Config.Dir)
-	if err != nil {
-		return err
-	}
-	moduleSchema, err := build(ctx, plugin, e.projectRoot, sch, meta.module, e.buildEnv, e.devMode)
+	moduleSchema, err := build(ctx, meta.plugin, e.projectRoot, sch, meta.module, e.buildEnv, e.devMode)
 	if err != nil {
 		return err
 	}
@@ -824,21 +841,4 @@ func (e *Engine) gatherSchemas(
 	})
 
 	return nil
-}
-
-// pluginForModule returns the language plugin for a module.
-// If one is not already loaded, it will be created (which can take some time).
-func (e *Engine) pluginForModule(ctx context.Context, moduleName string, path string) (*languageplugin.LanguagePlugin, error) {
-	var err error
-	plugin, _ := e.modulePlugins.LoadOrCompute(moduleName, func() *languageplugin.LanguagePlugin {
-		new, innerErr := languageplugin.New(ctx, path, e.bindAllocator.Next())
-		if innerErr != nil {
-			err = innerErr
-		}
-		return new
-	})
-	if err != nil {
-		return nil, err
-	}
-	return plugin, nil
 }

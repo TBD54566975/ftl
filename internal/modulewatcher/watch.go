@@ -3,7 +3,6 @@ package modulewatcher
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // A WatchEvent is an event that occurs when a module is added, removed, or
@@ -56,6 +54,7 @@ func New(patterns ...string) *Watcher {
 	svc := &Watcher{
 		existingModules:    map[string]moduleHashes{},
 		moduleTransactions: map[string][]*modifyFilesTransaction{},
+		patterns:           patterns,
 	}
 
 	return svc
@@ -125,8 +124,7 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 					continue
 				}
 				existingModule, haveExistingModule := w.existingModules[config.Dir]
-				absPatterns := absolutePatterns(config, w.patterns)
-				hashes, err := computeFileHashes(config, absPatterns)
+				hashes, err := computeFileHashes(config, w.patterns)
 				if err != nil {
 					logger.Tracef("error computing file hashes for %s: %v", config.Dir, err)
 					continue
@@ -218,10 +216,10 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 		return nil
 	}
 
-	absPatterns := absolutePatterns(moduleHashes.Config, t.watcher.patterns)
+	// absPatterns := absolutePatterns(moduleHashes.Config, t.watcher.patterns)
 
 	for _, path := range paths {
-		hash, matched, err := computeFileHash(moduleHashes.Config.Dir, path, absPatterns)
+		hash, matched, err := computeFileHash(moduleHashes.Config.Dir, path, t.watcher.patterns)
 		if err != nil {
 			return err
 		}
@@ -236,9 +234,11 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 	return nil
 }
 
-func absolutePatterns(config moduleconfig.ModuleConfig, patterns []string) []string {
-	// Watch paths are allowed to be outside the deploy directory.
-	return slices.Map(patterns, func(p string) string {
-		return filepath.Clean(filepath.Join(config.Dir, p))
-	})
-}
+// func absolutePatterns(config moduleconfig.ModuleConfig, patterns []string) []string {
+// 	// Watch paths are allowed to be outside the deploy directory.
+// 	out := slices.Map(patterns, func(p string) string {
+// 		return filepath.Clean(filepath.Join(config.Dir, p))
+// 	})
+// 	fmt.Printf("abs patterns: %v\n", out)
+// 	return out
+// }

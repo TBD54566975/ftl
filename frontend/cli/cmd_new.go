@@ -67,7 +67,7 @@ func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 		return fmt.Errorf("failed to parse url: %w", err)
 	}
 
-	plugin, err := languageplugin.NewWithConfig(ctx, path, fakeUrl, moduleconfig.ModuleConfig{
+	plugin, err := languageplugin.NewWithConfig(ctx, fakeUrl, moduleconfig.ModuleConfig{
 		Module:   name,
 		Language: i.Language,
 	})
