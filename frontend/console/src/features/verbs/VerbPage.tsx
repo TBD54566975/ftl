@@ -37,7 +37,7 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
     setModule(module)
     const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === declName?.toLocaleLowerCase())
     setVerb(verb)
-  }, [modules.data, moduleName])
+  }, [modules.data, moduleName, declName])
 
   const callEvents = useStreamVerbCalls(module?.name, verb?.verb?.name)
   const calls = callEvents.data || []
