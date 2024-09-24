@@ -16,20 +16,20 @@ const skipGapAfterTypes: { [key: string]: string[] } = {
 
 export const specialChars = ['{', '}', '=']
 
-export function shouldAddLeadingSpace(ll: string[], i: number): boolean {
-  if (!isFirstLineOfBlock(ll, i)) {
+export function shouldAddLeadingSpace(lines: string[], i: number): boolean {
+  if (!isFirstLineOfBlock(lines, i)) {
     return false
   }
 
   for (const j in skipNewLineDeclTypes) {
-    if (declTypeAndPriorLineMatch(ll, i, skipNewLineDeclTypes[j], skipNewLineDeclTypes[j])) {
+    if (declTypeAndPriorLineMatch(lines, i, skipNewLineDeclTypes[j], skipNewLineDeclTypes[j])) {
       return false
     }
   }
 
   for (const declType in skipGapAfterTypes) {
     for (const j in skipGapAfterTypes[declType]) {
-      if (declTypeAndPriorLineMatch(ll, i, declType, skipGapAfterTypes[declType][j])) {
+      if (declTypeAndPriorLineMatch(lines, i, declType, skipGapAfterTypes[declType][j])) {
         return false
       }
     }
@@ -38,34 +38,34 @@ export function shouldAddLeadingSpace(ll: string[], i: number): boolean {
   return true
 }
 
-function declTypeAndPriorLineMatch(ll: string[], i: number, declType: string, priorDeclType: string): boolean {
-  if (i === 0 || ll.length === 1) {
+function declTypeAndPriorLineMatch(lines: string[], i: number, declType: string, priorDeclType: string): boolean {
+  if (i === 0 || lines.length === 1) {
     return false
   }
-  return regexForDeclType(declType).exec(ll[i]) !== null && regexForDeclType(priorDeclType).exec(ll[i - 1]) !== null
+  return regexForDeclType(declType).exec(lines[i]) !== null && regexForDeclType(priorDeclType).exec(lines[i - 1]) !== null
 }
 
 function regexForDeclType(declType: string) {
   return new RegExp(`^  (export )?${declType} \\w+`)
 }
 
-function isFirstLineOfBlock(ll: string[], i: number): boolean {
+function isFirstLineOfBlock(lines: string[], i: number): boolean {
   if (i === 0) {
     // Never add space for the first block
     return false
   }
-  if (ll[i].startsWith('    ')) {
+  if (lines[i].startsWith('    ')) {
     // Never add space for nested lines
     return false
   }
-  if (ll[i - 1].startsWith(commentPrefix)) {
+  if (lines[i - 1].startsWith(commentPrefix)) {
     // Prior line is a comment
     return false
   }
-  if (ll[i].startsWith(commentPrefix)) {
+  if (lines[i].startsWith(commentPrefix)) {
     return true
   }
-  const tokens = ll[i].trim().split(' ')
+  const tokens = lines[i].trim().split(' ')
   if (!tokens || tokens.length === 0) {
     return false
   }

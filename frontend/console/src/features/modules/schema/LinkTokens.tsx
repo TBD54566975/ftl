@@ -16,6 +16,9 @@ export const LinkToken = ({ token, containerRect }: { token: string; containerRe
 
 export const LinkVerbNameToken = ({ token, containerRect }: { token: string; containerRect?: DOMRect }) => {
   const splitToken = token.split('(')
+  if (splitToken.length < 2) {
+    return
+  }
   return (
     <span>
       <LinkToken token={splitToken[0]} containerRect={containerRect} />
