@@ -1,25 +1,26 @@
+import { useMemo, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { classNames } from '../../../utils'
 import { DeclLink } from '../decls/DeclLink'
 import { LinkToken, LinkVerbNameToken } from './LinkTokens'
 import { UnderlyingType } from './UnderlyingType'
-import { commentPrefix, declTypes, isFirstLineOfBlock, specialChars, staticKeywords } from './schema.utils'
+import { commentPrefix, declTypes, shouldAddLeadingSpace, specialChars, staticKeywords } from './schema.utils'
 
-function maybeRenderDeclName(token: string, declType: string, tokens: string[], i: number) {
+function maybeRenderDeclName(token: string, declType: string, tokens: string[], i: number, containerRect?: DOMRect) {
   const offset = declType === 'database' ? 4 : 2
   if (i - offset < 0 || declType !== tokens[i - offset]) {
     return
   }
   if (declType === 'enum') {
-    return [<LinkToken key='l' token={token.slice(0, token.length - 1)} />, token.slice(-1)]
+    return [<LinkToken key='l' token={token.slice(0, token.length - 1)} containerRect={containerRect} />, token.slice(-1)]
   }
   if (declType === 'verb') {
-    return <LinkVerbNameToken token={token} />
+    return <LinkVerbNameToken token={token} containerRect={containerRect} />
   }
-  return <LinkToken token={token} />
+  return <LinkToken token={token} containerRect={containerRect} />
 }
 
-function maybeRenderUnderlyingType(token: string, declType: string, tokens: string[], i: number, moduleName: string) {
+function maybeRenderUnderlyingType(token: string, declType: string, tokens: string[], i: number, moduleName: string, containerRect?: DOMRect) {
   if (declType === 'database') {
     return
   }
@@ -27,25 +28,25 @@ function maybeRenderUnderlyingType(token: string, declType: string, tokens: stri
   // Parse type(s) out of the headline signature
   const offset = 4
   if (i - offset >= 0 && tokens.slice(0, i - offset + 1).includes(declType)) {
-    return <UnderlyingType token={token} />
+    return <UnderlyingType token={token} containerRect={containerRect} />
   }
 
   // Parse type(s) out of nested lines
   if (tokens.length > 4 && tokens.slice(0, 4).filter((t) => t !== ' ').length === 0) {
     if (i === 6 && tokens[4] === '+calls') {
-      return <UnderlyingType token={token} />
+      return <UnderlyingType token={token} containerRect={containerRect} />
     }
     if (i === 6 && tokens[4] === '+subscribe') {
-      return <DeclLink moduleName={moduleName} declName={token} textColors='font-bold text-green-700 dark:text-green-400' />
+      return <DeclLink moduleName={moduleName} declName={token} textColors='font-bold text-green-700 dark:text-green-400' containerRect={containerRect} />
     }
     const plusIndex = tokens.findIndex((t) => t.startsWith('+'))
     if (i >= 6 && (i < plusIndex || plusIndex === -1)) {
-      return <UnderlyingType token={token} />
+      return <UnderlyingType token={token} containerRect={containerRect} />
     }
   }
 }
 
-const SchemaLine = ({ line }: { line: string }) => {
+const SchemaLine = ({ line, containerRect }: { line: string; containerRect?: DOMRect }) => {
   const { moduleName } = useParams()
   if (line.startsWith(commentPrefix)) {
     return <span className='text-gray-500 dark:text-gray-400'>{line}</span>
@@ -98,11 +99,11 @@ const SchemaLine = ({ line }: { line: string }) => {
       )
     }
 
-    const maybeDeclName = maybeRenderDeclName(token, declType, tokens, i)
+    const maybeDeclName = maybeRenderDeclName(token, declType, tokens, i, containerRect)
     if (maybeDeclName) {
       return <span key={i}>{maybeDeclName}</span>
     }
-    const maybeUnderlyingType = maybeRenderUnderlyingType(token, declType, tokens, i, moduleName || '')
+    const maybeUnderlyingType = maybeRenderUnderlyingType(token, declType, tokens, i, moduleName || '', containerRect)
     if (maybeUnderlyingType) {
       return <span key={i}>{maybeUnderlyingType}</span>
     }
@@ -110,12 +111,14 @@ const SchemaLine = ({ line }: { line: string }) => {
   })
 }
 
-export const Schema = ({ schema }: { schema: string }) => {
-  const ll = schema.split('\n')
+export const Schema = ({ schema, containerRect }: { schema: string; containerRect?: DOMRect }) => {
+  const ref = useRef<HTMLDivElement>(null)
+  const rect = ref?.current?.getBoundingClientRect()
+  const ll = useMemo(() => schema.split('\n'), [schema])
   const lines = ll.map((l, i) => (
-    <div key={i} className={classNames('mb-1', isFirstLineOfBlock(ll, i) ? 'mt-4' : '')}>
-      <SchemaLine line={l} />
+    <div ref={ref} key={i} className={classNames('mb-1', shouldAddLeadingSpace(ll, i) ? 'mt-4' : '')}>
+      <SchemaLine line={l} containerRect={containerRect || rect} />
     </div>
   ))
-  return <div className='mt-4 mx-4 whitespace-pre font-mono text-xs'>{lines}</div>
+  return <div className='whitespace-pre font-mono text-xs'>{lines}</div>
 }

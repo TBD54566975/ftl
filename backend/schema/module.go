@@ -82,7 +82,8 @@ func (m *Module) String() string {
 	}
 	fmt.Fprintf(w, "module %s {\n", m.Name)
 
-	// print decls with spacing rules
+	// Print decls with spacing rules
+	// Keep these in sync with frontend/console/src/features/modules/schema/schema.utils.ts
 	typeSpacingRules := map[reflect.Type]spacingRule{
 		reflect.TypeOf(&Config{}):       {gapWithinType: false},
 		reflect.TypeOf(&Secret{}):       {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Config{})}},
