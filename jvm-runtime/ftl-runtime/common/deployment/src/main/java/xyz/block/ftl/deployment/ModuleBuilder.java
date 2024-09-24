@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -55,7 +56,6 @@ import xyz.block.ftl.v1.schema.MetadataAlias;
 import xyz.block.ftl.v1.schema.MetadataCalls;
 import xyz.block.ftl.v1.schema.MetadataTypeMap;
 import xyz.block.ftl.v1.schema.Module;
-import xyz.block.ftl.v1.schema.Optional;
 import xyz.block.ftl.v1.schema.Ref;
 import xyz.block.ftl.v1.schema.Time;
 import xyz.block.ftl.v1.schema.Type;
@@ -84,11 +84,11 @@ public class ModuleBuilder {
     private final Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics;
     private final Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients;
     private final FTLRecorder recorder;
-    private final Map<String, String> verbDocs;
+    private final Map<String, Iterable<String>> comments;
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
-            Map<String, String> verbDocs, Map<TypeKey, ExistingRef> typeAliases) {
+            Map<String, Iterable<String>> comments, Map<TypeKey, ExistingRef> typeAliases) {
         this.index = index;
         this.moduleName = moduleName;
         this.moduleBuilder = Module.newBuilder()
@@ -97,7 +97,7 @@ public class ModuleBuilder {
         this.knownTopics = knownTopics;
         this.verbClients = verbClients;
         this.recorder = recorder;
-        this.verbDocs = verbDocs;
+        this.comments = comments;
         this.dataElements = new HashMap<>(typeAliases);
     }
 
@@ -184,8 +184,12 @@ public class ModuleBuilder {
                     String name = param.annotation(Secret.class).value().asString();
                     paramMappers.add(new VerbRegistry.SecretSupplier(name, paramType));
                     if (!knownSecrets.contains(name)) {
-                        addDecls(Decl.newBuilder().setSecret(xyz.block.ftl.v1.schema.Secret.newBuilder()
-                                .setType(buildType(param.type(), false)).setName(name)).build());
+                        xyz.block.ftl.v1.schema.Secret.Builder secretBuilder = xyz.block.ftl.v1.schema.Secret.newBuilder()
+                                .setType(buildType(param.type(), false))
+                                .setName(name);
+                        Optional.ofNullable(comments.get(CommentKey.ofSecret(name)))
+                                .ifPresent(secretBuilder::addAllComments);
+                        addDecls(Decl.newBuilder().setSecret(secretBuilder).build());
                         knownSecrets.add(name);
                     }
                 } else if (param.hasAnnotation(Config.class)) {
@@ -194,8 +198,12 @@ public class ModuleBuilder {
                     String name = param.annotation(Config.class).value().asString();
                     paramMappers.add(new VerbRegistry.ConfigSupplier(name, paramType));
                     if (!knownConfig.contains(name)) {
-                        addDecls(Decl.newBuilder().setConfig(xyz.block.ftl.v1.schema.Config.newBuilder()
-                                .setType(buildType(param.type(), false)).setName(name)).build());
+                        xyz.block.ftl.v1.schema.Config.Builder configBuilder = xyz.block.ftl.v1.schema.Config.newBuilder()
+                                .setType(buildType(param.type(), false))
+                                .setName(name);
+                        Optional.ofNullable(comments.get(CommentKey.ofConfig(name)))
+                                .ifPresent(configBuilder::addAllComments);
+                        addDecls(Decl.newBuilder().setConfig(configBuilder).build());
                         knownConfig.add(name);
                     }
                 } else if (knownTopics.containsKey(param.type().name())) {
@@ -242,9 +250,8 @@ public class ModuleBuilder {
                     .setExport(exported)
                     .setRequest(buildType(bodyParamType, exported))
                     .setResponse(buildType(method.returnType(), exported));
-            if (verbDocs.containsKey(verbName)) {
-                verbBuilder.addComments(verbDocs.get(verbName));
-            }
+            Optional.ofNullable(comments.get(CommentKey.ofVerb(verbName)))
+                    .ifPresent(verbBuilder::addAllComments);
 
             if (metadataCallback != null) {
                 metadataCallback.accept(verbBuilder);
@@ -301,7 +308,9 @@ public class ModuleBuilder {
                     if (type.hasAnnotation(NOT_NULL)) {
                         return primitive;
                     }
-                    return Type.newBuilder().setOptional(Optional.newBuilder().setType(primitive)).build();
+                    return Type.newBuilder().setOptional(xyz.block.ftl.v1.schema.Optional.newBuilder()
+                            .setType(primitive))
+                            .build();
                 }
                 if (info != null && info.hasDeclaredAnnotation(GENERATED_REF)) {
                     var ref = info.declaredAnnotation(GENERATED_REF);
@@ -347,6 +356,8 @@ public class ModuleBuilder {
                 Data.Builder data = Data.newBuilder();
                 data.setName(clazz.name().local());
                 data.setExport(type.hasAnnotation(EXPORT) || export);
+                Optional.ofNullable(comments.get(CommentKey.ofData(clazz.name().local())))
+                        .ifPresent(data::addAllComments);
                 buildDataElement(data, clazz.name());
                 moduleBuilder.addDecls(Decl.newBuilder().setData(data).build());
                 Ref ref = Ref.newBuilder().setName(data.getName()).setModule(moduleName).build();
@@ -367,9 +378,8 @@ public class ModuleBuilder {
                             .build();
                 } else if (paramType.name().equals(DotNames.OPTIONAL)) {
                     //TODO: optional kinda sucks
-                    return Type.newBuilder()
-                            .setOptional(
-                                    Optional.newBuilder().setType(buildType(paramType.arguments().get(0), export)))
+                    return Type.newBuilder().setOptional(xyz.block.ftl.v1.schema.Optional.newBuilder()
+                            .setType(buildType(paramType.arguments().get(0), export)))
                             .build();
                 } else if (paramType.name().equals(DotName.createSimple(HttpRequest.class))) {
                     return Type.newBuilder()
