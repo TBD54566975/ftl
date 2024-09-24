@@ -47,7 +47,7 @@ export const Tabs: FC<TabsProps> = ({ tabs, initialTabId, onTabClick }) => {
             )}
           >
             {tab.name}
-            {tab.count && (
+            {tab.count !== undefined && (
               <Pill
                 text={`${tab.count}`}
                 className={classNames(selectedTabId === tab.id ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500 dark:text-indigo-100' : '', 'ml-2')}
