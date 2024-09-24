@@ -37,6 +37,10 @@ import xyz.block.ftl.Verb;
  */
 public class AnnotationProcessor implements Processor {
     private static final Pattern REMOVE_LEADING_SPACE = Pattern.compile("^ ", Pattern.MULTILINE);
+    private static final Pattern REMOVE_JAVADOC_TAGS = Pattern.compile(
+            "^\\s*@(param|return|throws|exception|see|author)\\b[^\\n]*$\\n*",
+            Pattern.MULTILINE);
+
     private ProcessingEnvironment processingEnv;
 
     final Map<String, String> saved = new HashMap<>();
@@ -69,14 +73,15 @@ public class AnnotationProcessor implements Processor {
                     Optional<String> javadoc = getJavadoc(element);
 
                     javadoc.ifPresent(doc -> {
+                        String strippedDownDoc = stripJavadocTags(doc);
                         String key = element.getSimpleName().toString();
 
                         if (element.getKind() == ElementKind.METHOD) {
-                            saved.put("verb." + key, doc);
+                            saved.put("verb." + key, strippedDownDoc);
                         } else if (element.getKind() == ElementKind.CLASS) {
-                            saved.put("data." + key, doc);
+                            saved.put("data." + key, strippedDownDoc);
                         } else if (element.getKind() == ElementKind.ENUM) {
-                            saved.put("enum." + key, doc);
+                            saved.put("enum." + key, strippedDownDoc);
                         }
 
                         if (element.getKind() == ElementKind.METHOD) {
@@ -145,6 +150,11 @@ public class AnnotationProcessor implements Processor {
         return Optional.of(REMOVE_LEADING_SPACE.matcher(docComment)
                 .replaceAll("")
                 .trim());
+    }
+
+    public String stripJavadocTags(String doc) {
+        // TODO extract JavaDoc tags to a rich markdown model supported by schema
+        return REMOVE_JAVADOC_TAGS.matcher(doc).replaceAll("");
     }
 
     /**
