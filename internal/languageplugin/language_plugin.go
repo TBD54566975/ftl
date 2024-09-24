@@ -120,7 +120,7 @@ func (p *LanguagePlugin) Kill() error {
 	if p.cmd == nil {
 		return nil
 	}
-	return p.cmd.Kill(syscall.SIGABRT)
+	return p.cmd.Kill(syscall.SIGINT)
 }
 
 func (p *LanguagePlugin) ping(ctx context.Context) error {
