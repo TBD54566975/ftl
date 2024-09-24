@@ -37,7 +37,12 @@ func PostgresDatabase(name string) Database {
 			}
 
 			// sets db.system and db.name attributes
-			metricAttrs := otelsql.WithAttributes(semconv.DBSystemPostgreSQL, semconv.DBNameKey.String(name))
+			metricAttrs := otelsql.WithAttributes(
+				semconv.DBSystemPostgreSQL,
+				semconv.DBNameKey.String(name),
+				attribute.Bool("ftl.is_user_service", true),
+				attribute.String("ftl.sql.module.name", provider.module),
+			)
 			err = otelsql.RegisterDBStatsMetrics(db, metricAttrs)
 			if err != nil {
 				return nil, fmt.Errorf("failed to register database metrics: %w", err)
