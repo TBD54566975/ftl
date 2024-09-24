@@ -28,7 +28,7 @@ const EVENT_TYPES: Record<string, EventFilter> = {
     type: EventType.DEPLOYMENT_UPDATED,
     icon: <Rocket01Icon className='w-4 h-4 text-indigo-500 ml-1' />,
   },
-  ingress: { label: 'Ingress', type: EventType.INGRESS, icon: <PackageReceiveIcon className='w-4 h-4 text-indigo-500 ml-1' /> },
+  ingress: { label: 'Ingress', type: EventType.INGRESS, icon: <PackageReceiveIcon className='w-4 h-4 text-sky-400 ml-1' /> },
 }
 
 const LOG_LEVELS: Record<number, string> = {
