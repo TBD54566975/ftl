@@ -37,6 +37,23 @@ type TinkVerifier struct {
 	verifier tink.Verifier
 }
 
+func NewTinkVerifier(publicKey []byte) (Verifier, error) {
+	reader := keyset.NewBinaryReader(bytes.NewReader(publicKey))
+	public, err := keyset.ReadWithNoSecrets(reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read public keyset: %w", err)
+	}
+
+	verifier, err := signature.NewVerifier(public)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create verifier: %w", err)
+	}
+
+	return &TinkVerifier{
+		verifier: verifier,
+	}, nil
+}
+
 func (k TinkVerifier) Verify(signedData SignedData) error {
 	err := k.verifier.Verify(signedData.Signature, signedData.Data)
 	if err != nil {
