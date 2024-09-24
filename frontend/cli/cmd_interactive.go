@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecthomas/kong"
 
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
@@ -13,8 +14,8 @@ import (
 type interactiveCmd struct {
 }
 
-func (i *interactiveCmd) Run(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder console.KongContextBinder, cancel context.CancelFunc) error {
-	err := console.RunInteractiveConsole(ctx, k, projectConfig, binder, nil, cancel)
+func (i *interactiveCmd) Run(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder console.KongContextBinder, cancel context.CancelFunc, client ftlv1connect.ControllerServiceClient) error {
+	err := console.RunInteractiveConsole(ctx, k, projectConfig, binder, nil, cancel, client)
 	if err != nil {
 		return fmt.Errorf("interactive console: %w", err)
 	}

@@ -31,7 +31,6 @@ type devCmd struct {
 
 func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig.Config, cancel context.CancelFunc) error {
 	startTime := time.Now()
-	console.LaunchEmbeddedConsole(ctx, k, projConfig, bindContext, cancel)
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
 	}
@@ -40,6 +39,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 	}
 
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+	console.LaunchEmbeddedConsole(ctx, k, projConfig, bindContext, cancel, client)
 
 	g, ctx := errgroup.WithContext(ctx)
 

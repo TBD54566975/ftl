@@ -149,19 +149,21 @@ func createKongApplication(cli any) *kong.Kong {
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 		},
 	)
-	kongcompletion.Register(app)
 	return app
 }
 
 var _ console.KongContextBinder = bindContext
 
 func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context {
+
 	kctx.Bind(projectConfig)
 	kctx.Bind(app)
 
 	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
 	kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
+
+	kongcompletion.Register(app, kongcompletion.WithPredictors(console.Predictors(ctx, controllerServiceClient)))
 
 	verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, verbServiceClient)

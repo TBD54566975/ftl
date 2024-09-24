@@ -13,6 +13,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/posener/complete"
 
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
@@ -21,12 +22,12 @@ var errExitTrap = errors.New("exit trap")
 
 type KongContextBinder func(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context
 
-func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, refreshFunction func(func()), cancelContext context.CancelFunc) error {
+func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, refreshFunction func(func()), cancelContext context.CancelFunc, client ftlv1connect.ControllerServiceClient) error {
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          "\033[32m>\033[0m ",
 		InterruptPrompt: "^C",
 		EOFPrompt:       "exit",
-		AutoComplete:    &FTLCompletion{app: k},
+		AutoComplete:    &FTLCompletion{app: k, ctx: ctx, client: client},
 		Listener:        &ExitListener{cancel: cancelContext},
 	})
 	if refreshFunction != nil {
@@ -106,7 +107,9 @@ func errorf(format string, args ...any) {
 }
 
 type FTLCompletion struct {
-	app *kong.Kong
+	app    *kong.Kong
+	client ftlv1connect.ControllerServiceClient
+	ctx    context.Context
 }
 
 func (f *FTLCompletion) Do(line []rune, pos int) ([][]rune, int) {
@@ -160,7 +163,7 @@ func (f *FTLCompletion) Do(line []rune, pos int) ([][]rune, int) {
 		LastCompleted: lastCompleted,
 	}
 
-	command, err := kongcompletion.Command(parser)
+	command, err := kongcompletion.Command(parser, kongcompletion.WithPredictors(Predictors(f.ctx, f.client)))
 	if err != nil {
 		// TODO handle error
 		println(err.Error())

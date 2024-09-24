@@ -24,7 +24,7 @@ import (
 
 type callCmd struct {
 	Wait    time.Duration  `short:"w" help:"Wait up to this elapsed time for the FTL cluster to become available." default:"1m"`
-	Verb    reflection.Ref `arg:"" required:"" help:"Full path of Verb to call."`
+	Verb    reflection.Ref `arg:"" required:"" help:"Full path of Verb to call." predictor:"verbs"`
 	Request string         `arg:"" optional:"" help:"JSON5 request payload." default:"{}"`
 }
 
