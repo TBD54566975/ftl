@@ -1,6 +1,7 @@
 import type { Timestamp } from '@bufbuild/protobuf'
 import type { TraceEvent } from '../../api/timeline/use-request-trace-events'
 import { CallEvent, type Event, IngressEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { classNames } from '../../utils'
 import { TimelineIcon } from '../timeline/TimelineIcon'
 import { eventBackgroundColor } from '../timeline/timeline.utils'
 import { eventBarLeftOffsetPercentage } from './traces.utils'
@@ -41,15 +42,13 @@ export const TraceDetailItem: React.FC<TraceDetailItemProps> = ({
     eventName = `${traceEvent.path}`
   }
 
-  let barColor = eventBackgroundColor(event)
-  if (event.id === selectedEventId) {
-    barColor = 'bg-green-500'
-  }
+  const barColor = event.id === selectedEventId ? 'bg-green-500' : eventBackgroundColor(event)
 
   const isSelected = event.id === selectedEventId
-  const listItemClass = isSelected
-    ? 'flex items-center justify-between p-2 bg-indigo-100/50 dark:bg-indigo-700 rounded cursor-pointer'
-    : 'flex items-center justify-between p-2 hover:bg-indigo-500/10 rounded cursor-pointer'
+  const listItemClass = classNames(
+    'flex items-center justify-between p-2 rounded cursor-pointer',
+    isSelected ? 'bg-indigo-100/50 dark:bg-indigo-700' : 'hover:bg-indigo-500/10',
+  )
 
   return (
     <li key={event.id.toString()} className={listItemClass} onClick={() => handleEventClick(event.id)}>

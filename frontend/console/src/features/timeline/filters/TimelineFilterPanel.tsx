@@ -21,12 +21,12 @@ const EVENT_TYPES: Record<string, EventFilter> = {
   deploymentCreated: {
     label: 'Deployment Created',
     type: EventType.DEPLOYMENT_CREATED,
-    icon: <Rocket01Icon className='w-4 h-4 text-green-500 ml-1' />,
+    icon: <Rocket01Icon className='w-4 h-4 text-green-500 dark:text-green-300 ml-1' />,
   },
   deploymentUpdated: {
     label: 'Deployment Updated',
     type: EventType.DEPLOYMENT_UPDATED,
-    icon: <Rocket01Icon className='w-4 h-4 text-indigo-500 ml-1' />,
+    icon: <Rocket01Icon className='w-4 h-4 text-green-500 dark:text-green-300 ml-1' />,
   },
   ingress: { label: 'Ingress', type: EventType.INGRESS, icon: <PackageReceiveIcon className='w-4 h-4 text-sky-400 ml-1' /> },
 }

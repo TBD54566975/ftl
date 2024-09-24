@@ -6,8 +6,12 @@ export const eventBarLeftOffsetPercentage = (event: Event, requestStartTime: Tim
     return 0
   }
 
-  const callTime = event.timeStamp?.toDate() ?? new Date()
-  const initialTime = requestStartTime?.toDate() ?? new Date()
+  if (!event.timeStamp || !requestStartTime) {
+    return 0
+  }
+
+  const callTime = event.timeStamp.toDate()
+  const initialTime = requestStartTime.toDate()
   const offsetInMillis = callTime.getTime() - initialTime.getTime()
 
   return (offsetInMillis / requestDurationMs) * 100
