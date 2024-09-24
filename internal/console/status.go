@@ -23,12 +23,12 @@ import (
 
 type BuildState string
 
-const BuildStateWaiting BuildState = " 🚦️"
-const BuildStateBuilding BuildState = " 🏗️"
+const BuildStateWaiting BuildState = "🕗"
+const BuildStateBuilding BuildState = "🛠️ "
 const BuildStateBuilt BuildState = "📦️️"
-const BuildStateDeploying BuildState = " 🚚️"
-const BuildStateDeployed BuildState = " ✅️️"
-const BuildStateFailed BuildState = "💥"
+const BuildStateDeploying BuildState = "🚀"
+const BuildStateDeployed BuildState = "✅"
+const BuildStateFailed BuildState = "❌"
 
 // moduleStatusPadding is the padding between module status entries
 // it accounts for the colon, space and the emoji
