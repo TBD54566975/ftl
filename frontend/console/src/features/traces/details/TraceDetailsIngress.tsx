@@ -1,41 +1,15 @@
-import { useContext } from 'react'
 import { AttributeBadge } from '../../../components/AttributeBadge'
-import { CloseButton } from '../../../components/CloseButton'
 import { CodeBlock } from '../../../components/CodeBlock'
 import type { Event, IngressEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
-import { TraceGraph } from '../../traces/TraceGraph'
-import { TraceGraphHeader } from '../../traces/TraceGraphHeader'
 import { verbRefString } from '../../verbs/verb.utils'
-import { TimelineTimestamp } from './TimelineTimestamp'
 
-export const TimelineIngressDetails = ({ event }: { event: Event }) => {
-  const { closePanel } = useContext(SidePanelContext)
-
+export const TraceDetailsIngress = ({ event }: { event: Event }) => {
   const ingress = event.entry.value as IngressEvent
   return (
-    <div className='p-4'>
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center space-x-2'>
-          <div className=''>
-            {ingress.verbRef && (
-              <div className={'inline-block rounded-md bg-indigo-200 dark:bg-indigo-700 px-2 py-1 mr-1 text-sm font-medium text-gray-700 dark:text-gray-100'}>
-                {`${ingress.method} ${ingress.path}`}
-              </div>
-            )}
-          </div>
-          <TimelineTimestamp timestamp={event.timeStamp} />
-        </div>
-        <CloseButton onClick={closePanel} />
-      </div>
-
-      <div className='mt-2'>
-        <TraceGraphHeader requestKey={ingress.requestKey} eventId={event.id} />
-        <TraceGraph requestKey={ingress.requestKey} selectedEventId={event.id} />
-      </div>
-
+    <>
+      <span className='text-xl font-semibold'>Call Details</span>
       <div className='text-sm pt-2'>Request</div>
       <CodeBlock code={JSON.stringify(JSON.parse(ingress.request), null, 2)} language='json' />
 
@@ -93,6 +67,6 @@ export const TimelineIngressDetails = ({ event }: { event: Event }) => {
           </li>
         )}
       </ul>
-    </div>
+    </>
   )
 }
