@@ -8,6 +8,7 @@ import (
 	"github.com/XSAM/otelsql"
 	"github.com/alecthomas/types/once"
 	_ "github.com/jackc/pgx/v5/stdlib" // Register Postgres driver
+	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/TBD54566975/ftl/internal/modulecontext"
