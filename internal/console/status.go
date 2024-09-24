@@ -17,6 +17,7 @@ import (
 	"github.com/tidwall/pretty"
 	"golang.org/x/term"
 
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
@@ -422,7 +423,7 @@ func (r *terminalStatusLine) SetMessage(message string) {
 	r.manager.recalculateLines()
 }
 
-func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, cancel context.CancelFunc) {
+func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, cancel context.CancelFunc, client ftlv1connect.ControllerServiceClient) {
 	sm := FromContext(ctx)
 	if tsm, ok := sm.(*terminalStatusManager); ok {
 		tsm.console = true
@@ -432,7 +433,7 @@ func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 				tsm.statusLock.Lock()
 				defer tsm.statusLock.Unlock()
 				tsm.consoleRefresh = f
-			}, cancel)
+			}, cancel, client)
 			if err != nil {
 				fmt.Printf("\033[31mError: %s\033[0m\n", err)
 				return
