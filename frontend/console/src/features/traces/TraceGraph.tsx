@@ -1,53 +1,49 @@
 import type { Duration, Timestamp } from '@bufbuild/protobuf'
 import { useState } from 'react'
 import { type TraceEvent, useRequestTraceEvents } from '../../api/timeline/use-request-trace-events'
-import { CallEvent, IngressEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { CallEvent, type Event, IngressEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { classNames } from '../../utils'
+import { eventBackgroundColor } from '../timeline/timeline.utils'
+import { eventBarLeftOffsetPercentage } from './traces.utils'
 
 const EventBlock = ({
   event,
   isSelected,
-  firstTimeStamp,
-  firstDuration,
+  requestStartTime,
+  requestDuration,
 }: {
-  event: TraceEvent
+  event: Event
   isSelected: boolean
-  firstTimeStamp: Timestamp
-  firstDuration: Duration
+  requestStartTime: Timestamp
+  requestDuration: Duration
 }) => {
   const [isHovering, setIsHovering] = useState(false)
 
-  const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000
-  const durationInMillis = (event.duration?.nanos ?? 0) / 1000000
+  const traceEvent = event.entry.value as TraceEvent
+  const totalDurationMillis = (requestDuration.nanos ?? 0) / 1000000
+  const durationInMillis = (traceEvent.duration?.nanos ?? 0) / 1000000
   let width = (durationInMillis / totalDurationMillis) * 100
   if (width < 1) {
     width = 1
   }
 
-  const callTime = event.timeStamp?.toDate() ?? new Date()
-  const initialTime = firstTimeStamp?.toDate() ?? new Date()
-  const offsetInMillis = callTime.getTime() - initialTime.getTime()
-  const leftOffsetPercentage = (offsetInMillis / totalDurationMillis) * 100
+  const leftOffsetPercentage = eventBarLeftOffsetPercentage(event, requestStartTime, totalDurationMillis)
 
-  let barColor = 'bg-pink-500'
   let eventTarget = ''
 
-  if (event instanceof CallEvent) {
-    barColor = 'bg-indigo-500'
-    eventTarget = `${event.destinationVerbRef?.module}.${event.destinationVerbRef?.name}`
-  } else if (event instanceof IngressEvent) {
-    barColor = 'bg-yellow-500'
-    eventTarget = event.path
+  if (traceEvent instanceof CallEvent) {
+    eventTarget = `${traceEvent.destinationVerbRef?.module}.${traceEvent.destinationVerbRef?.name}`
+  } else if (traceEvent instanceof IngressEvent) {
+    eventTarget = traceEvent.path
   }
 
-  if (isSelected) {
-    barColor = 'bg-pink-500'
-  }
+  const barColor = isSelected ? 'bg-green-500' : eventBackgroundColor(event)
 
   return (
     <div className='group relative my-0.5 h-2.5 flex' onMouseEnter={() => setIsHovering(true)} onMouseLeave={() => setIsHovering(false)}>
       <div className='flex-grow relative'>
         <div
-          className={`absolute h-2.5 ${barColor} rounded-sm`}
+          className={classNames('absolute h-2.5 rounded-sm', barColor)}
           style={{
             width: `${width}%`,
             left: `${leftOffsetPercentage}%`,
@@ -75,10 +71,10 @@ export const TraceGraph = ({ requestKey, selectedEventId }: { requestKey?: strin
     return
   }
 
-  const firstTimeStamp = events[0].timeStamp
+  const requestStartTime = events[0].timeStamp
   const traceEvent = events[0].entry.value as TraceEvent
-  const firstDuration = traceEvent.duration
-  if (firstTimeStamp === undefined || firstDuration === undefined) {
+  const firstEventDuration = traceEvent.duration
+  if (requestStartTime === undefined || firstEventDuration === undefined) {
     return
   }
 
@@ -87,12 +83,7 @@ export const TraceGraph = ({ requestKey, selectedEventId }: { requestKey?: strin
       {events.map((c, index) => (
         <div key={index} className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm'>
           <div className='w-full relative'>
-            <EventBlock
-              event={c.entry.value as TraceEvent}
-              isSelected={c.id === selectedEventId}
-              firstTimeStamp={firstTimeStamp}
-              firstDuration={firstDuration}
-            />
+            <EventBlock event={c} isSelected={c.id === selectedEventId} requestStartTime={requestStartTime} requestDuration={firstEventDuration} />
           </div>
         </div>
       ))}
