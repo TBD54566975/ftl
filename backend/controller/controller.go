@@ -57,7 +57,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
-	status "github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -70,6 +69,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
+	status "github.com/TBD54566975/ftl/internal/terminal"
 )
 
 // CommonConfig between the production controller and development server.
@@ -1846,7 +1846,10 @@ func (s *Service) syncSchema(ctx context.Context) {
 		})
 		if err != nil {
 			next := retry.Duration()
-			logger.Warnf("Failed to watch module changes, retrying in %s: %s", next, err)
+			if ctx.Err() == nil {
+				// Don't log when the context is done
+				logger.Warnf("Failed to watch module changes, retrying in %s: %s", next, err)
+			}
 			select {
 			case <-time.After(next):
 			case <-ctx.Done():

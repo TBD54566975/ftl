@@ -3,6 +3,7 @@ package exec
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec" //nolint:depguard
 	"syscall"
@@ -64,8 +65,11 @@ func (c *Cmd) RunBuffered(ctx context.Context) error {
 
 	err := c.Run()
 	if err != nil {
-		log.FromContext(ctx).Errorf(err, "%s", outputBuffer.Bytes())
-		return err
+		if ctx.Err() == nil {
+			// Don't log on context cancellation
+			log.FromContext(ctx).Errorf(err, "%s", outputBuffer.Bytes())
+		}
+		return fmt.Errorf("command failed: %w", err)
 	}
 
 	return nil

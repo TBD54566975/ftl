@@ -1,10 +1,11 @@
-package console
+package terminal
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -26,9 +27,10 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          "\033[32m>\033[0m ",
 		InterruptPrompt: "^C",
-		EOFPrompt:       "exit",
 		AutoComplete:    &FTLCompletion{app: k, ctx: ctx, client: client},
-		Listener:        &ExitListener{cancel: cancelContext},
+		Listener: &ExitListener{cancel: func() {
+			os.Exit(0)
+		}},
 	})
 	if refreshFunction != nil {
 		refreshFunction(l.Refresh)
@@ -50,7 +52,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 			}
 			continue
 		} else if errors.Is(err, io.EOF) {
-			break
+			os.Exit(0)
 		}
 		line = strings.TrimSpace(line)
 		if line == "" {
