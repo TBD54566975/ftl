@@ -22,15 +22,21 @@ func New(conn libdal.Connection) *DAL {
 	}
 }
 
-type EncryptedIdentity = sql.GetOnlyIdentityKeyRow
+type EncryptedIdentity = sql.GetIdentityKeysRow
 
-func (d *DAL) GetOnlyIdentityKey(ctx context.Context) (*EncryptedIdentity, error) {
-	row, err := d.db.GetOnlyIdentityKey(ctx)
+func (d *DAL) GetOnlyIdentityKey(ctx context.Context) (EncryptedIdentity, error) {
+	rows, err := d.db.GetIdentityKeys(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get only identity key: %w", err)
+		return EncryptedIdentity{}, fmt.Errorf("failed to get only identity key: %w", err)
+	}
+	if len(rows) == 0 {
+		return EncryptedIdentity{}, libdal.ErrNotFound
+	}
+	if len(rows) > 1 {
+		return EncryptedIdentity{}, fmt.Errorf("too many identity keys found: %d", len(rows))
 	}
 
-	return &row, nil
+	return rows[0], nil
 }
 
 func (d *DAL) CreateOnlyIdentityKey(ctx context.Context, e EncryptedIdentity) error {

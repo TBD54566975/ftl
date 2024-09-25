@@ -12,7 +12,7 @@ import (
 
 type Querier interface {
 	CreateOnlyIdentityKey(ctx context.Context, private api.EncryptedIdentityColumn, public []byte, verifySignature []byte) error
-	GetOnlyIdentityKey(ctx context.Context) (GetOnlyIdentityKeyRow, error)
+	GetIdentityKeys(ctx context.Context) ([]GetIdentityKeysRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

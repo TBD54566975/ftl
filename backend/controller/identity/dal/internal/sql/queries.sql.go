@@ -12,8 +12,8 @@ import (
 )
 
 const createOnlyIdentityKey = `-- name: CreateOnlyIdentityKey :exec
-INSERT INTO identity_keys (id, private, public, verify_signature)
-VALUES (1, $1, $2, $3)
+INSERT INTO identity_keys (private, public, verify_signature)
+VALUES ($1, $2, $3)
 `
 
 func (q *Queries) CreateOnlyIdentityKey(ctx context.Context, private api.EncryptedIdentityColumn, public []byte, verifySignature []byte) error {
@@ -21,21 +21,36 @@ func (q *Queries) CreateOnlyIdentityKey(ctx context.Context, private api.Encrypt
 	return err
 }
 
-const getOnlyIdentityKey = `-- name: GetOnlyIdentityKey :one
+const getIdentityKeys = `-- name: GetIdentityKeys :many
 SELECT private, public, verify_signature
 FROM identity_keys
-WHERE id = 1
 `
 
-type GetOnlyIdentityKeyRow struct {
+type GetIdentityKeysRow struct {
 	Private         api.EncryptedIdentityColumn
 	Public          []byte
 	VerifySignature []byte
 }
 
-func (q *Queries) GetOnlyIdentityKey(ctx context.Context) (GetOnlyIdentityKeyRow, error) {
-	row := q.db.QueryRowContext(ctx, getOnlyIdentityKey)
-	var i GetOnlyIdentityKeyRow
-	err := row.Scan(&i.Private, &i.Public, &i.VerifySignature)
-	return i, err
+func (q *Queries) GetIdentityKeys(ctx context.Context) ([]GetIdentityKeysRow, error) {
+	rows, err := q.db.QueryContext(ctx, getIdentityKeys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetIdentityKeysRow
+	for rows.Next() {
+		var i GetIdentityKeysRow
+		if err := rows.Scan(&i.Private, &i.Public, &i.VerifySignature); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

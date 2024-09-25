@@ -105,7 +105,7 @@ func (s Service) ensureIdentity(ctx context.Context) (err error) {
 
 	_, err = s.dal.GetOnlyIdentityKey(ctx)
 	if err != nil {
-		if !libdal.IsNotFound(err) {
+		if err != libdal.ErrNotFound {
 			return fmt.Errorf("failed to get only identity key: %w", err)
 		}
 

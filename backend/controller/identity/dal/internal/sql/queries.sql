@@ -1,4 +1,4 @@
--- name: GetOnlyIdentityKey :one
+-- name: GetIdentityKeys :many
 SELECT private, public, verify_signature
 FROM identity_keys;
 
