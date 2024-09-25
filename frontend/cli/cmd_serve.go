@@ -113,6 +113,15 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		controllerAddresses = append(controllerAddresses, bindAllocator.Next())
 	}
 
+	for _, addr := range controllerAddresses {
+		// Add controller address to allow origins for console requests.
+		// The console is run on `localhost` so we replace 127.0.0.1 with localhost.
+		if addr.Hostname() == "127.0.0.1" {
+			addr.Host = "localhost" + ":" + addr.Port()
+		}
+		s.CommonConfig.AllowOrigins = append(s.CommonConfig.AllowOrigins, addr)
+	}
+
 	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration)
 	if err != nil {
 		return err

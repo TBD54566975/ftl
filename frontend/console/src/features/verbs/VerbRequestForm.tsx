@@ -1,16 +1,28 @@
-import { useEffect, useState } from 'react'
+import { Copy01Icon } from 'hugeicons-react'
+import { useContext, useEffect, useState } from 'react'
 import { CodeEditor, type InitialState } from '../../components/CodeEditor'
 import { ResizableVerticalPanels } from '../../components/ResizableVerticalPanels'
 import { useClient } from '../../hooks/use-client'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
 import type { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { classNames } from '../../utils'
 import { VerbFormInput } from './VerbFormInput'
-import { createVerbRequest, defaultRequest, fullRequestPath, httpPopulatedRequestPath, isHttpIngress, requestType, simpleJsonSchema } from './verb.utils'
+import {
+  createVerbRequest as createCallRequest,
+  defaultRequest,
+  fullRequestPath,
+  generateCliCommand,
+  httpPopulatedRequestPath,
+  isHttpIngress,
+  requestType,
+  simpleJsonSchema,
+} from './verb.utils'
 
 export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb }) => {
   const client = useClient(VerbService)
+  const { showNotification } = useContext(NotificationsContext)
   const [activeTabId, setActiveTabId] = useState('body')
   const [initialEditorState, setInitialEditorText] = useState<InitialState>({ initialText: '' })
   const [editorText, setEditorText] = useState('')
@@ -18,9 +30,14 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
   const [headersText, setHeadersText] = useState('')
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [path, setPath] = useState('')
 
   const editorTextKey = `${module?.name}-${verb?.verb?.name}-editor-text`
   const headersTextKey = `${module?.name}-${verb?.verb?.name}-headers-text`
+
+  useEffect(() => {
+    setPath(httpPopulatedRequestPath(module, verb))
+  }, [module, verb])
 
   useEffect(() => {
     if (verb) {
@@ -42,7 +59,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       if (savedHeadersValue != null && savedHeadersValue !== '') {
         headerValue = savedHeadersValue
       } else {
-        headerValue = '{\n  "console": ["example"]\n}'
+        headerValue = '{}'
       }
       setInitialHeadersText({ initialText: headerValue })
       setHeadersText(headerValue)
@@ -73,31 +90,89 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
 
   tabs.push({ id: 'verbschema', name: 'Verb Schema' }, { id: 'jsonschema', name: 'JSONSchema' })
 
+  const httpCall = (path: string) => {
+    const method = requestType(verb)
+
+    fetch(path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...JSON.parse(headersText),
+      },
+      ...(method === 'POST' || method === 'PUT' ? { body: editorText } : {}),
+    })
+      .then(async (response) => {
+        if (response.ok) {
+          const json = await response.json()
+          setResponse(JSON.stringify(json, null, 2))
+        } else {
+          const text = await response.text()
+          setError(text)
+        }
+      })
+      .catch((error) => {
+        setError(String(error))
+      })
+  }
+
+  const ftlCall = (path: string) => {
+    const verbRef: Ref = {
+      name: verb?.verb?.name,
+      module: module?.name,
+    } as Ref
+
+    const requestBytes = createCallRequest(path, verb, editorText, headersText)
+    client
+      .call({ verb: verbRef, body: requestBytes })
+      .then((response) => {
+        if (response.response.case === 'body') {
+          const textDecoder = new TextDecoder('utf-8')
+          const jsonString = textDecoder.decode(response.response.value)
+
+          setResponse(JSON.stringify(JSON.parse(jsonString), null, 2))
+        } else if (response.response.case === 'error') {
+          setError(response.response.value.message)
+        }
+      })
+      .catch((error) => {
+        console.error(error)
+      })
+  }
+
   const handleSubmit = async (path: string) => {
     setResponse(null)
     setError(null)
 
     try {
-      const verbRef: Ref = {
-        name: verb?.verb?.name,
-        module: module?.name,
-      } as Ref
-
-      const requestBytes = createVerbRequest(path, verb, editorText, headersText)
-      const response = await client.call({ verb: verbRef, body: requestBytes })
-
-      if (response.response.case === 'body') {
-        const textDecoder = new TextDecoder('utf-8')
-        const jsonString = textDecoder.decode(response.response.value)
-
-        setResponse(JSON.stringify(JSON.parse(jsonString), null, 2))
-      } else if (response.response.case === 'error') {
-        setError(response.response.value.message)
+      if (isHttpIngress(verb)) {
+        httpCall(path)
+      } else {
+        ftlCall(path)
       }
     } catch (error) {
       console.error('There was an error with the request:', error)
       setError(String(error))
     }
+  }
+
+  const handleCopyButton = () => {
+    if (!verb) {
+      return
+    }
+
+    const cliCommand = generateCliCommand(verb, path, headersText, editorText)
+    navigator.clipboard
+      .writeText(cliCommand)
+      .then(() => {
+        showNotification({
+          title: 'Copied to clipboard',
+          message: cliCommand,
+          type: NotificationType.Info,
+        })
+      })
+      .catch((err) => {
+        console.error('Failed to copy text: ', err)
+      })
   }
 
   const bottomText = response ?? error ?? ''
@@ -117,31 +192,42 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
     <div className='flex flex-col h-full overflow-hidden pt-4'>
       <VerbFormInput
         requestType={requestType(verb)}
-        initialPath={httpPopulatedRequestPath(module, verb)}
+        path={path}
+        setPath={setPath}
         requestPath={fullRequestPath(module, verb)}
         readOnly={!isHttpIngress(verb)}
         onSubmit={handleSubmit}
       />
       <div>
         <div className='border-b border-gray-200 dark:border-white/10'>
-          <nav className='-mb-px flex space-x-6 pl-4' aria-label='Tabs'>
-            {tabs.map((tab) => (
-              <button
-                type='button'
-                key={tab.name}
-                className={classNames(
-                  activeTabId === tab.id
-                    ? 'border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:hover:border-gray-500 dark:text-gray-500 dark:hover:text-gray-300',
-                  'whitespace-nowrap cursor-pointer border-b-2 py-2 px-1 text-sm font-medium',
-                )}
-                aria-current={activeTabId === tab.id ? 'page' : undefined}
-                onClick={(e) => handleTabClick(e, tab.id)}
-              >
-                {tab.name}
-              </button>
-            ))}
-          </nav>
+          <div className='flex justify-between items-center  pr-4'>
+            <nav className='-mb-px flex space-x-6 pl-4' aria-label='Tabs'>
+              {tabs.map((tab) => (
+                <button
+                  type='button'
+                  key={tab.name}
+                  className={classNames(
+                    activeTabId === tab.id
+                      ? 'border-indigo-500 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:hover:border-gray-500 dark:text-gray-500 dark:hover:text-gray-300',
+                    'whitespace-nowrap cursor-pointer border-b-2 py-2 px-1 text-sm font-medium',
+                  )}
+                  aria-current={activeTabId === tab.id ? 'page' : undefined}
+                  onClick={(e) => handleTabClick(e, tab.id)}
+                >
+                  {tab.name}
+                </button>
+              ))}
+            </nav>
+            <button
+              type='button'
+              title='Copy'
+              className='flex items-center p-1 rounded text-indigo-500 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer'
+              onClick={handleCopyButton}
+            >
+              <Copy01Icon className='size-5' />
+            </button>
+          </div>
         </div>
       </div>
       <div className='flex-1 overflow-hidden'>

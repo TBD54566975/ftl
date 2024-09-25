@@ -1,5 +1,5 @@
 import { Transition } from '@headlessui/react'
-import { Alert02Icon, AlertCircleIcon, Cancel02Icon, CheckmarkCircle02Icon, InformationCircleIcon } from 'hugeicons-react'
+import { Alert02Icon, AlertCircleIcon, Cancel01Icon, CheckmarkCircle02Icon, InformationCircleIcon } from 'hugeicons-react'
 import { Fragment, useContext } from 'react'
 import { NotificationType, NotificationsContext } from '../providers/notifications-provider'
 import { textColor } from '../utils'
@@ -67,7 +67,7 @@ export const Notification = () => {
                     }}
                   >
                     <span className='sr-only'>Close</span>
-                    <Cancel02Icon className='h-5 w-5' aria-hidden='true' />
+                    <Cancel01Icon className='h-5 w-5' aria-hidden='true' />
                   </button>
                 </div>
               </div>
