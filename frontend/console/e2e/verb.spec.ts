@@ -4,7 +4,7 @@ ftlTest.beforeEach(async ({ page }) => {
   const modulesNavItem = page.getByRole('link', { name: 'Modules' })
   await modulesNavItem.click()
 
-  const moduleEcho = page.getByRole('button', { name: 'echo' })
+  const moduleEcho = page.locator('div.cursor-pointer').getByText('echo').nth(0)
   await moduleEcho.click()
 
   const verbEcho = page.locator('div#decl-echo')
