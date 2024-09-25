@@ -61,5 +61,12 @@
       matchPackageNames: ["connectrpc.com/connect"],
       enabled: false,
     },
+    {
+      "matchPaths": ["frontend/console/**", "frontend/vscode/**"],
+      "postUpgradeTasks": {
+        "commands": ["pnpm install"],
+        "fileFilters": ["pnpm-lock.yaml"]
+      }
+    }
   ],
 }
