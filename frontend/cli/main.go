@@ -73,9 +73,7 @@ func main() {
 
 	app := createKongApplication(&cli)
 	kctx, err := app.Parse(os.Args[1:])
-	if err != nil {
-		panic(err)
-	}
+	app.FatalIfErrorf(err)
 
 	if !cli.Plain {
 		sm := terminal.NewStatusManager(ctx)
