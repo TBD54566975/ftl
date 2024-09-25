@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/tink-crypto/tink-go/v2/keyset"
@@ -105,7 +106,7 @@ func (s Service) ensureIdentity(ctx context.Context) (err error) {
 
 	_, err = s.dal.GetOnlyIdentityKey(ctx)
 	if err != nil {
-		if err != libdal.ErrNotFound {
+		if errors.Is(err, libdal.ErrNotFound) {
 			return fmt.Errorf("failed to get only identity key: %w", err)
 		}
 
