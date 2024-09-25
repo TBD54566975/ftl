@@ -32,12 +32,12 @@ func TestLifecycleJVM(t *testing.T) {
 func TestVerbCalls(t *testing.T) {
 	in.Run(t,
 		in.WithLanguages("java"),
-		in.CopyModule("verbs"),
-		in.Deploy("verbs"),
-		in.Call("verbs", "anyInput", map[string]string{"name": "Jimmy"}, func(t testing.TB, response string) {
+		in.CopyModule("javaserver"),
+		in.Deploy("javaserver"),
+		in.Call("javaserver", "anyInput", map[string]string{"name": "Jimmy"}, func(t testing.TB, response string) {
 			assert.Equal(t, "Jimmy", response)
 		}),
-		in.Call("verbs", "anyOutput", "Jimmy", func(t testing.TB, response map[string]string) {
+		in.Call("javaserver", "anyOutput", "Jimmy", func(t testing.TB, response map[string]string) {
 			assert.Equal(t, map[string]string{"name": "Jimmy"}, response)
 		}),
 	)
