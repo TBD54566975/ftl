@@ -29,7 +29,7 @@ type devCmd struct {
 	Build          buildCmd `embed:""`
 }
 
-func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig.Config, cancel context.CancelFunc) error {
+func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig.Config, bindContext terminal.KongContextBinder) error {
 	startTime := time.Now()
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
@@ -39,7 +39,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 	}
 
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-	terminal.LaunchEmbeddedConsole(ctx, k, projConfig, bindContext, cancel, client)
+	terminal.LaunchEmbeddedConsole(ctx, k, bindContext, client)
 
 	g, ctx := errgroup.WithContext(ctx)
 

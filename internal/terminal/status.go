@@ -20,7 +20,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 type BuildState string
@@ -489,11 +488,11 @@ func (r *terminalStatusLine) SetMessage(message string) {
 	r.manager.recalculateLines()
 }
 
-func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, cancel context.CancelFunc, client ftlv1connect.ControllerServiceClient) {
+func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) {
 	sm := FromContext(ctx)
 	if _, ok := sm.(*terminalStatusManager); ok {
 		go func() {
-			err := RunInteractiveConsole(ctx, k, projectConfig, binder, cancel, client)
+			err := RunInteractiveConsole(ctx, k, binder, client)
 			if err != nil {
 				fmt.Printf("\033[31mError: %s\033[0m\n", err)
 				return

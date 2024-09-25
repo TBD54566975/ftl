@@ -121,7 +121,8 @@ func main() {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		kctx.FatalIfErrorf(err)
 	}
-	ctx = bindContext(ctx, kctx, config, createKongApplication(&InteractiveCLI{}), cancel)
+	bindContext := makeBindContext(config, cancel)
+	ctx = bindContext(ctx, kctx)
 
 	err = kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
@@ -150,26 +151,26 @@ func createKongApplication(cli any) *kong.Kong {
 	return app
 }
 
-var _ terminal.KongContextBinder = bindContext
+func makeBindContext(projectConfig projectconfig.Config, cancel context.CancelFunc) terminal.KongContextBinder {
+	var bindContext terminal.KongContextBinder
+	bindContext = func(ctx context.Context, kctx *kong.Context) context.Context {
+		kctx.Bind(projectConfig)
 
-func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context {
+		controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
+		kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
 
-	kctx.Bind(projectConfig)
-	kctx.Bind(app)
+		kongcompletion.Register(kctx.Kong, kongcompletion.WithPredictors(terminal.Predictors(ctx, controllerServiceClient)))
 
-	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
-	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
-	kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
+		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
+		kctx.BindTo(verbServiceClient, (*ftlv1connect.VerbServiceClient)(nil))
 
-	kongcompletion.Register(app, kongcompletion.WithPredictors(terminal.Predictors(ctx, controllerServiceClient)))
-
-	verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
-	ctx = rpc.ContextWithClient(ctx, verbServiceClient)
-	kctx.BindTo(verbServiceClient, (*ftlv1connect.VerbServiceClient)(nil))
-
-	kctx.Bind(cli.Endpoint)
-	kctx.BindTo(ctx, (*context.Context)(nil))
-	kctx.BindTo(bindContext, (*terminal.KongContextBinder)(nil))
-	kctx.BindTo(cancel, (*context.CancelFunc)(nil))
-	return ctx
+		kctx.Bind(cli.Endpoint)
+		kctx.BindTo(ctx, (*context.Context)(nil))
+		kctx.Bind(bindContext)
+		kctx.BindTo(cancel, (*context.CancelFunc)(nil))
+		return ctx
+	}
+	return bindContext
 }
