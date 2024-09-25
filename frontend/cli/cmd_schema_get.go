@@ -37,28 +37,34 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerSe
 	}
 	for resp.Receive() {
 		msg := resp.Msg()
-		module, err := schema.ModuleFromProto(msg.Schema)
-		if len(g.Modules) == 0 || remainingNames[msg.Schema.Name] {
-			if err != nil {
-				return fmt.Errorf("invalid module schema: %w", err)
+		switch resp.Msg().ChangeType {
+		case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
+			module, err := schema.ModuleFromProto(msg.Schema)
+			if len(g.Modules) == 0 || remainingNames[msg.Schema.Name] {
+				if err != nil {
+					return fmt.Errorf("invalid module schema: %w", err)
+				}
+				fmt.Println(module)
+				delete(remainingNames, msg.Schema.Name)
 			}
-			fmt.Println(module)
-			delete(remainingNames, msg.Schema.Name)
-		}
-		if !msg.More {
-			missingNames := maps.Keys(remainingNames)
-			slices.Sort(missingNames)
-			if len(missingNames) > 0 {
-				if g.Watch {
-					fmt.Printf("missing modules: %s\n", strings.Join(missingNames, ", "))
-				} else {
-					return fmt.Errorf("missing modules: %s", strings.Join(missingNames, ", "))
+			if !msg.More {
+				missingNames := maps.Keys(remainingNames)
+				slices.Sort(missingNames)
+				if len(missingNames) > 0 {
+					if g.Watch {
+						fmt.Printf("missing modules: %s\n", strings.Join(missingNames, ", "))
+					} else {
+						return fmt.Errorf("missing modules: %s", strings.Join(missingNames, ", "))
+					}
+				}
+				if !g.Watch {
+					break
 				}
 			}
-			if !g.Watch {
-				break
-			}
+		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
+			fmt.Printf("deployment %s removed\n", msg.DeploymentKey)
 		}
+
 	}
 	if err := resp.Err(); err != nil {
 		return resp.Err()
