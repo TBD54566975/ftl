@@ -15,7 +15,6 @@ import (
 	"github.com/posener/complete"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 const interactivePrompt = "\033[32m>\033[0m "
@@ -23,9 +22,9 @@ const interactivePrompt = "\033[32m>\033[0m "
 var _ readline.AutoCompleter = &FTLCompletion{}
 var errExitTrap = errors.New("exit trap")
 
-type KongContextBinder func(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context
+type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Context
 
-func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, cancelContext context.CancelFunc, client ftlv1connect.ControllerServiceClient) error {
+func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) error {
 
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          interactivePrompt,
@@ -90,7 +89,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 				errorf("%s", err)
 				return
 			}
-			subctx := binder(ctx, kctx, projectConfig, k, cancelContext)
+			subctx := binder(ctx, kctx)
 
 			err = kctx.Run(subctx)
 			if err != nil {
