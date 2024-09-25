@@ -41,7 +41,7 @@ var _ StatusLine = &terminalStatusLine{}
 var buildColors map[BuildState]string
 var buildStateIcon map[BuildState]func(int) string
 
-var spinner = []string{"▁", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃"}
+var spinner = []string{"◜", "◝", "◞", "◟"}
 
 func init() {
 	buildColors = map[BuildState]string{
@@ -56,10 +56,10 @@ func init() {
 		return spinner[spinnerCount]
 	}
 	block := func(int) string {
-		return "█"
+		return "✔"
 	}
 	empty := func(int) string {
-		return "▁"
+		return "•"
 	}
 	buildStateIcon = map[BuildState]func(int) string{
 		BuildStateWaiting:   empty,
@@ -204,7 +204,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 
 	go func() {
 		for !sm.closed.Load() {
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(150 * time.Millisecond)
 			sm.statusLock.Lock()
 			if sm.spinnerCount == len(spinner)-1 {
 				sm.spinnerCount = 0
