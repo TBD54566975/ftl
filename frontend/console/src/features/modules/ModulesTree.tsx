@@ -87,7 +87,6 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
         <CircleArrowRight02Icon
           className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600'
           onClick={(e) => {
-            console.log('module page click')
             e.preventDefault()
             e.stopPropagation()
             navigate(`/modules/${module.name}`)
