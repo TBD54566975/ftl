@@ -99,7 +99,7 @@ func (t *plainSink) Log(entry Entry) error {
 	scope, exists := entry.Attributes[scopeKey]
 	if exists {
 		if t.isaTTY {
-			prefix += entry.Level.String() + ":" + scopeColour(scope) + scope + "\x1b[0m: "
+			prefix += entry.Level.String() + ":" + ScopeColor(scope) + scope + "\x1b[0m: "
 		} else {
 			prefix += entry.Level.String() + ":" + scope + ": "
 		}
@@ -128,7 +128,7 @@ func parseRGB(s string) (int, int, int) {
 	return int(r), int(g), int(b)
 }
 
-func scopeColour(scope string) string {
+func ScopeColor(scope string) string {
 	hash := fnv.New32a()
 	hash.Write([]byte(scope))
 	colours, _ := scopeColours.Get(context.Background()) //nolint:errcheck

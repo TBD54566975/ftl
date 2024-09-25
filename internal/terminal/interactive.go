@@ -18,22 +18,32 @@ import (
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
+const interactivePrompt = "\033[32m>\033[0m "
+
 var _ readline.AutoCompleter = &FTLCompletion{}
 var errExitTrap = errors.New("exit trap")
 
 type KongContextBinder func(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context
 
-func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, refreshFunction func(func()), cancelContext context.CancelFunc, client ftlv1connect.ControllerServiceClient) error {
+func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, cancelContext context.CancelFunc, client ftlv1connect.ControllerServiceClient) error {
+
 	l, err := readline.NewEx(&readline.Config{
-		Prompt:          "\033[32m>\033[0m ",
+		Prompt:          interactivePrompt,
 		InterruptPrompt: "^C",
 		AutoComplete:    &FTLCompletion{app: k, ctx: ctx, client: client},
 		Listener: &ExitListener{cancel: func() {
 			os.Exit(0)
 		}},
 	})
-	if refreshFunction != nil {
-		refreshFunction(l.Refresh)
+	sm := FromContext(ctx)
+	var tsm *terminalStatusManager
+	ok := false
+	if tsm, ok = sm.(*terminalStatusManager); ok {
+		tsm.statusLock.Lock()
+		tsm.console = true
+		tsm.consoleRefresh = l.Refresh
+		tsm.recalculateLines()
+		tsm.statusLock.Unlock()
 	}
 	if err != nil {
 		return fmt.Errorf("init readline: %w", err)
@@ -53,6 +63,9 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 			continue
 		} else if errors.Is(err, io.EOF) {
 			os.Exit(0)
+		}
+		if tsm != nil {
+			tsm.consoleNewline(line)
 		}
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -84,8 +97,6 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 				errorf("error: %s", err)
 				return
 			}
-			// Force a status refresh
-			println("")
 		}()
 	}
 	return nil
