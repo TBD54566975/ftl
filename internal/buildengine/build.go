@@ -32,7 +32,7 @@ func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema,
 		return err
 	}
 	defer release() //nolint:errcheck
-	logger := log.FromContext(ctx).Scope(module.Config.Module)
+	logger := log.FromContext(ctx).Module(module.Config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	// clear the deploy directory before extracting schema

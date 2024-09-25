@@ -43,7 +43,7 @@ func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource s
 }
 
 func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Module) ([]model.CronJob, error) {
-	logger := log.FromContext(ctx).Scope("cron")
+	logger := log.FromContext(ctx).Scope("cron").Module(module.Name)
 	start := s.clock.Now().UTC()
 	newJobs := []model.CronJob{}
 	merr := []error{}
@@ -149,7 +149,7 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 
 // scheduleCronJob schedules the next execution of a single cron job.
 func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.CronJob) error {
-	logger := log.FromContext(ctx).Scope("cron")
+	logger := log.FromContext(ctx).Scope("cron").Module(job.Verb.Module)
 	now := s.clock.Now().UTC()
 	pending, err := tx.IsCronJobPending(ctx, job.Key, now)
 	if err != nil {

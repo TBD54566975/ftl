@@ -636,7 +636,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		wg.SetLimit(e.parallelism)
 		for _, moduleName := range group {
 			wg.Go(func() error {
-				logger := log.FromContext(ctx).Scope(moduleName)
+				logger := log.FromContext(ctx).Module(moduleName).Scope("build")
 				ctx := log.ContextWithLogger(ctx, logger)
 				err := e.tryBuild(ctx, mustBuild, moduleName, builtModules, schemas, callback)
 				if err != nil {
