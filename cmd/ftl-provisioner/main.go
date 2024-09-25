@@ -41,5 +41,5 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	err = provisioner.Start(ctx, cli.ProvisionerConfig, false)
-	kctx.FatalIfErrorf(err)
+	kctx.FatalIfErrorf(err, "failed to start provisioner")
 }
