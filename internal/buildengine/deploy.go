@@ -36,7 +36,7 @@ type DeployClient interface {
 
 // Deploy a module to the FTL controller with the given number of replicas. Optionally wait for the deployment to become ready.
 func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnline bool, client DeployClient) error {
-	logger := log.FromContext(ctx).Scope(module.Config.Module)
+	logger := log.FromContext(ctx).Module(module.Config.Module).Scope("deploy")
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Deploying module")
 
@@ -107,7 +107,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 }
 
 func terminateModuleDeployment(ctx context.Context, client ftlv1connect.ControllerServiceClient, module string) error {
-	logger := log.FromContext(ctx).Scope(module)
+	logger := log.FromContext(ctx).Module(module).Scope("terminate")
 
 	status, err := client.Status(ctx, connect.NewRequest(&ftlv1.StatusRequest{}))
 	if err != nil {

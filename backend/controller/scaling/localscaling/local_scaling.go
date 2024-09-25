@@ -106,7 +106,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 	}
 	l.lock.Lock()
 	defer l.lock.Unlock()
-	logger := log.FromContext(ctx).Scope("localScaling")
+	logger := log.FromContext(ctx).Scope("localScaling").Module(msg.ModuleName)
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Handling schema change for %s", msg.DeploymentKey)
 	moduleDeployments := l.runners[msg.ModuleName]
@@ -192,7 +192,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	config.HeartbeatPeriod = time.Second
 	config.HeartbeatJitter = time.Millisecond * 100
 
-	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
+	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName).Module(info.module))
 
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
 	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port()})

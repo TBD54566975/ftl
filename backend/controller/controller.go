@@ -1310,7 +1310,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		call.Release() //nolint:errcheck
 	}()
 
-	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb))
+	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb)).Module(call.Verb.Module)
 
 	if call.Catching {
 		// Retries have been exhausted but catch verb has previously failed
@@ -1516,7 +1516,7 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 }
 
 func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.DAL, origin async.AsyncOriginFSM, failed bool, isFinalResult bool) error {
-	logger := log.FromContext(ctx).Scope(origin.FSM.String())
+	logger := log.FromContext(ctx).Scope(origin.FSM.String()).Module(origin.FSM.Module)
 
 	// retrieve the next fsm event and delete it
 	next, err := tx.PopNextFSMEvent(ctx, origin.FSM, origin.Key)

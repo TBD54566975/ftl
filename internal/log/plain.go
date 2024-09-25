@@ -96,12 +96,24 @@ func (t *plainSink) Log(entry Entry) error {
 	}
 
 	// Add scope if required
+	scopeString := ""
 	scope, exists := entry.Attributes[scopeKey]
+	module, moduleExists := entry.Attributes[moduleKey]
+	if moduleExists {
+		if exists && scope != module {
+			scopeString = module + ":" + scope
+		} else {
+			scopeString = module
+		}
+	} else if exists {
+		scopeString = scope
+		module = scope
+	}
 	if exists {
 		if t.isaTTY {
-			prefix += entry.Level.String() + ":" + scopeColour(scope) + scope + "\x1b[0m: "
+			prefix += entry.Level.String() + ":" + ScopeColor(module) + scopeString + "\x1b[0m: "
 		} else {
-			prefix += entry.Level.String() + ":" + scope + ": "
+			prefix += entry.Level.String() + ":" + scopeString + ": "
 		}
 	} else {
 		prefix += entry.Level.String() + ": "
@@ -128,7 +140,7 @@ func parseRGB(s string) (int, int, int) {
 	return int(r), int(g), int(b)
 }
 
-func scopeColour(scope string) string {
+func ScopeColor(scope string) string {
 	hash := fnv.New32a()
 	hash.Write([]byte(scope))
 	colours, _ := scopeColours.Get(context.Background()) //nolint:errcheck

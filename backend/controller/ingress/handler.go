@@ -50,6 +50,7 @@ func Handle(
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), startTime, optional.Some("failed to resolve route"))
 		return
 	}
+	logger = logger.Module(route.Module)
 
 	verbRef := &schemapb.Ref{Module: route.Module, Name: route.Verb}
 
