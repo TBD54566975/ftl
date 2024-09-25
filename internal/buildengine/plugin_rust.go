@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/alecthomas/types/pubsub"
+
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/alecthomas/types/pubsub"
 )
 
 type rustPlugin struct {

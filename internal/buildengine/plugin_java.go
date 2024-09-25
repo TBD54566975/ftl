@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alecthomas/types/pubsub"
+	"github.com/beevik/etree"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl"
@@ -18,8 +20,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/alecthomas/types/pubsub"
-	"github.com/beevik/etree"
 )
 
 type javaPlugin struct {
