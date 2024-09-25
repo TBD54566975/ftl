@@ -147,10 +147,10 @@ func TestJVMToGoCall(t *testing.T) {
 	in.Run(t,
 		in.WithJavaBuild(),
 		in.CopyModuleWithLanguage("gomodule", "go"),
-		in.CopyModuleWithLanguage("javamodule", "java"),
+		in.CopyModuleWithLanguage("javaclient", "java"),
 		in.CopyModuleWithLanguage("kotlinmodule", "kotlin"),
 		in.Deploy("gomodule"),
-		in.Deploy("javamodule"),
+		in.Deploy("javaclient"),
 		in.Deploy("kotlinmodule"),
 		in.SubTests(tests...),
 	)
@@ -175,7 +175,7 @@ func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTes
 		},
 		{
 			Name:   name + "-java",
-			Action: testFunc("javamodule"),
+			Action: testFunc("javaclient"),
 		},
 		{
 			Name:   name + "-kotlin",
