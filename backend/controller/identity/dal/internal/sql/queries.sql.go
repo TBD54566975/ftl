@@ -24,6 +24,7 @@ func (q *Queries) CreateOnlyIdentityKey(ctx context.Context, private api.Encrypt
 const getIdentityKeys = `-- name: GetIdentityKeys :many
 SELECT private, public, verify_signature
 FROM identity_keys
+LIMIT 2
 `
 
 type GetIdentityKeysRow struct {
