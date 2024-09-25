@@ -179,3 +179,31 @@ export const createVerbRequest = (path: string, verb?: Verb, editorText?: string
 export const verbCalls = (verb?: Verb) => {
   return verb?.verb?.metadata.filter((meta) => meta.value.case === 'calls').map((meta) => meta.value.value as MetadataCalls) ?? null
 }
+
+export const generateCliCommand = (verb: Verb, path: string, header: string, body: string) => {
+  const method = requestType(verb)
+  return method === 'CALL' ? generateFtlCallCommand(path, body) : generateCurlCommand(method, path, header, body)
+}
+
+const generateFtlCallCommand = (path: string, editorText: string) => {
+  const command = `ftl call ${path} '${editorText}'`
+  return command
+}
+
+const generateCurlCommand = (method: string, path: string, header: string, body: string) => {
+  const headers = JSON.parse(header)
+
+  let curlCommand = `curl -X ${method.toUpperCase()} "${path}"`
+
+  for (const [key, value] of Object.entries(headers)) {
+    curlCommand += ` -H "${key}: ${value}"`
+  }
+
+  curlCommand += ' -H "Content-Type: application/json"'
+
+  if (method === 'POST' || method === 'PUT') {
+    curlCommand += ` -d '${body}'`
+  }
+
+  return curlCommand
+}
