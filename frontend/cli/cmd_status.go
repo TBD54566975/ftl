@@ -9,7 +9,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/console"
+	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type statusCmd struct {
@@ -36,6 +36,6 @@ func (s *statusCmd) Run(ctx context.Context, client ftlv1connect.ControllerServi
 	if err != nil {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}
-	console.PrintJSON(ctx, data)
+	terminal.PrintJSON(ctx, data)
 	return nil
 }

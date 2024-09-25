@@ -17,10 +17,10 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type InteractiveCLI struct {
@@ -78,7 +78,7 @@ func main() {
 	}
 
 	if !cli.Plain {
-		sm := console.NewStatusManager(ctx)
+		sm := terminal.NewStatusManager(ctx)
 		ctx = sm.IntoContext(ctx)
 		defer sm.Close()
 	}
@@ -95,7 +95,7 @@ func main() {
 			kctx.Fatalf("could not determine default config path, either place an ftl-project.toml file in the root of your project, use --config=FILE, or set the FTL_CONFIG envar")
 		}
 	}
-	if console.IsANSITerminal(ctx) {
+	if terminal.IsANSITerminal(ctx) {
 		cli.LogConfig.Color = true
 	}
 
@@ -152,7 +152,7 @@ func createKongApplication(cli any) *kong.Kong {
 	return app
 }
 
-var _ console.KongContextBinder = bindContext
+var _ terminal.KongContextBinder = bindContext
 
 func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context {
 
@@ -163,7 +163,7 @@ func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectc
 	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
 	kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
 
-	kongcompletion.Register(app, kongcompletion.WithPredictors(console.Predictors(ctx, controllerServiceClient)))
+	kongcompletion.Register(app, kongcompletion.WithPredictors(terminal.Predictors(ctx, controllerServiceClient)))
 
 	verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, verbServiceClient)
@@ -171,7 +171,7 @@ func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectc
 
 	kctx.Bind(cli.Endpoint)
 	kctx.BindTo(ctx, (*context.Context)(nil))
-	kctx.BindTo(bindContext, (*console.KongContextBinder)(nil))
+	kctx.BindTo(bindContext, (*terminal.KongContextBinder)(nil))
 	kctx.BindTo(cancel, (*context.CancelFunc)(nil))
 	return ctx
 }
