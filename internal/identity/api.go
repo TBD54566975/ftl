@@ -1,8 +1,8 @@
 package identity
 
 type SignedData struct {
-	Data      []byte
-	Signature []byte
+	data      []byte
+	signature []byte
 }
 
 type PublicKey = []byte
@@ -20,5 +20,5 @@ type Signer interface {
 
 type Verifier interface {
 	// TODO: Should hide the data until verified, i.e. return the data if the signature is valid.
-	Verify(signedData SignedData) error
+	Verify(signedData SignedData) ([]byte, error)
 }

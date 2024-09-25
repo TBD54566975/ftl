@@ -10,20 +10,22 @@ type CertificateData struct {
 	NodePublicKey PublicKey
 }
 
-func ParseCertificateData(s []byte) (CertificateData, error) {
-	parts := strings.Split(string(s), ":")
-	if len(parts) != 2 {
-		return CertificateData{}, fmt.Errorf("invalid certificate data: %s", s)
+func ParseCertificateData(bytes []byte) (*CertificateData, error) {
+	str := string(bytes)
+	lastColon := strings.LastIndex(str, ":")
+	if lastColon == -1 {
+		return nil, fmt.Errorf("no colon in certificate data: %s", str)
 	}
+	idStr, pubKey := str[:lastColon], str[lastColon+1:]
 
-	id, err := Parse(parts[0])
+	id, err := Parse(idStr)
 	if err != nil {
-		return CertificateData{}, fmt.Errorf("failed to parse identity: %w", err)
+		return nil, fmt.Errorf("failed to parse identity: %w", err)
 	}
 
-	return CertificateData{
+	return &CertificateData{
 		ID:            id,
-		NodePublicKey: PublicKey(parts[1]),
+		NodePublicKey: PublicKey(pubKey),
 	}, nil
 }
 
@@ -36,31 +38,29 @@ type Certificate struct {
 }
 
 func (c Certificate) String() string {
-	return fmt.Sprintf("Certificate %s signed:%x", c.Data, c.Signature)
+	return fmt.Sprintf("Certificate %s signed:%x", c.data, c.signature)
 }
 
 // SignCertificateRequest signs an identity certificate request.
 // This does not verify the contents of the data--it is assumed that the caller has already done so.
 func SignCertificateRequest(caSigner Signer, nodePublic PublicKey, signedData SignedData) (*Certificate, error) {
-	id, err := Parse(string(signedData.Data))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse identity: %w", err)
-	}
-
 	nodeVerifier, err := NewTinkVerifier(nodePublic)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
 	}
-	err = nodeVerifier.Verify(signedData)
+	data, err := nodeVerifier.Verify(signedData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify signed data: %w", err)
+	}
+	id, err := Parse(string(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse identity: %w", err)
 	}
 
 	certData := CertificateData{
 		ID:            id,
 		NodePublicKey: nodePublic,
 	}
-
 	caSigned, err := caSigner.Sign([]byte(certData.String()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign certificate: %w", err)
@@ -75,28 +75,28 @@ type CertifiedSignedData struct {
 }
 
 func (c CertifiedSignedData) String() string {
-	return fmt.Sprintf("CertifiedSignedData data:%s signature:%x (%s)", c.SignedData.Data, c.SignedData.Signature, c.Certificate)
+	return fmt.Sprintf("CertifiedSignedData data:%s signature:%x (%s)", c.SignedData.data, c.SignedData.signature, c.Certificate)
 }
 
-func (c CertifiedSignedData) Verify(caVerifier Verifier) error {
-	certificateData, err := ParseCertificateData(c.SignedData.Data)
+func (c CertifiedSignedData) Verify(caVerifier Verifier) ([]byte, error) {
+	data, err := caVerifier.Verify(c.Certificate.SignedData)
 	if err != nil {
-		return fmt.Errorf("failed to parse identity: %w", err)
+		return nil, fmt.Errorf("failed to verify certificate: %w", err)
 	}
 
-	err = caVerifier.Verify(c.Certificate.SignedData)
+	certificateData, err := ParseCertificateData(data)
 	if err != nil {
-		return fmt.Errorf("failed to verify certificate: %w", err)
+		return nil, fmt.Errorf("failed to parse certificate data: %w", err)
 	}
 
-	nodeVerifier, err := NewTinkVerifier(c.Certificate.SignedData.Data)
+	nodeVerifier, err := NewTinkVerifier(certificateData.NodePublicKey)
 	if err != nil {
-		return fmt.Errorf("failed to create verifier: %w", err)
+		return nil, fmt.Errorf("failed to create verifier: %w", err)
 	}
-	err = nodeVerifier.Verify(c.SignedData)
+	payload, err := nodeVerifier.Verify(c.SignedData)
 	if err != nil {
-		return fmt.Errorf("failed to verify signed data: %w", err)
+		return nil, fmt.Errorf("failed to verify signed data: %w", err)
 	}
 
-	return nil
+	return payload, nil
 }

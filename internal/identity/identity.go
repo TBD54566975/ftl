@@ -15,12 +15,12 @@ func Parse(s string) (Identity, error) {
 	parts := strings.Split(s, ":")
 	if parts[0] == "r" {
 		if len(parts) != 3 {
-			return nil, fmt.Errorf("invalid runner identity: %s", s)
+			return nil, fmt.Errorf("invalid runner parts: %s", s)
 		}
 		return Runner{ID: parts[1], Module: parts[2]}, nil
 	}
 
-	return nil, fmt.Errorf("unknown identity: %s", s)
+	return nil, fmt.Errorf("unknown starting char: %s", s)
 }
 
 var _ Identity = &Runner{}
