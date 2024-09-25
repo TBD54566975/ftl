@@ -9,6 +9,12 @@
     "group:allNonMajor",
     "schedule:earlyMondays",
   ],
+  "js": {
+    "managerBranchPrefix": "js-"
+  },
+  "java": {
+    "managerBranchPrefix": "java-"
+  },
   lockFileMaintenance: {
     enabled: true, // Automatically update lock files like pnpm-lock.yaml
   },
