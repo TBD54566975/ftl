@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/tink-crypto/tink-go/v2/tink"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/internal/dal"
@@ -29,6 +30,17 @@ func New(ctx context.Context, conn libdal.Connection, encryptionBuilder Builder)
 	}
 
 	return &Service{encryptor: encryptor}, nil
+}
+
+// AEAD returns the AEAD instance used by the encryptor.
+// TODO: Remove this method once we have a better way to handle this.
+func (s *Service) AEAD() (tink.AEAD, error) {
+	kmsEncryptor, ok := s.encryptor.(*KMSEncryptor)
+	if !ok {
+		return nil, fmt.Errorf("encryptor is not of type *KMSEncryptor")
+	}
+
+	return kmsEncryptor.kekAEAD, nil
 }
 
 // EncryptJSON encrypts the given JSON object and stores it in the provided destination.

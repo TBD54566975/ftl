@@ -67,6 +67,8 @@ sql:
             nullable: true
             go_type:
               type: "optional.Option[model.CronJobKey]"
+          - db_type: "encrypted_identity"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.EncryptedIdentityColumn"
           - db_type: "encrypted_async"
             go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.EncryptedAsyncColumn"
           - db_type: "encrypted_async"
@@ -173,6 +175,13 @@ sql:
       go:
         <<: *gengo
         out: "backend/controller/leases/dbleaser/internal/sql"
+  - <<: *daldir
+    queries:
+      - backend/controller/identity/dal/internal/sql/queries.sql
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/identity/dal/internal/sql"
   - <<: *daldir
     queries:
       - backend/controller/encryption/internal/sql/queries.sql
