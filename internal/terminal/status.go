@@ -357,7 +357,7 @@ func (r *terminalStatusManager) writeLine(s string) {
 	defer r.statusLock.RUnlock()
 
 	if r.totalStatusLines == 0 {
-		r.underlyingWrite("\n---" + fmt.Sprintf("%v", r.console) + s)
+		r.underlyingWrite("\n" + s)
 		return
 	}
 	r.clearStatusMessages()
