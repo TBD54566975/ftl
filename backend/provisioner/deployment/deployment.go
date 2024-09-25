@@ -84,7 +84,7 @@ type Deployment struct {
 // next running or pending task. Nil if all tasks are done.
 func (d *Deployment) next() *Task {
 	for _, t := range d.Tasks {
-		if t.State == TaskStatePending || t.State == TaskStateRunning {
+		if t.State == TaskStatePending || t.State == TaskStateRunning || t.State == TaskStateFailed {
 			return t
 		}
 	}
