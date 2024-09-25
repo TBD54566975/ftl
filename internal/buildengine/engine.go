@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -504,37 +504,20 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				// 	continue
 				// }
 
-<<<<<<< HEAD
-				if event.Time.Before(meta.lastBuildStartTime) {
-					logger.Debugf("Skipping build and deploy; event time %v is before the last build time %v", event.Time, meta.lastBuildStartTime)
-					continue // Skip this event as it's outdated
-				}
-				didError = false
-				err := e.BuildAndDeploy(ctx, 1, true, config.Module)
-				if err != nil {
-					didError = true
-					e.reportBuildFailed(err)
-					terminal.UpdateModuleState(ctx, config.Module, terminal.BuildStateFailed)
-					logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
-				} else {
-					didUpdateDeployments = true
-				}
-=======
 				// if event.Time.Before(meta.lastBuildStartTime) {
 				// 	logger.Debugf("Skipping build and deploy; event time %v is before the last build time %v", event.Time, meta.lastBuildStartTime)
 				// 	continue // Skip this event as it's outdated
 				// }
 				// didError = false
-				// err := e.BuildAndDeploy(ctx, 1, true, event.Config.Module)
+				// err := e.BuildAndDeploy(ctx, 1, true, config.Module)
 				// if err != nil {
 				// 	didError = true
 				// 	e.reportBuildFailed(err)
-				// 	console.UpdateModuleState(ctx, event.Config.Module, console.BuildStateFailed)
-				// 	logger.Errorf(err, "build and deploy failed for module %q", event.Config.Module)
+				// 	terminal.UpdateModuleState(ctx, config.Module, terminal.BuildStateFailed)
+				// 	logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
 				// } else {
 				// 	didUpdateDeployments = true
 				// }
->>>>>>> 2fef63a1 (language isolation)
 			}
 		case change := <-schemaChanges:
 			if change.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
@@ -822,16 +805,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if err != nil {
 		return err
 	}
-<<<<<<< HEAD
-	config := meta.module.Config
-	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(config.Dir, config.DeployDir, config.Schema))
-	if err != nil {
-		return fmt.Errorf("could not load schema for module %q: %w", config.Module, err)
-	}
 	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilt)
-=======
-	console.UpdateModuleState(ctx, moduleName, console.BuildStateBuilt)
->>>>>>> 2fef63a1 (language isolation)
 	schemas <- moduleSchema
 	return nil
 }
@@ -894,7 +868,7 @@ func (e *Engine) listenForBuildUpdates(ctx context.Context) {
 		case event := <-e.pluginEvents:
 			switch event := event.(type) {
 			case AutoRebuildStartedEvent:
-				console.UpdateModuleState(ctx, event.Module, console.BuildStateBuilding)
+				terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateBuilding)
 
 			case AutoRebuildEndedEvent:
 				switch result := event.Result.(type) {
@@ -912,7 +886,7 @@ func (e *Engine) listenForBuildUpdates(ctx context.Context) {
 						// return fmt.Errorf("Module %q not found", moduleName)
 						continue
 					}
-					console.UpdateModuleState(ctx, event.Module, console.BuildStateDeploying)
+					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateDeploying)
 					if err := Deploy(ctx, meta.module, 1, true, e.client); err != nil {
 						log.FromContext(ctx).Errorf(err, "deploy %s failed", event.Module)
 						e.reportBuildFailed(err)
