@@ -11,7 +11,10 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/backend/provisioner/deployment"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
@@ -34,6 +37,9 @@ func (c *Config) SetDefaults() {
 
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
+	// TODO: Store in a resource graph
+	currentResources map[string][]*provisioner.Resource
+	registry         deployment.ProvisionerRegistry
 }
 
 var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
@@ -44,17 +50,71 @@ func New(ctx context.Context, config Config, controllerClient ftlv1connect.Contr
 	}, nil
 }
 
+func (s *Service) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+	return &connect.Response[ftlv1.PingResponse]{}, nil
+}
+
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
-	// TODO: provision infrastructure
+	// TODO: Block deployments to make sure only one module is modified at a time
+	moduleName := req.Msg.Schema.Name
+	module, err := schema.ModuleFromProto(req.Msg.Schema)
+	if err != nil {
+		return nil, fmt.Errorf("invalid module schema for module %s: %w", moduleName, err)
+	}
+
+	existingResources := s.currentResources[moduleName]
+	desiredResources, err := deployment.ExtractResources(module)
+	if err != nil {
+		return nil, fmt.Errorf("error extracting resources from schema: %w", err)
+	}
+	if err := replaceOutputs(desiredResources, existingResources); err != nil {
+		return nil, err
+	}
+
+	deployment := s.registry.CreateDeployment(moduleName, desiredResources, existingResources)
+	running := true
+	for running {
+		running, err = deployment.Progress(ctx)
+		if err != nil {
+			// TODO: Deal with failed deployments
+			return nil, fmt.Errorf("error running a provisioner: %w", err)
+		}
+	}
+
+	// TODO: manage multiple deployments properly. Extract as a provisioner plugin
 	response, err := s.controllerClient.CreateDeployment(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
 	}
+
+	s.currentResources[moduleName] = desiredResources
+
 	return response, nil
 }
 
-func (s *Service) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	return &connect.Response[ftlv1.PingResponse]{}, nil
+func replaceOutputs(to []*provisioner.Resource, from []*provisioner.Resource) error {
+	byID := map[string]*provisioner.Resource{}
+	for _, r := range from {
+		byID[r.ResourceId] = r
+	}
+	for _, r := range to {
+		existing := byID[r.ResourceId]
+		if existing == nil {
+			continue
+		}
+		if mysqlTo, ok := r.Resource.(*provisioner.Resource_Mysql); ok {
+			if myslqFrom, ok := existing.Resource.(*provisioner.Resource_Mysql); ok {
+				mysqlTo.Mysql.Output = myslqFrom.Mysql.Output
+			}
+		} else if postgresTo, ok := r.Resource.(*provisioner.Resource_Postgres); ok {
+			if postgresFrom, ok := existing.Resource.(*provisioner.Resource_Postgres); ok {
+				postgresTo.Postgres.Output = postgresFrom.Postgres.Output
+			}
+		} else {
+			return fmt.Errorf("can not replace outputs for an unknown resource type %T", r)
+		}
+	}
+	return nil
 }
 
 // Start the Provisioner. Blocks until the context is cancelled.
