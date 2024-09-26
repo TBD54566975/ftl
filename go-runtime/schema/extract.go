@@ -5,6 +5,7 @@ import (
 	"go/types"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
@@ -297,11 +298,33 @@ func analyzersWithDependencies() []*analysis.Analyzer {
 	//
 	// flattens Extractors (a list of lists) into a single list to provide as input for the checker
 	extractors := Extractors()
-	for i, extractorRound := range extractors {
-		for _, extractor := range extractorRound {
+	var beforeIndex []*analysis.Analyzer
+	var extractorRound []*analysis.Analyzer
+	var extractor *analysis.Analyzer
+	var i int
+	defer func() {
+		// This code is cursed, it randomly panics and I don't know why
+		// Lets recover from the panic and see what the actual state of the program is
+		// This is temporary and should be removed once the curse has been lifted
+		if r := recover(); r != nil {
+			fmt.Printf("Recovered from intermittent panic in analysers: %v\n", r)
+			fmt.Printf("i: %d\n", i)
+			fmt.Printf("extractor: %v\n", extractor)
+			fmt.Printf("extractors: %v\n", extractors)
+			fmt.Printf("extractorRound: %v\n", extractorRound)
+			fmt.Printf("beforeIndex: %v\n", beforeIndex)
+			time.Sleep(time.Second) // Make sure the output makes it before the crash
+			panic(r)                // re-panic
+		}
+	}()
+
+	for i, extractorRound = range extractors {
+		for _, extractor = range extractorRound {
 			extractor.RunDespiteErrors = true
-			extractor.Requires = append(extractor.Requires, dependenciesBeforeIndex(i)...)
+			beforeIndex = dependenciesBeforeIndex(i)
+			extractor.Requires = append(extractor.Requires, beforeIndex...)
 			as = append(as, extractor)
+
 		}
 	}
 	return as
