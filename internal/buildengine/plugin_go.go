@@ -79,7 +79,7 @@ func (p *goPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModu
 	if err := internal.ScaffoldZip(goruntime.Files(), parentPath, sctx, opts...); err != nil {
 		return fmt.Errorf("failed to scaffold: %w", err)
 	}
-	logger.Debugf("Running go mod tidy")
+	logger.Debugf("Running go mod tidy: %s", config.Dir)
 	if err := exec.Command(ctx, log.Debug, config.Dir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
 		return err
 	}

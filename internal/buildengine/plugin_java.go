@@ -102,7 +102,10 @@ func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsMo
 	logger.Debugf("Excluding bin directory")
 	opts = append(opts, scaffolder.Exclude("^bin"))
 	// }
-	if err := internal.ScaffoldZip(source, config.Dir, sctx, opts...); err != nil {
+
+	// scaffold at one directory above the module directory
+	parentPath := filepath.Dir(config.Dir)
+	if err := internal.ScaffoldZip(source, parentPath, sctx, opts...); err != nil {
 		return fmt.Errorf("failed to scaffold: %w", err)
 	}
 	return nil

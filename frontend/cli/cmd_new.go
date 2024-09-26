@@ -39,6 +39,7 @@ func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 	moduleConfig := moduleconfig.ModuleConfig{
 		Module:   name,
 		Language: i.Language,
+		Dir:      path,
 	}.Abs()
 	plugin, err := buildengine.PluginFromConfig(ctx, moduleConfig, config.Root())
 	plugin.CreateModule(ctx, moduleConfig)
