@@ -1,0 +1,16 @@
+name = "ftl"
+module-dirs = ["."]
+
+[modules]
+  [modules.origin]
+    [modules.origin.configuration]
+      nonce = "inline://ImFiY2Qi"
+  [modules.relay]
+    [modules.relay.configuration]
+      log_file = "inline://Ii9Vc2Vycy9zYWZlZXIvdG1wL2V4ZW1wbGFyLnRtcC5sb2ci"
+    [modules.relay.secrets]
+      FTL_DSN_RELAY_EXEMPLARDB = "inline://OUNUTlo3ekxuZjZPSmpxZmNyazR3d3ZZN1NINSs4K2MwdzdPNjQ1b0dLVHB4MVJZVExNK1J3dFhlWEFDMUZEWUMzRVZzTFhIYWcyVzdQSk1wV01tcjBRVUJFMTduaGFpQjArRTNydlZpeldTMllmTmk4SWI4YmdnRkVOQksvRW0zNEtuR05nNGFJV1krUXk0VUFHZjI4ckhscWo4"
+
+[commands]
+  startup = ["echo 'FTL exemplar startup ⚡️⚡️'"]
+  

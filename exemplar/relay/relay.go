@@ -99,35 +99,47 @@ func Terminated(ctx context.Context, t agentTerminated) error {
 	return nil
 }
 
-// Exported verb
+// Exported verbs
 
 type MissionResultRequest struct {
-	AgentID    int  `json:"agent_id"`
-	Successful bool `json:"successful"`
+	AgentID    int
+	Successful bool
 }
 
 type MissionResultResponse struct{}
 
 //ftl:verb export
 func MissionResult(ctx context.Context, req MissionResultRequest) (MissionResultResponse, error) {
+	fmt.Printf("Mission result for agent %v: %t\n", req.AgentID, req.Successful)
 	agentID := req.AgentID
 	var event any
 	if req.Successful {
 		event = missionSuccess{
-			AgentID:   agentID,
+			AgentID:   int(agentID),
 			SuccessAt: time.Now(),
 		}
 	} else {
 		event = agentTerminated{
-			AgentID:      agentID,
+			AgentID:      int(agentID),
 			TerminatedAt: time.Now(),
 		}
 	}
-	err := mission.Send(ctx, strconv.Itoa(agentID), event)
+	fmt.Printf("Sending event %v\n", event)
+	err := mission.Send(ctx, strconv.Itoa(int(agentID)), event)
 	if err != nil {
 		return MissionResultResponse{}, err
 	}
 	return MissionResultResponse{}, nil
+}
+
+type GetLogFileRequest struct{}
+type GetLogFileResponse struct {
+	Path string
+}
+
+//ftl:verb export
+func GetLogFile(ctx context.Context, req GetLogFileRequest) (GetLogFileResponse, error) {
+	return GetLogFileResponse{Path: logFile.Get(ctx)}, nil
 }
 
 // DB

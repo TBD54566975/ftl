@@ -5,6 +5,7 @@ package exemplar
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"testing"
 
@@ -13,25 +14,25 @@ import (
 )
 
 func TestExemplar(t *testing.T) {
-	logFilePath := filepath.Join(t.TempDir(), "exemplar.log")
+	tmpDir := t.TempDir()
+	logFilePath := filepath.Join(tmpDir, "exemplar.log")
+
 	var postResult struct {
 		ID int `json:"id"`
 	}
-	var successAgentId int
-	var failedAgentId int
+	var successAgentId int = 7
+	var failedAgentId int = 99
+	nonce := randomString(4)
+
 	in.Run(t,
-		// in.WithFTLConfig("../../../ftl-project.toml"),
+		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),
 		in.CopyModule("origin"),
 		in.CopyModule("relay"),
 		in.CopyModule("pulse"),
 		in.CreateDBAction("relay", "exemplardb", false),
-		in.Deploy("origin"),
-		in.Deploy("relay"),
-		in.Deploy("pulse"),
 
-		// TODO abcd
-		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", "--inline", "abcd"}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", "--inline", nonce}, func(output string) {
 			fmt.Println(output)
 		}),
 
@@ -39,31 +40,29 @@ func TestExemplar(t *testing.T) {
 			fmt.Println(output)
 		}),
 
-		in.ExecWithOutput("ftl", []string{"config", "set", "pulse.log_file", "--inline", logFilePath}, func(output string) {
-			fmt.Println(output)
-		}),
+		in.Deploy("origin"),
+		in.Deploy("relay"),
+		in.Deploy("pulse"),
 
-		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/http/agent", "-H", "Content-Type: application/json", "-d", `{"alias": "bond", "license_to_kill": true, "hired_at": "2023-10-23T23:20:45.00Z"}`}, func(output string) {
+		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/http/agent", "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "james", "license_to_kill": true, "hired_at": "2023-10-23T23:20:45.00Z"}`, successAgentId)}, func(output string) {
 			err := json.Unmarshal([]byte(output), &postResult)
 			assert.NoError(t, err)
-			successAgentId = postResult.ID
-			fmt.Printf("successAgentId: %d\n", successAgentId)
+			assert.Equal(t, successAgentId, postResult.ID)
 		}),
 
-		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/http/agent", "-H", "Content-Type: application/json", "-d", `{"alias": "notbond", "license_to_kill": false, "hired_at": "2024-08-12T21:10:37.00Z"}`}, func(output string) {
+		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/http/agent", "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "bill", "license_to_kill": false, "hired_at": "2024-08-12T21:10:37.00Z"}`, failedAgentId)}, func(output string) {
 			err := json.Unmarshal([]byte(output), &postResult)
 			assert.NoError(t, err)
-			failedAgentId = postResult.ID
-			fmt.Printf("failedAgentId: %d\n", failedAgentId)
+			assert.Equal(t, failedAgentId, postResult.ID)
 		}),
 
 		in.Sleep(2*1000*1000),
 
-		in.ExecWithOutput("ftl", []string{"call", "relay.missionResult", fmt.Sprintf(`{"agent_id": %d, "successful": true}`, successAgentId)}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"call", "relay.missionResult", fmt.Sprintf(`{"agentId": %v, "successful": true}`, successAgentId)}, func(output string) {
 			fmt.Println(output)
 		}),
 
-		in.ExecWithOutput("ftl", []string{"call", "relay.missionResult", fmt.Sprintf(`{"agent_id": %d, "successful": false}`, failedAgentId)}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"call", "relay.missionResult", fmt.Sprintf(`{"agentId": %v, "successful": false}`, failedAgentId)}, func(output string) {
 			fmt.Println(output)
 		}),
 
@@ -73,5 +72,16 @@ func TestExemplar(t *testing.T) {
 		in.FileContains(logFilePath, fmt.Sprintf("deployed %d", failedAgentId)),
 		in.FileContains(logFilePath, fmt.Sprintf("succeeded %d", successAgentId)),
 		in.FileContains(logFilePath, fmt.Sprintf("terminated %d", failedAgentId)),
+		in.FileContains(logFilePath, fmt.Sprintf("cron %v", nonce)),
 	)
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyz"
+
+func randomString(length int) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
 }

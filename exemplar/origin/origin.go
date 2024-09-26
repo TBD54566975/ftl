@@ -2,8 +2,6 @@ package origin
 
 import (
 	"context"
-	"crypto/rand"
-	"math/big"
 	"time"
 
 	"ftl/builtin"
@@ -17,14 +15,7 @@ var nonce = ftl.Config[string]("nonce")
 var AgentBroadcast = ftl.Topic[Agent]("agentBroadcast")
 
 type Agent struct {
-	ID            int
-	Alias         string
-	LicenseToKill bool
-	HiredAt       time.Time
-	BriefedAt     ftl.Option[time.Time]
-}
-
-type PostAgentRequest struct {
+	ID            int                   `json:"id"`
 	Alias         string                `json:"alias"`
 	LicenseToKill bool                  `json:"license_to_kill"`
 	HiredAt       time.Time             `json:"hired_at"`
@@ -38,9 +29,9 @@ type PostAgentResponse struct {
 type PostAgentErrorResponse string
 
 //ftl:ingress POST /http/agent
-func PostAgent(ctx context.Context, req builtin.HttpRequest[PostAgentRequest, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse], error) {
+func PostAgent(ctx context.Context, req builtin.HttpRequest[Agent, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse], error) {
 	agent := Agent{
-		ID:            generateRandomID(),
+		ID:            req.Body.ID,
 		Alias:         req.Body.Alias,
 		LicenseToKill: req.Body.LicenseToKill,
 		HiredAt:       req.Body.HiredAt,
@@ -61,14 +52,4 @@ type GetNonceResponse struct{ Nonce string }
 //ftl:verb export
 func GetNonce(ctx context.Context, req GetNonceRequest) (GetNonceResponse, error) {
 	return GetNonceResponse{Nonce: nonce.Get(ctx)}, nil
-}
-
-// Helpers
-
-func generateRandomID() int {
-	n, err := rand.Int(rand.Reader, big.NewInt(1000))
-	if err != nil {
-		panic(err)
-	}
-	return int(n.Int64())
 }

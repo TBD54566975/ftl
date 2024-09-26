@@ -6,20 +6,20 @@ import java.io.IOException;
 import ftl.origin.GetNonceClient;
 import ftl.origin.GetNonceRequest;
 import ftl.origin.GetNonceResponse;
+import ftl.relay.GetLogFileClient;
+import ftl.relay.GetLogFileRequest;
+import ftl.relay.GetLogFileResponse;
 import io.quarkus.logging.Log;
-import xyz.block.ftl.Config;
 import xyz.block.ftl.Cron;
 
 public class Pulse {
 
     @Cron("1s")
-    public void cron(GetNonceClient getNonceClient, @Config("log_file") String lf) throws Exception {
-        if (lf == null || lf.isEmpty()) {
-            throw new IllegalArgumentException("log_file config not set");
-        }
+    public void cron10s(GetNonceClient getNonceClient, GetLogFileClient getLogFileClient) throws Exception {
         GetNonceResponse nr = getNonceClient.call(new GetNonceRequest());
-        Log.infof("Cron job triggered, lf: %s, received nonce: %s", lf, nr);
-        appendLog(lf, "cron %s", nr);
+        GetLogFileResponse lfr = getLogFileClient.call(new GetLogFileRequest());
+        Log.infof("Cron job triggered, nonce %s, log file: %s", nr.getNonce(), lfr.getPath());
+        appendLog(lfr.getPath(), "cron %s", nr.getNonce());
     }
 
     public static void appendLog(String path, String msg, Object... args) {
