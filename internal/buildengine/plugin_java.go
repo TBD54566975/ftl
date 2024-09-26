@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/beevik/etree"
 	"golang.org/x/exp/maps"
@@ -24,7 +25,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/jvm-runtime/java"
 	"github.com/TBD54566975/ftl/jvm-runtime/kotlin"
-	"github.com/TBD54566975/scaffolder"
 )
 
 type javaPlugin struct {
