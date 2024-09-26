@@ -463,16 +463,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			case WatchEventModuleAdded:
 				config := event.Config
 				if _, exists := e.moduleMetas.Load(config.Module); !exists {
-					// TODO: this was a fast func before, but now we are initializing a plugin here which could be slow...
 					meta, err := e.newModuleMeta(ctx, config, e.projectRoot)
 					if err != nil {
-						return err
+						logger.Errorf(err, "could not add module %s", config.Module)
+						continue
 					}
-					// TODO: we werent getting deps before. should we now?
-					// meta, err = meta.copyWithUpdatedDependencies(ctx)
-					// if err != nil {
-					// 	return err
-					// }
 					e.moduleMetas.Store(config.Module, meta)
 					didError = false
 					err = e.BuildAndDeploy(ctx, 1, true, config.Module)
