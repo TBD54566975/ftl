@@ -108,7 +108,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 	defer l.lock.Unlock()
 	logger := log.FromContext(ctx).Scope("localScaling").Module(msg.ModuleName)
 	ctx = log.ContextWithLogger(ctx, logger)
-	logger.Infof("Handling schema change for %s", msg.DeploymentKey)
+	logger.Debugf("Handling schema change for %s", msg.DeploymentKey)
 	moduleDeployments := l.runners[msg.ModuleName]
 	if moduleDeployments == nil {
 		moduleDeployments = map[string]*deploymentInfo{}
