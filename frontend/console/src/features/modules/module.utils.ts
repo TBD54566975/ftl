@@ -96,7 +96,7 @@ export const declFromSchema = (moduleName: string, declName: string, schema: Pul
   return module.schema.decls.find((d) => d.value.value?.name === declName)
 }
 
-export const listExpandedModulesFromLocalStorage = () => (localStorage.getItem('tree_m') || '').split(',')
+export const listExpandedModulesFromLocalStorage = () => (localStorage.getItem('tree_m') || '').split(',').filter((s) => s !== '')
 
 export const toggleModuleExpansionInLocalStorage = (moduleName: string) => {
   const expanded = listExpandedModulesFromLocalStorage()
@@ -115,6 +115,8 @@ export const addModuleToLocalStorageIfMissing = (moduleName?: string) => {
     localStorage.setItem('tree_m', [...expanded, moduleName].join(','))
   }
 }
+
+export const collapseAllModulesInLocalStorage = () => localStorage.setItem('tree_m', '')
 
 type IconMap = Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>>
 export const declIcons: IconMap = {

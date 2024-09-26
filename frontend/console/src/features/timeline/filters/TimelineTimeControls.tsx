@@ -1,6 +1,6 @@
 import { Timestamp } from '@bufbuild/protobuf'
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
-import { Backward02Icon, Forward02Icon, PauseIcon, PlayIcon, Tick02Icon, UnfoldLessIcon } from 'hugeicons-react'
+import { ArrowDown01Icon, Backward02Icon, Forward02Icon, PauseIcon, PlayIcon, Tick02Icon } from 'hugeicons-react'
 import { useEffect, useState } from 'react'
 import { bgColor, borderColor, classNames, formatTimestampShort, formatTimestampTime, panelColor, textColor } from '../../../utils'
 
@@ -117,7 +117,7 @@ export const TimelineTimeControls = ({
             >
               <span className='block truncate'>{selected.label}</span>
               <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1'>
-                <UnfoldLessIcon className='h-5 w-5 text-gray-400' aria-hidden='true' />
+                <ArrowDown01Icon className='h-5 w-5 text-gray-400' aria-hidden='true' />
               </span>
             </ListboxButton>
 

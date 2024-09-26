@@ -1,10 +1,20 @@
-import { ArrowRight01Icon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon } from 'hugeicons-react'
+import { ArrowRight01Icon, ArrowShrinkIcon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
+import type { MultiselectOpt } from '../../components/Multiselect'
 import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils'
 import type { ModuleTreeItem } from './module.utils'
-import { addModuleToLocalStorageIfMissing, declIcons, declUrl, listExpandedModulesFromLocalStorage, toggleModuleExpansionInLocalStorage } from './module.utils'
+import {
+  addModuleToLocalStorageIfMissing,
+  collapseAllModulesInLocalStorage,
+  declIcons,
+  declUrl,
+  listExpandedModulesFromLocalStorage,
+  toggleModuleExpansionInLocalStorage,
+} from './module.utils'
+import { declTypeMultiselectOpts } from './schema/schema.utils'
 
 const ExportedIcon = () => (
   <span className='w-4' title='Exported'>
@@ -55,7 +65,12 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
   )
 }
 
-const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: ModuleTreeItem; isExpanded: boolean; toggleExpansion: (m: string) => void }) => {
+const ModuleSection = ({
+  module,
+  isExpanded,
+  toggleExpansion,
+  selectedDeclTypes,
+}: { module: ModuleTreeItem; isExpanded: boolean; toggleExpansion: (m: string) => void; selectedDeclTypes: MultiselectOpt[] }) => {
   const { moduleName, declName } = useParams()
   const navigate = useNavigate()
   const isSelected = useMemo(() => moduleName === module.name, [moduleName, module.name])
@@ -71,6 +86,11 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
       }
     }
   }, [moduleName]) // moduleName is the selected module; module.name is the one being rendered
+
+  const filteredDecls = useMemo(
+    () => module.decls.filter((d) => d.value?.case && !!selectedDeclTypes.find((o) => o.key === d.value.case)),
+    [module.decls, selectedDeclTypes],
+  )
 
   return (
     <li key={module.name} id={`module-tree-module-${module.name}`} className='my-2'>
@@ -92,13 +112,13 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
             navigate(`/modules/${module.name}`)
           }}
         />
-        {module.decls.length === 0 || (
-          <ArrowRight01Icon aria-hidden='true' className='ml-auto mr-2 h-4 w-4 shrink-0 group-data-[open]:rotate-90 group-data-[open]:text-gray-500' />
+        {filteredDecls.length === 0 || (
+          <ArrowRight01Icon aria-hidden='true' className={`ml-auto mr-2 h-4 w-4 shrink-0 ${isExpanded ? 'rotate-90 text-gray-500' : ''}`} />
         )}
       </div>
       {isExpanded && (
         <ul>
-          {module.decls.map((d, i) => (
+          {filteredDecls.map((d, i) => (
             <DeclNode key={i} decl={d} href={declUrl(module.name, d)} isSelected={isSelected && declName === d.value.value?.name} />
           ))}
         </ul>
@@ -107,8 +127,15 @@ const ModuleSection = ({ module, isExpanded, toggleExpansion }: { module: Module
   )
 }
 
+const declTypesSearchParamKey = 'dt'
+
 export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
   const { moduleName, declName } = useParams()
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const declTypeKeysFromUrl = searchParams.getAll(declTypesSearchParamKey)
+  const declTypesFromUrl = declTypeMultiselectOpts.filter((o) => declTypeKeysFromUrl.includes(o.key))
+  const [selectedDeclTypes, setSelectedDeclTypes] = useState(declTypesFromUrl.length === 0 ? declTypeMultiselectOpts : declTypesFromUrl)
 
   const [expandedModules, setExpandedModules] = useState(listExpandedModulesFromLocalStorage())
   useEffect(() => {
@@ -117,19 +144,51 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     }
   }, [moduleName, declName])
 
-  function toggleFn(moduleName: string) {
+  function msOnChange(opts: MultiselectOpt[]) {
+    const params = new URLSearchParams()
+    if (opts.length !== declTypeMultiselectOpts.length) {
+      for (const o of sortMultiselectOpts(opts)) {
+        params.append(declTypesSearchParamKey, o.key)
+      }
+    }
+    setSearchParams(params)
+    setSelectedDeclTypes(opts)
+  }
+
+  function toggle(moduleName: string) {
     toggleModuleExpansionInLocalStorage(moduleName)
     setExpandedModules(listExpandedModulesFromLocalStorage())
-    return
+  }
+
+  function collapseAll() {
+    collapseAllModulesInLocalStorage()
+    setExpandedModules([])
   }
 
   modules.sort((m1, m2) => Number(m1.isBuiltin) - Number(m2.isBuiltin))
   return (
     <div className={'flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'}>
       <nav>
+        <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900'>
+          <span className='block w-[calc(100%-30px)]'>
+            <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
+          </span>
+          <span
+            className='absolute inset-y-0 right-0 flex items-center px-1 mx-1 my-1.5 rounded-md cursor-pointer bg-gray-300 hover:bg-gray-400 dark:bg-gray-800 hover:dark:bg-gray-700'
+            onClick={collapseAll}
+          >
+            <ArrowShrinkIcon className='w-5 dark:text-gray-300' />
+          </span>
+        </div>
         <ul>
           {modules.map((m) => (
-            <ModuleSection key={m.name} module={m} isExpanded={expandedModules.includes(m.name)} toggleExpansion={toggleFn} />
+            <ModuleSection
+              key={m.name}
+              module={m}
+              isExpanded={expandedModules.includes(m.name)}
+              toggleExpansion={toggle}
+              selectedDeclTypes={selectedDeclTypes}
+            />
           ))}
         </ul>
       </nav>
