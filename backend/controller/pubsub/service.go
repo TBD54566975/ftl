@@ -26,8 +26,8 @@ const (
 )
 
 type Scheduler interface {
-	Singleton(retry backoff.Backoff, job scheduledtask.Job)
-	Parallel(retry backoff.Backoff, job scheduledtask.Job)
+	Singleton(name string, retry backoff.Backoff, job scheduledtask.Job)
+	Parallel(name string, retry backoff.Backoff, job scheduledtask.Job)
 }
 
 type AsyncCallListener interface {
@@ -46,7 +46,7 @@ func New(conn libdal.Connection, encryption *encryption.Service, scheduler Sched
 		scheduler:         scheduler,
 		asyncCallListener: asyncCallListener,
 	}
-	m.scheduler.Parallel(backoff.Backoff{
+	m.scheduler.Parallel("progress-subs", backoff.Backoff{
 		Min:    1 * time.Second,
 		Max:    5 * time.Second,
 		Jitter: true,

@@ -5,10 +5,7 @@ import (
 	"context"
 	"errors"
 	"math/rand"
-	"reflect"
-	"runtime"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -74,19 +71,16 @@ func NewForTesting(ctx context.Context, id model.ControllerKey, clock clock.Cloc
 //
 // This is not guaranteed, however, as controllers may have inconsistent views
 // of the hash ring.
-func (s *Scheduler) Singleton(retry backoff.Backoff, job Job) {
-	s.schedule(retry, job, true)
+func (s *Scheduler) Singleton(name string, retry backoff.Backoff, job Job) {
+	s.schedule(name, retry, job, true)
 }
 
 // Parallel schedules a job to run on every controller.
-func (s *Scheduler) Parallel(retry backoff.Backoff, job Job) {
-	s.schedule(retry, job, false)
+func (s *Scheduler) Parallel(name string, retry backoff.Backoff, job Job) {
+	s.schedule(name, retry, job, false)
 }
 
-func (s *Scheduler) schedule(retry backoff.Backoff, job Job, singlyHomed bool) {
-	name := runtime.FuncForPC(reflect.ValueOf(job).Pointer()).Name()
-	name = name[strings.LastIndex(name, ".")+1:]
-	name = strings.TrimSuffix(name, "-fm")
+func (s *Scheduler) schedule(name string, retry backoff.Backoff, job Job, singlyHomed bool) {
 	s.jobs <- &descriptor{
 		name:        name,
 		retry:       retry,

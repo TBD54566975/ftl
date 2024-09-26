@@ -319,22 +319,32 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		return makeBackoff(minDelay, maxDelay), job
 	}
 
+	parallelTask := func(job scheduledtask.Job, name string, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) {
+		maybeDevelJob, backoff := maybeDevelTask(job, name, maxNext, minDelay, maxDelay, develBackoff...)
+		svc.tasks.Parallel(name, maybeDevelJob, backoff)
+	}
+
+	singletonTask := func(job scheduledtask.Job, name string, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) {
+		maybeDevelJob, backoff := maybeDevelTask(job, name, maxNext, minDelay, maxDelay, develBackoff...)
+		svc.tasks.Singleton(name, maybeDevelJob, backoff)
+	}
+
 	// Parallel tasks.
-	svc.tasks.Parallel(maybeDevelTask(svc.syncRoutes, "sync-routes", time.Second, time.Second, time.Second*5))
-	svc.tasks.Parallel(maybeDevelTask(svc.heartbeatController, "controller-heartbeat", time.Second, time.Second*3, time.Second*5))
-	svc.tasks.Parallel(maybeDevelTask(svc.updateControllersList, "update-controllers-list", time.Second, time.Second*5, time.Second*5))
-	svc.tasks.Parallel(maybeDevelTask(svc.executeAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10))
+	parallelTask(svc.syncRoutes, "sync-routes", time.Second, time.Second, time.Second*5)
+	parallelTask(svc.heartbeatController, "controller-heartbeat", time.Second, time.Second*3, time.Second*5)
+	parallelTask(svc.updateControllersList, "update-controllers-list", time.Second, time.Second*5, time.Second*5)
+	parallelTask(svc.executeAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10)
 
 	// This should be a singleton task, but because this is the task that
 	// actually expires the leases used to run singleton tasks, it must be
 	// parallel.
-	svc.tasks.Parallel(maybeDevelTask(svc.expireStaleLeases, "expire-stale-leases", time.Second*2, time.Second, time.Second*5))
+	parallelTask(svc.expireStaleLeases, "expire-stale-leases", time.Second*2, time.Second, time.Second*5)
 
 	// Singleton tasks use leases to only run on a single controller.
-	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleControllers, "reap-stale-controllers", time.Second*2, time.Second*20, time.Second*20))
-	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10))
-	svc.tasks.Singleton(maybeDevelTask(svc.reapCallEvents, "reap-call-events", time.Minute*5, time.Minute, time.Minute*30))
-	svc.tasks.Singleton(maybeDevelTask(svc.reapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5))
+	singletonTask(svc.reapStaleControllers, "reap-stale-controllers", time.Second*2, time.Second*20, time.Second*20)
+	singletonTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10)
+	singletonTask(svc.reapCallEvents, "reap-call-events", time.Minute*5, time.Minute, time.Minute*30)
+	singletonTask(svc.reapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5)
 	return svc, nil
 }
 
