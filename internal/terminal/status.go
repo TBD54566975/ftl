@@ -264,11 +264,9 @@ func (r *terminalStatusManager) clearStatusMessages() {
 	count := r.totalStatusLines
 	if r.console {
 		count--
-		// Don't clear the console line
-		r.underlyingWrite("\u001B[1A")
 	}
 	for range count {
-		r.underlyingWrite("\033[2K\u001B[1A")
+		r.underlyingWrite("\u001B[1A\u001B[2K")
 	}
 }
 
@@ -357,11 +355,11 @@ func (r *terminalStatusManager) writeLine(s string) {
 	defer r.statusLock.RUnlock()
 
 	if r.totalStatusLines == 0 {
-		r.underlyingWrite("\n" + s)
+		r.underlyingWrite("\r" + s + "\n")
 		return
 	}
 	r.clearStatusMessages()
-	r.underlyingWrite("\n" + s)
+	r.underlyingWrite("\r" + s + "\n")
 	r.redrawStatus()
 
 }
@@ -372,11 +370,8 @@ func (r *terminalStatusManager) redrawStatus() {
 	for i := len(r.lines) - 1; i >= 0; i-- {
 		msg := r.lines[i].message
 		if msg != "" {
-			r.underlyingWrite("\n" + msg)
+			r.underlyingWrite("\r" + msg + "\n")
 		}
-	}
-	if r.console {
-		r.underlyingWrite("\n")
 	}
 	if r.consoleRefresh != nil {
 		r.consoleRefresh()

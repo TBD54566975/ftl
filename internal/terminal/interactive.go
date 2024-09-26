@@ -39,6 +39,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 	ok := false
 	if tsm, ok = sm.(*terminalStatusManager); ok {
 		tsm.statusLock.Lock()
+		tsm.clearStatusMessages()
 		tsm.console = true
 		tsm.consoleRefresh = l.Refresh
 		tsm.recalculateLines()
