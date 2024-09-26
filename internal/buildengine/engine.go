@@ -639,6 +639,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 				ctx := log.ContextWithLogger(ctx, logger)
 				err := e.tryBuild(ctx, mustBuild, moduleName, builtModules, schemas, callback)
 				if err != nil {
+					terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 					errCh <- err
 				}
 				return nil
