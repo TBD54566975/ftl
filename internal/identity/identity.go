@@ -1,56 +1,65 @@
 package identity
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 type Identity interface {
-	Name() string
 }
 
-func Parse(s string) (Identity, error) {
-	parts := strings.Split(s, ":")
-	if parts[0] == "r" {
-		if len(parts) != 3 {
-			return nil, fmt.Errorf("invalid runner parts: %s", s)
-		}
-		return Runner{ID: parts[1], Module: parts[2]}, nil
+func Parse(d []byte) (Identity, error) {
+	var identity Runner // TODO: use protos instead of json
+	if json.Unmarshal(d, &identity) != nil {
+		return nil, fmt.Errorf("failed to unmarshal identity")
 	}
 
-	return nil, fmt.Errorf("unknown starting char: %s", s)
+	return identity, nil
 }
-
-var _ Identity = &Runner{}
 
 type Runner struct {
-	ID     string
-	Module string
+	Key model.RunnerKey
+	// Module string
 }
 
-func (r Runner) Name() string {
-	return fmt.Sprintf("r:%s:%s", r.ID, r.Module)
+func NewRunner(key model.RunnerKey) Runner {
+	return Runner{Key: key}
 }
 
-func Sign[T Identity](signer Signer, identity T) (*SignedData, error) {
-	return signer.Sign([]byte(identity.Name()))
+func (r Runner) String() string {
+	return fmt.Sprintf("r:%s", r.Key)
+}
+
+func Sign[T Identity](signer Signer, identity T) (SignedData, error) {
+	encoded, err := json.Marshal(identity)
+	if err != nil {
+		return SignedData{}, fmt.Errorf("failed to marshal identity: %w", err)
+	}
+	signedData, err := signer.Sign(encoded)
+	if err != nil {
+		return SignedData{}, fmt.Errorf("failed to sign identity: %w", err)
+	}
+	return signedData, nil
 }
 
 type Store struct {
+	Identity    Identity
 	KeyPair     KeyPair
 	Certificate optional.Option[KeyPair]
 }
 
-func NewStore() (*Store, error) {
+func NewStore(identity Identity) (*Store, error) {
 	// gen signing set
 	// keep all in memory
 	// optional field for certificate (of the runner's public key)
 	// { certificate: { trustedid: "" }, verb: {} }
-	// runner:<id>:<module>
-	// controller:<id>
-	// provisioner:<id>
+	// r:<id>:<module> runner
+	// c:<id> controller
+	// p:<id> provisioner
 
 	pair, err := GenerateTinkKeyPair()
 	if err != nil {

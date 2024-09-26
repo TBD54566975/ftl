@@ -33,6 +33,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
+	"github.com/TBD54566975/ftl/internal/identity"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -98,8 +99,15 @@ func Start(ctx context.Context, config Config) error {
 		return fmt.Errorf("failed to marshal labels: %w", err)
 	}
 
+	identityStore, err := identity.NewStore(identity.NewRunner(key))
+	if err != nil {
+		observability.Runner.StartupFailed(ctx)
+		return fmt.Errorf("failed to create identity store: %w", err)
+	}
+
 	svc := &Service{
 		key:                key,
+		identity:           identityStore,
 		config:             config,
 		controllerClient:   controllerClient,
 		labels:             labels,
@@ -193,6 +201,7 @@ type deployment struct {
 
 type Service struct {
 	key        model.RunnerKey
+	identity   *identity.Store
 	lock       sync.Mutex
 	deployment atomic.Value[optional.Option[*deployment]]
 
@@ -228,6 +237,8 @@ func (s *Service) deploy(ctx context.Context) error {
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to register runner: %w", err))
 	}
 
+	fmt.Printf("c config deployment %v\n", s.config.Deployment)
+	panic("implement me")
 	key, err := model.ParseDeploymentKey(s.config.Deployment)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.None[string]())

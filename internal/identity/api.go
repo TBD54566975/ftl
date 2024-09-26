@@ -15,7 +15,7 @@ type KeyPair interface {
 }
 
 type Signer interface {
-	Sign(data []byte) (*SignedData, error)
+	Sign(data []byte) (SignedData, error)
 	Public() (PublicKey, error)
 }
 

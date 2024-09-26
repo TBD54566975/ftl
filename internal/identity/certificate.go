@@ -1,8 +1,8 @@
 package identity
 
 import (
+	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 type CertificateData struct {
@@ -11,26 +11,16 @@ type CertificateData struct {
 }
 
 func ParseCertificateData(bytes []byte) (*CertificateData, error) {
-	str := string(bytes)
-	lastColon := strings.LastIndex(str, ":")
-	if lastColon == -1 {
-		return nil, fmt.Errorf("no colon in certificate data: %s", str)
-	}
-	idStr, pubKey := str[:lastColon], str[lastColon+1:]
-
-	id, err := Parse(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse identity: %w", err)
+	var certData CertificateData
+	if err := json.Unmarshal(bytes, &certData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal certificate data: %w", err)
 	}
 
-	return &CertificateData{
-		ID:            id,
-		NodePublicKey: PublicKey(pubKey),
-	}, nil
+	return &certData, nil
 }
 
 func (c CertificateData) String() string {
-	return fmt.Sprintf("%s:%x", c.ID, c.NodePublicKey)
+	return fmt.Sprintf("CertData(%s %x)", c.ID, c.NodePublicKey)
 }
 
 type Certificate struct {
@@ -38,35 +28,36 @@ type Certificate struct {
 }
 
 func (c Certificate) String() string {
-	return fmt.Sprintf("Certificate %s signed:%x", c.data, c.Signature)
+	return fmt.Sprintf("Certificate(%s %x)", c.data, c.Signature)
 }
 
 // SignCertificateRequest signs an identity certificate request.
 // This does not verify the contents of the data--it is assumed that the caller has already done so.
-func SignCertificateRequest(caSigner Signer, nodePublic PublicKey, signedData SignedData) (*Certificate, error) {
+func SignCertificateRequest(caSigner Signer, nodePublic PublicKey, signedData SignedData) (Certificate, error) {
 	nodeVerifier, err := NewTinkVerifier(nodePublic)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create verifier: %w", err)
+		return Certificate{}, fmt.Errorf("failed to create verifier: %w", err)
 	}
 	data, err := nodeVerifier.Verify(signedData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify signed data: %w", err)
+		return Certificate{}, fmt.Errorf("failed to verify signed data: %w", err)
 	}
-	id, err := Parse(string(data))
+	id, err := Parse(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse identity: %w", err)
+		return Certificate{}, fmt.Errorf("failed to parse identity: %w", err)
 	}
 
 	certData := CertificateData{
 		ID:            id,
 		NodePublicKey: nodePublic,
 	}
-	caSigned, err := caSigner.Sign([]byte(certData.String()))
+	certDataEncoded, err := json.Marshal(certData)
+	caSigned, err := caSigner.Sign(certDataEncoded)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign certificate: %w", err)
+		return Certificate{}, fmt.Errorf("failed to sign certificate: %w", err)
 	}
 
-	return &Certificate{SignedData: *caSigned}, nil
+	return Certificate{SignedData: caSigned}, nil
 }
 
 type CertifiedSignedData struct {

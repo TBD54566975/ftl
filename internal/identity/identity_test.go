@@ -21,13 +21,13 @@ func TestBasics(t *testing.T) {
 	verifier, err := keyPair.Verifier()
 	assert.NoError(t, err)
 
-	data, err = verifier.Verify(*signedData)
+	data, err = verifier.Verify(signedData)
 	assert.NoError(t, err)
 	assert.Equal(t, "hunter2", string(data))
 
 	// Now fail it just for sanity
 	signedData.Signature[0] = ^signedData.Signature[0]
-	_, err = verifier.Verify(*signedData)
+	_, err = verifier.Verify(signedData)
 	assert.EqualError(t, err, "failed to verify signature: verifier_factory: invalid signature")
 }
 
@@ -56,7 +56,7 @@ func TestCertificate(t *testing.T) {
 	// Hand wave "check the ID and module"
 
 	// Sign the certificate
-	certificate, err := SignCertificateRequest(caSigner, runnerPublicKey, *runnerSignedData)
+	certificate, err := SignCertificateRequest(caSigner, runnerPublicKey, runnerSignedData)
 	assert.NoError(t, err)
 
 	fmt.Printf("Certificate: %s\n", certificate)
@@ -65,9 +65,11 @@ func TestCertificate(t *testing.T) {
 	message := []byte("hello")
 	signedMessage, err := runnerSigner.Sign(message)
 	certified := CertifiedSignedData{
-		Certificate: *certificate,
-		SignedData:  *signedMessage,
+		Certificate: certificate,
+		SignedData:  signedMessage,
 	}
+
+	fmt.Printf("Certified message: %s\n", certified)
 
 	// Hand wave "send the certificate to the runner"
 

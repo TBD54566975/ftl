@@ -15,13 +15,13 @@ type TinkSigner struct {
 	signer tink.Signer
 }
 
-func (k TinkSigner) Sign(data []byte) (*SignedData, error) {
+func (k TinkSigner) Sign(data []byte) (SignedData, error) {
 	bytes, err := k.signer.Sign(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign data: %w", err)
+		return SignedData{}, fmt.Errorf("failed to sign data: %w", err)
 	}
 
-	return &SignedData{
+	return SignedData{
 		data:      data,
 		Signature: bytes,
 	}, nil
@@ -38,6 +38,7 @@ type TinkVerifier struct {
 }
 
 func NewTinkVerifier(publicKey []byte) (Verifier, error) {
+	fmt.Printf("publicKey: %s\n", string(publicKey))
 	reader := keyset.NewBinaryReader(bytes.NewReader(publicKey))
 	public, err := keyset.ReadWithNoSecrets(reader)
 	if err != nil {
