@@ -84,16 +84,7 @@ func CreateForDevel(ctx context.Context, dsn string, recreate bool) (*stdsql.DB,
 	// controller/runner registration, etc. but not anything more.
 	if !recreate {
 		_, err = realConn.ExecContext(ctx, `
-			WITH deleted AS (
-				DELETE FROM async_calls
-				RETURNING 1
-			), deleted_fsm_instances AS (
-				DELETE FROM fsm_instances
-				RETURNING 1
-			), deleted_leases AS (
-				DELETE FROM leases
-				RETURNING 1
-			), deleted_controllers AS (
+			WITH deleted_controllers AS (
 				DELETE FROM controllers
 				RETURNING 1
 			), deleted_runners AS (
