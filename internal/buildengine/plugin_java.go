@@ -33,26 +33,8 @@ type javaPlugin struct {
 
 var _ = LanguagePlugin(&javaPlugin{})
 
-func newJavaPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig, projectPath string) *javaPlugin {
-	internal := newInternalPlugin(ctx, config, func(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
-		logger := log.FromContext(ctx)
-		if config.Java.BuildTool == moduleconfig.JavaBuildToolMaven {
-			if err := setPOMProperties(ctx, config.Dir); err != nil {
-				// This is not a critical error, things will probably work fine
-				// TBH updating the pom is maybe not the best idea anyway
-				logger.Warnf("unable to update ftl.version in %s: %s", config.Dir, err.Error())
-			}
-		}
-		logger.Infof("Using build command '%s'", config.Build)
-		command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
-		err := command.RunBuffered(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to build module %q: %w", config.Module, err)
-		}
-
-		// TODO: return an actual result
-		return nil
-	})
+func newJavaPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig) *javaPlugin {
+	internal := newInternalPlugin(ctx, config, buildJava)
 	return &javaPlugin{
 		internalPlugin: internal,
 	}
@@ -197,8 +179,28 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func (p *javaPlugin) Build(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, projectPath string, buildEnv []string, devMode bool) (BuildResult, error) {
-	return p.internalPlugin.build(ctx, config, sch, buildEnv, devMode)
+func (p *javaPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
+	return p.internalPlugin.build(ctx, projectRoot, config, sch, buildEnv, devMode)
+}
+
+func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
+	logger := log.FromContext(ctx)
+	if config.Java.BuildTool == moduleconfig.JavaBuildToolMaven {
+		if err := setPOMProperties(ctx, config.Dir); err != nil {
+			// This is not a critical error, things will probably work fine
+			// TBH updating the pom is maybe not the best idea anyway
+			logger.Warnf("unable to update ftl.version in %s: %s", config.Dir, err.Error())
+		}
+	}
+	logger.Infof("Using build command '%s'", config.Build)
+	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
+	err := command.RunBuffered(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to build module %q: %w", config.Module, err)
+	}
+
+	// TODO: return an actual result
+	return nil
 }
 
 // setPOMProperties updates the ftl.version properties in the

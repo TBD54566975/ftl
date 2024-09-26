@@ -40,7 +40,7 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 
 	startTime := time.Now()
 
-	result, err := plugin.Build(ctx, config, sch, projectRootDir, buildEnv, devMode)
+	result, err := plugin.Build(ctx, projectRootDir, config, sch, buildEnv, devMode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build module: %w", err)
 	}

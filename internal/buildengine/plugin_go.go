@@ -31,13 +31,8 @@ type goPlugin struct {
 
 var _ = LanguagePlugin(&goPlugin{})
 
-func newGoPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig, projectPath string) *goPlugin {
-	internal := newInternalPlugin(ctx, config, func(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
-		if err := compile.Build(ctx, projectPath, config.Dir, sch, transaction, buildEnv, devMode); err != nil {
-			return CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
-		}
-		return nil
-	})
+func newGoPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig) *goPlugin {
+	internal := newInternalPlugin(ctx, config, buildGo)
 	return &goPlugin{
 		internalPlugin: internal,
 	}
@@ -130,6 +125,13 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	})
 }
 
-func (p *goPlugin) Build(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, projectPath string, buildEnv []string, devMode bool) (BuildResult, error) {
-	return p.internalPlugin.build(ctx, config, sch, buildEnv, devMode)
+func (p *goPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
+	return p.internalPlugin.build(ctx, projectRoot, config, sch, buildEnv, devMode)
+}
+
+func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
+	if err := compile.Build(ctx, projectRoot, config.Dir, sch, transaction, buildEnv, devMode); err != nil {
+		return CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
+	}
+	return nil
 }

@@ -18,17 +18,8 @@ type rustPlugin struct {
 
 var _ = LanguagePlugin(&rustPlugin{})
 
-func newRustPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig, projectPath string) *rustPlugin {
-	internal := newInternalPlugin(ctx, config, func(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
-		logger := log.FromContext(ctx)
-
-		logger.Debugf("Using build command '%s'", config.Build)
-		err := exec.Command(ctx, log.Debug, config.Dir+"/_ftl", "bash", "-c", config.Build).RunBuffered(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to build module %q: %w", config.Module, err)
-		}
-		return nil
-	})
+func newRustPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig) *rustPlugin {
+	internal := newInternalPlugin(ctx, config, buildRust)
 	return &rustPlugin{
 		internalPlugin: internal,
 	}
@@ -51,6 +42,17 @@ func (p *rustPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (p *rustPlugin) Build(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, projectPath string, buildEnv []string, devMode bool) (BuildResult, error) {
-	return p.internalPlugin.build(ctx, config, sch, buildEnv, devMode)
+func (p *rustPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
+	return p.internalPlugin.build(ctx, projectRoot, config, sch, buildEnv, devMode)
+}
+
+func buildRust(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
+	logger := log.FromContext(ctx)
+
+	logger.Debugf("Using build command '%s'", config.Build)
+	err := exec.Command(ctx, log.Debug, config.Dir+"/_ftl", "bash", "-c", config.Build).RunBuffered(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to build module %q: %w", config.Module, err)
+	}
+	return nil
 }

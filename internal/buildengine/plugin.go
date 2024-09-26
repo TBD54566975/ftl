@@ -32,7 +32,6 @@ type PluginEvent interface {
 
 type AutoRebuildStartedEvent struct {
 	Module string
-	// TODO: include file change for logging?
 }
 
 func (AutoRebuildStartedEvent) pluginEvent() {}
@@ -53,23 +52,27 @@ type LanguagePlugin interface {
 	// CreateModule creates a new module in the given directory with the given name and language.
 	// Replacements and groups are special cases until plugins can provide their parameters.
 	CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig, includeBinDir bool, replacements map[string]string, group string) error
-	// TODO: docs
+
+	// GetDependencies returns the dependencies of the module.
 	GetDependencies(ctx context.Context) ([]string, error)
-	// TODO: docs
-	Build(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, projectPath string, buildEnv []string, devMode bool) (BuildResult, error)
+
+	// Build builds the module with the latest config and schema.
+	// In dev mode, plugin is responsible for automatically rebuilding as relevant files within the module change,
+	// and publishing these automatic builds updates to Updates().
+	Build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error)
 
 	// TODO: docs
 	Kill(ctx context.Context) error
 }
 
-func PluginFromConfig(ctx context.Context, config moduleconfig.AbsModuleConfig, projectPath string) (p LanguagePlugin, err error) {
+func PluginFromConfig(ctx context.Context, config moduleconfig.AbsModuleConfig, projectRoot string) (p LanguagePlugin, err error) {
 	switch config.Language {
 	case "go":
-		return newGoPlugin(ctx, config, projectPath), nil
+		return newGoPlugin(ctx, config), nil
 	case "java", "kotlin":
-		return newJavaPlugin(ctx, config, projectPath), nil
+		return newJavaPlugin(ctx, config), nil
 	case "rust":
-		return newRustPlugin(ctx, config, projectPath), nil
+		return newRustPlugin(ctx, config), nil
 	default:
 		return p, fmt.Errorf("unknown language %q", config.Language)
 	}
@@ -89,27 +92,23 @@ var scaffoldFuncs = template.FuncMap{
 	"typename":       schema.TypeName,
 }
 
+//sumtype:decl
 type pluginCommand interface {
 	pluginCmd()
 }
 
 type buildCommand struct {
-	config   moduleconfig.AbsModuleConfig
-	schema   *schema.Schema
-	buildEnv []string
-	devMode  bool
+	projectRoot string
+	config      moduleconfig.AbsModuleConfig
+	schema      *schema.Schema
+	buildEnv    []string
+	devMode     bool
 
 	// TODO: turn this into an either[BuildResult, error] channel?
 	result chan either.Either[BuildResult, error]
 }
 
 func (buildCommand) pluginCmd() {}
-
-type watchCommand struct {
-	err chan error
-}
-
-func (watchCommand) pluginCmd() {}
 
 type dependenciesFunc = func() ([]string, error)
 type getDependenciesCommand struct {
@@ -120,10 +119,10 @@ type getDependenciesCommand struct {
 
 func (getDependenciesCommand) pluginCmd() {}
 
-type buildFunc = func(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error
+type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error
 
-// internal plugin is used by languages that have not been split off into their own external plugins yet.
-// it coordinates builds and watching for changes
+// internalPlugin is used by languages that have not been split off into their own external plugins yet.
+// It has standard behaviours around building and watching files.
 type internalPlugin struct {
 	// config does not change, may not be up to date
 	config moduleconfig.AbsModuleConfig
@@ -148,23 +147,14 @@ func newInternalPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig,
 	return plugin
 }
 
-func (p *internalPlugin) build(ctx context.Context, config moduleconfig.AbsModuleConfig, schema *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
-	if devMode {
-		watchCmd := watchCommand{
-			err: make(chan error),
-		}
-		p.commands <- watchCmd
-		err := <-watchCmd.err
-		if err != nil {
-			return BuildResult{}, err
-		}
-	}
+func (p *internalPlugin) build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, schema *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
 	cmd := buildCommand{
-		config:   config,
-		schema:   schema,
-		buildEnv: buildEnv,
-		devMode:  devMode,
-		result:   make(chan either.Either[BuildResult, error]),
+		projectRoot: projectRoot,
+		config:      config,
+		schema:      schema,
+		buildEnv:    buildEnv,
+		devMode:     devMode,
+		result:      make(chan either.Either[BuildResult, error]),
 	}
 	p.commands <- cmd
 	select {
@@ -208,8 +198,8 @@ func (p *internalPlugin) run(ctx context.Context) {
 	watchChan := make(chan WatchEvent, 128)
 
 	// state
-	isWatching := false
 	config := p.config
+	var projectRoot string
 	var schema *schema.Schema
 	var buildEnv []string
 	devMode := false
@@ -221,15 +211,22 @@ func (p *internalPlugin) run(ctx context.Context) {
 			switch c := cmd.(type) {
 			case buildCommand:
 				// update state
+				projectRoot = c.projectRoot
 				config = c.config
 				schema = c.schema
 				buildEnv = c.buildEnv
-				if c.devMode {
+				if c.devMode && !devMode {
 					devMode = true
+					topic, err := watcher.Watch(ctx, time.Second, []string{config.Dir})
+					if err != nil {
+						c.result <- either.RightOf[BuildResult](fmt.Errorf("failed to start watching: %w", err))
+						continue
+					}
+					topic.Subscribe(watchChan)
 				}
 
 				transaction := watcher.GetTransaction(p.config.Dir)
-				err := p.buildFunc(ctx, config, schema, buildEnv, devMode, transaction)
+				err := p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
 				if err != nil {
 					c.result <- either.RightOf[BuildResult](err)
 					continue
@@ -241,19 +238,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 					continue
 				}
 				c.result <- either.LeftOf[error](result)
-			case watchCommand:
-				if isWatching {
-					c.err <- nil
-					continue
-				}
-				isWatching = true
-				topic, err := watcher.Watch(ctx, time.Second, []string{config.Dir})
-				if err != nil {
-					c.err <- fmt.Errorf("failed to start watching: %w", err)
-					continue
-				}
-				topic.Subscribe(watchChan)
-				c.err <- nil
+
 			case getDependenciesCommand:
 				result, err := c.dependenciesFunc()
 				if err != nil {
@@ -265,10 +250,10 @@ func (p *internalPlugin) run(ctx context.Context) {
 		case event := <-watchChan:
 			switch event.(type) {
 			case WatchEventModuleChanged:
-				// build
+				// automatic rebuild
 				p.updates.Publish(AutoRebuildStartedEvent{Module: p.config.Module})
 				transaction := watcher.GetTransaction(p.config.Dir)
-				err := p.buildFunc(ctx, config, schema, buildEnv, devMode, transaction)
+				err := p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
 				if err != nil {
 					p.updates.Publish(AutoRebuildEndedEvent{
 						Module: p.config.Module,
