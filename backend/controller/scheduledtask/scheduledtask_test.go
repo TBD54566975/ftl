@@ -42,11 +42,11 @@ func TestScheduledTask(t *testing.T) {
 
 	for _, c := range controllers {
 		c.cron = NewForTesting(ctx, c.controller.Key, clock, leaser)
-		c.cron.Singleton(backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
+		c.cron.Singleton("singleton", backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
 			singletonCount.Add(1)
 			return time.Second, nil
 		})
-		c.cron.Parallel(backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
+		c.cron.Parallel("parallel", backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
 			multiCount.Add(1)
 			return time.Second, nil
 		})
