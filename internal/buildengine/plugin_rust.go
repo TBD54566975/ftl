@@ -16,7 +16,7 @@ type rustPlugin struct {
 	*internalPlugin
 }
 
-var _ = Plugin(&rustPlugin{})
+var _ = LanguagePlugin(&rustPlugin{})
 
 func newRustPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig, projectPath string) *rustPlugin {
 	internal := newInternalPlugin(ctx, config, func(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {

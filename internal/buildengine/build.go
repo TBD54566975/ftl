@@ -21,7 +21,7 @@ const BuildLockTimeout = time.Minute
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func build(ctx context.Context, plugin Plugin, projectRootDir string, sch *schema.Schema, c moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (*schema.Module, error) {
+func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sch *schema.Schema, c moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (*schema.Module, error) {
 	config := c.Abs()
 	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {

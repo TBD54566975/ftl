@@ -8,7 +8,7 @@ import (
 
 // UpdateDependencies finds the dependencies for a module and returns a
 // Module with those dependencies populated.
-func UpdateDependencies(ctx context.Context, module Module, plugin Plugin) (Module, error) {
+func UpdateDependencies(ctx context.Context, module Module, plugin LanguagePlugin) (Module, error) {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Extracting dependencies for %q", module.Config.Module)
 	dependencies, err := plugin.GetDependencies(ctx)

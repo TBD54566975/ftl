@@ -49,7 +49,7 @@ type schemaChange struct {
 type moduleMeta struct {
 	module             Module
 	lastBuildStartTime time.Time
-	plugin             Plugin
+	plugin             LanguagePlugin
 }
 
 // copyWithUpdatedDependencies finds the dependencies for a module and returns a

@@ -29,7 +29,7 @@ type goPlugin struct {
 	*internalPlugin
 }
 
-var _ = Plugin(&goPlugin{})
+var _ = LanguagePlugin(&goPlugin{})
 
 func newGoPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig, projectPath string) *goPlugin {
 	internal := newInternalPlugin(ctx, config, func(ctx context.Context, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {

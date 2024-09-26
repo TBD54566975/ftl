@@ -45,7 +45,7 @@ type AutoRebuildEndedEvent struct {
 func (AutoRebuildEndedEvent) pluginEvent() {}
 
 // TODO: docs
-type Plugin interface {
+type LanguagePlugin interface {
 	// Topic for all update events from the plugin
 	// The same topic must be returned each time this method is called
 	Updates() *pubsub.Topic[PluginEvent]
@@ -62,7 +62,7 @@ type Plugin interface {
 	Kill(ctx context.Context) error
 }
 
-func PluginFromConfig(ctx context.Context, config moduleconfig.AbsModuleConfig, projectPath string) (p Plugin, err error) {
+func PluginFromConfig(ctx context.Context, config moduleconfig.AbsModuleConfig, projectPath string) (p LanguagePlugin, err error) {
 	switch config.Language {
 	case "go":
 		return newGoPlugin(ctx, config, projectPath), nil
