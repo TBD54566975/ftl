@@ -58,20 +58,20 @@ type scaffoldingContext struct {
 	Replace   map[string]string
 }
 
-func (p *goPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
+func (p *goPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
 	logger := log.FromContext(ctx)
 	opts := []scaffolder.Option{
 		scaffolder.Exclude("^go.mod$"),
 		scaffolder.Functions(scaffoldFuncs),
 	}
-	// TODO: bring back this logic
-	// if !includeBinDir {
-	logger.Debugf("Excluding bin directory")
-	opts = append(opts, scaffolder.Exclude("^bin"))
-	// }
+	if !includeBinDir {
+		logger.Debugf("Excluding bin directory")
+		opts = append(opts, scaffolder.Exclude("^bin"))
+	}
 	sctx := scaffoldingContext{
 		Name:      config.Module,
 		GoVersion: runtime.Version()[2:],
+		Replace:   replacements,
 	}
 
 	// scaffold at one directory above the module directory

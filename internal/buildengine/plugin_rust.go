@@ -43,7 +43,7 @@ func (p *rustPlugin) Kill(ctx context.Context) error {
 	return nil
 }
 
-func (p *rustPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
+func (p *rustPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
 	return fmt.Errorf("not implemented")
 }
 

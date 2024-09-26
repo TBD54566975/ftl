@@ -20,6 +20,12 @@ type newCmd struct {
 	Language string `arg:"" help:"Language of the module to create."`
 	Dir      string `arg:"" help:"Directory to initialize the module in."`
 	Name     string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
+
+	// Go specific flags
+	Replace map[string]string `short:"r" help:"For Go, replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..." env:"FTL_INIT_GO_REPLACE"`
+
+	// Java/Kotlin specific flags
+	Group string `help:"For Java and Kotlin, the Maven groupId of the project." default:"com.example"`
 }
 
 func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
@@ -42,7 +48,7 @@ func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 		Dir:      path,
 	}.Abs()
 	plugin, err := buildengine.PluginFromConfig(ctx, moduleConfig, config.Root())
-	plugin.CreateModule(ctx, moduleConfig)
+	plugin.CreateModule(ctx, moduleConfig, config.Hermit, i.Replace, i.Group)
 	if err != nil {
 		return err
 	}

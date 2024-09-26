@@ -67,11 +67,8 @@ func (p *javaPlugin) Kill(ctx context.Context) error {
 	return nil
 }
 
-func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
+func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
 	logger := log.FromContext(ctx)
-
-	// TODO: allow user to override the group
-	group := "com.example"
 
 	var source *zip.Reader
 	if config.Language == "java" {
@@ -97,11 +94,10 @@ func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsMo
 	}
 
 	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("^go.mod$")}
-	// TODO: add this back in
-	// if !includeBinDir {
-	logger.Debugf("Excluding bin directory")
-	opts = append(opts, scaffolder.Exclude("^bin"))
-	// }
+	if !includeBinDir {
+		logger.Debugf("Excluding bin directory")
+		opts = append(opts, scaffolder.Exclude("^bin"))
+	}
 
 	// scaffold at one directory above the module directory
 	parentPath := filepath.Dir(config.Dir)

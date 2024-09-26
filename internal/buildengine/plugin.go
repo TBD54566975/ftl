@@ -51,7 +51,8 @@ type Plugin interface {
 	Updates() *pubsub.Topic[PluginEvent]
 
 	// CreateModule creates a new module in the given directory with the given name and language.
-	CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig) error
+	// Replacements and groups are special cases until plugins can provide their parameters.
+	CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig, includeBinDir bool, replacements map[string]string, group string) error
 	// TODO: docs
 	GetDependencies(ctx context.Context) ([]string, error)
 	// TODO: docs
