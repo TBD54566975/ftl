@@ -118,6 +118,14 @@ type VerbCall struct {
 
 func (*VerbCall) schemaFactValue() {}
 
+// IncludeNativeName marks a node that needs to be added to the native names map provided in the extraction result.
+type IncludeNativeName struct {
+	// The schema node associated with this native name.
+	Node schema.Node
+}
+
+func (*IncludeNativeName) schemaFactValue() {}
+
 // MarkSchemaDecl marks the given object as having been extracted to the given schema decl.
 func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	fact := newFact(pass, obj)
@@ -181,6 +189,13 @@ func MarkVerbCall(pass *analysis.Pass, obj types.Object, verbRef *schema.Ref) {
 	pass.ExportObjectFact(obj, fact)
 }
 
+// MarkIncludeNativeName marks the given object as needing to be added to the native names map.
+func MarkIncludeNativeName(pass *analysis.Pass, obj types.Object, node schema.Node) {
+	fact := newFact(pass, obj)
+	fact.Add(&IncludeNativeName{Node: node})
+	pass.ExportObjectFact(obj, fact)
+}
+
 // GetAllFactsExtractionStatus merges schema facts inclusive of all available results and the present pass facts.
 // For a given object, it provides the current extraction status.
 //
@@ -232,18 +247,18 @@ func GetAllFactsExtractionStatus(pass *analysis.Pass) map[types.Object]SchemaFac
 
 // GetAllFactsOfType returns all facts of the provided type marked on objects, across the current pass and results from
 // prior passes. If multiple of the same fact type are marked on a single object, the first fact is returned.
-func GetAllFactsOfType[T SchemaFactValue](pass *analysis.Pass) map[types.Object]T {
+func GetAllFactsOfType[T SchemaFactValue](pass *analysis.Pass) map[types.Object][]T {
 	return getFactsScoped[T](allFacts(pass))
 }
 
 // GetCurrentPassFacts returns all facts of the provided type marked on objects during the current pass.
 // If multiple of the same fact type are marked on a single object, the first fact is returned.
-func GetCurrentPassFacts[T SchemaFactValue](pass *analysis.Pass) map[types.Object]T {
+func GetCurrentPassFacts[T SchemaFactValue](pass *analysis.Pass) map[types.Object][]T {
 	return getFactsScoped[T](pass.AllObjectFacts())
 }
 
-func getFactsScoped[T SchemaFactValue](scope []analysis.ObjectFact) map[types.Object]T {
-	facts := make(map[types.Object]T)
+func getFactsScoped[T SchemaFactValue](scope []analysis.ObjectFact) map[types.Object][]T {
+	facts := make(map[types.Object][]T)
 	for _, fact := range scope {
 		sf, ok := fact.Fact.(SchemaFact)
 		if !ok {
@@ -252,7 +267,10 @@ func getFactsScoped[T SchemaFactValue](scope []analysis.ObjectFact) map[types.Ob
 
 		for _, f := range sf.Get() {
 			if t, ok := f.(T); ok {
-				facts[fact.Object] = t
+				if _, exists := facts[fact.Object]; !exists {
+					facts[fact.Object] = []T{t}
+				}
+				facts[fact.Object] = append(facts[fact.Object], t)
 			}
 		}
 	}
