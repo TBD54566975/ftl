@@ -295,7 +295,7 @@ func ValidateModule(module *Module) error {
 		switch n := n.(type) {
 		case *Ref:
 			mdecl := scopes.Resolve(*n)
-			if mdecl == nil && n.Module == "" {
+			if mdecl == nil && (n.Module == "" || n.Module == module.Name) {
 				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 			}
 			if mdecl != nil {

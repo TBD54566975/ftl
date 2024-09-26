@@ -144,6 +144,9 @@ func Echo(context.Context, EchoRequest) (EchoResponse, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }
 
+//ftl:verb
+type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)
+
 type SinkReq struct {
 }
 
@@ -156,6 +159,9 @@ func Sink(context.Context, SinkReq) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
 }
 
+//ftl:verb
+type SinkClient func(context.Context, SinkReq)
+
 type SourceResp struct {
 }
 
@@ -165,9 +171,15 @@ func Source(context.Context) (SourceResp, error) {
 }
 
 //ftl:verb
+type SourceClient func(context.Context) (SourceResp, error)
+
+//ftl:verb
 func Nothing(context.Context) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")
 }
+
+//ftl:verb
+type NothingClient func(context.Context) error
 
 func init() {
   reflection.Register(
@@ -238,6 +250,9 @@ type Resp struct {
 func Call(context.Context, Req) (Resp, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }
+
+//ftl:verb
+type CallClient func(context.Context, Req) (Resp, error)
 `
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	projectRoot := t.TempDir()
