@@ -56,9 +56,9 @@ func (reg *ProvisionerRegistry) CreateDeployment(module string, desiredResources
 	for handler, desired := range desiredByHandler {
 		existing := existingByHandler[handler]
 		result = append(result, &Task{
-			Handler:  handler,
-			Desired:  desired,
-			Existing: existing,
+			handler:  handler,
+			desired:  desired,
+			existing: existing,
 		})
 	}
 	return &Deployment{Tasks: result, Module: module}
@@ -69,17 +69,18 @@ func ExtractResources(sch *schema.Module) ([]*provisioner.Resource, error) {
 	var result []*provisioner.Resource
 	for _, decl := range sch.Decls {
 		if db, ok := decl.(*schema.Database); ok {
-			if db.Type == "postgres" {
+			switch db.Type {
+			case "postgres":
 				result = append(result, &provisioner.Resource{
 					ResourceId: decl.GetName(),
 					Resource:   &provisioner.Resource_Postgres{},
 				})
-			} else if db.Type == "mysql" {
+			case "mysql":
 				result = append(result, &provisioner.Resource{
 					ResourceId: decl.GetName(),
 					Resource:   &provisioner.Resource_Mysql{},
 				})
-			} else {
+			default:
 				return nil, fmt.Errorf("unknown db type: %s", db.Type)
 			}
 		}
