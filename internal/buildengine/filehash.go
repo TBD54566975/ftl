@@ -3,6 +3,7 @@ package buildengine
 import (
 	"bytes"
 	"crypto/sha256"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -97,7 +98,7 @@ func computeFileHashes(config moduleconfig.ModuleConfig, patterns []string) (Fil
 func computeFileHash(baseDir, srcPath string, patterns []string) (hash []byte, matched bool, err error) {
 	relativePath, err := filepath.Rel(baseDir, srcPath)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("could not calculate relative path while computing filehash: %w", err)
 	}
 	for _, pattern := range patterns {
 		match, err := doublestar.PathMatch(pattern, relativePath)
@@ -116,13 +117,13 @@ func computeFileHash(baseDir, srcPath string, patterns []string) (hash []byte, m
 		hasher := sha256.New()
 		if _, err := io.Copy(hasher, file); err != nil {
 			_ = file.Close()
-			return nil, false, err
+			return nil, false, fmt.Errorf("could not hash file: %w", err)
 		}
 
 		hash := hasher.Sum(nil)
 
 		if err := file.Close(); err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("could not close file after hashing: %w", err)
 		}
 		return hash, true, nil
 	}

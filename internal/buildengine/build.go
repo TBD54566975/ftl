@@ -25,7 +25,7 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 	config := c.Abs()
 	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err)
 	}
 	defer release() //nolint:errcheck
 	logger := log.FromContext(ctx).Module(config.Module).Scope("build")

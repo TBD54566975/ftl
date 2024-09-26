@@ -52,15 +52,15 @@ type moduleMeta struct {
 	plugin             LanguagePlugin
 }
 
-// copyWithUpdatedDependencies finds the dependencies for a module and returns a
+// copyMetaWithUpdatedDependencies finds the dependencies for a module and returns a
 // copy with those dependencies populated.
-func (m moduleMeta) copyWithUpdatedDependencies(ctx context.Context) (moduleMeta, error) {
+func copyMetaWithUpdatedDependencies(ctx context.Context, m moduleMeta) (moduleMeta, error) {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Extracting dependencies for %q", m.module.Config.Module)
 
 	dependencies, err := m.plugin.GetDependencies(ctx)
 	if err != nil {
-		return moduleMeta{}, err
+		return moduleMeta{}, fmt.Errorf("could not get dependencies for %v: %w", m.module.Config.Module, err)
 	}
 	containsBuiltin := false
 	for _, dep := range dependencies {
@@ -190,7 +190,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 			if err != nil {
 				return err
 			}
-			meta, err = meta.copyWithUpdatedDependencies(ctx)
+			meta, err = copyMetaWithUpdatedDependencies(ctx, meta)
 			if err != nil {
 				return err
 			}
@@ -200,7 +200,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		})
 	}
 	if err := wg.Wait(); err != nil {
-		return nil, err
+		return nil, err //nolint:wrapcheck
 	}
 	if client == nil {
 		return e, nil
@@ -639,7 +639,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 				return fmt.Errorf("module %q not found", name)
 			}
 
-			meta, err := meta.copyWithUpdatedDependencies(ctx)
+			meta, err := copyMetaWithUpdatedDependencies(ctx, meta)
 			if err != nil {
 				return fmt.Errorf("could not get dependencies for %s: %w", name, err)
 			}
@@ -650,7 +650,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		})
 	}
 	if err := wg.Wait(); err != nil {
-		return err
+		return err //nolint:wrapcheck
 	}
 	close(mustBuildChan)
 	mustBuild := map[string]bool{}

@@ -48,7 +48,10 @@ func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 		Dir:      path,
 	}.Abs()
 	plugin, err := buildengine.PluginFromConfig(ctx, moduleConfig, config.Root())
-	plugin.CreateModule(ctx, moduleConfig, config.Hermit, i.Replace, i.Group)
+	if err != nil {
+		return err
+	}
+	err = plugin.CreateModule(ctx, moduleConfig, config.Hermit, i.Replace, i.Group)
 	if err != nil {
 		return err
 	}

@@ -39,7 +39,7 @@ type AutoRebuildStartedEvent struct {
 
 func (AutoRebuildStartedEvent) pluginEvent() {}
 
-// AutoRebuildStartedEvent is sent when the plugin ends an automatic rebuild.
+// AutoRebuildEndedEvent is sent when the plugin ends an automatic rebuild.
 type AutoRebuildEndedEvent struct {
 	Module string
 	Result either.Either[BuildResult, error]
@@ -167,7 +167,7 @@ func (p *internalPlugin) build(ctx context.Context, projectRoot string, config m
 		case either.Left[BuildResult, error]:
 			return result.Get(), nil
 		case either.Right[BuildResult, error]:
-			return BuildResult{}, result.Get()
+			return BuildResult{}, result.Get() //nolint:wrapcheck
 		default:
 			panic(fmt.Sprintf("unexpected result type %T", result))
 		}
