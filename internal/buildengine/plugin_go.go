@@ -11,14 +11,12 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"text/template"
 
 	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/types/pubsub"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal"
@@ -64,19 +62,7 @@ func (p *goPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModu
 	logger := log.FromContext(ctx)
 	opts := []scaffolder.Option{
 		scaffolder.Exclude("^go.mod$"),
-		scaffolder.Functions(template.FuncMap{
-			"snake":          strcase.ToLowerSnake,
-			"screamingSnake": strcase.ToUpperSnake,
-			"camel":          strcase.ToUpperCamel,
-			"lowerCamel":     strcase.ToLowerCamel,
-			"strippedCamel":  strcase.ToUpperStrippedCamel,
-			"kebab":          strcase.ToLowerKebab,
-			"screamingKebab": strcase.ToUpperKebab,
-			"upper":          strings.ToUpper,
-			"lower":          strings.ToLower,
-			"title":          strings.Title,
-			"typename":       schema.TypeName,
-		}),
+		scaffolder.Functions(scaffoldFuncs),
 	}
 	// TODO: bring back this logic
 	// if !includeBinDir {

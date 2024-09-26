@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -16,34 +17,10 @@ import (
 )
 
 type newCmd struct {
-	// Go     newGoCmd     `cmd:"" help:"Initialize a new FTL Go module."`
-	// Java   newJavaCmd   `cmd:"" help:"Initialize a new FTL Java module."`
-	// Kotlin newKotlinCmd `cmd:"" help:"Initialize a new FTL Kotlin module."`
-
-	// TODO: add a way for language plugins to get extra configuration
-	// TODO: a way to get a list of languages and/or extra configuration?
 	Language string `arg:"" help:"Language of the module to create."`
 	Dir      string `arg:"" help:"Directory to initialize the module in."`
 	Name     string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
-
-// type newGoCmd struct {
-// 	Replace   map[string]string `short:"r" help:"Replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..." env:"FTL_INIT_GO_REPLACE"`
-// 	Dir       string            `arg:"" help:"Directory to initialize the module in."`
-// 	Name      string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-// 	GoVersion string
-// }
-
-// type newJavaCmd struct {
-// 	Dir   string `arg:"" help:"Directory to initialize the module in."`
-// 	Name  string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-// 	Group string `help:"The Maven groupId of the project." default:"com.example"`
-// }
-// type newKotlinCmd struct {
-// 	Dir   string `arg:"" help:"Directory to initialize the module in."`
-// 	Name  string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-// 	Group string `help:"The Maven groupId of the project." default:"com.example"`
-// }
 
 func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 	name, path, err := validateModule(i.Dir, i.Name)
@@ -52,8 +29,7 @@ func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 	}
 
 	// Validate the module name with custom validation
-	// TODO: rewrite this to be less go specific
-	if !isValidGoModuleName(name) {
+	if !isValidModuleName(name) {
 		return fmt.Errorf("module name %q must be a valid Go module name and not a reserved keyword", name)
 	}
 
@@ -70,72 +46,20 @@ func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 		return err
 	}
 
-	// TODO: re-add git logic
-
-	// _, ok := internal.GitRoot(i.Dir).Get()
-	// if !config.NoGit && ok {
-	// 	logger.Debugf("Adding files to git")
-	// 	if config.Hermit {
-	// 		if err := maybeGitAdd(ctx, i.Dir, "bin/*"); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// 	if err := maybeGitAdd(ctx, i.Dir, filepath.Join(i.Name, "*")); err != nil {
-	// 		return err
-	// 	}
-	// }
+	_, ok := internal.GitRoot(i.Dir).Get()
+	if !config.NoGit && ok {
+		logger.Debugf("Adding files to git")
+		if config.Hermit {
+			if err := maybeGitAdd(ctx, i.Dir, "bin/*"); err != nil {
+				return err
+			}
+		}
+		if err := maybeGitAdd(ctx, i.Dir, filepath.Join(i.Name, "*")); err != nil {
+			return err
+		}
+	}
 	return nil
 }
-
-// func (i newJavaCmd) Run(ctx context.Context, config projectconfig.Config) error {
-// 	return RunJvmScaffolding(ctx, config, i.Dir, i.Name, i.Group, java.Files())
-// }
-
-// func (i newKotlinCmd) Run(ctx context.Context, config projectconfig.Config) error {
-// 	return RunJvmScaffolding(ctx, config, i.Dir, i.Name, i.Group, kotlin.Files())
-// }
-
-// func RunJvmScaffolding(ctx context.Context, config projectconfig.Config, dir string, name string, group string, source *zip.Reader) error {
-// 	name, path, err := validateModule(dir, name)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	logger := log.FromContext(ctx)
-// 	logger.Debugf("Creating FTL module %q in %s", name, path)
-
-// 	packageDir := strings.ReplaceAll(group, ".", "/")
-
-// 	javaContext := struct {
-// 		Dir        string
-// 		Name       string
-// 		Group      string
-// 		PackageDir string
-// 	}{
-// 		Dir:        dir,
-// 		Name:       name,
-// 		Group:      group,
-// 		PackageDir: packageDir,
-// 	}
-
-// 	if err := scaffold(ctx, config.Hermit, source, dir, javaContext); err != nil {
-// 		return err
-// 	}
-
-// 	_, ok := internal.GitRoot(dir).Get()
-// 	if !config.NoGit && ok {
-// 		logger.Debugf("Adding files to git")
-// 		if config.Hermit {
-// 			if err := maybeGitAdd(ctx, dir, "bin/*"); err != nil {
-// 				return err
-// 			}
-// 		}
-// 		if err := maybeGitAdd(ctx, dir, filepath.Join(name, "*")); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
 
 func validateModule(dir string, name string) (string, string, error) {
 	if dir == "" {
@@ -158,7 +82,7 @@ func validateModule(dir string, name string) (string, string, error) {
 	return name, absPath, nil
 }
 
-func isValidGoModuleName(name string) bool {
+func isValidModuleName(name string) bool {
 	validNamePattern := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
 	if !validNamePattern.MatchString(name) {
 		return false

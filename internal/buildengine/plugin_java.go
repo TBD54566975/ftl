@@ -1,6 +1,7 @@
 package buildengine
 
 import (
+	"archive/zip"
 	"bufio"
 	"context"
 	"fmt"
@@ -17,9 +18,13 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/jvm-runtime/java"
+	"github.com/TBD54566975/ftl/jvm-runtime/kotlin"
+	"github.com/TBD54566975/scaffolder"
 )
 
 type javaPlugin struct {
@@ -63,7 +68,44 @@ func (p *javaPlugin) Kill(ctx context.Context) error {
 }
 
 func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
-	return fmt.Errorf("not implemented")
+	logger := log.FromContext(ctx)
+
+	// TODO: allow user to override the group
+	group := "com.example"
+
+	var source *zip.Reader
+	if config.Language == "java" {
+		source = java.Files()
+	} else if config.Language == "kotlin" {
+		kotlin.Files()
+	} else {
+		return fmt.Errorf("unknown jvm language %q", config.Language)
+	}
+
+	packageDir := strings.ReplaceAll(group, ".", "/")
+
+	sctx := struct {
+		Dir        string
+		Name       string
+		Group      string
+		PackageDir string
+	}{
+		Dir:        config.Dir,
+		Name:       config.Module,
+		Group:      group,
+		PackageDir: packageDir,
+	}
+
+	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("^go.mod$")}
+	// TODO: add this back in
+	// if !includeBinDir {
+	logger.Debugf("Excluding bin directory")
+	opts = append(opts, scaffolder.Exclude("^bin"))
+	// }
+	if err := internal.ScaffoldZip(source, config.Dir, sctx, opts...); err != nil {
+		return fmt.Errorf("failed to scaffold: %w", err)
+	}
+	return nil
 }
 
 func (p *javaPlugin) GetDependencies(ctx context.Context) ([]string, error) {
