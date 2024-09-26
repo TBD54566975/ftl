@@ -46,7 +46,7 @@ func (AutoRebuildEndedEvent) pluginEvent() {}
 
 // TODO: docs
 type Plugin interface {
-	// TODO: doc
+	// Topic for all update events from the plugin
 	Updates() *pubsub.Topic[PluginEvent]
 
 	// CreateModule creates a new module in the given directory with the given name and language.
