@@ -82,7 +82,7 @@ export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=d
 init-db:
   dbmate drop || true
   dbmate create
-  dbmate --migrations-dir backend/controller/sql/schema up
+  dbmate --no-dump-schema --migrations-dir backend/controller/sql/schema up
 
 # Regenerate SQLC code (requires init-db to be run first)
 build-sqlc:
