@@ -146,3 +146,70 @@ func Start(ctx context.Context, config Config, devel bool) error {
 	}
 	return nil
 }
+
+// Deployment client calls to ftl-controller
+
+func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftlv1.GetArtefactDiffsRequest]) (*connect.Response[ftlv1.GetArtefactDiffsResponse], error) {
+	resp, err := s.controllerClient.GetArtefactDiffs(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
+	}
+	return resp, nil
+}
+
+func (s *Service) ReplaceDeploy(ctx context.Context, req *connect.Request[ftlv1.ReplaceDeployRequest]) (*connect.Response[ftlv1.ReplaceDeployResponse], error) {
+	resp, err := s.controllerClient.ReplaceDeploy(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
+	}
+	return resp, nil
+}
+
+func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusRequest]) (*connect.Response[ftlv1.StatusResponse], error) {
+	resp, err := s.controllerClient.Status(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
+	}
+	return resp, nil
+}
+
+func (s *Service) UpdateDeploy(ctx context.Context, req *connect.Request[ftlv1.UpdateDeployRequest]) (*connect.Response[ftlv1.UpdateDeployResponse], error) {
+	resp, err := s.controllerClient.UpdateDeploy(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
+	}
+	return resp, nil
+}
+
+func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error) {
+	resp, err := s.controllerClient.UploadArtefact(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
+	}
+	return resp, nil
+}
+
+func (s *Service) GetSchema(ctx context.Context, req *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
+	resp, err := s.controllerClient.GetSchema(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
+	}
+	return resp, nil
+}
+
+func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], to *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
+	stream, err := s.controllerClient.PullSchema(ctx, req)
+	if err != nil {
+		return fmt.Errorf("call to ftl-controller failed: %w", err)
+	}
+	defer stream.Close()
+	for stream.Receive() {
+		if err := stream.Err(); err != nil {
+			return fmt.Errorf("call to ftl-controller failed: %w", err)
+		}
+		if err := to.Send(stream.Msg()); err != nil {
+			return fmt.Errorf("call to ftl-controller failed: %w", err)
+		}
+	}
+	return nil
+}
