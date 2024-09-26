@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 )
 
 type TaskState string
