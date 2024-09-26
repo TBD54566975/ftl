@@ -56,7 +56,7 @@ func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsMo
 	if config.Language == "java" {
 		source = java.Files()
 	} else if config.Language == "kotlin" {
-		kotlin.Files()
+		source = kotlin.Files()
 	} else {
 		return fmt.Errorf("unknown jvm language %q", config.Language)
 	}
