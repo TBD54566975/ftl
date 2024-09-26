@@ -133,10 +133,12 @@ type options struct {
 
 // Run an integration test.
 func Run(t *testing.T, actionsOrOptions ...ActionOrOption) {
+	t.Helper()
 	run(t, actionsOrOptions...)
 }
 
 func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
+	t.Helper()
 	opts := options{
 		startController: true,
 		languages:       []string{"go"},
@@ -215,6 +217,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	for _, language := range opts.languages {
 		ctx, done := context.WithCancel(ctx)
 		t.Run(language, func(t *testing.T) {
+			t.Helper()
 			tmpDir := initWorkDir(t, cwd, opts)
 
 			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
@@ -330,6 +333,7 @@ func (i TestContext) WorkingDir() string { return i.workDir }
 
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
+	t.Helper()
 	waitCtx, done := context.WithTimeout(i, i.integrationTestTimeout())
 	defer done()
 	for {
@@ -348,6 +352,7 @@ func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
 
 // Run an assertion, wrapping testing.TB in an implementation that panics on failure, propagating the error.
 func (i TestContext) runAssertionOnce(t testing.TB, assertion Action) (err error) {
+	t.Helper()
 	defer func() {
 		switch r := recover().(type) {
 		case TestingError:
