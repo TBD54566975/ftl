@@ -344,7 +344,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	singletonTask(svc.reapStaleControllers, "reap-stale-controllers", time.Second*2, time.Second*20, time.Second*20)
 	singletonTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10)
 	singletonTask(svc.reapCallEvents, "reap-call-events", time.Minute*5, time.Minute, time.Minute*30)
-	singletonTask(svc.reapAsyncCalls, "reap-async-calls", time.Second*1, time.Second, time.Second*1)
+	singletonTask(svc.reapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5)
 	return svc, nil
 }
 
