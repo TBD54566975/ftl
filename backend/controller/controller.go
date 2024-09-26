@@ -342,14 +342,8 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("failed to resolve route from dal"))
 		return
 	}
-	sch, err := s.dal.GetActiveSchema(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("could not get active schema"))
-		return
-	}
 	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-	ingress.Handle(start, sch, requestKey, routes, w, r, s.timeline, s.callWithRequest)
+	ingress.Handle(start, s.schema.Load(), requestKey, routes, w, r, s.timeline, s.callWithRequest)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
@@ -990,16 +984,12 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
 
-	sch, err := s.dal.GetActiveSchema(ctx)
-	if err != nil {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("schema retrieval failed"))
-		return nil, err
-	}
+	sch := s.schema.Load()
 
 	verbRef := schema.RefFromProto(req.Msg.Verb)
 	verb := &schema.Verb{}
 
-	if err = sch.ResolveToType(verbRef, verb); err != nil {
+	if err := sch.ResolveToType(verbRef, verb); err != nil {
 		if errors.Is(err, schema.ErrNotFound) {
 			observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb not found"))
 			return nil, connect.NewError(connect.CodeNotFound, err)
@@ -1008,7 +998,7 @@ func (s *Service) callWithRequest(
 		return nil, err
 	}
 
-	err = ingress.ValidateCallBody(req.Msg.Body, verb, sch)
+	err := ingress.ValidateCallBody(req.Msg.Body, verb, sch)
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
 		return nil, err
