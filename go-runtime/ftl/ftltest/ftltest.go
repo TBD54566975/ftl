@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/TBD54566975/ftl/go-runtime/server"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -277,16 +278,16 @@ func WithDatabase(dbHandle ftl.Database) Option {
 // To be used when setting up a context for a test:
 //
 //	ctx := ftltest.Context(
-//		ftltest.WhenVerb(Example.Verb, func(ctx context.Context, req Example.Req) (Example.Resp, error) {
+//		ftltest.WhenVerb[example.VerbClient](func(ctx context.Context, req example.Req) (example.Resp, error) {
 //	    	// ...
 //		}),
 //		// ... other options
 //	)
-func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake ftl.Verb[Req, Resp]) Option {
+func WhenVerb[VerbClient, Req, Resp any](fake ftl.Verb[Req, Resp]) Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
-			ref := reflection.FuncRef(verb)
+			ref := reflection.ClientRef[VerbClient]()
 			state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 				request, ok := req.(Req)
 				if !ok {
@@ -304,16 +305,16 @@ func WhenVerb[Req any, Resp any](verb ftl.Verb[Req, Resp], fake ftl.Verb[Req, Re
 // To be used when setting up a context for a test:
 //
 //	ctx := ftltest.Context(
-//		ftltest.WhenSource(example.Source, func(ctx context.Context) (example.Resp, error) {
+//		ftltest.WhenSource[example.SourceClient](func(ctx context.Context) (example.Resp, error) {
 //	    	// ...
 //		}),
 //		// ... other options
 //	)
-func WhenSource[Resp any](source ftl.Source[Resp], fake func(ctx context.Context) (resp Resp, err error)) Option {
+func WhenSource[SourceClient, Resp any](fake ftl.Source[Resp]) Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
-			ref := reflection.FuncRef(source)
+			ref := reflection.ClientRef[SourceClient]()
 			state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 				return fake(ctx)
 			}
@@ -327,16 +328,16 @@ func WhenSource[Resp any](source ftl.Source[Resp], fake func(ctx context.Context
 // To be used when setting up a context for a test:
 //
 //	ctx := ftltest.Context(
-//		ftltest.WhenSink(example.Sink, func(ctx context.Context, req example.Req) error {
+//		ftltest.WhenSink[example.SinkClient](func(ctx context.Context, req example.Req) error {
 //	    	...
 //		}),
 //		// ... other options
 //	)
-func WhenSink[Req any](sink ftl.Sink[Req], fake func(ctx context.Context, req Req) error) Option {
+func WhenSink[SinkClient, Req any](fake ftl.Sink[Req]) Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
-			ref := reflection.FuncRef(sink)
+			ref := reflection.ClientRef[SinkClient]()
 			state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 				request, ok := req.(Req)
 				if !ok {
@@ -354,15 +355,15 @@ func WhenSink[Req any](sink ftl.Sink[Req], fake func(ctx context.Context, req Re
 // To be used when setting up a context for a test:
 //
 //	ctx := ftltest.Context(
-//		ftltest.WhenEmpty(Example.Empty, func(ctx context.Context) error {
+//		ftltest.WhenEmpty[example.EmptyClient](func(ctx context.Context) error {
 //	    	...
 //		}),
 //	)
-func WhenEmpty(empty ftl.Empty, fake func(ctx context.Context) (err error)) Option {
+func WhenEmpty[EmptyClient any](fake ftl.Empty) Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
-			ref := reflection.FuncRef(empty)
+			ref := reflection.ClientRef[EmptyClient]()
 			state.mockVerbs[schema.RefKey(ref)] = func(ctx context.Context, req any) (resp any, err error) {
 				return ftl.Unit{}, fake(ctx)
 			}
@@ -496,4 +497,57 @@ func ErrorsForSubscription[E any](ctx context.Context, subscription ftl.Subscrip
 func WaitForSubscriptionsToComplete(ctx context.Context) {
 	fftl := internal.FromContext(ctx).(*fakeFTL) //nolint:forcetypeassert
 	fftl.pubSub.waitForSubscriptionsToComplete(ctx)
+}
+
+// Call a Verb inline, applying resources and test behavior.
+func Call[VerbClient, Req, Resp any](ctx context.Context, req Req) (Resp, error) {
+	return call[VerbClient, Req, Resp](ctx, req)
+}
+
+// CallSource calls a Source inline, applying resources and test behavior.
+func CallSource[VerbClient, Resp any](ctx context.Context) (Resp, error) {
+	return call[VerbClient, ftl.Unit, Resp](ctx, ftl.Unit{})
+}
+
+// CallSink calls a Sink inline, applying resources and test behavior.
+func CallSink[VerbClient, Req any](ctx context.Context, req Req) error {
+	_, err := call[VerbClient, Req, ftl.Unit](ctx, req)
+	return err
+}
+
+// CallEmpty calls an Empty inline, applying resources and test behavior.
+func CallEmpty[VerbClient any](ctx context.Context) error {
+	_, err := call[VerbClient, ftl.Unit, ftl.Unit](ctx, ftl.Unit{})
+	return err
+}
+
+func call[VerbClient, Req, Resp any](ctx context.Context, req Req) (resp Resp, err error) {
+	ref := reflection.ClientRef[VerbClient]()
+	inline := server.Call[Req, Resp](ref)
+	moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
+	override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: ref.Module, Name: ref.Name})
+	if err != nil {
+		return resp, fmt.Errorf("test harness failed to retrieve behavior for verb %s: %w", ref, err)
+	}
+	if behavior, ok := override.Get(); ok {
+		uncheckedResp, err := behavior.Call(ctx, modulecontext.Verb(widenVerb(inline)), req)
+		if err != nil {
+			return resp, fmt.Errorf("test harness failed to call verb %s: %w", ref, err)
+		}
+		if r, ok := uncheckedResp.(Resp); ok {
+			return r, nil
+		}
+		return resp, fmt.Errorf("%s: overridden verb had invalid response type %T, expected %v", ref, uncheckedResp, reflect.TypeFor[Resp]())
+	}
+	return inline(ctx, req)
+}
+
+func widenVerb[Req, Resp any](verb ftl.Verb[Req, Resp]) ftl.Verb[any, any] {
+	return func(ctx context.Context, uncheckedReq any) (any, error) {
+		req, ok := uncheckedReq.(Req)
+		if !ok {
+			return nil, fmt.Errorf("invalid request type %T for %v, expected %v", uncheckedReq, reflection.FuncRef(verb), reflect.TypeFor[Req]())
+		}
+		return verb(ctx, req)
+	}
 }

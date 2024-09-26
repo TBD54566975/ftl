@@ -30,6 +30,7 @@ go-runtime/schema/testdata/test/test.go
 **/testdata/**/_ftl
 **/examples/**/_ftl
 **/types.ftl.go
+!go-runtime/ftl/ftltest/testdata/go/verbtypes/types.ftl.go
 **/testdata/**/.ftl
 **/examples/**/.ftl
 /.ftl

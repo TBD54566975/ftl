@@ -30,7 +30,7 @@ func TestWrappedWithConfigEnvar(t *testing.T) {
 			options: []ftltest.Option{
 				ftltest.WithDefaultProjectFile(),
 				ftltest.WithCallsAllowedWithinModule(),
-				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
+				ftltest.WhenVerb[time.TimeClient, time.TimeRequest, time.TimeResponse](func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
 				}),
 			},
@@ -95,7 +95,7 @@ func TestWrapped(t *testing.T) {
 				ftltest.WithConfig(myConfig, "helloworld"),
 				ftltest.WithSecret(mySecret, "shhhhh"),
 				ftltest.WithCallsAllowedWithinModule(),
-				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
+				ftltest.WhenVerb[time.TimeClient, time.TimeRequest, time.TimeResponse](func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
 				}),
 			},
@@ -107,7 +107,7 @@ func TestWrapped(t *testing.T) {
 			options: []ftltest.Option{
 				ftltest.WithProjectFile("ftl-project-test-1.toml"),
 				ftltest.WithCallsAllowedWithinModule(),
-				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
+				ftltest.WhenVerb[time.TimeClient, time.TimeRequest, time.TimeResponse](func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
 				}),
 			},
@@ -118,7 +118,7 @@ func TestWrapped(t *testing.T) {
 			options: []ftltest.Option{
 				ftltest.WithDefaultProjectFile(),
 				ftltest.WithCallsAllowedWithinModule(),
-				ftltest.WhenVerb(time.Time, func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
+				ftltest.WhenVerb[time.TimeClient, time.TimeRequest, time.TimeResponse](func(ctx context.Context, req time.TimeRequest) (time.TimeResponse, error) {
 					return time.TimeResponse{Time: stdtime.Date(2024, 1, 1, 0, 0, 0, 0, stdtime.UTC)}, nil
 				}),
 			},

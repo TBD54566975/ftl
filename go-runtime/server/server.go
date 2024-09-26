@@ -183,8 +183,12 @@ func Call[Req, Resp any](ref reflection.Ref) func(ctx context.Context, req Req) 
 			request = optional.None[any]()
 		}
 
-		var respValue any
 		out, err := reflection.CallVerb(reflection.Ref{Module: ref.Module, Name: ref.Name})(ctx, request)
+		if err != nil {
+			return resp, err
+		}
+
+		var respValue any
 		if r, ok := out.Get(); ok {
 			respValue = r
 		} else {
