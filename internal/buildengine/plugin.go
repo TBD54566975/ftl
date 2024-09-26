@@ -25,17 +25,21 @@ type BuildResult struct {
 	Schema *schema.Module
 }
 
+// PluginEvent is used to notify of updates from the plugin.
+//
 //sumtype:decl
 type PluginEvent interface {
 	pluginEvent()
 }
 
+// AutoRebuildStartedEvent is sent when the plugin starts an automatic rebuild.
 type AutoRebuildStartedEvent struct {
 	Module string
 }
 
 func (AutoRebuildStartedEvent) pluginEvent() {}
 
+// AutoRebuildStartedEvent is sent when the plugin ends an automatic rebuild.
 type AutoRebuildEndedEvent struct {
 	Module string
 	Result either.Either[BuildResult, error]
@@ -43,7 +47,7 @@ type AutoRebuildEndedEvent struct {
 
 func (AutoRebuildEndedEvent) pluginEvent() {}
 
-// TODO: docs
+// LanguagePlugin handles building and scaffolding modules in a specific language.
 type LanguagePlugin interface {
 	// Topic for all update events from the plugin
 	// The same topic must be returned each time this method is called
@@ -65,6 +69,7 @@ type LanguagePlugin interface {
 	Kill(ctx context.Context) error
 }
 
+// PluginFromConfig creates a new language plugin from the given config.
 func PluginFromConfig(ctx context.Context, config moduleconfig.AbsModuleConfig, projectRoot string) (p LanguagePlugin, err error) {
 	switch config.Language {
 	case "go":
@@ -104,7 +109,6 @@ type buildCommand struct {
 	buildEnv    []string
 	devMode     bool
 
-	// TODO: turn this into an either[BuildResult, error] channel?
 	result chan either.Either[BuildResult, error]
 }
 
@@ -207,7 +211,6 @@ func (p *internalPlugin) run(ctx context.Context) {
 	for {
 		select {
 		case cmd := <-p.commands:
-			// TODO: commands can be queued up and file changes can be ignored if there is also a build command in the queue
 			switch c := cmd.(type) {
 			case buildCommand:
 				// update state
@@ -225,6 +228,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 					topic.Subscribe(watchChan)
 				}
 
+				// build
 				transaction := watcher.GetTransaction(p.config.Dir)
 				err := p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
 				if err != nil {
@@ -286,6 +290,8 @@ func (p *internalPlugin) run(ctx context.Context) {
 	}
 }
 
+// loadBuildResult reads the result of a build (ie schema and errors) from disk.
+// internal plugins don't have a way to pass back schema and errors other than writing them to disk.
 func loadBuildResult(config moduleconfig.AbsModuleConfig) (BuildResult, error) {
 	errorList, err := loadProtoErrors(config)
 	if err != nil {
