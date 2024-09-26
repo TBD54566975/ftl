@@ -58,6 +58,9 @@ func init() {
 	block := func(int) string {
 		return "✔"
 	}
+	cross := func(int) string {
+		return "✘"
+	}
 	empty := func(int) string {
 		return "•"
 	}
@@ -67,7 +70,7 @@ func init() {
 		BuildStateBuilt:     block,
 		BuildStateDeploying: spin,
 		BuildStateDeployed:  block,
-		BuildStateFailed:    spin,
+		BuildStateFailed:    cross,
 	}
 }
 
