@@ -22,9 +22,8 @@ func TestWatch(t *testing.T) {
 	var events chan WatchEvent
 	var topic *pubsub.Topic[WatchEvent]
 	var one, two moduleconfig.ModuleConfig
-	// TODO: add patterns to watch
-	w := NewWatcher()
 
+	w := NewWatcher("**/*.go", "go.mod", "go.sum")
 	in.Run(t,
 		func(tb testing.TB, ic in.TestContext) {
 			events, topic = startWatching(ic, t, w, ic.WorkingDir())
@@ -64,8 +63,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	var events chan WatchEvent
 	var topic *pubsub.Topic[WatchEvent]
 	var transaction ModifyFilesTransaction
-	// TODO: add patterns to watch
-	w := NewWatcher()
+	w := NewWatcher("**/*.go", "go.mod", "go.sum")
 
 	in.Run(t,
 		func(tb testing.TB, ic in.TestContext) {
@@ -99,8 +97,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	var events chan WatchEvent
 	var topic *pubsub.Topic[WatchEvent]
 	var transaction ModifyFilesTransaction
-	// TODO: add patterns to watch
-	w := NewWatcher()
+	w := NewWatcher("**/*.go", "go.mod", "go.sum")
 
 	in.Run(t,
 		func(tb testing.TB, ic in.TestContext) {
