@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	"github.com/alecthomas/types/optional"
 )
 
 type TaskState string
@@ -18,34 +19,34 @@ const (
 
 // Task is a unit of work for a deployment
 type Task struct {
-	Handler  Provisioner
-	Module   string
-	State    TaskState
-	Desired  []*provisioner.Resource
-	Existing []*provisioner.Resource
+	handler  Provisioner
+	module   string
+	state    TaskState
+	desired  []*provisioner.Resource
+	existing []*provisioner.Resource
 	// populated only when the task is done
-	Output []*provisioner.Resource
+	output []*provisioner.Resource
 
 	// set if the task is currently running
-	RunningToken string
+	runningToken string
 }
 
 func (t *Task) Start(ctx context.Context) error {
-	if t.State != TaskStatePending {
-		return fmt.Errorf("task state is not pending: %s", t.State)
+	if t.state != TaskStatePending {
+		return fmt.Errorf("task state is not pending: %s", t.state)
 	}
-	t.State = TaskStateRunning
-	token, err := t.Handler.Provision(ctx, t.Module, t.constructResourceContext(t.Desired), t.Existing)
+	t.state = TaskStateRunning
+	token, err := t.handler.Provision(ctx, t.module, t.constructResourceContext(t.desired), t.existing)
 	if err != nil {
-		t.State = TaskStateFailed
+		t.state = TaskStateFailed
 		return fmt.Errorf("error provisioning resources: %w", err)
 	}
 	if token == "" {
 		// no changes
-		t.State = TaskStateDone
-		t.Output = t.Desired
+		t.state = TaskStateDone
+		t.output = t.desired
 	}
-	t.RunningToken = token
+	t.runningToken = token
 	return nil
 }
 
@@ -61,16 +62,16 @@ func (t *Task) constructResourceContext(r []*provisioner.Resource) []*provisione
 }
 
 func (t *Task) Progress(ctx context.Context) error {
-	if t.State != TaskStateRunning {
-		return fmt.Errorf("task state is not running: %s", t.State)
+	if t.state != TaskStateRunning {
+		return fmt.Errorf("task state is not running: %s", t.state)
 	}
-	state, output, err := t.Handler.State(ctx, t.RunningToken, t.Desired)
+	state, output, err := t.handler.State(ctx, t.runningToken, t.desired)
 	if err != nil {
 		return fmt.Errorf("error getting state: %w", err)
 	}
 	if state == TaskStateDone {
-		t.State = TaskStateDone
-		t.Output = output
+		t.state = TaskStateDone
+		t.output = output
 	}
 	return nil
 }
@@ -82,30 +83,30 @@ type Deployment struct {
 }
 
 // next running or pending task. Nil if all tasks are done.
-func (d *Deployment) next() *Task {
+func (d *Deployment) next() optional.Option[*Task] {
 	for _, t := range d.Tasks {
-		if t.State == TaskStatePending || t.State == TaskStateRunning || t.State == TaskStateFailed {
-			return t
+		if t.state == TaskStatePending || t.state == TaskStateRunning || t.state == TaskStateFailed {
+			return optional.Some(t)
 		}
 	}
-	return nil
+	return optional.None[*Task]()
 }
 
 // Progress the deployment. Returns true if there are still tasks running or pending.
 func (d *Deployment) Progress(ctx context.Context) (bool, error) {
-	next := d.next()
-	if next == nil {
+	next, ok := d.next().Get()
+	if !ok {
 		return false, nil
 	}
 
-	if next.State == TaskStatePending {
+	if next.state == TaskStatePending {
 		err := next.Start(ctx)
 		if err != nil {
 			return true, err
 		}
 	}
 	err := next.Progress(ctx)
-	return d.next() != nil, err
+	return d.next().Ok(), err
 }
 
 type DeploymentState struct {
@@ -118,7 +119,7 @@ type DeploymentState struct {
 func (d *Deployment) State() *DeploymentState {
 	result := &DeploymentState{}
 	for _, t := range d.Tasks {
-		switch t.State {
+		switch t.state {
 		case TaskStatePending:
 			result.Pending = append(result.Pending, t)
 		case TaskStateRunning:
