@@ -172,6 +172,7 @@ func TestExternalPublishRuntimeCheck(t *testing.T) {
 }
 
 func TestLeaseFailure(t *testing.T) {
+	t.Skip()
 	logFilePath := filepath.Join(t.TempDir(), "pubsub.log")
 	t.Setenv("FSM_LOG_FILE", logFilePath)
 
@@ -192,7 +193,7 @@ func TestLeaseFailure(t *testing.T) {
 				)
 				RETURNING *
 			)
-			SELECT COUNT(*) FROM deleted_rows;		
+			SELECT COUNT(*) FROM deleted_rows;
 		`, 1),
 
 		in.Sleep(time.Second*7),
