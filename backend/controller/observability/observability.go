@@ -17,6 +17,7 @@ var (
 	Ingress    *IngressMetrics
 	PubSub     *PubSubMetrics
 	Cron       *CronMetrics
+	Controller *ControllerTracing
 )
 
 func init() {
@@ -37,6 +38,7 @@ func init() {
 	errs = errors.Join(errs, err)
 	Cron, err = initCronMetrics()
 	errs = errors.Join(errs, err)
+	Controller = initControllerTracing()
 
 	if err != nil {
 		panic(fmt.Errorf("could not initialize controller metrics: %w", errs))
