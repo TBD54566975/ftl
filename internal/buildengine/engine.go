@@ -488,7 +488,9 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				} else {
 					didUpdateDeployments = true
 				}
-
+				if meta, ok := e.moduleMetas.Load(event.Config.Module); ok {
+					meta.plugin.Updates().Unsubscribe(e.pluginEvents)
+				}
 				e.moduleMetas.Delete(event.Config.Module)
 			case WatchEventModuleChanged:
 				// TODO: ftl.toml changed... update config and tell plugin
@@ -843,7 +845,6 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleCo
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}
 	plugin.Updates().Subscribe(e.pluginEvents)
-	// TODO: unsubscribe when we remove this module
 
 	return moduleMeta{
 		module: Module{
