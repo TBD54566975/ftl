@@ -50,7 +50,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 		config := m.Abs()
 		schemaPath := config.Schema()
 		if r, ok := s.deployRoot.Get(); ok {
-			schemaPath = filepath.Join(r, config.Module, config.DeployDir, config.Schema())
+			schemaPath = filepath.Join(r, m.Module, m.DeployDir, m.Schema())
 		}
 
 		module, err := schema.ModuleFromProtoFile(schemaPath)

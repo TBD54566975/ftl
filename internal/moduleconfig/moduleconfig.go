@@ -326,6 +326,10 @@ func parseImports(filePath string) ([]string, error) {
 	return imports, nil
 }
 
+func (c ModuleConfig) Schema() string {
+	return "schema.pb"
+}
+
 func (c AbsModuleConfig) Schema() string {
 	return filepath.Join(c.DeployDir, "schema.pb")
 }
