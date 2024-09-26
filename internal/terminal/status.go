@@ -151,7 +151,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 			n, err := sm.read.Read(rawData)
 			if err != nil {
 				if current != "" {
-					sm.writeLine(current)
+					sm.writeLine(current, true)
 				}
 				if !closed {
 					sm.exitWait.Done()
@@ -165,7 +165,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 					// Null byte, we are done
 					// we keep running though as there may be more data on exit
 					// that we handle on a best effort basis
-					sm.writeLine(current)
+					sm.writeLine(current, true)
 					if !closed {
 						sm.exitWait.Done()
 						closed = true
@@ -186,7 +186,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 					continue
 				}
 				if d == '\n' {
-					sm.writeLine(current)
+					sm.writeLine(current, false)
 					current = ""
 				} else {
 					current += string(d)
@@ -350,16 +350,19 @@ func (r *terminalStatusManager) Close() {
 	r.exitWait.Wait()
 }
 
-func (r *terminalStatusManager) writeLine(s string) {
+func (r *terminalStatusManager) writeLine(s string, last bool) {
 	r.statusLock.RLock()
 	defer r.statusLock.RUnlock()
+	if !last {
+		s += "\n"
+	}
 
 	if r.totalStatusLines == 0 {
-		r.underlyingWrite("\r" + s + "\n")
+		r.underlyingWrite("\r" + s)
 		return
 	}
 	r.clearStatusMessages()
-	r.underlyingWrite("\r" + s + "\n")
+	r.underlyingWrite("\r" + s)
 	r.redrawStatus()
 
 }
