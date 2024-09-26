@@ -23,7 +23,7 @@ func (k TinkSigner) Sign(data []byte) (*SignedData, error) {
 
 	return &SignedData{
 		data:      data,
-		signature: bytes,
+		Signature: bytes,
 	}, nil
 }
 
@@ -55,7 +55,7 @@ func NewTinkVerifier(publicKey []byte) (Verifier, error) {
 }
 
 func (k TinkVerifier) Verify(signedData SignedData) ([]byte, error) {
-	err := k.verifier.Verify(signedData.signature, signedData.data)
+	err := k.verifier.Verify(signedData.Signature, signedData.data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify signature: %w", err)
 	}

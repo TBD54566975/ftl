@@ -38,7 +38,7 @@ type Certificate struct {
 }
 
 func (c Certificate) String() string {
-	return fmt.Sprintf("Certificate %s signed:%x", c.data, c.signature)
+	return fmt.Sprintf("Certificate %s signed:%x", c.data, c.Signature)
 }
 
 // SignCertificateRequest signs an identity certificate request.
@@ -75,7 +75,7 @@ type CertifiedSignedData struct {
 }
 
 func (c CertifiedSignedData) String() string {
-	return fmt.Sprintf("CertifiedSignedData data:%s signature:%x (%s)", c.SignedData.data, c.SignedData.signature, c.Certificate)
+	return fmt.Sprintf("CertifiedSignedData data:%s signature:%x (%s)", c.SignedData.data, c.SignedData.Signature, c.Certificate)
 }
 
 func (c CertifiedSignedData) Verify(caVerifier Verifier) ([]byte, error) {

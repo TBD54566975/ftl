@@ -26,7 +26,7 @@ func TestBasics(t *testing.T) {
 	assert.Equal(t, "hunter2", string(data))
 
 	// Now fail it just for sanity
-	signedData.signature[0] = ^signedData.signature[0]
+	signedData.Signature[0] = ^signedData.Signature[0]
 	_, err = verifier.Verify(*signedData)
 	assert.EqualError(t, err, "failed to verify signature: verifier_factory: invalid signature")
 }
