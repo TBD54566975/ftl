@@ -1340,8 +1340,8 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	}
 
 	queueDepth := call.QueueDepth
-	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(ctx, call, callResult, func(tx *dal.DAL, isFinalResult bool) error {
-		return s.finaliseAsyncCall(ctx, tx, call, callResult, isFinalResult)
+	didScheduleAnotherCall, err := s.dal.CompleteAsyncCall(originalCtx, call, callResult, func(tx *dal.DAL, isFinalResult bool) error {
+		return s.finaliseAsyncCall(originalCtx, tx, call, callResult, isFinalResult)
 	})
 	if err != nil {
 		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, err)

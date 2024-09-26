@@ -198,7 +198,7 @@ func TestLeaseFailure(t *testing.T) {
 		in.Sleep(time.Second*7),
 
 		// confirm that the first event failed and the second event succeeded,
-		in.QueryRow("ftl", `SELECT state, error FROM async_calls WHERE verb = 'slow.consume' ORDER BY created_at`, "error", "async call lease expired"),
+		in.QueryRow("ftl", `SELECT state, error FROM async_calls WHERE verb = 'slow.consume' ORDER BY created_at`, "error", "canceled: context canceled"),
 		in.QueryRow("ftl", `SELECT state, error FROM async_calls WHERE verb = 'slow.consume' ORDER BY created_at OFFSET 1`, "success", nil),
 
 		// confirm that the first call did not keep executing for too long after the lease was expired
