@@ -28,9 +28,6 @@ func ConsumeAgentBroadcast(ctx context.Context, agent origin.Agent) error {
 
 // FSM
 
-// //ftl:typealias
-// type Agent origin.Agent
-
 var mission = ftl.FSM(
 	"mission",
 	ftl.Start(Briefed),
@@ -68,18 +65,6 @@ func Briefed(ctx context.Context, agent origin.Agent) error {
 
 //ftl:verb
 func Deployed(ctx context.Context, d deployment) error {
-	// TODO: Insert deployed agent into database, update via Succeeded/Terminated
-	// _, err := ftl.Call(ctx, InsertDeployedAgent, InsertDeployedAgentRequest{
-	// 	AgentID:       d.Agent.Id,
-	// 	Alias:         d.Agent.Alias,
-	// 	LicenseToKill: d.Agent.LicenseToKill,
-	// 	BriefedAt:     d.Agent.BriefedAt.MustGet(),
-	// 	DeployedAt:    time.Now(),
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("failed to call agent insertion verb: %w", err)
-	// }
-
 	ftl.LoggerFromContext(ctx).Infof("Deployed agent %v to %s", d.Agent.Id, d.Target)
 	appendLog(ctx, "deployed %d", d.Agent.Id)
 	return nil
@@ -142,63 +127,6 @@ func GetLogFile(ctx context.Context, req GetLogFileRequest) (GetLogFileResponse,
 	return GetLogFileResponse{Path: logFile.Get(ctx)}, nil
 }
 
-// DB
-
-type InsertDeployedAgentRequest struct {
-	AgentID       int
-	Alias         string
-	LicenseToKill bool
-	BriefedAt     time.Time
-	DeployedAt    time.Time
-}
-
-type InsertDeployedAgentResponse struct{}
-
-//ftl:verb
-func InsertDeployedAgent(ctx context.Context, req InsertDeployedAgentRequest) (InsertDeployedAgentResponse, error) {
-	err := setupDatabase(ctx)
-	if err != nil {
-		return InsertDeployedAgentResponse{}, fmt.Errorf("failed to setup database: %w", err)
-	}
-	_, err = db.Get(ctx).Exec(
-		"INSERT INTO deployed_agents (agent_id, alias, license_to_kill, briefed_at, deployed_at) VALUES ($1, $2, $3, $4);",
-		req.AgentID, req.Alias, req.LicenseToKill, req.BriefedAt, req.DeployedAt,
-	)
-	if err != nil {
-		return InsertDeployedAgentResponse{}, fmt.Errorf("failed to insert deployed agent: %w", err)
-	}
-	return InsertDeployedAgentResponse{}, nil
-}
-
-type UpdateDeployedAgentRequest struct {
-	AgentID      int
-	SuccessAt    ftl.Option[time.Time]
-	TerminatedAt ftl.Option[time.Time]
-}
-
-type UpdateDeployedAgentResponse struct{}
-
-//ftl:verb
-func UpdateDeployedAgent(ctx context.Context, req UpdateDeployedAgentRequest) (UpdateDeployedAgentResponse, error) {
-	err := setupDatabase(ctx)
-	if err != nil {
-		return UpdateDeployedAgentResponse{}, fmt.Errorf("failed to setup database: %w", err)
-	}
-	if successAt, ok := req.SuccessAt.Get(); ok {
-		_, err = db.Get(ctx).Exec("UPDATE deployed_agents SET success_at = $1 WHERE agent_id = $2;", successAt, req.AgentID)
-		if err != nil {
-			return UpdateDeployedAgentResponse{}, fmt.Errorf("failed to update deployed agent: %w", err)
-		}
-	}
-	if termAt, ok := req.TerminatedAt.Get(); ok {
-		_, err = db.Get(ctx).Exec("UPDATE deployed_agents SET terminated_at = $1 WHERE agent_id = $2;", termAt, req.AgentID)
-		if err != nil {
-			return UpdateDeployedAgentResponse{}, fmt.Errorf("failed to update deployed agent: %w", err)
-		}
-	}
-	return UpdateDeployedAgentResponse{}, nil
-}
-
 // Helpers
 
 func appendLog(ctx context.Context, msg string, args ...interface{}) {
@@ -215,16 +143,4 @@ func appendLog(ctx context.Context, msg string, args ...interface{}) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func setupDatabase(ctx context.Context) error {
-	_, err := db.Get(ctx).Exec(`CREATE TABLE IF NOT EXISTS deployed_agents (
-		agent_id INT PRIMARY KEY,
-		alias TEXT,
-		license_to_kill BOOLEAN,
-		deployed_at TIMESTAMPTZ NOT NULL,
-		success_at TIMESTAMPTZ,
-		terminated_at TIMESTAMPTZ
-	);`)
-	return err
 }
