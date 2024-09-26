@@ -66,10 +66,12 @@ func extractEnumVariant(pass *analysis.Pass, node *ast.TypeSpec, obj types.Objec
 			if !ok {
 				return optional.None[*schema.TypeValue]()
 			}
-			return optional.Some(&schema.TypeValue{
+			tv := &schema.TypeValue{
 				Pos:   common.GoPosToSchemaPos(p.Fset, node.Pos()),
 				Value: value,
-			})
+			}
+			common.MarkIncludeNativeName(p, obj, tv)
+			return optional.Some(tv)
 		}
 		common.MarkMaybeTypeEnumVariant(pass, obj, variant, o, valueFunc)
 	}

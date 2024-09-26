@@ -51,6 +51,12 @@ func CallingVerb() schema.RefKey {
 	return schema.RefKey{Module: module, Name: verb}
 }
 
+func ClientRef[T any]() Ref {
+	ref := TypeRef[T]()
+	ref.Name = strings.TrimSuffix(ref.Name, "Client")
+	return ref
+}
+
 // TypeRef returns the Ref for a Go type.
 //
 // Panics if called with a type outside of FTL.

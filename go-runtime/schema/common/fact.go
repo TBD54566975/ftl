@@ -118,6 +118,14 @@ type VerbCall struct {
 
 func (*VerbCall) schemaFactValue() {}
 
+// IncludeNativeName marks a node that needs to be added to the native names map provided in the extraction result.
+type IncludeNativeName struct {
+	// The schema node associated with this native name.
+	Node schema.Node
+}
+
+func (*IncludeNativeName) schemaFactValue() {}
+
 // MarkSchemaDecl marks the given object as having been extracted to the given schema decl.
 func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	fact := newFact(pass, obj)
@@ -178,6 +186,13 @@ func MarkFunctionCall(pass *analysis.Pass, obj types.Object, callee types.Object
 func MarkVerbCall(pass *analysis.Pass, obj types.Object, verbRef *schema.Ref) {
 	fact := newFact(pass, obj)
 	fact.Add(&VerbCall{VerbRef: verbRef})
+	pass.ExportObjectFact(obj, fact)
+}
+
+// MarkIncludeNativeName marks the given object as needing to be added to the native names map.
+func MarkIncludeNativeName(pass *analysis.Pass, obj types.Object, node schema.Node) {
+	fact := newFact(pass, obj)
+	fact.Add(&IncludeNativeName{Node: node})
 	pass.ExportObjectFact(obj, fact)
 }
 

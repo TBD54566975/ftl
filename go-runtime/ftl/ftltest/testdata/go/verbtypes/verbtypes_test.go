@@ -14,27 +14,44 @@ func TestVerbs(t *testing.T) {
 	knockOnEffects := map[string]string{}
 
 	ctx := ftltest.Context(
-		ftltest.WhenVerb(Verb, func(ctx context.Context, req Request) (Response, error) {
+		ftltest.WhenVerb[VerbClient](func(ctx context.Context, req Request) (Response, error) {
 			return Response{Output: fmt.Sprintf("fake: %s", req.Input)}, nil
 		}),
-		ftltest.WhenSource(Source, func(ctx context.Context) (Response, error) {
+		ftltest.WhenSource[SourceClient](func(ctx context.Context) (Response, error) {
 			return Response{Output: "fake"}, nil
 		}),
-		ftltest.WhenSink(Sink, func(ctx context.Context, req Request) error {
+		ftltest.WhenSink[SinkClient](func(ctx context.Context, req Request) error {
 			knockOnEffects["sink"] = req.Input
 			return nil
 		}),
-		ftltest.WhenEmpty(Empty, func(ctx context.Context) error {
+		ftltest.WhenEmpty[EmptyClient](func(ctx context.Context) error {
 			knockOnEffects["empty"] = "test"
 			return nil
 		}),
 	)
 
-	verbResp, err := ftl.Call(ctx, Verb, Request{Input: "test"})
+	verbResp, err := ftltest.Call[VerbClient, Request, Response](ctx, Request{Input: "test"})
 	assert.NoError(t, err)
 	assert.Equal(t, Response{Output: "fake: test"}, verbResp)
 
-	sourceResp, err := ftl.CallSource(ctx, Source)
+	sourceResp, err := ftltest.CallSource[SourceClient, Response](ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, Response{Output: "fake"}, sourceResp)
+
+	err = ftltest.CallSink[SinkClient](ctx, Request{Input: "testsink"})
+	assert.NoError(t, err)
+	assert.Equal(t, knockOnEffects["sink"], "testsink")
+
+	err = ftltest.CallEmpty[EmptyClient](ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, knockOnEffects["empty"], "test")
+
+	// TODO: remove after refactor
+	verbResp, err = ftl.Call(ctx, Verb, Request{Input: "test"})
+	assert.NoError(t, err)
+	assert.Equal(t, Response{Output: "fake: test"}, verbResp)
+
+	sourceResp, err = ftl.CallSource(ctx, Source)
 	assert.NoError(t, err)
 	assert.Equal(t, Response{Output: "fake"}, sourceResp)
 
@@ -49,44 +66,57 @@ func TestVerbs(t *testing.T) {
 
 func TestContextExtension(t *testing.T) {
 	ctx1 := ftltest.Context(
-		ftltest.WhenSource(Source, func(ctx context.Context) (Response, error) {
+		ftltest.WhenSource[SourceClient](func(ctx context.Context) (Response, error) {
 			return Response{Output: "fake"}, nil
 		}),
 	)
 
 	ctx2 := ftltest.SubContext(
 		ctx1,
-		ftltest.WhenSource(Source, func(ctx context.Context) (Response, error) {
+		ftltest.WhenSource[SourceClient](func(ctx context.Context) (Response, error) {
 			return Response{Output: "another fake"}, nil
 		}),
 	)
 
-	sourceResp, err := ftl.CallSource(ctx1, Source)
+	sourceResp, err := ftltest.CallSource[SourceClient, Response](ctx1)
 	assert.NoError(t, err)
 	assert.Equal(t, Response{Output: "fake"}, sourceResp)
 
-	sourceResp, err = ftl.CallSource(ctx2, Source)
+	sourceResp, err = ftltest.CallSource[SourceClient, Response](ctx2)
 	assert.NoError(t, err)
 	assert.Equal(t, Response{Output: "another fake"}, sourceResp)
 }
 
 func TestVerbErrors(t *testing.T) {
 	ctx := ftltest.Context(
-		ftltest.WhenVerb(Verb, func(ctx context.Context, req Request) (Response, error) {
+		ftltest.WhenVerb[VerbClient](func(ctx context.Context, req Request) (Response, error) {
 			return Response{}, fmt.Errorf("fake: %s", req.Input)
 		}),
-		ftltest.WhenSource(Source, func(ctx context.Context) (Response, error) {
+		ftltest.WhenSource[SourceClient](func(ctx context.Context) (Response, error) {
 			return Response{}, fmt.Errorf("fake-source")
 		}),
-		ftltest.WhenSink(Sink, func(ctx context.Context, req Request) error {
+		ftltest.WhenSink[SinkClient](func(ctx context.Context, req Request) error {
 			return fmt.Errorf("fake: %s", req.Input)
 		}),
-		ftltest.WhenEmpty(Empty, func(ctx context.Context) error {
+		ftltest.WhenEmpty[EmptyClient](func(ctx context.Context) error {
 			return fmt.Errorf("fake-empty")
 		}),
 	)
 
-	_, err := ftl.Call(ctx, Verb, Request{Input: "test"})
+	_, err := ftltest.Call[VerbClient, Request, Response](ctx, Request{Input: "test"})
+	assert.EqualError(t, err, "verbtypes.verb: fake: test")
+
+	_, err = ftltest.CallSource[SourceClient, Response](ctx)
+	assert.EqualError(t, err, "verbtypes.source: fake-source")
+
+	err = ftltest.CallSink[SinkClient](ctx, Request{Input: "test-sink"})
+	assert.EqualError(t, err, "verbtypes.sink: fake: test-sink")
+
+	err = ftltest.CallEmpty[EmptyClient](ctx)
+	assert.EqualError(t, err, "verbtypes.empty: fake-empty")
+
+	// TODO: remove after refactor
+	_, err = ftl.Call(ctx, Verb, Request{Input: "test"})
 	assert.EqualError(t, err, "verbtypes.verb: fake: test")
 
 	_, err = ftl.CallSource(ctx, Source)
@@ -97,4 +127,17 @@ func TestVerbErrors(t *testing.T) {
 
 	err = ftl.CallEmpty(ctx, Empty)
 	assert.EqualError(t, err, "verbtypes.empty: fake-empty")
+}
+
+func TestTransitiveVerbMock(t *testing.T) {
+	ctx := ftltest.Context(
+		ftltest.WithCallsAllowedWithinModule(),
+		ftltest.WhenVerb[CalleeVerbClient](func(ctx context.Context, req Request) (Response, error) {
+			return Response{Output: fmt.Sprintf("mocked: %s", req.Input)}, nil
+		}),
+	)
+
+	verbResp, err := ftltest.Call[CallerVerbClient, Request, Response](ctx, Request{Input: "test"})
+	assert.NoError(t, err)
+	assert.Equal(t, Response{Output: "mocked: test"}, verbResp)
 }

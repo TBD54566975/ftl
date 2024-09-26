@@ -129,6 +129,10 @@ func (m ModuleContext) GetSecret(name string, value any) error {
 	return json.Unmarshal(data, value)
 }
 
+func (m ModuleContext) GetPostgresDatabase(name string) (string, error) {
+	return m.GetDatabase(name, DBTypePostgres)
+}
+
 // GetDatabase gets a database DSN by name and type.
 //
 // Returns an error if no database with that name is found or it is not the
