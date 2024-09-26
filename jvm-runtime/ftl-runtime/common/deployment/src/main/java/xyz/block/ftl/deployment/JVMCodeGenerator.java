@@ -46,7 +46,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
         List<Module> modules = new ArrayList<>();
         Map<DeclRef, Type> typeAliasMap = new HashMap<>();
         Map<DeclRef, String> nativeTypeAliasMap = new HashMap<>();
-        Map<DeclRef, EnumVariantInfo> enumVariantInfoMap = new HashMap<>();
+        Map<DeclRef, List<EnumInfo>> enumVariantInfoMap = new HashMap<>();
         try (Stream<Path> pathStream = Files.list(context.inputDir())) {
             for (var file : pathStream.toList()) {
                 String fileName = file.getFileName().toString();
@@ -135,11 +135,11 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
             Map<DeclRef, Type> typeAliasMap, Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
 
     protected abstract void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, EnumVariantInfo> enumVariantInfoMap, Path outputDir)
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, List<EnumInfo>> enumVariantInfoMap, Path outputDir)
             throws IOException;
 
     protected abstract void generateDataObject(Module module, Data data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, EnumVariantInfo> enumVariantInfoMap, Path outputDir)
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, List<EnumInfo>> enumVariantInfoMap, Path outputDir)
             throws IOException;
 
     protected abstract void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
@@ -153,7 +153,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
     public record DeclRef(String module, String name) {
     }
 
-    public record EnumVariantInfo(String interfaceType, EnumVariant variant, List<EnumVariant> otherVariants) {
+    public record EnumInfo(String interfaceType, EnumVariant variant, List<EnumVariant> otherVariants) {
     }
 
     protected static String className(String in) {
