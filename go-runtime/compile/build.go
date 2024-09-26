@@ -1024,7 +1024,7 @@ func genTypeWithNativeNames(module *schema.Module, t schema.Type, nativeNames ex
 				if i != 0 {
 					desc += ", "
 				}
-				desc += genType(module, tp)
+				desc += genTypeWithNativeNames(module, tp, nativeNames)
 			}
 			desc += "]"
 		}
@@ -1040,13 +1040,13 @@ func genTypeWithNativeNames(module *schema.Module, t schema.Type, nativeNames ex
 		return strings.ToLower(t.String())
 
 	case *schema.Array:
-		return "[]" + genType(module, t.Element)
+		return "[]" + genTypeWithNativeNames(module, t.Element, nativeNames)
 
 	case *schema.Map:
-		return "map[" + genType(module, t.Key) + "]" + genType(module, t.Value)
+		return "map[" + genTypeWithNativeNames(module, t.Key, nativeNames) + "]" + genType(module, t.Value)
 
 	case *schema.Optional:
-		return "ftl.Option[" + genType(module, t.Type) + "]"
+		return "ftl.Option[" + genTypeWithNativeNames(module, t.Type, nativeNames) + "]"
 
 	case *schema.Unit:
 		return "ftl.Unit"
