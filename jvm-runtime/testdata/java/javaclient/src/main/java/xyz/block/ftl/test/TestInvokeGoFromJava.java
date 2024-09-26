@@ -6,13 +6,18 @@ import java.util.Map;
 
 import org.jetbrains.annotations.NotNull;
 
+import ftl.gomodule.Animal;
 import ftl.gomodule.BoolVerbClient;
 import ftl.gomodule.BytesVerbClient;
+import ftl.gomodule.ColorInt;
 import ftl.gomodule.EmptyVerbClient;
 import ftl.gomodule.ErrorEmptyVerbClient;
 import ftl.gomodule.ExternalTypeVerbClient;
 import ftl.gomodule.FloatVerbClient;
 import ftl.gomodule.IntVerbClient;
+import ftl.gomodule.Mixed;
+import ftl.gomodule.MixedEnumVerbClient;
+import ftl.gomodule.NoValueTypeEnumVerbClient;
 import ftl.gomodule.ObjectArrayVerbClient;
 import ftl.gomodule.ObjectMapVerbClient;
 import ftl.gomodule.OptionalBoolVerbClient;
@@ -27,9 +32,11 @@ import ftl.gomodule.OptionalTestObjectVerbClient;
 import ftl.gomodule.OptionalTimeVerbClient;
 import ftl.gomodule.ParameterizedObjectVerbClient;
 import ftl.gomodule.ParameterizedType;
+import ftl.gomodule.Scalar;
 import ftl.gomodule.SinkVerbClient;
 import ftl.gomodule.SourceVerbClient;
 import ftl.gomodule.StringArrayVerbClient;
+import ftl.gomodule.StringList;
 import ftl.gomodule.StringMapVerbClient;
 import ftl.gomodule.StringVerbClient;
 import ftl.gomodule.TestObject;
@@ -37,6 +44,9 @@ import ftl.gomodule.TestObjectOptionalFields;
 import ftl.gomodule.TestObjectOptionalFieldsVerbClient;
 import ftl.gomodule.TestObjectVerbClient;
 import ftl.gomodule.TimeVerbClient;
+import ftl.gomodule.TypeEnum;
+import ftl.gomodule.TypeEnumVerbClient;
+import ftl.gomodule.ValueEnumVerbClient;
 import web5.sdk.dids.didcore.Did;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
@@ -216,4 +226,37 @@ public class TestInvokeGoFromJava {
         return client.call(val);
     }
 
+    @Export
+    @Verb
+    public Animal noValueTypeEnumVerb(Animal animal, NoValueTypeEnumVerbClient client) {
+        if (animal.isCat()) {
+            return client.call(animal.getCat());
+        } else {
+            return client.call(animal.getDog());
+        }
+    }
+
+    @Export
+    @Verb
+    public ColorInt valueEnumVerb(ColorInt color, ValueEnumVerbClient client) {
+        return client.call(ColorInt.Red);
+    }
+
+    @Export
+    @Verb
+    public TypeEnum typeEnumVerb(TypeEnum value, TypeEnumVerbClient client) {
+        if (value.isScalar()) {
+            return client.call(new StringList(List.of("a", "b", "c")));
+        } else if (value.isStringList()) {
+            return client.call(new Scalar("scalar"));
+        } else {
+            throw new IllegalArgumentException("unexpected value");
+        }
+    }
+
+    @Export
+    @Verb
+    public Mixed mixedEnumVerb(Mixed mixed, MixedEnumVerbClient client) {
+        return client.call(mixed);
+    }
 }
