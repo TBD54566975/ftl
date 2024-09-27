@@ -9,28 +9,31 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/profiles"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/projectinit"
 )
 
 type initCmd struct {
-	Name       string   `arg:"" help:"Name of the project."`
-	Hermit     bool     `help:"Include Hermit language-specific toolchain binaries." negatable:""`
-	Dir        string   `arg:"" help:"Directory to initialize the project in."`
-	ModuleDirs []string `help:"Child directories of existing modules."`
-	NoGit      bool     `help:"Don't add files to the git repository."`
-	Startup    string   `help:"Command to run on startup."`
+	Name        string   `arg:"" help:"Name of the project."`
+	Hermit      bool     `help:"Include Hermit language-specific toolchain binaries." negatable:""`
+	Dir         string   `arg:"" help:"Directory to initialize the project in." default:"${gitroot}" required:""`
+	ModuleDirs  []string `help:"Child directories of existing modules."`
+	ModuleRoots []string `help:"Root directories of existing modules."`
+	NoGit       bool     `help:"Don't add files to the git repository."`
+	Startup     string   `help:"Command to run on startup."`
 }
 
-func (i initCmd) Run(ctx context.Context) error {
-	if i.Dir == "" {
-		return fmt.Errorf("directory is required")
-	}
-
-	logger := log.FromContext(ctx)
+func (i initCmd) Run(
+	ctx context.Context,
+	logger *log.Logger,
+	configRegistry *providers.Registry[configuration.Configuration],
+	secretsRegistry *providers.Registry[configuration.Secrets],
+) error {
 	logger.Debugf("Initializing FTL project in %s", i.Dir)
 	if err := scaffold(ctx, i.Hermit, projectinit.Files(), i.Dir, i); err != nil {
 		return err
@@ -50,20 +53,24 @@ func (i initCmd) Run(ctx context.Context) error {
 		return err
 	}
 
-	gitRoot, ok := internal.GitRoot(i.Dir).Get()
-	if !i.NoGit && ok {
+	_, err := profiles.Init(profiles.ProjectConfig{
+		Realm:         i.Name,
+		FTLMinVersion: ftl.Version,
+		ModuleRoots:   i.ModuleRoots,
+		NoGit:         i.NoGit,
+		Root:          i.Dir,
+	}, secretsRegistry, configRegistry)
+	if err != nil {
+		return fmt.Errorf("initialize project: %w", err)
+	}
+
+	if !i.NoGit {
 		logger.Debugf("Updating .gitignore")
-		if err := updateGitIgnore(ctx, gitRoot); err != nil {
-			return err
+		if err := updateGitIgnore(ctx, i.Dir); err != nil {
+			return fmt.Errorf("update .gitignore: %w", err)
 		}
-		logger.Debugf("Adding files to git")
-		if i.Hermit {
-			if err := maybeGitAdd(ctx, i.Dir, "bin/*"); err != nil {
-				return err
-			}
-		}
-		if err := maybeGitAdd(ctx, i.Dir, "ftl-project.toml"); err != nil {
-			return err
+		if err := maybeGitAdd(ctx, i.Dir, ".ftl-project"); err != nil {
+			return fmt.Errorf("git add .ftl-project: %w", err)
 		}
 	}
 	return nil
