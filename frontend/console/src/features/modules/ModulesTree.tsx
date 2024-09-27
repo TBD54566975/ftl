@@ -1,4 +1,4 @@
-import { ArrowRight01Icon, SquareArrowShrink02Icon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon } from 'hugeicons-react'
+import { ArrowRight01Icon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon, SquareArrowShrink02Icon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
