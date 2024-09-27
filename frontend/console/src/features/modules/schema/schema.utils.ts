@@ -38,7 +38,7 @@ export const declTypeMultiselectOpts = [
   },
   {
     key: 'secret',
-    displayName: 'FSM',
+    displayName: 'Secret',
   },
   {
     key: 'subscription',
@@ -51,7 +51,7 @@ export const declTypeMultiselectOpts = [
 ]
 
 // Keep these in sync with backend/schema/module.go#L86-L95
-const skipNewLineDeclTypes = ['config', 'secret', 'database', 'topic', 'subscription']
+const skipNewLineDeclTypes = ['config', 'secret', 'database', 'topic', 'subscription', 'typealias']
 const skipGapAfterTypes: { [key: string]: string[] } = {
   secret: ['config'],
   subscription: ['topic'],

@@ -90,9 +90,7 @@ func (m *Module) String() string {
 		reflect.TypeOf(&Database{}):     {gapWithinType: false},
 		reflect.TypeOf(&Topic{}):        {gapWithinType: false},
 		reflect.TypeOf(&Subscription{}): {gapWithinType: false, skipGapAfterTypes: []reflect.Type{reflect.TypeOf(&Topic{})}},
-		reflect.TypeOf(&Enum{}):         {gapWithinType: true},
-		reflect.TypeOf(&Data{}):         {gapWithinType: true},
-		reflect.TypeOf(&Verb{}):         {gapWithinType: true},
+		reflect.TypeOf(&TypeAlias{}):    {gapWithinType: false},
 	}
 
 	lastTypePrinted := optional.None[reflect.Type]()
