@@ -336,7 +336,7 @@ func (c *ConsoleService) GetSubscription(ctx context.Context, req *connect.Reque
 func (c *ConsoleService) GetVerb(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Verb], error) {
 	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get deployments: %w", err)
 	}
 
 	sch := &schema.Schema{
@@ -359,11 +359,11 @@ func (c *ConsoleService) GetVerb(ctx context.Context, req *connect.Request[pbcon
 		if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
 			jsonSchema, err := schema.RequestResponseToJSONSchema(sch, *requestData)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to get JSON schema: %w", err)
 			}
 			jsonData, err := json.MarshalIndent(jsonSchema, "", "  ")
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to marshel indent: %w", err)
 			}
 			jsonRequestSchema = string(jsonData)
 		}
@@ -383,7 +383,7 @@ func (c *ConsoleService) GetVerb(ctx context.Context, req *connect.Request[pbcon
 func (c *ConsoleService) findDecl(ctx context.Context, req *pbconsole.GetDeclRequest) (schema.Decl, error) {
 	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get deployments: %w", err)
 	}
 
 	module, ok := slices.Find(deployments, func(d dalmodel.Deployment) bool {
