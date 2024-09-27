@@ -70,7 +70,7 @@ func AppendOrReplace[T any](slice []T, value T, fn func(T) bool) []T {
 func Sort[T cmp.Ordered](slice []T) []T {
 	out := make([]T, len(slice))
 	copy(out, slice)
-	sort.Slice(out, func(i, j int) bool {
+	sort.SliceStable(out, func(i, j int) bool {
 		return out[i] < out[j]
 	})
 	return out
