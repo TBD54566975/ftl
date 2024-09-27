@@ -106,7 +106,7 @@ type IngressRoute struct {
 	Path       string
 	Module     string
 	Verb       string
-	Method string
+	Method     string
 }
 
 type IngressRouteEntry struct {
