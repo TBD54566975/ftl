@@ -57,7 +57,7 @@ type Querier interface {
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
 	GetFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (FsmInstance, error)
 	// Get the runner endpoints corresponding to the given ingress route.
-	GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error)
+	GetIngressRoutes(ctx context.Context) ([]GetIngressRoutesRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)

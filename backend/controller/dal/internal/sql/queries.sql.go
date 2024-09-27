@@ -1035,11 +1035,10 @@ func (q *Queries) GetFSMInstance(ctx context.Context, fsm schema.RefKey, key str
 }
 
 const getIngressRoutes = `-- name: GetIngressRoutes :many
-SELECT r.key AS runner_key, d.key AS deployment_key, endpoint, ir.path, ir.module, ir.verb
+SELECT r.key AS runner_key, d.key AS deployment_key, endpoint, ir.path, ir.module, ir.verb, ir.method
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
          INNER JOIN deployments d ON ir.deployment_id = d.id
-WHERE ir.method = $1
 `
 
 type GetIngressRoutesRow struct {
@@ -1049,11 +1048,12 @@ type GetIngressRoutesRow struct {
 	Path          string
 	Module        string
 	Verb          string
+	Method        string
 }
 
 // Get the runner endpoints corresponding to the given ingress route.
-func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIngressRoutesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getIngressRoutes, method)
+func (q *Queries) GetIngressRoutes(ctx context.Context) ([]GetIngressRoutesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getIngressRoutes)
 	if err != nil {
 		return nil, err
 	}
@@ -1068,6 +1068,7 @@ func (q *Queries) GetIngressRoutes(ctx context.Context, method string) ([]GetIng
 			&i.Path,
 			&i.Module,
 			&i.Verb,
+			&i.Method,
 		); err != nil {
 			return nil, err
 		}
