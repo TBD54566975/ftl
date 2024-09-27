@@ -30,7 +30,7 @@ export const Multiselect = ({
         <Listbox.Options
           anchor='bottom'
           transition
-          className='w-[var(--button-width)] min-w-48 mt-1 rounded-xl border dark:border-white/5 bg-white/90 dark:bg-gray-700 transition duration-100 ease-in truncate z-20 drop-shadow-lg'
+          className='w-[var(--button-width)] min-w-48 mt-1 rounded-xl border dark:border-white/5 bg-white/90 dark:bg-gray-700 transition duration-100 ease-in truncate drop-shadow-lg z-20'
         >
           {allOpts.map((o) => (
             <Listbox.Option
