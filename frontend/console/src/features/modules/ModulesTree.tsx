@@ -169,7 +169,7 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
   return (
     <div className={'flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'}>
       <nav>
-        <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900'>
+        <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 z-10'>
           <span className='block w-[calc(100%-30px)]'>
             <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
           </span>
