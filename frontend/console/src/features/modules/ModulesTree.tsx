@@ -37,7 +37,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
       const { top } = declRef.current.getBoundingClientRect()
       const { innerHeight } = window
       if (top < 64 || top > innerHeight) {
-        declRef.current.scrollIntoView()
+        declRef.current.scrollIntoView({ behavior: 'smooth' })
       }
     }
   }, [isSelected])
@@ -50,7 +50,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
         id={`decl-${decl.value.value.name}`}
         className={classNames(
           isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
-          'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer',
+          'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer scroll-mt-10',
         )}
         onClick={(e) => {
           e.preventDefault()
@@ -127,6 +127,13 @@ const ModuleSection = ({
   )
 }
 
+function getInitialExpandedModules(moduleName?: string, declName?: string): string[] {
+  if (moduleName && declName) {
+    addModuleToLocalStorageIfMissing(moduleName)
+  }
+  return listExpandedModulesFromLocalStorage()
+}
+
 const declTypesSearchParamKey = 'dt'
 
 export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
@@ -137,11 +144,9 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
   const declTypesFromUrl = declTypeMultiselectOpts.filter((o) => declTypeKeysFromUrl.includes(o.key))
   const [selectedDeclTypes, setSelectedDeclTypes] = useState(declTypesFromUrl.length === 0 ? declTypeMultiselectOpts : declTypesFromUrl)
 
-  const [expandedModules, setExpandedModules] = useState(listExpandedModulesFromLocalStorage())
+  const [expandedModules, setExpandedModules] = useState(getInitialExpandedModules(moduleName, declName))
   useEffect(() => {
-    if (declName) {
-      addModuleToLocalStorageIfMissing(moduleName)
-    }
+    setExpandedModules(getInitialExpandedModules(moduleName, declName))
   }, [moduleName, declName])
 
   function msOnChange(opts: MultiselectOpt[]) {
@@ -167,7 +172,7 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
 
   modules.sort((m1, m2) => Number(m1.isBuiltin) - Number(m2.isBuiltin))
   return (
-    <div className={'flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'}>
+    <div className='flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'>
       <nav>
         <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 z-10'>
           <span className='block w-[calc(100%-30px)]'>
