@@ -15,3 +15,7 @@ func OtherFunc(ctx context.Context, req Request) (Response, error) {
 type NonFTLType struct {
 	Message string
 }
+
+type AnotherNonFTLType struct {
+	Message string
+}
