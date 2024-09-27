@@ -1,4 +1,4 @@
-import { ArrowRight01Icon, ArrowShrinkIcon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon } from 'hugeicons-react'
+import { ArrowRight01Icon, SquareArrowShrink02Icon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
@@ -174,10 +174,10 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
             <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
           </span>
           <span
-            className='absolute inset-y-0 right-0 flex items-center px-1 mx-1 my-1.5 rounded-md cursor-pointer bg-gray-300 hover:bg-gray-400 dark:bg-gray-800 hover:dark:bg-gray-700'
+            className='absolute inset-y-0 right-0 flex items-center h-7 px-1 mx-1 my-1.5 rounded-md cursor-pointer bg-gray-300 hover:bg-gray-400 dark:bg-gray-800 hover:dark:bg-gray-700'
             onClick={collapseAll}
           >
-            <ArrowShrinkIcon className='w-5 dark:text-gray-300' />
+            <SquareArrowShrink02Icon className='w-5 dark:text-gray-300' />
           </span>
         </div>
         <ul>
