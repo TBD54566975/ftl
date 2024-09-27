@@ -103,7 +103,7 @@ func FilterDescending() TimelineFilter {
 	}
 }
 
-func (s *Service) QueryTimeline(ctx context.Context, limit int, filters ...TimelineFilter) ([]TimelineEvent, error) {
+func (s *Service) QueryTimeline(ctx context.Context, limit int, filters ...TimelineFilter) ([]Event, error) {
 	if limit < 1 {
 		return nil, fmt.Errorf("limit must be >= 1, got %d", limit)
 	}
@@ -158,7 +158,7 @@ func (s *Service) QueryTimeline(ctx context.Context, limit int, filters ...Timel
 		deploymentQuery += ` WHERE key = ANY($1::TEXT[])`
 		deploymentArgs = append(deploymentArgs, filter.deployments)
 	}
-	rows, err := s.Handle.Connection.QueryContext(ctx, deploymentQuery, deploymentArgs...)
+	rows, err := s.conn.QueryContext(ctx, deploymentQuery, deploymentArgs...)
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
@@ -214,7 +214,7 @@ func (s *Service) QueryTimeline(ctx context.Context, limit int, filters ...Timel
 	q += fmt.Sprintf(" LIMIT %d", limit)
 
 	// Issue query.
-	rows, err = s.Handle.Connection.QueryContext(ctx, q, args...)
+	rows, err = s.conn.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", q, libdal.TranslatePGError(err))
 	}
@@ -227,8 +227,8 @@ func (s *Service) QueryTimeline(ctx context.Context, limit int, filters ...Timel
 	return events, nil
 }
 
-func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.DeploymentKey, rows *stdsql.Rows) ([]TimelineEvent, error) {
-	var out []TimelineEvent
+func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.DeploymentKey, rows *stdsql.Rows) ([]Event, error) {
+	var out []Event
 	for rows.Next() {
 		row := eventRow{}
 		var deploymentID int64

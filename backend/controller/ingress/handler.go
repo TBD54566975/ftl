@@ -153,7 +153,7 @@ func Handle(
 		if err == nil {
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.None[string]())
 			ingressEvent.Response.Body = io.NopCloser(strings.NewReader(string(rawBody)))
-			timelineService.InsertHTTPIngress(r.Context(), &ingressEvent)
+			timelineService.EnqueueEvent(r.Context(), &ingressEvent)
 		} else {
 			logger.Errorf(err, "could not write response body")
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not write response body"))
@@ -176,7 +176,7 @@ func recordIngressErrorEvent(
 ) {
 	ingressEvent.Response.StatusCode = statusCode
 	ingressEvent.Error = optional.Some(errorMsg)
-	timelineService.InsertHTTPIngress(ctx, ingressEvent)
+	timelineService.EnqueueEvent(ctx, ingressEvent)
 }
 
 // Copied from the Apache-licensed connect-go source.

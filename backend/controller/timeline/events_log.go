@@ -24,6 +24,8 @@ type Log struct {
 	Error         optional.Option[string]
 }
 
+func (l *Log) inEvent() {}
+
 type LogEvent struct {
 	ID int64
 	Log
@@ -38,7 +40,7 @@ type eventLogJSON struct {
 	Error      optional.Option[string] `json:"error,omitempty"`
 }
 
-func (s *Service) InsertLogEvent(ctx context.Context, log *Log) error {
+func (s *Service) insertLogEvent(ctx context.Context, querier sql.Querier, log *Log) error {
 	var requestKey optional.Option[string]
 	if name, ok := log.RequestKey.Get(); ok {
 		requestKey = optional.Some(name.String())
@@ -61,7 +63,7 @@ func (s *Service) InsertLogEvent(ctx context.Context, log *Log) error {
 		return fmt.Errorf("failed to encrypt log payload: %w", err)
 	}
 
-	return libdal.TranslatePGError(s.db.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
+	return libdal.TranslatePGError(querier.InsertTimelineLogEvent(ctx, sql.InsertTimelineLogEventParams{
 		DeploymentKey: log.DeploymentKey,
 		RequestKey:    requestKey,
 		TimeStamp:     log.Time,

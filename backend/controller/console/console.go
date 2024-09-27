@@ -366,7 +366,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter
 	return query, nil
 }
 
-func eventDALToProto(event timeline.TimelineEvent) *pbconsole.Event {
+func eventDALToProto(event timeline.Event) *pbconsole.Event {
 	switch event := event.(type) {
 	case *timeline.CallEvent:
 		var requestKey *string
