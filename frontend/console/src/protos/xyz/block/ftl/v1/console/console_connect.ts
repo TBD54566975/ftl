@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { EventsQuery, GetEventsResponse, GetModulesRequest, GetModulesResponse, StreamEventsRequest, StreamEventsResponse } from "./console_pb.js";
+import { Config, Data, Database, Enum, EventsQuery, FSM, GetDeclRequest, GetEventsResponse, GetModulesRequest, GetModulesResponse, Secret, StreamEventsRequest, StreamEventsResponse, Subscription, Topic, TypeAlias, Verb } from "./console_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.console.ConsoleService
@@ -50,6 +50,96 @@ export const ConsoleService = {
       name: "GetEvents",
       I: EventsQuery,
       O: GetEventsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetConfig
+     */
+    getConfig: {
+      name: "GetConfig",
+      I: GetDeclRequest,
+      O: Config,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetData
+     */
+    getData: {
+      name: "GetData",
+      I: GetDeclRequest,
+      O: Data,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetEnum
+     */
+    getEnum: {
+      name: "GetEnum",
+      I: GetDeclRequest,
+      O: Enum,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetFSM
+     */
+    getFSM: {
+      name: "GetFSM",
+      I: GetDeclRequest,
+      O: FSM,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetTopic
+     */
+    getTopic: {
+      name: "GetTopic",
+      I: GetDeclRequest,
+      O: Topic,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetTypeAlias
+     */
+    getTypeAlias: {
+      name: "GetTypeAlias",
+      I: GetDeclRequest,
+      O: TypeAlias,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetDatabase
+     */
+    getDatabase: {
+      name: "GetDatabase",
+      I: GetDeclRequest,
+      O: Database,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetSecret
+     */
+    getSecret: {
+      name: "GetSecret",
+      I: GetDeclRequest,
+      O: Secret,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetSubscription
+     */
+    getSubscription: {
+      name: "GetSubscription",
+      I: GetDeclRequest,
+      O: Subscription,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetVerb
+     */
+    getVerb: {
+      name: "GetVerb",
+      I: GetDeclRequest,
+      O: Verb,
       kind: MethodKind.Unary,
     },
   }

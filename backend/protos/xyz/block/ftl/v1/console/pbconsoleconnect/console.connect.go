@@ -45,6 +45,31 @@ const (
 	// ConsoleServiceGetEventsProcedure is the fully-qualified name of the ConsoleService's GetEvents
 	// RPC.
 	ConsoleServiceGetEventsProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetEvents"
+	// ConsoleServiceGetConfigProcedure is the fully-qualified name of the ConsoleService's GetConfig
+	// RPC.
+	ConsoleServiceGetConfigProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetConfig"
+	// ConsoleServiceGetDataProcedure is the fully-qualified name of the ConsoleService's GetData RPC.
+	ConsoleServiceGetDataProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetData"
+	// ConsoleServiceGetEnumProcedure is the fully-qualified name of the ConsoleService's GetEnum RPC.
+	ConsoleServiceGetEnumProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetEnum"
+	// ConsoleServiceGetFSMProcedure is the fully-qualified name of the ConsoleService's GetFSM RPC.
+	ConsoleServiceGetFSMProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetFSM"
+	// ConsoleServiceGetTopicProcedure is the fully-qualified name of the ConsoleService's GetTopic RPC.
+	ConsoleServiceGetTopicProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetTopic"
+	// ConsoleServiceGetTypeAliasProcedure is the fully-qualified name of the ConsoleService's
+	// GetTypeAlias RPC.
+	ConsoleServiceGetTypeAliasProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetTypeAlias"
+	// ConsoleServiceGetDatabaseProcedure is the fully-qualified name of the ConsoleService's
+	// GetDatabase RPC.
+	ConsoleServiceGetDatabaseProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetDatabase"
+	// ConsoleServiceGetSecretProcedure is the fully-qualified name of the ConsoleService's GetSecret
+	// RPC.
+	ConsoleServiceGetSecretProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetSecret"
+	// ConsoleServiceGetSubscriptionProcedure is the fully-qualified name of the ConsoleService's
+	// GetSubscription RPC.
+	ConsoleServiceGetSubscriptionProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetSubscription"
+	// ConsoleServiceGetVerbProcedure is the fully-qualified name of the ConsoleService's GetVerb RPC.
+	ConsoleServiceGetVerbProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetVerb"
 )
 
 // ConsoleServiceClient is a client for the xyz.block.ftl.v1.console.ConsoleService service.
@@ -54,6 +79,16 @@ type ConsoleServiceClient interface {
 	GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error)
 	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest]) (*connect.ServerStreamForClient[console.StreamEventsResponse], error)
 	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
+	GetConfig(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Config], error)
+	GetData(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Data], error)
+	GetEnum(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Enum], error)
+	GetFSM(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.FSM], error)
+	GetTopic(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Topic], error)
+	GetTypeAlias(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.TypeAlias], error)
+	GetDatabase(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Database], error)
+	GetSecret(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Secret], error)
+	GetSubscription(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Subscription], error)
+	GetVerb(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Verb], error)
 }
 
 // NewConsoleServiceClient constructs a client for the xyz.block.ftl.v1.console.ConsoleService
@@ -87,15 +122,75 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceGetEventsProcedure,
 			opts...,
 		),
+		getConfig: connect.NewClient[console.GetDeclRequest, console.Config](
+			httpClient,
+			baseURL+ConsoleServiceGetConfigProcedure,
+			opts...,
+		),
+		getData: connect.NewClient[console.GetDeclRequest, console.Data](
+			httpClient,
+			baseURL+ConsoleServiceGetDataProcedure,
+			opts...,
+		),
+		getEnum: connect.NewClient[console.GetDeclRequest, console.Enum](
+			httpClient,
+			baseURL+ConsoleServiceGetEnumProcedure,
+			opts...,
+		),
+		getFSM: connect.NewClient[console.GetDeclRequest, console.FSM](
+			httpClient,
+			baseURL+ConsoleServiceGetFSMProcedure,
+			opts...,
+		),
+		getTopic: connect.NewClient[console.GetDeclRequest, console.Topic](
+			httpClient,
+			baseURL+ConsoleServiceGetTopicProcedure,
+			opts...,
+		),
+		getTypeAlias: connect.NewClient[console.GetDeclRequest, console.TypeAlias](
+			httpClient,
+			baseURL+ConsoleServiceGetTypeAliasProcedure,
+			opts...,
+		),
+		getDatabase: connect.NewClient[console.GetDeclRequest, console.Database](
+			httpClient,
+			baseURL+ConsoleServiceGetDatabaseProcedure,
+			opts...,
+		),
+		getSecret: connect.NewClient[console.GetDeclRequest, console.Secret](
+			httpClient,
+			baseURL+ConsoleServiceGetSecretProcedure,
+			opts...,
+		),
+		getSubscription: connect.NewClient[console.GetDeclRequest, console.Subscription](
+			httpClient,
+			baseURL+ConsoleServiceGetSubscriptionProcedure,
+			opts...,
+		),
+		getVerb: connect.NewClient[console.GetDeclRequest, console.Verb](
+			httpClient,
+			baseURL+ConsoleServiceGetVerbProcedure,
+			opts...,
+		),
 	}
 }
 
 // consoleServiceClient implements ConsoleServiceClient.
 type consoleServiceClient struct {
-	ping         *connect.Client[v1.PingRequest, v1.PingResponse]
-	getModules   *connect.Client[console.GetModulesRequest, console.GetModulesResponse]
-	streamEvents *connect.Client[console.StreamEventsRequest, console.StreamEventsResponse]
-	getEvents    *connect.Client[console.EventsQuery, console.GetEventsResponse]
+	ping            *connect.Client[v1.PingRequest, v1.PingResponse]
+	getModules      *connect.Client[console.GetModulesRequest, console.GetModulesResponse]
+	streamEvents    *connect.Client[console.StreamEventsRequest, console.StreamEventsResponse]
+	getEvents       *connect.Client[console.EventsQuery, console.GetEventsResponse]
+	getConfig       *connect.Client[console.GetDeclRequest, console.Config]
+	getData         *connect.Client[console.GetDeclRequest, console.Data]
+	getEnum         *connect.Client[console.GetDeclRequest, console.Enum]
+	getFSM          *connect.Client[console.GetDeclRequest, console.FSM]
+	getTopic        *connect.Client[console.GetDeclRequest, console.Topic]
+	getTypeAlias    *connect.Client[console.GetDeclRequest, console.TypeAlias]
+	getDatabase     *connect.Client[console.GetDeclRequest, console.Database]
+	getSecret       *connect.Client[console.GetDeclRequest, console.Secret]
+	getSubscription *connect.Client[console.GetDeclRequest, console.Subscription]
+	getVerb         *connect.Client[console.GetDeclRequest, console.Verb]
 }
 
 // Ping calls xyz.block.ftl.v1.console.ConsoleService.Ping.
@@ -118,6 +213,56 @@ func (c *consoleServiceClient) GetEvents(ctx context.Context, req *connect.Reque
 	return c.getEvents.CallUnary(ctx, req)
 }
 
+// GetConfig calls xyz.block.ftl.v1.console.ConsoleService.GetConfig.
+func (c *consoleServiceClient) GetConfig(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Config], error) {
+	return c.getConfig.CallUnary(ctx, req)
+}
+
+// GetData calls xyz.block.ftl.v1.console.ConsoleService.GetData.
+func (c *consoleServiceClient) GetData(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Data], error) {
+	return c.getData.CallUnary(ctx, req)
+}
+
+// GetEnum calls xyz.block.ftl.v1.console.ConsoleService.GetEnum.
+func (c *consoleServiceClient) GetEnum(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Enum], error) {
+	return c.getEnum.CallUnary(ctx, req)
+}
+
+// GetFSM calls xyz.block.ftl.v1.console.ConsoleService.GetFSM.
+func (c *consoleServiceClient) GetFSM(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.FSM], error) {
+	return c.getFSM.CallUnary(ctx, req)
+}
+
+// GetTopic calls xyz.block.ftl.v1.console.ConsoleService.GetTopic.
+func (c *consoleServiceClient) GetTopic(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Topic], error) {
+	return c.getTopic.CallUnary(ctx, req)
+}
+
+// GetTypeAlias calls xyz.block.ftl.v1.console.ConsoleService.GetTypeAlias.
+func (c *consoleServiceClient) GetTypeAlias(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.TypeAlias], error) {
+	return c.getTypeAlias.CallUnary(ctx, req)
+}
+
+// GetDatabase calls xyz.block.ftl.v1.console.ConsoleService.GetDatabase.
+func (c *consoleServiceClient) GetDatabase(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Database], error) {
+	return c.getDatabase.CallUnary(ctx, req)
+}
+
+// GetSecret calls xyz.block.ftl.v1.console.ConsoleService.GetSecret.
+func (c *consoleServiceClient) GetSecret(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Secret], error) {
+	return c.getSecret.CallUnary(ctx, req)
+}
+
+// GetSubscription calls xyz.block.ftl.v1.console.ConsoleService.GetSubscription.
+func (c *consoleServiceClient) GetSubscription(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Subscription], error) {
+	return c.getSubscription.CallUnary(ctx, req)
+}
+
+// GetVerb calls xyz.block.ftl.v1.console.ConsoleService.GetVerb.
+func (c *consoleServiceClient) GetVerb(ctx context.Context, req *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Verb], error) {
+	return c.getVerb.CallUnary(ctx, req)
+}
+
 // ConsoleServiceHandler is an implementation of the xyz.block.ftl.v1.console.ConsoleService
 // service.
 type ConsoleServiceHandler interface {
@@ -126,6 +271,16 @@ type ConsoleServiceHandler interface {
 	GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error)
 	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest], *connect.ServerStream[console.StreamEventsResponse]) error
 	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
+	GetConfig(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Config], error)
+	GetData(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Data], error)
+	GetEnum(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Enum], error)
+	GetFSM(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.FSM], error)
+	GetTopic(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Topic], error)
+	GetTypeAlias(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.TypeAlias], error)
+	GetDatabase(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Database], error)
+	GetSecret(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Secret], error)
+	GetSubscription(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Subscription], error)
+	GetVerb(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Verb], error)
 }
 
 // NewConsoleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -155,6 +310,56 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 		svc.GetEvents,
 		opts...,
 	)
+	consoleServiceGetConfigHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetConfigProcedure,
+		svc.GetConfig,
+		opts...,
+	)
+	consoleServiceGetDataHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetDataProcedure,
+		svc.GetData,
+		opts...,
+	)
+	consoleServiceGetEnumHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetEnumProcedure,
+		svc.GetEnum,
+		opts...,
+	)
+	consoleServiceGetFSMHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetFSMProcedure,
+		svc.GetFSM,
+		opts...,
+	)
+	consoleServiceGetTopicHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetTopicProcedure,
+		svc.GetTopic,
+		opts...,
+	)
+	consoleServiceGetTypeAliasHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetTypeAliasProcedure,
+		svc.GetTypeAlias,
+		opts...,
+	)
+	consoleServiceGetDatabaseHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetDatabaseProcedure,
+		svc.GetDatabase,
+		opts...,
+	)
+	consoleServiceGetSecretHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetSecretProcedure,
+		svc.GetSecret,
+		opts...,
+	)
+	consoleServiceGetSubscriptionHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetSubscriptionProcedure,
+		svc.GetSubscription,
+		opts...,
+	)
+	consoleServiceGetVerbHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetVerbProcedure,
+		svc.GetVerb,
+		opts...,
+	)
 	return "/xyz.block.ftl.v1.console.ConsoleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ConsoleServicePingProcedure:
@@ -165,6 +370,26 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 			consoleServiceStreamEventsHandler.ServeHTTP(w, r)
 		case ConsoleServiceGetEventsProcedure:
 			consoleServiceGetEventsHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetConfigProcedure:
+			consoleServiceGetConfigHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetDataProcedure:
+			consoleServiceGetDataHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetEnumProcedure:
+			consoleServiceGetEnumHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetFSMProcedure:
+			consoleServiceGetFSMHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetTopicProcedure:
+			consoleServiceGetTopicHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetTypeAliasProcedure:
+			consoleServiceGetTypeAliasHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetDatabaseProcedure:
+			consoleServiceGetDatabaseHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetSecretProcedure:
+			consoleServiceGetSecretHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetSubscriptionProcedure:
+			consoleServiceGetSubscriptionHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetVerbProcedure:
+			consoleServiceGetVerbHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -188,4 +413,44 @@ func (UnimplementedConsoleServiceHandler) StreamEvents(context.Context, *connect
 
 func (UnimplementedConsoleServiceHandler) GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetEvents is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetConfig(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Config], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetConfig is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetData(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Data], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetData is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetEnum(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Enum], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetEnum is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetFSM(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.FSM], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetFSM is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetTopic(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Topic], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetTopic is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetTypeAlias(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.TypeAlias], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetTypeAlias is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetDatabase(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Database], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetDatabase is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetSecret(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Secret], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetSecret is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetSubscription(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Subscription], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetSubscription is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetVerb(context.Context, *connect.Request[console.GetDeclRequest]) (*connect.Response[console.Verb], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetVerb is not implemented"))
 }

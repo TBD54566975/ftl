@@ -2,6 +2,7 @@ import { FunctionIcon } from 'hugeicons-react'
 import { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
+import { useVerb } from '../../api/decls/use-verb'
 import { useStreamVerbCalls } from '../../api/timeline/stream-verb-calls'
 import { Loader } from '../../components/Loader'
 import { ResizablePanels } from '../../components/ResizablePanels'
@@ -20,6 +21,13 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
   const [module, setModule] = useState<Module | undefined>()
   const [verb, setVerb] = useState<Verb | undefined>()
 
+  const verbResp = useVerb(moduleName, declName)
+  useEffect(() => {
+    if (!verbResp.isSuccess) return
+    if (!verbResp.data || !moduleName || !declName) return
+    setVerb(verbResp.data)
+  })
+
   useEffect(() => {
     if (!modules.isSuccess) return
     if (modules.data.modules.length === 0 || !moduleName || !declName) return
@@ -35,11 +43,9 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
       })
     }
     setModule(module)
-    const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === declName?.toLocaleLowerCase())
-    setVerb(verb)
-  }, [modules.data, moduleName, declName])
+  }, [modules.data, moduleName])
 
-  const callEvents = useStreamVerbCalls(module?.name, verb?.verb?.name)
+  const callEvents = useStreamVerbCalls(moduleName, declName)
   const calls = callEvents.data || []
 
   if (!module || !verb) {

@@ -84,10 +84,8 @@ message IngressEvent {
   optional string error = 14;
 }
 
-message Verb {
-  schema.Verb verb = 1;
-  string schema = 2;
-  string json_request_schema = 3;
+message Config {
+  schema.Config config = 1;
 }
 
 message Data {
@@ -95,12 +93,38 @@ message Data {
   string schema = 2;
 }
 
+message Database {
+  schema.Database database = 1;
+}
+
+message Enum {
+  schema.Enum enum = 1;
+}
+
+message FSM {
+  schema.FSM fsm = 1;
+}
+
+message Topic {
+  schema.Topic topic = 1;
+}
+
+message TypeAlias {
+  schema.TypeAlias typealias = 1;
+}
+
 message Secret {
   schema.Secret secret = 1;
 }
 
-message Config {
-  schema.Config config = 1;
+message Subscription {
+  schema.Subscription subscription = 1;
+}
+
+message Verb {
+  schema.Verb verb = 1;
+  string schema = 2;
+  string json_request_schema = 3;
 }
 
 message Module {
@@ -120,6 +144,11 @@ message TopologyGroup {
 
 message Topology {
   repeated TopologyGroup levels = 1;
+}
+
+message GetDeclRequest {
+  string module_name = 1;
+  string decl_name = 2;
 }
 
 message GetModulesRequest {}
@@ -233,4 +262,15 @@ service ConsoleService {
   rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
   rpc StreamEvents(StreamEventsRequest) returns (stream StreamEventsResponse);
   rpc GetEvents(EventsQuery) returns (GetEventsResponse);
+
+  rpc GetConfig(GetDeclRequest) returns (Config);
+  rpc GetData(GetDeclRequest) returns (Data);
+  rpc GetEnum(GetDeclRequest) returns (Enum);
+  rpc GetFSM(GetDeclRequest) returns (FSM);
+  rpc GetTopic(GetDeclRequest) returns (Topic);
+  rpc GetTypeAlias(GetDeclRequest) returns (TypeAlias);
+  rpc GetDatabase(GetDeclRequest) returns (Database);
+  rpc GetSecret(GetDeclRequest) returns (Secret);
+  rpc GetSubscription(GetDeclRequest) returns (Subscription);
+  rpc GetVerb(GetDeclRequest) returns (Verb);
 }

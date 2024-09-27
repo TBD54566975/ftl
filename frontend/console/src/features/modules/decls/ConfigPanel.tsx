@@ -1,8 +1,11 @@
+import { useConfig } from '../../../api/decls/use-config'
 import type { Config } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { PanelHeader } from './PanelHeader'
 import { TypeEl } from './TypeEl'
 
 export const ConfigPanel = ({ value, moduleName, declName }: { value: Config; moduleName: string; declName: string }) => {
+  const config = useConfig(moduleName, declName)
+  console.log('config', config?.data)
   return (
     <div className='py-2 px-4'>
       <PanelHeader exported={false} comments={value.comments}>

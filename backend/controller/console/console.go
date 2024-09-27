@@ -188,6 +188,219 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}), nil
 }
 
+func (c *ConsoleService) GetConfig(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Config], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	config, ok := decl.ToProto().(*schemapb.Config)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert config %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.Config{
+		Config: config,
+	}), nil
+}
+
+func (c *ConsoleService) GetData(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Data], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	data, ok := decl.ToProto().(*schemapb.Data)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert data %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.Data{
+		Data:   data,
+		Schema: schema.DataFromProto(data).String(),
+	}), nil
+}
+
+func (c *ConsoleService) GetDatabase(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Database], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	database, ok := decl.ToProto().(*schemapb.Database)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert database %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.Database{
+		Database: database,
+	}), nil
+}
+
+func (c *ConsoleService) GetEnum(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Enum], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	enum, ok := decl.ToProto().(*schemapb.Enum)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert enum %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.Enum{
+		Enum: enum,
+	}), nil
+}
+
+func (c *ConsoleService) GetFSM(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.FSM], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	fsm, ok := decl.ToProto().(*schemapb.FSM)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert FSM %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.FSM{
+		Fsm: fsm,
+	}), nil
+}
+
+func (c *ConsoleService) GetTopic(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Topic], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	topic, ok := decl.ToProto().(*schemapb.Topic)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert topic %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.Topic{
+		Topic: topic,
+	}), nil
+}
+
+func (c *ConsoleService) GetTypeAlias(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.TypeAlias], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	ta, ok := decl.ToProto().(*schemapb.TypeAlias)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert type alias %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.TypeAlias{
+		Typealias: ta,
+	}), nil
+}
+
+func (c *ConsoleService) GetSecret(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Secret], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	secret, ok := decl.ToProto().(*schemapb.Secret)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert secret %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.Secret{
+		Secret: secret,
+	}), nil
+}
+
+func (c *ConsoleService) GetSubscription(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Subscription], error) {
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	sub, ok := decl.ToProto().(*schemapb.Subscription)
+	if !ok {
+		return nil, fmt.Errorf("Could not convert subscription %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+	}
+	return connect.NewResponse(&pbconsole.Subscription{
+		Subscription: sub,
+	}), nil
+}
+
+func (c *ConsoleService) GetVerb(ctx context.Context, req *connect.Request[pbconsole.GetDeclRequest]) (*connect.Response[pbconsole.Verb], error) {
+	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sch := &schema.Schema{
+		Modules: slices.Map(deployments, func(d dalmodel.Deployment) *schema.Module {
+			return d.Schema
+		}),
+	}
+	sch.Modules = append(sch.Modules, schema.Builtins())
+
+	decl, err := c.findDecl(ctx, req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	//nolint:forcetypeassert
+	v := decl.ToProto().(*schemapb.Verb)
+	verbSchema := schema.VerbFromProto(v)
+	var jsonRequestSchema string
+	if verbSchema.Request != nil {
+		if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
+			jsonSchema, err := schema.RequestResponseToJSONSchema(sch, *requestData)
+			if err != nil {
+				return nil, err
+			}
+			jsonData, err := json.MarshalIndent(jsonSchema, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+			jsonRequestSchema = string(jsonData)
+		}
+	}
+
+	schemaString, err := verbSchemaString(sch, decl.(*schema.Verb))
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&pbconsole.Verb{
+		Verb:              v,
+		Schema:            schemaString,
+		JsonRequestSchema: jsonRequestSchema,
+	}), nil
+}
+
+func (c *ConsoleService) findDecl(ctx context.Context, req *pbconsole.GetDeclRequest) (schema.Decl, error) {
+	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	module, ok := slices.Find(deployments, func(d dalmodel.Deployment) bool {
+		return d.Module == req.ModuleName
+	})
+	if !ok {
+		return nil, fmt.Errorf("Could not find module with name %q", req.ModuleName)
+	}
+	decl, ok := slices.Find(module.Schema.Decls, func(d schema.Decl) bool {
+		return d.GetName() == req.DeclName
+	})
+	if !ok {
+		return nil, fmt.Errorf("Could not find decl %q in module %q", req.DeclName, req.ModuleName)
+	}
+	return decl, nil
+}
+
 func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbconsole.EventsQuery]) (*connect.Response[pbconsole.GetEventsResponse], error) {
 	query, err := eventsQueryProtoToDAL(req.Msg)
 	if err != nil {
