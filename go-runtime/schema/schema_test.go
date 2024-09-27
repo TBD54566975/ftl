@@ -197,20 +197,15 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	expected := `module two {
 			typealias BackoffAlias Any
         		+typemap go "github.com/jpillora/backoff.Backoff"
-        
 			typealias ExplicitAliasAlias Any
 				+typemap kotlin "com.foo.bar.NonFTLType"
 				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
-
 			typealias ExplicitAliasType Any
 				+typemap kotlin "com.foo.bar.NonFTLType"
 				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
-
 			typealias PaymentState String
-
 			typealias TransitiveAliasAlias Any
 				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
-
 			typealias TransitiveAliasType Any
 				+typemap go "github.com/TBD54566975/ftl/go-runtime/schema/testdata.lib.NonFTLType"
 
@@ -356,12 +351,9 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	actual := schema.Normalise(r.Module)
 	expected := `module named {
 		typealias DoubleAliasedUser named.InternalUser
-
 		// ID testing if typealias before struct works
 		export typealias Id String
-
 		typealias InternalUser named.User
-
 		// Name testing if typealias after struct works
 		export typealias Name String
 
