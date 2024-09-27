@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/XSAM/otelsql"
 	"github.com/alecthomas/types/once"
@@ -47,6 +48,8 @@ func PostgresDatabase(name string) Database {
 			if err != nil {
 				return nil, fmt.Errorf("failed to register database metrics: %w", err)
 			}
+			db.SetConnMaxIdleTime(time.Minute)
+			db.SetMaxOpenConns(20)
 			return db, nil
 		}),
 	}
