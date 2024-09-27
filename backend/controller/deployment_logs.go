@@ -71,7 +71,7 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				errorStr = optional.Some(entry.Error.Error())
 			}
 
-			err = d.timeline.InsertLogEvent(ctx, &timeline.Log{
+			d.timeline.EnqueueEvent(ctx, &timeline.Log{
 				RequestKey:    request,
 				DeploymentKey: deployment,
 				Time:          entry.Time,
@@ -80,9 +80,6 @@ func (d *deploymentLogsSink) processLogs(ctx context.Context) {
 				Message:       entry.Message,
 				Error:         errorStr,
 			})
-			if err != nil {
-				fmt.Printf("failed to insert log entry: %v :: error: %v\n", entry, err)
-			}
 		case <-ctx.Done():
 			return
 		case <-time.After(1 * time.Second):

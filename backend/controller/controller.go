@@ -478,7 +478,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		err = s.timeline.InsertLogEvent(ctx, &timeline.Log{
+		s.timeline.EnqueueEvent(ctx, &timeline.Log{
 			DeploymentKey: deploymentKey,
 			RequestKey:    requestKey,
 			Time:          msg.TimeStamp.AsTime(),
@@ -487,10 +487,6 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			Message:       msg.Message,
 			Error:         optional.Ptr(msg.Error),
 		})
-
-		if err != nil {
-			return nil, err
-		}
 	}
 	if stream.Err() != nil {
 		return nil, stream.Err()
@@ -1080,7 +1076,7 @@ func (s *Service) callWithRequest(
 		callResponse = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 	}
-	s.timeline.InsertCallEvent(ctx, &timeline.Call{
+	s.timeline.EnqueueEvent(ctx, &timeline.Call{
 		DeploymentKey:    route.Deployment,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentKey,
