@@ -406,7 +406,8 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 		return
 	}
 
-	_ = schema.Visit(d, func(n schema.Node, next func() error) error { //nolint:errcheck
+	// exclude metadata children so we don't update callees to be exported if their callers are
+	_ = schema.VisitExcludingMetadataChildren(d, func(n schema.Node, next func() error) error { //nolint:errcheck
 		ref, ok := n.(*schema.Ref)
 		if !ok {
 			return next()
