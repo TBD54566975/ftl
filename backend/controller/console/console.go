@@ -316,6 +316,8 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter
 					eventTypes = append(eventTypes, timeline.EventTypeDeploymentUpdated)
 				case pbconsole.EventType_EVENT_TYPE_INGRESS:
 					eventTypes = append(eventTypes, timeline.EventTypeIngress)
+				case pbconsole.EventType_EVENT_TYPE_CRON_SCHEDULED:
+					eventTypes = append(eventTypes, timeline.EventTypeCronScheduled)
 				default:
 					return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown event type %v", eventType))
 				}

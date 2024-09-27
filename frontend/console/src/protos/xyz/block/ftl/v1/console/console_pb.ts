@@ -40,6 +40,11 @@ export enum EventType {
    * @generated from enum value: EVENT_TYPE_INGRESS = 5;
    */
   INGRESS = 5,
+
+  /**
+   * @generated from enum value: EVENT_TYPE_CRON_SCHEDULED = 6;
+   */
+  CRON_SCHEDULED = 6,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EventType)
 proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
@@ -49,6 +54,7 @@ proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
   { no: 3, name: "EVENT_TYPE_DEPLOYMENT_CREATED" },
   { no: 4, name: "EVENT_TYPE_DEPLOYMENT_UPDATED" },
   { no: 5, name: "EVENT_TYPE_INGRESS" },
+  { no: 6, name: "EVENT_TYPE_CRON_SCHEDULED" },
 ]);
 
 /**
@@ -481,6 +487,73 @@ export class IngressEvent extends Message<IngressEvent> {
 
   static equals(a: IngressEvent | PlainMessage<IngressEvent> | undefined, b: IngressEvent | PlainMessage<IngressEvent> | undefined): boolean {
     return proto3.util.equals(IngressEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.CronScheduledEvent
+ */
+export class CronScheduledEvent extends Message<CronScheduledEvent> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb_ref = 2;
+   */
+  verbRef?: Ref;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
+   */
+  timeStamp?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp scheduled_at = 4;
+   */
+  scheduledAt?: Timestamp;
+
+  /**
+   * @generated from field: string schedule = 5;
+   */
+  schedule = "";
+
+  /**
+   * @generated from field: optional string error = 6;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<CronScheduledEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.CronScheduledEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "verb_ref", kind: "message", T: Ref },
+    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 4, name: "scheduled_at", kind: "message", T: Timestamp },
+    { no: 5, name: "schedule", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CronScheduledEvent {
+    return new CronScheduledEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CronScheduledEvent {
+    return new CronScheduledEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CronScheduledEvent {
+    return new CronScheduledEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CronScheduledEvent | PlainMessage<CronScheduledEvent> | undefined, b: CronScheduledEvent | PlainMessage<CronScheduledEvent> | undefined): boolean {
+    return proto3.util.equals(CronScheduledEvent, a, b);
   }
 }
 
@@ -1783,6 +1856,12 @@ export class Event extends Message<Event> {
      */
     value: IngressEvent;
     case: "ingress";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.CronScheduledEvent cron_scheduled = 8;
+     */
+    value: CronScheduledEvent;
+    case: "cronScheduled";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Event>) {
@@ -1800,6 +1879,7 @@ export class Event extends Message<Event> {
     { no: 5, name: "deployment_created", kind: "message", T: DeploymentCreatedEvent, oneof: "entry" },
     { no: 6, name: "deployment_updated", kind: "message", T: DeploymentUpdatedEvent, oneof: "entry" },
     { no: 7, name: "ingress", kind: "message", T: IngressEvent, oneof: "entry" },
+    { no: 8, name: "cron_scheduled", kind: "message", T: CronScheduledEvent, oneof: "entry" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {

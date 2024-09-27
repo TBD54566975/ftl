@@ -17,6 +17,7 @@ enum EventType {
   EVENT_TYPE_DEPLOYMENT_CREATED = 3;
   EVENT_TYPE_DEPLOYMENT_UPDATED = 4;
   EVENT_TYPE_INGRESS = 5;
+  EVENT_TYPE_CRON_SCHEDULED = 6;
 }
 
 enum LogLevel {
@@ -82,6 +83,15 @@ message IngressEvent {
   string response = 12;
   string response_header = 13;
   optional string error = 14;
+}
+
+message CronScheduledEvent {
+  string deployment_key = 1;
+  schema.Ref verb_ref = 2;
+  google.protobuf.Timestamp time_stamp = 3;
+  google.protobuf.Timestamp scheduled_at = 4;
+  string schedule = 5;
+  optional string error = 6;
 }
 
 message Config {
@@ -243,6 +253,7 @@ message Event {
     DeploymentCreatedEvent deployment_created = 5;
     DeploymentUpdatedEvent deployment_updated = 6;
     IngressEvent ingress = 7;
+    CronScheduledEvent cron_scheduled = 8;
   }
 }
 

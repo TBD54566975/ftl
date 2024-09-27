@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/internal/dal"
 	encryptionsvc "github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
+	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -20,24 +22,26 @@ import (
 )
 
 type Service struct {
-	key           model.ControllerKey
-	requestSource string
-	dal           dal.DAL
-	encryption    *encryptionsvc.Service
-	clock         clock.Clock
+	key             model.ControllerKey
+	requestSource   string
+	dal             dal.DAL
+	encryption      *encryptionsvc.Service
+	timelineService *timeline.Service
+	clock           clock.Clock
 }
 
-func New(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, conn *sql.DB) *Service {
-	return NewForTesting(ctx, key, requestSource, encryption, *dal.New(conn), clock.New())
+func New(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline *timeline.Service, conn *sql.DB) *Service {
+	return NewForTesting(ctx, key, requestSource, encryption, timeline, *dal.New(conn), clock.New())
 }
 
-func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, dal dal.DAL, clock clock.Clock) *Service {
+func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline *timeline.Service, dal dal.DAL, clock clock.Clock) *Service {
 	svc := &Service{
-		key:           key,
-		requestSource: requestSource,
-		dal:           dal,
-		encryption:    encryption,
-		clock:         clock,
+		key:             key,
+		requestSource:   requestSource,
+		dal:             dal,
+		encryption:      encryption,
+		timelineService: timeline,
+		clock:           clock,
 	}
 	return svc
 }
@@ -117,6 +121,14 @@ func (s *Service) scheduleCronJobs(ctx context.Context) (err error) {
 	for _, job := range jobs {
 		err = s.scheduleCronJob(ctx, tx, job)
 		if err != nil {
+			s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduledEvent{
+				DeploymentKey: job.DeploymentKey,
+				Verb:          job.Verb,
+				Time:          now,
+				ScheduledAt:   job.NextExecution,
+				Schedule:      job.Schedule,
+				Error:         optional.Some(err.Error()),
+			})
 			return fmt.Errorf("failed to schedule cron job %q: %w", job.Key, err)
 		}
 	}
@@ -142,6 +154,14 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 	}
 	err = s.scheduleCronJob(ctx, tx, job)
 	if err != nil {
+		s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduledEvent{
+			DeploymentKey: job.DeploymentKey,
+			Verb:          job.Verb,
+			Time:          s.clock.Now().UTC(),
+			ScheduledAt:   job.NextExecution,
+			Schedule:      job.Schedule,
+			Error:         optional.Some(err.Error()),
+		})
 		return fmt.Errorf("failed to schedule cron job %q: %w", key, err)
 	}
 	return nil
@@ -206,5 +226,12 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 	if err != nil {
 		return fmt.Errorf("failed to update cron job %q: %w", job.Key, err)
 	}
+	s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduledEvent{
+		DeploymentKey: job.DeploymentKey,
+		Verb:          job.Verb,
+		Time:          now,
+		ScheduledAt:   nextAttemptForJob,
+		Schedule:      job.Schedule,
+	})
 	return nil
 }

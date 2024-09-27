@@ -141,6 +141,18 @@ func TestTimeline(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	})
 
+	t.Run("InsertCronScheduledEvent", func(t *testing.T) {
+		timeline.InsertCronScheduledEvent(ctx, &CronScheduledEvent{
+			DeploymentKey: deploymentKey,
+			Verb:          schema.Ref{Module: "time", Name: "time"},
+			Time:          time.Now().Round(time.Millisecond),
+			ScheduledAt:   time.Now().Add(time.Minute).Round(time.Millisecond),
+			Schedule:      "* * * * *",
+			Error:         optional.None[string](),
+		})
+		assert.NoError(t, err)
+	})
+
 	expectedDeploymentUpdatedEvent := &DeploymentUpdatedEvent{
 		DeploymentKey: deploymentKey,
 		MinReplicas:   1,

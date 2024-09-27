@@ -370,6 +370,20 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				ResponseHeader: jsonPayload.ResponseHeader,
 				Error:          jsonPayload.Error,
 			})
+		case sql.EventTypeCronScheduled:
+			var jsonPayload eventCronScheduledJSON
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt cron scheduled event: %w", err)
+			}
+			out = append(out, &CronScheduledEvent{
+				ID:            row.ID,
+				DeploymentKey: row.DeploymentKey,
+				Verb:          schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
+				Time:          row.TimeStamp,
+				ScheduledAt:   jsonPayload.ScheduledAt,
+				Schedule:      jsonPayload.Schedule,
+				Error:         jsonPayload.Error,
+			})
 
 		default:
 			panic("unknown event type: " + row.Type)

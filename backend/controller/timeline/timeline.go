@@ -25,6 +25,7 @@ const (
 	EventTypeDeploymentCreated = sql.EventTypeDeploymentCreated
 	EventTypeDeploymentUpdated = sql.EventTypeDeploymentUpdated
 	EventTypeIngress           = sql.EventTypeIngress
+	EventTypeCronScheduled     = sql.EventTypeCronScheduled
 
 	maxBatchSize  = 16
 	maxBatchDelay = 100 * time.Millisecond

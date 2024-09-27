@@ -117,6 +117,44 @@ func (q *Queries) InsertTimelineCallEvent(ctx context.Context, arg InsertTimelin
 	return err
 }
 
+const insertTimelineCronScheduledEvent = `-- name: InsertTimelineCronScheduledEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
+  $2::TIMESTAMPTZ,
+  'cron_scheduled',
+  $3::TEXT,
+  $4::TEXT,
+  $5
+)
+`
+
+type InsertTimelineCronScheduledEventParams struct {
+	DeploymentKey model.DeploymentKey
+	TimeStamp     time.Time
+	Module        string
+	Verb          string
+	Payload       api.EncryptedTimelineColumn
+}
+
+func (q *Queries) InsertTimelineCronScheduledEvent(ctx context.Context, arg InsertTimelineCronScheduledEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelineCronScheduledEvent,
+		arg.DeploymentKey,
+		arg.TimeStamp,
+		arg.Module,
+		arg.Verb,
+		arg.Payload,
+	)
+	return err
+}
+
 const insertTimelineIngressEvent = `-- name: InsertTimelineIngressEvent :exec
 INSERT INTO timeline (
   deployment_id,
