@@ -197,7 +197,7 @@ func (c *ConsoleService) GetConfig(ctx context.Context, req *connect.Request[pbc
 	//nolint:forcetypeassert
 	config, ok := decl.ToProto().(*schemapb.Config)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert config %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert config %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.Config{
 		Config: config,
@@ -213,7 +213,7 @@ func (c *ConsoleService) GetData(ctx context.Context, req *connect.Request[pbcon
 	//nolint:forcetypeassert
 	data, ok := decl.ToProto().(*schemapb.Data)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert data %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert data %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.Data{
 		Data:   data,
@@ -230,7 +230,7 @@ func (c *ConsoleService) GetDatabase(ctx context.Context, req *connect.Request[p
 	//nolint:forcetypeassert
 	database, ok := decl.ToProto().(*schemapb.Database)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert database %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert database %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.Database{
 		Database: database,
@@ -246,7 +246,7 @@ func (c *ConsoleService) GetEnum(ctx context.Context, req *connect.Request[pbcon
 	//nolint:forcetypeassert
 	enum, ok := decl.ToProto().(*schemapb.Enum)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert enum %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert enum %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.Enum{
 		Enum: enum,
@@ -262,7 +262,7 @@ func (c *ConsoleService) GetFSM(ctx context.Context, req *connect.Request[pbcons
 	//nolint:forcetypeassert
 	fsm, ok := decl.ToProto().(*schemapb.FSM)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert FSM %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert FSM %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.FSM{
 		Fsm: fsm,
@@ -278,7 +278,7 @@ func (c *ConsoleService) GetTopic(ctx context.Context, req *connect.Request[pbco
 	//nolint:forcetypeassert
 	topic, ok := decl.ToProto().(*schemapb.Topic)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert topic %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert topic %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.Topic{
 		Topic: topic,
@@ -294,7 +294,7 @@ func (c *ConsoleService) GetTypeAlias(ctx context.Context, req *connect.Request[
 	//nolint:forcetypeassert
 	ta, ok := decl.ToProto().(*schemapb.TypeAlias)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert type alias %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert type alias %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.TypeAlias{
 		Typealias: ta,
@@ -310,7 +310,7 @@ func (c *ConsoleService) GetSecret(ctx context.Context, req *connect.Request[pbc
 	//nolint:forcetypeassert
 	secret, ok := decl.ToProto().(*schemapb.Secret)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert secret %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert secret %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.Secret{
 		Secret: secret,
@@ -326,7 +326,7 @@ func (c *ConsoleService) GetSubscription(ctx context.Context, req *connect.Reque
 	//nolint:forcetypeassert
 	sub, ok := decl.ToProto().(*schemapb.Subscription)
 	if !ok {
-		return nil, fmt.Errorf("Could not convert subscription %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
+		return nil, fmt.Errorf("could not convert subscription %s.%s to proto", req.Msg.ModuleName, req.Msg.DeclName)
 	}
 	return connect.NewResponse(&pbconsole.Subscription{
 		Subscription: sub,
@@ -390,13 +390,13 @@ func (c *ConsoleService) findDecl(ctx context.Context, req *pbconsole.GetDeclReq
 		return d.Module == req.ModuleName
 	})
 	if !ok {
-		return nil, fmt.Errorf("Could not find module with name %q", req.ModuleName)
+		return nil, fmt.Errorf("could not find module with name %q", req.ModuleName)
 	}
 	decl, ok := slices.Find(module.Schema.Decls, func(d schema.Decl) bool {
 		return d.GetName() == req.DeclName
 	})
 	if !ok {
-		return nil, fmt.Errorf("Could not find decl %q in module %q", req.DeclName, req.ModuleName)
+		return nil, fmt.Errorf("could not find decl %q in module %q", req.DeclName, req.ModuleName)
 	}
 	return decl, nil
 }
