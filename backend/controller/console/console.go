@@ -494,6 +494,25 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 			},
 		}
 
+	case *timeline.CronScheduledEvent:
+		return &pbconsole.Event{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.Event_CronScheduled{
+				CronScheduled: &pbconsole.CronScheduledEvent{
+					DeploymentKey: event.DeploymentKey.String(),
+					VerbRef: &schemapb.Ref{
+						Module: event.Verb.Module,
+						Name:   event.Verb.Name,
+					},
+					TimeStamp:   timestamppb.New(event.Time),
+					ScheduledAt: timestamppb.New(event.ScheduledAt),
+					Schedule:    event.Schedule,
+					Error:       event.Error.Ptr(),
+				},
+			},
+		}
+
 	default:
 		panic(fmt.Errorf("unknown event type %T", event))
 	}

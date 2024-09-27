@@ -45,8 +45,6 @@ func TestNewCronJobsForModule(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
 	assert.NoError(t, err)
 
-	timelineSvc := timeline.New(ctx, conn, encryption)
-
 	scheduler := scheduledtask.New(ctx, key, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
 	parentDAL := parentdal.New(ctx, conn, encryption, pubSub)
@@ -62,7 +60,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 
 	// Progress so that start_time is valid
 	clk.Add(time.Second)
-	cjs := NewForTesting(ctx, key, "test.com", encryption, timelineSvc, *dal, clk)
+	cjs := NewForTesting(ctx, key, "test.com", encryption, &mockTimelineService{}, *dal, clk)
 	// All jobs need to be scheduled
 	expectUnscheduledJobs(t, dal, clk, 2)
 	unscheduledJobs, err := dal.GetUnscheduledCronJobs(ctx, clk.Now())
@@ -137,6 +135,11 @@ func TestNewCronJobsForModule(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, p)
 	}
+}
+
+type mockTimelineService struct{}
+
+func (m *mockTimelineService) InsertCronScheduledEvent(ctx context.Context, event *timeline.CronScheduledEvent) {
 }
 
 func expectUnscheduledJobs(t *testing.T, dal *dal.DAL, clk *clock.Mock, count int) {

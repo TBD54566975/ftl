@@ -26,15 +26,19 @@ type Service struct {
 	requestSource   string
 	dal             dal.DAL
 	encryption      *encryptionsvc.Service
-	timelineService *timeline.Service
+	timelineService timelineService
 	clock           clock.Clock
 }
 
-func New(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline *timeline.Service, conn *sql.DB) *Service {
+type timelineService interface {
+	InsertCronScheduledEvent(ctx context.Context, event *timeline.CronScheduledEvent)
+}
+
+func New(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline timelineService, conn *sql.DB) *Service {
 	return NewForTesting(ctx, key, requestSource, encryption, timeline, *dal.New(conn), clock.New())
 }
 
-func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline *timeline.Service, dal dal.DAL, clock clock.Clock) *Service {
+func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline timelineService, dal dal.DAL, clock clock.Clock) *Service {
 	svc := &Service{
 		key:             key,
 		requestSource:   requestSource,
