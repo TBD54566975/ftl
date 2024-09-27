@@ -1,6 +1,7 @@
 import { ArrowLeft02Icon } from 'hugeicons-react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useRequestTraceEvents } from '../../api/timeline/use-request-trace-events'
+import { Divider } from '../../components/Divider'
 import { Loader } from '../../components/Loader'
 import { TraceDetails } from './TraceDetails'
 import { TraceDetailsCall } from './details/TraceDetailsCall'
@@ -67,7 +68,7 @@ export const TracesPage = () => {
         <TraceDetails requestKey={requestKey} events={events} selectedEventId={selectedEventId} />
       </div>
 
-      <div className='my-4 border-l border-gray-100 dark:border-gray-700' />
+      <Divider vertical />
 
       <div className='w-1/2 p-4 mt-1 h-full overflow-y-auto'>{eventDetailsComponent}</div>
     </div>

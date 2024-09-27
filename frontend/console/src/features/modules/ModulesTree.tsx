@@ -1,4 +1,4 @@
-import { ArrowRight01Icon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon, SquareArrowShrink02Icon } from 'hugeicons-react'
+import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
@@ -93,7 +93,7 @@ const ModuleSection = ({
   )
 
   return (
-    <li key={module.name} id={`module-tree-module-${module.name}`} className='my-2'>
+    <li key={module.name} id={`module-tree-module-${module.name}`} className='mb-2'>
       <div
         ref={moduleRef}
         className={classNames(
@@ -175,14 +175,14 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     <div className='flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'>
       <nav>
         <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 z-10'>
-          <span className='block w-[calc(100%-30px)]'>
+          <span className='block w-[calc(100%-32px)]'>
             <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
           </span>
           <span
-            className='absolute inset-y-0 right-0 flex items-center h-7 px-1 mx-1 my-1.5 rounded-md cursor-pointer bg-gray-300 hover:bg-gray-400 dark:bg-gray-800 hover:dark:bg-gray-700'
+            className='absolute inset-y-0 right-0 flex items-center px-1 mx-1 my-1.5 rounded-md cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-100'
             onClick={collapseAll}
           >
-            <SquareArrowShrink02Icon className='w-5 dark:text-gray-300' />
+            <ArrowShrink02Icon className='size-5 text-gray-500 dark:text-gray-300' />
           </span>
         </div>
         <ul>
