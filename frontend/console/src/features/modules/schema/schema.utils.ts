@@ -7,6 +7,49 @@ export const staticKeywords = ['module', 'export']
 
 export const declTypes = ['config', 'data', 'database', 'enum', 'fsm', 'topic', 'typealias', 'secret', 'subscription', 'verb']
 
+export const declTypeMultiselectOpts = [
+  {
+    key: 'config',
+    displayName: 'Config',
+  },
+  {
+    key: 'data',
+    displayName: 'Data',
+  },
+  {
+    key: 'database',
+    displayName: 'Database',
+  },
+  {
+    key: 'enum',
+    displayName: 'Enum',
+  },
+  {
+    key: 'fsm',
+    displayName: 'FSM',
+  },
+  {
+    key: 'topic',
+    displayName: 'Topic',
+  },
+  {
+    key: 'typealias',
+    displayName: 'Type Alias',
+  },
+  {
+    key: 'secret',
+    displayName: 'FSM',
+  },
+  {
+    key: 'subscription',
+    displayName: 'Subscription',
+  },
+  {
+    key: 'verb',
+    displayName: 'Verb',
+  },
+]
+
 // Keep these in sync with backend/schema/module.go#L86-L95
 const skipNewLineDeclTypes = ['config', 'secret', 'database', 'topic', 'subscription']
 const skipGapAfterTypes: { [key: string]: string[] } = {
