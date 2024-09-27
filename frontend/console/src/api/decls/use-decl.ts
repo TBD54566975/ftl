@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useSchema } from '../schema/use-schema'
 
+// biome-ignore lint/suspicious/noExplicitAny: support injection of getter for any decl type
 export const useDecl = (declType: string, moduleName: string, declName: string, clientFn: (request: any, options?: any) => Promise<any>) => {
   const queryClient = useQueryClient()
   const { data: schemaData } = useSchema()
@@ -20,7 +21,7 @@ export const useDecl = (declType: string, moduleName: string, declName: string, 
   const fetch = async (signal: AbortSignal) => {
     try {
       console.debug(`fetching verb ${moduleName}.${declName} from FTL`)
-      const decl = await clientFn({moduleName, declName}, { signal })
+      const decl = await clientFn({ moduleName, declName }, { signal })
       return decl
     } catch (error) {
       if (error instanceof ConnectError) {
