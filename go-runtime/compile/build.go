@@ -813,6 +813,17 @@ func (b *mainModuleContextBuilder) getGoSchemaType(typ schema.Type) (goSchemaTyp
 
 	switch t := typ.(type) {
 	case *schema.Ref:
+		// we add native types for all refs traversed from the main module. however, if this
+		// ref was not directly traversed by the main module (e.g. the request of a verb in an external module, where
+		// the main module needs a generated client for this verb), we can infer its native qualified name to get the
+		// native type here.
+		if !result.nativeType.Ok() {
+			nt, err := b.getNativeType("ftl/" + t.Module + "." + t.Name)
+			if err != nil {
+				return goSchemaType{}, err
+			}
+			result.nativeType = optional.Some(nt)
+		}
 		if len(t.TypeParameters) > 0 {
 			for _, tp := range t.TypeParameters {
 				_r, err := b.getGoSchemaType(tp)
