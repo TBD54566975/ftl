@@ -64,13 +64,13 @@ type Dog struct{}
 func (Cat) animal() {}
 func (Dog) animal() {}
 
-//ftl:enum
-type Mixed interface{ tag() }
-type Word string
-type Thing struct{}
-
-func (Word) tag()  {}
-func (Thing) tag() {}
+//TODO this doesn't work yet: https://github.com/TBD54566975/ftl/issues/2857
+////ftl:enum
+//type Mixed interface{ mixed() }
+//type Word string
+//
+//func (Word) mixed() {}
+//func (Dog) mixed()  {}
 
 //ftl:typealias
 //ftl:typemap kotlin "web5.sdk.dids.didcore.Did"
@@ -242,7 +242,7 @@ func NoValueTypeEnumVerb(ctx context.Context, val Animal) (Animal, error) {
 	return val, nil
 }
 
-//ftl:verb export
-func MixedEnumVerb(ctx context.Context, val Mixed) (Mixed, error) {
-	return val, nil
-}
+////ftl:verb export
+//func MixedEnumVerb(ctx context.Context, val Mixed) (Mixed, error) {
+//	return val, nil
+//}

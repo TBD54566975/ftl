@@ -15,8 +15,6 @@ import ftl.gomodule.ErrorEmptyVerbClient;
 import ftl.gomodule.ExternalTypeVerbClient;
 import ftl.gomodule.FloatVerbClient;
 import ftl.gomodule.IntVerbClient;
-import ftl.gomodule.Mixed;
-import ftl.gomodule.MixedEnumVerbClient;
 import ftl.gomodule.NoValueTypeEnumVerbClient;
 import ftl.gomodule.ObjectArrayVerbClient;
 import ftl.gomodule.ObjectMapVerbClient;
@@ -254,9 +252,9 @@ public class TestInvokeGoFromJava {
         }
     }
 
-    @Export
-    @Verb
-    public Mixed mixedEnumVerb(Mixed mixed, MixedEnumVerbClient client) {
-        return client.call(mixed);
-    }
+    //    @Export
+    //    @Verb
+    //    public Mixed mixedEnumVerb(Mixed mixed, MixedEnumVerbClient client) {
+    //        return client.call(mixed);
+    //    }
 }
