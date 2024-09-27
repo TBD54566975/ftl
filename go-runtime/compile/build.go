@@ -596,9 +596,7 @@ func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName s
 			}
 			ctx.MainCtx.SumTypes = append(ctx.MainCtx.SumTypes, n)
 		case goExternalType:
-			if isLocal {
-				ctx.TypesCtx.ExternalTypes = append(ctx.TypesCtx.ExternalTypes, n)
-			}
+			ctx.TypesCtx.ExternalTypes = append(ctx.TypesCtx.ExternalTypes, n)
 			ctx.MainCtx.ExternalTypes = append(ctx.MainCtx.ExternalTypes, n)
 		}
 		return next()
@@ -627,9 +625,6 @@ func (b *mainModuleContextBuilder) getGoType(module *schema.Module, node schema.
 	isLocal = b.visitingMainModule(module.Name)
 	switch n := node.(type) {
 	case *schema.Ref:
-		if n.Module != "" && n.Module != b.mainModule.Name {
-			return optional.None[goType](), isLocal, nil
-		}
 		maybeResolved, maybeModule := b.sch.ResolveWithModule(n)
 		resolved, ok := maybeResolved.Get()
 		if !ok {
@@ -682,12 +677,10 @@ func (b *mainModuleContextBuilder) processSumType(module *schema.Module, enum *s
 	var err error
 	if !b.visitingMainModule(moduleName) {
 		nt, err = nativeTypeFromQualifiedName("ftl/" + moduleName + "." + enum.Name)
+	} else if nn, ok := b.nativeNames[enum]; ok {
+		nt, err = b.getNativeType(nn)
 	} else {
-		if nn, ok := b.nativeNames[enum]; ok {
-			nt, err = b.getNativeType(nn)
-		} else {
-			return goSumType{}, fmt.Errorf("missing native name for enum %s", enum.Name)
-		}
+		return goSumType{}, fmt.Errorf("missing native name for enum %s", enum.Name)
 	}
 	if err != nil {
 		return goSumType{}, err
@@ -695,11 +688,14 @@ func (b *mainModuleContextBuilder) processSumType(module *schema.Module, enum *s
 
 	variants := make([]goSumTypeVariant, 0, len(enum.Variants))
 	for _, v := range enum.Variants {
-		nn, ok := b.nativeNames[v]
-		if !ok {
-			return goSumType{}, fmt.Errorf("missing native name for enum variant %s", v.Name)
+		var vnt nativeType
+		if !b.visitingMainModule(moduleName) {
+			vnt, err = nativeTypeFromQualifiedName("ftl/" + moduleName + "." + v.Name)
+		} else if nn, ok := b.nativeNames[v]; ok {
+			vnt, err = b.getNativeType(nn)
+		} else {
+			return goSumType{}, fmt.Errorf("missing native name for enum variant %s", enum.Name)
 		}
-		vnt, err := b.getNativeType(nn)
 		if err != nil {
 			return goSumType{}, err
 		}

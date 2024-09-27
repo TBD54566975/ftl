@@ -8,12 +8,18 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
+	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 
+	ftlanother "ftl/another"
 	ftlother "ftl/other"
 )
 
 func init() {
 	reflection.Register(
+		reflection.SumType[ftlanother.TypeEnum](
+			*new(ftlanother.A),
+			*new(ftlanother.B),
+		),
 		reflection.SumType[ftlother.SecondTypeEnum](
 			*new(ftlother.A),
 			*new(ftlother.B),
@@ -31,6 +37,8 @@ func init() {
 			*new(ftlother.MyTime),
 			*new(ftlother.MyUnit),
 		),
+		reflection.ExternalType(*new(lib.NonFTLType)),
+		reflection.ExternalType(*new(lib.AnotherNonFTLType)),
 		reflection.ProvideResourcesForVerb(
             ftlother.Echo,
 		),
