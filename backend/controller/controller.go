@@ -344,18 +344,13 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
-	if err != nil {
-		if errors.Is(err, libdal.ErrNotFound) {
-			http.NotFound(w, r)
-			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("failed to resolve route from dal"))
+	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
+	routes := s.schemaState.Load().httpRoutes[r.Method]
+	if len(routes) == 0 {
+		http.NotFound(w, r)
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
 		return
 	}
-	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
 	ingress.Handle(start, s.schemaState.Load().schema, requestKey, routes, w, r, s.timeline, s.callWithRequest)
 }
 
@@ -1828,12 +1823,16 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 		}
 	}
 
+	httpRoutes, err := s.dal.GetIngressRoutes(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get ingress routes: %w", err)
+	}
 	orderedModules := maps.Values(modulesByName)
 	sort.SliceStable(orderedModules, func(i, j int) bool {
 		return orderedModules[i].Name < orderedModules[j].Name
 	})
 	combined := &schema.Schema{Modules: orderedModules}
-	s.schemaState.Store(schemaState{schema: combined, routes: newRoutes})
+	s.schemaState.Store(schemaState{schema: combined, routes: newRoutes, httpRoutes: httpRoutes})
 	return time.Second, nil
 }
 
@@ -1904,8 +1903,9 @@ type Route struct {
 }
 
 type schemaState struct {
-	schema *schema.Schema
-	routes map[string]Route
+	schema     *schema.Schema
+	routes     map[string]Route
+	httpRoutes map[string][]dalmodel.IngressRoute
 }
 
 func (r Route) String() string {

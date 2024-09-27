@@ -212,11 +212,10 @@ VALUES ((SELECT id FROM deployments WHERE key = sqlc.arg('key')::deployment_key 
 
 -- name: GetIngressRoutes :many
 -- Get the runner endpoints corresponding to the given ingress route.
-SELECT r.key AS runner_key, d.key AS deployment_key, endpoint, ir.path, ir.module, ir.verb
+SELECT r.key AS runner_key, d.key AS deployment_key, endpoint, ir.path, ir.module, ir.verb, ir.method
 FROM ingress_routes ir
          INNER JOIN runners r ON ir.deployment_id = r.deployment_id
-         INNER JOIN deployments d ON ir.deployment_id = d.id
-WHERE ir.method = $1;
+         INNER JOIN deployments d ON ir.deployment_id = d.id;
 
 -- name: GetActiveIngressRoutes :many
 SELECT d.key AS deployment_key, ir.module, ir.verb, ir.method, ir.path

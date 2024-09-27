@@ -723,15 +723,12 @@ func (d *DAL) CreateRequest(ctx context.Context, key model.RequestKey, addr stri
 	return nil
 }
 
-func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]dalmodel.IngressRoute, error) {
-	routes, err := d.db.GetIngressRoutes(ctx, method)
+func (d *DAL) GetIngressRoutes(ctx context.Context) (map[string][]dalmodel.IngressRoute, error) {
+	routes, err := d.db.GetIngressRoutes(ctx)
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
-	if len(routes) == 0 {
-		return nil, libdal.ErrNotFound
-	}
-	return slices.Map(routes, func(row dalsql.GetIngressRoutesRow) dalmodel.IngressRoute {
+	return slices.GroupBy(slices.Map(routes, func(row dalsql.GetIngressRoutesRow) dalmodel.IngressRoute {
 		return dalmodel.IngressRoute{
 			Runner:     row.RunnerKey,
 			Deployment: row.DeploymentKey,
@@ -739,8 +736,9 @@ func (d *DAL) GetIngressRoutes(ctx context.Context, method string) ([]dalmodel.I
 			Path:       row.Path,
 			Module:     row.Module,
 			Verb:       row.Verb,
+			Method:     row.Method,
 		}
-	}), nil
+	}), func(route dalmodel.IngressRoute) string { return route.Method }), nil
 }
 
 func (d *DAL) UpsertController(ctx context.Context, key model.ControllerKey, addr string) (int64, error) {
