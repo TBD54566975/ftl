@@ -39,6 +39,7 @@ type InteractiveCLI struct {
 	New      newCmd      `cmd:"" help:"Create a new FTL module."`
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
+	Bench    benchCmd    `cmd:"" help:"Benchmark an FTL function."`
 	Replay   replayCmd   `cmd:"" help:"Call an FTL function with the same request body as the last invocation."`
 	Update   updateCmd   `cmd:"" help:"Update a deployment."`
 	Kill     killCmd     `cmd:"" help:"Kill a deployment."`

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alecthomas/atomic"
+
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
@@ -42,10 +44,12 @@ type InEvent interface {
 }
 
 type Service struct {
-	ctx        context.Context
-	conn       *stdsql.DB
-	encryption *encryption.Service
-	events     chan InEvent
+	ctx              context.Context
+	conn             *stdsql.DB
+	encryption       *encryption.Service
+	events           chan InEvent
+	lastDroppedError atomic.Value[time.Time]
+	lastFailedError  atomic.Value[time.Time]
 }
 
 func New(ctx context.Context, conn *stdsql.DB, encryption *encryption.Service) *Service {
@@ -71,7 +75,10 @@ func (s *Service) EnqueueEvent(ctx context.Context, event InEvent) {
 	select {
 	case s.events <- event:
 	default:
-		log.FromContext(ctx).Warnf("Dropping event %T due to full queue", event)
+		if time.Since(s.lastDroppedError.Load()) > 10*time.Second {
+			log.FromContext(ctx).Warnf("Dropping event %T due to full queue", event)
+			s.lastDroppedError.Store(time.Now())
+		}
 	}
 }
 
@@ -133,7 +140,10 @@ func (s *Service) flushEvents(events []InEvent) {
 		lastError = err
 	}
 	if lastError != nil {
-		logger.Errorf(lastError, "Failed to insert %d events, most recent error", failures)
+		if time.Since(s.lastFailedError.Load()) > 10*time.Second {
+			logger.Errorf(lastError, "Failed to insert %d events, most recent error", failures)
+			s.lastFailedError.Store(time.Now())
+		}
 		observability.Timeline.Failed(s.ctx, failures)
 	}
 	observability.Timeline.Inserted(s.ctx, len(events)-failures)
