@@ -62,7 +62,7 @@ func callVerb(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli
 	if cerr := new(connect.Error); errors.As(err, &cerr) && cerr.Code() == connect.CodeNotFound {
 		suggestions, err := findSuggestions(ctx, ctlCli, verb)
 
-		// if we have suggestions, return a helpful error message. otherwise continue to the original error
+		// If we have suggestions, return a helpful error message, otherwise continue to the original error.
 		if err == nil {
 			return fmt.Errorf("verb not found: %s\n\nDid you mean one of these?\n%s", verb, strings.Join(suggestions, "\n"))
 		}
