@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
-
-	"github.com/TBD54566975/ftl/internal/model"
 )
 
 func TestBasics(t *testing.T) {
@@ -35,16 +33,14 @@ func TestBasics(t *testing.T) {
 
 func TestCertificate(t *testing.T) {
 	// Set up CA
-	caIdent, err := Parse("c")
-	assert.NoError(t, err)
+	caIdent := NewIdentity("ca", "")
 	caStore, err := NewStoreNewKeys(caIdent)
 	assert.NoError(t, err)
 	caVerifier, err := caStore.KeyPair.Verifier()
 	assert.NoError(t, err)
 
 	// Runner generates a key pair and identity for signing
-	runnerKey := model.NewRunnerKey("runnerhost", "1234")
-	runnerIdent := NewRunner(runnerKey, "echo")
+	runnerIdent := NewIdentity("runner", "echo")
 	assert.NoError(t, err)
 	runnerStore, err := NewStoreNewKeys(runnerIdent)
 	assert.NoError(t, err)

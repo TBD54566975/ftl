@@ -8,71 +8,34 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/internal/model"
 )
 
-type Identity interface {
-	Prefix() string
-	String() string
+// Identity represents a node's identity.
+// This had some extra logic in the original code, but it was removed for simplicity.
+// TODO: Maybe use model.KeyType
+type Identity struct {
+	Host   string
+	Module string
 }
 
-func Parse(d string) (Identity, error) {
-	parts := strings.Split(d, ":")
-	if len(parts) == 0 {
-		return nil, fmt.Errorf("invalid identity: empty string")
+func NewIdentity(host, module string) Identity {
+	return Identity{
+		Host:   host,
+		Module: module,
+	}
+}
+
+func (i Identity) String() string {
+	return fmt.Sprintf("%s:%s", i.Host, i.Module)
+}
+
+func Parse(s string) (Identity, error) {
+	parts := strings.Split(s, ":")
+	if len(parts) != 2 {
+		return Identity{}, fmt.Errorf("invalid identity: %s", s)
 	}
 
-	switch parts[0] {
-	case "r":
-		if len(parts) != 3 {
-			return nil, fmt.Errorf("invalid runner identity: %s", d)
-		}
-
-		runnerKey, err := model.ParseRunnerKey(parts[1])
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse runner key: %w", err)
-		}
-
-		return NewRunner(model.RunnerKey(runnerKey), parts[2]), nil
-	case "c":
-		if len(parts) != 1 {
-			return nil, fmt.Errorf("invalid controller identity: %s", d)
-		}
-
-		return Controller{}, nil
-	}
-
-	return nil, fmt.Errorf("invalid identity: %s", d)
-}
-
-var _ Identity = Runner{}
-
-type Controller struct {
-}
-
-func (c Controller) String() string {
-	return c.Prefix()
-}
-
-func (c Controller) Prefix() string {
-	return "c"
-}
-
-type Runner struct {
-	Key        model.RunnerKey
-	Deployment string
-}
-
-func NewRunner(key model.RunnerKey, deployment string) Runner {
-	return Runner{Key: key, Deployment: deployment}
-}
-
-func (r Runner) String() string {
-	return fmt.Sprintf("r:%s:%s", r.Key, r.Deployment)
-}
-
-func (r Runner) Prefix() string {
-	return "r"
+	return NewIdentity(parts[0], parts[1]), nil
 }
 
 // Store is held by a node and contains the node's identity, key pair, signer, and certificate.
