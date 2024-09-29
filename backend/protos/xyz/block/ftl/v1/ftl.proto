@@ -133,6 +133,31 @@ service ModuleService {
   rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
 }
 
+message CertificationRequest {
+    string identity = 1;
+    bytes public_key = 2;
+}
+
+message GetCertificationRequest {
+  CertificationRequest request = 1;
+  bytes signature = 2;
+}
+
+message GetCertificationResponse {
+  Certificate certificate = 1;
+}
+
+// CertificateContent is separated from Certificate to allow for easier signing.
+message CertificateContent {
+    string identity = 1;
+    bytes public_key = 2;
+}
+
+message Certificate {
+  CertificateContent content = 1;
+  bytes controller_signature = 3;
+}
+
 enum DeploymentChangeType {
   DEPLOYMENT_ADDED = 0;
   DEPLOYMENT_REMOVED = 1;
@@ -315,6 +340,9 @@ service ControllerService {
   rpc ProcessList(ProcessListRequest) returns (ProcessListResponse);
 
   rpc Status(StatusRequest) returns (StatusResponse);
+
+  // Runner will initially call this to have the controller sign its public key.
+  rpc GetCertification(GetCertificationRequest) returns (GetCertificationResponse);
 
   // Get list of artefacts that differ between the server and client.
   rpc GetArtefactDiffs(GetArtefactDiffsRequest) returns (GetArtefactDiffsResponse);

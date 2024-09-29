@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
 func TestBasics(t *testing.T) {
-	keyPair, err := GenerateTinkKeyPair()
+	keyPair, err := GenerateKeyPair()
 	assert.NoError(t, err)
 
 	signer, err := keyPair.Signer()
@@ -33,51 +35,40 @@ func TestBasics(t *testing.T) {
 
 func TestCertificate(t *testing.T) {
 	// Set up CA
-	caStore, err := NewStore()
+	caIdent, err := Parse("c")
 	assert.NoError(t, err)
-	caSigner, err := caStore.KeyPair.Signer()
+	caStore, err := NewStoreNewKeys(caIdent)
 	assert.NoError(t, err)
-	caPublicKey, err := caStore.KeyPair.Public()
+	caVerifier, err := caStore.KeyPair.Verifier()
 	assert.NoError(t, err)
 
 	// Runner generates a key pair and identity for signing
-	runnerStore, err := NewStore()
+	runnerKey := model.NewRunnerKey("runnerhost", "1234")
+	runnerIdent := NewRunner(runnerKey, "echo")
 	assert.NoError(t, err)
-	runnerSigner, err := runnerStore.KeyPair.Signer()
+	runnerStore, err := NewStoreNewKeys(runnerIdent)
 	assert.NoError(t, err)
-	runnerIdentity, err := Parse("r:rnr-1234:echo")
-	assert.NoError(t, err)
-	runnerSignedData, err := Sign(runnerSigner, runnerIdentity)
-	fmt.Printf("Runner signed data: %s\n", runnerSignedData)
-	assert.NoError(t, err)
-	runnerPublicKey, err := runnerStore.KeyPair.Public()
+	request, err := runnerStore.NewGetCertificateRequest()
 	assert.NoError(t, err)
 
+	// Hand wave "send the request to the CA"
 	// Hand wave "check the ID and module"
 
-	// Sign the certificate
-	certificate, err := SignCertificateRequest(caSigner, runnerPublicKey, runnerSignedData)
+	certificate, err := caStore.SignCertificateRequest(&request)
 	assert.NoError(t, err)
-
 	fmt.Printf("Certificate: %s\n", certificate)
-
-	// Runner A constructs a message for runner B
-	message := []byte("hello")
-	signedMessage, err := runnerSigner.Sign(message)
-	certified := CertifiedSignedData{
-		Certificate: certificate,
-		SignedData:  signedMessage,
-	}
-
-	fmt.Printf("Certified message: %s\n", certified)
 
 	// Hand wave "send the certificate to the runner"
 
-	// Runner B verifies the message
-	caVerifier, err := NewTinkVerifier(caPublicKey)
+	err = runnerStore.SetCertificate(certificate, caVerifier)
 	assert.NoError(t, err)
 
-	data, err := certified.Verify(caVerifier)
+	// Runner A constructs a certified message
+	message := []byte("hello")
+	certified, err := runnerStore.CertifiedSign(message)
+
+	fmt.Printf("Certified message: %s\n", certified)
+	_, data, err := certified.Verify(caVerifier)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(data))
 }

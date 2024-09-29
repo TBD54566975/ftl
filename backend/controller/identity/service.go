@@ -55,42 +55,42 @@ func New(ctx context.Context, encryption *encryptionsvc.Service, conn *sql.DB) (
 	return svc, nil
 }
 
-func (s Service) Sign(data []byte) (*internalidentity.SignedData, error) {
+func (s Service) Sign(data []byte) (internalidentity.SignedData, error) {
 	signedData, err := s.signer.Sign(data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign data: %w", err)
+		return internalidentity.SignedData{}, fmt.Errorf("failed to sign data: %w", err)
 	}
 
 	return signedData, nil
 }
 
-func (s Service) Verify(signedData internalidentity.SignedData) error {
-	err := s.verifier.Verify(signedData)
+func (s Service) Verify(signedData internalidentity.SignedData) ([]byte, error) {
+	data, err := s.verifier.Verify(signedData)
 	if err != nil {
-		return fmt.Errorf("failed to verify data: %w", err)
+		return nil, fmt.Errorf("failed to verify data: %w", err)
 	}
 
-	return nil
+	return data, nil
 }
 
 func (s Service) getKeyPair(ctx context.Context) (internalidentity.KeyPair, error) {
 	identity, err := s.dal.GetOnlyIdentityKey(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get only identity key: %w", err)
+		return internalidentity.KeyPair{}, fmt.Errorf("failed to get only identity key: %w", err)
 	}
 
 	reader := keyset.NewBinaryReader(bytes.NewReader(identity.Private.Bytes()))
 	aead, err := s.encryption.AEAD()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get AEAD: %w", err)
+		return internalidentity.KeyPair{}, fmt.Errorf("failed to get AEAD: %w", err)
 	}
 
 	handle, err := keyset.Read(reader, aead)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read keyset: %w", err)
+		return internalidentity.KeyPair{}, fmt.Errorf("failed to read keyset: %w", err)
 	}
 
-	keyPair := internalidentity.NewTinkKeyPair(*handle)
+	keyPair := internalidentity.NewKeyPair(*handle)
 	return keyPair, nil
 }
 
@@ -123,7 +123,7 @@ func (s Service) ensureIdentity(ctx context.Context) (err error) {
 }
 
 func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error {
-	pair, err := internalidentity.GenerateTinkKeyPair()
+	pair, err := internalidentity.GenerateKeyPair()
 	if err != nil {
 		return fmt.Errorf("failed to generate key pair: %w", err)
 	}
@@ -144,7 +144,7 @@ func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error
 	}
 
 	// For total sanity, verify immediately
-	verified, err := verifier.Verify(*signed)
+	verified, err := verifier.Verify(signed)
 	if err != nil {
 		return fmt.Errorf("failed to verify signed verification: %w", err)
 	}
@@ -176,7 +176,7 @@ func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error
 
 	encryptedIdentity := &dal.EncryptedIdentity{
 		Private:         encryptedIdentityColumn,
-		Public:          public,
+		Public:          public.Bytes,
 		VerifySignature: signed.Signature,
 	}
 	if err := tx.CreateOnlyIdentityKey(ctx, *encryptedIdentity); err != nil {

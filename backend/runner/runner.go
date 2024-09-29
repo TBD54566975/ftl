@@ -42,18 +42,19 @@ import (
 )
 
 type Config struct {
-	Config                []string        `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
-	Bind                  *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
-	Key                   model.RunnerKey `help:"Runner key (auto)."`
-	ControllerEndpoint    *url.URL        `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
-	TemplateDir           string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
-	DeploymentDir         string          `help:"Directory to store deployments in." default:"${deploymentdir}"`
-	DeploymentKeepHistory int             `help:"Number of deployments to keep history for." default:"3"`
-	Language              []string        `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust,java"`
-	HeartbeatPeriod       time.Duration   `help:"Minimum period between heartbeats." default:"3s"`
-	HeartbeatJitter       time.Duration   `help:"Jitter to add to heartbeat period." default:"2s"`
-	Deployment            string          `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
-	DebugPort             int             `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
+	Config                []string            `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
+	Bind                  *url.URL            `help:"Endpoint the Runner should bind to and advertise." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
+	Key                   model.RunnerKey     `help:"Runner key (auto)."`
+	ControllerEndpoint    *url.URL            `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	ControllerPublicKey   *identity.PublicKey `name:"ftl-public-key" help:"Controller public key in Base64. Temporarily optional." env:"FTL_CONTROLLER_PUBLIC_KEY"`
+	TemplateDir           string              `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
+	DeploymentDir         string              `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	DeploymentKeepHistory int                 `help:"Number of deployments to keep history for." default:"3"`
+	Language              []string            `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust,java"`
+	HeartbeatPeriod       time.Duration       `help:"Minimum period between heartbeats." default:"3s"`
+	HeartbeatJitter       time.Duration       `help:"Jitter to add to heartbeat period." default:"2s"`
+	Deployment            string              `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
+	DebugPort             int                 `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -99,10 +100,43 @@ func Start(ctx context.Context, config Config) error {
 		return fmt.Errorf("failed to marshal labels: %w", err)
 	}
 
-	identityStore, err := identity.NewStore(identity.NewRunner(key))
-	if err != nil {
-		observability.Runner.StartupFailed(ctx)
-		return fmt.Errorf("failed to create identity store: %w", err)
+	// TODO: Retry loop, RetryStreamingClientStreamish
+	var identityStore *identity.Store
+	if config.ControllerPublicKey != nil {
+		controllerVerifier, err := identity.NewVerifier(*config.ControllerPublicKey)
+		if err != nil {
+			observability.Runner.StartupFailed(ctx)
+			return fmt.Errorf("failed to create controller verifier: %w", err)
+		}
+
+		identityStore, err := identity.NewStoreNewKeys(identity.NewRunner(key, config.Deployment))
+		if err != nil {
+			observability.Runner.StartupFailed(ctx)
+			return fmt.Errorf("failed to create identity store: %w", err)
+		}
+
+		certRequest, err := identityStore.NewGetCertificateRequest()
+		if err != nil {
+			observability.Runner.StartupFailed(ctx)
+			return fmt.Errorf("failed to create certificate request: %w", err)
+		}
+
+		certResp, err := controllerClient.GetCertification(ctx, connect.NewRequest(&certRequest))
+		if err != nil {
+			observability.Runner.StartupFailed(ctx)
+			return fmt.Errorf("failed to get certificate: %w", err)
+		}
+
+		certificate, err := identity.NewCertificate(certResp.Msg.Certificate)
+		if err != nil {
+			observability.Runner.StartupFailed(ctx)
+			return fmt.Errorf("failed to create certificate: %w", err)
+		}
+
+		if err = identityStore.SetCertificate(certificate, controllerVerifier); err != nil {
+			observability.Runner.StartupFailed(ctx)
+			return fmt.Errorf("failed to set certificate: %w", err)
+		}
 	}
 
 	svc := &Service{
@@ -238,7 +272,6 @@ func (s *Service) deploy(ctx context.Context) error {
 	}
 
 	fmt.Printf("c config deployment %v\n", s.config.Deployment)
-	panic("implement me")
 	key, err := model.ParseDeploymentKey(s.config.Deployment)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.None[string]())
@@ -259,6 +292,7 @@ func (s *Service) deploy(ctx context.Context) error {
 		return errors.New("already deployed")
 	}
 
+	fmt.Printf("--- get deployment %v\n", key)
 	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: s.config.Deployment}))
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
