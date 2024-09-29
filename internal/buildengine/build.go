@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/alecthomas/types/either"
 )
 
 const BuildLockTimeout = time.Minute
@@ -28,21 +29,45 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 		return nil, fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err)
 	}
 	defer release() //nolint:errcheck
+
 	logger := log.FromContext(ctx).Module(config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	// clear the deploy directory before extracting schema
-	if err := os.RemoveAll(config.DeployDir); err != nil {
-		return nil, fmt.Errorf("failed to clear errors: %w", err)
+	if err := prebuild(ctx, config); err != nil {
+		return nil, err
 	}
-
-	logger.Infof("Building module")
-
-	startTime := time.Now()
 
 	result, err := plugin.Build(ctx, projectRootDir, config, sch, buildEnv, devMode)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build module: %w", err)
+		return postbuild(ctx, config, either.RightOf[BuildResult](err))
+	}
+	return postbuild(ctx, config, either.LeftOf[error](result))
+}
+
+// TODO: docs
+func prebuild(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
+	// clear the deploy directory before extracting schema
+	if err := os.RemoveAll(config.DeployDir); err != nil {
+		return fmt.Errorf("failed to clear deploy directory: %w", err)
+	}
+	if err := os.MkdirAll(config.DeployDir, 0700); err != nil {
+		return fmt.Errorf("could not create deploy directory: %w", err)
+	}
+
+	log.FromContext(ctx).Infof("Building module")
+	return nil
+}
+
+// TODO: docs
+func postbuild(ctx context.Context, config moduleconfig.AbsModuleConfig, eitherResult either.Either[BuildResult, error]) (*schema.Module, error) {
+	logger := log.FromContext(ctx)
+
+	var result BuildResult
+	switch eitherResult := eitherResult.(type) {
+	case either.Right[BuildResult, error]:
+		return nil, fmt.Errorf("failed to build module: %w", eitherResult.Get())
+	case either.Left[BuildResult, error]:
+		result = eitherResult.Get()
 	}
 
 	var errs []error
@@ -58,7 +83,7 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 		return nil, errors.Join(errs...)
 	}
 
-	logger.Infof("Module built (%.2fs)", time.Since(startTime).Seconds())
+	logger.Infof("Module built (%.2fs)", time.Since(result.StartTime).Seconds())
 
 	// write schema proto to deploy directory
 	schemaBytes, err := proto.Marshal(result.Schema.ToProto())

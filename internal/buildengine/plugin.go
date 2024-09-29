@@ -20,15 +20,17 @@ import (
 )
 
 type BuildResult struct {
-	Name   string
-	Errors []*schema.Error
-	Schema *schema.Module
+	Name      string
+	Errors    []*schema.Error
+	Schema    *schema.Module
+	StartTime time.Time
 }
 
 // PluginEvent is used to notify of updates from the plugin.
 //
 //sumtype:decl
 type PluginEvent interface {
+	ModuleName() string
 	pluginEvent()
 }
 
@@ -37,7 +39,8 @@ type AutoRebuildStartedEvent struct {
 	Module string
 }
 
-func (AutoRebuildStartedEvent) pluginEvent() {}
+func (AutoRebuildStartedEvent) pluginEvent()         {}
+func (e AutoRebuildStartedEvent) ModuleName() string { return e.Module }
 
 // AutoRebuildEndedEvent is sent when the plugin ends an automatic rebuild.
 type AutoRebuildEndedEvent struct {
@@ -45,7 +48,8 @@ type AutoRebuildEndedEvent struct {
 	Result either.Either[BuildResult, error]
 }
 
-func (AutoRebuildEndedEvent) pluginEvent() {}
+func (AutoRebuildEndedEvent) pluginEvent()         {}
+func (e AutoRebuildEndedEvent) ModuleName() string { return e.Module }
 
 // LanguagePlugin handles building and scaffolding modules in a specific language.
 type LanguagePlugin interface {
@@ -214,6 +218,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 			switch c := cmd.(type) {
 			case buildCommand:
 				// update state
+				startTime := time.Now()
 				projectRoot = c.projectRoot
 				config = c.config
 				schema = c.schema
@@ -236,7 +241,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 					continue
 				}
 
-				result, err := loadBuildResult(config)
+				result, err := loadBuildResult(config, startTime)
 				if err != nil {
 					c.result <- either.RightOf[BuildResult](err)
 					continue
@@ -255,6 +260,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 			switch event.(type) {
 			case WatchEventModuleChanged:
 				// automatic rebuild
+				startTime := time.Now()
 				p.updates.Publish(AutoRebuildStartedEvent{Module: p.config.Module})
 				transaction := watcher.GetTransaction(p.config.Dir)
 				err := p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
@@ -265,7 +271,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 					})
 					continue
 				}
-				result, err := loadBuildResult(config)
+				result, err := loadBuildResult(config, startTime)
 				if err != nil {
 					p.updates.Publish(AutoRebuildEndedEvent{
 						Module: p.config.Module,
@@ -292,14 +298,15 @@ func (p *internalPlugin) run(ctx context.Context) {
 
 // loadBuildResult reads the result of a build (ie schema and errors) from disk.
 // internal plugins don't have a way to pass back schema and errors other than writing them to disk.
-func loadBuildResult(config moduleconfig.AbsModuleConfig) (BuildResult, error) {
+func loadBuildResult(config moduleconfig.AbsModuleConfig, startTime time.Time) (BuildResult, error) {
 	errorList, err := loadProtoErrors(config)
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("failed to read build errors for module: %w", err)
 	}
 
 	result := BuildResult{
-		Errors: errorList.Errors,
+		Errors:    errorList.Errors,
+		StartTime: startTime,
 	}
 
 	if schema.ContainsTerminalError(errorList.Errors) {

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
@@ -789,17 +788,20 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilding)
 	meta, ok := e.moduleMetas.Load(moduleName)
 	if !ok {
+		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 		return fmt.Errorf("module %q not found", moduleName)
 	}
 
 	sch := &schema.Schema{Modules: maps.Values(builtModules)}
 
 	if e.listener != nil {
+		// TODO: publish this when auto build starts as well
 		e.listener.OnBuildStarted(meta.module)
 	}
 
 	moduleSchema, err := build(ctx, meta.plugin, e.projectRoot, sch, meta.module.Config, e.buildEnv, e.devMode)
 	if err != nil {
+		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 		return err
 	}
 	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilt)
@@ -858,42 +860,34 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleCo
 // listenForBuildUpdates listens for adhoc build updates and reports them to the listener.
 // These happen when a plugin for a module detects a change and automatically rebuilds.
 func (e *Engine) listenForBuildUpdates(ctx context.Context) {
-	logger := log.FromContext(ctx)
 	for {
 		select {
 		case event := <-e.pluginEvents:
+			logger := log.FromContext(ctx).Module(event.ModuleName()).Scope("build")
+			ctx = log.ContextWithLogger(ctx, logger)
+			meta, ok := e.moduleMetas.Load(event.ModuleName())
+			if !ok {
+				logger.Warnf("module not found for build update", event.ModuleName())
+				continue
+			}
 			switch event := event.(type) {
 			case AutoRebuildStartedEvent:
+				prebuild(ctx, meta.module.Config.Abs())
 				terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateBuilding)
 
 			case AutoRebuildEndedEvent:
-				switch result := event.Result.(type) {
-				case either.Left[BuildResult, error]:
-					buildResult := result.Get()
-					if schema.ContainsTerminalError(buildResult.Errors) {
-						// TODO: clean up...
-						// logger.Errorf(result.Get(), "build %s failed", event.module)
-						// e.reportBuildFailed(result.Get())
-						continue
-					}
-					meta, ok := e.moduleMetas.Load(event.Module)
-					if !ok {
-						// TODO: handle this case
-						// return fmt.Errorf("Module %q not found", moduleName)
-						continue
-					}
-					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateDeploying)
-					if err := Deploy(ctx, meta.module, 1, true, e.client); err != nil {
-						log.FromContext(ctx).Errorf(err, "deploy %s failed", event.Module)
-						e.reportBuildFailed(err)
-					} else {
-						e.reportSuccess()
-					}
-				case either.Right[BuildResult, error]:
-					logger.Errorf(result.Get(), "build %s failed", event.Module)
-					e.reportBuildFailed(result.Get())
-				default:
-					panic(fmt.Sprintf("unexpected result type %T", result))
+				if _, err := postbuild(ctx, meta.module.Config.Abs(), event.Result); err != nil {
+					logger.Errorf(err, "build failed")
+					e.reportBuildFailed(err)
+					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateFailed)
+					continue
+				}
+				terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateDeploying)
+				if err := Deploy(ctx, meta.module, 1, true, e.client); err != nil {
+					logger.Errorf(err, "deploy failed")
+					e.reportBuildFailed(err)
+				} else {
+					e.reportSuccess()
 				}
 			}
 
