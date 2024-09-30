@@ -55,6 +55,8 @@ build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
 
+  export CGO_ENABLED=0
+
   for tool in $@; do
     path="cmd/$tool"
     test "$tool" = "ftl" && path="frontend/cli"
@@ -123,7 +125,7 @@ format-frontend:
 
 # Install Node dependencies using pnpm
 pnpm-install:
-  @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install" && break || sleep 5; done
+  @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
 
 # Regenerate protos
 build-protos: pnpm-install
@@ -255,4 +257,8 @@ storybook:
 
 # Build an FTL Docker image.
 build-docker name:
-  docker build --platform linux/amd64 -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" -t ftl0/ftl-{{name}}:latest -f Dockerfile.{{name}} .
+  docker build \
+    --platform linux/amd64 \
+    -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" \
+    -t ftl0/ftl-{{name}}:latest \
+    -f Dockerfile.{{name}} .
