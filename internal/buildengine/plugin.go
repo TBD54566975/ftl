@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -16,8 +17,11 @@ import (
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/internal/errors"
+	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
+
+const BuildLockTimeout = time.Minute
 
 type BuildResult struct {
 	Name      string
@@ -233,15 +237,25 @@ func (p *internalPlugin) run(ctx context.Context) {
 					topic.Subscribe(watchChan)
 				}
 
+				// flock should only be released after we have read back the pb files
+				release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
+				if err != nil {
+					c.result <- either.RightOf[BuildResult](fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err))
+					release() //nolint:errcheck
+					continue
+				}
+
 				// build
 				transaction := watcher.GetTransaction(p.config.Dir)
-				err := p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
+				err = p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
 				if err != nil {
 					c.result <- either.RightOf[BuildResult](err)
+					release() //nolint:errcheck
 					continue
 				}
 
 				result, err := loadBuildResult(config, startTime)
+				release() //nolint:errcheck
 				if err != nil {
 					c.result <- either.RightOf[BuildResult](err)
 					continue
@@ -262,16 +276,30 @@ func (p *internalPlugin) run(ctx context.Context) {
 				// automatic rebuild
 				startTime := time.Now()
 				p.updates.Publish(AutoRebuildStartedEvent{Module: p.config.Module})
+
+				// flock should only be released after we have read back the pb files
+				release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
+				if err != nil {
+					release() //nolint:errcheck
+					p.updates.Publish(AutoRebuildEndedEvent{
+						Module: p.config.Module,
+						Result: either.RightOf[BuildResult](fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err)),
+					})
+					continue
+				}
+
 				transaction := watcher.GetTransaction(p.config.Dir)
-				err := p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
+				err = p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
 				if err != nil {
 					p.updates.Publish(AutoRebuildEndedEvent{
 						Module: p.config.Module,
 						Result: either.RightOf[BuildResult](err),
 					})
+					release() //nolint:errcheck
 					continue
 				}
 				result, err := loadBuildResult(config, startTime)
+				release() //nolint:errcheck
 				if err != nil {
 					p.updates.Publish(AutoRebuildEndedEvent{
 						Module: p.config.Module,
