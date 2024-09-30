@@ -8,7 +8,11 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-var db = ftl.PostgresDatabase("echodb")
+type EchoDBConfig struct {
+	ftl.DefaultPostgresDatabaseConfig
+}
+
+func (EchoDBConfig) Name() string { return "echodb" }
 
 // Echo returns a greeting with the current time.
 //

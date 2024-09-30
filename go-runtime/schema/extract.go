@@ -16,6 +16,7 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/schema/call"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/TBD54566975/ftl/go-runtime/schema/config"
 	"github.com/TBD54566975/ftl/go-runtime/schema/configsecret"
 	"github.com/TBD54566975/ftl/go-runtime/schema/data"
 	"github.com/TBD54566975/ftl/go-runtime/schema/database"
@@ -52,6 +53,7 @@ func Extractors() [][]*analysis.Analyzer {
 			metadata.Extractor,
 		},
 		{
+			config.Extractor,
 			// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
 			// interfaces and typeenumvariant.Extractor determines any types that implement these
 			typeenum.Extractor,
@@ -65,7 +67,6 @@ func Extractors() [][]*analysis.Analyzer {
 			typealias.Extractor,
 			typeenumvariant.Extractor,
 			valueenumvariant.Extractor,
-			verb.Extractor,
 		},
 		{
 			call.Extractor,
@@ -73,6 +74,7 @@ func Extractors() [][]*analysis.Analyzer {
 			// visits a node and aggregates its enum variants if present
 			enum.Extractor,
 			subscription.Extractor,
+			verb.Extractor,
 		},
 		{
 			transitive.Extractor,
@@ -351,6 +353,9 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 		return Result{}, fmt.Errorf("schema extraction finalizer result not found")
 	}
 	for _, r := range fResults {
+		if r == nil {
+			return Result{}, fmt.Errorf("schema extraction failed")
+		}
 		fr, ok := r.(finalize.Result)
 		if !ok {
 			return Result{}, fmt.Errorf("unexpected schema extraction result type: %T", r)
