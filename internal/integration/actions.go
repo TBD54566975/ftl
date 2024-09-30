@@ -225,7 +225,7 @@ func Deploy(module string) Action {
 		func(t testing.TB, ic TestContext) {
 			args := []string{"deploy"}
 			if ic.Provisioner != nil {
-				args = append(args, "--use-provisioner", "--provisioner-endpoint=http://localhost:8894")
+				args = append(args, "--use-provisioner", "--provisioner-endpoint=http://localhost:8893")
 			}
 			if ic.kubeClient != nil {
 				args = append(args, "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0")
