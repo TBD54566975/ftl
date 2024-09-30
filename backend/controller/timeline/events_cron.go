@@ -3,6 +3,7 @@ package timeline
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -11,7 +12,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -26,6 +26,9 @@ type CronScheduledEvent struct {
 	Error       optional.Option[string]
 }
 
+func (e *CronScheduledEvent) GetID() int64 { return e.ID }
+func (e *CronScheduledEvent) event()       {}
+
 type CronScheduled struct {
 	DeploymentKey model.DeploymentKey
 	Verb          schema.Ref
@@ -36,8 +39,7 @@ type CronScheduled struct {
 	Error       optional.Option[string]
 }
 
-func (e *CronScheduledEvent) GetID() int64 { return e.ID }
-func (e *CronScheduledEvent) event()       {}
+func (*CronScheduled) inEvent() {}
 
 type eventCronScheduledJSON struct {
 	ScheduledAt time.Time               `json:"scheduled_at"`
@@ -45,9 +47,7 @@ type eventCronScheduledJSON struct {
 	Error       optional.Option[string] `json:"error,omitempty"`
 }
 
-func (s *Service) InsertCronScheduledEvent(ctx context.Context, event *CronScheduled) {
-	logger := log.FromContext(ctx)
-
+func (s *Service) insertCronScheduledEvent(ctx context.Context, querier sql.Querier, event *CronScheduled) error {
 	cronJSON := eventCronScheduledJSON{
 		ScheduledAt: event.ScheduledAt,
 		Schedule:    event.Schedule,
@@ -56,18 +56,16 @@ func (s *Service) InsertCronScheduledEvent(ctx context.Context, event *CronSched
 
 	data, err := json.Marshal(cronJSON)
 	if err != nil {
-		logger.Errorf(err, "failed to marshal cron JSON")
-		return
+		return fmt.Errorf("failed to marshal cron JSON: %w", err)
 	}
 
 	var payload ftlencryption.EncryptedTimelineColumn
 	err = s.encryption.EncryptJSON(json.RawMessage(data), &payload)
 	if err != nil {
-		logger.Errorf(err, "failed to encrypt cron JSON")
-		return
+		return fmt.Errorf("failed to encrypt cron JSON: %w", err)
 	}
 
-	err = libdal.TranslatePGError(s.db.InsertTimelineCronScheduledEvent(ctx, sql.InsertTimelineCronScheduledEventParams{
+	err = libdal.TranslatePGError(querier.InsertTimelineCronScheduledEvent(ctx, sql.InsertTimelineCronScheduledEventParams{
 		DeploymentKey: event.DeploymentKey,
 		TimeStamp:     event.Time,
 		Module:        event.Verb.Module,
@@ -75,6 +73,7 @@ func (s *Service) InsertCronScheduledEvent(ctx context.Context, event *CronSched
 		Payload:       payload,
 	}))
 	if err != nil {
-		logger.Errorf(err, "failed to insert cron event")
+		return fmt.Errorf("failed to insert cron event: %w", err)
 	}
+	return err
 }

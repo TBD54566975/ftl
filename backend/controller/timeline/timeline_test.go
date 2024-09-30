@@ -151,7 +151,7 @@ func TestTimeline(t *testing.T) {
 	}
 
 	t.Run("InsertCronScheduledEvent", func(t *testing.T) {
-		timeline.InsertCronScheduledEvent(ctx, &CronScheduled{
+		timeline.EnqueueEvent(ctx, &CronScheduled{
 			DeploymentKey: cronEvent.DeploymentKey,
 			Verb:          cronEvent.Verb,
 			Time:          cronEvent.Time,

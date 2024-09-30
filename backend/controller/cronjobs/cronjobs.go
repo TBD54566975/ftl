@@ -26,19 +26,15 @@ type Service struct {
 	requestSource   string
 	dal             dal.DAL
 	encryption      *encryptionsvc.Service
-	timelineService timelineService
+	timelineService *timeline.Service
 	clock           clock.Clock
 }
 
-type timelineService interface {
-	InsertCronScheduledEvent(ctx context.Context, event *timeline.CronScheduled)
-}
-
-func New(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline timelineService, conn *sql.DB) *Service {
+func New(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline *timeline.Service, conn *sql.DB) *Service {
 	return NewForTesting(ctx, key, requestSource, encryption, timeline, *dal.New(conn), clock.New())
 }
 
-func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline timelineService, dal dal.DAL, clock clock.Clock) *Service {
+func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline *timeline.Service, dal dal.DAL, clock clock.Clock) *Service {
 	svc := &Service{
 		key:             key,
 		requestSource:   requestSource,
@@ -125,7 +121,7 @@ func (s *Service) scheduleCronJobs(ctx context.Context) (err error) {
 	for _, job := range jobs {
 		err = s.scheduleCronJob(ctx, tx, job)
 		if err != nil {
-			s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduled{
+			s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 				DeploymentKey: job.DeploymentKey,
 				Verb:          job.Verb,
 				Time:          now,
@@ -158,7 +154,7 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 	}
 	err = s.scheduleCronJob(ctx, tx, job)
 	if err != nil {
-		s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduled{
+		s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 			DeploymentKey: job.DeploymentKey,
 			Verb:          job.Verb,
 			Time:          s.clock.Now().UTC(),
@@ -230,7 +226,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 	if err != nil {
 		return fmt.Errorf("failed to update cron job %q: %w", job.Key, err)
 	}
-	s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduled{
+	s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 		DeploymentKey: job.DeploymentKey,
 		Verb:          job.Verb,
 		Time:          now,

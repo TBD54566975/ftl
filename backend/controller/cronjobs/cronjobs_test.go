@@ -58,9 +58,11 @@ func TestNewCronJobsForModule(t *testing.T) {
 	err = parentDAL.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
 
+	timelineSrv := timeline.New(ctx, conn, encryption)
+
 	// Progress so that start_time is valid
 	clk.Add(time.Second)
-	cjs := NewForTesting(ctx, key, "test.com", encryption, &mockTimelineService{}, *dal, clk)
+	cjs := NewForTesting(ctx, key, "test.com", encryption, timelineSrv, *dal, clk)
 	// All jobs need to be scheduled
 	expectUnscheduledJobs(t, dal, clk, 2)
 	unscheduledJobs, err := dal.GetUnscheduledCronJobs(ctx, clk.Now())
@@ -135,11 +137,6 @@ func TestNewCronJobsForModule(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, p)
 	}
-}
-
-type mockTimelineService struct{}
-
-func (m *mockTimelineService) InsertCronScheduledEvent(ctx context.Context, event *timeline.CronScheduled) {
 }
 
 func expectUnscheduledJobs(t *testing.T, dal *dal.DAL, clk *clock.Mock, count int) {
