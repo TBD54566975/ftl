@@ -867,7 +867,7 @@ func (e *Engine) listenForBuildUpdates(ctx context.Context) {
 			ctx = log.ContextWithLogger(ctx, logger)
 			meta, ok := e.moduleMetas.Load(event.ModuleName())
 			if !ok {
-				logger.Warnf("module not found for build update", event.ModuleName())
+				logger.Warnf("module not found for build update")
 				continue
 			}
 			switch event := event.(type) {
