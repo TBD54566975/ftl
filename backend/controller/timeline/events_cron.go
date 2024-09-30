@@ -26,6 +26,16 @@ type CronScheduledEvent struct {
 	Error       optional.Option[string]
 }
 
+type CronScheduled struct {
+	DeploymentKey model.DeploymentKey
+	Verb          schema.Ref
+
+	Time        time.Time
+	ScheduledAt time.Time
+	Schedule    string
+	Error       optional.Option[string]
+}
+
 func (e *CronScheduledEvent) GetID() int64 { return e.ID }
 func (e *CronScheduledEvent) event()       {}
 
@@ -35,7 +45,7 @@ type eventCronScheduledJSON struct {
 	Error       optional.Option[string] `json:"error,omitempty"`
 }
 
-func (s *Service) InsertCronScheduledEvent(ctx context.Context, event *CronScheduledEvent) {
+func (s *Service) InsertCronScheduledEvent(ctx context.Context, event *CronScheduled) {
 	logger := log.FromContext(ctx)
 
 	cronJSON := eventCronScheduledJSON{

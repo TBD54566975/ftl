@@ -139,7 +139,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 
 type mockTimelineService struct{}
 
-func (m *mockTimelineService) InsertCronScheduledEvent(ctx context.Context, event *timeline.CronScheduledEvent) {
+func (m *mockTimelineService) InsertCronScheduledEvent(ctx context.Context, event *timeline.CronScheduled) {
 }
 
 func expectUnscheduledJobs(t *testing.T, dal *dal.DAL, clk *clock.Mock, count int) {

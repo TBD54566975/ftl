@@ -31,7 +31,7 @@ type Service struct {
 }
 
 type timelineService interface {
-	InsertCronScheduledEvent(ctx context.Context, event *timeline.CronScheduledEvent)
+	InsertCronScheduledEvent(ctx context.Context, event *timeline.CronScheduled)
 }
 
 func New(ctx context.Context, key model.ControllerKey, requestSource string, encryption *encryptionsvc.Service, timeline timelineService, conn *sql.DB) *Service {
@@ -125,7 +125,7 @@ func (s *Service) scheduleCronJobs(ctx context.Context) (err error) {
 	for _, job := range jobs {
 		err = s.scheduleCronJob(ctx, tx, job)
 		if err != nil {
-			s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduledEvent{
+			s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduled{
 				DeploymentKey: job.DeploymentKey,
 				Verb:          job.Verb,
 				Time:          now,
@@ -158,7 +158,7 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 	}
 	err = s.scheduleCronJob(ctx, tx, job)
 	if err != nil {
-		s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduledEvent{
+		s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduled{
 			DeploymentKey: job.DeploymentKey,
 			Verb:          job.Verb,
 			Time:          s.clock.Now().UTC(),
@@ -230,7 +230,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 	if err != nil {
 		return fmt.Errorf("failed to update cron job %q: %w", job.Key, err)
 	}
-	s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduledEvent{
+	s.timelineService.InsertCronScheduledEvent(ctx, &timeline.CronScheduled{
 		DeploymentKey: job.DeploymentKey,
 		Verb:          job.Verb,
 		Time:          now,
