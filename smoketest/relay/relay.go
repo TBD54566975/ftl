@@ -36,17 +36,17 @@ var mission = ftl.FSM(
 	ftl.Transition(Deployed, Terminated),
 )
 
-type deployment struct {
+type AgentDeployment struct {
 	Agent  origin.Agent
 	Target string
 }
 
-type missionSuccess struct {
+type MissionSuccess struct {
 	AgentID   int
 	SuccessAt time.Time
 }
 
-type agentTerminated struct {
+type AgentTerminated struct {
 	AgentID      int
 	TerminatedAt time.Time
 }
@@ -56,7 +56,7 @@ func Briefed(ctx context.Context, agent origin.Agent) error {
 	briefedAt := time.Now()
 	ftl.LoggerFromContext(ctx).Infof("Briefed agent %v at %s", agent.Id, briefedAt)
 	agent.BriefedAt = ftl.Some(briefedAt)
-	d := deployment{
+	d := AgentDeployment{
 		Agent:  agent,
 		Target: "villain",
 	}
@@ -64,19 +64,19 @@ func Briefed(ctx context.Context, agent origin.Agent) error {
 }
 
 //ftl:verb
-func Deployed(ctx context.Context, d deployment) error {
+func Deployed(ctx context.Context, d AgentDeployment) error {
 	ftl.LoggerFromContext(ctx).Infof("Deployed agent %v to %s", d.Agent.Id, d.Target)
 	return appendLog(ctx, "deployed %d", d.Agent.Id)
 }
 
 //ftl:verb
-func Succeeded(ctx context.Context, s missionSuccess) error {
+func Succeeded(ctx context.Context, s MissionSuccess) error {
 	ftl.LoggerFromContext(ctx).Infof("Agent %d succeeded at %s\n", s.AgentID, s.SuccessAt)
 	return appendLog(ctx, "succeeded %d", s.AgentID)
 }
 
 //ftl:verb
-func Terminated(ctx context.Context, t agentTerminated) error {
+func Terminated(ctx context.Context, t AgentTerminated) error {
 	ftl.LoggerFromContext(ctx).Infof("Agent %d terminated at %s\n", t.AgentID, t.TerminatedAt)
 	return appendLog(ctx, "terminated %d", t.AgentID)
 }
@@ -96,12 +96,12 @@ func MissionResult(ctx context.Context, req MissionResultRequest) (MissionResult
 	agentID := req.AgentID
 	var event any
 	if req.Successful {
-		event = missionSuccess{
+		event = MissionSuccess{
 			AgentID:   int(agentID),
 			SuccessAt: time.Now(),
 		}
 	} else {
-		event = agentTerminated{
+		event = AgentTerminated{
 			AgentID:      int(agentID),
 			TerminatedAt: time.Now(),
 		}
