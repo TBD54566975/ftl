@@ -8,6 +8,8 @@ import java.util.function.Consumer;
 
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -25,10 +27,12 @@ import xyz.block.ftl.v1.schema.Decl;
 public class TopicsProcessor {
 
     public static final DotName TOPIC = DotName.createSimple(Topic.class);
+    private static final Logger log = LoggerFactory.getLogger(TopicsProcessor.class);
 
     @BuildStep
     TopicsBuildItem handleTopics(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedTopicProducer) {
         var topicDefinitions = index.getComputingIndex().getAnnotations(TopicDefinition.class);
+        log.info("Processing {} topic definition annotations into build items", topicDefinitions.size());
         Map<DotName, TopicsBuildItem.DiscoveredTopic> topics = new HashMap<>();
         Set<String> names = new HashSet<>();
         for (var topicDefinition : topicDefinitions) {
@@ -82,6 +86,7 @@ public class TopicsProcessor {
 
     @BuildStep
     public SchemaContributorBuildItem topicSchema(TopicsBuildItem topics) {
+        log.info("Generating schema build items for {} topic build items", topics.getTopics().size());
         //register all the topics we are defining in the module definition
         return new SchemaContributorBuildItem(new Consumer<ModuleBuilder>() {
             @Override

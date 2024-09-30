@@ -16,7 +16,8 @@ import java.util.stream.Collectors;
 
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.ParameterizedType;
-import org.jboss.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
 
@@ -48,7 +49,7 @@ import xyz.block.ftl.v1.schema.Ref;
 
 public class ModuleProcessor {
 
-    private static final Logger log = Logger.getLogger(ModuleProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(ModuleProcessor.class);
 
     private static final String FEATURE = "ftl-java-runtime";
 
@@ -89,7 +90,7 @@ public class ModuleProcessor {
                     if (value != null) {
                         return new ModuleNameBuildItem(value);
                     } else {
-                        log.errorf("module name not found in %s", toml);
+                        log.error("module name not found in {}", toml);
                     }
                 }
                 if (source.getParent() == null) {
@@ -113,6 +114,7 @@ public class ModuleProcessor {
             VerbClientBuildItem verbClientBuildItem,
             List<TypeAliasBuildItem> typeAliasBuildItems,
             List<SchemaContributorBuildItem> schemaContributorBuildItems) throws Exception {
+        log.info("Generating module '{}' schema from build items", moduleNameBuildItem.getModuleName());
         String moduleName = moduleNameBuildItem.getModuleName();
         Map<String, Iterable<String>> comments = readComments();
         Map<TypeKey, ModuleBuilder.ExistingRef> existingRefs = new HashMap<>();

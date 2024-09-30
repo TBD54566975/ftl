@@ -1,12 +1,15 @@
 package xyz.block.ftl.deployment;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
-import org.jboss.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -22,13 +25,16 @@ import xyz.block.ftl.v1.schema.Ref;
 
 public class SubscriptionProcessor {
 
-    private static final Logger log = Logger.getLogger(SubscriptionProcessor.class);
+    private static final Logger log = LoggerFactory.getLogger(SubscriptionProcessor.class);
 
     @BuildStep
     SubscriptionMetaAnnotationsBuildItem subscriptionAnnotations(CombinedIndexBuildItem combinedIndexBuildItem,
             ModuleNameBuildItem moduleNameBuildItem) {
+        Collection<AnnotationInstance> subscriptionAnnotations = combinedIndexBuildItem.getComputingIndex()
+                .getAnnotations(Subscription.class);
+        log.info("Processing {} subscription annotations into build items", subscriptionAnnotations.size());
         Map<DotName, SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation> annotations = new HashMap<>();
-        for (var subscriptions : combinedIndexBuildItem.getComputingIndex().getAnnotations(Subscription.class)) {
+        for (var subscriptions : subscriptionAnnotations) {
             if (subscriptions.target().kind() != AnnotationTarget.Kind.CLASS) {
                 continue;
             }
@@ -59,7 +65,7 @@ public class SubscriptionProcessor {
         for (var metaSub : subscriptionMetaAnnotationsBuildItem.getAnnotations().entrySet()) {
             for (var subscription : index.getIndex().getAnnotations(metaSub.getKey())) {
                 if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
-                    log.warnf("Subscription annotation on non-method target: %s", subscription.target());
+                    log.warn("Subscription annotation on non-method target: {}", subscription.target());
                     continue;
                 }
                 var method = subscription.target().asMethod();

@@ -1,7 +1,12 @@
 package xyz.block.ftl.deployment;
 
+import java.util.Collection;
+
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.Type;
 import org.jboss.jandex.TypeVariable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -10,13 +15,17 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 
 public class TypeAliasProcessor {
 
+    private static final Logger log = LoggerFactory.getLogger(TypeAliasProcessor.class);
+
     @BuildStep
     public void processTypeAlias(CombinedIndexBuildItem index,
             BuildProducer<SchemaContributorBuildItem> schemaContributorBuildItemBuildProducer,
             BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem,
             BuildProducer<TypeAliasBuildItem> typeAliasBuildItemBuildProducer) {
+        Collection<AnnotationInstance> typeAliasAnnotations = index.getIndex().getAnnotations(FTLDotNames.TYPE_ALIAS);
+        log.info("Processing {} type alias annotations into build items", typeAliasAnnotations.size());
         var beans = new AdditionalBeanBuildItem.Builder().setUnremovable();
-        for (var mapper : index.getIndex().getAnnotations(FTLDotNames.TYPE_ALIAS)) {
+        for (var mapper : typeAliasAnnotations) {
             boolean exported = mapper.target().hasAnnotation(FTLDotNames.EXPORT);
             // This may or may not be the actual mapper, it may be a subclass
 

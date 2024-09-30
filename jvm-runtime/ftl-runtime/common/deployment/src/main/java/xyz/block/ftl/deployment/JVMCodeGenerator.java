@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.eclipse.microprofile.config.Config;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.quarkus.bootstrap.prebuild.CodeGenException;
 import io.quarkus.deployment.CodeGenContext;
@@ -27,6 +29,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
 
     public static final String PACKAGE_PREFIX = "ftl.";
     public static final String TYPE_MAPPER = "TypeAliasMapper";
+    private static final Logger log = LoggerFactory.getLogger(JVMCodeGenerator.class);
 
     @Override
     public String providerId() {
@@ -40,6 +43,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
 
     @Override
     public boolean trigger(CodeGenContext context) throws CodeGenException {
+        log.info("Generating JVM clients, data, enums from schema");
         if (!Files.isDirectory(context.inputDir())) {
             return false;
         }
