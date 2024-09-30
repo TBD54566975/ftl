@@ -104,6 +104,10 @@ func Start(ctx context.Context, config Config) error {
 	var identityStore *identity.Store
 	if config.ControllerPublicKey != nil {
 		identityStore, err = newIdentityStore(ctx, config, key, controllerClient)
+		if err != nil {
+			observability.Runner.StartupFailed(ctx)
+			return fmt.Errorf("failed to create identity store: %w", err)
+		}
 	}
 
 	svc := &Service{
