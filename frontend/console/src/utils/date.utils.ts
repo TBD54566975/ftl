@@ -35,18 +35,7 @@ export const formatTimestampTime = (timestamp?: Timestamp): string => {
   return formattedDate
 }
 
-export const compareTimestamps = (a: Timestamp | undefined, b: Timestamp | undefined): number => {
-  const timeASeconds = a?.seconds || 0n
-  const timeBSeconds = b?.seconds || 0n
-
-  // First, compare the seconds
-  if (timeASeconds !== timeBSeconds) {
-    return Number(timeASeconds - timeBSeconds)
-  }
-
-  // If seconds are identical, compare the nanoseconds
-  const timeANanos = a?.nanos || 0
-  const timeBNanos = b?.nanos || 0
-
-  return timeANanos - timeBNanos
+export const compareTimestamps = (a?: Timestamp, b?: Timestamp): number => {
+  const compareTo = (a?: bigint, b?: bigint): number => Number((a || 0n) - (b || 0n))
+  return a?.seconds !== b?.seconds ? compareTo(a?.seconds, b?.seconds) : compareTo(BigInt(a?.nanos || 0), BigInt(b?.nanos || 0))
 }

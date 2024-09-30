@@ -19,28 +19,26 @@ export const eventBarLeftOffsetPercentage = (event: Event, requestStartTime: Tim
 }
 
 export const groupEventsByRequestKey = (events: Event[]): Record<string, Event[]> => {
-  const even = events.reduce((acc: Record<string, Event[]>, event: Event) => {
-    let requestKey: string | undefined
-
-    if (event.entry.case === 'call') {
-      requestKey = event.entry.value.requestKey
-    } else if (event.entry.case === 'ingress') {
-      requestKey = event.entry.value.requestKey
-    }
-
-    if (requestKey) {
-      if (!acc[requestKey]) {
-        acc[requestKey] = []
+  return events.reduce((acc: Record<string, Event[]>, event: Event) => {
+    const requestKey = (() => {
+      switch (event.entry.case) {
+        case 'call':
+        case 'ingress':
+          return event.entry.value.requestKey
+        default:
+          return undefined
       }
+    })()
 
-      acc[requestKey].push(event)
-
-      // first event will be the "trigger" event
-      acc[requestKey].sort((a, b) => compareTimestamps(a.timeStamp, b.timeStamp))
+    if (!requestKey) {
+      return acc
     }
+
+    acc[requestKey] = acc[requestKey] ? [...acc[requestKey], event] : [event]
+
+    // Sort events by timestamp, ensuring the first event is the "trigger" event
+    acc[requestKey].sort((a, b) => compareTimestamps(a.timeStamp, b.timeStamp))
 
     return acc
   }, {})
-
-  return even
 }

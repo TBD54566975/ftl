@@ -170,6 +170,12 @@ func TestTimeline(t *testing.T) {
 		})
 
 		t.Run("ByModule", func(t *testing.T) {
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeIngress), FilterModule("echo", optional.None[string]()))
+			assert.NoError(t, err)
+			assertEventsEqual(t, []Event{ingressEvent}, events)
+		})
+
+		t.Run("ByModuleWithVerb", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeIngress), FilterModule("echo", optional.Some("echo")))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []Event{ingressEvent}, events)
