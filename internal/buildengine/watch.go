@@ -42,6 +42,7 @@ type moduleHashes struct {
 type Watcher struct {
 	isWatching bool
 
+	// patterns are relative to each module found
 	patterns []string
 
 	// use mutex whenever accessing / modifying existingModules or moduleTransactions

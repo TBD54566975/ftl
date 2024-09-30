@@ -123,7 +123,6 @@ func computeFileHash(baseDir, srcPath string, patterns []string) (hash []byte, m
 		hash := hasher.Sum(nil)
 
 		if err := file.Close(); err != nil {
-			return nil, false, fmt.Errorf("could not close file after hashing: %w", err)
 		}
 		return hash, true, nil
 	}
