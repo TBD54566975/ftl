@@ -12,13 +12,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/TBD54566975/ftl/go-runtime/server"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
+	"github.com/TBD54566975/ftl/go-runtime/server"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
