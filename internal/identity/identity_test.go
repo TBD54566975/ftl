@@ -65,7 +65,8 @@ func TestCertificate(t *testing.T) {
 	certified, err := runnerStore.CertifiedSign(message)
 	assert.NoError(t, err)
 
-	_, data, err := certified.Verify(caVerifier)
+	id, data, err := certified.Verify(caVerifier)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(data))
+	assert.Equal(t, runnerIdent.String(), id.String())
 }
