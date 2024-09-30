@@ -37,6 +37,7 @@ func (e *EncryptedColumn[SK]) Scan(src interface{}) error {
 
 type EncryptedTimelineColumn = EncryptedColumn[TimelineSubKey]
 type EncryptedAsyncColumn = EncryptedColumn[AsyncSubKey]
+type EncryptedIdentityColumn = EncryptedColumn[IdentityKeySubKey]
 
 type OptionalEncryptedTimelineColumn = optional.Option[EncryptedTimelineColumn]
 type OptionalEncryptedAsyncColumn = optional.Option[EncryptedAsyncColumn]
@@ -53,3 +54,8 @@ func (TimelineSubKey) SubKey() string { return "timeline" }
 type AsyncSubKey struct{}
 
 func (AsyncSubKey) SubKey() string { return "async" }
+
+// IdentityKeySubKey is a type that represents the subkey for identity keys.
+type IdentityKeySubKey struct{}
+
+func (IdentityKeySubKey) SubKey() string { return "identity" }

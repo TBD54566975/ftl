@@ -103,7 +103,9 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 		return nil
 	}
 	logger := log.FromContext(ctx)
-	logger.Infof("Handling schema change for %s", msg.DeploymentKey)
+	logger = logger.Module(msg.ModuleName)
+	ctx = log.ContextWithLogger(ctx, logger)
+	logger.Debugf("Handling schema change for %s", msg.DeploymentKey)
 	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
 	deployment, err := deploymentClient.Get(ctx, msg.DeploymentKey, v1.GetOptions{})
 	deploymentExists := true

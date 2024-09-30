@@ -209,7 +209,8 @@ func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
 			return fmt.Errorf("deploy %s files must be relative to the module directory %s", deploy, moduleDir)
 		}
 	}
-
+	config.Deploy = slices.Sort(config.Deploy)
+	config.Watch = slices.Sort(config.Watch)
 	return nil
 }
 

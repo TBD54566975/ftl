@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/alecthomas/types/either"
@@ -14,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/libdal"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -55,8 +55,9 @@ type Call struct {
 	Response         either.Either[*ftlv1.CallResponse, error]
 }
 
-func (s *Service) InsertCallEvent(ctx context.Context, call *Call) {
-	logger := log.FromContext(ctx)
+func (c *Call) inEvent() {}
+
+func (s *Service) insertCallEvent(ctx context.Context, querier sql.Querier, call *Call) error {
 	callEvent := callToCallEvent(call)
 
 	var sourceModule, sourceVerb optional.Option[string]
@@ -84,18 +85,16 @@ func (s *Service) InsertCallEvent(ctx context.Context, call *Call) {
 
 	data, err := json.Marshal(callJSON)
 	if err != nil {
-		logger.Errorf(err, "failed to marshal call event")
-		return
+		return fmt.Errorf("failed to marshal call event: %w", err)
 	}
 
 	var payload ftlencryption.EncryptedTimelineColumn
 	err = s.encryption.EncryptJSON(json.RawMessage(data), &payload)
 	if err != nil {
-		logger.Errorf(err, "failed to encrypt call event")
-		return
+		return fmt.Errorf("failed to encrypt call event: %w", err)
 	}
 
-	err = libdal.TranslatePGError(s.db.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
+	err = libdal.TranslatePGError(querier.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
 		DeploymentKey:    call.DeploymentKey,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentRequestKey,
@@ -107,8 +106,9 @@ func (s *Service) InsertCallEvent(ctx context.Context, call *Call) {
 		Payload:          payload,
 	}))
 	if err != nil {
-		logger.Errorf(err, "failed to insert call event")
+		return fmt.Errorf("failed to insert call event: %w", err)
 	}
+	return nil
 }
 
 func callToCallEvent(call *Call) *CallEvent {

@@ -38,6 +38,9 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 			doc = n.Doc
 		case *ast.GenDecl:
 			doc = n.Doc
+			if len(n.Specs) == 0 {
+				return
+			}
 			if ts, ok := n.Specs[0].(*ast.TypeSpec); len(n.Specs) > 0 && ok {
 				if doc == nil {
 					doc = ts.Doc

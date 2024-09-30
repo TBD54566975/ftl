@@ -270,7 +270,7 @@ type CronJob struct {
 	StartTime       time.Time
 	NextExecution   time.Time
 	ModuleName      string
-	LastExecution   optional.Option[time.Time]
+	LastExecution   sqltypes.OptionalTime
 	LastAsyncCallID optional.Option[int64]
 }
 

@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
@@ -85,7 +86,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}
 
 	sch := &schema.Schema{
-		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
+		Modules: slices.Map(deployments, func(d dalmodel.Deployment) *schema.Module {
 			return d.Schema
 		}),
 	}
@@ -365,7 +366,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter
 	return query, nil
 }
 
-func eventDALToProto(event timeline.TimelineEvent) *pbconsole.Event {
+func eventDALToProto(event timeline.Event) *pbconsole.Event {
 	switch event := event.(type) {
 	case *timeline.CallEvent:
 		var requestKey *string

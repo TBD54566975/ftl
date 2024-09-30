@@ -223,11 +223,16 @@ func ExpectError(action Action, expectedErrorMsg ...string) Action {
 func Deploy(module string) Action {
 	return Chain(
 		func(t testing.TB, ic TestContext) {
-			if ic.kubeClient != nil {
-				Exec("ftl", "deploy", "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0", module)(t, ic)
-			} else {
-				Exec("ftl", "deploy", module)(t, ic)
+			args := []string{"deploy"}
+			if ic.Provisioner != nil {
+				args = append(args, "--use-provisioner", "--provisioner-endpoint=http://localhost:8893")
 			}
+			if ic.kubeClient != nil {
+				args = append(args, "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0")
+			}
+			args = append(args, module)
+
+			Exec("ftl", args...)(t, ic)
 		},
 		Wait(module),
 	)

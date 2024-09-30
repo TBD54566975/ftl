@@ -1,28 +1,22 @@
-import { useEffect, useState } from 'react'
-
 export const VerbFormInput = ({
   requestType,
-  initialPath,
+  path,
+  setPath,
   requestPath,
   readOnly,
   onSubmit,
 }: {
   requestType: string
-  initialPath: string
+  path: string
+  setPath: (path: string) => void
   requestPath: string
   readOnly: boolean
   onSubmit: (path: string) => void
 }) => {
-  const [path, setPath] = useState(initialPath)
-
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault()
     onSubmit(path)
   }
-
-  useEffect(() => {
-    setPath(initialPath)
-  }, [initialPath])
 
   return (
     <form onSubmit={handleSubmit} className='rounded-lg'>
@@ -41,7 +35,7 @@ export const VerbFormInput = ({
           Send
         </button>
       </div>
-      {!readOnly && <span className='text-xs text-gray-500'>{requestPath}</span>}
+      {!readOnly && <span className='ml-4 text-xs text-gray-500'>{requestPath}</span>}
     </form>
   )
 }

@@ -5,8 +5,13 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/pubsub"
+	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -19,8 +24,9 @@ func TestNoCallToAcquire(t *testing.T) {
 	conn := sqltest.OpenForTesting(ctx, t)
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
-
-	dal := New(ctx, conn, encryption)
+	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
+	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	dal := New(ctx, conn, encryption, pubSub)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, libdal.ErrNotFound)
@@ -32,22 +38,22 @@ func TestParser(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		expected AsyncOrigin
+		expected async.AsyncOrigin
 	}{
-		{"Cron", `cron:crn-initial-verb0Cron-5eq2ivpmuv0lvnoc`, AsyncOriginCron{
+		{"Cron", `cron:crn-initial-verb0Cron-5eq2ivpmuv0lvnoc`, async.AsyncOriginCron{
 			CronJobKey: model.CronJobKey{
 				Payload: model.CronJobPayload{Module: "initial", Verb: "verb0Cron"},
 				Suffix:  []byte("\xfd7\xe6*\xfcƹ\xe9.\x9c"),
 			}}},
-		{"FSM", `fsm:module.name:key`, AsyncOriginFSM{FSM: schema.RefKey{Module: "module", Name: "name"}, Key: "key"}},
-		{"PubSub", `sub:module.topic`, AsyncOriginPubSub{Subscription: schema.RefKey{Module: "module", Name: "topic"}}},
+		{"FSM", `fsm:module.name:key`, async.AsyncOriginFSM{FSM: schema.RefKey{Module: "module", Name: "name"}, Key: "key"}},
+		{"PubSub", `sub:module.topic`, async.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "module", Name: "topic"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			origin, err := asyncOriginParser.ParseString("", tt.input)
+			origin, err := async.ParseAsyncOrigin(tt.input)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, origin.Key)
+			assert.Equal(t, tt.expected, origin)
 		})
 	}
 }

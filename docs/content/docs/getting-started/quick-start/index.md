@@ -136,13 +136,18 @@ Or from a terminal use `ftl call` to call your verb:
 
 ### Create another module
 
-Create another module and call `alice.echo` from it with:
+Create another module and call `alice.echo` from it with by importing the `alice` module and adding the verb client,
+`alice.EchoClient`, to the signature of the calling verb. It can be invoked as a function:
 
 ```go
 //ftl:verb
 import "ftl/alice"
 
-out, err := ftl.Call(ctx, alice.Echo, alice.EchoRequest{})
+//ftl:verb
+func Other(ctx context.Context, in Request, ec alice.EchoClient) (Response, error) {
+    out, err := ec(ctx, alice.EchoRequest{...})
+	...
+}
 ```
 
 ### What next?

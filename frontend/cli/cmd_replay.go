@@ -15,14 +15,14 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-	status "github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	status "github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type replayCmd struct {
 	Wait time.Duration  `short:"w" help:"Wait up to this elapsed time for the FTL cluster to become available." default:"1m"`
-	Verb reflection.Ref `arg:"" required:"" help:"Full path of Verb to call."`
+	Verb reflection.Ref `arg:"" required:"" help:"Full path of Verb to call." predictor:"verbs"`
 }
 
 func (c *replayCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli ftlv1connect.ControllerServiceClient) error {

@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
@@ -56,6 +57,7 @@ import xyz.block.ftl.v1.schema.MetadataAlias;
 import xyz.block.ftl.v1.schema.MetadataCalls;
 import xyz.block.ftl.v1.schema.MetadataTypeMap;
 import xyz.block.ftl.v1.schema.Module;
+import xyz.block.ftl.v1.schema.Position;
 import xyz.block.ftl.v1.schema.Ref;
 import xyz.block.ftl.v1.schema.Time;
 import xyz.block.ftl.v1.schema.Type;
@@ -74,6 +76,7 @@ public class ModuleBuilder {
     public static final DotName OFFSET_DATE_TIME = DotName.createSimple(OffsetDateTime.class.getName());
     public static final DotName GENERATED_REF = DotName.createSimple(GeneratedRef.class);
     public static final DotName EXPORT = DotName.createSimple(Export.class);
+    private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
 
     private final IndexView index;
     private final Module.Builder moduleBuilder;
@@ -85,6 +88,7 @@ public class ModuleBuilder {
     private final Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients;
     private final FTLRecorder recorder;
     private final Map<String, Iterable<String>> comments;
+    private final List<ValidationFailure> validationFailures = new ArrayList<>();
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
@@ -175,7 +179,7 @@ public class ModuleBuilder {
             List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
             org.jboss.jandex.Type bodyParamType = null;
             xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
-            String verbName = ModuleBuilder.methodToName(method);
+            String verbName = validateName(className, ModuleBuilder.methodToName(method));
             MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
             for (var param : method.parameters()) {
                 if (param.hasAnnotation(Secret.class)) {
@@ -301,6 +305,11 @@ public class ModuleBuilder {
             case CLASS -> {
                 var clazz = type.asClassType();
                 var info = index.getClassByName(clazz.name());
+                if (info.enclosingClass() != null && !Modifier.isStatic(info.flags())) {
+                    // proceed as normal, we fail at the end
+                    validationFailures.add(new ValidationFailure(clazz.name().toString(),
+                            "Inner classes must be static"));
+                }
 
                 PrimitiveType unboxed = PrimitiveType.unbox(clazz);
                 if (unboxed != null) {
@@ -394,6 +403,7 @@ public class ModuleBuilder {
                             .build();
                 } else {
                     ClassInfo classByName = index.getClassByName(paramType.name());
+                    validateName(classByName.name().toString(), classByName.name().local());
                     var cb = ClassType.builder(classByName.name());
                     var main = buildType(cb.build(), export);
                     var builder = main.toBuilder();
@@ -440,15 +450,47 @@ public class ModuleBuilder {
     }
 
     public ModuleBuilder addDecls(Decl decl) {
+        if (decl.hasDatabase()) {
+            validateName(decl.getDatabase().getPos(), decl.getDatabase().getName());
+        } else if (decl.hasData()) {
+            validateName(decl.getData().getPos(), decl.getData().getName());
+        } else if (decl.hasConfig()) {
+            validateName(decl.getConfig().getPos(), decl.getConfig().getName());
+        } else if (decl.hasEnum()) {
+            validateName(decl.getEnum().getPos(), decl.getEnum().getName());
+        } else if (decl.hasSecret()) {
+            validateName(decl.getSecret().getPos(), decl.getSecret().getName());
+        } else if (decl.hasVerb()) {
+            validateName(decl.getVerb().getPos(), decl.getVerb().getName());
+        } else if (decl.hasTypeAlias()) {
+            validateName(decl.getTypeAlias().getPos(), decl.getTypeAlias().getName());
+        } else if (decl.hasTopic()) {
+            validateName(decl.getTopic().getPos(), decl.getTopic().getName());
+        } else if (decl.hasFsm()) {
+            validateName(decl.getFsm().getPos(), decl.getFsm().getName());
+        } else if (decl.hasSubscription()) {
+            validateName(decl.getSubscription().getPos(), decl.getSubscription().getName());
+        } else if (decl.hasTypeAlias()) {
+            validateName(decl.getTypeAlias().getPos(), decl.getTypeAlias().getName());
+        }
         moduleBuilder.addDecls(decl);
         return this;
     }
 
     public void writeTo(OutputStream out) throws IOException {
+        if (!validationFailures.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (var failure : validationFailures) {
+                sb.append("Validation failure: ").append(failure.className).append(": ").append(failure.message)
+                        .append("\n");
+            }
+            throw new RuntimeException(sb.toString());
+        }
         moduleBuilder.build().writeTo(out);
     }
 
     public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported) {
+        validateName(finalT.name().toString(), name);
         moduleBuilder.addDecls(Decl.newBuilder()
                 .setTypeAlias(TypeAlias.newBuilder().setType(buildType(finalS, exported)).setName(name).addMetadata(Metadata
                         .newBuilder()
@@ -465,5 +507,27 @@ public class ModuleBuilder {
         DISALLOWED,
         ALLOWED,
         REQUIRED
+    }
+
+    record ValidationFailure(String className, String message) {
+    }
+
+    String validateName(Position position, String name) {
+        //we group all validation failures together so we can report them all at once
+        if (!NAME_PATTERN.matcher(name).matches()) {
+            validationFailures.add(
+                    new ValidationFailure(position == null ? "<unknown>" : position.getFilename() + ":" + position.getLine(),
+                            String.format("Invalid name %s, must match " + NAME_PATTERN, name)));
+        }
+        return name;
+    }
+
+    String validateName(String className, String name) {
+        //we group all validation failures together so we can report them all at once
+        if (!NAME_PATTERN.matcher(name).matches()) {
+            validationFailures
+                    .add(new ValidationFailure(className, String.format("Invalid name %s, must match " + NAME_PATTERN, name)));
+        }
+        return name;
     }
 }

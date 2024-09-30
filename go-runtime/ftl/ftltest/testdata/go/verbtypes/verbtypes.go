@@ -34,3 +34,13 @@ func Sink(ctx context.Context, req Request) error {
 func Empty(ctx context.Context) error {
 	return nil
 }
+
+//ftl:verb
+func CallerVerb(ctx context.Context, req Request, c CalleeVerbClient) (Response, error) {
+	return c(ctx, req)
+}
+
+//ftl:verb
+func CalleeVerb(ctx context.Context, req Request) (Response, error) {
+	return Response{Output: "from callee: " + req.Input}, nil
+}

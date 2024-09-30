@@ -8,8 +8,8 @@ import (
 
 	"github.com/benbjohnson/clock"
 
+	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/internal/dal"
-	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	encryptionsvc "github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
@@ -43,7 +43,7 @@ func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource s
 }
 
 func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Module) ([]model.CronJob, error) {
-	logger := log.FromContext(ctx).Scope("cron")
+	logger := log.FromContext(ctx).Scope("cron").Module(module.Name)
 	start := s.clock.Now().UTC()
 	newJobs := []model.CronJob{}
 	merr := []error{}
@@ -149,7 +149,7 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 
 // scheduleCronJob schedules the next execution of a single cron job.
 func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.CronJob) error {
-	logger := log.FromContext(ctx).Scope("cron")
+	logger := log.FromContext(ctx).Scope("cron").Module(job.Verb.Module)
 	now := s.clock.Now().UTC()
 	pending, err := tx.IsCronJobPending(ctx, job.Key, now)
 	if err != nil {
@@ -177,7 +177,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 	}
 
 	logger.Tracef("Scheduling cron job %q async_call execution at %s", job.Key, nextAttemptForJob)
-	origin := &parentdal.AsyncOriginCron{CronJobKey: job.Key}
+	origin := &async.AsyncOriginCron{CronJobKey: job.Key}
 	var request api.EncryptedColumn[api.AsyncSubKey]
 	err = s.encryption.Encrypt([]byte(`{}`), &request)
 	if err != nil {

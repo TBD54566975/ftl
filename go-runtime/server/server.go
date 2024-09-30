@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"reflect"
 	"runtime/debug"
+	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
@@ -62,7 +66,8 @@ type Handler struct {
 	fn  func(ctx context.Context, req []byte, metadata map[internal.MetadataKey]string) ([]byte, error)
 }
 
-func handler[Req, Resp any](ref reflection.Ref, verb func(ctx context.Context, req Req) (Resp, error)) Handler {
+func HandleCall[Req, Resp any](verb any) Handler {
+	ref := reflection.FuncRef(verb)
 	return Handler{
 		ref: ref,
 		fn: func(ctx context.Context, reqdata []byte, metadata map[internal.MetadataKey]string) ([]byte, error) {
@@ -76,7 +81,7 @@ func handler[Req, Resp any](ref reflection.Ref, verb func(ctx context.Context, r
 			}
 
 			// Call Verb.
-			resp, err := verb(ctx, req)
+			resp, err := Call[Req, Resp](ref)(ctx, req)
 			if err != nil {
 				return nil, fmt.Errorf("call to verb %s failed: %w", ref, err)
 			}
@@ -91,32 +96,110 @@ func handler[Req, Resp any](ref reflection.Ref, verb func(ctx context.Context, r
 	}
 }
 
-// HandleCall creates a Handler from a Verb.
-func HandleCall[Req, Resp any](verb func(ctx context.Context, req Req) (Resp, error)) Handler {
-	return handler(reflection.FuncRef(verb), verb)
+func HandleSink[Req any](verb any) Handler {
+	return HandleCall[Req, ftl.Unit](verb)
 }
 
-// HandleSink creates a Handler from a Sink with no response.
-func HandleSink[Req any](sink func(ctx context.Context, req Req) error) Handler {
-	return handler(reflection.FuncRef(sink), func(ctx context.Context, req Req) (ftl.Unit, error) {
-		err := sink(ctx, req)
-		return ftl.Unit{}, err
-	})
+func HandleSource[Resp any](verb any) Handler {
+	return HandleCall[ftl.Unit, Resp](verb)
 }
 
-// HandleSource creates a Handler from a Source with no request.
-func HandleSource[Resp any](source func(ctx context.Context) (Resp, error)) Handler {
-	return handler(reflection.FuncRef(source), func(ctx context.Context, _ ftl.Unit) (Resp, error) {
-		return source(ctx)
-	})
+func HandleEmpty(verb any) Handler {
+	return HandleCall[ftl.Unit, ftl.Unit](verb)
 }
 
-// HandleEmpty creates a Handler from a Verb with no request or response.
-func HandleEmpty(empty func(ctx context.Context) error) Handler {
-	return handler(reflection.FuncRef(empty), func(ctx context.Context, _ ftl.Unit) (ftl.Unit, error) {
-		err := empty(ctx)
-		return ftl.Unit{}, err
-	})
+func VerbClient[Verb, Req, Resp any]() reflection.VerbResource {
+	typ := reflect.TypeFor[Verb]()
+	if typ.Kind() != reflect.Func {
+		panic(fmt.Sprintf("Cannot register %s: expected function, got %s", typ, typ.Kind()))
+	}
+	callee := reflection.TypeRef[Verb]()
+	callee.Name = strings.TrimSuffix(callee.Name, "Client")
+	fn := func(ctx context.Context, req Req) (resp Resp, err error) {
+		ref := reflection.Ref{Module: callee.Module, Name: callee.Name}
+		moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
+		override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: ref.Module, Name: ref.Name})
+		if err != nil {
+			return resp, fmt.Errorf("%s: %w", ref, err)
+		}
+		if behavior, ok := override.Get(); ok {
+			uncheckedResp, err := behavior.Call(ctx, modulecontext.Verb(widenVerb(Call[Req, Resp](ref))), req)
+			if err != nil {
+				return resp, fmt.Errorf("%s: %w", ref, err)
+			}
+			if r, ok := uncheckedResp.(Resp); ok {
+				return r, nil
+			}
+			return resp, fmt.Errorf("%s: overridden verb had invalid response type %T, expected %v", ref,
+				uncheckedResp, reflect.TypeFor[Resp]())
+		}
+
+		reqData, err := encoding.Marshal(req)
+		if err != nil {
+			return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
+		}
+
+		client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
+		cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData}))
+		if err != nil {
+			return resp, fmt.Errorf("%s: failed to call Verb: %w", callee, err)
+		}
+		switch cresp := cresp.Msg.Response.(type) {
+		case *ftlv1.CallResponse_Error_:
+			return resp, fmt.Errorf("%s: %s", callee, cresp.Error.Message)
+
+		case *ftlv1.CallResponse_Body:
+			err = encoding.Unmarshal(cresp.Body, &resp)
+			if err != nil {
+				return resp, fmt.Errorf("%s: failed to decode response: %w", callee, err)
+			}
+			return resp, nil
+
+		default:
+			panic(fmt.Sprintf("%s: invalid response type %T", callee, cresp))
+		}
+	}
+	return func() reflect.Value {
+		return reflect.ValueOf(fn)
+	}
+}
+
+func SinkClient[Verb, Req any]() reflection.VerbResource {
+	return VerbClient[Verb, Req, ftl.Unit]()
+}
+
+func SourceClient[Verb, Resp any]() reflection.VerbResource {
+	return VerbClient[Verb, ftl.Unit, Resp]()
+}
+
+func EmptyClient[Verb any]() reflection.VerbResource {
+	return VerbClient[Verb, ftl.Unit, ftl.Unit]()
+}
+
+func Call[Req, Resp any](ref reflection.Ref) func(ctx context.Context, req Req) (resp Resp, err error) {
+	return func(ctx context.Context, req Req) (resp Resp, err error) {
+		request := optional.Some[any](req)
+		if reflect.TypeFor[Req]() == reflect.TypeFor[ftl.Unit]() {
+			request = optional.None[any]()
+		}
+
+		out, err := reflection.CallVerb(reflection.Ref{Module: ref.Module, Name: ref.Name})(ctx, request)
+		if err != nil {
+			return resp, err
+		}
+
+		var respValue any
+		if r, ok := out.Get(); ok {
+			respValue = r
+		} else {
+			respValue = ftl.Unit{}
+		}
+		resp, ok := respValue.(Resp)
+		if !ok {
+			return resp, fmt.Errorf("unexpected response type from verb %s: %T", ref, resp)
+		}
+		return resp, err
+	}
 }
 
 var _ ftlv1connect.VerbServiceHandler = (*moduleServer)(nil)
@@ -173,4 +256,14 @@ func (m *moduleServer) Call(ctx context.Context, req *connect.Request[ftlv1.Call
 
 func (m *moduleServer) Ping(_ context.Context, _ *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
+}
+
+func widenVerb[Req, Resp any](verb ftl.Verb[Req, Resp]) ftl.Verb[any, any] {
+	return func(ctx context.Context, uncheckedReq any) (any, error) {
+		req, ok := uncheckedReq.(Req)
+		if !ok {
+			return nil, fmt.Errorf("invalid request type %T for %v, expected %v", uncheckedReq, reflection.FuncRef(verb), reflect.TypeFor[Req]())
+		}
+		return verb(ctx, req)
+	}
 }

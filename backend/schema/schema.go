@@ -93,18 +93,24 @@ func (s *Schema) resolveToDataMonomorphised(n Node, parent Node) (*Data, error) 
 	}
 }
 
-// Resolve a reference to a declaration.
-func (s *Schema) Resolve(ref *Ref) optional.Option[Decl] {
+// ResolveWithModule a reference to a declaration and its module.
+func (s *Schema) ResolveWithModule(ref *Ref) (optional.Option[Decl], optional.Option[*Module]) {
 	for _, module := range s.Modules {
 		if module.Name == ref.Module {
 			for _, decl := range module.Decls {
 				if decl.GetName() == ref.Name {
-					return optional.Some(decl)
+					return optional.Some(decl), optional.Some(module)
 				}
 			}
 		}
 	}
-	return optional.None[Decl]()
+	return optional.None[Decl](), optional.None[*Module]()
+}
+
+// Resolve a reference to a declaration.
+func (s *Schema) Resolve(ref *Ref) optional.Option[Decl] {
+	decl, _ := s.ResolveWithModule(ref)
+	return decl
 }
 
 // ResolveToType resolves a reference to a declaration of the given type.

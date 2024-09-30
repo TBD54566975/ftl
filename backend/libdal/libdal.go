@@ -38,6 +38,13 @@ func New[T any](sql Connection, fn MakeWithHandle[T]) *Handle[T] {
 	return &Handle[T]{Connection: sql, Make: fn}
 }
 
+// Adopt creates a new Handle with the given transaction.
+//
+// TODO: This needs to be removed - DALs should not be shared.
+func (h *Handle[T]) Adopt(tx Connection) *T {
+	return h.Make(&Handle[T]{Connection: tx, Make: h.Make})
+}
+
 // Begin creates a new transaction or increments the transaction counter if the handle is already in a transaction.
 //
 // In all cases a new handle is returned.

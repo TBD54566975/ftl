@@ -16,6 +16,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver
+	"github.com/jpillora/backoff"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl"
@@ -24,6 +25,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/backend/provisioner"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -42,6 +45,7 @@ type serveCmd struct {
 	DBPort              int                  `help:"Port to use for the database." default:"15432"`
 	Recreate            bool                 `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
+	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"0" hidden:"true"`
 	Background          bool                 `help:"Run in the background." default:"false"`
 	Stop                bool                 `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
 	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"1m"`
@@ -59,7 +63,8 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 
 func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], devMode bool) error {
 	logger := log.FromContext(ctx)
-	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+	provisionerClient := rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
 
 	if s.Background {
 		if s.Stop {
@@ -71,9 +76,13 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 			return err
 		}
 
-		err := waitForControllerOnline(ctx, s.StartupTimeout, client)
-		if err != nil {
+		if err := waitForControllerOnline(ctx, s.StartupTimeout, controllerClient); err != nil {
 			return err
+		}
+		if s.Provisioners > 0 {
+			if err := rpc.Wait(ctx, backoff.Backoff{Max: s.StartupTimeout}, provisionerClient); err != nil {
+				return fmt.Errorf("provisioner failed to start: %w", err)
+			}
 		}
 
 		os.Exit(0)
@@ -83,11 +92,15 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		return KillBackgroundServe(logger)
 	}
 
-	if s.isRunning(ctx, client) {
+	if s.isRunning(ctx, controllerClient) {
 		return errors.New(ftlRunningErrorMsg)
 	}
 
-	logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
+	if s.Provisioners > 0 {
+		logger.Infof("Starting FTL with %d controller(s) and %d provisioner(s)", s.Controllers, s.Provisioners)
+	} else {
+		logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
+	}
 
 	err := observability.Init(ctx, false, "", "ftl-serve", ftl.Version, s.ObservabilityConfig)
 	if err != nil {
@@ -107,10 +120,24 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 	}
 
 	controllerAddresses := make([]*url.URL, 0, s.Controllers)
-	ingressAddresses := make([]*url.URL, 0, s.Controllers)
+	controllerIngressAddresses := make([]*url.URL, 0, s.Controllers)
 	for range s.Controllers {
-		ingressAddresses = append(ingressAddresses, bindAllocator.Next())
+		controllerIngressAddresses = append(controllerIngressAddresses, bindAllocator.Next())
 		controllerAddresses = append(controllerAddresses, bindAllocator.Next())
+	}
+
+	for _, addr := range controllerAddresses {
+		// Add controller address to allow origins for console requests.
+		// The console is run on `localhost` so we replace 127.0.0.1 with localhost.
+		if addr.Hostname() == "127.0.0.1" {
+			addr.Host = "localhost" + ":" + addr.Port()
+		}
+		s.CommonConfig.AllowOrigins = append(s.CommonConfig.AllowOrigins, addr)
+	}
+
+	provisionerAddresses := make([]*url.URL, 0, s.Provisioners)
+	for range s.Provisioners {
+		provisionerAddresses = append(provisionerAddresses, bindAllocator.Next())
 	}
 
 	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration)
@@ -121,7 +148,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		config := controller.Config{
 			CommonConfig: s.CommonConfig,
 			Bind:         controllerAddresses[i],
-			IngressBind:  ingressAddresses[i],
+			IngressBind:  controllerIngressAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
 		}
@@ -162,10 +189,34 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		})
 	}
 
+	for i := range s.Provisioners {
+		config := provisioner.Config{
+			Bind:               provisionerAddresses[i],
+			ControllerEndpoint: controllerAddresses[i%len(controllerAddresses)],
+		}
+
+		config.SetDefaults()
+
+		scope := fmt.Sprintf("provisioner%d", i)
+		provisionerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
+		wg.Go(func() error {
+			if err := provisioner.Start(provisionerCtx, config, true); err != nil {
+				logger.Errorf(err, "provisioner%d failed: %v", i, err)
+				return fmt.Errorf("provisioner%d failed: %w", i, err)
+			}
+			return nil
+		})
+	}
+
 	// Wait for controller to start, then run startup commands.
 	start := time.Now()
-	if err := waitForControllerOnline(ctx, s.StartupTimeout, client); err != nil {
+	if err := waitForControllerOnline(ctx, s.StartupTimeout, controllerClient); err != nil {
 		return fmt.Errorf("controller failed to start: %w", err)
+	}
+	if s.Provisioners > 0 {
+		if err := rpc.Wait(ctx, backoff.Backoff{Max: s.StartupTimeout}, provisionerClient); err != nil {
+			return fmt.Errorf("provisioner failed to start: %w", err)
+		}
 	}
 	logger.Infof("Controller started in %s", time.Since(start))
 
@@ -395,7 +446,7 @@ func waitForControllerOnline(ctx context.Context, startupTimeout time.Duration, 
 	}
 }
 
-func (s *serveCmd) isRunning(ctx context.Context, client ftlv1connect.ControllerServiceClient) bool {
+func (s *serveCmd) isRunning(ctx context.Context, client rpc.Pingable) bool {
 	_, err := client.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
 	return err == nil
 }

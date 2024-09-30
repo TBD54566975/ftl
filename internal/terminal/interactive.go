@@ -1,10 +1,11 @@
-package console
+package terminal
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -13,24 +14,36 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/posener/complete"
 
-	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 )
+
+const interactivePrompt = "\033[32m>\033[0m "
 
 var _ readline.AutoCompleter = &FTLCompletion{}
 var errExitTrap = errors.New("exit trap")
 
-type KongContextBinder func(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context
+type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Context
 
-func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, refreshFunction func(func()), cancelContext context.CancelFunc) error {
+func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) error {
+
 	l, err := readline.NewEx(&readline.Config{
-		Prompt:          "\033[32m>\033[0m ",
+		Prompt:          interactivePrompt,
 		InterruptPrompt: "^C",
-		EOFPrompt:       "exit",
-		AutoComplete:    &FTLCompletion{app: k},
-		Listener:        &ExitListener{cancel: cancelContext},
+		AutoComplete:    &FTLCompletion{app: k, ctx: ctx, client: client},
+		Listener: &ExitListener{cancel: func() {
+			os.Exit(0)
+		}},
 	})
-	if refreshFunction != nil {
-		refreshFunction(l.Refresh)
+	sm := FromContext(ctx)
+	var tsm *terminalStatusManager
+	ok := false
+	if tsm, ok = sm.(*terminalStatusManager); ok {
+		tsm.statusLock.Lock()
+		tsm.clearStatusMessages()
+		tsm.console = true
+		tsm.consoleRefresh = l.Refresh
+		tsm.recalculateLines()
+		tsm.statusLock.Unlock()
 	}
 	if err != nil {
 		return fmt.Errorf("init readline: %w", err)
@@ -49,7 +62,10 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 			}
 			continue
 		} else if errors.Is(err, io.EOF) {
-			break
+			os.Exit(0)
+		}
+		if tsm != nil {
+			tsm.consoleNewline(line)
 		}
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -74,15 +90,13 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, projectConfig proj
 				errorf("%s", err)
 				return
 			}
-			subctx := binder(ctx, kctx, projectConfig, k, cancelContext)
+			subctx := binder(ctx, kctx)
 
 			err = kctx.Run(subctx)
 			if err != nil {
 				errorf("error: %s", err)
 				return
 			}
-			// Force a status refresh
-			println("")
 		}()
 	}
 	return nil
@@ -106,7 +120,9 @@ func errorf(format string, args ...any) {
 }
 
 type FTLCompletion struct {
-	app *kong.Kong
+	app    *kong.Kong
+	client ftlv1connect.ControllerServiceClient
+	ctx    context.Context
 }
 
 func (f *FTLCompletion) Do(line []rune, pos int) ([][]rune, int) {
@@ -160,7 +176,7 @@ func (f *FTLCompletion) Do(line []rune, pos int) ([][]rune, int) {
 		LastCompleted: lastCompleted,
 	}
 
-	command, err := kongcompletion.Command(parser)
+	command, err := kongcompletion.Command(parser, kongcompletion.WithPredictors(Predictors(f.ctx, f.client)))
 	if err != nil {
 		// TODO handle error
 		println(err.Error())

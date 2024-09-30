@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 )
 
 //ftl:enum export
@@ -48,3 +49,6 @@ type EchoResponse struct {
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name.Default("anonymous"))}, nil
 }
+
+//ftl:typealias export
+type External lib.AnotherNonFTLType

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"syscall"
@@ -16,23 +17,31 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/TBD54566975/ftl/internal/console"
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/profiles"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type InteractiveCLI struct {
-	Version  kong.VersionFlag `help:"Show version."`
-	Endpoint *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
+	Version             kong.VersionFlag `help:"Show version."`
+	Endpoint            *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
+	ProvisionerEndpoint *url.URL         `help:"Provisioner endpoint." env:"FTL_PROVISIONER_ENDPOINT" default:"http://127.0.0.1:8894" hidden:"true"`
 
 	Ping     pingCmd     `cmd:"" help:"Ping the FTL cluster."`
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
 	Init     initCmd     `cmd:"" help:"Initialize a new FTL project."`
+	Profile  profileCmd  `cmd:"" help:"Manage profiles."`
 	New      newCmd      `cmd:"" help:"Create a new FTL module."`
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
+	Bench    benchCmd    `cmd:"" help:"Benchmark an FTL function."`
 	Replay   replayCmd   `cmd:"" help:"Call an FTL function with the same request body as the last invocation."`
 	Update   updateCmd   `cmd:"" help:"Update a deployment."`
 	Kill     killCmd     `cmd:"" help:"Kill a deployment."`
@@ -73,12 +82,10 @@ func main() {
 
 	app := createKongApplication(&cli)
 	kctx, err := app.Parse(os.Args[1:])
-	if err != nil {
-		panic(err)
-	}
+	app.FatalIfErrorf(err)
 
 	if !cli.Plain {
-		sm := console.NewStatusManager(ctx)
+		sm := terminal.NewStatusManager(ctx)
 		ctx = sm.IntoContext(ctx)
 		defer sm.Close()
 	}
@@ -95,7 +102,7 @@ func main() {
 			kctx.Fatalf("could not determine default config path, either place an ftl-project.toml file in the root of your project, use --config=FILE, or set the FTL_CONFIG envar")
 		}
 	}
-	if console.IsANSITerminal(ctx) {
+	if terminal.IsANSITerminal(ctx) {
 		cli.LogConfig.Color = true
 	}
 
@@ -123,13 +130,15 @@ func main() {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		kctx.FatalIfErrorf(err)
 	}
-	ctx = bindContext(ctx, kctx, config, createKongApplication(&InteractiveCLI{}), cancel)
+	bindContext := makeBindContext(config, logger, cancel)
+	ctx = bindContext(ctx, kctx)
 
 	err = kctx.Run(ctx)
 	kctx.FatalIfErrorf(err)
 }
 
 func createKongApplication(cli any) *kong.Kong {
+	gitRoot, _ := internal.GitRoot(".").Get()
 	app := kong.Must(cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
 		kong.Configuration(kongtoml.Loader, ".ftl.toml", "~/.ftl.toml"),
@@ -147,29 +156,49 @@ func createKongApplication(cli any) *kong.Kong {
 			"os":      runtime.GOOS,
 			"arch":    runtime.GOARCH,
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
+			"gitroot": gitRoot,
 		},
 	)
-	kongcompletion.Register(app)
 	return app
 }
 
-var _ console.KongContextBinder = bindContext
+func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, cancel context.CancelFunc) terminal.KongContextBinder {
+	var bindContext terminal.KongContextBinder
+	bindContext = func(ctx context.Context, kctx *kong.Context) context.Context {
+		kctx.Bind(projectConfig)
+		kctx.Bind(logger)
 
-func bindContext(ctx context.Context, kctx *kong.Context, projectConfig projectconfig.Config, app *kong.Kong, cancel context.CancelFunc) context.Context {
-	kctx.Bind(projectConfig)
-	kctx.Bind(app)
+		controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
+		kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
 
-	controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
-	ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
-	kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
+		provisionerServiceClient := rpc.Dial(provisionerconnect.NewProvisionerServiceClient, cli.ProvisionerEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, provisionerServiceClient)
+		kctx.BindTo(provisionerServiceClient, (*provisionerconnect.ProvisionerServiceClient)(nil))
 
-	verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
-	ctx = rpc.ContextWithClient(ctx, verbServiceClient)
-	kctx.BindTo(verbServiceClient, (*ftlv1connect.VerbServiceClient)(nil))
+		// Initialise configuration registries.
+		configRegistry := providers.NewRegistry[configuration.Configuration]()
+		configRegistry.Register(providers.NewEnvarFactory[configuration.Configuration]())
+		configRegistry.Register(providers.NewInlineFactory[configuration.Configuration]())
+		kctx.Bind(configRegistry)
+		secretsRegistry := providers.NewRegistry[configuration.Secrets]()
+		secretsRegistry.Register(providers.NewEnvarFactory[configuration.Secrets]())
+		secretsRegistry.Register(providers.NewInlineFactory[configuration.Secrets]())
+		kongcompletion.Register(kctx.Kong, kongcompletion.WithPredictors(terminal.Predictors(ctx, controllerServiceClient)))
+		kctx.Bind(secretsRegistry)
 
-	kctx.Bind(cli.Endpoint)
-	kctx.BindTo(ctx, (*context.Context)(nil))
-	kctx.BindTo(bindContext, (*console.KongContextBinder)(nil))
-	kctx.BindTo(cancel, (*context.CancelFunc)(nil))
-	return ctx
+		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
+		kctx.BindTo(verbServiceClient, (*ftlv1connect.VerbServiceClient)(nil))
+		project, err := profiles.Open(filepath.Dir(projectConfig.Path), secretsRegistry, configRegistry)
+		kctx.FatalIfErrorf(err)
+		kctx.Bind(project)
+
+		kctx.Bind(cli.Endpoint)
+		kctx.BindTo(ctx, (*context.Context)(nil))
+		kctx.Bind(bindContext)
+		kctx.BindTo(cancel, (*context.CancelFunc)(nil))
+		return ctx
+	}
+	return bindContext
 }

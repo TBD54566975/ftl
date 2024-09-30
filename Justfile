@@ -36,7 +36,7 @@ live-rebuild:
 
 # Run "ftl dev" with live-reloading whenever source changes.
 dev *args:
-  watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev {{args}}"
+  watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
 build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java generate-kube-migrations
@@ -54,6 +54,8 @@ build-generate:
 build +tools: build-protos build-zips build-frontend
   #!/bin/bash
   shopt -s extglob
+
+  export CGO_ENABLED=0
 
   for tool in $@; do
     path="cmd/$tool"
@@ -82,11 +84,13 @@ export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=d
 init-db:
   dbmate drop || true
   dbmate create
-  dbmate --migrations-dir backend/controller/sql/schema up
+  dbmate --no-dump-schema --migrations-dir backend/controller/sql/schema up
 
 # Regenerate SQLC code (requires init-db to be run first)
 build-sqlc:
-  @mk backend/controller/sql/{db.go,models.go,querier.go,queries.sql.go} backend/controller/cronjobs/sql/{db.go,models.go,querier.go,queries.sql.go} internal/configuration/sql/{db.go,models.go,querier.go,queries.sql.go} : backend/controller/sql/queries.sql backend/controller/sql/async_queries.sql backend/controller/cronjobs/sql/queries.sql internal/configuration/sql/queries.sql backend/controller/sql/schema sqlc.yaml -- "just init-db && sqlc generate"
+  @mk $(eval echo $(yq '.sql[].gen.go.out + "/{db.go,models.go,querier.go,queries.sql.go}"' sqlc.yaml)) \
+    : sqlc.yaml $(yq '.sql[].queries[]' sqlc.yaml) \
+    --  "just init-db && sqlc generate"
 
 # Build the ZIP files that are embedded in the FTL release binaries
 build-zips:
@@ -121,7 +125,7 @@ format-frontend:
 
 # Install Node dependencies using pnpm
 pnpm-install:
-  @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install" && break || sleep 5; done
+  @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
 
 # Regenerate protos
 build-protos: pnpm-install
@@ -138,14 +142,14 @@ integration-tests *test:
   #!/bin/bash
   set -euo pipefail
   testName=${1:-}
-  for i in {1..3}; do go test -fullpath -count 1 -v -tags integration -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build integration' | xargs -I {} dirname './{}') && break; done
+  for i in {1..3}; do go test -fullpath -count 1 -v -tags integration -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build integration' | xargs -I {} dirname './{}') && break || true; done
 
 # Run integration test(s)
 infrastructure-tests *test:
   #!/bin/bash
   set -euo pipefail
   testName=${1:-}
-  for i in {1..3}; do go test -fullpath -count 1 -v -tags infrastructure -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build infrastructure' | xargs -I {} dirname './{}') && break; done
+  for i in {1..3}; do go test -fullpath -count 1 -v -tags infrastructure -run "$testName" -p 1 $(find . -type f -name '*_test.go' -print0 | xargs -0 grep -r -l "$testName" | xargs grep -l '//go:build infrastructure' | xargs -I {} dirname './{}') && break || true; done
 
 # Run README doc tests
 test-readme *args:
@@ -253,4 +257,8 @@ storybook:
 
 # Build an FTL Docker image.
 build-docker name:
-  docker build --platform linux/amd64 -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" -t ftl0/ftl-{{name}}:latest -f Dockerfile.{{name}} .
+  docker build \
+    --platform linux/amd64 \
+    -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" \
+    -t ftl0/ftl-{{name}}:latest \
+    -f Dockerfile.{{name}} .

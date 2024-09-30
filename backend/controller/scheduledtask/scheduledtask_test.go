@@ -10,7 +10,7 @@ import (
 	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -26,15 +26,15 @@ func TestScheduledTask(t *testing.T) {
 	var multiCount atomic.Int64
 
 	type controller struct {
-		controller dal.Controller
+		controller dalmodel.Controller
 		cron       *Scheduler
 	}
 
 	controllers := []*controller{
-		{controller: dal.Controller{Key: model.NewControllerKey("localhost", "8080")}},
-		{controller: dal.Controller{Key: model.NewControllerKey("localhost", "8081")}},
-		{controller: dal.Controller{Key: model.NewControllerKey("localhost", "8082")}},
-		{controller: dal.Controller{Key: model.NewControllerKey("localhost", "8083")}},
+		{controller: dalmodel.Controller{Key: model.NewControllerKey("localhost", "8080")}},
+		{controller: dalmodel.Controller{Key: model.NewControllerKey("localhost", "8081")}},
+		{controller: dalmodel.Controller{Key: model.NewControllerKey("localhost", "8082")}},
+		{controller: dalmodel.Controller{Key: model.NewControllerKey("localhost", "8083")}},
 	}
 
 	clock := clock.NewMock()
@@ -42,11 +42,11 @@ func TestScheduledTask(t *testing.T) {
 
 	for _, c := range controllers {
 		c.cron = NewForTesting(ctx, c.controller.Key, clock, leaser)
-		c.cron.Singleton(backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
+		c.cron.Singleton("singleton", backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
 			singletonCount.Add(1)
 			return time.Second, nil
 		})
-		c.cron.Parallel(backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
+		c.cron.Parallel("parallel", backoff.Backoff{}, func(ctx context.Context) (time.Duration, error) {
 			multiCount.Add(1)
 			return time.Second, nil
 		})

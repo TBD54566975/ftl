@@ -12,11 +12,11 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/lsp"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type devCmd struct {
@@ -29,9 +29,8 @@ type devCmd struct {
 	Build          buildCmd `embed:""`
 }
 
-func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig.Config, cancel context.CancelFunc) error {
+func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig.Config, bindContext terminal.KongContextBinder) error {
 	startTime := time.Now()
-	console.LaunchEmbeddedConsole(ctx, k, projConfig, bindContext, cancel)
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
 	}
@@ -40,6 +39,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 	}
 
 	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+	terminal.LaunchEmbeddedConsole(ctx, k, bindContext, client)
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -56,7 +56,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 		fmt.Println(dsn)
 		return nil
 	}
-	sm := console.FromContext(ctx)
+	sm := terminal.FromContext(ctx)
 	starting := sm.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready
 	controllerReady := make(chan bool, 1)

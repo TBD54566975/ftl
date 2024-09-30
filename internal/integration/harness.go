@@ -26,6 +26,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -121,22 +122,35 @@ func WithoutController() Option {
 	}
 }
 
+// WithProvisioner is a Run* option that starts the provisioner service.
+// if set, all deployments are done through the provisioner
+func WithProvisioner() Option {
+	return func(o *options) {
+		o.startProvisioner = true
+		// provisioner always needs a controller to talk to
+		o.startController = true
+	}
+}
+
 type options struct {
-	languages       []string
-	testDataDir     string
-	ftlConfigPath   string
-	startController bool
-	requireJava     bool
-	envars          map[string]string
-	kube            bool
+	languages        []string
+	testDataDir      string
+	ftlConfigPath    string
+	startController  bool
+	startProvisioner bool
+	requireJava      bool
+	envars           map[string]string
+	kube             bool
 }
 
 // Run an integration test.
 func Run(t *testing.T, actionsOrOptions ...ActionOrOption) {
+	t.Helper()
 	run(t, actionsOrOptions...)
 }
 
 func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
+	t.Helper()
 	opts := options{
 		startController: true,
 		languages:       []string{"go"},
@@ -215,19 +229,28 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	for _, language := range opts.languages {
 		ctx, done := context.WithCancel(ctx)
 		t.Run(language, func(t *testing.T) {
+			t.Helper()
 			tmpDir := initWorkDir(t, cwd, opts)
 
 			verbs := rpc.Dial(ftlv1connect.NewVerbServiceClient, "http://localhost:8892", log.Debug)
 
 			var controller ftlv1connect.ControllerServiceClient
 			var console pbconsoleconnect.ConsoleServiceClient
+			var provisioner provisionerconnect.ProvisionerServiceClient
 			if opts.startController {
 				Infof("Starting ftl cluster")
-				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
+				args := []string{filepath.Join(binDir, "ftl"), "serve", "--recreate"}
+				if opts.startProvisioner {
+					args = append(args, "--provisioners=1")
+				}
+				ctx = startProcess(ctx, t, args...)
 			}
 			if opts.startController || opts.kube {
 				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
+			}
+			if opts.startProvisioner {
+				provisioner = rpc.Dial(provisionerconnect.NewProvisionerServiceClient, "http://localhost:8893", log.Debug)
 			}
 
 			testData := filepath.Join(cwd, "testdata", language)
@@ -255,6 +278,16 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				Infof("Waiting for controller to be ready")
 				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
 					_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+					assert.NoError(t, err)
+				})
+			}
+
+			if opts.startProvisioner {
+				ic.Provisioner = provisioner
+
+				Infof("Waiting for provisioner to be ready")
+				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
+					_, err := ic.Provisioner.Ping(ic, connect.NewRequest(&ftlv1.PingRequest{}))
 					assert.NoError(t, err)
 				})
 			}
@@ -314,9 +347,10 @@ type TestContext struct {
 	kubeClient    *kubernetes.Clientset
 	kubeNamespace string
 
-	Controller ftlv1connect.ControllerServiceClient
-	Console    pbconsoleconnect.ConsoleServiceClient
-	Verbs      ftlv1connect.VerbServiceClient
+	Controller  ftlv1connect.ControllerServiceClient
+	Provisioner provisionerconnect.ProvisionerServiceClient
+	Console     pbconsoleconnect.ConsoleServiceClient
+	Verbs       ftlv1connect.VerbServiceClient
 
 	realT *testing.T
 }
@@ -330,6 +364,7 @@ func (i TestContext) WorkingDir() string { return i.workDir }
 
 // AssertWithRetry asserts that the given action passes within the timeout.
 func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
+	t.Helper()
 	waitCtx, done := context.WithTimeout(i, i.integrationTestTimeout())
 	defer done()
 	for {
@@ -348,6 +383,7 @@ func (i TestContext) AssertWithRetry(t testing.TB, assertion Action) {
 
 // Run an assertion, wrapping testing.TB in an implementation that panics on failure, propagating the error.
 func (i TestContext) runAssertionOnce(t testing.TB, assertion Action) (err error) {
+	t.Helper()
 	defer func() {
 		switch r := recover().(type) {
 		case TestingError:

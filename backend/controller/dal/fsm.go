@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/async"
 	sql2 "github.com/TBD54566975/ftl/backend/controller/dal/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
@@ -43,7 +44,7 @@ func (d *DAL) StartFSMTransition(ctx context.Context, fsm schema.RefKey, instanc
 	}
 
 	// Create an async call for the event.
-	origin := AsyncOriginFSM{FSM: fsm, Key: instanceKey}
+	origin := async.AsyncOriginFSM{FSM: fsm, Key: instanceKey}
 	asyncCallID, err := d.db.CreateAsyncCall(ctx, sql2.CreateAsyncCallParams{
 		ScheduledAt:       time.Now(),
 		Verb:              destinationState,
@@ -192,7 +193,7 @@ type FSMInstance struct {
 //
 // The lease must be released by the caller.
 func (d *DAL) AcquireFSMInstance(ctx context.Context, fsm schema.RefKey, instanceKey string) (*FSMInstance, error) {
-	lease, _, err := d.leaseDAL.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
+	lease, _, err := d.leaser.AcquireLease(ctx, leases.SystemKey("fsm_instance", fsm.String(), instanceKey), time.Second*5, optional.None[any]())
 	if err != nil {
 		return nil, fmt.Errorf("failed to acquire FSM lease: %w", err)
 	}

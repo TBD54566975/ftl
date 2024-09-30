@@ -13,7 +13,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
@@ -29,7 +29,7 @@ func Handle(
 	startTime time.Time,
 	sch *schema.Schema,
 	requestKey model.RequestKey,
-	routes []dal.IngressRoute,
+	routes []dalmodel.IngressRoute,
 	w http.ResponseWriter,
 	r *http.Request,
 	timelineService *timeline.Service,
@@ -50,6 +50,7 @@ func Handle(
 		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), startTime, optional.Some("failed to resolve route"))
 		return
 	}
+	logger = logger.Module(route.Module)
 
 	verbRef := &schemapb.Ref{Module: route.Module, Name: route.Verb}
 
@@ -152,7 +153,7 @@ func Handle(
 		if err == nil {
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.None[string]())
 			ingressEvent.Response.Body = io.NopCloser(strings.NewReader(string(rawBody)))
-			timelineService.InsertHTTPIngress(r.Context(), &ingressEvent)
+			timelineService.EnqueueEvent(r.Context(), &ingressEvent)
 		} else {
 			logger.Errorf(err, "could not write response body")
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.Some("could not write response body"))
@@ -175,7 +176,7 @@ func recordIngressErrorEvent(
 ) {
 	ingressEvent.Response.StatusCode = statusCode
 	ingressEvent.Error = optional.Some(errorMsg)
-	timelineService.InsertHTTPIngress(ctx, ingressEvent)
+	timelineService.EnqueueEvent(ctx, ingressEvent)
 }
 
 // Copied from the Apache-licensed connect-go source.

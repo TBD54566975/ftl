@@ -339,11 +339,8 @@ module test {
   subscription subscription test.topic
 
   typealias Alias {{.TypeName}}
-
   typealias EqualAlias {{.TypeName}}
-
   export typealias ExportedAlias {{.TypeName}}
-
   export typealias ExportedEqualAlias {{.TypeName}}
 {{.ValueEnum}}{{.TypeEnum}}
   data Data {

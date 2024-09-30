@@ -1,4 +1,4 @@
-package console
+package terminal
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unicode/utf8"
 
 	"github.com/alecthomas/atomic"
@@ -17,26 +18,31 @@ import (
 	"github.com/tidwall/pretty"
 	"golang.org/x/term"
 
-	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 type BuildState string
 
-const BuildStateWaiting BuildState = " 🚦️"
-const BuildStateBuilding BuildState = " 🏗️"
-const BuildStateBuilt BuildState = "📦️️"
-const BuildStateDeploying BuildState = " 🚚️"
-const BuildStateDeployed BuildState = " ✅️️"
-const BuildStateFailed BuildState = "💥"
+const BuildStateWaiting BuildState = "Waiting"
+const BuildStateBuilding BuildState = "Building"
+const BuildStateBuilt BuildState = "Built"
+const BuildStateDeploying BuildState = "Deploying"
+const BuildStateDeployed BuildState = "Deployed"
+const BuildStateFailed BuildState = "Failed"
+const BuildStateTerminated BuildState = "Terminated"
 
 // moduleStatusPadding is the padding between module status entries
-// it accounts for the colon, space and the emoji
-const moduleStatusPadding = 10
+// it accounts for the icon, the module name, and the padding between them
+const moduleStatusPadding = 5
 
 var _ StatusManager = &terminalStatusManager{}
 var _ StatusLine = &terminalStatusLine{}
 
 var buildColors map[BuildState]string
+var buildStateIcon map[BuildState]func(int) string
+
+var spinner = []string{"◜", "◝", "◞", "◟"}
 
 func init() {
 	buildColors = map[BuildState]string{
@@ -46,6 +52,26 @@ func init() {
 		BuildStateDeploying: "\u001B[94m",
 		BuildStateDeployed:  "\u001B[92m",
 		BuildStateFailed:    "\u001B[91m",
+	}
+	spin := func(spinnerCount int) string {
+		return spinner[spinnerCount]
+	}
+	block := func(int) string {
+		return "✔"
+	}
+	cross := func(int) string {
+		return "✘"
+	}
+	empty := func(int) string {
+		return "•"
+	}
+	buildStateIcon = map[BuildState]func(int) string{
+		BuildStateWaiting:   empty,
+		BuildStateBuilding:  spin,
+		BuildStateBuilt:     block,
+		BuildStateDeploying: spin,
+		BuildStateDeployed:  block,
+		BuildStateFailed:    cross,
 	}
 }
 
@@ -77,6 +103,7 @@ type terminalStatusManager struct {
 	exitWait         sync.WaitGroup
 	console          bool
 	consoleRefresh   func()
+	spinnerCount     int
 }
 
 type statusKey struct{}
@@ -128,7 +155,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 			n, err := sm.read.Read(rawData)
 			if err != nil {
 				if current != "" {
-					sm.writeLine(current)
+					sm.writeLine(current, true)
 				}
 				if !closed {
 					sm.exitWait.Done()
@@ -142,7 +169,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 					// Null byte, we are done
 					// we keep running though as there may be more data on exit
 					// that we handle on a best effort basis
-					sm.writeLine(current)
+					sm.writeLine(current, true)
 					if !closed {
 						sm.exitWait.Done()
 						closed = true
@@ -163,7 +190,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 					continue
 				}
 				if d == '\n' {
-					sm.writeLine(current)
+					sm.writeLine(current, false)
 					current = ""
 				} else {
 					current += string(d)
@@ -176,6 +203,34 @@ func NewStatusManager(ctx context.Context) StatusManager {
 		<-ctx.Done()
 		sm.Close()
 	}()
+
+	// Animate the spinners
+
+	go func() {
+		for !sm.closed.Load() {
+			time.Sleep(150 * time.Millisecond)
+			sm.statusLock.Lock()
+			if sm.spinnerCount == len(spinner)-1 {
+				sm.spinnerCount = 0
+			} else {
+				sm.spinnerCount++
+			}
+			// only redraw if not stable
+			stable := true
+			for _, state := range sm.moduleStates {
+				if state != BuildStateDeployed && state != BuildStateBuilt {
+					stable = false
+					break
+				}
+			}
+			if !stable {
+				sm.recalculateLines()
+			}
+			sm.statusLock.Unlock()
+
+		}
+	}()
+
 	return sm
 }
 
@@ -213,11 +268,24 @@ func (r *terminalStatusManager) clearStatusMessages() {
 	count := r.totalStatusLines
 	if r.console {
 		count--
-		// Don't clear the console line
-		r.underlyingWrite("\u001B[1A")
 	}
 	for range count {
-		r.underlyingWrite("\033[2K\u001B[1A")
+		r.underlyingWrite("\u001B[1A\u001B[2K")
+	}
+}
+
+func (r *terminalStatusManager) consoleNewline(line string) {
+	r.statusLock.Lock()
+	defer r.statusLock.Unlock()
+	count := r.totalStatusLines
+	for range count {
+		r.underlyingWrite("\u001B[1A\033[2K")
+	}
+	if line == "" {
+		r.underlyingWrite("\r" + interactivePrompt + line)
+		r.redrawStatus()
+	} else {
+		r.underlyingWrite("\r" + interactivePrompt + line + strings.Repeat("\n", r.totalStatusLines))
 	}
 }
 
@@ -263,7 +331,11 @@ func (r *terminalStatusManager) SetModuleState(module string, state BuildState) 
 	}
 	r.statusLock.Lock()
 	defer r.statusLock.Unlock()
-	r.moduleStates[module] = state
+	if state == BuildStateTerminated {
+		delete(r.moduleStates, module)
+	} else {
+		r.moduleStates[module] = state
+	}
 	if r.moduleLine != nil {
 		r.recalculateLines()
 	} else {
@@ -286,16 +358,19 @@ func (r *terminalStatusManager) Close() {
 	r.exitWait.Wait()
 }
 
-func (r *terminalStatusManager) writeLine(s string) {
+func (r *terminalStatusManager) writeLine(s string, last bool) {
 	r.statusLock.RLock()
 	defer r.statusLock.RUnlock()
+	if !last {
+		s += "\n"
+	}
 
 	if r.totalStatusLines == 0 {
-		r.underlyingWrite("\n" + s)
+		r.underlyingWrite("\r" + s)
 		return
 	}
 	r.clearStatusMessages()
-	r.underlyingWrite("\n" + s)
+	r.underlyingWrite("\r" + s)
 	r.redrawStatus()
 
 }
@@ -306,11 +381,8 @@ func (r *terminalStatusManager) redrawStatus() {
 	for i := len(r.lines) - 1; i >= 0; i-- {
 		msg := r.lines[i].message
 		if msg != "" {
-			r.underlyingWrite("\n" + msg)
+			r.underlyingWrite("\r" + msg + "\n")
 		}
-	}
-	if r.console {
-		r.underlyingWrite("\n")
 	}
 	if r.consoleRefresh != nil {
 		r.consoleRefresh()
@@ -344,9 +416,9 @@ func (r *terminalStatusManager) recalculateLines() {
 				multiLine = true
 				total++
 			}
-			pad := strings.Repeat(" ", entryLength-len(k)-moduleStatusPadding+2)
+			pad := strings.Repeat(" ", entryLength-len(k)-moduleStatusPadding)
 			state := r.moduleStates[k]
-			msg += pad + buildColors[state] + k + ": " + string(state) + "\u001B[39m"
+			msg += buildColors[state] + buildStateIcon[state](r.spinnerCount) + "[" + log.ScopeColor(k) + k + buildColors[state] + "]  \u001B[39m" + pad
 		}
 		if !multiLine {
 			// For multi-line messages we don't want to trim the message as we want to line up the columns
@@ -422,24 +494,15 @@ func (r *terminalStatusLine) SetMessage(message string) {
 	r.manager.recalculateLines()
 }
 
-func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, projectConfig projectconfig.Config, binder KongContextBinder, cancel context.CancelFunc) {
+func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) {
 	sm := FromContext(ctx)
-	if tsm, ok := sm.(*terminalStatusManager); ok {
-		tsm.console = true
+	if _, ok := sm.(*terminalStatusManager); ok {
 		go func() {
-
-			err := RunInteractiveConsole(ctx, k, projectConfig, binder, func(f func()) {
-				tsm.statusLock.Lock()
-				defer tsm.statusLock.Unlock()
-				tsm.consoleRefresh = f
-			}, cancel)
+			err := RunInteractiveConsole(ctx, k, binder, client)
 			if err != nil {
 				fmt.Printf("\033[31mError: %s\033[0m\n", err)
 				return
 			}
 		}()
-		tsm.statusLock.Lock()
-		defer tsm.statusLock.Unlock()
-		tsm.recalculateLines()
 	}
 }

@@ -1,6 +1,7 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   labels: ["run-all"],
+  allowedPostUpgradeCommands: ["pnpm install"],
   extends: [
     "config:recommended",
     ":semanticCommits",
@@ -9,6 +10,15 @@
     "group:allNonMajor",
     "schedule:earlyMondays",
   ],
+  constraints: {
+    "node": ">=22.7.0"
+  },
+  "js": {
+    "managerBranchPrefix": "js-"
+  },
+  "java": {
+    "managerBranchPrefix": "java-"
+  },
   lockFileMaintenance: {
     enabled: true, // Automatically update lock files like pnpm-lock.yaml
   },
@@ -55,5 +65,12 @@
       matchPackageNames: ["connectrpc.com/connect"],
       enabled: false,
     },
+    {
+      "matchPaths": ["frontend/console/**", "frontend/vscode/**"],
+      "postUpgradeTasks": {
+        "commands": ["pnpm install"],
+        "fileFilters": ["pnpm-lock.yaml"]
+      }
+    }
   ],
 }

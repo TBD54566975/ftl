@@ -20,13 +20,12 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/internal/console"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
+	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type CompilerBuildError struct {
@@ -66,7 +65,7 @@ type Listener interface {
 
 // Engine for building a set of modules.
 type Engine struct {
-	client           ftlv1connect.ControllerServiceClient
+	client           DeployClient
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectRoot      string
 	moduleDirs       []string
@@ -124,7 +123,7 @@ func WithStartTime(startTime time.Time) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client DeployClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -356,19 +355,19 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	e.schemaChanges.Subscribe(schemaChanges)
 	defer func() {
 		e.schemaChanges.Unsubscribe(schemaChanges)
-		close(schemaChanges)
 	}()
 
 	watchEvents := make(chan WatchEvent, 128)
+	ctx, cancel := context.WithCancel(ctx)
 	topic, err := e.watcher.Watch(ctx, period, e.moduleDirs)
 	if err != nil {
+		cancel()
 		return err
 	}
 	topic.Subscribe(watchEvents)
 	defer func() {
-		topic.Unsubscribe(watchEvents)
-		topic.Close()
-		close(watchEvents)
+		// Cancel will close the topic and channel
+		cancel()
 	}()
 
 	// Build and deploy all modules first.
@@ -464,7 +463,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
-					console.UpdateModuleState(ctx, config.Module, console.BuildStateFailed)
+					terminal.UpdateModuleState(ctx, config.Module, terminal.BuildStateFailed)
 					logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
 				} else {
 					didUpdateDeployments = true
@@ -547,7 +546,7 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 		return e.buildWithCallback(ctx, func(buildCtx context.Context, module Module) error {
 			buildGroup.Go(func() error {
 				e.modulesToBuild.Store(module.Config.Module, false)
-				console.UpdateModuleState(ctx, module.Config.Module, console.BuildStateDeploying)
+				terminal.UpdateModuleState(ctx, module.Config.Module, terminal.BuildStateDeploying)
 				return Deploy(buildCtx, module, replicas, waitForDeployOnline, e.client)
 			})
 			return nil
@@ -597,7 +596,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		e.moduleMetas.Store(name, moduleMeta{module: module})
 		mustBuild[name] = true
 
-		console.UpdateModuleState(ctx, name, console.BuildStateWaiting)
+		terminal.UpdateModuleState(ctx, name, terminal.BuildStateWaiting)
 	}
 	graph, err := e.Graph(moduleNames...)
 	if err != nil {
@@ -636,10 +635,11 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		wg.SetLimit(e.parallelism)
 		for _, moduleName := range group {
 			wg.Go(func() error {
-				logger := log.FromContext(ctx).Scope(moduleName)
+				logger := log.FromContext(ctx).Module(moduleName).Scope("build")
 				ctx := log.ContextWithLogger(ctx, logger)
 				err := e.tryBuild(ctx, mustBuild, moduleName, builtModules, schemas, callback)
 				if err != nil {
+					terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 					errCh <- err
 				}
 				return nil
@@ -724,7 +724,7 @@ func (e *Engine) mustSchema(ctx context.Context, moduleName string, builtModules
 //
 // Assumes that all dependencies have been built and are available in "built".
 func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
-	console.UpdateModuleState(ctx, moduleName, console.BuildStateBuilding)
+	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilding)
 	meta, ok := e.moduleMetas.Load(moduleName)
 	if !ok {
 		return fmt.Errorf("module %q not found", moduleName)
@@ -745,7 +745,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if err != nil {
 		return fmt.Errorf("could not load schema for module %q: %w", config.Module, err)
 	}
-	console.UpdateModuleState(ctx, moduleName, console.BuildStateBuilt)
+	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilt)
 	schemas <- moduleSchema
 	return nil
 }

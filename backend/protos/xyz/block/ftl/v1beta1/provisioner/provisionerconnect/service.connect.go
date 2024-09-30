@@ -36,17 +36,44 @@ const (
 const (
 	// ProvisionerServicePingProcedure is the fully-qualified name of the ProvisionerService's Ping RPC.
 	ProvisionerServicePingProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/Ping"
+	// ProvisionerServiceStatusProcedure is the fully-qualified name of the ProvisionerService's Status
+	// RPC.
+	ProvisionerServiceStatusProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/Status"
+	// ProvisionerServiceGetArtefactDiffsProcedure is the fully-qualified name of the
+	// ProvisionerService's GetArtefactDiffs RPC.
+	ProvisionerServiceGetArtefactDiffsProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/GetArtefactDiffs"
+	// ProvisionerServiceUploadArtefactProcedure is the fully-qualified name of the ProvisionerService's
+	// UploadArtefact RPC.
+	ProvisionerServiceUploadArtefactProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/UploadArtefact"
 	// ProvisionerServiceCreateDeploymentProcedure is the fully-qualified name of the
 	// ProvisionerService's CreateDeployment RPC.
 	ProvisionerServiceCreateDeploymentProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/CreateDeployment"
+	// ProvisionerServiceUpdateDeployProcedure is the fully-qualified name of the ProvisionerService's
+	// UpdateDeploy RPC.
+	ProvisionerServiceUpdateDeployProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/UpdateDeploy"
+	// ProvisionerServiceReplaceDeployProcedure is the fully-qualified name of the ProvisionerService's
+	// ReplaceDeploy RPC.
+	ProvisionerServiceReplaceDeployProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/ReplaceDeploy"
+	// ProvisionerServiceGetSchemaProcedure is the fully-qualified name of the ProvisionerService's
+	// GetSchema RPC.
+	ProvisionerServiceGetSchemaProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/GetSchema"
+	// ProvisionerServicePullSchemaProcedure is the fully-qualified name of the ProvisionerService's
+	// PullSchema RPC.
+	ProvisionerServicePullSchemaProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/PullSchema"
 )
 
 // ProvisionerServiceClient is a client for the xyz.block.ftl.v1beta1.provisioner.ProvisionerService
 // service.
 type ProvisionerServiceClient interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// Create a deployment.
+	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
+	GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error)
+	UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error)
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
+	UpdateDeploy(context.Context, *connect.Request[v1.UpdateDeployRequest]) (*connect.Response[v1.UpdateDeployResponse], error)
+	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
+	GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error)
+	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest]) (*connect.ServerStreamForClient[v1.PullSchemaResponse], error)
 }
 
 // NewProvisionerServiceClient constructs a client for the
@@ -66,9 +93,44 @@ func NewProvisionerServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
+		status: connect.NewClient[v1.StatusRequest, v1.StatusResponse](
+			httpClient,
+			baseURL+ProvisionerServiceStatusProcedure,
+			opts...,
+		),
+		getArtefactDiffs: connect.NewClient[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse](
+			httpClient,
+			baseURL+ProvisionerServiceGetArtefactDiffsProcedure,
+			opts...,
+		),
+		uploadArtefact: connect.NewClient[v1.UploadArtefactRequest, v1.UploadArtefactResponse](
+			httpClient,
+			baseURL+ProvisionerServiceUploadArtefactProcedure,
+			opts...,
+		),
 		createDeployment: connect.NewClient[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse](
 			httpClient,
 			baseURL+ProvisionerServiceCreateDeploymentProcedure,
+			opts...,
+		),
+		updateDeploy: connect.NewClient[v1.UpdateDeployRequest, v1.UpdateDeployResponse](
+			httpClient,
+			baseURL+ProvisionerServiceUpdateDeployProcedure,
+			opts...,
+		),
+		replaceDeploy: connect.NewClient[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse](
+			httpClient,
+			baseURL+ProvisionerServiceReplaceDeployProcedure,
+			opts...,
+		),
+		getSchema: connect.NewClient[v1.GetSchemaRequest, v1.GetSchemaResponse](
+			httpClient,
+			baseURL+ProvisionerServiceGetSchemaProcedure,
+			opts...,
+		),
+		pullSchema: connect.NewClient[v1.PullSchemaRequest, v1.PullSchemaResponse](
+			httpClient,
+			baseURL+ProvisionerServicePullSchemaProcedure,
 			opts...,
 		),
 	}
@@ -77,7 +139,14 @@ func NewProvisionerServiceClient(httpClient connect.HTTPClient, baseURL string, 
 // provisionerServiceClient implements ProvisionerServiceClient.
 type provisionerServiceClient struct {
 	ping             *connect.Client[v1.PingRequest, v1.PingResponse]
+	status           *connect.Client[v1.StatusRequest, v1.StatusResponse]
+	getArtefactDiffs *connect.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
+	uploadArtefact   *connect.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
 	createDeployment *connect.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
+	updateDeploy     *connect.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
+	replaceDeploy    *connect.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
+	getSchema        *connect.Client[v1.GetSchemaRequest, v1.GetSchemaResponse]
+	pullSchema       *connect.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
 }
 
 // Ping calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.Ping.
@@ -85,17 +154,58 @@ func (c *provisionerServiceClient) Ping(ctx context.Context, req *connect.Reques
 	return c.ping.CallUnary(ctx, req)
 }
 
+// Status calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.Status.
+func (c *provisionerServiceClient) Status(ctx context.Context, req *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error) {
+	return c.status.CallUnary(ctx, req)
+}
+
+// GetArtefactDiffs calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.GetArtefactDiffs.
+func (c *provisionerServiceClient) GetArtefactDiffs(ctx context.Context, req *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error) {
+	return c.getArtefactDiffs.CallUnary(ctx, req)
+}
+
+// UploadArtefact calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.UploadArtefact.
+func (c *provisionerServiceClient) UploadArtefact(ctx context.Context, req *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error) {
+	return c.uploadArtefact.CallUnary(ctx, req)
+}
+
 // CreateDeployment calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.CreateDeployment.
 func (c *provisionerServiceClient) CreateDeployment(ctx context.Context, req *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error) {
 	return c.createDeployment.CallUnary(ctx, req)
+}
+
+// UpdateDeploy calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.UpdateDeploy.
+func (c *provisionerServiceClient) UpdateDeploy(ctx context.Context, req *connect.Request[v1.UpdateDeployRequest]) (*connect.Response[v1.UpdateDeployResponse], error) {
+	return c.updateDeploy.CallUnary(ctx, req)
+}
+
+// ReplaceDeploy calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.ReplaceDeploy.
+func (c *provisionerServiceClient) ReplaceDeploy(ctx context.Context, req *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error) {
+	return c.replaceDeploy.CallUnary(ctx, req)
+}
+
+// GetSchema calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.GetSchema.
+func (c *provisionerServiceClient) GetSchema(ctx context.Context, req *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error) {
+	return c.getSchema.CallUnary(ctx, req)
+}
+
+// PullSchema calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.PullSchema.
+func (c *provisionerServiceClient) PullSchema(ctx context.Context, req *connect.Request[v1.PullSchemaRequest]) (*connect.ServerStreamForClient[v1.PullSchemaResponse], error) {
+	return c.pullSchema.CallServerStream(ctx, req)
 }
 
 // ProvisionerServiceHandler is an implementation of the
 // xyz.block.ftl.v1beta1.provisioner.ProvisionerService service.
 type ProvisionerServiceHandler interface {
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
-	// Create a deployment.
+	Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error)
+	GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error)
+	UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error)
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
+	UpdateDeploy(context.Context, *connect.Request[v1.UpdateDeployRequest]) (*connect.Response[v1.UpdateDeployResponse], error)
+	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
+	GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error)
+	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error
 }
 
 // NewProvisionerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -110,17 +220,66 @@ func NewProvisionerServiceHandler(svc ProvisionerServiceHandler, opts ...connect
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
+	provisionerServiceStatusHandler := connect.NewUnaryHandler(
+		ProvisionerServiceStatusProcedure,
+		svc.Status,
+		opts...,
+	)
+	provisionerServiceGetArtefactDiffsHandler := connect.NewUnaryHandler(
+		ProvisionerServiceGetArtefactDiffsProcedure,
+		svc.GetArtefactDiffs,
+		opts...,
+	)
+	provisionerServiceUploadArtefactHandler := connect.NewUnaryHandler(
+		ProvisionerServiceUploadArtefactProcedure,
+		svc.UploadArtefact,
+		opts...,
+	)
 	provisionerServiceCreateDeploymentHandler := connect.NewUnaryHandler(
 		ProvisionerServiceCreateDeploymentProcedure,
 		svc.CreateDeployment,
+		opts...,
+	)
+	provisionerServiceUpdateDeployHandler := connect.NewUnaryHandler(
+		ProvisionerServiceUpdateDeployProcedure,
+		svc.UpdateDeploy,
+		opts...,
+	)
+	provisionerServiceReplaceDeployHandler := connect.NewUnaryHandler(
+		ProvisionerServiceReplaceDeployProcedure,
+		svc.ReplaceDeploy,
+		opts...,
+	)
+	provisionerServiceGetSchemaHandler := connect.NewUnaryHandler(
+		ProvisionerServiceGetSchemaProcedure,
+		svc.GetSchema,
+		opts...,
+	)
+	provisionerServicePullSchemaHandler := connect.NewServerStreamHandler(
+		ProvisionerServicePullSchemaProcedure,
+		svc.PullSchema,
 		opts...,
 	)
 	return "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProvisionerServicePingProcedure:
 			provisionerServicePingHandler.ServeHTTP(w, r)
+		case ProvisionerServiceStatusProcedure:
+			provisionerServiceStatusHandler.ServeHTTP(w, r)
+		case ProvisionerServiceGetArtefactDiffsProcedure:
+			provisionerServiceGetArtefactDiffsHandler.ServeHTTP(w, r)
+		case ProvisionerServiceUploadArtefactProcedure:
+			provisionerServiceUploadArtefactHandler.ServeHTTP(w, r)
 		case ProvisionerServiceCreateDeploymentProcedure:
 			provisionerServiceCreateDeploymentHandler.ServeHTTP(w, r)
+		case ProvisionerServiceUpdateDeployProcedure:
+			provisionerServiceUpdateDeployHandler.ServeHTTP(w, r)
+		case ProvisionerServiceReplaceDeployProcedure:
+			provisionerServiceReplaceDeployHandler.ServeHTTP(w, r)
+		case ProvisionerServiceGetSchemaProcedure:
+			provisionerServiceGetSchemaHandler.ServeHTTP(w, r)
+		case ProvisionerServicePullSchemaProcedure:
+			provisionerServicePullSchemaHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -134,6 +293,34 @@ func (UnimplementedProvisionerServiceHandler) Ping(context.Context, *connect.Req
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.Ping is not implemented"))
 }
 
+func (UnimplementedProvisionerServiceHandler) Status(context.Context, *connect.Request[v1.StatusRequest]) (*connect.Response[v1.StatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.Status is not implemented"))
+}
+
+func (UnimplementedProvisionerServiceHandler) GetArtefactDiffs(context.Context, *connect.Request[v1.GetArtefactDiffsRequest]) (*connect.Response[v1.GetArtefactDiffsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.GetArtefactDiffs is not implemented"))
+}
+
+func (UnimplementedProvisionerServiceHandler) UploadArtefact(context.Context, *connect.Request[v1.UploadArtefactRequest]) (*connect.Response[v1.UploadArtefactResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.UploadArtefact is not implemented"))
+}
+
 func (UnimplementedProvisionerServiceHandler) CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.CreateDeployment is not implemented"))
+}
+
+func (UnimplementedProvisionerServiceHandler) UpdateDeploy(context.Context, *connect.Request[v1.UpdateDeployRequest]) (*connect.Response[v1.UpdateDeployResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.UpdateDeploy is not implemented"))
+}
+
+func (UnimplementedProvisionerServiceHandler) ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.ReplaceDeploy is not implemented"))
+}
+
+func (UnimplementedProvisionerServiceHandler) GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.GetSchema is not implemented"))
+}
+
+func (UnimplementedProvisionerServiceHandler) PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.PullSchema is not implemented"))
 }
