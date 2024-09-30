@@ -209,7 +209,8 @@ func (p *internalPlugin) run(ctx context.Context) {
 	watcher := NewWatcher(p.config.Watch...)
 	watchChan := make(chan WatchEvent, 128)
 
-	// state
+	// State
+	// This is updated when given explicit build commands and used for automatic rebuilds
 	config := p.config
 	var projectRoot string
 	var schema *schema.Schema
@@ -222,11 +223,12 @@ func (p *internalPlugin) run(ctx context.Context) {
 			switch c := cmd.(type) {
 			case buildCommand:
 				// update state
-				startTime := time.Now()
 				projectRoot = c.projectRoot
 				config = c.config
 				schema = c.schema
 				buildEnv = c.buildEnv
+
+				// begin watching if needed
 				if c.devMode && !devMode {
 					devMode = true
 					topic, err := watcher.Watch(ctx, time.Second, []string{config.Dir})
@@ -237,25 +239,8 @@ func (p *internalPlugin) run(ctx context.Context) {
 					topic.Subscribe(watchChan)
 				}
 
-				// flock should only be released after we have read back the pb files
-				release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
-				if err != nil {
-					c.result <- either.RightOf[BuildResult](fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err))
-					release() //nolint:errcheck
-					continue
-				}
-
 				// build
-				transaction := watcher.GetTransaction(p.config.Dir)
-				err = p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
-				if err != nil {
-					c.result <- either.RightOf[BuildResult](err)
-					release() //nolint:errcheck
-					continue
-				}
-
-				result, err := loadBuildResult(config, startTime)
-				release() //nolint:errcheck
+				result, err := buildAndLoadResult(ctx, projectRoot, config, schema, buildEnv, devMode, watcher, p.buildFunc)
 				if err != nil {
 					c.result <- either.RightOf[BuildResult](err)
 					continue
@@ -274,32 +259,9 @@ func (p *internalPlugin) run(ctx context.Context) {
 			switch event.(type) {
 			case WatchEventModuleChanged:
 				// automatic rebuild
-				startTime := time.Now()
+
 				p.updates.Publish(AutoRebuildStartedEvent{Module: p.config.Module})
-
-				// flock should only be released after we have read back the pb files
-				release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
-				if err != nil {
-					release() //nolint:errcheck
-					p.updates.Publish(AutoRebuildEndedEvent{
-						Module: p.config.Module,
-						Result: either.RightOf[BuildResult](fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err)),
-					})
-					continue
-				}
-
-				transaction := watcher.GetTransaction(p.config.Dir)
-				err = p.buildFunc(ctx, projectRoot, config, schema, buildEnv, devMode, transaction)
-				if err != nil {
-					p.updates.Publish(AutoRebuildEndedEvent{
-						Module: p.config.Module,
-						Result: either.RightOf[BuildResult](err),
-					})
-					release() //nolint:errcheck
-					continue
-				}
-				result, err := loadBuildResult(config, startTime)
-				release() //nolint:errcheck
+				result, err := buildAndLoadResult(ctx, projectRoot, config, schema, buildEnv, devMode, watcher, p.buildFunc)
 				if err != nil {
 					p.updates.Publish(AutoRebuildEndedEvent{
 						Module: p.config.Module,
@@ -324,9 +286,19 @@ func (p *internalPlugin) run(ctx context.Context) {
 	}
 }
 
-// loadBuildResult reads the result of a build (ie schema and errors) from disk.
-// internal plugins don't have a way to pass back schema and errors other than writing them to disk.
-func loadBuildResult(config moduleconfig.AbsModuleConfig, startTime time.Time) (BuildResult, error) {
+func buildAndLoadResult(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, watcher *Watcher, build buildFunc) (BuildResult, error) {
+	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
+	if err != nil {
+		return BuildResult{}, fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err)
+	}
+	defer release() //nolint:errcheck
+
+	startTime := time.Now()
+	transaction := watcher.GetTransaction(config.Dir)
+	err = build(ctx, projectRoot, config, sch, buildEnv, devMode, transaction)
+	if err != nil {
+		return BuildResult{}, err
+	}
 	errorList, err := loadProtoErrors(config)
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("failed to read build errors for module: %w", err)
@@ -342,11 +314,11 @@ func loadBuildResult(config moduleconfig.AbsModuleConfig, startTime time.Time) (
 		return result, nil
 	}
 
-	sch, err := schema.ModuleFromProtoFile(config.Schema())
+	moduleSchema, err := schema.ModuleFromProtoFile(config.Schema())
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("failed to read schema for module: %w", err)
 	}
-	result.Schema = sch
+	result.Schema = moduleSchema
 	return result, nil
 }
 
