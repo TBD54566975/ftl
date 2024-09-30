@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
+	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -168,7 +169,7 @@ type modifyFilesTransaction struct {
 
 var _ ModifyFilesTransaction = (*modifyFilesTransaction)(nil)
 
-// var _ compile.ModifyFilesTransaction = (*modifyFilesTransaction)(nil)
+var _ compile.ModifyFilesTransaction = (*modifyFilesTransaction)(nil)
 
 func (t *modifyFilesTransaction) Begin() error {
 	if t.isActive {
@@ -217,8 +218,6 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 		return nil
 	}
 
-	// absPatterns := absolutePatterns(moduleHashes.Config, t.watcher.patterns)
-
 	for _, path := range paths {
 		hash, matched, err := computeFileHash(moduleHashes.Config.Dir, path, t.watcher.patterns)
 		if err != nil {
@@ -234,12 +233,3 @@ func (t *modifyFilesTransaction) ModifiedFiles(paths ...string) error {
 
 	return nil
 }
-
-// func absolutePatterns(config moduleconfig.ModuleConfig, patterns []string) []string {
-// 	// Watch paths are allowed to be outside the deploy directory.
-// 	out := slices.Map(patterns, func(p string) string {
-// 		return filepath.Clean(filepath.Join(config.Dir, p))
-// 	})
-// 	fmt.Printf("abs patterns: %v\n", out)
-// 	return out
-// }
