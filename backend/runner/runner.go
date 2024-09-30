@@ -103,40 +103,7 @@ func Start(ctx context.Context, config Config) error {
 	// TODO: Retry loop, RetryStreamingClientStreamish
 	var identityStore *identity.Store
 	if config.ControllerPublicKey != nil {
-		controllerVerifier, err := identity.NewVerifier(*config.ControllerPublicKey)
-		if err != nil {
-			observability.Runner.StartupFailed(ctx)
-			return fmt.Errorf("failed to create controller verifier: %w", err)
-		}
-
-		identityStore, err = identity.NewStoreNewKeys(identity.NewRunner(key, config.Deployment))
-		if err != nil {
-			observability.Runner.StartupFailed(ctx)
-			return fmt.Errorf("failed to create identity store: %w", err)
-		}
-
-		certRequest, err := identityStore.NewGetCertificateRequest()
-		if err != nil {
-			observability.Runner.StartupFailed(ctx)
-			return fmt.Errorf("failed to create certificate request: %w", err)
-		}
-
-		certResp, err := controllerClient.GetCertification(ctx, connect.NewRequest(&certRequest))
-		if err != nil {
-			observability.Runner.StartupFailed(ctx)
-			return fmt.Errorf("failed to get certificate: %w", err)
-		}
-
-		certificate, err := identity.NewCertificate(certResp.Msg.Certificate)
-		if err != nil {
-			observability.Runner.StartupFailed(ctx)
-			return fmt.Errorf("failed to create certificate: %w", err)
-		}
-
-		if err = identityStore.SetCertificate(certificate, controllerVerifier); err != nil {
-			observability.Runner.StartupFailed(ctx)
-			return fmt.Errorf("failed to set certificate: %w", err)
-		}
+		identityStore, err = newIdentityStore(ctx, config, key, controllerClient)
 	}
 
 	svc := &Service{
@@ -167,6 +134,42 @@ func Start(ctx context.Context, config Config) error {
 		rpc.HTTP("/", svc),
 		rpc.HealthCheck(svc.healthCheck),
 	)
+}
+
+func newIdentityStore(ctx context.Context, config Config, key model.RunnerKey, controllerClient ftlv1connect.ControllerServiceClient) (*identity.Store, error) {
+	controllerVerifier, err := identity.NewVerifier(*config.ControllerPublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create controller verifier: %w", err)
+	}
+
+	identityStore, err := identity.NewStoreNewKeys(identity.NewRunner(key, config.Deployment))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create identity store: %w", err)
+	}
+
+	certRequest, err := identityStore.NewGetCertificateRequest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create certificate request: %w", err)
+	}
+
+	certResp, err := controllerClient.GetCertification(ctx, connect.NewRequest(&certRequest))
+	if err != nil {
+		observability.Runner.StartupFailed(ctx)
+		return nil, fmt.Errorf("failed to get certificate: %w", err)
+	}
+
+	certificate, err := identity.NewCertificate(certResp.Msg.Certificate)
+	if err != nil {
+		observability.Runner.StartupFailed(ctx)
+		return nil, fmt.Errorf("failed to create certificate: %w", err)
+	}
+
+	if err = identityStore.SetCertificate(certificate, controllerVerifier); err != nil {
+		observability.Runner.StartupFailed(ctx)
+		return nil, fmt.Errorf("failed to set certificate: %w", err)
+	}
+
+	return identityStore, nil
 }
 
 // manageDeploymentDirectory ensures the deployment directory exists and removes old deployments.
