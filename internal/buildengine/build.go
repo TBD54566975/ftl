@@ -24,9 +24,7 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 	logger := log.FromContext(ctx).Module(config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	if err := prepareBuild(ctx, config); err != nil {
-		return nil, err
-	}
+	logger.Infof("Building module")
 
 	result, err := plugin.Build(ctx, projectRootDir, config, sch, buildEnv, devMode)
 	if err != nil {
@@ -35,21 +33,7 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 	return handleBuildResult(ctx, config, either.LeftOf[error](result))
 }
 
-// TODO: docs
-func prepareBuild(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
-	// clear the deploy directory before extracting schema
-	if err := os.RemoveAll(config.DeployDir); err != nil {
-		return fmt.Errorf("failed to clear deploy directory: %w", err)
-	}
-	if err := os.MkdirAll(config.DeployDir, 0700); err != nil {
-		return fmt.Errorf("could not create deploy directory: %w", err)
-	}
-
-	log.FromContext(ctx).Infof("Building module")
-	return nil
-}
-
-// TODO: docs
+// handleBuildResult processes the result of a build
 func handleBuildResult(ctx context.Context, config moduleconfig.AbsModuleConfig, eitherResult either.Either[BuildResult, error]) (*schema.Module, error) {
 	logger := log.FromContext(ctx)
 

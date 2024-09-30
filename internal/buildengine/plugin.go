@@ -296,6 +296,14 @@ func buildAndLoadResult(ctx context.Context, projectRoot string, config moduleco
 	defer release() //nolint:errcheck
 
 	startTime := time.Now()
+
+	if err := os.RemoveAll(config.DeployDir); err != nil {
+		return BuildResult{}, fmt.Errorf("failed to clear deploy directory: %w", err)
+	}
+	if err := os.MkdirAll(config.DeployDir, 0700); err != nil {
+		return BuildResult{}, fmt.Errorf("could not create deploy directory: %w", err)
+	}
+
 	transaction := watcher.GetTransaction(config.Dir)
 	err = build(ctx, projectRoot, config, sch, buildEnv, devMode, transaction)
 	if err != nil {

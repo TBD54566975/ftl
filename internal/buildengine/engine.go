@@ -801,7 +801,6 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	sch := &schema.Schema{Modules: maps.Values(builtModules)}
 
 	if e.listener != nil {
-		// TODO: publish this when auto build starts as well
 		e.listener.OnBuildStarted(meta.module)
 	}
 
@@ -897,13 +896,11 @@ func (e *Engine) listenForBuildUpdates(originalCtx context.Context) {
 			}
 			switch event := event.(type) {
 			case AutoRebuildStartedEvent:
-				if err := prepareBuild(ctx, meta.module.Config.Abs()); err != nil {
-					logger.Errorf(err, "could not prepare for build")
-					e.reportBuildFailed(err)
-					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateFailed)
-					continue
-				}
+				log.FromContext(ctx).Infof("Building module")
 				terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateBuilding)
+				if e.listener != nil {
+					e.listener.OnBuildStarted(meta.module)
+				}
 
 			case AutoRebuildEndedEvent:
 				if _, err := handleBuildResult(ctx, meta.module.Config.Abs(), event.Result); err != nil {

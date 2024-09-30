@@ -198,8 +198,6 @@ func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsM
 	if err != nil {
 		return fmt.Errorf("failed to build module %q: %w", config.Module, err)
 	}
-
-	// TODO: return an actual result
 	return nil
 }
 
