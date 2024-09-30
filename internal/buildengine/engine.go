@@ -48,7 +48,9 @@ type schemaChange struct {
 type moduleMeta struct {
 	module             Module
 	lastBuildStartTime time.Time
-	plugin             LanguagePlugin
+
+	plugin LanguagePlugin
+	events chan PluginEvent
 }
 
 // copyMetaWithUpdatedDependencies finds the dependencies for a module and returns a
@@ -488,7 +490,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					didUpdateDeployments = true
 				}
 				if meta, ok := e.moduleMetas.Load(event.Config.Module); ok {
-					meta.plugin.Updates().Unsubscribe(e.pluginEvents)
+					meta.plugin.Updates().Unsubscribe(meta.events)
 					meta.plugin.Kill(ctx)
 				}
 				e.moduleMetas.Delete(event.Config.Module)
@@ -849,7 +851,25 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleCo
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}
-	plugin.Updates().Subscribe(e.pluginEvents)
+	events := make(chan PluginEvent, 64)
+	plugin.Updates().Subscribe(events)
+
+	// pass on plugin events to the main event channel
+	// make sure we do not pass on nil (chan closure) events
+	go func() {
+		for {
+			select {
+			case event := <-events:
+				if event == nil {
+					// chan closed
+					return
+				}
+				e.pluginEvents <- event
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	return moduleMeta{
 		module: Module{
@@ -857,6 +877,7 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleCo
 			Dependencies: []string{},
 		},
 		plugin: plugin,
+		events: events,
 	}, nil
 }
 
