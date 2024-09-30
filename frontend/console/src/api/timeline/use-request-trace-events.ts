@@ -7,7 +7,7 @@ export type TraceEvent = CallEvent | IngressEvent
 export const useRequestTraceEvents = (requestKey?: string, filters: EventsQuery_Filter[] = []) => {
   const eventTypes = [EventType.CALL, EventType.INGRESS]
   const allFilters = [...filters, requestKeysFilter([requestKey || '']), eventTypesFilter(eventTypes)]
-  const timelineQuery = useTimeline(true, allFilters, !!requestKey)
+  const timelineQuery = useTimeline(true, allFilters, 500, !!requestKey)
 
   const data = timelineQuery.data?.filter((event) => event.entry.case === 'call' || event.entry.case === 'ingress') ?? []
   return {

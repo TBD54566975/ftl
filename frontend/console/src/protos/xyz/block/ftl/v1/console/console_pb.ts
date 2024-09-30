@@ -1511,6 +1511,49 @@ export class EventsQuery_CallFilter extends Message<EventsQuery_CallFilter> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.ModuleFilter
+ */
+export class EventsQuery_ModuleFilter extends Message<EventsQuery_ModuleFilter> {
+  /**
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  /**
+   * @generated from field: optional string verb = 2;
+   */
+  verb?: string;
+
+  constructor(data?: PartialMessage<EventsQuery_ModuleFilter>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.ModuleFilter";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "verb", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_ModuleFilter {
+    return new EventsQuery_ModuleFilter().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_ModuleFilter {
+    return new EventsQuery_ModuleFilter().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_ModuleFilter {
+    return new EventsQuery_ModuleFilter().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EventsQuery_ModuleFilter | PlainMessage<EventsQuery_ModuleFilter> | undefined, b: EventsQuery_ModuleFilter | PlainMessage<EventsQuery_ModuleFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_ModuleFilter, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.console.EventsQuery.Filter
  */
 export class EventsQuery_Filter extends Message<EventsQuery_Filter> {
@@ -1567,6 +1610,12 @@ export class EventsQuery_Filter extends Message<EventsQuery_Filter> {
      */
     value: EventsQuery_CallFilter;
     case: "call";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.ModuleFilter module = 9;
+     */
+    value: EventsQuery_ModuleFilter;
+    case: "module";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<EventsQuery_Filter>) {
@@ -1585,6 +1634,7 @@ export class EventsQuery_Filter extends Message<EventsQuery_Filter> {
     { no: 6, name: "time", kind: "message", T: EventsQuery_TimeFilter, oneof: "filter" },
     { no: 7, name: "id", kind: "message", T: EventsQuery_IDFilter, oneof: "filter" },
     { no: 8, name: "call", kind: "message", T: EventsQuery_CallFilter, oneof: "filter" },
+    { no: 9, name: "module", kind: "message", T: EventsQuery_ModuleFilter, oneof: "filter" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_Filter {

@@ -4,7 +4,7 @@ import { useTimeline } from './use-timeline.ts'
 
 export const useTimelineCalls = (isStreaming: boolean, filters: EventsQuery_Filter[], enabled = true) => {
   const allFilters = [...filters, eventTypesFilter([EventType.CALL])]
-  const timelineQuery = useTimeline(isStreaming, allFilters, enabled)
+  const timelineQuery = useTimeline(isStreaming, allFilters, 1000, enabled)
 
   const data = timelineQuery.data || []
   return {

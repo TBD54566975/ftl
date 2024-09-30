@@ -2,14 +2,13 @@ import { FunctionIcon } from 'hugeicons-react'
 import { useContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
-import { useStreamVerbCalls } from '../../api/timeline/stream-verb-calls'
 import { Loader } from '../../components/Loader'
 import { ResizablePanels } from '../../components/ResizablePanels'
 import { Page } from '../../layout'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
-import { CallList } from '../calls/CallList'
+import { TraceRequestList } from '../traces/TraceRequestList'
 import { VerbRequestForm } from './VerbRequestForm'
 import { verbPanels } from './VerbRightPanel'
 
@@ -39,9 +38,6 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
     setVerb(verb)
   }, [modules.data, moduleName, declName])
 
-  const callEvents = useStreamVerbCalls(module?.name, verb?.verb?.name)
-  const calls = callEvents.data || []
-
   if (!module || !verb) {
     return (
       <div className='flex justify-center items-center min-h-screen'>
@@ -65,7 +61,7 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
             mainContent={<VerbRequestForm module={module} verb={verb} />}
             rightPanelHeader={header}
             rightPanelPanels={verbPanels(verb)}
-            bottomPanelContent={<CallList calls={calls} />}
+            bottomPanelContent={<TraceRequestList module={module.name} verb={verb.verb?.name} />}
           />
         </Page.Body>
       </Page>
