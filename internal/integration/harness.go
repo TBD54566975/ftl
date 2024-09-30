@@ -206,7 +206,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
 				// If we are already on linux/amd64 we don't need to rebuild, otherwise we now need a native one to interact with the kube cluster
 				Infof("Building FTL for native OS")
-				err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl", "ftl-provisioner").RunBuffered(ctx)
+				err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 				assert.NoError(t, err)
 			}
 			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "wait-for-kube").RunBuffered(ctx)
@@ -217,7 +217,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			assert.NoError(t, err)
 		} else {
 			Infof("Building ftl")
-			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl", "ftl-provisioner").RunBuffered(ctx)
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
 		if opts.requireJava || slices.Contains(opts.languages, "java") {
@@ -237,18 +237,20 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			var controller ftlv1connect.ControllerServiceClient
 			var console pbconsoleconnect.ConsoleServiceClient
 			var provisioner provisionerconnect.ProvisionerServiceClient
-			if opts.startProvisioner {
-				Infof("Starting ftl provisioner")
-				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl-provisioner"), "--ftl-endpoint=http://localhost:8892")
-				provisioner = rpc.Dial(provisionerconnect.NewProvisionerServiceClient, "http://localhost:8894", log.Debug)
-			}
 			if opts.startController {
 				Infof("Starting ftl cluster")
-				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
+				args := []string{filepath.Join(binDir, "ftl"), "serve", "--recreate"}
+				if opts.startProvisioner {
+					args = append(args, "--provisioners=1")
+				}
+				ctx = startProcess(ctx, t, args...)
 			}
 			if opts.startController || opts.kube {
 				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
+			}
+			if opts.startProvisioner {
+				provisioner = rpc.Dial(provisionerconnect.NewProvisionerServiceClient, "http://localhost:8893", log.Debug)
 			}
 
 			testData := filepath.Join(cwd, "testdata", language)

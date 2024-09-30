@@ -20,8 +20,7 @@ import (
 )
 
 type Config struct {
-	Bind               *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8894" env:"FTL_PROVISIONER_BIND"`
-	IngressBind        *url.URL `help:"Socket to bind to for ingress." default:"http://127.0.0.1:8893" env:"FTL_PROVISIONER_INGRESS_BIND"`
+	Bind               *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8893" env:"FTL_PROVISIONER_BIND"`
 	Advertise          *url.URL `help:"Endpoint the Provisioner should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_PROVISIONER_ADVERTISE"`
 	ControllerEndpoint *url.URL `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 }
@@ -131,7 +130,7 @@ func Start(ctx context.Context, config Config, devel bool) error {
 	if err != nil {
 		return err
 	}
-	logger.Debugf("Listening on %s", config.Bind)
+	logger.Debugf("Provisioner available at: %s", config.Bind)
 	logger.Debugf("Advertising as %s", config.Advertise)
 	logger.Debugf("Using FTL endpoint: %s", config.ControllerEndpoint)
 
