@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -19,13 +20,12 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/internal/status"
+	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type CompilerBuildError struct {
@@ -65,7 +65,7 @@ type Listener interface {
 
 // Engine for building a set of modules.
 type Engine struct {
-	client           ftlv1connect.ControllerServiceClient
+	client           DeployClient
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectRoot      string
 	moduleDirs       []string
@@ -78,6 +78,7 @@ type Engine struct {
 	modulesToBuild   *xsync.MapOf[string, bool]
 	buildEnv         []string
 	devMode          bool
+	startTime        optional.Option[time.Time]
 }
 
 type Option func(o *Engine)
@@ -108,6 +109,13 @@ func WithDevMode(devMode bool) Option {
 	}
 }
 
+// WithStartTime sets the start time to report total startup time
+func WithStartTime(startTime time.Time) Option {
+	return func(o *Engine) {
+		o.startTime = optional.Some(startTime)
+	}
+}
+
 // New constructs a new [Engine].
 //
 // Completely offline builds are possible if the full dependency graph is
@@ -115,7 +123,7 @@ func WithDevMode(devMode bool) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client ftlv1connect.ControllerServiceClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client DeployClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -347,19 +355,19 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 	e.schemaChanges.Subscribe(schemaChanges)
 	defer func() {
 		e.schemaChanges.Unsubscribe(schemaChanges)
-		close(schemaChanges)
 	}()
 
 	watchEvents := make(chan WatchEvent, 128)
+	ctx, cancel := context.WithCancel(ctx)
 	topic, err := e.watcher.Watch(ctx, period, e.moduleDirs)
 	if err != nil {
+		cancel()
 		return err
 	}
 	topic.Subscribe(watchEvents)
 	defer func() {
-		topic.Unsubscribe(watchEvents)
-		topic.Close()
-		close(watchEvents)
+		// Cancel will close the topic and channel
+		cancel()
 	}()
 
 	// Build and deploy all modules first.
@@ -368,7 +376,11 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		logger.Errorf(err, "initial deploy failed")
 		e.reportBuildFailed(err)
 	} else {
-		logger.Infof("All modules deployed, watching for changes...")
+		if start, ok := e.startTime.Get(); ok {
+			logger.Infof("All modules deployed in %s, watching for changes...", time.Since(start).String())
+		} else {
+			logger.Infof("All modules deployed, watching for changes...")
+		}
 		e.reportSuccess()
 	}
 
@@ -451,7 +463,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
-					status.UpdateModuleState(ctx, config.Module, status.BuildStateFailed)
+					terminal.UpdateModuleState(ctx, config.Module, terminal.BuildStateFailed)
 					logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
 				} else {
 					didUpdateDeployments = true
@@ -534,7 +546,7 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 		return e.buildWithCallback(ctx, func(buildCtx context.Context, module Module) error {
 			buildGroup.Go(func() error {
 				e.modulesToBuild.Store(module.Config.Module, false)
-				status.UpdateModuleState(ctx, module.Config.Module, status.BuildStateDeploying)
+				terminal.UpdateModuleState(ctx, module.Config.Module, terminal.BuildStateDeploying)
 				return Deploy(buildCtx, module, replicas, waitForDeployOnline, e.client)
 			})
 			return nil
@@ -584,7 +596,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		e.moduleMetas.Store(name, moduleMeta{module: module})
 		mustBuild[name] = true
 
-		status.UpdateModuleState(ctx, name, status.BuildStateWaiting)
+		terminal.UpdateModuleState(ctx, name, terminal.BuildStateWaiting)
 	}
 	graph, err := e.Graph(moduleNames...)
 	if err != nil {
@@ -623,10 +635,11 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		wg.SetLimit(e.parallelism)
 		for _, moduleName := range group {
 			wg.Go(func() error {
-				logger := log.FromContext(ctx).Scope(moduleName)
+				logger := log.FromContext(ctx).Module(moduleName).Scope("build")
 				ctx := log.ContextWithLogger(ctx, logger)
 				err := e.tryBuild(ctx, mustBuild, moduleName, builtModules, schemas, callback)
 				if err != nil {
+					terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 					errCh <- err
 				}
 				return nil
@@ -711,7 +724,7 @@ func (e *Engine) mustSchema(ctx context.Context, moduleName string, builtModules
 //
 // Assumes that all dependencies have been built and are available in "built".
 func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
-	status.UpdateModuleState(ctx, moduleName, status.BuildStateBuilding)
+	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilding)
 	meta, ok := e.moduleMetas.Load(moduleName)
 	if !ok {
 		return fmt.Errorf("module %q not found", moduleName)
@@ -732,7 +745,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if err != nil {
 		return fmt.Errorf("could not load schema for module %q: %w", config.Module, err)
 	}
-	status.UpdateModuleState(ctx, moduleName, status.BuildStateBuilt)
+	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilt)
 	schemas <- moduleSchema
 	return nil
 }

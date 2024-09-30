@@ -13,7 +13,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
-	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
+	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/k8sscaling"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
@@ -50,10 +50,10 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	// The FTL controller currently only supports DB as a cf provider/resolver.
-	conn, err := observability.OpenDBAndInstrument(cli.ControllerConfig.DSN)
+	conn, err := cli.ControllerConfig.OpenDBAndInstrument()
 	kctx.FatalIfErrorf(err)
 
-	dal := leasesdal.New(conn)
+	dal := dbleaser.NewDatabaseLeaser(conn)
 	kctx.FatalIfErrorf(err)
 
 	configDal := cfdal.New(conn)

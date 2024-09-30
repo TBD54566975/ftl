@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/jpillora/backoff"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
@@ -34,14 +35,15 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
-	leasesdal "github.com/TBD54566975/ftl/backend/controller/leases/dal"
+	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
@@ -61,12 +63,12 @@ import (
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
-	ftlreflect "github.com/TBD54566975/ftl/internal/reflect"
+	internalobservability "github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/internal/status"
+	status "github.com/TBD54566975/ftl/internal/terminal"
 )
 
 // CommonConfig between the production controller and development server.
@@ -101,6 +103,8 @@ type Config struct {
 	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
 	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
 	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
+	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
+	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 	CommonConfig
 }
 
@@ -111,6 +115,16 @@ func (c *Config) SetDefaults() {
 	if c.Advertise == nil {
 		c.Advertise = c.Bind
 	}
+}
+
+func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
+	conn, err := internalobservability.OpenDBAndInstrument(c.DSN)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open DB connection: %w", err)
+	}
+	conn.SetMaxIdleConns(c.MaxIdleDBConnections)
+	conn.SetMaxOpenConns(c.MaxOpenDBConnections)
+	return conn, nil
 }
 
 // Start the Controller. Blocks until the context is cancelled.
@@ -148,7 +162,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	admin := admin.NewAdminService(cm, sm, svc.dal)
 	console := console.NewService(svc.dal, svc.timeline)
 
-	ingressHandler := http.Handler(svc)
+	ingressHandler := otelhttp.NewHandler(http.Handler(svc), "ftl.ingress")
 	if len(config.AllowOrigins) > 0 {
 		ingressHandler = cors.Middleware(
 			slices.Map(config.AllowOrigins, func(u *url.URL) string { return u.String() }),
@@ -176,7 +190,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		)
 	})
 	g.Go(func() error {
-		return runnerScaling.Start(ctx, *config.Bind, svc.leasesdal)
+		return runnerScaling.Start(ctx, *config.Bind, svc.dbleaser)
 	})
 
 	go svc.dal.PollDeployments(ctx)
@@ -194,20 +208,19 @@ type clients struct {
 // ControllerListListener is regularly notified of the current list of controllers
 // This is often used to update a hash ring to distribute work.
 type ControllerListListener interface {
-	UpdatedControllerList(ctx context.Context, controllers []dal.Controller)
+	UpdatedControllerList(ctx context.Context, controllers []dalmodel.Controller)
 }
 
 type Service struct {
 	conn               *sql.DB
-	leasesdal          *leasesdal.DAL
+	dbleaser           *dbleaser.DatabaseLeaser
 	dal                *dal.DAL
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
 
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
-	pubSub                  *pubsub.Manager
-	registry                *artefacts.Service
+	pubSub                  *pubsub.Service
 	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
@@ -215,9 +228,8 @@ type Service struct {
 	clients *ttlcache.Cache[string, clients]
 
 	// Complete schema synchronised from the database.
-	schema atomic.Value[*schema.Schema]
+	schemaState atomic.Value[schemaState]
 
-	routes atomic.Value[map[string]Route]
 	config Config
 
 	increaseReplicaFailures map[string]int
@@ -243,12 +255,12 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
 	}
 
-	db := dal.New(ctx, conn, encryption)
-	ldb := leasesdal.New(conn)
+	ldb := dbleaser.NewDatabaseLeaser(conn)
+	scheduler := scheduledtask.New(ctx, key, ldb)
+
 	svc := &Service{
-		tasks:                   scheduledtask.New(ctx, key, ldb),
-		dal:                     db,
-		leasesdal:               ldb,
+		tasks:                   scheduler,
+		dbleaser:                ldb,
 		conn:                    conn,
 		key:                     key,
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
@@ -256,31 +268,36 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		increaseReplicaFailures: map[string]int{},
 		runnerScaling:           runnerScaling,
 	}
-	svc.routes.Store(map[string]Route{})
-	svc.schema.Store(&schema.Schema{})
-
+	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, conn)
 	svc.cronJobs = cronSvc
 
-	pubSub := pubsub.New(ctx, db, svc.tasks, svc)
+	pubSub := pubsub.New(conn, encryption, svc.tasks, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
 
-	svc.registry = artefacts.New(ctx, conn)
+	svc.dal = dal.New(ctx, conn, encryption, pubSub)
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 
-	go svc.syncSchema(ctx)
-
 	// Use min, max backoff if we are running in production, otherwise use
 	// (1s, 1s) (or develBackoff). Will also wrap the job such that it its next
 	// runtime is capped at 1s.
-	maybeDevelTask := func(job scheduledtask.Job, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) (backoff.Backoff, scheduledtask.Job) {
+	maybeDevelTask := func(job scheduledtask.Job, name string, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) (backoff.Backoff, scheduledtask.Job) {
 		if len(develBackoff) > 1 {
 			panic("too many devel backoffs")
 		}
+		chain := job
+
+		// Trace controller operations
+		job = func(ctx context.Context) (time.Duration, error) {
+			ctx, span := observability.Controller.BeginSpan(ctx, name)
+			defer span.End()
+			return chain(ctx)
+		}
+
 		if devel {
 			chain := job
 			job = func(ctx context.Context) (time.Duration, error) {
@@ -296,47 +313,45 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		return makeBackoff(minDelay, maxDelay), job
 	}
 
+	parallelTask := func(job scheduledtask.Job, name string, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) {
+		maybeDevelJob, backoff := maybeDevelTask(job, name, maxNext, minDelay, maxDelay, develBackoff...)
+		svc.tasks.Parallel(name, maybeDevelJob, backoff)
+	}
+
+	singletonTask := func(job scheduledtask.Job, name string, maxNext, minDelay, maxDelay time.Duration, develBackoff ...backoff.Backoff) {
+		maybeDevelJob, backoff := maybeDevelTask(job, name, maxNext, minDelay, maxDelay, develBackoff...)
+		svc.tasks.Singleton(name, maybeDevelJob, backoff)
+	}
+
 	// Parallel tasks.
-	svc.tasks.Parallel(maybeDevelTask(svc.syncRoutes, time.Second, time.Second, time.Second*5))
-	svc.tasks.Parallel(maybeDevelTask(svc.heartbeatController, time.Second, time.Second*3, time.Second*5))
-	svc.tasks.Parallel(maybeDevelTask(svc.updateControllersList, time.Second, time.Second*5, time.Second*5))
-	svc.tasks.Parallel(maybeDevelTask(svc.executeAsyncCalls, time.Second, time.Second*5, time.Second*10))
+	parallelTask(svc.syncRoutesAndSchema, "sync-routes-and-schema", time.Second, time.Second, time.Second*5)
+	parallelTask(svc.heartbeatController, "controller-heartbeat", time.Second, time.Second*3, time.Second*5)
+	parallelTask(svc.updateControllersList, "update-controllers-list", time.Second, time.Second*5, time.Second*5)
+	parallelTask(svc.executeAsyncCalls, "execute-async-calls", time.Second, time.Second*5, time.Second*10)
 
 	// This should be a singleton task, but because this is the task that
 	// actually expires the leases used to run singleton tasks, it must be
 	// parallel.
-	svc.tasks.Parallel(maybeDevelTask(svc.expireStaleLeases, time.Second*2, time.Second, time.Second*5))
+	parallelTask(svc.expireStaleLeases, "expire-stale-leases", time.Second*2, time.Second, time.Second*5)
 
 	// Singleton tasks use leases to only run on a single controller.
-	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleControllers, time.Second*2, time.Second*20, time.Second*20))
-	svc.tasks.Singleton(maybeDevelTask(svc.reapStaleRunners, time.Second*2, time.Second, time.Second*10))
-	svc.tasks.Singleton(maybeDevelTask(svc.reapCallEvents, time.Minute*5, time.Minute, time.Minute*30))
-	svc.tasks.Singleton(maybeDevelTask(svc.reapAsyncCalls, time.Second*5, time.Second, time.Second*5))
+	singletonTask(svc.reapStaleControllers, "reap-stale-controllers", time.Second*2, time.Second*20, time.Second*20)
+	singletonTask(svc.reapStaleRunners, "reap-stale-runners", time.Second*2, time.Second, time.Second*10)
+	singletonTask(svc.reapCallEvents, "reap-call-events", time.Minute*5, time.Minute, time.Minute*30)
+	singletonTask(svc.reapAsyncCalls, "reap-async-calls", time.Second*5, time.Second, time.Second*5)
 	return svc, nil
 }
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-
-	routes, err := s.dal.GetIngressRoutes(r.Context(), r.Method)
-	if err != nil {
-		if errors.Is(err, libdal.ErrNotFound) {
-			http.NotFound(w, r)
-			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("failed to resolve route from dal"))
-		return
-	}
-	sch, err := s.dal.GetActiveSchema(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("could not get active schema"))
-		return
-	}
 	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
-	ingress.Handle(start, sch, requestKey, routes, w, r, s.timeline, s.callWithRequest)
+	routes := s.schemaState.Load().httpRoutes[r.Method]
+	if len(routes) == 0 {
+		http.NotFound(w, r)
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("route not found in dal"))
+		return
+	}
+	ingress.Handle(start, s.schemaState.Load().schema, requestKey, routes, w, r, s.timeline, s.callWithRequest)
 }
 
 func (s *Service) ProcessList(ctx context.Context, req *connect.Request[ftlv1.ProcessListRequest]) (*connect.Response[ftlv1.ProcessListResponse], error) {
@@ -379,7 +394,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	if err != nil {
 		return nil, fmt.Errorf("could not get status: %w", err)
 	}
-	sroutes := s.routes.Load()
+	sroutes := s.schemaState.Load().routes
 	routes := slices.Map(maps.Values(sroutes), func(route Route) (out *ftlv1.StatusResponse_Route) {
 		return &ftlv1.StatusResponse_Route{
 			Module:     route.Module,
@@ -388,7 +403,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		}
 	})
 	replicas := map[string]int32{}
-	protoRunners, err := slices.MapErr(status.Runners, func(r dal.Runner) (*ftlv1.StatusResponse_Runner, error) {
+	protoRunners, err := slices.MapErr(status.Runners, func(r dalmodel.Runner) (*ftlv1.StatusResponse_Runner, error) {
 		asString := r.Deployment.String()
 		deployment := &asString
 		replicas[asString]++
@@ -406,7 +421,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	if err != nil {
 		return nil, err
 	}
-	deployments, err := slices.MapErr(status.Deployments, func(d dal.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
+	deployments, err := slices.MapErr(status.Deployments, func(d dalmodel.Deployment) (*ftlv1.StatusResponse_Deployment, error) {
 		labels, err := structpb.NewStruct(d.Labels)
 		if err != nil {
 			return nil, fmt.Errorf("could not marshal attributes for deployment %s: %w", d.Key.String(), err)
@@ -425,7 +440,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		return nil, err
 	}
 	resp := &ftlv1.StatusResponse{
-		Controllers: slices.Map(status.Controllers, func(c dal.Controller) *ftlv1.StatusResponse_Controller {
+		Controllers: slices.Map(status.Controllers, func(c dalmodel.Controller) *ftlv1.StatusResponse_Controller {
 			return &ftlv1.StatusResponse_Controller{
 				Key:      c.Key.String(),
 				Endpoint: c.Endpoint,
@@ -434,7 +449,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		}),
 		Runners:     protoRunners,
 		Deployments: deployments,
-		IngressRoutes: slices.Map(status.IngressRoutes, func(r dal.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
+		IngressRoutes: slices.Map(status.IngressRoutes, func(r dalmodel.IngressRouteEntry) *ftlv1.StatusResponse_IngressRoute {
 			return &ftlv1.StatusResponse_IngressRoute{
 				DeploymentKey: r.Deployment.String(),
 				Verb:          &schemapb.Ref{Module: r.Module, Name: r.Verb},
@@ -463,7 +478,7 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			requestKey = optional.Some(rkey)
 		}
 
-		err = s.timeline.InsertLogEvent(ctx, &timeline.Log{
+		s.timeline.EnqueueEvent(ctx, &timeline.Log{
 			DeploymentKey: deploymentKey,
 			RequestKey:    requestKey,
 			Time:          msg.TimeStamp.AsTime(),
@@ -472,10 +487,6 @@ func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.Clie
 			Message:       msg.Message,
 			Error:         optional.Ptr(msg.Error),
 		})
-
-		if err != nil {
-			return nil, err
-		}
 	}
 	if stream.Err() != nil {
 		return nil, stream.Err()
@@ -587,7 +598,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		}
-		err = s.dal.UpsertRunner(ctx, dal.Runner{
+		err = s.dal.UpsertRunner(ctx, dalmodel.Runner{
 			Key:        runnerKey,
 			Endpoint:   msg.Endpoint,
 			Deployment: deploymentKey,
@@ -608,7 +619,7 @@ func (s *Service) RegisterRunner(ctx context.Context, stream *connect.ClientStre
 			}()
 			deferredDeregistration = true
 		}
-		_, err = s.syncRoutes(ctx)
+		_, err = s.syncRoutesAndSchema(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("could not sync routes: %w", err)
 		}
@@ -678,7 +689,7 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	}
 
 	// It's not actually ready until it is in the routes table
-	routes := s.routes.Load()
+	routes := s.schemaState.Load().routes
 	var missing []string
 	for _, module := range s.config.WaitFor {
 		if _, ok := routes[module]; !ok {
@@ -792,7 +803,7 @@ func (s *Service) AcquireLease(ctx context.Context, stream *connect.BidiStream[f
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not receive lease request: %w", err))
 		}
 		if lease == nil {
-			lease, _, err = s.leasesdal.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
+			lease, _, err = s.dbleaser.AcquireLease(ctx, leases.ModuleKey(msg.Module, msg.Key...), msg.Ttl.AsDuration(), optional.None[any]())
 			if err != nil {
 				if errors.Is(err, leases.ErrConflict) {
 					return connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("lease is held: %w", err))
@@ -848,7 +859,7 @@ func (s *Service) sendFSMEventInTx(ctx context.Context, tx *dal.DAL, instance *d
 
 	var candidates []string
 
-	sch := s.schema.Load()
+	sch := s.schemaState.Load().schema
 
 	updateCandidates := func(ref *schema.Ref) (brk bool, err error) {
 		verb := &schema.Verb{}
@@ -915,7 +926,7 @@ func (s *Service) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("could not start transaction: %w", err))
 	}
 	defer tx.CommitOrRollback(ctx, &err)
-	sch := s.schema.Load()
+	sch := s.schemaState.Load().schema
 	msg := req.Msg
 	fsm, eventType, fsmKey, err := s.resolveFSMEvent(msg)
 	if err != nil {
@@ -950,7 +961,7 @@ func (s *Service) SetNextFSMEvent(ctx context.Context, req *connect.Request[ftlv
 
 func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
 	// Publish the event.
-	err := s.dal.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
+	err := s.pubSub.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
 	}
@@ -965,6 +976,8 @@ func (s *Service) callWithRequest(
 	sourceAddress string,
 ) (*connect.Response[ftlv1.CallResponse], error) {
 	start := time.Now()
+	ctx, span := observability.Calls.BeginSpan(ctx, req.Msg.Verb)
+	defer span.End()
 
 	if req.Msg.Verb == nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: missing verb"))
@@ -975,16 +988,13 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("body is required"))
 	}
 
-	sch, err := s.dal.GetActiveSchema(ctx)
-	if err != nil {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("schema retrieval failed"))
-		return nil, err
-	}
+	sstate := s.schemaState.Load()
+	sch := sstate.schema
 
 	verbRef := schema.RefFromProto(req.Msg.Verb)
 	verb := &schema.Verb{}
 
-	if err = sch.ResolveToType(verbRef, verb); err != nil {
+	if err := sch.ResolveToType(verbRef, verb); err != nil {
 		if errors.Is(err, schema.ErrNotFound) {
 			observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb not found"))
 			return nil, connect.NewError(connect.CodeNotFound, err)
@@ -993,14 +1003,14 @@ func (s *Service) callWithRequest(
 		return nil, err
 	}
 
-	err = ingress.ValidateCallBody(req.Msg.Body, verb, sch)
+	err := ingress.ValidateCallBody(req.Msg.Body, verb, sch)
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
 		return nil, err
 	}
 
 	module := verbRef.Module
-	route, ok := s.routes.Load()[module]
+	route, ok := sstate.routes[module]
 	if !ok {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
@@ -1066,7 +1076,7 @@ func (s *Service) callWithRequest(
 		callResponse = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 	}
-	s.timeline.InsertCallEvent(ctx, &timeline.Call{
+	s.timeline.EnqueueEvent(ctx, &timeline.Call{
 		DeploymentKey:    route.Deployment,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentKey,
@@ -1084,7 +1094,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return nil, err
 	}
-	_, need, err := s.registry.GetDigestsKeys(ctx, byteDigests)
+	need, err := s.dal.GetMissingArtefacts(ctx, byteDigests)
 	if err != nil {
 		return nil, err
 	}
@@ -1095,7 +1105,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 
 func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error) {
 	logger := log.FromContext(ctx)
-	digest, err := s.registry.Upload(ctx, artefacts.Artefact{Content: req.Msg.Content})
+	digest, err := s.dal.CreateArtefact(ctx, req.Msg.Content)
 	if err != nil {
 		return nil, err
 	}
@@ -1106,14 +1116,14 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
 	logger := log.FromContext(ctx)
 
-	artefacts := make([]dal.DeploymentArtefact, len(req.Msg.Artefacts))
+	artefacts := make([]dalmodel.DeploymentArtefact, len(req.Msg.Artefacts))
 	for i, artefact := range req.Msg.Artefacts {
 		digest, err := sha256.ParseSHA256(artefact.Digest)
 		if err != nil {
 			logger.Errorf(err, "Invalid digest %s", artefact.Digest)
 			return nil, fmt.Errorf("invalid digest: %w", err)
 		}
-		artefacts[i] = dal.DeploymentArtefact{
+		artefacts[i] = dalmodel.DeploymentArtefact{
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 			Digest:     digest,
@@ -1156,7 +1166,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 }
 
 func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ftlv1.ResetSubscriptionRequest]) (*connect.Response[ftlv1.ResetSubscriptionResponse], error) {
-	err := s.dal.ResetSubscription(ctx, req.Msg.Subscription.Module, req.Msg.Subscription.Name)
+	err := s.pubSub.ResetSubscription(ctx, req.Msg.Subscription.Module, req.Msg.Subscription.Name)
 	if err != nil {
 		return nil, fmt.Errorf("could not reset subscription: %w", err)
 	}
@@ -1278,13 +1288,13 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		if returnErr == nil {
 			// Post-commit notification based on origin
 			switch origin := call.Origin.(type) {
-			case dal.AsyncOriginCron:
+			case async.AsyncOriginCron:
 				break
 
-			case dal.AsyncOriginFSM:
+			case async.AsyncOriginFSM:
 				break
 
-			case dal.AsyncOriginPubSub:
+			case async.AsyncOriginPubSub:
 				go s.pubSub.AsyncCallDidCommit(originalCtx, origin)
 
 			default:
@@ -1295,7 +1305,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		call.Release() //nolint:errcheck
 	}()
 
-	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb))
+	logger = logger.Scope(fmt.Sprintf("%s:%s", call.Origin, call.Verb)).Module(call.Verb.Module)
 
 	if call.Catching {
 		// Retries have been exhausted but catch verb has previously failed
@@ -1350,7 +1360,7 @@ func (s *Service) catchAsyncCall(ctx context.Context, logger *log.Logger, call *
 	}
 	logger.Debugf("Catching async call %s with %s", call.Verb, catchVerb)
 
-	sch := s.schema.Load()
+	sch := s.schemaState.Load().schema
 
 	verb := &schema.Verb{}
 	if err := sch.ResolveToType(call.Verb.ToRef(), verb); err != nil {
@@ -1449,10 +1459,10 @@ func (s *Service) reapAsyncCalls(ctx context.Context) (nextInterval time.Duratio
 
 func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
 	switch origin := call.Origin.(type) {
-	case dal.AsyncOriginCron:
+	case async.AsyncOriginCron:
 		return &ftlv1.Metadata{}
 
-	case dal.AsyncOriginFSM:
+	case async.AsyncOriginFSM:
 		return &ftlv1.Metadata{
 			Values: []*ftlv1.Metadata_Pair{
 				{
@@ -1466,7 +1476,7 @@ func metadataForAsyncCall(call *dal.AsyncCall) *ftlv1.Metadata {
 			},
 		}
 
-	case dal.AsyncOriginPubSub:
+	case async.AsyncOriginPubSub:
 		return &ftlv1.Metadata{}
 
 	default:
@@ -1479,18 +1489,18 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 
 	// Allow for handling of completion based on origin
 	switch origin := call.Origin.(type) {
-	case dal.AsyncOriginCron:
+	case async.AsyncOriginCron:
 		if err := s.cronJobs.OnJobCompletion(ctx, origin.CronJobKey, failed); err != nil {
 			return fmt.Errorf("failed to finalize cron async call: %w", err)
 		}
 
-	case dal.AsyncOriginFSM:
+	case async.AsyncOriginFSM:
 		if err := s.onAsyncFSMCallCompletion(ctx, tx, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize FSM async call: %w", err)
 		}
 
-	case dal.AsyncOriginPubSub:
-		if err := s.pubSub.OnCallCompletion(ctx, tx, origin, failed, isFinalResult); err != nil {
+	case async.AsyncOriginPubSub:
+		if err := s.pubSub.OnCallCompletion(ctx, tx.Connection, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize pubsub async call: %w", err)
 		}
 
@@ -1500,8 +1510,8 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 	return nil
 }
 
-func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.DAL, origin dal.AsyncOriginFSM, failed bool, isFinalResult bool) error {
-	logger := log.FromContext(ctx).Scope(origin.FSM.String())
+func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.DAL, origin async.AsyncOriginFSM, failed bool, isFinalResult bool) error {
+	logger := log.FromContext(ctx).Scope(origin.FSM.String()).Module(origin.FSM.Module)
 
 	// retrieve the next fsm event and delete it
 	next, err := tx.PopNextFSMEvent(ctx, origin.FSM, origin.Key)
@@ -1528,7 +1538,7 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.DAL, ori
 		return nil
 	}
 
-	sch := s.schema.Load()
+	sch := s.schemaState.Load().schema
 
 	fsm := &schema.FSM{}
 	err = sch.ResolveToType(origin.FSM.ToRef(), fsm)
@@ -1563,7 +1573,7 @@ func (s *Service) onAsyncFSMCallCompletion(ctx context.Context, tx *dal.DAL, ori
 }
 
 func (s *Service) resolveFSMEvent(msg *ftlv1.SendFSMEventRequest) (fsm *schema.FSM, eventType schema.Type, fsmKey schema.RefKey, err error) {
-	sch := s.schema.Load()
+	sch := s.schemaState.Load().schema
 
 	fsm = &schema.FSM{}
 	if err := sch.ResolveToType(schema.RefFromProto(msg.Fsm), fsm); err != nil {
@@ -1577,7 +1587,7 @@ func (s *Service) resolveFSMEvent(msg *ftlv1.SendFSMEventRequest) (fsm *schema.F
 }
 
 func (s *Service) expireStaleLeases(ctx context.Context) (time.Duration, error) {
-	err := s.leasesdal.ExpireLeases(ctx)
+	err := s.dbleaser.ExpireLeases(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to expire leases: %w", err)
 	}
@@ -1742,11 +1752,13 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 	return log.FromContext(ctx).AddSink(s.deploymentLogsSink).Attrs(attrs)
 }
 
-// Periodically sync the routing table from the DB.
-func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error) {
+// Periodically sync the routing table and schema from the DB.
+// We do this in a single function so the routing table and schema are always consistent
+// And they both need the same info from the DB
+func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, err error) {
 	deployments, err := s.dal.GetActiveDeployments(ctx)
 	if errors.Is(err, libdal.ErrNotFound) {
-		deployments = []dal.Deployment{}
+		deployments = []dalmodel.Deployment{}
 	} else if err != nil {
 		return 0, err
 	}
@@ -1756,8 +1768,15 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 	}
 	defer tx.CommitOrRollback(ctx, &err)
 
-	old := s.routes.Load()
+	old := s.schemaState.Load().routes
 	newRoutes := map[string]Route{}
+	modulesByName := map[string]*schema.Module{}
+
+	builtins := schema.Builtins().ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	modulesByName[builtins.Name], err = schema.ModuleFromProto(builtins)
+	if err != nil {
+		return 0, fmt.Errorf("failed to convert builtins to schema: %w", err)
+	}
 	for _, v := range deployments {
 		deploymentLogger := s.getDeploymentLogger(ctx, v.Key)
 		deploymentLogger.Tracef("processing deployment %s for route table", v.Key.String())
@@ -1796,51 +1815,21 @@ func (s *Service) syncRoutes(ctx context.Context) (ret time.Duration, err error)
 				}
 			}
 			newRoutes[v.Module] = Route{Module: v.Module, Deployment: v.Key, Endpoint: targetEndpoint}
+			modulesByName[v.Module] = v.Schema
 		}
 	}
-	s.routes.Store(newRoutes)
+
+	httpRoutes, err := s.dal.GetIngressRoutes(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get ingress routes: %w", err)
+	}
+	orderedModules := maps.Values(modulesByName)
+	sort.SliceStable(orderedModules, func(i, j int) bool {
+		return orderedModules[i].Name < orderedModules[j].Name
+	})
+	combined := &schema.Schema{Modules: orderedModules}
+	s.schemaState.Store(schemaState{schema: combined, routes: newRoutes, httpRoutes: httpRoutes})
 	return time.Second, nil
-}
-
-// Synchronises Service.schema from the database.
-func (s *Service) syncSchema(ctx context.Context) {
-	logger := log.FromContext(ctx)
-	modulesByName := map[string]*schema.Module{}
-	retry := backoff.Backoff{Max: time.Second * 5}
-	for {
-		err := s.watchModuleChanges(ctx, func(response *ftlv1.PullSchemaResponse) error {
-			switch response.ChangeType {
-			case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
-				moduleSchema, err := schema.ModuleFromProto(response.Schema)
-				if err != nil {
-					return err
-				}
-				modulesByName[moduleSchema.Name] = moduleSchema
-
-			case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-				delete(modulesByName, response.ModuleName)
-			}
-
-			orderedModules := maps.Values(modulesByName)
-			sort.SliceStable(orderedModules, func(i, j int) bool {
-				return orderedModules[i].Name < orderedModules[j].Name
-			})
-			combined := &schema.Schema{Modules: orderedModules}
-			s.schema.Store(ftlreflect.DeepCopy(combined))
-			return nil
-		})
-		if err != nil {
-			next := retry.Duration()
-			logger.Warnf("Failed to watch module changes, retrying in %s: %s", next, err)
-			select {
-			case <-time.After(next):
-			case <-ctx.Done():
-				return
-			}
-		} else {
-			retry.Reset()
-		}
-	}
 }
 
 func (s *Service) reapCallEvents(ctx context.Context) (time.Duration, error) {
@@ -1907,6 +1896,12 @@ type Route struct {
 	Module     string
 	Deployment model.DeploymentKey
 	Endpoint   string
+}
+
+type schemaState struct {
+	schema     *schema.Schema
+	routes     map[string]Route
+	httpRoutes map[string][]dalmodel.IngressRoute
 }
 
 func (r Route) String() string {

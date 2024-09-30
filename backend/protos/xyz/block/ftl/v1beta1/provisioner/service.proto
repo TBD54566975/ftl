@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1beta1.provisioner;
+
+import "xyz/block/ftl/v1/ftl.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner;provisioner";
+option java_multiple_files = true;
+
+service ProvisionerService {
+  rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Deployment Client API
+
+  rpc Status(xyz.block.ftl.v1.StatusRequest) returns (xyz.block.ftl.v1.StatusResponse);
+  rpc GetArtefactDiffs(xyz.block.ftl.v1.GetArtefactDiffsRequest) returns (xyz.block.ftl.v1.GetArtefactDiffsResponse);
+  rpc UploadArtefact(xyz.block.ftl.v1.UploadArtefactRequest) returns (xyz.block.ftl.v1.UploadArtefactResponse);
+  rpc CreateDeployment(xyz.block.ftl.v1.CreateDeploymentRequest) returns (xyz.block.ftl.v1.CreateDeploymentResponse);
+  rpc UpdateDeploy(xyz.block.ftl.v1.UpdateDeployRequest) returns (xyz.block.ftl.v1.UpdateDeployResponse);
+  rpc ReplaceDeploy(xyz.block.ftl.v1.ReplaceDeployRequest) returns (xyz.block.ftl.v1.ReplaceDeployResponse);
+  rpc GetSchema(xyz.block.ftl.v1.GetSchemaRequest) returns (xyz.block.ftl.v1.GetSchemaResponse);
+  rpc PullSchema(xyz.block.ftl.v1.PullSchemaRequest) returns (stream xyz.block.ftl.v1.PullSchemaResponse);
+}

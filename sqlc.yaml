@@ -5,8 +5,9 @@ sql:
     queries:
       - backend/controller/dal/internal/sql/queries.sql
       - backend/controller/dal/internal/sql/async_queries.sql
+      - backend/controller/pubsub/internal/sql/queries.sql
       # FIXME: Until we fully decouple cron from the controller, we need to include the cron queries here
-      - backend/controller/cronjobs/dal/internal/sql/queries.sql
+      - backend/controller/cronjobs/internal/sql/queries.sql
       # Some of the timeline entries happen within a controller transaction, so we need to include them here
       - backend/controller/timeline/internal/sql/deployment_queries.sql
     schema: "backend/controller/sql/schema"
@@ -38,8 +39,7 @@ sql:
             go_type: "*github.com/TBD54566975/ftl/backend/schema.Module"
           - db_type: "timestamptz"
             nullable: true
-            go_type:
-              type: "optional.Option[time.Time]"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/sql/sqltypes.OptionalTime"
           - db_type: "pg_catalog.varchar"
             nullable: true
             go_type: "github.com/alecthomas/types/optional.Option[string]"
@@ -67,6 +67,8 @@ sql:
             nullable: true
             go_type:
               type: "optional.Option[model.CronJobKey]"
+          - db_type: "encrypted_identity"
+            go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.EncryptedIdentityColumn"
           - db_type: "encrypted_async"
             go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.EncryptedAsyncColumn"
           - db_type: "encrypted_async"
@@ -154,12 +156,12 @@ sql:
       - postgresql-no-seq-scan
   - <<: *daldir
     queries:
-      - backend/controller/cronjobs/dal/internal/sql/queries.sql
+      - backend/controller/cronjobs/internal/sql/queries.sql
       - backend/controller/dal/internal/sql/async_queries.sql
     gen:
       go:
         <<: *gengo
-        out: "backend/controller/cronjobs/dal/internal/sql"
+        out: "backend/controller/cronjobs/internal/sql"
   - <<: *daldir
     queries: "internal/configuration/dal/internal/sql/queries.sql"
     gen:
@@ -175,18 +177,25 @@ sql:
         out: "backend/controller/artefacts/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/leases/dal/internal/sql/queries.sql
+      - backend/controller/leases/dbleaser/internal/sql/queries.sql
     gen:
       go:
         <<: *gengo
-        out: "backend/controller/leases/dal/internal/sql"
+        out: "backend/controller/leases/dbleaser/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/encryption/dal/internal/sql/queries.sql
+      - backend/controller/identity/dal/internal/sql/queries.sql
     gen:
       go:
         <<: *gengo
-        out: "backend/controller/encryption/dal/internal/sql"
+        out: "backend/controller/identity/dal/internal/sql"
+  - <<: *daldir
+    queries:
+      - backend/controller/encryption/internal/sql/queries.sql
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/encryption/internal/sql"
   - <<: *daldir
     queries:
       - backend/controller/timeline/internal/sql/queries.sql
@@ -195,6 +204,14 @@ sql:
       go:
         <<: *gengo
         out: "backend/controller/timeline/internal/sql"
+  - <<: *daldir
+    queries:
+      - backend/controller/pubsub/internal/sql/queries.sql
+      - backend/controller/dal/internal/sql/async_queries.sql
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/pubsub/internal/sql"
 rules:
   - name: postgresql-query-too-costly
     message: "Query cost estimate is too high"

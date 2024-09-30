@@ -116,7 +116,14 @@ func inferDeclType(pass *analysis.Pass, node ast.Node, obj types.Object) optiona
 	}
 	if !common.IsSelfReference(pass, obj, t) {
 		// if this is a type alias and it has enum variants, infer to be a value enum
-		for _, fact := range common.GetAllFactsOfType[*common.MaybeValueEnumVariant](pass) {
+		for _, facts := range common.GetAllFactsOfType[*common.MaybeValueEnumVariant](pass) {
+			// there shouldn't be more than one of this type of fact on an object, but even if there are,
+			// we don't care. We just need to know if there are any.
+			if len(facts) < 1 {
+				continue
+			}
+			fact := facts[0]
+
 			if fact.Type == obj {
 				return optional.Some[schema.Decl](&schema.Enum{})
 			}

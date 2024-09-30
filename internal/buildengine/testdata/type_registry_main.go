@@ -8,35 +8,46 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/server"
+	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 
-	"ftl/other"
+	ftlanother "ftl/another"
+	ftlother "ftl/other"
 )
 
 func init() {
 	reflection.Register(
-		reflection.SumType[other.SecondTypeEnum](
-			*new(other.A),
-			*new(other.B),
+		reflection.SumType[ftlanother.TypeEnum](
+			*new(ftlanother.A),
+			*new(ftlanother.B),
 		),
-		reflection.SumType[other.TypeEnum](
-			*new(other.MyBool),
-			*new(other.MyBytes),
-			*new(other.MyFloat),
-			*new(other.MyInt),
-			*new(other.MyList),
-			*new(other.MyMap),
-			*new(other.MyOption),
-			*new(other.MyString),
-			*new(other.MyStruct),
-			*new(other.MyTime),
-			*new(other.MyUnit),
+		reflection.SumType[ftlother.SecondTypeEnum](
+			*new(ftlother.A),
+			*new(ftlother.B),
+		),
+		reflection.SumType[ftlother.TypeEnum](
+			*new(ftlother.MyBool),
+			*new(ftlother.MyBytes),
+			*new(ftlother.MyFloat),
+			*new(ftlother.MyInt),
+			*new(ftlother.MyList),
+			*new(ftlother.MyMap),
+			*new(ftlother.MyOption),
+			*new(ftlother.MyString),
+			*new(ftlother.MyStruct),
+			*new(ftlother.MyTime),
+			*new(ftlother.MyUnit),
+		),
+		reflection.ExternalType(*new(lib.NonFTLType)),
+		reflection.ExternalType(*new(lib.AnotherNonFTLType)),
+		reflection.ProvideResourcesForVerb(
+            ftlother.Echo,
 		),
 	)
 }
 
 func main() {
 	verbConstructor := server.NewUserVerbServer("integration", "other",
-		server.HandleCall(other.Echo),
+		server.HandleCall[ftlother.EchoRequest, ftlother.EchoResponse](ftlother.Echo),
 	)
 	plugin.Start(context.Background(), "other", verbConstructor, ftlv1connect.VerbServiceName, ftlv1connect.NewVerbServiceHandler)
 }

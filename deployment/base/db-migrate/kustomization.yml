@@ -28,3 +28,4 @@ configMapGenerator:
   - ./schema/20240916190209_rename_controller_to_controllers.sql
   - ./schema/20240917015216_add_ingress_event_type.sql
   - ./schema/20240917062716_change_deployments_index.sql
+  - ./schema/20240919001309_create_identity_keys_table.sql

@@ -5,6 +5,7 @@ import { CloseButton } from '../../../components/CloseButton'
 import type { DeploymentCreatedEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
+import { TimelineDetailsColorBar } from './TimelineDetailsColorBar'
 import { TimelineTimestamp } from './TimelineTimestamp'
 
 export const TimelineDeploymentCreatedDetails = ({
@@ -18,7 +19,7 @@ export const TimelineDeploymentCreatedDetails = ({
 
   return (
     <>
-      <div className={'bg-green-500 dark:bg-green-300 h-2 w-full'} />
+      <TimelineDetailsColorBar event={event} />
       <div className='p-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-2'>

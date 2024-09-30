@@ -1,21 +1,33 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSchema } from '../../../api/schema/use-schema'
-import type { PullSchemaResponse } from '../../../protos/xyz/block/ftl/v1/ftl_pb.ts'
-import type { Decl } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import { useModules } from '../../../api/modules/use-modules'
 import { classNames } from '../../../utils'
-import { DeclSnippet } from './DeclSnippet'
+import { Schema } from '../schema/Schema'
+import { type DeclSchema, declFromModules } from '../schema/schema.utils'
 
-const SnippetContainer = ({ decl }: { decl: Decl }) => {
+const SnippetContainer = ({ decl, linkRect, containerRect }: { decl: DeclSchema; linkRect?: DOMRect; containerRect?: DOMRect }) => {
+  const ref = useRef<HTMLDivElement>(null)
+  const snipRect = ref?.current?.getBoundingClientRect()
+
+  const hasRects = !!snipRect && !!linkRect
+  const toTop = hasRects && window.innerHeight - linkRect.top - linkRect.height < snipRect.height + linkRect.height
+  const fitsToRight = hasRects && window.innerWidth - linkRect.left >= snipRect.width
+  const fitsToLeft = hasRects && !!containerRect && linkRect.left - containerRect.x + linkRect.width >= snipRect.width
+  const horizontalAlignmentClassNames = fitsToRight ? '-ml-1' : fitsToLeft ? '-translate-x-full left-full ml-0' : ''
+  const style = {
+    transform: !fitsToRight && !fitsToLeft ? `translateX(-${(linkRect?.left || 0) - (containerRect?.left || 0)}px)` : undefined,
+  }
   return (
-    <div className='absolute p-4 mt-4 -ml-1 rounded-md bg-gray-200 dark:bg-gray-900 text-gray-700 dark:text-white text-xs font-normal z-10 drop-shadow-xl'>
-      <div className='-mt-7 mb-2 text-gray-200 dark:text-gray-900'>
-        <svg height='20' width='20'>
-          <title>triangle</title>
-          <polygon points='11,0 9,0 0,20 20,20' fill='currentColor' />
-        </svg>
-      </div>
-      <DeclSnippet decl={decl} />
+    <div
+      ref={ref}
+      style={style}
+      className={classNames(
+        toTop ? 'bottom-full' : '',
+        horizontalAlignmentClassNames,
+        'absolute p-4 rounded-md border-solid border border border-gray-400 bg-gray-200 dark:border-gray-800 dark:bg-gray-700 text-gray-700 dark:text-white text-xs font-normal z-10 drop-shadow-xl cursor-default',
+      )}
+    >
+      <Schema schema={decl.schema} containerRect={containerRect} />
     </div>
   )
 }
@@ -26,17 +38,12 @@ export const DeclLink = ({
   declName,
   slim,
   textColors = 'text-indigo-600 dark:text-indigo-400',
-}: { moduleName?: string; declName: string; slim?: boolean; textColors?: string }) => {
+  containerRect,
+}: { moduleName?: string; declName: string; slim?: boolean; textColors?: string; containerRect?: DOMRect }) => {
+  const navigate = useNavigate()
+  const modules = useModules()
+  const decl = useMemo(() => (moduleName ? declFromModules(moduleName, declName, modules) : undefined), [moduleName, declName, modules?.data])
   const [isHovering, setIsHovering] = useState(false)
-  const schema = useSchema()
-  const decl = useMemo(() => {
-    const modules = (schema?.data || []) as PullSchemaResponse[]
-    const module = modules.find((m: PullSchemaResponse) => m.moduleName === moduleName)
-    if (!module?.schema) {
-      return
-    }
-    return module.schema.decls.find((d) => d.value.value?.name === declName)
-  }, [moduleName, declName, schema?.data])
 
   const str = moduleName && slim !== true ? `${moduleName}.${declName}` : declName
 
@@ -44,16 +51,17 @@ export const DeclLink = ({
     return str
   }
 
-  const navigate = useNavigate()
+  const linkRef = useRef<HTMLSpanElement>(null)
   return (
     <span
-      className={classNames(textColors, 'inline-block rounded-md cursor-pointer hover:bg-gray-100 hover:dark:bg-gray-700 p-1 -m-1 relative')}
-      onClick={() => navigate(`/modules/${moduleName}/${decl.value.case}/${declName}`)}
+      className='inline-block rounded-md cursor-pointer hover:bg-gray-400/30 hover:dark:bg-gray-900/30 p-1 -m-1 relative'
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      {str}
-      {!slim && isHovering && <SnippetContainer decl={decl} />}
+      <span ref={linkRef} className={textColors} onClick={() => navigate(`/modules/${moduleName}/${decl.declType}/${declName}`)}>
+        {str}
+      </span>
+      {!slim && isHovering && <SnippetContainer decl={decl} linkRect={linkRef?.current?.getBoundingClientRect()} containerRect={containerRect} />}
     </span>
   )
 }

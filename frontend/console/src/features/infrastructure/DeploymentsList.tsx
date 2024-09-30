@@ -19,7 +19,7 @@ export const DeploymentsList = ({ deployments }: { deployments: StatusResponse_D
                 <Badge name={deployment.language} />
               </div>
 
-              <p className={classNames(deploymentTextColor(deployment.key), 'text-sm font-semibold leading-6')}>{deployment.key}</p>
+              <p className={classNames(deploymentTextColor(deployment.key), 'text-sm leading-6')}>{deployment.key}</p>
             </div>
           </div>
           <div className='flex gap-x-4 items-center w-1/2 justify-end'>

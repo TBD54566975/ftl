@@ -158,6 +158,31 @@ This will automatically create a migration file in `backend/controller/sql/schem
 
 [This section](https://github.com/amacneil/dbmate?tab=readme-ov-file#creating-migrations) of the dbmate docs explains how to create a migration if you'd like to learn more.
 
+## Controller "services"
+
+Currently all backend logic is contained in the `backend/controller` package tree. We've started to split functionality out of `controller.Service` into subpackages, such as `backend/controller/pubsub`, i`backend/controller/cronjobs`, and so on. These packages have the following structure:
+
+```
+controller/
+  pubsub/
+    internal/dal/... # Data access layer
+    internal/sql/... # SQL queries
+    service.go
+```
+
+`sqlc.yaml` is configured to generate code for each of these subpackages using shared types, eg.
+
+```yaml
+- <<: *daldir
+  queries:
+    - backend/controller/pubsub/internal/sql/queries.sql
+    - backend/controller/dal/internal/sql/async_queries.sql
+  gen:
+    go:
+      <<: *gengo
+      out: "backend/controller/pubsub/internal/sql"
+```
+
 ## VSCode extension
 
 The preferred way to develop the FTL VSCode extension is to open a VSCode instance in the `frontend/vscode` directory. This will load the extension in a new VSCode window. From there, the `launch.json` and `tasks.json` files are configured to run the extension in a new window.
@@ -244,7 +269,7 @@ To use your locally built FTL in a separate project, you can start live rebuild 
 just live-rebuild
 ```
 
-Then, in a separate terminal, you can use the locall build FTL to test your changes against a separate FTL project by running the locally build FTL from the root of this project:
+Then, in a separate terminal, you can use the locally built FTL to test your changes against a separate FTL project by running the locally built FTL from the root of this project:
 ```sh
 ${FTL_HOME}/build/release/ftl dev
 ```
@@ -264,7 +289,7 @@ Anyone from the community is welcome (and encouraged!) to raise issues via
 
 We have an [automated aggregation issue](https://github.com/TBD54566975/ftl/issues/728) that lists all the PRs and issues people are working on.
 
-### Continuous Integration
+## Continuous Integration
 
 Build and Test cycles are run on every commit to every branch on [GitHub Actions](https://github.com/TBD54566975/ftl/actions).
 

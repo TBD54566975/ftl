@@ -15,6 +15,7 @@ import (
 var _ Interface = (*Logger)(nil)
 
 const scopeKey = "scope"
+const moduleKey = "module"
 
 type Entry struct {
 	Time       time.Time         `json:"-"`
@@ -45,6 +46,9 @@ func New(level Level, sink Sink) *Logger {
 
 func (l Logger) Scope(scope string) *Logger {
 	return l.Attrs(map[string]string{scopeKey: scope})
+}
+func (l Logger) Module(module string) *Logger {
+	return l.Attrs(map[string]string{moduleKey: module})
 }
 
 // Attrs creates a new logger with the given attributes.

@@ -13,7 +13,11 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/pubsub"
+	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -25,11 +29,12 @@ import (
 func TestDAL(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encrypt, err := encryption.New(ctx, conn, encryption.NewBuilder())
-
+	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	dal := New(ctx, conn, encrypt)
+	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
+	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	dal := New(ctx, conn, encryption, pubSub)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
@@ -59,7 +64,7 @@ func TestDAL(t *testing.T) {
 	module := &schema.Module{Name: "test"}
 	var deploymentKey model.DeploymentKey
 	t.Run("CreateDeployment", func(t *testing.T) {
-		deploymentKey, err = dal.CreateDeployment(ctx, "go", module, []DeploymentArtefact{{
+		deploymentKey, err = dal.CreateDeployment(ctx, "go", module, []dalmodel.DeploymentArtefact{{
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
@@ -105,7 +110,7 @@ func TestDAL(t *testing.T) {
 	labels := map[string]any{"languages": []any{"go"}}
 
 	t.Run("RegisterRunner", func(t *testing.T) {
-		err = dal.UpsertRunner(ctx, Runner{
+		err = dal.UpsertRunner(ctx, dalmodel.Runner{
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
@@ -120,7 +125,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("UpdateRunnerAssigned", func(t *testing.T) {
-		err := dal.UpsertRunner(ctx, Runner{
+		err := dal.UpsertRunner(ctx, dalmodel.Runner{
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
@@ -132,7 +137,7 @@ func TestDAL(t *testing.T) {
 	t.Run("GetRunnersForDeployment", func(t *testing.T) {
 		runners, err := dal.GetRunnersForDeployment(ctx, deploymentKey)
 		assert.NoError(t, err)
-		assert.Equal(t, []Runner{{
+		assert.Equal(t, []dalmodel.Runner{{
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
@@ -147,7 +152,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	t.Run("UpdateRunnerInvalidDeployment", func(t *testing.T) {
-		err := dal.UpsertRunner(ctx, Runner{
+		err := dal.UpsertRunner(ctx, dalmodel.Runner{
 			Key:        runnerID,
 			Labels:     labels,
 			Endpoint:   "http://localhost:8080",
@@ -171,8 +176,8 @@ func TestDAL(t *testing.T) {
 		t.Skip("Skipping this test since we're not using the deployment notification system")
 		dal.DeploymentChanges.Unsubscribe(deploymentChangesCh)
 		expectedDeploymentChanges := []DeploymentNotification{
-			{Message: optional.Some(Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},
-			{Message: optional.Some(Deployment{Language: "go", Module: "test", MinReplicas: 1, Schema: &schema.Module{Name: "test"}})},
+			{Message: optional.Some(dalmodel.Deployment{Language: "go", Module: "test", Schema: &schema.Module{Name: "test"}})},
+			{Message: optional.Some(dalmodel.Deployment{Language: "go", Module: "test", MinReplicas: 1, Schema: &schema.Module{Name: "test"}})},
 		}
 		err = wg.Wait()
 		assert.NoError(t, err)
@@ -184,10 +189,12 @@ func TestDAL(t *testing.T) {
 func TestCreateArtefactConflict(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	conn := sqltest.OpenForTesting(ctx, t)
-	encrypt, err := encryption.New(ctx, conn, encryption.NewBuilder())
+	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	dal := New(ctx, conn, encrypt)
+	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
+	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	dal := New(ctx, conn, encryption, pubSub)
 
 	idch := make(chan sha256.SHA256, 2)
 

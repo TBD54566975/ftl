@@ -12,9 +12,14 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
 
-	"github.com/TBD54566975/ftl/backend/controller/cronjobs/dal"
+	"github.com/TBD54566975/ftl/backend/controller/async"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs/internal/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/leases"
+	"github.com/TBD54566975/ftl/backend/controller/pubsub"
+	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -39,13 +44,15 @@ func TestNewCronJobsForModule(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
 	assert.NoError(t, err)
 
-	parentDAL := parentdal.New(ctx, conn, encryption)
+	scheduler := scheduledtask.New(ctx, key, leases.NewFakeLeaser())
+	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	parentDAL := parentdal.New(ctx, conn, encryption, pubSub)
 	moduleName := "initial"
 	jobsToCreate := newCronJobs(t, moduleName, "* * * * * *", clk, 2) // every minute
 
 	deploymentKey, err := parentDAL.CreateDeployment(ctx, "go", &schema.Module{
 		Name: moduleName,
-	}, []parentdal.DeploymentArtefact{}, []parentdal.IngressRoutingEntry{}, jobsToCreate)
+	}, []dalmodel.DeploymentArtefact{}, []parentdal.IngressRoutingEntry{}, jobsToCreate)
 	assert.NoError(t, err)
 	err = parentDAL.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
@@ -107,7 +114,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	expectUnscheduledJobs(t, dal, clk, 2)
 	// Use the completion handler to schedule the next execution
 	for _, call := range calls {
-		origin, ok := call.Origin.(parentdal.AsyncOriginCron)
+		origin, ok := call.Origin.(async.AsyncOriginCron)
 		assert.True(t, ok)
 		err = cjs.OnJobCompletion(ctx, origin.CronJobKey, false)
 		assert.NoError(t, err)

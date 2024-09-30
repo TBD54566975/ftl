@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
+	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 
 	"ftl/another"
 )
@@ -76,6 +77,7 @@ type EchoRequest struct {
 	Name                  ftl.Option[string] `json:"name"`
 	ExternalSumType       another.TypeEnum
 	ExternalNestedSumType another.TransitiveTypeEnum
+	ExternalExternalType  another.External
 }
 
 type EchoResponse struct {
@@ -86,3 +88,6 @@ type EchoResponse struct {
 func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
 	return EchoResponse{Message: fmt.Sprintf("Hello, %s!", req.Name.Default("anonymous"))}, nil
 }
+
+//ftl:typealias
+type External lib.NonFTLType

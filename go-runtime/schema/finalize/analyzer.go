@@ -69,8 +69,15 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 			failed[schema.RefKey{Module: moduleName, Name: strcase.ToUpperCamel(obj.Name())}] = obj
 		}
 	}
-	for obj, fact := range common.GetAllFactsOfType[*common.MaybeTypeEnumVariant](pass) {
-		nativeNames[fact.Variant] = common.GetNativeName(obj)
+	for obj, facts := range common.GetAllFactsOfType[*common.MaybeTypeEnumVariant](pass) {
+		for _, fact := range facts {
+			nativeNames[fact.Variant] = common.GetNativeName(obj)
+		}
+	}
+	for obj, facts := range common.GetAllFactsOfType[*common.IncludeNativeName](pass) {
+		for _, fact := range facts {
+			nativeNames[fact.Node] = common.GetNativeName(obj)
+		}
 	}
 	fnCalls, verbCalls := getCalls(pass)
 	return Result{
@@ -86,19 +93,23 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 
 func getCalls(pass *analysis.Pass) (functionCalls map[types.Object]sets.Set[types.Object], verbCalls map[types.Object]sets.Set[*schema.Ref]) {
 	fnCalls := make(map[types.Object]sets.Set[types.Object])
-	for obj, fnCall := range common.GetAllFactsOfType[*common.FunctionCall](pass) {
-		if fnCalls[obj] == nil {
-			fnCalls[obj] = sets.NewSet[types.Object]()
+	for obj, calls := range common.GetAllFactsOfType[*common.FunctionCall](pass) {
+		for _, fnCall := range calls {
+			if fnCalls[obj] == nil {
+				fnCalls[obj] = sets.NewSet[types.Object]()
+			}
+			fnCalls[obj].Add(fnCall.Callee)
 		}
-		fnCalls[obj].Add(fnCall.Callee)
 	}
 
 	vCalls := make(map[types.Object]sets.Set[*schema.Ref])
-	for obj, vCall := range common.GetAllFactsOfType[*common.VerbCall](pass) {
-		if vCalls[obj] == nil {
-			vCalls[obj] = sets.NewSet[*schema.Ref]()
+	for obj, calls := range common.GetAllFactsOfType[*common.VerbCall](pass) {
+		for _, vCall := range calls {
+			if vCalls[obj] == nil {
+				vCalls[obj] = sets.NewSet[*schema.Ref]()
+			}
+			vCalls[obj].Add(vCall.VerbRef)
 		}
-		vCalls[obj].Add(vCall.VerbRef)
 	}
 	return fnCalls, vCalls
 }

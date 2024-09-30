@@ -106,9 +106,9 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 	}
 	l.lock.Lock()
 	defer l.lock.Unlock()
-	logger := log.FromContext(ctx).Scope("localScaling")
+	logger := log.FromContext(ctx).Scope("localScaling").Module(msg.ModuleName)
 	ctx = log.ContextWithLogger(ctx, logger)
-	logger.Infof("Handling schema change for %s", msg.DeploymentKey)
+	logger.Debugf("Handling schema change for %s", msg.DeploymentKey)
 	moduleDeployments := l.runners[msg.ModuleName]
 	if moduleDeployments == nil {
 		moduleDeployments = map[string]*deploymentInfo{}
@@ -139,7 +139,16 @@ func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *
 			return err
 		}
 	} else if deploymentRunners.replicas == 0 && deploymentRunners.runner.Ok() {
-		deploymentRunners.runner.MustGet().cancelFunc()
+		go func() {
+			// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
+			// so we add a slight delay here
+			time.Sleep(time.Second * 2)
+			l.lock.Lock()
+			defer l.lock.Unlock()
+			if r, ok := deploymentRunners.runner.Get(); ok {
+				r.cancelFunc()
+			}
+		}()
 		deploymentRunners.runner = optional.None[runnerInfo]()
 	}
 	return nil
@@ -183,7 +192,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	config.HeartbeatPeriod = time.Second
 	config.HeartbeatJitter = time.Millisecond * 100
 
-	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName))
+	runnerCtx := log.ContextWithLogger(ctx, logger.Scope(simpleName).Module(info.module))
 
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
 	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port()})

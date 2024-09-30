@@ -13,7 +13,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
@@ -63,7 +63,7 @@ func TestIngress(t *testing.T) {
 	`)
 	assert.NoError(t, err)
 
-	routes := []dal.IngressRoute{
+	routes := []dalmodel.IngressRoute{
 		{Path: "/getAlias", Module: "test", Verb: "getAlias"},
 		{Path: "/getPath/{username}", Module: "test", Verb: "getPath"},
 		{Path: "/postMissingTypes", Module: "test", Verb: "postMissingTypes"},

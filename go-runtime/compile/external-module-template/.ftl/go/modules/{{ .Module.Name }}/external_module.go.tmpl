@@ -63,18 +63,30 @@ type {{.Name|title}}
 func {{.Name|title}}(context.Context) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")
 }
+
+//ftl:verb
+type {{.Name|title}}Client func(context.Context) error
 {{- else if eq (type $.Module .Request) "ftl.Unit"}}
 func {{.Name|title}}(context.Context) ({{type $.Module .Response}}, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSource()")
 }
+
+//ftl:verb
+type {{.Name|title}}Client func(context.Context) ({{type $.Module .Response}}, error)
 {{- else if eq (type $.Module .Response) "ftl.Unit"}}
 func {{.Name|title}}(context.Context, {{type $.Module .Request}}) error {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
 }
+
+//ftl:verb
+type {{.Name|title}}Client func(context.Context, {{type $.Module .Request}})
 {{- else}}
 func {{.Name|title}}(context.Context, {{type $.Module .Request}}) ({{type $.Module .Response}}, error) {
   panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
 }
+
+//ftl:verb
+type {{.Name|title}}Client func(context.Context, {{type $.Module .Request}}) ({{type $.Module .Response}}, error)
 {{- end}}
 {{- end}}
 {{- end}}

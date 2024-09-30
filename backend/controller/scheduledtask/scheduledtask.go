@@ -5,17 +5,14 @@ import (
 	"context"
 	"errors"
 	"math/rand"
-	"reflect"
-	"runtime"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/types/optional"
-	clock "github.com/benbjohnson/clock"
+	"github.com/benbjohnson/clock"
 	"github.com/jpillora/backoff"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -37,7 +34,7 @@ type descriptor struct {
 // run.
 type Job func(ctx context.Context) (time.Duration, error)
 
-type DALFunc func(ctx context.Context, all bool) ([]dal.Controller, error)
+type DALFunc func(ctx context.Context, all bool) ([]dalmodel.Controller, error)
 
 // Scheduler is a task scheduler for the controller.
 //
@@ -74,19 +71,16 @@ func NewForTesting(ctx context.Context, id model.ControllerKey, clock clock.Cloc
 //
 // This is not guaranteed, however, as controllers may have inconsistent views
 // of the hash ring.
-func (s *Scheduler) Singleton(retry backoff.Backoff, job Job) {
-	s.schedule(retry, job, true)
+func (s *Scheduler) Singleton(name string, retry backoff.Backoff, job Job) {
+	s.schedule(name, retry, job, true)
 }
 
 // Parallel schedules a job to run on every controller.
-func (s *Scheduler) Parallel(retry backoff.Backoff, job Job) {
-	s.schedule(retry, job, false)
+func (s *Scheduler) Parallel(name string, retry backoff.Backoff, job Job) {
+	s.schedule(name, retry, job, false)
 }
 
-func (s *Scheduler) schedule(retry backoff.Backoff, job Job, singlyHomed bool) {
-	name := runtime.FuncForPC(reflect.ValueOf(job).Pointer()).Name()
-	name = name[strings.LastIndex(name, ".")+1:]
-	name = strings.TrimSuffix(name, "-fm")
+func (s *Scheduler) schedule(name string, retry backoff.Backoff, job Job, singlyHomed bool) {
 	s.jobs <- &descriptor{
 		name:        name,
 		retry:       retry,

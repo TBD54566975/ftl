@@ -13,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal"
+	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
@@ -67,9 +68,12 @@ func verbSchemaString(sch *schema.Schema, verb *schema.Verb) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = visitNode(sch, verb.Response, &verbString)
-	if err != nil {
-		return "", err
+	// Don't print the response if it's the same as the request.
+	if !verb.Response.Equal(verb.Request) {
+		err = visitNode(sch, verb.Response, &verbString)
+		if err != nil {
+			return "", err
+		}
 	}
 	verbString += verb.String()
 	return verbString, nil
@@ -82,7 +86,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}
 
 	sch := &schema.Schema{
-		Modules: slices.Map(deployments, func(d dal.Deployment) *schema.Module {
+		Modules: slices.Map(deployments, func(d dalmodel.Deployment) *schema.Module {
 			return d.Schema
 		}),
 	}
@@ -310,6 +314,8 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter
 					eventTypes = append(eventTypes, timeline.EventTypeDeploymentCreated)
 				case pbconsole.EventType_EVENT_TYPE_DEPLOYMENT_UPDATED:
 					eventTypes = append(eventTypes, timeline.EventTypeDeploymentUpdated)
+				case pbconsole.EventType_EVENT_TYPE_INGRESS:
+					eventTypes = append(eventTypes, timeline.EventTypeIngress)
 				default:
 					return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown event type %v", eventType))
 				}
@@ -360,7 +366,7 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter
 	return query, nil
 }
 
-func eventDALToProto(event timeline.TimelineEvent) *pbconsole.Event {
+func eventDALToProto(event timeline.Event) *pbconsole.Event {
 	switch event := event.(type) {
 	case *timeline.CallEvent:
 		var requestKey *string

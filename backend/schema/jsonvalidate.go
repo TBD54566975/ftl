@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -46,9 +45,7 @@ func validateJSONValue(fieldType Type, path path, value any, sch *Schema, opts *
 		typeMatches = true
 
 	case *Unit:
-		// TODO: Use type assertions consistently in this function rather than reflection.
-		rv := reflect.ValueOf(value)
-		if rv.Kind() != reflect.Map || rv.Len() != 0 {
+		if valueMap, ok := value.(map[string]any); !ok || len(valueMap) != 0 {
 			return fmt.Errorf("%s must be an empty map", path)
 		}
 		return nil
@@ -98,14 +95,14 @@ func validateJSONValue(fieldType Type, path path, value any, sch *Schema, opts *
 		}
 
 	case *Array:
-		rv := reflect.ValueOf(value)
-		if rv.Kind() != reflect.Slice {
+		valueSlice, ok := value.([]any)
+		if !ok {
 			return fmt.Errorf("%s is not a slice", path)
 		}
+
 		elementType := fieldType.Element
-		for i := range rv.Len() {
+		for i, elem := range valueSlice {
 			elemPath := append(path, fmt.Sprintf("[%d]", i)) //nolint:gocritic
-			elem := rv.Index(i).Interface()
 			if err := validateJSONValue(elementType, elemPath, elem, sch, opts); err != nil {
 				return err
 			}
@@ -113,16 +110,16 @@ func validateJSONValue(fieldType Type, path path, value any, sch *Schema, opts *
 		typeMatches = true
 
 	case *Map:
-		rv := reflect.ValueOf(value)
-		if rv.Kind() != reflect.Map {
+		valueMap, ok := value.(map[string]any)
+		if !ok {
 			return fmt.Errorf("%s is not a map", path)
 		}
+
 		keyType := fieldType.Key
 		valueType := fieldType.Value
-		for _, key := range rv.MapKeys() {
+		for key, elem := range valueMap {
 			elemPath := append(path, fmt.Sprintf("[%q]", key)) //nolint:gocritic
-			elem := rv.MapIndex(key).Interface()
-			if err := validateJSONValue(keyType, elemPath, key.Interface(), sch, opts); err != nil {
+			if err := validateJSONValue(keyType, elemPath, key, sch, opts); err != nil {
 				return err
 			}
 			if err := validateJSONValue(valueType, elemPath, elem, sch, opts); err != nil {
@@ -130,6 +127,7 @@ func validateJSONValue(fieldType Type, path path, value any, sch *Schema, opts *
 			}
 		}
 		typeMatches = true
+
 	case *Ref:
 		decl, ok := sch.Resolve(fieldType).Get()
 		if !ok {
