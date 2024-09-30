@@ -176,7 +176,7 @@ func (p *internalPlugin) build(ctx context.Context, projectRoot string, config m
 			panic(fmt.Sprintf("unexpected result type %T", result))
 		}
 	case <-ctx.Done():
-		return BuildResult{}, ctx.Err()
+		return BuildResult{}, fmt.Errorf("error waiting for build to complete: %w", ctx.Err())
 	}
 }
 
