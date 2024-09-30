@@ -1,5 +1,5 @@
 name = "ftl"
-module-dirs = ["examples/go", "exemplar"]
+module-dirs = ["examples/go", "smoketest"]
 ftl-min-version = ""
 hermit = false
 no-git = false

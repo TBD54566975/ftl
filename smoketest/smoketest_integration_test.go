@@ -1,6 +1,6 @@
 //go:build integration
 
-package exemplar
+package smoketest
 
 import (
 	"encoding/json"
@@ -14,9 +14,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestExemplar(t *testing.T) {
+func TestSmokeTest(t *testing.T) {
 	tmpDir := t.TempDir()
-	logFilePath := filepath.Join(tmpDir, "exemplar.log")
+	logFilePath := filepath.Join(tmpDir, "smoketest.log")
 
 	var postResult struct {
 		ID int `json:"id"`
@@ -31,7 +31,7 @@ func TestExemplar(t *testing.T) {
 		in.CopyModule("origin"),
 		in.CopyModule("relay"),
 		in.CopyModule("pulse"),
-		in.CreateDBAction("relay", "exemplardb", false),
+		// in.CreateDBAction("relay", "exemplardb", false),
 
 		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", "--inline", nonce}, func(output string) {
 			fmt.Println(output)
