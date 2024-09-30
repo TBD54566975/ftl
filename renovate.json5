@@ -10,6 +10,9 @@
     "group:allNonMajor",
     "schedule:earlyMondays",
   ],
+  constraints: {
+    "node": ">=22.7.0"
+  },
   "js": {
     "managerBranchPrefix": "js-"
   },
