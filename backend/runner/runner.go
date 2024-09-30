@@ -109,7 +109,7 @@ func Start(ctx context.Context, config Config) error {
 			return fmt.Errorf("failed to create controller verifier: %w", err)
 		}
 
-		identityStore, err := identity.NewStoreNewKeys(identity.NewRunner(key, config.Deployment))
+		identityStore, err = identity.NewStoreNewKeys(identity.NewRunner(key, config.Deployment))
 		if err != nil {
 			observability.Runner.StartupFailed(ctx)
 			return fmt.Errorf("failed to create identity store: %w", err)

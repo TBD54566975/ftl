@@ -9,34 +9,61 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/internal/model"
 )
 
-// Identity represents a node's identity.
-// This had some extra logic in the original code, but it was removed for simplicity.
-// TODO: Maybe use model.KeyType
-type Identity struct {
-	Host   string
+type Identity interface {
+	String() string
+}
+
+var _ Identity = Controller{}
+
+type Controller struct{}
+
+func NewController() Controller {
+	return Controller{}
+}
+
+func (c Controller) String() string {
+	return "ca"
+}
+
+var _ Identity = Runner{}
+
+// Runner identity
+// TODO: Maybe use KeyType[T any, TP keyPayloadConstraint[T]]?
+type Runner struct {
+	Key    model.RunnerKey
 	Module string
 }
 
-func NewIdentity(host, module string) Identity {
-	return Identity{
-		Host:   host,
+func NewRunner(key model.RunnerKey, module string) Runner {
+	return Runner{
+		Key:    key,
 		Module: module,
 	}
 }
 
-func (i Identity) String() string {
-	return fmt.Sprintf("%s:%s", i.Host, i.Module)
+func (r Runner) String() string {
+	return fmt.Sprintf("%s:%s", r.Key, r.Module)
 }
 
 func Parse(s string) (Identity, error) {
+	if s == "" {
+		return nil, fmt.Errorf("empty identity")
+	}
 	parts := strings.Split(s, ":")
-	if len(parts) != 2 {
-		return Identity{}, fmt.Errorf("invalid identity: %s", s)
+
+	if parts[0] == "ca" {
+		return Controller{}, nil
 	}
 
-	return NewIdentity(parts[0], parts[1]), nil
+	key, err := model.ParseRunnerKey(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse key: %w", err)
+	}
+
+	return NewRunner(key, parts[1]), nil
 }
 
 // Store is held by a node and contains the node's identity, key pair, signer, and certificate.
@@ -103,7 +130,13 @@ func (s *Store) SignCertificateRequest(req *v1.GetCertificationRequest) (Certifi
 		return Certificate{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
 	signedData, err := NewSignedData(verifier, data, req.Signature)
-	verifier.Verify(signedData)
+	if err != nil {
+		return Certificate{}, fmt.Errorf("failed to create signed data: %w", err)
+	}
+	_, err = verifier.Verify(signedData)
+	if err != nil {
+		return Certificate{}, fmt.Errorf("failed to verify signature: %w", err)
+	}
 
 	// Discard the node signature as we have verified it.
 	// This contains the node's identity and public key.

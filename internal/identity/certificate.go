@@ -49,27 +49,27 @@ func (c CertifiedSignedData) Verify(caVerifier Verifier) (Identity, []byte, erro
 	// Verify against the CA certificate.
 	data, err := caVerifier.Verify(c.Certificate.SignedData)
 	if err != nil {
-		return Identity{}, nil, fmt.Errorf("failed to verify certificate: %w", err)
+		return nil, nil, fmt.Errorf("failed to verify certificate: %w", err)
 	}
 
 	var certificateContent ftlv1.CertificateContent
 	if err = proto.Unmarshal(data, &certificateContent); err != nil {
-		return Identity{}, nil, fmt.Errorf("failed to unmarshal certificate content: %w", err)
+		return nil, nil, fmt.Errorf("failed to unmarshal certificate content: %w", err)
 	}
 
 	identity, err := Parse(certificateContent.Identity)
 	if err != nil {
-		return Identity{}, nil, fmt.Errorf("failed to parse identity: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse identity: %w", err)
 	}
 
 	nodePublicKey := PublicKey{Bytes: certificateContent.PublicKey}
 	nodeVerifier, err := NewVerifier(nodePublicKey)
 	if err != nil {
-		return Identity{}, nil, fmt.Errorf("failed to create verifier: %w", err)
+		return nil, nil, fmt.Errorf("failed to create verifier: %w", err)
 	}
 	payload, err := nodeVerifier.Verify(c.SignedData)
 	if err != nil {
-		return Identity{}, nil, fmt.Errorf("failed to verify signed data: %w", err)
+		return nil, nil, fmt.Errorf("failed to verify signed data: %w", err)
 	}
 
 	return identity, payload, nil

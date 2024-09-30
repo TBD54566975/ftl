@@ -113,7 +113,7 @@ func (t KeyPair) Handle() keyset.Handle {
 	return t.keysetHandle
 }
 
-// GenerateTinkKeyPair creates a new key pair using Tink's ED25519 key template
+// GenerateKeyPair creates a new key pair using Tink's ED25519 key template
 func GenerateKeyPair() (KeyPair, error) {
 	keysetHandle, err := keyset.NewHandle(signature.ED25519KeyTemplate())
 	if err != nil {
