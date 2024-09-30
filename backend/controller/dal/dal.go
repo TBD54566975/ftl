@@ -6,13 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"strings"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"time"
 
 	"github.com/alecthomas/types/optional"
 	inprocesspubsub "github.com/alecthomas/types/pubsub"
-	sets "github.com/deckarep/golang-set/v2"
 	xmaps "golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 
@@ -55,10 +53,12 @@ type Reservation interface {
 
 func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, pubsub *pubsub.Service) *DAL {
 	var d *DAL
+	db := dalsql.New(conn)
 	d = &DAL{
 		leaser:     dbleaser.NewDatabaseLeaser(conn),
-		db:         dalsql.New(conn),
+		db:         db,
 		encryption: encryption,
+		registry:   artefacts.New(ctx, conn),
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
@@ -66,6 +66,7 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 				leaser:            dbleaser.NewDatabaseLeaser(h.Connection),
 				pubsub:            pubsub,
 				encryption:        d.encryption,
+				registry:          artefacts.New(ctx, h.Connection),
 				DeploymentChanges: d.DeploymentChanges,
 			}
 		}),
@@ -82,6 +83,7 @@ type DAL struct {
 	leaser     *dbleaser.DatabaseLeaser
 	pubsub     *pubsub.Service
 	encryption *encryption.Service
+	registry   *artefacts.Service
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *inprocesspubsub.Topic[DeploymentNotification]
@@ -194,25 +196,6 @@ func (d *DAL) UpsertModule(ctx context.Context, language, name string) (err erro
 	return libdal.TranslatePGError(err)
 }
 
-// GetMissingArtefacts returns the digests of the artefacts that are missing from the database.
-func (d *DAL) GetMissingArtefacts(ctx context.Context, digests []sha256.SHA256) ([]sha256.SHA256, error) {
-	have, err := d.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
-	if err != nil {
-		return nil, libdal.TranslatePGError(err)
-	}
-	haveStr := slices.Map(have, func(in dalsql.GetArtefactDigestsRow) sha256.SHA256 {
-		return sha256.FromBytes(in.Digest)
-	})
-	return sets.NewSet(digests...).Difference(sets.NewSet(haveStr...)).ToSlice(), nil
-}
-
-// CreateArtefact inserts a new artefact into the database and returns its ID.
-func (d *DAL) CreateArtefact(ctx context.Context, content []byte) (digest sha256.SHA256, err error) {
-	sha256digest := sha256.Sum(content)
-	_, err = d.db.CreateArtefact(ctx, sha256digest[:], content)
-	return sha256digest, libdal.TranslatePGError(err)
-}
-
 type IngressRoutingEntry struct {
 	Verb   string
 	Method string
@@ -281,19 +264,21 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 		return model.DeploymentKey{}, fmt.Errorf("failed to create deployment: %w", libdal.TranslatePGError(err))
 	}
 
-	uploadedDigests := slices.Map(artefacts, func(in dalmodel.DeploymentArtefact) []byte { return in.Digest[:] })
-	artefactDigests, err := tx.db.GetArtefactDigests(ctx, uploadedDigests)
+	uploadedDigests := slices.Map(artefacts, func(in dalmodel.DeploymentArtefact) sha256.SHA256 { return sha256.FromBytes(in.Digest[:]) })
+	keys, missing, err := tx.registry.GetDigestsKeys(ctx, uploadedDigests)
 	if err != nil {
 		return model.DeploymentKey{}, fmt.Errorf("failed to get artefact digests: %w", err)
 	}
-	if len(artefactDigests) != len(artefacts) {
-		missingDigests := strings.Join(slices.Map(artefacts, func(in dalmodel.DeploymentArtefact) string { return in.Digest.String() }), ", ")
-		return model.DeploymentKey{}, fmt.Errorf("missing %d artefacts: %s", len(artefacts)-len(artefactDigests), missingDigests)
+	if len(missing) > 0 {
+		m := slices.Reduce(missing, "", func(join string, in sha256.SHA256) string {
+			return fmt.Sprintf("%s, %s", join, in.String())
+		})
+		return model.DeploymentKey{}, fmt.Errorf("missing digests %s", m)
 	}
 
 	// Associate the artefacts with the deployment
-	for _, row := range artefactDigests {
-		artefact := artefactsByDigest[sha256.FromBytes(row.Digest)]
+	for _, row := range keys {
+		artefact := artefactsByDigest[row.Digest]
 		err = tx.db.AssociateArtefactWithDeployment(ctx, dalsql.AssociateArtefactWithDeploymentParams{
 			Key:        deploymentKey,
 			ArtefactID: row.ID,
@@ -701,18 +686,27 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymen
 		Key:      deployment.Deployment.Key,
 		Schema:   deployment.Deployment.Schema,
 	}
-	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
+	darts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
+
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
-	out.Artefacts = slices.Map(artefacts, func(row dalsql.GetDeploymentArtefactsRow) *model.Artefact {
+	out.Artefacts, err = slices.MapErr(darts, func(row dalsql.GetDeploymentArtefactsRow) (*model.Artefact, error) {
+		digest := sha256.FromBytes(row.Digest)
+		content, err := d.registry.Download(ctx, digest)
+		if err != nil {
+			return nil, fmt.Errorf("artefact download failed: %w", libdal.TranslatePGError(err))
+		}
 		return &model.Artefact{
 			Path:       row.Path,
 			Executable: row.Executable,
-			Content:    &artefactReader{id: row.ID, db: d.db},
-			Digest:     sha256.FromBytes(row.Digest),
-		}
+			Content:    content,
+			Digest:     digest,
+		}, nil
 	})
+	if err != nil {
+		return nil, fmt.Errorf("an artefact download failed: %w", err)
+	}
 	return out, nil
 }
 
@@ -778,26 +772,4 @@ func (*DAL) checkForExistingDeployments(ctx context.Context, tx *DAL, moduleSche
 
 func sha256esToBytes(digests []sha256.SHA256) [][]byte {
 	return slices.Map(digests, func(digest sha256.SHA256) []byte { return digest[:] })
-}
-
-type artefactReader struct {
-	id     int64
-	db     dalsql.Querier
-	offset int32
-}
-
-func (r *artefactReader) Close() error { return nil }
-
-func (r *artefactReader) Read(p []byte) (n int, err error) {
-	content, err := r.db.GetArtefactContentRange(context.Background(), r.offset+1, int32(len(p)), r.id)
-	if err != nil {
-		return 0, libdal.TranslatePGError(err)
-	}
-	copy(p, content)
-	clen := len(content)
-	r.offset += int32(clen)
-	if clen == 0 {
-		err = io.EOF
-	}
-	return clen, err
 }

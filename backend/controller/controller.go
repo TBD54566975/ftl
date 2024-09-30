@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"hash"
 	"io"
 	"net/http"
@@ -221,6 +222,7 @@ type Service struct {
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
 	pubSub                  *pubsub.Service
+	registry                *artefacts.Service
 	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
@@ -274,6 +276,8 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 	pubSub := pubsub.New(conn, encryption, svc.tasks, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
+
+	svc.registry = artefacts.New(ctx, conn)
 
 	svc.dal = dal.New(ctx, conn, encryption, pubSub)
 
@@ -1094,7 +1098,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return nil, err
 	}
-	need, err := s.dal.GetMissingArtefacts(ctx, byteDigests)
+	_, need, err := s.registry.GetDigestsKeys(ctx, byteDigests)
 	if err != nil {
 		return nil, err
 	}
@@ -1105,7 +1109,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 
 func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error) {
 	logger := log.FromContext(ctx)
-	digest, err := s.dal.CreateArtefact(ctx, req.Msg.Content)
+	digest, err := s.registry.Upload(ctx, artefacts.Artefact{Content: req.Msg.Content})
 	if err != nil {
 		return nil, err
 	}
