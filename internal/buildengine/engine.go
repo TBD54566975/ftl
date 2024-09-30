@@ -859,12 +859,12 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleCo
 
 // listenForBuildUpdates listens for adhoc build updates and reports them to the listener.
 // These happen when a plugin for a module detects a change and automatically rebuilds.
-func (e *Engine) listenForBuildUpdates(ctx context.Context) {
+func (e *Engine) listenForBuildUpdates(originalCtx context.Context) {
 	for {
 		select {
 		case event := <-e.pluginEvents:
-			logger := log.FromContext(ctx).Module(event.ModuleName()).Scope("build")
-			ctx = log.ContextWithLogger(ctx, logger)
+			logger := log.FromContext(originalCtx).Module(event.ModuleName()).Scope("build")
+			ctx := log.ContextWithLogger(originalCtx, logger)
 			meta, ok := e.moduleMetas.Load(event.ModuleName())
 			if !ok {
 				logger.Warnf("module not found for build update")
@@ -891,7 +891,7 @@ func (e *Engine) listenForBuildUpdates(ctx context.Context) {
 				}
 			}
 
-		case <-ctx.Done():
+		case <-originalCtx.Done():
 			return
 		}
 	}
