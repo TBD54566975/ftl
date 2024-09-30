@@ -9,12 +9,16 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-var db = ftl.PostgresDatabase("echodb")
+type EchoDBConfig struct {
+	ftl.DefaultPostgresDatabaseConfig
+}
+
+func (EchoDBConfig) Name() string { return "echodb" }
 
 // Echo returns a greeting with the current time.
 //
 //ftl:verb export
-func Echo(ctx context.Context, req string) (string, error) {
+func Echo(ctx context.Context, req string, db ftl.DatabaseHandle[EchoDBConfig]) (string, error) {
 	_, err := db.Get(ctx).Exec(`CREATE TABLE IF NOT EXISTS messages(
 	    message TEXT
 	);`)

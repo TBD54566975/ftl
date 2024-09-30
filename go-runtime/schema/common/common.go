@@ -70,15 +70,18 @@ func NewDeclExtractor[T schema.Decl, N ast.Node](name string, extractFunc Extrac
 // NewResourceDeclExtractor creates a new schema declaration extractor to extract resources, e.g. Database, Subscription,
 // Topics.
 //
-// Resources are extracted on the basis of their underlying type, e.g. ftl.PostgresDatabaseHandle, rather than
+// Only resources where the provided `matchFunc` returns true will be visited for extraction. These resources are
+// typically extracted on the basis of their underlying type, e.g. ftl.DatabaseConfig, rather than
 // an FTL directive.
-func NewResourceDeclExtractor[T schema.Decl](name string, extractFunc ExtractResourceDeclFunc[T], typePaths ...string) *analysis.Analyzer {
+func NewResourceDeclExtractor[T schema.Decl](name string, extractFunc ExtractResourceDeclFunc[T], matchFn matchFunc) *analysis.Analyzer {
 	type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
-	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractResourceDeclsFunc[T](extractFunc, typePaths...))
+	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractResourceDeclsFunc[T](extractFunc, matchFn))
 }
 
-// ExtractResourceDeclFunc extracts a schema declaration from the given node, providing the path to the underlying resource type.
-type ExtractResourceDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.TypeSpec, typePath string) optional.Option[T]
+type matchFunc func(pass *analysis.Pass, node ast.Node) bool
+
+// ExtractResourceDeclFunc extracts a schema resource declaration from the given node.
+type ExtractResourceDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.TypeSpec) optional.Option[T]
 
 // ExtractCallDeclFunc extracts a schema declaration from the given node.
 type ExtractCallDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.GenDecl, callExpr *ast.CallExpr, callPath string) optional.Option[T]
@@ -138,7 +141,7 @@ func runExtractDeclsFunc[T schema.Decl, N ast.Node](extractFunc ExtractDeclFunc[
 	}
 }
 
-func runExtractResourceDeclsFunc[T schema.Decl](extractFunc ExtractResourceDeclFunc[T], typePaths ...string) func(pass *analysis.Pass) (interface{}, error) {
+func runExtractResourceDeclsFunc[T schema.Decl](extractFunc ExtractResourceDeclFunc[T], matchFunc matchFunc) func(pass *analysis.Pass) (interface{}, error) {
 	return func(pass *analysis.Pass) (interface{}, error) {
 		nodeFilter := []ast.Node{
 			(*ast.TypeSpec)(nil),
@@ -154,24 +157,10 @@ func runExtractResourceDeclsFunc[T schema.Decl](extractFunc ExtractResourceDeclF
 				return
 			}
 
-			typeObj, ok := GetObjectForNode(pass.TypesInfo, node.Type).Get()
-			if !ok {
+			if !matchFunc(pass, node) {
 				return
 			}
-			if typeObj.Pkg() == nil {
-				return
-			}
-			typePath := typeObj.Pkg().Path() + "." + typeObj.Name()
-			var matchesType bool
-			for _, path := range typePaths {
-				if typePath == path {
-					matchesType = true
-				}
-			}
-			if !matchesType {
-				return
-			}
-			decl := extractFunc(pass, obj, node, typePath)
+			decl := extractFunc(pass, obj, node)
 			if d, ok := decl.Get(); ok {
 				MarkSchemaDecl(pass, obj, d)
 			}
@@ -371,6 +360,8 @@ func extractType(pass *analysis.Pass, node ast.Node) optional.Option[schema.Type
 		for _, idx := range typ.Indices {
 			if param, ok := ExtractType(pass, idx).Get(); ok {
 				params = append(params, param)
+			} else {
+				Errorf(pass, idx, "unsupported type for type argument")
 			}
 		}
 		ref.TypeParameters = params
@@ -784,6 +775,47 @@ func CallExprFromVar(node *ast.GenDecl) optional.Option[*ast.CallExpr] {
 		return optional.None[*ast.CallExpr]()
 	}
 	return optional.Some(callExpr)
+}
+
+// IsDatabaseConfigType will return true if the provided type implements the `DatabaseConfig` type.
+func IsDatabaseConfigType(pass *analysis.Pass, typ types.Type) bool {
+	return implementsType(pass, typ, "github.com/TBD54566975/ftl/go-runtime/ftl", "DatabaseConfig")
+}
+
+// IsPostgresDatabaseConfigType will return true if the provided type implements the `DatabaseConfig` type.
+func IsPostgresDatabaseConfigType(pass *analysis.Pass, typ types.Type) bool {
+	return implementsType(pass, typ, "github.com/TBD54566975/ftl/go-runtime/ftl", "PostgresDatabaseConfig")
+}
+
+func implementsType(pass *analysis.Pass, typ types.Type, pkg string, name string) bool {
+	ityp, ok := loadRefFromImports(pass, pkg, name).Get()
+	if !ok {
+		return false
+	}
+	res := types.Implements(typ, ityp) || types.Implements(types.NewPointer(typ), ityp)
+	return res
+}
+
+// Lazy load the compile-time reference from a package if it is imported by the package in this pass.
+func loadRefFromImports(pass *analysis.Pass, pkg, name string) optional.Option[*types.Interface] {
+	var importedPkg *types.Package
+	for _, p := range pass.Pkg.Imports() {
+		if p.Path() == pkg {
+			importedPkg = p
+		}
+	}
+	if importedPkg == nil {
+		return optional.None[*types.Interface]()
+	}
+	obj := importedPkg.Scope().Lookup(name)
+	if obj == nil {
+		return optional.None[*types.Interface]()
+	}
+	ifaceType, ok := obj.Type().Underlying().(*types.Interface)
+	if !ok {
+		return optional.None[*types.Interface]()
+	}
+	return optional.Some(ifaceType)
 }
 
 // FuncPathEquals checks if the function call expression is a call to the given path.

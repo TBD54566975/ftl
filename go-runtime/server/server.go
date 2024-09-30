@@ -9,8 +9,6 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/types/optional"
-
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/plugin"
@@ -24,6 +22,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/alecthomas/types/optional"
 )
 
 type UserVerbConfig struct {
@@ -81,8 +80,8 @@ func HandleCall[Req, Resp any](verb any) Handler {
 			}
 			ctx = observability.AddSpanContextToLogger(ctx)
 
-			// Call Verb.
-			resp, err := Call[Req, Resp](ref)(ctx, req)
+			// InvokeVerb Verb.
+			resp, err := InvokeVerb[Req, Resp](ref)(ctx, req)
 			if err != nil {
 				return nil, fmt.Errorf("call to verb %s failed: %w", ref, err)
 			}
@@ -109,56 +108,29 @@ func HandleEmpty(verb any) Handler {
 	return HandleCall[ftl.Unit, ftl.Unit](verb)
 }
 
-func call[Verb, Req, Resp any]() func(ctx context.Context, req Req) (resp Resp, err error) {
-	typ := reflect.TypeFor[Verb]()
-	if typ.Kind() != reflect.Func {
-		panic(fmt.Sprintf("Cannot register %s: expected function, got %s", typ, typ.Kind()))
-	}
-	callee := reflection.TypeRef[Verb]()
-	callee.Name = strings.TrimSuffix(callee.Name, "Client")
+func InvokeVerb[Req, Resp any](ref reflection.Ref) func(ctx context.Context, req Req) (resp Resp, err error) {
 	return func(ctx context.Context, req Req) (resp Resp, err error) {
-		ref := reflection.Ref{Module: callee.Module, Name: callee.Name}
-		moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
-		override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: ref.Module, Name: ref.Name})
+		request := optional.Some[any](req)
+		if reflect.TypeFor[Req]() == reflect.TypeFor[ftl.Unit]() {
+			request = optional.None[any]()
+		}
+
+		out, err := reflection.CallVerb(reflection.Ref{Module: ref.Module, Name: ref.Name})(ctx, request)
 		if err != nil {
-			return resp, fmt.Errorf("%s: %w", ref, err)
-		}
-		if behavior, ok := override.Get(); ok {
-			uncheckedResp, err := behavior.Call(ctx, modulecontext.Verb(widenVerb(Call[Req, Resp](ref))), req)
-			if err != nil {
-				return resp, fmt.Errorf("%s: %w", ref, err)
-			}
-			if r, ok := uncheckedResp.(Resp); ok {
-				return r, nil
-			}
-			return resp, fmt.Errorf("%s: overridden verb had invalid response type %T, expected %v", ref,
-				uncheckedResp, reflect.TypeFor[Resp]())
+			return resp, err
 		}
 
-		reqData, err := encoding.Marshal(req)
-		if err != nil {
-			return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
+		var respValue any
+		if r, ok := out.Get(); ok {
+			respValue = r
+		} else {
+			respValue = ftl.Unit{}
 		}
-
-		client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
-		cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData}))
-		if err != nil {
-			return resp, fmt.Errorf("%s: failed to call Verb: %w", callee, err)
+		resp, ok := respValue.(Resp)
+		if !ok {
+			return resp, fmt.Errorf("unexpected response type from verb %s: %T", ref, resp)
 		}
-		switch cresp := cresp.Msg.Response.(type) {
-		case *ftlv1.CallResponse_Error_:
-			return resp, fmt.Errorf("%s: %s", callee, cresp.Error.Message)
-
-		case *ftlv1.CallResponse_Body:
-			err = encoding.Unmarshal(cresp.Body, &resp)
-			if err != nil {
-				return resp, fmt.Errorf("%s: failed to decode response: %w", callee, err)
-			}
-			return resp, nil
-
-		default:
-			panic(fmt.Sprintf("%s: invalid response type %T", callee, cresp))
-		}
+		return resp, err
 	}
 }
 
@@ -201,29 +173,56 @@ func EmptyClient[Verb any]() reflection.VerbResource {
 	}
 }
 
-func Call[Req, Resp any](ref reflection.Ref) func(ctx context.Context, req Req) (resp Resp, err error) {
+func call[Verb, Req, Resp any]() func(ctx context.Context, req Req) (resp Resp, err error) {
+	typ := reflect.TypeFor[Verb]()
+	if typ.Kind() != reflect.Func {
+		panic(fmt.Sprintf("Cannot register %s: expected function, got %s", typ, typ.Kind()))
+	}
+	callee := reflection.TypeRef[Verb]()
+	callee.Name = strings.TrimSuffix(callee.Name, "Client")
 	return func(ctx context.Context, req Req) (resp Resp, err error) {
-		request := optional.Some[any](req)
-		if reflect.TypeFor[Req]() == reflect.TypeFor[ftl.Unit]() {
-			request = optional.None[any]()
-		}
-
-		out, err := reflection.CallVerb(reflection.Ref{Module: ref.Module, Name: ref.Name})(ctx, request)
+		ref := reflection.Ref{Module: callee.Module, Name: callee.Name}
+		moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
+		override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: ref.Module, Name: ref.Name})
 		if err != nil {
-			return resp, err
+			return resp, fmt.Errorf("%s: %w", ref, err)
+		}
+		if behavior, ok := override.Get(); ok {
+			uncheckedResp, err := behavior.Call(ctx, modulecontext.Verb(widenVerb(InvokeVerb[Req, Resp](ref))), req)
+			if err != nil {
+				return resp, fmt.Errorf("%s: %w", ref, err)
+			}
+			if r, ok := uncheckedResp.(Resp); ok {
+				return r, nil
+			}
+			return resp, fmt.Errorf("%s: overridden verb had invalid response type %T, expected %v", ref,
+				uncheckedResp, reflect.TypeFor[Resp]())
 		}
 
-		var respValue any
-		if r, ok := out.Get(); ok {
-			respValue = r
-		} else {
-			respValue = ftl.Unit{}
+		reqData, err := encoding.Marshal(req)
+		if err != nil {
+			return resp, fmt.Errorf("%s: failed to marshal request: %w", callee, err)
 		}
-		resp, ok := respValue.(Resp)
-		if !ok {
-			return resp, fmt.Errorf("unexpected response type from verb %s: %T", ref, resp)
+
+		client := rpc.ClientFromContext[ftlv1connect.VerbServiceClient](ctx)
+		cresp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{Verb: callee.ToProto(), Body: reqData}))
+		if err != nil {
+			return resp, fmt.Errorf("%s: failed to call Verb: %w", callee, err)
 		}
-		return resp, err
+		switch cresp := cresp.Msg.Response.(type) {
+		case *ftlv1.CallResponse_Error_:
+			return resp, fmt.Errorf("%s: %s", callee, cresp.Error.Message)
+
+		case *ftlv1.CallResponse_Body:
+			err = encoding.Unmarshal(cresp.Body, &resp)
+			if err != nil {
+				return resp, fmt.Errorf("%s: failed to decode response: %w", callee, err)
+			}
+			return resp, nil
+
+		default:
+			panic(fmt.Sprintf("%s: invalid response type %T", callee, cresp))
+		}
 	}
 }
 

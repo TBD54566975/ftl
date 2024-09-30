@@ -6,7 +6,11 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-var db = ftl.PostgresDatabase("testdb")
+type MyDbConfig struct {
+	ftl.DefaultPostgresDatabaseConfig
+}
+
+func (MyDbConfig) Name() string { return "testdb" }
 
 type InsertRequest struct {
 	Data string
@@ -15,8 +19,8 @@ type InsertRequest struct {
 type InsertResponse struct{}
 
 //ftl:verb
-func Insert(ctx context.Context, req InsertRequest) (InsertResponse, error) {
-	err := persistRequest(ctx, req)
+func Insert(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDbConfig]) (InsertResponse, error) {
+	err := persistRequest(ctx, req, db)
 	if err != nil {
 		return InsertResponse{}, err
 	}
@@ -24,7 +28,7 @@ func Insert(ctx context.Context, req InsertRequest) (InsertResponse, error) {
 	return InsertResponse{}, nil
 }
 
-func persistRequest(ctx context.Context, req InsertRequest) error {
+func persistRequest(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDbConfig]) error {
 	_, err := db.Get(ctx).Exec(`CREATE TABLE IF NOT EXISTS requests
 	       (
 	         data TEXT,
