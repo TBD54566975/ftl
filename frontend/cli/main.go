@@ -17,6 +17,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/configuration"
@@ -29,8 +30,9 @@ import (
 )
 
 type InteractiveCLI struct {
-	Version  kong.VersionFlag `help:"Show version."`
-	Endpoint *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
+	Version             kong.VersionFlag `help:"Show version."`
+	Endpoint            *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
+	ProvisionerEndpoint *url.URL         `help:"Provisioner endpoint." env:"FTL_PROVISIONER_ENDPOINT" default:"http://127.0.0.1:8894" hidden:"true"`
 
 	Ping     pingCmd     `cmd:"" help:"Ping the FTL cluster."`
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
@@ -169,6 +171,10 @@ func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, can
 		controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
 		kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
+
+		provisionerServiceClient := rpc.Dial(provisionerconnect.NewProvisionerServiceClient, cli.ProvisionerEndpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, provisionerServiceClient)
+		kctx.BindTo(provisionerServiceClient, (*provisionerconnect.ProvisionerServiceClient)(nil))
 
 		// Initialise configuration registries.
 		configRegistry := providers.NewRegistry[configuration.Configuration]()

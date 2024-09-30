@@ -26,6 +26,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -121,14 +122,25 @@ func WithoutController() Option {
 	}
 }
 
+// WithProvisioner is a Run* option that starts the provisioner service.
+// if set, all deployments are done through the provisioner
+func WithProvisioner() Option {
+	return func(o *options) {
+		o.startProvisioner = true
+		// provisioner always needs a controller to talk to
+		o.startController = true
+	}
+}
+
 type options struct {
-	languages       []string
-	testDataDir     string
-	ftlConfigPath   string
-	startController bool
-	requireJava     bool
-	envars          map[string]string
-	kube            bool
+	languages        []string
+	testDataDir      string
+	ftlConfigPath    string
+	startController  bool
+	startProvisioner bool
+	requireJava      bool
+	envars           map[string]string
+	kube             bool
 }
 
 // Run an integration test.
@@ -194,7 +206,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
 				// If we are already on linux/amd64 we don't need to rebuild, otherwise we now need a native one to interact with the kube cluster
 				Infof("Building FTL for native OS")
-				err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
+				err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl", "ftl-provisioner").RunBuffered(ctx)
 				assert.NoError(t, err)
 			}
 			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "wait-for-kube").RunBuffered(ctx)
@@ -205,7 +217,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			assert.NoError(t, err)
 		} else {
 			Infof("Building ftl")
-			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl", "ftl-provisioner").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
 		if opts.requireJava || slices.Contains(opts.languages, "java") {
@@ -224,6 +236,12 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 
 			var controller ftlv1connect.ControllerServiceClient
 			var console pbconsoleconnect.ConsoleServiceClient
+			var provisioner provisionerconnect.ProvisionerServiceClient
+			if opts.startProvisioner {
+				Infof("Starting ftl provisioner")
+				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl-provisioner"), "--ftl-endpoint=http://localhost:8892")
+				provisioner = rpc.Dial(provisionerconnect.NewProvisionerServiceClient, "http://localhost:8894", log.Debug)
+			}
 			if opts.startController {
 				Infof("Starting ftl cluster")
 				ctx = startProcess(ctx, t, filepath.Join(binDir, "ftl"), "serve", "--recreate")
@@ -258,6 +276,16 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				Infof("Waiting for controller to be ready")
 				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
 					_, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+					assert.NoError(t, err)
+				})
+			}
+
+			if opts.startProvisioner {
+				ic.Provisioner = provisioner
+
+				Infof("Waiting for provisioner to be ready")
+				ic.AssertWithRetry(t, func(t testing.TB, ic TestContext) {
+					_, err := ic.Provisioner.Ping(ic, connect.NewRequest(&ftlv1.PingRequest{}))
 					assert.NoError(t, err)
 				})
 			}
@@ -317,9 +345,10 @@ type TestContext struct {
 	kubeClient    *kubernetes.Clientset
 	kubeNamespace string
 
-	Controller ftlv1connect.ControllerServiceClient
-	Console    pbconsoleconnect.ConsoleServiceClient
-	Verbs      ftlv1connect.VerbServiceClient
+	Controller  ftlv1connect.ControllerServiceClient
+	Provisioner provisionerconnect.ProvisionerServiceClient
+	Console     pbconsoleconnect.ConsoleServiceClient
+	Verbs       ftlv1connect.VerbServiceClient
 
 	realT *testing.T
 }

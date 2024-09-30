@@ -47,6 +47,7 @@ var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
 func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, devel bool) (*Service, error) {
 	return &Service{
 		controllerClient: controllerClient,
+		currentResources: map[string][]*provisioner.Resource{},
 	}, nil
 }
 

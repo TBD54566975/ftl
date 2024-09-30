@@ -57,7 +57,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 
 	gadResp, err := client.GetArtefactDiffs(ctx, connect.NewRequest(&ftlv1.GetArtefactDiffsRequest{ClientDigests: maps.Keys(filesByHash)}))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get artefact diffs: %w", err)
 	}
 
 	moduleSchema, err := loadProtoSchema(moduleConfig, replicas)
