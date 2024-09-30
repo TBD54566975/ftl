@@ -13,7 +13,7 @@ func TestExtractModuleDepsGo(t *testing.T) {
 	config, err := moduleconfig.LoadModuleConfig("testdata/alpha")
 	assert.NoError(t, err)
 
-	plugin, err := PluginFromConfig(ctx, config.Abs(), "")
+	plugin, err := PluginFromConfig(ctx, config, "")
 	assert.NoError(t, err)
 
 	deps, err := plugin.GetDependencies(ctx)

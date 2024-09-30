@@ -31,7 +31,7 @@ type goPlugin struct {
 
 var _ = LanguagePlugin(&goPlugin{})
 
-func newGoPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig) *goPlugin {
+func newGoPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *goPlugin {
 	internal := newInternalPlugin(ctx, config, buildGo)
 	return &goPlugin{
 		internalPlugin: internal,
@@ -53,8 +53,9 @@ type scaffoldingContext struct {
 	Replace   map[string]string
 }
 
-func (p *goPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
+func (p *goPlugin) CreateModule(ctx context.Context, c moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
 	logger := log.FromContext(ctx)
+	config := c.Abs()
 	opts := []scaffolder.Option{
 		scaffolder.Exclude("^go.mod$"),
 		scaffolder.Functions(scaffoldFuncs),
@@ -85,7 +86,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	return p.internalPlugin.getDependencies(ctx, func() ([]string, error) {
 		dependencies := map[string]bool{}
 		fset := token.NewFileSet()
-		err := WalkDir(p.config.Dir, func(path string, d fs.DirEntry) error {
+		err := WalkDir(p.config.Abs().Dir, func(path string, d fs.DirEntry) error {
 			if !d.IsDir() {
 				return nil
 			}
@@ -125,7 +126,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	})
 }
 
-func (p *goPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
+func (p *goPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
 	return p.internalPlugin.build(ctx, projectRoot, config, sch, buildEnv, devMode)
 }
 

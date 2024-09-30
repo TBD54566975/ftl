@@ -63,7 +63,7 @@ type LanguagePlugin interface {
 
 	// CreateModule creates a new module in the given directory with the given name and language.
 	// Replacements and groups are special cases until plugins can provide their parameters.
-	CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig, includeBinDir bool, replacements map[string]string, group string) error
+	CreateModule(ctx context.Context, config moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error
 
 	// GetDependencies returns the dependencies of the module.
 	GetDependencies(ctx context.Context) ([]string, error)
@@ -71,14 +71,14 @@ type LanguagePlugin interface {
 	// Build builds the module with the latest config and schema.
 	// In dev mode, plugin is responsible for automatically rebuilding as relevant files within the module change,
 	// and publishing these automatic builds updates to Updates().
-	Build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error)
+	Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error)
 
 	// Kill stops the plugin and cleans up any resources.
 	Kill(ctx context.Context) error
 }
 
 // PluginFromConfig creates a new language plugin from the given config.
-func PluginFromConfig(ctx context.Context, config moduleconfig.AbsModuleConfig, projectRoot string) (p LanguagePlugin, err error) {
+func PluginFromConfig(ctx context.Context, config moduleconfig.ModuleConfig, projectRoot string) (p LanguagePlugin, err error) {
 	switch config.Language {
 	case "go":
 		return newGoPlugin(ctx, config), nil
@@ -112,7 +112,7 @@ type pluginCommand interface {
 
 type buildCommand struct {
 	projectRoot string
-	config      moduleconfig.AbsModuleConfig
+	config      moduleconfig.ModuleConfig
 	schema      *schema.Schema
 	buildEnv    []string
 	devMode     bool
@@ -137,7 +137,7 @@ type buildFunc = func(ctx context.Context, projectRoot string, config moduleconf
 // It has standard behaviours around building and watching files.
 type internalPlugin struct {
 	// config does not change, may not be up to date
-	config moduleconfig.AbsModuleConfig
+	config moduleconfig.ModuleConfig
 
 	// build is called when a new build is explicitly requested or when a watched file changes
 	buildFunc buildFunc
@@ -149,7 +149,7 @@ type internalPlugin struct {
 	cancel  context.CancelFunc
 }
 
-func newInternalPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig, build buildFunc) *internalPlugin {
+func newInternalPlugin(ctx context.Context, config moduleconfig.ModuleConfig, build buildFunc) *internalPlugin {
 	plugin := &internalPlugin{
 		config:    config,
 		buildFunc: build,
@@ -161,7 +161,7 @@ func newInternalPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig,
 	return plugin
 }
 
-func (p *internalPlugin) build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, schema *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
+func (p *internalPlugin) build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, schema *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
 	cmd := buildCommand{
 		projectRoot: projectRoot,
 		config:      config,
@@ -233,7 +233,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 				// begin watching if needed
 				if c.devMode && !devMode {
 					devMode = true
-					topic, err := watcher.Watch(ctx, time.Second, []string{config.Dir})
+					topic, err := watcher.Watch(ctx, time.Second, []string{config.Abs().Dir})
 					if err != nil {
 						c.result <- either.RightOf[BuildResult](fmt.Errorf("failed to start watching: %w", err))
 						continue
@@ -288,7 +288,8 @@ func (p *internalPlugin) run(ctx context.Context) {
 	}
 }
 
-func buildAndLoadResult(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, watcher *Watcher, build buildFunc) (BuildResult, error) {
+func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, watcher *Watcher, build buildFunc) (BuildResult, error) {
+	config := c.Abs()
 	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err)

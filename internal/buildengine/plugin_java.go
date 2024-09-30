@@ -33,7 +33,7 @@ type javaPlugin struct {
 
 var _ = LanguagePlugin(&javaPlugin{})
 
-func newJavaPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig) *javaPlugin {
+func newJavaPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *javaPlugin {
 	internal := newInternalPlugin(ctx, config, buildJava)
 	return &javaPlugin{
 		internalPlugin: internal,
@@ -49,7 +49,7 @@ func (p *javaPlugin) Kill(ctx context.Context) error {
 	return nil
 }
 
-func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
+func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
 	logger := log.FromContext(ctx)
 
 	var source *zip.Reader
@@ -179,7 +179,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func (p *javaPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
+func (p *javaPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
 	return p.internalPlugin.build(ctx, projectRoot, config, sch, buildEnv, devMode)
 }
 

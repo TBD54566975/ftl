@@ -847,7 +847,7 @@ func (e *Engine) gatherSchemas(
 }
 
 func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleConfig, projectPath string) (moduleMeta, error) {
-	plugin, err := PluginFromConfig(ctx, config.Abs(), projectPath)
+	plugin, err := PluginFromConfig(ctx, config, projectPath)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}
@@ -903,7 +903,7 @@ func (e *Engine) listenForBuildUpdates(originalCtx context.Context) {
 				}
 
 			case AutoRebuildEndedEvent:
-				if _, err := handleBuildResult(ctx, meta.module.Config.Abs(), event.Result); err != nil {
+				if _, err := handleBuildResult(ctx, meta.module.Config, event.Result); err != nil {
 					logger.Errorf(err, "build failed")
 					e.reportBuildFailed(err)
 					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateFailed)

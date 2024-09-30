@@ -46,7 +46,7 @@ func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 		Module:   name,
 		Language: i.Language,
 		Dir:      path,
-	}.Abs()
+	}
 	plugin, err := buildengine.PluginFromConfig(ctx, moduleConfig, config.Root())
 	if err != nil {
 		return err

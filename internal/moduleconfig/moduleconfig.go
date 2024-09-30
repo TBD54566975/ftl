@@ -50,7 +50,6 @@ type ModuleConfig struct {
 	// Errors is the name of the error file relative to the DeployDir.
 	Errors string `toml:"errors"`
 	// Watch is the list of files to watch for changes.
-	// These are relative to the module directory, even for AbsModuleConfig.
 	Watch []string `toml:"watch"`
 
 	Go     ModuleGoConfig     `toml:"go,optional"`
@@ -110,6 +109,10 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 			panic(fmt.Sprintf("deploy path %q is not beneath deploy directory %q", out, clone.DeployDir))
 		}
 		return out
+	})
+	// Watch paths are allowed to be outside the deploy directory.
+	clone.Watch = slices.Map(clone.Watch, func(p string) string {
+		return filepath.Clean(filepath.Join(clone.Dir, p))
 	})
 	return AbsModuleConfig(clone)
 }

@@ -18,9 +18,7 @@ import (
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sch *schema.Schema, c moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (*schema.Module, error) {
-	config := c.Abs()
-
+func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sch *schema.Schema, config moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (*schema.Module, error) {
 	logger := log.FromContext(ctx).Module(config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -34,8 +32,9 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 }
 
 // handleBuildResult processes the result of a build
-func handleBuildResult(ctx context.Context, config moduleconfig.AbsModuleConfig, eitherResult either.Either[BuildResult, error]) (*schema.Module, error) {
+func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult either.Either[BuildResult, error]) (*schema.Module, error) {
 	logger := log.FromContext(ctx)
+	config := c.Abs()
 
 	var result BuildResult
 	switch eitherResult := eitherResult.(type) {
