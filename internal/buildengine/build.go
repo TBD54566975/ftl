@@ -33,19 +33,19 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 	logger := log.FromContext(ctx).Module(config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	if err := prebuild(ctx, config); err != nil {
+	if err := prepareBuild(ctx, config); err != nil {
 		return nil, err
 	}
 
 	result, err := plugin.Build(ctx, projectRootDir, config, sch, buildEnv, devMode)
 	if err != nil {
-		return postbuild(ctx, config, either.RightOf[BuildResult](err))
+		return handleBuildResult(ctx, config, either.RightOf[BuildResult](err))
 	}
-	return postbuild(ctx, config, either.LeftOf[error](result))
+	return handleBuildResult(ctx, config, either.LeftOf[error](result))
 }
 
 // TODO: docs
-func prebuild(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
+func prepareBuild(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
 	// clear the deploy directory before extracting schema
 	if err := os.RemoveAll(config.DeployDir); err != nil {
 		return fmt.Errorf("failed to clear deploy directory: %w", err)
@@ -59,7 +59,7 @@ func prebuild(ctx context.Context, config moduleconfig.AbsModuleConfig) error {
 }
 
 // TODO: docs
-func postbuild(ctx context.Context, config moduleconfig.AbsModuleConfig, eitherResult either.Either[BuildResult, error]) (*schema.Module, error) {
+func handleBuildResult(ctx context.Context, config moduleconfig.AbsModuleConfig, eitherResult either.Either[BuildResult, error]) (*schema.Module, error) {
 	logger := log.FromContext(ctx)
 
 	var result BuildResult

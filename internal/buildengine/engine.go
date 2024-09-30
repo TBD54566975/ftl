@@ -872,11 +872,16 @@ func (e *Engine) listenForBuildUpdates(originalCtx context.Context) {
 			}
 			switch event := event.(type) {
 			case AutoRebuildStartedEvent:
-				prebuild(ctx, meta.module.Config.Abs())
+				if err := prepareBuild(ctx, meta.module.Config.Abs()); err != nil {
+					logger.Errorf(err, "could not prepare for build")
+					e.reportBuildFailed(err)
+					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateFailed)
+					continue
+				}
 				terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateBuilding)
 
 			case AutoRebuildEndedEvent:
-				if _, err := postbuild(ctx, meta.module.Config.Abs(), event.Result); err != nil {
+				if _, err := handleBuildResult(ctx, meta.module.Config.Abs(), event.Result); err != nil {
 					logger.Errorf(err, "build failed")
 					e.reportBuildFailed(err)
 					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateFailed)
