@@ -31,7 +31,7 @@ func TestSmokeTest(t *testing.T) {
 		in.CopyModule("origin"),
 		in.CopyModule("relay"),
 		in.CopyModule("pulse"),
-		// in.CreateDBAction("relay", "exemplardb", false),
+		in.CreateDBAction("relay", "exemplardb", false),
 
 		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", "--inline", nonce}, func(output string) {
 			fmt.Println(output)
@@ -67,7 +67,7 @@ func TestSmokeTest(t *testing.T) {
 			fmt.Println(output)
 		}),
 
-		in.Sleep(2*1000*1000),
+		in.Sleep(2*time.Second),
 
 		in.FileContains(logFilePath, fmt.Sprintf("deployed %d", successAgentId)),
 		in.FileContains(logFilePath, fmt.Sprintf("deployed %d", failedAgentId)),
