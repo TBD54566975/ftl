@@ -48,6 +48,23 @@ const (
 	Blue  ColorInt = 2
 )
 
+type ColorWrapper struct {
+	Color ColorInt
+}
+
+//ftl:enum export
+type Shape string
+
+const (
+	Circle   Shape = "circle"
+	Square   Shape = "square"
+	Triangle Shape = "triangle"
+)
+
+type ShapeWrapper struct {
+	Shape Shape
+}
+
 //ftl:enum export
 type TypeEnum interface{ typeEnum() }
 type Scalar string
@@ -56,6 +73,10 @@ type StringList []string
 func (Scalar) typeEnum()     {}
 func (StringList) typeEnum() {}
 
+type TypeEnumWrapper struct {
+	Type TypeEnum
+}
+
 //ftl:enum
 type Animal interface{ animal() }
 type Cat struct{}
@@ -63,6 +84,10 @@ type Dog struct{}
 
 func (Cat) animal() {}
 func (Dog) animal() {}
+
+type AnimalWrapper struct {
+	Animal Animal
+}
 
 //TODO this doesn't work yet: https://github.com/TBD54566975/ftl/issues/2857
 ////ftl:enum
@@ -228,18 +253,28 @@ func ExternalTypeVerb(ctx context.Context, did DID) (DID, error) {
 }
 
 //ftl:verb export
-func ValueEnumVerb(ctx context.Context, val ColorInt) (ColorInt, error) {
+func ValueEnumVerb(ctx context.Context, val ColorWrapper) (ColorWrapper, error) {
 	return val, nil
 }
 
 //ftl:verb export
-func TypeEnumVerb(ctx context.Context, val TypeEnum) (TypeEnum, error) {
+func ShapeEnumVerb(ctx context.Context, val ShapeWrapper) (ShapeWrapper, error) {
 	return val, nil
 }
 
 //ftl:verb export
-func NoValueTypeEnumVerb(ctx context.Context, val Animal) (Animal, error) {
+func TypeEnumVerb(ctx context.Context, val TypeEnumWrapper) (TypeEnumWrapper, error) {
 	return val, nil
+}
+
+//ftl:verb export
+func NoValueTypeEnumVerb(ctx context.Context, val AnimalWrapper) (AnimalWrapper, error) {
+	return val, nil
+}
+
+//ftl:verb export
+func GetAnimal(ctx context.Context) (AnimalWrapper, error) {
+	return AnimalWrapper{Animal: Cat{}}, nil
 }
 
 ////ftl:verb export
