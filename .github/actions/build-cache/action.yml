@@ -26,7 +26,9 @@ runs:
       id: cache-maven
       uses: actions/cache/restore@v4
       with:
-        path: ~/.m2/repository
+        path: |
+          ~/.m2/repository
+          **SNAPSHOT**
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
