@@ -30,6 +30,7 @@ const BuildStateBuilt BuildState = "Built"
 const BuildStateDeploying BuildState = "Deploying"
 const BuildStateDeployed BuildState = "Deployed"
 const BuildStateFailed BuildState = "Failed"
+const BuildStateTerminated BuildState = "Terminated"
 
 // moduleStatusPadding is the padding between module status entries
 // it accounts for the icon, the module name, and the padding between them
@@ -330,7 +331,11 @@ func (r *terminalStatusManager) SetModuleState(module string, state BuildState) 
 	}
 	r.statusLock.Lock()
 	defer r.statusLock.Unlock()
-	r.moduleStates[module] = state
+	if state == BuildStateTerminated {
+		delete(r.moduleStates, module)
+	} else {
+		r.moduleStates[module] = state
+	}
 	if r.moduleLine != nil {
 		r.recalculateLines()
 	} else {
