@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 
 	"github.com/bmatcuk/doublestar/v4"
+
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 type FileChangeType rune
@@ -63,18 +65,17 @@ func CompareFileHashes(oldFiles, newFiles FileHashes) (FileChangeType, string, b
 
 // ComputeFileHashes computes the SHA256 hash of all (non-git-ignored) files in
 // the given directory.
-func ComputeFileHashes(module Module) (FileHashes, error) {
-	config := module.Config
-
+func computeFileHashes(config moduleconfig.ModuleConfig, patterns []string) (FileHashes, error) {
+	// Watch paths are allowed to be outside the deploy directory.
 	fileHashes := make(FileHashes)
-	rootDirs := computeRootDirs(config.Dir, config.Watch)
+	rootDirs := computeRootDirs(config.Dir, patterns)
 
 	for _, rootDir := range rootDirs {
 		err := WalkDir(rootDir, func(srcPath string, entry fs.DirEntry) error {
 			if entry.IsDir() {
 				return nil
 			}
-			hash, matched, err := ComputeFileHash(rootDir, srcPath, config.Watch)
+			hash, matched, err := computeFileHash(rootDir, srcPath, patterns)
 			if err != nil {
 				return err
 			}
@@ -93,35 +94,37 @@ func ComputeFileHashes(module Module) (FileHashes, error) {
 	return fileHashes, nil
 }
 
-func ComputeFileHash(baseDir, srcPath string, watch []string) (hash []byte, matched bool, err error) {
-	for _, pattern := range watch {
-		relativePath, err := filepath.Rel(baseDir, srcPath)
-		if err != nil {
-			return nil, false, err
-		}
+func computeFileHash(baseDir, srcPath string, patterns []string) (hash []byte, matched bool, err error) {
+	relativePath, err := filepath.Rel(baseDir, srcPath)
+	if err != nil {
+		return nil, false, err
+	}
+	for _, pattern := range patterns {
 		match, err := doublestar.PathMatch(pattern, relativePath)
 		if err != nil {
 			return nil, false, err
 		}
-		if match {
-			file, err := os.Open(srcPath)
-			if err != nil {
-				return nil, false, err
-			}
-
-			hasher := sha256.New()
-			if _, err := io.Copy(hasher, file); err != nil {
-				_ = file.Close()
-				return nil, false, err
-			}
-
-			hash := hasher.Sum(nil)
-
-			if err := file.Close(); err != nil {
-				return nil, false, err
-			}
-			return hash, true, nil
+		if !match {
+			continue
 		}
+
+		file, err := os.Open(srcPath)
+		if err != nil {
+			return nil, false, err
+		}
+
+		hasher := sha256.New()
+		if _, err := io.Copy(hasher, file); err != nil {
+			_ = file.Close()
+			return nil, false, err
+		}
+
+		hash := hasher.Sum(nil)
+
+		if err := file.Close(); err != nil {
+			return nil, false, err
+		}
+		return hash, true, nil
 	}
 	return nil, false, nil
 }

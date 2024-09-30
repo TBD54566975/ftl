@@ -6,13 +6,13 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -49,6 +49,32 @@ type schemaChange struct {
 type moduleMeta struct {
 	module             Module
 	lastBuildStartTime time.Time
+	plugin             Plugin
+}
+
+// copyWithUpdatedDependencies finds the dependencies for a module and returns a
+// copy with those dependencies populated.
+func (m moduleMeta) copyWithUpdatedDependencies(ctx context.Context) (moduleMeta, error) {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Extracting dependencies for %q", m.module.Config.Module)
+
+	dependencies, err := m.plugin.GetDependencies(ctx)
+	if err != nil {
+		return moduleMeta{}, err
+	}
+	containsBuiltin := false
+	for _, dep := range dependencies {
+		if dep == "builtin" {
+			containsBuiltin = true
+			break
+		}
+	}
+	if !containsBuiltin {
+		dependencies = append(dependencies, "builtin")
+	}
+
+	m.module = m.module.CopyWithDependencies(dependencies)
+	return m, nil
 }
 
 type Listener interface {
@@ -69,9 +95,10 @@ type Engine struct {
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectRoot      string
 	moduleDirs       []string
-	watcher          *Watcher
+	watcher          *Watcher // only watches for module toml changes
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
+	pluginEvents     chan PluginEvent
 	cancel           func()
 	parallelism      int
 	listener         Listener
@@ -130,9 +157,10 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		projectRoot:      projectRoot,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
-		watcher:          NewWatcher(),
+		watcher:          NewWatcher("ftl.toml"),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
+		pluginEvents:     make(chan PluginEvent, 128),
 		parallelism:      runtime.NumCPU(),
 		modulesToBuild:   xsync.NewMapOf[string, bool](),
 	}
@@ -148,17 +176,31 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		return nil, fmt.Errorf("failed to clean stubs: %w", err)
 	}
 
-	modules, err := DiscoverModules(ctx, moduleDirs)
+	go e.listenForBuildUpdates(ctx)
+
+	configs, err := DiscoverModules(ctx, moduleDirs)
 	if err != nil {
 		return nil, fmt.Errorf("could not find modules: %w", err)
 	}
-	for _, module := range modules {
-		module, err = UpdateDependencies(ctx, module)
-		if err != nil {
-			return nil, err
-		}
-		e.moduleMetas.Store(module.Config.Module, moduleMeta{module: module})
-		e.modulesToBuild.Store(module.Config.Module, true)
+
+	wg := &errgroup.Group{}
+	for _, config := range configs {
+		wg.Go(func() error {
+			meta, err := e.newModuleMeta(ctx, config, projectRoot)
+			if err != nil {
+				return err
+			}
+			meta, err = meta.copyWithUpdatedDependencies(ctx)
+			if err != nil {
+				return err
+			}
+			e.moduleMetas.Store(config.Module, meta)
+			e.modulesToBuild.Store(config.Module, true)
+			return nil
+		})
+	}
+	if err := wg.Wait(); err != nil {
+		return nil, err
 	}
 	if client == nil {
 		return e, nil
@@ -419,11 +461,21 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		case event := <-watchEvents:
 			switch event := event.(type) {
 			case WatchEventModuleAdded:
-				config := event.Module.Config
+				config := event.Config
 				if _, exists := e.moduleMetas.Load(config.Module); !exists {
-					e.moduleMetas.Store(config.Module, moduleMeta{module: event.Module})
+					// TODO: this was a fast func before, but now we are initializing a plugin here which could be slow...
+					meta, err := e.newModuleMeta(ctx, config, e.projectRoot)
+					if err != nil {
+						return err
+					}
+					// TODO: we werent getting deps before. should we now?
+					// meta, err = meta.copyWithUpdatedDependencies(ctx)
+					// if err != nil {
+					// 	return err
+					// }
+					e.moduleMetas.Store(config.Module, meta)
 					didError = false
-					err := e.BuildAndDeploy(ctx, 1, true, config.Module)
+					err = e.BuildAndDeploy(ctx, 1, true, config.Module)
 					if err != nil {
 						didError = true
 						e.reportBuildFailed(err)
@@ -433,27 +485,26 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					}
 				}
 			case WatchEventModuleRemoved:
-				config := event.Module.Config
-
-				err := terminateModuleDeployment(ctx, e.client, config.Module)
+				err := terminateModuleDeployment(ctx, e.client, event.Config.Module)
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
-					logger.Errorf(err, "terminate %s failed", config.Module)
+					logger.Errorf(err, "terminate %s failed", event.Config.Module)
 				} else {
 					didUpdateDeployments = true
 				}
 
-				e.moduleMetas.Delete(config.Module)
+				e.moduleMetas.Delete(event.Config.Module)
 			case WatchEventModuleChanged:
-				config := event.Module.Config
+				// TODO: ftl.toml changed... update config and tell plugin
 
-				meta, ok := e.moduleMetas.Load(config.Module)
-				if !ok {
-					logger.Warnf("module %q not found", config.Module)
-					continue
-				}
+				// meta, ok := e.moduleMetas.Load(event.Config.Module)
+				// if !ok {
+				// 	logger.Warnf("module %q not found", event.Config.Module)
+				// 	continue
+				// }
 
+<<<<<<< HEAD
 				if event.Time.Before(meta.lastBuildStartTime) {
 					logger.Debugf("Skipping build and deploy; event time %v is before the last build time %v", event.Time, meta.lastBuildStartTime)
 					continue // Skip this event as it's outdated
@@ -468,6 +519,22 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				} else {
 					didUpdateDeployments = true
 				}
+=======
+				// if event.Time.Before(meta.lastBuildStartTime) {
+				// 	logger.Debugf("Skipping build and deploy; event time %v is before the last build time %v", event.Time, meta.lastBuildStartTime)
+				// 	continue // Skip this event as it's outdated
+				// }
+				// didError = false
+				// err := e.BuildAndDeploy(ctx, 1, true, event.Config.Module)
+				// if err != nil {
+				// 	didError = true
+				// 	e.reportBuildFailed(err)
+				// 	console.UpdateModuleState(ctx, event.Config.Module, console.BuildStateFailed)
+				// 	logger.Errorf(err, "build and deploy failed for module %q", event.Config.Module)
+				// } else {
+				// 	didUpdateDeployments = true
+				// }
+>>>>>>> 2fef63a1 (language isolation)
 			}
 		case change := <-schemaChanges:
 			if change.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
@@ -575,29 +642,44 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 type buildCallback func(ctx context.Context, module Module) error
 
 func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, moduleNames ...string) error {
-	mustBuild := map[string]bool{}
+
 	if len(moduleNames) == 0 {
 		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
 			moduleNames = append(moduleNames, name)
 			return true
 		})
 	}
+
+	mustBuildChan := make(chan string, len(moduleNames))
+	wg := errgroup.Group{}
 	for _, name := range moduleNames {
-		meta, ok := e.moduleMetas.Load(name)
-		if !ok {
-			return fmt.Errorf("module %q not found", name)
-		}
-		// Update dependencies before building.
-		var err error
-		module, err := UpdateDependencies(ctx, meta.module)
-		if err != nil {
-			return err
-		}
-		e.moduleMetas.Store(name, moduleMeta{module: module})
+		wg.Go(func() error {
+			meta, ok := e.moduleMetas.Load(name)
+			if !ok {
+				return fmt.Errorf("module %q not found", name)
+			}
+
+			meta, err := meta.copyWithUpdatedDependencies(ctx)
+			if err != nil {
+				return fmt.Errorf("could not get dependencies for %s: %w", name, err)
+			}
+
+			e.moduleMetas.Store(name, meta)
+			mustBuildChan <- name
+			return nil
+		})
+	}
+	if err := wg.Wait(); err != nil {
+		return err
+	}
+	close(mustBuildChan)
+	mustBuild := map[string]bool{}
+	for name := range mustBuildChan {
 		mustBuild[name] = true
 
 		terminal.UpdateModuleState(ctx, name, terminal.BuildStateWaiting)
 	}
+
 	graph, err := e.Graph(moduleNames...)
 	if err != nil {
 		return err
@@ -736,16 +818,20 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	err := Build(ctx, e.projectRoot, sch, meta.module, e.watcher.GetTransaction(meta.module.Config.Dir), e.buildEnv, e.devMode)
+	moduleSchema, err := build(ctx, meta.plugin, e.projectRoot, sch, meta.module.Config, e.buildEnv, e.devMode)
 	if err != nil {
 		return err
 	}
+<<<<<<< HEAD
 	config := meta.module.Config
 	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(config.Dir, config.DeployDir, config.Schema))
 	if err != nil {
 		return fmt.Errorf("could not load schema for module %q: %w", config.Module, err)
 	}
 	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilt)
+=======
+	console.UpdateModuleState(ctx, moduleName, console.BuildStateBuilt)
+>>>>>>> 2fef63a1 (language isolation)
 	schemas <- moduleSchema
 	return nil
 }
@@ -780,4 +866,69 @@ func (e *Engine) gatherSchemas(
 	})
 
 	return nil
+}
+
+func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleConfig, projectPath string) (moduleMeta, error) {
+	plugin, err := PluginFromConfig(ctx, config.Abs(), projectPath)
+	if err != nil {
+		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
+	}
+	plugin.Updates().Subscribe(e.pluginEvents)
+	// TODO: unsubscribe when we remove this module
+
+	return moduleMeta{
+		module: Module{
+			Config:       config,
+			Dependencies: []string{},
+		},
+		plugin: plugin,
+	}, nil
+}
+
+// listenForBuildUpdates listens for adhoc build updates and reports them to the listener.
+// These happen when a plugin for a module detects a change and automatically rebuilds.
+func (e *Engine) listenForBuildUpdates(ctx context.Context) {
+	logger := log.FromContext(ctx)
+	for {
+		select {
+		case event := <-e.pluginEvents:
+			switch event := event.(type) {
+			case AutoRebuildStartedEvent:
+				console.UpdateModuleState(ctx, event.Module, console.BuildStateBuilding)
+
+			case AutoRebuildEndedEvent:
+				switch result := event.Result.(type) {
+				case either.Left[BuildResult, error]:
+					buildResult := result.Get()
+					if schema.ContainsTerminalError(buildResult.Errors) {
+						// TODO: clean up...
+						// logger.Errorf(result.Get(), "build %s failed", event.module)
+						// e.reportBuildFailed(result.Get())
+						continue
+					}
+					meta, ok := e.moduleMetas.Load(event.Module)
+					if !ok {
+						// TODO: handle this case
+						// return fmt.Errorf("Module %q not found", moduleName)
+						continue
+					}
+					console.UpdateModuleState(ctx, event.Module, console.BuildStateDeploying)
+					if err := Deploy(ctx, meta.module, 1, true, e.client); err != nil {
+						log.FromContext(ctx).Errorf(err, "deploy %s failed", event.Module)
+						e.reportBuildFailed(err)
+					} else {
+						e.reportSuccess()
+					}
+				case either.Right[BuildResult, error]:
+					logger.Errorf(result.Get(), "build %s failed", event.Module)
+					e.reportBuildFailed(result.Get())
+				default:
+					panic(fmt.Sprintf("unexpected result type %T", result))
+				}
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
 }
