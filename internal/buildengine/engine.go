@@ -46,9 +46,7 @@ type schemaChange struct {
 
 // moduleMeta is a wrapper around a module that includes the last build's start time.
 type moduleMeta struct {
-	module             Module
-	lastBuildStartTime time.Time
-
+	module Module
 	plugin LanguagePlugin
 	events chan PluginEvent
 }
@@ -767,8 +765,6 @@ func (e *Engine) tryBuild(ctx context.Context, mustBuild map[string]bool, module
 		}
 	}
 
-	meta.lastBuildStartTime = time.Now()
-	e.moduleMetas.Store(moduleName, meta)
 	err := e.build(ctx, moduleName, builtModules, schemas)
 	if err == nil && callback != nil {
 		return callback(ctx, meta.module)
