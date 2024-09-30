@@ -43,7 +43,6 @@ import (
 type Config struct {
 	Config                []string        `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
 	Bind                  *url.URL        `help:"Endpoint the Runner should bind to and advertise." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
-	Advertise             *url.URL        `help:"Endpoint the Runner should advertise (use --bind if omitted)." default:"" env:"FTL_RUNNER_ADVERTISE"`
 	Key                   model.RunnerKey `help:"Runner key (auto)."`
 	ControllerEndpoint    *url.URL        `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
 	TemplateDir           string          `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
@@ -57,9 +56,6 @@ type Config struct {
 }
 
 func Start(ctx context.Context, config Config) error {
-	if config.Advertise.String() == "" {
-		config.Advertise = config.Bind
-	}
 	ctx, doneFunc := context.WithCancel(ctx)
 	defer doneFunc()
 	hostname, err := os.Hostname()
@@ -389,7 +385,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 	logger.Tracef("Registering with Controller for deployment %s", s.config.Deployment)
 	err := send(&ftlv1.RegisterRunnerRequest{
 		Key:        s.key.String(),
-		Endpoint:   s.config.Advertise.String(),
+		Endpoint:   s.config.Bind.String(),
 		Labels:     s.labels,
 		Deployment: s.config.Deployment,
 	})
