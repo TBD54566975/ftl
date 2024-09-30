@@ -46,13 +46,15 @@ func TestCertificate(t *testing.T) {
 	assert.NoError(t, err)
 	request, err := runnerStore.NewGetCertificateRequest()
 	assert.NoError(t, err)
+	fmt.Printf("runner request id %s\n", request.Request.Identity)
+	fmt.Printf("runner request public key %x\n", request.Request.PublicKey)
+	fmt.Printf("runner request signature %x\n", request.Signature)
 
 	// Hand wave "send the request to the CA"
 	// Hand wave "check the ID and module"
 
 	certificate, err := caStore.SignCertificateRequest(&request)
 	assert.NoError(t, err)
-	fmt.Printf("Certificate: %s\n", certificate)
 
 	// Hand wave "send the certificate to the runner"
 

@@ -71,22 +71,23 @@ func (s *Store) NewGetCertificateRequest() (v1.GetCertificationRequest, error) {
 		return v1.GetCertificationRequest{}, fmt.Errorf("failed to get public key: %w", err)
 	}
 
-	req := v1.CertificationRequest{
+	req := &v1.CertificationRequest{
 		Identity:  s.Identity.String(),
 		PublicKey: publicKey.Bytes,
 	}
-	data, err := proto.Marshal(&req)
+	data, err := proto.Marshal(req)
 	if err != nil {
-		return v1.GetCertificationRequest{}, fmt.Errorf("failed to marshal request: %w", err)
+		return v1.GetCertificationRequest{}, fmt.Errorf("failed to marshal cert request: %w", err)
 	}
+	fmt.Printf("data1: %x\n", data)
 
 	signed, err := s.Signer.Sign(data)
 	if err != nil {
-		return v1.GetCertificationRequest{}, fmt.Errorf("failed to sign request: %w", err)
+		return v1.GetCertificationRequest{}, fmt.Errorf("failed to sign cert request: %w", err)
 	}
 
 	return v1.GetCertificationRequest{
-		Request:   &req,
+		Request:   req,
 		Signature: signed.Signature,
 	}, nil
 }
@@ -101,6 +102,7 @@ func (s *Store) SignCertificateRequest(req *v1.GetCertificationRequest) (Certifi
 	if err != nil {
 		return Certificate{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
+	fmt.Printf("data2: %x\n", data)
 
 	signedData, err := NewSignedData(verifier, data, req.Signature)
 	if err != nil {
@@ -113,10 +115,13 @@ func (s *Store) SignCertificateRequest(req *v1.GetCertificationRequest) (Certifi
 }
 
 func (s *Store) SetCertificate(cert Certificate, controllerVerifier Verifier) error {
-	_, err := controllerVerifier.Verify(cert.SignedData)
+	fmt.Printf("whattt\n")
+	data, err := controllerVerifier.Verify(cert.SignedData)
 	if err != nil {
 		return fmt.Errorf("failed to verify controller certificate: %w", err)
 	}
+
+	fmt.Printf("data4: %x\n", data)
 
 	s.Certificate = optional.Some(cert)
 	s.ControllerVerifier = optional.Some(controllerVerifier)
