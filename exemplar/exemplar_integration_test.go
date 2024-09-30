@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"path/filepath"
 	"testing"
+	"time"
 
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/alecthomas/assert/v2"
@@ -56,7 +57,7 @@ func TestExemplar(t *testing.T) {
 			assert.Equal(t, failedAgentId, postResult.ID)
 		}),
 
-		in.Sleep(2*1000*1000),
+		in.Sleep(2*time.Second),
 
 		in.ExecWithOutput("ftl", []string{"call", "relay.missionResult", fmt.Sprintf(`{"agentId": %v, "successful": true}`, successAgentId)}, func(output string) {
 			fmt.Println(output)

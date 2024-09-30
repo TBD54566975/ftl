@@ -66,22 +66,19 @@ func Briefed(ctx context.Context, agent origin.Agent) error {
 //ftl:verb
 func Deployed(ctx context.Context, d deployment) error {
 	ftl.LoggerFromContext(ctx).Infof("Deployed agent %v to %s", d.Agent.Id, d.Target)
-	appendLog(ctx, "deployed %d", d.Agent.Id)
-	return nil
+	return appendLog(ctx, "deployed %d", d.Agent.Id)
 }
 
 //ftl:verb
 func Succeeded(ctx context.Context, s missionSuccess) error {
-	fmt.Printf("Agent %d succeeded at %s\n", s.AgentID, s.SuccessAt)
-	appendLog(ctx, "succeeded %d", s.AgentID)
-	return nil
+	ftl.LoggerFromContext(ctx).Infof("Agent %d succeeded at %s\n", s.AgentID, s.SuccessAt)
+	return appendLog(ctx, "succeeded %d", s.AgentID)
 }
 
 //ftl:verb
 func Terminated(ctx context.Context, t agentTerminated) error {
-	fmt.Printf("Agent %d terminated at %s\n", t.AgentID, t.TerminatedAt)
-	appendLog(ctx, "terminated %d", t.AgentID)
-	return nil
+	ftl.LoggerFromContext(ctx).Infof("Agent %d terminated at %s\n", t.AgentID, t.TerminatedAt)
+	return appendLog(ctx, "terminated %d", t.AgentID)
 }
 
 // Exported verbs
@@ -95,7 +92,7 @@ type MissionResultResponse struct{}
 
 //ftl:verb export
 func MissionResult(ctx context.Context, req MissionResultRequest) (MissionResultResponse, error) {
-	fmt.Printf("Mission result for agent %v: %t\n", req.AgentID, req.Successful)
+	ftl.LoggerFromContext(ctx).Infof("Mission result for agent %v: %t\n", req.AgentID, req.Successful)
 	agentID := req.AgentID
 	var event any
 	if req.Successful {
@@ -109,7 +106,7 @@ func MissionResult(ctx context.Context, req MissionResultRequest) (MissionResult
 			TerminatedAt: time.Now(),
 		}
 	}
-	fmt.Printf("Sending event %v\n", event)
+	ftl.LoggerFromContext(ctx).Infof("Sending event %v\n", event)
 	err := mission.Send(ctx, strconv.Itoa(int(agentID)), event)
 	if err != nil {
 		return MissionResultResponse{}, err
@@ -129,18 +126,19 @@ func GetLogFile(ctx context.Context, req GetLogFileRequest) (GetLogFileResponse,
 
 // Helpers
 
-func appendLog(ctx context.Context, msg string, args ...interface{}) {
+func appendLog(ctx context.Context, msg string, args ...interface{}) error {
 	path := logFile.Get(ctx)
 	if path == "" {
-		panic("log_file config not set")
+		return fmt.Errorf("log_file config not set")
 	}
 	w, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to open log file %q: %w", path, err)
 	}
 	fmt.Fprintf(w, msg+"\n", args...)
 	err = w.Close()
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to close log file %q: %w", path, err)
 	}
+	return nil
 }

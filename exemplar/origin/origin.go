@@ -38,9 +38,8 @@ func PostAgent(ctx context.Context, req builtin.HttpRequest[Agent, ftl.Unit, ftl
 	}
 	AgentBroadcast.Publish(ctx, agent)
 	return builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse]{
-		Status:  201,
-		Headers: map[string][]string{"Post": {"Header from FTL"}},
-		Body:    ftl.Some(PostAgentResponse{ID: agent.ID}),
+		Status: 201,
+		Body:   ftl.Some(PostAgentResponse{ID: agent.ID}),
 	}, nil
 }
 
