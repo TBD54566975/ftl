@@ -1,14 +1,18 @@
 package xyz.block.ftl.deployment;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
 import jakarta.inject.Singleton;
 
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
@@ -38,6 +42,7 @@ public class VerbProcessor {
     public static final DotName VERB_CLIENT_SOURCE = DotName.createSimple(VerbClientSource.class);
     public static final DotName VERB_CLIENT_EMPTY = DotName.createSimple(VerbClientEmpty.class);
     public static final String TEST_ANNOTATION = "xyz.block.ftl.java.test.FTLManaged";
+    private static final Logger log = LoggerFactory.getLogger(VerbProcessor.class);
 
     @BuildStep
     VerbClientBuildItem handleVerbClients(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedClients,
@@ -45,6 +50,7 @@ public class VerbProcessor {
             ModuleNameBuildItem moduleNameBuildItem,
             LaunchModeBuildItem launchModeBuildItem) {
         var clientDefinitions = index.getComputingIndex().getAnnotations(VerbClientDefinition.class);
+        log.info("Processing {} verb clients into build items", clientDefinitions.size());
         Map<DotName, VerbClientBuildItem.DiscoveredClients> clients = new HashMap<>();
         for (var clientDefinition : clientDefinitions) {
             var iface = clientDefinition.target().asClass();
@@ -226,8 +232,10 @@ public class VerbProcessor {
     public void verbsAndCron(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem,
             BuildProducer<SchemaContributorBuildItem> schemaContributorBuildItemBuildProducer) {
+        Collection<AnnotationInstance> verbAnnotations = index.getIndex().getAnnotations(FTLDotNames.VERB);
+        log.info("Processing {} verb annotations into schema build items", verbAnnotations.size());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
-        for (var verb : index.getIndex().getAnnotations(FTLDotNames.VERB)) {
+        for (var verb : verbAnnotations) {
             boolean exported = verb.target().hasAnnotation(FTLDotNames.EXPORT);
             var method = verb.target().asMethod();
             String className = method.declaringClass().name().toString();
@@ -235,7 +243,10 @@ public class VerbProcessor {
             schemaContributorBuildItemBuildProducer.produce(new SchemaContributorBuildItem(moduleBuilder -> moduleBuilder
                     .registerVerbMethod(method, className, exported, ModuleBuilder.BodyType.ALLOWED, null)));
         }
-        for (var cron : index.getIndex().getAnnotations(FTLDotNames.CRON)) {
+
+        Collection<AnnotationInstance> cronAnnotations = index.getIndex().getAnnotations(FTLDotNames.CRON);
+        log.info("Processing {} cron job annotations into schema build items", cronAnnotations.size());
+        for (var cron : cronAnnotations) {
             var method = cron.target().asMethod();
             String className = method.declaringClass().name().toString();
             beans.addBeanClass(className);
