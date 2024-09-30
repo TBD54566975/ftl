@@ -34,3 +34,8 @@ export const formatTimestampTime = (timestamp?: Timestamp): string => {
 
   return formattedDate
 }
+
+export const compareTimestamps = (a?: Timestamp, b?: Timestamp): number => {
+  const compareTo = (a?: bigint, b?: bigint): number => Number((a || 0n) - (b || 0n))
+  return a?.seconds !== b?.seconds ? compareTo(a?.seconds, b?.seconds) : compareTo(BigInt(a?.nanos || 0), BigInt(b?.nanos || 0))
+}

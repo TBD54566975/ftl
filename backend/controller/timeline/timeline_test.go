@@ -107,7 +107,7 @@ func TestTimeline(t *testing.T) {
 	ingressEvent := &IngressEvent{
 		DeploymentKey:  deploymentKey,
 		RequestKey:     optional.Some(requestKey),
-		Verb:           schema.Ref{},
+		Verb:           schema.Ref{Module: "echo", Name: "echo"},
 		Method:         "GET",
 		Path:           "/echo",
 		StatusCode:     200,
@@ -167,6 +167,18 @@ func TestTimeline(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []Event{callEvent}, events)
+		})
+
+		t.Run("ByModule", func(t *testing.T) {
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeIngress), FilterModule("echo", optional.None[string]()))
+			assert.NoError(t, err)
+			assertEventsEqual(t, []Event{ingressEvent}, events)
+		})
+
+		t.Run("ByModuleWithVerb", func(t *testing.T) {
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeIngress), FilterModule("echo", optional.Some("echo")))
+			assert.NoError(t, err)
+			assertEventsEqual(t, []Event{ingressEvent}, events)
 		})
 
 		t.Run("ByLogLevel", func(t *testing.T) {

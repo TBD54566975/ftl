@@ -194,6 +194,10 @@ message EventsQuery {
     optional string dest_verb = 2;
     optional string source_module = 3;
   }
+  message ModuleFilter {
+    string module = 1;
+    optional string verb = 2;
+  }
 
   enum Order {
     ASC = 0;
@@ -211,6 +215,7 @@ message EventsQuery {
       TimeFilter time = 6;
       IDFilter id = 7;
       CallFilter call = 8;
+      ModuleFilter module = 9;
     }
   }
 

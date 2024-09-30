@@ -3,12 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
 import { useVisibility } from '../../hooks/use-visibility'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
-import { type EventsQuery_Filter, EventsQuery_Order } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { type Event, type EventsQuery_Filter, EventsQuery_Order } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 const timelineKey = 'timeline'
 const maxTimelineEntries = 1000
 
-export const useTimeline = (isStreaming: boolean, filters: EventsQuery_Filter[], enabled = true) => {
+export const useTimeline = (isStreaming: boolean, filters: EventsQuery_Filter[], updateIntervalMs = 1000, enabled = true) => {
   const client = useClient(ConsoleService)
   const queryClient = useQueryClient()
   const isVisible = useVisibility()
@@ -36,12 +36,16 @@ export const useTimeline = (isStreaming: boolean, filters: EventsQuery_Filter[],
   const streamTimeline = async ({ signal }: { signal: AbortSignal }) => {
     try {
       console.debug('streaming timeline')
-      console.debug('filters:', filters)
-      for await (const response of client.streamEvents({ updateInterval: { seconds: BigInt(1) }, query: { limit, filters, order } }, { signal })) {
+      console.debug('timeline-filters:', filters)
+      for await (const response of client.streamEvents(
+        { updateInterval: { seconds: BigInt(0), nanos: updateIntervalMs * 1000 }, query: { limit, filters, order } },
+        { signal },
+      )) {
+        console.debug('timeline-response:', response)
         if (response.events) {
-          const prev = queryClient.getQueryData<Event[]>(queryKey) ?? []
-          const allEvents = [...response.events, ...prev].slice(0, maxTimelineEntries)
-          queryClient.setQueryData(queryKey, allEvents)
+          queryClient.setQueryData<Event[]>(queryKey, (prev = []) => {
+            return [...response.events, ...prev].slice(0, maxTimelineEntries)
+          })
         }
       }
     } catch (error) {

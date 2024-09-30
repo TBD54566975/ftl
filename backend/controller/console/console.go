@@ -358,6 +358,12 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter
 				destVerb = optional.Some(*filter.Call.DestVerb)
 			}
 			query = append(query, timeline.FilterCall(sourceModule, filter.Call.DestModule, destVerb))
+		case *pbconsole.EventsQuery_Filter_Module:
+			var verb optional.Option[string]
+			if filter.Module.Verb != nil {
+				verb = optional.Some(*filter.Module.Verb)
+			}
+			query = append(query, timeline.FilterModule(filter.Module.Module, verb))
 
 		default:
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown filter %T", filter))
