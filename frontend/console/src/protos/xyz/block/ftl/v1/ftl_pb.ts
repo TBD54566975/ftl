@@ -855,56 +855,13 @@ export class PublishEventResponse extends Message<PublishEventResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.CertificationRequest
- */
-export class CertificationRequest extends Message<CertificationRequest> {
-  /**
-   * @generated from field: string identity = 1;
-   */
-  identity = "";
-
-  /**
-   * @generated from field: bytes public_key = 2;
-   */
-  publicKey = new Uint8Array(0);
-
-  constructor(data?: PartialMessage<CertificationRequest>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.CertificationRequest";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "identity", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "public_key", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CertificationRequest {
-    return new CertificationRequest().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CertificationRequest {
-    return new CertificationRequest().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CertificationRequest {
-    return new CertificationRequest().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: CertificationRequest | PlainMessage<CertificationRequest> | undefined, b: CertificationRequest | PlainMessage<CertificationRequest> | undefined): boolean {
-    return proto3.util.equals(CertificationRequest, a, b);
-  }
-}
-
-/**
  * @generated from message xyz.block.ftl.v1.GetCertificationRequest
  */
 export class GetCertificationRequest extends Message<GetCertificationRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.CertificationRequest request = 1;
+   * @generated from field: xyz.block.ftl.v1.CertificateContent request = 1;
    */
-  request?: CertificationRequest;
+  request?: CertificateContent;
 
   /**
    * @generated from field: bytes signature = 2;
@@ -919,7 +876,7 @@ export class GetCertificationRequest extends Message<GetCertificationRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.GetCertificationRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "request", kind: "message", T: CertificationRequest },
+    { no: 1, name: "request", kind: "message", T: CertificateContent },
     { no: 2, name: "signature", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 

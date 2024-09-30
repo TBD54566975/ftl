@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -46,9 +45,6 @@ func TestCertificate(t *testing.T) {
 	assert.NoError(t, err)
 	request, err := runnerStore.NewGetCertificateRequest()
 	assert.NoError(t, err)
-	fmt.Printf("runner request id %s\n", request.Request.Identity)
-	fmt.Printf("runner request public key %x\n", request.Request.PublicKey)
-	fmt.Printf("runner request signature %x\n", request.Signature)
 
 	// Hand wave "send the request to the CA"
 	// Hand wave "check the ID and module"
@@ -61,11 +57,11 @@ func TestCertificate(t *testing.T) {
 	err = runnerStore.SetCertificate(certificate, caVerifier)
 	assert.NoError(t, err)
 
-	// Runner A constructs a certified message
+	// Runner constructs a certified message
 	message := []byte("hello")
 	certified, err := runnerStore.CertifiedSign(message)
+	assert.NoError(t, err)
 
-	fmt.Printf("Certified message: %s\n", certified)
 	_, data, err := certified.Verify(caVerifier)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(data))

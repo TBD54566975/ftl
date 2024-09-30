@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -71,7 +72,7 @@ func (s *Store) NewGetCertificateRequest() (v1.GetCertificationRequest, error) {
 		return v1.GetCertificationRequest{}, fmt.Errorf("failed to get public key: %w", err)
 	}
 
-	req := &v1.CertificationRequest{
+	req := &v1.CertificateContent{
 		Identity:  s.Identity.String(),
 		PublicKey: publicKey.Bytes,
 	}
@@ -79,7 +80,6 @@ func (s *Store) NewGetCertificateRequest() (v1.GetCertificationRequest, error) {
 	if err != nil {
 		return v1.GetCertificationRequest{}, fmt.Errorf("failed to marshal cert request: %w", err)
 	}
-	fmt.Printf("data1: %x\n", data)
 
 	signed, err := s.Signer.Sign(data)
 	if err != nil {
@@ -93,20 +93,27 @@ func (s *Store) NewGetCertificateRequest() (v1.GetCertificationRequest, error) {
 }
 
 func (s *Store) SignCertificateRequest(req *v1.GetCertificationRequest) (Certificate, error) {
+	// Ensure the pubkey matches the signature.
 	verifier, err := NewVerifier(NewPublicKey(req.Request.PublicKey))
 	if err != nil {
 		return Certificate{}, fmt.Errorf("failed to create verifier: %w", err)
 	}
-
 	data, err := proto.Marshal(req.Request)
 	if err != nil {
 		return Certificate{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
-	fmt.Printf("data2: %x\n", data)
-
 	signedData, err := NewSignedData(verifier, data, req.Signature)
+	verifier.Verify(signedData)
+
+	// Discard the node signature as we have verified it.
+	// This contains the node's identity and public key.
+	certificateData, err := proto.Marshal(req.Request)
 	if err != nil {
-		return Certificate{}, fmt.Errorf("failed to create signed data: %w", err)
+		return Certificate{}, fmt.Errorf("failed to marshal certificate data: %w", err)
+	}
+	signedData, err = s.Signer.Sign(certificateData)
+	if err != nil {
+		return Certificate{}, fmt.Errorf("failed to create ca signed data for cert: %w", err)
 	}
 
 	return Certificate{
@@ -115,13 +122,26 @@ func (s *Store) SignCertificateRequest(req *v1.GetCertificationRequest) (Certifi
 }
 
 func (s *Store) SetCertificate(cert Certificate, controllerVerifier Verifier) error {
-	fmt.Printf("whattt\n")
 	data, err := controllerVerifier.Verify(cert.SignedData)
 	if err != nil {
 		return fmt.Errorf("failed to verify controller certificate: %w", err)
 	}
 
-	fmt.Printf("data4: %x\n", data)
+	// Verify the certificate is for us, checking identity and public key.
+	req := &v1.CertificateContent{}
+	if err := proto.Unmarshal(data, req); err != nil {
+		return fmt.Errorf("failed to unmarshal cert request: %w", err)
+	}
+	if req.Identity != s.Identity.String() {
+		return fmt.Errorf("certificate identity does not match: %s != %s", req.Identity, s.Identity.String())
+	}
+	myPub, err := s.KeyPair.Public()
+	if err != nil {
+		return fmt.Errorf("failed to get public key: %w", err)
+	}
+	if !bytes.Equal(myPub.Bytes, req.PublicKey) {
+		return fmt.Errorf("certificate public key does not match")
+	}
 
 	s.Certificate = optional.Some(cert)
 	s.ControllerVerifier = optional.Some(controllerVerifier)

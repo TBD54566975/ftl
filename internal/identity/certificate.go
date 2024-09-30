@@ -31,7 +31,7 @@ func NewCertificate(cert *ftlv1.Certificate) (Certificate, error) {
 }
 
 func (c Certificate) String() string {
-	return fmt.Sprintf("Certificate(%s %x)", c.data, c.Signature)
+	return fmt.Sprintf("Certificate(%x %x)", c.data, c.Signature)
 }
 
 // CertifiedSignedData is sent by a node and proves identity based on a certificate.
@@ -41,7 +41,7 @@ type CertifiedSignedData struct {
 }
 
 func (c CertifiedSignedData) String() string {
-	return fmt.Sprintf("CertifiedSignedData data:%s signature:%x (%s)", c.SignedData.data, c.SignedData.Signature, c.Certificate)
+	return fmt.Sprintf("CertifiedSignedData data:%x signature:%x (%s)", c.SignedData.data, c.SignedData.Signature, c.Certificate)
 }
 
 // Verify against the CA and then the node certificate. Only return the data if both are valid.

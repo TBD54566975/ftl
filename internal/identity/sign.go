@@ -91,6 +91,7 @@ func (t KeyPair) Verifier() (Verifier, error) {
 }
 
 func (t KeyPair) Public() (PublicKey, error) {
+	// TODO: Maybe slow. Cache it.
 	publicHandle, err := t.keysetHandle.Public()
 	if err != nil {
 		return PublicKey{}, fmt.Errorf("failed to get public keyset from keyset handle: %w", err)

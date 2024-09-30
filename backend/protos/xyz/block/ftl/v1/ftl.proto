@@ -133,13 +133,8 @@ service ModuleService {
   rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
 }
 
-message CertificationRequest {
-    string identity = 1;
-    bytes public_key = 2;
-}
-
 message GetCertificationRequest {
-  CertificationRequest request = 1;
+  CertificateContent request = 1;
   bytes signature = 2;
 }
 
@@ -149,8 +144,8 @@ message GetCertificationResponse {
 
 // CertificateContent is separated from Certificate to allow for easier signing.
 message CertificateContent {
-    string identity = 1;
-    bytes public_key = 2;
+  string identity = 1;
+  bytes public_key = 2;
 }
 
 message Certificate {
