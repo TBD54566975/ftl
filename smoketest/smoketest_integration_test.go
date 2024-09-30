@@ -10,8 +10,9 @@ import (
 	"testing"
 	"time"
 
-	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/alecthomas/assert/v2"
+
+	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
 func TestSmokeTest(t *testing.T) {
@@ -26,6 +27,7 @@ func TestSmokeTest(t *testing.T) {
 	nonce := randomString(4)
 
 	in.Run(t,
+		in.WithJavaBuild(),
 		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),
 		in.CopyModule("origin"),
