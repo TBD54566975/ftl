@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alecthomas/types/either"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -14,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
-	"github.com/alecthomas/types/either"
 )
 
 const BuildLockTimeout = time.Minute
