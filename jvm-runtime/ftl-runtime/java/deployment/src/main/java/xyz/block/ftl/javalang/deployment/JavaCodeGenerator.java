@@ -110,6 +110,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             //Enums with a type are "value enums" - Java natively supports these
             TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(interfaceType)
                     .addAnnotation(getGeneratedRefAnnotation(module.getName(), data.getName()))
+                    .addAnnotation(AnnotationSpec.builder(xyz.block.ftl.Enum.class).build())
                     .addModifiers(Modifier.PUBLIC);
 
             TypeName enumType = toAnnotatedJavaTypeName(data.getType(), typeAliasMap, nativeTypeAliasMap);
@@ -124,16 +125,13 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     .addStatement("return value")
                     .build());
 
+            var format = data.getType().hasString() ? "$S" : "$L";
             for (var i : data.getVariantsList()) {
                 Object value = toJavaValue(i.getValue());
-                dataBuilder.addEnumConstant(i.getName(),
-                        TypeSpec.anonymousClassBuilder("$L", value)
-                                .build());
+                dataBuilder.addEnumConstant(i.getName(), TypeSpec.anonymousClassBuilder(format, value).build());
             }
-
             JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
                     .build();
-
             javaFile.writeTo(outputDir);
         } else {
             // Enums without a type are (confusingly) "type enums". Java can't represent these directly, so we use a
@@ -143,6 +141,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             // https://github.com/square/javapoet/issues/823
             TypeSpec.Builder interfaceBuilder = TypeSpec.interfaceBuilder(interfaceType)
                     .addAnnotation(getGeneratedRefAnnotation(module.getName(), data.getName()))
+                    .addAnnotation(AnnotationSpec.builder(xyz.block.ftl.Enum.class).build())
                     .addModifiers(Modifier.PUBLIC);
 
             Map<String, TypeName> variantValuesTypes = data.getVariantsList().stream().collect(
