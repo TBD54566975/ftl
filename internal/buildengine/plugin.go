@@ -198,12 +198,12 @@ func (p *internalPlugin) getDependencies(ctx context.Context, d dependenciesFunc
 		case either.Left[[]string, error]:
 			return result.Get(), nil
 		case either.Right[[]string, error]:
-			return nil, result.Get()
+			return nil, fmt.Errorf("could not get dependencies: %w", result.Get())
 		default:
 			panic(fmt.Sprintf("unexpected result type %T", result))
 		}
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, fmt.Errorf("could not get dependencies: %w", ctx.Err())
 	}
 }
 
@@ -331,12 +331,12 @@ func loadProtoErrors(config moduleconfig.AbsModuleConfig) (*schema.ErrorList, er
 
 	content, err := os.ReadFile(config.Errors)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load build errors file: %w", err)
 	}
 	errorspb := &schemapb.ErrorList{}
 	err = proto.Unmarshal(content, errorspb)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not unmarshal build errors %w", err)
 	}
 	return schema.ErrorListFromProto(errorspb), nil
 }

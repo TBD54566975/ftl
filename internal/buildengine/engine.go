@@ -489,21 +489,26 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				}
 				if meta, ok := e.moduleMetas.Load(event.Config.Module); ok {
 					meta.plugin.Updates().Unsubscribe(meta.events)
-					meta.plugin.Kill(ctx)
+					err := meta.plugin.Kill(ctx)
+					if err != nil {
+						didError = true
+						e.reportBuildFailed(err)
+						logger.Errorf(err, "terminate %s plugin failed", event.Config.Module)
+					}
 				}
 				e.moduleMetas.Delete(event.Config.Module)
 			case WatchEventModuleChanged:
-				// TODO: ftl.toml changed... update config and tell plugin
+				// ftl.toml file has changed
 				meta, ok := e.moduleMetas.Load(event.Config.Module)
 				if !ok {
 					logger.Warnf("module %q not found", event.Config.Module)
 					continue
 				}
 
-				// ftl.toml file has changed
 				updatedConfig, err := moduleconfig.LoadModuleConfig(event.Config.Dir)
 				if err != nil {
-					return err
+					logger.Errorf(err, "could not load updated toml for %s", event.Config.Module)
+					continue
 				}
 				meta.module.Config = updatedConfig
 				e.moduleMetas.Store(event.Config.Module, meta)

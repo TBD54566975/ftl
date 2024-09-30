@@ -153,7 +153,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 		}
 		file, err := os.Open(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not open file while extracting dependencies: %w", err)
 		}
 		defer file.Close()
 

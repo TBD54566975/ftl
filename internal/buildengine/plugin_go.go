@@ -76,7 +76,7 @@ func (p *goPlugin) CreateModule(ctx context.Context, config moduleconfig.AbsModu
 	}
 	logger.Debugf("Running go mod tidy: %s", config.Dir)
 	if err := exec.Command(ctx, log.Debug, config.Dir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
-		return err
+		return fmt.Errorf("could not tidy: %w", err)
 	}
 	return nil
 }
@@ -94,7 +94,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 			}
 			pkgs, err := parser.ParseDir(fset, path, nil, parser.ImportsOnly)
 			if pkgs == nil {
-				return err
+				return fmt.Errorf("could parse directory in search of dependencies: %w", err)
 			}
 			for _, pkg := range pkgs {
 				for _, file := range pkg.Files {
