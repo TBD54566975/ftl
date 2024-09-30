@@ -106,8 +106,13 @@ func (d *Deployment) Progress(ctx context.Context) (bool, error) {
 			return true, err
 		}
 	}
-	err := next.Progress(ctx)
-	return d.next().Ok(), err
+	if next.state != TaskStateDone {
+		err := next.Progress(ctx)
+		if err != nil {
+			return true, err
+		}
+	}
+	return d.next().Ok(), nil
 }
 
 type DeploymentState struct {

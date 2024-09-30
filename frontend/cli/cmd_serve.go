@@ -52,6 +52,7 @@ type serveCmd struct {
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	DatabaseImage       string               `help:"The container image to start for the database" default:"postgres:15.8" env:"FTL_DATABASE_IMAGE" hidden:""`
 	controller.CommonConfig
+	provisioner.CommonProvisionerConfig
 }
 
 const ftlContainerName = "ftl-db-1"
@@ -191,8 +192,9 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	for i := range s.Provisioners {
 		config := provisioner.Config{
-			Bind:               provisionerAddresses[i],
-			ControllerEndpoint: controllerAddresses[i%len(controllerAddresses)],
+			Bind:                    provisionerAddresses[i],
+			ControllerEndpoint:      controllerAddresses[i%len(controllerAddresses)],
+			CommonProvisionerConfig: s.CommonProvisionerConfig,
 		}
 
 		config.SetDefaults()

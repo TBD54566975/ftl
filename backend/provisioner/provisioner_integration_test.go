@@ -9,9 +9,14 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestDeploymentThroughProvisioner(t *testing.T) {
+func TestDeploymentThroughNoopProvisioner(t *testing.T) {
 	in.Run(t,
-		in.WithProvisioner(),
+		in.WithProvisioner(`
+			default = "noop"
+			plugins = [
+				{ name = "noop", resources = ["postgres"] },
+			]
+		`),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {

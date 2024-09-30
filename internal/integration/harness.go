@@ -124,8 +124,9 @@ func WithoutController() Option {
 
 // WithProvisioner is a Run* option that starts the provisioner service.
 // if set, all deployments are done through the provisioner
-func WithProvisioner() Option {
+func WithProvisioner(config string) Option {
 	return func(o *options) {
+		o.provisionerConfig = config
 		o.startProvisioner = true
 		// provisioner always needs a controller to talk to
 		o.startController = true
@@ -133,14 +134,15 @@ func WithProvisioner() Option {
 }
 
 type options struct {
-	languages        []string
-	testDataDir      string
-	ftlConfigPath    string
-	startController  bool
-	startProvisioner bool
-	requireJava      bool
-	envars           map[string]string
-	kube             bool
+	languages         []string
+	testDataDir       string
+	ftlConfigPath     string
+	startController   bool
+	startProvisioner  bool
+	provisionerConfig string
+	requireJava       bool
+	envars            map[string]string
+	kube              bool
 }
 
 // Run an integration test.
@@ -245,7 +247,11 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				Infof("Starting ftl cluster")
 				args := []string{filepath.Join(binDir, "ftl"), "serve", "--recreate"}
 				if opts.startProvisioner {
+					configFile := filepath.Join(tmpDir, "provisioner-plugin-config.toml")
+					os.WriteFile(configFile, []byte(opts.provisionerConfig), 0644)
+
 					args = append(args, "--provisioners=1")
+					args = append(args, "--provisioner-plugin-config="+configFile)
 				}
 				ctx = startProcess(ctx, t, args...)
 			}

@@ -4,13 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"connectrpc.com/connect"
-
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/common/plugin"
-	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // ResourceType is a type of resource used to configure provisioners
@@ -28,6 +23,29 @@ type Provisioner interface {
 	State(ctx context.Context, token string, desired []*provisioner.Resource) (TaskState, []*provisioner.Resource, error)
 }
 
+// ProvisionerPluginConfig is a map of provisioner name to resources it supports
+type ProvisionerPluginConfig struct {
+	// The default provisioner to use for all resources not matched here
+	Default string `toml:"default"`
+	Plugins []struct {
+		Name      string         `toml:"name"`
+		Resources []ResourceType `toml:"resources"`
+	} `toml:"plugins"`
+}
+
+func (cfg *ProvisionerPluginConfig) Validate() error {
+	registeredResources := map[ResourceType]bool{}
+	for _, plugin := range cfg.Plugins {
+		for _, r := range plugin.Resources {
+			if registeredResources[r] {
+				return fmt.Errorf("resource type %s is already registered. Trying to re-register for %s", r, plugin.Name)
+			}
+			registeredResources[r] = true
+		}
+	}
+	return nil
+}
+
 type provisionerConfig struct {
 	provisioner Provisioner
 	types       []ResourceType
@@ -35,7 +53,28 @@ type provisionerConfig struct {
 
 // ProvisionerRegistry contains all known resource handlers in the order they should be executed
 type ProvisionerRegistry struct {
+	Default      Provisioner
 	Provisioners []*provisionerConfig
+}
+
+func NewProvisionerRegistry(ctx context.Context, cfg *ProvisionerPluginConfig) (*ProvisionerRegistry, error) {
+	result := &ProvisionerRegistry{}
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("error validating provisioner config: %w", err)
+	}
+	for _, plugin := range cfg.Plugins {
+		switch plugin.Name {
+		case "noop":
+			result.Register(&NoopProvisioner{}, plugin.Resources...)
+		default:
+			provisioner, err := NewPluginProvisioner(ctx, plugin.Name)
+			if err != nil {
+				return nil, fmt.Errorf("error creating provisioner plugin %s: %w", plugin.Name, err)
+			}
+			result.Register(provisioner, plugin.Resources...)
+		}
+	}
+	return result, nil
 }
 
 // Register to the registry, to be executed after all the previously added handlers
@@ -112,61 +151,3 @@ func typeOf(r *provisioner.Resource) ResourceType {
 	}
 	return ResourceTypeUnknown
 }
-
-// PluginProvisioner delegates provisioning to an external plugin
-type PluginProvisioner struct {
-	cmdCtx context.Context
-	client *plugin.Plugin[provisionerconnect.ProvisionerPluginServiceClient]
-}
-
-func NewPluginProvisioner(ctx context.Context, name, dir, exe string) (*PluginProvisioner, error) {
-	client, cmdCtx, err := plugin.Spawn(
-		ctx,
-		log.Debug,
-		name,
-		dir,
-		exe,
-		provisionerconnect.NewProvisionerPluginServiceClient,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error spawning plugin: %w", err)
-	}
-
-	return &PluginProvisioner{
-		cmdCtx: cmdCtx,
-		client: client,
-	}, nil
-}
-
-func (p *PluginProvisioner) Provision(ctx context.Context, module string, desired []*provisioner.ResourceContext, existing []*provisioner.Resource) (string, error) {
-	resp, err := p.client.Client.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
-		DesiredResources:  desired,
-		ExistingResources: existing,
-		FtlClusterId:      "ftl",
-		Module:            module,
-	}))
-	if err != nil {
-		return "", fmt.Errorf("error calling plugin: %w", err)
-	}
-	if resp.Msg.Status != provisioner.ProvisionResponse_SUBMITTED {
-		return resp.Msg.ProvisioningToken, nil
-	}
-	return "", nil
-}
-
-func (p *PluginProvisioner) State(ctx context.Context, token string, desired []*provisioner.Resource) (TaskState, []*provisioner.Resource, error) {
-	resp, err := p.client.Client.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
-		ProvisioningToken: token,
-	}))
-	if err != nil {
-		return "", nil, fmt.Errorf("error getting status from plugin: %w", err)
-	}
-	if failed, ok := resp.Msg.Status.(*provisioner.StatusResponse_Failed); ok {
-		return TaskStateFailed, nil, fmt.Errorf("provisioning failed: %s", failed.Failed.ErrorMessage)
-	} else if success, ok := resp.Msg.Status.(*provisioner.StatusResponse_Success); ok {
-		return TaskStateDone, success.Success.UpdatedResources, nil
-	}
-	return TaskStateRunning, nil, nil
-}
-
-var _ Provisioner = (*PluginProvisioner)(nil)
