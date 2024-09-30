@@ -9,12 +9,12 @@ package {{$name}}
 {{ if .Imports -}}
 import (
 {{- range .Imports }}
-	{{.}}
+    {{.}}
 {{- end }}
 )
-{{- end }}
+{{ end }}
 
-{{ range $verbs -}}
+{{- range $verbs -}}
 	{{ $req := .Request.LocalTypeName -}}
 	{{ $resp := .Response.LocalTypeName -}}
 
@@ -47,7 +47,7 @@ func init() {
             {{ trimModuleQualifier $moduleName .TypeName }},
             {{- range .Resources}}
                 {{- with getVerbClient . }}
-            	{{ $verb := trimModuleQualifier $moduleName .TypeName -}}
+            	{{- $verb := trimModuleQualifier $moduleName .TypeName -}}
 
             	{{ if and (eq .Request.TypeName "ftl.Unit") (eq .Response.TypeName "ftl.Unit")}}
             server.EmptyClient[{{$verb}}](),

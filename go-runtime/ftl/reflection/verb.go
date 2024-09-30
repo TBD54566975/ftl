@@ -22,6 +22,7 @@ func ProvideResourcesForVerb(verb any, rs ...VerbResource) Registree {
 			resources = append(resources, r())
 		}
 		vi := verbCall{
+			ref:  ref,
 			args: resources,
 			fn:   reflect.ValueOf(verb),
 		}
@@ -33,6 +34,7 @@ func ProvideResourcesForVerb(verb any, rs ...VerbResource) Registree {
 type VerbExec func(ctx context.Context, req optional.Option[any]) (optional.Option[any], error)
 
 type verbCall struct {
+	ref  Ref
 	args []reflect.Value
 	fn   reflect.Value
 }
@@ -54,7 +56,7 @@ func (v verbCall) Exec(ctx context.Context, req optional.Option[any]) (optional.
 	tryCall := func(args []reflect.Value) (results []reflect.Value, err error) {
 		defer func() {
 			if r := recover(); r != nil {
-				err = fmt.Errorf("panic occurred: %v", r)
+				err = fmt.Errorf("%v", r)
 			}
 		}()
 		results = v.fn.Call(args)
@@ -82,7 +84,7 @@ func (v verbCall) Exec(ctx context.Context, req optional.Option[any]) (optional.
 		resp = optional.Some(results[0].Interface())
 		errValue = results[1]
 	default:
-		return optional.None[any](), fmt.Errorf("unexpected number of return values from verb")
+		return optional.None[any](), fmt.Errorf("unexpected number of return values from verb %s", v.ref)
 	}
 	var fnError error
 	if e := errValue.Interface(); e != nil {

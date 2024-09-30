@@ -6,8 +6,6 @@ import (
 
     "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
     "github.com/TBD54566975/ftl/go-runtime/server"
-
-    
 )
 
 type CalleeVerbClient func(context.Context, Request) (Response, error)
