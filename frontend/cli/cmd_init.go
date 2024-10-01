@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"context"
 	"fmt"
@@ -8,7 +9,10 @@ import (
 	"path"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
+
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -109,4 +113,18 @@ func updateGitIgnore(ctx context.Context, gitRoot string) error {
 
 	// Add .gitignore to git
 	return maybeGitAdd(ctx, gitRoot, ".gitignore")
+}
+
+func scaffold(ctx context.Context, includeBinDir bool, source *zip.Reader, destination string, sctx any, options ...scaffolder.Option) error {
+	logger := log.FromContext(ctx)
+	opts := []scaffolder.Option{scaffolder.Exclude("^go.mod$")}
+	if !includeBinDir {
+		logger.Debugf("Excluding bin directory")
+		opts = append(opts, scaffolder.Exclude("^bin"))
+	}
+	opts = append(opts, options...)
+	if err := internal.ScaffoldZip(source, destination, sctx, opts...); err != nil {
+		return fmt.Errorf("failed to scaffold: %w", err)
+	}
+	return nil
 }

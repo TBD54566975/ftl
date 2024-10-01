@@ -1154,7 +1154,11 @@ func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error 
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	return os.WriteFile(config.Abs().Schema, schemaBytes, 0600)
+	err = os.WriteFile(config.Abs().Schema(), schemaBytes, 0600)
+	if err != nil {
+		return fmt.Errorf("could not write schema: %w", err)
+	}
+	return nil
 }
 
 func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error) error {

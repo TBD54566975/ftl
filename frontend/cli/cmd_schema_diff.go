@@ -93,9 +93,9 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 		return nil, fmt.Errorf("failed to discover modules %w", err)
 	}
 	for _, moduleSettings := range modules {
-		mod, err := schema.ModuleFromProtoFile(moduleSettings.Config.Abs().Schema)
+		mod, err := schema.ModuleFromProtoFile(moduleSettings.Abs().Schema())
 		if err != nil {
-			tried += fmt.Sprintf(" failed to read schema file %s; did you run ftl build?", moduleSettings.Config.Abs().Schema)
+			tried += fmt.Sprintf(" failed to read schema file %s; did you run ftl build?", moduleSettings.Abs().Schema())
 		} else {
 			found = true
 			pb.Modules = append(pb.Modules, mod)

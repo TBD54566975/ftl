@@ -4,68 +4,48 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
+	"github.com/alecthomas/types/either"
 	"google.golang.org/protobuf/proto"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/errors"
-	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
-const BuildLockTimeout = time.Minute
-
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func Build(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) error {
-	return buildModule(ctx, projectRootDir, sch, module, filesTransaction, buildEnv, devMode)
-}
-
-func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema, module Module, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) error {
-	release, err := flock.Acquire(ctx, filepath.Join(module.Config.Dir, ".ftl.lock"), BuildLockTimeout)
-	if err != nil {
-		return err
-	}
-	defer release() //nolint:errcheck
-	logger := log.FromContext(ctx).Module(module.Config.Module).Scope("build")
+func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sch *schema.Schema, config moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (*schema.Module, error) {
+	logger := log.FromContext(ctx).Module(config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
-
-	// clear the deploy directory before extracting schema
-	if err := os.RemoveAll(module.Config.Abs().DeployDir); err != nil {
-		return fmt.Errorf("failed to clear errors: %w", err)
-	}
 
 	logger.Infof("Building module")
 
-	startTime := time.Now()
+	result, err := plugin.Build(ctx, projectRootDir, config, sch, buildEnv, devMode)
+	if err != nil {
+		return handleBuildResult(ctx, config, either.RightOf[BuildResult](err))
+	}
+	return handleBuildResult(ctx, config, either.LeftOf[error](result))
+}
 
-	switch module.Config.Language {
-	case "go":
-		err = buildGoModule(ctx, projectRootDir, sch, module, filesTransaction, buildEnv, devMode)
-	case "java", "kotlin":
-		err = buildJavaModule(ctx, module)
-	case "rust":
-		err = buildRustModule(ctx, sch, module)
-	default:
-		return fmt.Errorf("unknown language %q", module.Config.Language)
+// handleBuildResult processes the result of a build
+func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult either.Either[BuildResult, error]) (*schema.Module, error) {
+	logger := log.FromContext(ctx)
+	config := c.Abs()
+
+	var result BuildResult
+	switch eitherResult := eitherResult.(type) {
+	case either.Right[BuildResult, error]:
+		return nil, fmt.Errorf("failed to build module: %w", eitherResult.Get())
+	case either.Left[BuildResult, error]:
+		result = eitherResult.Get()
 	}
 
 	var errs []error
-	if err != nil {
-		errs = append(errs, err)
-	}
-	// read runtime-specific build errors from the build directory
-	errorList, err := loadProtoErrors(module.Config.Abs())
-	if err != nil {
-		return fmt.Errorf("failed to read build errors for module: %w", err)
-	}
-	schema.SortErrorsByPosition(errorList.Errors)
-	for _, e := range errorList.Errors {
+	for _, e := range result.Errors {
 		if e.Level == schema.WARN {
 			logger.Log(log.Entry{Level: log.Warn, Message: e.Error(), Error: e})
 			continue
@@ -74,27 +54,18 @@ func buildModule(ctx context.Context, projectRootDir string, sch *schema.Schema,
 	}
 
 	if len(errs) > 0 {
-		return errors.Join(errs...)
+		return nil, errors.Join(errs...)
 	}
 
-	logger.Infof("Module built (%.2fs)", time.Since(startTime).Seconds())
+	logger.Infof("Module built (%.2fs)", time.Since(result.StartTime).Seconds())
 
-	return nil
-}
-
-func loadProtoErrors(config moduleconfig.AbsModuleConfig) (*schema.ErrorList, error) {
-	if _, err := os.Stat(config.Errors); errors.Is(err, os.ErrNotExist) {
-		return &schema.ErrorList{Errors: make([]*schema.Error, 0)}, nil
-	}
-
-	content, err := os.ReadFile(config.Errors)
+	// write schema proto to deploy directory
+	schemaBytes, err := proto.Marshal(result.Schema.ToProto())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	errorspb := &schemapb.ErrorList{}
-	err = proto.Unmarshal(content, errorspb)
-	if err != nil {
-		return nil, err
+	if err := os.WriteFile(config.Schema(), schemaBytes, 0600); err != nil {
+		return nil, fmt.Errorf("failed to write schema: %w", err)
 	}
-	return schema.ErrorListFromProto(errorspb), nil
+	return result.Schema, nil
 }

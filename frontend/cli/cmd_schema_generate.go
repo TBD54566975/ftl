@@ -144,7 +144,6 @@ func (s *schemaGenerateCmd) regenerateModules(logger *log.Logger, modules []*sch
 
 	for _, module := range modules {
 		if err := scaffolder.Scaffold(s.Template, s.Dest, module,
-			scaffolder.Functions(scaffoldFuncs),
 			scaffolder.Extend(javascript.Extension("template.js", javascript.WithLogger(makeJSLoggerAdapter(logger)))),
 		); err != nil {
 			return err
