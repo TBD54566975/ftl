@@ -14,6 +14,10 @@ import (
 
 func init() {
 	reflection.Register(
+		reflection.SumType[ftlanother.SecondTypeEnum](
+			*new(ftlanother.One),
+			*new(ftlanother.Two),
+		),
 		reflection.SumType[ftlanother.TypeEnum](
 			*new(ftlanother.A),
 			*new(ftlanother.B),

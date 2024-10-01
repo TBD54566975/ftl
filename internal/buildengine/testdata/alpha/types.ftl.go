@@ -5,6 +5,7 @@ import (
 	"context"
 	ftlother "ftl/other"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
@@ -12,6 +13,7 @@ type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)
 
 func init() {
 	reflection.Register(
+		reflection.ExternalType(*new(lib.AnotherNonFTLType)),
 		reflection.ProvideResourcesForVerb(
 			Echo,
 			server.VerbClient[ftlother.EchoClient, ftlother.EchoRequest, ftlother.EchoResponse](),
