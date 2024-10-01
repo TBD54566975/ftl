@@ -40,7 +40,7 @@ func (m *Map) ToProto() proto.Message {
 
 func mapToSchema(s *schemapb.Map) *Map {
 	return &Map{
-		Pos:   posFromProto(s.Pos),
+		Pos:   PosFromProto(s.Pos),
 		Key:   TypeFromProto(s.Key),
 		Value: TypeFromProto(s.Value),
 	}

@@ -47,7 +47,7 @@ func (s *Secret) schemaSymbol()          {}
 
 func SecretFromProto(s *schemapb.Secret) *Secret {
 	return &Secret{
-		Pos:      posFromProto(s.Pos),
+		Pos:      PosFromProto(s.Pos),
 		Name:     s.Name,
 		Comments: s.Comments,
 		Type:     TypeFromProto(s.Type),

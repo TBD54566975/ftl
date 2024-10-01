@@ -57,7 +57,7 @@ func (t *Topic) ToProto() proto.Message {
 
 func TopicFromProto(t *schemapb.Topic) *Topic {
 	return &Topic{
-		Pos: posFromProto(t.Pos),
+		Pos: PosFromProto(t.Pos),
 
 		Name:     t.Name,
 		Export:   t.Export,

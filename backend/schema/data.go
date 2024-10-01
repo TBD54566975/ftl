@@ -195,7 +195,7 @@ func (d *Data) ToProto() proto.Message {
 
 func DataFromProto(s *schemapb.Data) *Data {
 	return &Data{
-		Pos: posFromProto(s.Pos),
+		Pos: PosFromProto(s.Pos),
 
 		Name:           s.Name,
 		Export:         s.Export,
