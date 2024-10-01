@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
-	"github.com/alecthomas/types/pubsub"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -36,15 +35,6 @@ func newGoPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *goPlugi
 	return &goPlugin{
 		internalPlugin: internal,
 	}
-}
-
-func (p *goPlugin) Updates() *pubsub.Topic[PluginEvent] {
-	return p.internalPlugin.updates
-}
-
-func (p *goPlugin) Kill(ctx context.Context) error {
-	p.cancel()
-	return nil
 }
 
 type scaffoldingContext struct {
@@ -124,10 +114,6 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 		sort.Strings(modules)
 		return modules, nil
 	})
-}
-
-func (p *goPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
-	return p.internalPlugin.build(ctx, projectRoot, config, sch, buildEnv, devMode)
 }
 
 func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {

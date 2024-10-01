@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alecthomas/types/pubsub"
-
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -25,25 +23,12 @@ func newRustPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *rustP
 	}
 }
 
-func (p *rustPlugin) Updates() *pubsub.Topic[PluginEvent] {
-	return p.internalPlugin.updates
-}
-
-func (p *rustPlugin) Kill(ctx context.Context) error {
-	p.cancel()
-	return nil
-}
-
 func (p *rustPlugin) CreateModule(ctx context.Context, config moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
 	return fmt.Errorf("not implemented")
 }
 
 func (p *rustPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	return nil, fmt.Errorf("not implemented")
-}
-
-func (p *rustPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
-	return p.internalPlugin.build(ctx, projectRoot, config, sch, buildEnv, devMode)
 }
 
 func buildRust(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {

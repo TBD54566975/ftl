@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
-	"github.com/alecthomas/types/pubsub"
 	"github.com/beevik/etree"
 	"golang.org/x/exp/maps"
 
@@ -38,15 +37,6 @@ func newJavaPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *javaP
 	return &javaPlugin{
 		internalPlugin: internal,
 	}
-}
-
-func (p *javaPlugin) Updates() *pubsub.Topic[PluginEvent] {
-	return p.internalPlugin.updates
-}
-
-func (p *javaPlugin) Kill(ctx context.Context) error {
-	p.cancel()
-	return nil
 }
 
 func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
@@ -177,10 +167,6 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
 	return modules, nil
-}
-
-func (p *javaPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
-	return p.internalPlugin.build(ctx, projectRoot, config, sch, buildEnv, devMode)
 }
 
 func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {

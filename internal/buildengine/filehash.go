@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 
 	"github.com/bmatcuk/doublestar/v4"
-
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 type FileChangeType rune
@@ -66,10 +64,10 @@ func CompareFileHashes(oldFiles, newFiles FileHashes) (FileChangeType, string, b
 
 // ComputeFileHashes computes the SHA256 hash of all (non-git-ignored) files in
 // the given directory.
-func computeFileHashes(config moduleconfig.ModuleConfig, patterns []string) (FileHashes, error) {
+func computeFileHashes(dir string, patterns []string) (FileHashes, error) {
 	// Watch paths are allowed to be outside the deploy directory.
 	fileHashes := make(FileHashes)
-	rootDirs := computeRootDirs(config.Dir, patterns)
+	rootDirs := computeRootDirs(dir, patterns)
 
 	for _, rootDir := range rootDirs {
 		err := WalkDir(rootDir, func(srcPath string, entry fs.DirEntry) error {

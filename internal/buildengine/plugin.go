@@ -122,7 +122,7 @@ type buildCommand struct {
 
 func (buildCommand) pluginCmd() {}
 
-type dependenciesFunc = func() ([]string, error)
+type dependenciesFunc func() ([]string, error)
 type getDependenciesCommand struct {
 	dependenciesFunc dependenciesFunc
 
@@ -161,11 +161,20 @@ func newInternalPlugin(ctx context.Context, config moduleconfig.ModuleConfig, bu
 	return plugin
 }
 
-func (p *internalPlugin) build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, schema *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
+func (p *internalPlugin) Updates() *pubsub.Topic[PluginEvent] {
+	return p.updates
+}
+
+func (p *internalPlugin) Kill(ctx context.Context) error {
+	p.cancel()
+	return nil
+}
+
+func (p *internalPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
 	cmd := buildCommand{
 		projectRoot: projectRoot,
 		config:      config,
-		schema:      schema,
+		schema:      sch,
 		buildEnv:    buildEnv,
 		devMode:     devMode,
 		result:      make(chan either.Either[BuildResult, error]),

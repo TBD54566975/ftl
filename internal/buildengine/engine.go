@@ -501,13 +501,13 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				// ftl.toml file has changed
 				meta, ok := e.moduleMetas.Load(event.Config.Module)
 				if !ok {
-					logger.Warnf("module %q not found", event.Config.Module)
+					logger.Warnf("Module %q not found", event.Config.Module)
 					continue
 				}
 
 				updatedConfig, err := moduleconfig.LoadModuleConfig(event.Config.Dir)
 				if err != nil {
-					logger.Errorf(err, "could not load updated toml for %s", event.Config.Module)
+					logger.Errorf(err, "Could not load updated toml for %s", event.Config.Module)
 					continue
 				}
 				meta.module.Config = updatedConfig
@@ -518,7 +518,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					didError = true
 					e.reportBuildFailed(err)
 					terminal.UpdateModuleState(ctx, event.Config.Module, terminal.BuildStateFailed)
-					logger.Errorf(err, "build and deploy failed for module %q", event.Config.Module)
+					logger.Errorf(err, "Build and deploy failed for module %q", event.Config.Module)
 				} else {
 					didUpdateDeployments = true
 				}
