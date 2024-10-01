@@ -2,11 +2,9 @@
 package subscriber
 
 import (
-    "context"
-
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-
-    ftlpubsub "ftl/pubsub"
+	"context"
+	ftlpubsub "ftl/pubsub"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
 type ConsumesSubscriptionFromExternalTopicClient func(context.Context, ftlpubsub.PayinEvent) error
@@ -14,7 +12,7 @@ type ConsumesSubscriptionFromExternalTopicClient func(context.Context, ftlpubsub
 func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
-            ConsumesSubscriptionFromExternalTopic,
+			ConsumesSubscriptionFromExternalTopic,
 		),
 	)
 }
