@@ -102,55 +102,20 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		for _, decl := range deployment.Schema.Decls {
 			switch decl := decl.(type) {
 			case *schema.Verb:
-				//nolint:forcetypeassert
-				v := decl.ToProto().(*schemapb.Verb)
-				verbSchema := schema.VerbFromProto(v)
-				var jsonRequestSchema string
-				if verbSchema.Request != nil {
-					if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
-						jsonSchema, err := schema.RequestResponseToJSONSchema(sch, *requestData)
-						if err != nil {
-							return nil, err
-						}
-						jsonData, err := json.MarshalIndent(jsonSchema, "", "  ")
-						if err != nil {
-							return nil, err
-						}
-						jsonRequestSchema = string(jsonData)
-					}
-				}
-
-				schemaString, err := verbSchemaString(sch, decl)
+				verb, err := verbFromDecl(decl, sch)
 				if err != nil {
 					return nil, err
 				}
-				verbs = append(verbs, &pbconsole.Verb{
-					Verb:              v,
-					Schema:            schemaString,
-					JsonRequestSchema: jsonRequestSchema,
-				})
+				verbs = append(verbs, verb)
 
 			case *schema.Data:
-				//nolint:forcetypeassert
-				d := decl.ToProto().(*schemapb.Data)
-				data = append(data, &pbconsole.Data{
-					Data:   d,
-					Schema: schema.DataFromProto(d).String(),
-				})
+				data = append(data, dataFromDecl(decl))
 
 			case *schema.Secret:
-				//nolint:forcetypeassert
-				s := decl.ToProto().(*schemapb.Secret)
-				secrets = append(secrets, &pbconsole.Secret{
-					Secret: s,
-				})
+				secrets = append(secrets, secretFromDecl(decl))
 
 			case *schema.Config:
-				//nolint:forcetypeassert
-				c := decl.ToProto().(*schemapb.Config)
-				configs = append(configs, &pbconsole.Config{
-					Config: c,
-				})
+				configs = append(configs, configFromDecl(decl))
 
 			case *schema.Database, *schema.Enum, *schema.TypeAlias, *schema.FSM, *schema.Topic, *schema.Subscription:
 			}
@@ -186,6 +151,201 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		Modules:  modules,
 		Topology: topology,
 	}), nil
+}
+
+func configFromDecl(decl *schema.Config) *pbconsole.Config {
+	//nolint:forcetypeassert
+	config := decl.ToProto().(*schemapb.Config)
+	return &pbconsole.Config{
+		Config: config,
+	}
+}
+
+func dataFromDecl(decl *schema.Data) *pbconsole.Data {
+	//nolint:forcetypeassert
+	d := decl.ToProto().(*schemapb.Data)
+	return &pbconsole.Data{
+		Data:   d,
+		Schema: schema.DataFromProto(d).String(),
+	}
+}
+
+func databaseFromDecl(decl *schema.Database) *pbconsole.Database {
+	//nolint:forcetypeassert
+	d := decl.ToProto().(*schemapb.Database)
+	return &pbconsole.Database{
+		Database: d,
+	}
+}
+
+func enumFromDecl(decl *schema.Enum) *pbconsole.Enum {
+	//nolint:forcetypeassert
+	e := decl.ToProto().(*schemapb.Enum)
+	return &pbconsole.Enum{
+		Enum: e,
+	}
+}
+
+func fsmFromDecl(decl *schema.FSM) *pbconsole.FSM {
+	//nolint:forcetypeassert
+	f := decl.ToProto().(*schemapb.FSM)
+	return &pbconsole.FSM{
+		Fsm: f,
+	}
+}
+
+func topicFromDecl(decl *schema.Topic) *pbconsole.Topic {
+	//nolint:forcetypeassert
+	t := decl.ToProto().(*schemapb.Topic)
+	return &pbconsole.Topic{
+		Topic: t,
+	}
+}
+
+func typealiasFromDecl(decl *schema.TypeAlias) *pbconsole.TypeAlias {
+	//nolint:forcetypeassert
+	t := decl.ToProto().(*schemapb.TypeAlias)
+	return &pbconsole.TypeAlias{
+		Typealias: t,
+	}
+}
+
+func secretFromDecl(decl *schema.Secret) *pbconsole.Secret {
+	//nolint:forcetypeassert
+	s := decl.ToProto().(*schemapb.Secret)
+	return &pbconsole.Secret{
+		Secret: s,
+	}
+}
+
+func subscriptionFromDecl(decl *schema.Subscription) *pbconsole.Subscription {
+	//nolint:forcetypeassert
+	s := decl.ToProto().(*schemapb.Subscription)
+	return &pbconsole.Subscription{
+		Subscription: s,
+	}
+}
+
+func verbFromDecl(decl *schema.Verb, sch *schema.Schema) (*pbconsole.Verb, error) {
+	//nolint:forcetypeassert
+	v := decl.ToProto().(*schemapb.Verb)
+	verbSchema := schema.VerbFromProto(v)
+	var jsonRequestSchema string
+	if verbSchema.Request != nil {
+		if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
+			jsonSchema, err := schema.RequestResponseToJSONSchema(sch, *requestData)
+			if err != nil {
+				return nil, err
+			}
+			jsonData, err := json.MarshalIndent(jsonSchema, "", "  ")
+			if err != nil {
+				return nil, err
+			}
+			jsonRequestSchema = string(jsonData)
+		}
+	}
+
+	schemaString, err := verbSchemaString(sch, decl)
+	if err != nil {
+		return nil, err
+	}
+	return &pbconsole.Verb{
+		Verb:              v,
+		Schema:            schemaString,
+		JsonRequestSchema: jsonRequestSchema,
+	}, nil
+}
+
+func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request[pbconsole.StreamModulesRequest], stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
+	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
+	if err != nil {
+		return err
+	}
+	sch := &schema.Schema{
+		Modules: slices.Map(deployments, func(d dalmodel.Deployment) *schema.Module {
+			return d.Schema
+		}),
+	}
+	sch.Modules = append(sch.Modules, schema.Builtins())
+
+	var modules []*pbconsole.Module
+	for _, deployment := range deployments {
+		var configs []*pbconsole.Config
+		var data []*pbconsole.Data
+		var databases []*pbconsole.Database
+		var enums []*pbconsole.Enum
+		var fsms []*pbconsole.FSM
+		var topics []*pbconsole.Topic
+		var typealiases []*pbconsole.TypeAlias
+		var secrets []*pbconsole.Secret
+		var subscriptions []*pbconsole.Subscription
+		var verbs []*pbconsole.Verb
+
+		for _, decl := range deployment.Schema.Decls {
+			switch decl := decl.(type) {
+			case *schema.Config:
+				configs = append(configs, configFromDecl(decl))
+
+			case *schema.Data:
+				data = append(data, dataFromDecl(decl))
+
+			case *schema.Database:
+				databases = append(databases, databaseFromDecl(decl))
+
+			case *schema.Enum:
+				enums = append(enums, enumFromDecl(decl))
+
+			case *schema.FSM:
+				fsms = append(fsms, fsmFromDecl(decl))
+
+			case *schema.Topic:
+				topics = append(topics, topicFromDecl(decl))
+
+			case *schema.Secret:
+				secrets = append(secrets, secretFromDecl(decl))
+
+			case *schema.Subscription:
+				subscriptions = append(subscriptions, subscriptionFromDecl(decl))
+
+			case *schema.TypeAlias:
+				typealiases = append(typealiases, typealiasFromDecl(decl))
+
+			case *schema.Verb:
+				verb, err := verbFromDecl(decl, sch)
+				if err != nil {
+					return err
+				}
+				verbs = append(verbs, verb)
+			}
+		}
+
+		modules = append(modules, &pbconsole.Module{
+			Name:          deployment.Module,
+			DeploymentKey: deployment.Key.String(),
+			Language:      deployment.Language,
+			Configs:       configs,
+			Data:          data,
+			Databases:     databases,
+			Enums:         enums,
+			Fsms:          fsms,
+			Topics:        topics,
+			Typealiases:   typealiases,
+			Secrets:       secrets,
+			Subscriptions: subscriptions,
+			Verbs:         verbs,
+			Schema:        deployment.Schema.String(),
+		})
+	}
+
+	err = stream.Send(&pbconsole.StreamModulesResponse{
+		Modules: modules,
+	})
+	if err != nil {
+		return err
+	}
+
+	// TODO: handle deployment updates
+	return nil
 }
 
 func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbconsole.EventsQuery]) (*connect.Response[pbconsole.GetEventsResponse], error) {
