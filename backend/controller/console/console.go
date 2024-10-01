@@ -232,10 +232,9 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module
 }
 
 func configFromDecl(decl *schema.Config) *pbconsole.Config {
-	//nolint:forcetypeassert
-	config := decl.ToProto().(*schemapb.Config)
 	return &pbconsole.Config{
-		Config: config,
+		//nolint:forcetypeassert
+		Config: decl.ToProto().(*schemapb.Config),
 	}
 }
 
@@ -249,58 +248,51 @@ func dataFromDecl(decl *schema.Data) *pbconsole.Data {
 }
 
 func databaseFromDecl(decl *schema.Database) *pbconsole.Database {
-	//nolint:forcetypeassert
-	d := decl.ToProto().(*schemapb.Database)
 	return &pbconsole.Database{
-		Database: d,
+		//nolint:forcetypeassert
+		Database: decl.ToProto().(*schemapb.Database),
 	}
 }
 
 func enumFromDecl(decl *schema.Enum) *pbconsole.Enum {
-	//nolint:forcetypeassert
-	e := decl.ToProto().(*schemapb.Enum)
 	return &pbconsole.Enum{
-		Enum: e,
+		//nolint:forcetypeassert
+		Enum: decl.ToProto().(*schemapb.Enum),
 	}
 }
 
 func fsmFromDecl(decl *schema.FSM) *pbconsole.FSM {
-	//nolint:forcetypeassert
-	f := decl.ToProto().(*schemapb.FSM)
 	return &pbconsole.FSM{
-		Fsm: f,
+		//nolint:forcetypeassert
+		Fsm: decl.ToProto().(*schemapb.FSM),
 	}
 }
 
 func topicFromDecl(decl *schema.Topic) *pbconsole.Topic {
-	//nolint:forcetypeassert
-	t := decl.ToProto().(*schemapb.Topic)
 	return &pbconsole.Topic{
-		Topic: t,
+		//nolint:forcetypeassert
+		Topic: decl.ToProto().(*schemapb.Topic),
 	}
 }
 
 func typealiasFromDecl(decl *schema.TypeAlias) *pbconsole.TypeAlias {
-	//nolint:forcetypeassert
-	t := decl.ToProto().(*schemapb.TypeAlias)
 	return &pbconsole.TypeAlias{
-		Typealias: t,
+		//nolint:forcetypeassert
+		Typealias: decl.ToProto().(*schemapb.TypeAlias),
 	}
 }
 
 func secretFromDecl(decl *schema.Secret) *pbconsole.Secret {
-	//nolint:forcetypeassert
-	s := decl.ToProto().(*schemapb.Secret)
 	return &pbconsole.Secret{
-		Secret: s,
+		//nolint:forcetypeassert
+		Secret: decl.ToProto().(*schemapb.Secret),
 	}
 }
 
 func subscriptionFromDecl(decl *schema.Subscription) *pbconsole.Subscription {
-	//nolint:forcetypeassert
-	s := decl.ToProto().(*schemapb.Subscription)
 	return &pbconsole.Subscription{
-		Subscription: s,
+		//nolint:forcetypeassert
+		Subscription: decl.ToProto().(*schemapb.Subscription),
 	}
 }
 
