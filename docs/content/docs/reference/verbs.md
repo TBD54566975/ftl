@@ -53,7 +53,7 @@ data class EchoRequest
 data class EchoResponse
 
 @Verb
-fun echo(ctx: Context, request: EchoRequest): EchoResponse {
+fun echo(request: EchoRequest): EchoResponse {
   // ...
 }
 ```
