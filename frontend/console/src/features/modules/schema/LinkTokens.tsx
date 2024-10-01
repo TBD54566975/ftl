@@ -11,6 +11,20 @@ export const LinkToken = ({ token, containerRect }: { token: string; containerRe
       </span>
     )
   }
+  if (token.match(/^\w+<\w+/)) {
+    const splitToken = token.split('<')
+    return (
+      <>
+        <span className='font-bold'>
+          <DeclLink slim moduleName={moduleName} declName={splitToken[0]} containerRect={containerRect} />
+        </span>
+        <span className='text-green-700 dark:text-green-400'>
+          {'<'}
+          <UnderlyingType token={splitToken[1]} containerRect={containerRect} />
+        </span>
+      </>
+    )
+  }
   return token
 }
 

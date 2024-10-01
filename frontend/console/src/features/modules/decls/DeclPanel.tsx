@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { useSchema } from '../../../api/schema/use-schema'
+import { useStreamModules } from '../../../api/modules/use-stream-modules'
+import type { Config, Data, Database, Enum, FSM, Secret, Subscription, Topic, TypeAlias } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { VerbPage } from '../../verbs/VerbPage'
-import { declFromSchema } from '../module.utils'
+import { declFromModules } from '../module.utils'
+import { declSchemaFromModules } from '../schema/schema.utils'
 import { ConfigPanel } from './ConfigPanel'
 import { DataPanel } from './DataPanel'
 import { DatabasePanel } from './DatabasePanel'
@@ -15,37 +17,43 @@ import { TypeAliasPanel } from './TypeAliasPanel'
 
 export const DeclPanel = () => {
   const { moduleName, declCase, declName } = useParams()
-  if (!moduleName || !declName) {
+  if (!moduleName || !declCase || !declName) {
     // Should be impossible, but validate anyway for type safety
     return
   }
 
-  const schema = useSchema()
-  const decl = useMemo(() => declFromSchema(moduleName, declName, schema?.data || []), [schema?.data, moduleName, declCase, declName])
-  if (!decl) {
+  const modules = useStreamModules()
+  const declSchema = useMemo(
+    () => (moduleName && !!modules?.data ? declSchemaFromModules(moduleName, declName, modules?.data) : undefined),
+    [moduleName, declName, modules?.data],
+  )
+
+  const decl = useMemo(() => declFromModules(moduleName, declCase, declName, modules?.data), [modules?.data, moduleName, declCase, declName])
+  if (!declSchema || !decl) {
     return
   }
 
   const nameProps = { moduleName, declName }
-  switch (decl.value.case) {
+  const commonProps = { moduleName, declName, schema: declSchema.schema }
+  switch (declCase) {
     case 'config':
-      return <ConfigPanel value={decl.value.value} {...nameProps} />
+      return <ConfigPanel {...commonProps} value={decl as Config} />
     case 'data':
-      return <DataPanel value={decl.value.value} {...nameProps} />
+      return <DataPanel {...commonProps} value={decl as Data} />
     case 'database':
-      return <DatabasePanel value={decl.value.value} {...nameProps} />
+      return <DatabasePanel {...commonProps} value={decl as Database} />
     case 'enum':
-      return <EnumPanel value={decl.value.value} {...nameProps} />
+      return <EnumPanel {...commonProps} value={decl as Enum} />
     case 'fsm':
-      return <FsmPanel value={decl.value.value} {...nameProps} />
+      return <FsmPanel {...commonProps} value={decl as FSM} />
     case 'secret':
-      return <SecretPanel value={decl.value.value} {...nameProps} />
+      return <SecretPanel {...commonProps} value={decl as Secret} />
     case 'subscription':
-      return <SubscriptionPanel value={decl.value.value} {...nameProps} />
+      return <SubscriptionPanel {...commonProps} value={decl as Subscription} />
     case 'topic':
-      return <TopicPanel value={decl.value.value} {...nameProps} />
+      return <TopicPanel {...commonProps} value={decl as Topic} />
     case 'typeAlias':
-      return <TypeAliasPanel value={decl.value.value} {...nameProps} />
+      return <TypeAliasPanel {...commonProps} value={decl as TypeAlias} />
     case 'verb':
       return <VerbPage {...nameProps} />
   }

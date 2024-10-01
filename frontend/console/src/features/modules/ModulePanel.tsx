@@ -1,17 +1,17 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { useModules } from '../../api/modules/use-modules'
+import { useStreamModules } from '../../api/modules/use-stream-modules'
 import { Schema } from './schema/Schema'
 
 export const ModulePanel = () => {
   const { moduleName } = useParams()
-  const modules = useModules()
+  const modules = useStreamModules()
 
   const module = useMemo(() => {
-    if (!modules.isSuccess || modules.data.modules.length === 0) {
+    if (!modules?.data) {
       return
     }
-    return modules.data.modules.find((module) => module.name === moduleName)
+    return modules.data.find((module) => module.name === moduleName)
   }, [modules?.data, moduleName])
 
   if (!module) return

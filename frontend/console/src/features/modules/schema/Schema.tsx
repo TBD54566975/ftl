@@ -11,8 +11,8 @@ function maybeRenderDeclName(token: string, declType: string, tokens: string[], 
   if (i - offset < 0 || declType !== tokens[i - offset]) {
     return
   }
-  if (declType === 'enum') {
-    return [<LinkToken key='l' token={token} containerRect={containerRect} />]
+  if (declType === 'enum' && token.endsWith(':')) {
+    return [<LinkToken key='l' token={token.slice(0, token.length - 1)} containerRect={containerRect} />, ':']
   }
   if (declType === 'verb') {
     return <LinkVerbNameToken token={token} containerRect={containerRect} />
@@ -48,7 +48,7 @@ function maybeRenderUnderlyingType(token: string, declType: string, tokens: stri
 
 const SchemaLine = ({ line, containerRect }: { line: string; containerRect?: DOMRect }) => {
   const { moduleName } = useParams()
-  if (line.startsWith(commentPrefix)) {
+  if (line.trim().startsWith(commentPrefix)) {
     return <span className='text-gray-500 dark:text-gray-400'>{line}</span>
   }
   const tokens = line.split(/( )/).filter((l) => l !== '')
