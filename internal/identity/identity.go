@@ -54,7 +54,7 @@ func Parse(s string) (Identity, error) {
 	}
 	parts := strings.Split(s, ":")
 
-	if parts[0] == "ca" {
+	if parts[0] == "ca" && len(parts) == 1 {
 		return Controller{}, nil
 	}
 
