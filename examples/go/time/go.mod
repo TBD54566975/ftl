@@ -1,6 +1,6 @@
 module ftl/time
 
-go 1.23.0
+go 1.23.1
 
 replace github.com/TBD54566975/ftl => ../../..
 
