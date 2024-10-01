@@ -995,6 +995,36 @@ export class Module extends Message<Module> {
    */
   configs: Config[] = [];
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Database databases = 9;
+   */
+  databases: Database[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Enum enums = 10;
+   */
+  enums: Enum[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.FSM fsms = 11;
+   */
+  fsms: FSM[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Topic topics = 12;
+   */
+  topics: Topic[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.TypeAlias typealiases = 13;
+   */
+  typealiases: TypeAlias[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Subscription subscriptions = 14;
+   */
+  subscriptions: Subscription[] = [];
+
   constructor(data?: PartialMessage<Module>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1011,6 +1041,12 @@ export class Module extends Message<Module> {
     { no: 6, name: "data", kind: "message", T: Data, repeated: true },
     { no: 7, name: "secrets", kind: "message", T: Secret, repeated: true },
     { no: 8, name: "configs", kind: "message", T: Config, repeated: true },
+    { no: 9, name: "databases", kind: "message", T: Database, repeated: true },
+    { no: 10, name: "enums", kind: "message", T: Enum, repeated: true },
+    { no: 11, name: "fsms", kind: "message", T: FSM, repeated: true },
+    { no: 12, name: "topics", kind: "message", T: Topic, repeated: true },
+    { no: 13, name: "typealiases", kind: "message", T: TypeAlias, repeated: true },
+    { no: 14, name: "subscriptions", kind: "message", T: Subscription, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {
@@ -1175,6 +1211,74 @@ export class GetModulesResponse extends Message<GetModulesResponse> {
 
   static equals(a: GetModulesResponse | PlainMessage<GetModulesResponse> | undefined, b: GetModulesResponse | PlainMessage<GetModulesResponse> | undefined): boolean {
     return proto3.util.equals(GetModulesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamModulesRequest
+ */
+export class StreamModulesRequest extends Message<StreamModulesRequest> {
+  constructor(data?: PartialMessage<StreamModulesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamModulesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamModulesRequest {
+    return new StreamModulesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamModulesRequest {
+    return new StreamModulesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamModulesRequest {
+    return new StreamModulesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamModulesRequest | PlainMessage<StreamModulesRequest> | undefined, b: StreamModulesRequest | PlainMessage<StreamModulesRequest> | undefined): boolean {
+    return proto3.util.equals(StreamModulesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamModulesResponse
+ */
+export class StreamModulesResponse extends Message<StreamModulesResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Module modules = 1;
+   */
+  modules: Module[] = [];
+
+  constructor(data?: PartialMessage<StreamModulesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamModulesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "modules", kind: "message", T: Module, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamModulesResponse {
+    return new StreamModulesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamModulesResponse {
+    return new StreamModulesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamModulesResponse {
+    return new StreamModulesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamModulesResponse | PlainMessage<StreamModulesResponse> | undefined, b: StreamModulesResponse | PlainMessage<StreamModulesResponse> | undefined): boolean {
+    return proto3.util.equals(StreamModulesResponse, a, b);
   }
 }
 
