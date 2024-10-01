@@ -6,8 +6,8 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-//ftl:cron 10s
-func TenSeconds(ctx context.Context) error {
+//ftl:cron 30s
+func ThirtySeconds(ctx context.Context) error {
 	ftl.LoggerFromContext(ctx).Infof("Frequent cron job triggered.")
 	return nil
 }

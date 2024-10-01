@@ -8,7 +8,7 @@ import (
 
 type HourlyClient func(context.Context) error
 
-type TenSecondsClient func(context.Context) error
+type ThirtySecondsClient func(context.Context) error
 
 func init() {
 	reflection.Register(
@@ -16,7 +16,7 @@ func init() {
 			Hourly,
 		),
 		reflection.ProvideResourcesForVerb(
-			TenSeconds,
+			ThirtySeconds,
 		),
 	)
 }
