@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-	"text/template"
 	"time"
 
 	"github.com/alecthomas/types/either"
@@ -15,7 +13,6 @@ import (
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -89,20 +86,6 @@ func PluginFromConfig(ctx context.Context, config moduleconfig.ModuleConfig, pro
 	default:
 		return p, fmt.Errorf("unknown language %q", config.Language)
 	}
-}
-
-var scaffoldFuncs = template.FuncMap{
-	"snake":          strcase.ToLowerSnake,
-	"screamingSnake": strcase.ToUpperSnake,
-	"camel":          strcase.ToUpperCamel,
-	"lowerCamel":     strcase.ToLowerCamel,
-	"strippedCamel":  strcase.ToUpperStrippedCamel,
-	"kebab":          strcase.ToLowerKebab,
-	"screamingKebab": strcase.ToUpperKebab,
-	"upper":          strings.ToUpper,
-	"lower":          strings.ToLower,
-	"title":          strings.Title,
-	"typename":       schema.TypeName,
 }
 
 //sumtype:decl

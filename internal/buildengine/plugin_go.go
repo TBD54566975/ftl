@@ -48,7 +48,6 @@ func (p *goPlugin) CreateModule(ctx context.Context, c moduleconfig.ModuleConfig
 	config := c.Abs()
 	opts := []scaffolder.Option{
 		scaffolder.Exclude("^go.mod$"),
-		scaffolder.Functions(scaffoldFuncs),
 	}
 	if !includeBinDir {
 		logger.Debugf("Excluding bin directory")

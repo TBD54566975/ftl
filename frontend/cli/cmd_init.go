@@ -8,13 +8,10 @@ import (
 	"os"
 	"path"
 	"strings"
-	"text/template"
 
 	"github.com/TBD54566975/scaffolder"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
@@ -120,7 +117,7 @@ func updateGitIgnore(ctx context.Context, gitRoot string) error {
 
 func scaffold(ctx context.Context, includeBinDir bool, source *zip.Reader, destination string, sctx any, options ...scaffolder.Option) error {
 	logger := log.FromContext(ctx)
-	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("^go.mod$")}
+	opts := []scaffolder.Option{scaffolder.Exclude("^go.mod$")}
 	if !includeBinDir {
 		logger.Debugf("Excluding bin directory")
 		opts = append(opts, scaffolder.Exclude("^bin"))
@@ -130,18 +127,4 @@ func scaffold(ctx context.Context, includeBinDir bool, source *zip.Reader, desti
 		return fmt.Errorf("failed to scaffold: %w", err)
 	}
 	return nil
-}
-
-var scaffoldFuncs = template.FuncMap{
-	"snake":          strcase.ToLowerSnake,
-	"screamingSnake": strcase.ToUpperSnake,
-	"camel":          strcase.ToUpperCamel,
-	"lowerCamel":     strcase.ToLowerCamel,
-	"strippedCamel":  strcase.ToUpperStrippedCamel,
-	"kebab":          strcase.ToLowerKebab,
-	"screamingKebab": strcase.ToUpperKebab,
-	"upper":          strings.ToUpper,
-	"lower":          strings.ToLower,
-	"title":          strings.Title,
-	"typename":       schema.TypeName,
 }

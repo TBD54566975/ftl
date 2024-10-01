@@ -65,7 +65,7 @@ func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.Modul
 		PackageDir: packageDir,
 	}
 
-	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("^go.mod$")}
+	opts := []scaffolder.Option{scaffolder.Exclude("^go.mod$")}
 	if !includeBinDir {
 		logger.Debugf("Excluding bin directory")
 		opts = append(opts, scaffolder.Exclude("^bin"))
