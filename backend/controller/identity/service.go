@@ -20,57 +20,29 @@ import (
 type Service struct {
 	dal        *dal.DAL
 	encryption *encryptionsvc.Service
-	signer     internalidentity.Signer
-	verifier   internalidentity.Verifier
+	Store      internalidentity.Store
 }
 
-func New(ctx context.Context, encryption *encryptionsvc.Service, conn *sql.DB) (*Service, error) {
-	svc := &Service{
+func New(ctx context.Context, encryption *encryptionsvc.Service, conn *sql.DB) (Service, error) {
+	svc := Service{
 		dal:        dal.New(conn),
 		encryption: encryption,
 	}
 
 	err := svc.ensureIdentity(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to ensure identity: %w", err)
+		return Service{}, fmt.Errorf("failed to ensure identity: %w", err)
 	}
 
 	keyPair, err := svc.getKeyPair(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get key pair: %w", err)
+		return Service{}, fmt.Errorf("failed to get key pair: %w", err)
 	}
 
-	signer, err := keyPair.Signer()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create signer: %w", err)
-	}
-	svc.signer = signer
-
-	verifier, err := keyPair.Verifier()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create verifier: %w", err)
-	}
-	svc.verifier = verifier
+	store, err := internalidentity.NewStore(internalidentity.NewController(), keyPair)
+	svc.Store = store
 
 	return svc, nil
-}
-
-func (s Service) Sign(data []byte) (internalidentity.SignedData, error) {
-	signedData, err := s.signer.Sign(data)
-	if err != nil {
-		return internalidentity.SignedData{}, fmt.Errorf("failed to sign data: %w", err)
-	}
-
-	return signedData, nil
-}
-
-func (s Service) Verify(signedData internalidentity.SignedData) ([]byte, error) {
-	data, err := s.verifier.Verify(signedData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to verify data: %w", err)
-	}
-
-	return data, nil
 }
 
 func (s Service) getKeyPair(ctx context.Context) (internalidentity.KeyPair, error) {

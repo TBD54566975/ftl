@@ -34,6 +34,13 @@ func (c Certificate) String() string {
 	return fmt.Sprintf("Certificate(%x %x)", c.data, c.Signature)
 }
 
+func (c Certificate) Proto() *ftlv1.Certificate {
+	return &ftlv1.Certificate{
+		Content:             &ftlv1.CertificateContent{Identity: c.ID.String()},
+		ControllerSignature: c.Signature,
+	}
+}
+
 // CertifiedSignedData is sent by a node and proves identity based on a certificate.
 type CertifiedSignedData struct {
 	Certificate Certificate

@@ -42,6 +42,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
+	"github.com/TBD54566975/ftl/backend/controller/identity"
 	"github.com/TBD54566975/ftl/backend/controller/ingress"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
@@ -217,6 +218,7 @@ type Service struct {
 	dbleaser           *dbleaser.DatabaseLeaser
 	dal                *dal.DAL
 	key                model.ControllerKey
+	identityService    identity.Service
 	deploymentLogsSink *deploymentLogsSink
 
 	tasks                   *scheduledtask.Scheduler
@@ -256,6 +258,10 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encryption dal: %w", err)
 	}
+	identityService, err := identity.New(ctx, encryption, conn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create identity: %w", err)
+	}
 
 	ldb := dbleaser.NewDatabaseLeaser(conn)
 	scheduler := scheduledtask.New(ctx, key, ldb)
@@ -265,6 +271,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		dbleaser:                ldb,
 		conn:                    conn,
 		key:                     key,
+		identityService:         identityService,
 		clients:                 ttlcache.New(ttlcache.WithTTL[string, clients](time.Minute)),
 		config:                  config,
 		increaseReplicaFailures: map[string]int{},
@@ -467,8 +474,16 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	return connect.NewResponse(resp), nil
 }
 
-func (s *Service) GetCertification(context.Context, *connect.Request[ftlv1.GetCertificationRequest]) (*connect.Response[ftlv1.GetCertificationResponse], error) {
-	panic("implement me")
+func (s *Service) GetCertification(ctx context.Context, certificateRequest *connect.Request[ftlv1.GetCertificationRequest]) (*connect.Response[ftlv1.GetCertificationResponse], error) {
+	msg := certificateRequest.Msg
+	certificate, err := s.identityService.Store.SignCertificateRequest(msg)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("could not sign certificate request: %w", err))
+	}
+
+	return connect.NewResponse(&ftlv1.GetCertificationResponse{
+		Certificate: certificate.Proto(),
+	}), nil
 }
 
 func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {

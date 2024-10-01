@@ -75,18 +75,31 @@ type Store struct {
 	ControllerVerifier optional.Option[Verifier]
 }
 
-func NewStoreNewKeys(identity Identity) (*Store, error) {
+func NewStore(identity Identity, keyPair KeyPair) (Store, error) {
+	signer, err := keyPair.Signer()
+	if err != nil {
+		return Store{}, fmt.Errorf("failed to get signer: %w", err)
+	}
+
+	return Store{
+		Identity: identity,
+		KeyPair:  keyPair,
+		Signer:   signer,
+	}, nil
+}
+
+func NewStoreNewKeys(identity Identity) (Store, error) {
 	pair, err := GenerateKeyPair()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate key pair: %w", err)
+		return Store{}, fmt.Errorf("failed to generate key pair: %w", err)
 	}
 
 	signer, err := pair.Signer()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get signer: %w", err)
+		return Store{}, fmt.Errorf("failed to get signer: %w", err)
 	}
 
-	return &Store{
+	return Store{
 		Identity: identity,
 		KeyPair:  pair,
 		Signer:   signer,

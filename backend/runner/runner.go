@@ -101,13 +101,15 @@ func Start(ctx context.Context, config Config) error {
 	}
 
 	// TODO: Retry loop, RetryStreamingClientStreamish
-	var identityStore *identity.Store
+	identityStore := optional.None[identity.Store]()
 	if config.ControllerPublicKey != nil {
-		identityStore, err = newIdentityStore(ctx, config, key, controllerClient)
+		store, err := newIdentityStore(ctx, config, key, controllerClient)
 		if err != nil {
 			observability.Runner.StartupFailed(ctx)
 			return fmt.Errorf("failed to create identity store: %w", err)
 		}
+
+		identityStore = optional.Some(store)
 	}
 
 	svc := &Service{
@@ -140,37 +142,37 @@ func Start(ctx context.Context, config Config) error {
 	)
 }
 
-func newIdentityStore(ctx context.Context, config Config, key model.RunnerKey, controllerClient ftlv1connect.ControllerServiceClient) (*identity.Store, error) {
+func newIdentityStore(ctx context.Context, config Config, key model.RunnerKey, controllerClient ftlv1connect.ControllerServiceClient) (identity.Store, error) {
 	controllerVerifier, err := identity.NewVerifier(*config.ControllerPublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create controller verifier: %w", err)
+		return identity.Store{}, fmt.Errorf("failed to create controller verifier: %w", err)
 	}
 
 	identityStore, err := identity.NewStoreNewKeys(identity.NewRunner(key, config.Deployment))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create identity store: %w", err)
+		return identity.Store{}, fmt.Errorf("failed to create identity store: %w", err)
 	}
 
 	certRequest, err := identityStore.NewGetCertificateRequest()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create certificate request: %w", err)
+		return identity.Store{}, fmt.Errorf("failed to create certificate request: %w", err)
 	}
 
 	certResp, err := controllerClient.GetCertification(ctx, connect.NewRequest(&certRequest))
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)
-		return nil, fmt.Errorf("failed to get certificate: %w", err)
+		return identity.Store{}, fmt.Errorf("failed to get certificate: %w", err)
 	}
 
 	certificate, err := identity.NewCertificate(certResp.Msg.Certificate)
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)
-		return nil, fmt.Errorf("failed to create certificate: %w", err)
+		return identity.Store{}, fmt.Errorf("failed to create certificate: %w", err)
 	}
 
 	if err = identityStore.SetCertificate(certificate, controllerVerifier); err != nil {
 		observability.Runner.StartupFailed(ctx)
-		return nil, fmt.Errorf("failed to set certificate: %w", err)
+		return identity.Store{}, fmt.Errorf("failed to set certificate: %w", err)
 	}
 
 	return identityStore, nil
@@ -243,7 +245,7 @@ type deployment struct {
 
 type Service struct {
 	key        model.RunnerKey
-	identity   *identity.Store
+	identity   optional.Option[identity.Store]
 	lock       sync.Mutex
 	deployment atomic.Value[optional.Option[*deployment]]
 
