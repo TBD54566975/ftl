@@ -31,6 +31,7 @@ var cli struct {
 	LogConfig           log.Config           `embed:"" prefix:"log-"`
 	ControllerConfig    controller.Config    `embed:""`
 	ConfigFlag          string               `name:"config" short:"C" help:"Path to FTL project cf file." env:"FTL_CONFIG" placeholder:"FILE"`
+	DisableIstio        bool                 `help:"Disable Istio integration. This will prevent the creation of Istio policies to limit network traffic." env:"FTL_DISABLE_ISTIO"`
 }
 
 func main() {
@@ -74,6 +75,6 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	ctx = manager.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling(), conn, false)
+	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling(cli.DisableIstio), conn, false)
 	kctx.FatalIfErrorf(err)
 }

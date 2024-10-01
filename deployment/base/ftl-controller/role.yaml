@@ -10,7 +10,7 @@ rules:
     resources: [ "deployments" ]
     verbs: [ "get", "list", "watch", "delete", "create", "update", "patch" ]
   - apiGroups: [ "" ]
-    resources: [ "services" ]
+    resources: [ "services" , "serviceaccounts"]
     verbs: [ "get", "list", "watch", "delete", "create", "update", "patch" ]
   - apiGroups: [ "" ]
     resources: [ "pods" ]
@@ -20,3 +20,6 @@ rules:
     resourceNames:
       - ftl-controller-deployment-config
     verbs: [ "get"]
+  - apiGroups: [ "security.istio.io" ]
+    resources: [ "authorizationpolicies" ]
+    verbs: [ "get", "list", "watch", "delete", "create", "update", "patch" ]

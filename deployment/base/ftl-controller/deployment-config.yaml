@@ -60,3 +60,9 @@ data:
                 timeoutSeconds: 2
                 successThreshold: 1
                 failureThreshold: 15
+    serviceAccountTemplate: |- 
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        labels:
+          app: ftl-runner
