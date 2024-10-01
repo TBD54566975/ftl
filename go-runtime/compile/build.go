@@ -776,9 +776,7 @@ func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error
 				}
 				calleeNativeName, ok := b.nativeNames[call]
 				if !ok {
-					// TODO: skip for now because metadata from legacy ftl.Call(...) will not have native name
-					continue
-					// return goVerb{}, fmt.Errorf("missing native name for verb client %s", call)
+					return goVerb{}, fmt.Errorf("missing native name for verb client %s", call)
 				}
 				calleeverb, err := b.getGoVerb(calleeNativeName, callee)
 				if err != nil {

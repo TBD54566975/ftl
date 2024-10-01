@@ -22,13 +22,13 @@ type WrappedResponse struct {
 }
 
 //ftl:verb
-func Outer(ctx context.Context) (WrappedResponse, error) {
-	return ftl.CallSource(ctx, Inner)
+func Outer(ctx context.Context, inner InnerClient) (WrappedResponse, error) {
+	return inner(ctx)
 }
 
 //ftl:verb
-func Inner(ctx context.Context) (WrappedResponse, error) {
-	resp, err := ftl.Call(ctx, time.Time, time.TimeRequest{})
+func Inner(ctx context.Context, tc time.TimeClient) (WrappedResponse, error) {
+	resp, err := tc(ctx, time.TimeRequest{})
 	if err != nil {
 		return WrappedResponse{}, err
 	}

@@ -18,8 +18,8 @@ type Response struct {
 }
 
 //ftl:verb
-func ShouldFail(ctx context.Context, req Request) (Response, error) {
-	_, err := ftl.Call(ctx, echo.Echo, echo.EchoRequest{})
+func ShouldFail(ctx context.Context, req Request, ec echo.EchoClient) (Response, error) {
+	_, err := ec(ctx, echo.EchoRequest{})
 	if err != nil {
 		return Response{}, err
 	}

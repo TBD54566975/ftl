@@ -2,16 +2,16 @@
 package two
 
 import (
-	"context"
+    "context"
 
-	 "github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-	"github.com/jpillora/backoff"
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+     "github.com/TBD54566975/ftl/go-runtime/ftl"
+    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+    "github.com/TBD54566975/ftl/go-runtime/server"
+    "github.com/jpillora/backoff"
+    lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 
-	ftlbuiltin "ftl/builtin"
+    ftlbuiltin "ftl/builtin"
 )
-
 
 type CallsTwoClient func(context.Context, Payload[string]) (Payload[string], error)
 
@@ -37,12 +37,15 @@ func init() {
 		reflection.ExternalType(*new(lib.NonFTLType)),
 		reflection.ProvideResourcesForVerb(
             CallsTwo,
+            server.VerbClient[TwoClient, Payload[string], Payload[string]](),
 		),
 		reflection.ProvideResourcesForVerb(
             Two,
 		),
 		reflection.ProvideResourcesForVerb(
             CallsTwoAndThree,
+            server.VerbClient[ThreeClient, Payload[string], Payload[string]](),
+            server.VerbClient[TwoClient, Payload[string], Payload[string]](),
 		),
 		reflection.ProvideResourcesForVerb(
             Three,

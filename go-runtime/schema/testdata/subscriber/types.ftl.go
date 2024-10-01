@@ -2,12 +2,12 @@
 package subscriber
 
 import (
-	"context"
-	ftlpubsub "ftl/pubsub"
+    "context"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+
+    ftlpubsub "ftl/pubsub"
 )
-
 
 type ConsumesSubscriptionFromExternalTopicClient func(context.Context, ftlpubsub.PayinEvent) error
 

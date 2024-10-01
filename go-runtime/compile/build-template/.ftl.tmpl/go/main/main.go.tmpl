@@ -29,7 +29,15 @@ func init() {
             {{.TypeName}},
             {{- range .Resources}}
                 {{- with getVerbClient . }}
-			server.VerbClient[{{.TypeName}}, {{.Request.TypeName}}, {{.Response.TypeName}}](),
+            	{{- if and (eq .Request.TypeName "ftl.Unit") (eq .Response.TypeName "ftl.Unit") }}
+            server.EmptyClient[{{.TypeName}}](),
+            	{{- else if eq .Request.TypeName "ftl.Unit" }}
+            server.SourceClient[{{.TypeName}}, {{.Response.TypeName}}](),
+            	{{- else if eq .Response.TypeName "ftl.Unit" }}
+            server.SinkClient[{{.TypeName}}, {{.Request.TypeName}}](),
+            	{{- else }}
+            server.VerbClient[{{.TypeName}}, {{.Request.TypeName}}, {{.Response.TypeName}}](),
+            	{{- end -}}
                 {{- end }}
 			{{- end}}
 		),

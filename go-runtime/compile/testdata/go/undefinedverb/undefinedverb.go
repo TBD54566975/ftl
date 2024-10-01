@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"ftl/echo"
+
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
@@ -16,8 +18,8 @@ type Response struct {
 }
 
 //ftl:verb
-func ShouldFail(ctx context.Context, req Request) (Response, error) {
-	_, err := ftl.Call(ctx, echo.Undefined, echo.EchoRequest{})
+func ShouldFail(ctx context.Context, req Request, client echo.UndefinedClient) (Response, error) {
+	_, err := client(ctx, echo.EchoRequest{})
 	if err != nil {
 		return Response{}, err
 	}

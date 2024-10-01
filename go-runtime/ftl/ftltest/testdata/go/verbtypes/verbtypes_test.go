@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/ftltest"
 	"github.com/alecthomas/assert/v2"
 )
@@ -43,23 +42,6 @@ func TestVerbs(t *testing.T) {
 	assert.Equal(t, knockOnEffects["sink"], "testsink")
 
 	err = ftltest.CallEmpty[EmptyClient](ctx)
-	assert.NoError(t, err)
-	assert.Equal(t, knockOnEffects["empty"], "test")
-
-	// TODO: remove after refactor
-	verbResp, err = ftl.Call(ctx, Verb, Request{Input: "test"})
-	assert.NoError(t, err)
-	assert.Equal(t, Response{Output: "fake: test"}, verbResp)
-
-	sourceResp, err = ftl.CallSource(ctx, Source)
-	assert.NoError(t, err)
-	assert.Equal(t, Response{Output: "fake"}, sourceResp)
-
-	err = ftl.CallSink(ctx, Sink, Request{Input: "testsink"})
-	assert.NoError(t, err)
-	assert.Equal(t, knockOnEffects["sink"], "testsink")
-
-	err = ftl.CallEmpty(ctx, Empty)
 	assert.NoError(t, err)
 	assert.Equal(t, knockOnEffects["empty"], "test")
 }
@@ -114,19 +96,6 @@ func TestVerbErrors(t *testing.T) {
 
 	err = ftltest.CallEmpty[EmptyClient](ctx)
 	assert.EqualError(t, err, "test harness failed to call verb verbtypes.empty: fake-empty")
-
-	// TODO: remove after refactor
-	_, err = ftl.Call(ctx, Verb, Request{Input: "test"})
-	assert.EqualError(t, err, "verbtypes.verb: fake: test")
-
-	_, err = ftl.CallSource(ctx, Source)
-	assert.EqualError(t, err, "verbtypes.source: fake-source")
-
-	err = ftl.CallSink(ctx, Sink, Request{Input: "test-sink"})
-	assert.EqualError(t, err, "verbtypes.sink: fake: test-sink")
-
-	err = ftl.CallEmpty(ctx, Empty)
-	assert.EqualError(t, err, "verbtypes.empty: fake-empty")
 }
 
 func TestTransitiveVerbMock(t *testing.T) {

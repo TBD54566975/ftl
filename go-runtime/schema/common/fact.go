@@ -106,6 +106,8 @@ func (*ExternalType) schemaFactValue() {}
 type FunctionCall struct {
 	// The function being called.
 	Callee types.Object
+	// Position where the call takes place.
+	Position schema.Position
 }
 
 func (*FunctionCall) schemaFactValue() {}
@@ -176,16 +178,9 @@ func MarkMaybeTypeEnum(pass *analysis.Pass, obj types.Object, enum *schema.Enum)
 }
 
 // MarkFunctionCall marks the given object as having an outbound function call.
-func MarkFunctionCall(pass *analysis.Pass, obj types.Object, callee types.Object) {
+func MarkFunctionCall(pass *analysis.Pass, obj types.Object, callee types.Object, pos schema.Position) {
 	fact := newFact(pass, obj)
-	fact.Add(&FunctionCall{Callee: callee})
-	pass.ExportObjectFact(obj, fact)
-}
-
-// MarkVerbCall marks the given object as having a call to an FTL verb.
-func MarkVerbCall(pass *analysis.Pass, obj types.Object, verbRef *schema.Ref) {
-	fact := newFact(pass, obj)
-	fact.Add(&VerbCall{VerbRef: verbRef})
+	fact.Add(&FunctionCall{Callee: callee, Position: pos})
 	pass.ExportObjectFact(obj, fact)
 }
 
