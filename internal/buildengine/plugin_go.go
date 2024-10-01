@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
+	"github.com/alecthomas/kong"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/schema"
@@ -22,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 type goPlugin struct {
@@ -43,20 +45,47 @@ type scaffoldingContext struct {
 	Replace   map[string]string
 }
 
-func (p *goPlugin) CreateModule(ctx context.Context, c moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
+func (p *goPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
+	return []*kong.Flag{
+		{
+			Value: &kong.Value{
+				Name: "replace",
+				Help: "Replace a module import path with a local path in the initialised FTL module.",
+				Tag: &kong.Tag{
+					Envs: []string{"FTL_INIT_GO_REPLACE"},
+				},
+			},
+			Short:       'r',
+			PlaceHolder: "OLD=NEW,...",
+		},
+	}, nil
+}
+
+func (p *goPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Config, c moduleconfig.ModuleConfig, flags map[string]string) error {
 	logger := log.FromContext(ctx)
 	config := c.Abs()
+
 	opts := []scaffolder.Option{
 		scaffolder.Exclude("^go.mod$"),
 	}
-	if !includeBinDir {
+	if !projConfig.Hermit {
 		logger.Debugf("Excluding bin directory")
 		opts = append(opts, scaffolder.Exclude("^bin"))
 	}
+
 	sctx := scaffoldingContext{
 		Name:      config.Module,
 		GoVersion: runtime.Version()[2:],
-		Replace:   replacements,
+		Replace:   map[string]string{},
+	}
+	if replaceStr, ok := flags["replace"]; ok {
+		for _, replace := range strings.Split(replaceStr, ",") {
+			parts := strings.Split(replace, "=")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid replace flag (format: A=B,C=D): %q", replace)
+			}
+			sctx.Replace[parts[0]] = parts[1]
+		}
 	}
 
 	// scaffold at one directory above the module directory

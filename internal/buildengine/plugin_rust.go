@@ -8,6 +8,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/alecthomas/kong"
 )
 
 type rustPlugin struct {
@@ -23,7 +25,11 @@ func newRustPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *rustP
 	}
 }
 
-func (p *rustPlugin) CreateModule(ctx context.Context, config moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
+func (p *rustPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
+	return []*kong.Flag{}, nil
+}
+
+func (p *rustPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Config, c moduleconfig.ModuleConfig, flags map[string]string) error {
 	return fmt.Errorf("not implemented")
 }
 
