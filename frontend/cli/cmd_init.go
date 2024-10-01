@@ -69,6 +69,10 @@ func (i initCmd) Run(
 	}
 
 	if !i.NoGit {
+		err := maybeGitInit(ctx, i.Dir)
+		if err != nil {
+			return fmt.Errorf("running git init: %w", err)
+		}
 		logger.Debugf("Updating .gitignore")
 		if err := updateGitIgnore(ctx, i.Dir); err != nil {
 			return fmt.Errorf("update .gitignore: %w", err)
@@ -84,6 +88,14 @@ func maybeGitAdd(ctx context.Context, dir string, paths ...string) error {
 	args := append([]string{"add"}, paths...)
 	if err := exec.Command(ctx, log.Debug, dir, "git", args...).RunBuffered(ctx); err != nil {
 		return err
+	}
+	return nil
+}
+
+func maybeGitInit(ctx context.Context, dir string) error {
+	args := []string{"init"}
+	if err := exec.Command(ctx, log.Debug, dir, "git", args...).RunBuffered(ctx); err != nil {
+		return fmt.Errorf("git init: %w", err)
 	}
 	return nil
 }
