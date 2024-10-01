@@ -2,12 +2,12 @@
 package parent
 
 import (
-	"context"
-	ftlchild "ftl/parent/child"
+    "context"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+
+    ftlchild "ftl/parent/child"
 )
-
 
 type ChildVerbClient func(context.Context) (ftlchild.Resp, error)
 

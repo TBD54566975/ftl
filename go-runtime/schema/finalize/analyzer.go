@@ -6,14 +6,12 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/TBD54566975/golang-tools/go/analysis"
-	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
-	"github.com/TBD54566975/golang-tools/go/ast/inspector"
-	sets "github.com/deckarep/golang-set/v2"
-
 	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/TBD54566975/golang-tools/go/analysis"
+	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
+	"github.com/TBD54566975/golang-tools/go/ast/inspector"
 )
 
 // Analyzer aggregates the results of all extractors.
@@ -37,9 +35,12 @@ type Result struct {
 	// Native names that can't be derived outside of the analysis pass.
 	NativeNames map[schema.Node]string
 	// FunctionCalls contains all function calls; key is the parent function, value is the called functions.
-	FunctionCalls map[types.Object]sets.Set[types.Object]
-	// VerbCalls contains all verb calls; key is the parent function, value is the called verbs.
-	VerbCalls map[types.Object]sets.Set[*schema.Ref]
+	FunctionCalls map[schema.Position]FunctionCall
+}
+
+type FunctionCall struct {
+	Caller types.Object
+	Callee types.Object
 }
 
 func Run(pass *analysis.Pass) (interface{}, error) {
@@ -79,39 +80,27 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 			nativeNames[fact.Node] = common.GetNativeName(obj)
 		}
 	}
-	fnCalls, verbCalls := getCalls(pass)
 	return Result{
 		ModuleName:     moduleName,
 		ModuleComments: extractModuleComments(pass),
 		Extracted:      extracted,
 		Failed:         failed,
 		NativeNames:    nativeNames,
-		FunctionCalls:  fnCalls,
-		VerbCalls:      verbCalls,
+		FunctionCalls:  getFunctionCalls(pass),
 	}, nil
 }
 
-func getCalls(pass *analysis.Pass) (functionCalls map[types.Object]sets.Set[types.Object], verbCalls map[types.Object]sets.Set[*schema.Ref]) {
-	fnCalls := make(map[types.Object]sets.Set[types.Object])
-	for obj, calls := range common.GetAllFactsOfType[*common.FunctionCall](pass) {
+func getFunctionCalls(pass *analysis.Pass) map[schema.Position]FunctionCall {
+	fnCalls := make(map[schema.Position]FunctionCall)
+	for caller, calls := range common.GetAllFactsOfType[*common.FunctionCall](pass) {
 		for _, fnCall := range calls {
-			if fnCalls[obj] == nil {
-				fnCalls[obj] = sets.NewSet[types.Object]()
+			fnCalls[fnCall.Position] = FunctionCall{
+				Caller: caller,
+				Callee: fnCall.Callee,
 			}
-			fnCalls[obj].Add(fnCall.Callee)
 		}
 	}
-
-	vCalls := make(map[types.Object]sets.Set[*schema.Ref])
-	for obj, calls := range common.GetAllFactsOfType[*common.VerbCall](pass) {
-		for _, vCall := range calls {
-			if vCalls[obj] == nil {
-				vCalls[obj] = sets.NewSet[*schema.Ref]()
-			}
-			vCalls[obj].Add(vCall.VerbRef)
-		}
-	}
-	return fnCalls, vCalls
+	return fnCalls
 }
 
 func extractModuleComments(pass *analysis.Pass) []string {

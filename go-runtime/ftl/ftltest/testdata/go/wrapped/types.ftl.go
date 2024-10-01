@@ -2,9 +2,10 @@
 package wrapped
 
 import (
-    "context"
-
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"context"
+	ftltime "ftl/time"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
 type InnerClient func(context.Context) (WrappedResponse, error)
@@ -14,10 +15,12 @@ type OuterClient func(context.Context) (WrappedResponse, error)
 func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
-            Inner,
+			Inner,
+			server.VerbClient[ftltime.TimeClient, ftltime.TimeRequest, ftltime.TimeResponse](),
 		),
 		reflection.ProvideResourcesForVerb(
-            Outer,
+			Outer,
+			server.SourceClient[InnerClient, WrappedResponse](),
 		),
 	)
 }

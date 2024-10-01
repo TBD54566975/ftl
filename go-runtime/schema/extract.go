@@ -3,10 +3,9 @@ package schema
 import (
 	"fmt"
 	"go/types"
-	"slices"
-	"strings"
 	"time"
 
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
@@ -142,8 +141,8 @@ type combinedData struct {
 	errs   []*schema.Error
 
 	nativeNames         NativeNames
-	functionCalls       map[types.Object]sets.Set[types.Object]
-	verbCalls           map[types.Object]sets.Set[*schema.Ref]
+	functionCalls       map[schema.Position]finalize.FunctionCall
+	verbs               map[types.Object]*schema.Verb
 	refResults          map[schema.RefKey]refResult
 	extractedDecls      map[schema.Decl]types.Object
 	externalTypeAliases sets.Set[*schema.TypeAlias]
@@ -156,8 +155,8 @@ func newCombinedData(diagnostics []analysis.SimpleDiagnostic) *combinedData {
 	return &combinedData{
 		errs:                diagnosticsToSchemaErrors(diagnostics),
 		nativeNames:         make(NativeNames),
-		functionCalls:       make(map[types.Object]sets.Set[types.Object]),
-		verbCalls:           make(map[types.Object]sets.Set[*schema.Ref]),
+		functionCalls:       make(map[schema.Position]finalize.FunctionCall),
+		verbs:               make(map[types.Object]*schema.Verb),
 		refResults:          make(map[schema.RefKey]refResult),
 		extractedDecls:      make(map[schema.Decl]types.Object),
 		externalTypeAliases: sets.NewSet[*schema.TypeAlias](),
@@ -178,13 +177,13 @@ func (cd *combinedData) update(fr finalize.Result) {
 	copyFailedRefs(cd.refResults, fr.Failed)
 	maps.Copy(cd.nativeNames, fr.NativeNames)
 	maps.Copy(cd.functionCalls, fr.FunctionCalls)
-	maps.Copy(cd.verbCalls, fr.VerbCalls)
 }
 
 func (cd *combinedData) toResult() Result {
 	cd.module.AddDecls(maps.Keys(cd.extractedDecls))
 	cd.updateDeclVisibility()
 	cd.propagateTypeErrors()
+	cd.errorDirectVerbInvocations()
 	schema.SortErrorsByPosition(cd.errs)
 	return Result{
 		Module:      cd.module,
@@ -223,17 +222,15 @@ func (cd *combinedData) validateDecl(decl schema.Decl, obj types.Object) {
 	cd.globalUniqueness[decl.GetName()] = tuple.Pair[types.Object, schema.Position]{A: obj, B: decl.Position()}
 }
 
-func (cd *combinedData) getVerbCalls(obj types.Object) sets.Set[*schema.Ref] {
-	calls := sets.NewSet[*schema.Ref]()
-	if cls, ok := cd.verbCalls[obj]; ok {
-		calls.Append(cls.ToSlice()...)
-	}
-	if fnCall, ok := cd.functionCalls[obj]; ok {
-		for _, calleeObj := range fnCall.ToSlice() {
-			calls.Append(cd.getVerbCalls(calleeObj).ToSlice()...)
+func (cd *combinedData) errorDirectVerbInvocations() {
+	for pos, fnCall := range cd.functionCalls {
+		if v, ok := cd.verbs[fnCall.Callee]; ok {
+			cd.error(schema.Errorf(pos, pos.Column,
+				"direct verb calls are not allowed; use the provided %sClient instead. "+
+					"See https://tbd54566975.github.io/ftl/docs/reference/verbs/#calling-verbs",
+				strcase.ToUpperCamel(v.Name)))
 		}
 	}
-	return calls
 }
 
 // updateDeclVisibility traverses the module schema via refs and updates visibility as needed.
@@ -379,16 +376,7 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 				cd.nativeNames[d] = common.GetNativeName(obj)
 			}
 		case *schema.Verb:
-			calls := cd.getVerbCalls(obj).ToSlice()
-			slices.SortFunc(calls, func(i, j *schema.Ref) int {
-				if i.Module != j.Module {
-					return strings.Compare(i.Module, j.Module)
-				}
-				return strings.Compare(i.Name, j.Name)
-			})
-			if len(calls) > 0 {
-				d.Metadata = append(d.Metadata, &schema.MetadataCalls{Calls: calls})
-			}
+			cd.verbs[obj] = d
 		default:
 		}
 	}

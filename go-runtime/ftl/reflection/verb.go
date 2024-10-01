@@ -51,8 +51,6 @@ func (v verbCall) Exec(ctx context.Context, req optional.Option[any]) (optional.
 		args = append(args, reflect.ValueOf(r))
 	}
 
-	// try to call the function, with panic recovery defaulting to the original args
-	// TODO: remove once ftl.Call(...) is no longer supported
 	tryCall := func(args []reflect.Value) (results []reflect.Value, err error) {
 		defer func() {
 			if r := recover(); r != nil {
@@ -65,11 +63,7 @@ func (v verbCall) Exec(ctx context.Context, req optional.Option[any]) (optional.
 
 	results, err := tryCall(append(args, v.args...))
 	if err != nil {
-		// retry with original args if panic occurred
-		results, err = tryCall(args)
-		if err != nil {
-			return optional.None[any](), err
-		}
+		return optional.None[any](), err
 	}
 
 	var resp optional.Option[any]
