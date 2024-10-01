@@ -82,7 +82,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	csm := &currentStatusManager{}
 	app := createKongApplication(&cli, csm)
-	prepareNewCmd(ctx, app, os.Args[1:])
+	app.FatalIfErrorf(prepareNewCmd(ctx, app, os.Args[1:]))
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
 
