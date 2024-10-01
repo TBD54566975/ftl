@@ -21,27 +21,93 @@ You can also use a shorthand syntax for the cron job, supporting seconds (`s`), 
 
 The following function will be called hourly:
 
+{% code_selector() %}
+<!-- go -->
 ```go
 //ftl:cron 0 * * * *
 func Hourly(ctx context.Context) error {
   // ...
 }
 ```
+<!-- kotlin -->
+```kotlin
+import xyz.block.ftl.Cron
+@Cron("0 * * * *")
+fun hourly() {
+    
+}
+```
+<!-- java -->
+```java
+import xyz.block.ftl.Cron;
 
+class MyCron {
+    @Cron("0 * * * *")
+    void hourly() {
+        
+    }
+}
+```
+
+{% end %}
 Every 12 hours, starting at UTC midnight:
 
+{% code_selector() %}
+<!-- go -->
 ```go
 //ftl:cron 12h
 func TwiceADay(ctx context.Context) error {
   // ...
 }
 ```
+<!-- kotlin -->
+```kotlin
+import xyz.block.ftl.Cron
+@Cron("12h")
+fun twiceADay() {
+    
+}
+```
+<!-- java -->
+```java
+import xyz.block.ftl.Cron;
+
+class MyCron {
+    @Cron("12h")
+    void twiceADay() {
+        
+    }
+}
+```
+{% end %}
 
 Every Monday at UTC midnight:
 
+{% code_selector() %}
+<!-- go -->
 ```go
 //ftl:cron Mon
 func Mondays(ctx context.Context) error {
   // ...
 }
 ```
+<!-- kotlin -->
+```kotlin
+import xyz.block.ftl.Cron
+@Cron("Mon")
+fun mondays() {
+    
+}
+```
+<!-- java -->
+```java
+import xyz.block.ftl.Cron;
+
+class MyCron {
+    @Cron("Mon")
+    void mondays() {
+        
+    }
+}
+```
+{% end %}
