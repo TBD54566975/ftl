@@ -278,7 +278,6 @@ func (s *Service) deploy(ctx context.Context) error {
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to register runner: %w", err))
 	}
 
-	fmt.Printf("c config deployment %v\n", s.config.Deployment)
 	key, err := model.ParseDeploymentKey(s.config.Deployment)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.None[string]())
@@ -299,7 +298,6 @@ func (s *Service) deploy(ctx context.Context) error {
 		return errors.New("already deployed")
 	}
 
-	fmt.Printf("--- get deployment %v\n", key)
 	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: s.config.Deployment}))
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))

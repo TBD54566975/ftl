@@ -19,7 +19,7 @@ var randRead = rand.Read
 // A constraint that requires itself be a pointer to a T that implements KeyPayload.
 //
 // This is necessary so that keyType.Payload can be a value rather than a pointer.
-type KeyPayloadConstraint[T any] interface {
+type keyPayloadConstraint[T any] interface {
 	*T
 	KeyPayload
 }
@@ -35,7 +35,7 @@ type KeyPayload interface {
 }
 
 // KeyType is a helper type to avoid having to write a bunch of boilerplate.
-type KeyType[T any, TP KeyPayloadConstraint[T]] struct {
+type KeyType[T any, TP keyPayloadConstraint[T]] struct {
 	Payload T
 	Suffix  []byte
 }
@@ -102,7 +102,7 @@ func (d *KeyType[T, TP]) UnmarshalText(bytes []byte) error {
 //
 // If the payload specifies a randomness greater than 0, a random suffix will be generated.
 // The payload will be parsed from payloadComponents, which must be a hyphen-separated string.
-func newKey[T any, TP KeyPayloadConstraint[T]](components ...string) (kt KeyType[T, TP]) {
+func newKey[T any, TP keyPayloadConstraint[T]](components ...string) (kt KeyType[T, TP]) {
 	var payload TP = &kt.Payload
 	if err := payload.Parse(components); err != nil {
 		panic(fmt.Errorf("failed to parse payload %q: %w", strings.Join(components, "-"), err))
@@ -119,7 +119,7 @@ func newKey[T any, TP KeyPayloadConstraint[T]](components ...string) (kt KeyType
 // Parse a key in the form <kind>[-<payload>][-<suffix>]
 //
 // Suffix will be parsed if the payload specifies a randomness greater than 0.
-func parseKey[T any, TP KeyPayloadConstraint[T]](key string) (kt KeyType[T, TP], err error) {
+func parseKey[T any, TP keyPayloadConstraint[T]](key string) (kt KeyType[T, TP], err error) {
 	components := strings.Split(key, "-")
 	if len(components) == 0 {
 		return kt, fmt.Errorf("expected a prefix for key %q", key)
