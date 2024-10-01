@@ -47,7 +47,7 @@ func (d *Database) IsExported() bool { return false }
 
 func DatabaseFromProto(s *schemapb.Database) *Database {
 	return &Database{
-		Pos:      posFromProto(s.Pos),
+		Pos:      PosFromProto(s.Pos),
 		Comments: s.Comments,
 		Name:     s.Name,
 		Type:     s.Type,

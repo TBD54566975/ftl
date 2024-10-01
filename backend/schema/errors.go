@@ -36,7 +36,7 @@ func (e Error) Error() string { return fmt.Sprintf("%s-%d: %s", e.Pos, e.EndColu
 
 func errorFromProto(e *schemapb.Error) *Error {
 	return &Error{
-		Pos:       posFromProto(e.Pos),
+		Pos:       PosFromProto(e.Pos),
 		Msg:       e.Msg,
 		EndColumn: int(e.EndColumn),
 		Level:     levelFromProto(e.Level),

@@ -113,7 +113,7 @@ func (r *Ref) String() string {
 
 func RefFromProto(s *schemapb.Ref) *Ref {
 	return &Ref{
-		Pos:            posFromProto(s.Pos),
+		Pos:            PosFromProto(s.Pos),
 		Name:           s.Name,
 		Module:         s.Module,
 		TypeParameters: slices.Map(s.TypeParameters, TypeFromProto),
