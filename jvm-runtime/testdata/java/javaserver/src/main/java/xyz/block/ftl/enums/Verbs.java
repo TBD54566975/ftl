@@ -1,11 +1,11 @@
-package xyz.block.ftl.test;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import xyz.block.ftl.Export;
-import xyz.block.ftl.Verb;
+package xyz.block.ftl.enums;
 
 import java.util.Map;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+import xyz.block.ftl.Export;
+import xyz.block.ftl.Verb;
 
 public class Verbs {
 
@@ -21,5 +21,15 @@ public class Verbs {
         return Map.of("name", name);
     }
 
+    @Export
+    @Verb
+    public ColorInt valueEnumVerb(ColorInt color) {
+        return color;
+    }
 
+    @Export
+    @Verb
+    public Shape stringEnumVerb(Shape shape) {
+        return shape;
+    }
 }

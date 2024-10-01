@@ -7,6 +7,7 @@ import (
 
 	"github.com/tbd54566975/web5-go/dids/did"
 
+	"ftl/javaserver"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
@@ -281,3 +282,8 @@ func GetAnimal(ctx context.Context) (AnimalWrapper, error) {
 //func MixedEnumVerb(ctx context.Context, val Mixed) (Mixed, error) {
 //	return val, nil
 //}
+
+func callJavaServer(ctx context.Context, req javaserver.ColorInt, getValueEnum javaserver.ValueEnumVerbClient) (javaserver.ColorInt, error) {
+	color, _ := getValueEnum(ctx, req)
+	return color, nil
+}

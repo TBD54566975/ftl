@@ -4,6 +4,7 @@ import static org.jboss.jandex.PrimitiveType.Primitive.BYTE;
 import static org.jboss.jandex.PrimitiveType.Primitive.INT;
 import static org.jboss.jandex.PrimitiveType.Primitive.LONG;
 import static org.jboss.jandex.PrimitiveType.Primitive.SHORT;
+import static xyz.block.ftl.deployment.FTLDotNames.GENERATED_REF;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -41,6 +42,9 @@ public class EnumProcessor {
             for (var enumAnnotation : enumAnnotations) {
                 boolean exported = enumAnnotation.target().hasAnnotation(FTLDotNames.EXPORT);
                 ClassInfo enumClassInfo = enumAnnotation.target().asClass();
+                if (enumClassInfo.hasDeclaredAnnotation(GENERATED_REF)) {
+                    continue;
+                }
                 Enum.Builder enumBuilder = Enum.newBuilder()
                         .setName(enumClassInfo.simpleName())
                         .setExport(exported);
