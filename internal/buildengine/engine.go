@@ -531,7 +531,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			}
 			existingHash, ok := moduleHashes[change.Name]
 			if !ok {
-				continue
+				existingHash = []byte{}
 			}
 
 			hash, err := computeModuleHash(change.Module)
