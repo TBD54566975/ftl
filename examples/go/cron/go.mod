@@ -2,7 +2,9 @@ module ftl/cron
 
 go 1.23.1
 
-require github.com/TBD54566975/ftl v1.1.5
+replace github.com/TBD54566975/ftl => ../../..
+
+require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 
 require (
 	connectrpc.com/connect v1.16.2 // indirect
@@ -45,5 +47,3 @@ require (
 	golang.org/x/text v0.18.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )
-
-replace github.com/TBD54566975/ftl => /Users/safeer/dev/ftl
