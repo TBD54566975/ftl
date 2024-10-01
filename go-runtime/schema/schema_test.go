@@ -273,7 +273,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 				+calls two.two
 
 			export verb callsTwoAndThree(two.Payload<String>) two.Payload<String>
-				+calls two.three, two.two
+				+calls two.two, two.three
 
 			export verb ingress(builtin.HttpRequest<two.PostRequest, Unit, Unit>) builtin.HttpResponse<two.PostResponse, String>
 				+ingress http POST /users
