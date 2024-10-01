@@ -18,10 +18,7 @@ export const useStreamModules = () => {
   const streamModules = async ({ signal }: { signal: AbortSignal }) => {
     try {
       console.debug('streaming modules')
-      for await (const response of client.streamModules(
-        { updateInterval: { seconds: BigInt(0), nanos: updateIntervalMs * 1000 }, query: {} },
-        { signal },
-      )) {
+      for await (const response of client.streamModules({ updateInterval: { seconds: BigInt(0), nanos: updateIntervalMs * 1000 }, query: {} }, { signal })) {
         console.debug('stream-modules-response:', response)
         if (response.modules) {
           const newModuleNames = response.modules.map((m) => m.name)

@@ -313,11 +313,11 @@ func verbFromDecl(decl *schema.Verb, sch *schema.Schema) (*pbconsole.Verb, error
 		if requestData, ok := verbSchema.Request.(*schema.Ref); ok {
 			jsonSchema, err := schema.RequestResponseToJSONSchema(sch, *requestData)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to retrieve JSON schema: %w", err)
 			}
 			jsonData, err := json.MarshalIndent(jsonSchema, "", "  ")
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to indent JSON schema: %w", err)
 			}
 			jsonRequestSchema = string(jsonData)
 		}
@@ -337,7 +337,7 @@ func verbFromDecl(decl *schema.Verb, sch *schema.Schema) (*pbconsole.Verb, error
 func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request[pbconsole.StreamModulesRequest], stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
 	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get deployments: %w", err)
 	}
 	sch := &schema.Schema{
 		Modules: slices.Map(deployments, func(d dalmodel.Deployment) *schema.Module {
@@ -369,7 +369,7 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 		Modules: modules,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send StreamModulesResponse to stream: %w", err)
 	}
 
 	// TODO: handle deployment updates
