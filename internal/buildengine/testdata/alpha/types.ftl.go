@@ -2,12 +2,10 @@
 package alpha
 
 import (
-    "context"
-
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-    "github.com/TBD54566975/ftl/go-runtime/server"
-
-    ftlother "ftl/other"
+	"context"
+	ftlother "ftl/other"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
 type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)
@@ -15,8 +13,8 @@ type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)
 func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
-            Echo,
-            server.VerbClient[ftlother.EchoClient, ftlother.EchoRequest, ftlother.EchoResponse](),
+			Echo,
+			server.VerbClient[ftlother.EchoClient, ftlother.EchoRequest, ftlother.EchoResponse](),
 		),
 	)
 }

@@ -2,10 +2,9 @@
 package another
 
 import (
-    "context"
-
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-    lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
+	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 )
 
 type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)
@@ -22,7 +21,7 @@ func init() {
 		),
 		reflection.ExternalType(*new(lib.AnotherNonFTLType)),
 		reflection.ProvideResourcesForVerb(
-            Echo,
+			Echo,
 		),
 	)
 }
