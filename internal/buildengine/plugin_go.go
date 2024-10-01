@@ -43,7 +43,7 @@ func (p *goPlugin) Updates() *pubsub.Topic[PluginEvent] {
 }
 
 func (p *goPlugin) Kill(ctx context.Context) error {
-	// TODO: create own context for background execution and cancel that...
+	p.cancel()
 	return nil
 }
 

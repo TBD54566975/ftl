@@ -73,7 +73,7 @@ type LanguagePlugin interface {
 	// and publishing these automatic builds updates to Updates().
 	Build(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error)
 
-	// TODO: docs
+	// Kill stops the plugin and cleans up any resources.
 	Kill(ctx context.Context) error
 }
 
@@ -146,6 +146,7 @@ type internalPlugin struct {
 	commands chan pluginCommand
 
 	updates *pubsub.Topic[PluginEvent]
+	cancel  context.CancelFunc
 }
 
 func newInternalPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig, build buildFunc) *internalPlugin {
@@ -155,6 +156,7 @@ func newInternalPlugin(ctx context.Context, config moduleconfig.AbsModuleConfig,
 		commands:  make(chan pluginCommand, 128),
 		updates:   pubsub.New[PluginEvent](),
 	}
+	ctx, plugin.cancel = context.WithCancel(ctx)
 	go plugin.run(ctx)
 	return plugin
 }

@@ -489,31 +489,34 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				}
 				if meta, ok := e.moduleMetas.Load(event.Config.Module); ok {
 					meta.plugin.Updates().Unsubscribe(e.pluginEvents)
+					meta.plugin.Kill(ctx)
 				}
 				e.moduleMetas.Delete(event.Config.Module)
 			case WatchEventModuleChanged:
 				// TODO: ftl.toml changed... update config and tell plugin
+				meta, ok := e.moduleMetas.Load(event.Config.Module)
+				if !ok {
+					logger.Warnf("module %q not found", event.Config.Module)
+					continue
+				}
 
-				// meta, ok := e.moduleMetas.Load(event.Config.Module)
-				// if !ok {
-				// 	logger.Warnf("module %q not found", event.Config.Module)
-				// 	continue
-				// }
+				// ftl.toml file has changed
+				updatedConfig, err := moduleconfig.LoadModuleConfig(event.Config.Dir)
+				if err != nil {
+					return err
+				}
+				meta.module.Config = updatedConfig
+				e.moduleMetas.Store(event.Config.Module, meta)
 
-				// if event.Time.Before(meta.lastBuildStartTime) {
-				// 	logger.Debugf("Skipping build and deploy; event time %v is before the last build time %v", event.Time, meta.lastBuildStartTime)
-				// 	continue // Skip this event as it's outdated
-				// }
-				// didError = false
-				// err := e.BuildAndDeploy(ctx, 1, true, config.Module)
-				// if err != nil {
-				// 	didError = true
-				// 	e.reportBuildFailed(err)
-				// 	terminal.UpdateModuleState(ctx, config.Module, terminal.BuildStateFailed)
-				// 	logger.Errorf(err, "build and deploy failed for module %q", event.Module.Config.Module)
-				// } else {
-				// 	didUpdateDeployments = true
-				// }
+				err = e.BuildAndDeploy(ctx, 1, true, event.Config.Module)
+				if err != nil {
+					didError = true
+					e.reportBuildFailed(err)
+					terminal.UpdateModuleState(ctx, event.Config.Module, terminal.BuildStateFailed)
+					logger.Errorf(err, "build and deploy failed for module %q", event.Config.Module)
+				} else {
+					didUpdateDeployments = true
+				}
 			}
 		case change := <-schemaChanges:
 			if change.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
