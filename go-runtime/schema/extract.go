@@ -5,7 +5,6 @@ import (
 	"go/types"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
@@ -16,6 +15,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/call"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/configsecret"
