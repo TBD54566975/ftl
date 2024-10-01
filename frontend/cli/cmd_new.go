@@ -54,12 +54,12 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) error {
 		Language: language,
 	}, "")
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create plugin for %v: %w", language, err)
 	}
 
 	flags, err := plugin.GetCreateModuleFlags(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not get CLI flags for %v plugin: %w", language, err)
 	}
 
 	registry := kong.NewRegistry().RegisterDefaults()
