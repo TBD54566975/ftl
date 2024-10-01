@@ -87,7 +87,7 @@ func (c mainModuleContext) generateMainImports() []string {
 	for _, e := range c.MainCtx.ExternalTypes {
 		imports.Add(e.importStatement())
 	}
-	return formatGoImports(imports.ToSlice())
+	return imports.ToSlice()
 }
 
 func (c mainModuleContext) generateTypesImports(mainModuleImport string) []string {
@@ -118,7 +118,7 @@ func (c mainModuleContext) generateTypesImports(mainModuleImport string) []strin
 		}
 		filteredImports = append(filteredImports, im)
 	}
-	return formatGoImports(filteredImports)
+	return filteredImports
 }
 
 func typeImports(t goSchemaType) []string {
@@ -355,16 +355,25 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 
 	logger.Debugf("Tidying go.mod files")
 	wg, wgctx := errgroup.WithContext(ctx)
+
+	ftlTypesFilename := "types.ftl.go"
 	wg.Go(func() error {
 		if err := exec.Command(wgctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", moduleDir, err)
 		}
-		return filesTransaction.ModifiedFiles(filepath.Join(moduleDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
+
+		if err := exec.Command(wgctx, log.Debug, moduleDir, "go", "fmt", ftlTypesFilename).RunBuffered(wgctx); err != nil {
+			return fmt.Errorf("%s: failed to format module dir: %w", moduleDir, err)
+		}
+		return filesTransaction.ModifiedFiles(filepath.Join(moduleDir, "go.mod"), filepath.Join(moduleDir, "go.sum"), filepath.Join(moduleDir, ftlTypesFilename))
 	})
 	mainDir := filepath.Join(buildDir, "go", "main")
 	wg.Go(func() error {
 		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", mainDir, err)
+		}
+		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "fmt", "./...").RunBuffered(wgctx); err != nil {
+			return fmt.Errorf("%s: failed to format main dir: %w", mainDir, err)
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
@@ -1317,44 +1326,5 @@ func addImports(existingImports map[string]string, newTypes ...nativeType) map[s
 			imports[importPath] = aliases[len(aliases)-1]
 		}
 	}
-	return imports
-}
-
-func formatGoImports(imports []string) []string {
-	getPriority := func(path string) int {
-		// ftl import
-		if strings.HasPrefix(path, "\"ftl/") {
-			return 2
-		}
-		// aliased ftl import
-		if parts := strings.SplitAfter(path, " "); len(parts) == 2 && strings.HasPrefix(parts[1], "\"ftl/") {
-			return 2
-		}
-		// stdlib imports don't contain a dot (e.g., "fmt", "strings")
-		if !strings.Contains(path, ".") {
-			return 0
-		}
-		return 1
-	}
-
-	slices.SortFunc(imports, func(i, j string) int {
-		priorityI := getPriority(i)
-		priorityJ := getPriority(j)
-		if priorityI != priorityJ {
-			return priorityI - priorityJ
-		}
-		return strings.Compare(i, j)
-	})
-
-	// add newlines between import groupings
-	previousPriority := -1
-	for i, imp := range imports {
-		currentPriority := getPriority(imp)
-		if currentPriority != previousPriority && previousPriority != -1 {
-			imports[i-1] = fmt.Sprintf("%s\n", imports[i-1])
-		}
-		previousPriority = currentPriority
-	}
-
 	return imports
 }
