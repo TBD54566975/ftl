@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/alecthomas/types/optional"
 	"github.com/benbjohnson/clock"
@@ -119,12 +120,12 @@ func (s *Service) scheduleCronJobs(ctx context.Context) (err error) {
 	}
 	logger.Tracef("Scheduling %d cron jobs", len(jobs))
 	for _, job := range jobs {
-		err = s.scheduleCronJob(ctx, tx, job)
+		err = s.scheduleCronJob(ctx, tx, job, now)
 		if err != nil {
 			s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 				DeploymentKey: job.DeploymentKey,
 				Verb:          job.Verb,
-				Time:          now,
+				StartTime:     now,
 				ScheduledAt:   job.NextExecution,
 				Schedule:      job.Schedule,
 				Error:         optional.Some(err.Error()),
@@ -141,6 +142,7 @@ func (s *Service) scheduleCronJobs(ctx context.Context) (err error) {
 func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, failed bool) (err error) {
 	logger := log.FromContext(ctx).Scope("cron")
 	logger.Tracef("Cron job %q completed with failed=%v", key, failed)
+	now := s.clock.Now().UTC()
 
 	tx, err := s.dal.Begin(ctx)
 	if err != nil {
@@ -152,12 +154,12 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 	if err != nil {
 		return fmt.Errorf("failed to get cron job %q: %w", key, err)
 	}
-	err = s.scheduleCronJob(ctx, tx, job)
+	err = s.scheduleCronJob(ctx, tx, job, now)
 	if err != nil {
 		s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 			DeploymentKey: job.DeploymentKey,
 			Verb:          job.Verb,
-			Time:          s.clock.Now().UTC(),
+			StartTime:     now,
 			ScheduledAt:   job.NextExecution,
 			Schedule:      job.Schedule,
 			Error:         optional.Some(err.Error()),
@@ -168,7 +170,7 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 }
 
 // scheduleCronJob schedules the next execution of a single cron job.
-func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.CronJob) error {
+func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.CronJob, startTime time.Time) error {
 	logger := log.FromContext(ctx).Scope("cron").Module(job.Verb.Module)
 	now := s.clock.Now().UTC()
 	pending, err := tx.IsCronJobPending(ctx, job.Key, now)
@@ -229,7 +231,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 	s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 		DeploymentKey: job.DeploymentKey,
 		Verb:          job.Verb,
-		Time:          now,
+		StartTime:     startTime,
 		ScheduledAt:   nextAttemptForJob,
 		Schedule:      job.Schedule,
 	})

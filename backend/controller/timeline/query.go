@@ -380,6 +380,7 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				DeploymentKey: row.DeploymentKey,
 				Verb:          schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
 				Time:          row.TimeStamp,
+				Duration:      time.Duration(jsonPayload.DurationMS) * time.Millisecond,
 				ScheduledAt:   jsonPayload.ScheduledAt,
 				Schedule:      jsonPayload.Schedule,
 				Error:         jsonPayload.Error,

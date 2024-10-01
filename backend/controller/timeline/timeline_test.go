@@ -154,7 +154,7 @@ func TestTimeline(t *testing.T) {
 		timeline.EnqueueEvent(ctx, &CronScheduled{
 			DeploymentKey: cronEvent.DeploymentKey,
 			Verb:          cronEvent.Verb,
-			Time:          cronEvent.Time,
+			StartTime:     cronEvent.Time,
 			ScheduledAt:   cronEvent.ScheduledAt,
 			Schedule:      cronEvent.Schedule,
 			Error:         cronEvent.Error,

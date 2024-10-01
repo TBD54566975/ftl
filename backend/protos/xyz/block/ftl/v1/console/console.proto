@@ -89,9 +89,10 @@ message CronScheduledEvent {
   string deployment_key = 1;
   schema.Ref verb_ref = 2;
   google.protobuf.Timestamp time_stamp = 3;
-  google.protobuf.Timestamp scheduled_at = 4;
-  string schedule = 5;
-  optional string error = 6;
+  google.protobuf.Duration duration = 4;
+  google.protobuf.Timestamp scheduled_at = 5;
+  string schedule = 6;
+  optional string error = 7;
 }
 
 message Config {

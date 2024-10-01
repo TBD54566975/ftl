@@ -510,17 +510,22 @@ export class CronScheduledEvent extends Message<CronScheduledEvent> {
   timeStamp?: Timestamp;
 
   /**
-   * @generated from field: google.protobuf.Timestamp scheduled_at = 4;
+   * @generated from field: google.protobuf.Duration duration = 4;
+   */
+  duration?: Duration;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp scheduled_at = 5;
    */
   scheduledAt?: Timestamp;
 
   /**
-   * @generated from field: string schedule = 5;
+   * @generated from field: string schedule = 6;
    */
   schedule = "";
 
   /**
-   * @generated from field: optional string error = 6;
+   * @generated from field: optional string error = 7;
    */
   error?: string;
 
@@ -535,9 +540,10 @@ export class CronScheduledEvent extends Message<CronScheduledEvent> {
     { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "verb_ref", kind: "message", T: Ref },
     { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
-    { no: 4, name: "scheduled_at", kind: "message", T: Timestamp },
-    { no: 5, name: "schedule", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "duration", kind: "message", T: Duration },
+    { no: 5, name: "scheduled_at", kind: "message", T: Timestamp },
+    { no: 6, name: "schedule", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CronScheduledEvent {
