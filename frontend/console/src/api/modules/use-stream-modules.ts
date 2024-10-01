@@ -18,23 +18,27 @@ export const useStreamModules = () => {
   const streamModules = async ({ signal }: { signal: AbortSignal }) => {
     try {
       console.debug('streaming modules')
+      let hasModules = false
       for await (const response of client.streamModules({ updateInterval: { seconds: BigInt(0), nanos: updateIntervalMs * 1000 }, query: {} }, { signal })) {
         console.debug('stream-modules-response:', response)
         if (response.modules) {
+          hasModules = true
           const newModuleNames = response.modules.map((m) => m.name)
           queryClient.setQueryData<Module[]>(queryKey, (prev = []) => {
             return [...response.modules, ...prev.filter((m) => !newModuleNames.includes(m.name))]
           })
         }
       }
+      return hasModules ? queryClient.getQueryData(queryKey) : [];
     } catch (error) {
       if (error instanceof ConnectError) {
         if (error.code !== Code.Canceled) {
-          console.error('Console service - streamEvents - Connect error:', error)
+          console.error('Console service - streamModules - Connect error:', error)
         }
       } else {
-        console.error('Console service - streamEvents:', error)
+        console.error('Console service - streamModules:', error)
       }
+      return []
     }
   }
 
