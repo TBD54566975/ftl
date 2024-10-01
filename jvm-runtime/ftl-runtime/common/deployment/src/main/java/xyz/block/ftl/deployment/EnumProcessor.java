@@ -35,7 +35,7 @@ public class EnumProcessor {
     @BuildStep
     SchemaContributorBuildItem handleEnums(CombinedIndexBuildItem index) {
         var enumAnnotations = index.getIndex().getAnnotations(FTLDotNames.ENUM);
-        log.info("Processing {} enum annotations into build items", enumAnnotations.size());
+        log.info("Processing {} enum annotations into decls", enumAnnotations.size());
         List<Decl> decls = new ArrayList<>();
         try {
             // TODO how do we exclude @Enum annotations from generated verb clients?

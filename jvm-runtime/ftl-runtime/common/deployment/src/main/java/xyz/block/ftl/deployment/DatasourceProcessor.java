@@ -26,7 +26,7 @@ public class DatasourceProcessor {
             List<JdbcDataSourceBuildItem> datasources,
             BuildProducer<SystemPropertyBuildItem> systemPropProducer,
             BuildProducer<GeneratedResourceBuildItem> generatedResourceBuildItemBuildProducer) {
-        log.info("Processing {} datasource annotations into build items", datasources.size());
+        log.info("Processing {} datasource annotations into decls", datasources.size());
         List<Decl> decls = new ArrayList<>();
         List<String> namedDatasources = new ArrayList<>();
         for (var ds : datasources) {

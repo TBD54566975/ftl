@@ -112,7 +112,6 @@ public class ModuleProcessor {
             VerbClientBuildItem verbClientBuildItem,
             List<SchemaContributorBuildItem> schemaContributorBuildItems) throws Exception {
         String moduleName = moduleNameBuildItem.getModuleName();
-        log.info("Generating module '{}' schema from build items", moduleName);
         Map<String, Iterable<String>> comments = readComments();
 
         ModuleBuilder moduleBuilder = new ModuleBuilder(index.getComputingIndex(), moduleName, topicsBuildItem.getTopics(),
@@ -122,6 +121,7 @@ public class ModuleProcessor {
             i.getSchemaContributor().accept(moduleBuilder);
         }
 
+        log.info("Generating module '{}' schema from {} decls", moduleName, moduleBuilder.getDeclsCount());
         Path output = outputTargetBuildItem.getOutputDirectory().resolve(SCHEMA_OUT);
         try (var out = Files.newOutputStream(output)) {
             moduleBuilder.writeTo(out);

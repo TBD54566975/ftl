@@ -484,6 +484,10 @@ public class ModuleBuilder {
         return this;
     }
 
+    public int getDeclsCount() {
+        return decls.size();
+    }
+
     public void writeTo(OutputStream out) throws IOException {
         decls.values().stream().forEachOrdered(protoModuleBuilder::addDecls);
 

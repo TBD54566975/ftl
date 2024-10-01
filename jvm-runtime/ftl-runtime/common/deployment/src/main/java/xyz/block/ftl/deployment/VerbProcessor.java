@@ -233,7 +233,7 @@ public class VerbProcessor {
             BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem,
             BuildProducer<SchemaContributorBuildItem> schemaContributorBuildItemBuildProducer) {
         Collection<AnnotationInstance> verbAnnotations = index.getIndex().getAnnotations(FTLDotNames.VERB);
-        log.info("Processing {} verb annotations into schema build items", verbAnnotations.size());
+        log.info("Processing {} verb annotations into decls", verbAnnotations.size());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
         for (var verb : verbAnnotations) {
             boolean exported = verb.target().hasAnnotation(FTLDotNames.EXPORT);
@@ -245,7 +245,7 @@ public class VerbProcessor {
         }
 
         Collection<AnnotationInstance> cronAnnotations = index.getIndex().getAnnotations(FTLDotNames.CRON);
-        log.info("Processing {} cron job annotations into schema build items", cronAnnotations.size());
+        log.info("Processing {} cron job annotations into decls", cronAnnotations.size());
         for (var cron : cronAnnotations) {
             var method = cron.target().asMethod();
             String className = method.declaringClass().name().toString();

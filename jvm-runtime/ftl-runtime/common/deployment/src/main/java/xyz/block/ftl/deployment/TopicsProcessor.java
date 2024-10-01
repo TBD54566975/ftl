@@ -32,7 +32,7 @@ public class TopicsProcessor {
     @BuildStep
     TopicsBuildItem handleTopics(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedTopicProducer) {
         var topicDefinitions = index.getComputingIndex().getAnnotations(TopicDefinition.class);
-        log.info("Processing {} topic definition annotations into build items", topicDefinitions.size());
+        log.info("Processing {} topic definition annotations into decls", topicDefinitions.size());
         Map<DotName, TopicsBuildItem.DiscoveredTopic> topics = new HashMap<>();
         Set<String> names = new HashSet<>();
         for (var topicDefinition : topicDefinitions) {
@@ -86,7 +86,6 @@ public class TopicsProcessor {
 
     @BuildStep
     public SchemaContributorBuildItem topicSchema(TopicsBuildItem topics) {
-        log.info("Generating schema build items for {} topic build items", topics.getTopics().size());
         //register all the topics we are defining in the module definition
         return new SchemaContributorBuildItem(new Consumer<ModuleBuilder>() {
             @Override

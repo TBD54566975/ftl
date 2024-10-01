@@ -32,7 +32,7 @@ public class SubscriptionProcessor {
             ModuleNameBuildItem moduleNameBuildItem) {
         Collection<AnnotationInstance> subscriptionAnnotations = combinedIndexBuildItem.getComputingIndex()
                 .getAnnotations(Subscription.class);
-        log.info("Processing {} subscription annotations into build items", subscriptionAnnotations.size());
+        log.info("Processing {} subscription annotations into decls", subscriptionAnnotations.size());
         Map<DotName, SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation> annotations = new HashMap<>();
         for (var subscriptions : subscriptionAnnotations) {
             if (subscriptions.target().kind() != AnnotationTarget.Kind.CLASS) {
