@@ -480,6 +480,8 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				}
 			case WatchEventModuleRemoved:
 				err := terminateModuleDeployment(ctx, e.client, event.Config.Module)
+				terminal.UpdateModuleState(ctx, event.Config.Module, terminal.BuildStateTerminated)
+
 				if err != nil {
 					didError = true
 					e.reportBuildFailed(err)
