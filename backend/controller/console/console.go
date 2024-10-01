@@ -153,6 +153,84 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}), nil
 }
 
+func moduleFromDeployment(deployment dalmodel.Deployment, sch *schema.Schema) (*pbconsole.Module, error) {
+	module, err := moduleFromDecls(deployment.Schema.Decls, sch)
+	if err != nil {
+		return nil, err
+	}
+
+	module.Name = deployment.Module
+	module.DeploymentKey = deployment.Key.String()
+	module.Language = deployment.Language
+	module.Schema = deployment.Schema.String()
+
+	return module, nil
+}
+
+func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module, error) {
+	var configs []*pbconsole.Config
+	var data []*pbconsole.Data
+	var databases []*pbconsole.Database
+	var enums []*pbconsole.Enum
+	var fsms []*pbconsole.FSM
+	var topics []*pbconsole.Topic
+	var typealiases []*pbconsole.TypeAlias
+	var secrets []*pbconsole.Secret
+	var subscriptions []*pbconsole.Subscription
+	var verbs []*pbconsole.Verb
+
+	for _, decl := range decls {
+		switch decl := decl.(type) {
+		case *schema.Config:
+			configs = append(configs, configFromDecl(decl))
+
+		case *schema.Data:
+			data = append(data, dataFromDecl(decl))
+
+		case *schema.Database:
+			databases = append(databases, databaseFromDecl(decl))
+
+		case *schema.Enum:
+			enums = append(enums, enumFromDecl(decl))
+
+		case *schema.FSM:
+			fsms = append(fsms, fsmFromDecl(decl))
+
+		case *schema.Topic:
+			topics = append(topics, topicFromDecl(decl))
+
+		case *schema.Secret:
+			secrets = append(secrets, secretFromDecl(decl))
+
+		case *schema.Subscription:
+			subscriptions = append(subscriptions, subscriptionFromDecl(decl))
+
+		case *schema.TypeAlias:
+			typealiases = append(typealiases, typealiasFromDecl(decl))
+
+		case *schema.Verb:
+			verb, err := verbFromDecl(decl, sch)
+			if err != nil {
+				return nil, err
+			}
+			verbs = append(verbs, verb)
+		}
+	}
+
+	return &pbconsole.Module{
+		Configs:       configs,
+		Data:          data,
+		Databases:     databases,
+		Enums:         enums,
+		Fsms:          fsms,
+		Topics:        topics,
+		Typealiases:   typealiases,
+		Secrets:       secrets,
+		Subscriptions: subscriptions,
+		Verbs:         verbs,
+	}, nil
+}
+
 func configFromDecl(decl *schema.Config) *pbconsole.Config {
 	//nolint:forcetypeassert
 	config := decl.ToProto().(*schemapb.Config)
@@ -266,76 +344,26 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 			return d.Schema
 		}),
 	}
-	sch.Modules = append(sch.Modules, schema.Builtins())
+	builtin := schema.Builtins()
+	sch.Modules = append(sch.Modules, builtin)
 
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
-		var configs []*pbconsole.Config
-		var data []*pbconsole.Data
-		var databases []*pbconsole.Database
-		var enums []*pbconsole.Enum
-		var fsms []*pbconsole.FSM
-		var topics []*pbconsole.Topic
-		var typealiases []*pbconsole.TypeAlias
-		var secrets []*pbconsole.Secret
-		var subscriptions []*pbconsole.Subscription
-		var verbs []*pbconsole.Verb
-
-		for _, decl := range deployment.Schema.Decls {
-			switch decl := decl.(type) {
-			case *schema.Config:
-				configs = append(configs, configFromDecl(decl))
-
-			case *schema.Data:
-				data = append(data, dataFromDecl(decl))
-
-			case *schema.Database:
-				databases = append(databases, databaseFromDecl(decl))
-
-			case *schema.Enum:
-				enums = append(enums, enumFromDecl(decl))
-
-			case *schema.FSM:
-				fsms = append(fsms, fsmFromDecl(decl))
-
-			case *schema.Topic:
-				topics = append(topics, topicFromDecl(decl))
-
-			case *schema.Secret:
-				secrets = append(secrets, secretFromDecl(decl))
-
-			case *schema.Subscription:
-				subscriptions = append(subscriptions, subscriptionFromDecl(decl))
-
-			case *schema.TypeAlias:
-				typealiases = append(typealiases, typealiasFromDecl(decl))
-
-			case *schema.Verb:
-				verb, err := verbFromDecl(decl, sch)
-				if err != nil {
-					return err
-				}
-				verbs = append(verbs, verb)
-			}
+		module, err := moduleFromDeployment(deployment, sch)
+		if err != nil {
+			return err
 		}
-
-		modules = append(modules, &pbconsole.Module{
-			Name:          deployment.Module,
-			DeploymentKey: deployment.Key.String(),
-			Language:      deployment.Language,
-			Configs:       configs,
-			Data:          data,
-			Databases:     databases,
-			Enums:         enums,
-			Fsms:          fsms,
-			Topics:        topics,
-			Typealiases:   typealiases,
-			Secrets:       secrets,
-			Subscriptions: subscriptions,
-			Verbs:         verbs,
-			Schema:        deployment.Schema.String(),
-		})
+		modules = append(modules, module)
 	}
+
+	builtinModule, err := moduleFromDecls(builtin.Decls, sch)
+	if err != nil {
+		return err
+	}
+	builtinModule.Name = builtin.Name
+	builtinModule.Language = "go"
+	builtinModule.Schema = builtin.String()
+	modules = append(modules, builtinModule)
 
 	err = stream.Send(&pbconsole.StreamModulesResponse{
 		Modules: modules,
