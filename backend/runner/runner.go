@@ -212,8 +212,16 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	}
 	response, err := deployment.plugin.Client.Call(ctx, req)
 	if err != nil {
+		deploymentLogger := s.getDeploymentLogger(ctx, deployment.key)
+		deploymentLogger.Errorf(err, "Call to deployments %s failed to perform gRPC call", deployment.key)
 		return nil, connect.NewError(connect.CodeOf(err), err)
+	} else if response.Msg.GetError() != nil {
+		// This is a user level error (i.e. something wrong in the users app)
+		// Log it to the deployment logger
+		deploymentLogger := s.getDeploymentLogger(ctx, deployment.key)
+		deploymentLogger.Errorf(fmt.Errorf("%v", response.Msg.GetError().GetMessage()), "Call to deployments %s failed", deployment.key)
 	}
+
 	return connect.NewResponse(response.Msg), nil
 }
 
@@ -413,6 +421,7 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 
 func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.StreamDeploymentLogsRequest) error) error {
 	delay := time.Millisecond * 500
+	logger := log.FromContext(ctx)
 
 	select {
 	case entry := <-s.deploymentLogQueue:
@@ -430,6 +439,9 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 		if reqStr, ok := entry.Attributes["request"]; ok {
 			request = &reqStr
 		}
+		// We also just output the log normally, so it shows up in the pod logs and gets synced to DD etc.
+		// It's not clear if we should output this here on or on the controller side.
+		logger.Log(entry)
 
 		err := send(&ftlv1.StreamDeploymentLogsRequest{
 			RequestKey:    request,
