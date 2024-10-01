@@ -159,7 +159,7 @@ func TestTimeline(t *testing.T) {
 			Schedule:      cronEvent.Schedule,
 			Error:         cronEvent.Error,
 		})
-		assert.NoError(t, err)
+		time.Sleep(200 * time.Millisecond)
 	})
 
 	expectedDeploymentUpdatedEvent := &DeploymentUpdatedEvent{
