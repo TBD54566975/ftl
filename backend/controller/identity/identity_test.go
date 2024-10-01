@@ -30,6 +30,7 @@ func TestIdentity(t *testing.T) {
 
 	service, err = New(ctx, encryption, conn)
 	assert.NoError(t, err)
-	err = service.Verify(*signedData)
+	data, err := service.Verify(signedData)
 	assert.NoError(t, err)
+	assert.Equal(t, "test", string(data))
 }
