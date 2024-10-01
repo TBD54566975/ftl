@@ -174,7 +174,8 @@ func manageDeploymentDirectory(logger *log.Logger, config Config) error {
 
 			err := os.RemoveAll(old)
 			if err != nil {
-				return fmt.Errorf("failed to remove old deployment: %w", err)
+				// This is not a fatal error, just log it.
+				logger.Errorf(err, "Failed to remove old deployment: %s", deployment.Name())
 			}
 		}
 	}
