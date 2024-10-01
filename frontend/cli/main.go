@@ -39,7 +39,7 @@ type InteractiveCLI struct {
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
 	Init     initCmd     `cmd:"" help:"Initialize a new FTL project."`
 	Profile  profileCmd  `cmd:"" help:"Manage profiles."`
-	New      newCmd      `cmd:"" help:"Create a new FTL module."`
+	New      newCmd      `cmd:"" help:"Create a new FTL module. See language specific flags with 'ftl new <language> --help'."`
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
 	Bench    benchCmd    `cmd:"" help:"Benchmark an FTL function."`
@@ -82,6 +82,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	csm := &currentStatusManager{}
 	app := createKongApplication(&cli, csm)
+	app.FatalIfErrorf(prepareNewCmd(ctx, app, os.Args[1:]))
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
 

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/pubsub"
 	"google.golang.org/protobuf/proto"
@@ -16,6 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 const BuildLockTimeout = time.Minute
@@ -58,9 +60,11 @@ type LanguagePlugin interface {
 	// The same topic must be returned each time this method is called
 	Updates() *pubsub.Topic[PluginEvent]
 
+	// GetCreateModuleFlags returns the flags that can be used to create a module for this language.
+	GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error)
+
 	// CreateModule creates a new module in the given directory with the given name and language.
-	// Replacements and groups are special cases until plugins can provide their parameters.
-	CreateModule(ctx context.Context, config moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error
+	CreateModule(ctx context.Context, projConfig projectconfig.Config, moduleConfig moduleconfig.ModuleConfig, flags map[string]string) error
 
 	// GetDependencies returns the dependencies of the module.
 	GetDependencies(ctx context.Context) ([]string, error)
