@@ -12,8 +12,9 @@ import (
 	"github.com/alecthomas/types/pubsub"
 	"google.golang.org/protobuf/proto"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -24,7 +25,7 @@ const BuildLockTimeout = time.Minute
 
 type BuildResult struct {
 	Name      string
-	Errors    []*schema.Error
+	Errors    []builderrors.Error
 	Schema    *schema.Module
 	StartTime time.Time
 }
@@ -306,17 +307,17 @@ func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.
 	if err != nil {
 		return BuildResult{}, err
 	}
-	errorList, err := loadProtoErrors(config)
+	errors, err := loadProtoErrors(config)
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("failed to read build errors for module: %w", err)
 	}
 
 	result := BuildResult{
-		Errors:    errorList.Errors,
+		Errors:    errors,
 		StartTime: startTime,
 	}
 
-	if schema.ContainsTerminalError(errorList.Errors) {
+	if builderrors.ContainsTerminalError(errors) {
 		// skip reading schema
 		return result, nil
 	}
@@ -329,19 +330,20 @@ func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.
 	return result, nil
 }
 
-func loadProtoErrors(config moduleconfig.AbsModuleConfig) (*schema.ErrorList, error) {
+func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]builderrors.Error, error) {
 	if _, err := os.Stat(config.Errors); errors.Is(err, os.ErrNotExist) {
-		return &schema.ErrorList{Errors: make([]*schema.Error, 0)}, nil
+		return nil, nil
 	}
 
 	content, err := os.ReadFile(config.Errors)
 	if err != nil {
 		return nil, fmt.Errorf("could not load build errors file: %w", err)
 	}
-	errorspb := &schemapb.ErrorList{}
+
+	errorspb := &languagepb.ErrorList{}
 	err = proto.Unmarshal(content, errorspb)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal build errors %w", err)
 	}
-	return schema.ErrorListFromProto(errorspb), nil
+	return languagepb.ErrorsFromProto(errorspb), nil
 }

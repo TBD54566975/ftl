@@ -104,8 +104,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"3:20-20: ingress verb a: request type Empty must be builtin.HttpRequest",
-				"3:27-27: ingress verb a: response type Empty must be builtin.HttpResponse",
+				"3:20: ingress verb a: request type Empty must be builtin.HttpRequest",
+				"3:27: ingress verb a: response type Empty must be builtin.HttpResponse",
 			}},
 		{name: "IngressBodyTypes",
 			schema: `
@@ -136,13 +136,13 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"11:22-22: ingress verb any: GET request type HttpRequest<Any, Unit, Unit> must have a body of unit not Any",
-				"11:52-52: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
-				"16:31-31: ingress verb pathInvalid: cannot use path parameter \"invalid\" with request type String as it has multiple path parameters, expected Data or Map type",
-				"16:41-41: ingress verb pathInvalid: cannot use path parameter \"extra\" with request type String as it has multiple path parameters, expected Data or Map type",
-				"18:31-31: ingress verb pathMissing: request pathParameter type one.Path does not contain a field corresponding to the parameter \"missing\"",
-				"18:7-7: duplicate http ingress GET /path/{} for 19:6:\"pathFound\" and 17:6:\"pathMissing\"",
-				"20:7-7: duplicate http ingress GET /path/{} for 13:6:\"path\" and 19:6:\"pathFound\"",
+				"11:22: ingress verb any: GET request type HttpRequest<Any, Unit, Unit> must have a body of unit not Any",
+				"11:52: ingress verb any: response type HttpResponse<Any, Any> must have a body of bytes, string, data structure, unit, float, int, bool, map, or array not Any",
+				"16:31: ingress verb pathInvalid: cannot use path parameter \"invalid\" with request type String as it has multiple path parameters, expected Data or Map type",
+				"16:41: ingress verb pathInvalid: cannot use path parameter \"extra\" with request type String as it has multiple path parameters, expected Data or Map type",
+				"18:31: ingress verb pathMissing: request pathParameter type one.Path does not contain a field corresponding to the parameter \"missing\"",
+				"18:7: duplicate http ingress GET /path/{} for 19:6:\"pathFound\" and 17:6:\"pathMissing\"",
+				"20:7: duplicate http ingress GET /path/{} for 13:6:\"path\" and 19:6:\"pathFound\"",
 			}},
 		{name: "GetRequestWithBody",
 			schema: `
@@ -152,7 +152,7 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"3:24-24: ingress verb bytes: GET request type HttpRequest<Bytes, Unit, Unit> must have a body of unit not Bytes",
+				"3:24: ingress verb bytes: GET request type HttpRequest<Bytes, Unit, Unit> must have a body of unit not Bytes",
 			}},
 		{name: "Array",
 			schema: `
@@ -172,7 +172,7 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"5:7-7: verb can not have multiple instances of cronjob",
+				"5:7: verb can not have multiple instances of cronjob",
 			},
 		},
 		{name: "DoubleIngress",
@@ -185,7 +185,7 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"6:10-10: verb can not have multiple instances of ingress",
+				"6:10: verb can not have multiple instances of ingress",
 			},
 		},
 		{name: "CronOnNonEmptyVerb",
@@ -198,8 +198,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				"4:7-7: verb verbWithWrongInput: cron job can not have a request type",
-				"6:7-7: verb verbWithWrongOutput: cron job can not have a response type",
+				"4:7: verb verbWithWrongInput: cron job can not have a request type",
+				"6:7: verb verbWithWrongOutput: cron job can not have a response type",
 			},
 		},
 		{name: "IngressBodyExternalType",
@@ -222,8 +222,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				`4:21-21: duplicate config "FTL_ENDPOINT", first defined at 3:20`,
-				`5:21-21: duplicate config "FTL_ENDPOINT", first defined at 3:20`,
+				`4:21: duplicate config "FTL_ENDPOINT", first defined at 3:20`,
+				`5:21: duplicate config "FTL_ENDPOINT", first defined at 3:20`,
 			},
 		},
 		{name: "DuplicateSecrets",
@@ -235,8 +235,8 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				`4:6-6: duplicate secret "MY_SECRET", first defined at 3:6`,
-				`5:6-6: duplicate secret "MY_SECRET", first defined at 3:6`,
+				`4:6: duplicate secret "MY_SECRET", first defined at 3:6`,
+				`5:6: duplicate secret "MY_SECRET", first defined at 3:6`,
 			},
 		},
 		{name: "ConfigAndSecretsWithSameName",
@@ -255,7 +255,7 @@ func TestValidate(t *testing.T) {
 				}
 			`,
 			errs: []string{
-				`4:6-6: duplicate database "MY_DB", first defined at 3:6`,
+				`4:6: duplicate database "MY_DB", first defined at 3:6`,
 			},
 		},
 		{name: "ValueEnumMismatchedVariantTypes",
@@ -267,7 +267,7 @@ func TestValidate(t *testing.T) {
 					}
 				}
 				`,
-			errs: []string{"4:7-7: enum variant \"A\" of type Int cannot have a value of type \"String\""},
+			errs: []string{"4:7: enum variant \"A\" of type Int cannot have a value of type \"String\""},
 		},
 		{name: "InvalidFSM",
 			schema: `
@@ -281,10 +281,10 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`4:13-13: unknown reference "one.C", is the type annotated and exported?`,
-				`6:6-6: "FSM" has no start states`,
-				`7:18-18: unknown source verb "one.C"`,
-				`7:27-27: destination state "one.B" must be a sink but is verb`,
+				`4:13: unknown reference "one.C", is the type annotated and exported?`,
+				`6:6: "FSM" has no start states`,
+				`7:18: unknown source verb "one.C"`,
+				`7:27: destination state "one.B" must be a sink but is verb`,
 			},
 		},
 		{name: "DuplicateFSM",
@@ -308,7 +308,7 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`14:6-6: duplicate fsm "FSM", first defined at 9:6`,
+				`14:6: duplicate fsm "FSM", first defined at 9:6`,
 			},
 		},
 		{name: "NonFSMVerbsWithRetry",
@@ -322,8 +322,8 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`4:7-7: retries can only be added to subscribers or FSM transitions`,
-				`6:7-7: retries can only be added to subscribers or FSM transitions`,
+				`4:7: retries can only be added to subscribers or FSM transitions`,
+				`6:7: retries can only be added to subscribers or FSM transitions`,
 			},
 		},
 		{name: "InvalidRetryDurations",
@@ -373,18 +373,18 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`10:7-7: retry must have a minimum backoff`,
-				`12:7-7: retry must have a minimum backoff`,
-				`14:7-7: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
-				`17:7-7: verb can not have multiple instances of retry`,
-				`19:7-7: could not parse min backoff duration: could not parse retry duration: duration has unknown unit "mins" - use 'd', 'h', 'm' or 's', eg '1d' or '30s'`,
-				`21:7-7: max backoff duration (1s) needs to be at least as long as initial backoff (1m)`,
-				`23:7-7: could not parse min backoff duration: retry backoff can not be larger than 1d`,
-				`25:7-7: can not define a backoff duration when retry count is 0 and no catch is declared`,
-				`30:7-7: catch can only be defined on verbs`,
-				`4:7-7: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
-				`6:7-7: could not parse min backoff duration: could not parse retry duration: duration has unit "d" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
-				`8:7-7: could not parse min backoff duration: retry must have a minimum backoff of 1s`,
+				`10:7: retry must have a minimum backoff`,
+				`12:7: retry must have a minimum backoff`,
+				`14:7: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
+				`17:7: verb can not have multiple instances of retry`,
+				`19:7: could not parse min backoff duration: could not parse retry duration: duration has unknown unit "mins" - use 'd', 'h', 'm' or 's', eg '1d' or '30s'`,
+				`21:7: max backoff duration (1s) needs to be at least as long as initial backoff (1m)`,
+				`23:7: could not parse min backoff duration: retry backoff can not be larger than 1d`,
+				`25:7: can not define a backoff duration when retry count is 0 and no catch is declared`,
+				`30:7: catch can only be defined on verbs`,
+				`4:7: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
+				`6:7: could not parse min backoff duration: could not parse retry duration: duration has unit "d" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
+				`8:7: could not parse min backoff duration: retry must have a minimum backoff of 1s`,
 			},
 		},
 		{name: "InvalidRetryInvalidSpace",
@@ -428,11 +428,11 @@ func TestValidate(t *testing.T) {
 			}
 			`,
 			errs: []string{
-				`20:6-6: verb wrongEventType: request type test.eventA differs from subscription's event type test.eventB`,
-				`23:6-6: verb SourceCantSubscribe: must be a sink to subscribe but found response type test.eventB`,
-				`23:6-6: verb SourceCantSubscribe: request type Unit differs from subscription's event type test.eventB`,
-				`26:6-6: verb EmptyCantSubscribe: request type Unit differs from subscription's event type test.eventB`,
-				`7:5-5: invalid name: must consist of only letters, numbers and underscores, and start with a lowercase letter.`,
+				`20:6: verb wrongEventType: request type test.eventA differs from subscription's event type test.eventB`,
+				`23:6: verb SourceCantSubscribe: must be a sink to subscribe but found response type test.eventB`,
+				`23:6: verb SourceCantSubscribe: request type Unit differs from subscription's event type test.eventB`,
+				`26:6: verb EmptyCantSubscribe: request type Unit differs from subscription's event type test.eventB`,
+				`7:5: invalid name: must consist of only letters, numbers and underscores, and start with a lowercase letter.`,
 			},
 		},
 		{
@@ -490,11 +490,11 @@ func TestValidate(t *testing.T) {
 		}
 		`,
 			errs: []string{
-				"34:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventA> or builtin.CatchRequest<Any>, but found builtin.CatchRequest<test.EventB>",
-				"38:5-5: catch verb must not have a response type but found test.EventA",
-				"42:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found Unit",
-				"46:5-5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found test.EventB",
-				"50:5-5: expected catch to be a verb",
+				"34:5: catch verb must have a request type of builtin.CatchRequest<test.EventA> or builtin.CatchRequest<Any>, but found builtin.CatchRequest<test.EventB>",
+				"38:5: catch verb must not have a response type but found test.EventA",
+				"42:5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found Unit",
+				"46:5: catch verb must have a request type of builtin.CatchRequest<test.EventB> or builtin.CatchRequest<Any>, but found test.EventB",
+				"50:5: expected catch to be a verb",
 			},
 		},
 	}
@@ -545,7 +545,7 @@ func TestValidateModuleWithSchema(t *testing.T) {
 						+calls one.one
 				}`,
 			errs: []string{
-				`4:14-14: verb "one.one" must be exported`,
+				`4:14: verb "one.one" must be exported`,
 			},
 		},
 	}
