@@ -16,15 +16,9 @@ import (
 )
 
 type CronScheduledEvent struct {
-	ID            int64
-	DeploymentKey model.DeploymentKey
-	Verb          schema.Ref
-
-	Time        time.Time
-	Duration    time.Duration
-	ScheduledAt time.Time
-	Schedule    string
-	Error       optional.Option[string]
+	ID       int64
+	Duration time.Duration
+	CronScheduled
 }
 
 func (e *CronScheduledEvent) GetID() int64 { return e.ID }

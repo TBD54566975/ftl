@@ -376,14 +376,16 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				return nil, fmt.Errorf("failed to decrypt cron scheduled event: %w", err)
 			}
 			out = append(out, &CronScheduledEvent{
-				ID:            row.ID,
-				DeploymentKey: row.DeploymentKey,
-				Verb:          schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
-				Time:          row.TimeStamp,
-				Duration:      time.Duration(jsonPayload.DurationMS) * time.Millisecond,
-				ScheduledAt:   jsonPayload.ScheduledAt,
-				Schedule:      jsonPayload.Schedule,
-				Error:         jsonPayload.Error,
+				ID:       row.ID,
+				Duration: time.Duration(jsonPayload.DurationMS) * time.Millisecond,
+				CronScheduled: CronScheduled{
+					DeploymentKey: row.DeploymentKey,
+					Verb:          schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
+					StartTime:     row.TimeStamp,
+					ScheduledAt:   jsonPayload.ScheduledAt,
+					Schedule:      jsonPayload.Schedule,
+					Error:         jsonPayload.Error,
+				},
 			})
 
 		default:

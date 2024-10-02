@@ -142,19 +142,21 @@ func TestTimeline(t *testing.T) {
 	})
 
 	cronEvent := &CronScheduledEvent{
-		DeploymentKey: deploymentKey,
-		Verb:          schema.Ref{Module: "time", Name: "time"},
-		Time:          time.Now().Round(time.Millisecond),
-		ScheduledAt:   time.Now().Add(time.Minute).Round(time.Millisecond).UTC(),
-		Schedule:      "* * * * *",
-		Error:         optional.None[string](),
+		CronScheduled: CronScheduled{
+			DeploymentKey: deploymentKey,
+			Verb:          schema.Ref{Module: "time", Name: "time"},
+			StartTime:     time.Now().Round(time.Millisecond),
+			ScheduledAt:   time.Now().Add(time.Minute).Round(time.Millisecond).UTC(),
+			Schedule:      "* * * * *",
+			Error:         optional.None[string](),
+		},
 	}
 
 	t.Run("InsertCronScheduledEvent", func(t *testing.T) {
 		timeline.EnqueueEvent(ctx, &CronScheduled{
 			DeploymentKey: cronEvent.DeploymentKey,
 			Verb:          cronEvent.Verb,
-			StartTime:     cronEvent.Time,
+			StartTime:     cronEvent.StartTime,
 			ScheduledAt:   cronEvent.ScheduledAt,
 			Schedule:      cronEvent.Schedule,
 			Error:         cronEvent.Error,
