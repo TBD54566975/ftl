@@ -16,7 +16,6 @@ import (
 	"github.com/alecthomas/kong"
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal"
@@ -24,6 +23,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 type goPlugin struct {
@@ -104,12 +105,12 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	return p.internalPlugin.getDependencies(ctx, func() ([]string, error) {
 		dependencies := map[string]bool{}
 		fset := token.NewFileSet()
-		err := WalkDir(p.config.Abs().Dir, func(path string, d fs.DirEntry) error {
+		err := watch.WalkDir(p.config.Abs().Dir, func(path string, d fs.DirEntry) error {
 			if !d.IsDir() {
 				return nil
 			}
 			if strings.HasPrefix(d.Name(), "_") || d.Name() == "testdata" {
-				return ErrSkip
+				return watch.ErrSkip
 			}
 			pkgs, err := parser.ParseDir(fset, path, nil, parser.ImportsOnly)
 			if pkgs == nil {
@@ -144,7 +145,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	})
 }
 
-func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
+func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
 	if err := compile.Build(ctx, projectRoot, config.Dir, sch, transaction, buildEnv, devMode); err != nil {
 		return CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
 	}

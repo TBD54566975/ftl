@@ -26,7 +26,6 @@ import (
 	"github.com/TBD54566975/ftl"
 	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/schema"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
@@ -35,6 +34,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/reflect"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type MainWorkContext struct {

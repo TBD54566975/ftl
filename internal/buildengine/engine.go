@@ -19,12 +19,13 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/terminal"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 type CompilerBuildError struct {
@@ -94,7 +95,7 @@ type Engine struct {
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectRoot      string
 	moduleDirs       []string
-	watcher          *Watcher // only watches for module toml changes
+	watcher          *watch.Watcher // only watches for module toml changes
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
 	pluginEvents     chan PluginEvent
@@ -156,7 +157,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		projectRoot:      projectRoot,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
-		watcher:          NewWatcher("ftl.toml"),
+		watcher:          watch.NewWatcher("ftl.toml"),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
 		pluginEvents:     make(chan PluginEvent, 128),
@@ -177,7 +178,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 
 	go e.listenForBuildUpdates(ctx)
 
-	configs, err := DiscoverModules(ctx, moduleDirs)
+	configs, err := watch.DiscoverModules(ctx, moduleDirs)
 	if err != nil {
 		return nil, fmt.Errorf("could not find modules: %w", err)
 	}
@@ -398,7 +399,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		e.schemaChanges.Unsubscribe(schemaChanges)
 	}()
 
-	watchEvents := make(chan WatchEvent, 128)
+	watchEvents := make(chan watch.WatchEvent, 128)
 	ctx, cancel := context.WithCancel(ctx)
 	topic, err := e.watcher.Watch(ctx, period, e.moduleDirs)
 	if err != nil {
@@ -459,7 +460,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			didUpdateDeployments = false
 		case event := <-watchEvents:
 			switch event := event.(type) {
-			case WatchEventModuleAdded:
+			case watch.WatchEventModuleAdded:
 				config := event.Config
 				if _, exists := e.moduleMetas.Load(config.Module); !exists {
 					meta, err := e.newModuleMeta(ctx, config, e.projectRoot)
@@ -478,7 +479,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 						didUpdateDeployments = true
 					}
 				}
-			case WatchEventModuleRemoved:
+			case watch.WatchEventModuleRemoved:
 				err := terminateModuleDeployment(ctx, e.client, event.Config.Module)
 				terminal.UpdateModuleState(ctx, event.Config.Module, terminal.BuildStateTerminated)
 
@@ -499,7 +500,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					}
 				}
 				e.moduleMetas.Delete(event.Config.Module)
-			case WatchEventModuleChanged:
+			case watch.WatchEventModuleChanged:
 				// ftl.toml file has changed
 				meta, ok := e.moduleMetas.Load(event.Config.Module)
 				if !ok {

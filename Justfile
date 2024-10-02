@@ -47,7 +47,7 @@ generate-kube-migrations:
 
 # Run "go generate" on all packages
 build-generate:
-  @mk backend/schema/aliaskind_enumer.go : backend/schema/metadataalias.go -- go generate -x ./backend/schema
+  @mk internal/schema/aliaskind_enumer.go : internal/schema/metadataalias.go -- go generate -x ./internal/schema
   @mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x ./internal/log
 
 # Build command-line tools
@@ -129,7 +129,7 @@ pnpm-install:
 
 # Regenerate protos
 build-protos: pnpm-install
-  @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint"
+  @mk {{SCHEMA_OUT}} : internal/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
 
 # Unconditionally rebuild protos

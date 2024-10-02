@@ -18,12 +18,13 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/watch"
 	"github.com/TBD54566975/ftl/jvm-runtime/java"
 	"github.com/TBD54566975/ftl/jvm-runtime/kotlin"
 )
@@ -190,7 +191,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
+func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx)
 	if config.Java.BuildTool == moduleconfig.JavaBuildToolMaven {
 		if err := setPOMProperties(ctx, config.Dir); err != nil {

@@ -6,11 +6,12 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 type rustPlugin struct {
@@ -38,7 +39,7 @@ func (p *rustPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
-func buildRust(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
+func buildRust(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Using build command '%s'", config.Build)
 	err := exec.Command(ctx, log.Debug, config.Dir+"/_ftl", "bash", "-c", config.Build).RunBuffered(ctx)
