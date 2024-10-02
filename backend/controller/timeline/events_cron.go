@@ -28,7 +28,7 @@ type CronScheduled struct {
 	DeploymentKey model.DeploymentKey
 	Verb          schema.Ref
 
-	StartTime   time.Time
+	Time        time.Time
 	ScheduledAt time.Time
 	Schedule    string
 	Error       optional.Option[string]
@@ -45,7 +45,7 @@ type eventCronScheduledJSON struct {
 
 func (s *Service) insertCronScheduledEvent(ctx context.Context, querier sql.Querier, event *CronScheduled) error {
 	cronJSON := eventCronScheduledJSON{
-		DurationMS:  time.Since(event.StartTime).Milliseconds(),
+		DurationMS:  time.Since(event.Time).Milliseconds(),
 		ScheduledAt: event.ScheduledAt,
 		Schedule:    event.Schedule,
 		Error:       event.Error,
@@ -64,7 +64,7 @@ func (s *Service) insertCronScheduledEvent(ctx context.Context, querier sql.Quer
 
 	err = libdal.TranslatePGError(querier.InsertTimelineCronScheduledEvent(ctx, sql.InsertTimelineCronScheduledEventParams{
 		DeploymentKey: event.DeploymentKey,
-		TimeStamp:     event.StartTime,
+		TimeStamp:     event.Time,
 		Module:        event.Verb.Module,
 		Verb:          event.Verb.Name,
 		Payload:       payload,

@@ -496,7 +496,7 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 
 	case *timeline.CronScheduledEvent:
 		return &pbconsole.Event{
-			TimeStamp: timestamppb.New(event.StartTime),
+			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbconsole.Event_CronScheduled{
 				CronScheduled: &pbconsole.CronScheduledEvent{
@@ -505,7 +505,8 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 						Module: event.Verb.Module,
 						Name:   event.Verb.Name,
 					},
-					TimeStamp:   timestamppb.New(event.StartTime),
+					TimeStamp:   timestamppb.New(event.Time),
+					Duration:    durationpb.New(event.Duration),
 					ScheduledAt: timestamppb.New(event.ScheduledAt),
 					Schedule:    event.Schedule,
 					Error:       event.Error.Ptr(),

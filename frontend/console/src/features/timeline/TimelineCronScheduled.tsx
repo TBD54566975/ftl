@@ -3,7 +3,7 @@ import { formatTimestampShort } from '../../utils/date.utils.ts'
 import { verbRefString } from '../verbs/verb.utils'
 
 export const TimelineCronScheduled = ({ cron }: { cron: CronScheduledEvent }) => {
-  const verbRef = cron.verbRef?.module && verbRefString(cron.verbRef) || 'unknown'
+  const verbRef = (cron.verbRef?.module && verbRefString(cron.verbRef)) || 'unknown'
   const scheduledAt = formatTimestampShort(cron.scheduledAt)
   const title = `Cron ${cron.schedule} verb ${verbRef} scheduled for ${scheduledAt}`
   return (

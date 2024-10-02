@@ -145,7 +145,7 @@ func TestTimeline(t *testing.T) {
 		CronScheduled: CronScheduled{
 			DeploymentKey: deploymentKey,
 			Verb:          schema.Ref{Module: "time", Name: "time"},
-			StartTime:     time.Now().Round(time.Millisecond),
+			Time:          time.Now().Round(time.Millisecond),
 			ScheduledAt:   time.Now().Add(time.Minute).Round(time.Millisecond).UTC(),
 			Schedule:      "* * * * *",
 			Error:         optional.None[string](),
@@ -156,7 +156,7 @@ func TestTimeline(t *testing.T) {
 		timeline.EnqueueEvent(ctx, &CronScheduled{
 			DeploymentKey: cronEvent.DeploymentKey,
 			Verb:          cronEvent.Verb,
-			StartTime:     cronEvent.StartTime,
+			Time:          cronEvent.Time,
 			ScheduledAt:   cronEvent.ScheduledAt,
 			Schedule:      cronEvent.Schedule,
 			Error:         cronEvent.Error,

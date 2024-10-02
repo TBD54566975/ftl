@@ -125,7 +125,7 @@ func (s *Service) scheduleCronJobs(ctx context.Context) (err error) {
 			s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 				DeploymentKey: job.DeploymentKey,
 				Verb:          job.Verb,
-				StartTime:     now,
+				Time:          now,
 				ScheduledAt:   job.NextExecution,
 				Schedule:      job.Schedule,
 				Error:         optional.Some(err.Error()),
@@ -159,7 +159,7 @@ func (s *Service) OnJobCompletion(ctx context.Context, key model.CronJobKey, fai
 		s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 			DeploymentKey: job.DeploymentKey,
 			Verb:          job.Verb,
-			StartTime:     now,
+			Time:          now,
 			ScheduledAt:   job.NextExecution,
 			Schedule:      job.Schedule,
 			Error:         optional.Some(err.Error()),
@@ -231,7 +231,7 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 	s.timelineService.EnqueueEvent(ctx, &timeline.CronScheduled{
 		DeploymentKey: job.DeploymentKey,
 		Verb:          job.Verb,
-		StartTime:     startTime,
+		Time:          startTime,
 		ScheduledAt:   nextAttemptForJob,
 		Schedule:      job.Schedule,
 	})

@@ -381,7 +381,7 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				CronScheduled: CronScheduled{
 					DeploymentKey: row.DeploymentKey,
 					Verb:          schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
-					StartTime:     row.TimeStamp,
+					Time:          row.TimeStamp,
 					ScheduledAt:   jsonPayload.ScheduledAt,
 					Schedule:      jsonPayload.Schedule,
 					Error:         jsonPayload.Error,
