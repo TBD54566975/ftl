@@ -23,7 +23,6 @@ type Artefact struct {
 
 type ArtefactKey struct {
 	Digest sha256.SHA256
-	id     int64
 }
 
 type ReleaseArtefact struct {

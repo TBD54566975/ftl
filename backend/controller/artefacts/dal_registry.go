@@ -48,7 +48,7 @@ func (s *Service) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (
 		return nil, nil, libdal.TranslatePGError(err)
 	}
 	keys = slices.Map(have, func(in sql.GetArtefactDigestsRow) ArtefactKey {
-		return ArtefactKey{id: in.ID, Digest: sha256.FromBytes(in.Digest)}
+		return ArtefactKey{Digest: sha256.FromBytes(in.Digest)}
 	})
 	haveStr := slices.Map(keys, func(in ArtefactKey) sha256.SHA256 {
 		return in.Digest
@@ -82,7 +82,7 @@ func (s *Service) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]R
 	}
 	return slices.Map(rows, func(row sql.GetDeploymentArtefactsRow) ReleaseArtefact {
 		return ReleaseArtefact{
-			Artefact:   ArtefactKey{Digest: sha256.FromBytes(row.Digest), id: row.ID},
+			Artefact:   ArtefactKey{Digest: sha256.FromBytes(row.Digest)},
 			Path:       row.Path,
 			Executable: row.Executable,
 		}
