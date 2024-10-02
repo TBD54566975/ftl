@@ -43,7 +43,7 @@ func TestWrappedWithConfigEnvar(t *testing.T) {
 				tt.options...,
 			)
 			myConfig.Get(ctx)
-			resp, err := Outer(ctx)
+			resp, err := ftltest.CallSource[OuterClient, WrappedResponse](ctx)
 
 			if expected, ok := tt.expectedError.Get(); ok {
 				assert.EqualError(t, err, expected)
@@ -76,7 +76,7 @@ func TestWrapped(t *testing.T) {
 			},
 			configValue:   "helloworld",
 			secretValue:   "shhhhh",
-			expectedError: ftl.Some("wrapped.inner: no mock found: provide a mock with ftltest.WhenVerb(Inner, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()"),
+			expectedError: ftl.Some("test harness failed to retrieve behavior for verb wrapped.outer: no mock found: provide a mock with ftltest.WhenVerb(Outer, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()"),
 		},
 		{
 			name: "AllowCallsWithinModule",
@@ -87,7 +87,7 @@ func TestWrapped(t *testing.T) {
 			},
 			configValue:   "helloworld",
 			secretValue:   "shhhhh",
-			expectedError: ftl.Some("wrapped.inner: time.time: no mock found: provide a mock with ftltest.WhenVerb(time.Time, ...)"),
+			expectedError: ftl.Some("test harness failed to call verb wrapped.outer: wrapped.inner: time.time: no mock found: provide a mock with ftltest.WhenVerb(time.Time, ...)"),
 		},
 		{
 			name: "WithExternalVerbMock",
@@ -131,7 +131,7 @@ func TestWrapped(t *testing.T) {
 				tt.options...,
 			)
 			myConfig.Get(ctx)
-			resp, err := Outer(ctx)
+			resp, err := ftltest.CallSource[OuterClient, WrappedResponse](ctx)
 
 			if expected, ok := tt.expectedError.Get(); ok {
 				assert.EqualError(t, err, expected)

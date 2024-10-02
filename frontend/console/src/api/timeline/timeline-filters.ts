@@ -7,6 +7,7 @@ import {
   EventsQuery_Filter,
   EventsQuery_IDFilter,
   EventsQuery_LogLevelFilter,
+  EventsQuery_ModuleFilter,
   EventsQuery_RequestFilter,
   EventsQuery_TimeFilter,
   type LogLevel,
@@ -56,7 +57,7 @@ export const modulesFilter = (modules: string[]): EventsQuery_Filter => {
   return filter
 }
 
-export const callFilter = (destModule: string, destVerb: string | undefined = undefined, sourceModule: string | undefined = undefined): EventsQuery_Filter => {
+export const callFilter = (destModule: string, destVerb?: string, sourceModule?: string): EventsQuery_Filter => {
   const filter = new EventsQuery_Filter()
   const callFilter = new EventsQuery_CallFilter()
   callFilter.destModule = destModule
@@ -65,6 +66,18 @@ export const callFilter = (destModule: string, destVerb: string | undefined = un
   filter.filter = {
     case: 'call',
     value: callFilter,
+  }
+  return filter
+}
+
+export const moduleFilter = (module: string, verb?: string): EventsQuery_Filter => {
+  const filter = new EventsQuery_Filter()
+  const moduleFilter = new EventsQuery_ModuleFilter()
+  moduleFilter.module = module
+  moduleFilter.verb = verb
+  filter.filter = {
+    case: 'module',
+    value: moduleFilter,
   }
   return filter
 }

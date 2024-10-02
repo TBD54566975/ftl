@@ -20,7 +20,7 @@ func TestNonExportedDecls(t *testing.T) {
 		in.CopyModule("notexportedverb"),
 		in.ExpectError(
 			in.ExecWithOutput("ftl", []string{"deploy", "notexportedverb"}, func(_ string) {}),
-			"call first argument must be a function but is an unresolved reference to echo.Echo, does it need to be exported?",
+			`unsupported verb parameter type &{"echo" "EchoClient"}; verbs must have the signature func(Context, Request?, Resources...)`,
 		),
 	)
 }
@@ -34,7 +34,7 @@ func TestUndefinedExportedDecls(t *testing.T) {
 		in.CopyModule("undefinedverb"),
 		in.ExpectError(
 			in.ExecWithOutput("ftl", []string{"deploy", "undefinedverb"}, func(_ string) {}),
-			"call first argument must be a function but is an unresolved reference to echo.Undefined",
+			`unsupported verb parameter type &{"echo" "UndefinedClient"}; verbs must have the signature func(Context, Request?, Resources...)`,
 		),
 	)
 }

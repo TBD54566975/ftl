@@ -3,11 +3,14 @@
 package ftl_test
 
 import (
+	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/alecthomas/assert/v2"
 
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	in "github.com/TBD54566975/ftl/internal/integration"
 
@@ -43,7 +46,7 @@ func TestVerbCalls(t *testing.T) {
 	)
 }
 
-func TestJVMToGoCall(t *testing.T) {
+func TestJVMCoreFunctionality(t *testing.T) {
 
 	exampleObject := TestObject{
 		IntField:    43,
@@ -143,6 +146,31 @@ func TestJVMToGoCall(t *testing.T) {
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTimeVerb", ftl.None[time.Time]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectVerb", ftl.None[any]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
+
+	// Schema comments
+	tests = append(tests, in.SubTest{Name: "schemaComments", Action: in.VerifySchema(func(ctx context.Context, t testing.TB, sch *schemapb.Schema) {
+		javaOk := false
+		kotlinOk := false
+		for _, module := range sch.Modules {
+			if module.Name == "gomodule" {
+				continue
+			}
+			for _, decl := range module.Decls {
+				if decl.GetVerb() != nil {
+					for _, comment := range decl.GetVerb().GetComments() {
+						if strings.Contains(comment, "JAVA COMMENT") {
+							javaOk = true
+						}
+						if strings.Contains(comment, "KOTLIN COMMENT") {
+							kotlinOk = true
+						}
+					}
+				}
+			}
+		}
+		assert.True(t, javaOk, "java comment not found")
+		assert.True(t, kotlinOk, "kotlin comment not found")
+	})})
 
 	in.Run(t,
 		in.WithJavaBuild(),

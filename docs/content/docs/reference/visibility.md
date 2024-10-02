@@ -21,7 +21,12 @@ Exporting a declaration makes it accessible to other modules. Some declarations 
 
 Types that are transitively referenced by an exported declaration will be automatically exported unless they were already defined but unexported. In this case, an error will be raised and the type must be explicitly exported.
 
-The following table describes the directives used to export the corresponding declaration:
+
+{% code_selector() %}
+
+<!-- go -->
+
+The following table describes the go directives used to export the corresponding declaration:
 
 | Symbol        | Export syntax            |
 | ------------- | ------------------------ |
@@ -30,9 +35,6 @@ The following table describes the directives used to export the corresponding de
 | Enum/Sum type | `//ftl:enum export`      |
 | Typealias     | `//ftl:typealias export` |
 | Topic         | `//ftl:export` [^1]      |
-
-eg.
-
 ```go
 //ftl:verb export
 func Verb(ctx context.Context, in In) (Out, error)
@@ -42,3 +44,27 @@ type UserID string
 ```
 
 [^1]: By default, topics do not require any annotations as the declaration itself is sufficient.
+
+<!-- kotlin -->
+
+For Kotlin the `@Export` annotation can be used to export a declaration:
+
+```kotlin
+@Verb
+@Export
+fun time(): TimeResponse {
+    // ...
+}
+```
+<!-- java -->
+
+For Java the `@Export` annotation can be used to export a declaration:
+
+```java
+@Verb
+@Export
+TimeResponse time()  {
+    // ...
+}
+```
+{% end %}

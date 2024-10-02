@@ -73,7 +73,7 @@ func (e *Enum) IsExported() bool { return e.Export }
 
 func EnumFromProto(s *schemapb.Enum) *Enum {
 	e := &Enum{
-		Pos:      posFromProto(s.Pos),
+		Pos:      PosFromProto(s.Pos),
 		Name:     s.Name,
 		Export:   s.Export,
 		Comments: s.Comments,
@@ -145,7 +145,7 @@ func enumVariantListToSchema(e []*schemapb.EnumVariant) []*EnumVariant {
 
 func enumVariantToSchema(v *schemapb.EnumVariant) *EnumVariant {
 	return &EnumVariant{
-		Pos:   posFromProto(v.Pos),
+		Pos:   PosFromProto(v.Pos),
 		Name:  v.Name,
 		Value: valueToSchema(v.Value),
 	}

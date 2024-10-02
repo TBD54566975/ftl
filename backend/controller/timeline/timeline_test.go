@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"io"
 	"net/http"
 	"net/url"
@@ -34,6 +35,7 @@ func TestTimeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
+	registry := artefacts.New(conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
@@ -48,7 +50,7 @@ func TestTimeline(t *testing.T) {
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = controllerDAL.CreateArtefact(ctx, testContent)
+		testSha, err = registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 
@@ -107,7 +109,7 @@ func TestTimeline(t *testing.T) {
 	ingressEvent := &IngressEvent{
 		DeploymentKey:  deploymentKey,
 		RequestKey:     optional.Some(requestKey),
-		Verb:           schema.Ref{},
+		Verb:           schema.Ref{Module: "echo", Name: "echo"},
 		Method:         "GET",
 		Path:           "/echo",
 		StatusCode:     200,
@@ -169,6 +171,18 @@ func TestTimeline(t *testing.T) {
 			assertEventsEqual(t, []Event{callEvent}, events)
 		})
 
+		t.Run("ByModule", func(t *testing.T) {
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeIngress), FilterModule("echo", optional.None[string]()))
+			assert.NoError(t, err)
+			assertEventsEqual(t, []Event{ingressEvent}, events)
+		})
+
+		t.Run("ByModuleWithVerb", func(t *testing.T) {
+			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeIngress), FilterModule("echo", optional.Some("echo")))
+			assert.NoError(t, err)
+			assertEventsEqual(t, []Event{ingressEvent}, events)
+		})
+
 		t.Run("ByLogLevel", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
 			assert.NoError(t, err)
@@ -209,6 +223,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
+	registry := artefacts.New(conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
@@ -217,7 +232,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = controllerDAL.CreateArtefact(ctx, testContent)
+		testSha, err = registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 

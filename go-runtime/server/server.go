@@ -108,14 +108,14 @@ func HandleEmpty(verb any) Handler {
 	return HandleCall[ftl.Unit, ftl.Unit](verb)
 }
 
-func VerbClient[Verb, Req, Resp any]() reflection.VerbResource {
+func call[Verb, Req, Resp any]() func(ctx context.Context, req Req) (resp Resp, err error) {
 	typ := reflect.TypeFor[Verb]()
 	if typ.Kind() != reflect.Func {
 		panic(fmt.Sprintf("Cannot register %s: expected function, got %s", typ, typ.Kind()))
 	}
 	callee := reflection.TypeRef[Verb]()
 	callee.Name = strings.TrimSuffix(callee.Name, "Client")
-	fn := func(ctx context.Context, req Req) (resp Resp, err error) {
+	return func(ctx context.Context, req Req) (resp Resp, err error) {
 		ref := reflection.Ref{Module: callee.Module, Name: callee.Name}
 		moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
 		override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: ref.Module, Name: ref.Name})
@@ -159,21 +159,45 @@ func VerbClient[Verb, Req, Resp any]() reflection.VerbResource {
 			panic(fmt.Sprintf("%s: invalid response type %T", callee, cresp))
 		}
 	}
+}
+
+func VerbClient[Verb, Req, Resp any]() reflection.VerbResource {
+	fnCall := call[Verb, Req, Resp]()
 	return func() reflect.Value {
-		return reflect.ValueOf(fn)
+		return reflect.ValueOf(fnCall)
 	}
 }
 
 func SinkClient[Verb, Req any]() reflection.VerbResource {
-	return VerbClient[Verb, Req, ftl.Unit]()
+	fnCall := call[Verb, Req, ftl.Unit]()
+	sink := func(ctx context.Context, req Req) error {
+		_, err := fnCall(ctx, req)
+		return err
+	}
+	return func() reflect.Value {
+		return reflect.ValueOf(sink)
+	}
 }
 
 func SourceClient[Verb, Resp any]() reflection.VerbResource {
-	return VerbClient[Verb, ftl.Unit, Resp]()
+	fnCall := call[Verb, ftl.Unit, Resp]()
+	source := func(ctx context.Context) (Resp, error) {
+		return fnCall(ctx, ftl.Unit{})
+	}
+	return func() reflect.Value {
+		return reflect.ValueOf(source)
+	}
 }
 
 func EmptyClient[Verb any]() reflection.VerbResource {
-	return VerbClient[Verb, ftl.Unit, ftl.Unit]()
+	fnCall := call[Verb, ftl.Unit, ftl.Unit]()
+	source := func(ctx context.Context) error {
+		_, err := fnCall(ctx, ftl.Unit{})
+		return err
+	}
+	return func() reflect.Value {
+		return reflect.ValueOf(source)
+	}
 }
 
 func Call[Req, Resp any](ref reflection.Ref) func(ctx context.Context, req Req) (resp Resp, err error) {

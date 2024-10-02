@@ -140,11 +140,6 @@ type EchoResponse struct {
 }
 
 //ftl:verb
-func Echo(context.Context, EchoRequest) (EchoResponse, error) {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
-}
-
-//ftl:verb
 type EchoClient func(context.Context, EchoRequest) (EchoResponse, error)
 
 type SinkReq struct {
@@ -155,28 +150,13 @@ type SinkReq struct {
 // Here is another line for this comment!
 //
 //ftl:verb
-func Sink(context.Context, SinkReq) error {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSink()")
-}
-
-//ftl:verb
 type SinkClient func(context.Context, SinkReq)
 
 type SourceResp struct {
 }
 
 //ftl:verb
-func Source(context.Context) (SourceResp, error) {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallSource()")
-}
-
-//ftl:verb
 type SourceClient func(context.Context) (SourceResp, error)
-
-//ftl:verb
-func Nothing(context.Context) error {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.CallEmpty()")
-}
 
 //ftl:verb
 type NothingClient func(context.Context) error
@@ -246,11 +226,6 @@ type Resp struct {
 
 // This is a verb.
 //
-//ftl:verb
-func Call(context.Context, Req) (Resp, error) {
-  panic("Verb stubs should not be called directly, instead use github.com/TBD54566975/ftl/runtime-go/ftl.Call()")
-}
-
 //ftl:verb
 type CallClient func(context.Context, Req) (Resp, error)
 `

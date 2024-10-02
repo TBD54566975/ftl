@@ -4,7 +4,11 @@ package echo
 import (
 	"context"
 	"fmt"
+
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
+
+var db = ftl.PostgresDatabase("echodb")
 
 // Echo returns a greeting with the current time.
 //

@@ -22,9 +22,15 @@ type eventFilterCall struct {
 	destVerb     optional.Option[string]
 }
 
+type eventFilterModule struct {
+	module string
+	verb   optional.Option[string]
+}
+
 type eventFilter struct {
 	level        *log.Level
 	calls        []*eventFilterCall
+	module       []*eventFilterModule
 	types        []EventType
 	deployments  []model.DeploymentKey
 	requests     []string
@@ -55,6 +61,12 @@ func FilterLogLevel(level log.Level) TimelineFilter {
 func FilterCall(sourceModule optional.Option[string], destModule string, destVerb optional.Option[string]) TimelineFilter {
 	return func(query *eventFilter) {
 		query.calls = append(query.calls, &eventFilterCall{sourceModule: sourceModule, destModule: destModule, destVerb: destVerb})
+	}
+}
+
+func FilterModule(module string, verb optional.Option[string]) TimelineFilter {
+	return func(query *eventFilter) {
+		query.module = append(query.module, &eventFilterModule{module: module, verb: verb})
 	}
 }
 
@@ -200,6 +212,23 @@ func (s *Service) QueryTimeline(ctx context.Context, limit int, filters ...Timel
 				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_3 = $%d AND e.custom_key_4 = $%d))", param(call.destModule), param(destVerb))
 			} else {
 				q += fmt.Sprintf("(e.type != 'call' OR (e.type = 'call' AND e.custom_key_3 = $%d))", param(call.destModule))
+			}
+		}
+		q += ")\n"
+	}
+
+	if len(filter.module) > 0 {
+		q += " AND ("
+		for i, module := range filter.module {
+			if i > 0 {
+				q += " OR "
+			}
+			if verb, ok := module.verb.Get(); ok {
+				q += fmt.Sprintf("((e.type = 'call' AND e.custom_key_3 = $%d AND e.custom_key_4 = $%d) OR (e.type = 'ingress' AND e.custom_key_1 = $%d AND e.custom_key_2 = $%d))",
+					param(module.module), param(verb), param(module.module), param(verb))
+			} else {
+				q += fmt.Sprintf("((e.type = 'call' AND e.custom_key_3 = $%d) OR (e.type = 'ingress' AND e.custom_key_1 = $%d))",
+					param(module.module), param(module.module))
 			}
 		}
 		q += ")\n"

@@ -3,19 +3,15 @@ package call
 import (
 	"go/ast"
 	"go/types"
-	"strings"
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	"github.com/TBD54566975/golang-tools/go/ast/inspector"
 
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 )
 
 const (
-	ftlCallFuncPath        = "github.com/TBD54566975/ftl/go-runtime/ftl.Call"
 	ftlPkgPath             = "github.com/TBD54566975/ftl/go-runtime/ftl"
 	ftlTopicHandleTypeName = "TopicHandle"
 )
@@ -50,48 +46,10 @@ func Extract(pass *analysis.Pass) (interface{}, error) {
 			if fn == nil {
 				return
 			}
-			if fn.FullName() == ftlCallFuncPath {
-				extractVerbCall(pass, parentFuncObj, node)
-				return
-			}
-			common.MarkFunctionCall(pass, parentFuncObj, fn)
+			common.MarkFunctionCall(pass, parentFuncObj, fn, common.GoPosToSchemaPos(pass.Fset, node.Pos()))
 		}
 	})
 	return common.NewExtractorResult(pass), nil
-}
-
-func extractVerbCall(pass *analysis.Pass, parentFuncObj types.Object, node *ast.CallExpr) {
-	if len(node.Args) != 3 {
-		common.Errorf(pass, node, "call must have exactly three arguments")
-		return
-	}
-	ref := parseVerbRef(pass, node.Args[1])
-	if ref == nil {
-		if sel, ok := node.Args[1].(*ast.SelectorExpr); ok {
-			common.Errorf(pass, node.Args[1], "call first argument must be a function but is an unresolved "+
-				"reference to %s.%s, does it need to be exported?", sel.X, sel.Sel)
-		}
-		common.Errorf(pass, node.Args[1], "call first argument must be a function in an ftl module, does "+
-			"it need to be exported?")
-		return
-	}
-	common.MarkVerbCall(pass, parentFuncObj, ref)
-}
-
-func parseVerbRef(pass *analysis.Pass, node ast.Expr) *schema.Ref {
-	_, verbFn := common.Deref[*types.Func](pass, node)
-	if verbFn == nil {
-		return nil
-	}
-	moduleName, err := common.FtlModuleFromGoPackage(verbFn.Pkg().Path())
-	if err != nil {
-		return nil
-	}
-	return &schema.Ref{
-		Pos:    common.GoPosToSchemaPos(pass.Fset, node.Pos()),
-		Module: moduleName,
-		Name:   strcase.ToLowerCamel(verbFn.Name()),
-	}
 }
 
 // validateCallExpr validates all function calls
@@ -136,12 +94,5 @@ func validateCallExpr(pass *analysis.Pass, node *ast.CallExpr) {
 			}
 		}
 		return
-	}
-
-	if lhsIsExternal && strings.HasPrefix(lhsPkgPath, "ftl/") {
-		if sig, ok := pass.TypesInfo.TypeOf(selExpr.Sel).(*types.Signature); ok && sig.Recv() == nil {
-			// can not call functions in external modules directly
-			common.Errorf(pass, node, "can not call verbs in other modules directly: use ftl.Call(…) instead")
-		}
 	}
 }

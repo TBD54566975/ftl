@@ -1,6 +1,6 @@
 //go:build integration
 
-package buildengine_test
+package buildengine
 
 import (
 	"context" //nolint:depguard
@@ -12,7 +12,6 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/pubsub"
 
-	. "github.com/TBD54566975/ftl/internal/buildengine"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
@@ -22,9 +21,9 @@ const pollFrequency = time.Millisecond * 500
 func TestWatch(t *testing.T) {
 	var events chan WatchEvent
 	var topic *pubsub.Topic[WatchEvent]
-	var one, two Module
-	w := NewWatcher()
+	var one, two moduleconfig.ModuleConfig
 
+	w := NewWatcher("**/*.go", "go.mod", "go.sum")
 	in.Run(t,
 		func(tb testing.TB, ic in.TestContext) {
 			events, topic = startWatching(ic, t, w, ic.WorkingDir())
@@ -38,8 +37,8 @@ func TestWatch(t *testing.T) {
 		},
 		func(tb testing.TB, ic in.TestContext) {
 			waitForEvents(tb, events, []WatchEvent{
-				WatchEventModuleAdded{Module: one},
-				WatchEventModuleAdded{Module: two},
+				WatchEventModuleAdded{Config: one},
+				WatchEventModuleAdded{Config: two},
 			})
 		},
 
@@ -48,8 +47,8 @@ func TestWatch(t *testing.T) {
 		updateModFile("one"),
 		func(tb testing.TB, ic in.TestContext) {
 			waitForEvents(tb, events, []WatchEvent{
-				WatchEventModuleChanged{Module: one},
-				WatchEventModuleRemoved{Module: two},
+				WatchEventModuleChanged{Config: one},
+				WatchEventModuleRemoved{Config: two},
 			})
 		},
 
@@ -64,7 +63,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 	var events chan WatchEvent
 	var topic *pubsub.Topic[WatchEvent]
 	var transaction ModifyFilesTransaction
-	w := NewWatcher()
+	w := NewWatcher("**/*.go", "go.mod", "go.sum")
 
 	in.Run(t,
 		func(tb testing.TB, ic in.TestContext) {
@@ -74,7 +73,7 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 		in.FtlNew("go", "one"),
 		func(tb testing.TB, ic in.TestContext) {
 			waitForEvents(tb, events, []WatchEvent{
-				WatchEventModuleAdded{Module: loadModule(t, ic.WorkingDir(), "one")},
+				WatchEventModuleAdded{Config: loadModule(t, ic.WorkingDir(), "one")},
 			})
 		},
 		func(tb testing.TB, ic in.TestContext) {
@@ -98,7 +97,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	var events chan WatchEvent
 	var topic *pubsub.Topic[WatchEvent]
 	var transaction ModifyFilesTransaction
-	w := NewWatcher()
+	w := NewWatcher("**/*.go", "go.mod", "go.sum")
 
 	in.Run(t,
 		func(tb testing.TB, ic in.TestContext) {
@@ -108,7 +107,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 		in.FtlNew("go", "one"),
 		func(tb testing.TB, ic in.TestContext) {
 			waitForEvents(tb, events, []WatchEvent{
-				WatchEventModuleAdded{Module: loadModule(t, ic.WorkingDir(), "one")},
+				WatchEventModuleAdded{Config: loadModule(t, ic.WorkingDir(), "one")},
 			})
 		},
 		// Change a file in a module, within a transaction
@@ -126,20 +125,18 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 		},
 		func(tb testing.TB, ic in.TestContext) {
 			waitForEvents(t, events, []WatchEvent{
-				WatchEventModuleChanged{Module: loadModule(t, ic.WorkingDir(), "one")},
+				WatchEventModuleChanged{Config: loadModule(t, ic.WorkingDir(), "one")},
 			})
 			topic.Close()
 		},
 	)
 }
 
-func loadModule(t *testing.T, dir, name string) Module {
+func loadModule(t *testing.T, dir, name string) moduleconfig.ModuleConfig {
 	t.Helper()
 	config, err := moduleconfig.LoadModuleConfig(filepath.Join(dir, name))
 	assert.NoError(t, err)
-	return Module{
-		Config: config,
-	}
+	return config
 }
 
 func startWatching(ctx context.Context, t testing.TB, w *Watcher, dir string) (chan WatchEvent, *pubsub.Topic[WatchEvent]) {
@@ -188,11 +185,11 @@ func waitForEvents(t testing.TB, events chan WatchEvent, expected []WatchEvent) 
 func keyForEvent(event WatchEvent) string {
 	switch event := event.(type) {
 	case WatchEventModuleAdded:
-		return "added:" + event.Module.Config.Module
+		return "added:" + event.Config.Module
 	case WatchEventModuleRemoved:
-		return "removed:" + event.Module.Config.Module
+		return "removed:" + event.Config.Module
 	case WatchEventModuleChanged:
-		return "updated:" + event.Module.Config.Module
+		return "updated:" + event.Config.Module
 	default:
 		panic("unknown event type")
 	}

@@ -70,7 +70,7 @@ func fieldListToSchema(s []*schemapb.Field) []*Field {
 
 func fieldToSchema(s *schemapb.Field) *Field {
 	return &Field{
-		Pos:      posFromProto(s.Pos),
+		Pos:      PosFromProto(s.Pos),
 		Name:     s.Name,
 		Comments: s.Comments,
 		Type:     TypeFromProto(s.Type),

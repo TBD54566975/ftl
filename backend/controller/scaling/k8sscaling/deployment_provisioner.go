@@ -22,6 +22,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/types/optional"
+	istiosecmodel "istio.io/api/security/v1"
+	"istio.io/api/type/v1beta1"
+	istiosec "istio.io/client-go/pkg/apis/security/v1"
+	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	kubeapps "k8s.io/api/apps/v1"
 	kubecore "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -40,6 +45,7 @@ const deploymentLabel = "ftl-deployment"
 const configMapName = "ftl-controller-deployment-config"
 const deploymentTemplate = "deploymentTemplate"
 const serviceTemplate = "serviceTemplate"
+const serviceAccountTemplate = "serviceAccountTemplate"
 
 // DeploymentProvisioner reconciles a Foo object
 type DeploymentProvisioner struct {
@@ -49,6 +55,7 @@ type DeploymentProvisioner struct {
 	// Map of known deployments
 	KnownDeployments map[string]bool
 	FTLEndpoint      string
+	IstioSecurity    optional.Option[istioclient.Clientset]
 }
 
 func (r *DeploymentProvisioner) updateDeployment(ctx context.Context, name string, mod func(deployment *kubeapps.Deployment)) error {
@@ -84,14 +91,14 @@ func (r *DeploymentProvisioner) HandleSchemaChange(ctx context.Context, msg *ftl
 			} else {
 				err = fmt.Errorf("%v", r)
 			}
-			logger.Errorf(err, "panic creating kube deployment")
+			logger.Errorf(err, "Panic creating kube deployment")
 		}
 	}()
 	err := r.handleSchemaChange(ctx, msg)
 	if err != nil {
-		logger.Errorf(err, "failed to handle schema change")
+		logger.Errorf(err, "Failed to handle schema change")
 	}
-	logger.Infof("handled schema change for %s", msg.ModuleName)
+	logger.Debugf("Handled schema change for %s", msg.ModuleName)
 	return err
 }
 func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
@@ -125,7 +132,7 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 		// This will need to be fixed as part of the support for rolling deployments
 		r.KnownDeployments[msg.DeploymentKey] = true
 		if deploymentExists {
-			logger.Infof("updating deployment %s", msg.DeploymentKey)
+			logger.Debugf("Updating deployment %s", msg.DeploymentKey)
 			return r.handleExistingDeployment(ctx, deployment, msg.Schema)
 		} else {
 			return r.handleNewDeployment(ctx, msg.Schema, msg.DeploymentKey)
@@ -138,10 +145,19 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 				// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
 				// so we add a slight delay here
 				time.Sleep(time.Second * 10)
-				logger.Infof("deleting deployment %s", msg.ModuleName)
+				logger.Debugf("Deleting deployment %s", msg.ModuleName)
 				err := deploymentClient.Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
 				if err != nil {
-					logger.Errorf(err, "failed to delete deployment %s", msg.ModuleName)
+					logger.Errorf(err, "Failed to delete deployment %s", msg.ModuleName)
+				}
+				// TODO: we only need to delete the services once this new ownership structure has been deployed to production
+				// Existing deployments don't have this though
+				logger.Debugf("Deleting service %s", msg.ModuleName)
+				err = r.Client.CoreV1().Secrets(r.Namespace).Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
+				if err != nil {
+					if !errors.IsNotFound(err) {
+						logger.Errorf(err, "Failed to delete service %s", msg.ModuleName)
+					}
 				}
 			}()
 		}
@@ -163,25 +179,82 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	if dep.Runtime == nil {
 		return nil
 	}
-	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
 	logger := log.FromContext(ctx)
-	logger.Infof("creating new kube deployment %s", name)
-	thisImage, err := r.thisContainerImage(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get configMap %s: %w", configMapName, err)
-	}
+
 	cm, err := r.Client.CoreV1().ConfigMaps(r.Namespace).Get(ctx, configMapName, v1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get configMap %s: %w", configMapName, err)
 	}
+	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
+	thisDeployment, err := deploymentClient.Get(ctx, thisDeploymentName, v1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get deployment %s: %w", thisDeploymentName, err)
+	}
+
+	// First create a Service, this will be the root owner of all the other resources
+	// Only create if it does not exist already
+	servicesClient := r.Client.CoreV1().Services(r.Namespace)
+	service, err := servicesClient.Get(ctx, name, v1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to get service %s: %w", name, err)
+		}
+		logger.Debugf("Creating new kube service %s", name)
+		err = decodeBytesToObject([]byte(cm.Data[serviceTemplate]), service)
+		if err != nil {
+			return fmt.Errorf("failed to decode service from configMap %s: %w", configMapName, err)
+		}
+		service.Name = name
+		service.Labels = addLabel(service.Labels, "app", name)
+		service.Labels = addLabel(service.Labels, deploymentLabel, name)
+		service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: thisDeploymentName, UID: thisDeployment.UID}}
+		service.Spec.Selector = map[string]string{"app": name}
+		service, err = servicesClient.Create(ctx, service, v1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to create service %s: %w", name, err)
+		}
+		logger.Debugf("Created kube service %s", name)
+	} else {
+		logger.Debugf("Service %s already exists", name)
+	}
+
+	// Now create a ServiceAccount, we mostly need this for Istio but we create it for all deployments
+	// To keep things consistent
+	serviceAccountClient := r.Client.CoreV1().ServiceAccounts(r.Namespace)
+	serviceAccount, err := serviceAccountClient.Get(ctx, name, v1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to get service account %s: %w", name, err)
+		}
+		logger.Debugf("Creating new kube service account %s", name)
+		err = decodeBytesToObject([]byte(cm.Data[serviceAccountTemplate]), serviceAccount)
+		if err != nil {
+			return fmt.Errorf("failed to decode service account from configMap %s: %w", configMapName, err)
+		}
+		serviceAccount.Name = name
+		serviceAccount.Labels = addLabel(serviceAccount.Labels, "app", name)
+		serviceAccount.OwnerReferences = []v1.OwnerReference{{APIVersion: "v1", Kind: "service", Name: name, UID: service.UID}}
+		_, err = serviceAccountClient.Create(ctx, serviceAccount, v1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to create service account%s: %w", name, err)
+		}
+		logger.Debugf("Created kube service  account%s", name)
+	} else {
+		logger.Debugf("Service account %s already exists", name)
+	}
+
+	// Now create the deployment
+
+	logger.Debugf("Creating new kube deployment %s", name)
+	thisImage, err := r.thisContainerImage(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get container image: %w", err)
+	}
 	data := cm.Data[deploymentTemplate]
-	deployment, err := decodeBytesToDeployment([]byte(data))
+	deployment := &kubeapps.Deployment{}
+	err = decodeBytesToObject([]byte(data), deployment)
 	if err != nil {
 		return fmt.Errorf("failed to decode deployment from configMap %s: %w", configMapName, err)
-	}
-	service, err := decodeBytesToService([]byte(cm.Data[serviceTemplate]))
-	if err != nil {
-		return fmt.Errorf("failed to decode service from configMap %s: %w", configMapName, err)
 	}
 	ourVersion, err := extractTag(thisImage)
 	if err != nil {
@@ -193,72 +266,58 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	}
 	runnerImage := strings.ReplaceAll(ourImage, "controller", "runner")
 
-	thisDeployment, err := deploymentClient.Get(ctx, thisDeploymentName, v1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to get deployment %s: %w", thisDeploymentName, err)
-	}
 	deployment.Name = name
-	deployment.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: thisDeploymentName, UID: thisDeployment.UID}}
+	deployment.OwnerReferences = []v1.OwnerReference{{APIVersion: "v1", Kind: "service", Name: name, UID: service.UID}}
 	deployment.Spec.Template.Spec.Containers[0].Image = fmt.Sprintf("%s:%s", runnerImage, ourVersion)
 	deployment.Spec.Selector = &v1.LabelSelector{MatchLabels: map[string]string{"app": name}}
 	if deployment.Spec.Template.ObjectMeta.Labels == nil {
 		deployment.Spec.Template.ObjectMeta.Labels = map[string]string{}
 	}
-	deployment.Spec.Template.ObjectMeta.Labels["app"] = name
+
+	deployment.Spec.Template.ObjectMeta.Labels = addLabel(deployment.Spec.Template.ObjectMeta.Labels, "app", name)
+	deployment.Spec.Template.Spec.ServiceAccountName = name
 	changes, err := r.syncDeployment(ctx, thisImage, deployment, dep)
+	if sec, ok := r.IstioSecurity.Get(); ok {
+		err = r.syncIstioPolicy(ctx, sec, name, service)
+		if err != nil {
+			return err
+		}
+	}
 	if err != nil {
 		return err
 	}
 	for _, change := range changes {
 		change(deployment)
 	}
-	if deployment.Labels == nil {
-		deployment.Labels = map[string]string{}
-	}
-	deployment.Labels[deploymentLabel] = name
+	deployment.Labels = addLabel(deployment.Labels, deploymentLabel, name)
+	deployment.Labels = addLabel(deployment.Labels, "app", name)
 
 	deployment, err = deploymentClient.Create(ctx, deployment, v1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create deployment %s: %w", deployment.Name, err)
 	}
-	logger.Infof("created kube deployment %s", name)
-
-	service.Name = name
-	service.Labels["app"] = name
-	service.OwnerReferences = []v1.OwnerReference{{APIVersion: "apps/v1", Kind: "deployment", Name: name, UID: deployment.UID}}
-	service.Spec.Selector = map[string]string{"app": name}
-	_, err = r.Client.CoreV1().Services(r.Namespace).Create(ctx, service, v1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to create service %s: %w", deployment.Name, err)
-	}
-	logger.Infof("created kube service %s", name)
+	logger.Debugf("Created kube deployment %s", name)
 
 	return nil
-
 }
 
-func decodeBytesToDeployment(bytes []byte) (*kubeapps.Deployment, error) {
-	deployment := kubeapps.Deployment{}
+func addLabel(labels map[string]string, key string, value string) map[string]string {
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[key] = value
+	return labels
+}
+
+func decodeBytesToObject(bytes []byte, deployment runtime.Object) error {
 	decodingScheme := runtime.NewScheme()
 	decoderCodecFactory := serializer.NewCodecFactory(decodingScheme)
 	decoder := decoderCodecFactory.UniversalDecoder()
-	err := runtime.DecodeInto(decoder, bytes, &deployment)
+	err := runtime.DecodeInto(decoder, bytes, deployment)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode deployment: %w", err)
+		return fmt.Errorf("failed to decode deployment: %w", err)
 	}
-	return &deployment, nil
-}
-
-func decodeBytesToService(bytes []byte) (*kubecore.Service, error) {
-	service := kubecore.Service{}
-	decodingScheme := runtime.NewScheme()
-	decoderCodecFactory := serializer.NewCodecFactory(decodingScheme)
-	decoder := decoderCodecFactory.UniversalDecoder()
-	err := runtime.DecodeInto(decoder, bytes, &service)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode service: %w", err)
-	}
-	return &service, nil
+	return nil
 }
 
 func (r *DeploymentProvisioner) handleExistingDeployment(ctx context.Context, deployment *kubeapps.Deployment, ftlDeployment *schemapb.Module) error {
@@ -306,7 +365,7 @@ func (r *DeploymentProvisioner) syncDeployment(ctx context.Context, thisImage st
 
 		base, err := extractBase(deployment.Spec.Template.Spec.Containers[0].Image)
 		if err != nil {
-			logger.Errorf(err, "could not determine base image for FTL deployment")
+			logger.Errorf(err, "Could not determine base image for FTL deployment")
 		} else {
 			changes = append(changes, func(deployment *kubeapps.Deployment) {
 				deployment.Spec.Template.Spec.Containers[0].Image = base + ":" + ourVersion
@@ -357,33 +416,82 @@ func (r *DeploymentProvisioner) updateEnvVar(deployment *kubeapps.Deployment, en
 
 func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
 	logger := log.FromContext(ctx)
-	deploymentClient := r.Client.AppsV1().Deployments(r.Namespace)
+	serviceClient := r.Client.CoreV1().Services(r.Namespace)
 
-	list, err := deploymentClient.List(ctx, v1.ListOptions{LabelSelector: deploymentLabel})
+	list, err := serviceClient.List(ctx, v1.ListOptions{LabelSelector: deploymentLabel})
 	if err != nil {
-		logger.Errorf(err, "failed to list deployments")
+		logger.Errorf(err, "Failed to list services")
 		return
 	}
 
-	for _, deployment := range list.Items {
-		if !r.KnownDeployments[deployment.Name] {
-			logger.Infof("deleting deployment %s as it is not a known module", deployment.Name)
-			err := deploymentClient.Delete(ctx, deployment.Name, v1.DeleteOptions{})
-			if err != nil {
-				logger.Errorf(err, "failed to delete deployment %s", deployment.Name)
-			}
+	for _, service := range list.Items {
+		if !r.KnownDeployments[service.Name] {
 
-			// With owner references the service should be deleted automatically
-			// However there was a bug so we need this in prod for a bit to clean up
-			logger.Infof("deleting service %s", deployment.Name)
-			err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, deployment.Name, v1.DeleteOptions{})
+			logger.Debugf("Deleting service %s", service.Name)
+			err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, service.Name, v1.DeleteOptions{})
 			if err != nil {
 				if !errors.IsNotFound(err) {
-					logger.Errorf(err, "failed to delete service %s", deployment.Name)
+					logger.Errorf(err, "Failed to delete service %s", service.Name)
 				}
+			}
+			// With owner references the deployments should be deleted automatically
+			// However this is in transition so delete both
+			logger.Debugf("Deleting service %s as it is not a known module", service.Name)
+			err := serviceClient.Delete(ctx, service.Name, v1.DeleteOptions{})
+			if err != nil {
+				logger.Errorf(err, "Failed to delete service %s", service.Name)
 			}
 		}
 	}
+}
+
+func (r *DeploymentProvisioner) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, name string, service *kubecore.Service) error {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Creating new istio policy for %s", name)
+	var update func(policy *istiosec.AuthorizationPolicy) error
+
+	policiesClient := sec.SecurityV1().AuthorizationPolicies(r.Namespace)
+	policy, err := policiesClient.Get(ctx, name, v1.GetOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return fmt.Errorf("failed to get istio policy %s: %w", name, err)
+		}
+		policy = &istiosec.AuthorizationPolicy{}
+		policy.Name = name
+		policy.Namespace = r.Namespace
+		update = func(policy *istiosec.AuthorizationPolicy) error {
+			_, err := policiesClient.Create(ctx, policy, v1.CreateOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to create istio policy %s: %w", name, err)
+			}
+			return nil
+		}
+	} else {
+		update = func(policy *istiosec.AuthorizationPolicy) error {
+			_, err := policiesClient.Update(ctx, policy, v1.UpdateOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to update istio policy %s: %w", name, err)
+			}
+			return nil
+		}
+	}
+	policy.OwnerReferences = []v1.OwnerReference{{APIVersion: "v1", Kind: "service", Name: name, UID: service.UID}}
+	// At present we only allow ingress from the controller
+	policy.Spec.Selector = &v1beta1.WorkloadSelector{MatchLabels: map[string]string{"app": name}}
+	policy.Spec.Action = istiosecmodel.AuthorizationPolicy_ALLOW
+	policy.Spec.Rules = []*istiosecmodel.Rule{
+		{
+			From: []*istiosecmodel.Rule_From{
+				{
+					Source: &istiosecmodel.Source{
+						Principals: []string{"cluster.local/ns/" + r.Namespace + "/sa/" + thisDeploymentName},
+					},
+				},
+			},
+		},
+	}
+
+	return update(policy)
 }
 
 func extractTag(image string) (string, error) {

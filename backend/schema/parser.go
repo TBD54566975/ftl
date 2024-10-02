@@ -9,6 +9,8 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/TBD54566975/ftl/internal/builderrors"
 )
 
 var (
@@ -85,6 +87,20 @@ func (p Position) String() string {
 }
 
 func (p Position) ToProto() proto.Message { return posToProto(p) }
+
+func (p Position) ToErrorPos() builderrors.Position {
+	return p.ToErrorPosWithEnd(p.Column)
+}
+
+func (p Position) ToErrorPosWithEnd(endColumn int) builderrors.Position {
+	return builderrors.Position{
+		Filename:    p.Filename,
+		Offset:      p.Offset,
+		Line:        p.Line,
+		StartColumn: p.Column,
+		EndColumn:   endColumn,
+	}
+}
 
 // A Node in the schema grammar.
 //

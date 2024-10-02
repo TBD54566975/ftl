@@ -62,7 +62,7 @@ func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnl
 
 	moduleSchema, err := loadProtoSchema(moduleConfig, replicas)
 	if err != nil {
-		return fmt.Errorf("failed to load protobuf schema from %q: %w", module.Config.Schema, err)
+		return fmt.Errorf("failed to load protobuf schema from %q: %w", moduleConfig.Schema(), err)
 	}
 
 	logger.Debugf("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))
@@ -135,7 +135,7 @@ func terminateModuleDeployment(ctx context.Context, client DeployClient, module 
 }
 
 func loadProtoSchema(config moduleconfig.AbsModuleConfig, replicas int32) (*schemapb.Module, error) {
-	content, err := os.ReadFile(config.Schema)
+	content, err := os.ReadFile(config.Schema())
 	if err != nil {
 		return nil, err
 	}

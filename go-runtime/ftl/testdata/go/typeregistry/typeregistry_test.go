@@ -37,7 +37,11 @@ func TestIngress(t *testing.T) {
 
 	for _, test := range testCases {
 		t.Run(test.Name, func(t *testing.T) {
-			resp, err := ftl.Call(ctx, Echo, builtin.HttpRequest[EchoRequest, ftl.Unit, ftl.Unit]{
+			resp, err := ftltest.Call[
+				EchoClient,
+				builtin.HttpRequest[EchoRequest, ftl.Unit, ftl.Unit],
+				builtin.HttpResponse[EchoResponse, string],
+			](ctx, builtin.HttpRequest[EchoRequest, ftl.Unit, ftl.Unit]{
 				Body: EchoRequest{Strings: test.Input},
 			})
 			assert.NoError(t, err)

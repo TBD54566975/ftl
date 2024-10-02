@@ -17,6 +17,9 @@ Verbs annotated with `ftl:ingress` will be exposed via HTTP (`http` is the defau
 
 The following will be available at `http://localhost:8891/http/users/123/posts?postId=456`.
 
+{% code_selector() %}
+<!-- go -->
+
 ```go
 type GetRequestPathParams struct {
 	UserID string `json:"userId"`
@@ -164,3 +167,40 @@ Complex query params can also be encoded as JSON using the `@json` query paramet
 ```bash
 curl -i http://localhost:8891/users/123/posts/456?@json=%7B%22tag%22%3A%22ftl%22%7D
 ```
+
+
+<!-- java -->
+
+JVM Languages use the `JAX-RS` annotations to define HTTP endpoints. The following example shows how to define an HTTP endpoint in Java. As the underling implementation is based on [Quarkus](https://quarkus.io)
+it is also possible to use the [Quarkus extensions to the JAX-RS annotations](https://quarkus.io/guides/rest#accessing-request-parameters):
+
+In general the difference between the Quarkus annotation and the standard JAX-RS ones is that the Quarkus parameters infer the parameter name from the method parameter name, while the JAX-RS ones require the parameter name to be explicitly defined.
+
+```java
+
+import java.util.List;
+
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+
+import jakarta.ws.rs.QueryParam; // JAX-RS annotation to get the query parameter
+import org.jboss.resteasy.reactive.RestPath; // Quarkus annotation to get the path parameter
+
+@Path("/")
+public class TestHTTP {
+
+    @GET
+    @Path("/http/users/{userId}/posts")
+    public String get(@RestPath String userId, @QueryParam("postId") String post) {
+        //...
+    }
+
+}
+```
+Under the hood these HTTP invocations are being mapped to verbs that take a `builtin.HttpRequest` and return a `builtin.HttpResponse`. This is not exposed directly to the user, but is instead mapped directly to `JAX-RS` annotations. 
+
+{% end %}
+

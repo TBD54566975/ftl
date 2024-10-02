@@ -124,8 +124,9 @@ func WithoutController() Option {
 
 // WithProvisioner is a Run* option that starts the provisioner service.
 // if set, all deployments are done through the provisioner
-func WithProvisioner() Option {
+func WithProvisioner(config string) Option {
 	return func(o *options) {
+		o.provisionerConfig = config
 		o.startProvisioner = true
 		// provisioner always needs a controller to talk to
 		o.startController = true
@@ -133,14 +134,15 @@ func WithProvisioner() Option {
 }
 
 type options struct {
-	languages        []string
-	testDataDir      string
-	ftlConfigPath    string
-	startController  bool
-	startProvisioner bool
-	requireJava      bool
-	envars           map[string]string
-	kube             bool
+	languages         []string
+	testDataDir       string
+	ftlConfigPath     string
+	startController   bool
+	startProvisioner  bool
+	provisionerConfig string
+	requireJava       bool
+	envars            map[string]string
+	kube              bool
 }
 
 // Run an integration test.
@@ -201,6 +203,10 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		if opts.kube {
 			// This command will build a linux/amd64 version of FTL and deploy it to the kube cluster
 			Infof("Building FTL and deploying to kube")
+			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "setup-cluster").RunBuffered(ctx)
+			assert.NoError(t, err)
+			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "install-istio").RunBuffered(ctx)
+			assert.NoError(t, err)
 			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "full-deploy").RunBuffered(ctx)
 			assert.NoError(t, err)
 			if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
@@ -220,7 +226,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
-		if opts.requireJava || slices.Contains(opts.languages, "java") {
+		if opts.requireJava || slices.Contains(opts.languages, "java") || slices.Contains(opts.languages, "kotlin") {
 			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java", "-DskipTests", "-B").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
@@ -241,7 +247,11 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				Infof("Starting ftl cluster")
 				args := []string{filepath.Join(binDir, "ftl"), "serve", "--recreate"}
 				if opts.startProvisioner {
+					configFile := filepath.Join(tmpDir, "provisioner-plugin-config.toml")
+					os.WriteFile(configFile, []byte(opts.provisionerConfig), 0644)
+
 					args = append(args, "--provisioners=1")
+					args = append(args, "--provisioner-plugin-config="+configFile)
 				}
 				ctx = startProcess(ctx, t, args...)
 			}

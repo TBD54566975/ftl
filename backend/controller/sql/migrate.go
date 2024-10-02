@@ -30,6 +30,7 @@ func Migrate(ctx context.Context, dsn string, logLevel log.Level) error {
 	defer conn.Close()
 
 	db := dbmate.New(u)
+	db.AutoDumpSchema = false
 	db.FS = migrationSchema
 	db.Log = log.FromContext(ctx).Scope("migrate").WriterAt(logLevel)
 	db.MigrationsDir = []string{"schema"}

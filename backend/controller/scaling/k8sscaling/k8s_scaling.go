@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/types/optional"
+	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -19,9 +20,11 @@ import (
 var _ scaling.RunnerScaling = &k8sScaling{}
 
 type k8sScaling struct {
+	disableIstio bool
 }
 
 func (k k8sScaling) Start(ctx context.Context, controller url.URL, leaser leases.Leaser) error {
+
 	logger := log.FromContext(ctx).Scope("K8sScaling")
 	ctx = log.ContextWithLogger(ctx, logger)
 	clientset, err := CreateClientSet()
@@ -34,27 +37,41 @@ func (k k8sScaling) Start(ctx context.Context, controller url.URL, leaser leases
 		// Nothing we can do here, if we don't have a namespace we have no runners
 		return fmt.Errorf("failed to get current namespace: %w", err)
 	}
-	logger.Infof("using namespace %s", namespace)
+
+	var sec *istioclient.Clientset
+	if !k.disableIstio {
+		groups, err := clientset.Discovery().ServerGroups()
+		if err != nil {
+			return fmt.Errorf("failed to get server groups: %w", err)
+		}
+		// If istio is present and not explicitly disabled we create the client
+		for _, group := range groups.Groups {
+			if group.Name == "security.istio.io" {
+				sec, err = CreateIstioClientSet()
+				if err != nil {
+					return fmt.Errorf("failed to create istio clientset: %w", err)
+				}
+				break
+			}
+		}
+	}
+
+	logger.Debugf("Using namespace %s", namespace)
 	deploymentReconciler := &DeploymentProvisioner{
 		Client:           clientset,
 		Namespace:        namespace,
 		KnownDeployments: map[string]bool{},
 		FTLEndpoint:      controller.String(),
+		IstioSecurity:    optional.Ptr(sec),
 	}
 	scaling.BeginGrpcScaling(ctx, controller, leaser, deploymentReconciler.HandleSchemaChange)
 	return nil
 }
 
 func CreateClientSet() (*kubernetes.Clientset, error) {
-	// creates the in-cluster config
-	config, err := rest.InClusterConfig()
-
+	config, err := getKubeConfig()
 	if err != nil {
-		// if we're not in a cluster, use the kubeconfig
-		config, err = clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
-		}
+		return nil, err
 	}
 	// creates the clientset
 	clientset, err := kubernetes.NewForConfig(config)
@@ -62,6 +79,32 @@ func CreateClientSet() (*kubernetes.Clientset, error) {
 		return nil, fmt.Errorf("failed to create client set: %w", err)
 	}
 	return clientset, nil
+}
+
+func CreateIstioClientSet() (*istioclient.Clientset, error) {
+	config, err := getKubeConfig()
+	if err != nil {
+		return nil, err
+	}
+	// creates the clientset
+	clientset, err := istioclient.NewForConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client set: %w", err)
+	}
+	return clientset, nil
+}
+
+func getKubeConfig() (*rest.Config, error) {
+	// creates the in-cluster config
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		// if we're not in a cluster, use the kubeconfig
+		config, err = clientcmd.BuildConfigFromFlags("", clientcmd.RecommendedHomeFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
+		}
+	}
+	return config, nil
 }
 
 func (k k8sScaling) GetEndpointForDeployment(ctx context.Context, module string, deployment string) (optional.Option[url.URL], error) {
@@ -72,8 +115,8 @@ func (k k8sScaling) GetEndpointForDeployment(ctx context.Context, module string,
 	}), nil
 }
 
-func NewK8sScaling() scaling.RunnerScaling {
-	return &k8sScaling{}
+func NewK8sScaling(disableIstio bool) scaling.RunnerScaling {
+	return &k8sScaling{disableIstio: disableIstio}
 }
 
 func GetCurrentNamespace() (string, error) {
