@@ -4,7 +4,10 @@ import (
 	"context"
 	"testing"
 
+	"connectrpc.com/connect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/provisioner/deployment"
 	"github.com/alecthomas/assert/v2"
 )
@@ -15,27 +18,40 @@ type MockProvisioner struct {
 	stateCalls int
 }
 
-var _ deployment.Provisioner = (*MockProvisioner)(nil)
+var _ provisionerconnect.ProvisionerPluginServiceClient = (*MockProvisioner)(nil)
 
-func (m *MockProvisioner) Provision(
-	ctx context.Context,
-	module string,
-	desired []*provisioner.ResourceContext,
-	existing []*provisioner.Resource,
-) (string, error) {
-	return m.Token, nil
+// Ping implements provisionerconnect.ProvisionerPluginServiceClient.
+func (m *MockProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+	return &connect.Response[ftlv1.PingResponse]{}, nil
 }
 
-func (m *MockProvisioner) State(
-	ctx context.Context,
-	token string,
-	desired []*provisioner.Resource,
-) (deployment.TaskState, []*provisioner.Resource, error) {
+// Plan implements provisionerconnect.ProvisionerPluginServiceClient.
+func (m *MockProvisioner) Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
+	panic("unimplemented")
+}
+
+// Provision implements provisionerconnect.ProvisionerPluginServiceClient.
+func (m *MockProvisioner) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
+	return connect.NewResponse(&provisioner.ProvisionResponse{
+		ProvisioningToken: m.Token,
+	}), nil
+}
+
+// Status implements provisionerconnect.ProvisionerPluginServiceClient.
+func (m *MockProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
 	m.stateCalls++
 	if m.stateCalls <= 1 {
-		return deployment.TaskStateRunning, nil, nil
+		return connect.NewResponse(&provisioner.StatusResponse{
+			Status: &provisioner.StatusResponse_Running{},
+		}), nil
 	}
-	return deployment.TaskStateDone, desired, nil
+	return connect.NewResponse(&provisioner.StatusResponse{
+		Status: &provisioner.StatusResponse_Success{
+			Success: &provisioner.StatusResponse_ProvisioningSuccess{
+				UpdatedResources: req.Msg.DesiredResources,
+			},
+		},
+	}), nil
 }
 
 func TestDeployment_Progress(t *testing.T) {

@@ -3,17 +3,31 @@ package deployment
 import (
 	"context"
 
+	"connectrpc.com/connect"
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 )
 
 type NoopProvisioner struct{}
 
-func (n *NoopProvisioner) Provision(ctx context.Context, module string, desired []*provisioner.ResourceContext, existing []*provisioner.Resource) (string, error) {
-	return "", nil
+var _ provisionerconnect.ProvisionerPluginServiceClient = (*NoopProvisioner)(nil)
+
+func (d *NoopProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+	return &connect.Response[ftlv1.PingResponse]{}, nil
 }
 
-func (n *NoopProvisioner) State(ctx context.Context, token string, desired []*provisioner.Resource) (TaskState, []*provisioner.Resource, error) {
-	return TaskStateDone, desired, nil
+func (d *NoopProvisioner) Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
+	panic("unimplemented")
 }
 
-var _ Provisioner = (*NoopProvisioner)(nil)
+func (d *NoopProvisioner) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
+	return connect.NewResponse(&provisioner.ProvisionResponse{
+		Status:            provisioner.ProvisionResponse_NO_CHANGES,
+		ProvisioningToken: "",
+	}), nil
+}
+
+func (d *NoopProvisioner) Status(context.Context, *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
+	panic("should not be called")
+}

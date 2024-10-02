@@ -14,9 +14,20 @@ func TestDeploymentThroughNoopProvisioner(t *testing.T) {
 		in.WithProvisioner(`
 			default = "noop"
 			plugins = [
-				{ name = "noop", resources = ["postgres"] },
+				{ id = "noop", resources = ["postgres"] },
 			]
 		`),
+		in.CopyModule("echo"),
+		in.Deploy("echo"),
+		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
+			assert.Equal(t, "Hello, Bob!!!", response)
+		}),
+	)
+}
+
+func TestDeploymentThrougDevProvisioner(t *testing.T) {
+	in.Run(t,
+		in.WithProvisioner(`default = "dev"`),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {

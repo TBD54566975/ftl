@@ -139,6 +139,9 @@ func Start(ctx context.Context, config Config, devel bool) error {
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
 	pluginConfig := &deployment.ProvisionerPluginConfig{Default: "noop"}
+	if devel {
+		pluginConfig = &deployment.ProvisionerPluginConfig{Default: "dev"}
+	}
 	if config.PluginConfigFile != nil {
 		pc, err := readPluginConfig(config.PluginConfigFile)
 		if err != nil {
