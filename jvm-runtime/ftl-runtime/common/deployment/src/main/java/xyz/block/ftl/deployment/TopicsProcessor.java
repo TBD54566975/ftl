@@ -90,7 +90,8 @@ public class TopicsProcessor {
                     moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
                             .setExport(topic.exported())
                             .setName(topic.topicName())
-                            .setEvent(moduleBuilder.buildType(topic.eventType(), topic.exported())).build()).build());
+                            .setEvent(moduleBuilder.buildType(topic.eventType(), topic.exported(), Nullability.NOT_NULL))
+                            .build()).build());
                 }
             }
         });

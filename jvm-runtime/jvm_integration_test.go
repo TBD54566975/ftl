@@ -148,29 +148,36 @@ func TestJVMCoreFunctionality(t *testing.T) {
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
 
 	// Schema comments
-	tests = append(tests, in.SubTest{Name: "schemaComments", Action: in.VerifySchema(func(ctx context.Context, t testing.TB, sch *schemapb.Schema) {
-		javaOk := false
-		kotlinOk := false
-		for _, module := range sch.Modules {
-			if module.Name == "gomodule" {
-				continue
-			}
-			for _, decl := range module.Decls {
-				if decl.GetVerb() != nil {
-					for _, comment := range decl.GetVerb().GetComments() {
-						if strings.Contains(comment, "JAVA COMMENT") {
-							javaOk = true
-						}
-						if strings.Contains(comment, "KOTLIN COMMENT") {
-							kotlinOk = true
-						}
-					}
+	tests = append(tests, JVMTest("schemaComments", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "emptyVerb", func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+			ok := false
+			for _, comment := range verb.GetComments() {
+				if strings.Contains(comment, "JAVA COMMENT") {
+					ok = true
+				}
+				if strings.Contains(comment, "KOTLIN COMMENT") {
+					ok = true
 				}
 			}
-		}
-		assert.True(t, javaOk, "java comment not found")
-		assert.True(t, kotlinOk, "kotlin comment not found")
-	})})
+			assert.True(t, ok, "comment not found")
+		})
+	})...)
+	tests = append(tests, JVMTest("optionalIntVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalFloatVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalBytesVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringArrayVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringMapVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalTimeVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalTestObjectVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("intVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("floatVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("bytesVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringArrayVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringMapVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("timeVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("testObjectVerb", verifyNonOptionalVerb)...)
 
 	in.Run(t,
 		in.WithJavaBuild(),
@@ -208,6 +215,19 @@ func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTes
 		{
 			Name:   name + "-kotlin",
 			Action: testFunc("kotlinmodule"),
+		},
+	}
+}
+
+func JVMTest(name string, testFunc func(name string, module string) in.Action) []in.SubTest {
+	return []in.SubTest{
+		{
+			Name:   name + "-java",
+			Action: testFunc(name, "javamodule"),
+		},
+		{
+			Name:   name + "-kotlin",
+			Action: testFunc(name, "kotlinmodule"),
 		},
 	}
 }
@@ -255,4 +275,22 @@ type ParameterizedType[T any] struct {
 	Array  []T           `json:"array"`
 	Option ftl.Option[T] `json:"option"`
 	Map    map[string]T  `json:"map"`
+}
+
+func subTest(name string, test in.Action) in.Action {
+	return in.SubTests(in.SubTest{Name: name, Action: test})
+}
+
+func verifyOptionalVerb(name string, module string) in.Action {
+	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+		assert.True(t, verb.Response.GetOptional() != nil, "response not optional")
+		assert.True(t, verb.Request.GetOptional() != nil, "request not optional")
+	})
+}
+
+func verifyNonOptionalVerb(name string, module string) in.Action {
+	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+		assert.True(t, verb.Response.GetOptional() == nil, "response was optional")
+		assert.True(t, verb.Request.GetOptional() == nil, "request was optional")
+	})
 }

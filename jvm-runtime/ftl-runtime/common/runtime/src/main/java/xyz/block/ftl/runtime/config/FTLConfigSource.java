@@ -96,7 +96,6 @@ public class FTLConfigSource implements ConfigSource {
             }
         }
         if (s.startsWith("quarkus.datasource")) {
-            System.out.println("prop: " + s);
             switch (s) {
                 case DEFAULT_USER -> {
                     return Optional.ofNullable(controller.getDatasource("default")).map(FTLController.Datasource::username)
@@ -115,19 +114,16 @@ public class FTLConfigSource implements ConfigSource {
             }
             Matcher m = USER_PATTERN.matcher(s);
             if (m.matches()) {
-                System.out.println("match: " + s);
                 return Optional.ofNullable(controller.getDatasource(m.group(1))).map(FTLController.Datasource::username)
                         .orElse(null);
             }
             m = PASSWORD_PATTERN.matcher(s);
             if (m.matches()) {
-                System.out.println("match: " + s);
                 return Optional.ofNullable(controller.getDatasource(m.group(1))).map(FTLController.Datasource::password)
                         .orElse(null);
             }
             m = URL_PATTERN.matcher(s);
             if (m.matches()) {
-                System.out.println("match: " + s);
                 return Optional.ofNullable(controller.getDatasource(m.group(1))).map(FTLController.Datasource::connectionString)
                         .orElse(null);
             }
