@@ -126,7 +126,7 @@ func (v *Verb) ToProto() proto.Message {
 
 func VerbFromProto(s *schemapb.Verb) *Verb {
 	return &Verb{
-		Pos:      posFromProto(s.Pos),
+		Pos:      PosFromProto(s.Pos),
 		Export:   s.Export,
 		Name:     s.Name,
 		Comments: s.Comments,

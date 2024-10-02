@@ -153,7 +153,7 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 			return err
 		}
 		files = append(files, filepath.Join(config.Dir, "ftl.toml"))
-		files = append(files, config.Schema)
+		files = append(files, config.Schema())
 		for _, file := range files {
 			relFile, err := filepath.Rel(config.Dir, file)
 			if err != nil {

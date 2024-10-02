@@ -13,6 +13,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	kongtoml "github.com/alecthomas/kong-toml"
+	"github.com/alecthomas/types/optional"
 	kongcompletion "github.com/jotaen/kong-completion"
 
 	"github.com/TBD54566975/ftl"
@@ -38,7 +39,7 @@ type InteractiveCLI struct {
 	Status   statusCmd   `cmd:"" help:"Show FTL status."`
 	Init     initCmd     `cmd:"" help:"Initialize a new FTL project."`
 	Profile  profileCmd  `cmd:"" help:"Manage profiles."`
-	New      newCmd      `cmd:"" help:"Create a new FTL module."`
+	New      newCmd      `cmd:"" help:"Create a new FTL module. See language specific flags with 'ftl new <language> --help'."`
 	PS       psCmd       `cmd:"" help:"List deployments."`
 	Call     callCmd     `cmd:"" help:"Call an FTL function."`
 	Bench    benchCmd    `cmd:"" help:"Benchmark an FTL function."`
@@ -79,13 +80,15 @@ var cli CLI
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-
-	app := createKongApplication(&cli)
+	csm := &currentStatusManager{}
+	app := createKongApplication(&cli, csm)
+	app.FatalIfErrorf(prepareNewCmd(ctx, app, os.Args[1:]))
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
 
 	if !cli.Plain {
 		sm := terminal.NewStatusManager(ctx)
+		csm.statusManager = optional.Some(sm)
 		ctx = sm.IntoContext(ctx)
 		defer sm.Close()
 	}
@@ -137,7 +140,7 @@ func main() {
 	kctx.FatalIfErrorf(err)
 }
 
-func createKongApplication(cli any) *kong.Kong {
+func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 	gitRoot, _ := internal.GitRoot(".").Get()
 	app := kong.Must(cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
@@ -158,7 +161,13 @@ func createKongApplication(cli any) *kong.Kong {
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 			"gitroot": gitRoot,
 		},
-	)
+		kong.Exit(func(code int) {
+			if sm, ok := csm.statusManager.Get(); ok {
+				sm.Close()
+			}
+			os.Exit(code)
+		},
+		))
 	return app
 }
 
@@ -201,4 +210,8 @@ func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, can
 		return ctx
 	}
 	return bindContext
+}
+
+type currentStatusManager struct {
+	statusManager optional.Option[terminal.StatusManager]
 }

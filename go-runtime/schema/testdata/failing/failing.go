@@ -3,11 +3,10 @@ package failing
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
-
 	"ftl/failing/child"
 	ps "ftl/pubsub"
+
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
 var empty = ftl.Config[string](1)
@@ -30,14 +29,6 @@ type Response struct {
 
 //ftl:export
 func WrongDirective(ctx context.Context, req Request) (Response, error) {
-	return Response{}, nil
-}
-
-//ftl:verb
-func BadCalls(ctx context.Context, req Request) (Response, error) {
-	ftl.Call(ctx, lib.OtherFunc, lib.Request{})
-	ftl.Call(ctx, "failing", "failingVerb", req)
-	ftl.Call(ctx, "failing", req)
 	return Response{}, nil
 }
 
@@ -195,3 +186,13 @@ type EnumVariantConflictParent int
 const (
 	SameVariant EnumVariantConflictParent = iota
 )
+
+//ftl:verb
+func Empty(ctx context.Context) error {
+	return nil
+}
+
+//ftl:verb
+func CallsEmptyDirectly(ctx context.Context) error {
+	return Empty(ctx)
+}

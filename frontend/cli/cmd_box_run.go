@@ -85,7 +85,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	// Manually import the schema for each module to get the dependency graph.
 	err = engine.Each(func(m buildengine.Module) error {
 		logger.Debugf("Loading schema for module %q", m.Config.Module)
-		mod, err := schema.ModuleFromProtoFile(m.Config.Abs().Schema)
+		mod, err := schema.ModuleFromProtoFile(m.Config.Abs().Schema())
 		if err != nil {
 			return fmt.Errorf("failed to read schema for module %q: %w", m.Config.Module, err)
 		}

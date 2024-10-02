@@ -13,6 +13,7 @@ spec:
     metadata:
       labels:
         app: ftl-controller
+        sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: ftl-controller
       containers:

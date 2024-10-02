@@ -23,16 +23,17 @@ testdata/**/go.work
 testdata/**/go.work.sum
 **/testdata/**/ftl-module-schema/
 **/examples/**/ftl-module-schema/**/*
+**/smoketest/**/ftl-module-schema/**/*
 go-runtime/schema/testdata/test/test.go
 .cache
 
 # Leaving old _ftl for now to avoid old stuff getting checked in
 **/testdata/**/_ftl
 **/examples/**/_ftl
-**/types.ftl.go
-!go-runtime/ftl/ftltest/testdata/go/verbtypes/types.ftl.go
+**/smoketest/**/_ftl
 **/testdata/**/.ftl
 **/examples/**/.ftl
+**/smoketest/**/.ftl
 /.ftl
 
 buildengine/.gitignore

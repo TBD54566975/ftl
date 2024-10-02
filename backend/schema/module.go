@@ -231,7 +231,7 @@ func ModuleFromProtoFile(filename string) (*Module, error) {
 // ModuleFromProto converts a protobuf Module to a Module and validates it.
 func ModuleFromProto(s *schemapb.Module) (*Module, error) {
 	module := &Module{
-		Pos:      posFromProto(s.Pos),
+		Pos:      PosFromProto(s.Pos),
 		Builtin:  s.Builtin,
 		Name:     s.Name,
 		Comments: s.Comments,

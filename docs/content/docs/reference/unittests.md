@@ -30,7 +30,6 @@ In this default set up, FTL does the following:
 - prevents access to `ftl.ConfigValue` and `ftl.SecretValue` ([See options](#project-files-configs-and-secrets))
 - prevents access to `ftl.Database` ([See options](#databases))
 - prevents access to `ftl.MapHandle` ([See options](#maps))
-- prevents calls via `ftl.Call(...)` ([See options](#calls))
 - disables all subscribers ([See options](#pubsub))
 
 ## Customization

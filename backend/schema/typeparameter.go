@@ -27,7 +27,7 @@ func typeParametersToSchema(s []*schemapb.TypeParameter) []*TypeParameter {
 	var out []*TypeParameter
 	for _, n := range s {
 		out = append(out, &TypeParameter{
-			Pos:  posFromProto(n.Pos),
+			Pos:  PosFromProto(n.Pos),
 			Name: n.Name,
 		})
 	}

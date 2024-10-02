@@ -4,7 +4,6 @@ import (
 	"context"
 	"ftl/builtin"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
 )
 
@@ -61,13 +60,13 @@ func Three(ctx context.Context, req Payload[string]) (Payload[string], error) {
 }
 
 //ftl:verb export
-func CallsTwo(ctx context.Context, req Payload[string]) (Payload[string], error) {
-	return ftl.Call(ctx, Two, req)
+func CallsTwo(ctx context.Context, req Payload[string], two TwoClient) (Payload[string], error) {
+	return two(ctx, req)
 }
 
 //ftl:verb export
-func CallsTwoAndThree(ctx context.Context, req Payload[string]) (Payload[string], error) {
-	err := transitiveVerbCall(ctx, req)
+func CallsTwoAndThree(ctx context.Context, req Payload[string], two TwoClient, three ThreeClient) (Payload[string], error) {
+	err := transitiveVerbCall(ctx, req, two, three)
 	return Payload[string]{}, err
 }
 
@@ -102,17 +101,17 @@ type TransitiveAliasAlias = lib.NonFTLType
 
 type TransitiveAlias lib.NonFTLType
 
-func transitiveVerbCall(ctx context.Context, req Payload[string]) error {
-	_, err := ftl.Call(ctx, Two, req)
+func transitiveVerbCall(ctx context.Context, req Payload[string], two TwoClient, three ThreeClient) error {
+	_, err := two(ctx, req)
 	if err != nil {
 		return err
 	}
-	err = superTransitiveVerbCall(ctx, req)
+	err = superTransitiveVerbCall(ctx, req, three)
 	return err
 }
 
-func superTransitiveVerbCall(ctx context.Context, req Payload[string]) error {
-	_, err := ftl.Call(ctx, Three, req)
+func superTransitiveVerbCall(ctx context.Context, req Payload[string], three ThreeClient) error {
+	_, err := three(ctx, req)
 	return err
 }
 

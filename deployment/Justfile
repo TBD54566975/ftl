@@ -51,6 +51,20 @@ setup-cluster: setup-registry
 
 
 
+install-istio:
+  #!/bin/bash
+  if [ -z "$(kubectl get namespace | grep istio-system)" ]; then
+      kubectl create namespace istio-system
+      helm repo add istio https://istio-release.storage.googleapis.com/charts
+      helm repo update
+      helm install istio-base istio/base -n istio-system --wait
+      helm install istiod istio/istiod -n istio-system --wait
+  fi
+  kubectl label namespace default istio-injection=enabled --overwrite
+  kubectl kustomize --load-restrictor=LoadRestrictionsNone istio | kubectl apply -f -
+
+
+
 setup: setup-registry setup-cluster
 
 teardown-registry:

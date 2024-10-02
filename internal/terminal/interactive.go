@@ -20,12 +20,14 @@ import (
 const interactivePrompt = "\033[32m>\033[0m "
 
 var _ readline.AutoCompleter = &FTLCompletion{}
-var errExitTrap = errors.New("exit trap")
 
 type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Context
 
 func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) error {
 
+	if !readline.DefaultIsTerminal() {
+		return nil
+	}
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          interactivePrompt,
 		InterruptPrompt: "^C",
@@ -53,7 +55,19 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 	})
 	l.CaptureExitSignal()
 	// Overload the exit function to avoid exiting the process
-	k.Exit = func(i int) { panic(errExitTrap) }
+	existing := k.Exit
+	k.Exit = func(i int) {
+		if i != 0 {
+			_ = l.Close()
+			if existing == nil {
+				// Should not happen, but no harm being cautious
+				os.Exit(i)
+			}
+			existing(i)
+		}
+		// For a normal exit from an interactive command we just ignore it
+		// This usually comes from --help or --version
+	}
 	for {
 		line, err := l.Readline()
 		if errors.Is(err, readline.ErrInterrupt) {
@@ -77,14 +91,6 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 			continue
 		}
 		func() {
-			defer func() {
-				// Catch Exit() and continue the loop
-				if r := recover(); r != nil {
-					if r == errExitTrap { //nolint:errorlint
-						return
-					}
-				}
-			}()
 			kctx, err := k.Parse(args)
 			if err != nil {
 				errorf("%s", err)
@@ -99,6 +105,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 			}
 		}()
 	}
+	_ = l.Close()
 	return nil
 }
 

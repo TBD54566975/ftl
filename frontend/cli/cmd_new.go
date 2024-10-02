@@ -1,75 +1,117 @@
 package main
 
 import (
-	"archive/zip"
 	"context"
 	"fmt"
 	"go/token"
-	"html/template"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
-	"runtime"
 	"strings"
 
-	"github.com/TBD54566975/scaffolder"
+	"github.com/alecthomas/kong"
 
 	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
-	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/jvm-runtime/java"
-	"github.com/TBD54566975/ftl/jvm-runtime/kotlin"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type newCmd struct {
-	Go     newGoCmd     `cmd:"" help:"Initialize a new FTL Go module."`
-	Java   newJavaCmd   `cmd:"" help:"Initialize a new FTL Java module."`
-	Kotlin newKotlinCmd `cmd:"" help:"Initialize a new FTL Kotlin module."`
+	Language string `arg:"" help:"Language of the module to create."`
+	Dir      string `arg:"" help:"Directory to initialize the module in."`
+	Name     string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
 }
 
-type newGoCmd struct {
-	Replace   map[string]string `short:"r" help:"Replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..." env:"FTL_INIT_GO_REPLACE"`
-	Dir       string            `arg:"" help:"Directory to initialize the module in."`
-	Name      string            `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-	GoVersion string
+// prepareNewCmd adds language specific flags to kong
+// This allows the new command to have good support for language specific flags like:
+// - help text (ftl new go --help)
+// - default values
+// - environment variable overrides
+func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) error {
+	if len(args) < 2 {
+		return nil
+	} else if args[0] != "new" {
+		return nil
+	}
+	language := args[1]
+	if len(language) == 0 {
+		return nil
+	}
+
+	newCmdNode, ok := slices.Find(k.Model.Children, func(n *kong.Node) bool {
+		return n.Name == "new"
+	})
+	if !ok {
+		return fmt.Errorf("could not find new command")
+	}
+
+	plugin, err := buildengine.PluginFromConfig(ctx, moduleconfig.ModuleConfig{
+		Language: language,
+	}, "")
+	if err != nil {
+		return fmt.Errorf("could not create plugin for %v: %w", language, err)
+	}
+
+	flags, err := plugin.GetCreateModuleFlags(ctx)
+	if err != nil {
+		return fmt.Errorf("could not get CLI flags for %v plugin: %w", language, err)
+	}
+
+	registry := kong.NewRegistry().RegisterDefaults()
+	for _, flag := range flags {
+		var str string
+		strPtr := &str
+		flag.Target = reflect.ValueOf(strPtr).Elem()
+		flag.Mapper = registry.ForValue(flag.Target)
+		flag.Group = &kong.Group{
+			Title: "Flags for " + strings.ToTitle(language[0:1]) + language[1:] + " modules",
+			Key:   "languageSpecificFlags",
+		}
+	}
+	newCmdNode.Flags = append(newCmdNode.Flags, flags...)
+	return nil
 }
 
-type newJavaCmd struct {
-	Dir   string `arg:"" help:"Directory to initialize the module in."`
-	Name  string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-	Group string `help:"The Maven groupId of the project." default:"com.example"`
-}
-type newKotlinCmd struct {
-	Dir   string `arg:"" help:"Directory to initialize the module in."`
-	Name  string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-	Group string `help:"The Maven groupId of the project." default:"com.example"`
-}
-
-func (i newGoCmd) Run(ctx context.Context, config projectconfig.Config) error {
+func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config) error {
 	name, path, err := validateModule(i.Dir, i.Name)
 	if err != nil {
 		return err
 	}
 
 	// Validate the module name with custom validation
-	if !isValidGoModuleName(name) {
+	if !isValidModuleName(name) {
 		return fmt.Errorf("module name %q must be a valid Go module name and not a reserved keyword", name)
 	}
 
 	logger := log.FromContext(ctx)
-	logger.Debugf("Creating FTL Go module %q in %s", name, path)
+	logger.Debugf("Creating FTL %s module %q in %s", i.Language, name, path)
 
-	i.GoVersion = runtime.Version()[2:]
-	if err := scaffold(ctx, config.Hermit, goruntime.Files(), i.Dir, i, scaffolder.Exclude("^go.mod$")); err != nil {
-		return err
+	moduleConfig := moduleconfig.ModuleConfig{
+		Module:   name,
+		Language: i.Language,
+		Dir:      path,
 	}
 
-	logger.Debugf("Running go mod tidy")
-	if err := exec.Command(ctx, log.Debug, path, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
+	flags := map[string]string{}
+	for _, f := range ktctx.Selected().Flags {
+		flagValue, ok := f.Target.Interface().(string)
+		if !ok {
+			return fmt.Errorf("expected %v value to be a string but it was %T", f.Name, f.Target.Interface())
+		}
+		flags[f.Name] = flagValue
+	}
+
+	plugin, err := buildengine.PluginFromConfig(ctx, moduleConfig, config.Root())
+	if err != nil {
+		return err
+	}
+	err = plugin.CreateModule(ctx, config, moduleConfig, flags)
+	if err != nil {
 		return err
 	}
 
@@ -88,56 +130,6 @@ func (i newGoCmd) Run(ctx context.Context, config projectconfig.Config) error {
 	return nil
 }
 
-func (i newJavaCmd) Run(ctx context.Context, config projectconfig.Config) error {
-	return RunJvmScaffolding(ctx, config, i.Dir, i.Name, i.Group, java.Files())
-}
-
-func (i newKotlinCmd) Run(ctx context.Context, config projectconfig.Config) error {
-	return RunJvmScaffolding(ctx, config, i.Dir, i.Name, i.Group, kotlin.Files())
-}
-
-func RunJvmScaffolding(ctx context.Context, config projectconfig.Config, dir string, name string, group string, source *zip.Reader) error {
-	name, path, err := validateModule(dir, name)
-	if err != nil {
-		return err
-	}
-
-	logger := log.FromContext(ctx)
-	logger.Debugf("Creating FTL module %q in %s", name, path)
-
-	packageDir := strings.ReplaceAll(group, ".", "/")
-
-	javaContext := struct {
-		Dir        string
-		Name       string
-		Group      string
-		PackageDir string
-	}{
-		Dir:        dir,
-		Name:       name,
-		Group:      group,
-		PackageDir: packageDir,
-	}
-
-	if err := scaffold(ctx, config.Hermit, source, dir, javaContext); err != nil {
-		return err
-	}
-
-	_, ok := internal.GitRoot(dir).Get()
-	if !config.NoGit && ok {
-		logger.Debugf("Adding files to git")
-		if config.Hermit {
-			if err := maybeGitAdd(ctx, dir, "bin/*"); err != nil {
-				return err
-			}
-		}
-		if err := maybeGitAdd(ctx, dir, filepath.Join(name, "*")); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func validateModule(dir string, name string) (string, string, error) {
 	if dir == "" {
 		return "", "", fmt.Errorf("directory is required")
@@ -149,13 +141,17 @@ func validateModule(dir string, name string) (string, string, error) {
 		return "", "", fmt.Errorf("module name %q is invalid", name)
 	}
 	path := filepath.Join(dir, name)
-	if _, err := os.Stat(path); err == nil {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", "", fmt.Errorf("could not make %q an absolute path: %w", path, err)
+	}
+	if _, err := os.Stat(absPath); err == nil {
 		return "", "", fmt.Errorf("module directory %s already exists", path)
 	}
-	return name, path, nil
+	return name, absPath, nil
 }
 
-func isValidGoModuleName(name string) bool {
+func isValidModuleName(name string) bool {
 	validNamePattern := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
 	if !validNamePattern.MatchString(name) {
 		return false
@@ -164,32 +160,4 @@ func isValidGoModuleName(name string) bool {
 		return false
 	}
 	return true
-}
-
-func scaffold(ctx context.Context, includeBinDir bool, source *zip.Reader, destination string, sctx any, options ...scaffolder.Option) error {
-	logger := log.FromContext(ctx)
-	opts := []scaffolder.Option{scaffolder.Functions(scaffoldFuncs), scaffolder.Exclude("^go.mod$")}
-	if !includeBinDir {
-		logger.Debugf("Excluding bin directory")
-		opts = append(opts, scaffolder.Exclude("^bin"))
-	}
-	opts = append(opts, options...)
-	if err := internal.ScaffoldZip(source, destination, sctx, opts...); err != nil {
-		return fmt.Errorf("failed to scaffold: %w", err)
-	}
-	return nil
-}
-
-var scaffoldFuncs = template.FuncMap{
-	"snake":          strcase.ToLowerSnake,
-	"screamingSnake": strcase.ToUpperSnake,
-	"camel":          strcase.ToUpperCamel,
-	"lowerCamel":     strcase.ToLowerCamel,
-	"strippedCamel":  strcase.ToUpperStrippedCamel,
-	"kebab":          strcase.ToLowerKebab,
-	"screamingKebab": strcase.ToUpperKebab,
-	"upper":          strings.ToUpper,
-	"lower":          strings.ToLower,
-	"title":          strings.Title,
-	"typename":       schema.TypeName,
 }

@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-import { Config as Config$1, Data as Data$1, Ref, Secret as Secret$1, Verb as Verb$1 } from "../schema/schema_pb.js";
+import { Config as Config$1, Data as Data$1, Database as Database$1, Enum as Enum$1, FSM as FSM$1, Ref, Secret as Secret$1, Subscription as Subscription$1, Topic as Topic$1, TypeAlias as TypeAlias$1, Verb as Verb$1 } from "../schema/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.console.EventType
@@ -485,51 +485,39 @@ export class IngressEvent extends Message<IngressEvent> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.Verb
+ * @generated from message xyz.block.ftl.v1.console.Config
  */
-export class Verb extends Message<Verb> {
+export class Config extends Message<Config> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Verb verb = 1;
+   * @generated from field: xyz.block.ftl.v1.schema.Config config = 1;
    */
-  verb?: Verb$1;
+  config?: Config$1;
 
-  /**
-   * @generated from field: string schema = 2;
-   */
-  schema = "";
-
-  /**
-   * @generated from field: string json_request_schema = 3;
-   */
-  jsonRequestSchema = "";
-
-  constructor(data?: PartialMessage<Verb>) {
+  constructor(data?: PartialMessage<Config>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.Verb";
+  static readonly typeName = "xyz.block.ftl.v1.console.Config";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "verb", kind: "message", T: Verb$1 },
-    { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "json_request_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "config", kind: "message", T: Config$1 },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {
-    return new Verb().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Config {
+    return new Config().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Verb {
-    return new Verb().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Config {
+    return new Config().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Verb {
-    return new Verb().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Config {
+    return new Config().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Verb | PlainMessage<Verb> | undefined, b: Verb | PlainMessage<Verb> | undefined): boolean {
-    return proto3.util.equals(Verb, a, b);
+  static equals(a: Config | PlainMessage<Config> | undefined, b: Config | PlainMessage<Config> | undefined): boolean {
+    return proto3.util.equals(Config, a, b);
   }
 }
 
@@ -577,6 +565,191 @@ export class Data extends Message<Data> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.console.Database
+ */
+export class Database extends Message<Database> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Database database = 1;
+   */
+  database?: Database$1;
+
+  constructor(data?: PartialMessage<Database>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Database";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "database", kind: "message", T: Database$1 },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Database {
+    return new Database().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Database {
+    return new Database().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Database {
+    return new Database().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Database | PlainMessage<Database> | undefined, b: Database | PlainMessage<Database> | undefined): boolean {
+    return proto3.util.equals(Database, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.Enum
+ */
+export class Enum extends Message<Enum> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Enum enum = 1;
+   */
+  enum?: Enum$1;
+
+  constructor(data?: PartialMessage<Enum>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Enum";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "enum", kind: "message", T: Enum$1 },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Enum {
+    return new Enum().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Enum {
+    return new Enum().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Enum {
+    return new Enum().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Enum | PlainMessage<Enum> | undefined, b: Enum | PlainMessage<Enum> | undefined): boolean {
+    return proto3.util.equals(Enum, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.FSM
+ */
+export class FSM extends Message<FSM> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.FSM fsm = 1;
+   */
+  fsm?: FSM$1;
+
+  constructor(data?: PartialMessage<FSM>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.FSM";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "fsm", kind: "message", T: FSM$1 },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FSM {
+    return new FSM().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FSM {
+    return new FSM().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FSM {
+    return new FSM().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FSM | PlainMessage<FSM> | undefined, b: FSM | PlainMessage<FSM> | undefined): boolean {
+    return proto3.util.equals(FSM, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.Topic
+ */
+export class Topic extends Message<Topic> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Topic topic = 1;
+   */
+  topic?: Topic$1;
+
+  constructor(data?: PartialMessage<Topic>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Topic";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "topic", kind: "message", T: Topic$1 },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Topic {
+    return new Topic().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Topic {
+    return new Topic().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Topic {
+    return new Topic().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Topic | PlainMessage<Topic> | undefined, b: Topic | PlainMessage<Topic> | undefined): boolean {
+    return proto3.util.equals(Topic, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.TypeAlias
+ */
+export class TypeAlias extends Message<TypeAlias> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.TypeAlias typealias = 1;
+   */
+  typealias?: TypeAlias$1;
+
+  constructor(data?: PartialMessage<TypeAlias>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.TypeAlias";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "typealias", kind: "message", T: TypeAlias$1 },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeAlias {
+    return new TypeAlias().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TypeAlias {
+    return new TypeAlias().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TypeAlias {
+    return new TypeAlias().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TypeAlias | PlainMessage<TypeAlias> | undefined, b: TypeAlias | PlainMessage<TypeAlias> | undefined): boolean {
+    return proto3.util.equals(TypeAlias, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.console.Secret
  */
 export class Secret extends Message<Secret> {
@@ -614,39 +787,88 @@ export class Secret extends Message<Secret> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.Config
+ * @generated from message xyz.block.ftl.v1.console.Subscription
  */
-export class Config extends Message<Config> {
+export class Subscription extends Message<Subscription> {
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Config config = 1;
+   * @generated from field: xyz.block.ftl.v1.schema.Subscription subscription = 1;
    */
-  config?: Config$1;
+  subscription?: Subscription$1;
 
-  constructor(data?: PartialMessage<Config>) {
+  constructor(data?: PartialMessage<Subscription>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.Config";
+  static readonly typeName = "xyz.block.ftl.v1.console.Subscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "config", kind: "message", T: Config$1 },
+    { no: 1, name: "subscription", kind: "message", T: Subscription$1 },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Config {
-    return new Config().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscription {
+    return new Subscription().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Config {
-    return new Config().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Subscription {
+    return new Subscription().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Config {
-    return new Config().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Subscription {
+    return new Subscription().fromJsonString(jsonString, options);
   }
 
-  static equals(a: Config | PlainMessage<Config> | undefined, b: Config | PlainMessage<Config> | undefined): boolean {
-    return proto3.util.equals(Config, a, b);
+  static equals(a: Subscription | PlainMessage<Subscription> | undefined, b: Subscription | PlainMessage<Subscription> | undefined): boolean {
+    return proto3.util.equals(Subscription, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.Verb
+ */
+export class Verb extends Message<Verb> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Verb verb = 1;
+   */
+  verb?: Verb$1;
+
+  /**
+   * @generated from field: string schema = 2;
+   */
+  schema = "";
+
+  /**
+   * @generated from field: string json_request_schema = 3;
+   */
+  jsonRequestSchema = "";
+
+  constructor(data?: PartialMessage<Verb>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.Verb";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "verb", kind: "message", T: Verb$1 },
+    { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "json_request_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {
+    return new Verb().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Verb {
+    return new Verb().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Verb {
+    return new Verb().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Verb | PlainMessage<Verb> | undefined, b: Verb | PlainMessage<Verb> | undefined): boolean {
+    return proto3.util.equals(Verb, a, b);
   }
 }
 
@@ -1289,6 +1511,49 @@ export class EventsQuery_CallFilter extends Message<EventsQuery_CallFilter> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.console.EventsQuery.ModuleFilter
+ */
+export class EventsQuery_ModuleFilter extends Message<EventsQuery_ModuleFilter> {
+  /**
+   * @generated from field: string module = 1;
+   */
+  module = "";
+
+  /**
+   * @generated from field: optional string verb = 2;
+   */
+  verb?: string;
+
+  constructor(data?: PartialMessage<EventsQuery_ModuleFilter>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.EventsQuery.ModuleFilter";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "verb", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_ModuleFilter {
+    return new EventsQuery_ModuleFilter().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EventsQuery_ModuleFilter {
+    return new EventsQuery_ModuleFilter().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EventsQuery_ModuleFilter {
+    return new EventsQuery_ModuleFilter().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EventsQuery_ModuleFilter | PlainMessage<EventsQuery_ModuleFilter> | undefined, b: EventsQuery_ModuleFilter | PlainMessage<EventsQuery_ModuleFilter> | undefined): boolean {
+    return proto3.util.equals(EventsQuery_ModuleFilter, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.console.EventsQuery.Filter
  */
 export class EventsQuery_Filter extends Message<EventsQuery_Filter> {
@@ -1345,6 +1610,12 @@ export class EventsQuery_Filter extends Message<EventsQuery_Filter> {
      */
     value: EventsQuery_CallFilter;
     case: "call";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.EventsQuery.ModuleFilter module = 9;
+     */
+    value: EventsQuery_ModuleFilter;
+    case: "module";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<EventsQuery_Filter>) {
@@ -1363,6 +1634,7 @@ export class EventsQuery_Filter extends Message<EventsQuery_Filter> {
     { no: 6, name: "time", kind: "message", T: EventsQuery_TimeFilter, oneof: "filter" },
     { no: 7, name: "id", kind: "message", T: EventsQuery_IDFilter, oneof: "filter" },
     { no: 8, name: "call", kind: "message", T: EventsQuery_CallFilter, oneof: "filter" },
+    { no: 9, name: "module", kind: "message", T: EventsQuery_ModuleFilter, oneof: "filter" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EventsQuery_Filter {

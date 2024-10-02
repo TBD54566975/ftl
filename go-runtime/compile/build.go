@@ -24,10 +24,12 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl"
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/schema"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -59,13 +61,12 @@ type mainModuleContext struct {
 	TypesCtx           typesFileContext
 }
 
-func (c mainModuleContext) withImports(mainModuleImport string) mainModuleContext {
+func (c *mainModuleContext) withImports(mainModuleImport string) {
 	c.MainCtx.Imports = c.generateMainImports()
 	c.TypesCtx.Imports = c.generateTypesImports(mainModuleImport)
-	return c
 }
 
-func (c mainModuleContext) generateMainImports() []string {
+func (c *mainModuleContext) generateMainImports() []string {
 	imports := sets.NewSet[string]()
 	imports.Add(`"context"`)
 	imports.Add(`"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"`)
@@ -87,10 +88,10 @@ func (c mainModuleContext) generateMainImports() []string {
 	for _, e := range c.MainCtx.ExternalTypes {
 		imports.Add(e.importStatement())
 	}
-	return formatGoImports(imports.ToSlice())
+	return imports.ToSlice()
 }
 
-func (c mainModuleContext) generateTypesImports(mainModuleImport string) []string {
+func (c *mainModuleContext) generateTypesImports(mainModuleImport string) []string {
 	imports := sets.NewSet[string]()
 	if len(c.TypesCtx.SumTypes) > 0 || len(c.TypesCtx.ExternalTypes) > 0 {
 		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"`)
@@ -118,7 +119,7 @@ func (c mainModuleContext) generateTypesImports(mainModuleImport string) []strin
 		}
 		filteredImports = append(filteredImports, im)
 	}
-	return formatGoImports(filteredImports)
+	return filteredImports
 }
 
 func typeImports(t goSchemaType) []string {
@@ -333,7 +334,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	if err = writeSchemaErrors(config, result.Errors); err != nil {
 		return fmt.Errorf("failed to write schema errors: %w", err)
 	}
-	if schema.ContainsTerminalError(result.Errors) {
+	if builderrors.ContainsTerminalError(result.Errors) {
 		// Only bail if schema errors contain elements at level ERROR.
 		// If errors are only at levels below ERROR (e.g. INFO, WARN), the schema can still be used.
 		return nil
@@ -355,16 +356,25 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 
 	logger.Debugf("Tidying go.mod files")
 	wg, wgctx := errgroup.WithContext(ctx)
+
+	ftlTypesFilename := "types.ftl.go"
 	wg.Go(func() error {
 		if err := exec.Command(wgctx, log.Debug, moduleDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", moduleDir, err)
 		}
-		return filesTransaction.ModifiedFiles(filepath.Join(moduleDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
+
+		if err := exec.Command(wgctx, log.Debug, moduleDir, "go", "fmt", ftlTypesFilename).RunBuffered(wgctx); err != nil {
+			return fmt.Errorf("%s: failed to format module dir: %w", moduleDir, err)
+		}
+		return filesTransaction.ModifiedFiles(filepath.Join(moduleDir, "go.mod"), filepath.Join(moduleDir, "go.sum"), filepath.Join(moduleDir, ftlTypesFilename))
 	})
 	mainDir := filepath.Join(buildDir, "go", "main")
 	wg.Go(func() error {
 		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", mainDir, err)
+		}
+		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "fmt", "./...").RunBuffered(wgctx); err != nil {
+			return fmt.Errorf("%s: failed to format main dir: %w", mainDir, err)
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
@@ -554,7 +564,7 @@ func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVers
 
 func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName string,
 	sharedModulesPaths []string, replacements []*modfile.Replace) (mainModuleContext, error) {
-	ctx := mainModuleContext{
+	ctx := &mainModuleContext{
 		GoVersion:          goModVersion,
 		FTLVersion:         ftlVersion,
 		Name:               b.mainModule.Name,
@@ -573,8 +583,53 @@ func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName s
 	}
 
 	visited := sets.NewSet[string]()
-	err := schema.Visit(b.mainModule, func(node schema.Node, next func() error) error {
-		maybeGoType, isLocal, err := b.getGoType(b.mainModule, node)
+	err := b.visit(ctx, b.mainModule, b.mainModule, visited)
+	if err != nil {
+		return mainModuleContext{}, err
+	}
+
+	slices.SortFunc(ctx.MainCtx.SumTypes, func(a, b goSumType) int {
+		return strings.Compare(a.TypeName(), b.TypeName())
+	})
+	slices.SortFunc(ctx.TypesCtx.SumTypes, func(a, b goSumType) int {
+		return strings.Compare(a.TypeName(), b.TypeName())
+	})
+
+	ctx.TypesCtx.MainModulePkg = b.mainModule.Name
+	mainModuleImport := fmt.Sprintf("ftl/%s", b.mainModule.Name)
+	if alias, ok := b.imports[mainModuleImport]; ok {
+		mainModuleImport = fmt.Sprintf("%s %q", alias, mainModuleImport)
+		ctx.TypesCtx.MainModulePkg = alias
+	}
+	ctx.withImports(mainModuleImport)
+	return *ctx, nil
+}
+
+func (b *mainModuleContextBuilder) visit(
+	ctx *mainModuleContext,
+	module *schema.Module,
+	node schema.Node,
+	visited sets.Set[string],
+) error {
+	err := schema.Visit(node, func(node schema.Node, next func() error) error {
+		if ref, ok := node.(*schema.Ref); ok {
+			maybeResolved, maybeModule := b.sch.ResolveWithModule(ref)
+			resolved, ok := maybeResolved.Get()
+			if !ok {
+				return next()
+			}
+			m, ok := maybeModule.Get()
+			if !ok {
+				return next()
+			}
+			err := b.visit(ctx, m, resolved, visited)
+			if err != nil {
+				return fmt.Errorf("failed to visit children of %s: %w", ref, err)
+			}
+			return next()
+		}
+
+		maybeGoType, isLocal, err := b.getGoType(module, node)
 		if err != nil {
 			return err
 		}
@@ -602,40 +657,14 @@ func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName s
 		return next()
 	})
 	if err != nil {
-		return mainModuleContext{}, fmt.Errorf("failed to build main module context: %w", err)
+		return fmt.Errorf("failed to build main module context: %w", err)
 	}
-
-	slices.SortFunc(ctx.MainCtx.SumTypes, func(a, b goSumType) int {
-		return strings.Compare(a.TypeName(), b.TypeName())
-	})
-	slices.SortFunc(ctx.TypesCtx.SumTypes, func(a, b goSumType) int {
-		return strings.Compare(a.TypeName(), b.TypeName())
-	})
-
-	ctx.TypesCtx.MainModulePkg = b.mainModule.Name
-	mainModuleImport := fmt.Sprintf("ftl/%s", b.mainModule.Name)
-	if alias, ok := b.imports[mainModuleImport]; ok {
-		mainModuleImport = fmt.Sprintf("%s %q", alias, mainModuleImport)
-		ctx.TypesCtx.MainModulePkg = alias
-	}
-	return ctx.withImports(mainModuleImport), nil
+	return nil
 }
 
 func (b *mainModuleContextBuilder) getGoType(module *schema.Module, node schema.Node) (gotype optional.Option[goType], isLocal bool, err error) {
 	isLocal = b.visitingMainModule(module.Name)
 	switch n := node.(type) {
-	case *schema.Ref:
-		maybeResolved, maybeModule := b.sch.ResolveWithModule(n)
-		resolved, ok := maybeResolved.Get()
-		if !ok {
-			return optional.None[goType](), isLocal, nil
-		}
-		m, ok := maybeModule.Get()
-		if !ok {
-			return optional.None[goType](), isLocal, nil
-		}
-		return b.getGoType(m, resolved)
-
 	case *schema.Verb:
 		if !isLocal {
 			return optional.None[goType](), false, nil
@@ -749,9 +778,7 @@ func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error
 				}
 				calleeNativeName, ok := b.nativeNames[call]
 				if !ok {
-					// TODO: skip for now because metadata from legacy ftl.Call(...) will not have native name
-					continue
-					// return goVerb{}, fmt.Errorf("missing native name for verb client %s", call)
+					return goVerb{}, fmt.Errorf("missing native name for verb client %s", call)
 				}
 				calleeverb, err := b.getGoVerb(calleeNativeName, callee)
 				if err != nil {
@@ -1154,14 +1181,15 @@ func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error 
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	return os.WriteFile(config.Abs().Schema, schemaBytes, 0600)
+	err = os.WriteFile(config.Abs().Schema(), schemaBytes, 0600)
+	if err != nil {
+		return fmt.Errorf("could not write schema: %w", err)
+	}
+	return nil
 }
 
-func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error) error {
-	el := schema.ErrorList{
-		Errors: errors,
-	}
-	elBytes, err := proto.Marshal(el.ToProto())
+func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []builderrors.Error) error {
+	elBytes, err := proto.Marshal(languagepb.ErrorsToProto(errors))
 	if err != nil {
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}
@@ -1313,44 +1341,5 @@ func addImports(existingImports map[string]string, newTypes ...nativeType) map[s
 			imports[importPath] = aliases[len(aliases)-1]
 		}
 	}
-	return imports
-}
-
-func formatGoImports(imports []string) []string {
-	getPriority := func(path string) int {
-		// ftl import
-		if strings.HasPrefix(path, "\"ftl/") {
-			return 2
-		}
-		// aliased ftl import
-		if parts := strings.SplitAfter(path, " "); len(parts) == 2 && strings.HasPrefix(parts[1], "\"ftl/") {
-			return 2
-		}
-		// stdlib imports don't contain a dot (e.g., "fmt", "strings")
-		if !strings.Contains(path, ".") {
-			return 0
-		}
-		return 1
-	}
-
-	slices.SortFunc(imports, func(i, j string) int {
-		priorityI := getPriority(i)
-		priorityJ := getPriority(j)
-		if priorityI != priorityJ {
-			return priorityI - priorityJ
-		}
-		return strings.Compare(i, j)
-	})
-
-	// add newlines between import groupings
-	previousPriority := -1
-	for i, imp := range imports {
-		currentPriority := getPriority(imp)
-		if currentPriority != previousPriority && previousPriority != -1 {
-			imports[i-1] = fmt.Sprintf("%s\n", imports[i-1])
-		}
-		previousPriority = currentPriority
-	}
-
 	return imports
 }

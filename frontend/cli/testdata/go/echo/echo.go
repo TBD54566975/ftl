@@ -22,8 +22,8 @@ type EchoResponse struct {
 // Echo returns a greeting with the current time.
 //
 //ftl:verb
-func Echo(ctx context.Context, req EchoRequest) (EchoResponse, error) {
-	tresp, err := ftl.Call(ctx, time.Time, time.TimeRequest{})
+func Echo(ctx context.Context, req EchoRequest, tc time.TimeClient) (EchoResponse, error) {
+	tresp, err := tc(ctx, time.TimeRequest{})
 	if err != nil {
 		return EchoResponse{}, err
 	}

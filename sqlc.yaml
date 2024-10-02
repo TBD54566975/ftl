@@ -184,11 +184,11 @@ sql:
         out: "backend/controller/leases/dbleaser/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/identity/dal/internal/sql/queries.sql
+      - backend/controller/identity/internal/sql/queries.sql
     gen:
       go:
         <<: *gengo
-        out: "backend/controller/identity/dal/internal/sql"
+        out: "backend/controller/identity/internal/sql"
   - <<: *daldir
     queries:
       - backend/controller/encryption/internal/sql/queries.sql

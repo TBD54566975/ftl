@@ -30,6 +30,7 @@ const BuildStateBuilt BuildState = "Built"
 const BuildStateDeploying BuildState = "Deploying"
 const BuildStateDeployed BuildState = "Deployed"
 const BuildStateFailed BuildState = "Failed"
+const BuildStateTerminated BuildState = "Terminated"
 
 // moduleStatusPadding is the padding between module status entries
 // it accounts for the icon, the module name, and the padding between them
@@ -93,7 +94,7 @@ type terminalStatusManager struct {
 	write            *os.File
 	closed           atomic.Value[bool]
 	totalStatusLines int
-	statusLock       sync.RWMutex
+	statusLock       sync.Mutex
 	lines            []*terminalStatusLine
 	moduleLine       *terminalStatusLine
 	moduleStates     map[string]BuildState
@@ -117,7 +118,7 @@ func NewStatusManager(ctx context.Context) StatusManager {
 	if err != nil {
 		return &noopStatusManager{}
 	}
-	sm := &terminalStatusManager{statusLock: sync.RWMutex{}, moduleStates: map[string]BuildState{}, height: height, width: width, exitWait: sync.WaitGroup{}}
+	sm := &terminalStatusManager{statusLock: sync.Mutex{}, moduleStates: map[string]BuildState{}, height: height, width: width, exitWait: sync.WaitGroup{}}
 	sm.exitWait.Add(1)
 	sm.old = os.Stdout
 	sm.oldErr = os.Stderr
@@ -256,10 +257,6 @@ func IsANSITerminal(ctx context.Context) bool {
 	return ok
 }
 
-func (r *terminalStatusManager) gotoCoords(line int, col int) {
-	r.underlyingWrite(fmt.Sprintf("\033[%d;%dH", line, col))
-}
-
 func (r *terminalStatusManager) clearStatusMessages() {
 	if r.totalStatusLines == 0 {
 		return
@@ -330,7 +327,11 @@ func (r *terminalStatusManager) SetModuleState(module string, state BuildState) 
 	}
 	r.statusLock.Lock()
 	defer r.statusLock.Unlock()
-	r.moduleStates[module] = state
+	if state == BuildStateTerminated {
+		delete(r.moduleStates, module)
+	} else {
+		r.moduleStates[module] = state
+	}
 	if r.moduleLine != nil {
 		r.recalculateLines()
 	} else {
@@ -354,8 +355,8 @@ func (r *terminalStatusManager) Close() {
 }
 
 func (r *terminalStatusManager) writeLine(s string, last bool) {
-	r.statusLock.RLock()
-	defer r.statusLock.RUnlock()
+	r.statusLock.Lock()
+	defer r.statusLock.Unlock()
 	if !last {
 		s += "\n"
 	}
@@ -366,7 +367,9 @@ func (r *terminalStatusManager) writeLine(s string, last bool) {
 	}
 	r.clearStatusMessages()
 	r.underlyingWrite("\r" + s)
-	r.redrawStatus()
+	if !last {
+		r.redrawStatus()
+	}
 
 }
 func (r *terminalStatusManager) redrawStatus() {
@@ -471,7 +474,6 @@ type terminalStatusLine struct {
 func (r *terminalStatusLine) Close() {
 	r.manager.statusLock.Lock()
 	defer r.manager.statusLock.Unlock()
-
 	for i := range r.manager.lines {
 		if r.manager.lines[i] == r {
 			r.manager.lines = append(r.manager.lines[:i], r.manager.lines[i+1:]...)

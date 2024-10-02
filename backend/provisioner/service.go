@@ -1,11 +1,15 @@
 package provisioner
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net/url"
+	"os"
 
 	"connectrpc.com/connect"
+	"github.com/BurntSushi/toml"
 	"github.com/alecthomas/kong"
 	"golang.org/x/sync/errgroup"
 
@@ -19,18 +23,20 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
+// CommonProvisionerConfig is shared config between the production controller and development server.
+type CommonProvisionerConfig struct {
+	PluginConfigFile *os.File `name:"provisioner-plugin-config" help:"Path to the plugin configuration file." env:"FTL_PROVISIONER_PLUGIN_CONFIG_FILE"`
+}
+
 type Config struct {
 	Bind               *url.URL `help:"Socket to bind to." default:"http://127.0.0.1:8893" env:"FTL_PROVISIONER_BIND"`
-	Advertise          *url.URL `help:"Endpoint the Provisioner should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_PROVISIONER_ADVERTISE"`
 	ControllerEndpoint *url.URL `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	CommonProvisionerConfig
 }
 
 func (c *Config) SetDefaults() {
 	if err := kong.ApplyDefaults(c); err != nil {
 		panic(err)
-	}
-	if c.Advertise == nil {
-		c.Advertise = c.Bind
 	}
 }
 
@@ -38,15 +44,21 @@ type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
 	// TODO: Store in a resource graph
 	currentResources map[string][]*provisioner.Resource
-	registry         deployment.ProvisionerRegistry
+	registry         *deployment.ProvisionerRegistry
 }
 
 var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
 
-func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, devel bool) (*Service, error) {
+func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, pluginConfig *deployment.ProvisionerPluginConfig) (*Service, error) {
+	registry, err := deployment.NewProvisionerRegistry(ctx, pluginConfig)
+	if err != nil {
+		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
+	}
+
 	return &Service{
 		controllerClient: controllerClient,
 		currentResources: map[string][]*provisioner.Resource{},
+		registry:         registry,
 	}, nil
 }
 
@@ -126,12 +138,20 @@ func Start(ctx context.Context, config Config, devel bool) error {
 
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
-	svc, err := New(ctx, config, controllerClient, devel)
+	pluginConfig := &deployment.ProvisionerPluginConfig{Default: "noop"}
+	if config.PluginConfigFile != nil {
+		pc, err := readPluginConfig(config.PluginConfigFile)
+		if err != nil {
+			return fmt.Errorf("error reading plugin configuration: %w", err)
+		}
+		pluginConfig = pc
+	}
+
+	svc, err := New(ctx, config, controllerClient, pluginConfig)
 	if err != nil {
 		return err
 	}
 	logger.Debugf("Provisioner available at: %s", config.Bind)
-	logger.Debugf("Advertising as %s", config.Advertise)
 	logger.Debugf("Using FTL endpoint: %s", config.ControllerEndpoint)
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -145,6 +165,18 @@ func Start(ctx context.Context, config Config, devel bool) error {
 		return fmt.Errorf("error waiting for rpc.Serve: %w", err)
 	}
 	return nil
+}
+
+func readPluginConfig(file *os.File) (*deployment.ProvisionerPluginConfig, error) {
+	result := deployment.ProvisionerPluginConfig{}
+	bytes, err := io.ReadAll(bufio.NewReader(file))
+	if err != nil {
+		return nil, fmt.Errorf("error reading plugin configuration: %w", err)
+	}
+	if err := toml.Unmarshal(bytes, &result); err != nil {
+		return nil, fmt.Errorf("error parsing plugin configuration: %w", err)
+	}
+	return &result, nil
 }
 
 // Deployment client calls to ftl-controller

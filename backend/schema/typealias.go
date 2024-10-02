@@ -62,7 +62,7 @@ func (t *TypeAlias) IsExported() bool { return t.Export }
 
 func TypeAliasFromProto(s *schemapb.TypeAlias) *TypeAlias {
 	return &TypeAlias{
-		Pos:      posFromProto(s.Pos),
+		Pos:      PosFromProto(s.Pos),
 		Name:     s.Name,
 		Export:   s.Export,
 		Comments: s.Comments,
