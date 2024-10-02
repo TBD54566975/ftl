@@ -29,3 +29,4 @@ configMapGenerator:
   - ./schema/20240917015216_add_ingress_event_type.sql
   - ./schema/20240917062716_change_deployments_index.sql
   - ./schema/20240919001309_create_identity_keys_table.sql
+  - ./schema/20240926231955_timeline_async_call_event_types.sql

@@ -271,8 +271,6 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		runnerScaling:           runnerScaling,
 	}
 	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, conn)
-	svc.cronJobs = cronSvc
 
 	pubSub := pubsub.New(conn, encryption, svc.tasks, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
@@ -283,6 +281,9 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
+
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, timelineSvc, conn)
+	svc.cronJobs = cronSvc
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 

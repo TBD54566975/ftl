@@ -6,6 +6,7 @@ import type { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/co
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import TimelineEventList from './TimelineEventList.tsx'
 import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
+import { TimelineCronScheduledDetails } from './details/TimelineCronScheduledDetails.tsx'
 import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCreatedDetails.tsx'
 import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUpdatedDetails.tsx'
 import { TimelineIngressDetails } from './details/TimelineIngressDetails.tsx'
@@ -60,6 +61,9 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
         break
       case 'ingress':
         openPanel(<TimelineIngressDetails event={entry} />, handlePanelClosed)
+        break
+      case 'cronScheduled':
+        openPanel(<TimelineCronScheduledDetails event={entry} />, handlePanelClosed)
         break
       default:
         break

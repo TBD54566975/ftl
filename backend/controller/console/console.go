@@ -316,6 +316,8 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter
 					eventTypes = append(eventTypes, timeline.EventTypeDeploymentUpdated)
 				case pbconsole.EventType_EVENT_TYPE_INGRESS:
 					eventTypes = append(eventTypes, timeline.EventTypeIngress)
+				case pbconsole.EventType_EVENT_TYPE_CRON_SCHEDULED:
+					eventTypes = append(eventTypes, timeline.EventTypeCronScheduled)
 				default:
 					return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown event type %v", eventType))
 				}
@@ -488,6 +490,26 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 					Response:       string(event.Response),
 					ResponseHeader: string(event.ResponseHeader),
 					Error:          event.Error.Ptr(),
+				},
+			},
+		}
+
+	case *timeline.CronScheduledEvent:
+		return &pbconsole.Event{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.Event_CronScheduled{
+				CronScheduled: &pbconsole.CronScheduledEvent{
+					DeploymentKey: event.DeploymentKey.String(),
+					VerbRef: &schemapb.Ref{
+						Module: event.Verb.Module,
+						Name:   event.Verb.Name,
+					},
+					TimeStamp:   timestamppb.New(event.Time),
+					Duration:    durationpb.New(event.Duration),
+					ScheduledAt: timestamppb.New(event.ScheduledAt),
+					Schedule:    event.Schedule,
+					Error:       event.Error.Ptr(),
 				},
 			},
 		}

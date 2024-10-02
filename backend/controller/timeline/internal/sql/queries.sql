@@ -80,6 +80,24 @@ VALUES (
   sqlc.arg('payload')
 );
 
+-- name: InsertTimelineCronScheduledEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
+  sqlc.arg('time_stamp')::TIMESTAMPTZ,
+  'cron_scheduled',
+  sqlc.arg('module')::TEXT,
+  sqlc.arg('verb')::TEXT,
+  sqlc.arg('payload')
+);
+
 -- name: DeleteOldTimelineEvents :one
 WITH deleted AS (
     DELETE FROM timeline

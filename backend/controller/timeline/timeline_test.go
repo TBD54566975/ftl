@@ -141,6 +141,29 @@ func TestTimeline(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	})
 
+	cronEvent := &CronScheduledEvent{
+		CronScheduled: CronScheduled{
+			DeploymentKey: deploymentKey,
+			Verb:          schema.Ref{Module: "time", Name: "time"},
+			Time:          time.Now().Round(time.Millisecond),
+			ScheduledAt:   time.Now().Add(time.Minute).Round(time.Millisecond).UTC(),
+			Schedule:      "* * * * *",
+			Error:         optional.None[string](),
+		},
+	}
+
+	t.Run("InsertCronScheduledEvent", func(t *testing.T) {
+		timeline.EnqueueEvent(ctx, &CronScheduled{
+			DeploymentKey: cronEvent.DeploymentKey,
+			Verb:          cronEvent.Verb,
+			Time:          cronEvent.Time,
+			ScheduledAt:   cronEvent.ScheduledAt,
+			Schedule:      cronEvent.Schedule,
+			Error:         cronEvent.Error,
+		})
+		time.Sleep(200 * time.Millisecond)
+	})
+
 	expectedDeploymentUpdatedEvent := &DeploymentUpdatedEvent{
 		DeploymentKey: deploymentKey,
 		MinReplicas:   1,
@@ -156,13 +179,13 @@ func TestTimeline(t *testing.T) {
 		t.Run("NoFilters", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000)
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent}, events)
+			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, FilterDeployments(deploymentKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent}, events)
+			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {

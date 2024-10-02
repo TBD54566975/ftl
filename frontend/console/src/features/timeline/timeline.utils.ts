@@ -6,6 +6,7 @@ const eventBackgroundColorMap: Record<string, string> = {
   ingress: 'bg-sky-400',
   deploymentCreated: 'bg-green-500 dark:bg-green-300',
   deploymentUpdated: 'bg-green-500 dark:bg-green-300',
+  cronScheduled: 'bg-blue-500',
   '': 'bg-gray-500',
 }
 
@@ -17,6 +18,7 @@ const eventTextColorMap: Record<string, string> = {
   ingress: 'text-sky-400',
   deploymentCreated: 'text-green-500 dark:text-green-300',
   deploymentUpdated: 'text-green-500 dark:text-green-300',
+  cronScheduled: 'text-blue-500',
   '': 'text-gray-500',
 }
 
