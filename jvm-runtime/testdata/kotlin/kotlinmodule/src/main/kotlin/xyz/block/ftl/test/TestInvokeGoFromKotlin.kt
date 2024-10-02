@@ -6,6 +6,9 @@ import xyz.block.ftl.Export
 import xyz.block.ftl.Verb
 import java.time.ZonedDateTime
 
+/**
+ * KOTLIN COMMENT
+ */
 @Export
 @Verb
 fun emptyVerb(emptyVerbClient: EmptyVerbClient) {

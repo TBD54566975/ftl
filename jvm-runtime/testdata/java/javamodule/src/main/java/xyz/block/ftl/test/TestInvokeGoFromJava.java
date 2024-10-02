@@ -61,6 +61,9 @@ public class TestInvokeGoFromJava {
         return sourceVerbClient.call();
     }
 
+    /**
+     * JAVA COMMENT
+     */
     @Export
     @Verb
     public void errorEmptyVerb(ErrorEmptyVerbClient client) {
