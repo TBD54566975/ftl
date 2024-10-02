@@ -15,9 +15,8 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
-	"github.com/TBD54566975/ftl/backend/provisioner/deployment"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -43,21 +42,21 @@ func (c *Config) SetDefaults() {
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
 	// TODO: Store in a resource graph
-	currentResources map[string][]*provisioner.Resource
-	registry         *deployment.ProvisionerRegistry
+	currentResources map[string][]*proto.Resource
+	registry         *ProvisionerRegistry
 }
 
 var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
 
-func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, pluginConfig *deployment.ProvisionerPluginConfig) (*Service, error) {
-	registry, err := deployment.NewProvisionerRegistry(ctx, pluginConfig)
+func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, pluginConfig *ProvisionerPluginConfig) (*Service, error) {
+	registry, err := NewProvisionerRegistry(ctx, pluginConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
 	}
 
 	return &Service{
 		controllerClient: controllerClient,
-		currentResources: map[string][]*provisioner.Resource{},
+		currentResources: map[string][]*proto.Resource{},
 		registry:         registry,
 	}, nil
 }
@@ -75,7 +74,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 
 	existingResources := s.currentResources[moduleName]
-	desiredResources, err := deployment.ExtractResources(module)
+	desiredResources, err := ExtractResources(module)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting resources from schema: %w", err)
 	}
@@ -104,8 +103,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	return response, nil
 }
 
-func replaceOutputs(to []*provisioner.Resource, from []*provisioner.Resource) error {
-	byID := map[string]*provisioner.Resource{}
+func replaceOutputs(to []*proto.Resource, from []*proto.Resource) error {
+	byID := map[string]*proto.Resource{}
 	for _, r := range from {
 		byID[r.ResourceId] = r
 	}
@@ -114,12 +113,12 @@ func replaceOutputs(to []*provisioner.Resource, from []*provisioner.Resource) er
 		if existing == nil {
 			continue
 		}
-		if mysqlTo, ok := r.Resource.(*provisioner.Resource_Mysql); ok {
-			if myslqFrom, ok := existing.Resource.(*provisioner.Resource_Mysql); ok {
+		if mysqlTo, ok := r.Resource.(*proto.Resource_Mysql); ok {
+			if myslqFrom, ok := existing.Resource.(*proto.Resource_Mysql); ok {
 				mysqlTo.Mysql.Output = myslqFrom.Mysql.Output
 			}
-		} else if postgresTo, ok := r.Resource.(*provisioner.Resource_Postgres); ok {
-			if postgresFrom, ok := existing.Resource.(*provisioner.Resource_Postgres); ok {
+		} else if postgresTo, ok := r.Resource.(*proto.Resource_Postgres); ok {
+			if postgresFrom, ok := existing.Resource.(*proto.Resource_Postgres); ok {
 				postgresTo.Postgres.Output = postgresFrom.Postgres.Output
 			}
 		} else {
@@ -138,9 +137,9 @@ func Start(ctx context.Context, config Config, devel bool) error {
 
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
-	pluginConfig := &deployment.ProvisionerPluginConfig{Default: "noop"}
+	pluginConfig := &ProvisionerPluginConfig{Default: "noop"}
 	if devel {
-		pluginConfig = &deployment.ProvisionerPluginConfig{Default: "dev"}
+		pluginConfig = &ProvisionerPluginConfig{Default: "dev"}
 	}
 	if config.PluginConfigFile != nil {
 		pc, err := readPluginConfig(config.PluginConfigFile)
@@ -170,8 +169,8 @@ func Start(ctx context.Context, config Config, devel bool) error {
 	return nil
 }
 
-func readPluginConfig(file *os.File) (*deployment.ProvisionerPluginConfig, error) {
-	result := deployment.ProvisionerPluginConfig{}
+func readPluginConfig(file *os.File) (*ProvisionerPluginConfig, error) {
+	result := ProvisionerPluginConfig{}
 	bytes, err := io.ReadAll(bufio.NewReader(file))
 	if err != nil {
 		return nil, fmt.Errorf("error reading plugin configuration: %w", err)

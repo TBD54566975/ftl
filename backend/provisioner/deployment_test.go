@@ -1,4 +1,4 @@
-package deployment_test
+package provisioner_test
 
 import (
 	"context"
@@ -6,9 +6,9 @@ import (
 
 	"connectrpc.com/connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
-	"github.com/TBD54566975/ftl/backend/provisioner/deployment"
+	"github.com/TBD54566975/ftl/backend/provisioner"
 	"github.com/alecthomas/assert/v2"
 )
 
@@ -26,28 +26,28 @@ func (m *MockProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingReque
 }
 
 // Plan implements provisionerconnect.ProvisionerPluginServiceClient.
-func (m *MockProvisioner) Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
+func (m *MockProvisioner) Plan(context.Context, *connect.Request[proto.PlanRequest]) (*connect.Response[proto.PlanResponse], error) {
 	panic("unimplemented")
 }
 
 // Provision implements provisionerconnect.ProvisionerPluginServiceClient.
-func (m *MockProvisioner) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
-	return connect.NewResponse(&provisioner.ProvisionResponse{
+func (m *MockProvisioner) Provision(context.Context, *connect.Request[proto.ProvisionRequest]) (*connect.Response[proto.ProvisionResponse], error) {
+	return connect.NewResponse(&proto.ProvisionResponse{
 		ProvisioningToken: m.Token,
 	}), nil
 }
 
 // Status implements provisionerconnect.ProvisionerPluginServiceClient.
-func (m *MockProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
+func (m *MockProvisioner) Status(ctx context.Context, req *connect.Request[proto.StatusRequest]) (*connect.Response[proto.StatusResponse], error) {
 	m.stateCalls++
 	if m.stateCalls <= 1 {
-		return connect.NewResponse(&provisioner.StatusResponse{
-			Status: &provisioner.StatusResponse_Running{},
+		return connect.NewResponse(&proto.StatusResponse{
+			Status: &proto.StatusResponse_Running{},
 		}), nil
 	}
-	return connect.NewResponse(&provisioner.StatusResponse{
-		Status: &provisioner.StatusResponse_Success{
-			Success: &provisioner.StatusResponse_ProvisioningSuccess{
+	return connect.NewResponse(&proto.StatusResponse{
+		Status: &proto.StatusResponse_Success{
+			Success: &proto.StatusResponse_ProvisioningSuccess{
 				UpdatedResources: req.Msg.DesiredResources,
 			},
 		},
@@ -58,27 +58,27 @@ func TestDeployment_Progress(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("no tasks", func(t *testing.T) {
-		deployment := &deployment.Deployment{}
+		deployment := &provisioner.Deployment{}
 		progress, err := deployment.Progress(ctx)
 		assert.NoError(t, err)
 		assert.False(t, progress)
 	})
 
 	t.Run("progresses each provisioner in order", func(t *testing.T) {
-		registry := deployment.ProvisionerRegistry{}
-		registry.Register(&MockProvisioner{Token: "foo"}, deployment.ResourceTypePostgres)
-		registry.Register(&MockProvisioner{Token: "bar"}, deployment.ResourceTypeMysql)
+		registry := provisioner.ProvisionerRegistry{}
+		registry.Register(&MockProvisioner{Token: "foo"}, provisioner.ResourceTypePostgres)
+		registry.Register(&MockProvisioner{Token: "bar"}, provisioner.ResourceTypeMysql)
 
 		dpl := registry.CreateDeployment(
 			"test-module",
-			[]*provisioner.Resource{{
+			[]*proto.Resource{{
 				ResourceId: "a",
-				Resource:   &provisioner.Resource_Mysql{},
+				Resource:   &proto.Resource_Mysql{},
 			}, {
 				ResourceId: "b",
-				Resource:   &provisioner.Resource_Postgres{},
+				Resource:   &proto.Resource_Postgres{},
 			}},
-			[]*provisioner.Resource{},
+			[]*proto.Resource{},
 		)
 
 		assert.Equal(t, 2, len(dpl.State().Pending))

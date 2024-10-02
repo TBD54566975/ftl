@@ -1,4 +1,4 @@
-package deployment
+package provisioner
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/backend/provisioner/dev"
+	"github.com/TBD54566975/ftl/backend/provisioner/noop"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -76,10 +78,10 @@ func NewProvisionerRegistry(ctx context.Context, cfg *ProvisionerPluginConfig) (
 func provisionerIDToProvisioner(ctx context.Context, id string) (provisionerconnect.ProvisionerPluginServiceClient, error) {
 	switch id {
 	case "noop":
-		return &NoopProvisioner{}, nil
+		return &noop.Provisioner{}, nil
 	case "dev":
 		// TODO: Wire in settings from ftl serve
-		return NewDevProvisioner("postgres:15.8", 15432), nil
+		return dev.NewProvisioner("postgres:15.8", 15432), nil
 	default:
 		plugin, _, err := plugin.Spawn(
 			ctx,

@@ -1,4 +1,4 @@
-package deployment
+package dev
 
 import (
 	"context"
@@ -34,8 +34,8 @@ type step struct {
 	done     atomic.Bool
 }
 
-// DevProvisioner is a provisioner for running FTL locally
-type DevProvisioner struct {
+// Provisioner is a provisioner for running FTL locally
+type Provisioner struct {
 	running     map[string]*task
 	postgresDSN string
 
@@ -43,24 +43,24 @@ type DevProvisioner struct {
 	postgresPort  int
 }
 
-func NewDevProvisioner(postgresImage string, postgresPort int) *DevProvisioner {
-	return &DevProvisioner{
+func NewProvisioner(postgresImage string, postgresPort int) *Provisioner {
+	return &Provisioner{
 		postgresImage: postgresImage,
 		postgresPort:  postgresPort,
 	}
 }
 
-var _ provisionerconnect.ProvisionerPluginServiceClient = (*DevProvisioner)(nil)
+var _ provisionerconnect.ProvisionerPluginServiceClient = (*Provisioner)(nil)
 
-func (d *DevProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
+func (d *Provisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
 	return &connect.Response[ftlv1.PingResponse]{}, nil
 }
 
-func (d *DevProvisioner) Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
+func (d *Provisioner) Plan(context.Context, *connect.Request[provisioner.PlanRequest]) (*connect.Response[provisioner.PlanResponse], error) {
 	panic("unimplemented")
 }
 
-func (d *DevProvisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
+func (d *Provisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
 	if d.running == nil {
 		d.running = map[string]*task{}
 	}
@@ -99,7 +99,7 @@ func (d *DevProvisioner) Provision(ctx context.Context, req *connect.Request[pro
 	}), nil
 }
 
-func (d *DevProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
+func (d *Provisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
 	token := req.Msg.ProvisioningToken
 	task, ok := d.running[token]
 	if !ok {
@@ -139,7 +139,7 @@ func statusFailure(message string) (*connect.Response[provisioner.StatusResponse
 	}), nil
 }
 
-func (d *DevProvisioner) provisionPostgres(ctx context.Context, tr *provisioner.Resource_Postgres, module, id string, step *step) {
+func (d *Provisioner) provisionPostgres(ctx context.Context, tr *provisioner.Resource_Postgres, module, id string, step *step) {
 	logger := log.FromContext(ctx)
 	logger.Infof("provisioning postgres database: %s_%s", module, id)
 
