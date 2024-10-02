@@ -418,7 +418,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		e.reportBuildFailed(err)
 	} else {
 		if start, ok := e.startTime.Get(); ok {
-			logger.Infof("All modules deployed in %s, watching for changes...", time.Since(start).String())
+			logger.Infof("All modules deployed in %.2fs, watching for changes...", time.Since(start).Seconds())
 		} else {
 			logger.Infof("All modules deployed, watching for changes...")
 		}
