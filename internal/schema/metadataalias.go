@@ -14,9 +14,10 @@ import (
 type AliasKind int
 
 const (
-	AliasKindJSON AliasKind = iota
+	AliasKindJson AliasKind = iota //nolint
 )
 
+//protobuf:5
 type MetadataAlias struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
@@ -35,7 +36,7 @@ func (m *MetadataAlias) String() string {
 func (m *MetadataAlias) ToProto() protoreflect.ProtoMessage {
 	return &schemapb.MetadataAlias{
 		Pos:   posToProto(m.Pos),
-		Kind:  int64(m.Kind),
+		Kind:  schemapb.AliasKind(m.Kind),
 		Alias: m.Alias,
 	}
 }

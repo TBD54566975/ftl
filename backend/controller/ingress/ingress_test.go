@@ -119,7 +119,7 @@ func TestValidation(t *testing.T) {
 		{name: "IntAlias",
 			schema: `module test {
 			typealias IntAlias Int
-			data Test { intValue test.IntAlias } 
+			data Test { intValue test.IntAlias }
 			}`,
 			request: obj{"intValue": 10.0},
 		},
@@ -245,7 +245,7 @@ func TestResponseBodyForVerb(t *testing.T) {
 					&schema.Data{
 						Name: "Test",
 						Fields: []*schema.Field{
-							{Name: "message", Type: &schema.String{}, Metadata: []schema.Metadata{&schema.MetadataAlias{Kind: schema.AliasKindJSON, Alias: "msg"}}},
+							{Name: "message", Type: &schema.String{}, Metadata: []schema.Metadata{&schema.MetadataAlias{Kind: schema.AliasKindJson, Alias: "msg"}}},
 						},
 					},
 					jsonVerb,

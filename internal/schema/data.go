@@ -11,6 +11,8 @@ import (
 )
 
 // A Data structure.
+//
+//protobuf:1
 type Data struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

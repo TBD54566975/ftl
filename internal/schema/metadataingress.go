@@ -9,6 +9,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+//protobuf:2
 type MetadataIngress struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
@@ -76,6 +77,7 @@ type IngressPathComponent interface {
 	schemaIngressPathComponent()
 }
 
+//protobuf:1
 type IngressPathLiteral struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
@@ -92,6 +94,7 @@ func (l *IngressPathLiteral) ToProto() proto.Message {
 	return &schemapb.IngressPathLiteral{Text: l.Text}
 }
 
+//protobuf:2
 type IngressPathParameter struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

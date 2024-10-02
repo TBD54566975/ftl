@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
@@ -11,6 +12,24 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+type VerbStatus int
+
+const (
+	VerbStatusOffline VerbStatus = iota
+	VerbStatusStarting
+	VerbStatusOnline
+	VerbStatusStopping
+	VerbStatusStopped
+	VerbStatusError
+)
+
+type VerbRuntime struct {
+	CreateTime time.Time  `protobuf:"1"`
+	StartTime  time.Time  `protobuf:"2"`
+	Status     VerbStatus `protobuf:"3"`
+}
+
+//protobuf:2
 type Verb struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
@@ -20,6 +39,8 @@ type Verb struct {
 	Request  Type       `parser:"'(' @@ ')'" protobuf:"5"`
 	Response Type       `parser:"@@" protobuf:"6"`
 	Metadata []Metadata `parser:"@@*" protobuf:"7"`
+
+	Runtime *VerbRuntime `protobuf:"31634,optional" parser:""`
 }
 
 var _ Decl = (*Verb)(nil)

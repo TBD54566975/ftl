@@ -394,7 +394,7 @@ func TransformAliasedFields(sch *Schema, t Type, obj any, aliaser func(obj map[s
 
 func TransformFromAliasedFields(ref *Ref, sch *Schema, request map[string]any) (map[string]any, error) {
 	return request, TransformAliasedFields(sch, ref, request, func(obj map[string]any, field *Field) string {
-		if jsonAlias, ok := field.Alias(AliasKindJSON).Get(); ok {
+		if jsonAlias, ok := field.Alias(AliasKindJson).Get(); ok {
 			if _, ok := obj[field.Name]; !ok && obj[jsonAlias] != nil {
 				obj[field.Name] = obj[jsonAlias]
 				delete(obj, jsonAlias)
@@ -406,7 +406,7 @@ func TransformFromAliasedFields(ref *Ref, sch *Schema, request map[string]any) (
 
 func TransformToAliasedFields(ref *Ref, sch *Schema, request map[string]any) (map[string]any, error) {
 	return request, TransformAliasedFields(sch, ref, request, func(obj map[string]any, field *Field) string {
-		if jsonAlias, ok := field.Alias(AliasKindJSON).Get(); ok && field.Name != jsonAlias {
+		if jsonAlias, ok := field.Alias(AliasKindJson).Get(); ok && field.Name != jsonAlias {
 			obj[jsonAlias] = obj[field.Name]
 			delete(obj, field.Name)
 			return jsonAlias

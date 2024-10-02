@@ -9,6 +9,9 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+// MetadataCalls represents a metadata block with a list of calls.
+//
+//protobuf:1,optional
 type MetadataCalls struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

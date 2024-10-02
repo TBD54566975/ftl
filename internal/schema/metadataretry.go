@@ -23,6 +23,7 @@ const (
 	MaxBackoffLimit    = 24 * time.Hour
 )
 
+//protobuf:6
 type MetadataRetry struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
