@@ -1,11 +1,11 @@
 package xyz.block.ftl.test;
 
+import java.util.Map;
+
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
-
-import java.util.Map;
 
 public class Verbs {
 
@@ -20,6 +20,5 @@ public class Verbs {
     public Object anyOutput(String name) {
         return Map.of("name", name);
     }
-
 
 }
