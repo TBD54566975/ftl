@@ -27,6 +27,7 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.WildcardTypeName;
 
+import xyz.block.ftl.EnumHolder;
 import xyz.block.ftl.GeneratedRef;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
@@ -170,6 +171,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     // Value type isn't a Ref, so we make a wrapper class that implements our interface
                     TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(className(name))
                             .addAnnotation(getGeneratedRefAnnotation(module.getName(), name))
+                            .addAnnotation(AnnotationSpec.builder(EnumHolder.class).build())
                             .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
                     dataBuilder.addField(valueTypeName, "value", Modifier.PRIVATE, Modifier.FINAL);
                     dataBuilder.addMethod(MethodSpec.constructorBuilder()
@@ -201,6 +203,8 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
                 .addAnnotation(getGeneratedRefAnnotation(module.getName(), data.getName()))
                 .addModifiers(Modifier.PUBLIC);
+
+        // if data is part of a type enum, generate the interface methods for each variant
         DeclRef key = new DeclRef(module.getName(), data.getName());
         if (enumVariantInfoMap.containsKey(key)) {
             for (var enumVariantInfo : enumVariantInfoMap.get(key)) {
@@ -214,8 +218,8 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                         variantTypeName, variantValuesTypes, true);
             }
         }
-        MethodSpec.Builder allConstructor = MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC);
 
+        MethodSpec.Builder allConstructor = MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC);
         dataBuilder.addMethod(allConstructor.build());
         for (var param : data.getTypeParametersList()) {
             dataBuilder.addTypeVariable(TypeVariableName.get(param.getName()));

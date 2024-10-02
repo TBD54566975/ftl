@@ -531,8 +531,8 @@ public class ModuleBuilder {
                     .setExport(export)
                     .build();
             decls.put(name, Decl.newBuilder().setEnum(merged).build());
-            if (export && !existing.getEnum().getExport()) {
-                // If the existing enum was not exported, we need to update variants too
+            if (export) {
+                // Need to update export on variants too
                 for (var childDecl : merged.getVariantsList()) {
                     if (childDecl.getValue().hasTypeValue() && childDecl.getValue().getTypeValue().getValue().hasRef()) {
                         var ref = childDecl.getValue().getTypeValue().getValue().getRef();
