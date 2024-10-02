@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1.language;
+
+import "xyz/block/ftl/v1/schema/schema.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language;languagepb";
+option java_multiple_files = true;
+
+message Error {
+  enum ErrorLevel {
+    INFO = 0;
+    WARN = 1;
+    ERROR = 2;
+  }
+
+  string msg = 1;
+  schema.Position pos = 2;
+  int64 endColumn = 3;
+  ErrorLevel level = 4;
+}
+
+message ErrorList {
+  repeated Error errors = 1;
+}

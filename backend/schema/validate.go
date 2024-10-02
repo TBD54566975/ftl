@@ -14,6 +14,7 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/errors"
 	dc "github.com/TBD54566975/ftl/internal/reflect"
@@ -530,7 +531,14 @@ func dfsForDependencyCycle(imports map[string][]string, vertexStates map[depende
 }
 
 func errorf(pos interface{ Position() Position }, format string, args ...interface{}) error {
-	return Errorf(pos.Position(), pos.Position().Column, format, args...)
+	p := pos.Position()
+	errPos := builderrors.Position{
+		Filename:    p.Filename,
+		Line:        p.Line,
+		StartColumn: p.Column,
+		EndColumn:   p.Column,
+	}
+	return builderrors.Errorf(errPos, format, args...)
 }
 
 func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error) {

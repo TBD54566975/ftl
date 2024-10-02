@@ -8,7 +8,7 @@ import (
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 
-	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 )
 
 type DiagnosticCategory string
@@ -19,14 +19,14 @@ const (
 	Error DiagnosticCategory = "error"
 )
 
-func (e DiagnosticCategory) ToErrorLevel() schema.ErrorLevel {
+func (e DiagnosticCategory) ToErrorLevel() builderrors.ErrorLevel {
 	switch e {
 	case Info:
-		return schema.INFO
+		return builderrors.INFO
 	case Warn:
-		return schema.WARN
+		return builderrors.WARN
 	case Error:
-		return schema.ERROR
+		return builderrors.ERROR
 	default:
 		panic(fmt.Sprintf("unknown diagnostic category %q", e))
 	}
