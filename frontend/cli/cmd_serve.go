@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/url"
 	"os"
 	osExec "os/exec" //nolint:depguard
@@ -22,7 +21,6 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
-	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
@@ -31,7 +29,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
-	"github.com/TBD54566975/ftl/internal/container"
+	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -55,7 +53,6 @@ type serveCmd struct {
 	provisioner.CommonProvisionerConfig
 }
 
-const ftlContainerName = "ftl-db-1"
 const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
 func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
@@ -108,7 +105,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		return fmt.Errorf("observability init failed: %w", err)
 	}
 	// Bring up the DB and DAL.
-	dsn, err := s.setupDB(ctx, s.DatabaseImage)
+	dsn, err := dev.SetupDB(ctx, s.DatabaseImage, s.DBPort, s.Recreate)
 	if err != nil {
 		return err
 	}
@@ -356,65 +353,6 @@ func isServeRunning(logger *log.Logger) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func (s *serveCmd) setupDB(ctx context.Context, image string) (string, error) {
-	logger := log.FromContext(ctx)
-
-	recreate := s.Recreate
-	port := s.DBPort
-
-	exists, err := container.DoesExist(ctx, ftlContainerName, optional.Some(image))
-	if err != nil {
-		return "", err
-	}
-
-	if !exists {
-		logger.Debugf("Creating docker container '%s' for postgres db", ftlContainerName)
-
-		// check if port s.DBPort is already in use
-		if l, err := net.Listen("tcp", fmt.Sprintf(":%d", s.DBPort)); err != nil {
-			return "", fmt.Errorf("port %d is already in use", s.DBPort)
-		} else if err = l.Close(); err != nil {
-			return "", fmt.Errorf("failed to close listener: %w", err)
-		}
-
-		err = container.RunDB(ctx, ftlContainerName, s.DBPort, image)
-		if err != nil {
-			return "", err
-		}
-
-		recreate = true
-	} else {
-		// Start the existing container
-		err = container.Start(ctx, ftlContainerName)
-		if err != nil {
-			return "", err
-		}
-
-		// Grab the port from the existing container
-		port, err = container.GetContainerPort(ctx, ftlContainerName, 5432)
-		if err != nil {
-			return "", err
-		}
-
-		logger.Debugf("Reusing existing docker container %s on port %d for postgres db", ftlContainerName, port)
-	}
-
-	err = container.PollContainerHealth(ctx, ftlContainerName, 10*time.Second)
-	if err != nil {
-		return "", fmt.Errorf("db container failed to be healthy: %w", err)
-	}
-
-	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%d/ftl?sslmode=disable", port)
-	logger.Debugf("Postgres DSN: %s", dsn)
-
-	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
-	if err != nil {
-		return "", err
-	}
-
-	return dsn, nil
 }
 
 // waitForControllerOnline polls the controller service until it is online.
