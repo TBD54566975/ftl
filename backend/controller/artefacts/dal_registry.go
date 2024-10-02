@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts/internal/sql"
+	"github.com/TBD54566975/ftl/internal/model"
 	"io"
 
 	sets "github.com/deckarep/golang-set/v2"
@@ -47,7 +48,7 @@ func (s *Service) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (
 		return nil, nil, libdal.TranslatePGError(err)
 	}
 	keys = slices.Map(have, func(in sql.GetArtefactDigestsRow) ArtefactKey {
-		return ArtefactKey{ID: in.ID, Digest: sha256.FromBytes(in.Digest)}
+		return ArtefactKey{id: in.ID, Digest: sha256.FromBytes(in.Digest)}
 	})
 	haveStr := slices.Map(keys, func(in ArtefactKey) sha256.SHA256 {
 		return in.Digest
@@ -72,6 +73,33 @@ func (s *Service) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCl
 		return nil, fmt.Errorf("no artefact found with digest: %s", digest)
 	}
 	return &dalArtefactStream{db: s.db, id: rows[0].ID}, nil
+}
+
+func (s *Service) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
+	rows, err := s.db.GetDeploymentArtefacts(ctx, releaseID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get release artefacts: %w", libdal.TranslatePGError(err))
+	}
+	return slices.Map(rows, func(row sql.GetDeploymentArtefactsRow) ReleaseArtefact {
+		return ReleaseArtefact{
+			Artefact:   ArtefactKey{Digest: sha256.FromBytes(row.Digest), id: row.ID},
+			Path:       row.Path,
+			Executable: row.Executable,
+		}
+	}), nil
+}
+
+func (s *Service) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
+	err := s.db.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
+		Key:        key,
+		Digest:     ra.Artefact.Digest[:],
+		Executable: ra.Executable,
+		Path:       ra.Path,
+	})
+	if err != nil {
+		return libdal.TranslatePGError(err)
+	}
+	return nil
 }
 
 type dalArtefactStream struct {

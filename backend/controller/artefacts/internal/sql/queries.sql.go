@@ -7,9 +7,33 @@ package sql
 
 import (
 	"context"
+	"time"
 
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/lib/pq"
 )
+
+const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
+INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
+VALUES ((SELECT id FROM deployments WHERE key = $1::deployment_key), (SELECT id FROM artefacts WHERE digest = $2::bytea), $3, $4)
+`
+
+type AssociateArtefactWithDeploymentParams struct {
+	Key        model.DeploymentKey
+	Digest     []byte
+	Executable bool
+	Path       string
+}
+
+func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error {
+	_, err := q.db.ExecContext(ctx, associateArtefactWithDeployment,
+		arg.Key,
+		arg.Digest,
+		arg.Executable,
+		arg.Path,
+	)
+	return err
+}
 
 const createArtefact = `-- name: CreateArtefact :one
 INSERT INTO artefacts (digest, content)
@@ -62,6 +86,53 @@ func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]G
 	for rows.Next() {
 		var i GetArtefactDigestsRow
 		if err := rows.Scan(&i.ID, &i.Digest); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getDeploymentArtefacts = `-- name: GetDeploymentArtefacts :many
+SELECT da.created_at, artefact_id AS id, executable, path, digest, executable
+FROM deployment_artefacts da
+         INNER JOIN artefacts ON artefacts.id = da.artefact_id
+WHERE deployment_id = $1
+`
+
+type GetDeploymentArtefactsRow struct {
+	CreatedAt    time.Time
+	ID           int64
+	Executable   bool
+	Path         string
+	Digest       []byte
+	Executable_2 bool
+}
+
+// Get all artefacts matching the given digests.
+func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getDeploymentArtefacts, deploymentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetDeploymentArtefactsRow
+	for rows.Next() {
+		var i GetDeploymentArtefactsRow
+		if err := rows.Scan(
+			&i.CreatedAt,
+			&i.ID,
+			&i.Executable,
+			&i.Path,
+			&i.Digest,
+			&i.Executable_2,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

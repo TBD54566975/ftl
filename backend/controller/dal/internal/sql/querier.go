@@ -19,7 +19,6 @@ type Querier interface {
 	// Reserve a pending async call for execution, returning the associated lease
 	// reservation key and accompanying metadata.
 	AcquireAsyncCall(ctx context.Context, ttl sqltypes.Duration) (AcquireAsyncCallRow, error)
-	AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error
 	AsyncCallQueueDepth(ctx context.Context) (int64, error)
 	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
@@ -43,8 +42,6 @@ type Querier interface {
 	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
 	GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
-	// Get all artefacts matching the given digests.
-	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
 	// Get all deployments that have artefacts matching the given digests.
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, schema []byte, count int64) ([]GetDeploymentsWithArtefactsRow, error)

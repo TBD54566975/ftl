@@ -105,28 +105,6 @@ func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl sqltypes.Duration) (
 	return i, err
 }
 
-const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
-INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
-VALUES ((SELECT id FROM deployments WHERE key = $1::deployment_key), $2, $3, $4)
-`
-
-type AssociateArtefactWithDeploymentParams struct {
-	Key        model.DeploymentKey
-	ArtefactID int64
-	Executable bool
-	Path       string
-}
-
-func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error {
-	_, err := q.db.ExecContext(ctx, associateArtefactWithDeployment,
-		arg.Key,
-		arg.ArtefactID,
-		arg.Executable,
-		arg.Path,
-	)
-	return err
-}
-
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
     SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
@@ -722,53 +700,6 @@ func (q *Queries) GetDeployment(ctx context.Context, key model.DeploymentKey) (G
 		&i.MinReplicas,
 	)
 	return i, err
-}
-
-const getDeploymentArtefacts = `-- name: GetDeploymentArtefacts :many
-SELECT da.created_at, artefact_id AS id, executable, path, digest, executable
-FROM deployment_artefacts da
-         INNER JOIN artefacts ON artefacts.id = da.artefact_id
-WHERE deployment_id = $1
-`
-
-type GetDeploymentArtefactsRow struct {
-	CreatedAt    time.Time
-	ID           int64
-	Executable   bool
-	Path         string
-	Digest       []byte
-	Executable_2 bool
-}
-
-// Get all artefacts matching the given digests.
-func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getDeploymentArtefacts, deploymentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDeploymentArtefactsRow
-	for rows.Next() {
-		var i GetDeploymentArtefactsRow
-		if err := rows.Scan(
-			&i.CreatedAt,
-			&i.ID,
-			&i.Executable,
-			&i.Path,
-			&i.Digest,
-			&i.Executable_2,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many

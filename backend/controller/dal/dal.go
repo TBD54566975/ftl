@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	aregistry "github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -58,7 +58,7 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 		leaser:     dbleaser.NewDatabaseLeaser(conn),
 		db:         db,
 		encryption: encryption,
-		registry:   artefacts.New(ctx, conn),
+		registry:   aregistry.New(ctx, conn),
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
@@ -66,7 +66,7 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 				leaser:            dbleaser.NewDatabaseLeaser(h.Connection),
 				pubsub:            pubsub,
 				encryption:        d.encryption,
-				registry:          artefacts.New(ctx, h.Connection),
+				registry:          aregistry.New(ctx, h.Connection),
 				DeploymentChanges: d.DeploymentChanges,
 			}
 		}),
@@ -83,7 +83,7 @@ type DAL struct {
 	leaser     *dbleaser.DatabaseLeaser
 	pubsub     *pubsub.Service
 	encryption *encryption.Service
-	registry   *artefacts.Service
+	registry   *aregistry.Service
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *inprocesspubsub.Topic[DeploymentNotification]
@@ -279,9 +279,8 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	// Associate the artefacts with the deployment
 	for _, row := range keys {
 		artefact := artefactsByDigest[row.Digest]
-		err = tx.db.AssociateArtefactWithDeployment(ctx, dalsql.AssociateArtefactWithDeploymentParams{
-			Key:        deploymentKey,
-			ArtefactID: row.ID,
+		err = tx.registry.AddReleaseArtefact(ctx, deploymentKey, aregistry.ReleaseArtefact{
+			Artefact:   aregistry.ArtefactKey{Digest: row.Digest},
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 		})
@@ -686,22 +685,21 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymen
 		Key:      deployment.Deployment.Key,
 		Schema:   deployment.Deployment.Schema,
 	}
-	darts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
+	ras, err := d.registry.GetReleaseArtefacts(ctx, deployment.Deployment.ID)
 
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
-	out.Artefacts, err = slices.MapErr(darts, func(row dalsql.GetDeploymentArtefactsRow) (*model.Artefact, error) {
-		digest := sha256.FromBytes(row.Digest)
-		content, err := d.registry.Download(ctx, digest)
+	out.Artefacts, err = slices.MapErr(ras, func(ra aregistry.ReleaseArtefact) (*model.Artefact, error) {
+		content, err := d.registry.Download(ctx, ra.Artefact.Digest)
 		if err != nil {
 			return nil, fmt.Errorf("artefact download failed: %w", libdal.TranslatePGError(err))
 		}
 		return &model.Artefact{
-			Path:       row.Path,
-			Executable: row.Executable,
+			Path:       ra.Path,
+			Executable: ra.Executable,
 			Content:    content,
-			Digest:     digest,
+			Digest:     ra.Artefact.Digest,
 		}, nil
 	})
 	if err != nil {

@@ -18,17 +18,6 @@ WHERE id = ANY (@ids::BIGINT[]);
 INSERT INTO deployments (module_id, "schema", "key")
 VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, @key::deployment_key);
 
--- name: GetDeploymentArtefacts :many
--- Get all artefacts matching the given digests.
-SELECT da.created_at, artefact_id AS id, executable, path, digest, executable
-FROM deployment_artefacts da
-         INNER JOIN artefacts ON artefacts.id = da.artefact_id
-WHERE deployment_id = $1;
-
--- name: AssociateArtefactWithDeployment :exec
-INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
-VALUES ((SELECT id FROM deployments WHERE key = @key::deployment_key), $2, $3, $4);
-
 -- name: GetDeployment :one
 SELECT sqlc.embed(d), m.language, m.name AS module_name, d.min_replicas
 FROM deployments d
