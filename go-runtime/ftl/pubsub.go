@@ -3,9 +3,9 @@ package ftl
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // Topic declares a topic

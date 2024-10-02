@@ -2,9 +2,8 @@
 package pubsub
 
 import (
-    "context"
-
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
 type BroadcastClient func(context.Context) error
@@ -18,16 +17,16 @@ type ProcessPayinClient func(context.Context, PayinEvent) error
 func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
-            Broadcast,
+			Broadcast,
 		),
 		reflection.ProvideResourcesForVerb(
-            Payin,
+			Payin,
 		),
 		reflection.ProvideResourcesForVerb(
-            ProcessBroadcast,
+			ProcessBroadcast,
 		),
 		reflection.ProvideResourcesForVerb(
-            ProcessPayin,
+			ProcessPayin,
 		),
 	)
 }

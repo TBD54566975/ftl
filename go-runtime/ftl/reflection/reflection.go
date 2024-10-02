@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
 // Module returns the FTL module currently being executed.

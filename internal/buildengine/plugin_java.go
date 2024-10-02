@@ -13,15 +13,18 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
+	"github.com/alecthomas/kong"
 	"github.com/beevik/etree"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/watch"
 	"github.com/TBD54566975/ftl/jvm-runtime/java"
 	"github.com/TBD54566975/ftl/jvm-runtime/kotlin"
 )
@@ -39,8 +42,27 @@ func newJavaPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *javaP
 	}
 }
 
-func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
+func (p *javaPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
+	return []*kong.Flag{
+		{
+			Value: &kong.Value{
+				Name:       "group",
+				Help:       "The Maven groupId of the project.",
+				Tag:        &kong.Tag{},
+				HasDefault: true,
+				Default:    "com.example",
+			},
+		},
+	}, nil
+}
+
+func (p *javaPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Config, c moduleconfig.ModuleConfig, flags map[string]string) error {
 	logger := log.FromContext(ctx)
+	config := c.Abs()
+	group, ok := flags["group"]
+	if !ok {
+		return fmt.Errorf("group flag not set")
+	}
 
 	var source *zip.Reader
 	if config.Language == "java" {
@@ -66,7 +88,7 @@ func (p *javaPlugin) CreateModule(ctx context.Context, config moduleconfig.Modul
 	}
 
 	opts := []scaffolder.Option{scaffolder.Exclude("^go.mod$")}
-	if !includeBinDir {
+	if !projConfig.Hermit {
 		logger.Debugf("Excluding bin directory")
 		opts = append(opts, scaffolder.Exclude("^bin"))
 	}
@@ -169,7 +191,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
+func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx)
 	if config.Java.BuildTool == moduleconfig.JavaBuildToolMaven {
 		if err := setPOMProperties(ctx, config.Dir); err != nil {

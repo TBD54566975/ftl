@@ -3,11 +3,14 @@
 package ftl_test
 
 import (
+	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/alecthomas/assert/v2"
 
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	in "github.com/TBD54566975/ftl/internal/integration"
 
@@ -43,7 +46,7 @@ func TestVerbCalls(t *testing.T) {
 	)
 }
 
-func TestJVMToGoCall(t *testing.T) {
+func TestJVMCoreFunctionality(t *testing.T) {
 
 	exampleObject := TestObject{
 		IntField:    43,
@@ -144,6 +147,38 @@ func TestJVMToGoCall(t *testing.T) {
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectVerb", ftl.None[any]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
 
+	// Schema comments
+	tests = append(tests, JVMTest("schemaComments", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "emptyVerb", func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+			ok := false
+			for _, comment := range verb.GetComments() {
+				if strings.Contains(comment, "JAVA COMMENT") {
+					ok = true
+				}
+				if strings.Contains(comment, "KOTLIN COMMENT") {
+					ok = true
+				}
+			}
+			assert.True(t, ok, "comment not found")
+		})
+	})...)
+	tests = append(tests, JVMTest("optionalIntVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalFloatVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalBytesVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringArrayVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringMapVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalTimeVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalTestObjectVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("intVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("floatVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("bytesVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringArrayVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringMapVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("timeVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("testObjectVerb", verifyNonOptionalVerb)...)
+
 	in.Run(t,
 		in.WithJavaBuild(),
 		in.CopyModuleWithLanguage("gomodule", "go"),
@@ -180,6 +215,19 @@ func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTes
 		{
 			Name:   name + "-kotlin",
 			Action: testFunc("kotlinmodule"),
+		},
+	}
+}
+
+func JVMTest(name string, testFunc func(name string, module string) in.Action) []in.SubTest {
+	return []in.SubTest{
+		{
+			Name:   name + "-java",
+			Action: testFunc(name, "javamodule"),
+		},
+		{
+			Name:   name + "-kotlin",
+			Action: testFunc(name, "kotlinmodule"),
 		},
 	}
 }
@@ -227,4 +275,22 @@ type ParameterizedType[T any] struct {
 	Array  []T           `json:"array"`
 	Option ftl.Option[T] `json:"option"`
 	Map    map[string]T  `json:"map"`
+}
+
+func subTest(name string, test in.Action) in.Action {
+	return in.SubTests(in.SubTest{Name: name, Action: test})
+}
+
+func verifyOptionalVerb(name string, module string) in.Action {
+	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+		assert.True(t, verb.Response.GetOptional() != nil, "response not optional")
+		assert.True(t, verb.Request.GetOptional() != nil, "request not optional")
+	})
+}
+
+func verifyNonOptionalVerb(name string, module string) in.Action {
+	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+		assert.True(t, verb.Response.GetOptional() == nil, "response was optional")
+		assert.True(t, verb.Request.GetOptional() == nil, "request was optional")
+	})
 }

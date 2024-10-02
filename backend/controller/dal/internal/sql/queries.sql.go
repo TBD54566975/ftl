@@ -13,8 +13,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -105,28 +105,6 @@ func (q *Queries) AcquireAsyncCall(ctx context.Context, ttl sqltypes.Duration) (
 	return i, err
 }
 
-const associateArtefactWithDeployment = `-- name: AssociateArtefactWithDeployment :exec
-INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
-VALUES ((SELECT id FROM deployments WHERE key = $1::deployment_key), $2, $3, $4)
-`
-
-type AssociateArtefactWithDeploymentParams struct {
-	Key        model.DeploymentKey
-	ArtefactID int64
-	Executable bool
-	Path       string
-}
-
-func (q *Queries) AssociateArtefactWithDeployment(ctx context.Context, arg AssociateArtefactWithDeploymentParams) error {
-	_, err := q.db.ExecContext(ctx, associateArtefactWithDeployment,
-		arg.Key,
-		arg.ArtefactID,
-		arg.Executable,
-		arg.Path,
-	)
-	return err
-}
-
 const beginConsumingTopicEvent = `-- name: BeginConsumingTopicEvent :exec
 WITH event AS (
     SELECT id, created_at, key, topic_id, payload, caller, request_key, trace_context
@@ -159,22 +137,6 @@ WHERE name = $1::TEXT
 func (q *Queries) CompleteEventForSubscription(ctx context.Context, name string, module string) error {
 	_, err := q.db.ExecContext(ctx, completeEventForSubscription, name, module)
 	return err
-}
-
-const createArtefact = `-- name: CreateArtefact :one
-INSERT INTO artefacts (digest, content)
-VALUES ($1, $2)
-ON CONFLICT (digest)
-DO UPDATE SET digest = EXCLUDED.digest
-RETURNING id
-`
-
-// Create a new artefact and return the artefact ID.
-func (q *Queries) CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createArtefact, digest, content)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
 }
 
 const createCronJob = `-- name: CreateCronJob :exec
@@ -670,54 +632,6 @@ func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, 
 	return items, nil
 }
 
-const getArtefactContentRange = `-- name: GetArtefactContentRange :one
-SELECT SUBSTRING(a.content FROM $1 FOR $2)::BYTEA AS content
-FROM artefacts a
-WHERE a.id = $3
-`
-
-func (q *Queries) GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error) {
-	row := q.db.QueryRowContext(ctx, getArtefactContentRange, start, count, iD)
-	var content []byte
-	err := row.Scan(&content)
-	return content, err
-}
-
-const getArtefactDigests = `-- name: GetArtefactDigests :many
-SELECT id, digest
-FROM artefacts
-WHERE digest = ANY ($1::bytea[])
-`
-
-type GetArtefactDigestsRow struct {
-	ID     int64
-	Digest []byte
-}
-
-// Return the digests that exist in the database.
-func (q *Queries) GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getArtefactDigests, pq.Array(digests))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetArtefactDigestsRow
-	for rows.Next() {
-		var i GetArtefactDigestsRow
-		if err := rows.Scan(&i.ID, &i.Digest); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getCronJobByKey = `-- name: GetCronJobByKey :one
 SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
 FROM cron_jobs j
@@ -786,53 +700,6 @@ func (q *Queries) GetDeployment(ctx context.Context, key model.DeploymentKey) (G
 		&i.MinReplicas,
 	)
 	return i, err
-}
-
-const getDeploymentArtefacts = `-- name: GetDeploymentArtefacts :many
-SELECT da.created_at, artefact_id AS id, executable, path, digest, executable
-FROM deployment_artefacts da
-         INNER JOIN artefacts ON artefacts.id = da.artefact_id
-WHERE deployment_id = $1
-`
-
-type GetDeploymentArtefactsRow struct {
-	CreatedAt    time.Time
-	ID           int64
-	Executable   bool
-	Path         string
-	Digest       []byte
-	Executable_2 bool
-}
-
-// Get all artefacts matching the given digests.
-func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getDeploymentArtefacts, deploymentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetDeploymentArtefactsRow
-	for rows.Next() {
-		var i GetDeploymentArtefactsRow
-		if err := rows.Scan(
-			&i.CreatedAt,
-			&i.ID,
-			&i.Executable,
-			&i.Path,
-			&i.Digest,
-			&i.Executable_2,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many

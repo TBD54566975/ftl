@@ -2,11 +2,9 @@
 package parent
 
 import (
-    "context"
-
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-
-    ftlchild "ftl/parent/child"
+	"context"
+	ftlchild "ftl/parent/child"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
 type ChildVerbClient func(context.Context) (ftlchild.Resp, error)
@@ -20,10 +18,10 @@ func init() {
 			*new(ftlchild.Scalar),
 		),
 		reflection.ProvideResourcesForVerb(
-            ftlchild.ChildVerb,
+			ftlchild.ChildVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            Verb,
+			Verb,
 		),
 	)
 }

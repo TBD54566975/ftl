@@ -16,7 +16,7 @@ import (
 	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type AsyncCall struct {

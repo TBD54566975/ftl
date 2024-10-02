@@ -112,6 +112,7 @@ public class ModuleProcessor {
             TopicsBuildItem topicsBuildItem,
             VerbClientBuildItem verbClientBuildItem,
             List<TypeAliasBuildItem> typeAliasBuildItems,
+            DefaultOptionalBuildItem defaultOptionalBuildItem,
             List<SchemaContributorBuildItem> schemaContributorBuildItems) throws Exception {
         String moduleName = moduleNameBuildItem.getModuleName();
         Map<String, Iterable<String>> comments = readComments();
@@ -133,7 +134,8 @@ public class ModuleProcessor {
         }
 
         ModuleBuilder moduleBuilder = new ModuleBuilder(index.getComputingIndex(), moduleName, topicsBuildItem.getTopics(),
-                verbClientBuildItem.getVerbClients(), recorder, comments, existingRefs);
+                verbClientBuildItem.getVerbClients(), recorder, comments, existingRefs,
+                defaultOptionalBuildItem.isDefaultToOptional());
 
         for (var i : schemaContributorBuildItems) {
             i.getSchemaContributor().accept(moduleBuilder);

@@ -9,10 +9,11 @@ import (
 	"github.com/alecthomas/types/either"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // Build a module in the given directory given the schema and module config.
@@ -46,7 +47,7 @@ func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherR
 
 	var errs []error
 	for _, e := range result.Errors {
-		if e.Level == schema.WARN {
+		if e.Level == builderrors.WARN {
 			logger.Log(log.Entry{Level: log.Warn, Message: e.Error(), Error: e})
 			continue
 		}

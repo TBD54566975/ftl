@@ -2,13 +2,11 @@
 package one
 
 import (
-    "context"
-    stdtime "time"
-
-     "github.com/TBD54566975/ftl/go-runtime/ftl"
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-
-    ftlbuiltin "ftl/builtin"
+	"context"
+	ftlbuiltin "ftl/builtin"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	stdtime "time"
 )
 
 type BatchStringToTimeClient func(context.Context, []string) ([]stdtime.Time, error)
@@ -43,25 +41,25 @@ func init() {
 			*new(ValueEnum),
 		),
 		reflection.ProvideResourcesForVerb(
-            BatchStringToTime,
+			BatchStringToTime,
 		),
 		reflection.ProvideResourcesForVerb(
-            Http,
+			Http,
 		),
 		reflection.ProvideResourcesForVerb(
-            Nothing,
+			Nothing,
 		),
 		reflection.ProvideResourcesForVerb(
-            Sink,
+			Sink,
 		),
 		reflection.ProvideResourcesForVerb(
-            Source,
+			Source,
 		),
 		reflection.ProvideResourcesForVerb(
-            StringToTime,
+			StringToTime,
 		),
 		reflection.ProvideResourcesForVerb(
-            Verb,
+			Verb,
 		),
 	)
 }

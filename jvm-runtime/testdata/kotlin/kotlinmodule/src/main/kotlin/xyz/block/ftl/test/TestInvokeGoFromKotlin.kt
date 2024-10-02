@@ -6,6 +6,9 @@ import xyz.block.ftl.Export
 import xyz.block.ftl.Verb
 import java.time.ZonedDateTime
 
+/**
+ * KOTLIN COMMENT
+ */
 @Export
 @Verb
 fun emptyVerb(emptyVerbClient: EmptyVerbClient) {
@@ -117,55 +120,55 @@ fun testObjectOptionalFieldsVerb(
 // now the same again but with option return / input types
 @Export
 @Verb
-fun optionalIntVerb(payload: Long, client: OptionalIntVerbClient): Long {
+fun optionalIntVerb(payload: Long?, client: OptionalIntVerbClient): Long? {
   return client.call(payload)
 }
 
 @Export
 @Verb
-fun optionalFloatVerb(payload: Double, client: OptionalFloatVerbClient): Double {
+fun optionalFloatVerb(payload: Double?, client: OptionalFloatVerbClient): Double? {
   return client.call(payload)
 }
 
 @Export
 @Verb
-fun optionalStringVerb(payload: String, client: OptionalStringVerbClient): String {
+fun optionalStringVerb(payload: String?, client: OptionalStringVerbClient): String? {
   return client.call(payload)
 }
 
 @Export
 @Verb
-fun optionalBytesVerb(payload: ByteArray?, client: OptionalBytesVerbClient): ByteArray {
+fun optionalBytesVerb(payload: ByteArray?, client: OptionalBytesVerbClient): ByteArray? {
   return client.call(payload!!)
 }
 
 @Export
 @Verb
-fun optionalBoolVerb(payload: Boolean, client: OptionalBoolVerbClient): Boolean {
+fun optionalBoolVerb(payload: Boolean?, client: OptionalBoolVerbClient): Boolean? {
   return client.call(payload)
 }
 
 @Export
 @Verb
-fun optionalStringArrayVerb(payload: List<String>, client: OptionalStringArrayVerbClient): List<String> {
+fun optionalStringArrayVerb(payload: List<String>?, client: OptionalStringArrayVerbClient): List<String>? {
   return client.call(payload)
 }
 
 @Export
 @Verb
-fun optionalStringMapVerb(payload: Map<String, String>, client: OptionalStringMapVerbClient): Map<String, String> {
+fun optionalStringMapVerb(payload: Map<String, String>?, client: OptionalStringMapVerbClient): Map<String, String>? {
   return client.call(payload)
 }
 
 @Export
 @Verb
-fun optionalTimeVerb(instant: ZonedDateTime?, client: OptionalTimeVerbClient): ZonedDateTime {
+fun optionalTimeVerb(instant: ZonedDateTime?, client: OptionalTimeVerbClient): ZonedDateTime? {
   return client.call(instant!!)
 }
 
 @Export
 @Verb
-fun optionalTestObjectVerb(payload: TestObject?, client: OptionalTestObjectVerbClient): TestObject {
+fun optionalTestObjectVerb(payload: TestObject?, client: OptionalTestObjectVerbClient): TestObject? {
   return client.call(payload!!)
 }
 
@@ -174,7 +177,7 @@ fun optionalTestObjectVerb(payload: TestObject?, client: OptionalTestObjectVerbC
 fun optionalTestObjectOptionalFieldsVerb(
   payload: TestObjectOptionalFields?,
   client: OptionalTestObjectOptionalFieldsVerbClient
-): TestObjectOptionalFields {
+): TestObjectOptionalFields? {
   return client.call(payload!!)
 }
 

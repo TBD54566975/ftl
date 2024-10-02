@@ -24,15 +24,17 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl"
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/schema"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/reflect"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type MainWorkContext struct {
@@ -332,7 +334,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 	if err = writeSchemaErrors(config, result.Errors); err != nil {
 		return fmt.Errorf("failed to write schema errors: %w", err)
 	}
-	if schema.ContainsTerminalError(result.Errors) {
+	if builderrors.ContainsTerminalError(result.Errors) {
 		// Only bail if schema errors contain elements at level ERROR.
 		// If errors are only at levels below ERROR (e.g. INFO, WARN), the schema can still be used.
 		return nil
@@ -1186,11 +1188,8 @@ func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error 
 	return nil
 }
 
-func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []*schema.Error) error {
-	el := schema.ErrorList{
-		Errors: errors,
-	}
-	elBytes, err := proto.Marshal(el.ToProto())
+func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []builderrors.Error) error {
+	elBytes, err := proto.Marshal(languagepb.ErrorsToProto(errors))
 	if err != nil {
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}

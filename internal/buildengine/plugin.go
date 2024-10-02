@@ -7,22 +7,26 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/pubsub"
 	"google.golang.org/protobuf/proto"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/schema"
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 const BuildLockTimeout = time.Minute
 
 type BuildResult struct {
 	Name      string
-	Errors    []*schema.Error
+	Errors    []builderrors.Error
 	Schema    *schema.Module
 	StartTime time.Time
 }
@@ -58,9 +62,11 @@ type LanguagePlugin interface {
 	// The same topic must be returned each time this method is called
 	Updates() *pubsub.Topic[PluginEvent]
 
+	// GetCreateModuleFlags returns the flags that can be used to create a module for this language.
+	GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error)
+
 	// CreateModule creates a new module in the given directory with the given name and language.
-	// Replacements and groups are special cases until plugins can provide their parameters.
-	CreateModule(ctx context.Context, config moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error
+	CreateModule(ctx context.Context, projConfig projectconfig.Config, moduleConfig moduleconfig.ModuleConfig, flags map[string]string) error
 
 	// GetDependencies returns the dependencies of the module.
 	GetDependencies(ctx context.Context) ([]string, error)
@@ -114,7 +120,7 @@ type getDependenciesCommand struct {
 
 func (getDependenciesCommand) pluginCmd() {}
 
-type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error
+type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error
 
 // internalPlugin is used by languages that have not been split off into their own external plugins yet.
 // It has standard behaviours around building and watching files.
@@ -200,8 +206,8 @@ func (p *internalPlugin) getDependencies(ctx context.Context, d dependenciesFunc
 }
 
 func (p *internalPlugin) run(ctx context.Context) {
-	watcher := NewWatcher(p.config.Watch...)
-	watchChan := make(chan WatchEvent, 128)
+	watcher := watch.NewWatcher(p.config.Watch...)
+	watchChan := make(chan watch.WatchEvent, 128)
 
 	// State
 	// This is updated when given explicit build commands and used for automatic rebuilds
@@ -251,7 +257,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 			}
 		case event := <-watchChan:
 			switch event.(type) {
-			case WatchEventModuleChanged:
+			case watch.WatchEventModuleChanged:
 				// automatic rebuild
 
 				p.updates.Publish(AutoRebuildStartedEvent{Module: p.config.Module})
@@ -267,10 +273,10 @@ func (p *internalPlugin) run(ctx context.Context) {
 					Module: p.config.Module,
 					Result: either.LeftOf[error](result),
 				})
-			case WatchEventModuleAdded:
+			case watch.WatchEventModuleAdded:
 				// ignore
 
-			case WatchEventModuleRemoved:
+			case watch.WatchEventModuleRemoved:
 				// ignore
 			}
 
@@ -280,7 +286,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 	}
 }
 
-func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, watcher *Watcher, build buildFunc) (BuildResult, error) {
+func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, watcher *watch.Watcher, build buildFunc) (BuildResult, error) {
 	config := c.Abs()
 	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
@@ -302,17 +308,17 @@ func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.
 	if err != nil {
 		return BuildResult{}, err
 	}
-	errorList, err := loadProtoErrors(config)
+	errors, err := loadProtoErrors(config)
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("failed to read build errors for module: %w", err)
 	}
 
 	result := BuildResult{
-		Errors:    errorList.Errors,
+		Errors:    errors,
 		StartTime: startTime,
 	}
 
-	if schema.ContainsTerminalError(errorList.Errors) {
+	if builderrors.ContainsTerminalError(errors) {
 		// skip reading schema
 		return result, nil
 	}
@@ -325,19 +331,20 @@ func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.
 	return result, nil
 }
 
-func loadProtoErrors(config moduleconfig.AbsModuleConfig) (*schema.ErrorList, error) {
+func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]builderrors.Error, error) {
 	if _, err := os.Stat(config.Errors); errors.Is(err, os.ErrNotExist) {
-		return &schema.ErrorList{Errors: make([]*schema.Error, 0)}, nil
+		return nil, nil
 	}
 
 	content, err := os.ReadFile(config.Errors)
 	if err != nil {
 		return nil, fmt.Errorf("could not load build errors file: %w", err)
 	}
-	errorspb := &schemapb.ErrorList{}
+
+	errorspb := &languagepb.ErrorList{}
 	err = proto.Unmarshal(content, errorspb)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal build errors %w", err)
 	}
-	return schema.ErrorListFromProto(errorspb), nil
+	return languagepb.ErrorsFromProto(errorspb), nil
 }

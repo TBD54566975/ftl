@@ -25,6 +25,9 @@ type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Con
 
 func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) error {
 
+	if !readline.DefaultIsTerminal() {
+		return nil
+	}
 	l, err := readline.NewEx(&readline.Config{
 		Prompt:          interactivePrompt,
 		InterruptPrompt: "^C",

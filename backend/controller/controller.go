@@ -35,6 +35,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/console"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
@@ -54,7 +55,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/schema"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/cors"
@@ -66,6 +66,7 @@ import (
 	internalobservability "github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 	status "github.com/TBD54566975/ftl/internal/terminal"
@@ -221,6 +222,7 @@ type Service struct {
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
 	pubSub                  *pubsub.Service
+	registry                *artefacts.Service
 	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
@@ -274,6 +276,8 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 	pubSub := pubsub.New(conn, encryption, svc.tasks, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
+
+	svc.registry = artefacts.New(conn)
 
 	svc.dal = dal.New(ctx, conn, encryption, pubSub)
 
@@ -460,6 +464,10 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 		Routes: routes,
 	}
 	return connect.NewResponse(resp), nil
+}
+
+func (s *Service) GetCertification(context.Context, *connect.Request[ftlv1.GetCertificationRequest]) (*connect.Response[ftlv1.GetCertificationResponse], error) {
+	panic("implement me")
 }
 
 func (s *Service) StreamDeploymentLogs(ctx context.Context, stream *connect.ClientStream[ftlv1.StreamDeploymentLogsRequest]) (*connect.Response[ftlv1.StreamDeploymentLogsResponse], error) {
@@ -1094,7 +1102,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return nil, err
 	}
-	need, err := s.dal.GetMissingArtefacts(ctx, byteDigests)
+	_, need, err := s.registry.GetDigestsKeys(ctx, byteDigests)
 	if err != nil {
 		return nil, err
 	}
@@ -1105,7 +1113,7 @@ func (s *Service) GetArtefactDiffs(ctx context.Context, req *connect.Request[ftl
 
 func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1.UploadArtefactRequest]) (*connect.Response[ftlv1.UploadArtefactResponse], error) {
 	logger := log.FromContext(ctx)
-	digest, err := s.dal.CreateArtefact(ctx, req.Msg.Content)
+	digest, err := s.registry.Upload(ctx, artefacts.Artefact{Content: req.Msg.Content})
 	if err != nil {
 		return nil, err
 	}

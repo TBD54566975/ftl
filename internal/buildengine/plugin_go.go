@@ -13,15 +13,18 @@ import (
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
+	"github.com/alecthomas/kong"
 	"golang.org/x/exp/maps"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 type goPlugin struct {
@@ -43,20 +46,47 @@ type scaffoldingContext struct {
 	Replace   map[string]string
 }
 
-func (p *goPlugin) CreateModule(ctx context.Context, c moduleconfig.ModuleConfig, includeBinDir bool, replacements map[string]string, group string) error {
+func (p *goPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
+	return []*kong.Flag{
+		{
+			Value: &kong.Value{
+				Name: "replace",
+				Help: "Replace a module import path with a local path in the initialised FTL module.",
+				Tag: &kong.Tag{
+					Envs: []string{"FTL_INIT_GO_REPLACE"},
+				},
+			},
+			Short:       'r',
+			PlaceHolder: "OLD=NEW,...",
+		},
+	}, nil
+}
+
+func (p *goPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Config, c moduleconfig.ModuleConfig, flags map[string]string) error {
 	logger := log.FromContext(ctx)
 	config := c.Abs()
+
 	opts := []scaffolder.Option{
 		scaffolder.Exclude("^go.mod$"),
 	}
-	if !includeBinDir {
+	if !projConfig.Hermit {
 		logger.Debugf("Excluding bin directory")
 		opts = append(opts, scaffolder.Exclude("^bin"))
 	}
+
 	sctx := scaffoldingContext{
 		Name:      config.Module,
 		GoVersion: runtime.Version()[2:],
-		Replace:   replacements,
+		Replace:   map[string]string{},
+	}
+	if replaceStr, ok := flags["replace"]; ok {
+		for _, replace := range strings.Split(replaceStr, ",") {
+			parts := strings.Split(replace, "=")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid replace flag (format: A=B,C=D): %q", replace)
+			}
+			sctx.Replace[parts[0]] = parts[1]
+		}
 	}
 
 	// scaffold at one directory above the module directory
@@ -75,12 +105,12 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	return p.internalPlugin.getDependencies(ctx, func() ([]string, error) {
 		dependencies := map[string]bool{}
 		fset := token.NewFileSet()
-		err := WalkDir(p.config.Abs().Dir, func(path string, d fs.DirEntry) error {
+		err := watch.WalkDir(p.config.Abs().Dir, func(path string, d fs.DirEntry) error {
 			if !d.IsDir() {
 				return nil
 			}
 			if strings.HasPrefix(d.Name(), "_") || d.Name() == "testdata" {
-				return ErrSkip
+				return watch.ErrSkip
 			}
 			pkgs, err := parser.ParseDir(fset, path, nil, parser.ImportsOnly)
 			if pkgs == nil {
@@ -115,7 +145,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 	})
 }
 
-func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error {
+func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
 	if err := compile.Build(ctx, projectRoot, config.Dir, sch, transaction, buildEnv, devMode); err != nil {
 		return CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
 	}

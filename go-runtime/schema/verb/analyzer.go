@@ -3,17 +3,16 @@ package verb
 import (
 	"go/ast"
 	"go/types"
-	"slices"
 	"strings"
 	"unicode"
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/initialize"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
 type resourceType int
@@ -94,7 +93,7 @@ func Extract(pass *analysis.Pass, node *ast.FuncDecl, obj types.Object) optional
 	}
 	verb.Request = reqV
 	verb.Response = resV
-	sortMetadata(verb)
+
 	return optional.Some(verb)
 }
 
@@ -171,17 +170,4 @@ func getResourceRef(paramObj types.Object, pass *analysis.Pass, param *ast.Field
 		Name:   strcase.ToLowerCamel(paramObj.Name()),
 	}
 	return dbRef
-}
-
-func sortMetadata(verb *schema.Verb) {
-	for _, md := range verb.Metadata {
-		if calls, ok := md.(*schema.MetadataCalls); ok {
-			slices.SortFunc(calls.Calls, func(i, j *schema.Ref) int {
-				if i.Module != j.Module {
-					return strings.Compare(i.Module, j.Module)
-				}
-				return strings.Compare(i.Name, j.Name)
-			})
-		}
-	}
 }

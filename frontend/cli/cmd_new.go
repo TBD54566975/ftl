@@ -6,29 +6,78 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"strings"
 
-	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/alecthomas/kong"
+
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type newCmd struct {
 	Language string `arg:"" help:"Language of the module to create."`
 	Dir      string `arg:"" help:"Directory to initialize the module in."`
 	Name     string `arg:"" help:"Name of the FTL module to create underneath the base directory."`
-
-	// Go specific flags
-	Replace map[string]string `short:"r" help:"For Go, replace a module import path with a local path in the initialised FTL module." placeholder:"OLD=NEW,..." env:"FTL_INIT_GO_REPLACE"`
-
-	// Java/Kotlin specific flags
-	Group string `help:"For Java and Kotlin, the Maven groupId of the project." default:"com.example"`
 }
 
-func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
+// prepareNewCmd adds language specific flags to kong
+// This allows the new command to have good support for language specific flags like:
+// - help text (ftl new go --help)
+// - default values
+// - environment variable overrides
+func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) error {
+	if len(args) < 2 {
+		return nil
+	} else if args[0] != "new" {
+		return nil
+	}
+	language := args[1]
+	if len(language) == 0 {
+		return nil
+	}
+
+	newCmdNode, ok := slices.Find(k.Model.Children, func(n *kong.Node) bool {
+		return n.Name == "new"
+	})
+	if !ok {
+		return fmt.Errorf("could not find new command")
+	}
+
+	plugin, err := buildengine.PluginFromConfig(ctx, moduleconfig.ModuleConfig{
+		Language: language,
+	}, "")
+	if err != nil {
+		return fmt.Errorf("could not create plugin for %v: %w", language, err)
+	}
+
+	flags, err := plugin.GetCreateModuleFlags(ctx)
+	if err != nil {
+		return fmt.Errorf("could not get CLI flags for %v plugin: %w", language, err)
+	}
+
+	registry := kong.NewRegistry().RegisterDefaults()
+	for _, flag := range flags {
+		var str string
+		strPtr := &str
+		flag.Target = reflect.ValueOf(strPtr).Elem()
+		flag.Mapper = registry.ForValue(flag.Target)
+		flag.Group = &kong.Group{
+			Title: "Flags for " + strings.ToTitle(language[0:1]) + language[1:] + " modules",
+			Key:   "languageSpecificFlags",
+		}
+	}
+	newCmdNode.Flags = append(newCmdNode.Flags, flags...)
+	return nil
+}
+
+func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config) error {
 	name, path, err := validateModule(i.Dir, i.Name)
 	if err != nil {
 		return err
@@ -47,11 +96,21 @@ func (i newCmd) Run(ctx context.Context, config projectconfig.Config) error {
 		Language: i.Language,
 		Dir:      path,
 	}
+
+	flags := map[string]string{}
+	for _, f := range ktctx.Selected().Flags {
+		flagValue, ok := f.Target.Interface().(string)
+		if !ok {
+			return fmt.Errorf("expected %v value to be a string but it was %T", f.Name, f.Target.Interface())
+		}
+		flags[f.Name] = flagValue
+	}
+
 	plugin, err := buildengine.PluginFromConfig(ctx, moduleConfig, config.Root())
 	if err != nil {
 		return err
 	}
-	err = plugin.CreateModule(ctx, moduleConfig, config.Hermit, i.Replace, i.Group)
+	err = plugin.CreateModule(ctx, config, moduleConfig, flags)
 	if err != nil {
 		return err
 	}

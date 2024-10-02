@@ -36,7 +36,7 @@ sql:
             go_type:
               type: "optional.Option[sqltypes.Duration]"
           - db_type: "module_schema_pb"
-            go_type: "*github.com/TBD54566975/ftl/backend/schema.Module"
+            go_type: "*github.com/TBD54566975/ftl/internal/schema.Module"
           - db_type: "timestamptz"
             nullable: true
             go_type: "github.com/TBD54566975/ftl/backend/controller/sql/sqltypes.OptionalTime"
@@ -50,7 +50,7 @@ sql:
             go_type:
               type: "optional.Option[model.RunnerKey]"
           - db_type: "schema_ref"
-            go_type: "github.com/TBD54566975/ftl/backend/schema.RefKey"
+            go_type: "github.com/TBD54566975/ftl/internal/schema.RefKey"
           - db_type: "schema_ref"
             nullable: true
             go_type:
@@ -170,6 +170,13 @@ sql:
         out: "internal/configuration/dal/internal/sql"
   - <<: *daldir
     queries:
+      - backend/controller/artefacts/internal/sql/queries.sql
+    gen:
+      go:
+        <<: *gengo
+        out: "backend/controller/artefacts/internal/sql"
+  - <<: *daldir
+    queries:
       - backend/controller/leases/dbleaser/internal/sql/queries.sql
     gen:
       go:
@@ -177,11 +184,11 @@ sql:
         out: "backend/controller/leases/dbleaser/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/identity/dal/internal/sql/queries.sql
+      - backend/controller/identity/internal/sql/queries.sql
     gen:
       go:
         <<: *gengo
-        out: "backend/controller/identity/dal/internal/sql"
+        out: "backend/controller/identity/internal/sql"
   - <<: *daldir
     queries:
       - backend/controller/encryption/internal/sql/queries.sql

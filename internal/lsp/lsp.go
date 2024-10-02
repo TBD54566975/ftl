@@ -15,8 +15,8 @@ import (
 	glspServer "github.com/tliron/glsp/server"
 	"github.com/tliron/kutil/version"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/buildengine"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	ftlErrors "github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -70,7 +70,7 @@ func (s *Server) Run() error {
 	return nil
 }
 
-type errSet []*schema.Error
+type errSet []builderrors.Error
 
 // OnBuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
 // Also emit an FTL message to set the status.
@@ -107,7 +107,7 @@ func (s *Server) post(err error) {
 			continue
 		}
 
-		var ce *schema.Error
+		var ce builderrors.Error
 		var cbe buildengine.CompilerBuildError
 		if errors.As(e, &ce) {
 			filename := ce.Pos.Filename
@@ -135,28 +135,28 @@ func publishPositionalErrors(errByFilename map[string]errSet, s *Server) {
 			var severity protocol.DiagnosticSeverity
 
 			switch e.Level {
-			case schema.ERROR:
+			case builderrors.ERROR:
 				severity = protocol.DiagnosticSeverityError
-			case schema.WARN:
+			case builderrors.WARN:
 				severity = protocol.DiagnosticSeverityWarning
-			case schema.INFO:
+			case builderrors.INFO:
 				severity = protocol.DiagnosticSeverityInformation
 			}
 
 			// If the end column is not set, set it to the length of the word.
-			if e.EndColumn <= pp.Column {
-				length, err := getLineOrWordLength(filename, pp.Line, pp.Column, false)
+			if pp.EndColumn <= pp.StartColumn {
+				length, err := getLineOrWordLength(filename, pp.Line, pp.StartColumn, false)
 				if err != nil {
 					s.logger.Errorf(err, "Failed to get line or word length")
 					continue
 				}
-				e.EndColumn = pp.Column + length
+				pp.EndColumn = pp.StartColumn + length
 			}
 
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: protocol.Range{
-					Start: protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.Column - 1)},
-					End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(e.EndColumn - 1)},
+					Start: protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.StartColumn - 1)},
+					End:   protocol.Position{Line: uint32(pp.Line - 1), Character: uint32(pp.EndColumn - 1)},
 				},
 				Severity: &severity,
 				Source:   &sourceName,

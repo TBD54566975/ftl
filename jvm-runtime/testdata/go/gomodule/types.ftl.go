@@ -3,13 +3,11 @@ package gomodule
 
 import (
 	"context"
-	stdtime "time"
-
-	 "github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/tbd54566975/web5-go/dids/did"
+	stdtime "time"
 )
-
 
 type BoolVerbClient func(context.Context, bool) (bool, error)
 
@@ -71,88 +69,88 @@ func init() {
 	reflection.Register(
 		reflection.ExternalType(*new(did.DID)),
 		reflection.ProvideResourcesForVerb(
-            BoolVerb,
+			BoolVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            BytesVerb,
+			BytesVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            EmptyVerb,
+			EmptyVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            ErrorEmptyVerb,
+			ErrorEmptyVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            ExternalTypeVerb,
+			ExternalTypeVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            FloatVerb,
+			FloatVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            IntVerb,
+			IntVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            ObjectArrayVerb,
+			ObjectArrayVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            ObjectMapVerb,
+			ObjectMapVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalBoolVerb,
+			OptionalBoolVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalBytesVerb,
+			OptionalBytesVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalFloatVerb,
+			OptionalFloatVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalIntVerb,
+			OptionalIntVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalStringArrayVerb,
+			OptionalStringArrayVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalStringMapVerb,
+			OptionalStringMapVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalStringVerb,
+			OptionalStringVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalTestObjectOptionalFieldsVerb,
+			OptionalTestObjectOptionalFieldsVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalTestObjectVerb,
+			OptionalTestObjectVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            OptionalTimeVerb,
+			OptionalTimeVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            ParameterizedObjectVerb,
+			ParameterizedObjectVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            SinkVerb,
+			SinkVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            SourceVerb,
+			SourceVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            StringArrayVerb,
+			StringArrayVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            StringMapVerb,
+			StringMapVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            StringVerb,
+			StringVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            TestObjectOptionalFieldsVerb,
+			TestObjectOptionalFieldsVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            TestObjectVerb,
+			TestObjectVerb,
 		),
 		reflection.ProvideResourcesForVerb(
-            TimeVerb,
+			TimeVerb,
 		),
 	)
 }

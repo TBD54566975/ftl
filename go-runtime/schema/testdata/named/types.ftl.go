@@ -2,9 +2,8 @@
 package named
 
 import (
-    "context"
-
-    "github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
 type PingInternalUserClient func(context.Context, InternalUser) error
@@ -14,10 +13,10 @@ type PingUserClient func(context.Context, User) error
 func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
-            PingInternalUser,
+			PingInternalUser,
 		),
 		reflection.ProvideResourcesForVerb(
-            PingUser,
+			PingUser,
 		),
 	)
 }

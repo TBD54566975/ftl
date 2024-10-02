@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // TypeRegistry is used for dynamic type resolution at runtime. It stores associations between sum type discriminators

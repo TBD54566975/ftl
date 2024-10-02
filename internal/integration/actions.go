@@ -401,6 +401,48 @@ func VerifyKubeState(check func(ctx context.Context, t testing.TB, namespace str
 	}
 }
 
+// VerifySchema lets you test the current schema
+func VerifySchema(check func(ctx context.Context, t testing.TB, sch *schemapb.Schema)) Action {
+	return func(t testing.TB, ic TestContext) {
+		sch, err := ic.Controller.GetSchema(ic, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+		if err != nil {
+			t.Errorf("failed to get schema: %v", err)
+			return
+		}
+		if err != nil {
+			t.Errorf("failed to deserialize schema: %v", err)
+			return
+		}
+		check(ic.Context, t, sch.Msg.GetSchema())
+	}
+}
+
+// VerifySchemaVerb lets you test the current schema for a specific verb
+func VerifySchemaVerb(module string, verb string, check func(ctx context.Context, t testing.TB, sch *schemapb.Verb)) Action {
+	return func(t testing.TB, ic TestContext) {
+		sch, err := ic.Controller.GetSchema(ic, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+		if err != nil {
+			t.Errorf("failed to get schema: %v", err)
+			return
+		}
+		if err != nil {
+			t.Errorf("failed to deserialize schema: %v", err)
+			return
+		}
+		for _, m := range sch.Msg.GetSchema().Modules {
+			if m.Name == module {
+				for _, v := range m.Decls {
+					if v.GetVerb() != nil && v.GetVerb().Name == verb {
+						check(ic.Context, t, v.GetVerb())
+						return
+					}
+				}
+			}
+
+		}
+	}
+}
+
 // Fail expects the next action to Fail.
 func Fail(next Action, msg string, args ...any) Action {
 	return func(t testing.TB, ic TestContext) {

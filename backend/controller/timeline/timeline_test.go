@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,9 +22,9 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
@@ -34,6 +35,7 @@ func TestTimeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
+	registry := artefacts.New(conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
@@ -48,7 +50,7 @@ func TestTimeline(t *testing.T) {
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = controllerDAL.CreateArtefact(ctx, testContent)
+		testSha, err = registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 
@@ -221,6 +223,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
+	registry := artefacts.New(conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
@@ -229,7 +232,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = controllerDAL.CreateArtefact(ctx, testContent)
+		testSha, err = registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 
