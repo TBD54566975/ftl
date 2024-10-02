@@ -3,6 +3,7 @@ package dal
 import (
 	"bytes"
 	"context"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"io"
 	"sync"
 	"testing"
@@ -56,7 +57,7 @@ func TestDAL(t *testing.T) {
 	var testSha sha256.SHA256
 
 	t.Run("CreateArtefact", func(t *testing.T) {
-		testSha, err = dal.CreateArtefact(ctx, testContent)
+		testSha, err = dal.registry.Upload(ctx, artefacts.Artefact{Content: testContent})
 		assert.NoError(t, err)
 	})
 
@@ -100,7 +101,7 @@ func TestDAL(t *testing.T) {
 
 	t.Run("GetMissingArtefacts", func(t *testing.T) {
 		misshingSHA := sha256.MustParseSHA256("fae7e4cbdca7167bbea4098c05d596f50bbb18062b61c1dfca3705b4a6c2888c")
-		missing, err := dal.GetMissingArtefacts(ctx, []sha256.SHA256{testSHA, misshingSHA})
+		_, missing, err := dal.registry.GetDigestsKeys(ctx, []sha256.SHA256{testSHA, misshingSHA})
 		assert.NoError(t, err)
 		assert.Equal(t, []sha256.SHA256{misshingSHA}, missing)
 	})
@@ -203,7 +204,7 @@ func TestCreateArtefactConflict(t *testing.T) {
 		defer wg.Done()
 		tx1, err := dal.Begin(ctx)
 		assert.NoError(t, err)
-		digest, err := tx1.CreateArtefact(ctx, []byte("content"))
+		digest, err := dal.registry.Upload(ctx, artefacts.Artefact{Content: []byte("content")})
 		assert.NoError(t, err)
 		time.Sleep(time.Second * 2)
 		err = tx1.Commit(ctx)
