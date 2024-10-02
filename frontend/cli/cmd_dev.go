@@ -12,6 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
+	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/lsp"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -49,7 +50,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 	}
 
 	if d.InitDB {
-		dsn, err := d.ServeCmd.setupDB(ctx, d.ServeCmd.DatabaseImage)
+		dsn, err := dev.SetupDB(ctx, d.ServeCmd.DatabaseImage, d.ServeCmd.DBPort, d.ServeCmd.Recreate)
 		if err != nil {
 			return fmt.Errorf("failed to setup database: %w", err)
 		}

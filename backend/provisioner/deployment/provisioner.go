@@ -78,7 +78,8 @@ func provisionerIDToProvisioner(ctx context.Context, id string) (provisionerconn
 	case "noop":
 		return &NoopProvisioner{}, nil
 	case "dev":
-		return &DevProvisioner{}, nil
+		// TODO: Wire in settings from ftl serve
+		return NewDevProvisioner("postgres:15.8", 15432), nil
 	default:
 		plugin, _, err := plugin.Spawn(
 			ctx,
@@ -114,6 +115,7 @@ func (reg *ProvisionerRegistry) CreateDeployment(module string, desiredResources
 	for handler, desired := range desiredByHandler {
 		existing := existingByHandler[handler]
 		result = append(result, &Task{
+			module:   module,
 			handler:  handler,
 			desired:  desired,
 			existing: existing,
@@ -149,14 +151,19 @@ func ExtractResources(sch *schema.Module) ([]*provisioner.Resource, error) {
 func (reg *ProvisionerRegistry) groupByProvisioner(resources []*provisioner.Resource) map[provisionerconnect.ProvisionerPluginServiceClient][]*provisioner.Resource {
 	result := map[provisionerconnect.ProvisionerPluginServiceClient][]*provisioner.Resource{}
 	for _, r := range resources {
+		found := false
 		for _, cfg := range reg.Provisioners {
 			for _, t := range cfg.types {
 				typed := typeOf(r)
 				if t == typed {
 					result[cfg.provisioner] = append(result[cfg.provisioner], r)
+					found = true
 					break
 				}
 			}
+		}
+		if !found {
+			result[reg.Default] = append(result[reg.Default], r)
 		}
 	}
 	return result

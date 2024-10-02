@@ -2,15 +2,53 @@ package deployment
 
 import (
 	"context"
+	"math/rand/v2"
+	"strconv"
+	"sync/atomic"
 
 	"connectrpc.com/connect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/internal/dev"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/XSAM/otelsql"
 )
 
+type task struct {
+	steps []*step
+}
+
+func (t *task) Done() bool {
+	for _, step := range t.steps {
+		if !step.done.Load() {
+			return false
+		}
+	}
+	return true
+}
+
+type step struct {
+	resource *provisioner.Resource
+	err      error
+	done     atomic.Bool
+}
+
 // DevProvisioner is a provisioner for running FTL locally
-type DevProvisioner struct{}
+type DevProvisioner struct {
+	running     map[string]*task
+	postgresDSN string
+
+	postgresImage string
+	postgresPort  int
+}
+
+func NewDevProvisioner(postgresImage string, postgresPort int) *DevProvisioner {
+	return &DevProvisioner{
+		postgresImage: postgresImage,
+		postgresPort:  postgresPort,
+	}
+}
 
 var _ provisionerconnect.ProvisionerPluginServiceClient = (*DevProvisioner)(nil)
 
@@ -22,10 +60,127 @@ func (d *DevProvisioner) Plan(context.Context, *connect.Request[provisioner.Plan
 	panic("unimplemented")
 }
 
-func (d *DevProvisioner) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
-	panic("unimplemented")
+func (d *DevProvisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
+	if d.running == nil {
+		d.running = map[string]*task{}
+	}
+
+	previous := map[string]*provisioner.Resource{}
+	for _, r := range req.Msg.ExistingResources {
+		previous[r.ResourceId] = r
+	}
+
+	task := &task{}
+	for _, r := range req.Msg.DesiredResources {
+		if _, ok := previous[r.Resource.ResourceId]; !ok {
+			switch tr := r.Resource.Resource.(type) {
+			case *provisioner.Resource_Postgres:
+				step := &step{resource: r.Resource}
+				task.steps = append(task.steps, step)
+
+				d.provisionPostgres(ctx, tr, req.Msg.Module, r.Resource.ResourceId, step)
+			default:
+			}
+		}
+	}
+
+	if len(task.steps) == 0 {
+		return connect.NewResponse(&provisioner.ProvisionResponse{
+			Status: provisioner.ProvisionResponse_NO_CHANGES,
+		}), nil
+	}
+
+	token := strconv.Itoa(rand.Int())
+	d.running[token] = task
+
+	return connect.NewResponse(&provisioner.ProvisionResponse{
+		ProvisioningToken: token,
+		Status:            provisioner.ProvisionResponse_SUBMITTED,
+	}), nil
 }
 
-func (d *DevProvisioner) Status(context.Context, *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
-	panic("unimplemented")
+func (d *DevProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
+	token := req.Msg.ProvisioningToken
+	task, ok := d.running[token]
+	if !ok {
+		return statusFailure("unknown token")
+	}
+	if !task.Done() {
+		return connect.NewResponse(&provisioner.StatusResponse{
+			Status: &provisioner.StatusResponse_Running{},
+		}), nil
+	}
+
+	var resources []*provisioner.Resource
+	for _, step := range task.steps {
+		if step.err != nil {
+			return statusFailure(step.err.Error())
+		}
+		resources = append(resources, step.resource)
+	}
+	delete(d.running, token)
+
+	return connect.NewResponse(&provisioner.StatusResponse{
+		Status: &provisioner.StatusResponse_Success{
+			Success: &provisioner.StatusResponse_ProvisioningSuccess{
+				UpdatedResources: resources,
+			},
+		},
+	}), nil
+}
+
+func statusFailure(message string) (*connect.Response[provisioner.StatusResponse], error) {
+	return connect.NewResponse(&provisioner.StatusResponse{
+		Status: &provisioner.StatusResponse_Failed{
+			Failed: &provisioner.StatusResponse_ProvisioningFailed{
+				ErrorMessage: message,
+			},
+		},
+	}), nil
+}
+
+func (d *DevProvisioner) provisionPostgres(ctx context.Context, tr *provisioner.Resource_Postgres, module, id string, step *step) {
+	logger := log.FromContext(ctx)
+	logger.Infof("provisioning postgres database: %s_%s", module, id)
+
+	go func() {
+		defer step.done.Store(true)
+		if d.postgresDSN == "" {
+			dsn, err := dev.SetupDB(ctx, d.postgresImage, d.postgresPort, false)
+			if err != nil {
+				step.err = err
+				return
+			}
+			d.postgresDSN = dsn
+		}
+		dbName := module + "_" + id
+		conn, err := otelsql.Open("pgx", d.postgresDSN)
+		if err != nil {
+			step.err = err
+			return
+		}
+		defer conn.Close()
+
+		res, err := conn.Query("SELECT * FROM pg_catalog.pg_database WHERE datname=$1", dbName)
+		if err != nil {
+			step.err = err
+			return
+		}
+		if !res.Next() {
+			_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
+			if err != nil {
+				step.err = err
+				return
+			}
+		}
+		res.Close()
+
+		if tr.Postgres == nil {
+			tr.Postgres = &provisioner.PostgresResource{}
+		}
+		tr.Postgres.Output = &provisioner.PostgresResource_PostgresResourceOutput{
+			ReadEndpoint:  d.postgresDSN,
+			WriteEndpoint: d.postgresDSN,
+		}
+	}()
 }
