@@ -35,7 +35,7 @@ func TestTimeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
-	registry := artefacts.New(ctx, conn)
+	registry := artefacts.New(conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
@@ -223,7 +223,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := New(ctx, conn, encryption)
-	registry := artefacts.New(ctx, conn)
+	registry := artefacts.New(conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)

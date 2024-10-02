@@ -30,7 +30,7 @@ type Service struct {
 	db sql.Querier
 }
 
-func New(_ context.Context, conn libdal.Connection) *Service {
+func New(conn libdal.Connection) *Service {
 	return &Service{
 		db: sql.New(conn),
 		Handle: libdal.New(conn, func(h *libdal.Handle[Service]) *Service {

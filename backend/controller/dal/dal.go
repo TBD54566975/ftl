@@ -58,7 +58,7 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 		leaser:     dbleaser.NewDatabaseLeaser(conn),
 		db:         db,
 		encryption: encryption,
-		registry:   aregistry.New(ctx, conn),
+		registry:   aregistry.New(conn),
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
@@ -66,7 +66,7 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 				leaser:            dbleaser.NewDatabaseLeaser(h.Connection),
 				pubsub:            pubsub,
 				encryption:        d.encryption,
-				registry:          aregistry.New(ctx, h.Connection),
+				registry:          aregistry.New(h.Connection),
 				DeploymentChanges: d.DeploymentChanges,
 			}
 		}),

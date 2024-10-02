@@ -277,7 +277,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	pubSub := pubsub.New(conn, encryption, svc.tasks, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
 
-	svc.registry = artefacts.New(ctx, conn)
+	svc.registry = artefacts.New(conn)
 
 	svc.dal = dal.New(ctx, conn, encryption, pubSub)
 
