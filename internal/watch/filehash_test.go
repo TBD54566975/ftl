@@ -1,4 +1,4 @@
-package buildengine
+package watch
 
 import (
 	"os"

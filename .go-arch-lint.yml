@@ -8,7 +8,7 @@ components:
   internal: { in: internal/** }
   dal: { in: backend/dal/** }
   protos: { in: backend/protos/** }
-  schema: { in: backend/schema/** }
+  schema: { in: internal/schema/** }
   ftl: { in: . }
   ftl-cmd: { in: frontend/cli/ftl/** }
   go-runtime: { in: go-runtime/** }

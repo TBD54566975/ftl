@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
 )
 

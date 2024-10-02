@@ -13,12 +13,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 const BuildLockTimeout = time.Minute
@@ -119,7 +120,7 @@ type getDependenciesCommand struct {
 
 func (getDependenciesCommand) pluginCmd() {}
 
-type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction ModifyFilesTransaction) error
+type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error
 
 // internalPlugin is used by languages that have not been split off into their own external plugins yet.
 // It has standard behaviours around building and watching files.
@@ -205,8 +206,8 @@ func (p *internalPlugin) getDependencies(ctx context.Context, d dependenciesFunc
 }
 
 func (p *internalPlugin) run(ctx context.Context) {
-	watcher := NewWatcher(p.config.Watch...)
-	watchChan := make(chan WatchEvent, 128)
+	watcher := watch.NewWatcher(p.config.Watch...)
+	watchChan := make(chan watch.WatchEvent, 128)
 
 	// State
 	// This is updated when given explicit build commands and used for automatic rebuilds
@@ -256,7 +257,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 			}
 		case event := <-watchChan:
 			switch event.(type) {
-			case WatchEventModuleChanged:
+			case watch.WatchEventModuleChanged:
 				// automatic rebuild
 
 				p.updates.Publish(AutoRebuildStartedEvent{Module: p.config.Module})
@@ -272,10 +273,10 @@ func (p *internalPlugin) run(ctx context.Context) {
 					Module: p.config.Module,
 					Result: either.LeftOf[error](result),
 				})
-			case WatchEventModuleAdded:
+			case watch.WatchEventModuleAdded:
 				// ignore
 
-			case WatchEventModuleRemoved:
+			case watch.WatchEventModuleRemoved:
 				// ignore
 			}
 
@@ -285,7 +286,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 	}
 }
 
-func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, watcher *Watcher, build buildFunc) (BuildResult, error) {
+func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, watcher *watch.Watcher, build buildFunc) (BuildResult, error) {
 	config := c.Abs()
 	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {

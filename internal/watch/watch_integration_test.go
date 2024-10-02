@@ -1,6 +1,6 @@
 //go:build integration
 
-package buildengine
+package watch
 
 import (
 	"context" //nolint:depguard

@@ -9,11 +9,11 @@ import (
 	"github.com/alecthomas/types/either"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // Build a module in the given directory given the schema and module config.
