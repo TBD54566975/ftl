@@ -345,14 +345,11 @@ public class ModuleBuilder {
                     return Type.newBuilder().setTime(Time.newBuilder().build()).build();
                 }
 
-                var ref = Type.newBuilder().setRef(Ref.newBuilder()
-                        .setName(clazz.name().local())
-                        .setModule(moduleName)
-                        .build())
-                        .build();
+                var ref = Type.newBuilder().setRef(
+                        Ref.newBuilder().setName(clazz.name().local()).setModule(moduleName).build()).build();
 
                 if (info.isEnum() || info.hasAnnotation(ENUM)) {
-                    // We set only the name and export here. EnumProcessor will fill in the rest
+                    // Set only the name and export here. EnumProcessor will fill in the rest
                     xyz.block.ftl.v1.schema.Enum ennum = xyz.block.ftl.v1.schema.Enum.newBuilder()
                             .setName(clazz.name().local())
                             .setExport(type.hasAnnotation(EXPORT) || export)
@@ -360,11 +357,10 @@ public class ModuleBuilder {
                     addDecls(Decl.newBuilder().setEnum(ennum).build());
                     return ref;
                 } else {
-                    // If we've processed this data already, skip early
+                    // If this data was processed already, skip early
                     if (updateData(clazz.name().local(), type.hasAnnotation(EXPORT) || export)) {
                         return ref;
                     }
-
                     Data.Builder data = Data.newBuilder();
                     data.setName(clazz.name().local());
                     data.setExport(type.hasAnnotation(EXPORT) || export);
@@ -529,12 +525,10 @@ public class ModuleBuilder {
                 duplicateNameValidationError(name, decl.getEnum().getPos());
             }
             var moreComplete = decl.getEnum().getVariantsCount() > 0 ? decl : existing;
-            var merged = existing.getEnum().toBuilder()
-                    .setName(moreComplete.getEnum().getName())
-                    .setExport(decl.getEnum().getExport() || existing.getEnum().getExport())
-                    .addAllVariants(moreComplete.getEnum().getVariantsList())
-                    .addAllComments(moreComplete.getEnum().getCommentsList())
-                    .setType(moreComplete.getEnum().getType()).build();
+            var lessComplete = decl.getEnum().getVariantsCount() > 0 ? existing : decl;
+            var merged = moreComplete.getEnum().toBuilder()
+                    .setExport(lessComplete.getEnum().getExport() || existing.getEnum().getExport())
+                    .build();
             decls.put(name, Decl.newBuilder().setEnum(merged).build());
             return true;
         }

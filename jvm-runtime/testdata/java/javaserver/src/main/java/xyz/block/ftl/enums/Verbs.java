@@ -32,4 +32,10 @@ public class Verbs {
     public Shape stringEnumVerb(Shape shape) {
         return shape;
     }
+
+    @Export
+    @Verb
+    public Animal typeEnumVerb(Animal animal) {
+        return animal;
+    }
 }
