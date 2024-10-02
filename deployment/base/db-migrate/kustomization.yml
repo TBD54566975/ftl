@@ -30,3 +30,4 @@ configMapGenerator:
   - ./schema/20240917062716_change_deployments_index.sql
   - ./schema/20240919001309_create_identity_keys_table.sql
   - ./schema/20240926231955_timeline_async_call_event_types.sql
+  - ./schema/20241002225509_create_last_activated.sql

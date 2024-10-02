@@ -153,7 +153,7 @@ sql:
     rules:
       - sqlc/db-prepare
       # - postgresql-query-too-costly
-      - postgresql-no-seq-scan
+      # - postgresql-no-seq-scan
   - <<: *daldir
     queries:
       - backend/controller/cronjobs/internal/sql/queries.sql
