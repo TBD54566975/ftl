@@ -157,8 +157,9 @@ public class HTTPProcessor {
                             .setIngress(ingressBuilder
                                     .build())
                             .build();
-                    Type requestTypeParam = moduleBuilder.buildType(bodyParamType, true);
-                    Type responseTypeParam = moduleBuilder.buildType(endpoint.getMethodInfo().returnType(), true);
+                    Type requestTypeParam = moduleBuilder.buildType(bodyParamType, true, Nullability.NOT_NULL);
+                    Type responseTypeParam = moduleBuilder.buildType(endpoint.getMethodInfo().returnType(), true,
+                            Nullability.NOT_NULL);
                     Type stringType = Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
                     Type pathParamType = Type.newBuilder()
                             .setMap(xyz.block.ftl.v1.schema.Map.newBuilder().setKey(stringType)
