@@ -3,13 +3,13 @@ package artefacts
 import (
 	"context"
 	"fmt"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts/internal/sql"
-	"github.com/TBD54566975/ftl/internal/model"
 	"io"
 
 	sets "github.com/deckarep/golang-set/v2"
 
+	"github.com/TBD54566975/ftl/backend/controller/artefacts/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )

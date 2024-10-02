@@ -2,9 +2,9 @@ package artefacts
 
 import (
 	"context"
-	"github.com/TBD54566975/ftl/internal/model"
 	"io"
 
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
