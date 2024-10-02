@@ -526,10 +526,20 @@ public class ModuleBuilder {
             }
             var moreComplete = decl.getEnum().getVariantsCount() > 0 ? decl : existing;
             var lessComplete = decl.getEnum().getVariantsCount() > 0 ? existing : decl;
+            boolean export = lessComplete.getEnum().getExport() || existing.getEnum().getExport();
             var merged = moreComplete.getEnum().toBuilder()
-                    .setExport(lessComplete.getEnum().getExport() || existing.getEnum().getExport())
+                    .setExport(export)
                     .build();
             decls.put(name, Decl.newBuilder().setEnum(merged).build());
+            if (export && !existing.getEnum().getExport()) {
+                // If the existing enum was not exported, we need to update variants too
+                for (var childDecl : merged.getVariantsList()) {
+                    if (childDecl.getValue().hasTypeValue() && childDecl.getValue().getTypeValue().getValue().hasRef()) {
+                        var ref = childDecl.getValue().getTypeValue().getValue().getRef();
+                        updateData(ref.getName(), true);
+                    }
+                }
+            }
             return true;
         }
         return false;

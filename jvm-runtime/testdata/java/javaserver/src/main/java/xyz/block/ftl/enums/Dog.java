@@ -1,8 +1,5 @@
 package xyz.block.ftl.enums;
 
-import xyz.block.ftl.EnumVariant;
-
-@EnumVariant
 public class Dog implements Animal {
     public boolean isCat() {
         return false;

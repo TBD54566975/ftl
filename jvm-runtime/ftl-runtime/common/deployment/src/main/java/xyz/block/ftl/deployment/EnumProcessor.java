@@ -4,6 +4,7 @@ import static org.jboss.jandex.PrimitiveType.Primitive.BYTE;
 import static org.jboss.jandex.PrimitiveType.Primitive.INT;
 import static org.jboss.jandex.PrimitiveType.Primitive.LONG;
 import static org.jboss.jandex.PrimitiveType.Primitive.SHORT;
+import static xyz.block.ftl.deployment.FTLDotNames.ENUM_HOLDER;
 import static xyz.block.ftl.deployment.FTLDotNames.GENERATED_REF;
 
 import java.lang.reflect.Field;
@@ -66,7 +67,18 @@ public class EnumProcessor {
                                 if (variant.hasDeclaredAnnotation(GENERATED_REF)) {
                                     continue;
                                 }
-                                Type variantType = ClassType.builder(variant.name()).build();
+                                Type variantType;
+                                if (variant.hasAnnotation(ENUM_HOLDER)) {
+                                    // Enum value holder class
+                                    FieldInfo valueField = variant.field("value");
+                                    if (valueField == null) {
+                                        throw new RuntimeException("Enum variant must have a 'value' field: " + variant.name());
+                                    }
+                                    variantType = valueField.type();
+                                } else {
+                                    // Class is the enum variant type
+                                    variantType = ClassType.builder(variant.name()).build();
+                                }
                                 xyz.block.ftl.v1.schema.Type declType = moduleBuilder.buildType(variantType, exported);
                                 TypeValue typeValue = TypeValue.newBuilder().setValue(declType).build();
 
