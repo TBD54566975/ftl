@@ -1,9 +1,11 @@
 module ftl/pubsub
 
-go 1.23.1
+go 1.23.0
+
+replace github.com/TBD54566975/ftl => ../../..
 
 require (
-	github.com/TBD54566975/ftl v1.1.5
+	github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
 	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
 )
 
@@ -47,5 +49,3 @@ require (
 	golang.org/x/text v0.18.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 )
-
-replace github.com/TBD54566975/ftl => /Users/safeer/dev/ftl
