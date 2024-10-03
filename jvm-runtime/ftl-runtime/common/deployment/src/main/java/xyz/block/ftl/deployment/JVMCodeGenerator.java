@@ -51,7 +51,12 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                 if (!fileName.endsWith(".pb")) {
                     continue;
                 }
-                var module = Module.parseFrom(Files.readAllBytes(file));
+                Module module;
+                try {
+                    module = Module.parseFrom(Files.readAllBytes(file));
+                } catch (Exception e) {
+                    throw new CodeGenException("Failed to parse " + file, e);
+                }
                 for (var decl : module.getDeclsList()) {
                     String packageName = PACKAGE_PREFIX + module.getName();
                     if (decl.hasTypeAlias()) {
