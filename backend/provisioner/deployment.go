@@ -43,7 +43,7 @@ func (t *Task) Start(ctx context.Context) error {
 
 	resp, err := t.handler.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
 		Module: t.module,
-		// TODO: We need a proper cluster speicific ID here
+		// TODO: We need a proper cluster specific ID here
 		FtlClusterId:      "ftl",
 		ExistingResources: t.existing,
 		DesiredResources:  t.constructResourceContext(t.desired),
@@ -83,13 +83,13 @@ func (t *Task) Progress(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error getting state: %w", err)
 	}
-	if succ, ok := resp.Msg.Status.(*provisioner.StatusResponse_Success); ok {
+	switch s := resp.Msg.Status.(type) {
+	case *provisioner.StatusResponse_Success:
 		t.state = TaskStateDone
-		t.output = succ.Success.UpdatedResources
-	}
-	if fail, ok := resp.Msg.Status.(*provisioner.StatusResponse_Failed); ok {
+		t.output = s.Success.UpdatedResources
+	case *provisioner.StatusResponse_Failed:
 		t.state = TaskStateFailed
-		return errors.New(fail.Failed.ErrorMessage)
+		return errors.New(s.Failed.ErrorMessage)
 	}
 	return nil
 }

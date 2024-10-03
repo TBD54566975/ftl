@@ -12,7 +12,8 @@ import (
 
 func TestDeploymentThroughNoopProvisioner(t *testing.T) {
 	in.Run(t,
-		in.WithProvisioner(`
+		in.WithProvisioner(),
+		in.WithProvisionerConfig(`
 			default = "noop"
 			plugins = [
 				{ id = "noop", resources = ["postgres"] },
@@ -28,7 +29,7 @@ func TestDeploymentThroughNoopProvisioner(t *testing.T) {
 
 func TestDeploymentThrougDevProvisionerCreatePostgresDB(t *testing.T) {
 	in.Run(t,
-		in.WithProvisioner(`default = "dev"`),
+		in.WithProvisioner(),
 		in.CopyModule("echo"),
 		in.DropDBAction(t, "echo_echodb"),
 		in.Deploy("echo"),

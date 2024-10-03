@@ -19,7 +19,7 @@ func SetupDB(ctx context.Context, image string, port int, recreate bool) (string
 
 	exists, err := container.DoesExist(ctx, ftlContainerName, optional.Some(image))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to check if container exists: %w", err)
 	}
 
 	if !exists {
@@ -34,7 +34,7 @@ func SetupDB(ctx context.Context, image string, port int, recreate bool) (string
 
 		err = container.RunDB(ctx, ftlContainerName, port, image)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to run db container: %w", err)
 		}
 
 		recreate = true
@@ -42,30 +42,39 @@ func SetupDB(ctx context.Context, image string, port int, recreate bool) (string
 		// Start the existing container
 		err = container.Start(ctx, ftlContainerName)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to start existing db container: %w", err)
 		}
 
 		// Grab the port from the existing container
 		port, err = container.GetContainerPort(ctx, ftlContainerName, 5432)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("failed to get port from existing db container: %w", err)
 		}
 
 		logger.Debugf("Reusing existing docker container %s on port %d for postgres db", ftlContainerName, port)
 	}
 
-	err = container.PollContainerHealth(ctx, ftlContainerName, 10*time.Second)
+	dsn, err := WaitForDBReady(ctx, port)
+	if err != nil {
+		return "", fmt.Errorf("db container failed to be healthy: %w", err)
+	}
+
+	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
+	if err != nil {
+		return "", fmt.Errorf("failed to create database: %w", err)
+	}
+
+	return dsn, nil
+}
+
+func WaitForDBReady(ctx context.Context, port int) (string, error) {
+	logger := log.FromContext(ctx)
+	err := container.PollContainerHealth(ctx, ftlContainerName, 10*time.Second)
 	if err != nil {
 		return "", fmt.Errorf("db container failed to be healthy: %w", err)
 	}
 
 	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%d/ftl?sslmode=disable", port)
 	logger.Debugf("Postgres DSN: %s", dsn)
-
-	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
-	if err != nil {
-		return "", err
-	}
-
 	return dsn, nil
 }

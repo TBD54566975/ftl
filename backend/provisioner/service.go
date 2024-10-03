@@ -48,12 +48,7 @@ type Service struct {
 
 var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
 
-func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, pluginConfig *ProvisionerPluginConfig) (*Service, error) {
-	registry, err := NewProvisionerRegistry(ctx, pluginConfig)
-	if err != nil {
-		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
-	}
-
+func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, registry *ProvisionerRegistry) (*Service, error) {
 	return &Service{
 		controllerClient: controllerClient,
 		currentResources: map[string][]*proto.Resource{},
@@ -129,7 +124,7 @@ func replaceOutputs(to []*proto.Resource, from []*proto.Resource) error {
 }
 
 // Start the Provisioner. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, devel bool) error {
+func Start(ctx context.Context, config Config, registry *ProvisionerRegistry) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -137,19 +132,7 @@ func Start(ctx context.Context, config Config, devel bool) error {
 
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
-	pluginConfig := &ProvisionerPluginConfig{Default: "noop"}
-	if devel {
-		pluginConfig = &ProvisionerPluginConfig{Default: "dev"}
-	}
-	if config.PluginConfigFile != nil {
-		pc, err := readPluginConfig(config.PluginConfigFile)
-		if err != nil {
-			return fmt.Errorf("error reading plugin configuration: %w", err)
-		}
-		pluginConfig = pc
-	}
-
-	svc, err := New(ctx, config, controllerClient, pluginConfig)
+	svc, err := New(ctx, config, controllerClient, registry)
 	if err != nil {
 		return err
 	}
@@ -169,16 +152,22 @@ func Start(ctx context.Context, config Config, devel bool) error {
 	return nil
 }
 
-func readPluginConfig(file *os.File) (*ProvisionerPluginConfig, error) {
-	result := ProvisionerPluginConfig{}
+func RegistryFromConfigFile(ctx context.Context, file *os.File) (*ProvisionerRegistry, error) {
+	config := provisionerPluginConfig{}
 	bytes, err := io.ReadAll(bufio.NewReader(file))
 	if err != nil {
 		return nil, fmt.Errorf("error reading plugin configuration: %w", err)
 	}
-	if err := toml.Unmarshal(bytes, &result); err != nil {
+	if err := toml.Unmarshal(bytes, &config); err != nil {
 		return nil, fmt.Errorf("error parsing plugin configuration: %w", err)
 	}
-	return &result, nil
+
+	registry, err := registryFromConfig(ctx, &config)
+	if err != nil {
+		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
+	}
+
+	return registry, nil
 }
 
 // Deployment client calls to ftl-controller

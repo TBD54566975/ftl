@@ -6,7 +6,6 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
-	"github.com/TBD54566975/ftl/backend/provisioner/dev"
 	"github.com/TBD54566975/ftl/backend/provisioner/noop"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -22,8 +21,8 @@ const (
 	ResourceTypeMysql    ResourceType = "mysql"
 )
 
-// ProvisionerPluginConfig is a map of provisioner name to resources it supports
-type ProvisionerPluginConfig struct {
+// provisionerPluginConfig is a map of provisioner name to resources it supports
+type provisionerPluginConfig struct {
 	// The default provisioner to use for all resources not matched here
 	Default string `toml:"default"`
 	Plugins []struct {
@@ -32,7 +31,7 @@ type ProvisionerPluginConfig struct {
 	} `toml:"plugins"`
 }
 
-func (cfg *ProvisionerPluginConfig) Validate() error {
+func (cfg *provisionerPluginConfig) Validate() error {
 	registeredResources := map[ResourceType]bool{}
 	for _, plugin := range cfg.Plugins {
 		for _, r := range plugin.Resources {
@@ -45,18 +44,19 @@ func (cfg *ProvisionerPluginConfig) Validate() error {
 	return nil
 }
 
-type provisionerConfig struct {
-	provisioner provisionerconnect.ProvisionerPluginServiceClient
-	types       []ResourceType
+// ProvisionerBinding is a Provisioner and the types it supports
+type ProvisionerBinding struct {
+	Provisioner provisionerconnect.ProvisionerPluginServiceClient
+	Types       []ResourceType
 }
 
 // ProvisionerRegistry contains all known resource handlers in the order they should be executed
 type ProvisionerRegistry struct {
 	Default      provisionerconnect.ProvisionerPluginServiceClient
-	Provisioners []*provisionerConfig
+	Provisioners []*ProvisionerBinding
 }
 
-func NewProvisionerRegistry(ctx context.Context, cfg *ProvisionerPluginConfig) (*ProvisionerRegistry, error) {
+func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig) (*ProvisionerRegistry, error) {
 	def, err := provisionerIDToProvisioner(ctx, cfg.Default)
 	if err != nil {
 		return nil, err
@@ -79,9 +79,6 @@ func provisionerIDToProvisioner(ctx context.Context, id string) (provisionerconn
 	switch id {
 	case "noop":
 		return &noop.Provisioner{}, nil
-	case "dev":
-		// TODO: Wire in settings from ftl serve
-		return dev.NewProvisioner("postgres:15.8", 15432), nil
 	default:
 		plugin, _, err := plugin.Spawn(
 			ctx,
@@ -101,9 +98,9 @@ func provisionerIDToProvisioner(ctx context.Context, id string) (provisionerconn
 
 // Register to the registry, to be executed after all the previously added handlers
 func (reg *ProvisionerRegistry) Register(handler provisionerconnect.ProvisionerPluginServiceClient, types ...ResourceType) {
-	reg.Provisioners = append(reg.Provisioners, &provisionerConfig{
-		provisioner: handler,
-		types:       types,
+	reg.Provisioners = append(reg.Provisioners, &ProvisionerBinding{
+		Provisioner: handler,
+		Types:       types,
 	})
 }
 
@@ -155,10 +152,10 @@ func (reg *ProvisionerRegistry) groupByProvisioner(resources []*provisioner.Reso
 	for _, r := range resources {
 		found := false
 		for _, cfg := range reg.Provisioners {
-			for _, t := range cfg.types {
+			for _, t := range cfg.Types {
 				typed := typeOf(r)
 				if t == typed {
-					result[cfg.provisioner] = append(result[cfg.provisioner], r)
+					result[cfg.Provisioner] = append(result[cfg.Provisioner], r)
 					found = true
 					break
 				}

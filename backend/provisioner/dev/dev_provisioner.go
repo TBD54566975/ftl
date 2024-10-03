@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"fmt"
 	"math/rand/v2"
 	"strconv"
 	"sync/atomic"
@@ -12,7 +13,9 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema/strcase"
 	"github.com/XSAM/otelsql"
+	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type task struct {
@@ -34,19 +37,18 @@ type step struct {
 	done     atomic.Bool
 }
 
-// Provisioner is a provisioner for running FTL locally
+// Provisioner for running FTL locally
 type Provisioner struct {
-	running     map[string]*task
+	running     *xsync.MapOf[string, *task]
 	postgresDSN string
 
-	postgresImage string
-	postgresPort  int
+	postgresPort int
 }
 
-func NewProvisioner(postgresImage string, postgresPort int) *Provisioner {
+func NewProvisioner(postgresPort int) *Provisioner {
 	return &Provisioner{
-		postgresImage: postgresImage,
-		postgresPort:  postgresPort,
+		postgresPort: postgresPort,
+		running:      xsync.NewMapOf[string, *task](),
 	}
 }
 
@@ -61,10 +63,6 @@ func (d *Provisioner) Plan(context.Context, *connect.Request[provisioner.PlanReq
 }
 
 func (d *Provisioner) Provision(ctx context.Context, req *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
-	if d.running == nil {
-		d.running = map[string]*task{}
-	}
-
 	previous := map[string]*provisioner.Resource{}
 	for _, r := range req.Msg.ExistingResources {
 		previous[r.ResourceId] = r
@@ -80,6 +78,8 @@ func (d *Provisioner) Provision(ctx context.Context, req *connect.Request[provis
 
 				d.provisionPostgres(ctx, tr, req.Msg.Module, r.Resource.ResourceId, step)
 			default:
+				err := fmt.Errorf("unsupported resource type: %T", r.Resource.Resource)
+				return nil, connect.NewError(connect.CodeInvalidArgument, err)
 			}
 		}
 	}
@@ -90,8 +90,8 @@ func (d *Provisioner) Provision(ctx context.Context, req *connect.Request[provis
 		}), nil
 	}
 
-	token := strconv.Itoa(rand.Int())
-	d.running[token] = task
+	token := strconv.Itoa(rand.Int()) //nolint:gosec
+	d.running.Store(token, task)
 
 	return connect.NewResponse(&provisioner.ProvisionResponse{
 		ProvisioningToken: token,
@@ -101,7 +101,7 @@ func (d *Provisioner) Provision(ctx context.Context, req *connect.Request[provis
 
 func (d *Provisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
 	token := req.Msg.ProvisioningToken
-	task, ok := d.running[token]
+	task, ok := d.running.Load(token)
 	if !ok {
 		return statusFailure("unknown token")
 	}
@@ -118,7 +118,7 @@ func (d *Provisioner) Status(ctx context.Context, req *connect.Request[provision
 		}
 		resources = append(resources, step.resource)
 	}
-	delete(d.running, token)
+	d.running.Delete(token)
 
 	return connect.NewResponse(&provisioner.StatusResponse{
 		Status: &provisioner.StatusResponse_Success{
@@ -146,14 +146,15 @@ func (d *Provisioner) provisionPostgres(ctx context.Context, tr *provisioner.Res
 	go func() {
 		defer step.done.Store(true)
 		if d.postgresDSN == "" {
-			dsn, err := dev.SetupDB(ctx, d.postgresImage, d.postgresPort, false)
+			// We assume that the DB hsas already been started when running in dev mode
+			dsn, err := dev.WaitForDBReady(ctx, d.postgresPort)
 			if err != nil {
 				step.err = err
 				return
 			}
 			d.postgresDSN = dsn
 		}
-		dbName := module + "_" + id
+		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 		conn, err := otelsql.Open("pgx", d.postgresDSN)
 		if err != nil {
 			step.err = err
@@ -166,6 +167,7 @@ func (d *Provisioner) provisionPostgres(ctx context.Context, tr *provisioner.Res
 			step.err = err
 			return
 		}
+		defer res.Close()
 		if !res.Next() {
 			_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
 			if err != nil {
@@ -173,7 +175,6 @@ func (d *Provisioner) provisionPostgres(ctx context.Context, tr *provisioner.Res
 				return
 			}
 		}
-		res.Close()
 
 		if tr.Postgres == nil {
 			tr.Postgres = &provisioner.PostgresResource{}

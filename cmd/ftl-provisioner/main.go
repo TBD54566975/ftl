@@ -40,6 +40,9 @@ func main() {
 	err = observability.Init(ctx, false, "", "ftl-provisioner", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	err = provisioner.Start(ctx, cli.ProvisionerConfig, false)
+	registry, err := provisioner.RegistryFromConfigFile(ctx, cli.ProvisionerConfig.PluginConfigFile)
+	kctx.FatalIfErrorf(err, "failed to create provisioner registry")
+
+	err = provisioner.Start(ctx, cli.ProvisionerConfig, registry)
 	kctx.FatalIfErrorf(err, "failed to start provisioner")
 }
