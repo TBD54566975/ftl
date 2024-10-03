@@ -10,14 +10,14 @@ import (
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func SmokeTest(t *testing.T) {
+func TestSmokeEcho(t *testing.T) {
 	in.Run(t,
 		in.WithKubernetes(),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
-			assert.Equal(t, "Hello, Bob!!!", response)
+			assert.Equal(t, "Hello, asdf Bob!!!", response)
 		}),
-		in.Exec("ftl", []string{"--version"}),
+		in.Exec("ftl", "--version"),
 	)
 }
