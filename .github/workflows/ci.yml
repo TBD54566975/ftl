@@ -394,3 +394,32 @@ jobs:
           else
             echo "Integration tests passed"
           fi
+  smoke-test-upgrade:
+    name: Smoke Test Upgrade Path
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout previous code
+        uses: actions/checkout@v4
+        with:
+          ref: 'refs/tags/previous-release'
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+        with:
+          cache: true
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Docker Compose
+        run: docker compose up -d --wait
+      - name: Create DB
+        run: just init-db
+      - name: Download Go Modules
+        run: go mod download
+      - name: Smoke Test Upgrade Path
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2046
+          test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname ./{})
+          for file in $test_files; do
+            go test -v -race -tags smoketest -run '^SmokeTest' $file
+          done
