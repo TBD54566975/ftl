@@ -399,10 +399,20 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout the repository with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Get latest release tag
+        run: |
+          latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
+          echo "Latest release: $latest_release"
+          echo "LATEST_RELEASE=$latest_release" >> "$GITHUB_ENV"
       - name: Checkout previous code
         uses: actions/checkout@v4
         with:
-          ref: 'refs/tags/previous-release'
+          ref: ${{ env.LATEST_RELEASE }}
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
         with:
