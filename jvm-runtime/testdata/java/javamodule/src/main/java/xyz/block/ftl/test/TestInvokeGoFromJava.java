@@ -191,7 +191,8 @@ public class TestInvokeGoFromJava {
 
     @Export
     @Verb
-    public @Nullable Map<String, String> optionalStringMapVerb(@Nullable Map<String, String> val, OptionalStringMapVerbClient client) {
+    public @Nullable Map<String, String> optionalStringMapVerb(@Nullable Map<String, String> val,
+            OptionalStringMapVerbClient client) {
         return client.call(val);
     }
 
@@ -220,4 +221,15 @@ public class TestInvokeGoFromJava {
         return client.call(val);
     }
 
+    @Export
+    @Verb
+    public CustomSerializedType stringAliasedType(CustomSerializedType type) {
+        return type;
+    }
+
+    @Export
+    @Verb
+    public AnySerializedType anyAliasedType(AnySerializedType type) {
+        return type;
+    }
 }

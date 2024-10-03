@@ -10,11 +10,12 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
+	"github.com/alecthomas/repr"
+
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	in "github.com/TBD54566975/ftl/internal/integration"
-
-	"github.com/alecthomas/repr"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 func TestLifecycleJVM(t *testing.T) {
@@ -147,9 +148,60 @@ func TestJVMCoreFunctionality(t *testing.T) {
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectVerb", ftl.None[any]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
 
+	// Test custom serialized type mapped to a string
+	tests = append(tests, JVMTest("stringAliasedTypeSchema", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "stringAliasedType", func(ctx context.Context, t testing.TB, sch *schemapb.Schema, verb *schemapb.Verb) {
+			assert.True(t, verb.Response.GetRef() != nil, "response was not a ref")
+			assert.True(t, verb.Request.GetRef() != nil, "request was not a ref")
+			fullSchema, err := schema.FromProto(sch)
+			assert.NoError(t, err, "failed to convert schema")
+			req := fullSchema.Resolve(schema.RefFromProto(verb.Request.GetRef()))
+			assert.True(t, req.Ok(), "request not found")
+			if typeAlias, ok := req.MustGet().(*schema.TypeAlias); ok {
+				if _, ok := typeAlias.Type.(*schema.String); !ok {
+					assert.False(t, true, "request type alias not a string")
+				}
+			} else {
+				assert.False(t, true, "request not a type alias")
+			}
+		})
+	})...)
+	// Test custom serialized type mapped to an any
+	tests = append(tests, JVMTest("anyAliasedTypeSchema", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "anyAliasedType", func(ctx context.Context, t testing.TB, sch *schemapb.Schema, verb *schemapb.Verb) {
+			assert.True(t, verb.Response.GetRef() != nil, "response was not a ref")
+			assert.True(t, verb.Request.GetRef() != nil, "request was not a ref")
+			fullSchema, err := schema.FromProto(sch)
+			assert.NoError(t, err, "failed to convert schema")
+			req := fullSchema.Resolve(schema.RefFromProto(verb.Request.GetRef()))
+			assert.True(t, req.Ok(), "request not found")
+			if typeAlias, ok := req.MustGet().(*schema.TypeAlias); ok {
+				if _, ok := typeAlias.Type.(*schema.Any); !ok {
+					assert.False(t, true, "request type alias not a any")
+				}
+				goMap := ""
+				javaMap := "false"
+				for _, md := range typeAlias.Metadata {
+					if md, ok := md.(*schema.MetadataTypeMap); ok {
+						switch md.Runtime {
+						case "go":
+							goMap = md.NativeName
+						case "java":
+							javaMap = md.NativeName
+						}
+					}
+				}
+				assert.Equal(t, "github.com/blockxyz/ftl/test.AnySerializedType", goMap, "go language map not found")
+				assert.Equal(t, "xyz.block.ftl.test.AnySerializedType", javaMap, "Java language map not found")
+			} else {
+				assert.False(t, true, "request not a type alias")
+			}
+
+		})
+	})...)
 	// Schema comments
 	tests = append(tests, JVMTest("schemaComments", func(name string, module string) in.Action {
-		return in.VerifySchemaVerb(module, "emptyVerb", func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+		return in.VerifySchemaVerb(module, "emptyVerb", func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb) {
 			ok := false
 			for _, comment := range verb.GetComments() {
 				if strings.Contains(comment, "JAVA COMMENT") {
@@ -282,14 +334,14 @@ func subTest(name string, test in.Action) in.Action {
 }
 
 func verifyOptionalVerb(name string, module string) in.Action {
-	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb) {
 		assert.True(t, verb.Response.GetOptional() != nil, "response not optional")
 		assert.True(t, verb.Request.GetOptional() != nil, "request not optional")
 	})
 }
 
 func verifyNonOptionalVerb(name string, module string) in.Action {
-	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, verb *schemapb.Verb) {
+	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb) {
 		assert.True(t, verb.Response.GetOptional() == nil, "response was optional")
 		assert.True(t, verb.Request.GetOptional() == nil, "request was optional")
 	})
