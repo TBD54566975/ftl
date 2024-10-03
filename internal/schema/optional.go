@@ -7,6 +7,8 @@ import (
 )
 
 // Optional represents a Type whose value may be optional.
+//
+//protobuf:12
 type Optional struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

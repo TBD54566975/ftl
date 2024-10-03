@@ -25,14 +25,14 @@ func (i AliasKind) String() string {
 // Re-run the stringer command to generate them again.
 func _AliasKindNoOp() {
 	var x [1]struct{}
-	_ = x[AliasKindJSON-(0)]
+	_ = x[AliasKindJson-(0)]
 }
 
-var _AliasKindValues = []AliasKind{AliasKindJSON}
+var _AliasKindValues = []AliasKind{AliasKindJson}
 
 var _AliasKindNameToValueMap = map[string]AliasKind{
-	_AliasKindName[0:4]:      AliasKindJSON,
-	_AliasKindLowerName[0:4]: AliasKindJSON,
+	_AliasKindName[0:4]:      AliasKindJson,
+	_AliasKindLowerName[0:4]: AliasKindJson,
 }
 
 var _AliasKindNames = []string{

@@ -45,6 +45,7 @@ import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.v1.CallRequest;
+import xyz.block.ftl.v1.schema.AliasKind;
 import xyz.block.ftl.v1.schema.Any;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
@@ -474,7 +475,8 @@ public class ModuleBuilder {
                     if (aliases.value() != null) {
                         for (var alias : aliases.value().asStringArray()) {
                             builder.addMetadata(
-                                    Metadata.newBuilder().setAlias(MetadataAlias.newBuilder().setKind(0).setAlias(alias)));
+                                    Metadata.newBuilder().setAlias(
+                                            MetadataAlias.newBuilder().setKind(AliasKind.ALIAS_KIND_JSON).setAlias(alias)));
                         }
                     }
                 }

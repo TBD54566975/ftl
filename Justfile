@@ -129,12 +129,12 @@ pnpm-install:
 
 # Regenerate protos
 build-protos: pnpm-install
-  @mk {{SCHEMA_OUT}} : internal/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint"
+  @mk {{SCHEMA_OUT}} : internal/schema -- "go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: pnpm-install
-  ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint
+  go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
   cd backend/protos && buf generate
 
 # Run integration test(s)

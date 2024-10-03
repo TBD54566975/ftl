@@ -11,6 +11,7 @@ import (
 
 const PostgresDatabaseType = "postgres"
 
+//protobuf:3
 type Database struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

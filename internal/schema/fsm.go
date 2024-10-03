@@ -12,6 +12,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+//protobuf:8
 type FSM struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

@@ -19,7 +19,7 @@ components:
   frontend: { in: frontend/console/** }
   ftl-gen-lsp-cmd: { in: cmd/ftl-gen-lsp/** }
   ftl-initdb-cmd: { in: cmd/ftl-initdb/** }
-  ftl-schema-cmd: { in: cmd/ftl-schema/** }
+  go2proto: { in: cmd/go2proto/** }
   lint-commit-or-rollback-cmd: { in: cmd/lint-commit-or-rollback/** }
   databasetesting: { in: backend/controller/sql/databasetesting/** }
   sql: { in: backend/controller/sql/** }

@@ -437,7 +437,7 @@ func TestParsing(t *testing.T) {
 						+retry 0 catch test.catch
 					verb catch(builtin.CatchRequest<Any>) Unit
 
-					fsm FSM 
+					fsm FSM
 						+ retry 10 1s 10s
 					{
 						start test.A
@@ -650,7 +650,7 @@ func TestParsing(t *testing.T) {
 			input: `
 				module test {
 					export topic topicA test.eventA
-				
+
 					topic topicB test.eventB
 
 					subscription subA1 test.topicA
@@ -1054,14 +1054,14 @@ var testSchema = MustValidate(&Schema{
 					Name:   "CreateRequest",
 					Export: true,
 					Fields: []*Field{
-						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJSON, Alias: "rqn"}}},
+						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJson, Alias: "rqn"}}},
 					},
 				},
 				&Data{
 					Name:   "CreateResponse",
 					Export: true,
 					Fields: []*Field{
-						{Name: "name", Type: &Array{Element: &String{}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJSON, Alias: "rsn"}}},
+						{Name: "name", Type: &Array{Element: &String{}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJson, Alias: "rsn"}}},
 					},
 				},
 				&Data{
