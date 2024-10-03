@@ -413,6 +413,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ env.LATEST_RELEASE }}
+          fetch-depth: 0
+          fetch-tags: true
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
         with:
@@ -430,6 +432,7 @@ jobs:
           set -euo pipefail
           # shellcheck disable=SC2046
           test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname ./{})
+          echo "smoke test test_files: $test_files"
           for file in $test_files; do
-            go test -v -race -tags smoketest -run '^SmokeTest' $file
+            go test -v -tags smoketest -run '^Test' "$file"
           done
