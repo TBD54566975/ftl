@@ -40,8 +40,11 @@ func (i TestContext) integrationTestTimeout() time.Duration {
 		panic(err)
 	}
 	if i.kubeClient != nil {
-		// kube can be slow, give it some time
-		return d * 5
+		// Kube can be slow, give it some time
+		kubeMin := time.Minute
+		if d.Milliseconds() < kubeMin.Milliseconds() {
+			return kubeMin
+		}
 	}
 	return d
 }
