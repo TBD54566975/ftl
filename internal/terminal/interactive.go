@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/alecthomas/kong"
 	"github.com/chzyer/readline"
@@ -33,7 +34,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 		InterruptPrompt: "^C",
 		AutoComplete:    &FTLCompletion{app: k, ctx: ctx, client: client},
 		Listener: &ExitListener{cancel: func() {
-			os.Exit(0)
+			_ = syscall.Kill(-syscall.Getpid(), syscall.SIGINT) //nolint:forcetypeassert,errcheck // best effort
 		}},
 	})
 	sm := FromContext(ctx)
@@ -71,6 +72,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 	for {
 		line, err := l.Readline()
 		if errors.Is(err, readline.ErrInterrupt) {
+
 			if len(line) == 0 {
 				break
 			}
