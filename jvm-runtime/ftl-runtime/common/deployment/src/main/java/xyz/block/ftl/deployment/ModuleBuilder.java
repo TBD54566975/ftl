@@ -524,15 +524,22 @@ public class ModuleBuilder {
         moduleBuilder.build().writeTo(out);
     }
 
-    public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported) {
+    public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported,
+            Map<String, String> languageMappings) {
         validateName(finalT.name().toString(), name);
+        TypeAlias.Builder typeAlias = TypeAlias.newBuilder().setType(buildType(finalS, exported, Nullability.NOT_NULL))
+                .setName(name)
+                .addMetadata(Metadata
+                        .newBuilder()
+                        .setTypeMap(MetadataTypeMap.newBuilder().setRuntime("java").setNativeName(finalT.toString())
+                                .build())
+                        .build());
+        for (var entry : languageMappings.entrySet()) {
+            typeAlias.addMetadata(Metadata.newBuilder().setTypeMap(MetadataTypeMap.newBuilder().setRuntime(entry.getKey())
+                    .setNativeName(entry.getValue()).build()).build());
+        }
         moduleBuilder.addDecls(Decl.newBuilder()
-                .setTypeAlias(TypeAlias.newBuilder().setType(buildType(finalS, exported, Nullability.NOT_NULL)).setName(name)
-                        .addMetadata(Metadata
-                                .newBuilder()
-                                .setTypeMap(MetadataTypeMap.newBuilder().setRuntime("java").setNativeName(finalT.toString())
-                                        .build())
-                                .build()))
+                .setTypeAlias(typeAlias)
                 .build());
     }
 

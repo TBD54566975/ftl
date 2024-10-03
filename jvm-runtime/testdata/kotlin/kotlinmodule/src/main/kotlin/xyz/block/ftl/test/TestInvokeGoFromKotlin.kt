@@ -186,3 +186,15 @@ fun optionalTestObjectOptionalFieldsVerb(
 fun externalTypeVerb(did: Did, client: ExternalTypeVerbClient): Did {
   return client.call(did)
 }
+
+@Export
+@Verb
+fun stringAliasedType(type: CustomSerializedType): CustomSerializedType {
+  return type
+}
+
+@Export
+@Verb
+fun anyAliasedType(type: AnySerializedType): AnySerializedType {
+  return type
+}

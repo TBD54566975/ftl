@@ -61,13 +61,18 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                             if (md.hasTypeMap()) {
                                 String runtime = md.getTypeMap().getRuntime();
                                 if (runtime.equals("kotlin") || runtime.equals("java")) {
-                                    nativeTypeAliasMap.put(new DeclRef(module.getName(), data.getName()),
-                                            md.getTypeMap().getNativeName());
-                                    generateTypeAliasMapper(module.getName(), data.getName(), packageName,
-                                            Optional.of(md.getTypeMap().getNativeName()),
-                                            context.outDir());
-                                    handled = true;
-                                    break;
+                                    String nativeName = md.getTypeMap().getNativeName();
+                                    var existing = getClass().getClassLoader()
+                                            .getResource(nativeName.replace(".", "/") + ".class");
+                                    if (existing != null) {
+                                        nativeTypeAliasMap.put(new DeclRef(module.getName(), data.getName()),
+                                                nativeName);
+                                        generateTypeAliasMapper(module.getName(), data.getName(), packageName,
+                                                Optional.of(nativeName),
+                                                context.outDir());
+                                        handled = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
