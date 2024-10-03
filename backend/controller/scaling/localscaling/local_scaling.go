@@ -25,6 +25,8 @@ import (
 
 var _ scaling.RunnerScaling = &localScaling{}
 
+const maxExits = 10
+
 type localScaling struct {
 	lock     sync.Mutex
 	cacheDir string
@@ -71,6 +73,7 @@ type deploymentInfo struct {
 	replicas int32
 	key      string
 	language string
+	exits    int
 }
 type runnerInfo struct {
 	cancelFunc context.CancelFunc
@@ -133,7 +136,7 @@ func (l *localScaling) handleSchemaChange(ctx context.Context, msg *ftlv1.PullSc
 func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *deploymentInfo) error {
 	// Must be called under lock
 	logger := log.FromContext(ctx)
-	if deploymentRunners.replicas > 0 && !deploymentRunners.runner.Ok() {
+	if deploymentRunners.replicas > 0 && !deploymentRunners.runner.Ok() && deploymentRunners.exits < maxExits {
 		if err := l.startRunner(ctx, deploymentRunners.key, deploymentRunners); err != nil {
 			logger.Errorf(err, "Failed to start runner")
 			return err
@@ -205,6 +208,10 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		}
 		l.lock.Lock()
 		defer l.lock.Unlock()
+		info.exits++
+		if info.exits >= maxExits {
+			logger.Errorf(fmt.Errorf("too many restarts"), "Runner failed too many times, not restarting")
+		}
 		info.runner = optional.None[runnerInfo]()
 		if l.debugPorts[info.module] == debug {
 			delete(l.debugPorts, info.module)
