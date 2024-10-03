@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -22,6 +23,11 @@ import (
 	"github.com/otiai10/copy"
 	"k8s.io/client-go/kubernetes"
 
+	kubecore "k8s.io/api/core/v1"
+	kubemeta "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"sigs.k8s.io/yaml"
+
 	"github.com/TBD54566975/ftl/backend/controller/scaling/k8sscaling"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
@@ -33,13 +39,15 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
+const dumpPath = "/tmp/ftl-kube-report"
+
 func (i TestContext) integrationTestTimeout() time.Duration {
 	timeout := optional.Zero(os.Getenv("FTL_INTEGRATION_TEST_TIMEOUT")).Default("5s")
 	d, err := time.ParseDuration(timeout)
 	if err != nil {
 		panic(err)
 	}
-	if i.kubeClient != nil {
+	if i.kubeClient.Ok() {
 		// kube can be slow, give it some time
 		return d * 5
 	}
@@ -277,9 +285,10 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				Verbs:         verbs,
 				realT:         t,
 				language:      language,
-				kubeClient:    kubeClient,
 				kubeNamespace: kubeNamespace,
+				kubeClient:    optional.Ptr(kubeClient),
 			}
+			defer ic.dumpKubePods()
 
 			if opts.startController || opts.kube {
 				ic.Controller = controller
@@ -354,7 +363,7 @@ type TestContext struct {
 	// The Language under test
 	language string
 	// Set if the test is running on kubernetes
-	kubeClient    *kubernetes.Clientset
+	kubeClient    optional.Option[kubernetes.Clientset]
 	kubeNamespace string
 
 	Controller  ftlv1connect.ControllerServiceClient
@@ -464,4 +473,55 @@ func startProcess(ctx context.Context, t testing.TB, args ...string) context.Con
 		cancel()
 	})
 	return ctx
+}
+
+func (i TestContext) dumpKubePods() {
+	if client, ok := i.kubeClient.Get(); ok {
+		_ = os.RemoveAll(dumpPath) // #nosec
+		list, err := client.CoreV1().Pods(i.kubeNamespace).List(i, kubemeta.ListOptions{})
+		if err == nil {
+			for _, pod := range list.Items {
+				Infof("Dumping logs for pod %s", pod.Name)
+				podPath := filepath.Join(dumpPath, pod.Name)
+				err := os.MkdirAll(podPath, 0755) // #nosec
+				if err != nil {
+					Infof("Error creating directory %s: %v", podPath, err)
+					continue
+				}
+				podYaml, err := yaml.Marshal(pod)
+				if err != nil {
+					Infof("Error marshalling pod %s: %v", pod.Name, err)
+					continue
+				}
+				err = os.WriteFile(filepath.Join(podPath, "pod.yaml"), podYaml, 0644) // #nosec
+				if err != nil {
+					Infof("Error writing pod %s: %v", pod.Name, err)
+					continue
+				}
+				for _, container := range pod.Spec.Containers {
+					path := filepath.Join(dumpPath, pod.Name, container.Name+".log")
+					req := client.CoreV1().Pods(i.kubeNamespace).GetLogs(pod.Name, &kubecore.PodLogOptions{Container: container.Name})
+					podLogs, err := req.Stream(context.Background())
+					defer func() {
+						_ = podLogs.Close()
+					}()
+					if err != nil {
+						Infof("Error getting logs for pod %s: %v", pod.Name, err)
+						continue
+					}
+					buf := new(bytes.Buffer)
+					_, err = io.Copy(buf, podLogs)
+					if err != nil {
+						Infof("Error copying logs for pod %s: %v", pod.Name, err)
+						continue
+					}
+					str := buf.String()
+					err = os.WriteFile(path, []byte(str), 0644) // #nosec
+					if err != nil {
+						Infof("Error writing logs for pod %s: %v", pod.Name, err)
+					}
+				}
+			}
+		}
+	}
 }

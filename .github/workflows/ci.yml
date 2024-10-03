@@ -348,6 +348,12 @@ jobs:
           set -euo pipefail
           # shellcheck disable=SC2046
           go test -v -race -tags infrastructure -run '^${{ matrix.test }}$' $(git grep -l '^//go:build infrastructure' | xargs grep -l '^func ${{ matrix.test }}' | xargs -I {} dirname ./{})
+      - name: Archive Report
+        uses: actions/upload-artifact@v4
+        if: always() # Always upload the report even on failure
+        with:
+          name: kube-report-${{ matrix.test }}
+          path: /tmp/ftl-kube-report/
   integration-success:
     name: Integration Success
     needs: [integration-run]

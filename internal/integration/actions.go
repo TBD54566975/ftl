@@ -227,7 +227,7 @@ func Deploy(module string) Action {
 			if ic.Provisioner != nil {
 				args = append(args, "--use-provisioner", "--provisioner-endpoint=http://localhost:8893")
 			}
-			if ic.kubeClient != nil {
+			if ic.kubeClient.Ok() {
 				args = append(args, "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0")
 			}
 			args = append(args, module)
@@ -395,9 +395,9 @@ func Call[Req any, Resp any](module, verb string, request Req, check func(t test
 }
 
 // VerifyKubeState lets you test the current kube state
-func VerifyKubeState(check func(ctx context.Context, t testing.TB, namespace string, client *kubernetes.Clientset)) Action {
+func VerifyKubeState(check func(ctx context.Context, t testing.TB, namespace string, client kubernetes.Clientset)) Action {
 	return func(t testing.TB, ic TestContext) {
-		check(ic.Context, t, ic.kubeNamespace, ic.kubeClient)
+		check(ic.Context, t, ic.kubeNamespace, ic.kubeClient.MustGet())
 	}
 }
 
