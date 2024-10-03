@@ -145,12 +145,6 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 				// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
 				// so we add a slight delay here
 				time.Sleep(time.Second * 10)
-				logger.Debugf("Deleting deployment %s", msg.ModuleName)
-				err := deploymentClient.Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
-				if err != nil {
-					logger.Errorf(err, "Failed to delete deployment %s", msg.ModuleName)
-				}
-				// TODO: we only need to delete the services once this new ownership structure has been deployed to production
 				// Existing deployments don't have this though
 				logger.Debugf("Deleting service %s", msg.ModuleName)
 				err = r.Client.CoreV1().Secrets(r.Namespace).Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
