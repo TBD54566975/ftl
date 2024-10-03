@@ -147,6 +147,12 @@ message Module {
   repeated Data data = 6;
   repeated Secret secrets = 7;
   repeated Config configs = 8;
+  repeated Database databases = 9;
+  repeated Enum enums = 10;
+  repeated FSM fsms = 11;
+  repeated Topic topics = 12;
+  repeated TypeAlias typealiases = 13;
+  repeated Subscription subscriptions = 14;
 }
 
 message TopologyGroup {
@@ -161,6 +167,11 @@ message GetModulesRequest {}
 message GetModulesResponse {
   repeated Module modules = 1;
   Topology topology = 2;
+}
+
+message StreamModulesRequest {}
+message StreamModulesResponse {
+  repeated Module modules = 1;
 }
 
 // Query for events.
@@ -272,6 +283,7 @@ service ConsoleService {
   }
 
   rpc GetModules(GetModulesRequest) returns (GetModulesResponse);
+  rpc StreamModules(StreamModulesRequest) returns (stream StreamModulesResponse);
   rpc StreamEvents(StreamEventsRequest) returns (stream StreamEventsResponse);
   rpc GetEvents(EventsQuery) returns (GetEventsResponse);
 }
