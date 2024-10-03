@@ -6,7 +6,6 @@ import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_co
 import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 const streamModulesKey = 'streamModules'
-const updateIntervalMs = 60 * 1000
 
 export const useStreamModules = () => {
   const client = useClient(ConsoleService)
@@ -19,7 +18,7 @@ export const useStreamModules = () => {
     try {
       console.debug('streaming modules')
       let hasModules = false
-      for await (const response of client.streamModules({ updateInterval: { seconds: BigInt(0), nanos: updateIntervalMs * 1000 }, query: {} }, { signal })) {
+      for await (const response of client.streamModules({}, { signal })) {
         console.debug('stream-modules-response:', response)
         if (response.modules) {
           hasModules = true
