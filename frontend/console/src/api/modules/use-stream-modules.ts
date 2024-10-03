@@ -28,7 +28,7 @@ export const useStreamModules = () => {
           })
         }
       }
-      return hasModules ? queryClient.getQueryData(queryKey) : [];
+      return hasModules ? queryClient.getQueryData(queryKey) : []
     } catch (error) {
       if (error instanceof ConnectError) {
         if (error.code !== Code.Canceled) {
