@@ -53,6 +53,12 @@ services:
     environment:
       SERVICES: secretsmanager
       DEBUG: 1
+  registry:
+    image: registry:2
+    ports:
+      -  "5000:5000"
+    volumes:
+      - ./.registry:/var/lib/registry
 
 volumes:
   grafana-storage: {}
