@@ -1012,34 +1012,35 @@ func (s *Service) callWithRequest(
 		return nil, err
 	}
 
-	err := ingress.ValidateCallBody(req.Msg.Body, verb, sch)
-	if err != nil {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
-		return nil, err
-	}
-
-	module := verbRef.Module
-	route, ok := sstate.routes[module]
-	if !ok {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
-	}
-	client := s.clientsForEndpoint(route.Endpoint)
-
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to get callers"))
 		return nil, err
 	}
 
-	if !verb.IsExported() {
-		for _, caller := range callers {
-			if caller.Module != module {
-				observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
-				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
-			}
-		}
+	var currentCaller *schema.Ref
+	if len(callers) > 0 {
+		currentCaller = callers[len(callers)-1]
 	}
+
+	module := verbRef.Module
+	if currentCaller.Module != module && !verb.IsExported() {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
+	}
+
+	err = ingress.ValidateCallBody(req.Msg.Body, verb, sch)
+	if err != nil {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
+		return nil, err
+	}
+
+	route, ok := sstate.routes[module]
+	if !ok {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
+	}
+	client := s.clientsForEndpoint(route.Endpoint)
 
 	var requestKey model.RequestKey
 	isNewRequestKey := false
