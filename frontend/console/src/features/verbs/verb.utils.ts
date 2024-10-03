@@ -68,9 +68,17 @@ export const defaultRequest = (verb?: Verb): string => {
 
   const schema = simpleJsonSchema(verb)
   JSONSchemaFaker.option({
-    alwaysFakeOptionals: false,
-    useDefaultValue: true,
-    requiredOnly: true,
+    alwaysFakeOptionals: true,
+    optionalsProbability: 0,
+    useDefaultValue: false,
+    minItems: 0,
+    maxItems: 0,
+    minLength: 0,
+    maxLength: 0,
+  })
+
+  JSONSchemaFaker.format('date-time', () => {
+    return new Date().toISOString()
   })
 
   try {
