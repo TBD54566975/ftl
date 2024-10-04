@@ -261,6 +261,7 @@ public class ModuleBuilder {
             verbBuilder
                     .setName(verbName)
                     .setExport(exported)
+                    .setPos(PositionUtils.forMethod(method))
                     .setRequest(buildType(bodyParamType, exported, bodyParamNullability))
                     .setResponse(buildType(method.returnType(), exported, method));
             Optional.ofNullable(comments.get(CommentKey.ofVerb(verbName)))
@@ -397,6 +398,7 @@ public class ModuleBuilder {
                     return Type.newBuilder().setRef(existing.ref()).build();
                 }
                 Data.Builder data = Data.newBuilder();
+                data.setPos(PositionUtils.forClass(clazz.name().toString()));
                 data.setName(clazz.name().local());
                 data.setExport(type.hasAnnotation(EXPORT) || export);
                 Optional.ofNullable(comments.get(CommentKey.ofData(clazz.name().local())))
@@ -507,8 +509,6 @@ public class ModuleBuilder {
             validateName(decl.getFsm().getPos(), decl.getFsm().getName());
         } else if (decl.hasSubscription()) {
             validateName(decl.getSubscription().getPos(), decl.getSubscription().getName());
-        } else if (decl.hasTypeAlias()) {
-            validateName(decl.getTypeAlias().getPos(), decl.getTypeAlias().getName());
         }
         moduleBuilder.addDecls(decl);
         return this;
