@@ -23,19 +23,19 @@ public class Verbs {
 
     @Export
     @Verb
-    public ColorInt valueEnumVerb(ColorInt color) {
+    public ColorWrapper valueEnumVerb(ColorWrapper color) {
         return color;
     }
 
     @Export
     @Verb
-    public Shape stringEnumVerb(Shape shape) {
+    public ShapeWrapper stringEnumVerb(ShapeWrapper shape) {
         return shape;
     }
 
     @Export
     @Verb
-    public Animal typeEnumVerb(Animal animal) {
+    public AnimalWrapper typeEnumVerb(AnimalWrapper animal) {
         return animal;
     }
 }

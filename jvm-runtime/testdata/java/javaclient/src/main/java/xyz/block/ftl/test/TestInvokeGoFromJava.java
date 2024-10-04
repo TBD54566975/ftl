@@ -229,11 +229,13 @@ public class TestInvokeGoFromJava {
 
     @Export
     @Verb
-    public Animal noValueTypeEnumVerb(Animal animal, NoValueTypeEnumVerbClient client) {
-        if (animal.isCat()) {
-            return client.call(animal.getCat());
+    public AnimalWrapper noValueTypeEnumVerb(AnimalWrapper animal, NoValueTypeEnumVerbClient client) {
+        if (animal.getAnimal().isCat()) {
+            return client.call(new AnimalWrapper(animal.getAnimal().getCat()));
         } else {
             return client.call(animal.getDog());
+        }
+            return client.call(new AnimalWrapper(animal.getAnimal().getDog()));
         }
     }
 
@@ -245,11 +247,23 @@ public class TestInvokeGoFromJava {
 
     @Export
     @Verb
-    public TypeEnum typeEnumVerb(TypeEnum value, TypeEnumVerbClient client) {
-        if (value.isScalar()) {
-            return client.call(new StringList(List.of("a", "b", "c")));
-        } else if (value.isStringList()) {
-            return client.call(new Scalar("scalar"));
+    public ColorWrapper valueEnumVerb(ColorWrapper color, ValueEnumVerbClient client) {
+        return client.call(color);
+    }
+
+    @Export
+    @Verb
+    public ShapeWrapper stringEnumVerb(ShapeWrapper shape, StringEnumVerbClient client) {
+        return client.call(shape);
+    }
+
+    @Export
+    @Verb
+    public TypeEnumWrapper typeEnumVerb(TypeEnumWrapper value, TypeEnumVerbClient client) {
+        if (value.getType().isScalar()) {
+            return client.call(new TypeEnumWrapper(new StringList(List.of("a", "b", "c"))));
+        } else if (value.getType().isStringList()) {
+            return client.call(new TypeEnumWrapper(new Scalar("scalar")));
         } else {
             throw new IllegalArgumentException("unexpected value");
         }

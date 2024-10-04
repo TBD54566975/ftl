@@ -22,7 +22,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.quarkus.deployment.annotations.BuildStep;
+import io.quarkus.deployment.annotations.ExecutionTime;
+import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
+import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.v1.schema.Decl;
 import xyz.block.ftl.v1.schema.Enum;
 import xyz.block.ftl.v1.schema.EnumVariant;
@@ -37,7 +40,8 @@ public class EnumProcessor {
     private static final Logger log = LoggerFactory.getLogger(EnumProcessor.class);
 
     @BuildStep
-    SchemaContributorBuildItem handleEnums(CombinedIndexBuildItem index) {
+    @Record(ExecutionTime.RUNTIME_INIT)
+    SchemaContributorBuildItem handleEnums(CombinedIndexBuildItem index, FTLRecorder recorder) {
         var enumAnnotations = index.getIndex().getAnnotations(FTLDotNames.ENUM);
         log.info("Processing {} enum annotations into decls", enumAnnotations.size());
 
@@ -48,18 +52,21 @@ public class EnumProcessor {
                 try {
                     for (var enumAnnotation : enumAnnotations) {
                         boolean exported = enumAnnotation.target().hasAnnotation(FTLDotNames.EXPORT);
-                        ClassInfo enumClassInfo = enumAnnotation.target().asClass();
-                        if (enumClassInfo.hasDeclaredAnnotation(GENERATED_REF)) {
-                            continue;
-                        }
+                        ClassInfo classInfo = enumAnnotation.target().asClass();
+                        Class<?> clazz = Class.forName(classInfo.name().toString(), false,
+                                Thread.currentThread().getContextClassLoader());
+                        var isLocalToModule = !classInfo.hasDeclaredAnnotation(GENERATED_REF);
                         Enum.Builder enumBuilder = Enum.newBuilder()
-                                .setName(enumClassInfo.simpleName())
+                                .setName(classInfo.simpleName())
                                 .setExport(exported);
-                        if (enumClassInfo.isEnum()) {
-                            decls.add(extractValueEnum(enumClassInfo, enumBuilder));
+                        if (classInfo.isEnum()) {
+                            recorder.registerEnum(clazz);
+                            if (isLocalToModule) {
+                                decls.add(extractValueEnum(classInfo, clazz, enumBuilder));
+                            }
                         } else {
                             // Type enums
-                            var variants = index.getComputingIndex().getAllKnownImplementors(enumClassInfo.name());
+                            var variants = index.getComputingIndex().getAllKnownImplementors(classInfo.name());
                             if (variants.isEmpty()) {
                                 throw new RuntimeException("No variants found for enum: " + enumBuilder.getName());
                             }
@@ -100,12 +107,12 @@ public class EnumProcessor {
         });
     }
 
-    private Decl extractValueEnum(ClassInfo enumClassInfo, Enum.Builder enumBuilder)
+    private Decl extractValueEnum(ClassInfo classInfo, Class<?> clazz, Enum.Builder enumBuilder)
             throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
         // Value enums must have a type
-        FieldInfo valueField = enumClassInfo.field("value");
+        FieldInfo valueField = classInfo.field("value");
         if (valueField == null) {
-            throw new RuntimeException("Enum must have a 'value' field: " + enumClassInfo.name());
+            throw new RuntimeException("Enum must have a 'value' field: " + classInfo.name());
         }
         Type type = valueField.type();
         xyz.block.ftl.v1.schema.Type.Builder typeBuilder = xyz.block.ftl.v1.schema.Type.newBuilder();
@@ -115,13 +122,11 @@ public class EnumProcessor {
             typeBuilder.setString(xyz.block.ftl.v1.schema.String.newBuilder().build());
         } else {
             throw new RuntimeException(
-                    "Enum value type must be String, int, long, short, or byte: " + enumClassInfo.name());
+                    "Enum value type must be String, int, long, short, or byte: " + classInfo.name());
         }
         enumBuilder.setType(typeBuilder.build());
 
-        Class<?> enumClass = Class.forName(enumClassInfo.name().toString(), false,
-                Thread.currentThread().getContextClassLoader());
-        for (var constant : enumClass.getEnumConstants()) {
+        for (var constant : clazz.getEnumConstants()) {
             Field value = constant.getClass().getDeclaredField("value");
             value.setAccessible(true);
             Value.Builder valueBuilder = Value.newBuilder();

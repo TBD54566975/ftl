@@ -568,10 +568,6 @@ public class ModuleBuilder {
                 name, moduleName, pos.getFilename() + ":" + pos.getLine())));
     }
 
-    record ExistingRef(Ref ref, boolean exported) {
-
-    }
-
     public enum BodyType {
         DISALLOWED,
         ALLOWED,

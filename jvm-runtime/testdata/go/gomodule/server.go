@@ -259,7 +259,7 @@ func ValueEnumVerb(ctx context.Context, val ColorWrapper) (ColorWrapper, error) 
 }
 
 //ftl:verb export
-func ShapeEnumVerb(ctx context.Context, val ShapeWrapper) (ShapeWrapper, error) {
+func StringEnumVerb(ctx context.Context, val ShapeWrapper) (ShapeWrapper, error) {
 	return val, nil
 }
 
@@ -283,7 +283,7 @@ func GetAnimal(ctx context.Context) (AnimalWrapper, error) {
 //	return val, nil
 //}
 
-func callJavaServer(ctx context.Context, req javaserver.ColorInt, getValueEnum javaserver.ValueEnumVerbClient) (javaserver.ColorInt, error) {
+func callJavaServer(ctx context.Context, req javaserver.ColorWrapper, getValueEnum javaserver.ValueEnumVerbClient) (javaserver.ColorWrapper, error) {
 	color, _ := getValueEnum(ctx, req)
 	return color, nil
 }
