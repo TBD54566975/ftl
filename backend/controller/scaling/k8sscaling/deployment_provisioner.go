@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/puzpuzpuz/xsync/v3"
 	istiosecmodel "istio.io/api/security/v1"
 	"istio.io/api/type/v1beta1"
 	istiosec "istio.io/client-go/pkg/apis/security/v1"
@@ -53,7 +54,7 @@ type DeploymentProvisioner struct {
 	MyDeploymentName string
 	Namespace        string
 	// Map of known deployments
-	KnownDeployments map[string]bool
+	KnownDeployments *xsync.Map
 	FTLEndpoint      string
 	IstioSecurity    optional.Option[istioclient.Clientset]
 }
@@ -130,7 +131,7 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 		// Note that a change is now currently usually and add and a delete
 		// As it should really be called a module changed, not a deployment changed
 		// This will need to be fixed as part of the support for rolling deployments
-		r.KnownDeployments[msg.DeploymentKey] = true
+		r.KnownDeployments.Store(msg.DeploymentKey, true)
 		if deploymentExists {
 			logger.Debugf("Updating deployment %s", msg.DeploymentKey)
 			return r.handleExistingDeployment(ctx, deployment, msg.Schema)
@@ -138,13 +139,13 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 			return r.handleNewDeployment(ctx, msg.Schema, msg.DeploymentKey)
 		}
 	case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-		delete(r.KnownDeployments, msg.DeploymentKey)
 		if deploymentExists {
 			go func() {
 
 				// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
 				// so we add a slight delay here
 				time.Sleep(time.Second * 10)
+				r.KnownDeployments.Delete(msg.DeploymentKey)
 				logger.Debugf("Deleting service %s", msg.ModuleName)
 				err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
 				if err != nil {
@@ -418,7 +419,7 @@ func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
 	}
 
 	for _, service := range list.Items {
-		if !r.KnownDeployments[service.Name] {
+		if _, ok := r.KnownDeployments.Load(service.Name); !ok {
 			// With owner references the deployments should be deleted automatically
 			// However this is in transition so delete both
 			logger.Debugf("Deleting service %s as it is not a known module", service.Name)

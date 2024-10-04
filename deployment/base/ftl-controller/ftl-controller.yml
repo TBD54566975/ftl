@@ -43,6 +43,8 @@ spec:
               value: "test"
             - name: AWS_ENDPOINT_URL
               value: "http://localstack:4566"
+            - name: LOG_TIMESTAMPS
+              value: "true"
           ports:
             - containerPort: 8891
             - containerPort: 8892

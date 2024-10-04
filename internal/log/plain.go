@@ -92,7 +92,7 @@ func (t *plainSink) Log(entry Entry) error {
 
 	// Add timestamp if required
 	if t.logTime {
-		prefix += entry.Time.Format(time.TimeOnly) + " "
+		prefix += entry.Time.Format(time.StampMilli) + " "
 	}
 
 	// Add scope if required

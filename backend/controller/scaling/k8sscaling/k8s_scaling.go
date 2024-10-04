@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/puzpuzpuz/xsync/v3"
 	istioclient "istio.io/client-go/pkg/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -60,7 +61,7 @@ func (k k8sScaling) Start(ctx context.Context, controller url.URL, leaser leases
 	deploymentReconciler := &DeploymentProvisioner{
 		Client:           clientset,
 		Namespace:        namespace,
-		KnownDeployments: map[string]bool{},
+		KnownDeployments: xsync.NewMap(),
 		FTLEndpoint:      controller.String(),
 		IstioSecurity:    optional.Ptr(sec),
 	}

@@ -49,6 +49,8 @@ data:
                   value: "http://$(MY_POD_IP):8893"
                 - name: FTL_LANGUAGE
                   value: "go,kotlin,java"
+                - name: LOG_TIMESTAMPS
+                  value: "true"
               ports:
                 - containerPort: 8893
               readinessProbe:
