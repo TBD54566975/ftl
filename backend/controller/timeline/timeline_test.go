@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"io"
 	"net/http"
 	"net/url"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
