@@ -1,5 +1,5 @@
 import { Code, ConnectError } from '@connectrpc/connect'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { type UseQueryResult, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client.ts'
 import { useVisibility } from '../../hooks/use-visibility.ts'
 import { ControllerService } from '../../protos/xyz/block/ftl/v1/ftl_connect.ts'
@@ -9,7 +9,7 @@ const streamingSchemaKey = 'streamingSchema'
 const currentDeployments: Record<string, string> = {}
 const schemaMap: Record<string, PullSchemaResponse> = {}
 
-export const useSchema = () => {
+export const useSchema = (): UseQueryResult<PullSchemaResponse[], Error> => {
   const client = useClient(ControllerService)
   const queryClient = useQueryClient()
   const isVisible = useVisibility()

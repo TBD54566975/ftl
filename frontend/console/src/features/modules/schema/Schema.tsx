@@ -12,7 +12,7 @@ function maybeRenderDeclName(token: string, declType: string, tokens: string[], 
     return
   }
   if (declType === 'enum') {
-    return [<LinkToken key='l' token={token.slice(0, token.length - 1)} containerRect={containerRect} />, token.slice(-1)]
+    return [<LinkToken key='l' token={token} containerRect={containerRect} />]
   }
   if (declType === 'verb') {
     return <LinkVerbNameToken token={token} containerRect={containerRect} />
