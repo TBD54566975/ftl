@@ -405,16 +405,20 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - name: Get latest release tag
+        # TODO switch to: latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
         run: |
-          latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
+          latest_release=$(git rev-parse HEAD^)
           echo "Latest release: $latest_release"
           echo "LATEST_RELEASE=$latest_release" >> "$GITHUB_ENV"
-      - name: Checkout previous code
+      - name: Check out exemplar from previous release
         uses: actions/checkout@v4
         with:
+          repository: TBD54566975/ftl.git
           ref: ${{ env.LATEST_RELEASE }}
-          fetch-depth: 0
+          fetch-depth: 1
           fetch-tags: true
+          sparse-checkout: smoketest
+          sparse-checkout-cone-mode: false
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
         with:

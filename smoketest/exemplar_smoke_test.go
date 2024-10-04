@@ -3,6 +3,7 @@
 package smoketest
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -16,8 +17,10 @@ func TestSmokeEcho(t *testing.T) {
 		in.WithTestDataDir("."),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
-		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
-			assert.Equal(t, "Hello, Bob!!!", response)
+		in.Call("echo", "echo", "Joe", func(t testing.TB, response string) {
+			name := "Joe"
+			fmt.Printf("name: %s\n", name)
+			assert.Equal(t, "Hello, %s!!!", name, response)
 		}),
 		in.Exec("ftl", "--version"),
 	)
