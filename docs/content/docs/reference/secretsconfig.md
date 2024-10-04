@@ -17,6 +17,11 @@ top = false
 
 Configuration values are named, typed values. They are managed by the `ftl config` command-line.
 
+{% code_selector() %}
+
+<!-- go -->
+
+
 To declare a configuration value use the following syntax:
 
 ```go
@@ -29,9 +34,38 @@ Then to retrieve a configuration value:
 username = defaultUser.Get(ctx)
 ```
 
+<!-- kotlin -->
+
+Configuration values can be injected into FTL methods, such as `@Verb`, HTTP ingress, Cron etc. To inject a configuration value, use the following syntax:
+
+```kotlin
+@Export
+@Verb
+fun hello(helloRequest: HelloRequest, @Config("defaultUser") defaultUser: String): HelloResponse {
+    return HelloResponse("Hello, $defaultUser")
+}
+```
+<!-- java -->
+Configuration values can be injected into FTL methods, such as `@Verb`, HTTP ingress, Cron etc. To inject a configuration value, use the following syntax:
+
+```java
+@Export
+@Verb
+HelloResponse hello(HelloRequest helloRequest, @Config("defaultUser") String defaultUser)  {
+    return new HelloResponse("Hello, " + defaultUser);
+}
+```
+
+{% end %}
+
+
 ### Secrets
 
 Secrets are encrypted, named, typed values. They are managed by the `ftl secret` command-line.
+
+{% code_selector() %}
+
+<!-- go -->
 
 Declare a secret with the following:
 
@@ -45,6 +79,29 @@ Then to retrieve a secret value:
 key = apiKey.Get(ctx)
 ```
 
+<!-- kotlin -->
+
+Configuration values can be injected into FTL methods, such as `@Verb`, HTTP ingress, Cron etc. To inject a configuration value, use the following syntax:
+
+```kotlin
+@Export
+@Verb
+fun hello(helloRequest: HelloRequest, @Secret("apiKey") apiKey: String): HelloResponse {
+    return HelloResponse("Hello, ${api.call(apiKey)}")
+}
+```
+<!-- java -->
+Configuration values can be injected into FTL methods, such as `@Verb`, HTTP ingress, Cron etc. To inject a configuration value, use the following syntax:
+
+```java
+@Export
+@Verb
+HelloResponse hello(HelloRequest helloRequest, @Secret("apiKey") String apiKey)  {
+    return new HelloResponse("Hello, " + api.call(apiKey));
+}
+```
+
+{% end %}
 ### Transforming secrets/configuration
 
 Often, raw secret/configuration values aren't directly useful. For example, raw credentials might be used to create an API client. For those situations `ftl.Map()` can be used to transform a configuration or secret value into another type:
@@ -55,3 +112,5 @@ var client = ftl.Map(ftl.Secret[Credentials]("credentials"),
     return api.NewClient(creds)
 })
 ```
+
+This is not currently supported in Kotlin or Java.
