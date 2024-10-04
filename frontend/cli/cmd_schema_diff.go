@@ -9,6 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/chroma/v2/quick"
+	"github.com/alecthomas/types/either"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
@@ -17,7 +18,9 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -96,15 +99,49 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover modules %w", err)
 	}
-	for _, moduleSettings := range modules {
-		mod, err := schema.ModuleFromProtoFile(moduleSettings.Abs().Schema())
-		if err != nil {
-			tried += fmt.Sprintf(" failed to read schema file %s; did you run ftl build?", moduleSettings.Abs().Schema())
-		} else {
-			found = true
-			pb.Modules = append(pb.Modules, mod)
-		}
 
+	moduleSchemas := make(chan either.Either[*schema.Module, moduleconfig.UnvalidatedModuleConfig], len(modules))
+	defer close(moduleSchemas)
+
+	for _, m := range modules {
+		go func() {
+			// Loading a plugin can be expensive. Is there a better way?
+			plugin, err := languageplugin.New(ctx, m.Language)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](m)
+			}
+			defer plugin.Kill(ctx)
+
+			customDefaults, err := plugin.ModuleConfigDefaults(ctx, m.Dir)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](m)
+			}
+
+			config, err := m.DefaultAndValidate(customDefaults)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](m)
+			}
+			module, err := schema.ModuleFromProtoFile(config.Schema())
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](m)
+				return
+			}
+			moduleSchemas <- either.LeftOf[moduleconfig.UnvalidatedModuleConfig](module)
+		}()
+	}
+	sch := &schema.Schema{}
+	for range len(modules) {
+		result := <-moduleSchemas
+		switch result := result.(type) {
+		case either.Left[*schema.Module, moduleconfig.UnvalidatedModuleConfig]:
+			sch.Upsert(result.Get())
+			found = true
+		case either.Right[*schema.Module, moduleconfig.UnvalidatedModuleConfig]:
+			tried += fmt.Sprintf(" failed to read schema for %s; did you run ftl build?", result.Get().Module)
+		default:
+			panic(fmt.Sprintf("unexpected type %T", result))
+
+		}
 	}
 	if !found {
 		return nil, errors.New(tried)

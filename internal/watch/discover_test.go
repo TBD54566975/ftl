@@ -14,7 +14,7 @@ func TestDiscoverModules(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	modules, err := DiscoverModules(ctx, []string{"testdata"})
 	assert.NoError(t, err)
-	expected := []moduleconfig.ModuleConfig{
+	expected := []moduleconfig.UnvalidatedModuleConfig{
 		{
 			Dir:       "testdata/alpha",
 			Language:  "go",
@@ -93,8 +93,8 @@ func TestDiscoverModules(t *testing.T) {
 				"src/**",
 				"target/generated-sources",
 			},
-			Java: moduleconfig.ModuleJavaConfig{
-				BuildTool: "maven",
+			LanguageConfig: map[string]any{
+				"build-tool": "maven",
 			},
 		},
 		{
@@ -135,8 +135,8 @@ func TestDiscoverModules(t *testing.T) {
 				"src/**",
 				"target/generated-sources",
 			},
-			Java: moduleconfig.ModuleJavaConfig{
-				BuildTool: "maven",
+			LanguageConfig: map[string]any{
+				"build-tool": "maven",
 			},
 		},
 		{

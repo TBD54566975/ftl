@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -45,19 +47,52 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 		return nil, fmt.Errorf("could not discover modules: %w", err)
 	}
 
-	sch := &schema.Schema{}
-	for _, m := range modules {
-		config := m.Abs()
-		schemaPath := config.Schema()
-		if r, ok := s.deployRoot.Get(); ok {
-			schemaPath = filepath.Join(r, m.Module, m.DeployDir, m.Schema())
-		}
+	moduleSchemas := make(chan either.Either[*schema.Module, error], len(modules))
+	defer close(moduleSchemas)
 
-		module, err := schema.ModuleFromProtoFile(schemaPath)
-		if err != nil {
-			return nil, fmt.Errorf("could not load module schema: %w", err)
+	for _, m := range modules {
+		go func() {
+			// Loading a plugin can be expensive. Is there a better way?
+			plugin, err := languageplugin.New(ctx, m.Language)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not load plugin for %s: %w", m.Module, err))
+			}
+			defer plugin.Kill(ctx)
+
+			customDefaults, err := plugin.ModuleConfigDefaults(ctx, m.Dir)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not get module config defaults for %s: %w", m.Module, err))
+			}
+
+			config, err := m.DefaultAndValidate(customDefaults)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not validate module config for %s: %w", m.Module, err))
+			}
+			schemaPath := config.Schema()
+			if r, ok := s.deployRoot.Get(); ok {
+				schemaPath = filepath.Join(r, m.Module, m.DeployDir, config.Abs().Schema())
+			}
+
+			module, err := schema.ModuleFromProtoFile(schemaPath)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not load module schema: %w", err))
+				return
+			}
+			moduleSchemas <- either.LeftOf[error](module)
+		}()
+	}
+	sch := &schema.Schema{}
+	for range len(modules) {
+		result := <-moduleSchemas
+		switch result := result.(type) {
+		case either.Left[*schema.Module, error]:
+			sch.Upsert(result.Get())
+		case either.Right[*schema.Module, error]:
+			return nil, result.Get()
+		default:
+			panic(fmt.Sprintf("unexpected type %T", result))
+
 		}
-		sch.Upsert(module)
 	}
 	return sch, nil
 }

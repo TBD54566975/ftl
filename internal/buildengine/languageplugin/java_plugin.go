@@ -1,4 +1,4 @@
-package buildengine
+package languageplugin
 
 import (
 	"archive/zip"
@@ -15,6 +15,7 @@ import (
 	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/kong"
 	"github.com/beevik/etree"
+	"github.com/go-viper/mapstructure/v2"
 	"golang.org/x/exp/maps"
 
 	"github.com/TBD54566975/ftl"
@@ -29,17 +30,64 @@ import (
 	"github.com/TBD54566975/ftl/jvm-runtime/kotlin"
 )
 
+const JavaBuildToolMaven string = "maven"
+const JavaBuildToolGradle string = "gradle"
+
+type JavaConfig struct {
+	BuildTool string `mapstructure:"build-tool"`
+}
+
+func loadJavaConfig(languageConfig any, language string) (JavaConfig, error) {
+	var javaConfig JavaConfig
+	err := mapstructure.Decode(languageConfig, &javaConfig)
+	if err != nil {
+		return JavaConfig{}, fmt.Errorf("failed to decode %s config: %w", language, err)
+	}
+	return javaConfig, nil
+}
+
+// ModuleJavaConfig is language-specific configuration for Java modules.
 type javaPlugin struct {
 	*internalPlugin
 }
 
 var _ = LanguagePlugin(&javaPlugin{})
 
-func newJavaPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *javaPlugin {
-	internal := newInternalPlugin(ctx, config, buildJava)
+func newJavaPlugin(ctx context.Context, language string) *javaPlugin {
+	internal := newInternalPlugin(ctx, language, buildJava)
 	return &javaPlugin{
 		internalPlugin: internal,
 	}
+}
+
+func (p *javaPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
+	return moduleconfig.CustomDefaults{
+		GeneratedSchemaDir: "src/main/ftl-module-schema",
+		Deploy:             []string{"quarkus-app", "launch"},
+		// Watch defaults to files related to maven and gradle
+		Watch: []string{"pom.xml", "src/**", "build/generated", "target/generated-sources"},
+	}, nil
+	// TODO: move this to module creation
+	// if config.Build == "" {
+	// 	pom := filepath.Join(moduleDir, "pom.xml")
+	// 	buildGradle := filepath.Join(moduleDir, "build.gradle")
+	// 	buildGradleKts := filepath.Join(moduleDir, "build.gradle.kts")
+	// 	if config.Java.BuildTool == JavaBuildToolMaven || fileExists(pom) {
+	// 		config.Java.BuildTool = JavaBuildToolMaven
+	// 		config.Build = "mvn -B package"
+	// 		if config.DeployDir == "" {
+	// 			config.DeployDir = "target"
+	// 		}
+	// 	} else if config.Java.BuildTool == JavaBuildToolGradle || fileExists(buildGradle) || fileExists(buildGradleKts) {
+	// 		config.Java.BuildTool = JavaBuildToolGradle
+	// 		config.Build = "gradle build"
+	// 		if config.DeployDir == "" {
+	// 			config.DeployDir = "build"
+	// 		}
+	// 	} else {
+	// 		return fmt.Errorf("could not find JVM build file in %s", moduleDir)
+	// 	}
+	// }
 }
 
 func (p *javaPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
@@ -101,12 +149,12 @@ func (p *javaPlugin) CreateModule(ctx context.Context, projConfig projectconfig.
 	return nil
 }
 
-func (p *javaPlugin) GetDependencies(ctx context.Context) ([]string, error) {
+func (p *javaPlugin) GetDependencies(ctx context.Context, config moduleconfig.ModuleConfig) ([]string, error) {
 	return p.internalPlugin.getDependencies(ctx, func() ([]string, error) {
 		dependencies := map[string]bool{}
 		// We also attempt to look at kotlin files
 		// As the Java module supports both
-		kotin, kotlinErr := extractKotlinFTLImports(p.config.Module, p.config.Dir)
+		kotin, kotlinErr := extractKotlinFTLImports(config.Module, config.Dir)
 		if kotlinErr == nil {
 			// We don't really care about the error case, its probably a Java project
 			for _, imp := range kotin {
@@ -115,7 +163,7 @@ func (p *javaPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 		}
 		javaImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
 
-		err := filepath.WalkDir(filepath.Join(p.config.Dir, "src/main/java"), func(path string, d fs.DirEntry, err error) error {
+		err := filepath.WalkDir(filepath.Join(config.Dir, "src/main/java"), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return fmt.Errorf("failed to walk directory: %w", err)
 			}
@@ -133,7 +181,7 @@ func (p *javaPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 				matches := javaImportRegex.FindStringSubmatch(scanner.Text())
 				if len(matches) > 1 {
 					module := strings.Split(matches[1], ".")[0]
-					if module == p.config.Module {
+					if module == config.Module {
 						continue
 					}
 					dependencies[module] = true
@@ -144,7 +192,7 @@ func (p *javaPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 
 		// We only error out if they both failed
 		if err != nil && kotlinErr != nil {
-			return nil, fmt.Errorf("%s: failed to extract dependencies from Java module: %w", p.config.Module, err)
+			return nil, fmt.Errorf("%s: failed to extract dependencies from Java module: %w", config.Module, err)
 		}
 		modules := maps.Keys(dependencies)
 		sort.Strings(modules)
@@ -193,7 +241,11 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 
 func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx)
-	if config.Java.BuildTool == moduleconfig.JavaBuildToolMaven {
+	javaConfig, err := loadJavaConfig(config.LanguageConfig, config.Language)
+	if err != nil {
+		return fmt.Errorf("failed to build module %q: %w", config.Module, err)
+	}
+	if javaConfig.BuildTool == JavaBuildToolMaven {
 		if err := setPOMProperties(ctx, config.Dir); err != nil {
 			// This is not a critical error, things will probably work fine
 			// TBH updating the pom is maybe not the best idea anyway
@@ -202,7 +254,7 @@ func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsM
 	}
 	logger.Infof("Using build command '%s'", config.Build)
 	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
-	err := command.RunBuffered(ctx)
+	err = command.RunBuffered(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to build module %q: %w", config.Module, err)
 	}

@@ -1,6 +1,6 @@
 //go:build integration
 
-package buildengine
+package languageplugin
 
 import (
 	"os"

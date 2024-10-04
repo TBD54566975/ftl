@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/types/either"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -19,7 +20,7 @@ import (
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sch *schema.Schema, config moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (*schema.Module, error) {
+func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRootDir string, sch *schema.Schema, config moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (*schema.Module, error) {
 	logger := log.FromContext(ctx).Module(config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -27,21 +28,21 @@ func build(ctx context.Context, plugin LanguagePlugin, projectRootDir string, sc
 
 	result, err := plugin.Build(ctx, projectRootDir, config, sch, buildEnv, devMode)
 	if err != nil {
-		return handleBuildResult(ctx, config, either.RightOf[BuildResult](err))
+		return handleBuildResult(ctx, config, either.RightOf[languageplugin.BuildResult](err))
 	}
 	return handleBuildResult(ctx, config, either.LeftOf[error](result))
 }
 
 // handleBuildResult processes the result of a build
-func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult either.Either[BuildResult, error]) (*schema.Module, error) {
+func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult either.Either[languageplugin.BuildResult, error]) (*schema.Module, error) {
 	logger := log.FromContext(ctx)
 	config := c.Abs()
 
-	var result BuildResult
+	var result languageplugin.BuildResult
 	switch eitherResult := eitherResult.(type) {
-	case either.Right[BuildResult, error]:
+	case either.Right[languageplugin.BuildResult, error]:
 		return nil, fmt.Errorf("failed to build module: %w", eitherResult.Get())
-	case either.Left[BuildResult, error]:
+	case either.Left[languageplugin.BuildResult, error]:
 		result = eitherResult.Get()
 	}
 

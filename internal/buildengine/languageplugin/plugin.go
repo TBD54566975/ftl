@@ -1,4 +1,4 @@
-package buildengine
+package languageplugin
 
 import (
 	"context"
@@ -62,6 +62,9 @@ type LanguagePlugin interface {
 	// The same topic must be returned each time this method is called
 	Updates() *pubsub.Topic[PluginEvent]
 
+	// TODO: docs
+	ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error)
+
 	// GetCreateModuleFlags returns the flags that can be used to create a module for this language.
 	GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error)
 
@@ -69,7 +72,7 @@ type LanguagePlugin interface {
 	CreateModule(ctx context.Context, projConfig projectconfig.Config, moduleConfig moduleconfig.ModuleConfig, flags map[string]string) error
 
 	// GetDependencies returns the dependencies of the module.
-	GetDependencies(ctx context.Context) ([]string, error)
+	GetDependencies(ctx context.Context, config moduleconfig.ModuleConfig) ([]string, error)
 
 	// Build builds the module with the latest config and schema.
 	// In dev mode, plugin is responsible for automatically rebuilding as relevant files within the module change,
@@ -81,16 +84,16 @@ type LanguagePlugin interface {
 }
 
 // PluginFromConfig creates a new language plugin from the given config.
-func PluginFromConfig(ctx context.Context, config moduleconfig.ModuleConfig, projectRoot string) (p LanguagePlugin, err error) {
-	switch config.Language {
+func New(ctx context.Context, language string) (p LanguagePlugin, err error) {
+	switch language {
 	case "go":
-		return newGoPlugin(ctx, config), nil
+		return newGoPlugin(ctx), nil
 	case "java", "kotlin":
-		return newJavaPlugin(ctx, config), nil
+		return newJavaPlugin(ctx, language), nil
 	case "rust":
-		return newRustPlugin(ctx, config), nil
+		return newRustPlugin(ctx), nil
 	default:
-		return p, fmt.Errorf("unknown language %q", config.Language)
+		return p, fmt.Errorf("unknown language %q", language)
 	}
 }
 
@@ -122,11 +125,22 @@ func (getDependenciesCommand) pluginCmd() {}
 
 type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error
 
+type CompilerBuildError struct {
+	err error
+}
+
+func (e CompilerBuildError) Error() string {
+	return e.err.Error()
+}
+
+func (e CompilerBuildError) Unwrap() error {
+	return e.err
+}
+
 // internalPlugin is used by languages that have not been split off into their own external plugins yet.
 // It has standard behaviours around building and watching files.
 type internalPlugin struct {
-	// config does not change, may not be up to date
-	config moduleconfig.ModuleConfig
+	language string
 
 	// build is called when a new build is explicitly requested or when a watched file changes
 	buildFunc buildFunc
@@ -138,9 +152,9 @@ type internalPlugin struct {
 	cancel  context.CancelFunc
 }
 
-func newInternalPlugin(ctx context.Context, config moduleconfig.ModuleConfig, build buildFunc) *internalPlugin {
+func newInternalPlugin(ctx context.Context, language string, build buildFunc) *internalPlugin {
 	plugin := &internalPlugin{
-		config:    config,
+		language:  language,
 		buildFunc: build,
 		commands:  make(chan pluginCommand, 128),
 		updates:   pubsub.New[PluginEvent](),
@@ -206,12 +220,12 @@ func (p *internalPlugin) getDependencies(ctx context.Context, d dependenciesFunc
 }
 
 func (p *internalPlugin) run(ctx context.Context) {
-	watcher := watch.NewWatcher(p.config.Watch...)
+	var watcher *watch.Watcher
 	watchChan := make(chan watch.WatchEvent, 128)
 
 	// State
 	// This is updated when given explicit build commands and used for automatic rebuilds
-	config := p.config
+	var config moduleconfig.ModuleConfig
 	var projectRoot string
 	var schema *schema.Schema
 	var buildEnv []string
@@ -227,6 +241,10 @@ func (p *internalPlugin) run(ctx context.Context) {
 				config = c.config
 				schema = c.schema
 				buildEnv = c.buildEnv
+
+				if watcher == nil {
+					watcher = watch.NewWatcher(config.Watch...)
+				}
 
 				// begin watching if needed
 				if c.devMode && !devMode {
@@ -260,17 +278,17 @@ func (p *internalPlugin) run(ctx context.Context) {
 			case watch.WatchEventModuleChanged:
 				// automatic rebuild
 
-				p.updates.Publish(AutoRebuildStartedEvent{Module: p.config.Module})
+				p.updates.Publish(AutoRebuildStartedEvent{Module: config.Module})
 				result, err := buildAndLoadResult(ctx, projectRoot, config, schema, buildEnv, devMode, watcher, p.buildFunc)
 				if err != nil {
 					p.updates.Publish(AutoRebuildEndedEvent{
-						Module: p.config.Module,
+						Module: config.Module,
 						Result: either.RightOf[BuildResult](err),
 					})
 					continue
 				}
 				p.updates.Publish(AutoRebuildEndedEvent{
-					Module: p.config.Module,
+					Module: config.Module,
 					Result: either.LeftOf[error](result),
 				})
 			case watch.WatchEventModuleAdded:

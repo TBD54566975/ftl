@@ -18,16 +18,20 @@ import (
 // changed.
 type WatchEvent interface{ watchEvent() }
 
-type WatchEventModuleAdded struct{ Config moduleconfig.ModuleConfig }
+type WatchEventModuleAdded struct {
+	Config moduleconfig.UnvalidatedModuleConfig
+}
 
 func (WatchEventModuleAdded) watchEvent() {}
 
-type WatchEventModuleRemoved struct{ Config moduleconfig.ModuleConfig }
+type WatchEventModuleRemoved struct {
+	Config moduleconfig.UnvalidatedModuleConfig
+}
 
 func (WatchEventModuleRemoved) watchEvent() {}
 
 type WatchEventModuleChanged struct {
-	Config moduleconfig.ModuleConfig
+	Config moduleconfig.UnvalidatedModuleConfig
 	Change FileChangeType
 	Path   string
 	Time   time.Time
@@ -37,7 +41,7 @@ func (WatchEventModuleChanged) watchEvent() {}
 
 type moduleHashes struct {
 	Hashes FileHashes
-	Config moduleconfig.ModuleConfig
+	Config moduleconfig.UnvalidatedModuleConfig
 }
 
 type Watcher struct {
@@ -100,7 +104,7 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 				continue
 			}
 
-			modulesByDir := maps.FromSlice(modules, func(config moduleconfig.ModuleConfig) (string, moduleconfig.ModuleConfig) {
+			modulesByDir := maps.FromSlice(modules, func(config moduleconfig.UnvalidatedModuleConfig) (string, moduleconfig.UnvalidatedModuleConfig) {
 				return config.Dir, config
 			})
 
