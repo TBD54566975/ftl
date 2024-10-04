@@ -984,6 +984,7 @@ func (s *Service) callWithRequest(
 	parentKey optional.Option[model.RequestKey],
 	sourceAddress string,
 ) (*connect.Response[ftlv1.CallResponse], error) {
+	logger := log.FromContext(ctx)
 	start := time.Now()
 	ctx, span := observability.Calls.BeginSpan(ctx, req.Msg.Verb)
 	defer span.End()
@@ -1002,6 +1003,7 @@ func (s *Service) callWithRequest(
 
 	verbRef := schema.RefFromProto(req.Msg.Verb)
 	verb := &schema.Verb{}
+	logger = logger.Module(verbRef.Module)
 
 	if err := sch.ResolveToType(verbRef, verb); err != nil {
 		if errors.Is(err, schema.ErrNotFound) {
@@ -1084,6 +1086,7 @@ func (s *Service) callWithRequest(
 	} else {
 		callResponse = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
+		logger.Errorf(err, "Call failed to verb %s for deployment %s", verbRef.String(), route.Deployment)
 	}
 	s.timeline.EnqueueEvent(ctx, &timeline.Call{
 		DeploymentKey:    route.Deployment,
@@ -1817,7 +1820,7 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 				// as the deployments are in order
 				// We have a new route ready to go, so we can just set the old one to 0 replicas
 				// Do this in a TX so it doesn't happen until the route table is updated
-				deploymentLogger.Debugf("Setting %s to zero replicas", v.Key.String())
+				deploymentLogger.Debugf("Setting %s to zero replicas", prev.Deployment)
 				err := tx.SetDeploymentReplicas(ctx, prev.Deployment, 0)
 				if err != nil {
 					deploymentLogger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())

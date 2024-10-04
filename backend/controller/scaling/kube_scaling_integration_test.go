@@ -49,9 +49,6 @@ func TestKubeScaling(t *testing.T) {
 			// Istio should prevent this
 			assert.Equal(t, strconv.FormatBool(false), response)
 		}),
-		in.EditFile("echo", func(content []byte) []byte {
-			return []byte(strings.ReplaceAll(string(content), "Hello", "Bye"))
-		}, "echo.go"),
 		func(t testing.TB, ic in.TestContext) {
 			// Hit the verb constantly to test rolling updates.
 			go func() {
@@ -71,9 +68,19 @@ func TestKubeScaling(t *testing.T) {
 				}
 			}()
 		},
+		in.EditFile("echo", func(content []byte) []byte {
+			return []byte(strings.ReplaceAll(string(content), "Hello", "Bye"))
+		}, "echo.go"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 			assert.Equal(t, "Bye, Bob!!!", response)
+		}),
+		in.EditFile("echo", func(content []byte) []byte {
+			return []byte(strings.ReplaceAll(string(content), "Bye", "Bonjour"))
+		}, "echo.go"),
+		in.Deploy("echo"),
+		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
+			assert.Equal(t, "Bonjour, Bob!!!", response)
 		}),
 		func(t testing.TB, ic in.TestContext) {
 			done.Store(true)
