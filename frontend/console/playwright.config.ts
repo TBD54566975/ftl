@@ -12,8 +12,6 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  /* If the test end up needing to pull the postgres docker image this can take a while, give it two minutes */
-  timeout: 120000,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:8892',
@@ -41,5 +39,7 @@ export default defineConfig({
     command: 'ftl dev --recreate',
     url: 'http://localhost:8892',
     reuseExistingServer: !process.env.CI,
+    /* If the test end up needing to pull the postgres docker image this can take a while, give it two minutes */
+    timeout: 120000,
   },
 });
