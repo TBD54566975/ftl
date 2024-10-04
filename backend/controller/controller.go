@@ -1025,7 +1025,7 @@ func (s *Service) callWithRequest(
 
 	module := verbRef.Module
 
-	if currentCaller.Module != module && !verb.IsExported() {
+	if currentCaller != nil && currentCaller.Module != module && !verb.IsExported() {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
 	}
