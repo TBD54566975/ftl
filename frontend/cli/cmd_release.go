@@ -40,8 +40,8 @@ func (d *releasePublishCmd) Run() error {
 	conn.SetMaxOpenConns(d.MaxOpenDBConnections)
 
 	svc := artefacts.NewContainerService(artefacts.ContainerConfig{
-		Registry:   "localhost:5000",
-		Repository: "demo-repo",
+		Registry:       "localhost:5000",
+		AllowPlainHTTP: true,
 	}, conn)
 	content := uuid.New()
 	contentBytes := content[:]
