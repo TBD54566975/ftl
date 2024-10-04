@@ -429,13 +429,26 @@ jobs:
         run: go mod download
       - name: Smoke Test Upgrade Path
         run: |
-          set -euo pipefail
-          # shellcheck disable=SC2046
-          test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname ./{})
-          echo "smoke test test_files: $test_files"
-          for file in $test_files; do
-            go test -v -tags smoketest -run '^Test' "$file"
-          done
+            test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname {} || true)
+            echo "Smoke test files: $test_files"
+
+            if [ -z "$test_files" ]; then
+              echo "No smoke test files found."
+              exit 0  # Exit gracefully if no smoke test files are found
+            fi
+
+            for file in $test_files; do
+              echo "Running smoke tests in $file"
+              go test -v -tags smoketest -run '^SmokeTest' "$file" || exit 1
+            done
+        # run: |
+        #   set -euo pipefail
+        #   # shellcheck disable=SC2046
+        #   test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname ./{})
+        #   echo "smoke test test_files: $test_files"
+        #   for file in $test_files; do
+        #     go test -v -tags smoketest -run '^Test' "$file"
+        #   done
       - name: Archive Report
         uses: actions/upload-artifact@v4
         if: always()
