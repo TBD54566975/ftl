@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+
+	"github.com/google/uuid"
+
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	internalobservability "github.com/TBD54566975/ftl/internal/observability"
-	"github.com/google/uuid"
 )
 
 type releaseCmd struct {

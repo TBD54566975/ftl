@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts/internal/sql"
-	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/sha256"
 	"io"
+
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
+
+	"github.com/TBD54566975/ftl/backend/controller/artefacts/internal/sql"
+	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 type ContainerConfig struct {
