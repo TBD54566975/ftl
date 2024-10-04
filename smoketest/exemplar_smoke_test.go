@@ -13,10 +13,11 @@ import (
 func TestSmokeEcho(t *testing.T) {
 	in.Run(t,
 		in.WithKubernetes(),
+		in.WithTestDataDir("."),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
-			assert.Equal(t, "Hello, asdf Bob!!!", response)
+			assert.Equal(t, "Hello, Bob!!!", response)
 		}),
 		in.Exec("ftl", "--version"),
 	)
