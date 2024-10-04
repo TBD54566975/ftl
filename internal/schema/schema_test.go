@@ -49,6 +49,8 @@ module todo {
   export verb create(todo.CreateRequest) todo.CreateResponse
     +calls todo.destroy
 	+database calls todo.testdb
+    +secrets todo.secretValue
+    +config todo.configValue
 
   export verb destroy(builtin.HttpRequest<Unit, todo.DestroyRequest, Unit>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{name}
@@ -189,6 +191,10 @@ Module
     MetadataCalls
       Ref
     MetadataDatabases
+      Ref
+    MetadataSecrets
+      Ref
+    MetadataConfig
       Ref
   Verb
     Ref
@@ -975,7 +981,7 @@ module todo {
 	when Time
   }
   export verb create(todo.CreateRequest) todo.CreateResponse
-  	+calls todo.destroy +database calls todo.testdb
+  	+calls todo.destroy +database calls todo.testdb +secrets todo.secretValue +config todo.configValue
   export verb destroy(builtin.HttpRequest<Unit, todo.DestroyRequest, Unit>) builtin.HttpResponse<todo.DestroyResponse, String>
   	+ingress http GET /todo/destroy/{name}
   verb scheduled(Unit) Unit
@@ -1084,6 +1090,8 @@ var testSchema = MustValidate(&Schema{
 					Metadata: []Metadata{
 						&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "destroy"}}},
 						&MetadataDatabases{Calls: []*Ref{{Module: "todo", Name: "testdb"}}},
+						&MetadataSecrets{Secrets: []*Ref{{Module: "todo", Name: "secretValue"}}},
+						&MetadataConfig{Config: []*Ref{{Module: "todo", Name: "configValue"}}},
 					}},
 				&Verb{Name: "destroy",
 					Export:   true,

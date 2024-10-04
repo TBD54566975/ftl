@@ -1,3 +1,4 @@
+// THIS FILE IS GENERATED; DO NOT MODIFY
 syntax = "proto3";
 
 package xyz.block.ftl.v1.schema;
@@ -147,11 +148,13 @@ message Metadata {
   oneof value {
     MetadataAlias alias = 5;
     MetadataCalls calls = 1;
+    MetadataConfig config = 10;
     MetadataCronJob cronJob = 3;
     MetadataDatabases databases = 4;
     MetadataEncoding encoding = 9;
     MetadataIngress ingress = 2;
     MetadataRetry retry = 6;
+    MetadataSecrets secrets = 11;
     MetadataSubscriber subscriber = 7;
     MetadataTypeMap typeMap = 8;
   }
@@ -166,6 +169,11 @@ message MetadataAlias {
 message MetadataCalls {
   optional Position pos = 1;
   repeated Ref calls = 2;
+}
+
+message MetadataConfig {
+  optional Position pos = 1;
+  repeated Ref config = 2;
 }
 
 message MetadataCronJob {
@@ -197,6 +205,11 @@ message MetadataRetry {
   string min_backoff = 3;
   string max_backoff = 4;
   optional Ref catch = 5;
+}
+
+message MetadataSecrets {
+  optional Position pos = 1;
+  repeated Ref secrets = 2;
 }
 
 message MetadataSubscriber {

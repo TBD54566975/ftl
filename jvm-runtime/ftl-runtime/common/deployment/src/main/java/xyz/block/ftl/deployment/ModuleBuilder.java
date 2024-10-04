@@ -58,6 +58,8 @@ import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataAlias;
 import xyz.block.ftl.v1.schema.MetadataCalls;
+import xyz.block.ftl.v1.schema.MetadataConfig;
+import xyz.block.ftl.v1.schema.MetadataSecrets;
 import xyz.block.ftl.v1.schema.MetadataTypeMap;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Position;
@@ -189,6 +191,8 @@ public class ModuleBuilder {
             xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
             String verbName = validateName(className, ModuleBuilder.methodToName(method));
             MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
+            MetadataConfig.Builder configMetadata = MetadataConfig.newBuilder();
+            MetadataSecrets.Builder secretMetadata = MetadataSecrets.newBuilder();
             for (var param : method.parameters()) {
                 if (param.hasAnnotation(Secret.class)) {
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
@@ -204,6 +208,7 @@ public class ModuleBuilder {
                         addDecls(Decl.newBuilder().setSecret(secretBuilder).build());
                         knownSecrets.add(name);
                     }
+                    secretMetadata.addSecrets(Ref.newBuilder().setName(name).setModule(moduleName).build());
                 } else if (param.hasAnnotation(Config.class)) {
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
                     parameterTypes.add(paramType);
@@ -218,6 +223,7 @@ public class ModuleBuilder {
                         addDecls(Decl.newBuilder().setConfig(configBuilder).build());
                         knownConfig.add(name);
                     }
+                    configMetadata.addConfig(Ref.newBuilder().setName(name).setModule(moduleName).build());
                 } else if (knownTopics.containsKey(param.type().name())) {
                     var topic = knownTopics.get(param.type().name());
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
@@ -252,6 +258,12 @@ public class ModuleBuilder {
             }
             if (callsMetadata.getCallsCount() > 0) {
                 verbBuilder.addMetadata(Metadata.newBuilder().setCalls(callsMetadata));
+            }
+            if (secretMetadata.getSecretsCount() > 0) {
+                verbBuilder.addMetadata(Metadata.newBuilder().setSecrets(secretMetadata));
+            }
+            if (configMetadata.getConfigCount() > 0) {
+                verbBuilder.addMetadata(Metadata.newBuilder().setConfig(configMetadata));
             }
 
             recorder.registerVerb(moduleName, verbName, method.name(), parameterTypes,

@@ -119,6 +119,24 @@ func (v *Verb) AddCall(verb *Ref) {
 	v.Metadata = append(v.Metadata, &MetadataCalls{Calls: []*Ref{verb}})
 }
 
+// AddConfig adds a config reference to the Verb.
+func (v *Verb) AddConfig(config *Ref) {
+	if c, ok := slices.FindVariant[*MetadataConfig](v.Metadata); ok {
+		c.Config = append(c.Config, config)
+		return
+	}
+	v.Metadata = append(v.Metadata, &MetadataConfig{Config: []*Ref{config}})
+}
+
+// AddSecret adds a config reference to the Verb.
+func (v *Verb) AddSecret(secret *Ref) {
+	if c, ok := slices.FindVariant[*MetadataSecrets](v.Metadata); ok {
+		c.Secrets = append(c.Secrets, secret)
+		return
+	}
+	v.Metadata = append(v.Metadata, &MetadataSecrets{Secrets: []*Ref{secret}})
+}
+
 func (v *Verb) GetMetadataIngress() optional.Option[*MetadataIngress] {
 	if m, ok := slices.FindVariant[*MetadataIngress](v.Metadata); ok {
 		return optional.Some(m)
