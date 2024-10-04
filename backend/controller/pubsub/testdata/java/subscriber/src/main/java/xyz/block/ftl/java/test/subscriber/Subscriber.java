@@ -3,9 +3,6 @@ package xyz.block.ftl.java.test.subscriber;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import ftl.builtin.CatchRequest;
 import ftl.publisher.PubSubEvent;
 import ftl.publisher.TestTopicSubscription;
@@ -58,7 +55,7 @@ public class Subscriber {
         if (!"publisher.PubSubEvent".equals(req.getRequestType())) {
             throw new IllegalArgumentException(String.format("unexpected request type: %s", req.getRequestType()));
         }
-        if (!(req.getRequest()instanceof Map<?,?>)) {
+        if (!(req.getRequest() instanceof Map<?, ?>)) {
             throw new IllegalArgumentException(
                     String.format("expected request to be a Map: %s", req.getRequest().getClass().getName()));
         }

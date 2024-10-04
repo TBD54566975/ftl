@@ -28,7 +28,6 @@ To use an external type in your FTL module schema, declare a type alias over the
 {% code_selector() %}
 <!-- go -->
 
-
 ```go
 //ftl:typealias
 type FtlType external.OtherType
