@@ -20,19 +20,92 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
+const help = `Generate a Protobuf schema from Go types.
+
+It supports converting structs to messages, Go "sum types" to oneof fields, and Go "enums" to Protobuf enums.
+
+The generator works by extracting protobuf tags from the source Go types. There are two locations where these tags must
+be specified:
+
+  1. For fields using a tag in the form ` + "`protobuf:\"<id>[,optional]\"`" + `.
+  2. For sum types as comment directives in the form //protobuf:<id>.
+
+An example showing all three supported types and the corresponding protobuf tags:
+
+	type UserType int
+
+	const (
+		UserTypeUnknown UserType = iota
+		UserTypeAdmin
+		UserTypeUser
+	)
+
+	// Entity is a "sum type" consisting of User and Group.
+	//
+	// Every sum type element must have a comment directive in the form //protobuf:<id>.
+	type Entity interface { entity() }
+
+	//protobuf:1
+	type User struct {
+		Name   string    ` + "`protobuf:\"1\"`" + `
+		Type   UserType ` + "`protobuf:\"2\"`" + `
+	}
+	func (User) entity() {}
+
+	//protobuf:2
+	type Group struct {
+		Users []string ` + "`protobuf:\"1\"`" + `
+	}
+	func (Group) entity() {}
+
+	type Role struct {
+		Name string ` + "`protobuf:\"1\"`" + `
+		Entities []Entity ` + "`protobuf:\"2\"`" + `
+	}
+
+And this is the corresponding protobuf schema:
+
+	message Entity {
+	  oneof value {
+	    User user = 1;
+	    Group group = 2;
+	  }
+	}
+
+	enum UserType {
+	  USER_TYPE_UNKNOWN = 0;
+	  USER_TYPE_ADMIN = 1;
+	  USER_TYPE_USER = 2;
+	}
+
+	message User {
+	  string Name = 1;
+	  UserType Type = 2;
+	}
+
+	message Group {
+	  repeated string users = 1;
+	}
+
+	message Role {
+	  string name = 1;
+	  repeated Entity entities = 2;
+	}
+`
+
 type Config struct {
 	Output    string   `help:"Output file to write generated protobuf schema to." short:"o"`
 	Imports   []string `help:"Additional imports to include in the generated protobuf schema." short:"I"`
 	GoPackage string   `help:"Go package to use in the generated protobuf schema." short:"g"`
 
 	Package string   `arg:"" help:"Package name to use in the generated protobuf schema."`
-	Ref     []string `arg:"" help:"Type to generate protobuf schema from in the form PKG.TYPE. eg. github.com/foo/bar.Waz" required:"true" placeholder:"PKG.TYPE"`
+	Ref     []string `arg:"" help:"Type to generate protobuf schema from in the form PKG.TYPE. eg. github.com/foo/bar/waz.Waz or ./waz.Waz" required:"true" placeholder:"PKG.TYPE"`
 }
 
 func main() {
 	fset := token.NewFileSet()
 	cli := Config{}
-	kctx := kong.Parse(&cli)
+	kctx := kong.Parse(&cli, kong.Description(help), kong.UsageOnError())
 
 	out := os.Stdout
 	if cli.Output != "" {
