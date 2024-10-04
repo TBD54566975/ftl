@@ -1018,12 +1018,13 @@ func (s *Service) callWithRequest(
 		return nil, err
 	}
 
-	var currentCaller *schema.Ref
+	var currentCaller *schema.Ref // might be nil but that's fine. just means that it's not a cal from another verb
 	if len(callers) > 0 {
 		currentCaller = callers[len(callers)-1]
 	}
 
 	module := verbRef.Module
+
 	if currentCaller.Module != module && !verb.IsExported() {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
