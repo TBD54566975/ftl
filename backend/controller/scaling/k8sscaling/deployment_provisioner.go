@@ -145,9 +145,8 @@ func (r *DeploymentProvisioner) handleSchemaChange(ctx context.Context, msg *ftl
 				// Nasty hack, we want all the controllers to have updated their route tables before we kill the runner
 				// so we add a slight delay here
 				time.Sleep(time.Second * 10)
-				// Existing deployments don't have this though
 				logger.Debugf("Deleting service %s", msg.ModuleName)
-				err = r.Client.CoreV1().Secrets(r.Namespace).Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
+				err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, msg.DeploymentKey, v1.DeleteOptions{})
 				if err != nil {
 					if !errors.IsNotFound(err) {
 						logger.Errorf(err, "Failed to delete service %s", msg.ModuleName)
@@ -420,14 +419,6 @@ func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
 
 	for _, service := range list.Items {
 		if !r.KnownDeployments[service.Name] {
-
-			logger.Debugf("Deleting service %s", service.Name)
-			err = r.Client.CoreV1().Services(r.Namespace).Delete(ctx, service.Name, v1.DeleteOptions{})
-			if err != nil {
-				if !errors.IsNotFound(err) {
-					logger.Errorf(err, "Failed to delete service %s", service.Name)
-				}
-			}
 			// With owner references the deployments should be deleted automatically
 			// However this is in transition so delete both
 			logger.Debugf("Deleting service %s as it is not a known module", service.Name)
