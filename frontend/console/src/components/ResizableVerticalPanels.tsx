@@ -20,6 +20,8 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
   const [topPanelHeight, setTopPanelHeight] = useState<number>()
   const [isDragging, setIsDragging] = useState(false)
 
+  const hasBottomPanel = !!bottomPanelContent
+
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
@@ -32,9 +34,12 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
     updateDimensions()
     window.addEventListener('resize', updateDimensions)
     return () => window.removeEventListener('resize', updateDimensions)
-  }, [initialTopPanelHeightPercent])
+  }, [initialTopPanelHeightPercent, hasBottomPanel])
 
   const startDragging = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!hasBottomPanel) {
+      return
+    }
     e.preventDefault()
     setIsDragging(true)
   }
@@ -44,7 +49,7 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
   }
 
   const onDrag = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging || !containerRef.current) {
+    if (!isDragging || !containerRef.current || !hasBottomPanel) {
       return
     }
     const containerDims = containerRef.current.getBoundingClientRect()
@@ -57,15 +62,20 @@ export const ResizableVerticalPanels: React.FC<ResizableVerticalPanelsProps> = (
 
   return (
     <div ref={containerRef} className='flex flex-col h-full w-full' onMouseMove={onDrag} onMouseUp={stopDragging} onMouseLeave={stopDragging}>
-      <div style={{ height: `${topPanelHeight}px` }} className='overflow-auto'>
+      <div style={{ height: hasBottomPanel ? `${topPanelHeight}px` : '100%' }} className='overflow-auto'>
+        {' '}
         {topPanelContent}
       </div>
-      <div
-        className='cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600'
-        onMouseDown={startDragging}
-        style={{ height: '3px', cursor: 'row-resize' }}
-      />
-      <div className='flex-1 overflow-auto'>{bottomPanelContent}</div>
+      {hasBottomPanel && (
+        <>
+          <div
+            className='cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600'
+            onMouseDown={startDragging}
+            style={{ height: '3px', cursor: 'row-resize' }}
+          />
+          <div className='flex-1 overflow-auto'>{bottomPanelContent}</div>
+        </>
+      )}
     </div>
   )
 }
