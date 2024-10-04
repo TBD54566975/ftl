@@ -169,6 +169,7 @@ public class HTTPProcessor {
                             .addDecls(Decl.newBuilder().setVerb(xyz.block.ftl.v1.schema.Verb.newBuilder()
                                     .addMetadata(ingressMetadata)
                                     .setName(verbName)
+                                    .setPos(PositionUtils.forMethod(endpoint.getMethodInfo()))
                                     .setExport(true)
                                     .setRequest(Type.newBuilder()
                                             .setRef(Ref.newBuilder().setModule(ModuleBuilder.BUILTIN)

@@ -20,7 +20,8 @@ public final class TopicsBuildItem extends SimpleBuildItem {
         return topics;
     }
 
-    public record DiscoveredTopic(String topicName, String generatedProducer, Type eventType, boolean exported) {
+    public record DiscoveredTopic(String topicName, String generatedProducer, Type eventType, boolean exported,
+            String interfaceName) {
 
     }
 }

@@ -81,6 +81,7 @@ public class SubscriptionProcessor {
 
             moduleBuilder.addDecls(Decl.newBuilder()
                     .setSubscription(xyz.block.ftl.v1.schema.Subscription.newBuilder()
+                            .setPos(PositionUtils.forMethod(method))
                             .setName(info.name())
                             .setTopic(Ref.newBuilder().setName(info.topic()).setModule(info.module()).build()))
                     .build());
