@@ -99,6 +99,7 @@ export const declFromSchema = (moduleName: string, declName: string, schema: Pul
 export const listExpandedModulesFromLocalStorage = () => (localStorage.getItem('tree_m') || '').split(',').filter((s) => s !== '')
 
 export const toggleModuleExpansionInLocalStorage = (moduleName: string) => {
+  console.log('toggle')
   const expanded = listExpandedModulesFromLocalStorage()
   const i = expanded.indexOf(moduleName)
   if (i === -1) {
@@ -110,6 +111,7 @@ export const toggleModuleExpansionInLocalStorage = (moduleName: string) => {
 }
 
 export const addModuleToLocalStorageIfMissing = (moduleName?: string) => {
+  console.log('add')
   const expanded = listExpandedModulesFromLocalStorage()
   if (moduleName && !expanded.includes(moduleName)) {
     localStorage.setItem('tree_m', [...expanded, moduleName].join(','))

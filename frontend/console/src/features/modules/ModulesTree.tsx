@@ -144,7 +144,8 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
   const declTypesFromUrl = declTypeMultiselectOpts.filter((o) => declTypeKeysFromUrl.includes(o.key))
   const [selectedDeclTypes, setSelectedDeclTypes] = useState(declTypesFromUrl.length === 0 ? declTypeMultiselectOpts : declTypesFromUrl)
 
-  const [expandedModules, setExpandedModules] = useState(getInitialExpandedModules(moduleName, declName))
+  const initialExpanded = getInitialExpandedModules(moduleName, declName)
+  const [expandedModules, setExpandedModules] = useState(initialExpanded)
   useEffect(() => {
     setExpandedModules(getInitialExpandedModules(moduleName, declName))
   }, [moduleName, declName])
@@ -160,14 +161,30 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     setSelectedDeclTypes(opts)
   }
 
-  function toggle(moduleName: string) {
-    toggleModuleExpansionInLocalStorage(moduleName)
+  function toggle(toggledModule: string) {
+    const beforeFromLS = listExpandedModulesFromLocalStorage()
+    if (toggledModule === moduleName && beforeFromLS.includes(toggledModule) && !expandedModules.includes(toggledModule)) {
+      // Local storage is out of sync from the state because user closed the
+      // module for the selected decl, which un-syncs the state from the saved
+      // state. Re-opening the selected module lets us re-sync those.
+      // The reason they go out of sync is getInitialExpandedModules gets called
+      // while the decl is still selected, so the module gets added back to the
+      // saved state despite being hence removed from the component state.
+      //setExpandedModules(listExpandedModulesFromLocalStorage())
+      //return
+    }
+    console.log('asdf', listExpandedModulesFromLocalStorage(), expandedModules)
+    toggleModuleExpansionInLocalStorage(toggledModule)
     setExpandedModules(listExpandedModulesFromLocalStorage())
+    console.log('asdf2', listExpandedModulesFromLocalStorage(), expandedModules)
   }
 
   function collapseAll() {
     collapseAllModulesInLocalStorage()
-    setExpandedModules([])
+    if (moduleName && declName) {
+      addModuleToLocalStorageIfMissing(moduleName)
+    }
+    setExpandedModules(listExpandedModulesFromLocalStorage())
   }
 
   modules.sort((m1, m2) => Number(m1.isBuiltin) - Number(m2.isBuiltin))
