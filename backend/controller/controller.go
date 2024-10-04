@@ -1032,7 +1032,7 @@ func (s *Service) callWithRequest(
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
 	}
 
-	err = ingress.ValidateCallBody(req.Msg.Body, verb, sch)
+	err = validateCallBody(req.Msg.Body, verb, sch)
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
 		return nil, err
@@ -1904,6 +1904,24 @@ func makeBackoff(min, max time.Duration) backoff.Backoff {
 		Jitter: true,
 		Factor: 2,
 	}
+}
+
+func validateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error {
+	var root any
+	err := json.Unmarshal(body, &root)
+	if err != nil {
+		return fmt.Errorf("request body is not valid JSON: %w", err)
+	}
+
+	var opts []schema.EncodingOption
+	if e, ok := slices.FindVariant[*schema.MetadataEncoding](verb.Metadata); ok && e.Lenient {
+		opts = append(opts, schema.LenientMode())
+	}
+	err = schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, root, sch, opts...)
+	if err != nil {
+		return fmt.Errorf("could not validate HTTP request body: %w", err)
+	}
+	return nil
 }
 
 type Route struct {
