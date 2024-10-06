@@ -8,36 +8,43 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 )
 
-type CertificateData struct {
-	ID            Identity
-	NodePublicKey PublicKey
+type CertificateContent struct {
+	Identity  Identity
+	PublicKey RawPublicKey
 }
 
-func (c CertificateData) String() string {
-	return fmt.Sprintf("CertData(%s %x)", c.ID, c.NodePublicKey)
+func (c CertificateContent) String() string {
+	return fmt.Sprintf("CertficateContent(%s %x)", c.Identity, c.PublicKey)
 }
 
 type Certificate struct {
-	SignedData
+	CertificateContent
+	Signature Signature
 }
 
-func NewCertificate(cert *ftlv1.Certificate) (Certificate, error) {
-	data, err := proto.Marshal(cert.Content)
+func ParseCertificateFromProto(cert *ftlv1.Certificate) (Certificate, error) {
+	identity, err := Parse(cert.Content.Identity)
 	if err != nil {
-		return Certificate{}, fmt.Errorf("failed to marshal certificate: %w", err)
+		return Certificate{}, fmt.Errorf("failed to parse identity from proto: %w", err)
 	}
 
-	return Certificate{SignedData: SignedData{data: data, Signature: cert.ControllerSignature}}, nil
+	return Certificate{
+		CertificateContent: CertificateContent{
+			Identity:  identity,
+			PublicKey: NewRawPublicKey(cert.Content.PublicKey),
+		},
+		Signature: NewSignature(cert.ControllerSignature),
+	}, nil
 }
 
 func (c Certificate) String() string {
-	return fmt.Sprintf("Certificate(%x %x)", c.data, c.Signature)
+	return fmt.Sprintf("Certificate(key:%x sig:%x)", c.PublicKey.Bytes, c.Signature.Bytes)
 }
 
-func (c Certificate) Proto() *ftlv1.Certificate {
+func (c Certificate) ToProto() *ftlv1.Certificate {
 	return &ftlv1.Certificate{
-		Content:             &ftlv1.CertificateContent{Identity: c.ID.String()},
-		ControllerSignature: c.Signature,
+		Content:             &ftlv1.CertificateContent{Identity: c.Identity.String(), PublicKey: c.PublicKey.Bytes},
+		ControllerSignature: c.Signature.Bytes,
 	}
 }
 
@@ -69,7 +76,7 @@ func (c CertifiedSignedData) Verify(caVerifier Verifier) (Identity, []byte, erro
 		return nil, nil, fmt.Errorf("failed to parse identity: %w", err)
 	}
 
-	nodePublicKey := PublicKey{Bytes: certificateContent.PublicKey}
+	nodePublicKey := RawPublicKey{Bytes: certificateContent.PublicKey}
 	nodeVerifier, err := NewVerifier(nodePublicKey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create verifier: %w", err)

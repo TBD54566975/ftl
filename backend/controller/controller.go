@@ -482,7 +482,7 @@ func (s *Service) GetCertification(ctx context.Context, certificateRequest *conn
 	}
 
 	return connect.NewResponse(&ftlv1.GetCertificationResponse{
-		Certificate: certificate.Proto(),
+		Certificate: certificate.ToProto(),
 	}), nil
 }
 

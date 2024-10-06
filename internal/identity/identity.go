@@ -14,6 +14,7 @@ import (
 
 type Identity interface {
 	String() string
+	identity()
 }
 
 var _ Identity = Controller{}
@@ -27,6 +28,7 @@ func NewController() Controller {
 func (c Controller) String() string {
 	return "ca"
 }
+func (Controller) identity() {}
 
 var _ Identity = Runner{}
 
@@ -47,6 +49,8 @@ func NewRunner(key model.RunnerKey, module string) Runner {
 func (r Runner) String() string {
 	return fmt.Sprintf("%s:%s", r.Key, r.Module)
 }
+
+func (Runner) identity() {}
 
 func Parse(s string) (Identity, error) {
 	if s == "" {
@@ -134,7 +138,7 @@ func (s *Store) NewGetCertificateRequest() (v1.GetCertificationRequest, error) {
 
 func (s *Store) SignCertificateRequest(req *v1.GetCertificationRequest) (Certificate, error) {
 	// Ensure the pubkey matches the signature.
-	verifier, err := NewVerifier(NewPublicKey(req.Request.PublicKey))
+	verifier, err := NewVerifier(NewRawPublicKey(req.Request.PublicKey))
 	if err != nil {
 		return Certificate{}, fmt.Errorf("failed to create verifier: %w", err)
 	}

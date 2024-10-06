@@ -14,18 +14,18 @@ type Signer struct {
 }
 
 func (k Signer) Sign(data []byte) (SignedData, error) {
-	bytes, err := k.signer.Sign(data)
+	signatureBytes, err := k.signer.Sign(data)
 	if err != nil {
 		return SignedData{}, fmt.Errorf("failed to sign data: %w", err)
 	}
 
 	return SignedData{
 		data:      data,
-		Signature: bytes,
+		Signature: NewSignature(signatureBytes),
 	}, nil
 }
 
-func (k Signer) Public() (PublicKey, error) {
+func (k Signer) Public() (RawPublicKey, error) {
 	panic("implement me")
 }
 
@@ -33,7 +33,7 @@ type Verifier struct {
 	verifier tink.Verifier
 }
 
-func NewVerifier(publicKey PublicKey) (Verifier, error) {
+func NewVerifier(publicKey RawPublicKey) (Verifier, error) {
 	reader := keyset.NewBinaryReader(bytes.NewReader(publicKey.Bytes))
 	public, err := keyset.ReadWithNoSecrets(reader)
 	if err != nil {
@@ -51,7 +51,7 @@ func NewVerifier(publicKey PublicKey) (Verifier, error) {
 }
 
 func (k Verifier) Verify(signedData SignedData) ([]byte, error) {
-	err := k.verifier.Verify(signedData.Signature, signedData.data)
+	err := k.verifier.Verify(signedData.Signature.Bytes, signedData.data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify signature: %w", err)
 	}
@@ -90,20 +90,20 @@ func (t KeyPair) Verifier() (Verifier, error) {
 	}, nil
 }
 
-func (t KeyPair) Public() (PublicKey, error) {
+func (t KeyPair) Public() (RawPublicKey, error) {
 	// TODO: Maybe slow. Cache it.
 	publicHandle, err := t.keysetHandle.Public()
 	if err != nil {
-		return PublicKey{}, fmt.Errorf("failed to get public keyset from keyset handle: %w", err)
+		return RawPublicKey{}, fmt.Errorf("failed to get public keyset from keyset handle: %w", err)
 	}
 
 	buf := new(bytes.Buffer)
 	writer := keyset.NewBinaryWriter(buf)
 	if err := publicHandle.WriteWithNoSecrets(writer); err != nil {
-		return PublicKey{}, fmt.Errorf("failed to write public keyset to buffer: %w", err)
+		return RawPublicKey{}, fmt.Errorf("failed to write public keyset to buffer: %w", err)
 	}
 
-	publicKey := PublicKey{
+	publicKey := RawPublicKey{
 		Bytes: buf.Bytes(),
 	}
 	return publicKey, nil

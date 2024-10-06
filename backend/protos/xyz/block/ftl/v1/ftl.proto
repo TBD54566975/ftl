@@ -133,19 +133,18 @@ service ModuleService {
   rpc PublishEvent(PublishEventRequest) returns (PublishEventResponse);
 }
 
-message GetCertificationRequest {
-  CertificateContent request = 1;
+message SignedMessage {
+  bytes message = 1;
   bytes signature = 2;
+}
+
+message GetCertificationRequest {
+    // This should be serialised with the node identity and its public key.
+    SignedMessage certificate_request = 1;
 }
 
 message GetCertificationResponse {
   Certificate certificate = 1;
-}
-
-// CertificateContent is separated from Certificate to allow for easier signing.
-message CertificateContent {
-  string identity = 1;
-  bytes public_key = 2;
 }
 
 message Certificate {

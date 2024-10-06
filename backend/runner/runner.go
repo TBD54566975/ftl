@@ -42,19 +42,19 @@ import (
 )
 
 type Config struct {
-	Config                []string            `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
-	Bind                  *url.URL            `help:"Endpoint the Runner should bind to and advertise." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
-	Key                   model.RunnerKey     `help:"Runner key (auto)."`
-	ControllerEndpoint    *url.URL            `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
-	ControllerPublicKey   *identity.PublicKey `name:"ftl-public-key" help:"Controller public key in Base64. Temporarily optional." env:"FTL_CONTROLLER_PUBLIC_KEY"`
-	TemplateDir           string              `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
-	DeploymentDir         string              `help:"Directory to store deployments in." default:"${deploymentdir}"`
-	DeploymentKeepHistory int                 `help:"Number of deployments to keep history for." default:"3"`
-	Language              []string            `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust,java"`
-	HeartbeatPeriod       time.Duration       `help:"Minimum period between heartbeats." default:"3s"`
-	HeartbeatJitter       time.Duration       `help:"Jitter to add to heartbeat period." default:"2s"`
-	Deployment            string              `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
-	DebugPort             int                 `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
+	Config                []string               `name:"config" short:"C" help:"Paths to FTL project configuration files." env:"FTL_CONFIG" placeholder:"FILE[,FILE,...]" type:"existingfile"`
+	Bind                  *url.URL               `help:"Endpoint the Runner should bind to and advertise." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
+	Key                   model.RunnerKey        `help:"Runner key (auto)."`
+	ControllerEndpoint    *url.URL               `name:"ftl-endpoint" help:"Controller endpoint." env:"FTL_ENDPOINT" default:"http://127.0.0.1:8892"`
+	ControllerPublicKey   *identity.RawPublicKey `name:"ftl-public-key" help:"Controller public key in Base64. Temporarily optional." env:"FTL_CONTROLLER_PUBLIC_KEY"`
+	TemplateDir           string                 `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
+	DeploymentDir         string                 `help:"Directory to store deployments in." default:"${deploymentdir}"`
+	DeploymentKeepHistory int                    `help:"Number of deployments to keep history for." default:"3"`
+	Language              []string               `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust,java"`
+	HeartbeatPeriod       time.Duration          `help:"Minimum period between heartbeats." default:"3s"`
+	HeartbeatJitter       time.Duration          `help:"Jitter to add to heartbeat period." default:"2s"`
+	Deployment            string                 `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
+	DebugPort             int                    `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -164,7 +164,7 @@ func newIdentityStore(ctx context.Context, config Config, key model.RunnerKey, c
 		return identity.Store{}, fmt.Errorf("failed to get certificate: %w", err)
 	}
 
-	certificate, err := identity.NewCertificate(certResp.Msg.Certificate)
+	certificate, err := identity.ParseCertificateFromProto(certResp.Msg.Certificate)
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)
 		return identity.Store{}, fmt.Errorf("failed to create certificate: %w", err)

@@ -149,7 +149,7 @@ func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error
 	encryptedIdentity := &dal.EncryptedIdentity{
 		Private:         encryptedIdentityColumn,
 		Public:          public.Bytes,
-		VerifySignature: signed.Signature,
+		VerifySignature: signed.Signature.Bytes,
 	}
 	if err := tx.CreateOnlyIdentityKey(ctx, *encryptedIdentity); err != nil {
 		return fmt.Errorf("failed to create only identity key: %w", err)

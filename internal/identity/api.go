@@ -11,11 +11,11 @@ import (
 type SignedData struct {
 	// data is hidden here so that the only way to access it is to verify the signature.
 	data      []byte
-	Signature []byte
+	Signature Signature
 }
 
 // NewSignedData ensures that the data is signed correctly.
-func NewSignedData(verifier Verifier, data, signature []byte) (SignedData, error) {
+func NewSignedData(verifier Verifier, data []byte, signature Signature) (SignedData, error) {
 	signedData := SignedData{data: data, Signature: signature}
 
 	_, err := verifier.Verify(signedData)
@@ -26,15 +26,26 @@ func NewSignedData(verifier Verifier, data, signature []byte) (SignedData, error
 	return signedData, nil
 }
 
-type PublicKey struct {
+type Signature struct {
 	Bytes []byte
 }
 
-func NewPublicKey(b []byte) PublicKey {
-	return PublicKey{Bytes: b}
+func NewSignature(b []byte) Signature {
+	return Signature{Bytes: b}
 }
 
-func (pk PublicKey) Decode(ctx *kong.DecodeContext) error {
+// RawPublicKey is a public key that has not been parsed into a Tink keyset handle.
+type RawPublicKey struct {
+	Bytes []byte
+}
+
+func NewRawPublicKey(b []byte) RawPublicKey {
+	return RawPublicKey{Bytes: b}
+}
+
+// Decode here is used for parsing the public key from a base64 string when passed
+// as a command line argument or environment variable.
+func (pk RawPublicKey) Decode(ctx *kong.DecodeContext) error {
 	var b64 string
 	err := ctx.Scan.PopValueInto("string", &b64)
 	if err != nil {
