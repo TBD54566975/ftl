@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand/v2"
 	"strconv"
@@ -130,13 +131,7 @@ func (d *Provisioner) Status(ctx context.Context, req *connect.Request[provision
 }
 
 func statusFailure(message string) (*connect.Response[provisioner.StatusResponse], error) {
-	return connect.NewResponse(&provisioner.StatusResponse{
-		Status: &provisioner.StatusResponse_Failed{
-			Failed: &provisioner.StatusResponse_ProvisioningFailed{
-				ErrorMessage: message,
-			},
-		},
-	}), nil
+	return nil, connect.NewError(connect.CodeUnknown, errors.New(message))
 }
 
 func (d *Provisioner) provisionPostgres(ctx context.Context, tr *provisioner.Resource_Postgres, module, id string, step *step) {

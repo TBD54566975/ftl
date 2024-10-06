@@ -2,7 +2,6 @@ package provisioner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -81,15 +80,12 @@ func (t *Task) Progress(ctx context.Context) error {
 		DesiredResources:  t.desired,
 	}))
 	if err != nil {
+		t.state = TaskStateFailed
 		return fmt.Errorf("error getting state: %w", err)
 	}
-	switch s := resp.Msg.Status.(type) {
-	case *provisioner.StatusResponse_Success:
+	if succ, ok := resp.Msg.Status.(*provisioner.StatusResponse_Success); ok {
 		t.state = TaskStateDone
-		t.output = s.Success.UpdatedResources
-	case *provisioner.StatusResponse_Failed:
-		t.state = TaskStateFailed
-		return errors.New(s.Failed.ErrorMessage)
+		t.output = succ.Success.UpdatedResources
 	}
 	return nil
 }

@@ -245,13 +245,7 @@ export class StatusResponse extends Message<StatusResponse> {
     case: "running";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningFailed failed = 2;
-     */
-    value: StatusResponse_ProvisioningFailed;
-    case: "failed";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess success = 3;
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess success = 2;
      */
     value: StatusResponse_ProvisioningSuccess;
     case: "success";
@@ -266,8 +260,7 @@ export class StatusResponse extends Message<StatusResponse> {
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.StatusResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "running", kind: "message", T: StatusResponse_ProvisioningRunning, oneof: "status" },
-    { no: 2, name: "failed", kind: "message", T: StatusResponse_ProvisioningFailed, oneof: "status" },
-    { no: 3, name: "success", kind: "message", T: StatusResponse_ProvisioningSuccess, oneof: "status" },
+    { no: 2, name: "success", kind: "message", T: StatusResponse_ProvisioningSuccess, oneof: "status" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse {

@@ -86,9 +86,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		if fail, ok := status.Msg.Status.(*provisioner.StatusResponse_Failed); ok {
-			panic(fail.Failed.ErrorMessage)
-		} else if success, ok := status.Msg.Status.(*provisioner.StatusResponse_Success); ok {
+		if success, ok := status.Msg.Status.(*provisioner.StatusResponse_Success); ok {
 			println("finished!")
 			for _, r := range success.Success.UpdatedResources {
 				jsn, err := json.MarshalIndent(r, "", "  ")
