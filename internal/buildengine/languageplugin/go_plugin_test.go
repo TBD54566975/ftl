@@ -25,7 +25,8 @@ func TestParseImportsFromTestData(t *testing.T) {
 
 func TestExtractModuleDepsGo(t *testing.T) {
 	ctx := context.Background()
-	dir := "../testdata/alpha"
+	dir, err := filepath.Abs("../testdata/alpha")
+	assert.NoError(t, err)
 	uncheckedConfig, err := moduleconfig.LoadModuleConfig(dir)
 	assert.NoError(t, err)
 

@@ -120,7 +120,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context, config moduleconfig.Modu
 	return p.internalPlugin.getDependencies(ctx, func() ([]string, error) {
 		dependencies := map[string]bool{}
 		fset := token.NewFileSet()
-		err := watch.WalkDir(config.Dir, func(path string, d fs.DirEntry) error {
+		err := watch.WalkDir(config.Abs().Dir, func(path string, d fs.DirEntry) error {
 			if !d.IsDir() {
 				return nil
 			}
