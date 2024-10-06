@@ -6,10 +6,11 @@ import (
 	"net"
 	"time"
 
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/alecthomas/types/optional"
 )
 
 const ftlContainerName = "ftl-db-1"

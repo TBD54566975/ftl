@@ -9,14 +9,15 @@ import (
 	"sync/atomic"
 
 	"connectrpc.com/connect"
+	"github.com/XSAM/otelsql"
+	"github.com/puzpuzpuz/xsync/v3"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
-	"github.com/XSAM/otelsql"
-	"github.com/puzpuzpuz/xsync/v3"
 )
 
 type task struct {
