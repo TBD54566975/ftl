@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alecthomas/types/either"
-	"github.com/alecthomas/types/optional"
-
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/watch"
+	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/optional"
 )
 
 // localClient reads and writes to local projectconfig files without making any network
@@ -46,7 +46,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 		return nil, fmt.Errorf("could not discover modules: %w", err)
 	}
 
-	moduleSchemas := make(chan either.Either[*schema.Module, error], len(modules))
+	moduleSchemas := make(chan either.Either[*schema.Module, error], 32)
 	defer close(moduleSchemas)
 
 	for _, m := range modules {
@@ -76,17 +76,20 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 		}()
 	}
 	sch := &schema.Schema{}
+	errs := []error{}
 	for range len(modules) {
 		result := <-moduleSchemas
 		switch result := result.(type) {
 		case either.Left[*schema.Module, error]:
 			sch.Upsert(result.Get())
 		case either.Right[*schema.Module, error]:
-			return nil, result.Get()
+			errs = append(errs, result.Get())
 		default:
 			panic(fmt.Sprintf("unexpected type %T", result))
-
 		}
+	}
+	if len(errs) > 0 {
+		return nil, errors.Join(errs...)
 	}
 	return sch, nil
 }
