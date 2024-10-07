@@ -2,6 +2,7 @@ package provisioner
 
 import "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 
+// ResourceGraph is an in-memory graph of resources and their dependencies
 type ResourceGraph struct {
 	nodes []*provisioner.Resource
 	edges []*ResourceEdge
@@ -27,6 +28,9 @@ func (g *ResourceGraph) AddEdge(from, to *provisioner.Resource) *ResourceEdge {
 
 // Resources returns all nodes in the graph
 func (g *ResourceGraph) Resources() []*provisioner.Resource {
+	if g == nil {
+		return nil
+	}
 	return g.nodes
 }
 

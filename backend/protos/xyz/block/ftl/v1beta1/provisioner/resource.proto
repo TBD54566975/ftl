@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1beta1.provisioner;
 
+import "google/protobuf/struct.proto";
 import "xyz/block/ftl/v1/ftl.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
@@ -41,10 +42,13 @@ message MysqlResource {
 }
 
 message ModuleResource {
-  message ModuleResourceOutput {}
-
+  message ModuleResourceOutput {
+    string deployment_key = 1;
+  }
   ModuleResourceOutput output = 1;
 
-  repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 2;
-  xyz.block.ftl.v1.schema.Module schema = 3;
+  xyz.block.ftl.v1.schema.Module schema = 2;
+  repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 3;
+  // Runner labels required to run this deployment.
+  optional google.protobuf.Struct labels = 4;
 }

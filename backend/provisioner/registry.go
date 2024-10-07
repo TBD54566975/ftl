@@ -3,23 +3,17 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
-	"github.com/TBD54566975/ftl/backend/provisioner/noop"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
-)
-
-// ResourceType is a type of resource used to configure provisioners
-type ResourceType string
-
-const (
-	ResourceTypeUnknown  ResourceType = "unknown"
-	ResourceTypePostgres ResourceType = "postgres"
-	ResourceTypeMysql    ResourceType = "mysql"
+	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 // provisionerPluginConfig is a map of provisioner name to resources it supports
@@ -57,8 +51,20 @@ type ProvisionerRegistry struct {
 	Provisioners []*ProvisionerBinding
 }
 
-func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig) (*ProvisionerRegistry, error) {
-	def, err := provisionerIDToProvisioner(ctx, cfg.Default)
+// listProvisioners in the order they should be executed
+func (reg *ProvisionerRegistry) listProvisioners() []provisionerconnect.ProvisionerPluginServiceClient {
+	result := []provisionerconnect.ProvisionerPluginServiceClient{}
+	if reg.Default != nil {
+		result = append(result, reg.Default)
+	}
+	for _, p := range reg.Provisioners {
+		result = append(result, p.Provisioner)
+	}
+	return result
+}
+
+func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
+	def, err := provisionerIDToProvisioner(ctx, cfg.Default, controller)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +73,7 @@ func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig) (*Pro
 		return nil, fmt.Errorf("error validating provisioner config: %w", err)
 	}
 	for _, plugin := range cfg.Plugins {
-		provisioner, err := provisionerIDToProvisioner(ctx, plugin.ID)
+		provisioner, err := provisionerIDToProvisioner(ctx, plugin.ID, controller)
 		if err != nil {
 			return nil, err
 		}
@@ -76,10 +82,12 @@ func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig) (*Pro
 	return result, nil
 }
 
-func provisionerIDToProvisioner(ctx context.Context, id string) (provisionerconnect.ProvisionerPluginServiceClient, error) {
+func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1connect.ControllerServiceClient) (provisionerconnect.ProvisionerPluginServiceClient, error) {
 	switch id {
+	case "controller":
+		return NewControllerProvisioner(controller), nil
 	case "noop":
-		return &noop.Provisioner{}, nil
+		return &NoopProvisioner{}, nil
 	default:
 		plugin, _, err := plugin.Spawn(
 			ctx,
@@ -112,16 +120,51 @@ func (reg *ProvisionerRegistry) CreateDeployment(module string, desiredResources
 	existingByHandler := reg.groupByProvisioner(existingResources.Resources())
 	desiredByHandler := reg.groupByProvisioner(desiredResources.Resources())
 
-	for handler, desired := range desiredByHandler {
+	for _, handler := range reg.listProvisioners() {
+		desired := desiredByHandler[handler]
 		existing := existingByHandler[handler]
-		result = append(result, &Task{
-			module:   module,
-			handler:  handler,
-			desired:  desiredResources.WithDirectDependencies(desired),
-			existing: existingResources.WithDirectDependencies(existing),
-		})
+
+		if !resourcesEqual(desired, existing) {
+			result = append(result, &Task{
+				module:   module,
+				handler:  handler,
+				desired:  desiredResources.WithDirectDependencies(desired),
+				existing: existingResources.WithDirectDependencies(existing),
+			})
+		}
 	}
 	return &Deployment{Tasks: result, Module: module}
+}
+
+func resourcesEqual(desired, existing []*provisioner.Resource) bool {
+	if len(desired) != len(existing) {
+		return false
+	}
+	// sort by resource id
+	sort.Slice(desired, func(i, j int) bool {
+		return desired[i].ResourceId < desired[j].ResourceId
+	})
+	sort.Slice(existing, func(i, j int) bool {
+		return existing[i].ResourceId < existing[j].ResourceId
+	})
+	// check each resource
+	for i := range desired {
+		if !resourceEqual(desired[i], existing[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func resourceEqual(desired, existing *provisioner.Resource) bool {
+	return cmp.Equal(desired, existing,
+		protocmp.Transform(),
+		protocmp.IgnoreMessages(
+			&provisioner.MysqlResource_MysqlResourceOutput{},
+			&provisioner.PostgresResource_PostgresResourceOutput{},
+			&provisioner.ModuleResource_ModuleResourceOutput{},
+		),
+	)
 }
 
 // ExtractResources from a module schema
@@ -156,8 +199,9 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 		ResourceId: module.GetName(),
 		Resource: &provisioner.Resource_Module{
 			Module: &provisioner.ModuleResource{
-				Artefacts: msg.Artefacts,
 				Schema:    msg.Schema,
+				Artefacts: msg.Artefacts,
+				Labels:    msg.Labels,
 			},
 		},
 	}
@@ -183,7 +227,7 @@ func (reg *ProvisionerRegistry) groupByProvisioner(resources []*provisioner.Reso
 		found := false
 		for _, cfg := range reg.Provisioners {
 			for _, t := range cfg.Types {
-				typed := typeOf(r)
+				typed := TypeOf(r)
 				if t == typed {
 					result[cfg.Provisioner] = append(result[cfg.Provisioner], r)
 					found = true
@@ -196,13 +240,4 @@ func (reg *ProvisionerRegistry) groupByProvisioner(resources []*provisioner.Reso
 		}
 	}
 	return result
-}
-
-func typeOf(r *provisioner.Resource) ResourceType {
-	if _, ok := r.Resource.(*provisioner.Resource_Mysql); ok {
-		return ResourceTypeMysql
-	} else if _, ok := r.Resource.(*provisioner.Resource_Postgres); ok {
-		return ResourceTypePostgres
-	}
-	return ResourceTypeUnknown
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestSubGraph(t *testing.T) {
+func TestSubGraphWithDirectDependencies(t *testing.T) {
 	t.Run("returns a subgraph with direct dependencies", func(t *testing.T) {
 		graph := &provisioner.ResourceGraph{}
 		a := graph.AddNode(&proto.Resource{ResourceId: "a", Resource: &proto.Resource_Mysql{}})

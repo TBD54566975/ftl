@@ -4,9 +4,9 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3 } from "@bufbuild/protobuf";
-import { DeploymentArtefact } from "../../v1/ftl_pb.js";
+import { Message, proto3, Struct } from "@bufbuild/protobuf";
 import { Module } from "../../v1/schema/schema_pb.js";
+import { DeploymentArtefact } from "../../v1/ftl_pb.js";
 
 /**
  * Resource is an abstract resource extracted from FTL Schema.
@@ -245,14 +245,21 @@ export class ModuleResource extends Message<ModuleResource> {
   output?: ModuleResource_ModuleResourceOutput;
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 2;
+   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 2;
+   */
+  schema?: Module;
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 3;
    */
   artefacts: DeploymentArtefact[] = [];
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 3;
+   * Runner labels required to run this deployment.
+   *
+   * @generated from field: optional google.protobuf.Struct labels = 4;
    */
-  schema?: Module;
+  labels?: Struct;
 
   constructor(data?: PartialMessage<ModuleResource>) {
     super();
@@ -263,8 +270,9 @@ export class ModuleResource extends Message<ModuleResource> {
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.ModuleResource";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "output", kind: "message", T: ModuleResource_ModuleResourceOutput },
-    { no: 2, name: "artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
-    { no: 3, name: "schema", kind: "message", T: Module },
+    { no: 2, name: "schema", kind: "message", T: Module },
+    { no: 3, name: "artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
+    { no: 4, name: "labels", kind: "message", T: Struct, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleResource {
@@ -288,6 +296,11 @@ export class ModuleResource extends Message<ModuleResource> {
  * @generated from message xyz.block.ftl.v1beta1.provisioner.ModuleResource.ModuleResourceOutput
  */
 export class ModuleResource_ModuleResourceOutput extends Message<ModuleResource_ModuleResourceOutput> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
   constructor(data?: PartialMessage<ModuleResource_ModuleResourceOutput>) {
     super();
     proto3.util.initPartial(data, this);
@@ -296,6 +309,7 @@ export class ModuleResource_ModuleResourceOutput extends Message<ModuleResource_
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.ModuleResource.ModuleResourceOutput";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleResource_ModuleResourceOutput {
