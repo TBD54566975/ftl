@@ -406,8 +406,6 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
       - name: Get latest release tag
-        # TODO switch to: latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
-        # latest_release=$(git rev-parse HEAD^)
         run: |
           latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
           echo "Latest release: $latest_release"
@@ -436,33 +434,14 @@ jobs:
       - name: Download Go Modules
         run: go mod download
       - name: Smoke Test Upgrade Path
+        # There's a chicken-and-egg here since the smoketest tag isn't in the last release,
+        # update -tags integration to -tags smoketest when released.
         run: |
             set -euo pipefail
             echo "Replacing current exemplar with latest released exemplar"
             rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest && rm -r ./tmpsmoketest
             echo "Running smoke test"
             go test -v -tags integration -run '^Test' ./smoketest
-        # run: |
-        #     test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname {} || true)
-        #     echo "Smoke test files: $test_files"
-
-        #     if [ -z "$test_files" ]; then
-        #       echo "No smoke test files found."
-        #       exit 0  # Exit gracefully if no smoke test files are found
-        #     fi
-
-        #     for file in $test_files; do
-        #       echo "Running smoke tests in $file"
-        #       go test -v -tags smoketest -run '^Test' "$file"
-        #     done
-        # run: |
-        #   set -euo pipefail
-        #   # shellcheck disable=SC2046
-        #   test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname ./{})
-        #   echo "smoke test test_files: $test_files"
-        #   for file in $test_files; do
-        #     go test -v -tags smoketest -run '^Test' "$file"
-        #   done
       - name: Archive Report
         uses: actions/upload-artifact@v4
         if: always()
