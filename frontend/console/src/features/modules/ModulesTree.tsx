@@ -127,13 +127,6 @@ const ModuleSection = ({
   )
 }
 
-function getInitialExpandedModules(moduleName?: string, declName?: string): string[] {
-  if (moduleName && declName) {
-    addModuleToLocalStorageIfMissing(moduleName)
-  }
-  return listExpandedModulesFromLocalStorage()
-}
-
 const declTypesSearchParamKey = 'dt'
 
 export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
@@ -144,10 +137,13 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
   const declTypesFromUrl = declTypeMultiselectOpts.filter((o) => declTypeKeysFromUrl.includes(o.key))
   const [selectedDeclTypes, setSelectedDeclTypes] = useState(declTypesFromUrl.length === 0 ? declTypeMultiselectOpts : declTypesFromUrl)
 
-  const initialExpanded = getInitialExpandedModules(moduleName, declName)
+  const initialExpanded = listExpandedModulesFromLocalStorage()
   const [expandedModules, setExpandedModules] = useState(initialExpanded)
   useEffect(() => {
-    setExpandedModules(getInitialExpandedModules(moduleName, declName))
+    if (moduleName && declName) {
+      addModuleToLocalStorageIfMissing(moduleName)
+    }
+    setExpandedModules(listExpandedModulesFromLocalStorage())
   }, [moduleName, declName])
 
   function msOnChange(opts: MultiselectOpt[]) {
@@ -161,22 +157,11 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     setSelectedDeclTypes(opts)
   }
 
+  // ['didweb'] -> toggle: [] => didweb removed from ls + state, component reinits WITHOUT adding didweb back in, but when component inits otherwise, didweb does get added in
+
   function toggle(toggledModule: string) {
-    const beforeFromLS = listExpandedModulesFromLocalStorage()
-    if (toggledModule === moduleName && beforeFromLS.includes(toggledModule) && !expandedModules.includes(toggledModule)) {
-      // Local storage is out of sync from the state because user closed the
-      // module for the selected decl, which un-syncs the state from the saved
-      // state. Re-opening the selected module lets us re-sync those.
-      // The reason they go out of sync is getInitialExpandedModules gets called
-      // while the decl is still selected, so the module gets added back to the
-      // saved state despite being hence removed from the component state.
-      //setExpandedModules(listExpandedModulesFromLocalStorage())
-      //return
-    }
-    console.log('asdf', listExpandedModulesFromLocalStorage(), expandedModules)
     toggleModuleExpansionInLocalStorage(toggledModule)
     setExpandedModules(listExpandedModulesFromLocalStorage())
-    console.log('asdf2', listExpandedModulesFromLocalStorage(), expandedModules)
   }
 
   function collapseAll() {
