@@ -190,7 +190,9 @@ lint-backend:
   @lint-commit-or-rollback ./backend/...
 
 lint-scripts:
-	@shellcheck -f gcc -e SC2016 $(find scripts -type f -not -path scripts/tests) | to-annotation
+  #!/bin/bash
+  set -euo pipefail
+  shellcheck -f gcc -e SC2016 $(find scripts -type f -not -path scripts/tests) | to-annotation
 
 # Run live docs server
 docs:
