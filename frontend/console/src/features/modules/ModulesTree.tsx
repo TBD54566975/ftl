@@ -157,8 +157,6 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     setSelectedDeclTypes(opts)
   }
 
-  // ['didweb'] -> toggle: [] => didweb removed from ls + state, component reinits WITHOUT adding didweb back in, but when component inits otherwise, didweb does get added in
-
   function toggle(toggledModule: string) {
     toggleModuleExpansionInLocalStorage(toggledModule)
     setExpandedModules(listExpandedModulesFromLocalStorage())
