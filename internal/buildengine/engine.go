@@ -498,7 +498,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					continue
 				}
 
-				updatedConfig, err := moduleconfig.LoadModuleConfig(event.Config.Dir)
+				updatedConfig, err := moduleconfig.LoadConfig(event.Config.Dir)
 				if err != nil {
 					logger.Errorf(err, "Could not load updated toml for %s", event.Config.Module)
 					continue

@@ -58,11 +58,17 @@ func (e AutoRebuildEndedEvent) ModuleName() string { return e.Module }
 
 // LanguagePlugin handles building and scaffolding modules in a specific language.
 type LanguagePlugin interface {
-	// Topic for all update events from the plugin
+	// Updates topic for all update events from the plugin
 	// The same topic must be returned each time this method is called
 	Updates() *pubsub.Topic[PluginEvent]
 
-	// TODO: docs
+	// GetModuleConfigDefaults provides custom defaults for the module config.
+	//
+	// The result may be cached by FTL, so defaulting logic should not be changing due to normal module changes.
+	// For example it is valid to return defaults based on which build tool is configured within the module directory,
+	// as that is not expected to change during normal operation.
+	// It is not recommended to read the module's toml file to determine defaults, as when the toml file is updated,
+	// the defaults will not be recalculated.
 	ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error)
 
 	// GetCreateModuleFlags returns the flags that can be used to create a module for this language.

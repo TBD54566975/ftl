@@ -27,7 +27,7 @@ func TestExtractModuleDepsGo(t *testing.T) {
 	ctx := context.Background()
 	dir, err := filepath.Abs("../testdata/alpha")
 	assert.NoError(t, err)
-	uncheckedConfig, err := moduleconfig.LoadModuleConfig(dir)
+	uncheckedConfig, err := moduleconfig.LoadConfig(dir)
 	assert.NoError(t, err)
 
 	plugin, err := New(ctx, uncheckedConfig.Language)

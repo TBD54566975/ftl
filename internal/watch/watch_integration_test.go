@@ -143,7 +143,7 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 
 func loadModule(t *testing.T, dir, name string) moduleconfig.UnvalidatedModuleConfig {
 	t.Helper()
-	config, err := moduleconfig.LoadModuleConfig(filepath.Join(dir, name))
+	config, err := moduleconfig.LoadConfig(filepath.Join(dir, name))
 	assert.NoError(t, err)
 	return config
 }

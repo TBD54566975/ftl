@@ -45,7 +45,7 @@ func discoverModules(dirs ...string) ([]moduleconfig.UnvalidatedModuleConfig, er
 				return nil
 			}
 			moduleDir := filepath.Dir(path)
-			config, err := moduleconfig.LoadModuleConfig(moduleDir)
+			config, err := moduleconfig.LoadConfig(moduleDir)
 			if err != nil {
 				return err
 			}

@@ -48,8 +48,10 @@ func (c *ModuleConfig) UnmarshalTOML(data []byte) error {
 // This is a type alias to prevent accidental use of the wrong type.
 type AbsModuleConfig ModuleConfig
 
-// UnvalidatedModuleConfig is a ModuleConfig that has been loaded from disk
-// but has not had it's defaults set or been validated.
+// UnvalidatedModuleConfig is a ModuleConfig that holds only the values read from the toml file.
+//
+// It has not had it's defaults set or been validated, so values may be empty or invalid.
+// Use FillDefaultsAndValidate() to get a ModuleConfig.
 type UnvalidatedModuleConfig ModuleConfig
 
 type CustomDefaults struct {
@@ -64,8 +66,9 @@ type CustomDefaults struct {
 	LanguageConfig map[string]any `toml:"-"`
 }
 
-// LoadModuleConfig from a directory.
-func LoadModuleConfig(dir string) (UnvalidatedModuleConfig, error) {
+// LoadConfig from a directory.
+// This returns only the values found in the toml file. To get the full config with defaults and validation, use FillDefaultsAndValidate.
+func LoadConfig(dir string) (UnvalidatedModuleConfig, error) {
 	path := filepath.Join(dir, "ftl.toml")
 
 	// Parse toml into generic map so that we can capture language config with a dynamic key
