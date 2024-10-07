@@ -503,7 +503,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					logger.Errorf(err, "Could not load updated toml for %s", event.Config.Module)
 					continue
 				}
-				validConfig, err := updatedConfig.DefaultAndValidate(meta.configDefaults)
+				validConfig, err := updatedConfig.FillDefaultsAndValidate(meta.configDefaults)
 				if err != nil {
 					logger.Errorf(err, "Could not configure module config defaults for %s", event.Config.Module)
 					continue
@@ -874,7 +874,7 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.Unvalida
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not get defaults provider for %s: %w", config.Module, err)
 	}
-	validConfig, err := config.DefaultAndValidate(customDefaults)
+	validConfig, err := config.FillDefaultsAndValidate(customDefaults)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not apply defaults for %s: %w", config.Module, err)
 	}

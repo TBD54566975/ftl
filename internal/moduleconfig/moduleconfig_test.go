@@ -165,7 +165,7 @@ func TestDefaulting(t *testing.T) {
 		t.Run(tt.config.Module, func(t *testing.T) {
 			t.Parallel()
 
-			config, err := tt.config.DefaultAndValidate(tt.defaults)
+			config, err := tt.config.FillDefaultsAndValidate(tt.defaults)
 			if tt.error != "" {
 				assert.Contains(t, err.Error(), tt.error)
 				return

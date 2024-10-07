@@ -146,7 +146,7 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 // configureDefaults defaults sets values for empty fields and validates the config.
 // It involves standard defaults for Real and Errors fields, and also looks at CustomDefaults for
 // defaulting other fields.
-func (c UnvalidatedModuleConfig) DefaultAndValidate(customDefaults CustomDefaults) (ModuleConfig, error) {
+func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDefaults) (ModuleConfig, error) {
 	if c.Realm == "" {
 		c.Realm = "home"
 	}

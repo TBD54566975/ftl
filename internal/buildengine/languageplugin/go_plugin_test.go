@@ -36,7 +36,7 @@ func TestExtractModuleDepsGo(t *testing.T) {
 	customDefaults, err := plugin.ModuleConfigDefaults(ctx, uncheckedConfig.Dir)
 	assert.NoError(t, err)
 
-	config, err := uncheckedConfig.DefaultAndValidate(customDefaults)
+	config, err := uncheckedConfig.FillDefaultsAndValidate(customDefaults)
 	assert.NoError(t, err)
 
 	deps, err := plugin.GetDependencies(ctx, config)

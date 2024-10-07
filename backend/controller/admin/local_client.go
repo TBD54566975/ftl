@@ -64,7 +64,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not get module config defaults for %s: %w", m.Module, err))
 			}
 
-			config, err := m.DefaultAndValidate(customDefaults)
+			config, err := m.FillDefaultsAndValidate(customDefaults)
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not validate module config for %s: %w", m.Module, err))
 			}

@@ -117,7 +117,7 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 				moduleSchemas <- either.RightOf[*schema.Module](m)
 			}
 
-			config, err := m.DefaultAndValidate(customDefaults)
+			config, err := m.FillDefaultsAndValidate(customDefaults)
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](m)
 			}
