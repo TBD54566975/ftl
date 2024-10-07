@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
@@ -68,12 +67,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not validate module config for %s: %w", m.Module, err))
 			}
-			schemaPath := config.Schema()
-			if r, ok := s.deployRoot.Get(); ok {
-				schemaPath = filepath.Join(r, m.Module, m.DeployDir, config.Abs().Schema())
-			}
-
-			module, err := schema.ModuleFromProtoFile(schemaPath)
+			module, err := schema.ModuleFromProtoFile(config.Abs().Schema())
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not load module schema: %w", err))
 				return
