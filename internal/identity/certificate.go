@@ -3,7 +3,6 @@ package identity
 import (
 	"fmt"
 
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -11,19 +10,16 @@ import (
 
 // CertificateContent is used as a certificate request and also the content of a certificate.
 // It is "content" that is to be signed outside of this struct.
+//
+//protobuf:1
 type CertificateContent struct {
 	Identity  Identity     `protobuf:"1"`
 	PublicKey RawPublicKey `protobuf:"2"`
 }
 
 func (c CertificateContent) ToProto() protoreflect.Message {
-	return &ftlv1.CertificateContent{
-		Identity:  c.Identity.ToProto(),
-		PublicKey: c.PublicKey.ToProto(),
-	}
+	panic("not implemented")
 }
-
-var _ proto.Message = CertificateContent{}
 
 func (c CertificateContent) String() string {
 	return fmt.Sprintf("CertficateContent(%s %x)", c.Identity, c.PublicKey)
@@ -47,31 +43,35 @@ func (c Certificate) Verify(caVerifier Verifier) error {
 }
 
 func (c Certificate) ToSignedMessage() (SignedMessage, error) {
-	encoded, err := proto.Marshal(&c.CertificateContent)
-	if err != nil {
-		return SignedMessage{}, fmt.Errorf("failed to marshal certificate content: %w", err)
-	}
+	// encoded, err := proto.Marshal(&c.CertificateContent.ToProto())
+	// if err != nil {
+	// 	return SignedMessage{}, fmt.Errorf("failed to marshal certificate content: %w", err)
+	// }
 
-	return SignedMessage{
-		message:   encoded,
-		Signature: c.Signature,
-	}, nil
+	// return SignedMessage{
+	// 	message:   encoded,
+	// 	Signature: c.Signature,
+	// }, nil
+
+	panic("not implemented")
 }
 
 func ParseCertificateFromProto(protoCert *ftlv1.Certificate) (Certificate, error) {
-	encoded := ParseSignedMessageFromProto(protoCert.SignedMessage)
-	var certificateContent CertificateContent
-	if err := proto.Unmarshal(encoded.message, &certificateContent); err != nil {
-		return Certificate{}, fmt.Errorf("failed to unmarshal certificate content: %w", err)
-	}
+	// encoded := ParseSignedMessageFromProto(protoCert.SignedMessage)
+	// var certificateContent CertificateContent
+	// if err := proto.Unmarshal(encoded.message, &certificateContent); err != nil {
+	// 	return Certificate{}, fmt.Errorf("failed to unmarshal certificate content: %w", err)
+	// }
 
-	return Certificate{
-		CertificateContent: CertificateContent{
-			Identity:  certificateContent.Identity,
-			PublicKey: certificateContent.PublicKey,
-		},
-		Signature: encoded.Signature,
-	}, nil
+	// return Certificate{
+	// 	CertificateContent: CertificateContent{
+	// 		Identity:  certificateContent.Identity,
+	// 		PublicKey: certificateContent.PublicKey,
+	// 	},
+	// 	Signature: encoded.Signature,
+	// }, nil
+	//
+	panic("not implemented")
 }
 
 func (c Certificate) String() string {
@@ -79,17 +79,19 @@ func (c Certificate) String() string {
 }
 
 func (c Certificate) ToProto() *ftlv1.Certificate {
-	certificateContent, err := proto.Marshal(&c.CertificateContent)
-	if err != nil {
-		panic(fmt.Errorf("failed to marshal certificate content: %w", err))
-	}
+	// certificateContent, err := proto.Marshal(&c.CertificateContent)
+	// if err != nil {
+	// 	panic(fmt.Errorf("failed to marshal certificate content: %w", err))
+	// }
 
-	return &ftlv1.Certificate{
-		SignedMessage: &ftlv1.SignedMessage{
-			Message:   certificateContent,
-			Signature: c.Signature.Bytes,
-		},
-	}
+	// return &ftlv1.Certificate{
+	// 	SignedMessage: &ftlv1.SignedMessage{
+	// 		Message:   certificateContent,
+	// 		Signature: c.Signature.Bytes,
+	// 	},
+	// }
+
+	panic("not implemented")
 }
 
 // CertifiedSignedData is sent by a node and proves identity based on a certificate.

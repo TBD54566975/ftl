@@ -1,3 +1,4 @@
+
 syntax = "proto3";
 
 package xyz.block.ftl.v1.schema;
@@ -358,3 +359,5 @@ enum VerbStatus {
   VERB_STATUS_STOPPED = 4;
   VERB_STATUS_STOPPING = 5;
 }
+
+
