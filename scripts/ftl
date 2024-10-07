@@ -1,7 +1,11 @@
 #!/bin/bash
 set -euo pipefail
-export FTL_DIR="$(dirname "$(readlink -f "$0")")/.."
-if [ ! "${HERMIT_ENV}" -ef ${FTL_DIR} ]; then
+
+FTL_DIR="$(dirname "$(readlink -f "$0")")/.."
+export FTL_DIR
+
+if [ ! "${HERMIT_ENV}" -ef "${FTL_DIR}" ]; then
+  # shellcheck disable=SC1091
   . "${FTL_DIR}/bin/activate-hermit"
 fi
 
