@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1.identity;
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/identity;identitypb";
+option java_multiple_files = true;
+
+message CertificateContent {
+  string identity = 1;
+  bytes public_key = 2;
+}
+
+message SignedMessage {
+  bytes message = 1;
+  bytes signature = 2;
+}
+
+message CertificateRequest {
+  // Serialised in the app: node identity and its public key, signed by the node.
+  SignedMessage signed_message = 1;
+}
+
+
+message Certificate {
+  // Serialised in the app: node identity + node public key, signed by the controller.
+  SignedMessage signed_message = 1;
+}

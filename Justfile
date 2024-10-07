@@ -5,14 +5,29 @@ WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml"
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
-SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
-IDENTITY_OUT := "backend/protos/xyz/block/ftl/v1/identity/identity.proto"
 ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template internal/projectinit/scaffolding go-runtime/scaffolding jvm-runtime/java/scaffolding jvm-runtime/kotlin/scaffolding"
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
-PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto backend/protos/xyz/block/ftl/v1/identity/identity.proto"
-PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go backend/protos/xyz/block/ftl/v1/identity/identity.pb.go " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
+SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
+PROTOS_IN := "\
+    backend/protos/xyz/block/ftl/v1/schema/schema.proto \
+    backend/protos/xyz/block/ftl/v1/console/console.proto \
+    backend/protos/xyz/block/ftl/v1/identity/identity.proto \
+    backend/protos/xyz/block/ftl/v1/ftl.proto \
+    backend/protos/xyz/block/ftl/v1/schema/runtime.proto \
+    "
+PROTOS_OUT := "\
+    backend/protos/xyz/block/ftl/v1/console/console.pb.go \
+    backend/protos/xyz/block/ftl/v1/ftl.pb.go \
+    backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go \
+    backend/protos/xyz/block/ftl/v1/schema/schema.pb.go \
+    backend/protos/xyz/block/ftl/v1/identity/identity.pb.go \
+    " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts \
+    " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts \
+    " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts \
+    " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts \
+    "
 
 _help:
   @just -l
@@ -131,7 +146,6 @@ pnpm-install:
 # Regenerate protos
 build-protos: pnpm-install
   @mk {{SCHEMA_OUT}} : internal/schema -- "go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint"
-  @mk {{IDENTITY_OUT}} : internal/identity -- "go2proto -o "{{IDENTITY_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/identity;identitypb' xyz.block.ftl.v1.identity ./internal/identity.CertificateContent && buf format -w && buf lint"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
 
 # Unconditionally rebuild protos

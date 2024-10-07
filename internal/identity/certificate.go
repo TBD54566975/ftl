@@ -3,22 +3,33 @@ package identity
 import (
 	"fmt"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
-
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	identitypb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/identity"
 )
 
 // CertificateContent is used as a certificate request and also the content of a certificate.
 // It is "content" that is to be signed outside of this struct.
-//
-//protobuf:1
 type CertificateContent struct {
-	Identity  Identity     `protobuf:"1"`
-	PublicKey RawPublicKey `protobuf:"2"`
+	Identity  Identity
+	PublicKey RawPublicKey
 }
 
-func (c CertificateContent) ToProto() protoreflect.Message {
-	panic("not implemented")
+func CertificateContentFromProto(proto *identitypb.CertificateContent) (CertificateContent, error) {
+	identity, err := Parse(proto.Identity)
+	if err != nil {
+		return CertificateContent{}, fmt.Errorf("failed to parse identity: %w", err)
+	}
+
+	return CertificateContent{
+		Identity:  identity,
+		PublicKey: NewRawPublicKey(proto.PublicKey),
+	}, nil
+}
+
+func (c CertificateContent) ToProto() *identitypb.CertificateContent {
+	return &identitypb.CertificateContent{
+		Identity:  c.Identity.String(),
+		PublicKey: c.PublicKey.Bytes,
+	}
 }
 
 func (c CertificateContent) String() string {
@@ -56,7 +67,7 @@ func (c Certificate) ToSignedMessage() (SignedMessage, error) {
 	panic("not implemented")
 }
 
-func ParseCertificateFromProto(protoCert *ftlv1.Certificate) (Certificate, error) {
+func ParseCertificateFromProto(protoCert *identitypb.Certificate) (Certificate, error) {
 	// encoded := ParseSignedMessageFromProto(protoCert.SignedMessage)
 	// var certificateContent CertificateContent
 	// if err := proto.Unmarshal(encoded.message, &certificateContent); err != nil {
@@ -78,7 +89,7 @@ func (c Certificate) String() string {
 	return fmt.Sprintf("Certificate(key:%x sig:%x)", c.PublicKey.Bytes, c.Signature.Bytes)
 }
 
-func (c Certificate) ToProto() *ftlv1.Certificate {
+func (c Certificate) ToProto() *identitypb.Certificate {
 	// certificateContent, err := proto.Marshal(&c.CertificateContent)
 	// if err != nil {
 	// 	panic(fmt.Errorf("failed to marshal certificate content: %w", err))

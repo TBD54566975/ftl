@@ -7,7 +7,7 @@ import (
 
 	"github.com/alecthomas/kong"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	identitypb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/identity"
 )
 
 type SignedMessage struct {
@@ -29,7 +29,7 @@ func NewSignedMessage(verifier Verifier, data []byte, signature Signature) (Sign
 	return signedMessage, nil
 }
 
-func ParseSignedMessageFromProto(proto *ftlv1.SignedMessage) SignedMessage {
+func ParseSignedMessageFromProto(proto *identitypb.SignedMessage) SignedMessage {
 	return SignedMessage{
 		message:   proto.Message,
 		Signature: NewSignature(proto.Signature),
@@ -50,8 +50,8 @@ func (sm SignedMessage) UnverifiedMessage() []byte {
 	return sm.message
 }
 
-func (sm SignedMessage) ToProto() *ftlv1.SignedMessage {
-	return &ftlv1.SignedMessage{
+func (sm SignedMessage) ToProto() *identitypb.SignedMessage {
+	return &identitypb.SignedMessage{
 		Message:   sm.message,
 		Signature: sm.Signature.Bytes,
 	}
