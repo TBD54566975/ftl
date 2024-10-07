@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1beta1.provisioner;
 
+import "xyz/block/ftl/v1/ftl.proto";
+import "xyz/block/ftl/v1/schema/schema.proto";
+
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner;provisioner";
 option java_multiple_files = true;
 
@@ -13,6 +16,7 @@ message Resource {
   oneof resource {
     PostgresResource postgres = 102;
     MysqlResource mysql = 103;
+    ModuleResource module = 104;
   }
 }
 
@@ -34,4 +38,13 @@ message MysqlResource {
     string write_endpoint = 2;
   }
   MysqlResourceOutput output = 1;
+}
+
+message ModuleResource {
+  message ModuleResourceOutput {}
+
+  ModuleResourceOutput output = 1;
+
+  repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 2;
+  xyz.block.ftl.v1.schema.Module schema = 3;
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/provisioner/noop"
@@ -124,9 +125,15 @@ func (reg *ProvisionerRegistry) CreateDeployment(module string, desiredResources
 }
 
 // ExtractResources from a module schema
-func ExtractResources(sch *schema.Module) ([]*provisioner.Resource, error) {
+func ExtractResources(msg *ftlv1.CreateDeploymentRequest) ([]*provisioner.Resource, error) {
 	var result []*provisioner.Resource
-	for _, decl := range sch.Decls {
+
+	module, err := schema.ModuleFromProto(msg.Schema)
+	if err != nil {
+		return nil, fmt.Errorf("invalid module schema for module %s: %w", msg.Schema.Name, err)
+	}
+
+	for _, decl := range module.Decls {
 		if db, ok := decl.(*schema.Database); ok {
 			switch db.Type {
 			case "postgres":
@@ -144,6 +151,16 @@ func ExtractResources(sch *schema.Module) ([]*provisioner.Resource, error) {
 			}
 		}
 	}
+	result = append(result, &provisioner.Resource{
+		ResourceId: module.GetName(),
+		Resource: &provisioner.Resource_Module{
+			Module: &provisioner.ModuleResource{
+				Artefacts: msg.Artefacts,
+				Schema:    msg.Schema,
+			},
+		},
+	})
+
 	return result, nil
 }
 

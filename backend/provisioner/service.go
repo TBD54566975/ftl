@@ -19,7 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // CommonProvisionerConfig is shared config between the production controller and development server.
@@ -64,13 +63,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	logger := log.FromContext(ctx)
 	// TODO: Block deployments to make sure only one module is modified at a time
 	moduleName := req.Msg.Schema.Name
-	module, err := schema.ModuleFromProto(req.Msg.Schema)
-	if err != nil {
-		return nil, fmt.Errorf("invalid module schema for module %s: %w", moduleName, err)
-	}
-
 	existingResources := s.currentResources[moduleName]
-	desiredResources, err := ExtractResources(module)
+	desiredResources, err := ExtractResources(req.Msg)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting resources from schema: %w", err)
 	}

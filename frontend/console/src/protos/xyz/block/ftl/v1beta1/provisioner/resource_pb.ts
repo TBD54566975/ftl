@@ -5,6 +5,8 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3 } from "@bufbuild/protobuf";
+import { DeploymentArtefact } from "../../v1/ftl_pb.js";
+import { Module } from "../../v1/schema/schema_pb.js";
 
 /**
  * Resource is an abstract resource extracted from FTL Schema.
@@ -34,6 +36,12 @@ export class Resource extends Message<Resource> {
      */
     value: MysqlResource;
     case: "mysql";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.ModuleResource module = 104;
+     */
+    value: ModuleResource;
+    case: "module";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Resource>) {
@@ -47,6 +55,7 @@ export class Resource extends Message<Resource> {
     { no: 1, name: "resource_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 102, name: "postgres", kind: "message", T: PostgresResource, oneof: "resource" },
     { no: 103, name: "mysql", kind: "message", T: MysqlResource, oneof: "resource" },
+    { no: 104, name: "module", kind: "message", T: ModuleResource, oneof: "resource" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource {
@@ -223,6 +232,86 @@ export class MysqlResource_MysqlResourceOutput extends Message<MysqlResource_Mys
 
   static equals(a: MysqlResource_MysqlResourceOutput | PlainMessage<MysqlResource_MysqlResourceOutput> | undefined, b: MysqlResource_MysqlResourceOutput | PlainMessage<MysqlResource_MysqlResourceOutput> | undefined): boolean {
     return proto3.util.equals(MysqlResource_MysqlResourceOutput, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.ModuleResource
+ */
+export class ModuleResource extends Message<ModuleResource> {
+  /**
+   * @generated from field: xyz.block.ftl.v1beta1.provisioner.ModuleResource.ModuleResourceOutput output = 1;
+   */
+  output?: ModuleResource_ModuleResourceOutput;
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.DeploymentArtefact artefacts = 2;
+   */
+  artefacts: DeploymentArtefact[] = [];
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Module schema = 3;
+   */
+  schema?: Module;
+
+  constructor(data?: PartialMessage<ModuleResource>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.ModuleResource";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "output", kind: "message", T: ModuleResource_ModuleResourceOutput },
+    { no: 2, name: "artefacts", kind: "message", T: DeploymentArtefact, repeated: true },
+    { no: 3, name: "schema", kind: "message", T: Module },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleResource {
+    return new ModuleResource().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleResource {
+    return new ModuleResource().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleResource {
+    return new ModuleResource().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ModuleResource | PlainMessage<ModuleResource> | undefined, b: ModuleResource | PlainMessage<ModuleResource> | undefined): boolean {
+    return proto3.util.equals(ModuleResource, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.ModuleResource.ModuleResourceOutput
+ */
+export class ModuleResource_ModuleResourceOutput extends Message<ModuleResource_ModuleResourceOutput> {
+  constructor(data?: PartialMessage<ModuleResource_ModuleResourceOutput>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.ModuleResource.ModuleResourceOutput";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleResource_ModuleResourceOutput {
+    return new ModuleResource_ModuleResourceOutput().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleResource_ModuleResourceOutput {
+    return new ModuleResource_ModuleResourceOutput().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleResource_ModuleResourceOutput {
+    return new ModuleResource_ModuleResourceOutput().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ModuleResource_ModuleResourceOutput | PlainMessage<ModuleResource_ModuleResourceOutput> | undefined, b: ModuleResource_ModuleResourceOutput | PlainMessage<ModuleResource_ModuleResourceOutput> | undefined): boolean {
+    return proto3.util.equals(ModuleResource_ModuleResourceOutput, a, b);
   }
 }
 
