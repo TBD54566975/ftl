@@ -79,7 +79,7 @@ func (p *goPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Co
 		GoVersion: runtime.Version()[2:],
 		Replace:   map[string]string{},
 	}
-	if replaceStr, ok := flags["replace"]; ok {
+	if replaceStr, ok := flags["replace"]; ok && replaceStr != "" {
 		for _, replace := range strings.Split(replaceStr, ",") {
 			parts := strings.Split(replace, "=")
 			if len(parts) != 2 {
