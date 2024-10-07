@@ -12,12 +12,15 @@ import (
 // CertificateContent is used as a certificate request and also the content of a certificate.
 // It is "content" that is to be signed outside of this struct.
 type CertificateContent struct {
-	Identity  Identity     `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
-	PublicKey RawPublicKey `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	Identity  Identity     `protobuf:"1"`
+	PublicKey RawPublicKey `protobuf:"2"`
 }
 
-func (c CertificateContent) ProtoReflect() protoreflect.Message {
-	panic("unimplemented")
+func (c CertificateContent) ToProto() protoreflect.Message {
+	return &ftlv1.CertificateContent{
+		Identity:  c.Identity.ToProto(),
+		PublicKey: c.PublicKey.ToProto(),
+	}
 }
 
 var _ proto.Message = CertificateContent{}
@@ -29,6 +32,30 @@ func (c CertificateContent) String() string {
 type Certificate struct {
 	CertificateContent
 	Signature Signature
+}
+
+func (c Certificate) Verify(caVerifier Verifier) error {
+	signedMessage, err := c.ToSignedMessage()
+	if err != nil {
+		return fmt.Errorf("failed to encode to signed message: %w", err)
+	}
+	_, err = caVerifier.Verify(signedMessage)
+	if err != nil {
+		return fmt.Errorf("failed to verify ca certificate: %w", err)
+	}
+	return nil
+}
+
+func (c Certificate) ToSignedMessage() (SignedMessage, error) {
+	encoded, err := proto.Marshal(&c.CertificateContent)
+	if err != nil {
+		return SignedMessage{}, fmt.Errorf("failed to marshal certificate content: %w", err)
+	}
+
+	return SignedMessage{
+		message:   encoded,
+		Signature: c.Signature,
+	}, nil
 }
 
 func ParseCertificateFromProto(protoCert *ftlv1.Certificate) (Certificate, error) {
@@ -67,41 +94,30 @@ func (c Certificate) ToProto() *ftlv1.Certificate {
 
 // CertifiedSignedData is sent by a node and proves identity based on a certificate.
 type CertifiedSignedData struct {
-	Certificate Certificate
-	SignedData  SignedMessage
+	Certificate   Certificate
+	SignedMessage SignedMessage
 }
 
 func (c CertifiedSignedData) String() string {
-	return fmt.Sprintf("CertifiedSignedData data:%x signature:%x (%s)", c.SignedData.message, c.SignedData.Signature, c.Certificate)
+	return fmt.Sprintf("CertifiedSignedData data:%x signature:%x (%s)", c.SignedMessage.message, c.SignedMessage.Signature, c.Certificate)
 }
 
 // Verify against the CA and then the node certificate. Only return the data if both are valid.
 func (c CertifiedSignedData) Verify(caVerifier Verifier) (Identity, []byte, error) {
-	// Verify against the CA certificate.
-	data, err := caVerifier.Verify(c.Certificate.SignedData)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to verify certificate: %w", err)
+	if err := c.Certificate.Verify(caVerifier); err != nil {
+		return nil, nil, fmt.Errorf("failed to verify ca certificate cert:%s: %w", c.Certificate, err)
 	}
 
-	var certificateContent ftlv1.CertificateContent
-	if err = proto.Unmarshal(data, &certificateContent); err != nil {
-		return nil, nil, fmt.Errorf("failed to unmarshal certificate content: %w", err)
-	}
+	// nodePublicKey := RawPublicKey{Bytes: certificateContent.PublicKey}
+	// nodeVerifier, err := NewVerifier(nodePublicKey)
+	// if err != nil {
+	// 	return nil, nil, fmt.Errorf("failed to create verifier: %w", err)
+	// }
+	// payload, err := nodeVerifier.Verify(c.SignedMessage)
+	// if err != nil {
+	// 	return nil, nil, fmt.Errorf("failed to verify signed data: %w", err)
+	// }
 
-	identity, err := Parse(certificateContent.Identity)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse identity: %w", err)
-	}
-
-	nodePublicKey := RawPublicKey{Bytes: certificateContent.PublicKey}
-	nodeVerifier, err := NewVerifier(nodePublicKey)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create verifier: %w", err)
-	}
-	payload, err := nodeVerifier.Verify(c.SignedData)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to verify signed data: %w", err)
-	}
-
-	return identity, payload, nil
+	// return identity, payload, nil
+	panic("unimplemented")
 }

@@ -148,8 +148,8 @@ message GetCertificateRequest {
 }
 
 message Certificate {
-    // Serialised in the app: node identity + node public key, signed by the controller.
-    SignedMessage signed_message = 1;
+  // Serialised in the app: node identity + node public key, signed by the controller.
+  SignedMessage signed_message = 1;
 }
 
 message GetCertificateResponse {

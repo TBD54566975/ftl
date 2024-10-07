@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -172,30 +171,31 @@ func (s *Store) SignCertificateRequest(req *v1.GetCertificateRequest) (Certifica
 }
 
 func (s *Store) SetCertificate(cert Certificate, controllerVerifier Verifier) error {
-	data, err := controllerVerifier.Verify(cert.SignedData)
-	if err != nil {
-		return fmt.Errorf("failed to verify controller certificate: %w", err)
-	}
+	// data, err := controllerVerifier.Verify(cert.SignedData)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to verify controller certificate: %w", err)
+	// }
 
-	// Verify the certificate is for us, checking identity and public key.
-	req := &v1.CertificateContent{}
-	if err := proto.Unmarshal(data, req); err != nil {
-		return fmt.Errorf("failed to unmarshal cert request: %w", err)
-	}
-	if req.Identity != s.Identity.String() {
-		return fmt.Errorf("certificate identity does not match: %s != %s", req.Identity, s.Identity.String())
-	}
-	myPub, err := s.KeyPair.Public()
-	if err != nil {
-		return fmt.Errorf("failed to get public key: %w", err)
-	}
-	if !bytes.Equal(myPub.Bytes, req.PublicKey) {
-		return fmt.Errorf("certificate public key does not match")
-	}
+	// // Verify the certificate is for us, checking identity and public key.
+	// req := &v1.CertificateContent{}
+	// if err := proto.Unmarshal(data, req); err != nil {
+	// 	return fmt.Errorf("failed to unmarshal cert request: %w", err)
+	// }
+	// if req.Identity != s.Identity.String() {
+	// 	return fmt.Errorf("certificate identity does not match: %s != %s", req.Identity, s.Identity.String())
+	// }
+	// myPub, err := s.KeyPair.Public()
+	// if err != nil {
+	// 	return fmt.Errorf("failed to get public key: %w", err)
+	// }
+	// if !bytes.Equal(myPub.Bytes, req.PublicKey) {
+	// 	return fmt.Errorf("certificate public key does not match")
+	// }
 
-	s.Certificate = optional.Some(cert)
-	s.ControllerVerifier = optional.Some(controllerVerifier)
-	return nil
+	// s.Certificate = optional.Some(cert)
+	// s.ControllerVerifier = optional.Some(controllerVerifier)
+	// return nil
+	panic("not implemented")
 }
 
 func (s *Store) CertifiedSign(data []byte) (CertifiedSignedData, error) {
@@ -210,7 +210,7 @@ func (s *Store) CertifiedSign(data []byte) (CertifiedSignedData, error) {
 	}
 
 	return CertifiedSignedData{
-		Certificate: certificate,
-		SignedData:  signedData,
+		Certificate:   certificate,
+		SignedMessage: signedData,
 	}, nil
 }
