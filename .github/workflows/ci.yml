@@ -407,8 +407,9 @@ jobs:
           fetch-tags: true
       - name: Get latest release tag
         # TODO switch to: latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
+        # latest_release=$(git rev-parse HEAD^)
         run: |
-          latest_release=$(git rev-parse HEAD^)
+          latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
           echo "Latest release: $latest_release"
           echo "LATEST_RELEASE=$latest_release" >> "$GITHUB_ENV"
       - name: Check out exemplar from previous release
@@ -438,15 +439,9 @@ jobs:
         run: |
             set -euo pipefail
             echo "Replacing current exemplar with latest released exemplar"
-            rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest
-            echo "List all files in ."
-            ls -la ./
-            echo "List all files in tmpsmoketest"
-            ls -la ./tmpsmoketest/
-            echo "List smoke test files"
-            git grep -l '^//go:build smoketest' | xargs -I {} dirname {} || true
-            echo "Run smoke test"
-            go test -v -tags smoketest -run '^Test' ./smoketest
+            rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest && rm -r ./tmpsmoketest
+            echo "Running smoke test"
+            go test -v -tags integration -run '^Test' ./smoketest
         # run: |
         #     test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname {} || true)
         #     echo "Smoke test files: $test_files"
