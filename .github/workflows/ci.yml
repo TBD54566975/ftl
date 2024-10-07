@@ -394,8 +394,8 @@ jobs:
           else
             echo "Integration tests passed"
           fi
-  smoke-test-upgrade:
-    name: Smoke Test Upgrade Path
+  smoke-test-released-exemplar:
+    name: Smoke Test Against Released Exemplar
     if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
