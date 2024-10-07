@@ -214,6 +214,22 @@ func TestJVMCoreFunctionality(t *testing.T) {
 			assert.True(t, ok, "comment not found")
 		})
 	})...)
+	// Config metadata
+	tests = append(tests, JVMTest("configMetadata", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "config", func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb) {
+			ok := false
+			for _, md := range verb.GetMetadata() {
+				if md.GetConfig() != nil {
+					for _, config := range md.GetConfig().GetConfig() {
+						if config.Name == "key" {
+							ok = true
+						}
+					}
+				}
+			}
+			assert.True(t, ok, "config metadata not found")
+		})
+	})...)
 	tests = append(tests, JVMTest("optionalIntVerb", verifyOptionalVerb)...)
 	tests = append(tests, JVMTest("optionalFloatVerb", verifyOptionalVerb)...)
 	tests = append(tests, JVMTest("optionalStringVerb", verifyOptionalVerb)...)

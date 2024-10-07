@@ -127,13 +127,6 @@ const ModuleSection = ({
   )
 }
 
-function getInitialExpandedModules(moduleName?: string, declName?: string): string[] {
-  if (moduleName && declName) {
-    addModuleToLocalStorageIfMissing(moduleName)
-  }
-  return listExpandedModulesFromLocalStorage()
-}
-
 const declTypesSearchParamKey = 'dt'
 
 export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
@@ -144,9 +137,13 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
   const declTypesFromUrl = declTypeMultiselectOpts.filter((o) => declTypeKeysFromUrl.includes(o.key))
   const [selectedDeclTypes, setSelectedDeclTypes] = useState(declTypesFromUrl.length === 0 ? declTypeMultiselectOpts : declTypesFromUrl)
 
-  const [expandedModules, setExpandedModules] = useState(getInitialExpandedModules(moduleName, declName))
+  const initialExpanded = listExpandedModulesFromLocalStorage()
+  const [expandedModules, setExpandedModules] = useState(initialExpanded)
   useEffect(() => {
-    setExpandedModules(getInitialExpandedModules(moduleName, declName))
+    if (moduleName && declName) {
+      addModuleToLocalStorageIfMissing(moduleName)
+    }
+    setExpandedModules(listExpandedModulesFromLocalStorage())
   }, [moduleName, declName])
 
   function msOnChange(opts: MultiselectOpt[]) {
@@ -160,14 +157,17 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     setSelectedDeclTypes(opts)
   }
 
-  function toggle(moduleName: string) {
-    toggleModuleExpansionInLocalStorage(moduleName)
+  function toggle(toggledModule: string) {
+    toggleModuleExpansionInLocalStorage(toggledModule)
     setExpandedModules(listExpandedModulesFromLocalStorage())
   }
 
   function collapseAll() {
     collapseAllModulesInLocalStorage()
-    setExpandedModules([])
+    if (moduleName && declName) {
+      addModuleToLocalStorageIfMissing(moduleName)
+    }
+    setExpandedModules(listExpandedModulesFromLocalStorage())
   }
 
   modules.sort((m1, m2) => Number(m1.isBuiltin) - Number(m2.isBuiltin))

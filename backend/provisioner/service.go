@@ -61,6 +61,7 @@ func (s *Service) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*c
 }
 
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
+	logger := log.FromContext(ctx)
 	// TODO: Block deployments to make sure only one module is modified at a time
 	moduleName := req.Msg.Schema.Name
 	module, err := schema.ModuleFromProto(req.Msg.Schema)
@@ -79,6 +80,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 
 	deployment := s.registry.CreateDeployment(moduleName, desiredResources, existingResources)
 	running := true
+	logger.Debugf("Running deployment for module %s", moduleName)
 	for running {
 		running, err = deployment.Progress(ctx)
 		if err != nil {
@@ -86,6 +88,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 			return nil, fmt.Errorf("error running a provisioner: %w", err)
 		}
 	}
+	logger.Debugf("Finished deployment for module %s", moduleName)
 
 	// TODO: manage multiple deployments properly. Extract as a provisioner plugin
 	response, err := s.controllerClient.CreateDeployment(ctx, req)

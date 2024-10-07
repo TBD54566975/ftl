@@ -69,6 +69,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataCalls:
 			v = &schemapb.Metadata_Calls{Calls: n.ToProto().(*schemapb.MetadataCalls)}
 
+		case *MetadataConfig:
+			v = &schemapb.Metadata_Config{Config: n.ToProto().(*schemapb.MetadataConfig)}
+
 		case *MetadataDatabases:
 			v = &schemapb.Metadata_Databases{Databases: n.ToProto().(*schemapb.MetadataDatabases)}
 
@@ -83,6 +86,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 
 		case *MetadataRetry:
 			v = &schemapb.Metadata_Retry{Retry: n.ToProto().(*schemapb.MetadataRetry)}
+
+		case *MetadataSecrets:
+			v = &schemapb.Metadata_Secrets{Secrets: n.ToProto().(*schemapb.MetadataSecrets)}
 
 		case *MetadataSubscriber:
 			v = &schemapb.Metadata_Subscriber{Subscriber: n.ToProto().(*schemapb.MetadataSubscriber)}

@@ -203,6 +203,7 @@ func genErrorf(pos token.Pos, format string, args ...any) error {
 
 var tmpl = template.Must(template.New("proto").
 	Parse(`
+// THIS FILE IS GENERATED; DO NOT MODIFY
 syntax = "proto3";
 
 package {{ .Package }};
