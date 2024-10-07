@@ -62,7 +62,7 @@
     "type-fest": "^4.18.2"
   },
   "devDependencies": {
-    "@bufbuild/protoc-gen-es": "^1.10.0",
+    "@bufbuild/protoc-gen-es": "^2.0.0",
     "@chromatic-com/storybook": "^2.0.0",
     "@connectrpc/protoc-gen-connect-es": "^1.5.0",
     "@playwright/test": "^1.46.1",
