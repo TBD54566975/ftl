@@ -323,7 +323,6 @@ type StatusResponse struct {
 	// Types that are assignable to Status:
 	//
 	//	*StatusResponse_Running
-	//	*StatusResponse_Failed
 	//	*StatusResponse_Success
 	Status isStatusResponse_Status `protobuf_oneof:"status"`
 }
@@ -374,13 +373,6 @@ func (x *StatusResponse) GetRunning() *StatusResponse_ProvisioningRunning {
 	return nil
 }
 
-func (x *StatusResponse) GetFailed() *StatusResponse_ProvisioningFailed {
-	if x, ok := x.GetStatus().(*StatusResponse_Failed); ok {
-		return x.Failed
-	}
-	return nil
-}
-
 func (x *StatusResponse) GetSuccess() *StatusResponse_ProvisioningSuccess {
 	if x, ok := x.GetStatus().(*StatusResponse_Success); ok {
 		return x.Success
@@ -396,17 +388,11 @@ type StatusResponse_Running struct {
 	Running *StatusResponse_ProvisioningRunning `protobuf:"bytes,1,opt,name=running,proto3,oneof"`
 }
 
-type StatusResponse_Failed struct {
-	Failed *StatusResponse_ProvisioningFailed `protobuf:"bytes,2,opt,name=failed,proto3,oneof"`
-}
-
 type StatusResponse_Success struct {
-	Success *StatusResponse_ProvisioningSuccess `protobuf:"bytes,3,opt,name=success,proto3,oneof"`
+	Success *StatusResponse_ProvisioningSuccess `protobuf:"bytes,2,opt,name=success,proto3,oneof"`
 }
 
 func (*StatusResponse_Running) isStatusResponse_Status() {}
-
-func (*StatusResponse_Failed) isStatusResponse_Status() {}
 
 func (*StatusResponse_Success) isStatusResponse_Status() {}
 
@@ -704,7 +690,7 @@ var file_xyz_block_ftl_v1beta1_provisioner_plugin_proto_rawDesc = []byte{
 	0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31,
 	0x62, 0x65, 0x74, 0x61, 0x31, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x65,
 	0x72, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x52, 0x10, 0x64, 0x65, 0x73, 0x69,
-	0x72, 0x65, 0x64, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x22, 0x83, 0x04, 0x0a,
+	0x72, 0x65, 0x64, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x73, 0x22, 0xa3, 0x03, 0x0a,
 	0x0e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
 	0x61, 0x0a, 0x07, 0x72, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
 	0x32, 0x45, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c,
@@ -712,13 +698,7 @@ var file_xyz_block_ftl_v1beta1_provisioner_plugin_proto_rawDesc = []byte{
 	0x6f, 0x6e, 0x65, 0x72, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x69, 0x6e, 0x67,
 	0x52, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x48, 0x00, 0x52, 0x07, 0x72, 0x75, 0x6e, 0x6e, 0x69,
-	0x6e, 0x67, 0x12, 0x5e, 0x0a, 0x06, 0x66, 0x61, 0x69, 0x6c, 0x65, 0x64, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x44, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66,
-	0x74, 0x6c, 0x2e, 0x76, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0x2e, 0x70, 0x72, 0x6f, 0x76, 0x69,
-	0x73, 0x69, 0x6f, 0x6e, 0x65, 0x72, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x73, 0x69, 0x6f, 0x6e, 0x69,
-	0x6e, 0x67, 0x46, 0x61, 0x69, 0x6c, 0x65, 0x64, 0x48, 0x00, 0x52, 0x06, 0x66, 0x61, 0x69, 0x6c,
-	0x65, 0x64, 0x12, 0x61, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x18, 0x03, 0x20,
+	0x6e, 0x67, 0x12, 0x61, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x45, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e,
 	0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x62, 0x65, 0x74, 0x61, 0x31, 0x2e, 0x70, 0x72, 0x6f, 0x76,
 	0x69, 0x73, 0x69, 0x6f, 0x6e, 0x65, 0x72, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65,
@@ -820,23 +800,22 @@ var file_xyz_block_ftl_v1beta1_provisioner_plugin_proto_depIdxs = []int32{
 	0,  // 4: xyz.block.ftl.v1beta1.provisioner.ProvisionResponse.status:type_name -> xyz.block.ftl.v1beta1.provisioner.ProvisionResponse.ProvisionResponseStatus
 	11, // 5: xyz.block.ftl.v1beta1.provisioner.StatusRequest.desired_resources:type_name -> xyz.block.ftl.v1beta1.provisioner.Resource
 	8,  // 6: xyz.block.ftl.v1beta1.provisioner.StatusResponse.running:type_name -> xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningRunning
-	9,  // 7: xyz.block.ftl.v1beta1.provisioner.StatusResponse.failed:type_name -> xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningFailed
-	10, // 8: xyz.block.ftl.v1beta1.provisioner.StatusResponse.success:type_name -> xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess
-	2,  // 9: xyz.block.ftl.v1beta1.provisioner.PlanRequest.provisioning:type_name -> xyz.block.ftl.v1beta1.provisioner.ProvisionRequest
-	11, // 10: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess.updated_resources:type_name -> xyz.block.ftl.v1beta1.provisioner.Resource
-	12, // 11: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Ping:input_type -> xyz.block.ftl.v1.PingRequest
-	2,  // 12: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Provision:input_type -> xyz.block.ftl.v1beta1.provisioner.ProvisionRequest
-	6,  // 13: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Plan:input_type -> xyz.block.ftl.v1beta1.provisioner.PlanRequest
-	4,  // 14: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Status:input_type -> xyz.block.ftl.v1beta1.provisioner.StatusRequest
-	13, // 15: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
-	3,  // 16: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Provision:output_type -> xyz.block.ftl.v1beta1.provisioner.ProvisionResponse
-	7,  // 17: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Plan:output_type -> xyz.block.ftl.v1beta1.provisioner.PlanResponse
-	5,  // 18: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Status:output_type -> xyz.block.ftl.v1beta1.provisioner.StatusResponse
-	15, // [15:19] is the sub-list for method output_type
-	11, // [11:15] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	10, // 7: xyz.block.ftl.v1beta1.provisioner.StatusResponse.success:type_name -> xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess
+	2,  // 8: xyz.block.ftl.v1beta1.provisioner.PlanRequest.provisioning:type_name -> xyz.block.ftl.v1beta1.provisioner.ProvisionRequest
+	11, // 9: xyz.block.ftl.v1beta1.provisioner.StatusResponse.ProvisioningSuccess.updated_resources:type_name -> xyz.block.ftl.v1beta1.provisioner.Resource
+	12, // 10: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Ping:input_type -> xyz.block.ftl.v1.PingRequest
+	2,  // 11: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Provision:input_type -> xyz.block.ftl.v1beta1.provisioner.ProvisionRequest
+	6,  // 12: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Plan:input_type -> xyz.block.ftl.v1beta1.provisioner.PlanRequest
+	4,  // 13: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Status:input_type -> xyz.block.ftl.v1beta1.provisioner.StatusRequest
+	13, // 14: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
+	3,  // 15: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Provision:output_type -> xyz.block.ftl.v1beta1.provisioner.ProvisionResponse
+	7,  // 16: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Plan:output_type -> xyz.block.ftl.v1beta1.provisioner.PlanResponse
+	5,  // 17: xyz.block.ftl.v1beta1.provisioner.ProvisionerPluginService.Status:output_type -> xyz.block.ftl.v1beta1.provisioner.StatusResponse
+	14, // [14:18] is the sub-list for method output_type
+	10, // [10:14] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_xyz_block_ftl_v1beta1_provisioner_plugin_proto_init() }
@@ -969,7 +948,6 @@ func file_xyz_block_ftl_v1beta1_provisioner_plugin_proto_init() {
 	}
 	file_xyz_block_ftl_v1beta1_provisioner_plugin_proto_msgTypes[4].OneofWrappers = []any{
 		(*StatusResponse_Running)(nil),
-		(*StatusResponse_Failed)(nil),
 		(*StatusResponse_Success)(nil),
 	}
 	type x struct{}

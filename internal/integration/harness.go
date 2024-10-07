@@ -132,12 +132,18 @@ func WithoutController() Option {
 
 // WithProvisioner is a Run* option that starts the provisioner service.
 // if set, all deployments are done through the provisioner
-func WithProvisioner(config string) Option {
+func WithProvisioner() Option {
 	return func(o *options) {
-		o.provisionerConfig = config
 		o.startProvisioner = true
 		// provisioner always needs a controller to talk to
 		o.startController = true
+	}
+}
+
+// WithProvisionerConfig is a Run* option that specifies the provisioner config to use.
+func WithProvisionerConfig(config string) Option {
+	return func(o *options) {
+		o.provisionerConfig = config
 	}
 }
 
@@ -255,11 +261,13 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				Infof("Starting ftl cluster")
 				args := []string{filepath.Join(binDir, "ftl"), "serve", "--recreate"}
 				if opts.startProvisioner {
-					configFile := filepath.Join(tmpDir, "provisioner-plugin-config.toml")
-					os.WriteFile(configFile, []byte(opts.provisionerConfig), 0644)
-
 					args = append(args, "--provisioners=1")
-					args = append(args, "--provisioner-plugin-config="+configFile)
+
+					if opts.provisionerConfig != "" {
+						configFile := filepath.Join(tmpDir, "provisioner-plugin-config.toml")
+						os.WriteFile(configFile, []byte(opts.provisionerConfig), 0644)
+						args = append(args, "--provisioner-plugin-config="+configFile)
+					}
 				}
 				ctx = startProcess(ctx, t, args...)
 			}

@@ -1,10 +1,14 @@
-package deployment
+package provisioner
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/backend/provisioner/noop"
+	"github.com/TBD54566975/ftl/common/plugin"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
@@ -17,28 +21,22 @@ const (
 	ResourceTypeMysql    ResourceType = "mysql"
 )
 
-// Provisioner is a runnable process to provision resources
-type Provisioner interface {
-	Provision(ctx context.Context, module string, desired []*provisioner.ResourceContext, existing []*provisioner.Resource) (string, error)
-	State(ctx context.Context, token string, desired []*provisioner.Resource) (TaskState, []*provisioner.Resource, error)
-}
-
-// ProvisionerPluginConfig is a map of provisioner name to resources it supports
-type ProvisionerPluginConfig struct {
+// provisionerPluginConfig is a map of provisioner name to resources it supports
+type provisionerPluginConfig struct {
 	// The default provisioner to use for all resources not matched here
 	Default string `toml:"default"`
 	Plugins []struct {
-		Name      string         `toml:"name"`
+		ID        string         `toml:"id"`
 		Resources []ResourceType `toml:"resources"`
 	} `toml:"plugins"`
 }
 
-func (cfg *ProvisionerPluginConfig) Validate() error {
+func (cfg *provisionerPluginConfig) Validate() error {
 	registeredResources := map[ResourceType]bool{}
 	for _, plugin := range cfg.Plugins {
 		for _, r := range plugin.Resources {
 			if registeredResources[r] {
-				return fmt.Errorf("resource type %s is already registered. Trying to re-register for %s", r, plugin.Name)
+				return fmt.Errorf("resource type %s is already registered. Trying to re-register for %s", r, plugin.ID)
 			}
 			registeredResources[r] = true
 		}
@@ -46,42 +44,63 @@ func (cfg *ProvisionerPluginConfig) Validate() error {
 	return nil
 }
 
-type provisionerConfig struct {
-	provisioner Provisioner
-	types       []ResourceType
+// ProvisionerBinding is a Provisioner and the types it supports
+type ProvisionerBinding struct {
+	Provisioner provisionerconnect.ProvisionerPluginServiceClient
+	Types       []ResourceType
 }
 
 // ProvisionerRegistry contains all known resource handlers in the order they should be executed
 type ProvisionerRegistry struct {
-	Default      Provisioner
-	Provisioners []*provisionerConfig
+	Default      provisionerconnect.ProvisionerPluginServiceClient
+	Provisioners []*ProvisionerBinding
 }
 
-func NewProvisionerRegistry(ctx context.Context, cfg *ProvisionerPluginConfig) (*ProvisionerRegistry, error) {
-	result := &ProvisionerRegistry{}
+func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig) (*ProvisionerRegistry, error) {
+	def, err := provisionerIDToProvisioner(ctx, cfg.Default)
+	if err != nil {
+		return nil, err
+	}
+	result := &ProvisionerRegistry{Default: def}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("error validating provisioner config: %w", err)
 	}
 	for _, plugin := range cfg.Plugins {
-		switch plugin.Name {
-		case "noop":
-			result.Register(&NoopProvisioner{}, plugin.Resources...)
-		default:
-			provisioner, err := NewPluginProvisioner(ctx, plugin.Name)
-			if err != nil {
-				return nil, fmt.Errorf("error creating provisioner plugin %s: %w", plugin.Name, err)
-			}
-			result.Register(provisioner, plugin.Resources...)
+		provisioner, err := provisionerIDToProvisioner(ctx, plugin.ID)
+		if err != nil {
+			return nil, err
 		}
+		result.Register(provisioner, plugin.Resources...)
 	}
 	return result, nil
 }
 
+func provisionerIDToProvisioner(ctx context.Context, id string) (provisionerconnect.ProvisionerPluginServiceClient, error) {
+	switch id {
+	case "noop":
+		return &noop.Provisioner{}, nil
+	default:
+		plugin, _, err := plugin.Spawn(
+			ctx,
+			log.Debug,
+			"ftl-provisioner-"+id,
+			".",
+			"ftl-provisioner-"+id,
+			provisionerconnect.NewProvisionerPluginServiceClient,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error spawning plugin: %w", err)
+		}
+
+		return plugin.Client, nil
+	}
+}
+
 // Register to the registry, to be executed after all the previously added handlers
-func (reg *ProvisionerRegistry) Register(handler Provisioner, types ...ResourceType) {
-	reg.Provisioners = append(reg.Provisioners, &provisionerConfig{
-		provisioner: handler,
-		types:       types,
+func (reg *ProvisionerRegistry) Register(handler provisionerconnect.ProvisionerPluginServiceClient, types ...ResourceType) {
+	reg.Provisioners = append(reg.Provisioners, &ProvisionerBinding{
+		Provisioner: handler,
+		Types:       types,
 	})
 }
 
@@ -95,6 +114,7 @@ func (reg *ProvisionerRegistry) CreateDeployment(module string, desiredResources
 	for handler, desired := range desiredByHandler {
 		existing := existingByHandler[handler]
 		result = append(result, &Task{
+			module:   module,
 			handler:  handler,
 			desired:  desired,
 			existing: existing,
@@ -127,17 +147,22 @@ func ExtractResources(sch *schema.Module) ([]*provisioner.Resource, error) {
 	return result, nil
 }
 
-func (reg *ProvisionerRegistry) groupByProvisioner(resources []*provisioner.Resource) map[Provisioner][]*provisioner.Resource {
-	result := map[Provisioner][]*provisioner.Resource{}
+func (reg *ProvisionerRegistry) groupByProvisioner(resources []*provisioner.Resource) map[provisionerconnect.ProvisionerPluginServiceClient][]*provisioner.Resource {
+	result := map[provisionerconnect.ProvisionerPluginServiceClient][]*provisioner.Resource{}
 	for _, r := range resources {
+		found := false
 		for _, cfg := range reg.Provisioners {
-			for _, t := range cfg.types {
+			for _, t := range cfg.Types {
 				typed := typeOf(r)
 				if t == typed {
-					result[cfg.provisioner] = append(result[cfg.provisioner], r)
+					result[cfg.Provisioner] = append(result[cfg.Provisioner], r)
+					found = true
 					break
 				}
 			}
+		}
+		if !found {
+			result[reg.Default] = append(result[reg.Default], r)
 		}
 	}
 	return result
