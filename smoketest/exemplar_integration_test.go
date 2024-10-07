@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -27,6 +28,13 @@ func TestExemplar(t *testing.T) {
 	nonce := randomString(4)
 
 	in.Run(t,
+		func(t *testing.T) Option {
+			if os.Getenv("SMOKE_TEST_WITH_KUBE") != "" {
+				fmt.Println("SMOKE_TEST_WITH_KUBE present, running with Kubernetes")
+				return in.WithKubernetes()
+			}
+			return func(o *options) {}
+		},
 		in.WithJavaBuild(),
 		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),

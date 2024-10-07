@@ -411,6 +411,7 @@ jobs:
           latest_release=$(git rev-parse HEAD^)
           echo "Latest release: $latest_release"
           echo "LATEST_RELEASE=$latest_release" >> "$GITHUB_ENV"
+          echo "SMOKE_TEST_WITH_KUBE=true" >> "$GITHUB_ENV"
       - name: Check out previous release
         uses: actions/checkout@v4
         with:
