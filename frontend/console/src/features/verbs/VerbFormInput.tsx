@@ -21,7 +21,9 @@ export const VerbFormInput = ({
   return (
     <form onSubmit={handleSubmit} className='rounded-lg'>
       <div className='flex rounded-md shadow-sm'>
-        <span className='inline-flex items-center rounded-l-md border border-r-0 border-gray-300 dark:border-gray-500 px-3 ml-4 sm:text-sm'>{requestType}</span>
+        <span id='call-type' className='inline-flex items-center rounded-l-md border border-r-0 border-gray-300 dark:border-gray-500 px-3 ml-4 sm:text-sm'>
+          {requestType}
+        </span>
         <input
           type='text'
           name='request-path'

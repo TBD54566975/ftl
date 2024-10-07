@@ -224,10 +224,10 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
                   >
                     Reset
                   </button>
-                  <CodeEditor value={bodyText} onTextChanged={handleBodyTextChanged} schema={schemaString} />
+                  <CodeEditor id='body-editor' value={bodyText} onTextChanged={handleBodyTextChanged} schema={schemaString} />
                 </div>
               }
-              bottomPanelContent={bottomText !== '' ? <CodeEditor value={bottomText} readonly onTextChanged={setHeadersText} /> : null}
+              bottomPanelContent={bottomText !== '' ? <CodeEditor id='response-editor' value={bottomText} readonly /> : null}
             />
           )}
           {activeTabId === 'verbschema' && <CodeEditor readonly value={verb?.schema ?? ''} />}
