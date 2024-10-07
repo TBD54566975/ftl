@@ -47,6 +47,7 @@ func TestExtractModuleDepsGo(t *testing.T) {
 }
 
 func TestGoConfigDefaults(t *testing.T) {
+	t.Parallel()
 	for _, tt := range []struct {
 		dir      string
 		expected moduleconfig.CustomDefaults

@@ -57,7 +57,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not load plugin for %s: %w", m.Module, err))
 			}
-			defer plugin.Kill(ctx)
+			defer plugin.Kill(ctx) // nolint:errcheck
 
 			customDefaults, err := plugin.ModuleConfigDefaults(ctx, m.Dir)
 			if err != nil {

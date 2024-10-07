@@ -110,7 +110,7 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](m)
 			}
-			defer plugin.Kill(ctx)
+			defer plugin.Kill(ctx) // nolint:errcheck
 
 			customDefaults, err := plugin.ModuleConfigDefaults(ctx, m.Dir)
 			if err != nil {

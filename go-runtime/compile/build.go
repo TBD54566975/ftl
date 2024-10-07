@@ -1188,7 +1188,11 @@ func writeSchemaErrors(config moduleconfig.AbsModuleConfig, errors []builderrors
 	if err != nil {
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}
-	return os.WriteFile(config.Errors, elBytes, 0600)
+	err = os.WriteFile(config.Errors, elBytes, 0600)
+	if err != nil {
+		return fmt.Errorf("could not write build errors: %w", err)
+	}
+	return nil
 }
 
 // returns the import path and directory name for a Go type

@@ -7,6 +7,7 @@ import (
 )
 
 func TestDefaulting(t *testing.T) {
+	t.Parallel()
 	for _, tt := range []struct {
 		config   UnvalidatedModuleConfig
 		defaults CustomDefaults

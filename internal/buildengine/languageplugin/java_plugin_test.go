@@ -16,6 +16,7 @@ func TestExtractModuleDepsKotlin(t *testing.T) {
 }
 
 func TestJavaConfigDefaults(t *testing.T) {
+	t.Parallel()
 	watch := []string{
 		"pom.xml",
 		"src/**",

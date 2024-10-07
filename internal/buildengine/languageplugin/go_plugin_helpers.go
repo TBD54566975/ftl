@@ -33,7 +33,7 @@ func replacementWatches(moduleDir, deployDir string) ([]string, error) {
 		if strings.HasPrefix(r.New.Path, ".") {
 			relPath, err := filepath.Rel(filepath.Dir(goModPath), filepath.Join(filepath.Dir(goModPath), r.New.Path))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to get relative path for %s: %w", r.New.Path, err)
 			}
 			replacements[r.Old.Path] = relPath
 		}
@@ -111,7 +111,7 @@ func parseImports(filePath string) ([]string, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, filePath, nil, parser.ImportsOnly)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse imports in %s: %w", filePath, err)
 	}
 
 	var imports []string
