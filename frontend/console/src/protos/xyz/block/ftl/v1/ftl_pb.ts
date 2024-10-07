@@ -855,127 +855,121 @@ export class PublishEventResponse extends Message<PublishEventResponse> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.GetCertificationRequest
+ * @generated from message xyz.block.ftl.v1.SignedMessage
  */
-export class GetCertificationRequest extends Message<GetCertificationRequest> {
+export class SignedMessage extends Message<SignedMessage> {
   /**
-   * @generated from field: xyz.block.ftl.v1.CertificateContent request = 1;
+   * @generated from field: bytes message = 1;
    */
-  request?: CertificateContent;
+  message = new Uint8Array(0);
 
   /**
    * @generated from field: bytes signature = 2;
    */
   signature = new Uint8Array(0);
 
-  constructor(data?: PartialMessage<GetCertificationRequest>) {
+  constructor(data?: PartialMessage<SignedMessage>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.GetCertificationRequest";
+  static readonly typeName = "xyz.block.ftl.v1.SignedMessage";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "request", kind: "message", T: CertificateContent },
+    { no: 1, name: "message", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 2, name: "signature", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCertificationRequest {
-    return new GetCertificationRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SignedMessage {
+    return new SignedMessage().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCertificationRequest {
-    return new GetCertificationRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SignedMessage {
+    return new SignedMessage().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCertificationRequest {
-    return new GetCertificationRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SignedMessage {
+    return new SignedMessage().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetCertificationRequest | PlainMessage<GetCertificationRequest> | undefined, b: GetCertificationRequest | PlainMessage<GetCertificationRequest> | undefined): boolean {
-    return proto3.util.equals(GetCertificationRequest, a, b);
+  static equals(a: SignedMessage | PlainMessage<SignedMessage> | undefined, b: SignedMessage | PlainMessage<SignedMessage> | undefined): boolean {
+    return proto3.util.equals(SignedMessage, a, b);
   }
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.GetCertificationResponse
+ * @generated from message xyz.block.ftl.v1.CertificateRequest
  */
-export class GetCertificationResponse extends Message<GetCertificationResponse> {
+export class CertificateRequest extends Message<CertificateRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.Certificate certificate = 1;
+   * Serialised in the app: node identity and its public key, signed by the node.
+   *
+   * @generated from field: xyz.block.ftl.v1.SignedMessage signed_message = 1;
    */
-  certificate?: Certificate;
+  signedMessage?: SignedMessage;
 
-  constructor(data?: PartialMessage<GetCertificationResponse>) {
+  constructor(data?: PartialMessage<CertificateRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.GetCertificationResponse";
+  static readonly typeName = "xyz.block.ftl.v1.CertificateRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "certificate", kind: "message", T: Certificate },
+    { no: 1, name: "signed_message", kind: "message", T: SignedMessage },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCertificationResponse {
-    return new GetCertificationResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CertificateRequest {
+    return new CertificateRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCertificationResponse {
-    return new GetCertificationResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CertificateRequest {
+    return new CertificateRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCertificationResponse {
-    return new GetCertificationResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CertificateRequest {
+    return new CertificateRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: GetCertificationResponse | PlainMessage<GetCertificationResponse> | undefined, b: GetCertificationResponse | PlainMessage<GetCertificationResponse> | undefined): boolean {
-    return proto3.util.equals(GetCertificationResponse, a, b);
+  static equals(a: CertificateRequest | PlainMessage<CertificateRequest> | undefined, b: CertificateRequest | PlainMessage<CertificateRequest> | undefined): boolean {
+    return proto3.util.equals(CertificateRequest, a, b);
   }
 }
 
 /**
- * CertificateContent is separated from Certificate to allow for easier signing.
- *
- * @generated from message xyz.block.ftl.v1.CertificateContent
+ * @generated from message xyz.block.ftl.v1.GetCertificateRequest
  */
-export class CertificateContent extends Message<CertificateContent> {
+export class GetCertificateRequest extends Message<GetCertificateRequest> {
   /**
-   * @generated from field: string identity = 1;
+   * @generated from field: xyz.block.ftl.v1.CertificateRequest certificate_request = 1;
    */
-  identity = "";
+  certificateRequest?: CertificateRequest;
 
-  /**
-   * @generated from field: bytes public_key = 2;
-   */
-  publicKey = new Uint8Array(0);
-
-  constructor(data?: PartialMessage<CertificateContent>) {
+  constructor(data?: PartialMessage<GetCertificateRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.CertificateContent";
+  static readonly typeName = "xyz.block.ftl.v1.GetCertificateRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "identity", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "public_key", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 1, name: "certificate_request", kind: "message", T: CertificateRequest },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CertificateContent {
-    return new CertificateContent().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCertificateRequest {
+    return new GetCertificateRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CertificateContent {
-    return new CertificateContent().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCertificateRequest {
+    return new GetCertificateRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CertificateContent {
-    return new CertificateContent().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCertificateRequest {
+    return new GetCertificateRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: CertificateContent | PlainMessage<CertificateContent> | undefined, b: CertificateContent | PlainMessage<CertificateContent> | undefined): boolean {
-    return proto3.util.equals(CertificateContent, a, b);
+  static equals(a: GetCertificateRequest | PlainMessage<GetCertificateRequest> | undefined, b: GetCertificateRequest | PlainMessage<GetCertificateRequest> | undefined): boolean {
+    return proto3.util.equals(GetCertificateRequest, a, b);
   }
 }
 
@@ -984,14 +978,11 @@ export class CertificateContent extends Message<CertificateContent> {
  */
 export class Certificate extends Message<Certificate> {
   /**
-   * @generated from field: xyz.block.ftl.v1.CertificateContent content = 1;
+   * Serialised in the app: node identity + node public key, signed by the controller.
+   *
+   * @generated from field: xyz.block.ftl.v1.SignedMessage signed_message = 1;
    */
-  content?: CertificateContent;
-
-  /**
-   * @generated from field: bytes controller_signature = 3;
-   */
-  controllerSignature = new Uint8Array(0);
+  signedMessage?: SignedMessage;
 
   constructor(data?: PartialMessage<Certificate>) {
     super();
@@ -1001,8 +992,7 @@ export class Certificate extends Message<Certificate> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.Certificate";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "content", kind: "message", T: CertificateContent },
-    { no: 3, name: "controller_signature", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 1, name: "signed_message", kind: "message", T: SignedMessage },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Certificate {
@@ -1019,6 +1009,43 @@ export class Certificate extends Message<Certificate> {
 
   static equals(a: Certificate | PlainMessage<Certificate> | undefined, b: Certificate | PlainMessage<Certificate> | undefined): boolean {
     return proto3.util.equals(Certificate, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.GetCertificateResponse
+ */
+export class GetCertificateResponse extends Message<GetCertificateResponse> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.Certificate certificate = 1;
+   */
+  certificate?: Certificate;
+
+  constructor(data?: PartialMessage<GetCertificateResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.GetCertificateResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "certificate", kind: "message", T: Certificate },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCertificateResponse {
+    return new GetCertificateResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCertificateResponse {
+    return new GetCertificateResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCertificateResponse {
+    return new GetCertificateResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCertificateResponse | PlainMessage<GetCertificateResponse> | undefined, b: GetCertificateResponse | PlainMessage<GetCertificateResponse> | undefined): boolean {
+    return proto3.util.equals(GetCertificateResponse, a, b);
   }
 }
 

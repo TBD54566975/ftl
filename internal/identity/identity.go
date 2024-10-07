@@ -110,64 +110,64 @@ func NewStoreNewKeys(identity Identity) (Store, error) {
 	}, nil
 }
 
-func (s *Store) NewGetCertificateRequest() (v1.GetCertificationRequest, error) {
+// NewGetCertificateRequest generates a certificate request to be used in the GetCertificate RPC.
+func (s *Store) NewGetCertificateRequest() (v1.GetCertificateRequest, error) {
 	publicKey, err := s.KeyPair.Public()
 	if err != nil {
-		return v1.GetCertificationRequest{}, fmt.Errorf("failed to get public key: %w", err)
+		return v1.GetCertificateRequest{}, fmt.Errorf("failed to get public key: %w", err)
 	}
 
-	req := &v1.CertificateContent{
-		Identity:  s.Identity.String(),
-		PublicKey: publicKey.Bytes,
+	content := CertificateContent{
+		Identity:  s.Identity,
+		PublicKey: publicKey,
 	}
-	data, err := proto.Marshal(req)
+	message, err := proto.Marshal(&content)
 	if err != nil {
-		return v1.GetCertificationRequest{}, fmt.Errorf("failed to marshal cert request: %w", err)
+		return v1.GetCertificateRequest{}, fmt.Errorf("failed to marshal cert content: %w", err)
 	}
 
-	signed, err := s.Signer.Sign(data)
+	signed, err := s.Signer.Sign(message)
 	if err != nil {
-		return v1.GetCertificationRequest{}, fmt.Errorf("failed to sign cert request: %w", err)
+		return v1.GetCertificateRequest{}, fmt.Errorf("failed to sign cert request: %w", err)
 	}
 
-	return v1.GetCertificationRequest{
-		Request:   req,
-		Signature: signed.Signature,
+	return v1.GetCertificateRequest{
+		CertificateRequest: &v1.CertificateRequest{
+			SignedMessage: signed.ToProto(),
+		},
 	}, nil
 }
 
-func (s *Store) SignCertificateRequest(req *v1.GetCertificationRequest) (Certificate, error) {
-	// Ensure the pubkey matches the signature.
-	verifier, err := NewVerifier(NewRawPublicKey(req.Request.PublicKey))
-	if err != nil {
-		return Certificate{}, fmt.Errorf("failed to create verifier: %w", err)
+// SignCertificateRequest is called by the controller to sign a certificate request, while verifiying the node's signature.
+// TODO: Make sure we check the actual given identity!
+func (s *Store) SignCertificateRequest(req *v1.GetCertificateRequest) (Certificate, error) {
+	signedRequest := ParseSignedMessageFromProto(req.CertificateRequest.SignedMessage)
+	encodedRequest := signedRequest.UnverifiedMessage()
+
+	var content CertificateContent
+	if err := proto.Unmarshal(encodedRequest, &content); err != nil {
+		return Certificate{}, fmt.Errorf("failed to unmarshal certificate content: %w", err)
 	}
-	data, err := proto.Marshal(req.Request)
+
+	// Ensure the given pubkey matches the signature.
+	verifier, err := NewVerifier(content.PublicKey)
 	if err != nil {
-		return Certificate{}, fmt.Errorf("failed to marshal request: %w", err)
+		return Certificate{}, fmt.Errorf("failed to create verifier for pubkey:%x %w", content.PublicKey.Bytes, err)
 	}
-	signedData, err := NewSignedData(verifier, data, req.Signature)
-	if err != nil {
-		return Certificate{}, fmt.Errorf("failed to create signed data: %w", err)
-	}
-	_, err = verifier.Verify(signedData)
+	_, err = signedRequest.VerifiedMessage(verifier)
 	if err != nil {
 		return Certificate{}, fmt.Errorf("failed to verify signature: %w", err)
 	}
 
-	// Discard the node signature as we have verified it.
-	// This contains the node's identity and public key.
-	certificateData, err := proto.Marshal(req.Request)
-	if err != nil {
-		return Certificate{}, fmt.Errorf("failed to marshal certificate data: %w", err)
-	}
-	signedData, err = s.Signer.Sign(certificateData)
+	// Request is valid, sign it.
+	signedCertificate, err := s.Signer.Sign(encodedRequest)
 	if err != nil {
 		return Certificate{}, fmt.Errorf("failed to create ca signed data for cert: %w", err)
 	}
 
 	return Certificate{
-		SignedData: signedData,
+		CertificateContent: content,
+		Signature:          signedCertificate.Signature,
 	}, nil
 }
 

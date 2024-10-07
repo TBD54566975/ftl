@@ -474,14 +474,14 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 	return connect.NewResponse(resp), nil
 }
 
-func (s *Service) GetCertification(ctx context.Context, certificateRequest *connect.Request[ftlv1.GetCertificationRequest]) (*connect.Response[ftlv1.GetCertificationResponse], error) {
+func (s *Service) GetCertificate(ctx context.Context, certificateRequest *connect.Request[ftlv1.GetCertificateRequest]) (*connect.Response[ftlv1.GetCertificateResponse], error) {
 	msg := certificateRequest.Msg
 	certificate, err := s.identityService.Store.SignCertificateRequest(msg)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("could not sign certificate request: %w", err))
 	}
 
-	return connect.NewResponse(&ftlv1.GetCertificationResponse{
+	return connect.NewResponse(&ftlv1.GetCertificateResponse{
 		Certificate: certificate.ToProto(),
 	}), nil
 }

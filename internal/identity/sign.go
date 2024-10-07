@@ -13,14 +13,14 @@ type Signer struct {
 	signer tink.Signer
 }
 
-func (k Signer) Sign(data []byte) (SignedData, error) {
+func (k Signer) Sign(data []byte) (SignedMessage, error) {
 	signatureBytes, err := k.signer.Sign(data)
 	if err != nil {
-		return SignedData{}, fmt.Errorf("failed to sign data: %w", err)
+		return SignedMessage{}, fmt.Errorf("failed to sign data: %w", err)
 	}
 
-	return SignedData{
-		data:      data,
+	return SignedMessage{
+		message:   data,
 		Signature: NewSignature(signatureBytes),
 	}, nil
 }
@@ -50,13 +50,13 @@ func NewVerifier(publicKey RawPublicKey) (Verifier, error) {
 	}, nil
 }
 
-func (k Verifier) Verify(signedData SignedData) ([]byte, error) {
-	err := k.verifier.Verify(signedData.Signature.Bytes, signedData.data)
+func (k Verifier) Verify(signedData SignedMessage) ([]byte, error) {
+	err := k.verifier.Verify(signedData.Signature.Bytes, signedData.message)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify signature: %w", err)
 	}
 
-	return signedData.data, nil
+	return signedData.message, nil
 }
 
 type KeyPair struct {

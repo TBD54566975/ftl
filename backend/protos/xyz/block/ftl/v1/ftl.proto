@@ -138,18 +138,22 @@ message SignedMessage {
   bytes signature = 2;
 }
 
-message GetCertificationRequest {
-    // This should be serialised with the node identity and its public key.
-    SignedMessage certificate_request = 1;
+message CertificateRequest {
+  // Serialised in the app: node identity and its public key, signed by the node.
+  SignedMessage signed_message = 1;
 }
 
-message GetCertificationResponse {
-  Certificate certificate = 1;
+message GetCertificateRequest {
+  CertificateRequest certificate_request = 1;
 }
 
 message Certificate {
-  CertificateContent content = 1;
-  bytes controller_signature = 3;
+    // Serialised in the app: node identity + node public key, signed by the controller.
+    SignedMessage signed_message = 1;
+}
+
+message GetCertificateResponse {
+  Certificate certificate = 1;
 }
 
 enum DeploymentChangeType {
@@ -336,7 +340,7 @@ service ControllerService {
   rpc Status(StatusRequest) returns (StatusResponse);
 
   // Runner will initially call this to have the controller sign its public key.
-  rpc GetCertification(GetCertificationRequest) returns (GetCertificationResponse);
+  rpc GetCertificate(GetCertificateRequest) returns (GetCertificateResponse);
 
   // Get list of artefacts that differ between the server and client.
   rpc GetArtefactDiffs(GetArtefactDiffsRequest) returns (GetArtefactDiffsResponse);

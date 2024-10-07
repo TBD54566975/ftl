@@ -158,7 +158,7 @@ func newIdentityStore(ctx context.Context, config Config, key model.RunnerKey, c
 		return identity.Store{}, fmt.Errorf("failed to create certificate request: %w", err)
 	}
 
-	certResp, err := controllerClient.GetCertification(ctx, connect.NewRequest(&certRequest))
+	certResp, err := controllerClient.GetCertificate(ctx, connect.NewRequest(&certRequest))
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)
 		return identity.Store{}, fmt.Errorf("failed to get certificate: %w", err)
