@@ -402,6 +402,7 @@ jobs:
       - name: Checkout the repository with full history
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
           fetch-tags: true
       - name: Get latest release tag
@@ -410,15 +411,21 @@ jobs:
           latest_release=$(git rev-parse HEAD^)
           echo "Latest release: $latest_release"
           echo "LATEST_RELEASE=$latest_release" >> "$GITHUB_ENV"
-      - name: Check out exemplar from previous release
+      - name: Check out previous release
         uses: actions/checkout@v4
         with:
-          repository: TBD54566975/ftl.git
           ref: ${{ env.LATEST_RELEASE }}
           fetch-depth: 1
           fetch-tags: true
-          sparse-checkout: smoketest
-          sparse-checkout-cone-mode: false
+      # - name: Check out exemplar from previous release
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: TBD54566975/ftl.git
+      #     ref: ${{ env.LATEST_RELEASE }}
+      #     fetch-depth: 1
+      #     fetch-tags: true
+      #     sparse-checkout: smoketest
+      #     sparse-checkout-cone-mode: false
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
         with:
@@ -433,18 +440,26 @@ jobs:
         run: go mod download
       - name: Smoke Test Upgrade Path
         run: |
-            test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname {} || true)
-            echo "Smoke test files: $test_files"
+            set -euo pipefail
+            echo "List all files"
+            ls -la ./smoketest/
+            echo "List smoke test files"
+            git grep -l '^//go:build smoketest' | xargs -I {} dirname {} || true
+            echo "Run smoke test"
+            go test -v -tags smoketest -run '^Test' ./smoketest
+        # run: |
+        #     test_files=$(git grep -l '^//go:build smoketest' | xargs -I {} dirname {} || true)
+        #     echo "Smoke test files: $test_files"
 
-            if [ -z "$test_files" ]; then
-              echo "No smoke test files found."
-              exit 0  # Exit gracefully if no smoke test files are found
-            fi
+        #     if [ -z "$test_files" ]; then
+        #       echo "No smoke test files found."
+        #       exit 0  # Exit gracefully if no smoke test files are found
+        #     fi
 
-            for file in $test_files; do
-              echo "Running smoke tests in $file"
-              go test -v -tags smoketest -run '^SmokeTest' "$file" || exit 1
-            done
+        #     for file in $test_files; do
+        #       echo "Running smoke tests in $file"
+        #       go test -v -tags smoketest -run '^Test' "$file"
+        #     done
         # run: |
         #   set -euo pipefail
         #   # shellcheck disable=SC2046

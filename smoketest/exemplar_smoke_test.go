@@ -18,9 +18,8 @@ func TestSmokeEcho(t *testing.T) {
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Joe", func(t testing.TB, response string) {
-			name := "Joe"
-			fmt.Printf("name: %s\n", name)
-			assert.Equal(t, "Hello, %s!!!", name, response)
+			expected := fmt.Sprintf("Hello, %s!!!", "Joe")
+			assert.Equal(t, expected, response)
 		}),
 		in.Exec("ftl", "--version"),
 	)
