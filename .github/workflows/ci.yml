@@ -411,12 +411,6 @@ jobs:
           latest_release=$(git rev-parse HEAD^)
           echo "Latest release: $latest_release"
           echo "LATEST_RELEASE=$latest_release" >> "$GITHUB_ENV"
-      # - name: Check out previous release
-      #   uses: actions/checkout@v4
-      #   with:
-      #     ref: ${{ env.LATEST_RELEASE }}
-      #     fetch-depth: 1
-      #     fetch-tags: true
       - name: Check out exemplar from previous release
         uses: actions/checkout@v4
         with:
@@ -443,8 +437,10 @@ jobs:
       - name: Smoke Test Upgrade Path
         run: |
             set -euo pipefail
-            echo "List all files in smoketest"
-            ls -la ./smoketest/
+            echo "Replacing current exemplar with latest released exemplar"
+            rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest
+            echo "List all files in ."
+            ls -la ./
             echo "List all files in tmpsmoketest"
             ls -la ./tmpsmoketest/
             echo "List smoke test files"
