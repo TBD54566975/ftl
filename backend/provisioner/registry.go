@@ -106,27 +106,27 @@ func (reg *ProvisionerRegistry) Register(handler provisionerconnect.ProvisionerP
 }
 
 // CreateDeployment to take the system to the desired state
-func (reg *ProvisionerRegistry) CreateDeployment(module string, desiredResources, existingResources []*provisioner.Resource) *Deployment {
+func (reg *ProvisionerRegistry) CreateDeployment(module string, desiredResources, existingResources *ResourceGraph) *Deployment {
 	var result []*Task
 
-	existingByHandler := reg.groupByProvisioner(existingResources)
-	desiredByHandler := reg.groupByProvisioner(desiredResources)
+	existingByHandler := reg.groupByProvisioner(existingResources.Resources())
+	desiredByHandler := reg.groupByProvisioner(desiredResources.Resources())
 
 	for handler, desired := range desiredByHandler {
 		existing := existingByHandler[handler]
 		result = append(result, &Task{
 			module:   module,
 			handler:  handler,
-			desired:  desired,
-			existing: existing,
+			desired:  desiredResources.WithDirectDependencies(desired),
+			existing: existingResources.WithDirectDependencies(existing),
 		})
 	}
 	return &Deployment{Tasks: result, Module: module}
 }
 
 // ExtractResources from a module schema
-func ExtractResources(msg *ftlv1.CreateDeploymentRequest) ([]*provisioner.Resource, error) {
-	var result []*provisioner.Resource
+func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error) {
+	var deps []*provisioner.Resource
 
 	module, err := schema.ModuleFromProto(msg.Schema)
 	if err != nil {
@@ -137,12 +137,12 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) ([]*provisioner.Resour
 		if db, ok := decl.(*schema.Database); ok {
 			switch db.Type {
 			case "postgres":
-				result = append(result, &provisioner.Resource{
+				deps = append(deps, &provisioner.Resource{
 					ResourceId: decl.GetName(),
 					Resource:   &provisioner.Resource_Postgres{},
 				})
 			case "mysql":
-				result = append(result, &provisioner.Resource{
+				deps = append(deps, &provisioner.Resource{
 					ResourceId: decl.GetName(),
 					Resource:   &provisioner.Resource_Mysql{},
 				})
@@ -151,7 +151,8 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) ([]*provisioner.Resour
 			}
 		}
 	}
-	result = append(result, &provisioner.Resource{
+
+	root := &provisioner.Resource{
 		ResourceId: module.GetName(),
 		Resource: &provisioner.Resource_Module{
 			Module: &provisioner.ModuleResource{
@@ -159,7 +160,19 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) ([]*provisioner.Resour
 				Schema:    msg.Schema,
 			},
 		},
-	})
+	}
+	edges := make([]*ResourceEdge, len(deps))
+	for i, dep := range deps {
+		edges[i] = &ResourceEdge{
+			from: root,
+			to:   dep,
+		}
+	}
+
+	result := &ResourceGraph{
+		nodes: append(deps, root),
+		edges: edges,
+	}
 
 	return result, nil
 }

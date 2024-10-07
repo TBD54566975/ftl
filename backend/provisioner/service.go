@@ -41,7 +41,7 @@ func (c *Config) SetDefaults() {
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
 	// TODO: Store in a resource graph
-	currentResources map[string][]*proto.Resource
+	currentResources map[string]*ResourceGraph
 	registry         *ProvisionerRegistry
 }
 
@@ -50,7 +50,7 @@ var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
 func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, registry *ProvisionerRegistry) (*Service, error) {
 	return &Service{
 		controllerClient: controllerClient,
-		currentResources: map[string][]*proto.Resource{},
+		currentResources: map[string]*ResourceGraph{},
 		registry:         registry,
 	}, nil
 }
@@ -64,15 +64,15 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	// TODO: Block deployments to make sure only one module is modified at a time
 	moduleName := req.Msg.Schema.Name
 	existingResources := s.currentResources[moduleName]
-	desiredResources, err := ExtractResources(req.Msg)
+	desiredGraph, err := ExtractResources(req.Msg)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting resources from schema: %w", err)
 	}
-	if err := replaceOutputs(desiredResources, existingResources); err != nil {
+	if err := replaceOutputs(desiredGraph.Resources(), existingResources.Resources()); err != nil {
 		return nil, err
 	}
 
-	deployment := s.registry.CreateDeployment(moduleName, desiredResources, existingResources)
+	deployment := s.registry.CreateDeployment(moduleName, desiredGraph, existingResources)
 	running := true
 	logger.Debugf("Running deployment for module %s", moduleName)
 	for running {
@@ -90,7 +90,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
 	}
 
-	s.currentResources[moduleName] = desiredResources
+	s.currentResources[moduleName] = desiredGraph
 
 	return response, nil
 }
@@ -105,15 +105,20 @@ func replaceOutputs(to []*proto.Resource, from []*proto.Resource) error {
 		if existing == nil {
 			continue
 		}
-		if mysqlTo, ok := r.Resource.(*proto.Resource_Mysql); ok {
-			if myslqFrom, ok := existing.Resource.(*proto.Resource_Mysql); ok {
-				mysqlTo.Mysql.Output = myslqFrom.Mysql.Output
+		switch r := r.Resource.(type) {
+		case *proto.Resource_Mysql:
+			if mysqlFrom, ok := existing.Resource.(*proto.Resource_Mysql); ok {
+				r.Mysql.Output = mysqlFrom.Mysql.Output
 			}
-		} else if postgresTo, ok := r.Resource.(*proto.Resource_Postgres); ok {
+		case *proto.Resource_Postgres:
 			if postgresFrom, ok := existing.Resource.(*proto.Resource_Postgres); ok {
-				postgresTo.Postgres.Output = postgresFrom.Postgres.Output
+				r.Postgres.Output = postgresFrom.Postgres.Output
 			}
-		} else {
+		case *proto.Resource_Module:
+			if moduleFrom, ok := existing.Resource.(*proto.Resource_Module); ok {
+				r.Module.Output = moduleFrom.Module.Output
+			}
+		default:
 			return fmt.Errorf("can not replace outputs for an unknown resource type %T", r)
 		}
 	}
