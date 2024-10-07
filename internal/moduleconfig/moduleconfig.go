@@ -59,6 +59,9 @@ type CustomDefaults struct {
 	GeneratedSchemaDir string
 	Errors             string
 	Watch              []string
+
+	// only the root keys in LanguageConfig are used to find missing values that can be defaulted
+	LanguageConfig map[string]any `toml:"-"`
 }
 
 // LoadModuleConfig from a directory.
@@ -168,7 +171,26 @@ func (c UnvalidatedModuleConfig) DefaultAndValidate(customDefaults CustomDefault
 		c.Watch = customDefaults.Watch
 	}
 
+	// Find any missing keys in LanguageConfig that can be defaulted
+	if c.LanguageConfig == nil && customDefaults.LanguageConfig != nil {
+		c.LanguageConfig = map[string]any{}
+	}
+	for k, v := range customDefaults.LanguageConfig {
+		if _, ok := c.LanguageConfig[k]; !ok {
+			c.LanguageConfig[k] = v
+		}
+	}
+
 	// Validate
+	if len(c.Deploy) == 0 {
+		return ModuleConfig{}, fmt.Errorf("no deploy files configured")
+	}
+	if c.DeployDir == "" {
+		return ModuleConfig{}, fmt.Errorf("no deploy directory configured")
+	}
+	if c.Errors == "" {
+		return ModuleConfig{}, fmt.Errorf("no errors file configured")
+	}
 	if !isBeneath(c.Dir, c.DeployDir) {
 		return ModuleConfig{}, fmt.Errorf("deploy-dir %s must be relative to the module directory %s", c.DeployDir, c.Dir)
 	}

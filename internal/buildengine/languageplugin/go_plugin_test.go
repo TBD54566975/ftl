@@ -43,3 +43,60 @@ func TestExtractModuleDepsGo(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"another", "other"}, deps)
 }
+
+func TestGoConfigDefaults(t *testing.T) {
+	for _, tt := range []struct {
+		dir      string
+		expected moduleconfig.CustomDefaults
+	}{
+		{
+			dir: "../testdata/alpha",
+			expected: moduleconfig.CustomDefaults{
+				Deploy: []string{
+					"main",
+					"launch",
+				},
+				DeployDir: ".ftl",
+				Watch: []string{
+					"**/*.go",
+					"go.mod",
+					"go.sum",
+					"../../../../go-runtime/ftl/**/*.go",
+				},
+			},
+		},
+		{
+			dir: "../testdata/another",
+			expected: moduleconfig.CustomDefaults{
+				Deploy: []string{
+					"main",
+					"launch",
+				},
+				DeployDir: ".ftl",
+				Watch: []string{
+					"**/*.go",
+					"go.mod",
+					"go.sum",
+					"../../../../go-runtime/ftl/**/*.go",
+					"../../../../go-runtime/schema/testdata/**/*.go",
+				},
+			},
+		},
+	} {
+		t.Run(tt.dir, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			dir, err := filepath.Abs(tt.dir)
+			assert.NoError(t, err)
+
+			plugin, err := New(ctx, "go")
+			assert.NoError(t, err)
+
+			defaults, err := plugin.ModuleConfigDefaults(ctx, dir)
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.expected, defaults)
+		})
+	}
+}

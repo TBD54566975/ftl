@@ -61,33 +61,38 @@ func newJavaPlugin(ctx context.Context, language string) *javaPlugin {
 }
 
 func (p *javaPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
-	return moduleconfig.CustomDefaults{
+	defaults := moduleconfig.CustomDefaults{
 		GeneratedSchemaDir: "src/main/ftl-module-schema",
-		Deploy:             []string{"quarkus-app", "launch"},
+		Deploy:             []string{"launch", "quarkus-app"},
 		// Watch defaults to files related to maven and gradle
 		Watch: []string{"pom.xml", "src/**", "build/generated", "target/generated-sources"},
-	}, nil
-	// TODO: move this to module creation
-	// if config.Build == "" {
-	// 	pom := filepath.Join(moduleDir, "pom.xml")
-	// 	buildGradle := filepath.Join(moduleDir, "build.gradle")
-	// 	buildGradleKts := filepath.Join(moduleDir, "build.gradle.kts")
-	// 	if config.Java.BuildTool == JavaBuildToolMaven || fileExists(pom) {
-	// 		config.Java.BuildTool = JavaBuildToolMaven
-	// 		config.Build = "mvn -B package"
-	// 		if config.DeployDir == "" {
-	// 			config.DeployDir = "target"
-	// 		}
-	// 	} else if config.Java.BuildTool == JavaBuildToolGradle || fileExists(buildGradle) || fileExists(buildGradleKts) {
-	// 		config.Java.BuildTool = JavaBuildToolGradle
-	// 		config.Build = "gradle build"
-	// 		if config.DeployDir == "" {
-	// 			config.DeployDir = "build"
-	// 		}
-	// 	} else {
-	// 		return fmt.Errorf("could not find JVM build file in %s", moduleDir)
-	// 	}
-	// }
+	}
+
+	pom := filepath.Join(dir, "pom.xml")
+	buildGradle := filepath.Join(dir, "build.gradle")
+	buildGradleKts := filepath.Join(dir, "build.gradle.kts")
+	if fileExists(pom) {
+		defaults.LanguageConfig = map[string]any{
+			"build-tool": JavaBuildToolMaven,
+		}
+		defaults.Build = "mvn -B package"
+		defaults.DeployDir = "target"
+	} else if fileExists(buildGradle) || fileExists(buildGradleKts) {
+		defaults.LanguageConfig = map[string]any{
+			"build-tool": JavaBuildToolGradle,
+		}
+		defaults.Build = "gradle build"
+		defaults.DeployDir = "build"
+	} else {
+		return moduleconfig.CustomDefaults{}, fmt.Errorf("could not find JVM build file in %s", dir)
+	}
+
+	return defaults, nil
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
 }
 
 func (p *javaPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
