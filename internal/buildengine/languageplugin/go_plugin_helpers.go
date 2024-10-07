@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/TBD54566975/ftl/internal/errors"
 	"golang.org/x/mod/modfile"
+
+	"github.com/TBD54566975/ftl/internal/errors"
 )
 
 func replacementWatches(moduleDir, deployDir string) ([]string, error) {
