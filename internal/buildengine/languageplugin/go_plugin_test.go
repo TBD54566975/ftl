@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/TBD54566975/ftl/internal/slices"
+
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/alecthomas/assert/v2"
 )
@@ -96,6 +98,8 @@ func TestGoConfigDefaults(t *testing.T) {
 			defaults, err := plugin.ModuleConfigDefaults(ctx, dir)
 			assert.NoError(t, err)
 
+			defaults.Watch = slices.Sort(defaults.Watch)
+			tt.expected.Watch = slices.Sort(tt.expected.Watch)
 			assert.Equal(t, tt.expected, defaults)
 		})
 	}
