@@ -1,8 +1,11 @@
 package xyz.block.ftl.deployment;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.jboss.jandex.AnnotationInstance;
+import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.Type;
 import org.jboss.jandex.TypeVariable;
 import org.slf4j.Logger;

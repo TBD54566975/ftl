@@ -89,7 +89,8 @@ public class EnumProcessor {
                                     variantClasses.add(variantClazz);
                                 }
                                 if (isVariantLocalToModule) {
-                                    xyz.block.ftl.v1.schema.Type declType = moduleBuilder.buildType(variantType, exported);
+                                    xyz.block.ftl.v1.schema.Type declType = moduleBuilder.buildType(variantType, exported,
+                                            Nullability.NOT_NULL);
                                     TypeValue typeValue = TypeValue.newBuilder().setValue(declType).build();
 
                                     EnumVariant.Builder variantBuilder = EnumVariant.newBuilder()
