@@ -21,6 +21,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/terminal"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -78,6 +79,9 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 
 	// Similar to the `diff` command, exit with 1 if there are differences.
 	if diff != "" {
+		// Unfortunately we need to close the terminal before exit to make sure the output is printed
+		// This is only applicable when we explicitly call os.Exit
+		terminal.FromContext(ctx).Close()
 		os.Exit(1)
 	}
 
