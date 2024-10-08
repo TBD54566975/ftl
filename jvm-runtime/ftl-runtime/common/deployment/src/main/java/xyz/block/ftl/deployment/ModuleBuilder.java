@@ -21,6 +21,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
+import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
@@ -30,6 +31,7 @@ import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.VoidType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -45,6 +47,7 @@ import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.v1.CallRequest;
+import xyz.block.ftl.v1.schema.AliasKind;
 import xyz.block.ftl.v1.schema.Any;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
@@ -57,6 +60,8 @@ import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataAlias;
 import xyz.block.ftl.v1.schema.MetadataCalls;
+import xyz.block.ftl.v1.schema.MetadataConfig;
+import xyz.block.ftl.v1.schema.MetadataSecrets;
 import xyz.block.ftl.v1.schema.MetadataTypeMap;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Position;
@@ -74,6 +79,7 @@ public class ModuleBuilder {
     public static final DotName INSTANT = DotName.createSimple(Instant.class);
     public static final DotName ZONED_DATE_TIME = DotName.createSimple(ZonedDateTime.class);
     public static final DotName NOT_NULL = DotName.createSimple(NotNull.class);
+    public static final DotName NULLABLE = DotName.createSimple(Nullable.class);
     public static final DotName JSON_NODE = DotName.createSimple(JsonNode.class.getName());
     public static final DotName OFFSET_DATE_TIME = DotName.createSimple(OffsetDateTime.class.getName());
 
@@ -90,10 +96,11 @@ public class ModuleBuilder {
     private final FTLRecorder recorder;
     private final Map<String, Iterable<String>> comments;
     private final List<ValidationFailure> validationFailures = new ArrayList<>();
+    private final boolean defaultToOptional;
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
-            Map<String, Iterable<String>> comments) {
+            Map<String, Iterable<String>> comments, boolean defaultToOptional) {
         this.index = index;
         this.moduleName = moduleName;
         this.protoModuleBuilder = Module.newBuilder()
@@ -103,6 +110,7 @@ public class ModuleBuilder {
         this.verbClients = verbClients;
         this.recorder = recorder;
         this.comments = comments;
+        this.defaultToOptional = defaultToOptional;
     }
 
     public static @NotNull String methodToName(MethodInfo method) {
@@ -178,9 +186,13 @@ public class ModuleBuilder {
             List<Class<?>> parameterTypes = new ArrayList<>();
             List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
             org.jboss.jandex.Type bodyParamType = null;
+            Nullability bodyParamNullability = Nullability.MISSING;
+
             xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
             String verbName = validateName(className, ModuleBuilder.methodToName(method));
             MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
+            MetadataConfig.Builder configMetadata = MetadataConfig.newBuilder();
+            MetadataSecrets.Builder secretMetadata = MetadataSecrets.newBuilder();
             for (var param : method.parameters()) {
                 if (param.hasAnnotation(Secret.class)) {
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
@@ -189,13 +201,14 @@ public class ModuleBuilder {
                     paramMappers.add(new VerbRegistry.SecretSupplier(name, paramType));
                     if (!knownSecrets.contains(name)) {
                         xyz.block.ftl.v1.schema.Secret.Builder secretBuilder = xyz.block.ftl.v1.schema.Secret.newBuilder()
-                                .setType(buildType(param.type(), false))
+                                .setType(buildType(param.type(), false, param))
                                 .setName(name);
                         Optional.ofNullable(comments.get(CommentKey.ofSecret(name)))
                                 .ifPresent(secretBuilder::addAllComments);
                         addDecls(Decl.newBuilder().setSecret(secretBuilder).build());
                         knownSecrets.add(name);
                     }
+                    secretMetadata.addSecrets(Ref.newBuilder().setName(name).setModule(moduleName).build());
                 } else if (param.hasAnnotation(Config.class)) {
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
                     parameterTypes.add(paramType);
@@ -203,13 +216,14 @@ public class ModuleBuilder {
                     paramMappers.add(new VerbRegistry.ConfigSupplier(name, paramType));
                     if (!knownConfig.contains(name)) {
                         xyz.block.ftl.v1.schema.Config.Builder configBuilder = xyz.block.ftl.v1.schema.Config.newBuilder()
-                                .setType(buildType(param.type(), false))
+                                .setType(buildType(param.type(), false, param))
                                 .setName(name);
                         Optional.ofNullable(comments.get(CommentKey.ofConfig(name)))
                                 .ifPresent(configBuilder::addAllComments);
                         addDecls(Decl.newBuilder().setConfig(configBuilder).build());
                         knownConfig.add(name);
                     }
+                    configMetadata.addConfig(Ref.newBuilder().setName(name).setModule(moduleName).build());
                 } else if (knownTopics.containsKey(param.type().name())) {
                     var topic = knownTopics.get(param.type().name());
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
@@ -226,6 +240,7 @@ public class ModuleBuilder {
                     paramMappers.add(recorder.leaseClientSupplier());
                 } else if (bodyType != BodyType.DISALLOWED && bodyParamType == null) {
                     bodyParamType = param.type();
+                    bodyParamNullability = nullability(param);
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
                     parameterTypes.add(paramType);
                     //TODO: map and list types
@@ -244,16 +259,23 @@ public class ModuleBuilder {
             if (callsMetadata.getCallsCount() > 0) {
                 verbBuilder.addMetadata(Metadata.newBuilder().setCalls(callsMetadata));
             }
+            if (secretMetadata.getSecretsCount() > 0) {
+                verbBuilder.addMetadata(Metadata.newBuilder().setSecrets(secretMetadata));
+            }
+            if (configMetadata.getConfigCount() > 0) {
+                verbBuilder.addMetadata(Metadata.newBuilder().setConfig(configMetadata));
+            }
 
-            //TODO: we need better handling around Optional
             recorder.registerVerb(moduleName, verbName, method.name(), parameterTypes,
                     Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers,
                     method.returnType() == VoidType.VOID);
+
             verbBuilder
                     .setName(verbName)
                     .setExport(exported)
-                    .setRequest(buildType(bodyParamType, exported))
-                    .setResponse(buildType(method.returnType(), exported));
+                    .setPos(PositionUtils.forMethod(method))
+                    .setRequest(buildType(bodyParamType, exported, bodyParamNullability))
+                    .setResponse(buildType(method.returnType(), exported, method));
             Optional.ofNullable(comments.get(CommentKey.ofVerb(verbName)))
                     .ifPresent(verbBuilder::addAllComments);
 
@@ -269,7 +291,31 @@ public class ModuleBuilder {
         }
     }
 
-    public Type buildType(org.jboss.jandex.Type type, boolean export) {
+    private Nullability nullability(org.jboss.jandex.AnnotationTarget type) {
+        if (type.hasAnnotation(NULLABLE)) {
+            return Nullability.NULLABLE;
+        } else if (type.hasAnnotation(NOT_NULL)) {
+            return Nullability.NOT_NULL;
+        }
+        return Nullability.MISSING;
+    }
+
+    private Type handleNullabilityAnnotations(Type res, Nullability nullability) {
+        if (nullability == Nullability.NOT_NULL) {
+            return res;
+        } else if (nullability == Nullability.NULLABLE || defaultToOptional) {
+            return Type.newBuilder().setOptional(xyz.block.ftl.v1.schema.Optional.newBuilder()
+                    .setType(res))
+                    .build();
+        }
+        return res;
+    }
+
+    public Type buildType(org.jboss.jandex.Type type, boolean export, AnnotationTarget target) {
+        return buildType(type, export, nullability(target));
+    }
+
+    public Type buildType(org.jboss.jandex.Type type, boolean export, Nullability nullability) {
         switch (type.kind()) {
             case PRIMITIVE -> {
                 var prim = type.asPrimitiveType();
@@ -296,11 +342,13 @@ public class ModuleBuilder {
                 ArrayType arrayType = type.asArrayType();
                 if (arrayType.componentType().kind() == org.jboss.jandex.Type.Kind.PRIMITIVE && arrayType
                         .componentType().asPrimitiveType().primitive() == PrimitiveType.Primitive.BYTE) {
-                    return Type.newBuilder().setBytes(Bytes.newBuilder().build()).build();
+                    return handleNullabilityAnnotations(Type.newBuilder().setBytes(Bytes.newBuilder().build()).build(),
+                            nullability);
                 }
-                return Type.newBuilder()
-                        .setArray(Array.newBuilder().setElement(buildType(arrayType.componentType(), export)).build())
-                        .build();
+                return handleNullabilityAnnotations(Type.newBuilder()
+                        .setArray(Array.newBuilder()
+                                .setElement(buildType(arrayType.componentType(), export, Nullability.NOT_NULL)).build())
+                        .build(), nullability);
             }
             case CLASS -> {
                 var clazz = type.asClassType();
@@ -313,8 +361,8 @@ public class ModuleBuilder {
 
                 PrimitiveType unboxed = PrimitiveType.unbox(clazz);
                 if (unboxed != null) {
-                    Type primitive = buildType(unboxed, export);
-                    if (type.hasAnnotation(NOT_NULL)) {
+                    Type primitive = buildType(unboxed, export, Nullability.NOT_NULL);
+                    if (nullability == Nullability.NOT_NULL) {
                         return primitive;
                     }
                     return Type.newBuilder().setOptional(xyz.block.ftl.v1.schema.Optional.newBuilder()
@@ -323,26 +371,24 @@ public class ModuleBuilder {
                 }
                 if (info.hasDeclaredAnnotation(GENERATED_REF)) {
                     var ref = info.declaredAnnotation(GENERATED_REF);
-                    return Type.newBuilder()
-                            .setRef(Ref.newBuilder()
-                                    .setName(ref.value("name").asString())
+                    return handleNullabilityAnnotations(Type.newBuilder()
+                            .setRef(Ref.newBuilder().setName(ref.value("name").asString())
                                     .setModule(ref.value("module").asString()))
-                            .build();
+                            .build(), nullability);
                 }
                 if (clazz.name().equals(DotName.STRING_NAME)) {
-                    return Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build();
+                    return handleNullabilityAnnotations(
+                            Type.newBuilder().setString(xyz.block.ftl.v1.schema.String.newBuilder().build()).build(),
+                            nullability);
                 }
                 if (clazz.name().equals(DotName.OBJECT_NAME) || clazz.name().equals(JSON_NODE)) {
-                    return Type.newBuilder().setAny(Any.newBuilder().build()).build();
+                    return handleNullabilityAnnotations(Type.newBuilder().setAny(Any.newBuilder().build()).build(),
+                            nullability);
                 }
-                if (clazz.name().equals(OFFSET_DATE_TIME)) {
-                    return Type.newBuilder().setTime(Time.newBuilder().build()).build();
-                }
-                if (clazz.name().equals(INSTANT)) {
-                    return Type.newBuilder().setTime(Time.newBuilder().build()).build();
-                }
-                if (clazz.name().equals(ZONED_DATE_TIME)) {
-                    return Type.newBuilder().setTime(Time.newBuilder().build()).build();
+                if (clazz.name().equals(OFFSET_DATE_TIME) || clazz.name().equals(INSTANT)
+                        || clazz.name().equals(ZONED_DATE_TIME)) {
+                    return handleNullabilityAnnotations(Type.newBuilder().setTime(Time.newBuilder().build()).build(),
+                            nullability);
                 }
 
                 var ref = Type.newBuilder().setRef(
@@ -362,6 +408,7 @@ public class ModuleBuilder {
                         return ref;
                     }
                     Data.Builder data = Data.newBuilder();
+                    data.setPos(PositionUtils.forClass(clazz.name().toString()));
                     data.setName(clazz.name().local());
                     data.setExport(type.hasAnnotation(EXPORT) || export);
                     Optional.ofNullable(comments.get(CommentKey.ofData(clazz.name().local())))
@@ -374,43 +421,45 @@ public class ModuleBuilder {
             case PARAMETERIZED_TYPE -> {
                 var paramType = type.asParameterizedType();
                 if (paramType.name().equals(DotName.createSimple(List.class))) {
-                    return Type.newBuilder()
-                            .setArray(Array.newBuilder().setElement(buildType(paramType.arguments().get(0), export)))
-                            .build();
+                    return handleNullabilityAnnotations(Type.newBuilder()
+                            .setArray(Array.newBuilder()
+                                    .setElement(buildType(paramType.arguments().get(0), export, Nullability.NOT_NULL)))
+                            .build(), nullability);
                 } else if (paramType.name().equals(DotName.createSimple(Map.class))) {
-                    return Type.newBuilder().setMap(xyz.block.ftl.v1.schema.Map.newBuilder()
-                            .setKey(buildType(paramType.arguments().get(0), export))
-                            .setValue(buildType(paramType.arguments().get(1), export)))
-                            .build();
+                    return handleNullabilityAnnotations(Type.newBuilder().setMap(xyz.block.ftl.v1.schema.Map.newBuilder()
+                            .setKey(buildType(paramType.arguments().get(0), export, Nullability.NOT_NULL))
+                            .setValue(buildType(paramType.arguments().get(1), export, Nullability.NOT_NULL)))
+                            .build(), nullability);
                 } else if (paramType.name().equals(DotNames.OPTIONAL)) {
                     //TODO: optional kinda sucks
                     return Type.newBuilder().setOptional(xyz.block.ftl.v1.schema.Optional.newBuilder()
-                            .setType(buildType(paramType.arguments().get(0), export)))
+                            .setType(buildType(paramType.arguments().get(0), export, Nullability.NOT_NULL)))
                             .build();
                 } else if (paramType.name().equals(DotName.createSimple(HttpRequest.class))) {
                     return Type.newBuilder()
                             .setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpRequest.class.getSimpleName())
-                                    .addTypeParameters(buildType(paramType.arguments().get(0), export)))
+                                    .addTypeParameters(buildType(paramType.arguments().get(0), export, Nullability.NOT_NULL)))
                             .build();
                 } else if (paramType.name().equals(DotName.createSimple(HttpResponse.class))) {
                     return Type.newBuilder()
                             .setRef(Ref.newBuilder().setModule(BUILTIN).setName(HttpResponse.class.getSimpleName())
-                                    .addTypeParameters(buildType(paramType.arguments().get(0), export))
+                                    .addTypeParameters(buildType(paramType.arguments().get(0), export, Nullability.NOT_NULL))
                                     .addTypeParameters(Type.newBuilder().setUnit(Unit.newBuilder().build())))
                             .build();
                 } else {
                     ClassInfo classByName = index.getClassByName(paramType.name());
                     validateName(classByName.name().toString(), classByName.name().local());
                     var cb = ClassType.builder(classByName.name());
-                    var main = buildType(cb.build(), export);
+                    var main = buildType(cb.build(), export, Nullability.NOT_NULL);
                     var builder = main.toBuilder();
                     var refBuilder = builder.getRef().toBuilder();
 
                     for (var arg : paramType.arguments()) {
-                        refBuilder.addTypeParameters(buildType(arg, export));
+                        refBuilder.addTypeParameters(buildType(arg, export, Nullability.NOT_NULL));
                     }
+
                     builder.setRef(refBuilder);
-                    return builder.build();
+                    return handleNullabilityAnnotations(builder.build(), nullability);
                 }
             }
         }
@@ -430,13 +479,14 @@ public class ModuleBuilder {
         for (var field : clazz.fields()) {
             if (!Modifier.isStatic(field.flags())) {
                 Field.Builder builder = Field.newBuilder().setName(field.name())
-                        .setType(buildType(field.type(), data.getExport()));
+                        .setType(buildType(field.type(), data.getExport(), field));
                 if (field.hasAnnotation(JsonAlias.class)) {
                     var aliases = field.annotation(JsonAlias.class);
                     if (aliases.value() != null) {
                         for (var alias : aliases.value().asStringArray()) {
                             builder.addMetadata(
-                                    Metadata.newBuilder().setAlias(MetadataAlias.newBuilder().setKind(0).setAlias(alias)));
+                                    Metadata.newBuilder().setAlias(
+                                            MetadataAlias.newBuilder().setKind(AliasKind.ALIAS_KIND_JSON).setAlias(alias)));
                         }
                     }
                 }
@@ -498,12 +548,22 @@ public class ModuleBuilder {
         protoModuleBuilder.build().writeTo(out);
     }
 
-    public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported) {
-        addDecls(Decl.newBuilder()
-                .setTypeAlias(TypeAlias.newBuilder().setType(buildType(finalS, exported)).setName(name).addMetadata(Metadata
+    public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported,
+            Map<String, String> languageMappings) {
+        validateName(finalT.name().toString(), name);
+        TypeAlias.Builder typeAlias = TypeAlias.newBuilder().setType(buildType(finalS, exported, Nullability.NOT_NULL))
+                .setName(name)
+                .addMetadata(Metadata
                         .newBuilder()
-                        .setTypeMap(MetadataTypeMap.newBuilder().setRuntime("java").setNativeName(finalT.toString()).build())
-                        .build()))
+                        .setTypeMap(MetadataTypeMap.newBuilder().setRuntime("java").setNativeName(finalT.toString())
+                                .build())
+                        .build());
+        for (var entry : languageMappings.entrySet()) {
+            typeAlias.addMetadata(Metadata.newBuilder().setTypeMap(MetadataTypeMap.newBuilder().setRuntime(entry.getKey())
+                    .setNativeName(entry.getValue()).build()).build());
+        }
+        addDecls(Decl.newBuilder()
+                .setTypeAlias(typeAlias)
                 .build());
     }
 

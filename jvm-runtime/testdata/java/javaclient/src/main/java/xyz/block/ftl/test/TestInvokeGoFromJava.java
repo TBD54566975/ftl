@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import ftl.gomodule.AnimalWrapper;
 import ftl.gomodule.BoolVerbClient;
@@ -53,6 +54,9 @@ import xyz.block.ftl.Verb;
 
 public class TestInvokeGoFromJava {
 
+    /**
+     * JAVA COMMENT
+     */
     @Export
     @Verb
     public void emptyVerb(EmptyVerbClient emptyVerbClient) {
@@ -71,9 +75,6 @@ public class TestInvokeGoFromJava {
         return sourceVerbClient.call();
     }
 
-    /**
-     * JAVA COMMENT
-     */
     @Export
     @Verb
     public void errorEmptyVerb(ErrorEmptyVerbClient client) {
@@ -137,7 +138,7 @@ public class TestInvokeGoFromJava {
     @Export
     @Verb
     public @NotNull ParameterizedType<String> parameterizedObjectVerb(@NotNull ParameterizedType<String> val,
-            ParameterizedObjectVerbClient client) {
+                                                                      ParameterizedObjectVerbClient client) {
         return client.call(val);
     }
 
@@ -156,7 +157,7 @@ public class TestInvokeGoFromJava {
     @Export
     @Verb
     public @NotNull TestObjectOptionalFields testObjectOptionalFieldsVerb(@NotNull TestObjectOptionalFields val,
-            TestObjectOptionalFieldsVerbClient client) {
+                                                                          TestObjectOptionalFieldsVerbClient client) {
         return client.call(val);
     }
 
@@ -176,50 +177,51 @@ public class TestInvokeGoFromJava {
 
     @Export
     @Verb
-    public String optionalStringVerb(String val, OptionalStringVerbClient client) {
+    public @Nullable String optionalStringVerb(@Nullable String val, OptionalStringVerbClient client) {
         return client.call(val);
     }
 
     @Export
     @Verb
-    public byte[] optionalBytesVerb(byte[] val, OptionalBytesVerbClient client) {
+    public byte @Nullable [] optionalBytesVerb(byte @Nullable [] val, OptionalBytesVerbClient client) {
         return client.call(val);
     }
 
     @Export
     @Verb
-    public boolean optionalBoolVerb(boolean val, OptionalBoolVerbClient client) {
+    public Boolean optionalBoolVerb(Boolean val, OptionalBoolVerbClient client) {
         return client.call(val);
     }
 
     @Export
     @Verb
-    public List<String> optionalStringArrayVerb(List<String> val, OptionalStringArrayVerbClient client) {
+    public @Nullable List<String> optionalStringArrayVerb(@Nullable List<String> val, OptionalStringArrayVerbClient client) {
         return client.call(val);
     }
 
     @Export
     @Verb
-    public Map<String, String> optionalStringMapVerb(Map<String, String> val, OptionalStringMapVerbClient client) {
+    public @Nullable Map<String, String> optionalStringMapVerb(@Nullable Map<String, String> val,
+                                                               OptionalStringMapVerbClient client) {
         return client.call(val);
     }
 
     @Export
     @Verb
-    public ZonedDateTime optionalTimeVerb(ZonedDateTime instant, OptionalTimeVerbClient client) {
+    public @Nullable ZonedDateTime optionalTimeVerb(@Nullable ZonedDateTime instant, OptionalTimeVerbClient client) {
         return client.call(instant);
     }
 
     @Export
     @Verb
-    public TestObject optionalTestObjectVerb(TestObject val, OptionalTestObjectVerbClient client) {
+    public @Nullable TestObject optionalTestObjectVerb(@Nullable TestObject val, OptionalTestObjectVerbClient client) {
         return client.call(val);
     }
 
     @Export
     @Verb
     public TestObjectOptionalFields optionalTestObjectOptionalFieldsVerb(TestObjectOptionalFields val,
-            OptionalTestObjectOptionalFieldsVerbClient client) {
+                                                                         OptionalTestObjectOptionalFieldsVerbClient client) {
         return client.call(val);
     }
 
@@ -231,13 +233,24 @@ public class TestInvokeGoFromJava {
 
     @Export
     @Verb
+    public CustomSerializedType stringAliasedType(CustomSerializedType type) {
+        return type;
+    }
+
+    @Export
+    @Verb
+    public AnySerializedType anyAliasedType(AnySerializedType type) {
+        return type;
+    }
+
+    @Export
+    @Verb
     public AnimalWrapper typeEnumVerb(AnimalWrapper animal, TypeEnumVerbClient client) {
-        return animal;
-//        if (animal.getAnimal().isCat()) {
-//            return client.call(new AnimalWrapper(animal.getAnimal().getCat()));
-//        } else {
-//            return client.call(new AnimalWrapper(animal.getAnimal().getDog()));
-//        }
+        if (animal.getAnimal().isCat()) {
+            return client.call(new AnimalWrapper(animal.getAnimal().getCat()));
+        } else {
+            return client.call(new AnimalWrapper(animal.getAnimal().getDog()));
+        }
     }
 
     @Export
@@ -264,9 +277,9 @@ public class TestInvokeGoFromJava {
         }
     }
 
-    //    @Export
-    //    @Verb
-    //    public Mixed mixedEnumVerb(Mixed mixed, MixedEnumVerbClient client) {
-    //        return client.call(mixed);
-    //    }
+//    @Export
+//    @Verb
+//    public Mixed mixedEnumVerb(Mixed mixed, MixedEnumVerbClient client) {
+//        return client.call(mixed);
+//    }
 }

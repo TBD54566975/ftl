@@ -11,9 +11,9 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type eventFilterCall struct {
@@ -369,6 +369,23 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				Response:       jsonPayload.Response,
 				ResponseHeader: jsonPayload.ResponseHeader,
 				Error:          jsonPayload.Error,
+			})
+		case sql.EventTypeCronScheduled:
+			var jsonPayload eventCronScheduledJSON
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt cron scheduled event: %w", err)
+			}
+			out = append(out, &CronScheduledEvent{
+				ID:       row.ID,
+				Duration: time.Duration(jsonPayload.DurationMS) * time.Millisecond,
+				CronScheduled: CronScheduled{
+					DeploymentKey: row.DeploymentKey,
+					Verb:          schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
+					Time:          row.TimeStamp,
+					ScheduledAt:   jsonPayload.ScheduledAt,
+					Schedule:      jsonPayload.Schedule,
+					Error:         jsonPayload.Error,
+				},
 			})
 
 		default:

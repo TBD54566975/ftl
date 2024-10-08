@@ -13,8 +13,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
-	"github.com/TBD54566975/ftl/backend/schema"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/alecthomas/types/optional"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -487,13 +487,13 @@ func (q *Queries) GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDe
 }
 
 const getActiveDeployments = `-- name: GetActiveDeployments :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language, COUNT(r.id) AS replicas
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language, COUNT(r.id) AS replicas
 FROM deployments d
   JOIN modules m ON d.module_id = m.id
   LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0
 GROUP BY d.id, m.name, m.language
-ORDER BY d.created_at
+ORDER BY d.last_activated_at
 `
 
 type GetActiveDeploymentsRow struct {
@@ -520,6 +520,7 @@ func (q *Queries) GetActiveDeployments(ctx context.Context) ([]GetActiveDeployme
 			&i.Deployment.Schema,
 			&i.Deployment.Labels,
 			&i.Deployment.MinReplicas,
+			&i.Deployment.LastActivatedAt,
 			&i.ModuleName,
 			&i.Language,
 			&i.Replicas,
@@ -633,7 +634,7 @@ func (q *Queries) GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, 
 }
 
 const getCronJobByKey = `-- name: GetCronJobByKey :one
-SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE j.key = $1::cron_job_key
@@ -666,12 +667,13 @@ func (q *Queries) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (Ge
 		&i.Deployment.Schema,
 		&i.Deployment.Labels,
 		&i.Deployment.MinReplicas,
+		&i.Deployment.LastActivatedAt,
 	)
 	return i, err
 }
 
 const getDeployment = `-- name: GetDeployment :one
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.language, m.name AS module_name, d.min_replicas
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.language, m.name AS module_name, d.min_replicas
 FROM deployments d
          INNER JOIN modules m ON m.id = d.module_id
 WHERE d.key = $1::deployment_key
@@ -695,6 +697,7 @@ func (q *Queries) GetDeployment(ctx context.Context, key model.DeploymentKey) (G
 		&i.Deployment.Schema,
 		&i.Deployment.Labels,
 		&i.Deployment.MinReplicas,
+		&i.Deployment.LastActivatedAt,
 		&i.Language,
 		&i.ModuleName,
 		&i.MinReplicas,
@@ -703,7 +706,7 @@ func (q *Queries) GetDeployment(ctx context.Context, key model.DeploymentKey) (G
 }
 
 const getDeploymentsByID = `-- name: GetDeploymentsByID :many
-SELECT id, created_at, module_id, key, schema, labels, min_replicas
+SELECT id, created_at, module_id, key, schema, labels, min_replicas, last_activated_at
 FROM deployments
 WHERE id = ANY ($1::BIGINT[])
 `
@@ -725,6 +728,7 @@ func (q *Queries) GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deploy
 			&i.Schema,
 			&i.Labels,
 			&i.MinReplicas,
+			&i.LastActivatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -792,7 +796,7 @@ func (q *Queries) GetDeploymentsWithArtefacts(ctx context.Context, digests [][]b
 }
 
 const getDeploymentsWithMinReplicas = `-- name: GetDeploymentsWithMinReplicas :many
-SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, m.name AS module_name, m.language
+SELECT d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at, m.name AS module_name, m.language
 FROM deployments d
   INNER JOIN modules m on d.module_id = m.id
 WHERE min_replicas > 0
@@ -822,6 +826,7 @@ func (q *Queries) GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeplo
 			&i.Deployment.Schema,
 			&i.Deployment.Labels,
 			&i.Deployment.MinReplicas,
+			&i.Deployment.LastActivatedAt,
 			&i.ModuleName,
 			&i.Language,
 		); err != nil {
@@ -839,7 +844,7 @@ func (q *Queries) GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeplo
 }
 
 const getExistingDeploymentForModule = `-- name: GetExistingDeploymentForModule :one
-SELECT d.id, created_at, module_id, key, schema, labels, min_replicas, m.id, language, name
+SELECT d.id, created_at, module_id, key, schema, labels, min_replicas, last_activated_at, m.id, language, name
 FROM deployments d
          INNER JOIN modules m on d.module_id = m.id
 WHERE m.name = $1
@@ -848,16 +853,17 @@ LIMIT 1
 `
 
 type GetExistingDeploymentForModuleRow struct {
-	ID          int64
-	CreatedAt   time.Time
-	ModuleID    int64
-	Key         model.DeploymentKey
-	Schema      *schema.Module
-	Labels      json.RawMessage
-	MinReplicas int32
-	ID_2        int64
-	Language    string
-	Name        string
+	ID              int64
+	CreatedAt       time.Time
+	ModuleID        int64
+	Key             model.DeploymentKey
+	Schema          *schema.Module
+	Labels          json.RawMessage
+	MinReplicas     int32
+	LastActivatedAt time.Time
+	ID_2            int64
+	Language        string
+	Name            string
 }
 
 func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error) {
@@ -871,6 +877,7 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 		&i.Schema,
 		&i.Labels,
 		&i.MinReplicas,
+		&i.LastActivatedAt,
 		&i.ID_2,
 		&i.Language,
 		&i.Name,
@@ -1150,28 +1157,29 @@ func (q *Queries) GetRunner(ctx context.Context, key model.RunnerKey) (GetRunner
 }
 
 const getRunnersForDeployment = `-- name: GetRunnersForDeployment :many
-SELECT r.id, r.key, created, last_seen, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas
+SELECT r.id, r.key, created, last_seen, endpoint, module_name, deployment_id, r.labels, d.id, created_at, module_id, d.key, schema, d.labels, min_replicas, last_activated_at
 FROM runners r
          INNER JOIN deployments d on r.deployment_id = d.id
 WHERE d.key = $1::deployment_key
 `
 
 type GetRunnersForDeploymentRow struct {
-	ID           int64
-	Key          model.RunnerKey
-	Created      time.Time
-	LastSeen     time.Time
-	Endpoint     string
-	ModuleName   optional.Option[string]
-	DeploymentID int64
-	Labels       json.RawMessage
-	ID_2         int64
-	CreatedAt    time.Time
-	ModuleID     int64
-	Key_2        model.DeploymentKey
-	Schema       *schema.Module
-	Labels_2     json.RawMessage
-	MinReplicas  int32
+	ID              int64
+	Key             model.RunnerKey
+	Created         time.Time
+	LastSeen        time.Time
+	Endpoint        string
+	ModuleName      optional.Option[string]
+	DeploymentID    int64
+	Labels          json.RawMessage
+	ID_2            int64
+	CreatedAt       time.Time
+	ModuleID        int64
+	Key_2           model.DeploymentKey
+	Schema          *schema.Module
+	Labels_2        json.RawMessage
+	MinReplicas     int32
+	LastActivatedAt time.Time
 }
 
 func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.DeploymentKey) ([]GetRunnersForDeploymentRow, error) {
@@ -1199,6 +1207,7 @@ func (q *Queries) GetRunnersForDeployment(ctx context.Context, key model.Deploym
 			&i.Schema,
 			&i.Labels_2,
 			&i.MinReplicas,
+			&i.LastActivatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1359,7 +1368,7 @@ func (q *Queries) GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent
 }
 
 const getUnscheduledCronJobs = `-- name: GetUnscheduledCronJobs :many
-SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE d.min_replicas > 0
@@ -1408,6 +1417,7 @@ func (q *Queries) GetUnscheduledCronJobs(ctx context.Context, startTime time.Tim
 			&i.Deployment.Schema,
 			&i.Deployment.Labels,
 			&i.Deployment.MinReplicas,
+			&i.Deployment.LastActivatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1685,7 +1695,7 @@ func (q *Queries) PublishEventForTopic(ctx context.Context, arg PublishEventForT
 
 const setDeploymentDesiredReplicas = `-- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
-SET min_replicas = $2
+SET min_replicas = $2, last_activated_at = CASE WHEN min_replicas = 0 THEN (NOW() AT TIME ZONE 'utc') ELSE  last_activated_at END
 WHERE key = $1::deployment_key
 RETURNING 1
 `

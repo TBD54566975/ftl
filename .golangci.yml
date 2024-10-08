@@ -101,7 +101,6 @@ linters-settings:
   #   ignorePackageGlobs:
   #     - github.com/TBD54566975/ftl/*
   spancheck:
-
     extra-start-span-signatures:
       - "github.com/TBD54566975/ftl/backend/controller/observability.BeginSpan:opentelemetry"
 issues:
@@ -143,3 +142,4 @@ issues:
     - "strings.Title has been deprecated"
     - "error returned from external package is unwrapped.*TranslatePGError"
     - "struct literal uses unkeyed fields"
+    - "exported: comment on exported type"

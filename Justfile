@@ -47,7 +47,7 @@ generate-kube-migrations:
 
 # Run "go generate" on all packages
 build-generate:
-  @mk backend/schema/aliaskind_enumer.go : backend/schema/metadataalias.go -- go generate -x ./backend/schema
+  @mk internal/schema/aliaskind_enumer.go : internal/schema/metadataalias.go -- go generate -x ./internal/schema
   @mk internal/log/log_level_string.go : internal/log/api.go -- go generate -x ./internal/log
 
 # Build command-line tools
@@ -129,12 +129,12 @@ pnpm-install:
 
 # Regenerate protos
 build-protos: pnpm-install
-  @mk {{SCHEMA_OUT}} : backend/schema -- "ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint"
+  @mk {{SCHEMA_OUT}} : internal/schema -- "go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: pnpm-install
-  ftl-schema > {{SCHEMA_OUT}} && buf format -w && buf lint
+  go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
   cd backend/protos && buf generate
 
 # Run integration test(s)
@@ -190,7 +190,9 @@ lint-backend:
   @lint-commit-or-rollback ./backend/...
 
 lint-scripts:
-	@shellcheck -f gcc -e SC2016 $(find scripts -type f -not -path scripts/tests) | to-annotation
+  #!/bin/bash
+  set -euo pipefail
+  shellcheck -f gcc -e SC2016 $(find scripts -type f -not -path scripts/tests) | to-annotation
 
 # Run live docs server
 docs:

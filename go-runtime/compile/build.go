@@ -26,7 +26,6 @@ import (
 	"github.com/TBD54566975/ftl"
 	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/schema"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
@@ -35,6 +34,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/reflect"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 type MainWorkContext struct {
@@ -262,7 +262,7 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (err error) {
+func Build(ctx context.Context, projectRootDir, moduleDir string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return err
 	}
@@ -294,11 +294,6 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, sch *schema.Sc
 			return fmt.Errorf("failed to load project config: %w", err)
 		}
 		projectName = pc.Name
-	}
-
-	config, err := moduleconfig.LoadModuleConfig(moduleDir)
-	if err != nil {
-		return fmt.Errorf("failed to load module config: %w", err)
 	}
 
 	logger := log.FromContext(ctx)
@@ -1159,7 +1154,7 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 	return true
 }
 
-func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error {
+func writeSchema(config moduleconfig.AbsModuleConfig, module *schema.Module) error {
 	modulepb := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	// If user has overridden GOOS and GOARCH we want to use those values.
 	goos, ok := os.LookupEnv("GOOS")
@@ -1181,19 +1176,23 @@ func writeSchema(config moduleconfig.ModuleConfig, module *schema.Module) error 
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	err = os.WriteFile(config.Abs().Schema(), schemaBytes, 0600)
+	err = os.WriteFile(config.Schema(), schemaBytes, 0600)
 	if err != nil {
 		return fmt.Errorf("could not write schema: %w", err)
 	}
 	return nil
 }
 
-func writeSchemaErrors(config moduleconfig.ModuleConfig, errors []builderrors.Error) error {
+func writeSchemaErrors(config moduleconfig.AbsModuleConfig, errors []builderrors.Error) error {
 	elBytes, err := proto.Marshal(languagepb.ErrorsToProto(errors))
 	if err != nil {
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}
-	return os.WriteFile(config.Abs().Errors, elBytes, 0600)
+	err = os.WriteFile(config.Errors, elBytes, 0600)
+	if err != nil {
+		return fmt.Errorf("could not write build errors: %w", err)
+	}
+	return nil
 }
 
 // returns the import path and directory name for a Go type

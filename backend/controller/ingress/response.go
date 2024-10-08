@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // HTTPResponse mirrors builtins.HttpResponse.
@@ -80,7 +80,7 @@ func bodyForType(typ schema.Type, sch *schema.Schema, data []byte) ([]byte, erro
 		}
 
 		err = schema.TransformAliasedFields(sch, t, response, func(obj map[string]any, field *schema.Field) string {
-			if jsonAlias, ok := field.Alias(schema.AliasKindJSON).Get(); ok && field.Name != jsonAlias {
+			if jsonAlias, ok := field.Alias(schema.AliasKindJson).Get(); ok && field.Name != jsonAlias {
 				obj[jsonAlias] = obj[field.Name]
 				delete(obj, field.Name)
 				return jsonAlias

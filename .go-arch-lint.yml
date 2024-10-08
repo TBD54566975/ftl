@@ -8,7 +8,7 @@ components:
   internal: { in: internal/** }
   dal: { in: backend/dal/** }
   protos: { in: backend/protos/** }
-  schema: { in: backend/schema/** }
+  schema: { in: internal/schema/** }
   ftl: { in: . }
   ftl-cmd: { in: frontend/cli/ftl/** }
   go-runtime: { in: go-runtime/** }
@@ -19,7 +19,7 @@ components:
   frontend: { in: frontend/console/** }
   ftl-gen-lsp-cmd: { in: cmd/ftl-gen-lsp/** }
   ftl-initdb-cmd: { in: cmd/ftl-initdb/** }
-  ftl-schema-cmd: { in: cmd/ftl-schema/** }
+  go2proto: { in: cmd/go2proto/** }
   lint-commit-or-rollback-cmd: { in: cmd/lint-commit-or-rollback/** }
   databasetesting: { in: backend/controller/sql/databasetesting/** }
   sql: { in: backend/controller/sql/** }

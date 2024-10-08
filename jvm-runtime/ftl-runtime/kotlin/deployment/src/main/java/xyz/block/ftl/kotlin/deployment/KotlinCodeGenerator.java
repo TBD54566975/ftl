@@ -211,8 +211,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         } else if (type.hasString()) {
             return new ClassName("kotlin", "String");
         } else if (type.hasOptional()) {
-            // Always box for optional, as normal primities can't be null
-            return toKotlinTypeName(type.getOptional().getType(), typeAliasMap, nativeTypeAliasMap);
+            return toKotlinTypeName(type.getOptional().getType(), typeAliasMap, nativeTypeAliasMap).copy(true, List.of());
         } else if (type.hasRef()) {
             if (type.getRef().getModule().isEmpty()) {
                 return TypeVariableName.get(type.getRef().getName());

@@ -40,6 +40,11 @@ export enum EventType {
    * @generated from enum value: EVENT_TYPE_INGRESS = 5;
    */
   INGRESS = 5,
+
+  /**
+   * @generated from enum value: EVENT_TYPE_CRON_SCHEDULED = 6;
+   */
+  CRON_SCHEDULED = 6,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EventType)
 proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
@@ -49,6 +54,7 @@ proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
   { no: 3, name: "EVENT_TYPE_DEPLOYMENT_CREATED" },
   { no: 4, name: "EVENT_TYPE_DEPLOYMENT_UPDATED" },
   { no: 5, name: "EVENT_TYPE_INGRESS" },
+  { no: 6, name: "EVENT_TYPE_CRON_SCHEDULED" },
 ]);
 
 /**
@@ -485,6 +491,79 @@ export class IngressEvent extends Message<IngressEvent> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.console.CronScheduledEvent
+ */
+export class CronScheduledEvent extends Message<CronScheduledEvent> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb_ref = 2;
+   */
+  verbRef?: Ref;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 3;
+   */
+  timeStamp?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Duration duration = 4;
+   */
+  duration?: Duration;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp scheduled_at = 5;
+   */
+  scheduledAt?: Timestamp;
+
+  /**
+   * @generated from field: string schedule = 6;
+   */
+  schedule = "";
+
+  /**
+   * @generated from field: optional string error = 7;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<CronScheduledEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.CronScheduledEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "verb_ref", kind: "message", T: Ref },
+    { no: 3, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 4, name: "duration", kind: "message", T: Duration },
+    { no: 5, name: "scheduled_at", kind: "message", T: Timestamp },
+    { no: 6, name: "schedule", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CronScheduledEvent {
+    return new CronScheduledEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CronScheduledEvent {
+    return new CronScheduledEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CronScheduledEvent {
+    return new CronScheduledEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CronScheduledEvent | PlainMessage<CronScheduledEvent> | undefined, b: CronScheduledEvent | PlainMessage<CronScheduledEvent> | undefined): boolean {
+    return proto3.util.equals(CronScheduledEvent, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.console.Config
  */
 export class Config extends Message<Config> {
@@ -916,6 +995,36 @@ export class Module extends Message<Module> {
    */
   configs: Config[] = [];
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Database databases = 9;
+   */
+  databases: Database[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Enum enums = 10;
+   */
+  enums: Enum[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.FSM fsms = 11;
+   */
+  fsms: FSM[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Topic topics = 12;
+   */
+  topics: Topic[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.TypeAlias typealiases = 13;
+   */
+  typealiases: TypeAlias[] = [];
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Subscription subscriptions = 14;
+   */
+  subscriptions: Subscription[] = [];
+
   constructor(data?: PartialMessage<Module>) {
     super();
     proto3.util.initPartial(data, this);
@@ -932,6 +1041,12 @@ export class Module extends Message<Module> {
     { no: 6, name: "data", kind: "message", T: Data, repeated: true },
     { no: 7, name: "secrets", kind: "message", T: Secret, repeated: true },
     { no: 8, name: "configs", kind: "message", T: Config, repeated: true },
+    { no: 9, name: "databases", kind: "message", T: Database, repeated: true },
+    { no: 10, name: "enums", kind: "message", T: Enum, repeated: true },
+    { no: 11, name: "fsms", kind: "message", T: FSM, repeated: true },
+    { no: 12, name: "topics", kind: "message", T: Topic, repeated: true },
+    { no: 13, name: "typealiases", kind: "message", T: TypeAlias, repeated: true },
+    { no: 14, name: "subscriptions", kind: "message", T: Subscription, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {
@@ -1096,6 +1211,74 @@ export class GetModulesResponse extends Message<GetModulesResponse> {
 
   static equals(a: GetModulesResponse | PlainMessage<GetModulesResponse> | undefined, b: GetModulesResponse | PlainMessage<GetModulesResponse> | undefined): boolean {
     return proto3.util.equals(GetModulesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamModulesRequest
+ */
+export class StreamModulesRequest extends Message<StreamModulesRequest> {
+  constructor(data?: PartialMessage<StreamModulesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamModulesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamModulesRequest {
+    return new StreamModulesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamModulesRequest {
+    return new StreamModulesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamModulesRequest {
+    return new StreamModulesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamModulesRequest | PlainMessage<StreamModulesRequest> | undefined, b: StreamModulesRequest | PlainMessage<StreamModulesRequest> | undefined): boolean {
+    return proto3.util.equals(StreamModulesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.StreamModulesResponse
+ */
+export class StreamModulesResponse extends Message<StreamModulesResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.console.Module modules = 1;
+   */
+  modules: Module[] = [];
+
+  constructor(data?: PartialMessage<StreamModulesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.StreamModulesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "modules", kind: "message", T: Module, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamModulesResponse {
+    return new StreamModulesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): StreamModulesResponse {
+    return new StreamModulesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): StreamModulesResponse {
+    return new StreamModulesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: StreamModulesResponse | PlainMessage<StreamModulesResponse> | undefined, b: StreamModulesResponse | PlainMessage<StreamModulesResponse> | undefined): boolean {
+    return proto3.util.equals(StreamModulesResponse, a, b);
   }
 }
 
@@ -1783,6 +1966,12 @@ export class Event extends Message<Event> {
      */
     value: IngressEvent;
     case: "ingress";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.CronScheduledEvent cron_scheduled = 8;
+     */
+    value: CronScheduledEvent;
+    case: "cronScheduled";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Event>) {
@@ -1800,6 +1989,7 @@ export class Event extends Message<Event> {
     { no: 5, name: "deployment_created", kind: "message", T: DeploymentCreatedEvent, oneof: "entry" },
     { no: 6, name: "deployment_updated", kind: "message", T: DeploymentUpdatedEvent, oneof: "entry" },
     { no: 7, name: "ingress", kind: "message", T: IngressEvent, oneof: "entry" },
+    { no: 8, name: "cron_scheduled", kind: "message", T: CronScheduledEvent, oneof: "entry" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {

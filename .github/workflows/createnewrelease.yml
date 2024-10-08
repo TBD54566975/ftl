@@ -11,7 +11,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Auto-version
         id: autoversion
         run: scripts/autoversion

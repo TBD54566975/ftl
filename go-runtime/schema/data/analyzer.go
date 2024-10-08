@@ -12,9 +12,9 @@ import (
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/schema"
-	"github.com/TBD54566975/ftl/backend/schema/strcase"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
 var (
@@ -94,7 +94,7 @@ func extractData(pass *analysis.Pass, node *ast.TypeSpec, named *types.Named) op
 				if jsonFieldName != "" {
 					metadata = append(metadata, &schema.MetadataAlias{
 						Pos:   common.GoPosToSchemaPos(pass.Fset, node.Pos()),
-						Kind:  schema.AliasKindJSON,
+						Kind:  schema.AliasKindJson,
 						Alias: jsonFieldName,
 					})
 				}

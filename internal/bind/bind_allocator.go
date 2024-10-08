@@ -33,11 +33,19 @@ func NewBindAllocator(url *url.URL) (*BindAllocator, error) {
 func (b *BindAllocator) NextPort() int {
 	var l *net.TCPListener
 	var err error
+
+	maxTries := 5000
+
+	tries := 0
 	for {
+		tries++
 		port := int(b.port.Add(1))
 		l, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP(b.baseURL.Hostname()), Port: port})
 
 		if err != nil {
+			if tries >= maxTries {
+				panic("failed to find an open port: " + err.Error())
+			}
 			continue
 		}
 		_ = l.Close()

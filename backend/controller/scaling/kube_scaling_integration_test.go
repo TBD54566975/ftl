@@ -34,7 +34,7 @@ func TestKubeScaling(t *testing.T) {
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 			assert.Equal(t, "Hello, Bob!!!", response)
 		}),
-		in.VerifyKubeState(func(ctx context.Context, t testing.TB, namespace string, client *kubernetes.Clientset) {
+		in.VerifyKubeState(func(ctx context.Context, t testing.TB, namespace string, client kubernetes.Clientset) {
 			deps, err := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
 			assert.NoError(t, err)
 			for _, dep := range deps.Items {
@@ -49,13 +49,15 @@ func TestKubeScaling(t *testing.T) {
 			// Istio should prevent this
 			assert.Equal(t, strconv.FormatBool(false), response)
 		}),
-		in.EditFile("echo", func(content []byte) []byte {
-			return []byte(strings.ReplaceAll(string(content), "Hello", "Bye"))
-		}, "echo.go"),
 		func(t testing.TB, ic in.TestContext) {
 			// Hit the verb constantly to test rolling updates.
 			go func() {
-				defer routineStopped.Done()
+				defer func() {
+					if r := recover(); r != nil {
+						failure.Store(fmt.Errorf("panic in verb: %v", r))
+					}
+					routineStopped.Done()
+				}()
 				for !done.Load() {
 					in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 						if !strings.Contains(response, "Bob") {
@@ -66,9 +68,19 @@ func TestKubeScaling(t *testing.T) {
 				}
 			}()
 		},
+		in.EditFile("echo", func(content []byte) []byte {
+			return []byte(strings.ReplaceAll(string(content), "Hello", "Bye"))
+		}, "echo.go"),
 		in.Deploy("echo"),
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 			assert.Equal(t, "Bye, Bob!!!", response)
+		}),
+		in.EditFile("echo", func(content []byte) []byte {
+			return []byte(strings.ReplaceAll(string(content), "Bye", "Bonjour"))
+		}, "echo.go"),
+		in.Deploy("echo"),
+		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
+			assert.Equal(t, "Bonjour, Bob!!!", response)
 		}),
 		func(t testing.TB, ic in.TestContext) {
 			done.Store(true)
@@ -76,7 +88,7 @@ func TestKubeScaling(t *testing.T) {
 			err := failure.Load()
 			assert.NoError(t, err)
 		},
-		in.VerifyKubeState(func(ctx context.Context, t testing.TB, namespace string, client *kubernetes.Clientset) {
+		in.VerifyKubeState(func(ctx context.Context, t testing.TB, namespace string, client kubernetes.Clientset) {
 			deps, err := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
 			assert.NoError(t, err)
 			depCount := 0

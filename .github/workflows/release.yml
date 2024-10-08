@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Build
         run: |
           just build-docker runner
@@ -30,7 +30,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Build
         run: |
           just build-docker controller
@@ -49,7 +49,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Build
         run: |
           just build-docker box
@@ -74,7 +74,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Retrieve Runner Docker image
         uses: actions/download-artifact@v4
         with:
@@ -122,7 +122,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Build Console
@@ -144,7 +144,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
 
       - uses: actions/cache@v4
         with:
@@ -184,7 +184,7 @@ jobs:
           ref: "main"
           token: ${{ secrets.FTL_HERMIT_AUTOVERSION }}
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Setup Git Config
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -206,7 +206,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Init Hermit
-        uses: cashapp/activate-hermit@v1
+        uses: cashapp/activate-hermit@v1.1.3
       - name: Publish
         run: |
           set -euo pipefail

@@ -78,7 +78,7 @@ public class TopicsProcessor {
                         publish.getMethodParam(0));
                 publish.returnVoid();
                 topics.put(iface.name(), new TopicsBuildItem.DiscoveredTopic(name, cc.getClassName(), paramType,
-                        iface.hasAnnotation(Export.class)));
+                        iface.hasAnnotation(Export.class), iface.name().toString()));
             }
         }
         return new TopicsBuildItem(topics);
@@ -93,8 +93,10 @@ public class TopicsProcessor {
                 for (var topic : topics.getTopics().values()) {
                     moduleBuilder.addDecls(Decl.newBuilder().setTopic(xyz.block.ftl.v1.schema.Topic.newBuilder()
                             .setExport(topic.exported())
+                            .setPos(PositionUtils.forClass(topic.interfaceName()))
                             .setName(topic.topicName())
-                            .setEvent(moduleBuilder.buildType(topic.eventType(), topic.exported())).build()).build());
+                            .setEvent(moduleBuilder.buildType(topic.eventType(), topic.exported(), Nullability.NOT_NULL))
+                            .build()).build());
                 }
             }
         });

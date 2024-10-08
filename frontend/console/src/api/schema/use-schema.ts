@@ -1,36 +1,50 @@
 import { Code, ConnectError } from '@connectrpc/connect'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { type UseQueryResult, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client.ts'
 import { useVisibility } from '../../hooks/use-visibility.ts'
 import { ControllerService } from '../../protos/xyz/block/ftl/v1/ftl_connect.ts'
 import { DeploymentChangeType, type PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/ftl_pb.ts'
 
 const streamingSchemaKey = 'streamingSchema'
+const currentDeployments: Record<string, string> = {}
+const schemaMap: Record<string, PullSchemaResponse> = {}
 
-export const useSchema = () => {
+export const useSchema = (): UseQueryResult<PullSchemaResponse[], Error> => {
   const client = useClient(ControllerService)
   const queryClient = useQueryClient()
   const isVisible = useVisibility()
 
   const streamSchema = async (signal: AbortSignal) => {
     try {
-      const schemaMap = new Map<string, PullSchemaResponse>()
       for await (const response of client.pullSchema({}, { signal })) {
         const moduleName = response.moduleName ?? ''
-        console.log(`schema changed: ${DeploymentChangeType[response.changeType]} ${moduleName}`)
+        const deploymentKey = response.deploymentKey ?? ''
+        console.log(`schema changed: ${DeploymentChangeType[response.changeType]} ${deploymentKey}`)
         switch (response.changeType) {
           case DeploymentChangeType.DEPLOYMENT_ADDED:
-            schemaMap.set(moduleName, response)
+          case DeploymentChangeType.DEPLOYMENT_CHANGED: {
+            const previousDeploymentKey = currentDeployments[moduleName]
+
+            currentDeployments[moduleName] = deploymentKey
+
+            if (previousDeploymentKey && previousDeploymentKey !== deploymentKey) {
+              delete schemaMap[previousDeploymentKey]
+            }
+
+            schemaMap[deploymentKey] = response
             break
-          case DeploymentChangeType.DEPLOYMENT_CHANGED:
-            schemaMap.set(moduleName, response)
-            break
+          }
+
           case DeploymentChangeType.DEPLOYMENT_REMOVED:
-            schemaMap.delete(moduleName)
+            if (currentDeployments[moduleName] === deploymentKey) {
+              delete schemaMap[deploymentKey]
+              delete currentDeployments[moduleName]
+            }
+            break
         }
 
         if (!response.more) {
-          const schema = Array.from(schemaMap.values()).sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0)
+          const schema = Object.values(schemaMap).sort((a, b) => a.schema?.name?.localeCompare(b.schema?.name ?? '') ?? 0)
           queryClient.setQueryData([streamingSchemaKey], schema ?? [])
         }
       }

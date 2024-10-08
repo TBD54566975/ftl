@@ -15,6 +15,7 @@ type Querier interface {
 	// This is a dummy query to ensure that the Timeline model is generated.
 	DummyQueryTimeline(ctx context.Context, id int64) (Timeline, error)
 	InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error
+	InsertTimelineCronScheduledEvent(ctx context.Context, arg InsertTimelineCronScheduledEventParams) error
 	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error
 	InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error
 	InsertTimelineIngressEvent(ctx context.Context, arg InsertTimelineIngressEventParams) error

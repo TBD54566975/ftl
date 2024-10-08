@@ -78,8 +78,16 @@ public class TypeAliasProcessor {
             String name = mapper.value("name").asString();
             typeAliasBuildItemBuildProducer.produce(new TypeAliasBuildItem(name, module, t, s, exported));
             if (module.isEmpty()) {
+                Map<String, String> languageMappings = new HashMap<>();
+                AnnotationValue languageTypeMappingsValue = mapper.value("languageTypeMappings");
+                if (languageTypeMappingsValue != null) {
+                    for (var lang : languageTypeMappingsValue.asArrayList()) {
+                        languageMappings.put(lang.asNested().value("language").asString(),
+                                lang.asNested().value("type").asString());
+                    }
+                }
                 schemaContributorBuildItemBuildProducer.produce(new SchemaContributorBuildItem(moduleBuilder -> moduleBuilder
-                        .registerTypeAlias(name, finalT, finalS, exported)));
+                        .registerTypeAlias(name, finalT, finalS, exported, languageMappings)));
             }
 
         }

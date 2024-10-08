@@ -13,7 +13,7 @@ import { githubLight } from '@uiw/codemirror-theme-github'
 import { defaultKeymap, indentWithTab } from '@codemirror/commands'
 import { handleRefresh, jsonSchemaHover, jsonSchemaLinter, stateExtensions } from 'codemirror-json-schema'
 import { json5, json5ParseLinter } from 'codemirror-json5'
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useUserPreferences } from '../providers/user-preferences-provider'
 
 const commonExtensions = [
@@ -26,58 +26,54 @@ const commonExtensions = [
   EditorState.tabSize.of(2),
 ]
 
-export interface InitialState {
-  initialText: string
-  schema?: string
+export const CodeEditor = ({
+  value = '',
+  onTextChanged,
+  readonly = false,
+  schema,
+}: {
+  value: string
+  onTextChanged?: (text: string) => void
   readonly?: boolean
-}
-
-export const CodeEditor = ({ initialState, onTextChanged }: { initialState: InitialState; onTextChanged?: (text: string) => void }) => {
+  schema?: string
+}) => {
   const { isDarkMode } = useUserPreferences()
   const editorContainerRef = useRef(null)
   const editorViewRef = useRef<EditorView | null>(null)
 
-  const handleEditorTextChange = useCallback(
-    (state: EditorState) => {
-      const currentText = state.doc.toString()
-      if (onTextChanged) {
-        onTextChanged(currentText)
-      }
-    },
-    [onTextChanged],
-  )
-
   useEffect(() => {
     if (editorContainerRef.current) {
-      const sch = initialState.schema ? JSON.parse(initialState.schema) : null
+      const sch = schema ? JSON.parse(schema) : null
 
-      const editingExtensions: Extension[] =
-        initialState.readonly || false
-          ? [EditorState.readOnly.of(true)]
-          : [
-              autocompletion(),
-              lineNumbers(),
-              lintGutter(),
-              indentOnInput(),
-              drawSelection(),
-              foldGutter(),
-              linter(json5ParseLinter(), {
-                delay: 300,
-              }),
-              linter(jsonSchemaLinter(), {
-                needsRefresh: handleRefresh,
-              }),
-              hoverTooltip(jsonSchemaHover()),
-              EditorView.updateListener.of((update) => {
-                if (update.docChanged) {
-                  handleEditorTextChange(update.state)
+      const editingExtensions: Extension[] = readonly
+        ? [EditorState.readOnly.of(true)]
+        : [
+            autocompletion(),
+            lineNumbers(),
+            lintGutter(),
+            indentOnInput(),
+            drawSelection(),
+            foldGutter(),
+            linter(json5ParseLinter(), {
+              delay: 300,
+            }),
+            linter(jsonSchemaLinter(), {
+              needsRefresh: handleRefresh,
+            }),
+            hoverTooltip(jsonSchemaHover()),
+            EditorView.updateListener.of((update) => {
+              if (update.docChanged) {
+                const currentText = update.state.doc.toString()
+                if (onTextChanged) {
+                  onTextChanged(currentText)
                 }
-              }),
-              stateExtensions(sch),
-            ]
+              }
+            }),
+            stateExtensions(sch),
+          ]
 
       const state = EditorState.create({
-        doc: initialState.initialText,
+        doc: value,
         extensions: [
           ...commonExtensions,
           isDarkMode ? atomone : githubLight,
@@ -100,7 +96,20 @@ export const CodeEditor = ({ initialState, onTextChanged }: { initialState: Init
         view.destroy()
       }
     }
-  }, [initialState, isDarkMode])
+  }, [isDarkMode, readonly, schema])
+
+  useEffect(() => {
+    if (editorViewRef.current && value !== undefined) {
+      const currentText = editorViewRef.current.state.doc.toString()
+      if (currentText !== value) {
+        const { state } = editorViewRef.current
+        const transaction = state.update({
+          changes: { from: 0, to: state.doc.length, insert: value },
+        })
+        editorViewRef.current.dispatch(transaction)
+      }
+    }
+  }, [value])
 
   return <div className='h-full' ref={editorContainerRef} />
 }

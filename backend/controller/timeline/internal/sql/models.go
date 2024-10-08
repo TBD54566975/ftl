@@ -21,6 +21,7 @@ const (
 	EventTypeDeploymentCreated EventType = "deployment_created"
 	EventTypeDeploymentUpdated EventType = "deployment_updated"
 	EventTypeIngress           EventType = "ingress"
+	EventTypeCronScheduled     EventType = "cron_scheduled"
 )
 
 func (e *EventType) Scan(src interface{}) error {

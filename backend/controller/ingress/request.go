@@ -12,7 +12,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/dal/model"
-	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -312,7 +312,7 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 
 		var field *schema.Field
 		for _, f := range data.Fields {
-			if jsonAlias, ok := f.Alias(schema.AliasKindJSON).Get(); (ok && jsonAlias == key) || f.Name == key {
+			if jsonAlias, ok := f.Alias(schema.AliasKindJson).Get(); (ok && jsonAlias == key) || f.Name == key {
 				field = f
 			}
 			for _, typeParam := range data.TypeParameters {

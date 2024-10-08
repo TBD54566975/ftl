@@ -1,6 +1,5 @@
 import { Code, ConnectError } from '@connectrpc/connect'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
 import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
 import { useSchema } from '../schema/use-schema'
@@ -9,16 +8,7 @@ const useModulesKey = 'modules'
 
 export const useModules = () => {
   const client = useClient(ConsoleService)
-  const queryClient = useQueryClient()
-  const { data: schemaData } = useSchema()
-
-  useEffect(() => {
-    if (schemaData) {
-      queryClient.invalidateQueries({
-        queryKey: [useModulesKey],
-      })
-    }
-  }, [schemaData, queryClient])
+  const { data: schemaData, dataUpdatedAt: schemaUpdatedAt } = useSchema()
 
   const fetchModules = async (signal: AbortSignal) => {
     try {
@@ -38,7 +28,7 @@ export const useModules = () => {
   }
 
   return useQuery({
-    queryKey: [useModulesKey],
+    queryKey: [useModulesKey, schemaUpdatedAt],
     queryFn: async ({ signal }) => fetchModules(signal),
     enabled: !!schemaData,
   })

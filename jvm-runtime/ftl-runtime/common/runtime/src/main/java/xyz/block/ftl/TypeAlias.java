@@ -12,4 +12,6 @@ public @interface TypeAlias {
     String name();
 
     String module() default "";
+
+    LanguageTypeMapping[] languageTypeMappings() default {};
 }

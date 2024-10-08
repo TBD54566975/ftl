@@ -10,11 +10,12 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
+	"github.com/alecthomas/repr"
+
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	in "github.com/TBD54566975/ftl/internal/integration"
-
-	"github.com/alecthomas/repr"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 func TestLifecycleJVM(t *testing.T) {
@@ -158,30 +159,104 @@ func TestJVMCoreFunctionality(t *testing.T) {
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectVerb", ftl.None[any]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalTestObjectOptionalFieldsVerb", ftl.None[any]())...)
 
-	// Schema comments
-	tests = append(tests, in.SubTest{Name: "schemaComments", Action: in.VerifySchema(func(ctx context.Context, t testing.TB, sch *schemapb.Schema) {
-		javaOk := false
-		kotlinOk := false
-		for _, module := range sch.Modules {
-			if module.Name == "gomodule" {
-				continue
+	// Test custom serialized type mapped to a string
+	tests = append(tests, JVMTest("stringAliasedTypeSchema", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "stringAliasedType", func(ctx context.Context, t testing.TB, sch *schemapb.Schema, verb *schemapb.Verb) {
+			assert.True(t, verb.Response.GetRef() != nil, "response was not a ref")
+			assert.True(t, verb.Request.GetRef() != nil, "request was not a ref")
+			fullSchema, err := schema.FromProto(sch)
+			assert.NoError(t, err, "failed to convert schema")
+			req := fullSchema.Resolve(schema.RefFromProto(verb.Request.GetRef()))
+			assert.True(t, req.Ok(), "request not found")
+			if typeAlias, ok := req.MustGet().(*schema.TypeAlias); ok {
+				if _, ok := typeAlias.Type.(*schema.String); !ok {
+					assert.False(t, true, "request type alias not a string")
+				}
+			} else {
+				assert.False(t, true, "request not a type alias")
 			}
-			for _, decl := range module.Decls {
-				if decl.GetVerb() != nil {
-					for _, comment := range decl.GetVerb().GetComments() {
-						if strings.Contains(comment, "JAVA COMMENT") {
-							javaOk = true
+		})
+	})...)
+	// Test custom serialized type mapped to an any
+	tests = append(tests, JVMTest("anyAliasedTypeSchema", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "anyAliasedType", func(ctx context.Context, t testing.TB, sch *schemapb.Schema, verb *schemapb.Verb) {
+			assert.True(t, verb.Response.GetRef() != nil, "response was not a ref")
+			assert.True(t, verb.Request.GetRef() != nil, "request was not a ref")
+			fullSchema, err := schema.FromProto(sch)
+			assert.NoError(t, err, "failed to convert schema")
+			req := fullSchema.Resolve(schema.RefFromProto(verb.Request.GetRef()))
+			assert.True(t, req.Ok(), "request not found")
+			if typeAlias, ok := req.MustGet().(*schema.TypeAlias); ok {
+				if _, ok := typeAlias.Type.(*schema.Any); !ok {
+					assert.False(t, true, "request type alias not a any")
+				}
+				goMap := ""
+				javaMap := "false"
+				for _, md := range typeAlias.Metadata {
+					if md, ok := md.(*schema.MetadataTypeMap); ok {
+						switch md.Runtime {
+						case "go":
+							goMap = md.NativeName
+						case "java":
+							javaMap = md.NativeName
 						}
-						if strings.Contains(comment, "KOTLIN COMMENT") {
-							kotlinOk = true
+					}
+				}
+				assert.Equal(t, "github.com/blockxyz/ftl/test.AnySerializedType", goMap, "go language map not found")
+				assert.Equal(t, "xyz.block.ftl.test.AnySerializedType", javaMap, "Java language map not found")
+			} else {
+				assert.False(t, true, "request not a type alias")
+			}
+
+		})
+	})...)
+	// Schema comments
+	tests = append(tests, JVMTest("schemaComments", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "emptyVerb", func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb) {
+			ok := false
+			for _, comment := range verb.GetComments() {
+				if strings.Contains(comment, "JAVA COMMENT") {
+					ok = true
+				}
+				if strings.Contains(comment, "KOTLIN COMMENT") {
+					ok = true
+				}
+			}
+			assert.True(t, ok, "comment not found")
+		})
+	})...)
+	// Config metadata
+	tests = append(tests, JVMTest("configMetadata", func(name string, module string) in.Action {
+		return in.VerifySchemaVerb(module, "config", func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb) {
+			ok := false
+			for _, md := range verb.GetMetadata() {
+				if md.GetConfig() != nil {
+					for _, config := range md.GetConfig().GetConfig() {
+						if config.Name == "key" {
+							ok = true
 						}
 					}
 				}
 			}
-		}
-		assert.True(t, javaOk, "java comment not found")
-		assert.True(t, kotlinOk, "kotlin comment not found")
-	})})
+			assert.True(t, ok, "config metadata not found")
+		})
+	})...)
+	tests = append(tests, JVMTest("optionalIntVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalFloatVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalBytesVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringArrayVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalStringMapVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalTimeVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("optionalTestObjectVerb", verifyOptionalVerb)...)
+	tests = append(tests, JVMTest("intVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("floatVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("bytesVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringArrayVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("stringMapVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("timeVerb", verifyNonOptionalVerb)...)
+	tests = append(tests, JVMTest("testObjectVerb", verifyNonOptionalVerb)...)
 
 	in.Run(t,
 		in.WithJavaBuild(),
@@ -219,6 +294,19 @@ func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTes
 		{
 			Name:   name + "-kotlin",
 			Action: testFunc("kotlinmodule"),
+		},
+	}
+}
+
+func JVMTest(name string, testFunc func(name string, module string) in.Action) []in.SubTest {
+	return []in.SubTest{
+		{
+			Name:   name + "-java",
+			Action: testFunc(name, "javamodule"),
+		},
+		{
+			Name:   name + "-kotlin",
+			Action: testFunc(name, "kotlinmodule"),
 		},
 	}
 }
@@ -266,6 +354,24 @@ type ParameterizedType[T any] struct {
 	Array  []T           `json:"array"`
 	Option ftl.Option[T] `json:"option"`
 	Map    map[string]T  `json:"map"`
+}
+
+func subTest(name string, test in.Action) in.Action {
+	return in.SubTests(in.SubTest{Name: name, Action: test})
+}
+
+func verifyOptionalVerb(name string, module string) in.Action {
+	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb) {
+		assert.True(t, verb.Response.GetOptional() != nil, "response not optional")
+		assert.True(t, verb.Request.GetOptional() != nil, "request not optional")
+	})
+}
+
+func verifyNonOptionalVerb(name string, module string) in.Action {
+	return in.VerifySchemaVerb(module, name, func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb) {
+		assert.True(t, verb.Response.GetOptional() == nil, "response was optional")
+		assert.True(t, verb.Request.GetOptional() == nil, "request was optional")
+	})
 }
 
 type ColorInt int

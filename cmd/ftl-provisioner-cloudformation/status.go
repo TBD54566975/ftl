@@ -83,13 +83,7 @@ func running() (*connect.Response[provisioner.StatusResponse], error) {
 }
 
 func failure(stack *types.Stack) (*connect.Response[provisioner.StatusResponse], error) {
-	return connect.NewResponse(&provisioner.StatusResponse{
-		Status: &provisioner.StatusResponse_Failed{
-			Failed: &provisioner.StatusResponse_ProvisioningFailed{
-				ErrorMessage: *stack.StackStatusReason,
-			},
-		},
-	}), nil
+	return nil, connect.NewError(connect.CodeUnknown, errors.New(*stack.StackStatusReason))
 }
 
 func updateResources(outputs []types.Output, update []*provisioner.Resource) error {

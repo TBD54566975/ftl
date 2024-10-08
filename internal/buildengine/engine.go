@@ -19,25 +19,15 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/schema"
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/terminal"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
-
-type CompilerBuildError struct {
-	err error
-}
-
-func (e CompilerBuildError) Error() string {
-	return e.err.Error()
-}
-
-func (e CompilerBuildError) Unwrap() error {
-	return e.err
-}
 
 type schemaChange struct {
 	ChangeType ftlv1.DeploymentChangeType
@@ -46,9 +36,10 @@ type schemaChange struct {
 
 // moduleMeta is a wrapper around a module that includes the last build's start time.
 type moduleMeta struct {
-	module Module
-	plugin LanguagePlugin
-	events chan PluginEvent
+	module         Module
+	plugin         languageplugin.LanguagePlugin
+	events         chan languageplugin.PluginEvent
+	configDefaults moduleconfig.CustomDefaults
 }
 
 // copyMetaWithUpdatedDependencies finds the dependencies for a module and returns a
@@ -57,7 +48,7 @@ func copyMetaWithUpdatedDependencies(ctx context.Context, m moduleMeta) (moduleM
 	logger := log.FromContext(ctx)
 	logger.Debugf("Extracting dependencies for %q", m.module.Config.Module)
 
-	dependencies, err := m.plugin.GetDependencies(ctx)
+	dependencies, err := m.plugin.GetDependencies(ctx, m.module.Config)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not get dependencies for %v: %w", m.module.Config.Module, err)
 	}
@@ -94,10 +85,10 @@ type Engine struct {
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectRoot      string
 	moduleDirs       []string
-	watcher          *Watcher // only watches for module toml changes
+	watcher          *watch.Watcher // only watches for module toml changes
 	controllerSchema *xsync.MapOf[string, *schema.Module]
 	schemaChanges    *pubsub.Topic[schemaChange]
-	pluginEvents     chan PluginEvent
+	pluginEvents     chan languageplugin.PluginEvent
 	cancel           func()
 	parallelism      int
 	listener         Listener
@@ -156,10 +147,10 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		projectRoot:      projectRoot,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
-		watcher:          NewWatcher("ftl.toml"),
+		watcher:          watch.NewWatcher("ftl.toml"),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
 		schemaChanges:    pubsub.New[schemaChange](),
-		pluginEvents:     make(chan PluginEvent, 128),
+		pluginEvents:     make(chan languageplugin.PluginEvent, 128),
 		parallelism:      runtime.NumCPU(),
 		modulesToBuild:   xsync.NewMapOf[string, bool](),
 	}
@@ -177,7 +168,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 
 	go e.listenForBuildUpdates(ctx)
 
-	configs, err := DiscoverModules(ctx, moduleDirs)
+	configs, err := watch.DiscoverModules(ctx, moduleDirs)
 	if err != nil {
 		return nil, fmt.Errorf("could not find modules: %w", err)
 	}
@@ -185,7 +176,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 	wg := &errgroup.Group{}
 	for _, config := range configs {
 		wg.Go(func() error {
-			meta, err := e.newModuleMeta(ctx, config, projectRoot)
+			meta, err := e.newModuleMeta(ctx, config)
 			if err != nil {
 				return err
 			}
@@ -398,7 +389,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 		e.schemaChanges.Unsubscribe(schemaChanges)
 	}()
 
-	watchEvents := make(chan WatchEvent, 128)
+	watchEvents := make(chan watch.WatchEvent, 128)
 	ctx, cancel := context.WithCancel(ctx)
 	topic, err := e.watcher.Watch(ctx, period, e.moduleDirs)
 	if err != nil {
@@ -459,10 +450,10 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			didUpdateDeployments = false
 		case event := <-watchEvents:
 			switch event := event.(type) {
-			case WatchEventModuleAdded:
+			case watch.WatchEventModuleAdded:
 				config := event.Config
 				if _, exists := e.moduleMetas.Load(config.Module); !exists {
-					meta, err := e.newModuleMeta(ctx, config, e.projectRoot)
+					meta, err := e.newModuleMeta(ctx, config)
 					if err != nil {
 						logger.Errorf(err, "could not add module %s", config.Module)
 						continue
@@ -478,7 +469,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 						didUpdateDeployments = true
 					}
 				}
-			case WatchEventModuleRemoved:
+			case watch.WatchEventModuleRemoved:
 				err := terminateModuleDeployment(ctx, e.client, event.Config.Module)
 				terminal.UpdateModuleState(ctx, event.Config.Module, terminal.BuildStateTerminated)
 
@@ -499,7 +490,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					}
 				}
 				e.moduleMetas.Delete(event.Config.Module)
-			case WatchEventModuleChanged:
+			case watch.WatchEventModuleChanged:
 				// ftl.toml file has changed
 				meta, ok := e.moduleMetas.Load(event.Config.Module)
 				if !ok {
@@ -507,12 +498,17 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					continue
 				}
 
-				updatedConfig, err := moduleconfig.LoadModuleConfig(event.Config.Dir)
+				updatedConfig, err := moduleconfig.LoadConfig(event.Config.Dir)
 				if err != nil {
 					logger.Errorf(err, "Could not load updated toml for %s", event.Config.Module)
 					continue
 				}
-				meta.module.Config = updatedConfig
+				validConfig, err := updatedConfig.FillDefaultsAndValidate(meta.configDefaults)
+				if err != nil {
+					logger.Errorf(err, "Could not configure module config defaults for %s", event.Config.Module)
+					continue
+				}
+				meta.module.Config = validConfig
 				e.moduleMetas.Store(event.Config.Module, meta)
 
 				err = e.BuildAndDeploy(ctx, 1, true, event.Config.Module)
@@ -848,12 +844,12 @@ func (e *Engine) gatherSchemas(
 	return nil
 }
 
-func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleConfig, projectPath string) (moduleMeta, error) {
-	plugin, err := PluginFromConfig(ctx, config, projectPath)
+func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.UnvalidatedModuleConfig) (moduleMeta, error) {
+	plugin, err := languageplugin.New(ctx, config.Language)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}
-	events := make(chan PluginEvent, 64)
+	events := make(chan languageplugin.PluginEvent, 64)
 	plugin.Updates().Subscribe(events)
 
 	// pass on plugin events to the main event channel
@@ -873,13 +869,23 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.ModuleCo
 		}
 	}()
 
+	// update config with defaults
+	customDefaults, err := plugin.ModuleConfigDefaults(ctx, config.Dir)
+	if err != nil {
+		return moduleMeta{}, fmt.Errorf("could not get defaults provider for %s: %w", config.Module, err)
+	}
+	validConfig, err := config.FillDefaultsAndValidate(customDefaults)
+	if err != nil {
+		return moduleMeta{}, fmt.Errorf("could not apply defaults for %s: %w", config.Module, err)
+	}
 	return moduleMeta{
 		module: Module{
-			Config:       config,
+			Config:       validConfig,
 			Dependencies: []string{},
 		},
-		plugin: plugin,
-		events: events,
+		plugin:         plugin,
+		events:         events,
+		configDefaults: customDefaults,
 	}, nil
 }
 
@@ -897,14 +903,14 @@ func (e *Engine) listenForBuildUpdates(originalCtx context.Context) {
 				continue
 			}
 			switch event := event.(type) {
-			case AutoRebuildStartedEvent:
+			case languageplugin.AutoRebuildStartedEvent:
 				log.FromContext(ctx).Infof("Building module")
 				terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateBuilding)
 				if e.listener != nil {
 					e.listener.OnBuildStarted(meta.module)
 				}
 
-			case AutoRebuildEndedEvent:
+			case languageplugin.AutoRebuildEndedEvent:
 				if _, err := handleBuildResult(ctx, meta.module.Config, event.Result); err != nil {
 					logger.Errorf(err, "build failed")
 					e.reportBuildFailed(err)

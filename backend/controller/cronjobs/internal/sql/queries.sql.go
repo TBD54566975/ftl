@@ -48,7 +48,7 @@ func (q *Queries) CreateCronJob(ctx context.Context, arg CreateCronJobParams) er
 }
 
 const getCronJobByKey = `-- name: GetCronJobByKey :one
-SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE j.key = $1::cron_job_key
@@ -81,12 +81,13 @@ func (q *Queries) GetCronJobByKey(ctx context.Context, key model.CronJobKey) (Ge
 		&i.Deployment.Schema,
 		&i.Deployment.Labels,
 		&i.Deployment.MinReplicas,
+		&i.Deployment.LastActivatedAt,
 	)
 	return i, err
 }
 
 const getUnscheduledCronJobs = `-- name: GetUnscheduledCronJobs :many
-SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas
+SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at
 FROM cron_jobs j
   INNER JOIN deployments d on j.deployment_id = d.id
 WHERE d.min_replicas > 0
@@ -135,6 +136,7 @@ func (q *Queries) GetUnscheduledCronJobs(ctx context.Context, startTime time.Tim
 			&i.Deployment.Schema,
 			&i.Deployment.Labels,
 			&i.Deployment.MinReplicas,
+			&i.Deployment.LastActivatedAt,
 		); err != nil {
 			return nil, err
 		}
