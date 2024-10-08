@@ -620,10 +620,10 @@ public class ModuleBuilder {
         var existing = decls.get(name);
         if (existing != null) {
             if (existing.hasData()) {
-                var merged = existing.getData().toBuilder().setExport(export).build();
+                var merged = existing.getData().toBuilder().setExport(export || existing.getData().getExport()).build();
                 decls.put(name, Decl.newBuilder().setData(merged).build());
             } else if (existing.hasTypeAlias()) {
-                var merged = existing.getTypeAlias().toBuilder().setExport(export).build();
+                var merged = existing.getTypeAlias().toBuilder().setExport(export || existing.getData().getExport()).build();
                 decls.put(name, Decl.newBuilder().setTypeAlias(merged).build());
             }
 

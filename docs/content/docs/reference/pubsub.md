@@ -116,14 +116,13 @@ There are two ways to subscribe to a topic. The first is to declare a method wit
 subscribing to a topic inside the same module:
 
 ```java
-@Subscription(topic = "invoices", name = "invoicesSubscription")
+@Subscription(topicClass = InvoiceTopic.class, name = "invoicesSubscription")
 public void consumeInvoice(Invoice event) {
     // ...
 }
 ```
 
-This is ok, but it requires the use of string constants for the topic name, which can be error-prone. If you are subscribing to a topic from
-another module, FTL will generate a type-safe subscription meta annotation you can use to subscribe to the topic:
+If you are subscribing to a topic from another module, FTL will generate a type-safe subscription meta annotation you can use to subscribe to the topic:
 
 ```java
 @Retention(java.lang.annotation.RetentionPolicy.RUNTIME)

@@ -19,7 +19,6 @@ import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.MethodDescriptor;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Topic;
-import xyz.block.ftl.TopicDefinition;
 import xyz.block.ftl.runtime.TopicHelper;
 import xyz.block.ftl.v1.schema.Decl;
 
@@ -30,7 +29,7 @@ public class TopicsProcessor {
 
     @BuildStep
     TopicsBuildItem handleTopics(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedTopicProducer) {
-        var topicDefinitions = index.getComputingIndex().getAnnotations(TopicDefinition.class);
+        var topicDefinitions = index.getComputingIndex().getAnnotations(FTLDotNames.TOPIC_DEFINITION);
         log.infof("Processing %d topic definition annotations into decls", topicDefinitions.size());
         Map<DotName, TopicsBuildItem.DiscoveredTopic> topics = new HashMap<>();
         Set<String> names = new HashSet<>();

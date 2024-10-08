@@ -15,9 +15,9 @@ public @interface Subscription {
 
     /**
      *
-     * @return The name of the topic to subscribe to.
+     * @return The name of the topic to subscribe to. Cannot be used in conjunction with {@link #topicClass()}.
      */
-    String topic();
+    String topic() default "";
 
     /**
      *
@@ -25,4 +25,8 @@ public @interface Subscription {
      */
     String name();
 
+    /**
+     * The class of the topic to subscribe to, which can be used in place of directly specifying the topic name and module.
+     */
+    Class<? extends Topic> topicClass() default Topic.class;
 }
