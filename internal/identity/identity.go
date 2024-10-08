@@ -1,13 +1,13 @@
 package identity
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
 
-	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/model"
 )
 
@@ -169,65 +169,53 @@ func (s Store) NewCertificateRequest() (CertificateRequest, error) {
 
 // SignCertificateRequest is called by the controller to sign a certificate request,
 // while verifiying the node's signature.
-// TODO: Make sure we check the actual given identity!
-func (s *Store) SignCertificateRequest(req *v1.GetCertificateRequest) (Certificate, error) {
-	// 	signedRequest := ParseSignedMessageFromProto(req.CertificateRequest.SignedMessage)
-	// 	encodedRequest := signedRequest.UnverifiedMessage()
+//
+// The caller must ensure that the request is valid and the identity is legit.
+func (s *Store) SignCertificateRequest(req CertificateRequest) (Certificate, error) {
+	encoded, err := proto.Marshal(req.CertificateContent.ToProto())
+	if err != nil {
+		return Certificate{}, fmt.Errorf("failed to marshal cert content: %w", err)
+	}
+	// Ensure the given pubkey matches the signature.
+	verifier, err := NewVerifier(req.CertificateContent.PublicKey)
+	if err != nil {
+		return Certificate{}, fmt.Errorf("failed to create verifier for pubkey:%x %w", req.CertificateContent.PublicKey.Bytes, err)
+	}
+	if err = verifier.Verify(req.Signature, encoded); err != nil {
+		return Certificate{}, fmt.Errorf("failed to verify signature: %w", err)
+	}
 
-	// 	var content CertificateContent
-	// 	if err := proto.Unmarshal(encodedRequest, &content); err != nil {
-	// 		return Certificate{}, fmt.Errorf("failed to unmarshal certificate content: %w", err)
-	// 	}
-
-	// 	// Ensure the given pubkey matches the signature.
-	// 	verifier, err := NewVerifier(content.PublicKey)
-	// 	if err != nil {
-	// 		return Certificate{}, fmt.Errorf("failed to create verifier for pubkey:%x %w", content.PublicKey.Bytes, err)
-	// 	}
-	// 	_, err = signedRequest.VerifiedMessage(verifier)
-	// 	if err != nil {
-	// 		return Certificate{}, fmt.Errorf("failed to verify signature: %w", err)
-	// 	}
-
-	// 	// Request is valid, sign it.
-	// 	signedCertificate, err := s.Signer.Sign(encodedRequest)
-	// 	if err != nil {
-	// 		return Certificate{}, fmt.Errorf("failed to create ca signed data for cert: %w", err)
-	// 	}
-
-	// 	return Certificate{
-	// 		CertificateContent: content,
-	// 		Signature:          signedCertificate.Signature,
-	// 	}, nil
-	panic("not implemented")
+	// Request is valid, sign it.
+	signed, err := s.Signer.Sign(encoded)
+	if err != nil {
+		return Certificate{}, fmt.Errorf("failed to create ca signed data for cert: %w", err)
+	}
+	return Certificate{
+		CertificateContent: req.CertificateContent,
+		Signature:          signed,
+	}, nil
 }
 
 func (s *Store) SetCertificate(cert Certificate, controllerVerifier Verifier) error {
-	// data, err := controllerVerifier.Verify(cert.SignedData)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to verify controller certificate: %w", err)
-	// }
+	if err := cert.Verify(controllerVerifier); err != nil {
+		return fmt.Errorf("failed to verify controller certificate: %w", err)
+	}
 
-	// // Verify the certificate is for us, checking identity and public key.
-	// req := &v1.CertificateContent{}
-	// if err := proto.Unmarshal(data, req); err != nil {
-	// 	return fmt.Errorf("failed to unmarshal cert request: %w", err)
-	// }
-	// if req.Identity != s.Identity.String() {
-	// 	return fmt.Errorf("certificate identity does not match: %s != %s", req.Identity, s.Identity.String())
-	// }
-	// myPub, err := s.KeyPair.Public()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to get public key: %w", err)
-	// }
-	// if !bytes.Equal(myPub.Bytes, req.PublicKey) {
-	// 	return fmt.Errorf("certificate public key does not match")
-	// }
+	// Verify the certificate is for us, checking identity and public key.
+	if cert.Identity.String() != s.Identity.String() {
+		return fmt.Errorf("certificate identity does not match: %s != %s", cert.Identity, s.Identity)
+	}
+	myPub, err := s.KeyPair.Public()
+	if err != nil {
+		return fmt.Errorf("failed to get public key: %w", err)
+	}
+	if !bytes.Equal(myPub.Bytes, cert.PublicKey.Bytes) {
+		return fmt.Errorf("certificate public key does not match")
+	}
 
-	// s.Certificate = optional.Some(cert)
-	// s.ControllerVerifier = optional.Some(controllerVerifier)
-	// return nil
-	panic("not implemented")
+	s.Certificate = optional.Some(cert)
+	s.ControllerVerifier = optional.Some(controllerVerifier)
+	return nil
 }
 
 func (s *Store) CertifiedSign(message []byte) (CertifiedSignedData, error) {

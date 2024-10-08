@@ -118,19 +118,10 @@ func (c Certificate) String() string {
 }
 
 func (c Certificate) ToProto() *identitypb.Certificate {
-	// certificateContent, err := proto.Marshal(&c.CertificateContent)
-	// if err != nil {
-	// 	panic(fmt.Errorf("failed to marshal certificate content: %w", err))
-	// }
-
-	// return &ftlv1.Certificate{
-	// 	SignedMessage: &ftlv1.SignedMessage{
-	// 		Message:   certificateContent,
-	// 		Signature: c.Signature.Bytes,
-	// 	},
-	// }
-
-	panic("not implemented")
+	return &identitypb.Certificate{
+		Content:   c.CertificateContent.ToProto(),
+		Signature: c.Signature.Bytes,
+	}
 }
 
 // CertifiedSignedData is sent by a node and proves identity based on a certificate.
@@ -150,16 +141,15 @@ func (c CertifiedSignedData) Verify(caVerifier Verifier) (Identity, []byte, erro
 		return nil, nil, fmt.Errorf("failed to verify ca certificate cert:%s: %w", c.Certificate, err)
 	}
 
-	// nodePublicKey := RawPublicKey{Bytes: certificateContent.PublicKey}
-	// nodeVerifier, err := NewVerifier(nodePublicKey)
-	// if err != nil {
-	// 	return nil, nil, fmt.Errorf("failed to create verifier: %w", err)
-	// }
-	// payload, err := nodeVerifier.Verify(c.SignedMessage)
-	// if err != nil {
-	// 	return nil, nil, fmt.Errorf("failed to verify signed data: %w", err)
-	// }
+	// Now verify the given data with the public key of the certificate.
+	verifier, err := NewVerifier(c.Certificate.PublicKey)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create verifier: %w", err)
+	}
 
-	// return identity, payload, nil
-	panic("unimplemented")
+	if err = verifier.Verify(c.Signature, c.Message); err != nil {
+		return nil, nil, fmt.Errorf("failed to verify message: %w", err)
+	}
+
+	return c.Certificate.Identity, c.Message, nil
 }

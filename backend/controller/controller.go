@@ -60,6 +60,7 @@ import (
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
+	internalidentity "github.com/TBD54566975/ftl/internal/identity"
 	"github.com/TBD54566975/ftl/internal/log"
 	ftlmaps "github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -475,9 +476,15 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 }
 
 func (s *Service) GetCertificate(ctx context.Context, certificateRequest *connect.Request[ftlv1.GetCertificateRequest]) (*connect.Response[ftlv1.GetCertificateResponse], error) {
+	request, err := internalidentity.CertificateRequestFromProto(certificateRequest.Msg.CertificateRequest)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("could not parse certificate request: %w", err))
+	}
 
-	msg := certificateRequest.Msg
-	certificate, err := s.identityService.Store.SignCertificateRequest(msg)
+	// TODO: check if the request is authorized and the identity is valid.
+	// For now, we assume the transport is secure and the request is authorized.
+
+	certificate, err := s.identityService.Store.SignCertificateRequest(request)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("could not sign certificate request: %w", err))
 	}
