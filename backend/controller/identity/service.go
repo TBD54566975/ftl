@@ -40,6 +40,9 @@ func New(ctx context.Context, encryption *encryptionsvc.Service, conn *sql.DB) (
 	}
 
 	store, err := internalidentity.NewStore(internalidentity.NewController(), keyPair)
+	if err != nil {
+		return Service{}, fmt.Errorf("failed to create store: %w", err)
+	}
 	svc.Store = store
 
 	return svc, nil
