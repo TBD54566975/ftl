@@ -1,6 +1,7 @@
 import { type Page, expect } from '@playwright/test'
 
 export async function navigateToModule(page: Page, moduleName: string) {
+  await page.goto('http://localhost:8892/modules')
   await page.getByRole('link', { name: 'Modules' }).click()
 
   // Navigate to the module page

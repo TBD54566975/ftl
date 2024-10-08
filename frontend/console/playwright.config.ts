@@ -1,10 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
+import { PlaywrightTestConfig } from '@playwright/test';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
-export default defineConfig({
+const config: PlaywrightTestConfig = {
   testDir: './e2e',
+  globalSetup: './e2e/global-setup.ts',
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
@@ -44,4 +46,6 @@ export default defineConfig({
     /* If the test ends up needing to pull the postgres docker image, this can take a while. Give it a few minutes. */
     timeout: 180000,
   },
-})
+}
+
+export default config
