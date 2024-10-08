@@ -153,6 +153,7 @@ message Metadata {
     MetadataDatabases databases = 4;
     MetadataEncoding encoding = 9;
     MetadataIngress ingress = 2;
+    MetadataPackageMap packageMap = 12;
     MetadataRetry retry = 6;
     MetadataSecrets secrets = 11;
     MetadataSubscriber subscriber = 7;
@@ -199,6 +200,12 @@ message MetadataIngress {
   repeated IngressPathComponent path = 4;
 }
 
+message MetadataPackageMap {
+  optional Position pos = 1;
+  string runtime = 2;
+  string package = 3;
+}
+
 message MetadataRetry {
   optional Position pos = 1;
   optional int64 count = 2;
@@ -228,6 +235,7 @@ message Module {
   repeated string comments = 2;
   bool builtin = 3;
   string name = 4;
+  repeated Metadata metadata = 6;
   repeated Decl decls = 5;
   optional ModuleRuntime runtime = 31634;
 }

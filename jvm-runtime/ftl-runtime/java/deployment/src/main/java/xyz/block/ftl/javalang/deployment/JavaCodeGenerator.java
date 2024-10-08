@@ -48,6 +48,11 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     public static final String PACKAGE_PREFIX = "ftl.";
 
     @Override
+    protected String runtime() {
+        return "java";
+    }
+
+    @Override
     protected void generateTypeAliasMapper(String module, String name, String packageName, Optional<String> nativeTypeAlias,
             Path outputDir) throws IOException {
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(name) + TYPE_MAPPER)

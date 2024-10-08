@@ -44,6 +44,11 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
     public static final String PACKAGE_PREFIX = "ftl.";
 
     @Override
+    protected String runtime() {
+        return "kotlin";
+    }
+
+    @Override
     protected void generateTypeAliasMapper(String module, String name, String packageName, Optional<String> nativeTypeAlias,
             Path outputDir) throws IOException {
         String thisType = className(name) + TYPE_MAPPER;

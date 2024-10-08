@@ -220,6 +220,8 @@ Module
     Unit
     Unit
     MetadataCronJob
+MetadataPackageMap
+MetadataPackageMap
 `
 	actual := &strings.Builder{}
 	i := 0
@@ -958,7 +960,9 @@ func TestParsing(t *testing.T) {
 func TestParseModule(t *testing.T) {
 	input := `
 // A comment
-module todo {
+module todo 
++packagemap go "github.com/foo/bar"
++packagemap kotlin "com.foo.bar" {
   // A config value
   config configValue String
   // Shhh
@@ -1040,6 +1044,7 @@ var testSchema = MustValidate(&Schema{
 		{
 			Name:     "todo",
 			Comments: []string{"A comment"},
+			Metadata: []Metadata{&MetadataPackageMap{Package: "github.com/foo/bar", Runtime: "go"}, &MetadataPackageMap{Package: "com.foo.bar", Runtime: "kotlin"}},
 			Decls: []Decl{
 				&Secret{
 					Comments: []string{"Shhh"},

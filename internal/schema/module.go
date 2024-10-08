@@ -29,10 +29,11 @@ type ModuleRuntime struct {
 type Module struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Builtin  bool     `parser:"@'builtin'?" protobuf:"3"`
-	Name     string   `parser:"'module' @Ident '{'" protobuf:"4"`
-	Decls    []Decl   `parser:"@@* '}'" protobuf:"5"`
+	Comments []string   `parser:"@Comment*" protobuf:"2"`
+	Builtin  bool       `parser:"@'builtin'?" protobuf:"3"`
+	Name     string     `parser:"'module' @Ident" protobuf:"4"`
+	Metadata []Metadata `parser:"@@*" protobuf:"6"`
+	Decls    []Decl     `parser:"'{' @@* '}'" protobuf:"5"`
 
 	Runtime *ModuleRuntime `protobuf:"31634,optional" parser:""`
 }
@@ -73,9 +74,12 @@ func (m *Module) Resolve(ref Ref) *ModuleDecl {
 func (m *Module) schemaSymbol()      {}
 func (m *Module) Position() Position { return m.Pos }
 func (m *Module) schemaChildren() []Node {
-	children := make([]Node, 0, len(m.Decls))
+	children := make([]Node, 0, len(m.Decls)+len(m.Metadata))
 	for _, d := range m.Decls {
 		children = append(children, d)
+	}
+	for _, md := range m.Metadata {
+		children = append(children, md)
 	}
 	return children
 }
@@ -91,8 +95,10 @@ func (m *Module) String() string {
 	if m.Builtin {
 		fmt.Fprint(w, "builtin ")
 	}
-	fmt.Fprintf(w, "module %s {\n", m.Name)
+	fmt.Fprintf(w, "module %s", m.Name)
 
+	fmt.Fprint(w, indent(encodeMetadata(m.Metadata)))
+	fmt.Fprintln(w, " {")
 	// Print decls with spacing rules
 	// Keep these in sync with frontend/console/src/features/modules/schema/schema.utils.ts
 	typeSpacingRules := map[reflect.Type]spacingRule{
@@ -217,12 +223,18 @@ func (m *Module) Imports() []string {
 	return importStrs
 }
 
+// AddPackageMap adds a config reference to the Module.
+func (m *Module) AddPackageMap(runtime string, pkg string) {
+	m.Metadata = append(m.Metadata, &MetadataPackageMap{Package: pkg, Runtime: runtime})
+}
+
 func (m *Module) ToProto() proto.Message {
 	return &schemapb.Module{
 		Pos:      posToProto(m.Pos),
 		Builtin:  m.Builtin,
 		Name:     m.Name,
 		Comments: m.Comments,
+		Metadata: metadataListToProto(m.Metadata),
 		Decls:    declListToProto(m.Decls),
 	}
 }
@@ -246,6 +258,7 @@ func ModuleFromProto(s *schemapb.Module) (*Module, error) {
 		Builtin:  s.Builtin,
 		Name:     s.Name,
 		Comments: s.Comments,
+		Metadata: metadataListToSchema(s.Metadata),
 		Decls:    declListToSchema(s.Decls),
 	}
 	return module, ValidateModule(module)

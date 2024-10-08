@@ -59,6 +59,7 @@ import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataAlias;
 import xyz.block.ftl.v1.schema.MetadataCalls;
 import xyz.block.ftl.v1.schema.MetadataConfig;
+import xyz.block.ftl.v1.schema.MetadataPackageMap;
 import xyz.block.ftl.v1.schema.MetadataSecrets;
 import xyz.block.ftl.v1.schema.MetadataTypeMap;
 import xyz.block.ftl.v1.schema.Module;
@@ -96,6 +97,7 @@ public class ModuleBuilder {
     private final Map<String, Iterable<String>> comments;
     private final List<ValidationFailure> validationFailures = new ArrayList<>();
     private final boolean defaultToOptional;
+    private String packageName = null;
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
@@ -111,6 +113,9 @@ public class ModuleBuilder {
         this.comments = comments;
         this.dataElements = new HashMap<>(typeAliases);
         this.defaultToOptional = defaultToOptional;
+        for (var topic : knownTopics.keySet()) {
+            handlePackageName(topic.toString());
+        }
     }
 
     public static @NotNull String methodToName(MethodInfo method) {
@@ -182,6 +187,7 @@ public class ModuleBuilder {
 
     public void registerVerbMethod(MethodInfo method, String className,
             boolean exported, BodyType bodyType, Consumer<Verb.Builder> metadataCallback) {
+        handlePackageName(className);
         try {
             List<Class<?>> parameterTypes = new ArrayList<>();
             List<BiFunction<ObjectMapper, CallRequest, Object>> paramMappers = new ArrayList<>();
@@ -289,6 +295,24 @@ public class ModuleBuilder {
             throw new RuntimeException("Failed to process FTL method " + method.declaringClass().name() + "." + method.name(),
                     e);
         }
+    }
+
+    private void handlePackageName(String className) {
+        if (packageName == null) {
+            packageName = className.substring(0, className.lastIndexOf('.'));
+        } else {
+            var classPackage = className.substring(0, className.lastIndexOf('.'));
+            int length = 0;
+            for (int i = 0; i < Math.min(packageName.length(), classPackage.length()); i++) {
+                if (packageName.charAt(i) == classPackage.charAt(i)) {
+                    length++;
+                } else {
+                    break;
+                }
+            }
+            packageName = packageName.substring(0, length);
+        }
+        System.out.println(packageName);
     }
 
     private Nullability nullability(org.jboss.jandex.AnnotationTarget type) {
@@ -534,6 +558,13 @@ public class ModuleBuilder {
                         .append("\n");
             }
             throw new RuntimeException(sb.toString());
+        }
+        if (packageName != null && !packageName.isEmpty()) {
+            moduleBuilder.addMetadata(Metadata.newBuilder()
+                    .setPackageMap(MetadataPackageMap.newBuilder().setRuntime("java").setPackage(packageName).build()).build());
+            moduleBuilder.addMetadata(Metadata.newBuilder()
+                    .setPackageMap(MetadataPackageMap.newBuilder().setRuntime("kotlin").setPackage(packageName).build())
+                    .build());
         }
         moduleBuilder.build().writeTo(out);
     }

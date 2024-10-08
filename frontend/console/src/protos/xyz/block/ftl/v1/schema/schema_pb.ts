@@ -1167,6 +1167,12 @@ export class Metadata extends Message<Metadata> {
     case: "ingress";
   } | {
     /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataPackageMap packageMap = 12;
+     */
+    value: MetadataPackageMap;
+    case: "packageMap";
+  } | {
+    /**
      * @generated from field: xyz.block.ftl.v1.schema.MetadataRetry retry = 6;
      */
     value: MetadataRetry;
@@ -1206,6 +1212,7 @@ export class Metadata extends Message<Metadata> {
     { no: 4, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
     { no: 9, name: "encoding", kind: "message", T: MetadataEncoding, oneof: "value" },
     { no: 2, name: "ingress", kind: "message", T: MetadataIngress, oneof: "value" },
+    { no: 12, name: "packageMap", kind: "message", T: MetadataPackageMap, oneof: "value" },
     { no: 6, name: "retry", kind: "message", T: MetadataRetry, oneof: "value" },
     { no: 11, name: "secrets", kind: "message", T: MetadataSecrets, oneof: "value" },
     { no: 7, name: "subscriber", kind: "message", T: MetadataSubscriber, oneof: "value" },
@@ -1555,6 +1562,55 @@ export class MetadataIngress extends Message<MetadataIngress> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataPackageMap
+ */
+export class MetadataPackageMap extends Message<MetadataPackageMap> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string runtime = 2;
+   */
+  runtime = "";
+
+  /**
+   * @generated from field: string package = 3;
+   */
+  package = "";
+
+  constructor(data?: PartialMessage<MetadataPackageMap>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataPackageMap";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "runtime", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "package", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataPackageMap {
+    return new MetadataPackageMap().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataPackageMap {
+    return new MetadataPackageMap().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataPackageMap {
+    return new MetadataPackageMap().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataPackageMap | PlainMessage<MetadataPackageMap> | undefined, b: MetadataPackageMap | PlainMessage<MetadataPackageMap> | undefined): boolean {
+    return proto3.util.equals(MetadataPackageMap, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.MetadataRetry
  */
 export class MetadataRetry extends Message<MetadataRetry> {
@@ -1775,6 +1831,11 @@ export class Module extends Message<Module> {
   name = "";
 
   /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 6;
+   */
+  metadata: Metadata[] = [];
+
+  /**
    * @generated from field: repeated xyz.block.ftl.v1.schema.Decl decls = 5;
    */
   decls: Decl[] = [];
@@ -1796,6 +1857,7 @@ export class Module extends Message<Module> {
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "builtin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "metadata", kind: "message", T: Metadata, repeated: true },
     { no: 5, name: "decls", kind: "message", T: Decl, repeated: true },
     { no: 31634, name: "runtime", kind: "message", T: ModuleRuntime, opt: true },
   ]);

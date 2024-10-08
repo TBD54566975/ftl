@@ -96,7 +96,14 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
         }
         try {
             for (var module : modules) {
-                String packageName = PACKAGE_PREFIX + module.getName();
+                String modPkg = "";
+                for (var i : module.getMetadataList()) {
+                    if (i.hasPackageMap() && i.getPackageMap().getRuntime().equals(runtime())) {
+                        modPkg = i.getPackageMap().getPackage() + ".";
+                        break;
+                    }
+                }
+                String packageName = PACKAGE_PREFIX + modPkg + module.getName();
                 for (var decl : module.getDeclsList()) {
                     if (decl.hasVerb()) {
                         var verb = decl.getVerb();
@@ -133,6 +140,8 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
         }
         return true;
     }
+
+    protected abstract String runtime();
 
     protected abstract void generateTypeAliasMapper(String module, String name, String packageName,
             Optional<String> nativeTypeAlias, Path outputDir) throws IOException;

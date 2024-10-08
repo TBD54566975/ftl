@@ -90,6 +90,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataSecrets:
 			v = &schemapb.Metadata_Secrets{Secrets: n.ToProto().(*schemapb.MetadataSecrets)}
 
+		case *MetadataPackageMap:
+			v = &schemapb.Metadata_PackageMap{PackageMap: n.ToProto().(*schemapb.MetadataPackageMap)}
+
 		case *MetadataSubscriber:
 			v = &schemapb.Metadata_Subscriber{Subscriber: n.ToProto().(*schemapb.MetadataSubscriber)}
 

@@ -175,6 +175,8 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 
 					case *MetadataCronJob, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap,
 						*MetadataEncoding, *MetadataSecrets:
+					default:
+						merr = append(merr, errorf(md, "invalid metadata %s for %s:%q", md, n.Pos, n.Name))
 					}
 				}
 
@@ -232,7 +234,7 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				*MetadataIngress, *MetadataAlias, *MetadataSecrets, *Module, *Optional, *Schema, *TypeAlias,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
-				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding:
+				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPackageMap:
 			}
 			return next()
 		})
@@ -651,6 +653,8 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
 			merr = append(merr, subErrs...)
 		case *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap, *MetadataEncoding, *MetadataSecrets:
+		default:
+			merr = append(merr, errorf(md, "invalid metadata %v for verb", md))
 		}
 	}
 	return

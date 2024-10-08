@@ -113,7 +113,7 @@ func (p *javaPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 				dependencies[imp] = true
 			}
 		}
-		javaImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
+		javaImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_]+\.)*([A-Za-z0-9_]+)`)
 
 		err := filepath.WalkDir(filepath.Join(p.config.Dir, "src/main/java"), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -132,7 +132,7 @@ func (p *javaPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 			for scanner.Scan() {
 				matches := javaImportRegex.FindStringSubmatch(scanner.Text())
 				if len(matches) > 1 {
-					module := strings.Split(matches[1], ".")[0]
+					module := strings.Split(matches[2], ".")[0]
 					if module == p.config.Module {
 						continue
 					}
@@ -154,7 +154,7 @@ func (p *javaPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 
 func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	dependencies := map[string]bool{}
-	kotlinImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
+	kotlinImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_]+\.)*([A-Za-z0-9_]+)`)
 
 	err := filepath.WalkDir(filepath.Join(dir, "src/main/kotlin"), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -173,7 +173,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 		for scanner.Scan() {
 			matches := kotlinImportRegex.FindStringSubmatch(scanner.Text())
 			if len(matches) > 1 {
-				module := strings.Split(matches[1], ".")[0]
+				module := strings.Split(matches[2], ".")[0]
 				if module == self {
 					continue
 				}

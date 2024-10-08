@@ -181,6 +181,13 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			NativeName: s.TypeMap.NativeName,
 		}
 
+	case *schemapb.Metadata_PackageMap:
+		return &MetadataPackageMap{
+			Pos:     PosFromProto(s.PackageMap.Pos),
+			Runtime: s.PackageMap.Runtime,
+			Package: s.PackageMap.Package,
+		}
+
 	case *schemapb.Metadata_Encoding:
 		return &MetadataEncoding{
 			Pos:     PosFromProto(s.Encoding.Pos),
