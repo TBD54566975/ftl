@@ -20,7 +20,7 @@ import (
 type Service struct {
 	dal        *dal.DAL
 	encryption *encryptionsvc.Service
-	Store      internalidentity.Store
+	Store      internalidentity.Wallet
 }
 
 func New(ctx context.Context, encryption *encryptionsvc.Service, conn *sql.DB) (Service, error) {

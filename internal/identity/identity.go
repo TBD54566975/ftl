@@ -61,6 +61,10 @@ func Parse(s string) (Identity, error) {
 		return Controller{}, nil
 	}
 
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid identity: %s", s)
+	}
+
 	key, err := model.ParseRunnerKey(parts[0])
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse key: %w", err)
@@ -69,8 +73,8 @@ func Parse(s string) (Identity, error) {
 	return NewRunner(key, parts[1]), nil
 }
 
-// Store is held by a node and contains the node's identity, key pair, signer, and certificate.
-type Store struct {
+// Wallet is held by a node and contains the node's identity, key pair, signer, and certificate.
+type Wallet struct {
 	Identity           Identity
 	KeyPair            KeyPair
 	Signer             Signer
@@ -78,38 +82,38 @@ type Store struct {
 	ControllerVerifier optional.Option[Verifier]
 }
 
-func NewStore(identity Identity, keyPair KeyPair) (Store, error) {
+func NewStore(identity Identity, keyPair KeyPair) (Wallet, error) {
 	signer, err := keyPair.Signer()
 	if err != nil {
-		return Store{}, fmt.Errorf("failed to get signer: %w", err)
+		return Wallet{}, fmt.Errorf("failed to get signer: %w", err)
 	}
 
-	return Store{
+	return Wallet{
 		Identity: identity,
 		KeyPair:  keyPair,
 		Signer:   signer,
 	}, nil
 }
 
-func NewStoreNewKeys(identity Identity) (Store, error) {
+func NewStoreNewKeys(identity Identity) (Wallet, error) {
 	pair, err := GenerateKeyPair()
 	if err != nil {
-		return Store{}, fmt.Errorf("failed to generate key pair: %w", err)
+		return Wallet{}, fmt.Errorf("failed to generate key pair: %w", err)
 	}
 
 	signer, err := pair.Signer()
 	if err != nil {
-		return Store{}, fmt.Errorf("failed to get signer: %w", err)
+		return Wallet{}, fmt.Errorf("failed to get signer: %w", err)
 	}
 
-	return Store{
+	return Wallet{
 		Identity: identity,
 		KeyPair:  pair,
 		Signer:   signer,
 	}, nil
 }
 
-func (s Store) NewCertificateRequest() (CertificateRequest, error) {
+func (s Wallet) NewCertificateRequest() (CertificateRequest, error) {
 	publicKey, err := s.KeyPair.Public()
 	if err != nil {
 		return CertificateRequest{}, fmt.Errorf("failed to get public key: %w", err)
@@ -138,40 +142,11 @@ func (s Store) NewCertificateRequest() (CertificateRequest, error) {
 	}, nil
 }
 
-// // NewGetCertificateRequest generates a signed certificate request to be used in the GetCertificate RPC.
-// func (s *Store) ToCertificateRequestProto() (v1.GetCertificateRequest, error) {
-// 	publicKey, err := s.KeyPair.Public()
-// 	if err != nil {
-// 		return v1.GetCertificateRequest{}, fmt.Errorf("failed to get public key: %w", err)
-// 	}
-
-// 	content := CertificateContent{
-// 		Identity:  s.Identity,
-// 		PublicKey: publicKey,
-// 	}
-// 	message, err := proto.Marshal(content.ToProto())
-// 	if err != nil {
-// 		return v1.GetCertificateRequest{}, fmt.Errorf("failed to marshal cert content: %w", err)
-// 	}
-
-// 	signed, err := s.Signer.Sign(message)
-// 	if err != nil {
-// 		return v1.GetCertificateRequest{}, fmt.Errorf("failed to sign cert request: %w", err)
-// 	}
-
-// 	return v1.GetCertificateRequest{
-// 		CertificateRequest: &identitypb.CertificateRequest{
-// 			Content:   content.ToProto(),
-// 			Signature: signed.Bytes,
-// 		},
-// 	}, nil
-// }
-
 // SignCertificateRequest is called by the controller to sign a certificate request,
 // while verifiying the node's signature.
 //
 // The caller must ensure that the request is valid and the identity is legit.
-func (s *Store) SignCertificateRequest(req CertificateRequest) (Certificate, error) {
+func (s *Wallet) SignCertificateRequest(req CertificateRequest) (Certificate, error) {
 	encoded, err := proto.Marshal(req.CertificateContent.ToProto())
 	if err != nil {
 		return Certificate{}, fmt.Errorf("failed to marshal cert content: %w", err)
@@ -196,7 +171,7 @@ func (s *Store) SignCertificateRequest(req CertificateRequest) (Certificate, err
 	}, nil
 }
 
-func (s *Store) SetCertificate(cert Certificate, controllerVerifier Verifier) error {
+func (s *Wallet) SetCertificate(cert Certificate, controllerVerifier Verifier) error {
 	if err := cert.Verify(controllerVerifier); err != nil {
 		return fmt.Errorf("failed to verify controller certificate: %w", err)
 	}
@@ -218,7 +193,7 @@ func (s *Store) SetCertificate(cert Certificate, controllerVerifier Verifier) er
 	return nil
 }
 
-func (s *Store) CertifiedSign(message []byte) (CertifiedSignedData, error) {
+func (s *Wallet) CertifiedSign(message []byte) (CertifiedSignedData, error) {
 	certificate, ok := s.Certificate.Get()
 	if !ok {
 		return CertifiedSignedData{}, fmt.Errorf("certificate not set")
