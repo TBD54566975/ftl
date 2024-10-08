@@ -21,33 +21,15 @@ jobs:
         run: |
           latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
           echo "Latest release: $latest_release"
-          echo "LATEST_RELEASE=$latest_release" >> "$GITHUB_ENV"
+          echo "LATEST_VERSION=${latest_release#v}" >> "$GITHUB_ENV"
       - name: Check out the last tagged release
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.LATEST_RELEASE }}
+          ref: v${{ env.LATEST_VERSION }}
           fetch-depth: 1
           fetch-tags: true
-      - name: Download the release images
-        uses: dsaltares/fetch-gh-release-asset@master
-        with:
-          repo: TBD54566975/ftl.git
-          version: tags/${{ env.LATEST_RELEASE }}
-          file: ftl-${{ env.LATEST_RELEASE:1 }}.linux-arm64.tar.gz
-          token: ${{ secrets.GITHUB_TOKEN }}
-          target: last-release.linux-arm64.tar.gz
-      - name: Replace deployment with release images
-        run: |
-          set -euo pipefail
-          ls -al .
-          mkdir -p last-release
-          tar -xzf last-release.linux-arm64.tar.gz -C last-release
-          if [ ! -f last-release/ftl ]; then
-            echo "Error: 'ftl' binary not found in the extracted files."
-            exit 1
-          fi
-          cp last-release/ftl ./build/devel/ftl
-          cp last-release/ftl ./build/release/ftl
+      # The following grabs the current smoke test from the HEAD branch. This is to solve the
+      # chicken-and-egg. Once it's in the tagged release, skip this.
       - name: Check out the current smoke test
         uses: actions/checkout@v4
         with:
@@ -70,13 +52,38 @@ jobs:
         run: just init-db
       - name: Download Go Modules
         run: go mod download
-      - name: Smoke test the tagged release
+      # When we remove the above step to fetch the current smoke tests into tmpsmoketest,
+      # update this to remove the overwrite step.
+      - name: Smoke test the tagged release to bring up the cluster
         run: |
             set -euo pipefail
             echo "Replacing released exemplar with current exemplar"
             rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest && rm -r ./tmpsmoketest
             echo "Running current smoke test on the tagged release"
-            go test -v -tags smoketest -run '^Test' ./smoketest
+            go test -v -tags integration -run '^Test' ./smoketest
+      - name: Download the last tagged release asset
+        run: |
+          set -euo pipefail
+          release_url="https://github.com/TBD54566975/ftl/releases/download/v${{ env.LATEST_VERSION }}/ftl-${{ env.LATEST_VERSION }}.linux-amd64.tar.gz"
+          echo "Fetching latest release asset from: $release_url"
+          curl -L "$release_url" --output last-release.linux-amd64.tar.gz
+      - name: Replace deployment with release images
+        run: |
+          set -euo pipefail
+          ls -al .
+          mkdir -p last-release
+          tar -xzf last-release.linux-amd64.tar.gz -C last-release
+          if [ ! -f last-release/ftl ]; then
+            echo "Error: 'ftl' binary not found in the extracted files."
+            exit 1
+          fi
+          cp last-release/ftl ./build/devel/ftl
+          cp last-release/ftl ./build/release/ftl
+      - name: Smoke test the tagged release with the release binaries
+        run: |
+            set -euo pipefail
+            echo "Running smoke test on the tagged release using released binaries"
+            go test -v -tags integration -run '^Test' ./smoketest
       # Next step is to build the FTL from HEAD, deploy it to the cluster, and run the smoke test
       - name: Archive Report
         uses: actions/upload-artifact@v4
