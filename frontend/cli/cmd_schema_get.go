@@ -58,7 +58,7 @@ func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerSe
 					}
 				}
 				if !g.Watch {
-					break
+					return nil
 				}
 			}
 		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
