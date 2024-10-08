@@ -1,4 +1,4 @@
-//go:build smoketest
+//go:build integration
 
 package smoketest
 

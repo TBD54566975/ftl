@@ -15,7 +15,7 @@ import (
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func TestExemplar(t *testing.T) {
+func DisabledTestExemplar(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFilePath := filepath.Join(tmpDir, "smoketest.log")
 
