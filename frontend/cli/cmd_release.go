@@ -12,17 +12,8 @@ import (
 )
 
 type releaseCmd struct {
-	Describe releaseDescribeCmd `cmd:"" help:"Describes the specified release."`
-	Publish  releasePublishCmd  `cmd:"" help:"Packages the project into a release and publishes it."`
-	List     releaseListCmd     `cmd:"" help:"Lists all published releases."`
-}
-
-type releaseDescribeCmd struct {
-	Digest string `arg:"" help:"Digest of the target release."`
-}
-
-func (d *releaseDescribeCmd) Run() error {
-	return fmt.Errorf("release describe not implemented")
+	Publish releasePublishCmd `cmd:"" help:"Packages the project into a release and publishes it."`
+	List    releaseListCmd    `cmd:"" help:"Lists all published releases."`
 }
 
 type releasePublishCmd struct {
@@ -74,7 +65,7 @@ func (d *releaseListCmd) Run() error {
 	format := "    Digest        : %s\n    Size          : %-7d\n    Repo Digest   : %s\n    Media Type    : %s\n    Artefact Type : %s\n"
 	fmt.Printf("Found %d module artefacts:\n", len(modules))
 	for i, m := range modules {
-		fmt.Printf("\n\033[31m  Artefact %d\033[0m\n\n", i)
+		fmt.Printf("\033[31m  Artefact %d\033[0m\n", i)
 		fmt.Printf(format, m.ModuleDigest, m.Size, m.RepositoryDigest, m.MediaType, m.ArtefactType)
 	}
 
