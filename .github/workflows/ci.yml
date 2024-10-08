@@ -354,6 +354,13 @@ jobs:
         with:
           name: kube-report-${{ matrix.test }}
           path: /tmp/ftl-kube-report/
+      - name: Teardown Cluster
+        working-directory: deployment
+        if: always() # Always cleanup the cluster even on failure
+        run: just teardown-cluster
+      - name: Delete Images
+        if: always() # We don't want to cache these images, delete them before the cache action
+        run: docker image rm localhost:5000/ftl-runner:latest ftl-runner:latest ftl-controller:latest localhost:5000/ftl-controller:latest
   integration-success:
     name: Integration Success
     needs: [integration-run]
