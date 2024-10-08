@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strings"
 
-	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/kong"
 	"github.com/beevik/etree"
@@ -21,6 +20,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl"
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
