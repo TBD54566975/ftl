@@ -94,7 +94,11 @@ func getDatabaseReleaseArtefacts(ctx context.Context, db sql.Querier, releaseID 
 }
 
 func (s *Service) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
-	err := s.db.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
+	return addReleaseArtefacts(ctx, s.db, key, ra)
+}
+
+func addReleaseArtefacts(ctx context.Context, db sql.Querier, key model.DeploymentKey, ra ReleaseArtefact) error {
+	err := db.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
 		Key:        key,
 		Digest:     ra.Artefact.Digest[:],
 		Executable: ra.Executable,

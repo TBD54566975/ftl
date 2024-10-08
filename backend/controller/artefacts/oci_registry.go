@@ -17,6 +17,11 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
+	"strings"
+)
+
+const (
+	ModuleArtifactPrefix = "ftl/modules/"
 )
 
 type ContainerConfig struct {
@@ -27,18 +32,26 @@ type ContainerConfig struct {
 }
 
 type ContainerService struct {
-	host              string
-	connectionBuilder func(container string) (*remote.Repository, error)
+	host                  string
+	repoConnectionBuilder func(container string) (*remote.Repository, error)
 
 	// in the interim releases and artefacts will continue to be linked via the `deployment_artefacts` table
 	Handle *libdal.Handle[ContainerService]
 	db     sql.Querier
 }
 
+type ArtefactRepository struct {
+	ModuleDigest     sha256.SHA256
+	MediaType        string
+	ArtefactType     string
+	RepositoryDigest digest.Digest
+	Size             int64
+}
+
 func NewContainerService(c ContainerConfig, conn libdal.Connection) *ContainerService {
 	// Connect the registry targeting the specified container
-	connectionBuilder := func(container string) (*remote.Repository, error) {
-		ref := fmt.Sprintf("%s/%s", c.Registry, container)
+	repoConnectionBuilder := func(path string) (*remote.Repository, error) {
+		ref := fmt.Sprintf("%s/%s", c.Registry, path)
 		reg, err := remote.NewRepository(ref)
 		if err != nil {
 			return nil, fmt.Errorf("unable to connect to container registry '%s': %w", ref, err)
@@ -58,14 +71,14 @@ func NewContainerService(c ContainerConfig, conn libdal.Connection) *ContainerSe
 	}
 
 	return &ContainerService{
-		host:              c.Registry,
-		connectionBuilder: connectionBuilder,
+		host:                  c.Registry,
+		repoConnectionBuilder: repoConnectionBuilder,
 		Handle: libdal.New(conn, func(h *libdal.Handle[ContainerService]) *ContainerService {
 			return &ContainerService{
-				host:              c.Registry,
-				connectionBuilder: connectionBuilder,
-				Handle:            h,
-				db:                sql.New(h.Connection),
+				host:                  c.Registry,
+				repoConnectionBuilder: repoConnectionBuilder,
+				Handle:                h,
+				db:                    sql.New(h.Connection),
 			}
 		}),
 	}
@@ -100,11 +113,11 @@ func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha25
 	if err = ms.Tag(ctx, manifestDescriptor, tag); err != nil {
 		return sha256.SHA256{}, fmt.Errorf("unable to tag artifact: %w", err)
 	}
-	registry, err := s.connectionBuilder(ref)
+	repo, err := s.repoConnectionBuilder(ref)
 	if err != nil {
-		return sha256.SHA256{}, fmt.Errorf("unable to connect to registry '%s/%s': %w", s.host, ref, err)
+		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s/%s': %w", s.host, ref, err)
 	}
-	desc, err := oras.Copy(ctx, ms, tag, registry, tag, oras.DefaultCopyOptions)
+	desc, err := oras.Copy(ctx, ms, tag, repo, tag, oras.DefaultCopyOptions)
 	if err != nil {
 		return sha256.SHA256{}, fmt.Errorf("unable to push artefact upstream from staging: %w", err)
 	}
@@ -113,26 +126,93 @@ func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha25
 }
 
 func (s *ContainerService) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
-	ref := fmt.Sprintf("ftl/modules/%s", digest)
-	registry, err := s.connectionBuilder(ref)
+	ref := createModuleRepositoryPathFromDigest(digest)
+	registry, err := s.repoConnectionBuilder(ref)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to registry '%s/%s': %w", s.host, ref, err)
 	}
-	_, stream, err := oras.Fetch(ctx, registry, remoteModulePath(s.host, digest), oras.DefaultFetchOptions)
+	_, stream, err := oras.Fetch(ctx, registry, createModuleRepositoryReferenceFromDigest(s.host, digest), oras.DefaultFetchOptions)
 	if err != nil {
 		return nil, fmt.Errorf("unable to download artefact: %w", err)
 	}
 	return stream, nil
 }
 
+func (s *ContainerService) DiscoverModuleArtefacts(ctx context.Context) ([]ArtefactRepository, error) {
+	return s.DiscoverArtefacts(ctx, ModuleArtifactPrefix)
+}
+
+func (s *ContainerService) DiscoverArtefacts(ctx context.Context, prefix string) ([]ArtefactRepository, error) {
+	registry, err := remote.NewRegistry(s.host)
+	if err != nil {
+		return nil, fmt.Errorf("unable to connect to registry '%s': %w", s.host, err)
+	}
+	registry.PlainHTTP = true
+	result := make([]ArtefactRepository, 0)
+	err = registry.Repositories(ctx, "", func(repos []string) error {
+		for _, path := range repos {
+			if !strings.HasPrefix(path, prefix) {
+				continue
+			}
+
+			d, err := getDigestFromModuleRepositoryPath(path)
+			if err != nil {
+				return fmt.Errorf("unable to get digest from repository path '%s': %w", path, err)
+			}
+
+			repo, err := registry.Repository(ctx, path)
+			if err != nil {
+				return fmt.Errorf("unable to connect to repository '%s': %w", path, err)
+			}
+
+			desc, err := repo.Resolve(ctx, "latest")
+			if err != nil {
+				return fmt.Errorf("unable to resolve module metadata '%s': %w", path, err)
+			}
+
+			result = append(result, ArtefactRepository{
+				ModuleDigest:     d,
+				MediaType:        desc.MediaType,
+				ArtefactType:     desc.ArtifactType,
+				RepositoryDigest: desc.Digest,
+				Size:             desc.Size,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to discover artefacts: %w", err)
+	}
+	return result, nil
+}
+
 func (s *ContainerService) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
-	return nil, nil
+	return getDatabaseReleaseArtefacts(ctx, s.db, releaseID)
 }
 
 func (s *ContainerService) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
-	return nil
+	return addReleaseArtefacts(ctx, s.db, key, ra)
 }
 
-func remoteModulePath(host string, digest sha256.SHA256) string {
-	return fmt.Sprintf("%s/modules/%s:latest", host, hex.EncodeToString(digest[:]))
+// createModuleRepositoryPathFromDigest creates the path to the repository, relative to the registries root
+func createModuleRepositoryPathFromDigest(digest sha256.SHA256) string {
+	return fmt.Sprintf("%s/%s:latest", ModuleArtifactPrefix, hex.EncodeToString(digest[:]))
+}
+
+// createModuleRepositoryReferenceFromDigest creates the URL used to connect to the repository
+func createModuleRepositoryReferenceFromDigest(host string, digest sha256.SHA256) string {
+	return fmt.Sprintf("%s/%s", host, createModuleRepositoryPathFromDigest(digest))
+}
+
+// getDigestFromModuleRepositoryPath extracts the digest from the module repository path; e.g. /ftl/modules/<digest>:latest
+func getDigestFromModuleRepositoryPath(repository string) (sha256.SHA256, error) {
+	slash := strings.LastIndex(repository, "/")
+	if slash == -1 {
+		return sha256.SHA256{}, fmt.Errorf("unable to parse repository '%s'", repository)
+	}
+	d, err := sha256.ParseSHA256(repository[slash+1:])
+	if err != nil {
+		return sha256.SHA256{}, fmt.Errorf("unable to parse repository digest '%s': %w", repository, err)
+	}
+	return d, nil
 }
