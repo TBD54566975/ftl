@@ -39,7 +39,8 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) error {
 		return nil
 	}
 	language := args[1]
-	if len(language) == 0 {
+	// Default to `new` command handler if no language is provided, or option is specified on `new` command.
+	if len(language) == 0 || language[0] == '-' {
 		return nil
 	}
 
