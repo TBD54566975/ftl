@@ -67,13 +67,12 @@ public class EnumProcessor {
                         } else {
                             // Type enums
                             var variants = index.getComputingIndex().getAllKnownImplementors(classInfo.name());
+                            var variantClasses = new ArrayList<Class<?>>();
                             if (variants.isEmpty()) {
                                 throw new RuntimeException("No variants found for enum: " + enumBuilder.getName());
                             }
                             for (var variant : variants) {
-                                if (variant.hasDeclaredAnnotation(GENERATED_REF)) {
-                                    continue;
-                                }
+                                var isVariantLocalToModule = !variant.hasDeclaredAnnotation(GENERATED_REF);
                                 Type variantType;
                                 if (variant.hasAnnotation(ENUM_HOLDER)) {
                                     // Enum value holder class
@@ -85,16 +84,24 @@ public class EnumProcessor {
                                 } else {
                                     // Class is the enum variant type
                                     variantType = ClassType.builder(variant.name()).build();
+                                    Class<?> variantClazz = Class.forName(variantType.name().toString(), false,
+                                            Thread.currentThread().getContextClassLoader());
+                                    variantClasses.add(variantClazz);
                                 }
-                                xyz.block.ftl.v1.schema.Type declType = moduleBuilder.buildType(variantType, exported);
-                                TypeValue typeValue = TypeValue.newBuilder().setValue(declType).build();
+                                if (isVariantLocalToModule) {
+                                    xyz.block.ftl.v1.schema.Type declType = moduleBuilder.buildType(variantType, exported);
+                                    TypeValue typeValue = TypeValue.newBuilder().setValue(declType).build();
 
-                                EnumVariant.Builder variantBuilder = EnumVariant.newBuilder()
-                                        .setName(variant.simpleName())
-                                        .setValue(Value.newBuilder().setTypeValue(typeValue).build());
-                                enumBuilder.addVariants(variantBuilder.build());
+                                    EnumVariant.Builder variantBuilder = EnumVariant.newBuilder()
+                                            .setName(variant.simpleName())
+                                            .setValue(Value.newBuilder().setTypeValue(typeValue).build());
+                                    enumBuilder.addVariants(variantBuilder.build());
+                                }
                             }
-                            decls.add(Decl.newBuilder().setEnum(enumBuilder).build());
+                            if (isLocalToModule) {
+                                decls.add(Decl.newBuilder().setEnum(enumBuilder).build());
+                            }
+                            recorder.registerEnum(clazz, variantClasses);
                         }
                     }
                     for (var decl : decls) {

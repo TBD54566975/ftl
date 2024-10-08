@@ -16,6 +16,7 @@ import javax.lang.model.element.Modifier;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -122,6 +123,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     .build());
             dataBuilder.addMethod(MethodSpec.methodBuilder("getValue")
                     .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(JsonIgnore.class)
                     .returns(enumType)
                     .addStatement("return value")
                     .build());
@@ -154,10 +156,12 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                 TypeName valueTypeName = variantValuesTypes.get(name);
                 interfaceBuilder.addMethod(MethodSpec.methodBuilder("is" + name)
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addAnnotation(JsonIgnore.class)
                         .returns(TypeName.BOOLEAN)
                         .build());
                 interfaceBuilder.addMethod(MethodSpec.methodBuilder("get" + name)
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addAnnotation(JsonIgnore.class)
                         .returns(valueTypeName)
                         .build());
 
@@ -409,12 +413,14 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         // Positive implementation of isX, getX for its type
         dataBuilder.addMethod(MethodSpec.methodBuilder("is" + enumVariantName)
                 .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(JsonIgnore.class)
                 .returns(TypeName.BOOLEAN)
                 .addStatement("return true")
                 .build());
 
         MethodSpec.Builder getMethod = MethodSpec.methodBuilder("get" + enumVariantName)
                 .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(JsonIgnore.class)
                 .returns(variantTypeName);
         if (returnSelf) {
             getMethod.addStatement("return this");
@@ -430,11 +436,13 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             // Negative implementation of isX, getX for other types
             dataBuilder.addMethod(MethodSpec.methodBuilder("is" + thingIAmNot.getKey())
                     .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(JsonIgnore.class)
                     .returns(TypeName.BOOLEAN)
                     .addStatement("return false")
                     .build());
             dataBuilder.addMethod(MethodSpec.methodBuilder("get" + thingIAmNot.getKey())
                     .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(JsonIgnore.class)
                     .returns(thingIAmNot.getValue())
                     .addStatement("throw new UnsupportedOperationException()")
                     .build());

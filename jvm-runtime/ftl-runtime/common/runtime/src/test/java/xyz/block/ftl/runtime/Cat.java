@@ -1,4 +1,4 @@
-package xyz.block.ftl.enums;
+package xyz.block.ftl.runtime;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -28,10 +28,6 @@ public class Cat implements Animal {
 
     public Cat getCat() {
         return this;
-    }
-
-    public Dog getDog() {
-        return null;
     }
 
     public @NotNull String getName() {

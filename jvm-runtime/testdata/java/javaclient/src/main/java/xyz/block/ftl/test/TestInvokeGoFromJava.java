@@ -6,16 +6,15 @@ import java.util.Map;
 
 import org.jetbrains.annotations.NotNull;
 
-import ftl.gomodule.Animal;
+import ftl.gomodule.AnimalWrapper;
 import ftl.gomodule.BoolVerbClient;
 import ftl.gomodule.BytesVerbClient;
-import ftl.gomodule.ColorInt;
+import ftl.gomodule.ColorWrapper;
 import ftl.gomodule.EmptyVerbClient;
 import ftl.gomodule.ErrorEmptyVerbClient;
 import ftl.gomodule.ExternalTypeVerbClient;
 import ftl.gomodule.FloatVerbClient;
 import ftl.gomodule.IntVerbClient;
-import ftl.gomodule.NoValueTypeEnumVerbClient;
 import ftl.gomodule.ObjectArrayVerbClient;
 import ftl.gomodule.ObjectMapVerbClient;
 import ftl.gomodule.OptionalBoolVerbClient;
@@ -31,9 +30,11 @@ import ftl.gomodule.OptionalTimeVerbClient;
 import ftl.gomodule.ParameterizedObjectVerbClient;
 import ftl.gomodule.ParameterizedType;
 import ftl.gomodule.Scalar;
+import ftl.gomodule.ShapeWrapper;
 import ftl.gomodule.SinkVerbClient;
 import ftl.gomodule.SourceVerbClient;
 import ftl.gomodule.StringArrayVerbClient;
+import ftl.gomodule.StringEnumVerbClient;
 import ftl.gomodule.StringList;
 import ftl.gomodule.StringMapVerbClient;
 import ftl.gomodule.StringVerbClient;
@@ -42,8 +43,9 @@ import ftl.gomodule.TestObjectOptionalFields;
 import ftl.gomodule.TestObjectOptionalFieldsVerbClient;
 import ftl.gomodule.TestObjectVerbClient;
 import ftl.gomodule.TimeVerbClient;
-import ftl.gomodule.TypeEnum;
 import ftl.gomodule.TypeEnumVerbClient;
+import ftl.gomodule.TypeEnumWrapper;
+import ftl.gomodule.TypeWrapperEnumVerbClient;
 import ftl.gomodule.ValueEnumVerbClient;
 import web5.sdk.dids.didcore.Did;
 import xyz.block.ftl.Export;
@@ -229,20 +231,12 @@ public class TestInvokeGoFromJava {
 
     @Export
     @Verb
-    public AnimalWrapper noValueTypeEnumVerb(AnimalWrapper animal, NoValueTypeEnumVerbClient client) {
+    public AnimalWrapper typeEnumVerb(AnimalWrapper animal, TypeEnumVerbClient client) {
         if (animal.getAnimal().isCat()) {
             return client.call(new AnimalWrapper(animal.getAnimal().getCat()));
         } else {
-            return client.call(animal.getDog());
-        }
             return client.call(new AnimalWrapper(animal.getAnimal().getDog()));
         }
-    }
-
-    @Export
-    @Verb
-    public ColorInt valueEnumVerb(ColorInt color, ValueEnumVerbClient client) {
-        return client.call(ColorInt.Red);
     }
 
     @Export
@@ -259,7 +253,7 @@ public class TestInvokeGoFromJava {
 
     @Export
     @Verb
-    public TypeEnumWrapper typeEnumVerb(TypeEnumWrapper value, TypeEnumVerbClient client) {
+    public TypeEnumWrapper typeWrapperEnumVerb(TypeEnumWrapper value, TypeWrapperEnumVerbClient client) {
         if (value.getType().isScalar()) {
             return client.call(new TypeEnumWrapper(new StringList(List.of("a", "b", "c"))));
         } else if (value.getType().isStringList()) {

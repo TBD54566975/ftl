@@ -15,8 +15,6 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 
-import org.jboss.logging.Logger;
-
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
@@ -29,6 +27,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 
 import io.quarkus.arc.Unremovable;
@@ -42,14 +41,21 @@ import xyz.block.ftl.TypeAliasMapper;
 @Unremovable
 public class JsonSerializationConfig implements ObjectMapperCustomizer {
 
-    final Instance<TypeAliasMapper<?, ?>> instances;
+    final Iterable<TypeAliasMapper<?, ?>> instances;
 
-    private record EnumCereal(Class<?> clazz, EnumDeserializer deserializer, EnumSerializer serializer) { }
-    final List<EnumCereal> enumList = new ArrayList<>();
+    private record TypeEnumDefn<T>(Class<T> type, List<Class<?>> variants) {
+    }
+
+    final List<Class> valueEnums = new ArrayList<>();
+    final List<TypeEnumDefn> typeEnums = new ArrayList<>();
 
     @Inject
     public JsonSerializationConfig(Instance<TypeAliasMapper<?, ?>> instances) {
         this.instances = instances;
+    }
+
+    JsonSerializationConfig() {
+        this.instances = List.of();
     }
 
     @Override
@@ -65,21 +71,26 @@ public class JsonSerializationConfig implements ObjectMapperCustomizer {
             module.addSerializer(object, new TypeAliasSerializer(object, serialized, i));
             module.addDeserializer(object, new TypeAliasDeSerializer(object, serialized, i));
         }
-        for (var i : enumList) {
-            module.addSerializer(i.clazz, i.serializer);
-            module.addDeserializer(i.clazz, i.deserializer);
+        for (var i : valueEnums) {
+            module.addSerializer(i, new ValueEnumSerializer(i));
+            module.addDeserializer(i, new ValueEnumDeserializer(i));
+        }
+
+        ObjectMapper cleanMapper = mapper.copy();
+        for (var i : typeEnums) {
+            module.addSerializer(i.type, new TypeEnumSerializer<>(i.type, cleanMapper));
+            module.addDeserializer(i.type, new TypeEnumDeserializer<>(i.type, i.variants));
         }
         mapper.registerModule(module);
     }
 
     public <T extends Enum<T>> void registerValueEnum(Class enumClass) {
-        enumList.add(new EnumCereal(enumClass, new EnumDeserializer<T>(enumClass), new EnumSerializer<T>(enumClass)));
+        valueEnums.add(enumClass);
     }
 
-    //    public <T> void registerEnum(String module, Class<T> enumClass) {
-    //        new EnumSerializer<Object>(enumClass, new ValueEnumMapper<T>(enumClass));
-    //        enumList.add(enumClass);
-    //    }
+    public <T> void registerTypeEnum(Class<?> type, List<Class<?>> variants) {
+        typeEnums.add(new TypeEnumDefn<>(type, variants));
+    }
 
     static Class<?> extractTypeAliasParam(Class<?> target, int no) {
         return (Class<?>) extractTypeAliasParamImpl(target, no);
@@ -139,7 +150,6 @@ public class JsonSerializationConfig implements ObjectMapperCustomizer {
             String base64 = node.asText();
             return Base64.getDecoder().decode(base64);
         }
-
     }
 
     public static class TypeAliasDeSerializer<T, S> extends StdDeserializer<T> {
@@ -158,7 +168,6 @@ public class JsonSerializationConfig implements ObjectMapperCustomizer {
             var s = ctxt.readValue(p, serializedType);
             return mapper.decode(s);
         }
-
     }
 
     public static class TypeAliasSerializer<T, S> extends StdSerializer<T> {
@@ -179,59 +188,10 @@ public class JsonSerializationConfig implements ObjectMapperCustomizer {
         }
     }
 
-//    //    public record WireEnum(String name, Object value) {
-//    //    }
-//
-//    public interface EnumMapper<T> {
-//        //        Object serialize(T value);
-//
-//        T deserialize(Object value);
-//    }
-//
-//    static class ValueEnumMapper<T> implements EnumMapper<T> {
-//
-//        private final Map<Object, T> lookup = new HashMap<>();
-//
-//        public ValueEnumMapper(Class<T> type) {
-//
-//            for (T ennum : type.getEnumConstants()) {
-//                try {
-//                    Field valueField = ennum.getClass().getDeclaredField("value");
-//                    valueField.setAccessible(true);
-//                    lookup.put(valueField.get(ennum), ennum);
-//                } catch (NoSuchFieldException | IllegalAccessException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//        }
-//
-//                @Override
-//                public WireEnum serialize(T value) {
-//                    try {
-//                        Field valueField = value.getClass().getDeclaredField("value");
-//                        valueField.setAccessible(true);
-//                        WireEnum wireEnum = new WireEnum(type.getSimpleName(), valueField.get(value));
-//                        log.warn("Value enum mapping enum " + value + " to wire " + wireEnum);
-//                        return wireEnum;
-//                    } catch (NoSuchFieldException | IllegalAccessException e) {
-//                        throw new RuntimeException(e);
-//                    }
-//                }
-//
-//        @Override
-//        public T deserialize(Object value) {
-//            T ennum = lookup.get(value);
-//            //            ennum.
-//            //            T ennum = Enum.valueOf(type, (String) value.value);
-//            log.warn("Value enum mapping wire value " + value + " to " + ennum);
-//            return ennum;
-//        }
-//    }
-
-    public static class EnumSerializer<T> extends StdSerializer<T> {
+    public static class ValueEnumSerializer<T> extends StdSerializer<T> {
         private final Field valueField;
 
-        public EnumSerializer(Class<T> type) {
+        public ValueEnumSerializer(Class<T> type) {
             super(type);
             try {
                 this.valueField = type.getDeclaredField("value");
@@ -251,11 +211,11 @@ public class JsonSerializationConfig implements ObjectMapperCustomizer {
         }
     }
 
-    public static class EnumDeserializer<T> extends StdDeserializer<T> {
+    public static class ValueEnumDeserializer<T> extends StdDeserializer<T> {
         private final Map<Object, T> wireToEnum = new HashMap<>();
         private final Class<?> valueClass;
 
-        public EnumDeserializer(Class<T> type) {
+        public ValueEnumDeserializer(Class<T> type) {
             super(type);
             try {
                 Field valueField = type.getDeclaredField("value");
@@ -273,6 +233,50 @@ public class JsonSerializationConfig implements ObjectMapperCustomizer {
         public T deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
             Object wireVal = ctxt.readValue(p, valueClass);
             return wireToEnum.get(wireVal);
+        }
+    }
+
+    public static class TypeEnumSerializer<T> extends StdSerializer<T> {
+        private final ObjectMapper defaultMapper;
+
+        public TypeEnumSerializer(Class<T> type, ObjectMapper mapper) {
+            super(type);
+            defaultMapper = mapper;
+        }
+
+        @Override
+        public void serialize(T value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+            gen.writeStartObject();
+            gen.writeStringField("name", value.getClass().getSimpleName());
+            gen.writeFieldName("value");
+            // Avoid infinite recursion by using a mapper without this serializer registered
+            defaultMapper.writeValue(gen, value);
+            gen.writeEndObject();
+        }
+    }
+
+    public static class TypeEnumDeserializer<T> extends StdDeserializer<T> {
+        private final Map<String, Class<?>> nameToVariant = new HashMap<>();
+
+        public TypeEnumDeserializer(Class<T> type, List<Class<?>> variants) {
+            super(type);
+            for (var variant : variants) {
+                nameToVariant.put(variant.getSimpleName(), variant);
+            }
+        }
+
+        @Override
+        public T deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            ObjectNode wireValue = p.readValueAsTree();
+            if (!wireValue.has("name") || !wireValue.has("value")) {
+                throw new RuntimeException("Enum missing 'name' or 'value' fields");
+            }
+            String name = wireValue.get("name").asText();
+            Class<?> variant = nameToVariant.get(name);
+            if (variant == null) {
+                throw new RuntimeException("Unknown variant " + name);
+            }
+            return (T) wireValue.get("value").traverse(p.getCodec()).readValueAs(variant);
         }
     }
 }

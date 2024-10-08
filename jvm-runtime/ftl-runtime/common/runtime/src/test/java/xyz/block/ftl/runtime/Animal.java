@@ -1,4 +1,4 @@
-package xyz.block.ftl.enums;
+package xyz.block.ftl.runtime;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -14,7 +14,4 @@ public interface Animal {
 
     @JsonIgnore
     Cat getCat();
-
-    @JsonIgnore
-    Dog getDog();
 }

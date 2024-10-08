@@ -7,7 +7,6 @@ import (
 
 	"github.com/tbd54566975/web5-go/dids/did"
 
-	"ftl/javaserver"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
@@ -67,7 +66,7 @@ type ShapeWrapper struct {
 }
 
 //ftl:enum export
-type TypeEnum interface{ typeEnum() }
+type TypeWrapperEnum interface{ typeEnum() }
 type Scalar string
 type StringList []string
 
@@ -75,12 +74,16 @@ func (Scalar) typeEnum()     {}
 func (StringList) typeEnum() {}
 
 type TypeEnumWrapper struct {
-	Type TypeEnum
+	Type TypeWrapperEnum
 }
 
 //ftl:enum
 type Animal interface{ animal() }
-type Cat struct{}
+type Cat struct {
+	Name      string
+	Breed     string
+	FurLength int
+}
 type Dog struct{}
 
 func (Cat) animal() {}
@@ -264,26 +267,16 @@ func StringEnumVerb(ctx context.Context, val ShapeWrapper) (ShapeWrapper, error)
 }
 
 //ftl:verb export
-func TypeEnumVerb(ctx context.Context, val TypeEnumWrapper) (TypeEnumWrapper, error) {
+func TypeWrapperEnumVerb(ctx context.Context, val TypeEnumWrapper) (TypeEnumWrapper, error) {
 	return val, nil
 }
 
 //ftl:verb export
-func NoValueTypeEnumVerb(ctx context.Context, val AnimalWrapper) (AnimalWrapper, error) {
+func TypeEnumVerb(ctx context.Context, val AnimalWrapper) (AnimalWrapper, error) {
 	return val, nil
-}
-
-//ftl:verb export
-func GetAnimal(ctx context.Context) (AnimalWrapper, error) {
-	return AnimalWrapper{Animal: Cat{}}, nil
 }
 
 ////ftl:verb export
 //func MixedEnumVerb(ctx context.Context, val Mixed) (Mixed, error) {
 //	return val, nil
 //}
-
-func callJavaServer(ctx context.Context, req javaserver.ColorWrapper, getValueEnum javaserver.ValueEnumVerbClient) (javaserver.ColorWrapper, error) {
-	color, _ := getValueEnum(ctx, req)
-	return color, nil
-}
