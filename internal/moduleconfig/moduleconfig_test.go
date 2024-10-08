@@ -118,17 +118,6 @@ func TestDefaulting(t *testing.T) {
 		{
 			config: UnvalidatedModuleConfig{
 				Dir:      "b",
-				Module:   "nodeploy",
-				Language: "test",
-			},
-			defaults: CustomDefaults{
-				DeployDir: "deploydir",
-			},
-			error: "no deploy files configured",
-		},
-		{
-			config: UnvalidatedModuleConfig{
-				Dir:      "b",
 				Module:   "nodeploydir",
 				Language: "test",
 			},
@@ -141,7 +130,7 @@ func TestDefaulting(t *testing.T) {
 
 			config, err := tt.config.FillDefaultsAndValidate(tt.defaults)
 			if tt.error != "" {
-				assert.Contains(t, err.Error(), tt.error)
+				assert.EqualError(t, err, tt.error)
 				return
 			}
 			assert.NoError(t, err)
