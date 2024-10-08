@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/types/optional"
+	"google.golang.org/protobuf/proto"
 
 	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -108,67 +109,96 @@ func NewStoreNewKeys(identity Identity) (Store, error) {
 	}, nil
 }
 
-// NewGetCertificateRequest generates a certificate request to be used in the GetCertificate RPC.
-func (s *Store) NewGetCertificateRequest() (v1.GetCertificateRequest, error) {
-	panic("not implemented")
-	// publicKey, err := s.KeyPair.Public()
-	// if err != nil {
-	// 	return v1.GetCertificateRequest{}, fmt.Errorf("failed to get public key: %w", err)
-	// }
+func (s Store) NewCertificateRequest() (CertificateRequest, error) {
+	publicKey, err := s.KeyPair.Public()
+	if err != nil {
+		return CertificateRequest{}, fmt.Errorf("failed to get public key: %w", err)
+	}
 
-	// content := CertificateContent{
-	// 	Identity:  s.Identity,
-	// 	PublicKey: publicKey,
-	// }
-	// message, err := proto.Marshal(&content.ToProto())
-	// if err != nil {
-	// 	return v1.GetCertificateRequest{}, fmt.Errorf("failed to marshal cert content: %w", err)
-	// }
+	certificateContent := CertificateContent{
+		Identity:  s.Identity,
+		PublicKey: publicKey,
+	}
+	encoded, err := proto.Marshal(certificateContent.ToProto())
+	if err != nil {
+		return CertificateRequest{}, fmt.Errorf("failed to marshal cert content: %w", err)
+	}
 
-	// signed, err := s.Signer.Sign(message)
-	// if err != nil {
-	// 	return v1.GetCertificateRequest{}, fmt.Errorf("failed to sign cert request: %w", err)
-	// }
+	signature, err := s.Signer.Sign(encoded)
+	if err != nil {
+		return CertificateRequest{}, fmt.Errorf("failed to sign cert request: %w", err)
+	}
 
-	// return v1.GetCertificateRequest{
-	// 	CertificateRequest: &v1.CertificateRequest{
-	// 		SignedMessage: signed.ToProto(),
-	// 	},
-	// }, nil
+	return CertificateRequest{
+		CertificateContent: CertificateContent{
+			Identity:  s.Identity,
+			PublicKey: publicKey,
+		},
+		Signature: signature,
+	}, nil
 }
 
-// SignCertificateRequest is called by the controller to sign a certificate request, while verifiying the node's signature.
+// // NewGetCertificateRequest generates a signed certificate request to be used in the GetCertificate RPC.
+// func (s *Store) ToCertificateRequestProto() (v1.GetCertificateRequest, error) {
+// 	publicKey, err := s.KeyPair.Public()
+// 	if err != nil {
+// 		return v1.GetCertificateRequest{}, fmt.Errorf("failed to get public key: %w", err)
+// 	}
+
+// 	content := CertificateContent{
+// 		Identity:  s.Identity,
+// 		PublicKey: publicKey,
+// 	}
+// 	message, err := proto.Marshal(content.ToProto())
+// 	if err != nil {
+// 		return v1.GetCertificateRequest{}, fmt.Errorf("failed to marshal cert content: %w", err)
+// 	}
+
+// 	signed, err := s.Signer.Sign(message)
+// 	if err != nil {
+// 		return v1.GetCertificateRequest{}, fmt.Errorf("failed to sign cert request: %w", err)
+// 	}
+
+// 	return v1.GetCertificateRequest{
+// 		CertificateRequest: &identitypb.CertificateRequest{
+// 			Content:   content.ToProto(),
+// 			Signature: signed.Bytes,
+// 		},
+// 	}, nil
+// }
+
+// SignCertificateRequest is called by the controller to sign a certificate request,
+// while verifiying the node's signature.
 // TODO: Make sure we check the actual given identity!
 func (s *Store) SignCertificateRequest(req *v1.GetCertificateRequest) (Certificate, error) {
-	// signedRequest := ParseSignedMessageFromProto(req.CertificateRequest.SignedMessage)
-	// encodedRequest := signedRequest.UnverifiedMessage()
+	// 	signedRequest := ParseSignedMessageFromProto(req.CertificateRequest.SignedMessage)
+	// 	encodedRequest := signedRequest.UnverifiedMessage()
 
-	// var content CertificateContent
-	// if err := proto.Unmarshal(encodedRequest, &content); err != nil {
-	// 	return Certificate{}, fmt.Errorf("failed to unmarshal certificate content: %w", err)
-	// }
+	// 	var content CertificateContent
+	// 	if err := proto.Unmarshal(encodedRequest, &content); err != nil {
+	// 		return Certificate{}, fmt.Errorf("failed to unmarshal certificate content: %w", err)
+	// 	}
 
-	// // Ensure the given pubkey matches the signature.
-	// verifier, err := NewVerifier(content.PublicKey)
-	// if err != nil {
-	// 	return Certificate{}, fmt.Errorf("failed to create verifier for pubkey:%x %w", content.PublicKey.Bytes, err)
-	// }
-	// _, err = signedRequest.VerifiedMessage(verifier)
-	// if err != nil {
-	// 	return Certificate{}, fmt.Errorf("failed to verify signature: %w", err)
-	// }
+	// 	// Ensure the given pubkey matches the signature.
+	// 	verifier, err := NewVerifier(content.PublicKey)
+	// 	if err != nil {
+	// 		return Certificate{}, fmt.Errorf("failed to create verifier for pubkey:%x %w", content.PublicKey.Bytes, err)
+	// 	}
+	// 	_, err = signedRequest.VerifiedMessage(verifier)
+	// 	if err != nil {
+	// 		return Certificate{}, fmt.Errorf("failed to verify signature: %w", err)
+	// 	}
 
-	// // Request is valid, sign it.
-	// signedCertificate, err := s.Signer.Sign(encodedRequest)
-	// if err != nil {
-	// 	return Certificate{}, fmt.Errorf("failed to create ca signed data for cert: %w", err)
-	// }
+	// 	// Request is valid, sign it.
+	// 	signedCertificate, err := s.Signer.Sign(encodedRequest)
+	// 	if err != nil {
+	// 		return Certificate{}, fmt.Errorf("failed to create ca signed data for cert: %w", err)
+	// 	}
 
-	// return Certificate{
-	// 	CertificateContent: content,
-	// 	Signature:          signedCertificate.Signature,
-	// }, nil
-
+	// 	return Certificate{
+	// 		CertificateContent: content,
+	// 		Signature:          signedCertificate.Signature,
+	// 	}, nil
 	panic("not implemented")
 }
 
@@ -200,19 +230,20 @@ func (s *Store) SetCertificate(cert Certificate, controllerVerifier Verifier) er
 	panic("not implemented")
 }
 
-func (s *Store) CertifiedSign(data []byte) (CertifiedSignedData, error) {
+func (s *Store) CertifiedSign(message []byte) (CertifiedSignedData, error) {
 	certificate, ok := s.Certificate.Get()
 	if !ok {
 		return CertifiedSignedData{}, fmt.Errorf("certificate not set")
 	}
 
-	signedData, err := s.Signer.Sign(data)
+	signature, err := s.Signer.Sign(message)
 	if err != nil {
 		return CertifiedSignedData{}, fmt.Errorf("failed to sign data: %w", err)
 	}
 
 	return CertifiedSignedData{
-		Certificate:   certificate,
-		SignedMessage: signedData,
+		Certificate: certificate,
+		Message:     message,
+		Signature:   signature,
 	}, nil
 }

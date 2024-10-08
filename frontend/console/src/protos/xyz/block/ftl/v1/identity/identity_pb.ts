@@ -50,58 +50,18 @@ export class CertificateContent extends Message<CertificateContent> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.identity.SignedMessage
+ * @generated from message xyz.block.ftl.v1.identity.CertificateRequest
  */
-export class SignedMessage extends Message<SignedMessage> {
+export class CertificateRequest extends Message<CertificateRequest> {
   /**
-   * @generated from field: bytes message = 1;
+   * @generated from field: xyz.block.ftl.v1.identity.CertificateContent content = 1;
    */
-  message = new Uint8Array(0);
+  content?: CertificateContent;
 
   /**
    * @generated from field: bytes signature = 2;
    */
   signature = new Uint8Array(0);
-
-  constructor(data?: PartialMessage<SignedMessage>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.identity.SignedMessage";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "message", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "signature", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SignedMessage {
-    return new SignedMessage().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SignedMessage {
-    return new SignedMessage().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SignedMessage {
-    return new SignedMessage().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SignedMessage | PlainMessage<SignedMessage> | undefined, b: SignedMessage | PlainMessage<SignedMessage> | undefined): boolean {
-    return proto3.util.equals(SignedMessage, a, b);
-  }
-}
-
-/**
- * @generated from message xyz.block.ftl.v1.identity.CertificateRequest
- */
-export class CertificateRequest extends Message<CertificateRequest> {
-  /**
-   * Serialised in the app: node identity and its public key, signed by the node.
-   *
-   * @generated from field: xyz.block.ftl.v1.identity.SignedMessage signed_message = 1;
-   */
-  signedMessage?: SignedMessage;
 
   constructor(data?: PartialMessage<CertificateRequest>) {
     super();
@@ -111,7 +71,8 @@ export class CertificateRequest extends Message<CertificateRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.identity.CertificateRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "signed_message", kind: "message", T: SignedMessage },
+    { no: 1, name: "content", kind: "message", T: CertificateContent },
+    { no: 2, name: "signature", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CertificateRequest {
@@ -136,11 +97,14 @@ export class CertificateRequest extends Message<CertificateRequest> {
  */
 export class Certificate extends Message<Certificate> {
   /**
-   * Serialised in the app: node identity + node public key, signed by the controller.
-   *
-   * @generated from field: xyz.block.ftl.v1.identity.SignedMessage signed_message = 1;
+   * @generated from field: xyz.block.ftl.v1.identity.CertificateContent content = 1;
    */
-  signedMessage?: SignedMessage;
+  content?: CertificateContent;
+
+  /**
+   * @generated from field: bytes signature = 2;
+   */
+  signature = new Uint8Array(0);
 
   constructor(data?: PartialMessage<Certificate>) {
     super();
@@ -150,7 +114,8 @@ export class Certificate extends Message<Certificate> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.identity.Certificate";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "signed_message", kind: "message", T: SignedMessage },
+    { no: 1, name: "content", kind: "message", T: CertificateContent },
+    { no: 2, name: "signature", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Certificate {

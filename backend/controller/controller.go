@@ -475,6 +475,7 @@ func (s *Service) Status(ctx context.Context, req *connect.Request[ftlv1.StatusR
 }
 
 func (s *Service) GetCertificate(ctx context.Context, certificateRequest *connect.Request[ftlv1.GetCertificateRequest]) (*connect.Response[ftlv1.GetCertificateResponse], error) {
+
 	msg := certificateRequest.Msg
 	certificate, err := s.identityService.Store.SignCertificateRequest(msg)
 	if err != nil {

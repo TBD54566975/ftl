@@ -116,12 +116,8 @@ func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error
 	}
 
 	// For total sanity, verify immediately
-	verified, err := verifier.Verify(signed)
-	if err != nil {
+	if err = verifier.Verify(signed, []byte(verificationText)); err != nil {
 		return fmt.Errorf("failed to verify signed verification: %w", err)
-	}
-	if string(verified) != verificationText {
-		return fmt.Errorf("failed to verify signed verification: got %q, want %q", verified, verificationText)
 	}
 
 	// TODO: Make this support different encryptors.
@@ -149,7 +145,7 @@ func (s Service) generateAndSaveIdentity(ctx context.Context, tx *dal.DAL) error
 	encryptedIdentity := &dal.EncryptedIdentity{
 		Private:         encryptedIdentityColumn,
 		Public:          public.Bytes,
-		VerifySignature: signed.Signature.Bytes,
+		VerifySignature: signed.Bytes,
 	}
 	if err := tx.CreateOnlyIdentityKey(ctx, *encryptedIdentity); err != nil {
 		return fmt.Errorf("failed to create only identity key: %w", err)

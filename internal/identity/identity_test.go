@@ -16,19 +16,18 @@ func TestBasics(t *testing.T) {
 	assert.NoError(t, err)
 
 	data := []byte("hunter2")
-	signedData, err := signer.Sign(data)
+	signature, err := signer.Sign(data)
 	assert.NoError(t, err)
 
 	verifier, err := keyPair.Verifier()
 	assert.NoError(t, err)
 
-	data, err = verifier.Verify(signedData)
+	err = verifier.Verify(signature, data)
 	assert.NoError(t, err)
-	assert.Equal(t, "hunter2", string(data))
 
 	// Now fail it just for sanity
-	signedData.Signature.Bytes[0] = ^signedData.Signature.Bytes[0]
-	_, err = verifier.Verify(signedData)
+	signature.Bytes[0] = ^signature.Bytes[0]
+	err = verifier.Verify(signature, data)
 	assert.EqualError(t, err, "failed to verify signature: verifier_factory: invalid signature")
 }
 
@@ -46,7 +45,7 @@ func TestCertificate(t *testing.T) {
 	assert.NoError(t, err)
 	runnerStore, err := NewStoreNewKeys(runnerIdent)
 	assert.NoError(t, err)
-	request, err := runnerStore.NewGetCertificateRequest()
+	request, err := runnerStore.NewCertificateRequest()
 	assert.NoError(t, err)
 
 	// Hand wave "send the request to the CA"

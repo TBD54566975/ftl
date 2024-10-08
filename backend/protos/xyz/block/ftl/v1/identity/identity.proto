@@ -10,18 +10,12 @@ message CertificateContent {
   bytes public_key = 2;
 }
 
-message SignedMessage {
-  bytes message = 1;
+message CertificateRequest {
+  CertificateContent content = 1;
   bytes signature = 2;
 }
 
-message CertificateRequest {
-  // Serialised in the app: node identity and its public key, signed by the node.
-  SignedMessage signed_message = 1;
-}
-
-
 message Certificate {
-  // Serialised in the app: node identity + node public key, signed by the controller.
-  SignedMessage signed_message = 1;
+  CertificateContent content = 1;
+  bytes signature = 2;
 }

@@ -6,56 +6,47 @@ import (
 	"reflect"
 
 	"github.com/alecthomas/kong"
-
-	identitypb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/identity"
 )
 
-type SignedMessage struct {
-	// message is hidden here to prevent misuse.
-	// Use Verifier.Verify() to get the message while verifying the signature.
-	message   []byte
-	Signature Signature
-}
+// type SignedMessage struct {
+// 	// message is hidden here to prevent misuse.
+// 	// Use Verifier.Verify() to get the message while verifying the signature.
+// 	message   []byte
+// 	Signature Signature
+// }
 
-// NewSignedMessage ensures that the data is signed correctly.
-func NewSignedMessage(verifier Verifier, data []byte, signature Signature) (SignedMessage, error) {
-	signedMessage := SignedMessage{message: data, Signature: signature}
+// // NewSignedMessage ensures that the data is signed correctly.
+// func NewSignedMessage(verifier Verifier, data []byte, signature Signature) (SignedMessage, error) {
+// 	signedMessage := SignedMessage{message: data, Signature: signature}
 
-	_, err := verifier.Verify(signedMessage)
-	if err != nil {
-		return SignedMessage{}, fmt.Errorf("failed to verify signed message: %w", err)
-	}
+// 	_, err := verifier.Verify(signedMessage)
+// 	if err != nil {
+// 		return SignedMessage{}, fmt.Errorf("failed to verify signed message: %w", err)
+// 	}
 
-	return signedMessage, nil
-}
+// 	return signedMessage, nil
+// }
 
-func ParseSignedMessageFromProto(proto *identitypb.SignedMessage) SignedMessage {
-	return SignedMessage{
-		message:   proto.Message,
-		Signature: NewSignature(proto.Signature),
-	}
-}
+// func (sm SignedMessage) VerifiedMessage(verifier Verifier) ([]byte, error) {
+// 	message, err := verifier.Verify(sm)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to verify signed message: %w", err)
+// 	}
+// 	return message, nil
+// }
 
-func (sm SignedMessage) VerifiedMessage(verifier Verifier) ([]byte, error) {
-	message, err := verifier.Verify(sm)
-	if err != nil {
-		return nil, fmt.Errorf("failed to verify signed message: %w", err)
-	}
-	return message, nil
-}
+// // UnverifiedMessage returns the message without checking the signature.
+// // Don't use this unless there's a good reason to do so (e.g. needing the public key before having access to the signature)
+// func (sm SignedMessage) UnverifiedMessage() []byte {
+// 	return sm.message
+// }
 
-// UnverifiedMessage returns the message without checking the signature.
-// Don't use this unless there's a good reason to do so (e.g. needing the public key before having access to the signature)
-func (sm SignedMessage) UnverifiedMessage() []byte {
-	return sm.message
-}
-
-func (sm SignedMessage) ToProto() *identitypb.SignedMessage {
-	return &identitypb.SignedMessage{
-		Message:   sm.message,
-		Signature: sm.Signature.Bytes,
-	}
-}
+// func (sm SignedMessage) ToProto() *identitypb.SignedMessage {
+// 	return &identitypb.SignedMessage{
+// 		Message:   sm.message,
+// 		Signature: sm.Signature.Bytes,
+// 	}
+// }
 
 type Signature struct {
 	Bytes []byte

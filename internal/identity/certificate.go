@@ -3,6 +3,8 @@ package identity
 import (
 	"fmt"
 
+	"google.golang.org/protobuf/proto"
+
 	identitypb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/identity"
 )
 
@@ -36,36 +38,62 @@ func (c CertificateContent) String() string {
 	return fmt.Sprintf("CertficateContent(%s %x)", c.Identity, c.PublicKey)
 }
 
+type CertificateRequest struct {
+	CertificateContent
+	Signature Signature
+}
+
+// CertificateRequestFromProto does not verify the signature.
+func CertificateRequestFromProto(proto *identitypb.CertificateRequest) (CertificateRequest, error) {
+	content, err := CertificateContentFromProto(proto.Content)
+	if err != nil {
+		return CertificateRequest{}, fmt.Errorf("failed to parse certificate content: %w", err)
+	}
+
+	return CertificateRequest{
+		CertificateContent: content,
+		Signature:          NewSignature(proto.Signature),
+	}, nil
+}
+
+func (c CertificateRequest) ToProto() *identitypb.CertificateRequest {
+	return &identitypb.CertificateRequest{
+		Content:   c.CertificateContent.ToProto(),
+		Signature: c.Signature.Bytes,
+	}
+}
+
 type Certificate struct {
 	CertificateContent
 	Signature Signature
 }
 
 func (c Certificate) Verify(caVerifier Verifier) error {
-	signedMessage, err := c.ToSignedMessage()
+	encoded, err := proto.Marshal(c.CertificateContent.ToProto())
 	if err != nil {
-		return fmt.Errorf("failed to encode to signed message: %w", err)
+		return fmt.Errorf("failed to marshal certificate content: %w", err)
 	}
-	_, err = caVerifier.Verify(signedMessage)
-	if err != nil {
+
+	if err = caVerifier.Verify(c.Signature, encoded); err != nil {
 		return fmt.Errorf("failed to verify ca certificate: %w", err)
 	}
+
 	return nil
 }
 
-func (c Certificate) ToSignedMessage() (SignedMessage, error) {
-	// encoded, err := proto.Marshal(&c.CertificateContent.ToProto())
-	// if err != nil {
-	// 	return SignedMessage{}, fmt.Errorf("failed to marshal certificate content: %w", err)
-	// }
+// func (c Certificate) ToSignedMessage() (SignedMessage, error) {
+// 	// encoded, err := proto.Marshal(&c.CertificateContent.ToProto())
+// 	// if err != nil {
+// 	// 	return SignedMessage{}, fmt.Errorf("failed to marshal certificate content: %w", err)
+// 	// }
 
-	// return SignedMessage{
-	// 	message:   encoded,
-	// 	Signature: c.Signature,
-	// }, nil
+// 	// return SignedMessage{
+// 	// 	message:   encoded,
+// 	// 	Signature: c.Signature,
+// 	// }, nil
 
-	panic("not implemented")
-}
+// 	panic("not implemented")
+// }
 
 func ParseCertificateFromProto(protoCert *identitypb.Certificate) (Certificate, error) {
 	// encoded := ParseSignedMessageFromProto(protoCert.SignedMessage)
@@ -107,12 +135,13 @@ func (c Certificate) ToProto() *identitypb.Certificate {
 
 // CertifiedSignedData is sent by a node and proves identity based on a certificate.
 type CertifiedSignedData struct {
-	Certificate   Certificate
-	SignedMessage SignedMessage
+	Certificate Certificate
+	Message     []byte
+	Signature   Signature
 }
 
 func (c CertifiedSignedData) String() string {
-	return fmt.Sprintf("CertifiedSignedData data:%x signature:%x (%s)", c.SignedMessage.message, c.SignedMessage.Signature, c.Certificate)
+	return fmt.Sprintf("CertifiedSignedData data:%x signature:%x (%s)", c.Message, c.Signature, c.Certificate)
 }
 
 // Verify against the CA and then the node certificate. Only return the data if both are valid.
