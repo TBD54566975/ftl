@@ -17,13 +17,14 @@ type releaseCmd struct {
 }
 
 type releasePublishCmd struct {
+	Registry             string `help:"Registry host:port" default:"127.0.0.1:5001"`
 	DSN                  string `help:"DAL DSN." default:"postgres://127.0.0.1:15432/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	MaxOpenDBConnections int    `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
 	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 }
 
 func (d *releasePublishCmd) Run() error {
-	svc, err := createContainerService(d.DSN, d.MaxOpenDBConnections, d.MaxIdleDBConnections)
+	svc, err := createContainerService(d.DSN, d.Registry, d.MaxOpenDBConnections, d.MaxIdleDBConnections)
 	if err != nil {
 		return fmt.Errorf("failed to create container service: %w", err)
 	}
@@ -43,13 +44,14 @@ func (d *releasePublishCmd) Run() error {
 }
 
 type releaseListCmd struct {
+	Registry             string `help:"Registry host:port" default:"127.0.0.1:5001"`
 	DSN                  string `help:"DAL DSN." default:"postgres://127.0.0.1:15432/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	MaxOpenDBConnections int    `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
 	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 }
 
 func (d *releaseListCmd) Run() error {
-	svc, err := createContainerService(d.DSN, d.MaxOpenDBConnections, d.MaxIdleDBConnections)
+	svc, err := createContainerService(d.DSN, d.Registry, d.MaxOpenDBConnections, d.MaxIdleDBConnections)
 	if err != nil {
 		return fmt.Errorf("failed to create container service: %w", err)
 	}
@@ -72,7 +74,7 @@ func (d *releaseListCmd) Run() error {
 	return nil
 }
 
-func createContainerService(dsn string, maxOpenConn int, maxIdleCon int) (*artefacts.ContainerService, error) {
+func createContainerService(dsn string, reg string, maxOpenConn int, maxIdleCon int) (*artefacts.ContainerService, error) {
 	conn, err := internalobservability.OpenDBAndInstrument(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open DB connection: %w", err)
@@ -81,7 +83,7 @@ func createContainerService(dsn string, maxOpenConn int, maxIdleCon int) (*artef
 	conn.SetMaxOpenConns(maxOpenConn)
 
 	return artefacts.NewContainerService(artefacts.ContainerConfig{
-		Registry:       "localhost:5000",
+		Registry:       reg,
 		AllowPlainHTTP: true,
 	}, conn), nil
 }

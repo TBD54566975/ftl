@@ -101,7 +101,7 @@ func (s *ContainerService) GetDigestsKeys(ctx context.Context, digests []sha256.
 		}
 	}
 	missing = make([]sha256.SHA256, 0)
-	for d, _ := range set {
+	for d := range set {
 		missing = append(missing, d)
 	}
 	return keys, missing, nil
