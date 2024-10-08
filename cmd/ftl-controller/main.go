@@ -15,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/k8sscaling"
-	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	cfdal "github.com/TBD54566975/ftl/internal/configuration/dal"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -23,6 +22,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/server"
 )
 
 var cli struct {
@@ -75,6 +75,8 @@ func main() {
 	kctx.FatalIfErrorf(err)
 	ctx = manager.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling(cli.DisableIstio), conn, false)
+	err = server.RunWithSignalHandler(ctx, func(ctx context.Context) error {
+		return controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling(cli.DisableIstio), conn, false)
+	})
 	kctx.FatalIfErrorf(err)
 }

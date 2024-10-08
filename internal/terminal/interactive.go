@@ -25,7 +25,6 @@ var _ readline.AutoCompleter = &FTLCompletion{}
 type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Context
 
 func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) error {
-
 	if !readline.DefaultIsTerminal() {
 		return nil
 	}
@@ -72,7 +71,6 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 	for {
 		line, err := l.Readline()
 		if errors.Is(err, readline.ErrInterrupt) {
-
 			if len(line) == 0 {
 				break
 			}

@@ -11,9 +11,9 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/provisioner"
-	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/server"
 )
 
 var cli struct {
@@ -43,6 +43,8 @@ func main() {
 	registry, err := provisioner.RegistryFromConfigFile(ctx, cli.ProvisionerConfig.PluginConfigFile)
 	kctx.FatalIfErrorf(err, "failed to create provisioner registry")
 
-	err = provisioner.Start(ctx, cli.ProvisionerConfig, registry)
+	err = server.RunWithSignalHandler(ctx, func(ctx context.Context) error {
+		return provisioner.Start(ctx, cli.ProvisionerConfig, registry)
+	})
 	kctx.FatalIfErrorf(err, "failed to start provisioner")
 }

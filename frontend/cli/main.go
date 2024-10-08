@@ -5,11 +5,9 @@ import (
 	"errors"
 	"net/url"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"syscall"
 
 	"github.com/alecthomas/kong"
 	kongtoml "github.com/alecthomas/kong-toml"
@@ -20,7 +18,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
-	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -79,7 +76,7 @@ type CLI struct {
 var cli CLI
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	csm := &currentStatusManager{}
 	app := createKongApplication(&cli, csm)
 	app.FatalIfErrorf(prepareNewCmd(ctx, app, os.Args[1:]))
@@ -118,22 +115,11 @@ func main() {
 
 	os.Setenv("FTL_CONFIG", configPath)
 
-	// Handle signals.
-	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-sigch
-		logger.Debugf("FTL terminating with signal %s", sig)
-		cancel()
-		_ = syscall.Kill(-syscall.Getpid(), sig.(syscall.Signal)) //nolint:forcetypeassert,errcheck // best effort
-		os.Exit(0)
-	}()
-
 	config, err := projectconfig.Load(ctx, configPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		kctx.FatalIfErrorf(err)
 	}
-	bindContext := makeBindContext(config, logger, cancel)
+	bindContext := makeBindContext(config, logger)
 	ctx = bindContext(ctx, kctx)
 
 	err = kctx.Run(ctx)
@@ -171,7 +157,7 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 	return app
 }
 
-func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, cancel context.CancelFunc) terminal.KongContextBinder {
+func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger) terminal.KongContextBinder {
 	var bindContext terminal.KongContextBinder
 	bindContext = func(ctx context.Context, kctx *kong.Context) context.Context {
 		kctx.Bind(projectConfig)
@@ -206,7 +192,6 @@ func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, can
 		kctx.Bind(cli.Endpoint)
 		kctx.BindTo(ctx, (*context.Context)(nil))
 		kctx.Bind(bindContext)
-		kctx.BindTo(cancel, (*context.CancelFunc)(nil))
 		return ctx
 	}
 	return bindContext
