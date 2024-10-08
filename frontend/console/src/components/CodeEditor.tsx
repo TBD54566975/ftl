@@ -31,11 +31,13 @@ export const CodeEditor = ({
   onTextChanged,
   readonly = false,
   schema,
+  id,
 }: {
   value: string
   onTextChanged?: (text: string) => void
   readonly?: boolean
   schema?: string
+  id?: string
 }) => {
   const { isDarkMode } = useUserPreferences()
   const editorContainerRef = useRef(null)
@@ -111,5 +113,5 @@ export const CodeEditor = ({
     }
   }, [value])
 
-  return <div className='h-full' ref={editorContainerRef} />
+  return <div id={id} className='h-full' ref={editorContainerRef} />
 }

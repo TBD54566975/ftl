@@ -96,6 +96,7 @@ const ModuleSection = ({
     <li key={module.name} id={`module-tree-module-${module.name}`} className='mb-2'>
       <div
         ref={moduleRef}
+        id={`module-${module.name}-tree-group`}
         className={classNames(
           isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
           'group flex w-full modules-center gap-x-2 space-y-1 text-left text-sm font-medium cursor-pointer leading-6',
@@ -105,6 +106,7 @@ const ModuleSection = ({
         <PackageIcon aria-hidden='true' className='size-4 my-1 ml-3 shrink-0' />
         {module.name}
         <CircleArrowRight02Icon
+          id={`module-${module.name}-view-icon`}
           className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600'
           onClick={(e) => {
             e.preventDefault()

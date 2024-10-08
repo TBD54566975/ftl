@@ -173,7 +173,7 @@ func manglePathParameters(params map[string]string, ref *schema.Ref, sch *schema
 	return map[string]any{}, nil
 }
 
-// Takes the map of path parameters and transforms them into the appropriate type
+// Takes the map of query parameters and transforms them into the appropriate type
 func mangleQueryParameters(params map[string]any, underlying map[string][]string, ref *schema.Ref, sch *schema.Schema) (any, error) {
 
 	paramsField, err := getField("query", ref, sch)
