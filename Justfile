@@ -1,7 +1,7 @@
 set positional-arguments
 set shell := ["bash", "-c"]
 
-WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml"
+WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml --ignore **/types.ftl.go"
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
