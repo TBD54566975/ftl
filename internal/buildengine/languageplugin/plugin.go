@@ -10,11 +10,8 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/pubsub"
-	"google.golang.org/protobuf/proto"
 
-	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal/builderrors"
-	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -25,10 +22,13 @@ import (
 const BuildLockTimeout = time.Minute
 
 type BuildResult struct {
-	Name      string
-	Errors    []builderrors.Error
-	Schema    *schema.Module
 	StartTime time.Time
+
+	Schema *schema.Module
+	Errors []builderrors.Error
+
+	// Files to deploy, relative to the module config's DeployDir
+	Deploy []string
 }
 
 // PluginEvent is used to notify of updates from the plugin.
@@ -129,7 +129,7 @@ type getDependenciesCommand struct {
 
 func (getDependenciesCommand) pluginCmd() {}
 
-type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error
+type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error)
 
 type CompilerBuildError struct {
 	err error
@@ -328,47 +328,10 @@ func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.
 	}
 
 	transaction := watcher.GetTransaction(config.Dir)
-	err = build(ctx, projectRoot, config, sch, buildEnv, devMode, transaction)
+	result, err := build(ctx, projectRoot, config, sch, buildEnv, devMode, transaction)
 	if err != nil {
 		return BuildResult{}, err
 	}
-	errors, err := loadProtoErrors(config)
-	if err != nil {
-		return BuildResult{}, fmt.Errorf("failed to read build errors for module: %w", err)
-	}
-
-	result := BuildResult{
-		Errors:    errors,
-		StartTime: startTime,
-	}
-
-	if builderrors.ContainsTerminalError(errors) {
-		// skip reading schema
-		return result, nil
-	}
-
-	moduleSchema, err := schema.ModuleFromProtoFile(config.Schema())
-	if err != nil {
-		return BuildResult{}, fmt.Errorf("failed to read schema for module: %w", err)
-	}
-	result.Schema = moduleSchema
+	result.StartTime = startTime
 	return result, nil
-}
-
-func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]builderrors.Error, error) {
-	if _, err := os.Stat(config.Errors); errors.Is(err, os.ErrNotExist) {
-		return nil, nil
-	}
-
-	content, err := os.ReadFile(config.Errors)
-	if err != nil {
-		return nil, fmt.Errorf("could not load build errors file: %w", err)
-	}
-
-	errorspb := &languagepb.ErrorList{}
-	err = proto.Unmarshal(content, errorspb)
-	if err != nil {
-		return nil, fmt.Errorf("could not unmarshal build errors %w", err)
-	}
-	return languagepb.ErrorsFromProto(errorspb), nil
 }

@@ -20,12 +20,8 @@ import (
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/TBD54566975/ftl"
-	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
@@ -262,9 +258,9 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, moduleDir string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (err error) {
+func Build(ctx context.Context, projectRootDir, moduleDir string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (moduleSch *schema.Module, buildErrors []builderrors.Error, err error) {
 	if err := filesTransaction.Begin(); err != nil {
-		return err
+		return nil, nil, fmt.Errorf("could not start a file transaction: %w", err)
 	}
 	defer func() {
 		if terr := filesTransaction.End(); terr != nil {
@@ -274,12 +270,12 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 
 	replacements, goModVersion, err := updateGoModule(filepath.Join(moduleDir, "go.mod"))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	goVersion := runtime.Version()[2:]
 	if semver.Compare("v"+goVersion, "v"+goModVersion) < 0 {
-		return fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
+		return nil, nil, fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
 	}
 
 	ftlVersion := ""
@@ -291,7 +287,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 	if pcpath, ok := projectconfig.DefaultConfigPath().Get(); ok {
 		pc, err := projectconfig.Load(ctx, pcpath)
 		if err != nil {
-			return fmt.Errorf("failed to load project config: %w", err)
+			return nil, nil, fmt.Errorf("failed to load project config: %w", err)
 		}
 		projectName = pc.Name
 	}
@@ -302,7 +298,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 	buildDir := buildDir(moduleDir)
 	err = os.MkdirAll(buildDir, 0750)
 	if err != nil {
-		return fmt.Errorf("failed to create build directory: %w", err)
+		return nil, nil, fmt.Errorf("failed to create build directory: %w", err)
 	}
 
 	var sharedModulesPaths []string
@@ -317,36 +313,30 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 		GoVersion:          goModVersion,
 		SharedModulesPaths: sharedModulesPaths,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
-		return fmt.Errorf("failed to scaffold zip: %w", err)
+		return nil, nil, fmt.Errorf("failed to scaffold zip: %w", err)
 	}
 
 	logger.Debugf("Extracting schema")
 	result, err := extract.Extract(config.Dir)
 	if err != nil {
-		return err
+		return nil, nil, fmt.Errorf("could not extract schema: %w", err)
 	}
 
-	if err = writeSchemaErrors(config, result.Errors); err != nil {
-		return fmt.Errorf("failed to write schema errors: %w", err)
-	}
 	if builderrors.ContainsTerminalError(result.Errors) {
 		// Only bail if schema errors contain elements at level ERROR.
 		// If errors are only at levels below ERROR (e.g. INFO, WARN), the schema can still be used.
-		return nil
-	}
-	if err = writeSchema(config, result.Module); err != nil {
-		return fmt.Errorf("failed to write schema: %w", err)
+		return nil, result.Errors, nil
 	}
 
 	logger.Debugf("Generating main module")
 	mctx, err := buildMainModuleContext(sch, result, goModVersion, ftlVersion, projectName, sharedModulesPaths,
 		replacements)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mctx, scaffolder.Exclude("^go.mod$"),
 		scaffolder.Functions(funcs)); err != nil {
-		return err
+		return nil, nil, fmt.Errorf("failed to scaffold build template: %w", err)
 	}
 
 	logger.Debugf("Tidying go.mod files")
@@ -374,7 +364,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
 	if err := wg.Wait(); err != nil {
-		return err
+		return nil, nil, err // nolint:wrapcheck
 	}
 
 	logger.Debugf("Compiling")
@@ -387,7 +377,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 	buildEnv = append(buildEnv, "GODEBUG=http2client=0")
 	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunBuffered(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to compile: %w", err)
+		return nil, nil, fmt.Errorf("failed to compile: %w", err)
 	}
 	err = os.WriteFile(filepath.Join(mainDir, "../../launch"), []byte(`#!/bin/bash
 	if [ -n "$FTL_DEBUG_PORT" ] && command -v dlv &> /dev/null ; then
@@ -397,9 +387,9 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 	fi
 	`), 0770) // #nosec
 	if err != nil {
-		return fmt.Errorf("failed to write launch script: %w", err)
+		return nil, nil, fmt.Errorf("failed to write launch script: %w", err)
 	}
-	return nil
+	return result.Module, result.Errors, nil
 }
 
 // CleanStubs removes all generated stubs.
@@ -1152,47 +1142,6 @@ func shouldUpdateVersion(goModfile *modfile.File) bool {
 		}
 	}
 	return true
-}
-
-func writeSchema(config moduleconfig.AbsModuleConfig, module *schema.Module) error {
-	modulepb := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-	// If user has overridden GOOS and GOARCH we want to use those values.
-	goos, ok := os.LookupEnv("GOOS")
-	if !ok {
-		goos = runtime.GOOS
-	}
-	goarch, ok := os.LookupEnv("GOARCH")
-	if !ok {
-		goarch = runtime.GOARCH
-	}
-
-	modulepb.Runtime = &schemapb.ModuleRuntime{
-		CreateTime: timestamppb.Now(),
-		Language:   "go",
-		Os:         &goos,
-		Arch:       &goarch,
-	}
-	schemaBytes, err := proto.Marshal(module.ToProto())
-	if err != nil {
-		return fmt.Errorf("failed to marshal schema: %w", err)
-	}
-	err = os.WriteFile(config.Schema(), schemaBytes, 0600)
-	if err != nil {
-		return fmt.Errorf("could not write schema: %w", err)
-	}
-	return nil
-}
-
-func writeSchemaErrors(config moduleconfig.AbsModuleConfig, errors []builderrors.Error) error {
-	elBytes, err := proto.Marshal(languagepb.ErrorsToProto(errors))
-	if err != nil {
-		return fmt.Errorf("failed to marshal errors: %w", err)
-	}
-	err = os.WriteFile(config.Errors, elBytes, 0600)
-	if err != nil {
-		return fmt.Errorf("could not write build errors: %w", err)
-	}
-	return nil
 }
 
 // returns the import path and directory name for a Go type

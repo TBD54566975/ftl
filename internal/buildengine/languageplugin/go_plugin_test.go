@@ -55,10 +55,6 @@ func TestGoConfigDefaults(t *testing.T) {
 		{
 			dir: "../testdata/alpha",
 			expected: moduleconfig.CustomDefaults{
-				Deploy: []string{
-					"main",
-					"launch",
-				},
 				DeployDir: ".ftl",
 				Watch: []string{
 					"**/*.go",
@@ -71,10 +67,6 @@ func TestGoConfigDefaults(t *testing.T) {
 		{
 			dir: "../testdata/another",
 			expected: moduleconfig.CustomDefaults{
-				Deploy: []string{
-					"main",
-					"launch",
-				},
 				DeployDir: ".ftl",
 				Watch: []string{
 					"**/*.go",

@@ -23,14 +23,10 @@ type ModuleConfig struct {
 	Module   string `toml:"module"`
 	// Build is the command to build the module.
 	Build string `toml:"build"`
-	// Deploy is the list of files to deploy relative to the DeployDir.
-	Deploy []string `toml:"deploy"`
 	// DeployDir is the directory to deploy from, relative to the module directory.
 	DeployDir string `toml:"deploy-dir"`
 	// GeneratedSchemaDir is the directory to generate protobuf schema files into. These can be picked up by language specific build tools
 	GeneratedSchemaDir string `toml:"generated-schema-dir"`
-	// Errors is the name of the error file relative to the DeployDir.
-	Errors string `toml:"errors"`
 	// Watch is the list of files to watch for changes.
 	Watch []string `toml:"watch"`
 
@@ -56,10 +52,8 @@ type UnvalidatedModuleConfig ModuleConfig
 
 type CustomDefaults struct {
 	Build              string
-	Deploy             []string
 	DeployDir          string
 	GeneratedSchemaDir string
-	Errors             string
 	Watch              []string
 
 	// only the root keys in LanguageConfig are used to find missing values that can be defaulted
@@ -128,17 +122,6 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 			panic(fmt.Sprintf("generated-schema-dir %q is not beneath module directory %q", clone.GeneratedSchemaDir, clone.Dir))
 		}
 	}
-	clone.Errors = filepath.Clean(filepath.Join(clone.DeployDir, clone.Errors))
-	if !strings.HasPrefix(clone.Errors, clone.DeployDir) {
-		panic(fmt.Sprintf("errors %q is not beneath deploy directory %q", clone.Errors, clone.DeployDir))
-	}
-	clone.Deploy = slices.Map(clone.Deploy, func(p string) string {
-		out := filepath.Clean(filepath.Join(clone.DeployDir, p))
-		if !strings.HasPrefix(out, clone.DeployDir) {
-			panic(fmt.Sprintf("deploy path %q is not beneath deploy directory %q", out, clone.DeployDir))
-		}
-		return out
-	})
 	// Watch paths are allowed to be outside the deploy directory.
 	clone.Watch = slices.Map(clone.Watch, func(p string) string {
 		return filepath.Clean(filepath.Join(clone.Dir, p))
@@ -153,9 +136,6 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	if c.Realm == "" {
 		c.Realm = "home"
 	}
-	if c.Errors == "" {
-		c.Errors = "errors.pb"
-	}
 
 	// Custom defaults
 	if c.Build == "" {
@@ -163,9 +143,6 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	}
 	if c.DeployDir == "" {
 		c.DeployDir = customDefaults.DeployDir
-	}
-	if c.Deploy == nil {
-		c.Deploy = customDefaults.Deploy
 	}
 	if c.GeneratedSchemaDir == "" {
 		c.GeneratedSchemaDir = customDefaults.GeneratedSchemaDir
@@ -185,24 +162,12 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	}
 
 	// Validate
-	if len(c.Deploy) == 0 {
-		return ModuleConfig{}, fmt.Errorf("no deploy files configured")
-	}
 	if c.DeployDir == "" {
 		return ModuleConfig{}, fmt.Errorf("no deploy directory configured")
-	}
-	if c.Errors == "" {
-		return ModuleConfig{}, fmt.Errorf("no errors file configured")
 	}
 	if !isBeneath(c.Dir, c.DeployDir) {
 		return ModuleConfig{}, fmt.Errorf("deploy-dir %s must be relative to the module directory %s", c.DeployDir, c.Dir)
 	}
-	for _, deploy := range c.Deploy {
-		if !isBeneath(c.Dir, deploy) {
-			return ModuleConfig{}, fmt.Errorf("deploy %s files must be relative to the module directory %s", deploy, c.Dir)
-		}
-	}
-	c.Deploy = slices.Sort(c.Deploy)
 	c.Watch = slices.Sort(c.Watch)
 	return ModuleConfig(c), nil
 }
