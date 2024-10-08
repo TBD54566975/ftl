@@ -36,9 +36,14 @@ func TestWatch(t *testing.T) {
 			two = loadModule(t, ic.WorkingDir(), "two")
 		},
 		func(tb testing.TB, ic in.TestContext) {
-			waitForEvents(tb, events, []WatchEvent{
+			// Module creation may insert the files and then modify them (eg `go mod tidy`)
+			// so we allow change events to occur
+			waitForEventsWhileIgnoringEvents(tb, events, []WatchEvent{
 				WatchEventModuleAdded{Config: one},
 				WatchEventModuleAdded{Config: two},
+			}, []WatchEvent{
+				WatchEventModuleChanged{Config: one},
+				WatchEventModuleChanged{Config: two},
 			})
 		},
 
@@ -72,8 +77,10 @@ func TestWatchWithBuildModifyingFiles(t *testing.T) {
 
 		in.FtlNew("go", "one"),
 		func(tb testing.TB, ic in.TestContext) {
-			waitForEvents(tb, events, []WatchEvent{
+			waitForEventsWhileIgnoringEvents(tb, events, []WatchEvent{
 				WatchEventModuleAdded{Config: loadModule(t, ic.WorkingDir(), "one")},
+			}, []WatchEvent{
+				WatchEventModuleChanged{Config: loadModule(t, ic.WorkingDir(), "one")},
 			})
 		},
 		func(tb testing.TB, ic in.TestContext) {
@@ -106,8 +113,10 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 
 		in.FtlNew("go", "one"),
 		func(tb testing.TB, ic in.TestContext) {
-			waitForEvents(tb, events, []WatchEvent{
+			waitForEventsWhileIgnoringEvents(tb, events, []WatchEvent{
 				WatchEventModuleAdded{Config: loadModule(t, ic.WorkingDir(), "one")},
+			}, []WatchEvent{
+				WatchEventModuleChanged{Config: loadModule(t, ic.WorkingDir(), "one")},
 			})
 		},
 		// Change a file in a module, within a transaction
@@ -155,6 +164,12 @@ func startWatching(ctx context.Context, t testing.TB, w *Watcher, dir string) (c
 // The expected events are matched by keyForEvent.
 func waitForEvents(t testing.TB, events chan WatchEvent, expected []WatchEvent) {
 	t.Helper()
+
+	waitForEventsWhileIgnoringEvents(t, events, expected, []WatchEvent{})
+}
+
+func waitForEventsWhileIgnoringEvents(t testing.TB, events chan WatchEvent, expected []WatchEvent, ignoredEvents []WatchEvent) {
+	t.Helper()
 	visited := map[string]bool{}
 	expectedKeys := []string{}
 	for _, event := range expected {
@@ -162,11 +177,20 @@ func waitForEvents(t testing.TB, events chan WatchEvent, expected []WatchEvent) 
 		visited[key] = false
 		expectedKeys = append(expectedKeys, key)
 	}
+	ignored := map[string]bool{}
+	for _, event := range ignoredEvents {
+		key := keyForEvent(event)
+		ignored[key] = true
+	}
 	eventCount := 0
 	for {
 		select {
 		case actual := <-events:
 			key := keyForEvent(actual)
+			_, isIgnored := ignored[key]
+			if isIgnored {
+				continue
+			}
 			hasVisited, isExpected := visited[key]
 			assert.True(t, isExpected, "unexpected event %v instead of %v", key, expectedKeys)
 			assert.False(t, hasVisited, "duplicate event %v", key)
