@@ -164,7 +164,7 @@ func newIdentityStore(ctx context.Context, config Config, key model.RunnerKey, c
 		return identity.Wallet{}, fmt.Errorf("failed to get certificate: %w", err)
 	}
 
-	certificate, err := identity.ParseCertificateFromProto(certResp.Msg.Certificate)
+	certificate, err := identity.CertificateFromProto(certResp.Msg.Certificate)
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)
 		return identity.Wallet{}, fmt.Errorf("failed to create certificate: %w", err)

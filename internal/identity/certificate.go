@@ -81,36 +81,16 @@ func (c Certificate) Verify(caVerifier Verifier) error {
 	return nil
 }
 
-// func (c Certificate) ToSignedMessage() (SignedMessage, error) {
-// 	// encoded, err := proto.Marshal(&c.CertificateContent.ToProto())
-// 	// if err != nil {
-// 	// 	return SignedMessage{}, fmt.Errorf("failed to marshal certificate content: %w", err)
-// 	// }
+func CertificateFromProto(protoCert *identitypb.Certificate) (Certificate, error) {
+	content, err := CertificateContentFromProto(protoCert.Content)
+	if err != nil {
+		return Certificate{}, fmt.Errorf("failed to parse certificate content: %w", err)
+	}
 
-// 	// return SignedMessage{
-// 	// 	message:   encoded,
-// 	// 	Signature: c.Signature,
-// 	// }, nil
-
-// 	panic("not implemented")
-// }
-
-func ParseCertificateFromProto(protoCert *identitypb.Certificate) (Certificate, error) {
-	// encoded := ParseSignedMessageFromProto(protoCert.SignedMessage)
-	// var certificateContent CertificateContent
-	// if err := proto.Unmarshal(encoded.message, &certificateContent); err != nil {
-	// 	return Certificate{}, fmt.Errorf("failed to unmarshal certificate content: %w", err)
-	// }
-
-	// return Certificate{
-	// 	CertificateContent: CertificateContent{
-	// 		Identity:  certificateContent.Identity,
-	// 		PublicKey: certificateContent.PublicKey,
-	// 	},
-	// 	Signature: encoded.Signature,
-	// }, nil
-	//
-	panic("not implemented")
+	return Certificate{
+		CertificateContent: content,
+		Signature:          NewSignature(protoCert.Signature),
+	}, nil
 }
 
 func (c Certificate) String() string {
