@@ -20,7 +20,6 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -93,14 +92,13 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 
 func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*schema.Schema, error) {
 	pb := &schema.Schema{}
-	found := false
-	tried := ""
+	errs := []error{}
 	modules, err := watch.DiscoverModules(ctx, projectConfig.AbsModuleDirs())
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover modules %w", err)
 	}
 
-	moduleSchemas := make(chan either.Either[*schema.Module, moduleconfig.UnvalidatedModuleConfig], len(modules))
+	moduleSchemas := make(chan either.Either[*schema.Module, error], len(modules))
 	defer close(moduleSchemas)
 
 	for _, m := range modules {
@@ -108,43 +106,45 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 			// Loading a plugin can be expensive. Is there a better way?
 			plugin, err := languageplugin.New(ctx, m.Language)
 			if err != nil {
-				moduleSchemas <- either.RightOf[*schema.Module](m)
+				moduleSchemas <- either.RightOf[*schema.Module](err)
 			}
 			defer plugin.Kill(ctx) // nolint:errcheck
 
 			customDefaults, err := plugin.ModuleConfigDefaults(ctx, m.Dir)
 			if err != nil {
-				moduleSchemas <- either.RightOf[*schema.Module](m)
+				moduleSchemas <- either.RightOf[*schema.Module](err)
 			}
 
 			config, err := m.FillDefaultsAndValidate(customDefaults)
 			if err != nil {
-				moduleSchemas <- either.RightOf[*schema.Module](m)
+				moduleSchemas <- either.RightOf[*schema.Module](err)
 			}
-			module, err := schema.ModuleFromProtoFile(config.Schema())
+			module, err := schema.ModuleFromProtoFile(config.Abs().Schema())
 			if err != nil {
-				moduleSchemas <- either.RightOf[*schema.Module](m)
+				moduleSchemas <- either.RightOf[*schema.Module](err)
 				return
 			}
-			moduleSchemas <- either.LeftOf[moduleconfig.UnvalidatedModuleConfig](module)
+			moduleSchemas <- either.LeftOf[error](module)
 		}()
 	}
 	sch := &schema.Schema{}
 	for range len(modules) {
 		result := <-moduleSchemas
 		switch result := result.(type) {
-		case either.Left[*schema.Module, moduleconfig.UnvalidatedModuleConfig]:
+		case either.Left[*schema.Module, error]:
 			sch.Upsert(result.Get())
-			found = true
-		case either.Right[*schema.Module, moduleconfig.UnvalidatedModuleConfig]:
-			tried += fmt.Sprintf(" failed to read schema for %s; did you run ftl build?", result.Get().Module)
+		case either.Right[*schema.Module, error]:
+			errs = append(errs, result.Get())
 		default:
 			panic(fmt.Sprintf("unexpected type %T", result))
 
 		}
 	}
-	if !found {
-		return nil, errors.New(tried)
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("failed to read schema, possibly due to not building: %w", errors.Join(errs...))
+	}
+	if len(sch.Modules) == 0 {
+		return nil, errors.New("no modules found")
 	}
 	return pb, nil
 }
