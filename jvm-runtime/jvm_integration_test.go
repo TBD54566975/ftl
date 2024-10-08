@@ -136,6 +136,17 @@ func TestJVMCoreFunctionality(t *testing.T) {
 	tests = append(tests, PairedVerbTest("optionalTestObjectVerb", exampleObject)...)
 	tests = append(tests, PairedVerbTest("optionalTestObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
 	tests = append(tests, PairedVerbTest("externalTypeVerb", "did:web:abc123")...)
+	tests = append(tests, PairedVerbTest("typeEnumVerb", AnimalWrapper{Animal: Animal{
+		Name: "Cat",
+		Value: Cat{
+			Name:      "Fluffy",
+			FurLength: 10,
+			Breed:     "Siamese",
+		},
+	}})...)
+	tests = append(tests, PairedVerbTest("valueEnumVerb", ColorWrapper{Color: Red})...)
+	//tests = append(tests, PairedVerbTest("typeWrapperEnumVerb", "hello")...)
+	//tests = append(tests, PairedVerbTest("mixedEnumVerb", Thing{})...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalIntVerb", ftl.None[int]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalFloatVerb", ftl.None[float64]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalStringVerb", ftl.None[string]())...)
@@ -256,3 +267,43 @@ type ParameterizedType[T any] struct {
 	Option ftl.Option[T] `json:"option"`
 	Map    map[string]T  `json:"map"`
 }
+
+type ColorInt int
+
+const (
+	Red   ColorInt = 0
+	Green ColorInt = 1
+	Blue  ColorInt = 2
+)
+
+type ColorWrapper struct {
+	Color ColorInt `json:"color"`
+}
+
+type TypeWrapperEnum interface{ typeEnum() }
+type Scalar string
+type StringList []string
+
+func (Scalar) typeEnum()     {}
+func (StringList) typeEnum() {}
+
+type Animal struct {
+	Name  string `json:"name"`
+	Value Cat    `json:"value"`
+}
+type Cat struct {
+	Name      string `json:"name"`
+	FurLength int    `json:"furLength"`
+	Breed     string `json:"breed"`
+}
+
+type AnimalWrapper struct {
+	Animal Animal `json:"animal"`
+}
+
+type Mixed interface{ tag() }
+type Word string
+type Thing struct{}
+
+func (Word) tag()  {}
+func (Thing) tag() {}

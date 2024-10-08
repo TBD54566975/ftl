@@ -232,11 +232,12 @@ public class TestInvokeGoFromJava {
     @Export
     @Verb
     public AnimalWrapper typeEnumVerb(AnimalWrapper animal, TypeEnumVerbClient client) {
-        if (animal.getAnimal().isCat()) {
-            return client.call(new AnimalWrapper(animal.getAnimal().getCat()));
-        } else {
-            return client.call(new AnimalWrapper(animal.getAnimal().getDog()));
-        }
+        return animal;
+//        if (animal.getAnimal().isCat()) {
+//            return client.call(new AnimalWrapper(animal.getAnimal().getCat()));
+//        } else {
+//            return client.call(new AnimalWrapper(animal.getAnimal().getDog()));
+//        }
     }
 
     @Export
