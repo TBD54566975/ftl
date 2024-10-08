@@ -32,11 +32,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			language: "kotlin",
 			dir:      "testdata/echokotlin",
 			expected: moduleconfig.CustomDefaults{
-				Build: "mvn -B package",
-				Deploy: []string{
-					"launch",
-					"quarkus-app",
-				},
+				Build:              "mvn -B package",
 				DeployDir:          "target",
 				GeneratedSchemaDir: "src/main/ftl-module-schema",
 				Watch:              watch,
@@ -49,11 +45,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			language: "kotlin",
 			dir:      "testdata/externalkotlin",
 			expected: moduleconfig.CustomDefaults{
-				Build: "mvn -B package",
-				Deploy: []string{
-					"launch",
-					"quarkus-app",
-				},
+				Build:              "mvn -B package",
 				DeployDir:          "target",
 				GeneratedSchemaDir: "src/main/ftl-module-schema",
 				Watch:              watch,

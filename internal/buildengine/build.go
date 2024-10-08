@@ -20,7 +20,7 @@ import (
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRootDir string, sch *schema.Schema, config moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (*schema.Module, error) {
+func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRootDir string, sch *schema.Schema, config moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx).Module(config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
@@ -34,14 +34,14 @@ func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRoo
 }
 
 // handleBuildResult processes the result of a build
-func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult either.Either[languageplugin.BuildResult, error]) (*schema.Module, error) {
+func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult either.Either[languageplugin.BuildResult, error]) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx)
 	config := c.Abs()
 
 	var result languageplugin.BuildResult
 	switch eitherResult := eitherResult.(type) {
 	case either.Right[languageplugin.BuildResult, error]:
-		return nil, fmt.Errorf("failed to build module: %w", eitherResult.Get())
+		return nil, nil, fmt.Errorf("failed to build module: %w", eitherResult.Get())
 	case either.Left[languageplugin.BuildResult, error]:
 		result = eitherResult.Get()
 	}
@@ -56,7 +56,7 @@ func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherR
 	}
 
 	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
+		return nil, nil, errors.Join(errs...)
 	}
 
 	logger.Infof("Module built (%.2fs)", time.Since(result.StartTime).Seconds())
@@ -64,10 +64,10 @@ func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherR
 	// write schema proto to deploy directory
 	schemaBytes, err := proto.Marshal(result.Schema.ToProto())
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal schema: %w", err)
+		return nil, nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
 	if err := os.WriteFile(config.Schema(), schemaBytes, 0600); err != nil {
-		return nil, fmt.Errorf("failed to write schema: %w", err)
+		return nil, nil, fmt.Errorf("failed to write schema: %w", err)
 	}
-	return result.Schema, nil
+	return result.Schema, result.Deploy, nil
 }

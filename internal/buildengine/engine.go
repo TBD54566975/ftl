@@ -338,11 +338,14 @@ func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline
 				continue
 			}
 			deployGroup.Go(func() error {
-				module, ok := e.moduleMetas.Load(moduleName)
+				meta, ok := e.moduleMetas.Load(moduleName)
 				if !ok {
 					return fmt.Errorf("module %q not found", moduleName)
 				}
-				return Deploy(ctx, module.module, replicas, waitForDeployOnline, e.client)
+				if len(meta.module.Deploy) == 0 {
+					return fmt.Errorf("no files found to deploy for %q", moduleName)
+				}
+				return Deploy(ctx, meta.module, meta.module.Deploy, replicas, waitForDeployOnline, e.client)
 			})
 		}
 		if err := deployGroup.Wait(); err != nil {
@@ -599,7 +602,8 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 			buildGroup.Go(func() error {
 				e.modulesToBuild.Store(module.Config.Module, false)
 				terminal.UpdateModuleState(ctx, module.Config.Module, terminal.BuildStateDeploying)
-				return Deploy(buildCtx, module, replicas, waitForDeployOnline, e.client)
+
+				return Deploy(buildCtx, module, module.Deploy, replicas, waitForDeployOnline, e.client)
 			})
 			return nil
 		}, moduleNames...)
@@ -758,7 +762,7 @@ func (e *Engine) tryBuild(ctx context.Context, mustBuild map[string]bool, module
 
 	meta, ok := e.moduleMetas.Load(moduleName)
 	if !ok {
-		return fmt.Errorf("Module %q not found", moduleName)
+		return fmt.Errorf("module %q not found", moduleName)
 	}
 
 	for _, dep := range meta.module.Dependencies {
@@ -770,6 +774,11 @@ func (e *Engine) tryBuild(ctx context.Context, mustBuild map[string]bool, module
 
 	err := e.build(ctx, moduleName, builtModules, schemas)
 	if err == nil && callback != nil {
+		// load latest meta as it may have been updated
+		meta, ok = e.moduleMetas.Load(moduleName)
+		if !ok {
+			return fmt.Errorf("module %q not found", moduleName)
+		}
 		return callback(ctx, meta.module)
 	}
 
@@ -802,11 +811,20 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	moduleSchema, err := build(ctx, meta.plugin, e.projectRoot, sch, meta.module.Config, e.buildEnv, e.devMode)
+	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, sch, meta.module.Config, e.buildEnv, e.devMode)
 	if err != nil {
 		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 		return err
 	}
+	// update files to deploy
+	e.moduleMetas.Compute(moduleName, func(meta moduleMeta, exists bool) (new moduleMeta, delete bool) {
+		if !exists {
+			return moduleMeta{}, true
+		}
+		meta.module = meta.module.CopyWithDeploy(deploy)
+		return meta, false
+	})
+
 	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilt)
 	schemas <- moduleSchema
 	return nil
@@ -911,14 +929,16 @@ func (e *Engine) listenForBuildUpdates(originalCtx context.Context) {
 				}
 
 			case languageplugin.AutoRebuildEndedEvent:
-				if _, err := handleBuildResult(ctx, meta.module.Config, event.Result); err != nil {
+				_, deploy, err := handleBuildResult(ctx, meta.module.Config, event.Result)
+				if err != nil {
 					logger.Errorf(err, "build failed")
 					e.reportBuildFailed(err)
 					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateFailed)
 					continue
 				}
+				// TODO: update deploy dirs
 				terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateDeploying)
-				if err := Deploy(ctx, meta.module, 1, true, e.client); err != nil {
+				if err := Deploy(ctx, meta.module, deploy, 1, true, e.client); err != nil {
 					logger.Errorf(err, "deploy failed")
 					e.reportBuildFailed(err)
 				} else {

@@ -51,7 +51,6 @@ func (p *goPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (module
 	return moduleconfig.CustomDefaults{
 		Watch:     watch,
 		DeployDir: deployDir,
-		Deploy:    []string{"main", "launch"},
 	}, nil
 }
 
@@ -160,9 +159,14 @@ func (p *goPlugin) GetDependencies(ctx context.Context, config moduleconfig.Modu
 	})
 }
 
-func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
-	if err := compile.Build(ctx, projectRoot, config.Dir, config, sch, transaction, buildEnv, devMode); err != nil {
-		return CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
+func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+	moduleSch, buildErrs, err := compile.Build(ctx, projectRoot, config.Dir, config, sch, transaction, buildEnv, devMode)
+	if err != nil {
+		return BuildResult{}, CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
 	}
-	return nil
+	return BuildResult{
+		Errors: buildErrs,
+		Schema: moduleSch,
+		Deploy: []string{"main", "launch"},
+	}, nil
 }

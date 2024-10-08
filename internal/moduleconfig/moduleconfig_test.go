@@ -22,10 +22,8 @@ func TestDefaulting(t *testing.T) {
 			},
 			defaults: CustomDefaults{
 				Build:              "build",
-				Deploy:             []string{"deploy"},
 				DeployDir:          "deploydir",
 				GeneratedSchemaDir: "generatedschemadir",
-				Errors:             "errors.pb",
 				Watch:              []string{"a", "b", "c"},
 			},
 			expected: ModuleConfig{
@@ -34,10 +32,8 @@ func TestDefaulting(t *testing.T) {
 				Module:             "nothingset",
 				Language:           "test",
 				Build:              "build",
-				Deploy:             []string{"deploy"},
 				DeployDir:          "deploydir",
 				GeneratedSchemaDir: "generatedschemadir",
-				Errors:             "errors.pb",
 				Watch:              []string{"a", "b", "c"},
 			},
 		},
@@ -47,10 +43,8 @@ func TestDefaulting(t *testing.T) {
 				Module:             "allset",
 				Language:           "test",
 				Build:              "custombuild",
-				Deploy:             []string{"customdeploy"},
 				DeployDir:          "customdeploydir",
 				GeneratedSchemaDir: "customgeneratedschemadir",
-				Errors:             "customerrors.pb",
 				Watch:              []string{"custom1"},
 				LanguageConfig: map[string]any{
 					"build-tool": "maven",
@@ -59,10 +53,8 @@ func TestDefaulting(t *testing.T) {
 			},
 			defaults: CustomDefaults{
 				Build:              "build",
-				Deploy:             []string{"deploy"},
 				DeployDir:          "deploydir",
 				GeneratedSchemaDir: "generatedschemadir",
-				Errors:             "errors.pb",
 				Watch:              []string{"a", "b", "c"},
 			},
 			expected: ModuleConfig{
@@ -71,10 +63,8 @@ func TestDefaulting(t *testing.T) {
 				Module:             "allset",
 				Language:           "test",
 				Build:              "custombuild",
-				Deploy:             []string{"customdeploy"},
 				DeployDir:          "customdeploydir",
 				GeneratedSchemaDir: "customgeneratedschemadir",
-				Errors:             "customerrors.pb",
 				Watch:              []string{"custom1"},
 				LanguageConfig: map[string]any{
 					"build-tool": "maven",
@@ -97,7 +87,6 @@ func TestDefaulting(t *testing.T) {
 				},
 			},
 			defaults: CustomDefaults{
-				Deploy:    []string{"example"},
 				DeployDir: "deploydir",
 				LanguageConfig: map[string]any{
 					"alreadyset": "incorrect",
@@ -109,9 +98,7 @@ func TestDefaulting(t *testing.T) {
 				},
 			},
 			expected: ModuleConfig{
-				Deploy:    []string{"example"},
 				DeployDir: "deploydir",
-				Errors:    "errors.pb",
 				Realm:     "home",
 				Dir:       "b",
 				Module:    "languageconfig",
@@ -145,22 +132,8 @@ func TestDefaulting(t *testing.T) {
 				Module:   "nodeploydir",
 				Language: "test",
 			},
-			defaults: CustomDefaults{
-				Deploy: []string{"example"},
-			},
-			error: "no deploy directory configured",
-		},
-		{
-			config: UnvalidatedModuleConfig{
-				Dir:      "b",
-				Module:   "deploynotindir",
-				Language: "test",
-			},
-			defaults: CustomDefaults{
-				Deploy:    []string{"example"},
-				DeployDir: "../../deploydir",
-			},
-			error: "must be relative to the module directory",
+			defaults: CustomDefaults{},
+			error:    "no deploy directory configured",
 		},
 	} {
 		t.Run(tt.config.Module, func(t *testing.T) {
