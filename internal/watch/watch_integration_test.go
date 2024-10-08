@@ -21,7 +21,7 @@ const pollFrequency = time.Millisecond * 500
 func TestWatch(t *testing.T) {
 	var events chan WatchEvent
 	var topic *pubsub.Topic[WatchEvent]
-	var one, two moduleconfig.ModuleConfig
+	var one, two moduleconfig.UnvalidatedModuleConfig
 
 	w := NewWatcher("**/*.go", "go.mod", "go.sum")
 	in.Run(t,
@@ -141,9 +141,9 @@ func TestWatchWithBuildAndUserModifyingFiles(t *testing.T) {
 	)
 }
 
-func loadModule(t *testing.T, dir, name string) moduleconfig.ModuleConfig {
+func loadModule(t *testing.T, dir, name string) moduleconfig.UnvalidatedModuleConfig {
 	t.Helper()
-	config, err := moduleconfig.LoadModuleConfig(filepath.Join(dir, name))
+	config, err := moduleconfig.LoadConfig(filepath.Join(dir, name))
 	assert.NoError(t, err)
 	return config
 }

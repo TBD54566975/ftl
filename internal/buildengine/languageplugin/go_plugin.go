@@ -1,4 +1,4 @@
-package buildengine
+package languageplugin
 
 import (
 	"context"
@@ -33,17 +33,26 @@ type goPlugin struct {
 
 var _ = LanguagePlugin(&goPlugin{})
 
-func newGoPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *goPlugin {
-	internal := newInternalPlugin(ctx, config, buildGo)
+func newGoPlugin(ctx context.Context) *goPlugin {
+	internal := newInternalPlugin(ctx, "go", buildGo)
 	return &goPlugin{
 		internalPlugin: internal,
 	}
 }
 
-type scaffoldingContext struct {
-	Name      string
-	GoVersion string
-	Replace   map[string]string
+func (p *goPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
+	deployDir := ".ftl"
+	watch := []string{"**/*.go", "go.mod", "go.sum"}
+	additionalWatch, err := replacementWatches(dir, deployDir)
+	watch = append(watch, additionalWatch...)
+	if err != nil {
+		return moduleconfig.CustomDefaults{}, err
+	}
+	return moduleconfig.CustomDefaults{
+		Watch:     watch,
+		DeployDir: deployDir,
+		Deploy:    []string{"main", "launch"},
+	}, nil
 }
 
 func (p *goPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
@@ -60,6 +69,12 @@ func (p *goPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, erro
 			PlaceHolder: "OLD=NEW,...",
 		},
 	}, nil
+}
+
+type scaffoldingContext struct {
+	Name      string
+	GoVersion string
+	Replace   map[string]string
 }
 
 func (p *goPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Config, c moduleconfig.ModuleConfig, flags map[string]string) error {
@@ -101,11 +116,11 @@ func (p *goPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Co
 	return nil
 }
 
-func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
+func (p *goPlugin) GetDependencies(ctx context.Context, config moduleconfig.ModuleConfig) ([]string, error) {
 	return p.internalPlugin.getDependencies(ctx, func() ([]string, error) {
 		dependencies := map[string]bool{}
 		fset := token.NewFileSet()
-		err := watch.WalkDir(p.config.Abs().Dir, func(path string, d fs.DirEntry) error {
+		err := watch.WalkDir(config.Abs().Dir, func(path string, d fs.DirEntry) error {
 			if !d.IsDir() {
 				return nil
 			}
@@ -127,7 +142,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 							continue
 						}
 						module := strings.Split(strings.TrimPrefix(path, "ftl/"), "/")[0]
-						if module == p.config.Module {
+						if module == config.Module {
 							continue
 						}
 						dependencies[module] = true
@@ -137,7 +152,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 			return nil
 		})
 		if err != nil {
-			return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", p.config.Module, err)
+			return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", config.Module, err)
 		}
 		modules := maps.Keys(dependencies)
 		sort.Strings(modules)
@@ -146,7 +161,7 @@ func (p *goPlugin) GetDependencies(ctx context.Context) ([]string, error) {
 }
 
 func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
-	if err := compile.Build(ctx, projectRoot, config.Dir, sch, transaction, buildEnv, devMode); err != nil {
+	if err := compile.Build(ctx, projectRoot, config.Dir, config, sch, transaction, buildEnv, devMode); err != nil {
 		return CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
 	}
 	return nil

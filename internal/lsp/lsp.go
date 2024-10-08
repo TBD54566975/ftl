@@ -16,6 +16,7 @@ import (
 	"github.com/tliron/kutil/version"
 
 	"github.com/TBD54566975/ftl/internal/buildengine"
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	ftlErrors "github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -108,7 +109,7 @@ func (s *Server) post(err error) {
 		}
 
 		var ce builderrors.Error
-		var cbe buildengine.CompilerBuildError
+		var cbe languageplugin.CompilerBuildError
 		if errors.As(e, &ce) {
 			filename := ce.Pos.Filename
 			if _, exists := errByFilename[filename]; !exists {

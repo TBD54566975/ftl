@@ -1,4 +1,4 @@
-package buildengine
+package languageplugin
 
 import (
 	"context"
@@ -20,11 +20,20 @@ type rustPlugin struct {
 
 var _ = LanguagePlugin(&rustPlugin{})
 
-func newRustPlugin(ctx context.Context, config moduleconfig.ModuleConfig) *rustPlugin {
-	internal := newInternalPlugin(ctx, config, buildRust)
+func newRustPlugin(ctx context.Context) *rustPlugin {
+	internal := newInternalPlugin(ctx, "rust", buildRust)
 	return &rustPlugin{
 		internalPlugin: internal,
 	}
+}
+
+func (p *rustPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
+	return moduleconfig.CustomDefaults{
+		Build:     "cargo build",
+		DeployDir: "_ftl/target/debug",
+		Deploy:    []string{"main"},
+		Watch:     []string{"**/*.rs", "Cargo.toml", "Cargo.lock"},
+	}, nil
 }
 
 func (p *rustPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
@@ -35,7 +44,7 @@ func (p *rustPlugin) CreateModule(ctx context.Context, projConfig projectconfig.
 	return fmt.Errorf("not implemented")
 }
 
-func (p *rustPlugin) GetDependencies(ctx context.Context) ([]string, error) {
+func (p *rustPlugin) GetDependencies(ctx context.Context, config moduleconfig.ModuleConfig) ([]string, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

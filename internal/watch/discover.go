@@ -13,8 +13,8 @@ import (
 
 // DiscoverModules recursively loads all modules under the given directories
 // (or if none provided, the current working directory is used).
-func DiscoverModules(ctx context.Context, moduleDirs []string) ([]moduleconfig.ModuleConfig, error) {
-	out := []moduleconfig.ModuleConfig{}
+func DiscoverModules(ctx context.Context, moduleDirs []string) ([]moduleconfig.UnvalidatedModuleConfig, error) {
+	out := []moduleconfig.UnvalidatedModuleConfig{}
 	logger := log.FromContext(ctx)
 
 	modules, err := discoverModules(moduleDirs...)
@@ -30,7 +30,7 @@ func DiscoverModules(ctx context.Context, moduleDirs []string) ([]moduleconfig.M
 // discoverModules recursively loads all modules under the given directories.
 //
 // If no directories are provided, the current working directory is used.
-func discoverModules(dirs ...string) ([]moduleconfig.ModuleConfig, error) {
+func discoverModules(dirs ...string) ([]moduleconfig.UnvalidatedModuleConfig, error) {
 	if len(dirs) == 0 {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -38,14 +38,14 @@ func discoverModules(dirs ...string) ([]moduleconfig.ModuleConfig, error) {
 		}
 		dirs = []string{cwd}
 	}
-	out := []moduleconfig.ModuleConfig{}
+	out := []moduleconfig.UnvalidatedModuleConfig{}
 	for _, dir := range dirs {
 		err := WalkDir(dir, func(path string, d fs.DirEntry) error {
 			if filepath.Base(path) != "ftl.toml" {
 				return nil
 			}
 			moduleDir := filepath.Dir(path)
-			config, err := moduleconfig.LoadModuleConfig(moduleDir)
+			config, err := moduleconfig.LoadConfig(moduleDir)
 			if err != nil {
 				return err
 			}
