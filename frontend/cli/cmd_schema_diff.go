@@ -91,7 +91,6 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 }
 
 func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*schema.Schema, error) {
-	pb := &schema.Schema{}
 	errs := []error{}
 	modules, err := watch.DiscoverModules(ctx, projectConfig.AbsModuleDirs())
 	if err != nil {
@@ -140,13 +139,11 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 
 		}
 	}
-	if len(errs) > 0 {
+	// we want schema even if there are errors as long as we have some modules
+	if len(sch.Modules) == 0 && len(errs) > 0 {
 		return nil, fmt.Errorf("failed to read schema, possibly due to not building: %w", errors.Join(errs...))
 	}
-	if len(sch.Modules) == 0 {
-		return nil, errors.New("no modules found")
-	}
-	return pb, nil
+	return sch, nil
 }
 
 func schemaForURL(ctx context.Context, url url.URL) (*schema.Schema, error) {

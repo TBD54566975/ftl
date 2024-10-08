@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/alecthomas/types/either"
-	"github.com/alecthomas/types/optional"
-
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -14,6 +11,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/watch"
+	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/optional"
 )
 
 // localClient reads and writes to local projectconfig files without making any network
