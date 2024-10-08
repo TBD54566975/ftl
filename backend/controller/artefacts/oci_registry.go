@@ -85,7 +85,26 @@ func NewContainerService(c ContainerConfig, conn libdal.Connection) *ContainerSe
 }
 
 func (s *ContainerService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
-	return nil, nil, nil
+	set := make(map[sha256.SHA256]bool)
+	for _, d := range digests {
+		set[d] = true
+	}
+	modules, err := s.DiscoverModuleArtefacts(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to discover module artefacts: %w", err)
+	}
+	keys = make([]ArtefactKey, 0)
+	for _, m := range modules {
+		if set[m.ModuleDigest] {
+			keys = append(keys, ArtefactKey{Digest: m.ModuleDigest})
+			delete(set, m.ModuleDigest)
+		}
+	}
+	missing = make([]sha256.SHA256, 0)
+	for d, _ := range set {
+		missing = append(missing, d)
+	}
+	return keys, missing, nil
 }
 
 func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
