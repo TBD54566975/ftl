@@ -817,7 +817,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		return err
 	}
 	// update files to deploy
-	e.moduleMetas.Compute(moduleName, func(meta moduleMeta, exists bool) (new moduleMeta, delete bool) {
+	e.moduleMetas.Compute(moduleName, func(meta moduleMeta, exists bool) (out moduleMeta, shouldDelete bool) {
 		if !exists {
 			return moduleMeta{}, true
 		}

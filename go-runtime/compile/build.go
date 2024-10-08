@@ -260,7 +260,7 @@ func buildDir(moduleDir string) string {
 // Build the given module.
 func Build(ctx context.Context, projectRootDir, moduleDir string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (moduleSch *schema.Module, buildErrors []builderrors.Error, err error) {
 	if err := filesTransaction.Begin(); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("could not start a file transaction: %w", err)
 	}
 	defer func() {
 		if terr := filesTransaction.End(); terr != nil {
@@ -319,7 +319,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 	logger.Debugf("Extracting schema")
 	result, err := extract.Extract(config.Dir)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("could not extract schema: %w", err)
 	}
 
 	if builderrors.ContainsTerminalError(result.Errors) {
@@ -336,7 +336,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 	}
 	if err := internal.ScaffoldZip(buildTemplateFiles(), moduleDir, mctx, scaffolder.Exclude("^go.mod$"),
 		scaffolder.Functions(funcs)); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to scaffold build template: %w", err)
 	}
 
 	logger.Debugf("Tidying go.mod files")
@@ -364,7 +364,7 @@ func Build(ctx context.Context, projectRootDir, moduleDir string, config modulec
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(moduleDir, "go.sum"))
 	})
 	if err := wg.Wait(); err != nil {
-		return nil, nil, err
+		return nil, nil, err // nolint:wrapcheck
 	}
 
 	logger.Debugf("Compiling")
