@@ -8,8 +8,7 @@ import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.Type;
 import org.jboss.jandex.TypeVariable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -18,7 +17,7 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 
 public class TypeAliasProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(TypeAliasProcessor.class);
+    private static final Logger log = Logger.getLogger(TypeAliasProcessor.class);
 
     @BuildStep
     public void processTypeAlias(CombinedIndexBuildItem index,
@@ -26,7 +25,7 @@ public class TypeAliasProcessor {
             BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem,
             BuildProducer<TypeAliasBuildItem> typeAliasBuildItemBuildProducer) {
         Collection<AnnotationInstance> typeAliasAnnotations = index.getIndex().getAnnotations(FTLDotNames.TYPE_ALIAS);
-        log.info("Processing {} type alias annotations into decls", typeAliasAnnotations.size());
+        log.infof("Processing %d type alias annotations into decls", typeAliasAnnotations.size());
         var beans = new AdditionalBeanBuildItem.Builder().setUnremovable();
         for (var mapper : typeAliasAnnotations) {
             boolean exported = mapper.target().hasAnnotation(FTLDotNames.EXPORT);

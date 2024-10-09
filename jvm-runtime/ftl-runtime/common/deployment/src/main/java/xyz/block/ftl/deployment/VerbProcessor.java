@@ -12,8 +12,7 @@ import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.arc.deployment.GeneratedBeanBuildItem;
@@ -43,7 +42,7 @@ public class VerbProcessor {
     public static final DotName VERB_CLIENT_SOURCE = DotName.createSimple(VerbClientSource.class);
     public static final DotName VERB_CLIENT_EMPTY = DotName.createSimple(VerbClientEmpty.class);
     public static final String TEST_ANNOTATION = "xyz.block.ftl.java.test.FTLManaged";
-    private static final Logger log = LoggerFactory.getLogger(VerbProcessor.class);
+    private static final Logger log = Logger.getLogger(VerbProcessor.class);
 
     @BuildStep
     VerbClientBuildItem handleVerbClients(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedClients,
@@ -51,7 +50,7 @@ public class VerbProcessor {
             ModuleNameBuildItem moduleNameBuildItem,
             LaunchModeBuildItem launchModeBuildItem) {
         var clientDefinitions = index.getComputingIndex().getAnnotations(VerbClientDefinition.class);
-        log.info("Processing {} verb clients", clientDefinitions.size());
+        log.infof("Processing %d verb clients", clientDefinitions.size());
         Map<DotName, VerbClientBuildItem.DiscoveredClients> clients = new HashMap<>();
         for (var clientDefinition : clientDefinitions) {
             var iface = clientDefinition.target().asClass();
@@ -236,7 +235,7 @@ public class VerbProcessor {
             List<TypeAliasBuildItem> typeAliasBuildItems // included to force typealias processing before this
     ) {
         Collection<AnnotationInstance> verbAnnotations = index.getIndex().getAnnotations(FTLDotNames.VERB);
-        log.info("Processing {} verb annotations into decls", verbAnnotations.size());
+        log.infof("Processing %d verb annotations into decls", verbAnnotations.size());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
         for (var verb : verbAnnotations) {
             boolean exported = verb.target().hasAnnotation(FTLDotNames.EXPORT);
@@ -248,7 +247,7 @@ public class VerbProcessor {
         }
 
         Collection<AnnotationInstance> cronAnnotations = index.getIndex().getAnnotations(FTLDotNames.CRON);
-        log.info("Processing {} cron job annotations into decls", cronAnnotations.size());
+        log.infof("Processing %d cron job annotations into decls", cronAnnotations.size());
         for (var cron : cronAnnotations) {
             var method = cron.target().asMethod();
             String className = method.declaringClass().name().toString();

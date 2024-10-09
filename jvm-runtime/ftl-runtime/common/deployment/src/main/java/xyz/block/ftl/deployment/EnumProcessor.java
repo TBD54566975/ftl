@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
@@ -21,8 +20,7 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.Type;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
@@ -40,14 +38,14 @@ import xyz.block.ftl.v1.schema.Value;
 
 public class EnumProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(EnumProcessor.class);
+    private static final Logger log = Logger.getLogger(EnumProcessor.class);
     public static final Set<PrimitiveType.Primitive> INT_TYPES = Set.of(INT, LONG, BYTE, SHORT);
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     SchemaContributorBuildItem handleEnums(CombinedIndexBuildItem index, FTLRecorder recorder) {
         var enumAnnotations = index.getIndex().getAnnotations(FTLDotNames.ENUM);
-        log.info("Processing {} enum annotations into decls", enumAnnotations.size());
+        log.infof("Processing %d enum annotations into decls", enumAnnotations.size());
         return new SchemaContributorBuildItem(moduleBuilder -> {
             try {
                 var decls = extractEnumDecls(index, enumAnnotations, recorder, moduleBuilder);

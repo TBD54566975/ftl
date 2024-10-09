@@ -4,8 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import io.quarkus.agroal.spi.JdbcDataSourceBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -19,14 +18,14 @@ import xyz.block.ftl.v1.schema.Decl;
 
 public class DatasourceProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(DatasourceProcessor.class);
+    private static final Logger log = Logger.getLogger(DatasourceProcessor.class);
 
     @BuildStep
     public SchemaContributorBuildItem registerDatasources(
             List<JdbcDataSourceBuildItem> datasources,
             BuildProducer<SystemPropertyBuildItem> systemPropProducer,
             BuildProducer<GeneratedResourceBuildItem> generatedResourceBuildItemBuildProducer) {
-        log.info("Processing {} datasource annotations into decls", datasources.size());
+        log.infof("Processing %d datasource annotations into decls", datasources.size());
         List<Decl> decls = new ArrayList<>();
         List<String> namedDatasources = new ArrayList<>();
         for (var ds : datasources) {

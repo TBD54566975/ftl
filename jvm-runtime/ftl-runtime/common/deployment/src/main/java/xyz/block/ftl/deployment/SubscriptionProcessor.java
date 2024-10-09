@@ -8,8 +8,7 @@ import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -25,14 +24,14 @@ import xyz.block.ftl.v1.schema.Ref;
 
 public class SubscriptionProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(SubscriptionProcessor.class);
+    private static final Logger log = Logger.getLogger(SubscriptionProcessor.class);
 
     @BuildStep
     SubscriptionMetaAnnotationsBuildItem subscriptionAnnotations(CombinedIndexBuildItem combinedIndexBuildItem,
             ModuleNameBuildItem moduleNameBuildItem) {
         Collection<AnnotationInstance> subscriptionAnnotations = combinedIndexBuildItem.getComputingIndex()
                 .getAnnotations(Subscription.class);
-        log.info("Processing {} subscription annotations into decls", subscriptionAnnotations.size());
+        log.infof("Processing %s subscription annotations into decls", subscriptionAnnotations.size());
         Map<DotName, SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation> annotations = new HashMap<>();
         for (var subscriptions : subscriptionAnnotations) {
             if (subscriptions.target().kind() != AnnotationTarget.Kind.CLASS) {
@@ -65,7 +64,7 @@ public class SubscriptionProcessor {
         for (var metaSub : subscriptionMetaAnnotationsBuildItem.getAnnotations().entrySet()) {
             for (var subscription : index.getIndex().getAnnotations(metaSub.getKey())) {
                 if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
-                    log.warn("Subscription annotation on non-method target: {}", subscription.target());
+                    log.warnf("Subscription annotation on non-method target: %s", subscription.target());
                     continue;
                 }
                 var method = subscription.target().asMethod();

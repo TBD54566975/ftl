@@ -15,8 +15,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.jboss.jandex.DotName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jboss.logging.Logger;
 import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
 
@@ -47,7 +46,7 @@ import xyz.block.ftl.runtime.http.FTLHttpHandler;
 
 public class ModuleProcessor {
 
-    private static final Logger log = LoggerFactory.getLogger(ModuleProcessor.class);
+    private static final Logger log = Logger.getLogger(ModuleProcessor.class);
 
     private static final String FEATURE = "ftl-java-runtime";
 
@@ -88,7 +87,7 @@ public class ModuleProcessor {
                     if (value != null) {
                         return new ModuleNameBuildItem(value);
                     } else {
-                        log.error("module name not found in {}", toml);
+                        log.errorf("module name not found in %s", toml);
                     }
                 }
                 if (source.getParent() == null) {
@@ -123,7 +122,7 @@ public class ModuleProcessor {
             i.getSchemaContributor().accept(moduleBuilder);
         }
 
-        log.info("Generating module '{}' schema from {} decls", moduleName, moduleBuilder.getDeclsCount());
+        log.infof("Generating module '%s' schema from %d decls", moduleName, moduleBuilder.getDeclsCount());
         Path output = outputTargetBuildItem.getOutputDirectory().resolve(SCHEMA_OUT);
         try (var out = Files.newOutputStream(output)) {
             moduleBuilder.writeTo(out);
