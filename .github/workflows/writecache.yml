@@ -35,6 +35,10 @@ jobs:
             ~/go/pkg/mod
             ${{ steps.find-go-build-cache.outputs.cache }}
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+      - name: Delete Maven Snapshots
+        id: maven-delete-snapshots
+        run: |
+          find ~/.m2/repository -type d -name "*SNAPSHOT" -exec rm -rf {} +
       - name: Save Maven Modules Cache
         id: cache-maven
         uses: actions/cache/save@v4
@@ -49,3 +53,7 @@ jobs:
             ~/.pnpm-store
             node_modules
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+      - name: Save Docker Images
+        uses: ScribeMD/docker-cache@0.5.0
+        with:
+          key: docker-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
