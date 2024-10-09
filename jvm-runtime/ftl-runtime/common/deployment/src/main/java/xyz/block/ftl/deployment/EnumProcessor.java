@@ -146,8 +146,8 @@ public class EnumProcessor {
 
     /**
      * Type Enums are an interface with 1+ implementing classes. The classes may be: </br>
-     *  - a wrapper for a FTL native type e.g. string, [string]. Has @EnumHolder annotation </br>
-     *  - a class with arbitrary fields </br>
+     * - a wrapper for a FTL native type e.g. string, [string]. Has @EnumHolder annotation </br>
+     * - a class with arbitrary fields </br>
      */
     private TypeEnum extractTypeEnum(CombinedIndexBuildItem index, ModuleBuilder moduleBuilder,
             ClassInfo classInfo, boolean exported) throws ClassNotFoundException {
