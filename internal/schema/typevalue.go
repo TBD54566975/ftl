@@ -8,6 +8,7 @@ import (
 
 var _ Value = (*TypeValue)(nil)
 
+//protobuf:3
 type TypeValue struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

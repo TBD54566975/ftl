@@ -119,7 +119,7 @@ func TestValidation(t *testing.T) {
 		{name: "IntAlias",
 			schema: `module test {
 			typealias IntAlias Int
-			data Test { intValue test.IntAlias } 
+			data Test { intValue test.IntAlias }
 			}`,
 			request: obj{"intValue": 10.0},
 		},
@@ -169,13 +169,13 @@ func TestParseQueryParams(t *testing.T) {
 		err     string
 	}{
 		{query: "", request: obj{}},
-		{query: "int=1", request: obj{"int": "1"}},
-		{query: "float=2.2", request: obj{"float": "2.2"}},
+		{query: "int=1", request: obj{"int": int64(1)}},
+		{query: "float=2.2", request: obj{"float": float64(2.2)}},
 		{query: "string=test", request: obj{"string": "test"}},
-		{query: "bool=true", request: obj{"bool": "true"}},
-		{query: "array=2", request: obj{"array": []string{"2"}}},
-		{query: "array=10&array=11", request: obj{"array": []string{"10", "11"}}},
-		{query: "int=10&array=11&array=12", request: obj{"int": "10", "array": []string{"11", "12"}}},
+		{query: "bool=true", request: obj{"bool": true}},
+		{query: "array=2", request: obj{"array": []any{int64(2)}}},
+		{query: "array=10&array=11", request: obj{"array": []any{int64(10), int64(11)}}},
+		{query: "int=10&array=11&array=12", request: obj{"int": int64(10), "array": []any{int64(11), int64(12)}}},
 		{query: "int=1&int=2", request: nil, err: `failed to parse query parameter "int": multiple values are not supported`},
 		{query: "[a,b]=c", request: nil, err: "complex key \"[a,b]\" is not supported, use '@json=' instead"},
 		{query: "array=[1,2]", request: nil, err: `failed to parse query parameter "array": complex value "[1,2]" is not supported, use '@json=' instead`},
@@ -245,7 +245,7 @@ func TestResponseBodyForVerb(t *testing.T) {
 					&schema.Data{
 						Name: "Test",
 						Fields: []*schema.Field{
-							{Name: "message", Type: &schema.String{}, Metadata: []schema.Metadata{&schema.MetadataAlias{Kind: schema.AliasKindJSON, Alias: "msg"}}},
+							{Name: "message", Type: &schema.String{}, Metadata: []schema.Metadata{&schema.MetadataAlias{Kind: schema.AliasKindJson, Alias: "msg"}}},
 						},
 					},
 					jsonVerb,

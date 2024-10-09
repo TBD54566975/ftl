@@ -21,6 +21,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -57,9 +58,11 @@ func TestNewCronJobsForModule(t *testing.T) {
 	err = parentDAL.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
 
+	timelineSrv := timeline.New(ctx, conn, encryption)
+
 	// Progress so that start_time is valid
 	clk.Add(time.Second)
-	cjs := NewForTesting(ctx, key, "test.com", encryption, *dal, clk)
+	cjs := NewForTesting(ctx, key, "test.com", encryption, timelineSrv, *dal, clk)
 	// All jobs need to be scheduled
 	expectUnscheduledJobs(t, dal, clk, 2)
 	unscheduledJobs, err := dal.GetUnscheduledCronJobs(ctx, clk.Now())

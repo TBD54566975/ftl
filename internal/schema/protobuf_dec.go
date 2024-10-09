@@ -112,7 +112,11 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Pos:   PosFromProto(s.Calls.Pos),
 			Calls: refListToSchema(s.Calls.Calls),
 		}
-
+	case *schemapb.Metadata_Config:
+		return &MetadataConfig{
+			Pos:    PosFromProto(s.Config.Pos),
+			Config: refListToSchema(s.Config.Config),
+		}
 	case *schemapb.Metadata_Databases:
 		return &MetadataDatabases{
 			Pos:   PosFromProto(s.Databases.Pos),
@@ -156,6 +160,12 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			MinBackoff: s.Retry.MinBackoff,
 			MaxBackoff: s.Retry.MaxBackoff,
 			Catch:      catch,
+		}
+
+	case *schemapb.Metadata_Secrets:
+		return &MetadataSecrets{
+			Pos:     PosFromProto(s.Secrets.Pos),
+			Secrets: refListToSchema(s.Secrets.Secrets),
 		}
 
 	case *schemapb.Metadata_Subscriber:

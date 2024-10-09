@@ -90,7 +90,7 @@ FROM deployments d
   LEFT JOIN runners r ON d.id = r.deployment_id
 WHERE min_replicas > 0
 GROUP BY d.id, m.name, m.language
-ORDER BY d.created_at;
+ORDER BY d.last_activated_at;
 
 -- name: GetDeploymentsWithMinReplicas :many
 SELECT sqlc.embed(d), m.name AS module_name, m.language
@@ -119,7 +119,7 @@ ORDER BY d.key;
 
 -- name: SetDeploymentDesiredReplicas :exec
 UPDATE deployments
-SET min_replicas = $2
+SET min_replicas = $2, last_activated_at = CASE WHEN min_replicas = 0 THEN (NOW() AT TIME ZONE 'utc') ELSE  last_activated_at END
 WHERE key = sqlc.arg('key')::deployment_key
 RETURNING 1;
 

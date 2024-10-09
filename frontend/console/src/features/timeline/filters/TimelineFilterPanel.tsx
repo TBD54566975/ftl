@@ -1,4 +1,4 @@
-import { Call02Icon, PackageReceiveIcon, Rocket01Icon } from 'hugeicons-react'
+import { Call02Icon, PackageReceiveIcon, Rocket01Icon, TimeQuarterPassIcon } from 'hugeicons-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { useModules } from '../../../api/modules/use-modules'
@@ -29,6 +29,7 @@ const EVENT_TYPES: Record<string, EventFilter> = {
     icon: <Rocket01Icon className='w-4 h-4 text-green-500 dark:text-green-300 ml-1' />,
   },
   ingress: { label: 'Ingress', type: EventType.INGRESS, icon: <PackageReceiveIcon className='w-4 h-4 text-sky-400 ml-1' /> },
+  cronScheduled: { label: 'Cron Scheduled', type: EventType.CRON_SCHEDULED, icon: <TimeQuarterPassIcon className='w-4 h-4 text-blue-500 ml-1' /> },
 }
 
 const LOG_LEVELS: Record<number, string> = {

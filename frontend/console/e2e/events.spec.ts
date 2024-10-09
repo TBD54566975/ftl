@@ -1,6 +1,6 @@
-import { expect, ftlTest } from './ftl-test'
+import { expect, test } from '@playwright/test'
 
-ftlTest('defaults to the events page', async ({ page }) => {
+test('defaults to the events page', async ({ page }) => {
   await page.goto('http://localhost:8892')
   const eventsNavItem = page.getByRole('link', { name: 'Events' })
 

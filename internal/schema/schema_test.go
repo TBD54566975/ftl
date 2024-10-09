@@ -49,6 +49,8 @@ module todo {
   export verb create(todo.CreateRequest) todo.CreateResponse
     +calls todo.destroy
 	+database calls todo.testdb
+    +secrets todo.secretValue
+    +config todo.configValue
 
   export verb destroy(builtin.HttpRequest<Unit, todo.DestroyRequest, Unit>) builtin.HttpResponse<todo.DestroyResponse, String>
       +ingress http GET /todo/destroy/{name}
@@ -189,6 +191,10 @@ Module
     MetadataCalls
       Ref
     MetadataDatabases
+      Ref
+    MetadataSecrets
+      Ref
+    MetadataConfig
       Ref
   Verb
     Ref
@@ -437,7 +443,7 @@ func TestParsing(t *testing.T) {
 						+retry 0 catch test.catch
 					verb catch(builtin.CatchRequest<Any>) Unit
 
-					fsm FSM 
+					fsm FSM
 						+ retry 10 1s 10s
 					{
 						start test.A
@@ -650,7 +656,7 @@ func TestParsing(t *testing.T) {
 			input: `
 				module test {
 					export topic topicA test.eventA
-				
+
 					topic topicB test.eventB
 
 					subscription subA1 test.topicA
@@ -975,7 +981,7 @@ module todo {
 	when Time
   }
   export verb create(todo.CreateRequest) todo.CreateResponse
-  	+calls todo.destroy +database calls todo.testdb
+  	+calls todo.destroy +database calls todo.testdb +secrets todo.secretValue +config todo.configValue
   export verb destroy(builtin.HttpRequest<Unit, todo.DestroyRequest, Unit>) builtin.HttpResponse<todo.DestroyResponse, String>
   	+ingress http GET /todo/destroy/{name}
   verb scheduled(Unit) Unit
@@ -1054,14 +1060,14 @@ var testSchema = MustValidate(&Schema{
 					Name:   "CreateRequest",
 					Export: true,
 					Fields: []*Field{
-						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJSON, Alias: "rqn"}}},
+						{Name: "name", Type: &Optional{Type: &Map{Key: &String{}, Value: &String{}}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJson, Alias: "rqn"}}},
 					},
 				},
 				&Data{
 					Name:   "CreateResponse",
 					Export: true,
 					Fields: []*Field{
-						{Name: "name", Type: &Array{Element: &String{}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJSON, Alias: "rsn"}}},
+						{Name: "name", Type: &Array{Element: &String{}}, Metadata: []Metadata{&MetadataAlias{Kind: AliasKindJson, Alias: "rsn"}}},
 					},
 				},
 				&Data{
@@ -1084,6 +1090,8 @@ var testSchema = MustValidate(&Schema{
 					Metadata: []Metadata{
 						&MetadataCalls{Calls: []*Ref{{Module: "todo", Name: "destroy"}}},
 						&MetadataDatabases{Calls: []*Ref{{Module: "todo", Name: "testdb"}}},
+						&MetadataSecrets{Secrets: []*Ref{{Module: "todo", Name: "secretValue"}}},
+						&MetadataConfig{Config: []*Ref{{Module: "todo", Name: "configValue"}}},
 					}},
 				&Verb{Name: "destroy",
 					Export:   true,

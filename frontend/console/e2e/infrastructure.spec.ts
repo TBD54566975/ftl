@@ -1,6 +1,7 @@
-import { expect, ftlTest } from './ftl-test'
+import { expect, test } from '@playwright/test'
 
-ftlTest('shows infrastructure', async ({ page }) => {
+test('shows infrastructure', async ({ page }) => {
+  await page.goto('http://localhost:8892')
   const infrastructureNavItem = page.getByRole('link', { name: 'Infrastructure' })
   await infrastructureNavItem.click()
   await expect(page).toHaveURL(/\/infrastructure\/controllers$/)

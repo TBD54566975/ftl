@@ -271,8 +271,6 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 		runnerScaling:           runnerScaling,
 	}
 	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, conn)
-	svc.cronJobs = cronSvc
 
 	pubSub := pubsub.New(conn, encryption, svc.tasks, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
@@ -283,6 +281,9 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
+
+	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, timelineSvc, conn)
+	svc.cronJobs = cronSvc
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 
@@ -983,6 +984,7 @@ func (s *Service) callWithRequest(
 	parentKey optional.Option[model.RequestKey],
 	sourceAddress string,
 ) (*connect.Response[ftlv1.CallResponse], error) {
+	logger := log.FromContext(ctx)
 	start := time.Now()
 	ctx, span := observability.Calls.BeginSpan(ctx, req.Msg.Verb)
 	defer span.End()
@@ -1001,6 +1003,7 @@ func (s *Service) callWithRequest(
 
 	verbRef := schema.RefFromProto(req.Msg.Verb)
 	verb := &schema.Verb{}
+	logger = logger.Module(verbRef.Module)
 
 	if err := sch.ResolveToType(verbRef, verb); err != nil {
 		if errors.Is(err, schema.ErrNotFound) {
@@ -1011,34 +1014,36 @@ func (s *Service) callWithRequest(
 		return nil, err
 	}
 
-	err := ingress.ValidateCallBody(req.Msg.Body, verb, sch)
-	if err != nil {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
-		return nil, err
-	}
-
-	module := verbRef.Module
-	route, ok := sstate.routes[module]
-	if !ok {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
-	}
-	client := s.clientsForEndpoint(route.Endpoint)
-
 	callers, err := headers.GetCallers(req.Header())
 	if err != nil {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("failed to get callers"))
 		return nil, err
 	}
 
-	if !verb.IsExported() {
-		for _, caller := range callers {
-			if caller.Module != module {
-				observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
-				return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
-			}
-		}
+	var currentCaller *schema.Ref // might be nil but that's fine. just means that it's not a cal from another verb
+	if len(callers) > 0 {
+		currentCaller = callers[len(callers)-1]
 	}
+
+	module := verbRef.Module
+
+	if currentCaller != nil && currentCaller.Module != module && !verb.IsExported() {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
+	}
+
+	err = validateCallBody(req.Msg.Body, verb, sch)
+	if err != nil {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
+		return nil, err
+	}
+
+	route, ok := sstate.routes[module]
+	if !ok {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
+	}
+	client := s.clientsForEndpoint(route.Endpoint)
 
 	var requestKey model.RequestKey
 	isNewRequestKey := false
@@ -1083,6 +1088,7 @@ func (s *Service) callWithRequest(
 	} else {
 		callResponse = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
+		logger.Errorf(err, "Call failed to verb %s for deployment %s", verbRef.String(), route.Deployment)
 	}
 	s.timeline.EnqueueEvent(ctx, &timeline.Call{
 		DeploymentKey:    route.Deployment,
@@ -1816,7 +1822,7 @@ func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, e
 				// as the deployments are in order
 				// We have a new route ready to go, so we can just set the old one to 0 replicas
 				// Do this in a TX so it doesn't happen until the route table is updated
-				deploymentLogger.Debugf("Setting %s to zero replicas", v.Key.String())
+				deploymentLogger.Debugf("Setting %s to zero replicas", prev.Deployment)
 				err := tx.SetDeploymentReplicas(ctx, prev.Deployment, 0)
 				if err != nil {
 					deploymentLogger.Errorf(err, "Failed to set replicas to 0 for deployment %s", prev.Deployment.String())
@@ -1898,6 +1904,24 @@ func makeBackoff(min, max time.Duration) backoff.Backoff {
 		Jitter: true,
 		Factor: 2,
 	}
+}
+
+func validateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error {
+	var root any
+	err := json.Unmarshal(body, &root)
+	if err != nil {
+		return fmt.Errorf("request body is not valid JSON: %w", err)
+	}
+
+	var opts []schema.EncodingOption
+	if e, ok := slices.FindVariant[*schema.MetadataEncoding](verb.Metadata); ok && e.Lenient {
+		opts = append(opts, schema.LenientMode())
+	}
+	err = schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, root, sch, opts...)
+	if err != nil {
+		return fmt.Errorf("could not validate HTTP request body: %w", err)
+	}
+	return nil
 }
 
 type Route struct {

@@ -1,6 +1,7 @@
-import { expect, ftlTest } from './ftl-test'
+import { expect, test } from '@playwright/test'
 
-ftlTest('shows active modules', async ({ page }) => {
+test('shows active modules', async ({ page }) => {
+  await page.goto('http://localhost:8892')
   const modulesNavItem = page.getByRole('link', { name: 'Modules' })
   await modulesNavItem.click()
   await expect(page).toHaveURL(/\/modules$/)

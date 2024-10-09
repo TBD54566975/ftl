@@ -9,6 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/chroma/v2/quick"
+	"github.com/alecthomas/types/either"
 	"github.com/hexops/gotextdiff"
 	"github.com/hexops/gotextdiff/myers"
 	"github.com/hexops/gotextdiff/span"
@@ -17,10 +18,12 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/terminal"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -78,6 +81,9 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 
 	// Similar to the `diff` command, exit with 1 if there are differences.
 	if diff != "" {
+		// Unfortunately we need to close the terminal before exit to make sure the output is printed
+		// This is only applicable when we explicitly call os.Exit
+		terminal.FromContext(ctx).Close()
 		os.Exit(1)
 	}
 
@@ -85,27 +91,59 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 }
 
 func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*schema.Schema, error) {
-	pb := &schema.Schema{}
-	found := false
-	tried := ""
+	errs := []error{}
 	modules, err := watch.DiscoverModules(ctx, projectConfig.AbsModuleDirs())
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover modules %w", err)
 	}
-	for _, moduleSettings := range modules {
-		mod, err := schema.ModuleFromProtoFile(moduleSettings.Abs().Schema())
-		if err != nil {
-			tried += fmt.Sprintf(" failed to read schema file %s; did you run ftl build?", moduleSettings.Abs().Schema())
-		} else {
-			found = true
-			pb.Modules = append(pb.Modules, mod)
-		}
 
+	moduleSchemas := make(chan either.Either[*schema.Module, error], len(modules))
+	defer close(moduleSchemas)
+
+	for _, m := range modules {
+		go func() {
+			// Loading a plugin can be expensive. Is there a better way?
+			plugin, err := languageplugin.New(ctx, m.Language)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](err)
+			}
+			defer plugin.Kill(ctx) // nolint:errcheck
+
+			customDefaults, err := plugin.ModuleConfigDefaults(ctx, m.Dir)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](err)
+			}
+
+			config, err := m.FillDefaultsAndValidate(customDefaults)
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](err)
+			}
+			module, err := schema.ModuleFromProtoFile(config.Abs().Schema())
+			if err != nil {
+				moduleSchemas <- either.RightOf[*schema.Module](err)
+				return
+			}
+			moduleSchemas <- either.LeftOf[error](module)
+		}()
 	}
-	if !found {
-		return nil, errors.New(tried)
+	sch := &schema.Schema{}
+	for range len(modules) {
+		result := <-moduleSchemas
+		switch result := result.(type) {
+		case either.Left[*schema.Module, error]:
+			sch.Upsert(result.Get())
+		case either.Right[*schema.Module, error]:
+			errs = append(errs, result.Get())
+		default:
+			panic(fmt.Sprintf("unexpected type %T", result))
+
+		}
 	}
-	return pb, nil
+	// we want schema even if there are errors as long as we have some modules
+	if len(sch.Modules) == 0 && len(errs) > 0 {
+		return nil, fmt.Errorf("failed to read schema, possibly due to not building: %w", errors.Join(errs...))
+	}
+	return sch, nil
 }
 
 func schemaForURL(ctx context.Context, url url.URL) (*schema.Schema, error) {

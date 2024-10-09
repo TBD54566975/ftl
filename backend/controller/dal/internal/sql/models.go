@@ -275,13 +275,14 @@ type CronJob struct {
 }
 
 type Deployment struct {
-	ID          int64
-	CreatedAt   time.Time
-	ModuleID    int64
-	Key         model.DeploymentKey
-	Schema      *schema.Module
-	Labels      json.RawMessage
-	MinReplicas int32
+	ID              int64
+	CreatedAt       time.Time
+	ModuleID        int64
+	Key             model.DeploymentKey
+	Schema          *schema.Module
+	Labels          json.RawMessage
+	MinReplicas     int32
+	LastActivatedAt time.Time
 }
 
 type FsmInstance struct {

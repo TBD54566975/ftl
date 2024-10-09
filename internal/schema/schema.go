@@ -61,7 +61,7 @@ func (s *Schema) ResolveRequestResponseType(ref *Ref) (Symbol, error) {
 		}
 	}
 
-	return s.resolveToDataMonomorphised(ref, nil)
+	return s.resolveToSymbolMonomorphised(ref, nil)
 }
 
 // ResolveMonomorphised resolves a reference to a monomorphised Data type.
@@ -88,6 +88,29 @@ func (s *Schema) resolveToDataMonomorphised(n Node, parent Node) (*Data, error) 
 		return typ.Monomorphise(p)
 	case *TypeAlias:
 		return s.resolveToDataMonomorphised(typ.Type, typ)
+	default:
+		return nil, fmt.Errorf("expected data or type alias of data, got %T", typ)
+	}
+}
+
+func (s *Schema) resolveToSymbolMonomorphised(n Node, parent Node) (Symbol, error) {
+	switch typ := n.(type) {
+	case *Ref:
+		resolved, ok := s.Resolve(typ).Get()
+		if !ok {
+			return nil, fmt.Errorf("unknown ref %s", typ)
+		}
+		return s.resolveToSymbolMonomorphised(resolved, typ)
+	case *Data:
+		p, ok := parent.(*Ref)
+		if !ok {
+			return nil, fmt.Errorf("expected data node parent to be a ref, got %T", p)
+		}
+		return typ.Monomorphise(p)
+	case *TypeAlias:
+		return s.resolveToSymbolMonomorphised(typ.Type, typ)
+	case Symbol:
+		return typ, nil
 	default:
 		return nil, fmt.Errorf("expected data or type alias of data, got %T", typ)
 	}

@@ -15,9 +15,8 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
-	"github.com/TBD54566975/ftl/backend/provisioner/deployment"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -43,21 +42,16 @@ func (c *Config) SetDefaults() {
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
 	// TODO: Store in a resource graph
-	currentResources map[string][]*provisioner.Resource
-	registry         *deployment.ProvisionerRegistry
+	currentResources map[string][]*proto.Resource
+	registry         *ProvisionerRegistry
 }
 
 var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
 
-func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, pluginConfig *deployment.ProvisionerPluginConfig) (*Service, error) {
-	registry, err := deployment.NewProvisionerRegistry(ctx, pluginConfig)
-	if err != nil {
-		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
-	}
-
+func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, registry *ProvisionerRegistry) (*Service, error) {
 	return &Service{
 		controllerClient: controllerClient,
-		currentResources: map[string][]*provisioner.Resource{},
+		currentResources: map[string][]*proto.Resource{},
 		registry:         registry,
 	}, nil
 }
@@ -67,6 +61,7 @@ func (s *Service) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*c
 }
 
 func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftlv1.CreateDeploymentRequest]) (*connect.Response[ftlv1.CreateDeploymentResponse], error) {
+	logger := log.FromContext(ctx)
 	// TODO: Block deployments to make sure only one module is modified at a time
 	moduleName := req.Msg.Schema.Name
 	module, err := schema.ModuleFromProto(req.Msg.Schema)
@@ -75,7 +70,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 
 	existingResources := s.currentResources[moduleName]
-	desiredResources, err := deployment.ExtractResources(module)
+	desiredResources, err := ExtractResources(module)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting resources from schema: %w", err)
 	}
@@ -85,6 +80,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 
 	deployment := s.registry.CreateDeployment(moduleName, desiredResources, existingResources)
 	running := true
+	logger.Debugf("Running deployment for module %s", moduleName)
 	for running {
 		running, err = deployment.Progress(ctx)
 		if err != nil {
@@ -92,6 +88,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 			return nil, fmt.Errorf("error running a provisioner: %w", err)
 		}
 	}
+	logger.Debugf("Finished deployment for module %s", moduleName)
 
 	// TODO: manage multiple deployments properly. Extract as a provisioner plugin
 	response, err := s.controllerClient.CreateDeployment(ctx, req)
@@ -104,8 +101,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	return response, nil
 }
 
-func replaceOutputs(to []*provisioner.Resource, from []*provisioner.Resource) error {
-	byID := map[string]*provisioner.Resource{}
+func replaceOutputs(to []*proto.Resource, from []*proto.Resource) error {
+	byID := map[string]*proto.Resource{}
 	for _, r := range from {
 		byID[r.ResourceId] = r
 	}
@@ -114,12 +111,12 @@ func replaceOutputs(to []*provisioner.Resource, from []*provisioner.Resource) er
 		if existing == nil {
 			continue
 		}
-		if mysqlTo, ok := r.Resource.(*provisioner.Resource_Mysql); ok {
-			if myslqFrom, ok := existing.Resource.(*provisioner.Resource_Mysql); ok {
+		if mysqlTo, ok := r.Resource.(*proto.Resource_Mysql); ok {
+			if myslqFrom, ok := existing.Resource.(*proto.Resource_Mysql); ok {
 				mysqlTo.Mysql.Output = myslqFrom.Mysql.Output
 			}
-		} else if postgresTo, ok := r.Resource.(*provisioner.Resource_Postgres); ok {
-			if postgresFrom, ok := existing.Resource.(*provisioner.Resource_Postgres); ok {
+		} else if postgresTo, ok := r.Resource.(*proto.Resource_Postgres); ok {
+			if postgresFrom, ok := existing.Resource.(*proto.Resource_Postgres); ok {
 				postgresTo.Postgres.Output = postgresFrom.Postgres.Output
 			}
 		} else {
@@ -130,7 +127,7 @@ func replaceOutputs(to []*provisioner.Resource, from []*provisioner.Resource) er
 }
 
 // Start the Provisioner. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, devel bool) error {
+func Start(ctx context.Context, config Config, registry *ProvisionerRegistry) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -138,16 +135,7 @@ func Start(ctx context.Context, config Config, devel bool) error {
 
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
-	pluginConfig := &deployment.ProvisionerPluginConfig{Default: "noop"}
-	if config.PluginConfigFile != nil {
-		pc, err := readPluginConfig(config.PluginConfigFile)
-		if err != nil {
-			return fmt.Errorf("error reading plugin configuration: %w", err)
-		}
-		pluginConfig = pc
-	}
-
-	svc, err := New(ctx, config, controllerClient, pluginConfig)
+	svc, err := New(ctx, config, controllerClient, registry)
 	if err != nil {
 		return err
 	}
@@ -167,16 +155,22 @@ func Start(ctx context.Context, config Config, devel bool) error {
 	return nil
 }
 
-func readPluginConfig(file *os.File) (*deployment.ProvisionerPluginConfig, error) {
-	result := deployment.ProvisionerPluginConfig{}
+func RegistryFromConfigFile(ctx context.Context, file *os.File) (*ProvisionerRegistry, error) {
+	config := provisionerPluginConfig{}
 	bytes, err := io.ReadAll(bufio.NewReader(file))
 	if err != nil {
 		return nil, fmt.Errorf("error reading plugin configuration: %w", err)
 	}
-	if err := toml.Unmarshal(bytes, &result); err != nil {
+	if err := toml.Unmarshal(bytes, &config); err != nil {
 		return nil, fmt.Errorf("error parsing plugin configuration: %w", err)
 	}
-	return &result, nil
+
+	registry, err := registryFromConfig(ctx, &config)
+	if err != nil {
+		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
+	}
+
+	return registry, nil
 }
 
 // Deployment client calls to ftl-controller

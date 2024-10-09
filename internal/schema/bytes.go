@@ -6,6 +6,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+//protobuf:4
 type Bytes struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

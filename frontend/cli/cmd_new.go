@@ -13,7 +13,7 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/buildengine"
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -39,7 +39,8 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) error {
 		return nil
 	}
 	language := args[1]
-	if len(language) == 0 {
+	// Default to `new` command handler if no language is provided, or option is specified on `new` command.
+	if len(language) == 0 || language[0] == '-' {
 		return nil
 	}
 
@@ -50,9 +51,7 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) error {
 		return fmt.Errorf("could not find new command")
 	}
 
-	plugin, err := buildengine.PluginFromConfig(ctx, moduleconfig.ModuleConfig{
-		Language: language,
-	}, "")
+	plugin, err := languageplugin.New(ctx, language)
 	if err != nil {
 		return fmt.Errorf("could not create plugin for %v: %w", language, err)
 	}
@@ -106,7 +105,7 @@ func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconf
 		flags[f.Name] = flagValue
 	}
 
-	plugin, err := buildengine.PluginFromConfig(ctx, moduleConfig, config.Root())
+	plugin, err := languageplugin.New(ctx, i.Language)
 	if err != nil {
 		return err
 	}

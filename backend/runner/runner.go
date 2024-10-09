@@ -472,7 +472,6 @@ func (s *Service) registrationLoop(ctx context.Context, send func(request *ftlv1
 
 func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.StreamDeploymentLogsRequest) error) error {
 	delay := time.Millisecond * 500
-	logger := log.FromContext(ctx)
 
 	select {
 	case entry := <-s.deploymentLogQueue:
@@ -490,9 +489,6 @@ func (s *Service) streamLogsLoop(ctx context.Context, send func(request *ftlv1.S
 		if reqStr, ok := entry.Attributes["request"]; ok {
 			request = &reqStr
 		}
-		// We also just output the log normally, so it shows up in the pod logs and gets synced to DD etc.
-		// It's not clear if we should output this here on or on the controller side.
-		logger.Log(entry)
 
 		err := send(&ftlv1.StreamDeploymentLogsRequest{
 			RequestKey:    request,

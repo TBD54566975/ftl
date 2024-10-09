@@ -11,7 +11,9 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
+	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/lsp"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -38,8 +40,13 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 		return errors.New("no directories specified")
 	}
 
-	client := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-	terminal.LaunchEmbeddedConsole(ctx, k, bindContext, client)
+	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+	terminal.LaunchEmbeddedConsole(ctx, k, bindContext, controllerClient)
+
+	var client buildengine.DeployClient = controllerClient
+	if d.ServeCmd.Provisioners > 0 {
+		client = rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
+	}
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -49,7 +56,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 	}
 
 	if d.InitDB {
-		dsn, err := d.ServeCmd.setupDB(ctx, d.ServeCmd.DatabaseImage)
+		dsn, err := dev.SetupDB(ctx, d.ServeCmd.DatabaseImage, d.ServeCmd.DBPort, d.ServeCmd.Recreate)
 		if err != nil {
 			return fmt.Errorf("failed to setup database: %w", err)
 		}

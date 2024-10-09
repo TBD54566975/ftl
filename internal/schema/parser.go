@@ -3,7 +3,6 @@ package schema
 import (
 	"fmt"
 	"io"
-	"reflect"
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
@@ -23,19 +22,11 @@ var (
 		&Ref{},
 	}
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
-	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataIngress{}, &MetadataCronJob{}, &MetadataDatabases{},
-		&MetadataAlias{}, &MetadataRetry{}, &MetadataSubscriber{}, &MetadataTypeMap{}, &MetadataEncoding{}}
+	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataConfig{}, &MetadataIngress{}, &MetadataCronJob{},
+		&MetadataDatabases{}, &MetadataAlias{}, &MetadataRetry{}, &MetadataSecrets{}, &MetadataSubscriber{},
+		&MetadataTypeMap{}, &MetadataEncoding{}}
 	ingressUnion = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
 	valueUnion   = []Value{&StringValue{}, &IntValue{}, &TypeValue{}}
-
-	// Used by protobuf generation.
-	unions = map[reflect.Type][]reflect.Type{
-		reflect.TypeOf((*Type)(nil)).Elem():                 reflectUnion(typeUnion...),
-		reflect.TypeOf((*Metadata)(nil)).Elem():             reflectUnion(metadataUnion...),
-		reflect.TypeOf((*IngressPathComponent)(nil)).Elem(): reflectUnion(ingressUnion...),
-		reflect.TypeOf((*Decl)(nil)).Elem():                 reflectUnion(declUnion...),
-		reflect.TypeOf((*Value)(nil)).Elem():                reflectUnion(valueUnion...),
-	}
 
 	Lexer = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "EOL", Pattern: `[\r\n]`},

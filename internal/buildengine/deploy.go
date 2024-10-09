@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -38,13 +39,14 @@ type DeployClient interface {
 }
 
 // Deploy a module to the FTL controller with the given number of replicas. Optionally wait for the deployment to become ready.
-func Deploy(ctx context.Context, module Module, replicas int32, waitForDeployOnline bool, client DeployClient) error {
+func Deploy(ctx context.Context, module Module, deploy []string, replicas int32, waitForDeployOnline bool, client DeployClient) error {
+	fmt.Printf("Deplying with arg: %v", deploy)
 	logger := log.FromContext(ctx).Module(module.Config.Module).Scope("deploy")
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Deploying module")
 
 	moduleConfig := module.Config.Abs()
-	files, err := FindFilesToDeploy(moduleConfig)
+	files, err := FindFilesToDeploy(moduleConfig, deploy)
 	if err != nil {
 		logger.Errorf(err, "failed to find files in %s", moduleConfig)
 		return err
@@ -159,9 +161,13 @@ func loadProtoSchema(config moduleconfig.AbsModuleConfig, replicas int32) (*sche
 }
 
 // FindFilesToDeploy returns a list of files to deploy for the given module.
-func FindFilesToDeploy(moduleConfig moduleconfig.AbsModuleConfig) ([]string, error) {
+func FindFilesToDeploy(config moduleconfig.AbsModuleConfig, deploy []string) ([]string, error) {
 	var out []string
-	for _, file := range moduleConfig.Deploy {
+	for _, f := range deploy {
+		file := filepath.Clean(filepath.Join(config.DeployDir, f))
+		if !strings.HasPrefix(file, config.DeployDir) {
+			return nil, fmt.Errorf("deploy path %q is not beneath deploy directory %q", file, config.DeployDir)
+		}
 		info, err := os.Stat(file)
 		if err != nil {
 			return nil, err

@@ -173,8 +173,8 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 					case *MetadataRetry:
 						validateRetries(module, md, optional.Some(n.Request), scopes, optional.Some(schema))
 
-					case *MetadataCronJob, *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap,
-						*MetadataEncoding:
+					case *MetadataCronJob, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap,
+						*MetadataEncoding, *MetadataSecrets:
 					}
 				}
 
@@ -228,8 +228,8 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
-				*Int, *Map, Metadata, *MetadataCalls, *MetadataDatabases, *MetadataCronJob,
-				*MetadataIngress, *MetadataAlias, *Module, *Optional, *Schema, *TypeAlias,
+				*Int, *Map, Metadata, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataCronJob,
+				*MetadataIngress, *MetadataAlias, *MetadataSecrets, *Module, *Optional, *Schema, *TypeAlias,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
 				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding:
@@ -341,8 +341,11 @@ func ValidateModule(module *Module) error {
 
 		case *Data:
 			for _, md := range n.Metadata {
-				if md, ok := md.(*MetadataCalls); ok {
+				switch md.(type) {
+				case *MetadataCalls, *MetadataSecrets, *MetadataConfig:
 					merr = append(merr, errorf(md, "metadata %q is not valid on data structures", strings.TrimSpace(md.String())))
+				default:
+
 				}
 			}
 
@@ -380,8 +383,8 @@ func ValidateModule(module *Module) error {
 
 		case *Array, *Bool, *Database, *Float, *Int,
 			*Time, *Map, *Module, *Schema, *String, *Bytes,
-			*MetadataCalls, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
-			IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
+			*MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
+			*MetadataSecrets, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
 			*Config, *FSMTransition, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding:
 
@@ -647,7 +650,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 		case *MetadataSubscriber:
 			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
 			merr = append(merr, subErrs...)
-		case *MetadataCalls, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap, *MetadataEncoding:
+		case *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap, *MetadataEncoding, *MetadataSecrets:
 		}
 	}
 	return
@@ -813,7 +816,11 @@ func requireUnitPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
 
 func validatePathParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
 	switch t := n.(type) {
-	case *String, *Data, *Unit, *Float, *Int, *Bool, *Map: // Valid HTTP param payload types.
+	case *String, *Data, *Unit, *Float, *Int, *Bool: // Valid HTTP param payload types.
+	case *Map:
+		if _, ok := t.Value.(*String); !ok {
+			return errorf(r, "ingress verb %s: %s type %s path params can only support maps of strings, not %v", v.Name, reqOrResp, r, n)
+		}
 	case *TypeAlias:
 		// allow aliases of external types
 		for _, m := range t.Metadata {
@@ -830,7 +837,20 @@ func validatePathParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) er
 
 func validateQueryParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
 	switch t := n.(type) {
-	case *Data, *Unit, *Map: // Valid HTTP query payload types.
+	case *Data, *Unit: // Valid HTTP query payload types.
+		return nil
+	case *Map:
+		switch val := t.Value.(type) {
+		case *String:
+			// Valid HTTP query payload type
+			return nil
+		case *Array:
+			if _, ok := val.Element.(*String); ok {
+				return nil
+			}
+		default:
+			return errorf(r, "ingress verb %s: %s type %s query params can only support maps of strings or string arrays, not %v", v.Name, reqOrResp, r, n)
+		}
 	case *TypeAlias:
 		// allow aliases of external types
 		for _, m := range t.Metadata {
@@ -842,7 +862,7 @@ func validateQueryParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) e
 	default:
 		return errorf(r, "ingress verb %s: %s type %s must have a param of data structure, unit or map not %s", v.Name, reqOrResp, r, n)
 	}
-	return nil
+	return errorf(r, "ingress verb %s: %s type %s query params can only support maps of strings or string arrays, or data types not %v", v.Name, reqOrResp, r, n)
 }
 
 func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, scopes Scopes, schema optional.Option[*Schema]) (merr []error) {

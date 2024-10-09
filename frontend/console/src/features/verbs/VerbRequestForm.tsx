@@ -1,6 +1,6 @@
 import { Copy01Icon } from 'hugeicons-react'
-import { useContext, useEffect, useState } from 'react'
-import { CodeEditor, type InitialState } from '../../components/CodeEditor'
+import { useCallback, useContext, useEffect, useState } from 'react'
+import { CodeEditor } from '../../components/CodeEditor'
 import { ResizableVerticalPanels } from '../../components/ResizableVerticalPanels'
 import { useClient } from '../../hooks/use-client'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
@@ -24,15 +24,13 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
   const client = useClient(VerbService)
   const { showNotification } = useContext(NotificationsContext)
   const [activeTabId, setActiveTabId] = useState('body')
-  const [initialEditorState, setInitialEditorText] = useState<InitialState>({ initialText: '' })
-  const [editorText, setEditorText] = useState('')
-  const [initialHeadersState, setInitialHeadersText] = useState<InitialState>({ initialText: '' })
+  const [bodyText, setBodyText] = useState('')
   const [headersText, setHeadersText] = useState('')
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [path, setPath] = useState('')
 
-  const editorTextKey = `${module?.name}-${verb?.verb?.name}-editor-text`
+  const bodyTextKey = `${module?.name}-${verb?.verb?.name}-body-text`
   const headersTextKey = `${module?.name}-${verb?.verb?.name}-headers-text`
 
   useEffect(() => {
@@ -41,35 +39,22 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
 
   useEffect(() => {
     if (verb) {
-      const savedEditorValue = localStorage.getItem(editorTextKey)
-      let editorValue: string
-      if (savedEditorValue != null && savedEditorValue !== '') {
-        editorValue = savedEditorValue
-      } else {
-        editorValue = defaultRequest(verb)
-      }
-
-      const schemaString = JSON.stringify(simpleJsonSchema(verb))
-      setInitialEditorText({ initialText: editorValue, schema: schemaString })
-      localStorage.setItem(editorTextKey, editorValue)
-      handleEditorTextChanged(editorValue)
+      const savedBodyValue = localStorage.getItem(bodyTextKey)
+      const bodyValue = savedBodyValue ?? defaultRequest(verb)
+      setBodyText(bodyValue)
 
       const savedHeadersValue = localStorage.getItem(headersTextKey)
-      let headerValue: string
-      if (savedHeadersValue != null && savedHeadersValue !== '') {
-        headerValue = savedHeadersValue
-      } else {
-        headerValue = '{}'
-      }
-      setInitialHeadersText({ initialText: headerValue })
+      const headerValue = savedHeadersValue ?? '{}'
       setHeadersText(headerValue)
-      localStorage.setItem(headersTextKey, headerValue)
+
+      setResponse(null)
+      setError(null)
     }
   }, [verb, activeTabId])
 
-  const handleEditorTextChanged = (text: string) => {
-    setEditorText(text)
-    localStorage.setItem(editorTextKey, text)
+  const handleBodyTextChanged = (text: string) => {
+    setBodyText(text)
+    localStorage.setItem(bodyTextKey, text)
   }
 
   const handleHeadersTextChanged = (text: string) => {
@@ -99,7 +84,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
         'Content-Type': 'application/json',
         ...JSON.parse(headersText),
       },
-      ...(method === 'POST' || method === 'PUT' ? { body: editorText } : {}),
+      ...(method === 'POST' || method === 'PUT' ? { body: bodyText } : {}),
     })
       .then(async (response) => {
         if (response.ok) {
@@ -121,7 +106,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       module: module?.name,
     } as Ref
 
-    const requestBytes = createCallRequest(path, verb, editorText, headersText)
+    const requestBytes = createCallRequest(path, verb, bodyText, headersText)
     client
       .call({ verb: verbRef, body: requestBytes })
       .then((response) => {
@@ -140,8 +125,8 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
   }
 
   const handleSubmit = async (path: string) => {
-    setResponse(null)
-    setError(null)
+    setResponse('')
+    setError('')
 
     try {
       if (isHttpIngress(verb)) {
@@ -160,7 +145,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       return
     }
 
-    const cliCommand = generateCliCommand(verb, path, headersText, editorText)
+    const cliCommand = generateCliCommand(verb, path, headersText, bodyText)
     navigator.clipboard
       .writeText(cliCommand)
       .then(() => {
@@ -175,18 +160,14 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       })
   }
 
-  const bottomText = response ?? error ?? ''
+  const handleResetBody = useCallback(() => {
+    if (verb) {
+      handleBodyTextChanged(defaultRequest(verb))
+    }
+  }, [verb, bodyTextKey])
 
-  const bodyEditor = <CodeEditor initialState={initialEditorState} onTextChanged={handleEditorTextChanged} />
-  const bodyPanels =
-    bottomText === '' ? (
-      bodyEditor
-    ) : (
-      <ResizableVerticalPanels
-        topPanelContent={bodyEditor}
-        bottomPanelContent={<CodeEditor initialState={{ initialText: bottomText, readonly: true }} onTextChanged={setHeadersText} />}
-      />
-    )
+  const bottomText = response ?? error ?? ''
+  const schemaString = verb ? JSON.stringify(simpleJsonSchema(verb)) : ''
 
   return (
     <div className='flex flex-col h-full overflow-hidden pt-4'>
@@ -232,10 +213,26 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       </div>
       <div className='flex-1 overflow-hidden'>
         <div className='h-full overflow-y-scroll'>
-          {activeTabId === 'body' && bodyPanels}
-          {activeTabId === 'verbschema' && <CodeEditor initialState={{ initialText: verb?.schema ?? 'what', readonly: true }} />}
-          {activeTabId === 'jsonschema' && <CodeEditor initialState={{ initialText: verb?.jsonRequestSchema ?? '', readonly: true }} />}
-          {activeTabId === 'headers' && <CodeEditor initialState={initialHeadersState} onTextChanged={handleHeadersTextChanged} />}
+          {activeTabId === 'body' && (
+            <ResizableVerticalPanels
+              topPanelContent={
+                <div className='relative h-full'>
+                  <button
+                    type='button'
+                    onClick={handleResetBody}
+                    className='text-sm absolute top-2 right-2 z-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-1 px-2 rounded'
+                  >
+                    Reset
+                  </button>
+                  <CodeEditor id='body-editor' value={bodyText} onTextChanged={handleBodyTextChanged} schema={schemaString} />
+                </div>
+              }
+              bottomPanelContent={bottomText !== '' ? <CodeEditor id='response-editor' value={bottomText} readonly /> : null}
+            />
+          )}
+          {activeTabId === 'verbschema' && <CodeEditor readonly value={verb?.schema ?? ''} />}
+          {activeTabId === 'jsonschema' && <CodeEditor readonly value={verb?.jsonRequestSchema ?? ''} />}
+          {activeTabId === 'headers' && <CodeEditor value={headersText} onTextChanged={handleHeadersTextChanged} />}
         </div>
       </div>
     </div>

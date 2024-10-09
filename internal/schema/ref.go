@@ -31,6 +31,8 @@ func (r *RefKey) Scan(src any) error {
 }
 
 // Ref is an untyped reference to a symbol.
+//
+//protobuf:11
 type Ref struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 

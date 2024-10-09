@@ -11,8 +11,8 @@ import (
 )
 
 type GetRequest struct {
-	UserID string `json:"userId,omitempty"`
-	PostID string `json:"postId,something,else"`
+	UserID int `json:"userId,omitempty"`
+	PostID int `json:"postId,something,else"`
 }
 
 type Nested struct {
@@ -42,7 +42,20 @@ func Get(ctx context.Context, req builtin.HttpRequest[ftl.Unit, GetRequest, ftl.
 	return builtin.HttpResponse[GetResponse, string]{
 		Headers: map[string][]string{"Get": {"Header from FTL"}},
 		Body: ftl.Some(GetResponse{
-			Message: fmt.Sprintf("UserID: %s, PostID: %s", req.PathParameters.UserID, req.PathParameters.PostID),
+			Message: fmt.Sprintf("UserID: %d, PostID: %d", req.PathParameters.UserID, req.PathParameters.PostID),
+			Nested: Nested{
+				GoodStuff: "This is good stuff",
+			},
+		}),
+	}, nil
+}
+
+//ftl:ingress http GET /getquery
+func GetQuery(ctx context.Context, req builtin.HttpRequest[ftl.Unit, ftl.Unit, GetRequest]) (builtin.HttpResponse[GetResponse, string], error) {
+	return builtin.HttpResponse[GetResponse, string]{
+		Headers: map[string][]string{"Get": {"Header from FTL"}},
+		Body: ftl.Some(GetResponse{
+			Message: fmt.Sprintf("UserID: %d, PostID: %d", req.Query.UserID, req.Query.PostID),
 			Nested: Nested{
 				GoodStuff: "This is good stuff",
 			},

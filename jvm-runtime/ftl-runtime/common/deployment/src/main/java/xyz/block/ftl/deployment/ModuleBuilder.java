@@ -45,6 +45,7 @@ import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.v1.CallRequest;
+import xyz.block.ftl.v1.schema.AliasKind;
 import xyz.block.ftl.v1.schema.Any;
 import xyz.block.ftl.v1.schema.Array;
 import xyz.block.ftl.v1.schema.Bool;
@@ -57,6 +58,8 @@ import xyz.block.ftl.v1.schema.Int;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataAlias;
 import xyz.block.ftl.v1.schema.MetadataCalls;
+import xyz.block.ftl.v1.schema.MetadataConfig;
+import xyz.block.ftl.v1.schema.MetadataSecrets;
 import xyz.block.ftl.v1.schema.MetadataTypeMap;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Position;
@@ -188,6 +191,8 @@ public class ModuleBuilder {
             xyz.block.ftl.v1.schema.Verb.Builder verbBuilder = xyz.block.ftl.v1.schema.Verb.newBuilder();
             String verbName = validateName(className, ModuleBuilder.methodToName(method));
             MetadataCalls.Builder callsMetadata = MetadataCalls.newBuilder();
+            MetadataConfig.Builder configMetadata = MetadataConfig.newBuilder();
+            MetadataSecrets.Builder secretMetadata = MetadataSecrets.newBuilder();
             for (var param : method.parameters()) {
                 if (param.hasAnnotation(Secret.class)) {
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
@@ -203,6 +208,7 @@ public class ModuleBuilder {
                         addDecls(Decl.newBuilder().setSecret(secretBuilder).build());
                         knownSecrets.add(name);
                     }
+                    secretMetadata.addSecrets(Ref.newBuilder().setName(name).setModule(moduleName).build());
                 } else if (param.hasAnnotation(Config.class)) {
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
                     parameterTypes.add(paramType);
@@ -217,6 +223,7 @@ public class ModuleBuilder {
                         addDecls(Decl.newBuilder().setConfig(configBuilder).build());
                         knownConfig.add(name);
                     }
+                    configMetadata.addConfig(Ref.newBuilder().setName(name).setModule(moduleName).build());
                 } else if (knownTopics.containsKey(param.type().name())) {
                     var topic = knownTopics.get(param.type().name());
                     Class<?> paramType = ModuleBuilder.loadClass(param.type());
@@ -252,6 +259,12 @@ public class ModuleBuilder {
             if (callsMetadata.getCallsCount() > 0) {
                 verbBuilder.addMetadata(Metadata.newBuilder().setCalls(callsMetadata));
             }
+            if (secretMetadata.getSecretsCount() > 0) {
+                verbBuilder.addMetadata(Metadata.newBuilder().setSecrets(secretMetadata));
+            }
+            if (configMetadata.getConfigCount() > 0) {
+                verbBuilder.addMetadata(Metadata.newBuilder().setConfig(configMetadata));
+            }
 
             recorder.registerVerb(moduleName, verbName, method.name(), parameterTypes,
                     Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers,
@@ -260,6 +273,7 @@ public class ModuleBuilder {
             verbBuilder
                     .setName(verbName)
                     .setExport(exported)
+                    .setPos(PositionUtils.forMethod(method))
                     .setRequest(buildType(bodyParamType, exported, bodyParamNullability))
                     .setResponse(buildType(method.returnType(), exported, method));
             Optional.ofNullable(comments.get(CommentKey.ofVerb(verbName)))
@@ -396,6 +410,7 @@ public class ModuleBuilder {
                     return Type.newBuilder().setRef(existing.ref()).build();
                 }
                 Data.Builder data = Data.newBuilder();
+                data.setPos(PositionUtils.forClass(clazz.name().toString()));
                 data.setName(clazz.name().local());
                 data.setExport(type.hasAnnotation(EXPORT) || export);
                 Optional.ofNullable(comments.get(CommentKey.ofData(clazz.name().local())))
@@ -474,7 +489,8 @@ public class ModuleBuilder {
                     if (aliases.value() != null) {
                         for (var alias : aliases.value().asStringArray()) {
                             builder.addMetadata(
-                                    Metadata.newBuilder().setAlias(MetadataAlias.newBuilder().setKind(0).setAlias(alias)));
+                                    Metadata.newBuilder().setAlias(
+                                            MetadataAlias.newBuilder().setKind(AliasKind.ALIAS_KIND_JSON).setAlias(alias)));
                         }
                     }
                 }
@@ -505,8 +521,6 @@ public class ModuleBuilder {
             validateName(decl.getFsm().getPos(), decl.getFsm().getName());
         } else if (decl.hasSubscription()) {
             validateName(decl.getSubscription().getPos(), decl.getSubscription().getName());
-        } else if (decl.hasTypeAlias()) {
-            validateName(decl.getTypeAlias().getPos(), decl.getTypeAlias().getName());
         }
         moduleBuilder.addDecls(decl);
         return this;
@@ -524,15 +538,22 @@ public class ModuleBuilder {
         moduleBuilder.build().writeTo(out);
     }
 
-    public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported) {
+    public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported,
+            Map<String, String> languageMappings) {
         validateName(finalT.name().toString(), name);
+        TypeAlias.Builder typeAlias = TypeAlias.newBuilder().setType(buildType(finalS, exported, Nullability.NOT_NULL))
+                .setName(name)
+                .addMetadata(Metadata
+                        .newBuilder()
+                        .setTypeMap(MetadataTypeMap.newBuilder().setRuntime("java").setNativeName(finalT.toString())
+                                .build())
+                        .build());
+        for (var entry : languageMappings.entrySet()) {
+            typeAlias.addMetadata(Metadata.newBuilder().setTypeMap(MetadataTypeMap.newBuilder().setRuntime(entry.getKey())
+                    .setNativeName(entry.getValue()).build()).build());
+        }
         moduleBuilder.addDecls(Decl.newBuilder()
-                .setTypeAlias(TypeAlias.newBuilder().setType(buildType(finalS, exported, Nullability.NOT_NULL)).setName(name)
-                        .addMetadata(Metadata
-                                .newBuilder()
-                                .setTypeMap(MetadataTypeMap.newBuilder().setRuntime("java").setNativeName(finalT.toString())
-                                        .build())
-                                .build()))
+                .setTypeAlias(typeAlias)
                 .build());
     }
 

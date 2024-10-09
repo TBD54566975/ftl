@@ -39,6 +39,9 @@ const (
 	// ConsoleServiceGetModulesProcedure is the fully-qualified name of the ConsoleService's GetModules
 	// RPC.
 	ConsoleServiceGetModulesProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetModules"
+	// ConsoleServiceStreamModulesProcedure is the fully-qualified name of the ConsoleService's
+	// StreamModules RPC.
+	ConsoleServiceStreamModulesProcedure = "/xyz.block.ftl.v1.console.ConsoleService/StreamModules"
 	// ConsoleServiceStreamEventsProcedure is the fully-qualified name of the ConsoleService's
 	// StreamEvents RPC.
 	ConsoleServiceStreamEventsProcedure = "/xyz.block.ftl.v1.console.ConsoleService/StreamEvents"
@@ -52,6 +55,7 @@ type ConsoleServiceClient interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error)
+	StreamModules(context.Context, *connect.Request[console.StreamModulesRequest]) (*connect.ServerStreamForClient[console.StreamModulesResponse], error)
 	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest]) (*connect.ServerStreamForClient[console.StreamEventsResponse], error)
 	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
 }
@@ -77,6 +81,11 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceGetModulesProcedure,
 			opts...,
 		),
+		streamModules: connect.NewClient[console.StreamModulesRequest, console.StreamModulesResponse](
+			httpClient,
+			baseURL+ConsoleServiceStreamModulesProcedure,
+			opts...,
+		),
 		streamEvents: connect.NewClient[console.StreamEventsRequest, console.StreamEventsResponse](
 			httpClient,
 			baseURL+ConsoleServiceStreamEventsProcedure,
@@ -92,10 +101,11 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 
 // consoleServiceClient implements ConsoleServiceClient.
 type consoleServiceClient struct {
-	ping         *connect.Client[v1.PingRequest, v1.PingResponse]
-	getModules   *connect.Client[console.GetModulesRequest, console.GetModulesResponse]
-	streamEvents *connect.Client[console.StreamEventsRequest, console.StreamEventsResponse]
-	getEvents    *connect.Client[console.EventsQuery, console.GetEventsResponse]
+	ping          *connect.Client[v1.PingRequest, v1.PingResponse]
+	getModules    *connect.Client[console.GetModulesRequest, console.GetModulesResponse]
+	streamModules *connect.Client[console.StreamModulesRequest, console.StreamModulesResponse]
+	streamEvents  *connect.Client[console.StreamEventsRequest, console.StreamEventsResponse]
+	getEvents     *connect.Client[console.EventsQuery, console.GetEventsResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.console.ConsoleService.Ping.
@@ -106,6 +116,11 @@ func (c *consoleServiceClient) Ping(ctx context.Context, req *connect.Request[v1
 // GetModules calls xyz.block.ftl.v1.console.ConsoleService.GetModules.
 func (c *consoleServiceClient) GetModules(ctx context.Context, req *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error) {
 	return c.getModules.CallUnary(ctx, req)
+}
+
+// StreamModules calls xyz.block.ftl.v1.console.ConsoleService.StreamModules.
+func (c *consoleServiceClient) StreamModules(ctx context.Context, req *connect.Request[console.StreamModulesRequest]) (*connect.ServerStreamForClient[console.StreamModulesResponse], error) {
+	return c.streamModules.CallServerStream(ctx, req)
 }
 
 // StreamEvents calls xyz.block.ftl.v1.console.ConsoleService.StreamEvents.
@@ -124,6 +139,7 @@ type ConsoleServiceHandler interface {
 	// Ping service for readiness.
 	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 	GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error)
+	StreamModules(context.Context, *connect.Request[console.StreamModulesRequest], *connect.ServerStream[console.StreamModulesResponse]) error
 	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest], *connect.ServerStream[console.StreamEventsResponse]) error
 	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
 }
@@ -145,6 +161,11 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 		svc.GetModules,
 		opts...,
 	)
+	consoleServiceStreamModulesHandler := connect.NewServerStreamHandler(
+		ConsoleServiceStreamModulesProcedure,
+		svc.StreamModules,
+		opts...,
+	)
 	consoleServiceStreamEventsHandler := connect.NewServerStreamHandler(
 		ConsoleServiceStreamEventsProcedure,
 		svc.StreamEvents,
@@ -161,6 +182,8 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 			consoleServicePingHandler.ServeHTTP(w, r)
 		case ConsoleServiceGetModulesProcedure:
 			consoleServiceGetModulesHandler.ServeHTTP(w, r)
+		case ConsoleServiceStreamModulesProcedure:
+			consoleServiceStreamModulesHandler.ServeHTTP(w, r)
 		case ConsoleServiceStreamEventsProcedure:
 			consoleServiceStreamEventsHandler.ServeHTTP(w, r)
 		case ConsoleServiceGetEventsProcedure:
@@ -180,6 +203,10 @@ func (UnimplementedConsoleServiceHandler) Ping(context.Context, *connect.Request
 
 func (UnimplementedConsoleServiceHandler) GetModules(context.Context, *connect.Request[console.GetModulesRequest]) (*connect.Response[console.GetModulesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetModules is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) StreamModules(context.Context, *connect.Request[console.StreamModulesRequest], *connect.ServerStream[console.StreamModulesResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.StreamModules is not implemented"))
 }
 
 func (UnimplementedConsoleServiceHandler) StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest], *connect.ServerStream[console.StreamEventsResponse]) error {

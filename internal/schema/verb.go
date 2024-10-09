@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
@@ -11,6 +12,24 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
+type VerbStatus int
+
+const (
+	VerbStatusOffline VerbStatus = iota
+	VerbStatusStarting
+	VerbStatusOnline
+	VerbStatusStopping
+	VerbStatusStopped
+	VerbStatusError
+)
+
+type VerbRuntime struct {
+	CreateTime time.Time  `protobuf:"1"`
+	StartTime  time.Time  `protobuf:"2"`
+	Status     VerbStatus `protobuf:"3"`
+}
+
+//protobuf:2
 type Verb struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
@@ -20,6 +39,8 @@ type Verb struct {
 	Request  Type       `parser:"'(' @@ ')'" protobuf:"5"`
 	Response Type       `parser:"@@" protobuf:"6"`
 	Metadata []Metadata `parser:"@@*" protobuf:"7"`
+
+	Runtime *VerbRuntime `protobuf:"31634,optional" parser:""`
 }
 
 var _ Decl = (*Verb)(nil)
@@ -96,6 +117,24 @@ func (v *Verb) AddCall(verb *Ref) {
 		return
 	}
 	v.Metadata = append(v.Metadata, &MetadataCalls{Calls: []*Ref{verb}})
+}
+
+// AddConfig adds a config reference to the Verb.
+func (v *Verb) AddConfig(config *Ref) {
+	if c, ok := slices.FindVariant[*MetadataConfig](v.Metadata); ok {
+		c.Config = append(c.Config, config)
+		return
+	}
+	v.Metadata = append(v.Metadata, &MetadataConfig{Config: []*Ref{config}})
+}
+
+// AddSecret adds a config reference to the Verb.
+func (v *Verb) AddSecret(secret *Ref) {
+	if c, ok := slices.FindVariant[*MetadataSecrets](v.Metadata); ok {
+		c.Secrets = append(c.Secrets, secret)
+		return
+	}
+	v.Metadata = append(v.Metadata, &MetadataSecrets{Secrets: []*Ref{secret}})
 }
 
 func (v *Verb) GetMetadataIngress() optional.Option[*MetadataIngress] {

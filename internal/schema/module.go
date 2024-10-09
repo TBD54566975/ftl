@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
@@ -17,6 +18,14 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+type ModuleRuntime struct {
+	CreateTime  time.Time `protobuf:"1"`
+	Language    string    `protobuf:"2"`
+	MinReplicas int32     `protobuf:"3"`
+	OS          string    `protobuf:"4,optional"`
+	Arch        string    `protobuf:"5,optional"`
+}
+
 type Module struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
@@ -24,6 +33,8 @@ type Module struct {
 	Builtin  bool     `parser:"@'builtin'?" protobuf:"3"`
 	Name     string   `parser:"'module' @Ident '{'" protobuf:"4"`
 	Decls    []Decl   `parser:"@@* '}'" protobuf:"5"`
+
+	Runtime *ModuleRuntime `protobuf:"31634,optional" parser:""`
 }
 
 var _ Node = (*Module)(nil)

@@ -1,33 +1,15 @@
 package moduleconfig
 
 import (
-	"errors"
 	"fmt"
-	"go/parser"
-	"go/token"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"golang.org/x/mod/modfile"
+	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/TBD54566975/ftl/internal/slices"
 )
-
-// ModuleGoConfig is language-specific configuration for Go modules.
-type ModuleGoConfig struct{}
-
-// ModuleKotlinConfig is language-specific configuration for Kotlin modules.
-type ModuleKotlinConfig struct{}
-
-// ModuleJavaConfig is language-specific configuration for Java modules.
-type ModuleJavaConfig struct {
-	BuildTool string `toml:"build-tool"`
-}
-
-const JavaBuildToolMaven string = "maven"
-const JavaBuildToolGradle string = "gradle"
 
 // ModuleConfig is the configuration for an FTL module.
 //
@@ -41,20 +23,20 @@ type ModuleConfig struct {
 	Module   string `toml:"module"`
 	// Build is the command to build the module.
 	Build string `toml:"build"`
-	// Deploy is the list of files to deploy relative to the DeployDir.
-	Deploy []string `toml:"deploy"`
 	// DeployDir is the directory to deploy from, relative to the module directory.
 	DeployDir string `toml:"deploy-dir"`
 	// GeneratedSchemaDir is the directory to generate protobuf schema files into. These can be picked up by language specific build tools
 	GeneratedSchemaDir string `toml:"generated-schema-dir"`
-	// Errors is the name of the error file relative to the DeployDir.
-	Errors string `toml:"errors"`
 	// Watch is the list of files to watch for changes.
 	Watch []string `toml:"watch"`
 
-	Go     ModuleGoConfig     `toml:"go,optional"`
-	Kotlin ModuleKotlinConfig `toml:"kotlin,optional"`
-	Java   ModuleJavaConfig   `toml:"java,optional"`
+	// LanguageConfig is a map of language specific configuration.
+	// It is saved in the toml with the value of Language as the key.
+	LanguageConfig map[string]any `toml:"-"`
+}
+
+func (c *ModuleConfig) UnmarshalTOML(data []byte) error {
+	return nil
 }
 
 // AbsModuleConfig is a ModuleConfig with all paths made absolute.
@@ -62,18 +44,59 @@ type ModuleConfig struct {
 // This is a type alias to prevent accidental use of the wrong type.
 type AbsModuleConfig ModuleConfig
 
-// LoadModuleConfig from a directory.
-func LoadModuleConfig(dir string) (ModuleConfig, error) {
+// UnvalidatedModuleConfig is a ModuleConfig that holds only the values read from the toml file.
+//
+// It has not had it's defaults set or been validated, so values may be empty or invalid.
+// Use FillDefaultsAndValidate() to get a ModuleConfig.
+type UnvalidatedModuleConfig ModuleConfig
+
+type CustomDefaults struct {
+	Build              string
+	DeployDir          string
+	GeneratedSchemaDir string
+	Watch              []string
+
+	// only the root keys in LanguageConfig are used to find missing values that can be defaulted
+	LanguageConfig map[string]any `toml:"-"`
+}
+
+// LoadConfig from a directory.
+// This returns only the values found in the toml file. To get the full config with defaults and validation, use FillDefaultsAndValidate.
+func LoadConfig(dir string) (UnvalidatedModuleConfig, error) {
 	path := filepath.Join(dir, "ftl.toml")
-	config := ModuleConfig{}
-	_, err := toml.DecodeFile(path, &config)
+
+	// Parse toml into generic map so that we can capture language config with a dynamic key
+	raw := map[string]any{}
+	_, err := toml.DecodeFile(path, &raw)
 	if err != nil {
-		return ModuleConfig{}, err
+		return UnvalidatedModuleConfig{}, fmt.Errorf("could not parse module toml: %w", err)
 	}
-	if err := setConfigDefaults(dir, &config); err != nil {
-		return config, fmt.Errorf("%s: %w", path, err)
+
+	// Decode the generic map into a module config
+	config := UnvalidatedModuleConfig{
+		Dir: dir,
 	}
-	config.Dir = dir
+	mapDecoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		ErrorUnused: false,
+		TagName:     "toml",
+		Result:      &config,
+	})
+	if err != nil {
+		return UnvalidatedModuleConfig{}, fmt.Errorf("could not parse contents of module toml: %w", err)
+	}
+	err = mapDecoder.Decode(raw)
+	if err != nil {
+		return UnvalidatedModuleConfig{}, fmt.Errorf("could not parse contents of module toml: %w", err)
+	}
+	// Decode language config
+	rawLangConfig, ok := raw[config.Language]
+	if ok {
+		langConfig, ok := rawLangConfig.(map[string]any)
+		if !ok {
+			return UnvalidatedModuleConfig{}, fmt.Errorf("language config for %q is not a map", config.Language)
+		}
+		config.LanguageConfig = langConfig
+	}
 	return config, nil
 }
 
@@ -99,17 +122,6 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 			panic(fmt.Sprintf("generated-schema-dir %q is not beneath module directory %q", clone.GeneratedSchemaDir, clone.Dir))
 		}
 	}
-	clone.Errors = filepath.Clean(filepath.Join(clone.DeployDir, clone.Errors))
-	if !strings.HasPrefix(clone.Errors, clone.DeployDir) {
-		panic(fmt.Sprintf("errors %q is not beneath deploy directory %q", clone.Errors, clone.DeployDir))
-	}
-	clone.Deploy = slices.Map(clone.Deploy, func(p string) string {
-		out := filepath.Clean(filepath.Join(clone.DeployDir, p))
-		if !strings.HasPrefix(out, clone.DeployDir) {
-			panic(fmt.Sprintf("deploy path %q is not beneath deploy directory %q", out, clone.DeployDir))
-		}
-		return out
-	})
 	// Watch paths are allowed to be outside the deploy directory.
 	clone.Watch = slices.Map(clone.Watch, func(p string) string {
 		return filepath.Clean(filepath.Join(clone.Dir, p))
@@ -117,212 +129,52 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 	return AbsModuleConfig(clone)
 }
 
-func setConfigDefaults(moduleDir string, config *ModuleConfig) error {
-	if config.Realm == "" {
-		config.Realm = "home"
+// FillDefaultsAndValidate sets values for empty fields and validates the config.
+// It involves standard defaults for Real and Errors fields, and also looks at CustomDefaults for
+// defaulting other fields.
+func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDefaults) (ModuleConfig, error) {
+	if c.Realm == "" {
+		c.Realm = "home"
 	}
-	if config.Errors == "" {
-		config.Errors = "errors.pb"
+
+	// Custom defaults
+	if c.Build == "" {
+		c.Build = customDefaults.Build
 	}
-	switch config.Language {
-	case "kotlin", "java":
+	if c.DeployDir == "" {
+		c.DeployDir = customDefaults.DeployDir
+	}
+	if c.GeneratedSchemaDir == "" {
+		c.GeneratedSchemaDir = customDefaults.GeneratedSchemaDir
+	}
+	if c.Watch == nil {
+		c.Watch = customDefaults.Watch
+	}
 
-		if config.Build == "" {
-			pom := filepath.Join(moduleDir, "pom.xml")
-			buildGradle := filepath.Join(moduleDir, "build.gradle")
-			buildGradleKts := filepath.Join(moduleDir, "build.gradle.kts")
-			if config.Java.BuildTool == JavaBuildToolMaven || fileExists(pom) {
-				config.Java.BuildTool = JavaBuildToolMaven
-				config.Build = "mvn -B package"
-				if config.DeployDir == "" {
-					config.DeployDir = "target"
-				}
-				if len(config.Watch) == 0 {
-					config.Watch = []string{"pom.xml", "src/**", "target/generated-sources"}
-				}
-			} else if config.Java.BuildTool == JavaBuildToolGradle || fileExists(buildGradle) || fileExists(buildGradleKts) {
-				config.Java.BuildTool = JavaBuildToolGradle
-				config.Build = "gradle build"
-				if config.DeployDir == "" {
-					config.DeployDir = "build"
-				}
-				if len(config.Watch) == 0 {
-					config.Watch = []string{"pom.xml", "src/**", "build/generated"}
-				}
-			} else {
-				return fmt.Errorf("could not find JVM build file in %s", moduleDir)
-			}
-		}
-
-		if config.GeneratedSchemaDir == "" {
-			config.GeneratedSchemaDir = "src/main/ftl-module-schema"
-		}
-		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"quarkus-app", "launch"}
-		}
-	case "go":
-		if config.DeployDir == "" {
-			config.DeployDir = ".ftl"
-		}
-		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"main", "launch"}
-		}
-		if len(config.Watch) == 0 {
-			config.Watch = []string{"**/*.go", "go.mod", "go.sum"}
-			watches, err := replacementWatches(moduleDir, config.DeployDir)
-			if err != nil {
-				return err
-			}
-			config.Watch = append(config.Watch, watches...)
-		}
-
-	case "rust":
-		if config.Build == "" {
-			config.Build = "cargo build"
-		}
-		if config.DeployDir == "" {
-			config.DeployDir = "_ftl/target/debug"
-		}
-		if len(config.Deploy) == 0 {
-			config.Deploy = []string{"main"}
-		}
-		if len(config.Watch) == 0 {
-			config.Watch = []string{"**/*.rs", "Cargo.toml", "Cargo.lock"}
+	// Find any missing keys in LanguageConfig that can be defaulted
+	if c.LanguageConfig == nil && customDefaults.LanguageConfig != nil {
+		c.LanguageConfig = map[string]any{}
+	}
+	for k, v := range customDefaults.LanguageConfig {
+		if _, ok := c.LanguageConfig[k]; !ok {
+			c.LanguageConfig[k] = v
 		}
 	}
 
-	// Do some validation.
-	if !isBeneath(moduleDir, config.DeployDir) {
-		return fmt.Errorf("deploy-dir %s must be relative to the module directory %s", config.DeployDir, moduleDir)
+	// Validate
+	if c.DeployDir == "" {
+		return ModuleConfig{}, fmt.Errorf("no deploy directory configured")
 	}
-	for _, deploy := range config.Deploy {
-		if !isBeneath(moduleDir, deploy) {
-			return fmt.Errorf("deploy %s files must be relative to the module directory %s", deploy, moduleDir)
-		}
+	if !isBeneath(c.Dir, c.DeployDir) {
+		return ModuleConfig{}, fmt.Errorf("deploy-dir %s must be relative to the module directory %s", c.DeployDir, c.Dir)
 	}
-	config.Deploy = slices.Sort(config.Deploy)
-	config.Watch = slices.Sort(config.Watch)
-	return nil
-}
-
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return err == nil
+	c.Watch = slices.Sort(c.Watch)
+	return ModuleConfig(c), nil
 }
 
 func isBeneath(moduleDir, path string) bool {
 	resolved := filepath.Clean(filepath.Join(moduleDir, path))
 	return strings.HasPrefix(resolved, strings.TrimSuffix(moduleDir, "/")+"/")
-}
-
-func replacementWatches(moduleDir, deployDir string) ([]string, error) {
-	goModPath := filepath.Join(moduleDir, "go.mod")
-	goModBytes, err := os.ReadFile(goModPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to read %s: %w", goModPath, err)
-	}
-	goModFile, err := modfile.Parse(goModPath, goModBytes, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s: %w", goModPath, err)
-	}
-
-	replacements := make(map[string]string)
-	for _, r := range goModFile.Replace {
-		replacements[r.Old.Path] = r.New.Path
-		if strings.HasPrefix(r.New.Path, ".") {
-			relPath, err := filepath.Rel(filepath.Dir(goModPath), filepath.Join(filepath.Dir(goModPath), r.New.Path))
-			if err != nil {
-				return nil, err
-			}
-			replacements[r.Old.Path] = relPath
-		}
-	}
-
-	files, err := findReplacedImports(moduleDir, deployDir, replacements)
-	if err != nil {
-		return nil, err
-	}
-
-	uniquePatterns := make(map[string]struct{})
-	for _, file := range files {
-		pattern := filepath.Join(file, "**/*.go")
-		uniquePatterns[pattern] = struct{}{}
-	}
-
-	patterns := make([]string, 0, len(uniquePatterns))
-	for pattern := range uniquePatterns {
-		patterns = append(patterns, pattern)
-	}
-
-	return patterns, nil
-}
-
-// findReplacedImports finds Go files with imports that are specified in the replacements.
-func findReplacedImports(moduleDir, deployDir string, replacements map[string]string) ([]string, error) {
-	libPaths := make(map[string]bool)
-
-	err := filepath.WalkDir(moduleDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() && !strings.Contains(path, deployDir) && strings.HasSuffix(path, ".go") {
-			imports, err := parseImports(path)
-			if err != nil {
-				return err
-			}
-
-			for _, imp := range imports {
-				for oldPath, newPath := range replacements {
-					if strings.HasPrefix(imp, oldPath) {
-						resolvedPath := filepath.Join(newPath, strings.TrimPrefix(imp, oldPath))
-						libPaths[resolvedPath] = true
-						break // Only add the library path once for each import match
-					}
-				}
-			}
-		}
-		return nil
-	})
-
-	return deduplicateLibPaths(libPaths), err
-}
-
-func deduplicateLibPaths(libPaths map[string]bool) []string {
-	for maybeParentPath := range libPaths {
-		for path := range libPaths {
-			if maybeParentPath != path && strings.HasPrefix(path, maybeParentPath) {
-				libPaths[path] = false
-			}
-		}
-	}
-
-	paths := []string{}
-	for path, shouldReturn := range libPaths {
-		if shouldReturn {
-			paths = append(paths, path)
-		}
-	}
-
-	return paths
-}
-
-func parseImports(filePath string) ([]string, error) {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, filePath, nil, parser.ImportsOnly)
-	if err != nil {
-		return nil, err
-	}
-
-	var imports []string
-	for _, imp := range file.Imports {
-		// Trim the quotes from the import path value
-		trimmedPath := strings.Trim(imp.Path.Value, `"`)
-		imports = append(imports, trimmedPath)
-	}
-	return imports, nil
 }
 
 func (c ModuleConfig) Schema() string {

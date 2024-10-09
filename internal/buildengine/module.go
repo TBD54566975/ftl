@@ -9,6 +9,8 @@ import (
 type Module struct {
 	Config       moduleconfig.ModuleConfig
 	Dependencies []string
+	// paths to deploy, relative to ModuleConfig.DeployDir
+	Deploy []string
 }
 
 func (m Module) CopyWithDependencies(dependencies []string) Module {
@@ -17,15 +19,8 @@ func (m Module) CopyWithDependencies(dependencies []string) Module {
 	return module
 }
 
-// LoadModule loads a module from the given directory.
-func LoadModule(dir string) (Module, error) {
-	config, err := moduleconfig.LoadModuleConfig(dir)
-	if err != nil {
-		return Module{}, err
-	}
-	module := Module{
-		Config:       config,
-		Dependencies: []string{},
-	}
-	return module, nil
+func (m Module) CopyWithDeploy(files []string) Module {
+	module := reflect.DeepCopy(m)
+	module.Deploy = files
+	return module
 }

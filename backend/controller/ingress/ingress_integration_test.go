@@ -35,6 +35,21 @@ func TestHttpIngress(t *testing.T) {
 				assert.True(t, ok, "good_stuff is not a string: %s", repr.String(resp.JsonBody))
 				assert.Equal(t, "This is good stuff", goodStuff)
 			})},
+			in.SubTest{Name: "GetWithNumericQueryParams", Action: in.HttpCall(http.MethodGet, "/getquery?userId=123&postId=456", nil, nil, func(t testing.TB, resp *in.HTTPResponse) {
+				assert.Equal(t, 200, resp.Status)
+				assert.Equal(t, []string{"Header from FTL"}, resp.Headers["Get"])
+				expectContentType(t, resp, "application/json;charset=utf-8")
+
+				message, ok := resp.JsonBody["msg"].(string)
+				assert.True(t, ok, "msg is not a string: %s", repr.String(resp.JsonBody))
+				assert.Equal(t, "UserID: 123, PostID: 456", message)
+
+				nested, ok := resp.JsonBody["nested"].(map[string]any)
+				assert.True(t, ok, "nested is not a map: %s", repr.String(resp.JsonBody))
+				goodStuff, ok := nested["good_stuff"].(string)
+				assert.True(t, ok, "good_stuff is not a string: %s", repr.String(resp.JsonBody))
+				assert.Equal(t, "This is good stuff", goodStuff)
+			})},
 			in.SubTest{Name: "PostUsers", Action: in.HttpCall(http.MethodPost, "/users", nil, in.JsonData(t, in.Obj{"userId": 123, "postId": 345}), func(t testing.TB, resp *in.HTTPResponse) {
 				assert.Equal(t, 201, resp.Status)
 				assert.Equal(t, []string{"Header from FTL"}, resp.Headers["Post"])

@@ -1,11 +1,19 @@
 #!/bin/bash
 set -euo pipefail
-ftldir="$(dirname "$(readlink -f "$0")")/.."
+
+FTL_DIR="$(dirname "$(readlink -f "$0")")/.."
+export FTL_DIR
+
+if [ ! "${HERMIT_ENV}" -ef "${FTL_DIR}" ]; then
+  # shellcheck disable=SC1091
+  . "${FTL_DIR}/bin/activate-hermit"
+fi
+
 name="$(basename "$0")"
-dest="${ftldir}/build/devel"
+dest="${FTL_DIR}/build/devel"
 src="./cmd/${name}"
 if [ "${name}" = "ftl" ]; then
   src="./frontend/cli"
 fi
 mkdir -p "$dest"
-(cd "${ftldir}/${src}" && "${ftldir}/bin/go" build -ldflags="-s -w -buildid=" -o "$dest/${name}" .) && exec "$dest/${name}" "$@"
+(cd "${FTL_DIR}/${src}" && "${FTL_DIR}/bin/go" build -ldflags="-s -w -buildid=" -o "$dest/${name}" .) && exec "$dest/${name}" "$@"

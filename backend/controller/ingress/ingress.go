@@ -1,7 +1,6 @@
 package ingress
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -47,24 +46,6 @@ func matchSegments(pattern, urlPath string, onMatch func(segment, value string))
 		}
 	}
 	return true
-}
-
-func ValidateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error {
-	var root any
-	err := json.Unmarshal(body, &root)
-	if err != nil {
-		return fmt.Errorf("request body is not valid JSON: %w", err)
-	}
-
-	var opts []schema.EncodingOption
-	if e, ok := slices.FindVariant[*schema.MetadataEncoding](verb.Metadata); ok && e.Lenient {
-		opts = append(opts, schema.LenientMode())
-	}
-	err = schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, root, sch, opts...)
-	if err != nil {
-		return fmt.Errorf("could not validate HTTP request body: %w", err)
-	}
-	return nil
 }
 
 func getField(name string, ref *schema.Ref, sch *schema.Schema) (*schema.Field, error) {
