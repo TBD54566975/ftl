@@ -6,6 +6,7 @@ import (
 
 	"github.com/alecthomas/kong"
 
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -31,7 +32,6 @@ func (p *rustPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (modu
 	return moduleconfig.CustomDefaults{
 		Build:     "cargo build",
 		DeployDir: "_ftl/target/debug",
-		Deploy:    []string{"main"},
 		Watch:     []string{"**/*.rs", "Cargo.toml", "Cargo.lock"},
 	}, nil
 }
@@ -48,12 +48,32 @@ func (p *rustPlugin) GetDependencies(ctx context.Context, config moduleconfig.Mo
 	return nil, fmt.Errorf("not implemented")
 }
 
-func buildRust(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
+func buildRust(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Using build command '%s'", config.Build)
 	err := exec.Command(ctx, log.Debug, config.Dir+"/_ftl", "bash", "-c", config.Build).RunBuffered(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to build module %q: %w", config.Module, err)
+		return BuildResult{}, fmt.Errorf("failed to build module %q: %w", config.Module, err)
 	}
-	return nil
+	buildErrs, err := loadProtoErrors(config)
+	if err != nil {
+		return BuildResult{}, fmt.Errorf("failed to load build errors: %w", err)
+	}
+	result := BuildResult{
+		Errors: buildErrs,
+	}
+	if builderrors.ContainsTerminalError(buildErrs) {
+		// skip reading schema
+		return result, nil
+	}
+
+	moduleSchema, err := schema.ModuleFromProtoFile(config.Schema())
+	if err != nil {
+		return BuildResult{}, fmt.Errorf("failed to read schema for module: %w", err)
+	}
+
+	result.Schema = moduleSchema
+	result.Deploy = []string{"main"}
+
+	return result, nil
 }

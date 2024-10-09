@@ -54,7 +54,8 @@
     },
     {
       matchPackageNames: [
-        "@bufbuild/protobuf", // We can't update this until we update buf
+        "@bufbuild/protobuf",      // We can't update this until we update buf
+        "@bufbuild/protoc-gen-es", // We can't update this until we update buf
         "codemirror",
         "codemirror-json-schema",
       ],

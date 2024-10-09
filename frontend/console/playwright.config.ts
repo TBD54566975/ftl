@@ -38,7 +38,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'ftl dev --recreate',
+    command: process.env.CI ? 'ftl dev --recreate -j1' : 'ftl dev --recreate',
     url: 'http://localhost:8892',
     reuseExistingServer: !process.env.CI,
     /* If the test ends up needing to pull the postgres docker image, this can take a while. Give it a few minutes. */

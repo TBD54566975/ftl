@@ -17,9 +17,13 @@ import (
 	"github.com/beevik/etree"
 	"github.com/go-viper/mapstructure/v2"
 	"golang.org/x/exp/maps"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl"
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/builderrors"
+	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -63,7 +67,6 @@ func newJavaPlugin(ctx context.Context, language string) *javaPlugin {
 func (p *javaPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
 	defaults := moduleconfig.CustomDefaults{
 		GeneratedSchemaDir: "src/main/ftl-module-schema",
-		Deploy:             []string{"launch", "quarkus-app"},
 		// Watch defaults to files related to maven and gradle
 		Watch: []string{"pom.xml", "src/**", "build/generated", "target/generated-sources"},
 	}
@@ -244,11 +247,13 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) error {
+func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+	// TODO: add back
+	// Deploy:
 	logger := log.FromContext(ctx)
 	javaConfig, err := loadJavaConfig(config.LanguageConfig, config.Language)
 	if err != nil {
-		return fmt.Errorf("failed to build module %q: %w", config.Module, err)
+		return BuildResult{}, fmt.Errorf("failed to build module %q: %w", config.Module, err)
 	}
 	if javaConfig.BuildTool == JavaBuildToolMaven {
 		if err := setPOMProperties(ctx, config.Dir); err != nil {
@@ -261,9 +266,29 @@ func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsM
 	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
 	err = command.RunBuffered(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to build module %q: %w", config.Module, err)
+		return BuildResult{}, fmt.Errorf("failed to build module %q: %w", config.Module, err)
 	}
-	return nil
+
+	buildErrs, err := loadProtoErrors(config)
+	if err != nil {
+		return BuildResult{}, fmt.Errorf("failed to load build errors: %w", err)
+	}
+	result := BuildResult{
+		Errors: buildErrs,
+	}
+	if builderrors.ContainsTerminalError(buildErrs) {
+		// skip reading schema
+		return result, nil
+	}
+
+	moduleSchema, err := schema.ModuleFromProtoFile(config.Schema())
+	if err != nil {
+		return BuildResult{}, fmt.Errorf("failed to read schema for module: %w", err)
+	}
+
+	result.Schema = moduleSchema
+	result.Deploy = []string{"launch", "quarkus-app"}
+	return result, nil
 }
 
 // setPOMProperties updates the ftl.version properties in the
@@ -325,4 +350,23 @@ func updatePomProperties(root *etree.Element, pomFile string, ftlVersion string)
 	}
 	version.SetText(ftlVersion)
 	return nil
+}
+
+func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]builderrors.Error, error) {
+	errorsPath := filepath.Join(config.DeployDir, "errors.pb")
+	if _, err := os.Stat(errorsPath); errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+
+	content, err := os.ReadFile(errorsPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not load build errors file: %w", err)
+	}
+
+	errorspb := &languagepb.ErrorList{}
+	err = proto.Unmarshal(content, errorspb)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal build errors %w", err)
+	}
+	return languagepb.ErrorsFromProto(errorspb), nil
 }

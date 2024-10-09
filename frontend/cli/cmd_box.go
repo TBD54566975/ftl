@@ -148,7 +148,7 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 		destDir := filepath.Join(workDir, "modules", config.Module)
 
 		// Copy deployment artefacts.
-		files, err := buildengine.FindFilesToDeploy(config)
+		files, err := buildengine.FindFilesToDeploy(config, m.Deploy)
 		if err != nil {
 			return err
 		}
