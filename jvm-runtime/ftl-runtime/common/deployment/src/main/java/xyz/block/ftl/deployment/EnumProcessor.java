@@ -48,18 +48,14 @@ public class EnumProcessor {
     SchemaContributorBuildItem handleEnums(CombinedIndexBuildItem index, FTLRecorder recorder) {
         var enumAnnotations = index.getIndex().getAnnotations(FTLDotNames.ENUM);
         log.info("Processing {} enum annotations into decls", enumAnnotations.size());
-
-        return new SchemaContributorBuildItem(new Consumer<ModuleBuilder>() {
-            @Override
-            public void accept(ModuleBuilder moduleBuilder) {
-                try {
-                    var decls = extractEnumDecls(index, enumAnnotations, recorder, moduleBuilder);
-                    for (var decl : decls) {
-                        moduleBuilder.addDecls(decl);
-                    }
-                } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
-                    throw new RuntimeException(e);
+        return new SchemaContributorBuildItem(moduleBuilder -> {
+            try {
+                var decls = extractEnumDecls(index, enumAnnotations, recorder, moduleBuilder);
+                for (var decl : decls) {
+                    moduleBuilder.addDecls(decl);
                 }
+            } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+                throw new RuntimeException(e);
             }
         });
     }
