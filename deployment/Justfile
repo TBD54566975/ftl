@@ -78,6 +78,11 @@ teardown: teardown-cluster teardown-registry
 apply:
   kubectl kustomize --load-restrictor=LoadRestrictionsNone overlays/dev | kubectl apply -f -
 
+deploy-version version: setup-cluster
+  # Ideally this would point to https://github.com/TBD54566975/ftl//deployment/overlays/dev/?ref={{version}} but that doesn't work due to symlinks
+  # For now this is using the new config with a released image
+  kustomize build --load-restrictor=LoadRestrictionsNone overlays/dev | sed 's/ftl:5000/ftl0/g' | sed 's/ftl-controller:latest/ftl-controller:{{version}}/g' | kubectl apply -f -
+
 delete:
   kubectl kustomize --load-restrictor=LoadRestrictionsNone overlays/dev | kubectl delete -f -
 
