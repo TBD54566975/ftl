@@ -60,7 +60,6 @@ require (
 	github.com/tliron/kutil v0.3.26
 	github.com/tmc/langchaingo v0.1.12
 	github.com/zalando/go-keyring v0.2.5
-	go.opencensus.io v0.24.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0
 	go.opentelemetry.io/otel v1.30.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.30.0
