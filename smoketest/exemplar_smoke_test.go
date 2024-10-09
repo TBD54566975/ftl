@@ -4,6 +4,7 @@ package smoketest
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -12,8 +13,10 @@ import (
 )
 
 func TestSmokeEcho(t *testing.T) {
+	skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
+	fmt.Println("skipKubeFullDeploy:", skipKubeFullDeploy)
 	in.Run(t,
-		in.WithKubernetes(),
+		in.WithKubernetes(!skipKubeFullDeploy),
 		in.WithTestDataDir("."),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),

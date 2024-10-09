@@ -40,6 +40,13 @@ jobs:
           fetch-depth: 0
           sparse-checkout: smoketest
           sparse-checkout-cone-mode: false
+      # When we remove the above step to fetch the current smoke tests into tmpsmoketest,
+      # remove the overwrite step as well.
+      - name: Replace the tagged release smoketest with the current smoketest
+        run: |
+          set -euo pipefail
+          echo "Replacing tagged release smoketest with current smoketest"
+          rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest && rm -r ./tmpsmoketest
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
         with:
@@ -52,37 +59,39 @@ jobs:
         run: just init-db
       - name: Download Go Modules
         run: go mod download
-      # When we remove the above step to fetch the current smoke tests into tmpsmoketest,
-      # update this to remove the overwrite step.
-      - name: Smoke test the tagged release to bring up the cluster
+      - name: Set up a kube cluster with the tagged release dockerhub image
         run: |
             set -euo pipefail
-            echo "Replacing released exemplar with current exemplar"
-            rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest && rm -r ./tmpsmoketest
-            echo "Running current smoke test on the tagged release"
-            go test -v -tags integration -run '^Test' ./smoketest
-      - name: Download the last tagged release asset
-        run: |
-          set -euo pipefail
-          release_url="https://github.com/TBD54566975/ftl/releases/download/v${{ env.LATEST_VERSION }}/ftl-${{ env.LATEST_VERSION }}.linux-amd64.tar.gz"
-          echo "Fetching latest release asset from: $release_url"
-          curl -L "$release_url" --output last-release.linux-amd64.tar.gz
-      - name: Replace deployment with release images
-        run: |
-          set -euo pipefail
-          ls -al .
-          mkdir -p last-release
-          tar -xzf last-release.linux-amd64.tar.gz -C last-release
-          if [ ! -f last-release/ftl ]; then
-            echo "Error: 'ftl' binary not found in the extracted files."
-            exit 1
-          fi
-          cp last-release/ftl ./build/devel/ftl
-          cp last-release/ftl ./build/release/ftl
-      - name: Smoke test the tagged release with the release binaries
+            echo "Deploying the tagged release to the cluster"
+            cd deployment && just deploy-version v${{ env.LATEST_VERSION }} && just wait-for-kube && cd ..
+      # - name: Smoke test the tagged release to bring up the cluster
+      #   run: |
+      #       set -euo pipefail
+      #       echo "Running current smoke test on the tagged release"
+      #       go test -v -tags integration -run '^Test' ./smoketest
+      # - name: Download the last tagged release asset
+      #   run: |
+      #     set -euo pipefail
+      #     release_url="https://github.com/TBD54566975/ftl/releases/download/v${{ env.LATEST_VERSION }}/ftl-${{ env.LATEST_VERSION }}.linux-amd64.tar.gz"
+      #     echo "Fetching latest release asset from: $release_url"
+      #     curl -L "$release_url" --output last-release.linux-amd64.tar.gz
+      # - name: Replace deployment with release images
+      #   run: |
+      #     set -euo pipefail
+      #     ls -al .
+      #     mkdir -p last-release
+      #     tar -xzf last-release.linux-amd64.tar.gz -C last-release
+      #     if [ ! -f last-release/ftl ]; then
+      #       echo "Error: 'ftl' binary not found in the extracted files."
+      #       exit 1
+      #     fi
+      #     cp last-release/ftl ./build/devel/ftl
+      #     cp last-release/ftl ./build/release/ftl
+      - name: Smoke test the tagged release images
         run: |
             set -euo pipefail
-            echo "Running smoke test on the tagged release using released binaries"
+            echo "Running smoke test on the tagged release images"
+            echo "SKIP_KUBE_FULL_DEPLOY=true" >> "$GITHUB_ENV"
             go test -v -tags integration -run '^Test' ./smoketest
       # Next step is to build the FTL from HEAD, deploy it to the cluster, and run the smoke test
       - name: Archive Report
@@ -91,3 +100,14 @@ jobs:
         with:
           name: kube-report-smoke-test-upgrade
           path: /tmp/ftl-kube-report/
+
+
+# Plan:
+# 1. checkout the latest tagged rlease
+# 2. update ./overlay/smoketest/kustomization.yml to use the same tagged docker hub images
+# 3. deployment Justfile to full-deploy a cluster
+# 4. run the smoke tests on the cluster
+# 5. checkout HEAD of the current branch
+# 6. update ./overlay/smoketest/kustomization.yml to use latest image
+# 7. deployments/Justfile to build and apply the latest image to the cluster 
+# 8. run the smoke tests on the cluster
