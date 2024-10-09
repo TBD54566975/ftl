@@ -12,7 +12,7 @@ type ApiError struct {
 }
 
 type GetQueryParams struct {
-	Age ftl.Option[string] `json:"age"`
+	Age ftl.Option[int] `json:"age"`
 }
 
 type GetPathParams struct {
@@ -20,8 +20,8 @@ type GetPathParams struct {
 }
 
 type GetResponse struct {
-	Name string             `json:"name"`
-	Age  ftl.Option[string] `json:"age"`
+	Name string          `json:"name"`
+	Age  ftl.Option[int] `json:"age"`
 }
 
 // Example usage of path and query params

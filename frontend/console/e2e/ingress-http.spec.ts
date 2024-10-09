@@ -32,7 +32,7 @@ test('send get request with path and query params', async ({ page }) => {
   const responseJson = JSON.parse(responseText?.trim() || '{}')
 
   expect(responseJson).toEqual({
-    age: '10',
+    age: 10,
     name: 'wicket',
   })
 })
