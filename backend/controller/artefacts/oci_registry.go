@@ -5,19 +5,21 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts/internal/sql"
-	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/internal/model"
-	"github.com/TBD54566975/ftl/internal/sha256"
+	"io"
+	"strings"
+
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"io"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/memory"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
-	"strings"
+
+	"github.com/TBD54566975/ftl/backend/controller/artefacts/internal/sql"
+	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
 const (
