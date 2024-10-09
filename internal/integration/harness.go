@@ -79,10 +79,14 @@ func WithLanguages(languages ...string) Option {
 
 // WithKubernetes is a Run* option that specifies tests should be run on a kube cluster
 //
+// Set kubeFullDeploy to do a build and deploy; if false, assumes a kube cluster with
+// a controller and running is running.
+//
 // This is only compatible with go tests
-func WithKubernetes() Option {
+func WithKubernetes(kubeFullDeploy bool) Option {
 	return func(o *options) {
 		o.kube = true
+		o.kubeFullDeploy = kubeFullDeploy
 		o.startController = false
 	}
 }
@@ -159,6 +163,7 @@ type options struct {
 	requireJava       bool
 	envars            map[string]string
 	kube              bool
+	kubeFullDeploy    bool
 }
 
 // Run an integration test.
@@ -224,7 +229,9 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			assert.NoError(t, err)
 			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "install-istio").RunBuffered(ctx)
 			assert.NoError(t, err)
-			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "full-deploy").RunBuffered(ctx)
+			if opts.kubeFullDeploy {
+				err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "full-deploy").RunBuffered(ctx)
+			}
 			assert.NoError(t, err)
 			if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
 				// If we are already on linux/amd64 we don't need to rebuild, otherwise we now need a native one to interact with the kube cluster
