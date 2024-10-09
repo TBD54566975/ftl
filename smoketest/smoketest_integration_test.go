@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -15,7 +16,7 @@ import (
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func DisabledTestExemplar(t *testing.T) {
+func TestExemplar(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFilePath := filepath.Join(tmpDir, "smoketest.log")
 
@@ -26,7 +27,11 @@ func DisabledTestExemplar(t *testing.T) {
 	var failedAgentId int = 99
 	nonce := randomString(4)
 
+	skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
+	fmt.Println("skipKubeFullDeploy:", skipKubeFullDeploy)
+
 	in.Run(t,
+		in.WithKubernetes(!skipKubeFullDeploy),
 		in.WithJavaBuild(),
 		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),
