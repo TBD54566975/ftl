@@ -8,6 +8,7 @@ import xyz.block.ftl.Export;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.Subscription;
+import xyz.block.ftl.TopicDefinition;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.Verb;
@@ -27,4 +28,5 @@ public class FTLDotNames {
     public static final DotName TYPE_ALIAS = DotName.createSimple(TypeAlias.class);
     public static final DotName SUBSCRIPTION = DotName.createSimple(Subscription.class);
     public static final DotName LEASE_CLIENT = DotName.createSimple(LeaseClient.class);
+    public static final DotName TOPIC_DEFINITION = DotName.createSimple(TopicDefinition.class);
 }
