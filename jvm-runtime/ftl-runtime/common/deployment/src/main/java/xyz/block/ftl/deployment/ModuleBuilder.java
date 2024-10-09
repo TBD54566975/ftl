@@ -1,5 +1,9 @@
 package xyz.block.ftl.deployment;
 
+import static xyz.block.ftl.deployment.FTLDotNames.ENUM;
+import static xyz.block.ftl.deployment.FTLDotNames.EXPORT;
+import static xyz.block.ftl.deployment.FTLDotNames.GENERATED_REF;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Modifier;
@@ -35,8 +39,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.arc.processor.DotNames;
 import xyz.block.ftl.Config;
-import xyz.block.ftl.Export;
-import xyz.block.ftl.GeneratedRef;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.Secret;
 import xyz.block.ftl.VerbName;
@@ -80,13 +82,13 @@ public class ModuleBuilder {
     public static final DotName NULLABLE = DotName.createSimple(Nullable.class);
     public static final DotName JSON_NODE = DotName.createSimple(JsonNode.class.getName());
     public static final DotName OFFSET_DATE_TIME = DotName.createSimple(OffsetDateTime.class.getName());
-    public static final DotName GENERATED_REF = DotName.createSimple(GeneratedRef.class);
-    public static final DotName EXPORT = DotName.createSimple(Export.class);
+
     private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
 
     private final IndexView index;
-    private final Module.Builder moduleBuilder;
-    private final Map<TypeKey, ExistingRef> dataElements;
+    private final Module.Builder protoModuleBuilder;
+    private final Map<String, Decl> decls = new HashMap<>();
+    private final Map<String, Ref> externalRefs = new HashMap<>();
     private final String moduleName;
     private final Set<String> knownSecrets = new HashSet<>();
     private final Set<String> knownConfig = new HashSet<>();
@@ -99,17 +101,16 @@ public class ModuleBuilder {
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
-            Map<String, Iterable<String>> comments, Map<TypeKey, ExistingRef> typeAliases, boolean defaultToOptional) {
+            Map<String, Iterable<String>> comments, boolean defaultToOptional) {
         this.index = index;
         this.moduleName = moduleName;
-        this.moduleBuilder = Module.newBuilder()
+        this.protoModuleBuilder = Module.newBuilder()
                 .setName(moduleName)
                 .setBuiltin(false);
         this.knownTopics = knownTopics;
         this.verbClients = verbClients;
         this.recorder = recorder;
         this.comments = comments;
-        this.dataElements = new HashMap<>(typeAliases);
         this.defaultToOptional = defaultToOptional;
     }
 
@@ -390,37 +391,38 @@ public class ModuleBuilder {
                     return handleNullabilityAnnotations(Type.newBuilder().setTime(Time.newBuilder().build()).build(),
                             nullability);
                 }
-                var existing = dataElements.get(new TypeKey(clazz.name().toString(), List.of()));
-                if (existing != null) {
-                    if (existing.exported() || !export || !existing.ref().getModule().equals(moduleName)) {
-                        return Type.newBuilder().setRef(existing.ref()).build();
-                    }
-                    //bit of an edge case, we have an existing non-exported object that we need to export
-                    for (var i = 0; i < moduleBuilder.getDeclsCount(); ++i) {
-                        var decl = moduleBuilder.getDecls(i);
-                        if (!decl.hasData()) {
-                            continue;
-                        }
-                        if (decl.getData().getName().equals(existing.ref().getName())) {
-                            moduleBuilder.setDecls(i,
-                                    decl.toBuilder().setData(decl.getData().toBuilder().setExport(true)).build());
-                            break;
-                        }
-                    }
-                    return Type.newBuilder().setRef(existing.ref()).build();
+
+                String name = clazz.name().local();
+                if (externalRefs.containsKey(name)) {
+                    // Ref is to another module. Don't need a Decl
+                    return Type.newBuilder().setRef(externalRefs.get(name)).build();
                 }
-                Data.Builder data = Data.newBuilder();
-                data.setPos(PositionUtils.forClass(clazz.name().toString()));
-                data.setName(clazz.name().local());
-                data.setExport(type.hasAnnotation(EXPORT) || export);
-                Optional.ofNullable(comments.get(CommentKey.ofData(clazz.name().local())))
-                        .ifPresent(data::addAllComments);
-                buildDataElement(data, clazz.name());
-                moduleBuilder.addDecls(Decl.newBuilder().setData(data).build());
-                Ref ref = Ref.newBuilder().setName(data.getName()).setModule(moduleName).build();
-                dataElements.put(new TypeKey(clazz.name().toString(), List.of()),
-                        new ExistingRef(ref, export || data.getExport()));
-                return Type.newBuilder().setRef(ref).build();
+                var ref = Type.newBuilder().setRef(
+                        Ref.newBuilder().setName(name).setModule(moduleName).build()).build();
+
+                if (info.isEnum() || info.hasAnnotation(ENUM)) {
+                    // Set only the name and export here. EnumProcessor will fill in the rest
+                    xyz.block.ftl.v1.schema.Enum ennum = xyz.block.ftl.v1.schema.Enum.newBuilder()
+                            .setName(name)
+                            .setExport(type.hasAnnotation(EXPORT) || export)
+                            .build();
+                    addDecls(Decl.newBuilder().setEnum(ennum).build());
+                    return ref;
+                } else {
+                    // If this data was processed already, skip early
+                    if (updateData(name, type.hasAnnotation(EXPORT) || export)) {
+                        return ref;
+                    }
+                    Data.Builder data = Data.newBuilder();
+                    data.setPos(PositionUtils.forClass(clazz.name().toString()));
+                    data.setName(name);
+                    data.setExport(type.hasAnnotation(EXPORT) || export);
+                    Optional.ofNullable(comments.get(CommentKey.ofData(name)))
+                            .ifPresent(data::addAllComments);
+                    buildDataElement(data, clazz.name());
+                    addDecls(Decl.newBuilder().setData(data).build());
+                    return ref;
+                }
             }
             case PARAMETERIZED_TYPE -> {
                 var paramType = type.asParameterizedType();
@@ -501,32 +503,46 @@ public class ModuleBuilder {
     }
 
     public ModuleBuilder addDecls(Decl decl) {
-        if (decl.hasDatabase()) {
-            validateName(decl.getDatabase().getPos(), decl.getDatabase().getName());
-        } else if (decl.hasData()) {
-            validateName(decl.getData().getPos(), decl.getData().getName());
-        } else if (decl.hasConfig()) {
-            validateName(decl.getConfig().getPos(), decl.getConfig().getName());
+        if (decl.hasData()) {
+            Data data = decl.getData();
+            if (updateData(data.getName(), data.getExport())) {
+                return this;
+            }
+            addDecl(decl, data.getPos(), data.getName());
         } else if (decl.hasEnum()) {
-            validateName(decl.getEnum().getPos(), decl.getEnum().getName());
+            xyz.block.ftl.v1.schema.Enum enuum = decl.getEnum();
+            if (updateEnum(enuum.getName(), decl)) {
+                return this;
+            }
+            addDecl(decl, enuum.getPos(), enuum.getName());
+        } else if (decl.hasDatabase()) {
+            addDecl(decl, decl.getDatabase().getPos(), decl.getDatabase().getName());
+        } else if (decl.hasConfig()) {
+            addDecl(decl, decl.getConfig().getPos(), decl.getConfig().getName());
         } else if (decl.hasSecret()) {
-            validateName(decl.getSecret().getPos(), decl.getSecret().getName());
+            addDecl(decl, decl.getSecret().getPos(), decl.getSecret().getName());
         } else if (decl.hasVerb()) {
-            validateName(decl.getVerb().getPos(), decl.getVerb().getName());
+            addDecl(decl, decl.getVerb().getPos(), decl.getVerb().getName());
         } else if (decl.hasTypeAlias()) {
-            validateName(decl.getTypeAlias().getPos(), decl.getTypeAlias().getName());
+            addDecl(decl, decl.getTypeAlias().getPos(), decl.getTypeAlias().getName());
         } else if (decl.hasTopic()) {
-            validateName(decl.getTopic().getPos(), decl.getTopic().getName());
+            addDecl(decl, decl.getTopic().getPos(), decl.getTopic().getName());
         } else if (decl.hasFsm()) {
-            validateName(decl.getFsm().getPos(), decl.getFsm().getName());
+            addDecl(decl, decl.getFsm().getPos(), decl.getFsm().getName());
         } else if (decl.hasSubscription()) {
-            validateName(decl.getSubscription().getPos(), decl.getSubscription().getName());
+            addDecl(decl, decl.getSubscription().getPos(), decl.getSubscription().getName());
         }
-        moduleBuilder.addDecls(decl);
+
         return this;
     }
 
+    public int getDeclsCount() {
+        return decls.size();
+    }
+
     public void writeTo(OutputStream out) throws IOException {
+        decls.values().stream().forEachOrdered(protoModuleBuilder::addDecls);
+
         if (!validationFailures.isEmpty()) {
             StringBuilder sb = new StringBuilder();
             for (var failure : validationFailures) {
@@ -535,7 +551,7 @@ public class ModuleBuilder {
             }
             throw new RuntimeException(sb.toString());
         }
-        moduleBuilder.build().writeTo(out);
+        protoModuleBuilder.build().writeTo(out);
     }
 
     public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported,
@@ -552,13 +568,82 @@ public class ModuleBuilder {
             typeAlias.addMetadata(Metadata.newBuilder().setTypeMap(MetadataTypeMap.newBuilder().setRuntime(entry.getKey())
                     .setNativeName(entry.getValue()).build()).build());
         }
-        moduleBuilder.addDecls(Decl.newBuilder()
+        addDecls(Decl.newBuilder()
                 .setTypeAlias(typeAlias)
                 .build());
     }
 
-    record ExistingRef(Ref ref, boolean exported) {
+    /**
+     * Types from other modules don't need a Decl. We store Ref for it, and prevent a Decl being created next
+     * time we see this name
+     */
+    public void registerExternalType(String module, String name) {
+        Ref ref = Ref.newBuilder()
+                .setModule(module)
+                .setName(name)
+                .build();
+        externalRefs.put(name, ref);
+    }
 
+    private void addDecl(Decl decl, Position pos, String name) {
+        validateName(pos, name);
+        if (decls.containsKey(name)) {
+            duplicateNameValidationError(name, pos);
+        }
+        decls.put(name, decl);
+    }
+
+    /**
+     * Check if an enum with the given name already exists in the module. If it does, merge fields from both into one
+     */
+    private boolean updateEnum(String name, Decl decl) {
+        if (decls.containsKey(name)) {
+            var existing = decls.get(name);
+            if (!existing.hasEnum()) {
+                duplicateNameValidationError(name, decl.getEnum().getPos());
+            }
+            var moreComplete = decl.getEnum().getVariantsCount() > 0 ? decl : existing;
+            var lessComplete = decl.getEnum().getVariantsCount() > 0 ? existing : decl;
+            boolean export = lessComplete.getEnum().getExport() || existing.getEnum().getExport();
+            var merged = moreComplete.getEnum().toBuilder()
+                    .setExport(export)
+                    .build();
+            decls.put(name, Decl.newBuilder().setEnum(merged).build());
+            if (export) {
+                // Need to update export on variants too
+                for (var childDecl : merged.getVariantsList()) {
+                    if (childDecl.getValue().hasTypeValue() && childDecl.getValue().getTypeValue().getValue().hasRef()) {
+                        var ref = childDecl.getValue().getTypeValue().getValue().getRef();
+                        updateData(ref.getName(), true);
+                    }
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if a data with the given name already exists in the module. If it does, update its export field to
+     * match <code>export</code>, and return true
+     */
+    private boolean updateData(String name, boolean export) {
+        if (decls.containsKey(name)) {
+            var existing = decls.get(name);
+            if (!existing.hasData()) {
+                return true;
+            }
+            var merged = existing.getData().toBuilder().setExport(export).build();
+            decls.put(name, Decl.newBuilder().setData(merged).build());
+            return true;
+        }
+        return false;
+    }
+
+    private void duplicateNameValidationError(String name, Position pos) {
+        validationFailures.add(new ValidationFailure(name, String.format(
+                "schema declaration with name \"%s\" already exists for module \"%s\"; previously declared at \"%s\"",
+                name, moduleName, pos.getFilename() + ":" + pos.getLine())));
     }
 
     public enum BodyType {

@@ -1,11 +1,14 @@
 package xyz.block.ftl.deployment;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationValue;
 import org.jboss.jandex.Type;
 import org.jboss.jandex.TypeVariable;
+import org.jboss.logging.Logger;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -14,13 +17,17 @@ import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 
 public class TypeAliasProcessor {
 
+    private static final Logger log = Logger.getLogger(TypeAliasProcessor.class);
+
     @BuildStep
     public void processTypeAlias(CombinedIndexBuildItem index,
             BuildProducer<SchemaContributorBuildItem> schemaContributorBuildItemBuildProducer,
             BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem,
             BuildProducer<TypeAliasBuildItem> typeAliasBuildItemBuildProducer) {
+        Collection<AnnotationInstance> typeAliasAnnotations = index.getIndex().getAnnotations(FTLDotNames.TYPE_ALIAS);
+        log.infof("Processing %d type alias annotations into decls", typeAliasAnnotations.size());
         var beans = new AdditionalBeanBuildItem.Builder().setUnremovable();
-        for (var mapper : index.getIndex().getAnnotations(FTLDotNames.TYPE_ALIAS)) {
+        for (var mapper : typeAliasAnnotations) {
             boolean exported = mapper.target().hasAnnotation(FTLDotNames.EXPORT);
             // This may or may not be the actual mapper, it may be a subclass
 
@@ -83,6 +90,11 @@ public class TypeAliasProcessor {
                 }
                 schemaContributorBuildItemBuildProducer.produce(new SchemaContributorBuildItem(moduleBuilder -> moduleBuilder
                         .registerTypeAlias(name, finalT, finalS, exported, languageMappings)));
+            } else {
+                // If the 'module' field of the annotation is non-empty, we have a mapper for a type alias defined in
+                // another module. Don't need a Decl
+                schemaContributorBuildItemBuildProducer.produce(new SchemaContributorBuildItem(moduleBuilder -> moduleBuilder
+                        .registerExternalType(module, name)));
             }
 
         }

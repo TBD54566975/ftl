@@ -1,8 +1,10 @@
 package xyz.block.ftl.deployment;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.AnnotationTarget;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.MethodInfo;
@@ -27,8 +29,11 @@ public class SubscriptionProcessor {
     @BuildStep
     SubscriptionMetaAnnotationsBuildItem subscriptionAnnotations(CombinedIndexBuildItem combinedIndexBuildItem,
             ModuleNameBuildItem moduleNameBuildItem) {
+        Collection<AnnotationInstance> subscriptionAnnotations = combinedIndexBuildItem.getComputingIndex()
+                .getAnnotations(Subscription.class);
+        log.infof("Processing %s subscription annotations into decls", subscriptionAnnotations.size());
         Map<DotName, SubscriptionMetaAnnotationsBuildItem.SubscriptionAnnotation> annotations = new HashMap<>();
-        for (var subscriptions : combinedIndexBuildItem.getComputingIndex().getAnnotations(Subscription.class)) {
+        for (var subscriptions : subscriptionAnnotations) {
             if (subscriptions.target().kind() != AnnotationTarget.Kind.CLASS) {
                 continue;
             }

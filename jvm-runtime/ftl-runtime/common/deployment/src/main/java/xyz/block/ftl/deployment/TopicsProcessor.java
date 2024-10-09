@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.Type;
+import org.jboss.logging.Logger;
 
 import io.quarkus.deployment.GeneratedClassGizmoAdaptor;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -25,10 +26,12 @@ import xyz.block.ftl.v1.schema.Decl;
 public class TopicsProcessor {
 
     public static final DotName TOPIC = DotName.createSimple(Topic.class);
+    private static final Logger log = Logger.getLogger(TopicsProcessor.class);
 
     @BuildStep
     TopicsBuildItem handleTopics(CombinedIndexBuildItem index, BuildProducer<GeneratedClassBuildItem> generatedTopicProducer) {
         var topicDefinitions = index.getComputingIndex().getAnnotations(TopicDefinition.class);
+        log.infof("Processing %d topic definition annotations into decls", topicDefinitions.size());
         Map<DotName, TopicsBuildItem.DiscoveredTopic> topics = new HashMap<>();
         Set<String> names = new HashSet<>();
         for (var topicDefinition : topicDefinitions) {

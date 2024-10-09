@@ -11,12 +11,14 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.eclipse.microprofile.config.Config;
+import org.jboss.logging.Logger;
 
 import io.quarkus.bootstrap.prebuild.CodeGenException;
 import io.quarkus.deployment.CodeGenContext;
 import io.quarkus.deployment.CodeGenProvider;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Enum;
+import xyz.block.ftl.v1.schema.EnumVariant;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Topic;
 import xyz.block.ftl.v1.schema.Type;
@@ -26,6 +28,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
 
     public static final String PACKAGE_PREFIX = "ftl.";
     public static final String TYPE_MAPPER = "TypeAliasMapper";
+    private static final Logger log = Logger.getLogger(JVMCodeGenerator.class);
 
     @Override
     public String providerId() {
@@ -39,12 +42,14 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
 
     @Override
     public boolean trigger(CodeGenContext context) throws CodeGenException {
+        log.info("Generating JVM clients, data, enums from schema");
         if (!Files.isDirectory(context.inputDir())) {
             return false;
         }
         List<Module> modules = new ArrayList<>();
         Map<DeclRef, Type> typeAliasMap = new HashMap<>();
         Map<DeclRef, String> nativeTypeAliasMap = new HashMap<>();
+        Map<DeclRef, List<EnumInfo>> enumVariantInfoMap = new HashMap<>();
         try (Stream<Path> pathStream = Files.list(context.inputDir())) {
             for (var file : pathStream.toList()) {
                 String fileName = file.getFileName().toString();
@@ -109,14 +114,16 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                         if (!data.getExport()) {
                             continue;
                         }
-                        generateDataObject(module, data, packageName, typeAliasMap, nativeTypeAliasMap, context.outDir());
+                        generateDataObject(module, data, packageName, typeAliasMap, nativeTypeAliasMap, enumVariantInfoMap,
+                                context.outDir());
 
                     } else if (decl.hasEnum()) {
                         var data = decl.getEnum();
                         if (!data.getExport()) {
                             continue;
                         }
-                        generateEnum(module, data, packageName, typeAliasMap, nativeTypeAliasMap, context.outDir());
+                        generateEnum(module, data, packageName, typeAliasMap, nativeTypeAliasMap, enumVariantInfoMap,
+                                context.outDir());
                     } else if (decl.hasTopic()) {
                         var data = decl.getTopic();
                         if (!data.getExport()) {
@@ -141,10 +148,12 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
             Map<DeclRef, Type> typeAliasMap, Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
 
     protected abstract void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, List<EnumInfo>> enumVariantInfoMap, Path outputDir)
+            throws IOException;
 
     protected abstract void generateDataObject(Module module, Data data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, List<EnumInfo>> enumVariantInfoMap, Path outputDir)
+            throws IOException;
 
     protected abstract void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
             Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException;
@@ -155,6 +164,9 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
     }
 
     public record DeclRef(String module, String name) {
+    }
+
+    public record EnumInfo(String interfaceType, EnumVariant variant, List<EnumVariant> otherVariants) {
     }
 
     protected static String className(String in) {
