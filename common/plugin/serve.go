@@ -20,10 +20,10 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	_ "github.com/TBD54566975/ftl/internal/server" // Set GOMAXPROCS to match Linux container CPU quota.
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	_ "github.com/TBD54566975/ftl/internal/server" // Set GOMAXPROCS to match Linux container CPU quota.
 )
 
 type serveCli struct {
