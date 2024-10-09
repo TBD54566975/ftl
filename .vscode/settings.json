@@ -1,0 +1,8 @@
+{
+  "protoc": {
+      "path": "${workspaceRoot}/bin/protoc",
+      "options": [
+          "--proto_path=${workspaceRoot}/backend/protos"
+      ]
+  }
+}
