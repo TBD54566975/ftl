@@ -4,9 +4,10 @@ import java.util.Set;
 
 import org.eclipse.microprofile.config.spi.ConfigSource;
 
-public class BannerConfigSource implements ConfigSource {
+public class StaticConfigSource implements ConfigSource {
 
     public static final String QUARKUS_BANNER_ENABLED = "quarkus.banner.enabled";
+    final static String OTEL_METRICS_ENABLED = "quarkus.otel.metrics.enabled";
 
     @Override
     public Set<String> getPropertyNames() {
@@ -15,14 +16,19 @@ public class BannerConfigSource implements ConfigSource {
 
     @Override
     public String getValue(String propertyName) {
-        if (propertyName.equals(QUARKUS_BANNER_ENABLED)) {
-            return "false";
+        switch (propertyName) {
+            case (QUARKUS_BANNER_ENABLED) -> {
+                return "false";
+            }
+            case OTEL_METRICS_ENABLED -> {
+                return "true";
+            }
         }
         return null;
     }
 
     @Override
     public String getName() {
-        return "Quarkus Banner";
+        return "Quarkus Static Config Source";
     }
 }
