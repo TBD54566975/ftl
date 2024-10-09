@@ -17,7 +17,7 @@ import (
 )
 
 type inMemProvisioningTask struct {
-	steps []*InMemProvisioningStep
+	steps []*inMemProvisioningStep
 }
 
 func (t *inMemProvisioningTask) Done() (bool, error) {
@@ -33,14 +33,14 @@ func (t *inMemProvisioningTask) Done() (bool, error) {
 	return done, nil
 }
 
-type InMemProvisioningStep struct {
+type inMemProvisioningStep struct {
 	Resource *provisioner.Resource
 	Err      error
 	Done     atomic.Bool
 }
 
 // InMemResourceProvisionerFn is a function that provisions a resource
-type InMemResourceProvisionerFn func(context.Context, *provisioner.Resource, string, string, *InMemProvisioningStep)
+type InMemResourceProvisionerFn func(context.Context, *provisioner.ResourceContext, string, string) (*provisioner.Resource, error)
 
 // InMemProvisioner for running an in memory provisioner, constructing all resources concurrently
 //
@@ -79,9 +79,18 @@ func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[p
 	task := &inMemProvisioningTask{}
 	for _, r := range req.Msg.DesiredResources {
 		if handler, ok := d.handlers[TypeOf(r.Resource)]; ok {
-			step := &InMemProvisioningStep{Resource: r.Resource}
+			step := &inMemProvisioningStep{Resource: r.Resource}
 			task.steps = append(task.steps, step)
-			go handler(ctx, r.Resource, req.Msg.Module, r.Resource.ResourceId, step)
+			go func() {
+				defer step.Done.Store(true)
+				output, err := handler(ctx, r, req.Msg.Module, r.Resource.ResourceId)
+				if err != nil {
+					step.Err = err
+					logger.Errorf(err, "failed to provision resource %s", r.Resource.ResourceId)
+					return
+				}
+				step.Resource = output
+			}()
 		} else {
 			err := fmt.Errorf("unsupported resource type: %T", r.Resource.Resource)
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)

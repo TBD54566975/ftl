@@ -14,12 +14,10 @@ import (
 // NewControllerProvisioner creates a new provisioner that uses the FTL controller to provision modules
 func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMemProvisioner {
 	return NewEmbeddedProvisioner(map[ResourceType]InMemResourceProvisionerFn{
-		ResourceTypeModule: func(ctx context.Context, res *provisioner.Resource, module, _ string, step *InMemProvisioningStep) {
-			defer step.Done.Store(true)
-
-			mod, ok := res.Resource.(*provisioner.Resource_Module)
+		ResourceTypeModule: func(ctx context.Context, rc *provisioner.ResourceContext, module, _ string) (*provisioner.Resource, error) {
+			mod, ok := rc.Resource.Resource.(*provisioner.Resource_Module)
 			if !ok {
-				panic(fmt.Errorf("unexpected resource type: %T", res.Resource))
+				panic(fmt.Errorf("unexpected resource type: %T", rc.Resource.Resource))
 			}
 			logger := log.FromContext(ctx)
 			logger.Infof("provisioning module: %s", module)
@@ -30,13 +28,13 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 				Labels:    mod.Module.Labels,
 			}))
 			if err != nil {
-				step.Err = err
-			} else {
-				if mod.Module.Output == nil {
-					mod.Module.Output = &provisioner.ModuleResource_ModuleResourceOutput{}
-				}
-				mod.Module.Output.DeploymentKey = resp.Msg.DeploymentKey
+				return nil, fmt.Errorf("failed to create deployment: %w", err)
 			}
+			if mod.Module.Output == nil {
+				mod.Module.Output = &provisioner.ModuleResource_ModuleResourceOutput{}
+			}
+			mod.Module.Output.DeploymentKey = resp.Msg.DeploymentKey
+			return rc.Resource, nil
 		},
 	})
 }
