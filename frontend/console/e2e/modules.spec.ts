@@ -6,6 +6,14 @@ test('shows active modules', async ({ page }) => {
   await modulesNavItem.click()
   await expect(page).toHaveURL(/\/modules$/)
 
-  await expect(page.getByText('dpl-time')).toBeVisible()
-  await expect(page.getByText('dpl-echo')).toBeVisible()
+  const moduleNames = await page.$$eval('[data-module-row]', (elements) => elements.map((el) => el.getAttribute('data-module-row')))
+
+  const expectedModuleNames = ['fsm', 'cron', 'time', 'pubsub', 'http', 'echo']
+  expect(moduleNames).toEqual(expect.arrayContaining(expectedModuleNames))
+})
+
+test('tapping on a module navigates to the module page', async ({ page }) => {
+  await page.goto('http://localhost:8892/modules')
+  await page.locator(`[data-module-row="echo"]`).click()
+  await expect(page).toHaveURL(/\/modules\/echo$/)
 })

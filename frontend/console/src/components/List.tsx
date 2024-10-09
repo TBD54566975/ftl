@@ -1,3 +1,4 @@
+import { ArrowRight01Icon } from 'hugeicons-react'
 import { classNames } from '../utils'
 
 type ListProps<T> = {
@@ -13,10 +14,11 @@ export const List = <T,>({ items, renderItem, onClick, className }: ListProps<T>
       {items.map((item, index) => (
         <li
           key={index}
-          className={`relative flex justify-between gap-x-6 p-4 ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' : ''}`}
+          className={`relative flex justify-between items-center gap-x-4 p-4 ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700' : ''}`}
           onClick={onClick ? () => onClick(item) : undefined}
         >
           {renderItem(item)}
+          {onClick && <ArrowRight01Icon className='size-5 text-gray-400' />}
         </li>
       ))}
     </ul>
