@@ -91,6 +91,11 @@ public class TypeAliasProcessor {
                 }
                 schemaContributorBuildItemBuildProducer.produce(new SchemaContributorBuildItem(moduleBuilder -> moduleBuilder
                         .registerTypeAlias(name, finalT, finalS, exported, languageMappings)));
+            } else {
+                // If the 'module' field of the annotation is non-empty, we have a mapper for a type alias defined in
+                // another module. Don't need a Decl
+                schemaContributorBuildItemBuildProducer.produce(new SchemaContributorBuildItem(moduleBuilder -> moduleBuilder
+                        .registerExternalType(module, name)));
             }
 
         }

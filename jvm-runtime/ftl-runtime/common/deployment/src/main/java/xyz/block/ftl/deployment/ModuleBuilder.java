@@ -88,6 +88,7 @@ public class ModuleBuilder {
     private final IndexView index;
     private final Module.Builder protoModuleBuilder;
     private final Map<String, Decl> decls = new HashMap<>();
+    private final Map<String, Ref> externalRefs = new HashMap<>();
     private final String moduleName;
     private final Set<String> knownSecrets = new HashSet<>();
     private final Set<String> knownConfig = new HashSet<>();
@@ -391,27 +392,32 @@ public class ModuleBuilder {
                             nullability);
                 }
 
+                String name = clazz.name().local();
+                if (externalRefs.containsKey(name)) {
+                    // Ref is to another module. Don't need a Decl
+                    return Type.newBuilder().setRef(externalRefs.get(name)).build();
+                }
                 var ref = Type.newBuilder().setRef(
-                        Ref.newBuilder().setName(clazz.name().local()).setModule(moduleName).build()).build();
+                        Ref.newBuilder().setName(name).setModule(moduleName).build()).build();
 
                 if (info.isEnum() || info.hasAnnotation(ENUM)) {
                     // Set only the name and export here. EnumProcessor will fill in the rest
                     xyz.block.ftl.v1.schema.Enum ennum = xyz.block.ftl.v1.schema.Enum.newBuilder()
-                            .setName(clazz.name().local())
+                            .setName(name)
                             .setExport(type.hasAnnotation(EXPORT) || export)
                             .build();
                     addDecls(Decl.newBuilder().setEnum(ennum).build());
                     return ref;
                 } else {
                     // If this data was processed already, skip early
-                    if (updateData(clazz.name().local(), type.hasAnnotation(EXPORT) || export)) {
+                    if (updateData(name, type.hasAnnotation(EXPORT) || export)) {
                         return ref;
                     }
                     Data.Builder data = Data.newBuilder();
                     data.setPos(PositionUtils.forClass(clazz.name().toString()));
-                    data.setName(clazz.name().local());
+                    data.setName(name);
                     data.setExport(type.hasAnnotation(EXPORT) || export);
-                    Optional.ofNullable(comments.get(CommentKey.ofData(clazz.name().local())))
+                    Optional.ofNullable(comments.get(CommentKey.ofData(name)))
                             .ifPresent(data::addAllComments);
                     buildDataElement(data, clazz.name());
                     addDecls(Decl.newBuilder().setData(data).build());
@@ -565,6 +571,18 @@ public class ModuleBuilder {
         addDecls(Decl.newBuilder()
                 .setTypeAlias(typeAlias)
                 .build());
+    }
+
+    /**
+     * Types from other modules don't need a Decl. We store Ref for it, and prevent a Decl being created next
+     * time we see this name
+     */
+    public void registerExternalType(String module, String name) {
+        Ref ref = Ref.newBuilder()
+                .setModule(module)
+                .setName(name)
+                .build();
+        externalRefs.put(name, ref);
     }
 
     private void addDecl(Decl decl, Position pos, String name) {
