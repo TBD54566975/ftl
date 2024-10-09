@@ -28,8 +28,8 @@ jobs:
           ref: v${{ env.LATEST_VERSION }}
           fetch-depth: 1
           fetch-tags: true
-      # The following grabs the current smoke test from the HEAD branch. This is to solve the
-      # chicken-and-egg. Once it's in the tagged release, skip this.
+      # The following grabs the current smoke test and deployment Justfile from the HEAD. This
+      # is to solve the chicken-and-egg. Once it's in the tagged release, skip this.
       - name: Check out the current smoke test
         uses: actions/checkout@v4
         with:
@@ -38,15 +38,21 @@ jobs:
           path: tmpsmoketest
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-          sparse-checkout: smoketest
+          sparse-checkout: |
+            smoketest
+            deployment
           sparse-checkout-cone-mode: false
-      # When we remove the above step to fetch the current smoke tests into tmpsmoketest,
-      # remove the overwrite step as well.
+      # When we remove the above step to fetch the current smoke tests and deployment Justfile
+      # into tmpsmoketest, remove the overwrite step as well.
       - name: Replace the tagged release smoketest with the current smoketest
         run: |
           set -euo pipefail
           echo "Replacing tagged release smoketest with current smoketest"
-          rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest && rm -r ./tmpsmoketest
+          rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest
+          echo "Replacing deployment Justfile with current Justfile"
+          cp ./tmpsmoketest/deployment/Justfile ./deployment/Justfile
+          echo "Removing tmpsmoketest"
+          rm -r ./tmpsmoketest
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
         with:
