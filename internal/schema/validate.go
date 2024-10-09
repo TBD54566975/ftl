@@ -816,7 +816,11 @@ func requireUnitPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
 
 func validatePathParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
 	switch t := n.(type) {
-	case *String, *Data, *Unit, *Float, *Int, *Bool, *Map: // Valid HTTP param payload types.
+	case *String, *Data, *Unit, *Float, *Int, *Bool: // Valid HTTP param payload types.
+	case *Map:
+		if _, ok := t.Value.(*String); !ok {
+			return errorf(r, "ingress verb %s: %s type %s path params can only support maps of strings, not %v", v.Name, reqOrResp, r, n)
+		}
 	case *TypeAlias:
 		// allow aliases of external types
 		for _, m := range t.Metadata {
@@ -833,7 +837,20 @@ func validatePathParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) er
 
 func validateQueryParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) error {
 	switch t := n.(type) {
-	case *Data, *Unit, *Map: // Valid HTTP query payload types.
+	case *Data, *Unit: // Valid HTTP query payload types.
+		return nil
+	case *Map:
+		switch val := t.Value.(type) {
+		case *String:
+			// Valid HTTP query payload type
+			return nil
+		case *Array:
+			if _, ok := val.Element.(*String); ok {
+				return nil
+			}
+		default:
+			return errorf(r, "ingress verb %s: %s type %s query params can only support maps of strings or string arrays, not %v", v.Name, reqOrResp, r, n)
+		}
 	case *TypeAlias:
 		// allow aliases of external types
 		for _, m := range t.Metadata {
@@ -845,7 +862,7 @@ func validateQueryParamsPayloadType(n Node, r Type, v *Verb, reqOrResp string) e
 	default:
 		return errorf(r, "ingress verb %s: %s type %s must have a param of data structure, unit or map not %s", v.Name, reqOrResp, r, n)
 	}
-	return nil
+	return errorf(r, "ingress verb %s: %s type %s query params can only support maps of strings or string arrays, or data types not %v", v.Name, reqOrResp, r, n)
 }
 
 func validateVerbSubscriptions(module *Module, v *Verb, md *MetadataSubscriber, scopes Scopes, schema optional.Option[*Schema]) (merr []error) {
