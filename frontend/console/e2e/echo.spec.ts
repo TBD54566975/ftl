@@ -1,7 +1,7 @@
-import { expect, ftlTest } from './ftl-test'
+import { expect, test } from '@playwright/test'
 import { navigateToDecl } from './helpers'
 
-ftlTest('shows echo verb form', async ({ page }) => {
+test('shows echo verb form', async ({ page }) => {
   await navigateToDecl(page, 'echo', 'echo')
 
   await expect(page.getByText('CALL', { exact: true })).toBeVisible()
@@ -12,7 +12,7 @@ ftlTest('shows echo verb form', async ({ page }) => {
   await expect(page.getByText('JSONSchema', { exact: true })).toBeVisible()
 })
 
-ftlTest('send echo request', async ({ page }) => {
+test('send echo request', async ({ page }) => {
   await navigateToDecl(page, 'echo', 'echo')
 
   // Check the initial value of the path input
@@ -31,7 +31,7 @@ ftlTest('send echo request', async ({ page }) => {
   await expect(responseEditor).toBeVisible()
 
   const responseText = await responseEditor.textContent()
-  const responseJson = JSON.parse(responseText.trim())
+  const responseJson = JSON.parse(responseText?.trim() || '{}')
 
   const expectedStart = 'Hello, wicket!!! It is '
   expect(responseJson.message.startsWith(expectedStart)).toBe(true)

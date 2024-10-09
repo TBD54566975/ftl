@@ -1,7 +1,7 @@
-import { expect, ftlTest } from './ftl-test'
+import { expect, test } from '@playwright/test'
 import { navigateToDecl } from './helpers'
 
-ftlTest('shows http ingress form', async ({ page }) => {
+test('shows http ingress form', async ({ page }) => {
   await navigateToDecl(page, 'http', 'get')
 
   await expect(page.locator('#call-type')).toHaveText('GET')
@@ -12,7 +12,7 @@ ftlTest('shows http ingress form', async ({ page }) => {
   await expect(page.getByText('JSONSchema', { exact: true })).toBeVisible()
 })
 
-ftlTest('send get request with path and query params', async ({ page }) => {
+test('send get request with path and query params', async ({ page }) => {
   await navigateToDecl(page, 'http', 'get')
 
   // Check the initial value of the path input
@@ -29,7 +29,7 @@ ftlTest('send get request with path and query params', async ({ page }) => {
   await expect(responseEditor).toBeVisible()
 
   const responseText = await responseEditor.textContent()
-  const responseJson = JSON.parse(responseText)
+  const responseJson = JSON.parse(responseText?.trim() || '{}')
 
   expect(responseJson).toEqual({
     age: '10',
@@ -37,7 +37,7 @@ ftlTest('send get request with path and query params', async ({ page }) => {
   })
 })
 
-ftlTest('send post request with body', async ({ page }) => {
+test('send post request with body', async ({ page }) => {
   await navigateToDecl(page, 'http', 'post')
 
   // Check the initial value of the path input
@@ -56,7 +56,7 @@ ftlTest('send post request with body', async ({ page }) => {
   await expect(responseEditor).toBeVisible()
 
   const responseText = await responseEditor.textContent()
-  const responseJson = JSON.parse(responseText)
+  const responseJson = JSON.parse(responseText?.trim() || '{}')
 
   expect(responseJson).toEqual({
     age: 10,
