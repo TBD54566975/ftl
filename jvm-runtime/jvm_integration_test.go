@@ -77,35 +77,35 @@ func TestJVMCoreFunctionality(t *testing.T) {
 	}
 
 	tests := []in.SubTest{}
-	tests = append(tests, PairedTest("emptyVerb", func(module string) in.Action {
+	tests = append(tests, AllRuntimesTest("emptyVerb", func(module string) in.Action {
 		return in.Call(module, "emptyVerb", in.Obj{}, func(t testing.TB, response in.Obj) {
 			assert.Equal(t, map[string]any{}, response, "expecting empty response, got %s", repr.String(response))
 		})
 	})...)
-	tests = append(tests, PairedTest("sinkVerb", func(module string) in.Action {
+	tests = append(tests, AllRuntimesTest("sinkVerb", func(module string) in.Action {
 		return in.Call(module, "sinkVerb", "ignored", func(t testing.TB, response in.Obj) {
 			assert.Equal(t, map[string]any{}, response, "expecting empty response, got %s", repr.String(response))
 		})
 	})...)
-	tests = append(tests, PairedTest("sourceVerb", func(module string) in.Action {
+	tests = append(tests, AllRuntimesTest("sourceVerb", func(module string) in.Action {
 		return in.Call(module, "sourceVerb", in.Obj{}, func(t testing.TB, response string) {
 			assert.Equal(t, "Source Verb", response, "expecting empty response, got %s", response)
 		})
 	})...)
-	tests = append(tests, PairedTest("errorEmptyVerb", func(module string) in.Action {
+	tests = append(tests, AllRuntimesTest("errorEmptyVerb", func(module string) in.Action {
 		return in.Fail(
 			in.Call(module, "errorEmptyVerb", in.Obj{}, func(t testing.TB, response in.Obj) {
 				assert.Equal(t, map[string]any{}, response, "expecting empty response, got %s", repr.String(response))
 			}), "verb failed")
 	})...)
-	tests = append(tests, PairedVerbTest("intVerb", 124)...)
-	tests = append(tests, PairedVerbTest("floatVerb", 0.123)...)
-	tests = append(tests, PairedVerbTest("stringVerb", "Hello World")...)
-	tests = append(tests, PairedVerbTest("bytesVerb", []byte{1, 2, 3, 0, 1})...)
-	tests = append(tests, PairedVerbTest("boolVerb", true)...)
-	tests = append(tests, PairedVerbTest("stringArrayVerb", []string{"Hello World"})...)
-	tests = append(tests, PairedVerbTest("stringMapVerb", map[string]string{"Hello": "World"})...)
-	tests = append(tests, PairedTest("timeVerb", func(module string) in.Action {
+	tests = append(tests, AllRuntimesVerbTest("intVerb", 124)...)
+	tests = append(tests, AllRuntimesVerbTest("floatVerb", 0.123)...)
+	tests = append(tests, AllRuntimesVerbTest("stringVerb", "Hello World")...)
+	tests = append(tests, AllRuntimesVerbTest("bytesVerb", []byte{1, 2, 3, 0, 1})...)
+	tests = append(tests, AllRuntimesVerbTest("boolVerb", true)...)
+	tests = append(tests, AllRuntimesVerbTest("stringArrayVerb", []string{"Hello World"})...)
+	tests = append(tests, AllRuntimesVerbTest("stringMapVerb", map[string]string{"Hello": "World"})...)
+	tests = append(tests, AllRuntimesTest("timeVerb", func(module string) in.Action {
 		now := time.Now().UTC()
 		return in.Call(module, "timeVerb", now.Format(time.RFC3339Nano), func(t testing.TB, response string) {
 			result, err := time.Parse(time.RFC3339Nano, response)
@@ -113,19 +113,19 @@ func TestJVMCoreFunctionality(t *testing.T) {
 			assert.Equal(t, now, result, "times not equal %s %s", now, result)
 		})
 	})...)
-	tests = append(tests, PairedVerbTest("testObjectVerb", exampleObject)...)
-	tests = append(tests, PairedVerbTest("testObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
-	tests = append(tests, PairedVerbTest("objectMapVerb", map[string]TestObject{"hello": exampleObject})...)
-	tests = append(tests, PairedVerbTest("objectArrayVerb", []TestObject{exampleObject})...)
-	tests = append(tests, PairedVerbTest("parameterizedObjectVerb", parameterizedObject)...)
-	tests = append(tests, PairedVerbTest("optionalIntVerb", -3)...)
-	tests = append(tests, PairedVerbTest("optionalFloatVerb", -7.6)...)
-	tests = append(tests, PairedVerbTest("optionalStringVerb", "foo")...)
-	tests = append(tests, PairedVerbTest("optionalBytesVerb", []byte{134, 255, 0})...)
-	tests = append(tests, PairedVerbTest("optionalBoolVerb", false)...)
-	tests = append(tests, PairedVerbTest("optionalStringArrayVerb", []string{"foo"})...)
-	tests = append(tests, PairedVerbTest("optionalStringMapVerb", map[string]string{"Hello": "World"})...)
-	tests = append(tests, PairedTest("optionalTimeVerb", func(module string) in.Action {
+	tests = append(tests, AllRuntimesVerbTest("testObjectVerb", exampleObject)...)
+	tests = append(tests, AllRuntimesVerbTest("testObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
+	tests = append(tests, AllRuntimesVerbTest("objectMapVerb", map[string]TestObject{"hello": exampleObject})...)
+	tests = append(tests, AllRuntimesVerbTest("objectArrayVerb", []TestObject{exampleObject})...)
+	tests = append(tests, AllRuntimesVerbTest("parameterizedObjectVerb", parameterizedObject)...)
+	tests = append(tests, AllRuntimesVerbTest("optionalIntVerb", -3)...)
+	tests = append(tests, AllRuntimesVerbTest("optionalFloatVerb", -7.6)...)
+	tests = append(tests, AllRuntimesVerbTest("optionalStringVerb", "foo")...)
+	tests = append(tests, AllRuntimesVerbTest("optionalBytesVerb", []byte{134, 255, 0})...)
+	tests = append(tests, AllRuntimesVerbTest("optionalBoolVerb", false)...)
+	tests = append(tests, AllRuntimesVerbTest("optionalStringArrayVerb", []string{"foo"})...)
+	tests = append(tests, AllRuntimesVerbTest("optionalStringMapVerb", map[string]string{"Hello": "World"})...)
+	tests = append(tests, AllRuntimesTest("optionalTimeVerb", func(module string) in.Action {
 		now := time.Now().UTC()
 		return in.Call(module, "optionalTimeVerb", now.Format(time.RFC3339Nano), func(t testing.TB, response string) {
 			result, err := time.Parse(time.RFC3339Nano, response)
@@ -134,10 +134,10 @@ func TestJVMCoreFunctionality(t *testing.T) {
 		})
 	})...)
 
-	tests = append(tests, PairedVerbTest("optionalTestObjectVerb", exampleObject)...)
-	tests = append(tests, PairedVerbTest("optionalTestObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
-	tests = append(tests, PairedVerbTest("externalTypeVerb", "did:web:abc123")...)
-	tests = append(tests, PairedVerbTest("typeEnumVerb", AnimalWrapper{Animal: Animal{
+	tests = append(tests, AllRuntimesVerbTest("optionalTestObjectVerb", exampleObject)...)
+	tests = append(tests, AllRuntimesVerbTest("optionalTestObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
+	tests = append(tests, AllRuntimesVerbTest("externalTypeVerb", "did:web:abc123")...)
+	tests = append(tests, JavaAndGoVerbTest("typeEnumVerb", AnimalWrapper{Animal: Animal{
 		Name: "Cat",
 		Value: Cat{
 			Name:      "Fluffy",
@@ -145,9 +145,9 @@ func TestJVMCoreFunctionality(t *testing.T) {
 			Breed:     "Siamese",
 		},
 	}})...)
-	tests = append(tests, PairedVerbTest("valueEnumVerb", ColorWrapper{Color: Red})...)
-	//tests = append(tests, PairedVerbTest("typeWrapperEnumVerb", "hello")...)
-	//tests = append(tests, PairedVerbTest("mixedEnumVerb", Thing{})...)
+	tests = append(tests, JavaAndGoVerbTest("valueEnumVerb", ColorWrapper{Color: Red})...)
+	//tests = append(tests, AllRuntimesVerbTest("typeWrapperEnumVerb", "hello")...)
+	//tests = append(tests, AllRuntimesVerbTest("mixedEnumVerb", Thing{})...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalIntVerb", ftl.None[int]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalFloatVerb", ftl.None[float64]())...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalStringVerb", ftl.None[string]())...)
@@ -281,7 +281,20 @@ func TestGradle(t *testing.T) {
 	)
 }
 
-func PairedTest(name string, testFunc func(module string) in.Action) []in.SubTest {
+func JavaAndGoTest(name string, testFunc func(module string) in.Action) []in.SubTest {
+	return []in.SubTest{
+		{
+			Name:   name + "-go",
+			Action: testFunc("gomodule"),
+		},
+		{
+			Name:   name + "-java",
+			Action: testFunc("javaclient"),
+		},
+	}
+}
+
+func AllRuntimesTest(name string, testFunc func(module string) in.Action) []in.SubTest {
 	return []in.SubTest{
 		{
 			Name:   name + "-go",
@@ -302,7 +315,7 @@ func JVMTest(name string, testFunc func(name string, module string) in.Action) [
 	return []in.SubTest{
 		{
 			Name:   name + "-java",
-			Action: testFunc(name, "javamodule"),
+			Action: testFunc(name, "javaclient"),
 		},
 		{
 			Name:   name + "-kotlin",
@@ -319,12 +332,15 @@ func VerbTest[T any](verb string, value T) func(module string) in.Action {
 	}
 }
 
-func PairedVerbTest[T any](verb string, value T) []in.SubTest {
-	return PairedTest(verb, VerbTest[T](verb, value))
+func AllRuntimesVerbTest[T any](verb string, value T) []in.SubTest {
+	return AllRuntimesTest(verb, VerbTest[T](verb, value))
+}
+func JavaAndGoVerbTest[T any](verb string, value T) []in.SubTest {
+	return JavaAndGoTest(verb, VerbTest[T](verb, value))
 }
 
 func PairedPrefixVerbTest[T any](prefex string, verb string, value T) []in.SubTest {
-	return PairedTest(prefex+"-"+verb, VerbTest[T](verb, value))
+	return AllRuntimesTest(prefex+"-"+verb, VerbTest[T](verb, value))
 }
 
 type TestObject struct {
