@@ -613,7 +613,7 @@ public class ModuleBuilder {
         if (decls.containsKey(name)) {
             var existing = decls.get(name);
             if (!existing.hasData()) {
-                duplicateNameValidationError(name, existing.getEnum().getPos());
+                return true;
             }
             var merged = existing.getData().toBuilder().setExport(export).build();
             decls.put(name, Decl.newBuilder().setData(merged).build());
