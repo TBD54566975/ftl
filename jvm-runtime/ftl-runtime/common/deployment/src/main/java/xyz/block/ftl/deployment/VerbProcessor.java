@@ -3,6 +3,7 @@ package xyz.block.ftl.deployment;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.inject.Singleton;
@@ -50,7 +51,7 @@ public class VerbProcessor {
             ModuleNameBuildItem moduleNameBuildItem,
             LaunchModeBuildItem launchModeBuildItem) {
         var clientDefinitions = index.getComputingIndex().getAnnotations(VerbClientDefinition.class);
-        log.info("Processing {} verb clients into build items", clientDefinitions.size());
+        log.info("Processing {} verb clients", clientDefinitions.size());
         Map<DotName, VerbClientBuildItem.DiscoveredClients> clients = new HashMap<>();
         for (var clientDefinition : clientDefinitions) {
             var iface = clientDefinition.target().asClass();
@@ -231,7 +232,9 @@ public class VerbProcessor {
     @BuildStep
     public void verbsAndCron(CombinedIndexBuildItem index,
             BuildProducer<AdditionalBeanBuildItem> additionalBeanBuildItem,
-            BuildProducer<SchemaContributorBuildItem> schemaContributorBuildItemBuildProducer) {
+            BuildProducer<SchemaContributorBuildItem> schemaContributorBuildItemBuildProducer,
+            List<TypeAliasBuildItem> typeAliasBuildItems // included to force typealias processing before this
+    ) {
         Collection<AnnotationInstance> verbAnnotations = index.getIndex().getAnnotations(FTLDotNames.VERB);
         log.info("Processing {} verb annotations into decls", verbAnnotations.size());
         var beans = AdditionalBeanBuildItem.builder().setUnremovable();
