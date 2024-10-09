@@ -350,8 +350,6 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 			}
 		}
 	}
-
-	return nil
 }
 
 func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
