@@ -214,10 +214,6 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	ctx := log.ContextWithLogger(context.Background(), logger)
 	binDir := filepath.Join(rootDir, "build", "release")
 
-	if opts.kube && len(opts.languages) != 1 && opts.languages[0] != "go" {
-		t.Fatal("Kubernetes tests are only supported for golang")
-	}
-
 	var kubeClient *kubernetes.Clientset
 	var kubeNamespace string
 	buildOnce.Do(func() {
