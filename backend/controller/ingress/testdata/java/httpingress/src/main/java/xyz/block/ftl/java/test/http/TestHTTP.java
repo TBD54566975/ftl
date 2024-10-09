@@ -21,7 +21,17 @@ public class TestHTTP {
     @GET
     @Path("/users/{userId}/posts/{postId}")
     @ResponseHeader(name = "Get", value = "Header from FTL")
-    public GetResponse get(@RestPath String userId, @RestPath String postId) {
+    public GetResponse get(@RestPath int userId, @RestPath int postId) {
+        return new GetResponse()
+                .setMsg(String.format("UserID: %s, PostID: %s", userId, postId))
+                .setNested(new Nested().setGoodStuff("This is good stuff"));
+    }
+
+
+    @GET
+    @Path("/getquery")
+    @ResponseHeader(name = "Get", value = "Header from FTL")
+    public GetResponse getquery(@RestQuery int userId, @RestQuery int postId) {
         return new GetResponse()
                 .setMsg(String.format("UserID: %s, PostID: %s", userId, postId))
                 .setNested(new Nested().setGoodStuff("This is good stuff"));

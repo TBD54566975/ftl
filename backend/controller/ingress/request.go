@@ -134,43 +134,53 @@ func manglePathParameters(params map[string]string, ref *schema.Ref, sch *schema
 		return nil, err
 	}
 
-	switch paramsField.Type.(type) {
-	case *schema.Ref, *schema.Map:
+	switch m := paramsField.Type.(type) {
+	case *schema.Map:
 		ret := map[string]any{}
 		for k, v := range params {
 			ret[k] = v
 		}
 		return ret, nil
+	case *schema.Ref:
+		data := &schema.Data{}
+		err := sch.ResolveToType(m, data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve path parameter type: %w", err)
+		}
+		return parsePathParams(params, data)
 	default:
 	}
 	// This is a scalar, there should only be a single param
 	// This is validated by the schema, we don't need extra validation here
 	for _, val := range params {
-
-		switch paramsField.Type.(type) {
-		case *schema.String:
-			return val, nil
-		case *schema.Int:
-			parsed, err := strconv.ParseInt(val, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse int from path parameter: %w", err)
-			}
-			return parsed, nil
-		case *schema.Float:
-			float, err := strconv.ParseFloat(val, 64)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse float from path parameter: %w", err)
-			}
-			return float, nil
-		case *schema.Bool:
-			// TODO: is anything else considered truthy?
-			return val == "true", nil
-		default:
-			return nil, fmt.Errorf("unsupported path parameter type %T", paramsField.Type)
-		}
+		return parseScalar(paramsField.Type, val)
 	}
 	// Empty map
 	return map[string]any{}, nil
+}
+
+func parseScalar(paramsField schema.Type, val string) (any, error) {
+	switch paramsField.(type) {
+	case *schema.String:
+		return val, nil
+	case *schema.Int:
+		parsed, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int from path parameter: %w", err)
+		}
+		return parsed, nil
+	case *schema.Float:
+		float, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse float from path parameter: %w", err)
+		}
+		return float, nil
+	case *schema.Bool:
+		// TODO: is anything else considered truthy?
+		return val == "true", nil
+	default:
+		return nil, fmt.Errorf("unsupported path parameter type %T", paramsField)
+	}
 }
 
 // Takes the map of query parameters and transforms them into the appropriate type
@@ -181,19 +191,33 @@ func mangleQueryParameters(params map[string]any, underlying map[string][]string
 		return nil, err
 	}
 
-	if m, ok := paramsField.Type.(*schema.Map); ok {
+	switch m := paramsField.Type.(type) {
+	case *schema.Map:
 		if _, ok := m.Value.(*schema.Array); ok {
 			return params, nil
+		} else if _, ok := m.Value.(*schema.String); ok {
+			// We need to turn them into straight strings
+			newParams := map[string]any{}
+			for k, v := range underlying {
+				if len(v) > 0 {
+					newParams[k] = v[0]
+				}
+			}
+			return newParams, nil
 		}
-	}
-	// We need to turn them into straight strings
-	newParams := map[string]any{}
-	for k, v := range underlying {
-		if len(v) > 0 {
-			newParams[k] = v[0]
+	case *schema.Ref:
+		data := &schema.Data{}
+		err := sch.ResolveToType(m, data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve query parameter type: %w", err)
 		}
+		return parseQueryParams(underlying, data)
+	case *schema.Unit:
+		return params, nil
+	default:
 	}
-	return newParams, nil
+
+	return nil, fmt.Errorf("unsupported query parameter type %v", paramsField.Type)
 }
 
 func valueForData(typ schema.Type, data []byte) (any, error) {
@@ -292,7 +316,7 @@ func buildRequestMap(r *http.Request) (map[string]any, error) {
 	}
 }
 
-func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, error) {
+func parseQueryParams(values map[string][]string, data *schema.Data) (map[string]any, error) {
 	if jsonStr, ok := values["@json"]; ok {
 		if len(values) > 1 {
 			return nil, fmt.Errorf("only '@json' parameter is allowed, but other parameters were found")
@@ -309,7 +333,6 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 		if hasInvalidQueryChars(key) {
 			return nil, fmt.Errorf("complex key %q is not supported, use '@json=' instead", key)
 		}
-
 		var field *schema.Field
 		for _, f := range data.Fields {
 			if jsonAlias, ok := f.Alias(schema.AliasKindJson).Get(); (ok && jsonAlias == key) || f.Name == key {
@@ -334,13 +357,38 @@ func parseQueryParams(values url.Values, data *schema.Data) (map[string]any, err
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse query parameter %q: %w", key, err)
 		}
-
 		if v, ok := val.Get(); ok {
 			queryMap[key] = v
 		}
 	}
-
 	return queryMap, nil
+}
+
+func parsePathParams(values map[string]string, data *schema.Data) (map[string]any, error) {
+	// This is annoyingly close to the query params logic, but just disimilar enough to not be easily refactored
+	pathMap := make(map[string]any)
+	for key, value := range values {
+		var field *schema.Field
+		for _, f := range data.Fields {
+			if jsonAlias, ok := f.Alias(schema.AliasKindJson).Get(); (ok && jsonAlias == key) || f.Name == key {
+				field = f
+			}
+		}
+
+		if field == nil {
+			pathMap[key] = value
+			continue
+		}
+
+		val, err := valueForField(field.Type, []string{value})
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse path parameter %q: %w", key, err)
+		}
+		if v, ok := val.Get(); ok {
+			pathMap[key] = v
+		}
+	}
+	return pathMap, nil
 }
 
 func valueForField(typ schema.Type, value []string) (optional.Option[any], error) {
@@ -355,7 +403,12 @@ func valueForField(typ schema.Type, value []string) (optional.Option[any], error
 		if hasInvalidQueryChars(value[0]) {
 			return optional.None[any](), fmt.Errorf("complex value %q is not supported, use '@json=' instead", value[0])
 		}
-		return optional.Some[any](value[0]), nil
+
+		parsed, err := parseScalar(typ, value[0])
+		if err != nil {
+			return optional.None[any](), fmt.Errorf("failed to parse int from path parameter: %w", err)
+		}
+		return optional.Some[any](parsed), nil
 
 	case *schema.Array:
 		for _, v := range value {
@@ -363,7 +416,17 @@ func valueForField(typ schema.Type, value []string) (optional.Option[any], error
 				return optional.None[any](), fmt.Errorf("complex value %q is not supported, use '@json=' instead", v)
 			}
 		}
-		return optional.Some[any](value), nil
+		ret := []any{}
+		for _, v := range value {
+			field, err := valueForField(t.Element, []string{v})
+			if err != nil {
+				return optional.None[any](), fmt.Errorf("failed to parse array element: %w", err)
+			}
+			if unwrapped, ok := field.Get(); ok {
+				ret = append(ret, unwrapped)
+			}
+		}
+		return optional.Some[any](ret), nil
 
 	case *schema.Optional:
 		if len(value) > 0 {
@@ -371,7 +434,7 @@ func valueForField(typ schema.Type, value []string) (optional.Option[any], error
 		}
 
 	default:
-		panic(fmt.Sprintf("unsupported type %T", typ))
+		return optional.None[any](), fmt.Errorf("unsupported type %T", typ)
 	}
 
 	return optional.Some[any](value), nil
