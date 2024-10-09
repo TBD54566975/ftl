@@ -19,6 +19,7 @@ import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
 import org.jboss.jandex.FieldInfo;
+import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ import xyz.block.ftl.v1.schema.Value;
 public class EnumProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(EnumProcessor.class);
+    public static final Set<PrimitiveType.Primitive> INT_TYPES = Set.of(INT, LONG, BYTE, SHORT);
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
@@ -95,12 +97,14 @@ public class EnumProcessor {
         return decls;
     }
 
+    /**
+     * Value enums are Java language enums with a single field 'value'
+     */
     private Decl extractValueEnum(ClassInfo classInfo, Class<?> clazz, boolean exported)
             throws NoSuchFieldException, IllegalAccessException {
         Enum.Builder enumBuilder = Enum.newBuilder()
                 .setName(classInfo.simpleName())
                 .setExport(exported);
-        // Value enums must have a type defined by the 'value' field
         FieldInfo valueField = classInfo.field("value");
         if (valueField == null) {
             throw new RuntimeException("Enum must have a 'value' field: " + classInfo.name());
@@ -140,6 +144,11 @@ public class EnumProcessor {
     private record TypeEnum(Decl decl, List<Class<?>> variantClasses) {
     }
 
+    /**
+     * Type Enums are an interface with 1+ implementing classes. The classes may be: </br>
+     *  - a wrapper for a FTL native type e.g. string, [string]. Has @EnumHolder annotation </br>
+     *  - a class with arbitrary fields </br>
+     */
     private TypeEnum extractTypeEnum(CombinedIndexBuildItem index, ModuleBuilder moduleBuilder,
             ClassInfo classInfo, boolean exported) throws ClassNotFoundException {
         Enum.Builder enumBuilder = Enum.newBuilder()
@@ -180,10 +189,7 @@ public class EnumProcessor {
     }
 
     private boolean isInt(Type type) {
-        if (type.kind() != Type.Kind.PRIMITIVE) {
-            return false;
-        }
-        return Set.of(INT, LONG, BYTE, SHORT).contains(type.asPrimitiveType().primitive());
+        return type.kind() == Type.Kind.PRIMITIVE && INT_TYPES.contains(type.asPrimitiveType().primitive());
     }
 
 }
