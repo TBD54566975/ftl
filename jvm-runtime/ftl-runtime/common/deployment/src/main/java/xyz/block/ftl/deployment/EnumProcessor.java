@@ -9,10 +9,12 @@ import static xyz.block.ftl.deployment.FTLDotNames.GENERATED_REF;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.jboss.jandex.AnnotationInstance;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
@@ -48,63 +50,8 @@ public class EnumProcessor {
         return new SchemaContributorBuildItem(new Consumer<ModuleBuilder>() {
             @Override
             public void accept(ModuleBuilder moduleBuilder) {
-                List<Decl> decls = new ArrayList<>();
                 try {
-                    for (var enumAnnotation : enumAnnotations) {
-                        boolean exported = enumAnnotation.target().hasAnnotation(FTLDotNames.EXPORT);
-                        ClassInfo classInfo = enumAnnotation.target().asClass();
-                        Class<?> clazz = Class.forName(classInfo.name().toString(), false,
-                                Thread.currentThread().getContextClassLoader());
-                        var isLocalToModule = !classInfo.hasDeclaredAnnotation(GENERATED_REF);
-                        Enum.Builder enumBuilder = Enum.newBuilder()
-                                .setName(classInfo.simpleName())
-                                .setExport(exported);
-                        if (classInfo.isEnum()) {
-                            recorder.registerEnum(clazz);
-                            if (isLocalToModule) {
-                                decls.add(extractValueEnum(classInfo, clazz, enumBuilder));
-                            }
-                        } else {
-                            // Type enums
-                            var variants = index.getComputingIndex().getAllKnownImplementors(classInfo.name());
-                            var variantClasses = new ArrayList<Class<?>>();
-                            if (variants.isEmpty()) {
-                                throw new RuntimeException("No variants found for enum: " + enumBuilder.getName());
-                            }
-                            for (var variant : variants) {
-                                var isVariantLocalToModule = !variant.hasDeclaredAnnotation(GENERATED_REF);
-                                Type variantType;
-                                if (variant.hasAnnotation(ENUM_HOLDER)) {
-                                    // Enum value holder class
-                                    FieldInfo valueField = variant.field("value");
-                                    if (valueField == null) {
-                                        throw new RuntimeException("Enum variant must have a 'value' field: " + variant.name());
-                                    }
-                                    variantType = valueField.type();
-                                } else {
-                                    // Class is the enum variant type
-                                    variantType = ClassType.builder(variant.name()).build();
-                                    Class<?> variantClazz = Class.forName(variantType.name().toString(), false,
-                                            Thread.currentThread().getContextClassLoader());
-                                    variantClasses.add(variantClazz);
-                                }
-                                if (isVariantLocalToModule) {
-                                    xyz.block.ftl.v1.schema.Type declType = moduleBuilder.buildType(variantType, exported,
-                                            Nullability.NOT_NULL);
-                                    TypeValue typeValue = TypeValue.newBuilder().setValue(declType).build();
-
-                                    EnumVariant.Builder variantBuilder = EnumVariant.newBuilder()
-                                            .setName(variant.simpleName())
-                                            .setValue(Value.newBuilder().setTypeValue(typeValue).build());
-                                    enumBuilder.addVariants(variantBuilder.build());
-                                }
-                            }
-                            if (isLocalToModule) {
-                                decls.add(Decl.newBuilder().setEnum(enumBuilder).build());
-                            }
-                            recorder.registerEnum(clazz, variantClasses);
-                        }
-                    }
+                    var decls = extractEnumDecls(index, enumAnnotations, recorder, moduleBuilder);
                     for (var decl : decls) {
                         moduleBuilder.addDecls(decl);
                     }
@@ -115,9 +62,45 @@ public class EnumProcessor {
         });
     }
 
-    private Decl extractValueEnum(ClassInfo classInfo, Class<?> clazz, Enum.Builder enumBuilder)
+    /**
+     * Extract all enums for this module, returning a Decl for each. Also registers the enums with the recorder, which
+     * sets up Jackson serialization in the runtime.
+     * ModuleBuilder.buildType is used, and has the side effect of adding child Decls to the module.
+     */
+    private List<Decl> extractEnumDecls(CombinedIndexBuildItem index, Collection<AnnotationInstance> enumAnnotations,
+            FTLRecorder recorder, ModuleBuilder moduleBuilder)
             throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
-        // Value enums must have a type
+        List<Decl> decls = new ArrayList<>();
+        for (var enumAnnotation : enumAnnotations) {
+            boolean exported = enumAnnotation.target().hasAnnotation(FTLDotNames.EXPORT);
+            ClassInfo classInfo = enumAnnotation.target().asClass();
+            Class<?> clazz = Class.forName(classInfo.name().toString(), false,
+                    Thread.currentThread().getContextClassLoader());
+            var isLocalToModule = !classInfo.hasDeclaredAnnotation(GENERATED_REF);
+
+            if (classInfo.isEnum()) {
+                // Value enum
+                recorder.registerEnum(clazz);
+                if (isLocalToModule) {
+                    decls.add(extractValueEnum(classInfo, clazz, exported));
+                }
+            } else {
+                var typeEnum = extractTypeEnum(index, moduleBuilder, classInfo, exported);
+                recorder.registerEnum(clazz, typeEnum.variantClasses);
+                if (isLocalToModule) {
+                    decls.add(typeEnum.decl);
+                }
+            }
+        }
+        return decls;
+    }
+
+    private Decl extractValueEnum(ClassInfo classInfo, Class<?> clazz, boolean exported)
+            throws NoSuchFieldException, IllegalAccessException {
+        Enum.Builder enumBuilder = Enum.newBuilder()
+                .setName(classInfo.simpleName())
+                .setExport(exported);
+        // Value enums must have a type defined by the 'value' field
         FieldInfo valueField = classInfo.field("value");
         if (valueField == null) {
             throw new RuntimeException("Enum must have a 'value' field: " + classInfo.name());
@@ -152,6 +135,48 @@ public class EnumProcessor {
             enumBuilder.addVariants(variant);
         }
         return Decl.newBuilder().setEnum(enumBuilder).build();
+    }
+
+    private record TypeEnum(Decl decl, List<Class<?>> variantClasses) {
+    }
+
+    private TypeEnum extractTypeEnum(CombinedIndexBuildItem index, ModuleBuilder moduleBuilder,
+            ClassInfo classInfo, boolean exported) throws ClassNotFoundException {
+        Enum.Builder enumBuilder = Enum.newBuilder()
+                .setName(classInfo.simpleName())
+                .setExport(exported);
+        var variants = index.getComputingIndex().getAllKnownImplementors(classInfo.name());
+        if (variants.isEmpty()) {
+            throw new RuntimeException("No variants found for enum: " + enumBuilder.getName());
+        }
+        var variantClasses = new ArrayList<Class<?>>();
+        for (var variant : variants) {
+            Type variantType;
+            if (variant.hasAnnotation(ENUM_HOLDER)) {
+                // Enum value holder class
+                FieldInfo valueField = variant.field("value");
+                if (valueField == null) {
+                    throw new RuntimeException("Enum variant must have a 'value' field: " + variant.name());
+                }
+                variantType = valueField.type();
+                // TODO add to variantClasses; write serialization code for holder classes
+            } else {
+                // Class is the enum variant type
+                variantType = ClassType.builder(variant.name()).build();
+                Class<?> variantClazz = Class.forName(variantType.name().toString(), false,
+                        Thread.currentThread().getContextClassLoader());
+                variantClasses.add(variantClazz);
+            }
+            xyz.block.ftl.v1.schema.Type declType = moduleBuilder.buildType(variantType, exported,
+                    Nullability.NOT_NULL);
+            TypeValue typeValue = TypeValue.newBuilder().setValue(declType).build();
+
+            EnumVariant.Builder variantBuilder = EnumVariant.newBuilder()
+                    .setName(variant.simpleName())
+                    .setValue(Value.newBuilder().setTypeValue(typeValue).build());
+            enumBuilder.addVariants(variantBuilder.build());
+        }
+        return new TypeEnum(Decl.newBuilder().setEnum(enumBuilder).build(), variantClasses);
     }
 
     private boolean isInt(Type type) {
