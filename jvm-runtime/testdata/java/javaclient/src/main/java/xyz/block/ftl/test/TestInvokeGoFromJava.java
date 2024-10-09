@@ -138,7 +138,7 @@ public class TestInvokeGoFromJava {
     @Export
     @Verb
     public @NotNull ParameterizedType<String> parameterizedObjectVerb(@NotNull ParameterizedType<String> val,
-                                                                      ParameterizedObjectVerbClient client) {
+            ParameterizedObjectVerbClient client) {
         return client.call(val);
     }
 
@@ -157,7 +157,7 @@ public class TestInvokeGoFromJava {
     @Export
     @Verb
     public @NotNull TestObjectOptionalFields testObjectOptionalFieldsVerb(@NotNull TestObjectOptionalFields val,
-                                                                          TestObjectOptionalFieldsVerbClient client) {
+            TestObjectOptionalFieldsVerbClient client) {
         return client.call(val);
     }
 
@@ -202,7 +202,7 @@ public class TestInvokeGoFromJava {
     @Export
     @Verb
     public @Nullable Map<String, String> optionalStringMapVerb(@Nullable Map<String, String> val,
-                                                               OptionalStringMapVerbClient client) {
+            OptionalStringMapVerbClient client) {
         return client.call(val);
     }
 
@@ -221,7 +221,7 @@ public class TestInvokeGoFromJava {
     @Export
     @Verb
     public TestObjectOptionalFields optionalTestObjectOptionalFieldsVerb(TestObjectOptionalFields val,
-                                                                         OptionalTestObjectOptionalFieldsVerbClient client) {
+            OptionalTestObjectOptionalFieldsVerbClient client) {
         return client.call(val);
     }
 
@@ -277,9 +277,9 @@ public class TestInvokeGoFromJava {
         }
     }
 
-//    @Export
-//    @Verb
-//    public Mixed mixedEnumVerb(Mixed mixed, MixedEnumVerbClient client) {
-//        return client.call(mixed);
-//    }
+    //    @Export
+    //    @Verb
+    //    public Mixed mixedEnumVerb(Mixed mixed, MixedEnumVerbClient client) {
+    //        return client.call(mixed);
+    //    }
 }
