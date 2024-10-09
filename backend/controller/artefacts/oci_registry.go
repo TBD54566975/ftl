@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -138,11 +139,9 @@ func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha25
 	if err != nil {
 		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s/%s': %w", s.host, ref, err)
 	}
-	desc, err := oras.Copy(ctx, ms, tag, repo, tag, oras.DefaultCopyOptions)
-	if err != nil {
+	if _, err = oras.Copy(ctx, ms, tag, repo, tag, oras.DefaultCopyOptions); err != nil {
 		return sha256.SHA256{}, fmt.Errorf("unable to push artefact upstream from staging: %w", err)
 	}
-	fmt.Printf("hash:%s\ndesc: %s\n%v", hex.EncodeToString(hash[:]), desc.Digest.String(), desc)
 	return hash, nil
 }
 
@@ -175,26 +174,30 @@ func (s *ContainerService) DiscoverArtefacts(ctx context.Context, prefix string)
 			if !strings.HasPrefix(path, prefix) {
 				continue
 			}
-
 			d, err := getDigestFromModuleRepositoryPath(path)
 			if err != nil {
 				return fmt.Errorf("unable to get digest from repository path '%s': %w", path, err)
 			}
-
 			repo, err := registry.Repository(ctx, path)
 			if err != nil {
 				return fmt.Errorf("unable to connect to repository '%s': %w", path, err)
 			}
-
 			desc, err := repo.Resolve(ctx, "latest")
 			if err != nil {
 				return fmt.Errorf("unable to resolve module metadata '%s': %w", path, err)
 			}
-
+			_, data, err := oras.FetchBytes(ctx, repo, desc.Digest.String(), oras.DefaultFetchBytesOptions)
+			if err != nil {
+				return fmt.Errorf("unable to fetch module metadata '%s': %w", path, err)
+			}
+			var manifest v1.Manifest
+			if err := json.Unmarshal(data, &manifest); err != nil {
+				return fmt.Errorf("unable to unmarshal module metadata '%s': %w", path, err)
+			}
 			result = append(result, ArtefactRepository{
 				ModuleDigest:     d,
-				MediaType:        desc.MediaType,
-				ArtefactType:     desc.ArtifactType,
+				MediaType:        manifest.Layers[0].MediaType,
+				ArtefactType:     manifest.ArtifactType,
 				RepositoryDigest: desc.Digest,
 				Size:             desc.Size,
 			})

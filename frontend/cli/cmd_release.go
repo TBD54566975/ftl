@@ -30,7 +30,7 @@ func (d *releasePublishCmd) Run() error {
 	}
 	content := uuid.New()
 	contentBytes := content[:]
-	_, err = svc.Upload(context.Background(), artefacts.Artefact{
+	hash, err := svc.Upload(context.Background(), artefacts.Artefact{
 		Digest: sha256.Sum256(contentBytes),
 		Metadata: artefacts.Metadata{
 			Path: fmt.Sprintf("random/%s", content),
@@ -40,6 +40,7 @@ func (d *releasePublishCmd) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed upload artefact: %w", err)
 	}
+	fmt.Printf("Artefact published with hash: \033[31m%s\033[0m\n", hash)
 	return nil
 }
 
