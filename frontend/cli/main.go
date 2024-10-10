@@ -22,6 +22,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -82,10 +83,18 @@ var cli CLI
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	csm := &currentStatusManager{}
+
 	app := createKongApplication(&cli, csm)
-	app.FatalIfErrorf(prepareNewCmd(ctx, app, os.Args[1:]))
+	languagePlugin, err := prepareNewCmd(ctx, app, os.Args[1:])
+	app.FatalIfErrorf(err)
+
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
+
+	if plugin, ok := languagePlugin.Get(); ok {
+		// for "ftl new" command, we only need to create the language plugin once
+		kctx.BindTo(plugin, (*languageplugin.LanguagePlugin)(nil))
+	}
 
 	if !cli.Plain {
 		sm := terminal.NewStatusManager(ctx)

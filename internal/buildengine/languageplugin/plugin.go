@@ -11,6 +11,7 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/pubsub"
 
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -90,7 +91,7 @@ type LanguagePlugin interface {
 }
 
 // PluginFromConfig creates a new language plugin from the given config.
-func New(ctx context.Context, language string) (p LanguagePlugin, err error) {
+func New(ctx context.Context, bindAllocator *bind.BindAllocator, language string) (p LanguagePlugin, err error) {
 	switch language {
 	case "go":
 		return newGoPlugin(ctx), nil
