@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStreamModules } from '../../../api/modules/use-stream-modules'
 import { classNames } from '../../../utils'
+import { getTreeWidthFromLS } from '../module.utils'
 import { Schema } from '../schema/Schema'
 import { type DeclSchema, declSchemaFromModules } from '../schema/schema.utils'
 
@@ -12,10 +13,10 @@ const SnippetContainer = ({ decl, visible, linkRect, containerRect }: { decl: De
   const hasRects = !!snipRect && !!linkRect
   const fitsAbove = hasRects && linkRect.top - 64 > snipRect.height
   const fitsToRight = hasRects && window.innerWidth - linkRect.left >= snipRect.width
-  const fitsToLeft = hasRects && !!containerRect && linkRect.left - containerRect.x + linkRect.width >= snipRect.width
+  const fitsToLeft = hasRects && linkRect.left - (containerRect?.x || getTreeWidthFromLS()) + linkRect.width >= snipRect.width
   const horizontalAlignmentClassNames = fitsToRight ? '-ml-1' : fitsToLeft ? '-translate-x-full left-full ml-0' : ''
   const style = {
-    transform: !fitsToRight && !fitsToLeft ? `translateX(-${(linkRect?.left || 0) - (containerRect?.left || 0)}px)` : undefined,
+    transform: !fitsToRight && !fitsToLeft ? `translateX(-${(linkRect?.left || 0) - (containerRect?.left || getTreeWidthFromLS())}px)` : undefined,
   }
   return (
     <div
@@ -25,7 +26,7 @@ const SnippetContainer = ({ decl, visible, linkRect, containerRect }: { decl: De
         fitsAbove ? 'bottom-full' : '',
         visible ? '' : 'invisible',
         horizontalAlignmentClassNames,
-        'absolute p-4 rounded-md border-solid border border border-gray-400 bg-gray-200 dark:border-gray-800 dark:bg-gray-700 text-gray-700 dark:text-white text-xs font-normal z-10 drop-shadow-xl cursor-default',
+        'absolute p-4 pl-0.5 rounded-md border-solid border border border-gray-400 bg-gray-200 dark:border-gray-800 dark:bg-gray-700 text-gray-700 dark:text-white text-xs font-normal z-10 drop-shadow-xl cursor-default',
       )}
     >
       <Schema schema={decl.schema} containerRect={containerRect} />

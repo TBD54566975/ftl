@@ -182,4 +182,11 @@ export const declIcons: IconMap = {
 }
 
 export const declUrl = (moduleName: string, decl: Decl) => `/modules/${moduleName}/${decl.value.case}/${decl.value.value?.name}`
+
 export const declUrlFromInfo = (moduleName: string, decl: DeclInfo) => `/modules/${moduleName}/${decl.declType}/${decl.value.name}`
+
+const treeWidthStorageKey = 'tree_w'
+
+export const getTreeWidthFromLS = () => Number(localStorage.getItem(treeWidthStorageKey)) || 300
+
+export const setTreeWidthInLS = (newWidth: number) => localStorage.setItem(treeWidthStorageKey, `${newWidth}`)
