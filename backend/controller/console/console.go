@@ -179,8 +179,8 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module
 	var subscriptions []*pbconsole.Subscription
 	var verbs []*pbconsole.Verb
 
-	for _, decl := range decls {
-		switch decl := decl.(type) {
+	for _, d := range decls {
+		switch decl := d.(type) {
 		case *schema.Config:
 			configs = append(configs, configFromDecl(decl))
 
@@ -385,6 +385,19 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	}
 	builtin := schema.Builtins()
 	sch.Modules = append(sch.Modules, builtin)
+
+	// Make a dependency map of decls that looks like:
+	// map[module: string] => map[decl: string] => []schema.Ref
+	// From the schema.Ref, I want to use:
+	//   position + module schema string to print the exact line
+	//   module.decl so I can show the parenting tree
+
+	// Then in this for loop below, I can pass the refs map to
+	// moduleFromDeployment, which will then pass:
+	//   refs[module.name][decl.name]
+	// to each helper function to embed in the output decl messages.
+
+	// To produce the dep map:
 
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
