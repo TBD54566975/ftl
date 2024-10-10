@@ -16,7 +16,7 @@ import (
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func TestJecho(t *testing.T) {
+func DisabledTestJecho(t *testing.T) {
 	skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
 	fmt.Println("skipKubeFullDeploy:", skipKubeFullDeploy)
 	in.Run(t,
@@ -27,14 +27,14 @@ func TestJecho(t *testing.T) {
 		in.CopyModule("jecho"),
 		in.Deploy("jecho"),
 		in.Call("jecho", "echo", "Joe", func(t testing.TB, response string) {
-			expected := fmt.Sprintf("Hello, %s!!!", "Joe")
+			expected := fmt.Sprintf("Hello, %s!", "Joe")
 			assert.Equal(t, expected, response)
 		}),
 		in.Exec("ftl", "--version"),
 	)
 }
 
-func DisabledTestExemplar(t *testing.T) {
+func TestExemplar(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFilePath := filepath.Join(tmpDir, "smoketest.log")
 
