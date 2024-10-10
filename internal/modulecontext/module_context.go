@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
@@ -37,10 +38,11 @@ type ModuleContext struct {
 	secrets   map[string][]byte
 	databases map[string]Database
 
-	isTesting               bool
-	mockVerbs               map[schema.RefKey]Verb
-	allowDirectVerbBehavior bool
-	leaseClient             optional.Option[LeaseClient]
+	isTesting                     bool
+	mockVerbs                     map[schema.RefKey]Verb
+	allowDirectVerbBehaviorGlobal bool
+	allowDirectVerb               schema.RefKey
+	leaseClient                   optional.Option[LeaseClient]
 }
 
 // DynamicModuleContext provides up-to-date ModuleContext instances supplied by the controller
@@ -68,6 +70,20 @@ func NewBuilder(module string) *Builder {
 	}
 }
 
+func NewBuilderFromContext(ctx ModuleContext) *Builder {
+	return &Builder{
+		module:                        ctx.module,
+		configs:                       ctx.configs,
+		secrets:                       ctx.secrets,
+		databases:                     ctx.databases,
+		isTesting:                     ctx.isTesting,
+		mockVerbs:                     ctx.mockVerbs,
+		allowDirectVerbBehaviorGlobal: ctx.allowDirectVerbBehaviorGlobal,
+		allowDirectVerb:               ctx.allowDirectVerb,
+		leaseClient:                   ctx.leaseClient,
+	}
+}
+
 // AddConfigs adds configuration values (as bytes) to the builder
 func (b *Builder) AddConfigs(configs map[string][]byte) *Builder {
 	for name, data := range configs {
@@ -92,13 +108,19 @@ func (b *Builder) AddDatabases(databases map[string]Database) *Builder {
 	return b
 }
 
+// AddAllowedDirectVerb adds a verb that can be called directly within the current context
+func (b *Builder) AddAllowedDirectVerb(ref reflection.Ref) *Builder {
+	b.allowDirectVerb = schema.RefKey(ref)
+	return b
+}
+
 // UpdateForTesting marks the builder as part of a test environment and adds mock verbs and flags for other test features.
 func (b *Builder) UpdateForTesting(mockVerbs map[schema.RefKey]Verb, allowDirectVerbBehavior bool, leaseClient LeaseClient) *Builder {
 	b.isTesting = true
 	for name, verb := range mockVerbs {
 		b.mockVerbs[name] = verb
 	}
-	b.allowDirectVerbBehavior = allowDirectVerbBehavior
+	b.allowDirectVerbBehaviorGlobal = allowDirectVerbBehavior
 	b.leaseClient = optional.Some[LeaseClient](leaseClient)
 	return b
 }
@@ -168,7 +190,7 @@ func (m ModuleContext) MockLeaseClient() optional.Option[LeaseClient] {
 func (m ModuleContext) BehaviorForVerb(ref schema.Ref) (optional.Option[VerbBehavior], error) {
 	if mock, ok := m.mockVerbs[ref.ToRefKey()]; ok {
 		return optional.Some(VerbBehavior(MockBehavior{Mock: mock})), nil
-	} else if m.allowDirectVerbBehavior && ref.Module == m.module {
+	} else if (m.allowDirectVerbBehaviorGlobal || m.allowDirectVerb == ref.ToRefKey()) && ref.Module == m.module {
 		return optional.Some(VerbBehavior(DirectBehavior{})), nil
 	} else if m.isTesting {
 		if ref.Module == m.module {
