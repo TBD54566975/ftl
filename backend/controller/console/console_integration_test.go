@@ -56,6 +56,7 @@ func TestConsoleStreamModules(t *testing.T) {
 				assert.Equal(t, 2, len(stream.Msg().Modules))
 				assert.Equal(t, "console", stream.Msg().Modules[0].Name)
 				assert.Equal(t, "builtin", stream.Msg().Modules[1].Name)
+				break
 			}
 		}),
 	)

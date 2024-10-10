@@ -327,6 +327,32 @@ func verbFromDecl(decl *schema.Verb, sch *schema.Schema) (*pbconsole.Verb, error
 }
 
 func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request[pbconsole.StreamModulesRequest], stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
+	deploymentChanges := make(chan dal.DeploymentNotification, 32)
+
+	// Subscribe to deployment changes.
+	c.dal.DeploymentChanges.Subscribe(deploymentChanges)
+	defer c.dal.DeploymentChanges.Unsubscribe(deploymentChanges)
+
+	err := c.sendStreamModulesResp(ctx, stream)
+	if err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+
+		case <-deploymentChanges:
+			err = c.sendStreamModulesResp(ctx, stream)
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
 	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get deployments: %w", err)
@@ -364,7 +390,6 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 		return fmt.Errorf("failed to send StreamModulesResponse to stream: %w", err)
 	}
 
-	// TODO: handle deployment updates
 	return nil
 }
 
