@@ -40,7 +40,6 @@ func (c *Config) SetDefaults() {
 
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
-	// TODO: Store in a resource graph
 	currentResources map[string]*ResourceGraph
 	registry         *ProvisionerRegistry
 }

@@ -119,12 +119,12 @@ func (d *InMemProvisioner) Status(ctx context.Context, req *connect.Request[prov
 	token := req.Msg.ProvisioningToken
 	task, ok := d.running.Load(token)
 	if !ok {
-		return statusFailure(fmt.Sprintf("unknown token: %s", token))
+		return statusFailure(fmt.Sprintf("unknown token: %s", token), connect.CodeNotFound)
 	}
 	done, err := task.Done()
 	if err != nil {
-		logger.Debugf("task with token %s is done with error: %s", token, err.Error())
-		return statusFailure(err.Error())
+		logger.Debugf("task with token %s failed with error: %s", token, err.Error())
+		return statusFailure(err.Error(), connect.CodeInternal)
 	}
 
 	if !done {
@@ -137,7 +137,7 @@ func (d *InMemProvisioner) Status(ctx context.Context, req *connect.Request[prov
 	var resources []*provisioner.Resource
 	for _, step := range task.steps {
 		if step.Err != nil {
-			return statusFailure(step.Err.Error())
+			return statusFailure(step.Err.Error(), connect.CodeInternal)
 		}
 		resources = append(resources, step.Resource)
 	}
@@ -152,6 +152,6 @@ func (d *InMemProvisioner) Status(ctx context.Context, req *connect.Request[prov
 	}), nil
 }
 
-func statusFailure(message string) (*connect.Response[provisioner.StatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnknown, errors.New(message))
+func statusFailure(message string, code connect.Code) (*connect.Response[provisioner.StatusResponse], error) {
+	return nil, connect.NewError(code, errors.New(message))
 }
