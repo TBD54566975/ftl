@@ -45,3 +45,4 @@ junit*.xml
 .ftl.lock
 docker-build/
 **/.ftl
+/.frontend.lock

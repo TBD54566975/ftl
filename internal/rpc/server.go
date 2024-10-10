@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -11,10 +12,10 @@ import (
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
-	"github.com/alecthomas/concurrency"
 	"github.com/alecthomas/types/pubsub"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"golang.org/x/sync/errgroup"
 
 	gaphttp "github.com/TBD54566975/ftl/internal/http"
 )
@@ -123,10 +124,10 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 	s.Bind.Publish(s.listen)
 
-	tree, _ := concurrency.New(ctx)
+	wg, ctx := errgroup.WithContext(ctx)
 
 	// Shutdown server on context cancellation.
-	tree.Go(func(ctx context.Context) error {
+	wg.Go(func() error {
 		<-ctx.Done()
 		ctx, cancel := context.WithTimeout(context.Background(), ShutdownGracePeriod)
 		defer cancel()
@@ -142,7 +143,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	})
 
 	// Start server.
-	tree.Go(func(ctx context.Context) error {
+	wg.Go(func() error {
 		err = s.Server.Serve(listener)
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
@@ -150,7 +151,11 @@ func (s *Server) Serve(ctx context.Context) error {
 		return err
 	})
 
-	return tree.Wait()
+	err = wg.Wait()
+	if err != nil {
+		return fmt.Errorf("server error: %w", err)
+	}
+	return nil
 }
 
 // Serve starts a HTTP and Connect gRPC server with sane defaults for FTL.

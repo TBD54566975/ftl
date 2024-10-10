@@ -9,9 +9,9 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/runner"
-	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/server"
 )
 
 var cli struct {
@@ -42,10 +42,14 @@ and route to user code.
 		}
 		return key
 	})
+
 	logger := log.Configure(os.Stderr, cli.LogConfig)
 	ctx := log.ContextWithLogger(context.Background(), logger)
+
 	err = observability.Init(ctx, false, "", "ftl-runner", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
-	err = runner.Start(ctx, cli.RunnerConfig)
+	err = server.RunWithSignalHandler(ctx, func(ctx context.Context) error {
+		return runner.Start(ctx, cli.RunnerConfig)
+	})
 	kctx.FatalIfErrorf(err)
 }

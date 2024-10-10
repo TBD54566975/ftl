@@ -18,7 +18,6 @@ require (
 	github.com/TBD54566975/scaffolder v1.1.0 // indirect
 	github.com/XSAM/otelsql v0.34.0 // indirect
 	github.com/alecthomas/atomic v0.1.0-alpha2 // indirect
-	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/kong v1.2.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/repr v0.4.0 // indirect

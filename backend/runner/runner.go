@@ -53,7 +53,7 @@ type Config struct {
 	Language              []string            `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,rust,java"`
 	HeartbeatPeriod       time.Duration       `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter       time.Duration       `help:"Jitter to add to heartbeat period." default:"2s"`
-	Deployment            string              `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
+	Deployment            string              `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT" placeholder:"DEPLOYMENT" required:""`
 	DebugPort             int                 `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
 }
 

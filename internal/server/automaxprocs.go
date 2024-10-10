@@ -1,5 +1,4 @@
-// Package automaxprocs sets GOMAXPROCS to match Linux container CPU quota.
-package automaxprocs
+package server
 
 import (
 	"fmt"
@@ -8,6 +7,7 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 )
 
+// automaxprocs sets GOMAXPROCS to match Linux container CPU quota.
 func init() {
 	_, err := maxprocs.Set()
 	if err != nil {
