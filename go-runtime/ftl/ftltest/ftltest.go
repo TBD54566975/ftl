@@ -523,8 +523,13 @@ func CallEmpty[VerbClient any](ctx context.Context) error {
 
 func call[VerbClient, Req, Resp any](ctx context.Context, req Req) (resp Resp, err error) {
 	ref := reflection.ClientRef[VerbClient]()
+	// always allow direct behavior for the verb triggered by this call
+	moduleCtx := modulecontext.NewBuilderFromContext(
+		modulecontext.FromContext(ctx).CurrentContext(),
+	).AddAllowedDirectVerb(ref).Build()
+	ctx = mcu.MakeDynamic(ctx, moduleCtx).ApplyToContext(ctx)
+
 	inline := server.Call[Req, Resp](ref)
-	moduleCtx := modulecontext.FromContext(ctx).CurrentContext()
 	override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: ref.Module, Name: ref.Name})
 	if err != nil {
 		return resp, fmt.Errorf("test harness failed to retrieve behavior for verb %s: %w", ref, err)

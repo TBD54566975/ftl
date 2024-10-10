@@ -100,7 +100,6 @@ func TestVerbErrors(t *testing.T) {
 
 func TestTransitiveVerbMock(t *testing.T) {
 	ctx := ftltest.Context(
-		ftltest.WithCallsAllowedWithinModule(),
 		ftltest.WhenVerb[CalleeVerbClient](func(ctx context.Context, req Request) (Response, error) {
 			return Response{Output: fmt.Sprintf("mocked: %s", req.Input)}, nil
 		}),

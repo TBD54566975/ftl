@@ -76,7 +76,7 @@ func TestWrapped(t *testing.T) {
 			},
 			configValue:   "helloworld",
 			secretValue:   "shhhhh",
-			expectedError: ftl.Some("test harness failed to retrieve behavior for verb wrapped.outer: no mock found: provide a mock with ftltest.WhenVerb(Outer, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()"),
+			expectedError: ftl.Some("test harness failed to call verb wrapped.outer: wrapped.inner: no mock found: provide a mock with ftltest.WhenVerb(Inner, ...) or enable all calls within the module with ftltest.WithCallsAllowedWithinModule()"),
 		},
 		{
 			name: "AllowCallsWithinModule",
