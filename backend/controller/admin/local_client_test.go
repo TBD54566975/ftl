@@ -9,6 +9,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/bind"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
@@ -25,7 +26,7 @@ func TestDiskSchemaRetrieverWithBuildArtefact(t *testing.T) {
 		in.Build("dischema"),
 		func(t testing.TB, ic in.TestContext) {
 			dsr := &diskSchemaRetriever{deployRoot: optional.Some[string](ic.WorkingDir())}
-			sch, err := dsr.GetActiveSchema(ic.Context)
+			sch, err := dsr.GetActiveSchema(ic.Context, optional.None[*bind.BindAllocator]())
 			assert.NoError(t, err)
 
 			module, ok := sch.Module("dischema").Get()
@@ -42,7 +43,7 @@ func TestDiskSchemaRetrieverWithNoSchema(t *testing.T) {
 		in.CopyModule("dischema"),
 		func(t testing.TB, ic in.TestContext) {
 			dsr := &diskSchemaRetriever{}
-			_, err := dsr.GetActiveSchema(ic.Context)
+			_, err := dsr.GetActiveSchema(ic.Context, optional.None[*bind.BindAllocator]())
 			assert.Error(t, err)
 		},
 	)
@@ -64,10 +65,10 @@ func TestAdminNoValidationWithNoSchema(t *testing.T) {
 	assert.NoError(t, err)
 
 	dsr := &diskSchemaRetriever{deployRoot: optional.Some(string(t.TempDir()))}
-	_, err = dsr.GetActiveSchema(ctx)
+	_, err = dsr.GetActiveSchema(ctx, optional.None[*bind.BindAllocator]())
 	assert.Error(t, err)
 
-	admin := NewAdminService(cm, sm, dsr)
+	admin := NewAdminService(cm, sm, dsr, optional.None[*bind.BindAllocator]())
 	testSetConfig(t, ctx, admin, "batmobile", "color", "Red", "")
 	testSetSecret(t, ctx, admin, "batmobile", "owner", 99, "")
 }

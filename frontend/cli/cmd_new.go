@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go/token"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -40,6 +41,7 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 	} else if args[0] != "new" {
 		return optionalPlugin, nil
 	}
+
 	language := args[1]
 	// Default to `new` command handler if no language is provided, or option is specified on `new` command.
 	if len(language) == 0 || language[0] == '-' {
@@ -53,13 +55,17 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 		return optionalPlugin, fmt.Errorf("could not find new command")
 	}
 
-	// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
+	// Too early to use any kong args here so we can't use cli.Endpoint.
+	// Hardcoding the default bind URL for now.
+	pluginBind, err := url.Parse("http://127.0.0.1:8893")
+	if err != nil {
+		return optionalPlugin, fmt.Errorf("could not parse default bind URL: %w", err)
+	}
 	var bindAllocator *bind.BindAllocator
-	bindAllocator, err = bind.NewBindAllocator(cli.Endpoint)
+	bindAllocator, err = bind.NewBindAllocator(pluginBind)
 	if err != nil {
 		return optionalPlugin, fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	_ = bindAllocator.Next()
 
 	plugin, err := languageplugin.New(ctx, bindAllocator, language)
 	if err != nil {
