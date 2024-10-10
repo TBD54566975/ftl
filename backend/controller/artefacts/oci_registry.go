@@ -111,12 +111,11 @@ func (s *ContainerService) GetDigestsKeys(ctx context.Context, digests []sha256.
 }
 
 func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
-	hash := sha256.Sum(artefact.Content)
-	ref := fmt.Sprintf("ftl/modules/%s", hash)
+	ref := fmt.Sprintf("ftl/modules/%s", artefact.Digest)
 	ms := memory.New()
 	mediaDescriptor := v1.Descriptor{
 		MediaType: "application/ftl.module.v1",
-		Digest:    digest.NewDigestFromBytes(digest.SHA256, hash[:]),
+		Digest:    digest.NewDigestFromBytes(digest.SHA256, artefact.Digest[:]),
 		Size:      int64(len(artefact.Content)),
 	}
 	err := ms.Push(ctx, mediaDescriptor, bytes.NewReader(artefact.Content))
@@ -142,7 +141,7 @@ func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha25
 	if _, err = oras.Copy(ctx, ms, tag, repo, tag, oras.DefaultCopyOptions); err != nil {
 		return sha256.SHA256{}, fmt.Errorf("unable to push artefact upstream from staging: %w", err)
 	}
-	return hash, nil
+	return artefact.Digest, nil
 }
 
 func (s *ContainerService) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
