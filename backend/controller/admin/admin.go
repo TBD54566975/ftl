@@ -10,30 +10,35 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/alecthomas/types/optional"
 )
 
 type AdminService struct {
 	schr SchemaRetriever
 	cm   *manager.Manager[configuration.Configuration]
 	sm   *manager.Manager[configuration.Secrets]
+	// bindAllocator needs to be set for local client to retrieve schemas from disk using language plugins
+	bindAllocator optional.Option[*bind.BindAllocator]
 }
 
 var _ ftlv1connect.AdminServiceHandler = (*AdminService)(nil)
 
 type SchemaRetriever interface {
-	GetActiveSchema(ctx context.Context) (*schema.Schema, error)
+	GetActiveSchema(ctx context.Context, bindAllocator optional.Option[*bind.BindAllocator]) (*schema.Schema, error)
 }
 
-func NewAdminService(cm *manager.Manager[configuration.Configuration], sm *manager.Manager[configuration.Secrets], schr SchemaRetriever) *AdminService {
+func NewAdminService(cm *manager.Manager[configuration.Configuration], sm *manager.Manager[configuration.Secrets], schr SchemaRetriever, bindAllocator optional.Option[*bind.BindAllocator]) *AdminService {
 	return &AdminService{
-		schr: schr,
-		cm:   cm,
-		sm:   sm,
+		schr:          schr,
+		cm:            cm,
+		sm:            sm,
+		bindAllocator: bindAllocator,
 	}
 }
 
@@ -246,7 +251,7 @@ func (s *AdminService) validateAgainstSchema(ctx context.Context, isSecret bool,
 	}
 
 	// If we can't retrieve an active schema, skip validation.
-	sch, err := s.schr.GetActiveSchema(ctx)
+	sch, err := s.schr.GetActiveSchema(ctx, s.bindAllocator)
 	if err != nil {
 		logger.Debugf("skipping validation; could not get the active schema: %v", err)
 		return nil

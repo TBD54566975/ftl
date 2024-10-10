@@ -18,6 +18,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -32,7 +33,7 @@ type schemaDiffCmd struct {
 	Color         bool    `help:"Enable colored output regardless of TTY."`
 }
 
-func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig projectconfig.Config) error {
+func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig projectconfig.Config, bindAllocator *bind.BindAllocator) error {
 	var other *schema.Schema
 	var err error
 	sameModulesOnly := false
@@ -40,7 +41,7 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 	if otherEndpoint == "" {
 		otherEndpoint = "Local Changes"
 		sameModulesOnly = true
-		other, err = localSchema(ctx, projConfig)
+		other, err = localSchema(ctx, projConfig, bindAllocator)
 	} else {
 		other, err = schemaForURL(ctx, d.OtherEndpoint)
 	}
@@ -90,7 +91,7 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 	return nil
 }
 
-func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*schema.Schema, error) {
+func localSchema(ctx context.Context, projectConfig projectconfig.Config, bindAllocator *bind.BindAllocator) (*schema.Schema, error) {
 	errs := []error{}
 	modules, err := watch.DiscoverModules(ctx, projectConfig.AbsModuleDirs())
 	if err != nil {
@@ -103,7 +104,7 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 	for _, m := range modules {
 		go func() {
 			// Loading a plugin can be expensive. Is there a better way?
-			plugin, err := languageplugin.New(ctx, m.Language)
+			plugin, err := languageplugin.New(ctx, bindAllocator, m.Language)
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](err)
 			}
