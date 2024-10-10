@@ -10,10 +10,12 @@ import (
 	"github.com/alecthomas/kong"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/provisioner"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 var cli struct {
@@ -40,9 +42,11 @@ func main() {
 	err = observability.Init(ctx, false, "", "ftl-provisioner", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	registry, err := provisioner.RegistryFromConfigFile(ctx, cli.ProvisionerConfig.PluginConfigFile)
+	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.ProvisionerConfig.ControllerEndpoint.String(), log.Error)
+
+	registry, err := provisioner.RegistryFromConfigFile(ctx, cli.ProvisionerConfig.PluginConfigFile, controllerClient)
 	kctx.FatalIfErrorf(err, "failed to create provisioner registry")
 
-	err = provisioner.Start(ctx, cli.ProvisionerConfig, registry)
+	err = provisioner.Start(ctx, cli.ProvisionerConfig, registry, controllerClient)
 	kctx.FatalIfErrorf(err, "failed to start provisioner")
 }

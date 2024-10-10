@@ -69,17 +69,11 @@ func TestDeployment_Progress(t *testing.T) {
 		registry.Register(&MockProvisioner{Token: "foo"}, provisioner.ResourceTypePostgres)
 		registry.Register(&MockProvisioner{Token: "bar"}, provisioner.ResourceTypeMysql)
 
-		dpl := registry.CreateDeployment(
-			"test-module",
-			[]*proto.Resource{{
-				ResourceId: "a",
-				Resource:   &proto.Resource_Mysql{},
-			}, {
-				ResourceId: "b",
-				Resource:   &proto.Resource_Postgres{},
-			}},
-			[]*proto.Resource{},
-		)
+		graph := &provisioner.ResourceGraph{}
+		graph.AddNode(&proto.Resource{ResourceId: "a", Resource: &proto.Resource_Mysql{}})
+		graph.AddNode(&proto.Resource{ResourceId: "b", Resource: &proto.Resource_Postgres{}})
+
+		dpl := registry.CreateDeployment("test-module", graph, &provisioner.ResourceGraph{})
 
 		assert.Equal(t, 2, len(dpl.State().Pending))
 

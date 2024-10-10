@@ -25,8 +25,8 @@ type Task struct {
 	handler  provisionerconnect.ProvisionerPluginServiceClient
 	module   string
 	state    TaskState
-	desired  []*provisioner.Resource
-	existing []*provisioner.Resource
+	desired  *ResourceGraph
+	existing *ResourceGraph
 	// populated only when the task is done
 	output []*provisioner.Resource
 
@@ -44,7 +44,7 @@ func (t *Task) Start(ctx context.Context) error {
 		Module: t.module,
 		// TODO: We need a proper cluster specific ID here
 		FtlClusterId:      "ftl",
-		ExistingResources: t.existing,
+		ExistingResources: t.existing.Roots(),
 		DesiredResources:  t.constructResourceContext(t.desired),
 	}))
 	if err != nil {
@@ -53,18 +53,18 @@ func (t *Task) Start(ctx context.Context) error {
 	}
 	if resp.Msg.Status == provisioner.ProvisionResponse_NO_CHANGES {
 		t.state = TaskStateDone
-		t.output = t.desired
+		t.output = t.desired.Resources()
 	}
 	t.runningToken = resp.Msg.ProvisioningToken
 	return nil
 }
 
-func (t *Task) constructResourceContext(r []*provisioner.Resource) []*provisioner.ResourceContext {
-	result := make([]*provisioner.ResourceContext, len(r))
-	for i, res := range r {
+func (t *Task) constructResourceContext(r *ResourceGraph) []*provisioner.ResourceContext {
+	result := make([]*provisioner.ResourceContext, len(r.Roots()))
+	for i, res := range r.Roots() {
 		result[i] = &provisioner.ResourceContext{
-			Resource: res,
-			// TODO: Collect previously constructed resources from a dependency graph here
+			Resource:     res,
+			Dependencies: r.Dependencies(res),
 		}
 	}
 	return result
@@ -77,7 +77,7 @@ func (t *Task) Progress(ctx context.Context) error {
 
 	resp, err := t.handler.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
 		ProvisioningToken: t.runningToken,
-		DesiredResources:  t.desired,
+		DesiredResources:  t.desired.Resources(),
 	}))
 	if err != nil {
 		t.state = TaskStateFailed

@@ -25,7 +25,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/provisioner"
-	devprovisioner "github.com/TBD54566975/ftl/backend/provisioner/dev"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -200,22 +199,26 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		scope := fmt.Sprintf("provisioner%d", i)
 		provisionerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
+		// default local dev provisioner
+		registry := &provisioner.ProvisionerRegistry{
+			Provisioners: []*provisioner.ProvisionerBinding{{
+				Provisioner: provisioner.NewControllerProvisioner(controllerClient),
+				Types:       []provisioner.ResourceType{provisioner.ResourceTypeModule},
+			}},
+			Default: provisioner.NewDevProvisioner(s.DBPort),
+		}
+
 		// read provisioners from a config file if provided
-		registry := &provisioner.ProvisionerRegistry{}
 		if s.PluginConfigFile != nil {
-			r, err := provisioner.RegistryFromConfigFile(provisionerCtx, s.PluginConfigFile)
+			r, err := provisioner.RegistryFromConfigFile(provisionerCtx, s.PluginConfigFile, controllerClient)
 			if err != nil {
 				return fmt.Errorf("failed to create provisioner registry: %w", err)
 			}
 			registry = r
 		}
 
-		if registry.Default == nil {
-			registry.Default = devprovisioner.NewProvisioner(s.DBPort)
-		}
-
 		wg.Go(func() error {
-			if err := provisioner.Start(provisionerCtx, config, registry); err != nil {
+			if err := provisioner.Start(provisionerCtx, config, registry, controllerClient); err != nil {
 				logger.Errorf(err, "provisioner%d failed: %v", i, err)
 				return fmt.Errorf("provisioner%d failed: %w", i, err)
 			}
