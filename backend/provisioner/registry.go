@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/testing/protocmp"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
@@ -12,8 +15,6 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/testing/protocmp"
 )
 
 // provisionerPluginConfig is a map of provisioner name to resources it supports
