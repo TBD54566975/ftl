@@ -4,10 +4,719 @@
 // @ts-nocheck
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { Position } from "../schema/schema_pb.js";
+import { Message, proto3, protoInt64, Struct } from "@bufbuild/protobuf";
+import { Module, Schema } from "../schema/schema_pb.js";
 
 /**
+ * ModuleConfig contains the configuration for a module, found in the module's ftl.toml file.
+ *
+ * @generated from message xyz.block.ftl.v1.language.ModuleConfig
+ */
+export class ModuleConfig extends Message<ModuleConfig> {
+  /**
+   * name of the module
+   *
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * absolute path to the module's directory
+   *
+   * @generated from field: string path = 2;
+   */
+  path = "";
+
+  /**
+   * absolute path
+   *
+   * @generated from field: string deployDir = 3;
+   */
+  deployDir = "";
+
+  /**
+   * @generated from field: optional string build = 4;
+   */
+  build?: string;
+
+  /**
+   * @generated from field: optional string generated_schema_dir = 5;
+   */
+  generatedSchemaDir?: string;
+
+  /**
+   * @generated from field: repeated string watch = 6;
+   */
+  watch: string[] = [];
+
+  /**
+   * LanguageConfig contains any metadata specific to a specific language.
+   * These are stored in the ftl.toml file under the same key as the language (eg: "go", "java")
+   *
+   * @generated from field: google.protobuf.Struct language_config = 7;
+   */
+  languageConfig?: Struct;
+
+  constructor(data?: PartialMessage<ModuleConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.ModuleConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "deployDir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "language_config", kind: "message", T: Struct },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfig {
+    return new ModuleConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleConfig {
+    return new ModuleConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleConfig {
+    return new ModuleConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ModuleConfig | PlainMessage<ModuleConfig> | undefined, b: ModuleConfig | PlainMessage<ModuleConfig> | undefined): boolean {
+    return proto3.util.equals(ModuleConfig, a, b);
+  }
+}
+
+/**
+ * ProjectConfig contains the configuration for a project, found in the ftl-project.toml file.
+ *
+ * @generated from message xyz.block.ftl.v1.language.ProjectConfig
+ */
+export class ProjectConfig extends Message<ProjectConfig> {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: bool no_git = 3;
+   */
+  noGit = false;
+
+  /**
+   * @generated from field: bool hermit = 4;
+   */
+  hermit = false;
+
+  constructor(data?: PartialMessage<ProjectConfig>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.ProjectConfig";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "no_git", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "hermit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ProjectConfig {
+    return new ProjectConfig().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ProjectConfig {
+    return new ProjectConfig().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ProjectConfig {
+    return new ProjectConfig().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ProjectConfig | PlainMessage<ProjectConfig> | undefined, b: ProjectConfig | PlainMessage<ProjectConfig> | undefined): boolean {
+    return proto3.util.equals(ProjectConfig, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.GetCreateModuleFlagsRequest
+ */
+export class GetCreateModuleFlagsRequest extends Message<GetCreateModuleFlagsRequest> {
+  /**
+   * @generated from field: string language = 1;
+   */
+  language = "";
+
+  constructor(data?: PartialMessage<GetCreateModuleFlagsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.GetCreateModuleFlagsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCreateModuleFlagsRequest {
+    return new GetCreateModuleFlagsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCreateModuleFlagsRequest {
+    return new GetCreateModuleFlagsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCreateModuleFlagsRequest {
+    return new GetCreateModuleFlagsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCreateModuleFlagsRequest | PlainMessage<GetCreateModuleFlagsRequest> | undefined, b: GetCreateModuleFlagsRequest | PlainMessage<GetCreateModuleFlagsRequest> | undefined): boolean {
+    return proto3.util.equals(GetCreateModuleFlagsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.GetCreateModuleFlagsResponse
+ */
+export class GetCreateModuleFlagsResponse extends Message<GetCreateModuleFlagsResponse> {
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.language.GetCreateModuleFlagsResponse.Flag flags = 1;
+   */
+  flags: GetCreateModuleFlagsResponse_Flag[] = [];
+
+  constructor(data?: PartialMessage<GetCreateModuleFlagsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.GetCreateModuleFlagsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "flags", kind: "message", T: GetCreateModuleFlagsResponse_Flag, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCreateModuleFlagsResponse {
+    return new GetCreateModuleFlagsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCreateModuleFlagsResponse {
+    return new GetCreateModuleFlagsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCreateModuleFlagsResponse {
+    return new GetCreateModuleFlagsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCreateModuleFlagsResponse | PlainMessage<GetCreateModuleFlagsResponse> | undefined, b: GetCreateModuleFlagsResponse | PlainMessage<GetCreateModuleFlagsResponse> | undefined): boolean {
+    return proto3.util.equals(GetCreateModuleFlagsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.GetCreateModuleFlagsResponse.Flag
+ */
+export class GetCreateModuleFlagsResponse_Flag extends Message<GetCreateModuleFlagsResponse_Flag> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string help = 2;
+   */
+  help = "";
+
+  /**
+   * @generated from field: optional string envar = 3;
+   */
+  envar?: string;
+
+  /**
+   * short must be a single character
+   *
+   * @generated from field: optional string short = 4;
+   */
+  short?: string;
+
+  /**
+   * @generated from field: optional string placeholder = 5;
+   */
+  placeholder?: string;
+
+  /**
+   * @generated from field: optional string default = 6;
+   */
+  default?: string;
+
+  constructor(data?: PartialMessage<GetCreateModuleFlagsResponse_Flag>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.GetCreateModuleFlagsResponse.Flag";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "help", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "envar", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "short", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "placeholder", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "default", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCreateModuleFlagsResponse_Flag {
+    return new GetCreateModuleFlagsResponse_Flag().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCreateModuleFlagsResponse_Flag {
+    return new GetCreateModuleFlagsResponse_Flag().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCreateModuleFlagsResponse_Flag {
+    return new GetCreateModuleFlagsResponse_Flag().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCreateModuleFlagsResponse_Flag | PlainMessage<GetCreateModuleFlagsResponse_Flag> | undefined, b: GetCreateModuleFlagsResponse_Flag | PlainMessage<GetCreateModuleFlagsResponse_Flag> | undefined): boolean {
+    return proto3.util.equals(GetCreateModuleFlagsResponse_Flag, a, b);
+  }
+}
+
+/**
+ * Request to create a new module.
+ *
+ * @generated from message xyz.block.ftl.v1.language.CreateModuleRequest
+ */
+export class CreateModuleRequest extends Message<CreateModuleRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * The root path for the module, which does not yet exist.
+   * The plugin should create the directory.
+   *
+   * @generated from field: string path = 2;
+   */
+  path = "";
+
+  /**
+   * The project configuration
+   *
+   * @generated from field: xyz.block.ftl.v1.language.ProjectConfig project_config = 3;
+   */
+  projectConfig?: ProjectConfig;
+
+  /**
+   * Flags contains any values set for those configured in the GetCreateModuleFlags call
+   *
+   * @generated from field: google.protobuf.Struct Flags = 4;
+   */
+  Flags?: Struct;
+
+  constructor(data?: PartialMessage<CreateModuleRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.CreateModuleRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "project_config", kind: "message", T: ProjectConfig },
+    { no: 4, name: "Flags", kind: "message", T: Struct },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateModuleRequest {
+    return new CreateModuleRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateModuleRequest {
+    return new CreateModuleRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateModuleRequest {
+    return new CreateModuleRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateModuleRequest | PlainMessage<CreateModuleRequest> | undefined, b: CreateModuleRequest | PlainMessage<CreateModuleRequest> | undefined): boolean {
+    return proto3.util.equals(CreateModuleRequest, a, b);
+  }
+}
+
+/**
+ * Response to a create module request.
+ *
+ * @generated from message xyz.block.ftl.v1.language.CreateModuleResponse
+ */
+export class CreateModuleResponse extends Message<CreateModuleResponse> {
+  constructor(data?: PartialMessage<CreateModuleResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.CreateModuleResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateModuleResponse {
+    return new CreateModuleResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CreateModuleResponse {
+    return new CreateModuleResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CreateModuleResponse {
+    return new CreateModuleResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CreateModuleResponse | PlainMessage<CreateModuleResponse> | undefined, b: CreateModuleResponse | PlainMessage<CreateModuleResponse> | undefined): boolean {
+    return proto3.util.equals(CreateModuleResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.ModuleConfigDefaultsRequest
+ */
+export class ModuleConfigDefaultsRequest extends Message<ModuleConfigDefaultsRequest> {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path = "";
+
+  constructor(data?: PartialMessage<ModuleConfigDefaultsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.ModuleConfigDefaultsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfigDefaultsRequest {
+    return new ModuleConfigDefaultsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleConfigDefaultsRequest {
+    return new ModuleConfigDefaultsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleConfigDefaultsRequest {
+    return new ModuleConfigDefaultsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ModuleConfigDefaultsRequest | PlainMessage<ModuleConfigDefaultsRequest> | undefined, b: ModuleConfigDefaultsRequest | PlainMessage<ModuleConfigDefaultsRequest> | undefined): boolean {
+    return proto3.util.equals(ModuleConfigDefaultsRequest, a, b);
+  }
+}
+
+/**
+ * ModuleConfigDefaultsResponse provides defaults for ModuleConfig.
+ *
+ * The result may be cached by FTL, so defaulting logic should not be changing due to normal module changes.
+ * For example, it is valid to return defaults based on which build tool is configured within the module directory,
+ * as that is not expected to change during normal operation.
+ * It is not recommended to read the module's toml file to determine defaults, as when the toml file is updated,
+ * the module defaults will not be recalculated.
+ *
+ * @generated from message xyz.block.ftl.v1.language.ModuleConfigDefaultsResponse
+ */
+export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsResponse> {
+  /**
+   * Default relative path to the directory containing all build artifacts for deployments
+   *
+   * @generated from field: string deployDir = 1;
+   */
+  deployDir = "";
+
+  /**
+   * Default build command
+   *
+   * @generated from field: optional string build = 2;
+   */
+  build?: string;
+
+  /**
+   * Default relative path to the directory containing generated schema files
+   *
+   * @generated from field: optional string generated_schema_dir = 3;
+   */
+  generatedSchemaDir?: string;
+
+  /**
+   * Default patterns to watch for file changes
+   *
+   * @generated from field: repeated string watch = 4;
+   */
+  watch: string[] = [];
+
+  /**
+   * Default language specific configuration.
+   * These defaults are filled in by looking at each root key only. If the key is not present, the default is used.
+   *
+   * @generated from field: google.protobuf.Struct language_config = 5;
+   */
+  languageConfig?: Struct;
+
+  constructor(data?: PartialMessage<ModuleConfigDefaultsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.ModuleConfigDefaultsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployDir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "language_config", kind: "message", T: Struct },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfigDefaultsResponse {
+    return new ModuleConfigDefaultsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ModuleConfigDefaultsResponse {
+    return new ModuleConfigDefaultsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ModuleConfigDefaultsResponse {
+    return new ModuleConfigDefaultsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ModuleConfigDefaultsResponse | PlainMessage<ModuleConfigDefaultsResponse> | undefined, b: ModuleConfigDefaultsResponse | PlainMessage<ModuleConfigDefaultsResponse> | undefined): boolean {
+    return proto3.util.equals(ModuleConfigDefaultsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.DependenciesRequest
+ */
+export class DependenciesRequest extends Message<DependenciesRequest> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.language.ModuleConfig module_config = 1;
+   */
+  moduleConfig?: ModuleConfig;
+
+  constructor(data?: PartialMessage<DependenciesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.DependenciesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module_config", kind: "message", T: ModuleConfig },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DependenciesRequest {
+    return new DependenciesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DependenciesRequest {
+    return new DependenciesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DependenciesRequest {
+    return new DependenciesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DependenciesRequest | PlainMessage<DependenciesRequest> | undefined, b: DependenciesRequest | PlainMessage<DependenciesRequest> | undefined): boolean {
+    return proto3.util.equals(DependenciesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.DependenciesResponse
+ */
+export class DependenciesResponse extends Message<DependenciesResponse> {
+  /**
+   * @generated from field: repeated string modules = 1;
+   */
+  modules: string[] = [];
+
+  constructor(data?: PartialMessage<DependenciesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.DependenciesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "modules", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DependenciesResponse {
+    return new DependenciesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DependenciesResponse {
+    return new DependenciesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DependenciesResponse {
+    return new DependenciesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DependenciesResponse | PlainMessage<DependenciesResponse> | undefined, b: DependenciesResponse | PlainMessage<DependenciesResponse> | undefined): boolean {
+    return proto3.util.equals(DependenciesResponse, a, b);
+  }
+}
+
+/**
+ * BuildContext contains contextual information needed to build.
+ *
+ * Plugins must include the build context's id when a build succeeds or fails.
+ * For automatic rebuilds, plugins must use the most recent build context they have received.
+ *
+ * @generated from message xyz.block.ftl.v1.language.BuildContext
+ */
+export class BuildContext extends Message<BuildContext> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * The configuration for the module
+   *
+   * @generated from field: xyz.block.ftl.v1.language.ModuleConfig module_config = 2;
+   */
+  moduleConfig?: ModuleConfig;
+
+  /**
+   * The FTL schema including all dependencies
+   *
+   * @generated from field: xyz.block.ftl.v1.schema.Schema schema = 3;
+   */
+  schema?: Schema;
+
+  /**
+   * The dependencies for the module
+   *
+   * @generated from field: repeated string dependencies = 4;
+   */
+  dependencies: string[] = [];
+
+  constructor(data?: PartialMessage<BuildContext>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.BuildContext";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "module_config", kind: "message", T: ModuleConfig },
+    { no: 3, name: "schema", kind: "message", T: Schema },
+    { no: 4, name: "dependencies", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildContext {
+    return new BuildContext().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildContext {
+    return new BuildContext().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildContext {
+    return new BuildContext().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BuildContext | PlainMessage<BuildContext> | undefined, b: BuildContext | PlainMessage<BuildContext> | undefined): boolean {
+    return proto3.util.equals(BuildContext, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.BuildContextUpdatedRequest
+ */
+export class BuildContextUpdatedRequest extends Message<BuildContextUpdatedRequest> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.language.BuildContext buildContext = 1;
+   */
+  buildContext?: BuildContext;
+
+  constructor(data?: PartialMessage<BuildContextUpdatedRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.BuildContextUpdatedRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "buildContext", kind: "message", T: BuildContext },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildContextUpdatedRequest {
+    return new BuildContextUpdatedRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildContextUpdatedRequest {
+    return new BuildContextUpdatedRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildContextUpdatedRequest {
+    return new BuildContextUpdatedRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BuildContextUpdatedRequest | PlainMessage<BuildContextUpdatedRequest> | undefined, b: BuildContextUpdatedRequest | PlainMessage<BuildContextUpdatedRequest> | undefined): boolean {
+    return proto3.util.equals(BuildContextUpdatedRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.BuildContextUpdatedResponse
+ */
+export class BuildContextUpdatedResponse extends Message<BuildContextUpdatedResponse> {
+  constructor(data?: PartialMessage<BuildContextUpdatedResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.BuildContextUpdatedResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildContextUpdatedResponse {
+    return new BuildContextUpdatedResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildContextUpdatedResponse {
+    return new BuildContextUpdatedResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildContextUpdatedResponse {
+    return new BuildContextUpdatedResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BuildContextUpdatedResponse | PlainMessage<BuildContextUpdatedResponse> | undefined, b: BuildContextUpdatedResponse | PlainMessage<BuildContextUpdatedResponse> | undefined): boolean {
+    return proto3.util.equals(BuildContextUpdatedResponse, a, b);
+  }
+}
+
+/**
+ * Error contains information about an error that occurred during a build.
+ * Errors do not always cause a build failure. Use lesser levels to help guide the user.
+ *
  * @generated from message xyz.block.ftl.v1.language.Error
  */
 export class Error extends Message<Error> {
@@ -17,19 +726,14 @@ export class Error extends Message<Error> {
   msg = "";
 
   /**
-   * @generated from field: xyz.block.ftl.v1.schema.Position pos = 2;
-   */
-  pos?: Position;
-
-  /**
-   * @generated from field: int64 endColumn = 3;
-   */
-  endColumn = protoInt64.zero;
-
-  /**
    * @generated from field: xyz.block.ftl.v1.language.Error.ErrorLevel level = 4;
    */
   level = Error_ErrorLevel.INFO;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.language.Position pos = 5;
+   */
+  pos?: Position;
 
   constructor(data?: PartialMessage<Error>) {
     super();
@@ -40,9 +744,8 @@ export class Error extends Message<Error> {
   static readonly typeName = "xyz.block.ftl.v1.language.Error";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "msg", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "pos", kind: "message", T: Position },
-    { no: 3, name: "endColumn", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
     { no: 4, name: "level", kind: "enum", T: proto3.getEnumType(Error_ErrorLevel) },
+    { no: 5, name: "pos", kind: "message", T: Position },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Error {
@@ -89,6 +792,61 @@ proto3.util.setEnumType(Error_ErrorLevel, "xyz.block.ftl.v1.language.Error.Error
 ]);
 
 /**
+ * @generated from message xyz.block.ftl.v1.language.Position
+ */
+export class Position extends Message<Position> {
+  /**
+   * @generated from field: string filename = 1;
+   */
+  filename = "";
+
+  /**
+   * @generated from field: int64 line = 2;
+   */
+  line = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 startColumn = 3;
+   */
+  startColumn = protoInt64.zero;
+
+  /**
+   * @generated from field: int64 endColumn = 4;
+   */
+  endColumn = protoInt64.zero;
+
+  constructor(data?: PartialMessage<Position>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.Position";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "line", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "startColumn", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "endColumn", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Position {
+    return new Position().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Position {
+    return new Position().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Position {
+    return new Position().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: Position | PlainMessage<Position> | undefined, b: Position | PlainMessage<Position> | undefined): boolean {
+    return proto3.util.equals(Position, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.language.ErrorList
  */
 export class ErrorList extends Message<ErrorList> {
@@ -122,6 +880,402 @@ export class ErrorList extends Message<ErrorList> {
 
   static equals(a: ErrorList | PlainMessage<ErrorList> | undefined, b: ErrorList | PlainMessage<ErrorList> | undefined): boolean {
     return proto3.util.equals(ErrorList, a, b);
+  }
+}
+
+/**
+ * Request to build a module.
+ *
+ * @generated from message xyz.block.ftl.v1.language.BuildRequest
+ */
+export class BuildRequest extends Message<BuildRequest> {
+  /**
+   * The root path for the FTL project
+   *
+   * @generated from field: string project_path = 1;
+   */
+  projectPath = "";
+
+  /**
+   * Indicates whether to watch for file changes and automatically rebuild
+   *
+   * @generated from field: bool rebuild_automatically = 2;
+   */
+  rebuildAutomatically = false;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.language.BuildContext build_context = 3;
+   */
+  buildContext?: BuildContext;
+
+  constructor(data?: PartialMessage<BuildRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.BuildRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "project_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "rebuild_automatically", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "build_context", kind: "message", T: BuildContext },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildRequest {
+    return new BuildRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildRequest {
+    return new BuildRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildRequest {
+    return new BuildRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BuildRequest | PlainMessage<BuildRequest> | undefined, b: BuildRequest | PlainMessage<BuildRequest> | undefined): boolean {
+    return proto3.util.equals(BuildRequest, a, b);
+  }
+}
+
+/**
+ * AutoRebuildStarted should be sent when the plugin decides to start rebuilding automatically.
+ *
+ * It is not required to send this event, though it helps inform the user that their changes are not yet built.
+ * FTL may ignore this event if it does not match FTL's current build context and state.
+ * If the plugin decides to cancel the build because another build started, no failure or cancellation event needs
+ * to be sent.
+ *
+ * @generated from message xyz.block.ftl.v1.language.AutoRebuildStarted
+ */
+export class AutoRebuildStarted extends Message<AutoRebuildStarted> {
+  /**
+   * @generated from field: string context_id = 1;
+   */
+  contextId = "";
+
+  constructor(data?: PartialMessage<AutoRebuildStarted>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.AutoRebuildStarted";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "context_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AutoRebuildStarted {
+    return new AutoRebuildStarted().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AutoRebuildStarted {
+    return new AutoRebuildStarted().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AutoRebuildStarted {
+    return new AutoRebuildStarted().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AutoRebuildStarted | PlainMessage<AutoRebuildStarted> | undefined, b: AutoRebuildStarted | PlainMessage<AutoRebuildStarted> | undefined): boolean {
+    return proto3.util.equals(AutoRebuildStarted, a, b);
+  }
+}
+
+/**
+ * BuildSuccess should be sent when a build succeeds.
+ *
+ * FTL may ignore this event if it does not match FTL's current build context and state.
+ *
+ * @generated from message xyz.block.ftl.v1.language.BuildSuccess
+ */
+export class BuildSuccess extends Message<BuildSuccess> {
+  /**
+   * The id of build context used while building.
+   *
+   * @generated from field: string context_id = 1;
+   */
+  contextId = "";
+
+  /**
+   * Indicates whether the build was automatically started by the plugin, rather than due to a Build rpc call.
+   *
+   * @generated from field: bool is_automatic_rebuild = 2;
+   */
+  isAutomaticRebuild = false;
+
+  /**
+   * Module schema for the built module
+   *
+   * @generated from field: xyz.block.ftl.v1.schema.Module module = 3;
+   */
+  module?: Module;
+
+  /**
+   * Paths for files/directories to be deployed
+   *
+   * @generated from field: repeated string deploy = 4;
+   */
+  deploy: string[] = [];
+
+  /**
+   * Name of the docker image to use for the runner
+   *
+   * @generated from field: string docker_image = 5;
+   */
+  dockerImage = "";
+
+  /**
+   * Errors contains any errors that occurred during the build
+   * No errors can have a level of ERROR, instead a BuildFailure should be sent
+   * Instead this is useful for INFO and WARN level errors.
+   *
+   * @generated from field: xyz.block.ftl.v1.language.ErrorList errors = 6;
+   */
+  errors?: ErrorList;
+
+  constructor(data?: PartialMessage<BuildSuccess>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.BuildSuccess";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "context_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "is_automatic_rebuild", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "module", kind: "message", T: Module },
+    { no: 4, name: "deploy", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "docker_image", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "errors", kind: "message", T: ErrorList },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildSuccess {
+    return new BuildSuccess().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildSuccess {
+    return new BuildSuccess().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildSuccess {
+    return new BuildSuccess().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BuildSuccess | PlainMessage<BuildSuccess> | undefined, b: BuildSuccess | PlainMessage<BuildSuccess> | undefined): boolean {
+    return proto3.util.equals(BuildSuccess, a, b);
+  }
+}
+
+/**
+ * BuildFailure should be sent when a build fails.
+ *
+ * FTL may ignore this event if it does not match FTL's current build context and state.
+ *
+ * @generated from message xyz.block.ftl.v1.language.BuildFailure
+ */
+export class BuildFailure extends Message<BuildFailure> {
+  /**
+   * The id of build context used while building.
+   *
+   * @generated from field: string context_id = 1;
+   */
+  contextId = "";
+
+  /**
+   * Indicates whether the build was automatically started by the plugin, rather than due to a Build rpc call.
+   *
+   * @generated from field: bool is_automatic_rebuild = 2;
+   */
+  isAutomaticRebuild = false;
+
+  /**
+   * Errors contains any errors that occurred during the build
+   *
+   * @generated from field: xyz.block.ftl.v1.language.ErrorList errors = 3;
+   */
+  errors?: ErrorList;
+
+  /**
+   * Indicates the plugin determined that the dependencies in the BuildContext are out of date.
+   * If a Build stream is being kept open for automatic rebuilds, FTL will call GetDependencies, followed by
+   * BuildContextUpdated.
+   *
+   * @generated from field: bool invalidate_dependencies = 4;
+   */
+  invalidateDependencies = false;
+
+  constructor(data?: PartialMessage<BuildFailure>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.BuildFailure";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "context_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "is_automatic_rebuild", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "errors", kind: "message", T: ErrorList },
+    { no: 4, name: "invalidate_dependencies", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildFailure {
+    return new BuildFailure().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildFailure {
+    return new BuildFailure().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildFailure {
+    return new BuildFailure().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BuildFailure | PlainMessage<BuildFailure> | undefined, b: BuildFailure | PlainMessage<BuildFailure> | undefined): boolean {
+    return proto3.util.equals(BuildFailure, a, b);
+  }
+}
+
+/**
+ * Log message from the language service.
+ *
+ * @generated from message xyz.block.ftl.v1.language.LogMessage
+ */
+export class LogMessage extends Message<LogMessage> {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message = "";
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.language.LogMessage.LogLevel level = 2;
+   */
+  level = LogMessage_LogLevel.DEBUG;
+
+  constructor(data?: PartialMessage<LogMessage>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.LogMessage";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "level", kind: "enum", T: proto3.getEnumType(LogMessage_LogLevel) },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogMessage {
+    return new LogMessage().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LogMessage {
+    return new LogMessage().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LogMessage {
+    return new LogMessage().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LogMessage | PlainMessage<LogMessage> | undefined, b: LogMessage | PlainMessage<LogMessage> | undefined): boolean {
+    return proto3.util.equals(LogMessage, a, b);
+  }
+}
+
+/**
+ * @generated from enum xyz.block.ftl.v1.language.LogMessage.LogLevel
+ */
+export enum LogMessage_LogLevel {
+  /**
+   * @generated from enum value: DEBUG = 0;
+   */
+  DEBUG = 0,
+
+  /**
+   * @generated from enum value: INFO = 1;
+   */
+  INFO = 1,
+
+  /**
+   * @generated from enum value: WARN = 2;
+   */
+  WARN = 2,
+
+  /**
+   * @generated from enum value: ERROR = 3;
+   */
+  ERROR = 3,
+}
+// Retrieve enum metadata with: proto3.getEnumType(LogMessage_LogLevel)
+proto3.util.setEnumType(LogMessage_LogLevel, "xyz.block.ftl.v1.language.LogMessage.LogLevel", [
+  { no: 0, name: "DEBUG" },
+  { no: 1, name: "INFO" },
+  { no: 2, name: "WARN" },
+  { no: 3, name: "ERROR" },
+]);
+
+/**
+ * Every type of message that can be streamed from the language plugin for a build.
+ *
+ * @generated from message xyz.block.ftl.v1.language.BuildEvent
+ */
+export class BuildEvent extends Message<BuildEvent> {
+  /**
+   * @generated from oneof xyz.block.ftl.v1.language.BuildEvent.event
+   */
+  event: {
+    /**
+     * @generated from field: xyz.block.ftl.v1.language.AutoRebuildStarted auto_rebuild_started = 2;
+     */
+    value: AutoRebuildStarted;
+    case: "autoRebuildStarted";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.language.BuildSuccess build_success = 3;
+     */
+    value: BuildSuccess;
+    case: "buildSuccess";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.language.BuildFailure build_failure = 4;
+     */
+    value: BuildFailure;
+    case: "buildFailure";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.language.LogMessage log_message = 5;
+     */
+    value: LogMessage;
+    case: "logMessage";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<BuildEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.BuildEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 2, name: "auto_rebuild_started", kind: "message", T: AutoRebuildStarted, oneof: "event" },
+    { no: 3, name: "build_success", kind: "message", T: BuildSuccess, oneof: "event" },
+    { no: 4, name: "build_failure", kind: "message", T: BuildFailure, oneof: "event" },
+    { no: 5, name: "log_message", kind: "message", T: LogMessage, oneof: "event" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildEvent {
+    return new BuildEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): BuildEvent {
+    return new BuildEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): BuildEvent {
+    return new BuildEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: BuildEvent | PlainMessage<BuildEvent> | undefined, b: BuildEvent | PlainMessage<BuildEvent> | undefined): boolean {
+    return proto3.util.equals(BuildEvent, a, b);
   }
 }
 
