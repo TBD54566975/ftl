@@ -76,7 +76,11 @@ func (s *Service) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCl
 }
 
 func (s *Service) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
-	rows, err := s.db.GetDeploymentArtefacts(ctx, releaseID)
+	return getDatabaseReleaseArtefacts(ctx, s.db, releaseID)
+}
+
+func getDatabaseReleaseArtefacts(ctx context.Context, db sql.Querier, releaseID int64) ([]ReleaseArtefact, error) {
+	rows, err := db.GetDeploymentArtefacts(ctx, releaseID)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get release artefacts: %w", libdal.TranslatePGError(err))
 	}
@@ -90,7 +94,11 @@ func (s *Service) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]R
 }
 
 func (s *Service) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
-	err := s.db.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
+	return addReleaseArtefacts(ctx, s.db, key, ra)
+}
+
+func addReleaseArtefacts(ctx context.Context, db sql.Querier, key model.DeploymentKey, ra ReleaseArtefact) error {
+	err := db.AssociateArtefactWithDeployment(ctx, sql.AssociateArtefactWithDeploymentParams{
 		Key:        key,
 		Digest:     ra.Artefact.Digest[:],
 		Executable: ra.Executable,
