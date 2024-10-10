@@ -6,7 +6,7 @@ import { getTreeWidthFromLS } from '../module.utils'
 import { Schema } from '../schema/Schema'
 import { type DeclSchema, declSchemaFromModules } from '../schema/schema.utils'
 
-const topbarHeight = 64;
+const topbarHeight = 64
 
 const SnippetContainer = ({
   decl,
