@@ -4,18 +4,32 @@ package admin
 
 import (
 	"context"
+	"net/url"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/bind"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/schema"
 )
+
+func getDiskSchema(t testing.TB, ctx context.Context) (*schema.Schema, error) {
+	t.Helper()
+
+	bindURL, err := url.Parse("http://127.0.0.1:8893")
+	assert.NoError(t, err)
+	bindAllocator, err := bind.NewBindAllocator(bindURL)
+	assert.NoError(t, err)
+	dsr := &diskSchemaRetriever{}
+	return dsr.GetActiveSchema(ctx, optional.Some(bindAllocator))
+}
 
 func TestDiskSchemaRetrieverWithBuildArtefact(t *testing.T) {
 	in.Run(t,
@@ -24,8 +38,7 @@ func TestDiskSchemaRetrieverWithBuildArtefact(t *testing.T) {
 		in.CopyModule("dischema"),
 		in.Build("dischema"),
 		func(t testing.TB, ic in.TestContext) {
-			dsr := &diskSchemaRetriever{deployRoot: optional.Some[string](ic.WorkingDir())}
-			sch, err := dsr.GetActiveSchema(ic.Context)
+			sch, err := getDiskSchema(t, ic.Context)
 			assert.NoError(t, err)
 
 			module, ok := sch.Module("dischema").Get()
@@ -41,8 +54,7 @@ func TestDiskSchemaRetrieverWithNoSchema(t *testing.T) {
 		in.WithoutController(),
 		in.CopyModule("dischema"),
 		func(t testing.TB, ic in.TestContext) {
-			dsr := &diskSchemaRetriever{}
-			_, err := dsr.GetActiveSchema(ic.Context)
+			_, err := getDiskSchema(t, ic.Context)
 			assert.Error(t, err)
 		},
 	)
@@ -64,10 +76,10 @@ func TestAdminNoValidationWithNoSchema(t *testing.T) {
 	assert.NoError(t, err)
 
 	dsr := &diskSchemaRetriever{deployRoot: optional.Some(string(t.TempDir()))}
-	_, err = dsr.GetActiveSchema(ctx)
+	_, err = dsr.GetActiveSchema(ctx, optional.None[*bind.BindAllocator]())
 	assert.Error(t, err)
 
-	admin := NewAdminService(cm, sm, dsr)
+	admin := NewAdminService(cm, sm, dsr, optional.None[*bind.BindAllocator]())
 	testSetConfig(t, ctx, admin, "batmobile", "color", "Red", "")
 	testSetSecret(t, ctx, admin, "batmobile", "owner", 99, "")
 }

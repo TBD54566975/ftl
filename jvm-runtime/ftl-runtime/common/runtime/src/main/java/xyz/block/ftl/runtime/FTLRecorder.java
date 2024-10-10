@@ -46,6 +46,22 @@ public class FTLRecorder {
         }
     }
 
+    public void registerEnum(Class<?> ennum) {
+        try {
+            Arc.container().instance(JsonSerializationConfig.class).get().registerValueEnum(ennum);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void registerEnum(Class<?> ennum, List<Class<?>> variants) {
+        try {
+            Arc.container().instance(JsonSerializationConfig.class).get().registerTypeEnum(ennum, variants);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public BiFunction<ObjectMapper, CallRequest, Object> topicSupplier(String className, String callingVerb) {
         try {
             var cls = Thread.currentThread().getContextClassLoader().loadClass(className.replace("/", "."));

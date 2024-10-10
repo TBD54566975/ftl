@@ -4,16 +4,19 @@ import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.nio.file.Path;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import javax.lang.model.element.Modifier;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ArrayTypeName;
 import com.squareup.javapoet.ClassName;
@@ -25,6 +28,7 @@ import com.squareup.javapoet.TypeSpec;
 import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.WildcardTypeName;
 
+import xyz.block.ftl.EnumHolder;
 import xyz.block.ftl.GeneratedRef;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
@@ -37,9 +41,11 @@ import xyz.block.ftl.VerbClientSource;
 import xyz.block.ftl.deployment.JVMCodeGenerator;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Enum;
+import xyz.block.ftl.v1.schema.EnumVariant;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Topic;
 import xyz.block.ftl.v1.schema.Type;
+import xyz.block.ftl.v1.schema.Value;
 import xyz.block.ftl.v1.schema.Verb;
 
 public class JavaCodeGenerator extends JVMCodeGenerator {
@@ -99,37 +105,125 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     }
 
     protected void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, List<EnumInfo>> enumVariantInfoMap, Path outputDir)
             throws IOException {
-        String thisType = className(data.getName());
-        TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(thisType)
-                .addAnnotation(
-                        AnnotationSpec.builder(GeneratedRef.class)
-                                .addMember("name", "\"" + data.getName() + "\"")
-                                .addMember("module", "\"" + module.getName() + "\"").build())
-                .addModifiers(Modifier.PUBLIC);
+        String interfaceType = className(data.getName());
+        if (data.hasType()) {
+            //Enums with a type are "value enums" - Java natively supports these
+            TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(interfaceType)
+                    .addAnnotation(getGeneratedRefAnnotation(module.getName(), data.getName()))
+                    .addAnnotation(AnnotationSpec.builder(xyz.block.ftl.Enum.class).build())
+                    .addModifiers(Modifier.PUBLIC);
 
-        for (var i : data.getVariantsList()) {
-            dataBuilder.addEnumConstant(i.getName());
+            TypeName enumType = toAnnotatedJavaTypeName(data.getType(), typeAliasMap, nativeTypeAliasMap);
+            dataBuilder.addField(enumType, "value", Modifier.PRIVATE, Modifier.FINAL);
+            dataBuilder.addMethod(MethodSpec.constructorBuilder()
+                    .addParameter(enumType, "value")
+                    .addStatement("this.value = value")
+                    .build());
+            dataBuilder.addMethod(MethodSpec.methodBuilder("getValue")
+                    .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(JsonIgnore.class)
+                    .returns(enumType)
+                    .addStatement("return value")
+                    .build());
+
+            var format = data.getType().hasString() ? "$S" : "$L";
+            for (var i : data.getVariantsList()) {
+                Object value = toJavaValue(i.getValue());
+                dataBuilder.addEnumConstant(i.getName(), TypeSpec.anonymousClassBuilder(format, value).build());
+            }
+            JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
+                    .build();
+            javaFile.writeTo(outputDir);
+        } else {
+            // Enums without a type are (confusingly) "type enums". Java can't represent these directly, so we use a
+            // sealed class
+
+            // TODO JavaPoet doesn't support 'sealed' or 'permits' syntax yet, so we can't seal the interface
+            // https://github.com/square/javapoet/issues/823
+            TypeSpec.Builder interfaceBuilder = TypeSpec.interfaceBuilder(interfaceType)
+                    .addAnnotation(getGeneratedRefAnnotation(module.getName(), data.getName()))
+                    .addAnnotation(AnnotationSpec.builder(xyz.block.ftl.Enum.class).build())
+                    .addModifiers(Modifier.PUBLIC);
+
+            Map<String, TypeName> variantValuesTypes = data.getVariantsList().stream().collect(
+                    Collectors.toMap(EnumVariant::getName, v -> toAnnotatedJavaTypeName(v.getValue().getTypeValue().getValue(),
+                            typeAliasMap, nativeTypeAliasMap)));
+            for (var variant : data.getVariantsList()) {
+                // Interface has isX and getX methods for each variant
+                String name = variant.getName();
+                TypeName valueTypeName = variantValuesTypes.get(name);
+                interfaceBuilder.addMethod(MethodSpec.methodBuilder("is" + name)
+                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addAnnotation(JsonIgnore.class)
+                        .returns(TypeName.BOOLEAN)
+                        .build());
+                interfaceBuilder.addMethod(MethodSpec.methodBuilder("get" + name)
+                        .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                        .addAnnotation(JsonIgnore.class)
+                        .returns(valueTypeName)
+                        .build());
+
+                if (variant.getValue().getTypeValue().getValue().hasRef()) {
+                    // Value type is a Ref, so it will have a class generated by generateDataObject
+                    // Store this variant in enumVariantInfoMap so we can fetch it later
+                    DeclRef key = new DeclRef(module.getName(), name);
+                    List<EnumInfo> variantInfos = enumVariantInfoMap.computeIfAbsent(key, k -> new ArrayList<>());
+                    variantInfos.add(new EnumInfo(interfaceType, variant, data.getVariantsList()));
+                } else {
+                    // Value type isn't a Ref, so we make a wrapper class that implements our interface
+                    TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(className(name))
+                            .addAnnotation(getGeneratedRefAnnotation(module.getName(), name))
+                            .addAnnotation(AnnotationSpec.builder(EnumHolder.class).build())
+                            .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
+                    dataBuilder.addField(valueTypeName, "value", Modifier.PRIVATE, Modifier.FINAL);
+                    dataBuilder.addMethod(MethodSpec.constructorBuilder()
+                            .addStatement("this.value = null")
+                            .addModifiers(Modifier.PRIVATE)
+                            .build());
+                    dataBuilder.addMethod(MethodSpec.constructorBuilder()
+                            .addParameter(valueTypeName, "value")
+                            .addStatement("this.value = value")
+                            .addModifiers(Modifier.PUBLIC)
+                            .build());
+                    addTypeEnumInterfaceMethods(packageName, interfaceType, dataBuilder, name, valueTypeName,
+                            variantValuesTypes, false);
+                    JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
+                            .build();
+                    javaFile.writeTo(outputDir);
+                }
+                JavaFile javaFile = JavaFile.builder(packageName, interfaceBuilder.build())
+                        .build();
+                javaFile.writeTo(outputDir);
+            }
         }
-
-        JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
-                .build();
-
-        javaFile.writeTo(outputDir);
     }
 
     protected void generateDataObject(Module module, Data data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException {
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, List<EnumInfo>> enumVariantInfoMap, Path outputDir)
+            throws IOException {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
-                .addAnnotation(
-                        AnnotationSpec.builder(GeneratedRef.class)
-                                .addMember("name", "\"" + data.getName() + "\"")
-                                .addMember("module", "\"" + module.getName() + "\"").build())
+                .addAnnotation(getGeneratedRefAnnotation(module.getName(), data.getName()))
                 .addModifiers(Modifier.PUBLIC);
-        MethodSpec.Builder allConstructor = MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC);
 
+        // if data is part of a type enum, generate the interface methods for each variant
+        DeclRef key = new DeclRef(module.getName(), data.getName());
+        if (enumVariantInfoMap.containsKey(key)) {
+            for (var enumVariantInfo : enumVariantInfoMap.get(key)) {
+                String name = enumVariantInfo.variant().getName();
+                TypeName variantTypeName = ClassName.get(packageName, name);
+                Map<String, TypeName> variantValuesTypes = enumVariantInfo.otherVariants().stream().collect(
+                        Collectors.toMap(EnumVariant::getName,
+                                v -> toAnnotatedJavaTypeName(v.getValue().getTypeValue().getValue(),
+                                        typeAliasMap, nativeTypeAliasMap)));
+                addTypeEnumInterfaceMethods(packageName, enumVariantInfo.interfaceType(), dataBuilder, name,
+                        variantTypeName, variantValuesTypes, true);
+            }
+        }
+
+        MethodSpec.Builder allConstructor = MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC);
         dataBuilder.addMethod(allConstructor.build());
         for (var param : data.getTypeParametersList()) {
             dataBuilder.addTypeVariable(TypeVariableName.get(param.getName()));
@@ -197,13 +291,13 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     toJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
                     .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
-                    .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build());
         } else if (verb.getResponse().hasUnit()) {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class),
                     toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID)
                     .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
-                    .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build());
         } else {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class),
                     toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true),
@@ -211,7 +305,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
                     .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
-                    .addModifiers(Modifier.ABSTRACT).addModifiers(Modifier.PUBLIC).build());
+                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build());
         }
 
         TypeSpec helloWorld = typeBuilder
@@ -247,7 +341,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         } else if (type.hasString()) {
             return ClassName.get(String.class);
         } else if (type.hasOptional()) {
-            // Always box for optional, as normal primities can't be null
+            // Always box for optional, as normal primitives can't be null
             return toJavaTypeName(type.getOptional().getType(), typeAliasMap, nativeTypeAliasMap, true);
         } else if (type.hasRef()) {
             if (type.getRef().getModule().isEmpty()) {
@@ -291,6 +385,74 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         }
 
         throw new RuntimeException("Cannot generate Java type name: " + type);
+    }
+
+    /**
+     * Get concrete value from a Value
+     */
+    private Object toJavaValue(Value value) {
+        if (value.hasIntValue()) {
+            return value.getIntValue().getValue();
+        } else if (value.hasStringValue()) {
+            return value.getStringValue().getValue();
+        } else if (value.hasTypeValue()) {
+            // Can't instantiate a TypeValue now. Cannot happen because it's only used in type enums
+            throw new RuntimeException("Cannot generate TypeValue: " + value);
+        }
+        throw new RuntimeException("Cannot generate Java value: " + value);
+    }
+
+    /**
+     * Adds the super interface and isX, getX methods to the <code>dataBuilder</code> for a type enum variant
+     */
+    private static void addTypeEnumInterfaceMethods(String packageName, String interfaceType, TypeSpec.Builder dataBuilder,
+            String enumVariantName, TypeName variantTypeName, Map<String, TypeName> variantValuesTypes, boolean returnSelf) {
+
+        dataBuilder.addSuperinterface(ClassName.get(packageName, interfaceType));
+
+        // Positive implementation of isX, getX for its type
+        dataBuilder.addMethod(MethodSpec.methodBuilder("is" + enumVariantName)
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(JsonIgnore.class)
+                .returns(TypeName.BOOLEAN)
+                .addStatement("return true")
+                .build());
+
+        MethodSpec.Builder getMethod = MethodSpec.methodBuilder("get" + enumVariantName)
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(JsonIgnore.class)
+                .returns(variantTypeName);
+        if (returnSelf) {
+            getMethod.addStatement("return this");
+        } else {
+            getMethod.addStatement("return value");
+        }
+        dataBuilder.addMethod(getMethod.build());
+
+        for (var thingIAmNot : variantValuesTypes.entrySet()) {
+            if (thingIAmNot.getKey().equals(enumVariantName)) {
+                continue;
+            }
+            // Negative implementation of isX, getX for other types
+            dataBuilder.addMethod(MethodSpec.methodBuilder("is" + thingIAmNot.getKey())
+                    .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(JsonIgnore.class)
+                    .returns(TypeName.BOOLEAN)
+                    .addStatement("return false")
+                    .build());
+            dataBuilder.addMethod(MethodSpec.methodBuilder("get" + thingIAmNot.getKey())
+                    .addModifiers(Modifier.PUBLIC)
+                    .addAnnotation(JsonIgnore.class)
+                    .returns(thingIAmNot.getValue())
+                    .addStatement("throw new UnsupportedOperationException()")
+                    .build());
+        }
+    }
+
+    private static @NotNull AnnotationSpec getGeneratedRefAnnotation(String module, String name) {
+        return AnnotationSpec.builder(GeneratedRef.class)
+                .addMember("name", "\"" + name + "\"")
+                .addMember("module", "\"" + module + "\"").build();
     }
 
     protected static final Set<String> JAVA_KEYWORDS = Set.of("abstract", "continue", "for", "new", "switch", "assert",

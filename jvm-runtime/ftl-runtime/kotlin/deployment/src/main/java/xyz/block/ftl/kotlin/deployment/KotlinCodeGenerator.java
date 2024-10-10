@@ -93,7 +93,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
     }
 
     protected void generateEnum(Module module, Enum data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, List<EnumInfo>> enumVariantInfoMap, Path outputDir)
             throws IOException {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(thisType)
@@ -114,7 +114,8 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
     }
 
     protected void generateDataObject(Module module, Data data, String packageName, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap, Path outputDir) throws IOException {
+            Map<DeclRef, String> nativeTypeAliasMap, Map<DeclRef, List<EnumInfo>> enumVariantInfoMap, Path outputDir)
+            throws IOException {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
                 .addAnnotation(

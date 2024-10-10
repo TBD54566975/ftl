@@ -1,8 +1,11 @@
 import type { Data } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { DataSnippet } from './DataSnippet'
+import { Schema } from '../schema/Schema'
 import { PanelHeader } from './PanelHeader'
 
-export const DataPanel = ({ value, moduleName, declName }: { value: Data; moduleName: string; declName: string }) => {
+export const DataPanel = ({ value, schema, moduleName, declName }: { value: Data; schema: string; moduleName: string; declName: string }) => {
+  if (!value || !schema) {
+    return
+  }
   const maybeTypeParams = value.typeParameters.length === 0 ? '' : `<${value.typeParameters.map((p) => p.name).join(', ')}>`
   return (
     <div className='py-2 px-4'>
@@ -10,7 +13,9 @@ export const DataPanel = ({ value, moduleName, declName }: { value: Data; module
         data: {moduleName}.{declName}
         {maybeTypeParams}
       </PanelHeader>
-      <DataSnippet value={value} />
+      <div className='-mx-3.5'>
+        <Schema schema={schema} />
+      </div>
     </div>
   )
 }

@@ -25,7 +25,7 @@ import (
 
 type boxRunCmd struct {
 	Recreate          bool          `help:"Recreate the database."`
-	DSN               string        `help:"DSN for the database." default:"postgres://postgres:secret@localhost:5432/ftl?sslmode=disable" env:"FTL_CONTROLLER_DSN"`
+	DSN               string        `help:"DSN for the database." default:"${boxdsn}" env:"FTL_CONTROLLER_DSN"`
 	IngressBind       *url.URL      `help:"Bind address for the ingress server." default:"http://0.0.0.0:8891" env:"FTL_INGRESS_BIND"`
 	Bind              *url.URL      `help:"Bind address for the FTL controller." default:"http://0.0.0.0:8892" env:"FTL_BIND"`
 	RunnerBase        *url.URL      `help:"Base bind address for FTL runners." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`

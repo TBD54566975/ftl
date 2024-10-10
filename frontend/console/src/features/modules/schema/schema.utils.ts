@@ -1,7 +1,6 @@
-import type { UseQueryResult } from '@tanstack/react-query'
-import type { GetModulesResponse } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Module } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 
-export const commentPrefix = '  //'
+export const commentPrefix = '//'
 
 export const staticKeywords = ['module', 'export']
 
@@ -101,11 +100,11 @@ function isFirstLineOfBlock(lines: string[], i: number): boolean {
     // Never add space for nested lines
     return false
   }
-  if (lines[i - 1].startsWith(commentPrefix)) {
+  if (lines[i - 1].trim().startsWith(commentPrefix)) {
     // Prior line is a comment
     return false
   }
-  if (lines[i].startsWith(commentPrefix)) {
+  if (lines[i].trim().startsWith(commentPrefix)) {
     return true
   }
   const tokens = lines[i].trim().split(' ')
@@ -120,11 +119,8 @@ export interface DeclSchema {
   declType: string
 }
 
-export function declFromModules(moduleName: string, declName: string, modules: UseQueryResult<GetModulesResponse, Error>) {
-  if (!modules.isSuccess || modules.data.modules.length === 0) {
-    return
-  }
-  const module = modules.data.modules.find((module) => module.name === moduleName)
+export function declSchemaFromModules(moduleName: string, declName: string, modules: Module[]) {
+  const module = modules.find((module) => module.name === moduleName)
   if (!module?.schema) {
     return
   }
@@ -133,10 +129,7 @@ export function declFromModules(moduleName: string, declName: string, modules: U
 
 export function declFromModuleSchemaString(declName: string, schema: string) {
   const lines = schema.split('\n')
-  const foundIdx = lines.findIndex((line) => {
-    const regex = new RegExp(`^  (export )?\\w+ ${declName}`)
-    return line.match(regex)
-  })
+  const foundIdx = findDeclLinkIdx(declName, lines)
 
   if (foundIdx === -1) {
     return
@@ -156,14 +149,27 @@ export function declFromModuleSchemaString(declName: string, schema: string) {
 
   // Scan backwards for comments
   subLineIdx = foundIdx - 1
-  while (subLineIdx >= 0 && lines[subLineIdx].startsWith(commentPrefix)) {
-    out = `${lines[subLineIdx]}\n${out}}`
+  while (subLineIdx >= 0 && lines[subLineIdx].trim().startsWith(commentPrefix)) {
+    out = `${lines[subLineIdx]}\n${out}`
     subLineIdx--
   }
 
   const regexExecd = new RegExp(` (\\w+) ${declName}`).exec(line)
+  const declType = lines[foundIdx].includes('database postgres') ? 'database' : regexExecd ? regexExecd[1] : ''
   return {
     schema: out,
-    declType: regexExecd ? regexExecd[1] : '',
+    declType,
   }
+}
+
+function findDeclLinkIdx(declName: string, lines: string[]) {
+  const regex = new RegExp(`^  (export )?\\w+ ${declName}`)
+  const foundIdx = lines.findIndex((line) => line.match(regex))
+  if (foundIdx !== -1) {
+    return foundIdx
+  }
+
+  // Check for databases, for which the DB type prefaces the name.
+  const dbRegex = new RegExp(`^  (export )?database postgres ${declName}`)
+  return lines.findIndex((line) => line.match(dbRegex))
 }

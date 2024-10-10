@@ -7,6 +7,7 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
@@ -24,16 +25,20 @@ type localClient struct {
 }
 
 type diskSchemaRetriever struct {
-	// Omit to use the project root as the deploy root.
+	// Omit to use the project root as the deploy root (used in tests)
 	deployRoot optional.Option[string]
 }
 
 // NewLocalClient creates a admin client that reads and writes from the provided config and secret managers
-func NewLocalClient(cm *manager.Manager[cf.Configuration], sm *manager.Manager[cf.Secrets]) Client {
-	return &localClient{NewAdminService(cm, sm, &diskSchemaRetriever{})}
+func NewLocalClient(cm *manager.Manager[cf.Configuration], sm *manager.Manager[cf.Secrets], bindAllocator *bind.BindAllocator) Client {
+	return &localClient{NewAdminService(cm, sm, &diskSchemaRetriever{}, optional.Some(bindAllocator))}
 }
 
-func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
+func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context, bAllocator optional.Option[*bind.BindAllocator]) (*schema.Schema, error) {
+	bindAllocator, ok := bAllocator.Get()
+	if !ok {
+		return nil, fmt.Errorf("no bind allocator available")
+	}
 	path, ok := projectconfig.DefaultConfigPath().Get()
 	if !ok {
 		return nil, fmt.Errorf("no project config path available")
@@ -53,7 +58,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Sche
 	for _, m := range modules {
 		go func() {
 			// Loading a plugin can be expensive. Is there a better way?
-			plugin, err := languageplugin.New(ctx, m.Language)
+			plugin, err := languageplugin.New(ctx, bindAllocator, m.Language)
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not load plugin for %s: %w", m.Module, err))
 			}

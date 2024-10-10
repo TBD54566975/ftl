@@ -39,6 +39,68 @@ type ParameterizedType[T any] struct {
 	Map    map[string]T
 }
 
+//ftl:enum export
+type ColorInt int
+
+const (
+	Red   ColorInt = 0
+	Green ColorInt = 1
+	Blue  ColorInt = 2
+)
+
+type ColorWrapper struct {
+	Color ColorInt
+}
+
+//ftl:enum export
+type Shape string
+
+const (
+	Circle   Shape = "circle"
+	Square   Shape = "square"
+	Triangle Shape = "triangle"
+)
+
+type ShapeWrapper struct {
+	Shape Shape
+}
+
+//ftl:enum export
+type TypeWrapperEnum interface{ typeEnum() }
+type Scalar string
+type StringList []string
+
+func (Scalar) typeEnum()     {}
+func (StringList) typeEnum() {}
+
+type TypeEnumWrapper struct {
+	Type TypeWrapperEnum
+}
+
+//ftl:enum
+type Animal interface{ animal() }
+type Cat struct {
+	Name      string
+	Breed     string
+	FurLength int
+}
+type Dog struct{}
+
+func (Cat) animal() {}
+func (Dog) animal() {}
+
+type AnimalWrapper struct {
+	Animal Animal
+}
+
+//TODO this doesn't work yet: https://github.com/TBD54566975/ftl/issues/2857
+////ftl:enum
+//type Mixed interface{ mixed() }
+//type Word string
+//
+//func (Word) mixed() {}
+//func (Dog) mixed()  {}
+
 //ftl:typealias
 //ftl:typemap kotlin "web5.sdk.dids.didcore.Did"
 type DID = did.DID
@@ -193,3 +255,28 @@ func OptionalTestObjectOptionalFieldsVerb(ctx context.Context, val ftl.Option[Te
 func ExternalTypeVerb(ctx context.Context, did DID) (DID, error) {
 	return did, nil
 }
+
+//ftl:verb export
+func ValueEnumVerb(ctx context.Context, val ColorWrapper) (ColorWrapper, error) {
+	return val, nil
+}
+
+//ftl:verb export
+func StringEnumVerb(ctx context.Context, val ShapeWrapper) (ShapeWrapper, error) {
+	return val, nil
+}
+
+//ftl:verb export
+func TypeWrapperEnumVerb(ctx context.Context, val TypeEnumWrapper) (TypeEnumWrapper, error) {
+	return val, nil
+}
+
+//ftl:verb export
+func TypeEnumVerb(ctx context.Context, val AnimalWrapper) (AnimalWrapper, error) {
+	return val, nil
+}
+
+////ftl:verb export
+//func MixedEnumVerb(ctx context.Context, val Mixed) (Mixed, error) {
+//	return val, nil
+//}

@@ -2,11 +2,132 @@ syntax = "proto3";
 
 package xyz.block.ftl.v1.language;
 
+import "google/protobuf/struct.proto";
+import "xyz/block/ftl/v1/ftl.proto";
 import "xyz/block/ftl/v1/schema/schema.proto";
 
 option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language;languagepb";
 option java_multiple_files = true;
 
+// ModuleConfig contains the configuration for a module, found in the module's ftl.toml file.
+message ModuleConfig {
+  // name of the module
+  string name = 1;
+  // absolute path to the module's directory
+  string path = 2;
+
+  // absolute path
+  string deployDir = 3;
+  optional string build = 4;
+  optional string generated_schema_dir = 5;
+  repeated string watch = 6;
+
+  // LanguageConfig contains any metadata specific to a specific language.
+  // These are stored in the ftl.toml file under the same key as the language (eg: "go", "java")
+  google.protobuf.Struct language_config = 7;
+}
+
+// ProjectConfig contains the configuration for a project, found in the ftl-project.toml file.
+message ProjectConfig {
+  string path = 1;
+  string name = 2;
+  bool no_git = 3;
+  bool hermit = 4;
+}
+
+message GetCreateModuleFlagsRequest {
+  string language = 1;
+}
+
+message GetCreateModuleFlagsResponse {
+  message Flag {
+    string name = 1;
+    string help = 2;
+    optional string envar = 3;
+    // short must be a single character
+    optional string short = 4;
+    optional string placeholder = 5;
+    optional string default = 6;
+  }
+  repeated Flag flags = 1;
+}
+
+// Request to create a new module.
+message CreateModuleRequest {
+  string name = 1;
+  // The root path for the module, which does not yet exist.
+  // The plugin should create the directory.
+  string path = 2;
+
+  // The project configuration
+  ProjectConfig project_config = 3;
+
+  // Flags contains any values set for those configured in the GetCreateModuleFlags call
+  google.protobuf.Struct Flags = 4;
+}
+
+// Response to a create module request.
+message CreateModuleResponse {}
+
+message ModuleConfigDefaultsRequest {
+  string path = 1;
+}
+
+// ModuleConfigDefaultsResponse provides defaults for ModuleConfig.
+//
+// The result may be cached by FTL, so defaulting logic should not be changing due to normal module changes.
+// For example, it is valid to return defaults based on which build tool is configured within the module directory,
+// as that is not expected to change during normal operation.
+// It is not recommended to read the module's toml file to determine defaults, as when the toml file is updated,
+// the module defaults will not be recalculated.
+message ModuleConfigDefaultsResponse {
+  // Default relative path to the directory containing all build artifacts for deployments
+  string deployDir = 1;
+
+  // Default build command
+  optional string build = 2;
+
+  // Default relative path to the directory containing generated schema files
+  optional string generated_schema_dir = 3;
+
+  // Default patterns to watch for file changes
+  repeated string watch = 4;
+
+  // Default language specific configuration.
+  // These defaults are filled in by looking at each root key only. If the key is not present, the default is used.
+  google.protobuf.Struct language_config = 5;
+}
+
+message DependenciesRequest {
+  ModuleConfig module_config = 1;
+}
+
+message DependenciesResponse {
+  repeated string modules = 1;
+}
+
+// BuildContext contains contextual information needed to build.
+//
+// Plugins must include the build context's id when a build succeeds or fails.
+// For automatic rebuilds, plugins must use the most recent build context they have received.
+message BuildContext {
+  string id = 1;
+  // The configuration for the module
+  ModuleConfig module_config = 2;
+  // The FTL schema including all dependencies
+  schema.Schema schema = 3;
+  // The dependencies for the module
+  repeated string dependencies = 4;
+}
+
+message BuildContextUpdatedRequest {
+  BuildContext buildContext = 1;
+}
+
+message BuildContextUpdatedResponse {}
+
+// Error contains information about an error that occurred during a build.
+// Errors do not always cause a build failure. Use lesser levels to help guide the user.
 message Error {
   enum ErrorLevel {
     INFO = 0;
@@ -15,11 +136,138 @@ message Error {
   }
 
   string msg = 1;
-  schema.Position pos = 2;
-  int64 endColumn = 3;
   ErrorLevel level = 4;
+  Position pos = 5;
+}
+
+message Position {
+  string filename = 1;
+  int64 line = 2;
+  int64 startColumn = 3;
+  int64 endColumn = 4;
 }
 
 message ErrorList {
   repeated Error errors = 1;
+}
+
+// Request to build a module.
+message BuildRequest {
+  // The root path for the FTL project
+  string project_path = 1;
+  // Indicates whether to watch for file changes and automatically rebuild
+  bool rebuild_automatically = 2;
+
+  BuildContext build_context = 3;
+}
+
+// AutoRebuildStarted should be sent when the plugin decides to start rebuilding automatically.
+//
+// It is not required to send this event, though it helps inform the user that their changes are not yet built.
+// FTL may ignore this event if it does not match FTL's current build context and state.
+// If the plugin decides to cancel the build because another build started, no failure or cancellation event needs
+// to be sent.
+message AutoRebuildStarted {
+  string context_id = 1;
+}
+
+// BuildSuccess should be sent when a build succeeds.
+//
+// FTL may ignore this event if it does not match FTL's current build context and state.
+message BuildSuccess {
+  // The id of build context used while building.
+  string context_id = 1;
+  // Indicates whether the build was automatically started by the plugin, rather than due to a Build rpc call.
+  bool is_automatic_rebuild = 2;
+  // Module schema for the built module
+  schema.Module module = 3;
+  // Paths for files/directories to be deployed
+  repeated string deploy = 4;
+  // Name of the docker image to use for the runner
+  string docker_image = 5;
+
+  // Errors contains any errors that occurred during the build
+  // No errors can have a level of ERROR, instead a BuildFailure should be sent
+  // Instead this is useful for INFO and WARN level errors.
+  ErrorList errors = 6;
+}
+
+// BuildFailure should be sent when a build fails.
+//
+// FTL may ignore this event if it does not match FTL's current build context and state.
+message BuildFailure {
+  // The id of build context used while building.
+  string context_id = 1;
+  // Indicates whether the build was automatically started by the plugin, rather than due to a Build rpc call.
+  bool is_automatic_rebuild = 2;
+
+  // Errors contains any errors that occurred during the build
+  ErrorList errors = 3;
+
+  // Indicates the plugin determined that the dependencies in the BuildContext are out of date.
+  // If a Build stream is being kept open for automatic rebuilds, FTL will call GetDependencies, followed by
+  // BuildContextUpdated.
+  bool invalidate_dependencies = 4;
+}
+
+// Log message from the language service.
+message LogMessage {
+  enum LogLevel {
+    DEBUG = 0;
+    INFO = 1;
+    WARN = 2;
+    ERROR = 3;
+  }
+
+  string message = 1;
+  LogLevel level = 2;
+}
+
+// Every type of message that can be streamed from the language plugin for a build.
+message BuildEvent {
+  oneof event {
+    AutoRebuildStarted auto_rebuild_started = 2;
+    BuildSuccess build_success = 3;
+    BuildFailure build_failure = 4;
+    LogMessage log_message = 5;
+  }
+}
+
+// LanguageService allows a plugin to add support for a programming language.
+service LanguageService {
+  // Ping service for readiness.
+  rpc Ping(xyz.block.ftl.v1.PingRequest) returns (xyz.block.ftl.v1.PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Get language specific flags that can be used to create a new module.
+  rpc GetCreateModuleFlags(GetCreateModuleFlagsRequest) returns (GetCreateModuleFlagsResponse);
+
+  // Generates files for a new module with the requested name
+  rpc CreateModule(CreateModuleRequest) returns (CreateModuleResponse);
+
+  // Provide default values for ModuleConfig for values that are not configured in the ftl.toml file.
+  rpc ModuleConfigDefaults(ModuleConfigDefaultsRequest) returns (ModuleConfigDefaultsResponse);
+
+  // Extract dependencies for a module
+  // FTL will ensure that these dependencies are built before requesting a build for this module.
+  rpc GetDependencies(DependenciesRequest) returns (DependenciesResponse);
+
+  // Build the module and stream back build events.
+  //
+  // A BuildSuccess or BuildFailure event must be streamed back with the request's context id to indicate the
+  // end of the build.
+  //
+  // The request can include the option to "rebuild_automatically". In this case the plugin should watch for
+  // file changes and automatically rebuild as needed as long as this build request is alive. Each automactic
+  // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
+  // calls.
+  rpc Build(BuildRequest) returns (stream BuildEvent);
+
+  // While a Build call with "rebuild_automatically" set is active, BuildContextUpdated is called whenever the
+  // build context is updated.
+  //
+  // Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
+  // event with the updated build context id with "is_automatic_rebuild" as false.
+  rpc BuildContextUpdated(BuildContextUpdatedRequest) returns (BuildContextUpdatedResponse);
 }

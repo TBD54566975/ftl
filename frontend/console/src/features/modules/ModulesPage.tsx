@@ -1,19 +1,17 @@
 import type React from 'react'
 import { useMemo, useState } from 'react'
-import { useSchema } from '../../api/schema/use-schema'
+import { useStreamModules } from '../../api/modules/use-stream-modules'
 import { ResizableHorizontalPanels } from '../../components/ResizableHorizontalPanels'
 import { ModulesTree } from './ModulesTree'
-import { moduleTreeFromSchema } from './module.utils'
-
-const treeWidthStorageKey = 'tree_w'
+import { getTreeWidthFromLS, moduleTreeFromStream, setTreeWidthInLS } from './module.utils'
 
 export const ModulesPage = ({ body }: { body: React.ReactNode }) => {
-  const schema = useSchema()
-  const tree = useMemo(() => moduleTreeFromSchema(schema?.data || []), [schema?.data])
-  const [treeWidth, setTreeWidth] = useState(Number(localStorage.getItem(treeWidthStorageKey)) || 300)
+  const modules = useStreamModules()
+  const tree = useMemo(() => moduleTreeFromStream(modules?.data || []), [modules?.data])
+  const [treeWidth, setTreeWidth] = useState(getTreeWidthFromLS())
 
   function setTreeWidthWithLS(newWidth: number) {
-    localStorage.setItem(treeWidthStorageKey, `${newWidth}`)
+    setTreeWidthInLS(newWidth)
     setTreeWidth(newWidth)
   }
 

@@ -6,18 +6,18 @@ import { LinkToken, LinkVerbNameToken } from './LinkTokens'
 import { UnderlyingType } from './UnderlyingType'
 import { commentPrefix, declTypes, shouldAddLeadingSpace, specialChars, staticKeywords } from './schema.utils'
 
-function maybeRenderDeclName(token: string, declType: string, tokens: string[], i: number, containerRect?: DOMRect) {
+function maybeRenderDeclName(token: string, declType: string, tokens: string[], i: number, moduleName: string, containerRect?: DOMRect) {
   const offset = declType === 'database' ? 4 : 2
   if (i - offset < 0 || declType !== tokens[i - offset]) {
     return
   }
-  if (declType === 'enum') {
-    return [<LinkToken key='l' token={token} containerRect={containerRect} />]
+  if (declType === 'enum' && token.endsWith(':')) {
+    return [<LinkToken key='l' moduleName={moduleName} token={token.slice(0, token.length - 1)} containerRect={containerRect} />, ':']
   }
   if (declType === 'verb') {
-    return <LinkVerbNameToken token={token} containerRect={containerRect} />
+    return <LinkVerbNameToken moduleName={moduleName} token={token} containerRect={containerRect} />
   }
-  return <LinkToken token={token} containerRect={containerRect} />
+  return <LinkToken moduleName={moduleName} token={token} containerRect={containerRect} />
 }
 
 function maybeRenderUnderlyingType(token: string, declType: string, tokens: string[], i: number, moduleName: string, containerRect?: DOMRect) {
@@ -46,9 +46,9 @@ function maybeRenderUnderlyingType(token: string, declType: string, tokens: stri
   }
 }
 
-const SchemaLine = ({ line, containerRect }: { line: string; containerRect?: DOMRect }) => {
+const SchemaLine = ({ line, moduleNameOverride, containerRect }: { line: string; moduleNameOverride?: string; containerRect?: DOMRect }) => {
   const { moduleName } = useParams()
-  if (line.startsWith(commentPrefix)) {
+  if (line.trim().startsWith(commentPrefix)) {
     return <span className='text-gray-500 dark:text-gray-400'>{line}</span>
   }
   const tokens = line.split(/( )/).filter((l) => l !== '')
@@ -99,11 +99,13 @@ const SchemaLine = ({ line, containerRect }: { line: string; containerRect?: DOM
       )
     }
 
-    const maybeDeclName = maybeRenderDeclName(token, declType, tokens, i, containerRect)
+    const module = moduleNameOverride || moduleName || ''
+
+    const maybeDeclName = maybeRenderDeclName(token, declType, tokens, i, module, containerRect)
     if (maybeDeclName) {
       return <span key={i}>{maybeDeclName}</span>
     }
-    const maybeUnderlyingType = maybeRenderUnderlyingType(token, declType, tokens, i, moduleName || '', containerRect)
+    const maybeUnderlyingType = maybeRenderUnderlyingType(token, declType, tokens, i, module, containerRect)
     if (maybeUnderlyingType) {
       return <span key={i}>{maybeUnderlyingType}</span>
     }
@@ -111,13 +113,15 @@ const SchemaLine = ({ line, containerRect }: { line: string; containerRect?: DOM
   })
 }
 
-export const Schema = ({ schema, containerRect }: { schema: string; containerRect?: DOMRect }) => {
+// Prop moduleName should be set if defaulting to the moduleName in the URL is NOT the
+// correct behavior.
+export const Schema = ({ schema, moduleName, containerRect }: { schema: string; moduleName?: string; containerRect?: DOMRect }) => {
   const ref = useRef<HTMLDivElement>(null)
   const rect = ref?.current?.getBoundingClientRect()
   const ll = useMemo(() => schema.split('\n'), [schema])
   const lines = ll.map((l, i) => (
     <div ref={ref} key={i} className={classNames('mb-1', shouldAddLeadingSpace(ll, i) ? 'mt-4' : '')}>
-      <SchemaLine line={l} containerRect={containerRect || rect} />
+      <SchemaLine line={l} moduleNameOverride={moduleName} containerRect={containerRect || rect} />
     </div>
   ))
   return <div className='whitespace-pre font-mono text-xs'>{lines}</div>
