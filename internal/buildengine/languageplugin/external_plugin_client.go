@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/either"
 	"github.com/jpillora/backoff"
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
@@ -24,7 +25,7 @@ type externalPluginClient interface {
 	moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error)
 	getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error)
 
-	build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan *langpb.BuildEvent, streamCancelFunc, error)
+	build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error)
 	buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error)
 
 	kill() error
@@ -125,13 +126,13 @@ func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.R
 	return p.client.GetDependencies(ctx, req)
 }
 
-func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan *langpb.BuildEvent, streamCancelFunc, error) {
+func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error) {
 	stream, err := p.client.Build(ctx, req)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	streamChan := make(chan *langpb.BuildEvent, 64)
+	streamChan := make(chan either.Either[*langpb.BuildEvent, error], 64)
 	go streamToChan(stream, streamChan)
 
 	return streamChan, func() {
@@ -140,9 +141,12 @@ func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[lan
 	}, err
 }
 
-func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch chan *langpb.BuildEvent) {
+func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch chan either.Either[*langpb.BuildEvent, error]) {
 	for stream.Receive() {
-		ch <- stream.Msg()
+		ch <- either.LeftOf[error](stream.Msg())
+	}
+	if err := stream.Err(); err != nil {
+		ch <- either.RightOf[*langpb.BuildEvent](err)
 	}
 	close(ch)
 }

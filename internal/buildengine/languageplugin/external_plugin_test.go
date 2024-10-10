@@ -2,6 +2,7 @@ package languageplugin
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -28,7 +29,7 @@ type testBuildContext struct {
 type mockExternalPluginClient struct {
 	flags []*langpb.GetCreateModuleFlagsResponse_Flag
 
-	buildEvents        chan *langpb.BuildEvent
+	buildEvents        chan either.Either[*langpb.BuildEvent, error]
 	latestBuildContext atomic.Value[testBuildContext]
 }
 
@@ -36,7 +37,7 @@ var _ externalPluginClient = &mockExternalPluginClient{}
 
 func newMockExternalPlugin() *mockExternalPluginClient {
 	return &mockExternalPluginClient{
-		buildEvents: make(chan *langpb.BuildEvent, 64),
+		buildEvents: make(chan either.Either[*langpb.BuildEvent, error], 64),
 	}
 }
 
@@ -83,7 +84,7 @@ func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 	}, nil
 }
 
-func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan *langpb.BuildEvent, streamCancelFunc, error) {
+func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error) {
 	bctx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return nil, nil, err
@@ -290,14 +291,14 @@ func TestAutomaticRebuilds(t *testing.T) {
 	result := beginBuild(ctx, plugin, bctx, true)
 
 	// plugin sends auto rebuild has started event (should be ignored)
-	mockImpl.buildEvents <- &langpb.BuildEvent{
+	mockImpl.buildEvents <- either.LeftOf[error](&langpb.BuildEvent{
 		Event: &langpb.BuildEvent_AutoRebuildStarted{},
-	}
+	})
 	// plugin sends auto rebuild event (should be ignored)
 	mockImpl.buildEvents <- buildEventWithBuildError("fake", true, "auto rebuild to ignore")
 
 	// send first build result
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 	buildCtx := mockImpl.latestBuildContext.Load()
 	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, false, "first build")
 
@@ -313,9 +314,9 @@ func TestAutomaticRebuilds(t *testing.T) {
 	}
 
 	// plugin sends auto rebuild events
-	mockImpl.buildEvents <- &langpb.BuildEvent{
+	mockImpl.buildEvents <- either.LeftOf[error](&langpb.BuildEvent{
 		Event: &langpb.BuildEvent_AutoRebuildStarted{},
-	}
+	})
 	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, true, "first real auto rebuild")
 	// plugin sends auto rebuild events again (this time with no rebuild started event)
 	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, true, "second real auto rebuild")
@@ -326,6 +327,42 @@ func TestAutomaticRebuilds(t *testing.T) {
 	assert.Equal(t, PluginEvent(AutoRebuildStartedEvent{Module: bctx.Config.Module}), events[0])
 	checkAutoRebuildResult(t, events[1], "first real auto rebuild")
 	checkAutoRebuildResult(t, events[2], "second real auto rebuild")
+}
+
+func TestBrokenBuildStream(t *testing.T) {
+	t.Parallel()
+	ctx, plugin, mockImpl, bctx := setUp()
+
+	updates := make(chan PluginEvent, 64)
+	plugin.Updates().Subscribe(updates)
+
+	// build and activate automatic rebuilds
+	result := beginBuild(ctx, plugin, bctx, true)
+
+	// break the stream
+	breakStream(mockImpl)
+	checkStreamError(t, <-result)
+
+	// build again
+	result = beginBuild(ctx, plugin, bctx, true)
+
+	// send build result
+	buildCtx := mockImpl.latestBuildContext.Load()
+	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, false, "first build")
+	checkResult(t, <-result, "first build")
+
+	// break the stream
+	breakStream(mockImpl)
+
+	// build again
+	result = beginBuild(ctx, plugin, bctx, true)
+	// confirm that a Build call was made instead of a BuildContextUpdated call
+	assert.False(t, mockImpl.latestBuildContext.Load().IsRebuild, "after breaking the stream, FTL should send a Build call instead of a BuildContextUpdated call")
+
+	// send build result
+	buildCtx = mockImpl.latestBuildContext.Load()
+	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, false, "second build")
+	checkResult(t, <-result, "second build")
 }
 
 func eventsFromChannel(updates chan PluginEvent) []PluginEvent {
@@ -344,8 +381,8 @@ func eventsFromChannel(updates chan PluginEvent) []PluginEvent {
 	}
 }
 
-func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg string) *langpb.BuildEvent {
-	return &langpb.BuildEvent{
+func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg string) either.Either[*langpb.BuildEvent, error] {
+	return either.LeftOf[error](&langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildFailure{
 			BuildFailure: &langpb.BuildFailure{
 				ContextId:          contextID,
@@ -357,7 +394,7 @@ func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg str
 				}),
 			},
 		},
-	}
+	})
 }
 
 func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, autoRebuild bool) chan either.Either[BuildResult, error] {
@@ -371,8 +408,14 @@ func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, 
 		}
 	}()
 	// sleep to make sure impl has received the build context
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(300 * time.Millisecond)
 	return result
+}
+
+func breakStream(client *mockExternalPluginClient) {
+	client.buildEvents <- either.RightOf[*langpb.BuildEvent](fmt.Errorf("fake a broken stream"))
+	close(client.buildEvents)
+	client.buildEvents = make(chan either.Either[*langpb.BuildEvent, error], 64)
 }
 
 func checkResult(t *testing.T, r either.Either[BuildResult, error], expectedMsg string) {
@@ -383,6 +426,14 @@ func checkResult(t *testing.T, r either.Either[BuildResult, error], expectedMsg 
 	buildResult := left.Get()
 	assert.Equal(t, len(buildResult.Errors), 1)
 	assert.Equal(t, buildResult.Errors[0].Msg, expectedMsg)
+}
+
+func checkStreamError(t *testing.T, r either.Either[BuildResult, error]) {
+	t.Helper()
+	right, ok := r.(either.Right[BuildResult, error])
+	assert.True(t, ok, "expected error result, got %v", r)
+
+	assert.Equal(t, right.Get(), fmt.Errorf("fake a broken stream"))
 }
 
 func checkAutoRebuildResult(t *testing.T, e PluginEvent, expectedMsg string) {
