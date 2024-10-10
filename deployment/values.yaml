@@ -1,0 +1,14 @@
+fullnameOverride: "ftl"
+ingress:
+  enabled: true
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+    kubernetes.io/ingress.class: traefik
+controller:
+  image:
+    repository: "ftl:5000/ftl-controller"
+    tag: "latest"
+  service:
+    ports:
+      - name: "http-8892"
+        port: 8892
