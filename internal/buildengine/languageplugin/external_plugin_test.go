@@ -65,7 +65,7 @@ func (p *mockExternalPluginClient) getDependencies(context.Context, *connect.Req
 func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 	sch, err := schema.FromProto(proto.Schema)
 	if err != nil {
-		return BuildContext{}, err
+		return BuildContext{}, fmt.Errorf("could not load schema from build context proto: %w", err)
 	}
 	return BuildContext{
 		Schema:       sch,
@@ -133,6 +133,7 @@ func setUp() (context.Context, *externalPlugin, *mockExternalPluginClient, Build
 }
 
 func TestCreateModuleFlags(t *testing.T) {
+	t.Parallel()
 	for _, tt := range []struct {
 		protoFlags    []*langpb.GetCreateModuleFlagsResponse_Flag
 		expectedFlags []*kong.Flag

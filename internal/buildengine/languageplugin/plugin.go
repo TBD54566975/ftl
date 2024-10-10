@@ -60,7 +60,9 @@ type AutoRebuildEndedEvent struct {
 func (AutoRebuildEndedEvent) pluginEvent()         {}
 func (e AutoRebuildEndedEvent) ModuleName() string { return e.Module }
 
-// TODO: docs
+// BuildContext contains contextual information needed to build.
+//
+// Any change to the build context would require a new build.
 type BuildContext struct {
 	Config       moduleconfig.ModuleConfig
 	Schema       *schema.Schema
@@ -94,7 +96,6 @@ type LanguagePlugin interface {
 	// Build builds the module with the latest config and schema.
 	// In dev mode, plugin is responsible for automatically rebuilding as relevant files within the module change,
 	// and publishing these automatic builds updates to Updates().
-	// TODO: build env needed?
 	Build(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error)
 
 	// Kill stops the plugin and cleans up any resources.

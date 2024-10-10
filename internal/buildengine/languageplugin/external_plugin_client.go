@@ -106,24 +106,42 @@ func (p *externalPluginImpl) ping(ctx context.Context) error {
 }
 
 func (p *externalPluginImpl) kill() error {
-	// TODO: cancel run() ctx
-	return p.cmd.Kill(syscall.SIGINT)
+	if err := p.cmd.Kill(syscall.SIGINT); err != nil {
+		return fmt.Errorf("failed to kill language plugin: %w", err)
+	}
+	return nil
 }
 
 func (p *externalPluginImpl) getCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
-	return p.client.GetCreateModuleFlags(ctx, req)
+	resp, err := p.client.GetCreateModuleFlags(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get create module flags from plugin: %w", err)
+	}
+	return resp, nil
 }
 
 func (p *externalPluginImpl) moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
-	return p.client.ModuleConfigDefaults(ctx, req)
+	resp, err := p.client.ModuleConfigDefaults(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get module config defaults from plugin: %w", err)
+	}
+	return resp, nil
 }
 
 func (p *externalPluginImpl) createModule(ctx context.Context, req *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error) {
-	return p.client.CreateModule(ctx, req)
+	resp, err := p.client.CreateModule(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create module: %w", err)
+	}
+	return resp, nil
 }
 
 func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
-	return p.client.GetDependencies(ctx, req)
+	resp, err := p.client.GetDependencies(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dependencies from plugin: %w", err)
+	}
+	return resp, nil
 }
 
 func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error) {
@@ -152,5 +170,9 @@ func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch c
 }
 
 func (p *externalPluginImpl) buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
-	return p.client.BuildContextUpdated(ctx, req)
+	resp, err := p.client.BuildContextUpdated(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send updated build context to plugin: %w", err)
+	}
+	return resp, nil
 }

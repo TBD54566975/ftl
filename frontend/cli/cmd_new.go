@@ -35,6 +35,8 @@ type newCmd struct {
 // - help text (ftl new go --help)
 // - default values
 // - environment variable overrides
+//
+// Language plugins take time to launch, so we return the one we created so it can be reused in Run().
 func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPlugin optional.Option[languageplugin.LanguagePlugin], err error) {
 	if len(args) < 2 {
 		return optionalPlugin, nil

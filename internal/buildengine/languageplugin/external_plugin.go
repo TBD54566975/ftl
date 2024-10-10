@@ -132,6 +132,8 @@ func (p *externalPlugin) CreateModule(ctx context.Context, projConfig projectcon
 		Name: moduleConfig.Module,
 		Path: moduleConfig.Dir,
 		ProjectConfig: &langpb.ProjectConfig{
+			Path:   projConfig.Path,
+			Name:   projConfig.Name,
 			NoGit:  projConfig.NoGit,
 			Hermit: projConfig.Hermit,
 		},

@@ -85,14 +85,16 @@ func main() {
 	csm := &currentStatusManager{}
 
 	app := createKongApplication(&cli, csm)
-	languagePlugin, err := prepareNewCmd(ctx, app, os.Args[1:])
+
+	// Dynamically update the kong app with language specific flags for the "ftl new" command.
+	languagePlugin, err := prepareNewCmd(log.ContextWithNewDefaultLogger(ctx), app, os.Args[1:])
 	app.FatalIfErrorf(err)
 
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
 
 	if plugin, ok := languagePlugin.Get(); ok {
-		// for "ftl new" command, we only need to create the language plugin once
+		// Plugins take time to launch, so we bind the "ftl new" plugin to the kong context.
 		kctx.BindTo(plugin, (*languageplugin.LanguagePlugin)(nil))
 	}
 
