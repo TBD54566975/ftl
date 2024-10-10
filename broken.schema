@@ -1,0 +1,110 @@
+// Built-in types for FTL.
+builtin module builtin {
+  // CatchRequest is a request structure for catch verbs.
+  export data CatchRequest<Req> {
+    verb builtin.Ref
+    request Req
+    requestType String
+    error String
+  }
+
+  export data Empty {
+  }
+
+  // HTTP request structure used for HTTP ingress verbs.
+  export data HttpRequest<Body, Path, Query> {
+    method String
+    path String
+    pathParameters Path
+    query Query
+    headers {String: [String]}
+    body Body
+  }
+
+  // HTTP response structure used for HTTP ingress verbs.
+  export data HttpResponse<Body, Error> {
+    status Int
+    headers {String: [String]}
+    // Either "body" or "error" must be present, not both.
+    body Body?
+    error Error?
+  }
+
+  // A reference to a declaration in the schema.
+  export data Ref {
+    module String
+    name String
+  }
+}
+
+module javaserver {
+  // Config comment
+  config config String
+  // Secret comment
+  secret secretString String
+
+  database postgres default
+
+  export enum Animal {
+    Cat javaserver.Cat
+    Dog javaserver.Dog
+  }
+
+  export enum ColorInt: Int {
+    RED = 0
+    GREEN = 1
+    BLUE = 2
+  }
+
+  export enum EnumType: String {
+    PORTENTOUS = "portentous"
+  }
+
+  enum ScalarOrList {
+    Scalar String
+    List [String]
+  }
+
+  export enum Shape: String {
+    CIRCLE = "circle"
+    SQUARE = "square"
+    TRIANGLE = "triangle"
+  }
+
+  export data AnimalWrapper {
+    animal javaserver.Animal
+  }
+
+  export data Cat {
+  }
+
+  export data ColorWrapper {
+    color javaserver.ColorInt
+  }
+
+  // Comment on a data class.
+  export data DataClass {
+    field String
+  }
+
+  export data Dog {
+  }
+
+  export data ShapeWrapper {
+    shape javaserver.Shape
+  }
+
+  // Comment on a verb
+  export verb MultilineCommentVerb(javaserver.DataClass) javaserver.EnumType
+
+  export verb anyInput(Any) String
+
+  export verb anyOutput(String) Any
+
+  export verb stringEnumVerb(javaserver.ShapeWrapper) javaserver.ShapeWrapper
+
+  export verb typeEnumVerb(javaserver.AnimalWrapper) javaserver.AnimalWrapper
+
+  export verb valueEnumVerb(javaserver.ColorWrapper) javaserver.ColorWrapper
+}
+

@@ -410,7 +410,7 @@ public class ModuleBuilder {
                     return ref;
                 } else {
                     // If this data was processed already, skip early
-                    if (updateData(name, type.hasAnnotation(EXPORT) || export)) {
+                    if (setDeclExport(name, type.hasAnnotation(EXPORT) || export)) {
                         return ref;
                     }
                     Data.Builder data = Data.newBuilder();
@@ -505,16 +505,14 @@ public class ModuleBuilder {
     public ModuleBuilder addDecls(Decl decl) {
         if (decl.hasData()) {
             Data data = decl.getData();
-            if (updateData(data.getName(), data.getExport())) {
-                return this;
+            if (!setDeclExport(data.getName(), data.getExport())) {
+                addDecl(decl, data.getPos(), data.getName());
             }
-            addDecl(decl, data.getPos(), data.getName());
         } else if (decl.hasEnum()) {
             xyz.block.ftl.v1.schema.Enum enuum = decl.getEnum();
-            if (updateEnum(enuum.getName(), decl)) {
-                return this;
+            if (!updateEnum(enuum.getName(), decl)) {
+                addDecl(decl, enuum.getPos(), enuum.getName());
             }
-            addDecl(decl, enuum.getPos(), enuum.getName());
         } else if (decl.hasDatabase()) {
             addDecl(decl, decl.getDatabase().getPos(), decl.getDatabase().getName());
         } else if (decl.hasConfig()) {
@@ -614,7 +612,7 @@ public class ModuleBuilder {
                 for (var childDecl : merged.getVariantsList()) {
                     if (childDecl.getValue().hasTypeValue() && childDecl.getValue().getTypeValue().getValue().hasRef()) {
                         var ref = childDecl.getValue().getTypeValue().getValue().getRef();
-                        updateData(ref.getName(), true);
+                        setDeclExport(ref.getName(), true);
                     }
                 }
             }
@@ -624,20 +622,21 @@ public class ModuleBuilder {
     }
 
     /**
-     * Check if a data with the given name already exists in the module. If it does, update its export field to
-     * match <code>export</code>, and return true
+     * Set a Decl's export field to <code>export</code>. Return true iff the Decl exists
      */
-    private boolean updateData(String name, boolean export) {
-        if (decls.containsKey(name)) {
-            var existing = decls.get(name);
-            if (!existing.hasData()) {
-                return true;
+    private boolean setDeclExport(String name, boolean export) {
+        var existing = decls.get(name);
+        if (existing != null) {
+            if (existing.hasData()) {
+                var merged = existing.getData().toBuilder().setExport(export).build();
+                decls.put(name, Decl.newBuilder().setData(merged).build());
+            } else if (existing.hasTypeAlias()) {
+                var merged = existing.getTypeAlias().toBuilder().setExport(export).build();
+                decls.put(name, Decl.newBuilder().setTypeAlias(merged).build());
             }
-            var merged = existing.getData().toBuilder().setExport(export).build();
-            decls.put(name, Decl.newBuilder().setData(merged).build());
-            return true;
+
         }
-        return false;
+        return existing != null;
     }
 
     private void duplicateNameValidationError(String name, Position pos) {
