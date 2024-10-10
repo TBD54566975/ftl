@@ -11,6 +11,7 @@ runs:
       uses: ScribeMD/docker-cache@0.5.0
       with:
         key: docker-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
+        read-only: true
     - name: Restore Go Modules Cache
       id: cache-go-modules
       uses: actions/cache/restore@v4
@@ -28,7 +29,6 @@ runs:
       with:
         path: |
           ~/.m2/repository
-          **SNAPSHOT**
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
