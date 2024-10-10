@@ -13,7 +13,12 @@ import (
 )
 
 var logFile = ftl.Config[string]("log_file")
-var db = ftl.PostgresDatabase("exemplardb")
+
+type ExemplarDbConfig struct {
+	ftl.DefaultPostgresDatabaseConfig
+}
+
+func (ExemplarDbConfig) Name() string { return "exemplardb" }
 
 // PubSub
 
