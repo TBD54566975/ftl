@@ -487,7 +487,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				}
 				if meta, ok := e.moduleMetas.Load(event.Config.Module); ok {
 					meta.plugin.Updates().Unsubscribe(meta.events)
-					err := meta.plugin.Kill(ctx)
+					err := meta.plugin.Kill()
 					if err != nil {
 						didError = true
 						e.reportBuildFailed(err)
@@ -813,7 +813,11 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, sch, meta.module.Config, e.buildEnv, e.devMode)
+	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, languageplugin.BuildContext{
+		Config:       meta.module.Config,
+		Schema:       sch,
+		Dependencies: meta.module.Dependencies,
+	}, e.buildEnv, e.devMode)
 	if err != nil {
 		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 		return err

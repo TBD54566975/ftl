@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -30,7 +31,7 @@ func newRustPlugin(ctx context.Context) *rustPlugin {
 
 func (p *rustPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
 	return moduleconfig.CustomDefaults{
-		Build:     "cargo build",
+		Build:     optional.Some("cargo build"),
 		DeployDir: "_ftl/target/debug",
 		Watch:     []string{"**/*.rs", "Cargo.toml", "Cargo.lock"},
 	}, nil
@@ -48,7 +49,8 @@ func (p *rustPlugin) GetDependencies(ctx context.Context, config moduleconfig.Mo
 	return nil, fmt.Errorf("not implemented")
 }
 
-func buildRust(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+func buildRust(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+	config := bctx.Config.Abs()
 	logger := log.FromContext(ctx)
 	logger.Debugf("Using build command '%s'", config.Build)
 	err := exec.Command(ctx, log.Debug, config.Dir+"/_ftl", "bash", "-c", config.Build).RunBuffered(ctx)

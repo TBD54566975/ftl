@@ -14,6 +14,7 @@ import (
 
 	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 	"github.com/beevik/etree"
 	"github.com/go-viper/mapstructure/v2"
 	"golang.org/x/exp/maps"
@@ -66,7 +67,7 @@ func newJavaPlugin(ctx context.Context, language string) *javaPlugin {
 
 func (p *javaPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
 	defaults := moduleconfig.CustomDefaults{
-		GeneratedSchemaDir: "src/main/ftl-module-schema",
+		GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
 		// Watch defaults to files related to maven and gradle
 		Watch: []string{"pom.xml", "src/**", "build/generated", "target/generated-sources"},
 	}
@@ -78,13 +79,13 @@ func (p *javaPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (modu
 		defaults.LanguageConfig = map[string]any{
 			"build-tool": JavaBuildToolMaven,
 		}
-		defaults.Build = "mvn -B package"
+		defaults.Build = optional.Some("mvn -B package")
 		defaults.DeployDir = "target"
 	} else if fileExists(buildGradle) || fileExists(buildGradleKts) {
 		defaults.LanguageConfig = map[string]any{
 			"build-tool": JavaBuildToolGradle,
 		}
-		defaults.Build = "gradle build"
+		defaults.Build = optional.Some("gradle build")
 		defaults.DeployDir = "build"
 	} else {
 		return moduleconfig.CustomDefaults{}, fmt.Errorf("could not find JVM build file in %s", dir)
@@ -247,9 +248,10 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func buildJava(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+func buildJava(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
 	// TODO: add back
 	// Deploy:
+	config := bctx.Config.Abs()
 	logger := log.FromContext(ctx)
 	javaConfig, err := loadJavaConfig(config.LanguageConfig, config.Language)
 	if err != nil {

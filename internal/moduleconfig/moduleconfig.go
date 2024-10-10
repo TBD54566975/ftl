@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/alecthomas/types/optional"
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -51,10 +52,10 @@ type AbsModuleConfig ModuleConfig
 type UnvalidatedModuleConfig ModuleConfig
 
 type CustomDefaults struct {
-	Build              string
 	DeployDir          string
-	GeneratedSchemaDir string
 	Watch              []string
+	Build              optional.Option[string]
+	GeneratedSchemaDir optional.Option[string]
 
 	// only the root keys in LanguageConfig are used to find missing values that can be defaulted
 	LanguageConfig map[string]any `toml:"-"`
@@ -138,14 +139,14 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	}
 
 	// Custom defaults
-	if c.Build == "" {
-		c.Build = customDefaults.Build
+	if defaultValue, ok := customDefaults.Build.Get(); ok && c.Build == "" {
+		c.Build = defaultValue
 	}
 	if c.DeployDir == "" {
 		c.DeployDir = customDefaults.DeployDir
 	}
-	if c.GeneratedSchemaDir == "" {
-		c.GeneratedSchemaDir = customDefaults.GeneratedSchemaDir
+	if defaultValue, ok := customDefaults.GeneratedSchemaDir.Get(); ok && c.GeneratedSchemaDir == "" {
+		c.GeneratedSchemaDir = defaultValue
 	}
 	if c.Watch == nil {
 		c.Watch = customDefaults.Watch

@@ -20,17 +20,17 @@ import (
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
-func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRootDir string, sch *schema.Schema, config moduleconfig.ModuleConfig, buildEnv []string, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
-	logger := log.FromContext(ctx).Module(config.Module).Scope("build")
+func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRootDir string, bctx languageplugin.BuildContext, buildEnv []string, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
+	logger := log.FromContext(ctx).Module(bctx.Config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	logger.Infof("Building module")
 
-	result, err := plugin.Build(ctx, projectRootDir, config, sch, buildEnv, devMode)
+	result, err := plugin.Build(ctx, projectRootDir, bctx, buildEnv, devMode)
 	if err != nil {
-		return handleBuildResult(ctx, config, either.RightOf[languageplugin.BuildResult](err))
+		return handleBuildResult(ctx, bctx.Config, either.RightOf[languageplugin.BuildResult](err))
 	}
-	return handleBuildResult(ctx, config, either.LeftOf[error](result))
+	return handleBuildResult(ctx, bctx.Config, either.LeftOf[error](result))
 }
 
 // handleBuildResult processes the result of a build
