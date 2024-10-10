@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStreamModules } from '../../../api/modules/use-stream-modules'
 import { classNames } from '../../../utils'
@@ -7,16 +7,23 @@ import { Schema } from '../schema/Schema'
 import { type DeclSchema, declSchemaFromModules } from '../schema/schema.utils'
 
 const SnippetContainer = ({ decl, visible, linkRect, containerRect }: { decl: DeclSchema; visible: boolean; linkRect?: DOMRect; containerRect?: DOMRect }) => {
+  const [containerX, setContainerX] = useState(containerRect?.x || getTreeWidthFromLS())
+  useEffect(() => {
+    if (containerRect !== undefined) {
+      setContainerX(containerRect.x)
+    }
+  }, [containerRect])
+
   const ref = useRef<HTMLDivElement>(null)
   const snipRect = ref?.current?.getBoundingClientRect()
 
   const hasRects = !!snipRect && !!linkRect
   const fitsAbove = hasRects && linkRect.top - 64 > snipRect.height
   const fitsToRight = hasRects && window.innerWidth - linkRect.left >= snipRect.width
-  const fitsToLeft = hasRects && linkRect.left - (containerRect?.x || getTreeWidthFromLS()) + linkRect.width >= snipRect.width
+  const fitsToLeft = hasRects && linkRect.left - containerX + linkRect.width >= snipRect.width
   const horizontalAlignmentClassNames = fitsToRight ? '-ml-1' : fitsToLeft ? '-translate-x-full left-full ml-0' : ''
   const style = {
-    transform: !fitsToRight && !fitsToLeft ? `translateX(-${(linkRect?.left || 0) - (containerRect?.left || getTreeWidthFromLS())}px)` : undefined,
+    transform: !fitsToRight && !fitsToLeft ? `translateX(-${(linkRect?.left || 0) - containerX}px)` : undefined,
   }
   return (
     <div
