@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
@@ -12,19 +11,20 @@ import (
 )
 
 type releaseCmd struct {
+	Registry             string `help:"Registry host:port" default:"127.0.0.1:5001"`
+	DSN                  string `help:"DAL DSN." default:"postgres://127.0.0.1:15432/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
+	MaxOpenDBConnections int    `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
+	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
+
 	Publish releasePublishCmd `cmd:"" help:"Packages the project into a release and publishes it."`
 	List    releaseListCmd    `cmd:"" help:"Lists all published releases."`
 }
 
 type releasePublishCmd struct {
-	Registry             string `help:"Registry host:port" default:"127.0.0.1:5001"`
-	DSN                  string `help:"DAL DSN." default:"postgres://127.0.0.1:15432/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
-	MaxOpenDBConnections int    `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
-	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 }
 
-func (d *releasePublishCmd) Run() error {
-	svc, err := createContainerService(d.DSN, d.Registry, d.MaxOpenDBConnections, d.MaxIdleDBConnections)
+func (d *releasePublishCmd) Run(release *releaseCmd) error {
+	svc, err := createContainerService(release)
 	if err != nil {
 		return fmt.Errorf("failed to create container service: %w", err)
 	}
@@ -45,14 +45,10 @@ func (d *releasePublishCmd) Run() error {
 }
 
 type releaseListCmd struct {
-	Registry             string `help:"Registry host:port" default:"127.0.0.1:5001"`
-	DSN                  string `help:"DAL DSN." default:"postgres://127.0.0.1:15432/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
-	MaxOpenDBConnections int    `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
-	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 }
 
-func (d *releaseListCmd) Run() error {
-	svc, err := createContainerService(d.DSN, d.Registry, d.MaxOpenDBConnections, d.MaxIdleDBConnections)
+func (d *releaseListCmd) Run(release *releaseCmd) error {
+	svc, err := createContainerService(release)
 	if err != nil {
 		return fmt.Errorf("failed to create container service: %w", err)
 	}
@@ -75,16 +71,16 @@ func (d *releaseListCmd) Run() error {
 	return nil
 }
 
-func createContainerService(dsn string, reg string, maxOpenConn int, maxIdleCon int) (*artefacts.ContainerService, error) {
-	conn, err := internalobservability.OpenDBAndInstrument(dsn)
+func createContainerService(release *releaseCmd) (*artefacts.ContainerService, error) {
+	conn, err := internalobservability.OpenDBAndInstrument(release.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open DB connection: %w", err)
 	}
-	conn.SetMaxIdleConns(maxIdleCon)
-	conn.SetMaxOpenConns(maxOpenConn)
+	conn.SetMaxIdleConns(release.MaxIdleDBConnections)
+	conn.SetMaxOpenConns(release.MaxOpenDBConnections)
 
 	return artefacts.NewContainerService(artefacts.ContainerConfig{
-		Registry:       reg,
+		Registry:       release.Registry,
 		AllowPlainHTTP: true,
 	}, conn), nil
 }

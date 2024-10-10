@@ -28,10 +28,10 @@ const (
 )
 
 type ContainerConfig struct {
-	Registry       string
-	Username       string
-	Password       string
-	AllowPlainHTTP bool
+	Registry       string `help:"OCI container registry host:port" env:"FTL_ARTEFACTS_REGISTRY"`
+	Username       string `help:"OCI container registry username" env:"FTL_ARTEFACTS_USER"`
+	Password       string `help:"OCI container registry password" env:"FTL_ARTEFACTS_PWD"`
+	AllowPlainHTTP bool   `help:"Allows OCI container requests to accept plain HTTP responses" env:"FTL_ARTEFACTS_ALLOW_HTTP"`
 }
 
 type ContainerService struct {
