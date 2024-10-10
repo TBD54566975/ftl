@@ -113,6 +113,7 @@ ftl-status:
 build-executables:
   # we build locally then copy into the docker files
   # it is way faster than building in the docker files
+  java -version #make sure hermit has downloaded Java
   mkdir -p "docker-build"
   cd ../ && GOARCH=amd64 GOOS=linux CGO_ENABLED=0 just build ftl-controller ftl-runner ftl-initdb ftl
   cp ../build/release/* ./docker-build/
