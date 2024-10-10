@@ -16,8 +16,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
-// TODO: rename all this!
-
 type streamCancelFunc func()
 
 type externalPluginClient interface {
@@ -26,7 +24,6 @@ type externalPluginClient interface {
 	moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error)
 	getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error)
 
-	// TODO: when not watching, does plugin need a way of closing the stream / chan?
 	build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan *langpb.BuildEvent, streamCancelFunc, error)
 	buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error)
 
@@ -53,10 +50,7 @@ func newExternalPluginImpl(ctx context.Context, bind *url.URL, language string) 
 
 // Start launches the plugin and blocks until the plugin is ready.
 func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language string) error {
-	// TODO: think more about whether this is a good log level
-	// TODO: think more about whether cmd's path should be the current directory, or the module's
 	cmdName := "ftl-language-" + language
-	// TODO: document says that we pass in dir... but I dont think we need to anymore
 	p.cmd = exec.Command(ctx, log.Debug, ".", cmdName, "--bind", bind.String())
 	_, err := exec.LookPath(cmdName)
 	if err != nil {

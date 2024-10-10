@@ -249,8 +249,6 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 }
 
 func buildJava(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
-	// TODO: add back
-	// Deploy:
 	config := bctx.Config.Abs()
 	logger := log.FromContext(ctx)
 	javaConfig, err := loadJavaConfig(config.LanguageConfig, config.Language)
