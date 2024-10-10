@@ -39,11 +39,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java generate-kube-migrations
-
-# Update the kube config map with the latest schema migrations
-generate-kube-migrations:
-    just k8s update-schema
+build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java
 
 # Run "go generate" on all packages
 build-generate:
@@ -264,3 +260,6 @@ build-docker name:
     -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" \
     -t ftl0/ftl-{{name}}:latest \
     -f Dockerfile.{{name}} .
+
+chart *args:
+    @cd charts && just {{args}}

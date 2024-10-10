@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+  name: {{ include "ftl.fullname" . }}-controller
+  {{- if .Values.controller.service.annotations }}
+  annotations:
+    {{- toYaml .Values.controller.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+    {{- range .Values.controller.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      protocol: {{ .protocol | default "TCP" }}
+      {{- if .appProtocol }}
+      appProtocol: {{ .appProtocol }}
+      {{- end }}
+      targetPort: {{ .targetPort }}
+    {{- end }}
+  selector:
+    {{- include "ftl-controller.selectorLabels" . | nindent 4 }}
+  type: {{ .Values.controller.service.type | default "ClusterIP" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+  name: {{ include "ftl.fullname" . }}-controller-ingress
+  {{- if .Values.controller.ingressService.annotations }}
+  annotations:
+    {{- toYaml .Values.controller.ingressService.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+    {{- range .Values.controller.ingressService.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      protocol: {{ .protocol | default "TCP" }}
+      targetPort: {{ .targetPort }}
+    {{- end }}
+  selector:
+    {{- include "ftl-controller.selectorLabels" . | nindent 4 }}
+  type: {{ .Values.controller.ingressService.type | default "ClusterIP" }}
