@@ -3,7 +3,6 @@ package languageplugin
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -112,12 +111,7 @@ func New(ctx context.Context, bindAllocator *bind.BindAllocator, language string
 	case "rust":
 		return newRustPlugin(ctx), nil
 	default:
-		// TODO: get bind url
-		bind, err := url.Parse("localhost:80123")
-		if err != nil {
-			return nil, fmt.Errorf("could not parse bind url: %w", err)
-		}
-		return newExternalPlugin(ctx, bind, language)
+		return newExternalPlugin(ctx, bindAllocator.Next(), language)
 	}
 }
 
