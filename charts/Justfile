@@ -1,0 +1,5 @@
+_help:
+  @just -l
+
+dep-update:
+    helm dep update .
