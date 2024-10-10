@@ -33,7 +33,7 @@ type schemaDiffCmd struct {
 	Color         bool    `help:"Enable colored output regardless of TTY."`
 }
 
-func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig projectconfig.Config, bindAllocator *bind.BindAllocator) error {
+func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig projectconfig.Config) error {
 	var other *schema.Schema
 	var err error
 	sameModulesOnly := false
@@ -41,11 +41,19 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 	if otherEndpoint == "" {
 		otherEndpoint = "Local Changes"
 		sameModulesOnly = true
+
+		// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
+		var bindAllocator *bind.BindAllocator
+		bindAllocator, err = bind.NewBindAllocator(cli.Endpoint)
+		if err != nil {
+			return fmt.Errorf("could not create bind allocator: %w", err)
+		}
+		_ = bindAllocator.Next()
+
 		other, err = localSchema(ctx, projConfig, bindAllocator)
 	} else {
 		other, err = schemaForURL(ctx, d.OtherEndpoint)
 	}
-
 	if err != nil {
 		return fmt.Errorf("failed to get other schema: %w", err)
 	}
