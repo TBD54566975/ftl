@@ -633,7 +633,6 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 type buildCallback func(ctx context.Context, module Module) error
 
 func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, moduleNames ...string) error {
-
 	if len(moduleNames) == 0 {
 		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
 			moduleNames = append(moduleNames, name)
@@ -820,6 +819,15 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	}, e.buildEnv, e.devMode)
 	if err != nil {
 		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
+		if errors.Is(err, invalidateDependenciesError) {
+			go func() {
+				logger := log.FromContext(ctx)
+				err := e.BuildAndDeploy(ctx, 1, true, moduleName)
+				e.reportBuildFailed(err)
+				terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
+				logger.Errorf(err, "Build and deploy failed for module %q", moduleName)
+			}()
+		}
 		return err
 	}
 	// update files to deploy

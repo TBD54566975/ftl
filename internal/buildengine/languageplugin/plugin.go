@@ -31,7 +31,7 @@ type BuildResult struct {
 	// Files to deploy, relative to the module config's DeployDir
 	Deploy []string
 
-	// Docs
+	// Whether the module needs to recalculate its dependencies
 	InvalidateDependencies bool
 }
 

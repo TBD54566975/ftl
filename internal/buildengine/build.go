@@ -17,9 +17,13 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
+var invalidateDependenciesError = errors.New("dependencies need to be updated")
+
 // Build a module in the given directory given the schema and module config.
 //
 // A lock file is used to ensure that only one build is running at a time.
+//
+// Returns invalidateDependenciesError if the build failed due to a change in dependencies.
 func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRootDir string, bctx languageplugin.BuildContext, buildEnv []string, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx).Module(bctx.Config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
@@ -44,6 +48,10 @@ func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherR
 		return nil, nil, fmt.Errorf("failed to build module: %w", eitherResult.Get())
 	case either.Left[languageplugin.BuildResult, error]:
 		result = eitherResult.Get()
+	}
+
+	if result.InvalidateDependencies {
+		return nil, nil, invalidateDependenciesError
 	}
 
 	var errs []error
