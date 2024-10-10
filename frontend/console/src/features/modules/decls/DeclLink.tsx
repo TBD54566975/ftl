@@ -6,7 +6,13 @@ import { getTreeWidthFromLS } from '../module.utils'
 import { Schema } from '../schema/Schema'
 import { type DeclSchema, declSchemaFromModules } from '../schema/schema.utils'
 
-const SnippetContainer = ({ decl, visible, linkRect, containerRect }: { decl: DeclSchema; visible: boolean; linkRect?: DOMRect; containerRect?: DOMRect }) => {
+const SnippetContainer = ({
+  decl,
+  moduleName,
+  visible,
+  linkRect,
+  containerRect,
+}: { decl: DeclSchema; moduleName: string; visible: boolean; linkRect?: DOMRect; containerRect?: DOMRect }) => {
   const [containerX, setContainerX] = useState(containerRect?.x || getTreeWidthFromLS())
   useEffect(() => {
     if (containerRect !== undefined) {
@@ -36,7 +42,7 @@ const SnippetContainer = ({ decl, visible, linkRect, containerRect }: { decl: De
         'absolute p-4 pl-0.5 rounded-md border-solid border border border-gray-400 bg-gray-200 dark:border-gray-800 dark:bg-gray-700 text-gray-700 dark:text-white text-xs font-normal z-10 drop-shadow-xl cursor-default',
       )}
     >
-      <Schema schema={decl.schema} containerRect={containerRect} />
+      <Schema schema={decl.schema} moduleName={moduleName} containerRect={containerRect} />
     </div>
   )
 }
@@ -49,6 +55,9 @@ export const DeclLink = ({
   textColors = 'text-indigo-600 dark:text-indigo-400',
   containerRect,
 }: { moduleName?: string; declName: string; slim?: boolean; textColors?: string; containerRect?: DOMRect }) => {
+  if (!moduleName || !declName) {
+    return
+  }
   const navigate = useNavigate()
   const modules = useStreamModules()
   const decl = useMemo(
@@ -73,7 +82,15 @@ export const DeclLink = ({
       <span ref={linkRef} className={textColors} onClick={() => navigate(`/modules/${moduleName}/${decl.declType}/${declName}`)}>
         {str}
       </span>
-      {!slim && <SnippetContainer decl={decl} visible={isHovering} linkRect={linkRef?.current?.getBoundingClientRect()} containerRect={containerRect} />}
+      {!slim && (
+        <SnippetContainer
+          decl={decl}
+          moduleName={moduleName}
+          visible={isHovering}
+          linkRect={linkRef?.current?.getBoundingClientRect()}
+          containerRect={containerRect}
+        />
+      )}
     </span>
   )
 }
