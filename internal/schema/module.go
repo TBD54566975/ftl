@@ -14,6 +14,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
@@ -218,12 +219,27 @@ func (m *Module) Imports() []string {
 }
 
 func (m *Module) ToProto() proto.Message {
+	var runtime *schemapb.ModuleRuntime
+	if m.Runtime != nil {
+		runtime = &schemapb.ModuleRuntime{
+			CreateTime:  timestamppb.New(m.Runtime.CreateTime),
+			Language:    m.Runtime.Language,
+			MinReplicas: m.Runtime.MinReplicas,
+		}
+		if m.Runtime.OS != "" {
+			runtime.Os = &m.Runtime.OS
+		}
+		if m.Runtime.Arch != "" {
+			runtime.Arch = &m.Runtime.Arch
+		}
+	}
 	return &schemapb.Module{
 		Pos:      posToProto(m.Pos),
 		Builtin:  m.Builtin,
 		Name:     m.Name,
 		Comments: m.Comments,
 		Decls:    declListToProto(m.Decls),
+		Runtime:  runtime,
 	}
 }
 
@@ -247,6 +263,15 @@ func ModuleFromProto(s *schemapb.Module) (*Module, error) {
 		Name:     s.Name,
 		Comments: s.Comments,
 		Decls:    declListToSchema(s.Decls),
+	}
+	if s.Runtime != nil {
+		module.Runtime = &ModuleRuntime{
+			CreateTime:  s.Runtime.GetCreateTime().AsTime(),
+			Language:    s.Runtime.Language,
+			MinReplicas: s.Runtime.MinReplicas,
+			OS:          s.Runtime.GetOs(),
+			Arch:        s.Runtime.GetArch(),
+		}
 	}
 	return module, ValidateModule(module)
 }

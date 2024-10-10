@@ -7,6 +7,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -152,6 +153,14 @@ func (v *Verb) GetMetadataCronJob() optional.Option[*MetadataCronJob] {
 }
 
 func (v *Verb) ToProto() proto.Message {
+	var runtime *schemapb.VerbRuntime
+	if v.Runtime != nil {
+		runtime = &schemapb.VerbRuntime{
+			CreateTime: timestamppb.New(v.Runtime.CreateTime),
+			StartTime:  timestamppb.New(v.Runtime.StartTime),
+			Status:     schemapb.VerbStatus(v.Runtime.Status),
+		}
+	}
 	return &schemapb.Verb{
 		Pos:      posToProto(v.Pos),
 		Export:   v.Export,
@@ -160,10 +169,19 @@ func (v *Verb) ToProto() proto.Message {
 		Request:  TypeToProto(v.Request),
 		Response: TypeToProto(v.Response),
 		Metadata: metadataListToProto(v.Metadata),
+		Runtime:  runtime,
 	}
 }
 
 func VerbFromProto(s *schemapb.Verb) *Verb {
+	var runtime *VerbRuntime
+	if s.Runtime != nil {
+		runtime = &VerbRuntime{
+			CreateTime: s.Runtime.CreateTime.AsTime(),
+			StartTime:  s.Runtime.StartTime.AsTime(),
+			Status:     VerbStatus(s.Runtime.Status),
+		}
+	}
 	return &Verb{
 		Pos:      PosFromProto(s.Pos),
 		Export:   s.Export,
@@ -172,5 +190,6 @@ func VerbFromProto(s *schemapb.Verb) *Verb {
 		Request:  TypeFromProto(s.Request),
 		Response: TypeFromProto(s.Response),
 		Metadata: metadataListToSchema(s.Metadata),
+		Runtime:  runtime,
 	}
 }
