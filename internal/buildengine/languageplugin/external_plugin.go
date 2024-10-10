@@ -234,6 +234,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 	// build counter is used to generate build request ids
 	var contextCounter = 0
 
+	// can not scope logger initially without knowing module name
 	logger := log.FromContext(ctx)
 
 	for {
@@ -243,9 +244,13 @@ func (p *externalPlugin) run(ctx context.Context) {
 			switch c := cmd.(type) {
 			case externalBuildCommand:
 				// update state
-				projectRoot = c.projectRoot
+				contextCounter++
 				bctx = c.BuildContext
+				projectRoot = c.projectRoot
+
+				// module name may have changed, update logger scope
 				logger = log.FromContext(ctx).Scope(bctx.Config.Module)
+
 				if _, ok := activeBuildCmd.Get(); ok {
 					c.result <- either.RightOf[BuildResult](fmt.Errorf("build already in progress"))
 					continue
@@ -256,19 +261,23 @@ func (p *externalPlugin) run(ctx context.Context) {
 					continue
 				}
 
-				activeBuildCmd = optional.Some[externalBuildCommand](c)
-				contextCounter++
+				schemaProto := bctx.Schema.ToProto().(*schemapb.Schema) //nolint:forcetypeassert
 
 				if streamChan != nil {
 					// tell plugin about new build context so that it rebuilds in existing build stream
-					p.client.buildContextUpdated(ctx, connect.NewRequest(&langpb.BuildContextUpdatedRequest{
+					_, err = p.client.buildContextUpdated(ctx, connect.NewRequest(&langpb.BuildContextUpdatedRequest{
 						BuildContext: &langpb.BuildContext{
-							Id:           contextId(bctx.Config, contextCounter),
+							Id:           contextID(bctx.Config, contextCounter),
 							ModuleConfig: configProto,
-							Schema:       bctx.Schema.ToProto().(*schemapb.Schema), //nolint:forcetypeassert
+							Schema:       schemaProto,
 							Dependencies: bctx.Dependencies,
 						},
 					}))
+					if err != nil {
+						c.result <- either.RightOf[BuildResult](err)
+						continue
+					}
+					activeBuildCmd = optional.Some[externalBuildCommand](c)
 					continue
 				}
 
@@ -276,16 +285,17 @@ func (p *externalPlugin) run(ctx context.Context) {
 					ProjectPath:          projectRoot,
 					RebuildAutomatically: c.rebuildAutomatically,
 					BuildContext: &langpb.BuildContext{
-						Id:           contextId(bctx.Config, contextCounter),
+						Id:           contextID(bctx.Config, contextCounter),
 						ModuleConfig: configProto,
-						Schema:       bctx.Schema.ToProto().(*schemapb.Schema), //nolint:forcetypeassert
+						Schema:       schemaProto,
 						Dependencies: bctx.Dependencies,
 					},
 				}))
 				if err != nil {
-					// TODO: error
+					c.result <- either.RightOf[BuildResult](err)
 					continue
 				}
+				activeBuildCmd = optional.Some[externalBuildCommand](c)
 				streamChan = newStreamChan
 				streamCancel = newCancelFunc
 			}
@@ -294,6 +304,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 		case e := <-streamChan:
 			if e == nil {
 				streamChan = nil
+				streamCancel = nil
 				continue
 			}
 
@@ -311,17 +322,18 @@ func (p *externalPlugin) run(ctx context.Context) {
 			case *langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure:
 				streamEnded := false
 				cmdEnded := false
-				result, eventContextId, isAutomaticRebuild := getBuildSuccessOrFailure(e)
+				result, eventContextID, isAutomaticRebuild := getBuildSuccessOrFailure(e)
 				if activeBuildCmd.Ok() == isAutomaticRebuild {
 					logger.Debugf("ignoring automatic rebuild while expecting explicit build")
 					continue
-				} else if eventContextId != contextId(bctx.Config, contextCounter) {
-					logger.Debugf("received build for outdated context %q; expected %q", eventContextId, contextId(bctx.Config, contextCounter))
+				} else if eventContextID != contextID(bctx.Config, contextCounter) {
+					logger.Debugf("received build for outdated context %q; expected %q", eventContextID, contextID(bctx.Config, contextCounter))
 					continue
 				}
 				streamEnded, cmdEnded = p.handleBuildResult(bctx.Config.Module, result, activeBuildCmd)
 				if streamEnded {
 					streamCancel()
+					streamCancel = nil
 					streamChan = nil
 				}
 				if cmdEnded {
@@ -340,7 +352,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 
 // getBuildSuccessOrFailure takes a BuildFailure or BuildSuccess event and returns the shared fields and an either wrapped result.
 // This makes it easier to have some shared logic for both event types.
-func getBuildSuccessOrFailure(e *langpb.BuildEvent) (result either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure], contextId string, isAutomaticRebuild bool) {
+func getBuildSuccessOrFailure(e *langpb.BuildEvent) (result either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure], contextID string, isAutomaticRebuild bool) {
 	switch e := e.Event.(type) {
 	case *langpb.BuildEvent_BuildSuccess:
 		return either.LeftOf[*langpb.BuildEvent_BuildFailure](e), e.BuildSuccess.ContextId, e.BuildSuccess.IsAutomaticRebuild
@@ -415,6 +427,6 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 	}
 }
 
-func contextId(config moduleconfig.ModuleConfig, counter int) string {
+func contextID(config moduleconfig.ModuleConfig, counter int) string {
 	return fmt.Sprintf("%v-%v", config.Module, counter)
 }

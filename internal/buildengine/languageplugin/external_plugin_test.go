@@ -21,7 +21,7 @@ import (
 
 type testBuildContext struct {
 	BuildContext
-	ContextId string
+	ContextID string
 	IsRebuild bool
 }
 
@@ -90,7 +90,7 @@ func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Reque
 	}
 	p.latestBuildContext.Store(testBuildContext{
 		BuildContext: bctx,
-		ContextId:    req.Msg.BuildContext.Id,
+		ContextID:    req.Msg.BuildContext.Id,
 		IsRebuild:    false,
 	})
 	return p.buildEvents, func() {}, nil
@@ -103,7 +103,7 @@ func (p *mockExternalPluginClient) buildContextUpdated(ctx context.Context, req 
 	}
 	p.latestBuildContext.Store(testBuildContext{
 		BuildContext: bctx,
-		ContextId:    req.Msg.BuildContext.Id,
+		ContextID:    req.Msg.BuildContext.Id,
 		IsRebuild:    true,
 	})
 	return connect.NewResponse(&langpb.BuildContextUpdatedResponse{}), nil
@@ -229,7 +229,7 @@ func TestSimultaneousBuild(t *testing.T) {
 	assert.Contains(t, result.Get().Error(), "build already in progress")
 }
 
-func TestMismatchedBuildContextId(t *testing.T) {
+func TestMismatchedBuildContextID(t *testing.T) {
 	t.Parallel()
 	ctx, plugin, mockImpl, bctx := setUp()
 
@@ -240,11 +240,11 @@ func TestMismatchedBuildContextId(t *testing.T) {
 	mockImpl.buildEvents <- buildEventWithBuildError("fake", false, "this is not the result you are looking for")
 
 	// send automatic rebuild result for the same context id (should be ignored)
-	realId := mockImpl.latestBuildContext.Load().ContextId
-	mockImpl.buildEvents <- buildEventWithBuildError(realId, true, "this is not the result you are looking for")
+	realID := mockImpl.latestBuildContext.Load().ContextID
+	mockImpl.buildEvents <- buildEventWithBuildError(realID, true, "this is not the result you are looking for")
 
 	// send real build result
-	mockImpl.buildEvents <- buildEventWithBuildError(realId, false, "this is the correct result")
+	mockImpl.buildEvents <- buildEventWithBuildError(realID, false, "this is the correct result")
 
 	// check result
 	checkResult(t, <-result, "this is the correct result")
@@ -259,7 +259,7 @@ func TestRebuilds(t *testing.T) {
 
 	// send first build result
 	testBuildCtx := mockImpl.latestBuildContext.Load()
-	mockImpl.buildEvents <- buildEventWithBuildError(testBuildCtx.ContextId, false, "first build")
+	mockImpl.buildEvents <- buildEventWithBuildError(testBuildCtx.ContextID, false, "first build")
 
 	// check result
 	checkResult(t, <-result, "first build")
@@ -273,7 +273,7 @@ func TestRebuilds(t *testing.T) {
 	// send rebuild result
 	testBuildCtx = mockImpl.latestBuildContext.Load()
 	assert.Equal(t, testBuildCtx.Schema, sch, "schema should have been updated")
-	mockImpl.buildEvents <- buildEventWithBuildError(testBuildCtx.ContextId, false, "second build")
+	mockImpl.buildEvents <- buildEventWithBuildError(testBuildCtx.ContextID, false, "second build")
 
 	// check rebuild result
 	checkResult(t, <-result, "second build")
@@ -299,7 +299,7 @@ func TestAutomaticRebuilds(t *testing.T) {
 	// send first build result
 	time.Sleep(500 * time.Millisecond)
 	buildCtx := mockImpl.latestBuildContext.Load()
-	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextId, false, "first build")
+	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, false, "first build")
 
 	// check result
 	checkResult(t, <-result, "first build")
@@ -316,9 +316,9 @@ func TestAutomaticRebuilds(t *testing.T) {
 	mockImpl.buildEvents <- &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_AutoRebuildStarted{},
 	}
-	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextId, true, "first real auto rebuild")
+	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, true, "first real auto rebuild")
 	// plugin sends auto rebuild events again (this time with no rebuild started event)
-	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextId, true, "second real auto rebuild")
+	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, true, "second real auto rebuild")
 
 	// confirm that auto rebuilds events were published
 	events := eventsFromChannel(updates)
@@ -344,11 +344,11 @@ func eventsFromChannel(updates chan PluginEvent) []PluginEvent {
 	}
 }
 
-func buildEventWithBuildError(contextId string, isAutomaticRebuild bool, msg string) *langpb.BuildEvent {
+func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg string) *langpb.BuildEvent {
 	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildFailure{
 			BuildFailure: &langpb.BuildFailure{
-				ContextId:          contextId,
+				ContextId:          contextID,
 				IsAutomaticRebuild: isAutomaticRebuild,
 				Errors: langpb.ErrorsToProto([]builderrors.Error{
 					{
