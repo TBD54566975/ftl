@@ -15,11 +15,10 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	provproto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // CommonProvisionerConfig is shared config between the production controller and development server.
@@ -41,8 +40,7 @@ func (c *Config) SetDefaults() {
 
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
-	// TODO: Store in a resource graph
-	currentResources map[string][]*proto.Resource
+	currentResources map[string]*ResourceGraph
 	registry         *ProvisionerRegistry
 }
 
@@ -51,7 +49,7 @@ var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
 func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, registry *ProvisionerRegistry) (*Service, error) {
 	return &Service{
 		controllerClient: controllerClient,
-		currentResources: map[string][]*proto.Resource{},
+		currentResources: map[string]*ResourceGraph{},
 		registry:         registry,
 	}, nil
 }
@@ -64,21 +62,16 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	logger := log.FromContext(ctx)
 	// TODO: Block deployments to make sure only one module is modified at a time
 	moduleName := req.Msg.Schema.Name
-	module, err := schema.ModuleFromProto(req.Msg.Schema)
-	if err != nil {
-		return nil, fmt.Errorf("invalid module schema for module %s: %w", moduleName, err)
-	}
-
 	existingResources := s.currentResources[moduleName]
-	desiredResources, err := ExtractResources(module)
+	desiredGraph, err := ExtractResources(req.Msg)
 	if err != nil {
 		return nil, fmt.Errorf("error extracting resources from schema: %w", err)
 	}
-	if err := replaceOutputs(desiredResources, existingResources); err != nil {
+	if err := replaceOutputs(desiredGraph.Resources(), existingResources.Resources()); err != nil {
 		return nil, err
 	}
 
-	deployment := s.registry.CreateDeployment(moduleName, desiredResources, existingResources)
+	deployment := s.registry.CreateDeployment(moduleName, desiredGraph, existingResources)
 	running := true
 	logger.Debugf("Running deployment for module %s", moduleName)
 	for running {
@@ -90,19 +83,23 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 	logger.Debugf("Finished deployment for module %s", moduleName)
 
-	// TODO: manage multiple deployments properly. Extract as a provisioner plugin
-	response, err := s.controllerClient.CreateDeployment(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
+	s.currentResources[moduleName] = desiredGraph
+
+	deploymentKey := ""
+	for _, r := range desiredGraph.Resources() {
+		if mod, ok := r.Resource.(*provproto.Resource_Module); ok && mod.Module.Schema.Name == moduleName {
+			deploymentKey = mod.Module.Output.DeploymentKey
+			break
+		}
 	}
 
-	s.currentResources[moduleName] = desiredResources
-
-	return response, nil
+	return connect.NewResponse(&ftlv1.CreateDeploymentResponse{
+		DeploymentKey: deploymentKey,
+	}), nil
 }
 
-func replaceOutputs(to []*proto.Resource, from []*proto.Resource) error {
-	byID := map[string]*proto.Resource{}
+func replaceOutputs(to []*provproto.Resource, from []*provproto.Resource) error {
+	byID := map[string]*provproto.Resource{}
 	for _, r := range from {
 		byID[r.ResourceId] = r
 	}
@@ -111,15 +108,20 @@ func replaceOutputs(to []*proto.Resource, from []*proto.Resource) error {
 		if existing == nil {
 			continue
 		}
-		if mysqlTo, ok := r.Resource.(*proto.Resource_Mysql); ok {
-			if myslqFrom, ok := existing.Resource.(*proto.Resource_Mysql); ok {
-				mysqlTo.Mysql.Output = myslqFrom.Mysql.Output
+		switch r := r.Resource.(type) {
+		case *provproto.Resource_Mysql:
+			if mysqlFrom, ok := existing.Resource.(*provproto.Resource_Mysql); ok {
+				r.Mysql.Output = mysqlFrom.Mysql.Output
 			}
-		} else if postgresTo, ok := r.Resource.(*proto.Resource_Postgres); ok {
-			if postgresFrom, ok := existing.Resource.(*proto.Resource_Postgres); ok {
-				postgresTo.Postgres.Output = postgresFrom.Postgres.Output
+		case *provproto.Resource_Postgres:
+			if postgresFrom, ok := existing.Resource.(*provproto.Resource_Postgres); ok {
+				r.Postgres.Output = postgresFrom.Postgres.Output
 			}
-		} else {
+		case *provproto.Resource_Module:
+			if moduleFrom, ok := existing.Resource.(*provproto.Resource_Module); ok {
+				r.Module.Output = moduleFrom.Module.Output
+			}
+		default:
 			return fmt.Errorf("can not replace outputs for an unknown resource type %T", r)
 		}
 	}
@@ -127,13 +129,11 @@ func replaceOutputs(to []*proto.Resource, from []*proto.Resource) error {
 }
 
 // Start the Provisioner. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, registry *ProvisionerRegistry) error {
+func Start(ctx context.Context, config Config, registry *ProvisionerRegistry, controllerClient ftlv1connect.ControllerServiceClient) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL provisioner")
-
-	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, config.ControllerEndpoint.String(), log.Error)
 
 	svc, err := New(ctx, config, controllerClient, registry)
 	if err != nil {
@@ -155,7 +155,7 @@ func Start(ctx context.Context, config Config, registry *ProvisionerRegistry) er
 	return nil
 }
 
-func RegistryFromConfigFile(ctx context.Context, file *os.File) (*ProvisionerRegistry, error) {
+func RegistryFromConfigFile(ctx context.Context, file *os.File, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
 	config := provisionerPluginConfig{}
 	bytes, err := io.ReadAll(bufio.NewReader(file))
 	if err != nil {
@@ -165,7 +165,7 @@ func RegistryFromConfigFile(ctx context.Context, file *os.File) (*ProvisionerReg
 		return nil, fmt.Errorf("error parsing plugin configuration: %w", err)
 	}
 
-	registry, err := registryFromConfig(ctx, &config)
+	registry, err := registryFromConfig(ctx, &config, controller)
 	if err != nil {
 		return nil, fmt.Errorf("error creating provisioner registry: %w", err)
 	}
