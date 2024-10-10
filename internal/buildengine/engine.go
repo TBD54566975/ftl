@@ -19,6 +19,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -82,6 +83,7 @@ type Listener interface {
 // Engine for building a set of modules.
 type Engine struct {
 	client           DeployClient
+	bindAllocator    *bind.BindAllocator
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectRoot      string
 	moduleDirs       []string
@@ -863,7 +865,7 @@ func (e *Engine) gatherSchemas(
 }
 
 func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.UnvalidatedModuleConfig) (moduleMeta, error) {
-	plugin, err := languageplugin.New(ctx, config.Language)
+	plugin, err := languageplugin.New(ctx, e.bindAllocator, config.Language)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}

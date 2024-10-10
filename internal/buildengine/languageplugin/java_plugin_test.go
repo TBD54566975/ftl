@@ -62,7 +62,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			dir, err := filepath.Abs(tt.dir)
 			assert.NoError(t, err)
 
-			plugin, err := New(ctx, "java")
+			plugin, err := New(ctx, nil, "java")
 			assert.NoError(t, err)
 
 			defaults, err := plugin.ModuleConfigDefaults(ctx, dir)
