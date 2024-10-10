@@ -30,9 +30,12 @@ type AdminService struct {
 var _ ftlv1connect.AdminServiceHandler = (*AdminService)(nil)
 
 type SchemaRetriever interface {
+	// BindAllocator is required if the schema is retrieved from disk using language plugins
 	GetActiveSchema(ctx context.Context, bindAllocator optional.Option[*bind.BindAllocator]) (*schema.Schema, error)
 }
 
+// NewAdminService creates a new AdminService.
+// bindAllocator is optional and should be set if a local client is to be used that accesses schema from disk using language plugins.
 func NewAdminService(cm *manager.Manager[configuration.Configuration], sm *manager.Manager[configuration.Secrets], schr SchemaRetriever, bindAllocator optional.Option[*bind.BindAllocator]) *AdminService {
 	return &AdminService{
 		schr:          schr,
