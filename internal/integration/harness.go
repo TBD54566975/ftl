@@ -60,6 +60,8 @@ func Infof(format string, args ...any) {
 
 var buildOnce sync.Once
 
+var buildOnceOptions *options
+
 // An Option for configuring the integration test harness.
 type Option func(*options)
 
@@ -214,6 +216,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	var kubeClient *kubernetes.Clientset
 	var kubeNamespace string
 	buildOnce.Do(func() {
+		buildOnceOptions = &opts
 		if opts.kube {
 			// This command will build a linux/amd64 version of FTL and deploy it to the kube cluster
 			Infof("Building FTL and deploying to kube")
@@ -245,6 +248,8 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			assert.NoError(t, err)
 		}
 	})
+
+	assert.Equal(t, *buildOnceOptions, opts, "Options changed between test runs")
 
 	for _, language := range opts.languages {
 		ctx, done := context.WithCancel(ctx)
