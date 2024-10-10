@@ -9,7 +9,7 @@ import (
 )
 
 type migrateCmd struct {
-	DSN string `help:"DSN for the database." default:"postgres://localhost:15432/ftl?sslmode=disable&user=postgres&password=secret" env:"DATABASE_URL"`
+	DSN string `help:"DSN for the database." default:"${dsn}" env:"DATABASE_URL"`
 }
 
 func (c *migrateCmd) Run(ctx context.Context) error {

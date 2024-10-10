@@ -13,6 +13,7 @@ import (
 	"github.com/otiai10/copy"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -77,7 +78,7 @@ services:
     environment:
       LOG_LEVEL: debug
       FTL_CONFIG: /root/ftl-project.toml
-      FTL_CONTROLLER_DSN: postgres://postgres:secret@db:5432/ftl?sslmode=disable
+      FTL_CONTROLLER_DSN: {{.DSN}}
 `
 
 func init() {
@@ -195,9 +196,11 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 		err = writeFile(b.Compose, boxComposeFile, struct {
 			Name   string
 			GOARCH string
+			DSN    string
 		}{
 			Name:   b.Name,
 			GOARCH: runtime.GOARCH,
+			DSN:    dsn.DSN("ftl", dsn.Host("db"), dsn.Port(5432)),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to write compose file: %w", err)

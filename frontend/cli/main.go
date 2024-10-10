@@ -17,6 +17,7 @@ import (
 	kongcompletion "github.com/jotaen/kong-completion"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
@@ -160,6 +161,8 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 			"arch":    runtime.GOARCH,
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 			"gitroot": gitRoot,
+			"dsn":     dsn.DSN("ftl"),
+			"boxdsn":  dsn.DSN("ftl", dsn.Port(5432)),
 		},
 		kong.Exit(func(code int) {
 			if sm, ok := csm.statusManager.Get(); ok {

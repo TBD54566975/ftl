@@ -3,9 +3,9 @@
 package sql_test
 
 import (
-	"fmt"
 	"testing"
 
+	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
@@ -29,7 +29,7 @@ func TestDatabase(t *testing.T) {
 
 func TestMigrate(t *testing.T) {
 	dbName := "ftl_test"
-	dbUri := fmt.Sprintf("postgres://postgres:secret@localhost:15432/%s?sslmode=disable", dbName)
+	dbUri := dsn.DSN(dbName)
 
 	q := func() in.Action {
 		return in.QueryRow(dbName, "SELECT version FROM schema_migrations WHERE version = '20240704103403'", "20240704103403")
