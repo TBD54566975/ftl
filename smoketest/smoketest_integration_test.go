@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -15,7 +16,25 @@ import (
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func TestSmokeTest(t *testing.T) {
+func DisabledTestJecho(t *testing.T) {
+	skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
+	fmt.Println("skipKubeFullDeploy:", skipKubeFullDeploy)
+	in.Run(t,
+		in.WithKubernetes(!skipKubeFullDeploy),
+		in.WithJavaBuild(),
+		in.WithFTLConfig("../../../ftl-project.toml"),
+		in.WithTestDataDir("."),
+		in.CopyModule("jecho"),
+		in.Deploy("jecho"),
+		in.Call("jecho", "echo", "Joe", func(t testing.TB, response string) {
+			expected := fmt.Sprintf("Hello, %s!", "Joe")
+			assert.Equal(t, expected, response)
+		}),
+		in.Exec("ftl", "--version"),
+	)
+}
+
+func TestExemplar(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFilePath := filepath.Join(tmpDir, "smoketest.log")
 
@@ -26,20 +45,30 @@ func TestSmokeTest(t *testing.T) {
 	var failedAgentId int = 99
 	nonce := randomString(4)
 
+	skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
+	fmt.Println("skipKubeFullDeploy:", skipKubeFullDeploy)
+
+	configProvider := "--inline"
+	if os.Getenv("USE_DB_CONFIG") == "true" {
+		configProvider = "--db"
+	}
+	fmt.Println("configProvider:", configProvider)
+
 	in.Run(t,
+		in.WithKubernetes(!skipKubeFullDeploy),
 		in.WithJavaBuild(),
 		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),
 		in.CopyModule("origin"),
 		in.CopyModule("relay"),
 		in.CopyModule("pulse"),
-		in.CreateDBAction("relay", "exemplardb", false),
+		// in.CreateDBAction("relay", "exemplardb", false),
 
-		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", "--inline", nonce}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", configProvider, nonce}, func(output string) {
 			fmt.Println(output)
 		}),
 
-		in.ExecWithOutput("ftl", []string{"config", "set", "relay.log_file", "--inline", logFilePath}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"config", "set", "relay.log_file", configProvider, logFilePath}, func(output string) {
 			fmt.Println(output)
 		}),
 
