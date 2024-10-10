@@ -572,6 +572,11 @@ export class Config extends Message<Config> {
    */
   config?: Config$1;
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 2;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<Config>) {
     super();
     proto3.util.initPartial(data, this);
@@ -581,6 +586,7 @@ export class Config extends Message<Config> {
   static readonly typeName = "xyz.block.ftl.v1.console.Config";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "config", kind: "message", T: Config$1 },
+    { no: 2, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Config {
@@ -614,6 +620,11 @@ export class Data extends Message<Data> {
    */
   schema = "";
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 3;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<Data>) {
     super();
     proto3.util.initPartial(data, this);
@@ -624,6 +635,7 @@ export class Data extends Message<Data> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "data", kind: "message", T: Data$1 },
     { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Data {
@@ -652,6 +664,11 @@ export class Database extends Message<Database> {
    */
   database?: Database$1;
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 2;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<Database>) {
     super();
     proto3.util.initPartial(data, this);
@@ -661,6 +678,7 @@ export class Database extends Message<Database> {
   static readonly typeName = "xyz.block.ftl.v1.console.Database";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "database", kind: "message", T: Database$1 },
+    { no: 2, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Database {
@@ -689,6 +707,11 @@ export class Enum extends Message<Enum> {
    */
   enum?: Enum$1;
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 2;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<Enum>) {
     super();
     proto3.util.initPartial(data, this);
@@ -698,6 +721,7 @@ export class Enum extends Message<Enum> {
   static readonly typeName = "xyz.block.ftl.v1.console.Enum";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "enum", kind: "message", T: Enum$1 },
+    { no: 2, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Enum {
@@ -726,6 +750,11 @@ export class Topic extends Message<Topic> {
    */
   topic?: Topic$1;
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 2;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<Topic>) {
     super();
     proto3.util.initPartial(data, this);
@@ -735,6 +764,7 @@ export class Topic extends Message<Topic> {
   static readonly typeName = "xyz.block.ftl.v1.console.Topic";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "topic", kind: "message", T: Topic$1 },
+    { no: 2, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Topic {
@@ -763,6 +793,11 @@ export class TypeAlias extends Message<TypeAlias> {
    */
   typealias?: TypeAlias$1;
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 2;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<TypeAlias>) {
     super();
     proto3.util.initPartial(data, this);
@@ -772,6 +807,7 @@ export class TypeAlias extends Message<TypeAlias> {
   static readonly typeName = "xyz.block.ftl.v1.console.TypeAlias";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "typealias", kind: "message", T: TypeAlias$1 },
+    { no: 2, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeAlias {
@@ -800,6 +836,11 @@ export class Secret extends Message<Secret> {
    */
   secret?: Secret$1;
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 2;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<Secret>) {
     super();
     proto3.util.initPartial(data, this);
@@ -809,6 +850,7 @@ export class Secret extends Message<Secret> {
   static readonly typeName = "xyz.block.ftl.v1.console.Secret";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "secret", kind: "message", T: Secret$1 },
+    { no: 2, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Secret {
@@ -837,6 +879,11 @@ export class Subscription extends Message<Subscription> {
    */
   subscription?: Subscription$1;
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 2;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<Subscription>) {
     super();
     proto3.util.initPartial(data, this);
@@ -846,6 +893,7 @@ export class Subscription extends Message<Subscription> {
   static readonly typeName = "xyz.block.ftl.v1.console.Subscription";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "subscription", kind: "message", T: Subscription$1 },
+    { no: 2, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Subscription {
@@ -884,6 +932,11 @@ export class Verb extends Message<Verb> {
    */
   jsonRequestSchema = "";
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref references = 4;
+   */
+  references: Ref[] = [];
+
   constructor(data?: PartialMessage<Verb>) {
     super();
     proto3.util.initPartial(data, this);
@@ -895,6 +948,7 @@ export class Verb extends Message<Verb> {
     { no: 1, name: "verb", kind: "message", T: Verb$1 },
     { no: 2, name: "schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "json_request_schema", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "references", kind: "message", T: Ref, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Verb {

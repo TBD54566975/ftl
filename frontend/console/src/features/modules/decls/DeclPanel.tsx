@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useStreamModules } from '../../../api/modules/use-stream-modules'
-import type { Config, Data, Database, Enum, Secret, Subscription, Topic, TypeAlias } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Config, Data, Database, Enum, Secret, Subscription, Topic, TypeAlias } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbPage } from '../../verbs/VerbPage'
 import { declFromModules } from '../module.utils'
 import { declSchemaFromModules } from '../schema/schema.utils'

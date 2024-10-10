@@ -92,6 +92,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}
 	sch.Modules = append(sch.Modules, schema.Builtins())
 
+	nilMap := map[schema.RefKey]map[schema.RefKey]bool{}
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
 		var verbs []*pbconsole.Verb
@@ -102,20 +103,20 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 		for _, decl := range deployment.Schema.Decls {
 			switch decl := decl.(type) {
 			case *schema.Verb:
-				verb, err := verbFromDecl(decl, sch)
+				verb, err := verbFromDecl(decl, sch, deployment.Module, nilMap)
 				if err != nil {
 					return nil, err
 				}
 				verbs = append(verbs, verb)
 
 			case *schema.Data:
-				data = append(data, dataFromDecl(decl))
+				data = append(data, dataFromDecl(decl, deployment.Module, nilMap))
 
 			case *schema.Secret:
-				secrets = append(secrets, secretFromDecl(decl))
+				secrets = append(secrets, secretFromDecl(decl, deployment.Module, nilMap))
 
 			case *schema.Config:
-				configs = append(configs, configFromDecl(decl))
+				configs = append(configs, configFromDecl(decl, deployment.Module, nilMap))
 
 			case *schema.Database, *schema.Enum, *schema.TypeAlias, *schema.Topic, *schema.Subscription:
 			}
@@ -153,8 +154,8 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 	}), nil
 }
 
-func moduleFromDeployment(deployment dalmodel.Deployment, sch *schema.Schema) (*pbconsole.Module, error) {
-	module, err := moduleFromDecls(deployment.Schema.Decls, sch)
+func moduleFromDeployment(deployment dalmodel.Deployment, sch *schema.Schema, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Module, error) {
+	module, err := moduleFromDecls(deployment.Schema.Decls, sch, deployment.Module, refMap)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +168,7 @@ func moduleFromDeployment(deployment dalmodel.Deployment, sch *schema.Schema) (*
 	return module, nil
 }
 
-func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module, error) {
+func moduleFromDecls(decls []schema.Decl, sch *schema.Schema, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Module, error) {
 	var configs []*pbconsole.Config
 	var data []*pbconsole.Data
 	var databases []*pbconsole.Database
@@ -178,34 +179,34 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module
 	var subscriptions []*pbconsole.Subscription
 	var verbs []*pbconsole.Verb
 
-	for _, decl := range decls {
-		switch decl := decl.(type) {
+	for _, d := range decls {
+		switch decl := d.(type) {
 		case *schema.Config:
-			configs = append(configs, configFromDecl(decl))
+			configs = append(configs, configFromDecl(decl, module, refMap))
 
 		case *schema.Data:
-			data = append(data, dataFromDecl(decl))
+			data = append(data, dataFromDecl(decl, module, refMap))
 
 		case *schema.Database:
-			databases = append(databases, databaseFromDecl(decl))
+			databases = append(databases, databaseFromDecl(decl, module, refMap))
 
 		case *schema.Enum:
-			enums = append(enums, enumFromDecl(decl))
+			enums = append(enums, enumFromDecl(decl, module, refMap))
 
 		case *schema.Topic:
-			topics = append(topics, topicFromDecl(decl))
+			topics = append(topics, topicFromDecl(decl, module, refMap))
 
 		case *schema.Secret:
-			secrets = append(secrets, secretFromDecl(decl))
+			secrets = append(secrets, secretFromDecl(decl, module, refMap))
 
 		case *schema.Subscription:
-			subscriptions = append(subscriptions, subscriptionFromDecl(decl))
+			subscriptions = append(subscriptions, subscriptionFromDecl(decl, module, refMap))
 
 		case *schema.TypeAlias:
-			typealiases = append(typealiases, typealiasFromDecl(decl))
+			typealiases = append(typealiases, typealiasFromDecl(decl, module, refMap))
 
 		case *schema.Verb:
-			verb, err := verbFromDecl(decl, sch)
+			verb, err := verbFromDecl(decl, sch, module, refMap)
 			if err != nil {
 				return nil, err
 			}
@@ -226,65 +227,73 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module
 	}, nil
 }
 
-func configFromDecl(decl *schema.Config) *pbconsole.Config {
+func configFromDecl(decl *schema.Config, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Config {
 	return &pbconsole.Config{
 		//nolint:forcetypeassert
-		Config: decl.ToProto().(*schemapb.Config),
+		Config:     decl.ToProto().(*schemapb.Config),
+		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func dataFromDecl(decl *schema.Data) *pbconsole.Data {
+func dataFromDecl(decl *schema.Data, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Data {
 	//nolint:forcetypeassert
 	d := decl.ToProto().(*schemapb.Data)
 	return &pbconsole.Data{
-		Data:   d,
-		Schema: schema.DataFromProto(d).String(),
+		Data:       d,
+		Schema:     schema.DataFromProto(d).String(),
+		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func databaseFromDecl(decl *schema.Database) *pbconsole.Database {
+func databaseFromDecl(decl *schema.Database, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Database {
 	return &pbconsole.Database{
 		//nolint:forcetypeassert
-		Database: decl.ToProto().(*schemapb.Database),
+		Database:   decl.ToProto().(*schemapb.Database),
+		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func enumFromDecl(decl *schema.Enum) *pbconsole.Enum {
+func enumFromDecl(decl *schema.Enum, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Enum {
 	return &pbconsole.Enum{
 		//nolint:forcetypeassert
-		Enum: decl.ToProto().(*schemapb.Enum),
+		Enum:       decl.ToProto().(*schemapb.Enum),
+		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func topicFromDecl(decl *schema.Topic) *pbconsole.Topic {
+func topicFromDecl(decl *schema.Topic, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Topic {
 	return &pbconsole.Topic{
 		//nolint:forcetypeassert
-		Topic: decl.ToProto().(*schemapb.Topic),
+		Topic:      decl.ToProto().(*schemapb.Topic),
+		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func typealiasFromDecl(decl *schema.TypeAlias) *pbconsole.TypeAlias {
+func typealiasFromDecl(decl *schema.TypeAlias, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.TypeAlias {
 	return &pbconsole.TypeAlias{
 		//nolint:forcetypeassert
-		Typealias: decl.ToProto().(*schemapb.TypeAlias),
+		Typealias:  decl.ToProto().(*schemapb.TypeAlias),
+		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func secretFromDecl(decl *schema.Secret) *pbconsole.Secret {
+func secretFromDecl(decl *schema.Secret, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Secret {
 	return &pbconsole.Secret{
 		//nolint:forcetypeassert
-		Secret: decl.ToProto().(*schemapb.Secret),
+		Secret:     decl.ToProto().(*schemapb.Secret),
+		References: getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func subscriptionFromDecl(decl *schema.Subscription) *pbconsole.Subscription {
+func subscriptionFromDecl(decl *schema.Subscription, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) *pbconsole.Subscription {
 	return &pbconsole.Subscription{
 		//nolint:forcetypeassert
 		Subscription: decl.ToProto().(*schemapb.Subscription),
+		References:   getReferencesFromMap(refMap, module, decl.Name),
 	}
 }
 
-func verbFromDecl(decl *schema.Verb, sch *schema.Schema) (*pbconsole.Verb, error) {
+func verbFromDecl(decl *schema.Verb, sch *schema.Schema, module string, refMap map[schema.RefKey]map[schema.RefKey]bool) (*pbconsole.Verb, error) {
 	//nolint:forcetypeassert
 	v := decl.ToProto().(*schemapb.Verb)
 	verbSchema := schema.VerbFromProto(v)
@@ -311,7 +320,24 @@ func verbFromDecl(decl *schema.Verb, sch *schema.Schema) (*pbconsole.Verb, error
 		Verb:              v,
 		Schema:            schemaString,
 		JsonRequestSchema: jsonRequestSchema,
+		References:        getReferencesFromMap(refMap, module, decl.Name),
 	}, nil
+}
+
+func getReferencesFromMap(refMap map[schema.RefKey]map[schema.RefKey]bool, module string, name string) []*schemapb.Ref {
+	key := schema.RefKey{
+		Module: module,
+		Name:   name,
+	}
+	out := []*schemapb.Ref{}
+	if refs, ok := refMap[key]; ok {
+		for refKey, ok := range refs {
+			if ok {
+				out = append(out, refKey.ToProto())
+			}
+		}
+	}
+	return out
 }
 
 func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request[pbconsole.StreamModulesRequest], stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
@@ -374,16 +400,21 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	builtin := schema.Builtins()
 	sch.Modules = append(sch.Modules, builtin)
 
+	refMap, err := getSchemaRefs(ctx, sch)
+	if err != nil {
+		return fmt.Errorf("failed to find references: %w", err)
+	}
+
 	var modules []*pbconsole.Module
 	for _, deployment := range deployments {
-		module, err := moduleFromDeployment(deployment, sch)
+		module, err := moduleFromDeployment(deployment, sch, refMap)
 		if err != nil {
 			return err
 		}
 		modules = append(modules, module)
 	}
 
-	builtinModule, err := moduleFromDecls(builtin.Decls, sch)
+	builtinModule, err := moduleFromDecls(builtin.Decls, sch, builtin.Name, refMap)
 	if err != nil {
 		return err
 	}
@@ -400,6 +431,38 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	}
 
 	return nil
+}
+
+func getSchemaRefs(ctx context.Context, sch *schema.Schema) (map[schema.RefKey]map[schema.RefKey]bool, error) {
+	refsToReferers := map[schema.RefKey]map[schema.RefKey]bool{}
+	for _, module := range sch.Modules {
+		for _, parentDecl := range module.Decls {
+			parentDeclRef := schema.Ref{
+				Module: module.Name,
+				Name:   parentDecl.GetName(),
+			}
+			err := schema.Visit(parentDecl, func(n schema.Node, next func() error) error {
+				if ref, ok := n.(*schema.Ref); ok {
+					addRefToSetMap(refsToReferers, ref.ToRefKey(), parentDeclRef)
+				}
+				return next()
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return refsToReferers, nil
+}
+
+// addRefToSetMap approximates adding to a map[ref]->set[ref], where the "set" is implemented
+// as a map to bools. A value is in the set if its value is `true`.
+func addRefToSetMap(m map[schema.RefKey]map[schema.RefKey]bool, key schema.RefKey, value schema.Ref) {
+	_, ok := m[key]
+	if !ok {
+		m[key] = map[schema.RefKey]bool{}
+	}
+	m[key][value.ToRefKey()] = true
 }
 
 func (c *ConsoleService) GetEvents(ctx context.Context, req *connect.Request[pbconsole.EventsQuery]) (*connect.Response[pbconsole.GetEventsResponse], error) {
