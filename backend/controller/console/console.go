@@ -352,11 +352,32 @@ func (c *ConsoleService) StreamModules(ctx context.Context, req *connect.Request
 	}
 }
 
+// filterDeployments removes any duplicate modules by selecting the deployment with the
+// latest CreatedAt.
+func (c *ConsoleService) filterDeployments(unfilteredDeployments []dalmodel.Deployment) []dalmodel.Deployment {
+	latest := make(map[string]dalmodel.Deployment)
+
+	for _, deployment := range unfilteredDeployments {
+		if existing, found := latest[deployment.Module]; !found || deployment.CreatedAt.After(existing.CreatedAt) {
+			latest[deployment.Module] = deployment
+
+		}
+	}
+
+	var result []dalmodel.Deployment
+	for _, value := range latest {
+		result = append(result, value)
+	}
+
+	return result
+}
+
 func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *connect.ServerStream[pbconsole.StreamModulesResponse]) error {
-	deployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
+	unfilteredDeployments, err := c.dal.GetDeploymentsWithMinReplicas(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get deployments: %w", err)
 	}
+	deployments := c.filterDeployments(unfilteredDeployments)
 	sch := &schema.Schema{
 		Modules: slices.Map(deployments, func(d dalmodel.Deployment) *schema.Module {
 			return d.Schema

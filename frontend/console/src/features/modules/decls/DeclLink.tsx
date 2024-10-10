@@ -6,6 +6,8 @@ import { getTreeWidthFromLS } from '../module.utils'
 import { Schema } from '../schema/Schema'
 import { type DeclSchema, declSchemaFromModules } from '../schema/schema.utils'
 
+const topbarHeight = 64;
+
 const SnippetContainer = ({
   decl,
   moduleName,
@@ -24,7 +26,7 @@ const SnippetContainer = ({
   const snipRect = ref?.current?.getBoundingClientRect()
 
   const hasRects = !!snipRect && !!linkRect
-  const fitsAbove = hasRects && linkRect.top - 64 > snipRect.height
+  const fitsAbove = hasRects && linkRect.top - topbarHeight > snipRect.height
   const fitsToRight = hasRects && window.innerWidth - linkRect.left >= snipRect.width
   const fitsToLeft = hasRects && linkRect.left - containerX + linkRect.width >= snipRect.width
   const horizontalAlignmentClassNames = fitsToRight ? '-ml-1' : fitsToLeft ? '-translate-x-full left-full ml-0' : ''
