@@ -3,9 +3,7 @@ package languagepb
 import (
 	"fmt"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/builderrors"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -44,7 +42,7 @@ func levelToProto(level builderrors.ErrorLevel) Error_ErrorLevel {
 
 func errorFromProto(e *Error) builderrors.Error {
 	return builderrors.Error{
-		Pos:   schema.PosFromProto(e.Pos).ToErrorPosWithEnd(int(e.EndColumn)),
+		Pos:   PosFromProto(e.Pos),
 		Msg:   e.Msg,
 		Level: levelFromProto(e.Level),
 	}
@@ -53,12 +51,24 @@ func errorFromProto(e *Error) builderrors.Error {
 func errorToProto(e builderrors.Error) *Error {
 	return &Error{
 		Msg: e.Msg,
-		Pos: &schemapb.Position{
-			Filename: e.Pos.Filename,
-			Column:   int64(e.Pos.StartColumn),
-			Line:     int64(e.Pos.Line),
+		Pos: &Position{
+			Filename:    e.Pos.Filename,
+			StartColumn: int64(e.Pos.StartColumn),
+			EndColumn:   int64(e.Pos.EndColumn),
+			Line:        int64(e.Pos.Line),
 		},
-		EndColumn: int64(e.Pos.EndColumn),
-		Level:     levelToProto(e.Level),
+		Level: levelToProto(e.Level),
+	}
+}
+
+func PosFromProto(pos *Position) builderrors.Position {
+	if pos == nil {
+		return builderrors.Position{}
+	}
+	return builderrors.Position{
+		Line:        int(pos.Line),
+		StartColumn: int(pos.StartColumn),
+		EndColumn:   int(pos.EndColumn),
+		Filename:    pos.Filename,
 	}
 }
