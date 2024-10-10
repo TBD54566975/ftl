@@ -24,11 +24,11 @@ export const useStreamModules = () => {
           hasModules = true
           const newModuleNames = response.modules.map((m) => m.name)
           queryClient.setQueryData<Module[]>(queryKey, (prev = []) => {
-            return [...response.modules, ...prev.filter((m) => !newModuleNames.includes(m.name))]
+            return [...response.modules, ...prev.filter((m) => !newModuleNames.includes(m.name))].sort((a, b) => a.name.localeCompare(b.name))
           })
         }
       }
-      return hasModules ? queryClient.getQueryData(queryKey) : []
+      return hasModules ? (queryClient.getQueryData(queryKey) as Module[]) : []
     } catch (error) {
       if (error instanceof ConnectError) {
         if (error.code !== Code.Canceled) {
@@ -41,7 +41,7 @@ export const useStreamModules = () => {
     }
   }
 
-  return useQuery({
+  return useQuery<Module[]>({
     queryKey: queryKey,
     queryFn: async ({ signal }) => streamModules({ signal }),
     enabled: isVisible,

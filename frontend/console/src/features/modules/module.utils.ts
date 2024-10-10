@@ -12,8 +12,7 @@ import {
   SquareLock02Icon,
 } from 'hugeicons-react'
 import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/ftl_pb'
-import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Config, Data, Database, Decl, Enum, FSM, Secret, Subscription, Topic, TypeAlias, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import type { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { verbCalls } from '../verbs/verb.utils'
 
@@ -71,29 +70,79 @@ export const deploymentKeyModuleName = (deploymentKey: string) => {
   return null
 }
 
+export type DeclSumType = Config | Data | Database | Enum | FSM | Topic | TypeAlias | Secret | Subscription | Verb
+
+export interface DeclInfo {
+  declType: string
+  value: DeclSumType
+}
+
 export interface ModuleTreeItem {
   name: string
   deploymentKey: string
-  decls: Decl[]
+  decls: DeclInfo[]
   isBuiltin: boolean
 }
 
-export const moduleTreeFromSchema = (schema: PullSchemaResponse[]) => {
-  const tree = schema.map((module) => ({
-    name: module.moduleName,
-    deploymentKey: module.deploymentKey,
-    isBuiltin: module.moduleName === 'builtin',
-    decls: module.schema ? module.schema.decls : [],
-  }))
-  return tree
+export const moduleTreeFromStream = (modules: Module[]) => {
+  return modules.map(
+    (module) =>
+      ({
+        name: module.name,
+        deploymentKey: module.deploymentKey,
+        isBuiltin: module.name === 'builtin',
+        decls: [
+          ...module.configs.map((d) => ({ declType: 'config', value: d.config })),
+          ...module.secrets.map((d) => ({ declType: 'secret', value: d.secret })),
+          ...module.databases.map((d) => ({ declType: 'database', value: d.database })),
+          ...module.topics.map((d) => ({ declType: 'topic', value: d.topic })),
+          ...module.subscriptions.map((d) => ({ declType: 'subscription', value: d.subscription })),
+          ...module.typealiases.map((d) => ({ declType: 'typealias', value: d.typealias })),
+          ...module.enums.map((d) => ({ declType: 'enum', value: d.enum })),
+          ...module.fsms.map((d) => ({ declType: 'fsm', value: d.fsm })),
+          ...module.data.map((d) => ({ declType: 'data', value: d.data })),
+          ...module.verbs.map((d) => ({ declType: 'verb', value: d.verb })),
+        ],
+      }) as ModuleTreeItem,
+  )
 }
 
-export const declFromSchema = (moduleName: string, declName: string, schema: PullSchemaResponse[]) => {
-  const module = schema.find((m) => m.moduleName === moduleName)
-  if (!module?.schema) {
+type WithExport = { export?: boolean }
+
+export const declSumTypeIsExported = (d: DeclSumType) => {
+  return (d as WithExport).export === true
+}
+
+export const declFromModules = (moduleName: string, declCase: string, declName: string, modules?: Module[]) => {
+  if (!modules) {
     return undefined
   }
-  return module.schema.decls.find((d) => d.value.value?.name === declName)
+  const module = modules.find((m) => m.name === moduleName)
+  if (!module) {
+    return undefined
+  }
+  switch (declCase) {
+    case 'config':
+      return module.configs.find((d) => d.config?.name === declName)?.config
+    case 'data':
+      return module.data.find((d) => d.data?.name === declName)?.data
+    case 'database':
+      return module.databases.find((d) => d.database?.name === declName)?.database
+    case 'enum':
+      return module.enums.find((d) => d.enum?.name === declName)?.enum
+    case 'fsm':
+      return module.fsms.find((d) => d.fsm?.name === declName)?.fsm
+    case 'secret':
+      return module.secrets.find((d) => d.secret?.name === declName)?.secret
+    case 'subscription':
+      return module.subscriptions.find((d) => d.subscription?.name === declName)?.subscription
+    case 'topic':
+      return module.topics.find((d) => d.topic?.name === declName)?.topic
+    case 'typealias':
+      return module.typealiases.find((d) => d.typealias?.name === declName)?.typealias
+    case 'verb':
+      return module.verbs.find((d) => d.verb?.name === declName)?.verb
+  }
 }
 
 export const listExpandedModulesFromLocalStorage = () => (localStorage.getItem('tree_m') || '').split(',').filter((s) => s !== '')
@@ -126,10 +175,18 @@ export const declIcons: IconMap = {
   enum: LeftToRightListNumberIcon,
   fsm: FlowIcon,
   topic: BubbleChatIcon,
-  typeAlias: AnonymousIcon,
+  typealias: AnonymousIcon,
   secret: SquareLock02Icon,
   subscription: MessageIncoming02Icon,
   verb: FunctionIcon,
 }
 
 export const declUrl = (moduleName: string, decl: Decl) => `/modules/${moduleName}/${decl.value.case}/${decl.value.value?.name}`
+
+export const declUrlFromInfo = (moduleName: string, decl: DeclInfo) => `/modules/${moduleName}/${decl.declType}/${decl.value.name}`
+
+const treeWidthStorageKey = 'tree_w'
+
+export const getTreeWidthFromLS = () => Number(localStorage.getItem(treeWidthStorageKey)) || 300
+
+export const setTreeWidthInLS = (newWidth: number) => localStorage.setItem(treeWidthStorageKey, `${newWidth}`)

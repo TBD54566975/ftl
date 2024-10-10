@@ -10,7 +10,7 @@ export const PanelHeader = ({ children, exported, comments }: { children?: React
         </div>
       )}
       {children}
-      {comments && comments.length > 0 && <p className='text-xs my-1'>{comments}</p>}
+      {comments && comments.length > 0 && <p className='text-xs my-1'>{comments.join(' ')}</p>}
     </div>
   )
 }
