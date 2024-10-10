@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ftl-controller-deployment-config
+data:
+  serviceTemplate: |-
+    apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        app: "(replaced)"
+      name: "(replaced)"
+    spec:
+      ports:
+        - name: verbs
+          protocol: TCP
+          port: 8893
+          targetPort: 8893
+      type: ClusterIP
+  deploymentTemplate: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: {{ include "ftl.fullname" . }}-runner
+      labels:
+        {{- include "ftl.labels" . | nindent 8 }}
+    spec:
+      replicas: {{ .Values.runner.replicas }}
+      revisionHistoryLimit: {{ .Values.runner.revisionHistoryLimit }}
+      minReadySeconds: 30
+      selector:
+        matchLabels:
+          {{- include "ftl-runner.selectorLabels" . | nindent 10 }}
+      template:
+        metadata:
+          labels:
+            {{- include "ftl-runner.selectorLabels" . | nindent 12 }}
+          {{- if .Values.runner.podAnnotations }}
+          annotations:
+            {{- toYaml .Values.runner.podAnnotations | nindent 12 }}
+          {{- end }}
+        spec:
+          containers:
+            - name: app
+              image: "(replaced)"
+              {{- if .Values.runner.envFrom }}
+              envFrom:
+                {{- toYaml .Values.runner.envFrom | nindent 16 }}
+              {{- end }}
+              env:
+                {{- if .Values.runner.env }}
+                {{- toYaml .Values.runner.env | nindent 16 }}
+                {{- end }}
+              ports:
+                {{- range .Values.runner.ports }}
+                - name: {{ .name }}
+                  containerPort: {{ .containerPort }}
+                  protocol: {{ .protocol | default "TCP" }}
+                {{- end }}
+              readinessProbe:
+                {{- if .Values.runner.readinessProbe }}
+                {{- toYaml .Values.runner.readinessProbe | nindent 16 }}
+                {{- else }}
+                httpGet:
+                  path: /healthz
+                  port: 8893
+                initialDelaySeconds: 1
+                periodSeconds: 2
+                timeoutSeconds: 2
+                successThreshold: 1
+                failureThreshold: 15
+                {{- end }}
+          {{- if .Values.runner.nodeSelector }}
+          nodeSelector:
+            {{- toYaml .Values.runner.nodeSelector | nindent 12 }}
+          {{- end }}
+          {{- if .Values.runner.affinity }}
+          affinity:
+            {{- toYaml .Values.runner.affinity | nindent 12 }}
+          {{- end }}
+          {{- if .Values.runner.topologySpreadConstraints }}
+          topologySpreadConstraints:
+            {{- toYaml .Values.runner.topologySpreadConstraints | nindent 12 }}
+          {{- end }}
+          {{- if .Values.runner.tolerations }}
+          tolerations:
+            {{- toYaml .Values.runner.tolerations | nindent 12 }}
+          {{- end }}

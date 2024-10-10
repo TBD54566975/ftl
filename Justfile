@@ -264,3 +264,6 @@ build-docker name:
     -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" \
     -t ftl0/ftl-{{name}}:latest \
     -f Dockerfile.{{name}} .
+
+chart *args:
+    @cd charts && just {{args}}
