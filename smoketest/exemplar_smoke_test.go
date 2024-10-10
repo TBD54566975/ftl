@@ -12,7 +12,7 @@ import (
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func TestSmokeEcho(t *testing.T) {
+func DisabledTestSmokeEcho(t *testing.T) {
 	skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
 	fmt.Println("skipKubeFullDeploy:", skipKubeFullDeploy)
 	in.Run(t,

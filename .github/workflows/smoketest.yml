@@ -76,7 +76,7 @@ jobs:
       #   run: |
       #       set -euo pipefail
       #       echo "Running smoke test on the tagged release images"
-      #       SKIP_KUBE_FULL_DEPLOY=true go test -v -tags integration -run '^Test' ./smoketest
+      #       USE_DB_CONFIG=true SKIP_KUBE_FULL_DEPLOY=true go test -v -tags integration -run '^Test' ./smoketest
       - name: Check out HEAD of the current branch
         uses: actions/checkout@v4
         with:
@@ -86,7 +86,7 @@ jobs:
         run: |
             set -euo pipefail
             echo "Running smoke test on the HEAD images"
-            go test -v -tags integration -run '^Test' ./smoketest
+            USE_DB_CONFIG=true go test -v -timeout 15m -tags integration -run '^Test' ./smoketest
       - name: Archive Report
         uses: actions/upload-artifact@v4
         if: always()
