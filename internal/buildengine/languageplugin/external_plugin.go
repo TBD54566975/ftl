@@ -224,7 +224,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 
 	// if a current build stream is active, this is non-nil
 	// this does not indicate if the stream is listening to automatic rebuilds
-	var streamChan chan *langpb.BuildEvent
+	var streamChan chan either.Either[*langpb.BuildEvent, error]
 	var streamCancel streamCancelFunc
 
 	// if an explicit build command is active, this is non-nil
@@ -301,13 +301,27 @@ func (p *externalPlugin) run(ctx context.Context) {
 			}
 
 		// Receive messages from the current build stream
-		case e := <-streamChan:
-			if e == nil {
+		case eitherResult := <-streamChan:
+			if eitherResult == nil {
 				streamChan = nil
 				streamCancel = nil
 				continue
 			}
 
+			var e *langpb.BuildEvent
+			switch r := eitherResult.(type) {
+			case either.Left[*langpb.BuildEvent, error]:
+				e = r.Get()
+			case either.Right[*langpb.BuildEvent, error]:
+				// Stream failed
+				if c, ok := activeBuildCmd.Get(); ok {
+					c.result <- either.RightOf[BuildResult](r.Get())
+					activeBuildCmd = optional.None[externalBuildCommand]()
+				}
+				streamCancel = nil
+				streamChan = nil
+				continue
+			}
 			switch event := e.Event.(type) {
 			case *langpb.BuildEvent_LogMessage:
 				logger.Logf(langpb.LogLevelFromProto(event.LogMessage.Level), "%s", event.LogMessage.Message)
