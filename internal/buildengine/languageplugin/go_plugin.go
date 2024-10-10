@@ -23,7 +23,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -159,8 +158,9 @@ func (p *goPlugin) GetDependencies(ctx context.Context, config moduleconfig.Modu
 	})
 }
 
-func buildGo(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
-	moduleSch, buildErrs, err := compile.Build(ctx, projectRoot, config.Dir, config, sch, transaction, buildEnv, devMode)
+func buildGo(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+	config := bctx.Config.Abs()
+	moduleSch, buildErrs, err := compile.Build(ctx, projectRoot, config.Dir, config, bctx.Schema, transaction, buildEnv, devMode)
 	if err != nil {
 		return BuildResult{}, CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
 	}

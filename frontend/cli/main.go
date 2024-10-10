@@ -80,13 +80,15 @@ type CLI struct {
 var cli CLI
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
+
 	csm := &currentStatusManager{}
 	app := createKongApplication(&cli, csm)
-	app.FatalIfErrorf(prepareNewCmd(ctx, app, os.Args[1:]))
+	// TODO: fix ctx without a logger...
+	app.FatalIfErrorf(prepareNewCmd(log.ContextWithNewDefaultLogger(context.Background()), app, os.Args[1:]))
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	if !cli.Plain {
 		sm := terminal.NewStatusManager(ctx)
 		csm.statusManager = optional.Some(sm)

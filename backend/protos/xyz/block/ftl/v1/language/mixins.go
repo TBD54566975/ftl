@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/TBD54566975/ftl/internal/builderrors"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
@@ -70,5 +71,18 @@ func PosFromProto(pos *Position) builderrors.Position {
 		StartColumn: int(pos.StartColumn),
 		EndColumn:   int(pos.EndColumn),
 		Filename:    pos.Filename,
+	}
+}
+
+func LogLevelFromProto(level LogMessage_LogLevel) log.Level {
+	switch level {
+	case LogMessage_INFO:
+		return log.Info
+	case LogMessage_WARN:
+		return log.Warn
+	case LogMessage_ERROR:
+		return log.Error
+	default:
+		panic(fmt.Sprintf("unhandled Log_Level %v", level))
 	}
 }
