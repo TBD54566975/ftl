@@ -73,7 +73,7 @@ apply:
   helm upgrade --install ftl ../charts -f values.yaml
 
 deploy-version version: setup-cluster
-  helm upgrade --install ftl ../charts --version={{version}} -f values-release.yaml
+  helm upgrade --install ftl oci://registry-1.docker.io/ftl0/ftl-chart --version={{version}} -f values-release.yaml
 
 delete:
   helm uninstall ftl
