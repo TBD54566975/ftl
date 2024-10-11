@@ -820,13 +820,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	if err != nil {
 		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 		if errors.Is(err, errInvalidateDependencies) {
-			go func() {
-				logger := log.FromContext(ctx)
-				err := e.BuildAndDeploy(ctx, 1, true, moduleName)
-				e.reportBuildFailed(err)
-				terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
-				logger.Errorf(err, "Build and deploy failed for module %q", moduleName)
-			}()
+			// TODO: handle this
 		}
 		return err
 	}
