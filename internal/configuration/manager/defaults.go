@@ -31,6 +31,5 @@ func NewSecretsManager(ctx context.Context, router configuration.Router[configur
 			Vault:       opVault,
 			ProjectName: projectConfig.Name,
 		},
-		providers.NewInMem[configuration.Secrets](),
 	})
 }

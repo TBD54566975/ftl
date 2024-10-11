@@ -1171,7 +1171,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		if db, ok := d.(*schema.Database); ok {
 			key := fmt.Sprintf("FTL_DSN_%s_%s", strcase.ToUpperSnake(module.Name), strcase.ToUpperSnake(db.Name))
 			// TODO: Use a cluster specific default provider
-			if err := sm.Set(ctx, providers.InMemProviderKey, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
+			if err := sm.Set(ctx, providers.InlineProviderKey, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
 				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
 			}
 			logger.Infof("Database declaration: %s -> %s", db.Name, db.Runtime.DSN)

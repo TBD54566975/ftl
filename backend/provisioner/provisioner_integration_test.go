@@ -30,6 +30,7 @@ func TestDeploymentThroughNoopProvisioner(t *testing.T) {
 
 func TestDeploymentThrougDevProvisionerCreatePostgresDB(t *testing.T) {
 	in.Run(t,
+		in.WithFTLConfig("./ftl-project.toml"),
 		in.WithProvisioner(),
 		in.CopyModule("echo"),
 		in.DropDBAction(t, "echo_echodb"),
