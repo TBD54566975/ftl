@@ -272,7 +272,7 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	deployment.Spec.Template.Spec.ServiceAccountName = name
 	changes, err := r.syncDeployment(ctx, thisImage, deployment, dep)
 	if sec, ok := r.IstioSecurity.Get(); ok {
-		err = r.syncIstioPolicy(ctx, sec, name, service)
+		err = r.syncIstioPolicy(ctx, sec, name, service, thisDeployment)
 		if err != nil {
 			return err
 		}
@@ -431,7 +431,7 @@ func (r *DeploymentProvisioner) deleteMissingDeployments(ctx context.Context) {
 	}
 }
 
-func (r *DeploymentProvisioner) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, name string, service *kubecore.Service) error {
+func (r *DeploymentProvisioner) syncIstioPolicy(ctx context.Context, sec istioclient.Clientset, name string, service *kubecore.Service, thisDeployment *kubeapps.Deployment) error {
 	logger := log.FromContext(ctx)
 	logger.Debugf("Creating new istio policy for %s", name)
 	var update func(policy *istiosec.AuthorizationPolicy) error
@@ -470,7 +470,7 @@ func (r *DeploymentProvisioner) syncIstioPolicy(ctx context.Context, sec istiocl
 			From: []*istiosecmodel.Rule_From{
 				{
 					Source: &istiosecmodel.Source{
-						Principals: []string{"cluster.local/ns/" + r.Namespace + "/sa/" + thisDeploymentName},
+						Principals: []string{"cluster.local/ns/" + r.Namespace + "/sa/" + thisDeployment.Spec.Template.Spec.ServiceAccountName},
 					},
 				},
 			},
