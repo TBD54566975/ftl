@@ -35,7 +35,7 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 						return nil, fmt.Errorf("failed to find database declaration: %w", err)
 					}
 					decl.Runtime = &schemapb.DatabaseRuntime{
-						Dsn: psql.Postgres.Output.WriteEndpoint,
+						Dsn: psql.Postgres.Output.WriteDsn,
 					}
 				}
 			}

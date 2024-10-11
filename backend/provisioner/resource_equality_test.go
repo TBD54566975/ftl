@@ -53,7 +53,7 @@ func TestResourceEqual(t *testing.T) {
 			Resource: &provisioner.Resource_Postgres{
 				Postgres: &provisioner.PostgresResource{
 					Output: &provisioner.PostgresResource_PostgresResourceOutput{
-						ReadEndpoint: "foo",
+						ReadDsn: "foo",
 					},
 				},
 			},
