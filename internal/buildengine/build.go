@@ -17,7 +17,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-var invalidateDependenciesError = errors.New("dependencies need to be updated")
+var errInvalidateDependencies = errors.New("dependencies need to be updated")
 
 // Build a module in the given directory given the schema and module config.
 //
@@ -51,7 +51,7 @@ func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherR
 	}
 
 	if result.InvalidateDependencies {
-		return nil, nil, invalidateDependenciesError
+		return nil, nil, errInvalidateDependencies
 	}
 
 	var errs []error
