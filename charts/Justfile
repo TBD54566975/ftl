@@ -6,7 +6,7 @@ dep-update:
 
 set-version version:
     @echo "Setting version to {{version}}"
-    yq -i  '.version="{{version}}"' Chart.yaml
+    yq -i  '.version="{{version}}",.appVersion="{{version}}"' Chart.yaml
 
 package:
     helm lint .
