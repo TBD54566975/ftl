@@ -58,6 +58,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
@@ -69,6 +70,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/schema/strcase"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 	status "github.com/TBD54566975/ftl/internal/terminal"
@@ -1163,8 +1165,13 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("invalid module schema: %w", err)
 	}
 
+	sm := cf.SecretsFromContext(ctx)
 	for _, d := range module.Decls {
 		if db, ok := d.(*schema.Database); ok {
+			key := configuration.ProviderKey(fmt.Sprintf("FTL_DSN_%s_%s", strcase.ToLowerSnake(module.Name), strcase.ToLowerSnake(db.Name)))
+			if err := sm.Set(ctx, key, configuration.NewRef(module.Name, db.Name), db.Runtime.DSN); err != nil {
+				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
+			}
 			logger.Infof("Database declaration: %s -> %s", db.Name, db.Runtime.DSN)
 		}
 	}
