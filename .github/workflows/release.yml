@@ -104,7 +104,7 @@ jobs:
       - name: Push Helm Chart
         run: |
           version="$(git describe --tags --abbrev=0 | sed s/v//)"
-          just chart release "$version" oci://ftl0/ftl-charts
+          just chart release oci://registry-1.docker.io/ftl0/ftl-charts "$version"
       - name: Push Docker Images
         run: |
           version="$(git describe --tags --abbrev=0)"
