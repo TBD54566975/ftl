@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -101,6 +102,29 @@ public class ModuleProcessor {
         return new ModuleNameBuildItem(applicationInfoBuildItem.getName());
     }
 
+    /**
+     * Bytecode doesn't retain comments, so they are stored in a separate file.
+     */
+    @BuildStep
+    public CommentsBuildItem readComments() throws IOException {
+        Map<String, Collection<String>> comments = new HashMap<>();
+        try (var input = Thread.currentThread().getContextClassLoader().getResourceAsStream("META-INF/ftl-verbs.txt")) {
+            if (input != null) {
+                var contents = new String(input.readAllBytes(), StandardCharsets.UTF_8).split("\n");
+                for (var content : contents) {
+                    var eq = content.indexOf('=');
+                    if (eq == -1) {
+                        continue;
+                    }
+                    String key = content.substring(0, eq);
+                    String value = new String(Base64.getDecoder().decode(content.substring(eq + 1)), StandardCharsets.UTF_8);
+                    comments.put(key, Arrays.asList(value.split("\n")));
+                }
+            }
+        }
+        return new CommentsBuildItem(comments);
+    }
+
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
     public void generateSchema(CombinedIndexBuildItem index,
@@ -110,9 +134,9 @@ public class ModuleProcessor {
             TopicsBuildItem topicsBuildItem,
             VerbClientBuildItem verbClientBuildItem,
             DefaultOptionalBuildItem defaultOptionalBuildItem,
-            List<SchemaContributorBuildItem> schemaContributorBuildItems) throws Exception {
+            List<SchemaContributorBuildItem> schemaContributorBuildItems,
+            CommentsBuildItem comments) throws Exception {
         String moduleName = moduleNameBuildItem.getModuleName();
-        Map<String, Iterable<String>> comments = readComments();
 
         ModuleBuilder moduleBuilder = new ModuleBuilder(index.getComputingIndex(), moduleName, topicsBuildItem.getTopics(),
                 verbClientBuildItem.getVerbClients(), recorder, comments,
@@ -171,28 +195,5 @@ public class ModuleProcessor {
             BuildProducer<RequireSocketHttpBuildItem> socket) throws IOException {
         socket.produce(RequireSocketHttpBuildItem.MARKER);
         virtual.produce(RequireVirtualHttpBuildItem.MARKER);
-    }
-
-    /**
-     * Bytecode doesn't retain comments, so they are stored in a separate file
-     * Each line is a key value pair separated by an '='. The key is the DeclRef and the value is the comment
-     */
-    private Map<String, Iterable<String>> readComments() throws IOException {
-        Map<String, Iterable<String>> comments = new HashMap<>();
-        try (var input = Thread.currentThread().getContextClassLoader().getResourceAsStream("META-INF/ftl-verbs.txt")) {
-            if (input != null) {
-                var contents = new String(input.readAllBytes(), StandardCharsets.UTF_8).split("\n");
-                for (var content : contents) {
-                    var eq = content.indexOf('=');
-                    if (eq == -1) {
-                        continue;
-                    }
-                    String key = content.substring(0, eq);
-                    String value = new String(Base64.getDecoder().decode(content.substring(eq + 1)), StandardCharsets.UTF_8);
-                    comments.put(key, Arrays.asList(value.split("\n")));
-                }
-            }
-        }
-        return comments;
     }
 }

@@ -43,12 +43,15 @@ public class EnumProcessor {
 
     @BuildStep
     @Record(ExecutionTime.RUNTIME_INIT)
-    SchemaContributorBuildItem handleEnums(CombinedIndexBuildItem index, FTLRecorder recorder) {
+    SchemaContributorBuildItem handleEnums(
+            CombinedIndexBuildItem index,
+            FTLRecorder recorder,
+            CommentsBuildItem commentsBuildItem) {
         var enumAnnotations = index.getIndex().getAnnotations(FTLDotNames.ENUM);
         log.infof("Processing %d enum annotations into decls", enumAnnotations.size());
         return new SchemaContributorBuildItem(moduleBuilder -> {
             try {
-                var decls = extractEnumDecls(index, enumAnnotations, recorder, moduleBuilder);
+                var decls = extractEnumDecls(index, enumAnnotations, recorder, moduleBuilder, commentsBuildItem);
                 for (var decl : decls) {
                     moduleBuilder.addDecls(decl);
                 }
@@ -64,7 +67,7 @@ public class EnumProcessor {
      * ModuleBuilder.buildType is used, and has the side effect of adding child Decls to the module.
      */
     private List<Decl> extractEnumDecls(CombinedIndexBuildItem index, Collection<AnnotationInstance> enumAnnotations,
-            FTLRecorder recorder, ModuleBuilder moduleBuilder)
+            FTLRecorder recorder, ModuleBuilder moduleBuilder, CommentsBuildItem commentsBuildItem)
             throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
         List<Decl> decls = new ArrayList<>();
         for (var enumAnnotation : enumAnnotations) {
@@ -78,10 +81,10 @@ public class EnumProcessor {
                 // Value enum
                 recorder.registerEnum(clazz);
                 if (isLocalToModule) {
-                    decls.add(extractValueEnum(classInfo, clazz, exported));
+                    decls.add(extractValueEnum(classInfo, clazz, exported, commentsBuildItem));
                 }
             } else {
-                var typeEnum = extractTypeEnum(index, moduleBuilder, classInfo, exported);
+                var typeEnum = extractTypeEnum(index, moduleBuilder, classInfo, exported, commentsBuildItem);
                 recorder.registerEnum(clazz, typeEnum.variantClasses);
                 if (isLocalToModule) {
                     decls.add(typeEnum.decl);
@@ -94,11 +97,14 @@ public class EnumProcessor {
     /**
      * Value enums are Java language enums with a single field 'value'
      */
-    private Decl extractValueEnum(ClassInfo classInfo, Class<?> clazz, boolean exported)
+    private Decl extractValueEnum(ClassInfo classInfo, Class<?> clazz, boolean exported, CommentsBuildItem commentsBuildItem)
             throws NoSuchFieldException, IllegalAccessException {
+        String name = classInfo.simpleName();
         Enum.Builder enumBuilder = Enum.newBuilder()
-                .setName(classInfo.simpleName())
-                .setExport(exported);
+                .setName(name)
+                .setPos(PositionUtils.forClass(classInfo.name().toString()))
+                .setExport(exported)
+                .addAllComments(commentsBuildItem.getComments(name));
         FieldInfo valueField = classInfo.field("value");
         if (valueField == null) {
             throw new RuntimeException("Enum must have a 'value' field: " + classInfo.name());
@@ -144,10 +150,13 @@ public class EnumProcessor {
      * - a class with arbitrary fields </br>
      */
     private TypeEnum extractTypeEnum(CombinedIndexBuildItem index, ModuleBuilder moduleBuilder,
-            ClassInfo classInfo, boolean exported) throws ClassNotFoundException {
+            ClassInfo classInfo, boolean exported, CommentsBuildItem commentsBuildItem) throws ClassNotFoundException {
+        String name = classInfo.simpleName();
         Enum.Builder enumBuilder = Enum.newBuilder()
-                .setName(classInfo.simpleName())
-                .setExport(exported);
+                .setName(name)
+                .setPos(PositionUtils.forClass(classInfo.name().toString()))
+                .setExport(exported)
+                .addAllComments(commentsBuildItem.getComments(name));
         var variants = index.getComputingIndex().getAllKnownImplementors(classInfo.name());
         if (variants.isEmpty()) {
             throw new RuntimeException("No variants found for enum: " + enumBuilder.getName());

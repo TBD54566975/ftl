@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import xyz.block.ftl.Enum;
 
+/**
+ * Comment on TypeEnum
+ */
 @Enum
 public interface Animal {
     @JsonIgnore
