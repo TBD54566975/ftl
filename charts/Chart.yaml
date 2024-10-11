@@ -4,14 +4,12 @@ description: |
   A Helm chart for Kubernetes that deploys FTL
 home: https://github.com/TBD54566975/ftl
 version: 0.0.1
-appVersion: v0.354.1
-
 dependencies:
-- name: postgresql
-  version: 15.5.29
-  repository: oci://registry-1.docker.io/bitnamicharts
-  condition: postgresql.enabled
-- name: harbor
-  version: v1.15.1
-  repository: https://helm.goharbor.io
-  condition: harbor.enabled
+  - name: postgresql
+    version: 15.5.29
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: postgresql.enabled
+  - name: harbor
+    version: v1.15.1
+    repository: https://helm.goharbor.io
+    condition: harbor.enabled

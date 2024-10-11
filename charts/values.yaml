@@ -20,7 +20,6 @@ controller:
 
   image:
     repository: "ftl0/ftl-controller"
-    tag: "v0.361.2"
 
   envFrom: null
   dbConnectionString: "postgres://$(endpoint):$(port)/tbd?sslmode=disable&user=$(username)&password=$(password)"

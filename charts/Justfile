@@ -3,3 +3,19 @@ _help:
 
 dep-update:
     helm dep update .
+
+set-version version:
+    @echo "Setting version to {{version}}"
+    yq -i  '.version="{{version}}"' Chart.yaml
+
+package:
+    helm lint .
+    helm package -u . -d output
+
+publish repo version:
+    helm push output/ftl-{{version}}.tgz {{repo}}
+
+release repo version:
+    just set-version version={{version}}
+    just package
+    just publish repo={{repo}} version={{version}}

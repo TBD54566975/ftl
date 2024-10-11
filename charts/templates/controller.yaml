@@ -22,7 +22,7 @@ spec:
       serviceAccountName: {{ include "ftl.fullname" . }}-controller
       containers:
         - name: app
-          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag }}"
+          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default .Chart.Version }}"
           {{- if .Values.controller.envFrom }}
           envFrom:
             {{- if .Values.controller.envFrom }}

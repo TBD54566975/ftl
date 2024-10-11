@@ -46,3 +46,4 @@ junit*.xml
 docker-build/
 **/.ftl
 charts/charts/
+charts/output/
