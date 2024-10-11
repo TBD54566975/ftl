@@ -216,17 +216,6 @@ debug *args:
   dlv_pid=$!
   wait "$dlv_pid"
 
-# Run otel collector in a docker container to stream local (i.e. from ftl dev) signals to
-# the terminal tab where this is running. To start FTL, opepn another terminal tab and run
-# `just otel-dev` with any args you would pass to `ftl dev`. To stop the otel stream, run
-# `just otel-stop` in a third terminal tab.
-otel-stream:
-  docker compose --profile infra up otel-collector
-
-# Stop the otel collector container.
-otel-stop:
-  docker compose --profile infra down otel-collector
-
 # Run `ftl dev` with the given args after setting the necessary envar.
 otel-dev *args:
   #!/bin/bash
@@ -238,16 +227,13 @@ otel-dev *args:
   # export FTL_O11Y_LOG_LEVEL="debug"
   ftl dev {{args}}
 
-# Runs a Grafana stack for storing and visualizing telemetry. This stack includes a
-# Prometheus database for metrics and a Tempo database for traces; both of which are
-# populated by the OTLP over GRPC collector that is integrated with this stack.
-#
-# Running `just otel-dev` will export ftl metrics to this Grafana stack.
-grafana:
-  docker compose up -d grafana
+# runs the otel-lgtm observability stack locallt which includes 
+# an otel collector, loki (for logs), prometheus metrics db (for metrics), tempo (trace storage) and grafana (for visualization)
+observe:
+  docker compose up otel-lgtm
 
-grafana-stop:
-  docker compose down grafana
+observe-stop:
+  docker compose down otel-lgtm
 
 # Start storybook server
 storybook:
