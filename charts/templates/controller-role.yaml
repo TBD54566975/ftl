@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "ftl.fullname" . }}-controller
+  name: {{ .Values.controller.serviceAccountName }}
   namespace: {{ .Release.Namespace }}
   {{- if .Values.controller.controllersRoleArn }}
   annotations:
@@ -45,4 +45,4 @@ roleRef:
   name: {{ include "ftl.fullname" . }}-controller
 subjects:
   - kind: ServiceAccount
-    name: {{ include "ftl.fullname" . }}-controller
+    name: {{ .Values.controller.serviceAccountName }}

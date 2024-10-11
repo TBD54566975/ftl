@@ -20,7 +20,7 @@ spec:
         {{- toYaml .Values.controller.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "ftl.fullname" . }}-controller
+      serviceAccountName: {{ .Values.controller.serviceAccountName }}
       containers:
         - name: app
           image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default $version }}"
