@@ -57,7 +57,6 @@ install-istio:
       helm install istiod istio/istiod -n istio-system --wait
   fi
   kubectl label namespace default istio-injection=enabled --overwrite
-  kubectl kustomize --load-restrictor=LoadRestrictionsNone istio | kubectl apply -f -
 
 setup: setup-registry setup-cluster
 

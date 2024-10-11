@@ -1,10 +1,8 @@
-
----
+{{- if .Values.istio.enabled }}
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: enable-trailers
-  namespace: istio-system
 spec:
   configPatches:
     - applyTo: NETWORK_FILTER
@@ -31,3 +29,4 @@ spec:
               explicit_http_config:
                 http_protocol_options:
                   enable_trailers: true
+{{- end }}

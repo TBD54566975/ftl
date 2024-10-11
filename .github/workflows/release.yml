@@ -103,8 +103,11 @@ jobs:
           password: ${{ secrets.FTL_DOCKER_PUSH_TOKEN }}
       - name: Push Helm Chart
         run: |
-          version="$(git describe --tags --abbrev=0 | sed s/v//)"
+          helm registry login -u ftl0 -p "$PASSWORD" registry-1.docker.io
+          version="$(git describe --tags --abbrev=0)"
           just chart release oci://registry-1.docker.io/ftl0/ftl-charts "$version"
+        env:
+          PASSWORD: ${{ secrets.FTL_DOCKER_PUSH_TOKEN }}
       - name: Push Docker Images
         run: |
           version="$(git describe --tags --abbrev=0)"

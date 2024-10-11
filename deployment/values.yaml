@@ -12,3 +12,6 @@ controller:
     ports:
       - name: "http-8892"
         port: 8892
+
+istio:
+  enabled: true
