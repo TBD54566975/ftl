@@ -13,7 +13,7 @@ package:
     helm package -u . -d output
 
 publish repo version:
-    helm push output/ftl-{{version}}.tgz {{repo}}
+    helm push output/ftl-chart-{{version}}.tgz {{repo}}
 
 release repo version:
     just set-version {{version}}
