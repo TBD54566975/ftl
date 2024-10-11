@@ -1,4 +1,17 @@
-# Metrics
++++
+title = "Metrics"
+description = "FTL metrics and attributes"
+date = 2021-05-01T08:00:00+00:00
+updated = 2021-05-01T08:00:00+00:00
+draft = false
+weight = 10
+sort_by = "weight"
+template = "docs/page.html"
+
+[extra]
+toc = true
+top = false
++++
 
 FTL collects and exports a variety of metrics to help you monitor and understand the behavior of your FTL deployment using OTEL. This allows cluster operators to consume metrics in their preferred monitoring system e.g. Prometheus, Grafana, Datadog etc.
 
@@ -28,6 +41,8 @@ _Note: this documentation is incomplete_
 | `ftl.timeline.inserted`              | Counter   | Total number of timeline insertions                |
 
 ### Attributes
+
+Attributes provide additional context and dimensions for metrics and are often used for analysis and filtering. Each section below represents an attribute key that is collected for a specific set of metrics.
 
 #### ftl.async_call.catching
 - `ftl.async_call.acquired`
