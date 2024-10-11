@@ -27,14 +27,14 @@ proto3.util.setEnumType(AliasKind, "xyz.block.ftl.v1.schema.AliasKind", [
  */
 export enum VerbStatus {
   /**
-   * @generated from enum value: VERB_STATUS_ERROR = 0;
+   * @generated from enum value: VERB_STATUS_OFFLINE = 0;
    */
-  ERROR = 0,
+  OFFLINE = 0,
 
   /**
-   * @generated from enum value: VERB_STATUS_OFFLINE = 1;
+   * @generated from enum value: VERB_STATUS_STARTING = 1;
    */
-  OFFLINE = 1,
+  STARTING = 1,
 
   /**
    * @generated from enum value: VERB_STATUS_ONLINE = 2;
@@ -42,9 +42,9 @@ export enum VerbStatus {
   ONLINE = 2,
 
   /**
-   * @generated from enum value: VERB_STATUS_STARTING = 3;
+   * @generated from enum value: VERB_STATUS_STOPPING = 3;
    */
-  STARTING = 3,
+  STOPPING = 3,
 
   /**
    * @generated from enum value: VERB_STATUS_STOPPED = 4;
@@ -52,18 +52,18 @@ export enum VerbStatus {
   STOPPED = 4,
 
   /**
-   * @generated from enum value: VERB_STATUS_STOPPING = 5;
+   * @generated from enum value: VERB_STATUS_ERROR = 5;
    */
-  STOPPING = 5,
+  ERROR = 5,
 }
 // Retrieve enum metadata with: proto3.getEnumType(VerbStatus)
 proto3.util.setEnumType(VerbStatus, "xyz.block.ftl.v1.schema.VerbStatus", [
-  { no: 0, name: "VERB_STATUS_ERROR" },
-  { no: 1, name: "VERB_STATUS_OFFLINE" },
+  { no: 0, name: "VERB_STATUS_OFFLINE" },
+  { no: 1, name: "VERB_STATUS_STARTING" },
   { no: 2, name: "VERB_STATUS_ONLINE" },
-  { no: 3, name: "VERB_STATUS_STARTING" },
+  { no: 3, name: "VERB_STATUS_STOPPING" },
   { no: 4, name: "VERB_STATUS_STOPPED" },
-  { no: 5, name: "VERB_STATUS_STOPPING" },
+  { no: 5, name: "VERB_STATUS_ERROR" },
 ]);
 
 /**
@@ -460,7 +460,7 @@ export class Decl extends Message<Decl> {
     case: "topic";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.TypeAlias typeAlias = 5;
+     * @generated from field: xyz.block.ftl.v1.schema.TypeAlias type_alias = 5;
      */
     value: TypeAlias;
     case: "typeAlias";
@@ -488,7 +488,7 @@ export class Decl extends Message<Decl> {
     { no: 7, name: "secret", kind: "message", T: Secret, oneof: "value" },
     { no: 10, name: "subscription", kind: "message", T: Subscription, oneof: "value" },
     { no: 9, name: "topic", kind: "message", T: Topic, oneof: "value" },
-    { no: 5, name: "typeAlias", kind: "message", T: TypeAlias, oneof: "value" },
+    { no: 5, name: "type_alias", kind: "message", T: TypeAlias, oneof: "value" },
     { no: 2, name: "verb", kind: "message", T: Verb, oneof: "value" },
   ]);
 
@@ -860,13 +860,13 @@ export class IngressPathComponent extends Message<IngressPathComponent> {
    */
   value: {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.IngressPathLiteral ingressPathLiteral = 1;
+     * @generated from field: xyz.block.ftl.v1.schema.IngressPathLiteral ingress_path_literal = 1;
      */
     value: IngressPathLiteral;
     case: "ingressPathLiteral";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.IngressPathParameter ingressPathParameter = 2;
+     * @generated from field: xyz.block.ftl.v1.schema.IngressPathParameter ingress_path_parameter = 2;
      */
     value: IngressPathParameter;
     case: "ingressPathParameter";
@@ -880,8 +880,8 @@ export class IngressPathComponent extends Message<IngressPathComponent> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.IngressPathComponent";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "ingressPathLiteral", kind: "message", T: IngressPathLiteral, oneof: "value" },
-    { no: 2, name: "ingressPathParameter", kind: "message", T: IngressPathParameter, oneof: "value" },
+    { no: 1, name: "ingress_path_literal", kind: "message", T: IngressPathLiteral, oneof: "value" },
+    { no: 2, name: "ingress_path_parameter", kind: "message", T: IngressPathParameter, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): IngressPathComponent {
@@ -1143,7 +1143,7 @@ export class Metadata extends Message<Metadata> {
     case: "config";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.MetadataCronJob cronJob = 3;
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataCronJob cron_job = 3;
      */
     value: MetadataCronJob;
     case: "cronJob";
@@ -1185,7 +1185,7 @@ export class Metadata extends Message<Metadata> {
     case: "subscriber";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.MetadataTypeMap typeMap = 8;
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataTypeMap type_map = 8;
      */
     value: MetadataTypeMap;
     case: "typeMap";
@@ -1202,14 +1202,14 @@ export class Metadata extends Message<Metadata> {
     { no: 5, name: "alias", kind: "message", T: MetadataAlias, oneof: "value" },
     { no: 1, name: "calls", kind: "message", T: MetadataCalls, oneof: "value" },
     { no: 10, name: "config", kind: "message", T: MetadataConfig, oneof: "value" },
-    { no: 3, name: "cronJob", kind: "message", T: MetadataCronJob, oneof: "value" },
+    { no: 3, name: "cron_job", kind: "message", T: MetadataCronJob, oneof: "value" },
     { no: 4, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
     { no: 9, name: "encoding", kind: "message", T: MetadataEncoding, oneof: "value" },
     { no: 2, name: "ingress", kind: "message", T: MetadataIngress, oneof: "value" },
     { no: 6, name: "retry", kind: "message", T: MetadataRetry, oneof: "value" },
     { no: 11, name: "secrets", kind: "message", T: MetadataSecrets, oneof: "value" },
     { no: 7, name: "subscriber", kind: "message", T: MetadataSubscriber, oneof: "value" },
-    { no: 8, name: "typeMap", kind: "message", T: MetadataTypeMap, oneof: "value" },
+    { no: 8, name: "type_map", kind: "message", T: MetadataTypeMap, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Metadata {
@@ -2675,19 +2675,19 @@ export class Value extends Message<Value> {
    */
   value: {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.IntValue intValue = 2;
+     * @generated from field: xyz.block.ftl.v1.schema.IntValue int_value = 2;
      */
     value: IntValue;
     case: "intValue";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.StringValue stringValue = 1;
+     * @generated from field: xyz.block.ftl.v1.schema.StringValue string_value = 1;
      */
     value: StringValue;
     case: "stringValue";
   } | {
     /**
-     * @generated from field: xyz.block.ftl.v1.schema.TypeValue typeValue = 3;
+     * @generated from field: xyz.block.ftl.v1.schema.TypeValue type_value = 3;
      */
     value: TypeValue;
     case: "typeValue";
@@ -2701,9 +2701,9 @@ export class Value extends Message<Value> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.Value";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 2, name: "intValue", kind: "message", T: IntValue, oneof: "value" },
-    { no: 1, name: "stringValue", kind: "message", T: StringValue, oneof: "value" },
-    { no: 3, name: "typeValue", kind: "message", T: TypeValue, oneof: "value" },
+    { no: 2, name: "int_value", kind: "message", T: IntValue, oneof: "value" },
+    { no: 1, name: "string_value", kind: "message", T: StringValue, oneof: "value" },
+    { no: 3, name: "type_value", kind: "message", T: TypeValue, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Value {
@@ -2819,7 +2819,7 @@ export class VerbRuntime extends Message<VerbRuntime> {
   /**
    * @generated from field: xyz.block.ftl.v1.schema.VerbStatus status = 3;
    */
-  status = VerbStatus.ERROR;
+  status = VerbStatus.OFFLINE;
 
   constructor(data?: PartialMessage<VerbRuntime>) {
     super();
