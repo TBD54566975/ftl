@@ -24,11 +24,6 @@ import (
 
 const launchTimeout = 10 * time.Second
 
-//sumtype:decl
-type externalPluginCommand interface {
-	externalPluginCmd()
-}
-
 type externalBuildCommand struct {
 	BuildContext
 	projectRoot          string
@@ -37,8 +32,6 @@ type externalBuildCommand struct {
 	result chan either.Either[BuildResult, error]
 }
 
-func (externalBuildCommand) externalPluginCmd() {}
-
 type externalPlugin struct {
 	client externalPluginClient
 
@@ -46,7 +39,7 @@ type externalPlugin struct {
 	cancel context.CancelFunc
 
 	// commands to execute
-	commands chan externalPluginCommand
+	commands chan externalBuildCommand
 
 	updates *pubsub.Topic[PluginEvent]
 }
@@ -64,7 +57,7 @@ func newExternalPlugin(ctx context.Context, bind *url.URL, language string) (*ex
 func newExternalPluginForTesting(ctx context.Context, client externalPluginClient) *externalPlugin {
 	plugin := &externalPlugin{
 		client:   client,
-		commands: make(chan externalPluginCommand, 64),
+		commands: make(chan externalBuildCommand, 64),
 		updates:  pubsub.New[PluginEvent](),
 	}
 
@@ -77,7 +70,10 @@ func newExternalPluginForTesting(ctx context.Context, client externalPluginClien
 
 func (p *externalPlugin) Kill() error {
 	p.cancel()
-	return p.client.kill()
+	if err := p.client.kill(); err != nil {
+		return fmt.Errorf("failed to kill language plugin: %w", err)
+	}
+	return nil
 }
 
 func (p *externalPlugin) Updates() *pubsub.Topic[PluginEvent] {
@@ -87,7 +83,7 @@ func (p *externalPlugin) Updates() *pubsub.Topic[PluginEvent] {
 func (p *externalPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag, error) {
 	res, err := p.client.getCreateModuleFlags(ctx, connect.NewRequest(&langpb.GetCreateModuleFlagsRequest{}))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get create module flags from plugin: %w", err)
 	}
 	flags := []*kong.Flag{}
 	shorts := map[rune]string{}
@@ -138,7 +134,10 @@ func (p *externalPlugin) CreateModule(ctx context.Context, projConfig projectcon
 			Hermit: projConfig.Hermit,
 		},
 	}))
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create module: %w", err)
+	}
+	return nil
 }
 
 func (p *externalPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
@@ -146,7 +145,7 @@ func (p *externalPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (
 		Path: dir,
 	}))
 	if err != nil {
-		return moduleconfig.CustomDefaults{}, err
+		return moduleconfig.CustomDefaults{}, fmt.Errorf("failed to get module config defaults from plugin: %w", err)
 	}
 	return moduleconfig.CustomDefaults{
 		DeployDir:          resp.Msg.DeployDir,
@@ -166,7 +165,7 @@ func (p *externalPlugin) GetDependencies(ctx context.Context, config moduleconfi
 		ModuleConfig: configProto,
 	}))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get dependencies from plugin: %w", err)
 	}
 	return resp.Msg.Modules, nil
 }
@@ -242,50 +241,30 @@ func (p *externalPlugin) run(ctx context.Context) {
 	for {
 		select {
 		// Process incoming commands
-		case cmd := <-p.commands:
-			switch c := cmd.(type) {
-			case externalBuildCommand:
-				// update state
-				contextCounter++
-				bctx = c.BuildContext
-				projectRoot = c.projectRoot
+		case c := <-p.commands:
+			// update state
+			contextCounter++
+			bctx = c.BuildContext
+			projectRoot = c.projectRoot
 
-				// module name may have changed, update logger scope
-				logger = log.FromContext(ctx).Scope(bctx.Config.Module)
+			// module name may have changed, update logger scope
+			logger = log.FromContext(ctx).Scope(bctx.Config.Module)
 
-				if _, ok := activeBuildCmd.Get(); ok {
-					c.result <- either.RightOf[BuildResult](fmt.Errorf("build already in progress"))
-					continue
-				}
-				configProto, err := protoFromModuleConfig(bctx.Config)
-				if err != nil {
-					c.result <- either.RightOf[BuildResult](err)
-					continue
-				}
+			if _, ok := activeBuildCmd.Get(); ok {
+				c.result <- either.RightOf[BuildResult](fmt.Errorf("build already in progress"))
+				continue
+			}
+			configProto, err := protoFromModuleConfig(bctx.Config)
+			if err != nil {
+				c.result <- either.RightOf[BuildResult](err)
+				continue
+			}
 
-				schemaProto := bctx.Schema.ToProto().(*schemapb.Schema) //nolint:forcetypeassert
+			schemaProto := bctx.Schema.ToProto().(*schemapb.Schema) //nolint:forcetypeassert
 
-				if streamChan != nil {
-					// tell plugin about new build context so that it rebuilds in existing build stream
-					_, err = p.client.buildContextUpdated(ctx, connect.NewRequest(&langpb.BuildContextUpdatedRequest{
-						BuildContext: &langpb.BuildContext{
-							Id:           contextID(bctx.Config, contextCounter),
-							ModuleConfig: configProto,
-							Schema:       schemaProto,
-							Dependencies: bctx.Dependencies,
-						},
-					}))
-					if err != nil {
-						c.result <- either.RightOf[BuildResult](err)
-						continue
-					}
-					activeBuildCmd = optional.Some[externalBuildCommand](c)
-					continue
-				}
-
-				newStreamChan, newCancelFunc, err := p.client.build(ctx, connect.NewRequest(&langpb.BuildRequest{
-					ProjectPath:          projectRoot,
-					RebuildAutomatically: c.rebuildAutomatically,
+			if streamChan != nil {
+				// tell plugin about new build context so that it rebuilds in existing build stream
+				_, err = p.client.buildContextUpdated(ctx, connect.NewRequest(&langpb.BuildContextUpdatedRequest{
 					BuildContext: &langpb.BuildContext{
 						Id:           contextID(bctx.Config, contextCounter),
 						ModuleConfig: configProto,
@@ -294,13 +273,30 @@ func (p *externalPlugin) run(ctx context.Context) {
 					},
 				}))
 				if err != nil {
-					c.result <- either.RightOf[BuildResult](err)
+					c.result <- either.RightOf[BuildResult](fmt.Errorf("failed to send updated build context to plugin: %w", err))
 					continue
 				}
 				activeBuildCmd = optional.Some[externalBuildCommand](c)
-				streamChan = newStreamChan
-				streamCancel = newCancelFunc
+				continue
 			}
+
+			newStreamChan, newCancelFunc, err := p.client.build(ctx, connect.NewRequest(&langpb.BuildRequest{
+				ProjectPath:          projectRoot,
+				RebuildAutomatically: c.rebuildAutomatically,
+				BuildContext: &langpb.BuildContext{
+					Id:           contextID(bctx.Config, contextCounter),
+					ModuleConfig: configProto,
+					Schema:       schemaProto,
+					Dependencies: bctx.Dependencies,
+				},
+			}))
+			if err != nil {
+				c.result <- either.RightOf[BuildResult](fmt.Errorf("failed to start build stream: %w", err))
+				continue
+			}
+			activeBuildCmd = optional.Some[externalBuildCommand](c)
+			streamChan = newStreamChan
+			streamCancel = newCancelFunc
 
 		// Receive messages from the current build stream
 		case eitherResult := <-streamChan:

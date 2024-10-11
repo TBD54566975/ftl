@@ -107,7 +107,7 @@ func (p *externalPluginImpl) ping(ctx context.Context) error {
 
 func (p *externalPluginImpl) kill() error {
 	if err := p.cmd.Kill(syscall.SIGINT); err != nil {
-		return fmt.Errorf("failed to kill language plugin: %w", err)
+		return err //nolint:wrapcheck
 	}
 	return nil
 }
@@ -115,7 +115,7 @@ func (p *externalPluginImpl) kill() error {
 func (p *externalPluginImpl) getCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
 	resp, err := p.client.GetCreateModuleFlags(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get create module flags from plugin: %w", err)
+		return nil, err //nolint:wrapcheck
 	}
 	return resp, nil
 }
@@ -123,7 +123,7 @@ func (p *externalPluginImpl) getCreateModuleFlags(ctx context.Context, req *conn
 func (p *externalPluginImpl) moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
 	resp, err := p.client.ModuleConfigDefaults(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get module config defaults from plugin: %w", err)
+		return nil, err //nolint:wrapcheck
 	}
 	return resp, nil
 }
@@ -131,7 +131,7 @@ func (p *externalPluginImpl) moduleConfigDefaults(ctx context.Context, req *conn
 func (p *externalPluginImpl) createModule(ctx context.Context, req *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error) {
 	resp, err := p.client.CreateModule(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create module: %w", err)
+		return nil, err //nolint:wrapcheck
 	}
 	return resp, nil
 }
@@ -139,7 +139,7 @@ func (p *externalPluginImpl) createModule(ctx context.Context, req *connect.Requ
 func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
 	resp, err := p.client.GetDependencies(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get dependencies from plugin: %w", err)
+		return nil, err //nolint:wrapcheck
 	}
 	return resp, nil
 }
@@ -147,7 +147,7 @@ func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.R
 func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error) {
 	stream, err := p.client.Build(ctx, req)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, err //nolint:wrapcheck
 	}
 
 	streamChan := make(chan either.Either[*langpb.BuildEvent, error], 64)
@@ -156,7 +156,7 @@ func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[lan
 	return streamChan, func() {
 		stream.Close()
 		close(streamChan)
-	}, err
+	}, nil
 }
 
 func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch chan either.Either[*langpb.BuildEvent, error]) {
@@ -172,7 +172,7 @@ func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch c
 func (p *externalPluginImpl) buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
 	resp, err := p.client.BuildContextUpdated(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send updated build context to plugin: %w", err)
+		return nil, err //nolint:wrapcheck
 	}
 	return resp, nil
 }
