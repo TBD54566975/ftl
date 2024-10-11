@@ -819,9 +819,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	}, e.buildEnv, e.devMode)
 	if err != nil {
 		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
-		if errors.Is(err, errInvalidateDependencies) {
-			// TODO: handle this
-		}
+		// TODO: handle errInvalidateDependencies
 		return err
 	}
 	// update files to deploy
