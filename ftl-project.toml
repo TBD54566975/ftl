@@ -1,19 +1,21 @@
 name = "ftl"
 module-dirs = ["examples/go"]
-ftl-min-version = ""
-hermit = false
-no-git = false
 disable-ide-integration = true
 
 [global]
   [global.configuration]
     CUSTOMER_TOKEN_TBD = "inline://InNvbWVDb25maWci"
     key = "inline://InZhbHVlIg"
+  [global.secrets]
+    FTL_DSN_ECHO_ECHODB = "inmem:"
 
 [modules]
   [modules.echo]
     [modules.echo.configuration]
       default = "inline://ImFub255bW91cyI"
+    [modules.echo.secrets]
+      FTL_DSN_ECHO_ECHODB = "inmem:"
+      echodb = "inmem:"
   [modules.test]
     [modules.test.configuration]
     [modules.test.secrets]

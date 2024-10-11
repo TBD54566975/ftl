@@ -60,6 +60,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -1168,8 +1169,9 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	sm := cf.SecretsFromContext(ctx)
 	for _, d := range module.Decls {
 		if db, ok := d.(*schema.Database); ok {
-			key := configuration.ProviderKey(fmt.Sprintf("FTL_DSN_%s_%s", strcase.ToLowerSnake(module.Name), strcase.ToLowerSnake(db.Name)))
-			if err := sm.Set(ctx, key, configuration.NewRef(module.Name, db.Name), db.Runtime.DSN); err != nil {
+			key := fmt.Sprintf("FTL_DSN_%s_%s", strcase.ToUpperSnake(module.Name), strcase.ToUpperSnake(db.Name))
+			// TODO: Use a cluster specific default provider
+			if err := sm.Set(ctx, providers.InMemProviderKey, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
 				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
 			}
 			logger.Infof("Database declaration: %s -> %s", db.Name, db.Runtime.DSN)

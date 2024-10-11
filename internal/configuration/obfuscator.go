@@ -49,6 +49,9 @@ func (o Obfuscator) Obfuscate(input []byte) ([]byte, error) {
 
 // Reveal takes an obfuscated value and de-obfuscates the base64 encoded value
 func (o Obfuscator) Reveal(input []byte) ([]byte, error) {
+	if len(input) == 0 {
+		return nil, nil
+	}
 	// check if the input looks like it was obfuscated
 	if !strings.ContainsRune("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+/=", rune(input[0])) {
 		// known issue: an unobfuscated value which is just a number will be considered obfuscated
