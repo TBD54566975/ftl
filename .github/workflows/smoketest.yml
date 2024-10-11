@@ -69,7 +69,7 @@ jobs:
         run: |
             set -euo pipefail
             echo "Deploying the tagged release to the cluster"
-            cd deployment && just deploy-version v${{ env.LATEST_VERSION }} && just wait-for-kube && cd ..
+            cd deployment && just deploy-version ${{ env.LATEST_VERSION }} && just wait-for-kube && cd ..
       # We skip this since it requires an integration test change to skip the full kube deploy.
       # Re-enable this step when the tagged release has the integration test change.
       # - name: Smoke test the tagged release images
