@@ -3,6 +3,7 @@ package languageplugin
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,7 +30,10 @@ type testBuildContext struct {
 type mockExternalPluginClient struct {
 	flags []*langpb.GetCreateModuleFlagsResponse_Flag
 
-	buildEvents        chan either.Either[*langpb.BuildEvent, error]
+	// atomic.Value does not allow us to atomically publish, close and replace the chan
+	buildEventsLock *sync.Mutex
+	buildEvents     chan either.Either[*langpb.BuildEvent, error]
+
 	latestBuildContext atomic.Value[testBuildContext]
 }
 
@@ -37,7 +41,8 @@ var _ externalPluginClient = &mockExternalPluginClient{}
 
 func newMockExternalPlugin() *mockExternalPluginClient {
 	return &mockExternalPluginClient{
-		buildEvents: make(chan either.Either[*langpb.BuildEvent, error], 64),
+		buildEventsLock: &sync.Mutex{},
+		buildEvents:     make(chan either.Either[*langpb.BuildEvent, error], 64),
 	}
 }
 
@@ -85,6 +90,9 @@ func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 }
 
 func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error) {
+	p.buildEventsLock.Lock()
+	defer p.buildEventsLock.Unlock()
+
 	bctx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return nil, nil, err
@@ -239,14 +247,14 @@ func TestMismatchedBuildContextID(t *testing.T) {
 	result := beginBuild(ctx, plugin, bctx, false)
 
 	// send mismatched build result (ie: a different build attempt completing)
-	mockImpl.buildEvents <- buildEventWithBuildError("fake", false, "this is not the result you are looking for")
+	mockImpl.publishBuildEvent(buildEventWithBuildError("fake", false, "this is not the result you are looking for"))
 
 	// send automatic rebuild result for the same context id (should be ignored)
 	realID := mockImpl.latestBuildContext.Load().ContextID
-	mockImpl.buildEvents <- buildEventWithBuildError(realID, true, "this is not the result you are looking for")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(realID, true, "this is not the result you are looking for"))
 
 	// send real build result
-	mockImpl.buildEvents <- buildEventWithBuildError(realID, false, "this is the correct result")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(realID, false, "this is the correct result"))
 
 	// check result
 	checkResult(t, <-result, "this is the correct result")
@@ -261,7 +269,7 @@ func TestRebuilds(t *testing.T) {
 
 	// send first build result
 	testBuildCtx := mockImpl.latestBuildContext.Load()
-	mockImpl.buildEvents <- buildEventWithBuildError(testBuildCtx.ContextID, false, "first build")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(testBuildCtx.ContextID, false, "first build"))
 
 	// check result
 	checkResult(t, <-result, "first build")
@@ -275,7 +283,7 @@ func TestRebuilds(t *testing.T) {
 	// send rebuild result
 	testBuildCtx = mockImpl.latestBuildContext.Load()
 	assert.Equal(t, testBuildCtx.Schema, sch, "schema should have been updated")
-	mockImpl.buildEvents <- buildEventWithBuildError(testBuildCtx.ContextID, false, "second build")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(testBuildCtx.ContextID, false, "second build"))
 
 	// check rebuild result
 	checkResult(t, <-result, "second build")
@@ -292,16 +300,16 @@ func TestAutomaticRebuilds(t *testing.T) {
 	result := beginBuild(ctx, plugin, bctx, true)
 
 	// plugin sends auto rebuild has started event (should be ignored)
-	mockImpl.buildEvents <- either.LeftOf[error](&langpb.BuildEvent{
+	mockImpl.publishBuildEvent(&langpb.BuildEvent{
 		Event: &langpb.BuildEvent_AutoRebuildStarted{},
 	})
 	// plugin sends auto rebuild event (should be ignored)
-	mockImpl.buildEvents <- buildEventWithBuildError("fake", true, "auto rebuild to ignore")
+	mockImpl.publishBuildEvent(buildEventWithBuildError("fake", true, "auto rebuild to ignore"))
 
 	// send first build result
 	time.Sleep(200 * time.Millisecond)
 	buildCtx := mockImpl.latestBuildContext.Load()
-	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, false, "first build")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(buildCtx.ContextID, false, "first build"))
 
 	// check result
 	checkResult(t, <-result, "first build")
@@ -315,12 +323,12 @@ func TestAutomaticRebuilds(t *testing.T) {
 	}
 
 	// plugin sends auto rebuild events
-	mockImpl.buildEvents <- either.LeftOf[error](&langpb.BuildEvent{
+	mockImpl.publishBuildEvent(&langpb.BuildEvent{
 		Event: &langpb.BuildEvent_AutoRebuildStarted{},
 	})
-	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, true, "first real auto rebuild")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(buildCtx.ContextID, true, "first real auto rebuild"))
 	// plugin sends auto rebuild events again (this time with no rebuild started event)
-	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, true, "second real auto rebuild")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(buildCtx.ContextID, true, "second real auto rebuild"))
 
 	// confirm that auto rebuilds events were published
 	events := eventsFromChannel(updates)
@@ -341,7 +349,7 @@ func TestBrokenBuildStream(t *testing.T) {
 	result := beginBuild(ctx, plugin, bctx, true)
 
 	// break the stream
-	breakStream(mockImpl)
+	mockImpl.breakStream()
 	checkStreamError(t, <-result)
 
 	// build again
@@ -349,11 +357,11 @@ func TestBrokenBuildStream(t *testing.T) {
 
 	// send build result
 	buildCtx := mockImpl.latestBuildContext.Load()
-	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, false, "first build")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(buildCtx.ContextID, false, "first build"))
 	checkResult(t, <-result, "first build")
 
 	// break the stream
-	breakStream(mockImpl)
+	mockImpl.breakStream()
 
 	// build again
 	result = beginBuild(ctx, plugin, bctx, true)
@@ -362,7 +370,7 @@ func TestBrokenBuildStream(t *testing.T) {
 
 	// send build result
 	buildCtx = mockImpl.latestBuildContext.Load()
-	mockImpl.buildEvents <- buildEventWithBuildError(buildCtx.ContextID, false, "second build")
+	mockImpl.publishBuildEvent(buildEventWithBuildError(buildCtx.ContextID, false, "second build"))
 	checkResult(t, <-result, "second build")
 }
 
@@ -382,8 +390,8 @@ func eventsFromChannel(updates chan PluginEvent) []PluginEvent {
 	}
 }
 
-func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg string) either.Either[*langpb.BuildEvent, error] {
-	return either.LeftOf[error](&langpb.BuildEvent{
+func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg string) *langpb.BuildEvent {
+	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildFailure{
 			BuildFailure: &langpb.BuildFailure{
 				ContextId:          contextID,
@@ -395,7 +403,14 @@ func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg str
 				}),
 			},
 		},
-	})
+	}
+}
+
+func (p *mockExternalPluginClient) publishBuildEvent(event *langpb.BuildEvent) {
+	p.buildEventsLock.Lock()
+	defer p.buildEventsLock.Unlock()
+
+	p.buildEvents <- either.LeftOf[error](event)
 }
 
 func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, autoRebuild bool) chan either.Either[BuildResult, error] {
@@ -413,10 +428,12 @@ func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, 
 	return result
 }
 
-func breakStream(client *mockExternalPluginClient) {
-	client.buildEvents <- either.RightOf[*langpb.BuildEvent](fmt.Errorf("fake a broken stream"))
-	close(client.buildEvents)
-	client.buildEvents = make(chan either.Either[*langpb.BuildEvent, error], 64)
+func (p *mockExternalPluginClient) breakStream() {
+	p.buildEventsLock.Lock()
+	defer p.buildEventsLock.Unlock()
+	p.buildEvents <- either.RightOf[*langpb.BuildEvent](fmt.Errorf("fake a broken stream"))
+	close(p.buildEvents)
+	p.buildEvents = make(chan either.Either[*langpb.BuildEvent, error], 64)
 }
 
 func checkResult(t *testing.T, r either.Either[BuildResult, error], expectedMsg string) {
