@@ -358,6 +358,11 @@ export class Database extends Message<Database> {
   pos?: Position;
 
   /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.DatabaseRuntime runtime = 31634;
+   */
+  runtime?: DatabaseRuntime;
+
+  /**
    * @generated from field: repeated string comments = 2;
    */
   comments: string[] = [];
@@ -381,6 +386,7 @@ export class Database extends Message<Database> {
   static readonly typeName = "xyz.block.ftl.v1.schema.Database";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 31634, name: "runtime", kind: "message", T: DatabaseRuntime, opt: true },
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
@@ -400,6 +406,43 @@ export class Database extends Message<Database> {
 
   static equals(a: Database | PlainMessage<Database> | undefined, b: Database | PlainMessage<Database> | undefined): boolean {
     return proto3.util.equals(Database, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.DatabaseRuntime
+ */
+export class DatabaseRuntime extends Message<DatabaseRuntime> {
+  /**
+   * @generated from field: string dsn = 1;
+   */
+  dsn = "";
+
+  constructor(data?: PartialMessage<DatabaseRuntime>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.DatabaseRuntime";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DatabaseRuntime {
+    return new DatabaseRuntime().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DatabaseRuntime {
+    return new DatabaseRuntime().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DatabaseRuntime {
+    return new DatabaseRuntime().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DatabaseRuntime | PlainMessage<DatabaseRuntime> | undefined, b: DatabaseRuntime | PlainMessage<DatabaseRuntime> | undefined): boolean {
+    return proto3.util.equals(DatabaseRuntime, a, b);
   }
 }
 

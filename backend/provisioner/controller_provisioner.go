@@ -8,6 +8,7 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/internal/log"
 )
@@ -22,6 +23,22 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 			}
 			logger := log.FromContext(ctx)
 			logger.Infof("provisioning module: %s", module)
+
+			for _, dep := range rc.Dependencies {
+				if psql, ok := dep.Resource.(*provisioner.Resource_Postgres); ok {
+					if psql.Postgres.Output == nil {
+						return nil, fmt.Errorf("postgres resource has not been provisioned")
+					}
+
+					decl, err := findDBDecl(dep.ResourceId, mod.Module.Schema)
+					if err != nil {
+						return nil, fmt.Errorf("failed to find database declaration: %w", err)
+					}
+					decl.Runtime = &schemapb.DatabaseRuntime{
+						Dsn: psql.Postgres.Output.WriteEndpoint,
+					}
+				}
+			}
 
 			resp, err := client.CreateDeployment(ctx, connect.NewRequest(&ftlv1.CreateDeploymentRequest{
 				Schema:    mod.Module.Schema,
@@ -38,4 +55,15 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 			return rc.Resource, nil
 		},
 	})
+}
+
+func findDBDecl(id string, schema *schemapb.Module) (*schemapb.Database, error) {
+	for _, d := range schema.Decls {
+		if db, ok := d.Value.(*schemapb.Decl_Database); ok {
+			if db.Database.Name == id {
+				return db.Database, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("database %s not found", id)
 }

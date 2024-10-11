@@ -13,7 +13,8 @@ const PostgresDatabaseType = "postgres"
 
 //protobuf:3
 type Database struct {
-	Pos Position `parser:"" protobuf:"1,optional"`
+	Pos     Position         `parser:"" protobuf:"1,optional"`
+	Runtime *DatabaseRuntime `parser:"" protobuf:"31634,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
 	Type     string   `parser:"'database' @'postgres'" protobuf:"4"`
@@ -41,6 +42,7 @@ func (d *Database) ToProto() proto.Message {
 		Name:     d.Name,
 		Type:     d.Type,
 	}
+	// We are not serializing runtime, as it can contain sensitive information
 }
 
 func (d *Database) GetName() string  { return d.Name }
@@ -52,5 +54,17 @@ func DatabaseFromProto(s *schemapb.Database) *Database {
 		Comments: s.Comments,
 		Name:     s.Name,
 		Type:     s.Type,
+		Runtime:  DatabaseRuntimeFromProto(s.Runtime),
 	}
+}
+
+type DatabaseRuntime struct {
+	DSN string `parser:"" protobuf:"1"`
+}
+
+func DatabaseRuntimeFromProto(s *schemapb.DatabaseRuntime) *DatabaseRuntime {
+	if s == nil {
+		return nil
+	}
+	return &DatabaseRuntime{DSN: s.Dsn}
 }

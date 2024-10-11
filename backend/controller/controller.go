@@ -1163,6 +1163,12 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("invalid module schema: %w", err)
 	}
 
+	for _, d := range module.Decls {
+		if db, ok := d.(*schema.Database); ok {
+			logger.Infof("Database declaration: %s -> %s", db.Name, db.Runtime.DSN)
+		}
+	}
+
 	ingressRoutes := extractIngressRoutingEntries(req.Msg)
 	cronJobs, err := s.cronJobs.NewCronJobsForModule(ctx, req.Msg.Schema)
 	if err != nil {
