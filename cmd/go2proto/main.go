@@ -94,7 +94,17 @@ And this is the corresponding protobuf schema:
 `
 
 type File struct {
-	Decls []Decl
+	Imports []string
+	Decls   []Decl
+}
+
+func (f *File) AddImport(name string) {
+	for _, imp := range f.Imports {
+		if imp == name {
+			return
+		}
+	}
+	f.Imports = append(f.Imports, name)
 }
 
 func (f File) OrderedDecls() []Decl {
@@ -153,9 +163,9 @@ func (SumType) decl()              {}
 func (s SumType) DeclName() string { return s.Name }
 
 type Config struct {
-	Output    string   `help:"Output file to write generated protobuf schema to." short:"o"`
-	Imports   []string `help:"Additional imports to include in the generated protobuf schema." short:"I"`
-	GoPackage string   `help:"Go package to use in the generated protobuf schema." short:"g"`
+	Output  string            `help:"Output file to write generated protobuf schema to." short:"o"`
+	Options map[string]string `placeholder:"OPTION=VALUE" help:"Additional options to include in the generated protobuf schema. Note: strings must be double quoted." short:"O" mapsep:"\\0"`
+	// Mappers bool              `help:"Generate ToProto and FromProto mappers for each message." short:"m"`
 
 	Package string   `arg:"" help:"Package name to use in the generated protobuf schema."`
 	Ref     []string `arg:"" help:"Type to generate protobuf schema from in the form PKG.TYPE. eg. github.com/foo/bar/waz.Waz or ./waz.Waz" required:"true" placeholder:"PKG.TYPE"`
@@ -172,6 +182,7 @@ func main() {
 		out, err = os.Create(cli.Output + "~")
 		kctx.FatalIfErrorf(err)
 		defer out.Close()
+		defer os.Remove(cli.Output + "~")
 	}
 
 	var resolved *PkgRefs
@@ -207,13 +218,16 @@ func main() {
 	if resolved.Pkg.Types == nil {
 		kctx.Fatalf("package %s had fatal errors, cannot continue", resolved.Path)
 	}
-	err = generate(out, cli, resolved)
+	file, err := extract(cli, resolved)
 	if gerr := new(GenError); errors.As(err, &gerr) {
 		pos := fset.Position(gerr.pos)
 		kctx.Fatalf("%s:%d: %s", pos.Filename, pos.Line, err)
 	} else {
 		kctx.FatalIfErrorf(err)
 	}
+
+	err = render(out, cli, file)
+	kctx.FatalIfErrorf(err)
 
 	if cli.Output != "" {
 		err = os.Rename(cli.Output+"~", cli.Output)
@@ -269,12 +283,11 @@ package {{ .Package }};
 {{ range .Imports }}
 import "{{.}}";
 {{- end}}
-{{ if .GoPackage }}
-option go_package = "{{ .GoPackage }}";
+{{ range $name, $value := .Options }}
+option {{ $name }} = {{ $value }};
 {{ end -}}
-option java_multiple_files = true;
 
-{{ range $decl := .Dest.OrderedDecls }}
+{{ range $decl := .OrderedDecls }}
 {{- if eq (typeof $decl) "Message" }}
 message {{ .Name }} {
 {{- range $name, $field := .Fields }}
@@ -300,7 +313,23 @@ message {{ .Name }}  {
 {{ end }}
 `))
 
-func generate(out *os.File, config Config, pkg *PkgRefs) error {
+type RenderContext struct {
+	Config
+	File
+}
+
+func render(out *os.File, config Config, file File) error {
+	err := tmpl.Execute(out, RenderContext{
+		Config: config,
+		File:   file,
+	})
+	if err != nil {
+		return fmt.Errorf("template error: %w", err)
+	}
+	return nil
+}
+
+func extract(config Config, pkg *PkgRefs) (File, error) {
 	state := State{
 		Seen:    map[string]bool{},
 		Config:  config,
@@ -309,25 +338,13 @@ func generate(out *os.File, config Config, pkg *PkgRefs) error {
 	for _, sym := range pkg.Refs {
 		obj := pkg.Pkg.Types.Scope().Lookup(sym)
 		if obj == nil {
-			return fmt.Errorf("%s: not found in package %s", sym, pkg.Pkg.ID)
+			return File{}, fmt.Errorf("%s: not found in package %s", sym, pkg.Pkg.ID)
 		}
 		if err := state.extractDecl(obj, obj.Type()); err != nil {
-			return fmt.Errorf("%s: %w", sym, err)
+			return File{}, fmt.Errorf("%s: %w", sym, err)
 		}
 	}
-	if err := tmpl.Execute(out, state); err != nil {
-		return fmt.Errorf("template error: %w", err)
-	}
-	return nil
-}
-
-func (s *State) addImport(name string) {
-	for _, imp := range s.Imports {
-		if imp == name {
-			return
-		}
-	}
-	s.Imports = append(s.Imports, name)
+	return state.Dest, nil
 }
 
 func (s *State) extractDecl(obj types.Object, t types.Type) error {
@@ -368,7 +385,7 @@ var builtinTypes = map[string]builtinType{
 
 func (s *State) extractStruct(n *types.Named, t *types.Struct) error {
 	if imp, ok := builtinTypes[n.String()]; ok {
-		s.addImport(imp.path)
+		s.Dest.AddImport(imp.path)
 		return nil
 	}
 
