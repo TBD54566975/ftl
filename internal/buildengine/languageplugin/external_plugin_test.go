@@ -10,8 +10,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/kong"
-	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/result"
 
 	"connectrpc.com/connect"
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
@@ -32,7 +32,7 @@ type mockExternalPluginClient struct {
 
 	// atomic.Value does not allow us to atomically publish, close and replace the chan
 	buildEventsLock *sync.Mutex
-	buildEvents     chan either.Either[*langpb.BuildEvent, error]
+	buildEvents     chan result.Result[*langpb.BuildEvent]
 
 	latestBuildContext atomic.Value[testBuildContext]
 }
@@ -42,7 +42,7 @@ var _ externalPluginClient = &mockExternalPluginClient{}
 func newMockExternalPlugin() *mockExternalPluginClient {
 	return &mockExternalPluginClient{
 		buildEventsLock: &sync.Mutex{},
-		buildEvents:     make(chan either.Either[*langpb.BuildEvent, error], 64),
+		buildEvents:     make(chan result.Result[*langpb.BuildEvent], 64),
 	}
 }
 
@@ -89,7 +89,7 @@ func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 	}, nil
 }
 
-func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error) {
+func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
 
@@ -234,9 +234,8 @@ func TestSimultaneousBuild(t *testing.T) {
 	ctx, plugin, _, bctx := setUp()
 	_ = beginBuild(ctx, plugin, bctx, false)
 	r := beginBuild(ctx, plugin, bctx, false)
-	result, ok := (<-r).(either.Right[BuildResult, error])
-	assert.True(t, ok, "expected error, got %v", result)
-	assert.Contains(t, result.Get().Error(), "build already in progress")
+	_, err := (<-r).Result()
+	assert.EqualError(t, err, "build already in progress")
 }
 
 func TestMismatchedBuildContextID(t *testing.T) {
@@ -410,48 +409,39 @@ func (p *mockExternalPluginClient) publishBuildEvent(event *langpb.BuildEvent) {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
 
-	p.buildEvents <- either.LeftOf[error](event)
+	p.buildEvents <- result.From(event, nil)
 }
 
-func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, autoRebuild bool) chan either.Either[BuildResult, error] {
-	result := make(chan either.Either[BuildResult, error])
+func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, autoRebuild bool) chan result.Result[BuildResult] {
+	resultChan := make(chan result.Result[BuildResult])
 	go func() {
-		r, err := plugin.Build(ctx, "", bctx, []string{}, autoRebuild)
-		if err != nil {
-			result <- either.RightOf[BuildResult](err)
-		} else {
-			result <- either.LeftOf[error](r)
-		}
+		resultChan <- result.From(plugin.Build(ctx, "", bctx, []string{}, autoRebuild))
 	}()
 	// sleep to make sure impl has received the build context
 	time.Sleep(300 * time.Millisecond)
-	return result
+	return resultChan
 }
 
 func (p *mockExternalPluginClient) breakStream() {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
-	p.buildEvents <- either.RightOf[*langpb.BuildEvent](fmt.Errorf("fake a broken stream"))
+	p.buildEvents <- result.Err[*langpb.BuildEvent](fmt.Errorf("fake a broken stream"))
 	close(p.buildEvents)
-	p.buildEvents = make(chan either.Either[*langpb.BuildEvent, error], 64)
+	p.buildEvents = make(chan result.Result[*langpb.BuildEvent], 64)
 }
 
-func checkResult(t *testing.T, r either.Either[BuildResult, error], expectedMsg string) {
+func checkResult(t *testing.T, r result.Result[BuildResult], expectedMsg string) {
 	t.Helper()
-	left, ok := r.(either.Left[BuildResult, error])
+	buildResult, ok := r.Get()
 	assert.True(t, ok, "expected build result, got %v", r)
-
-	buildResult := left.Get()
 	assert.Equal(t, len(buildResult.Errors), 1)
 	assert.Equal(t, buildResult.Errors[0].Msg, expectedMsg)
 }
 
-func checkStreamError(t *testing.T, r either.Either[BuildResult, error]) {
+func checkStreamError(t *testing.T, r result.Result[BuildResult]) {
 	t.Helper()
-	right, ok := r.(either.Right[BuildResult, error])
-	assert.True(t, ok, "expected error result, got %v", r)
-
-	assert.Equal(t, right.Get(), fmt.Errorf("fake a broken stream"))
+	_, err := r.Result()
+	assert.EqualError(t, err, "fake a broken stream")
 }
 
 func checkAutoRebuildResult(t *testing.T, e PluginEvent, expectedMsg string) {

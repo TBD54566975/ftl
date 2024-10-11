@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/pubsub"
+	"github.com/alecthomas/types/result"
 
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/builderrors"
@@ -54,7 +55,7 @@ func (e AutoRebuildStartedEvent) ModuleName() string { return e.Module }
 // AutoRebuildEndedEvent is sent when the plugin ends an automatic rebuild.
 type AutoRebuildEndedEvent struct {
 	Module string
-	Result either.Either[BuildResult, error]
+	Result result.Result[BuildResult]
 }
 
 func (AutoRebuildEndedEvent) pluginEvent()         {}
@@ -294,17 +295,9 @@ func (p *internalPlugin) run(ctx context.Context) {
 				// automatic rebuild
 
 				p.updates.Publish(AutoRebuildStartedEvent{Module: bctx.Config.Module})
-				result, err := buildAndLoadResult(ctx, projectRoot, bctx, buildEnv, true, watcher, p.buildFunc)
-				if err != nil {
-					p.updates.Publish(AutoRebuildEndedEvent{
-						Module: bctx.Config.Module,
-						Result: either.RightOf[BuildResult](err),
-					})
-					continue
-				}
 				p.updates.Publish(AutoRebuildEndedEvent{
 					Module: bctx.Config.Module,
-					Result: either.LeftOf[error](result),
+					Result: result.From(buildAndLoadResult(ctx, projectRoot, bctx, buildEnv, true, watcher, p.buildFunc)),
 				})
 			case watch.WatchEventModuleAdded:
 				// ignore

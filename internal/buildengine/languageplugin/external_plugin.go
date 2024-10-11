@@ -11,6 +11,7 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
+	"github.com/alecthomas/types/result"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
@@ -29,7 +30,7 @@ type externalBuildCommand struct {
 	projectRoot          string
 	rebuildAutomatically bool
 
-	result chan either.Either[BuildResult, error]
+	result chan result.Result[BuildResult]
 }
 
 type externalPlugin struct {
@@ -176,19 +177,16 @@ func (p *externalPlugin) Build(ctx context.Context, projectRoot string, bctx Bui
 		BuildContext:         bctx,
 		projectRoot:          projectRoot,
 		rebuildAutomatically: rebuildAutomatically,
-		result:               make(chan either.Either[BuildResult, error]),
+		result:               make(chan result.Result[BuildResult]),
 	}
 	p.commands <- cmd
 	select {
-	case result := <-cmd.result:
-		switch result := result.(type) {
-		case either.Left[BuildResult, error]:
-			return result.Get(), nil
-		case either.Right[BuildResult, error]:
-			return BuildResult{}, result.Get() //nolint:wrapcheck
-		default:
-			panic(fmt.Sprintf("unexpected result type %T", result))
+	case r := <-cmd.result:
+		result, err := r.Result()
+		if err != nil {
+			return BuildResult{}, err //nolint:wrapcheck
 		}
+		return result, nil
 	case <-ctx.Done():
 		return BuildResult{}, fmt.Errorf("error waiting for build to complete: %w", ctx.Err())
 	}
@@ -225,7 +223,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 
 	// if a current build stream is active, this is non-nil
 	// this does not indicate if the stream is listening to automatic rebuilds
-	var streamChan chan either.Either[*langpb.BuildEvent, error]
+	var streamChan chan result.Result[*langpb.BuildEvent]
 	var streamCancel streamCancelFunc
 
 	// if an explicit build command is active, this is non-nil
@@ -251,12 +249,12 @@ func (p *externalPlugin) run(ctx context.Context) {
 			logger = log.FromContext(ctx).Scope(bctx.Config.Module)
 
 			if _, ok := activeBuildCmd.Get(); ok {
-				c.result <- either.RightOf[BuildResult](fmt.Errorf("build already in progress"))
+				c.result <- result.Err[BuildResult](fmt.Errorf("build already in progress"))
 				continue
 			}
 			configProto, err := protoFromModuleConfig(bctx.Config)
 			if err != nil {
-				c.result <- either.RightOf[BuildResult](err)
+				c.result <- result.Err[BuildResult](err)
 				continue
 			}
 
@@ -273,7 +271,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 					},
 				}))
 				if err != nil {
-					c.result <- either.RightOf[BuildResult](fmt.Errorf("failed to send updated build context to plugin: %w", err))
+					c.result <- result.Err[BuildResult](fmt.Errorf("failed to send updated build context to plugin: %w", err))
 					continue
 				}
 				activeBuildCmd = optional.Some[externalBuildCommand](c)
@@ -291,7 +289,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 				},
 			}))
 			if err != nil {
-				c.result <- either.RightOf[BuildResult](fmt.Errorf("failed to start build stream: %w", err))
+				c.result <- result.Err[BuildResult](fmt.Errorf("failed to start build stream: %w", err))
 				continue
 			}
 			activeBuildCmd = optional.Some[externalBuildCommand](c)
@@ -299,27 +297,23 @@ func (p *externalPlugin) run(ctx context.Context) {
 			streamCancel = newCancelFunc
 
 		// Receive messages from the current build stream
-		case eitherResult := <-streamChan:
-			if eitherResult == nil {
+		case r := <-streamChan:
+			e, err := r.Result()
+			if err != nil {
+				// Stream failed
+				if c, ok := activeBuildCmd.Get(); ok {
+					c.result <- result.Err[BuildResult](err)
+					activeBuildCmd = optional.None[externalBuildCommand]()
+				}
+				streamCancel = nil
+				streamChan = nil
+			}
+			if e == nil {
 				streamChan = nil
 				streamCancel = nil
 				continue
 			}
 
-			var e *langpb.BuildEvent
-			switch r := eitherResult.(type) {
-			case either.Left[*langpb.BuildEvent, error]:
-				e = r.Get()
-			case either.Right[*langpb.BuildEvent, error]:
-				// Stream failed
-				if c, ok := activeBuildCmd.Get(); ok {
-					c.result <- either.RightOf[BuildResult](r.Get())
-					activeBuildCmd = optional.None[externalBuildCommand]()
-				}
-				streamCancel = nil
-				streamChan = nil
-				continue
-			}
 			switch event := e.Event.(type) {
 			case *langpb.BuildEvent_LogMessage:
 				logger.Logf(langpb.LogLevelFromProto(event.LogMessage.Level), "%s", event.LogMessage.Message)
@@ -376,15 +370,12 @@ func getBuildSuccessOrFailure(e *langpb.BuildEvent) (result either.Either[*langp
 }
 
 // handleBuildResult processes the result of a build and publishes the appropriate events.
-func (p *externalPlugin) handleBuildResult(module string, result either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure], activeBuildCmd optional.Option[externalBuildCommand]) (streamEnded, cmdEnded bool) {
-	buildResult, err := buildResultFromProto(result)
+func (p *externalPlugin) handleBuildResult(module string, r either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure], activeBuildCmd optional.Option[externalBuildCommand]) (streamEnded, cmdEnded bool) {
+	buildResult, err := buildResultFromProto(r)
 	if cmd, ok := activeBuildCmd.Get(); ok {
 		// handle explicit build
-		if err != nil {
-			cmd.result <- either.RightOf[BuildResult](err)
-		} else {
-			cmd.result <- either.LeftOf[error](buildResult)
-		}
+		cmd.result <- result.From(buildResult, err)
+
 		cmdEnded = true
 		if !cmd.rebuildAutomatically {
 			streamEnded = true
@@ -392,17 +383,10 @@ func (p *externalPlugin) handleBuildResult(module string, result either.Either[*
 		return
 	}
 	// handle auto rebuild
-	if err != nil {
-		p.updates.Publish(AutoRebuildEndedEvent{
-			Module: module,
-			Result: either.RightOf[BuildResult](err),
-		})
-	} else {
-		p.updates.Publish(AutoRebuildEndedEvent{
-			Module: module,
-			Result: either.LeftOf[error](buildResult),
-		})
-	}
+	p.updates.Publish(AutoRebuildEndedEvent{
+		Module: module,
+		Result: result.From(buildResult, err),
+	})
 	return
 }
 

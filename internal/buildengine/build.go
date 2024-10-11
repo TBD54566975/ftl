@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/result"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
@@ -29,25 +29,17 @@ func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRoo
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	logger.Infof("Building module")
-
-	result, err := plugin.Build(ctx, projectRootDir, bctx, buildEnv, devMode)
-	if err != nil {
-		return handleBuildResult(ctx, bctx.Config, either.RightOf[languageplugin.BuildResult](err))
-	}
-	return handleBuildResult(ctx, bctx.Config, either.LeftOf[error](result))
+	return handleBuildResult(ctx, bctx.Config, result.From(plugin.Build(ctx, projectRootDir, bctx, buildEnv, devMode)))
 }
 
 // handleBuildResult processes the result of a build
-func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult either.Either[languageplugin.BuildResult, error]) (moduleSchema *schema.Module, deploy []string, err error) {
+func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult result.Result[languageplugin.BuildResult]) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx)
 	config := c.Abs()
 
-	var result languageplugin.BuildResult
-	switch eitherResult := eitherResult.(type) {
-	case either.Right[languageplugin.BuildResult, error]:
-		return nil, nil, fmt.Errorf("failed to build module: %w", eitherResult.Get())
-	case either.Left[languageplugin.BuildResult, error]:
-		result = eitherResult.Get()
+	result, err := eitherResult.Result()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to build module: %w", err)
 	}
 
 	if result.InvalidateDependencies {

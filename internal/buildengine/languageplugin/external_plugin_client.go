@@ -7,7 +7,7 @@ import (
 	"syscall"
 
 	"connectrpc.com/connect"
-	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/result"
 	"github.com/jpillora/backoff"
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
@@ -25,7 +25,7 @@ type externalPluginClient interface {
 	moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error)
 	getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error)
 
-	build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error)
+	build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error)
 	buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error)
 
 	kill() error
@@ -144,13 +144,13 @@ func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.R
 	return resp, nil
 }
 
-func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan either.Either[*langpb.BuildEvent, error], streamCancelFunc, error) {
+func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
 	stream, err := p.client.Build(ctx, req)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck
 	}
 
-	streamChan := make(chan either.Either[*langpb.BuildEvent, error], 64)
+	streamChan := make(chan result.Result[*langpb.BuildEvent], 64)
 	go streamToChan(stream, streamChan)
 
 	return streamChan, func() {
@@ -159,12 +159,12 @@ func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[lan
 	}, nil
 }
 
-func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch chan either.Either[*langpb.BuildEvent, error]) {
+func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch chan result.Result[*langpb.BuildEvent]) {
 	for stream.Receive() {
-		ch <- either.LeftOf[error](stream.Msg())
+		ch <- result.From(stream.Msg(), nil)
 	}
 	if err := stream.Err(); err != nil {
-		ch <- either.RightOf[*langpb.BuildEvent](err)
+		ch <- result.Err[*langpb.BuildEvent](err)
 	}
 	close(ch)
 }
