@@ -2,11 +2,9 @@
 set -euo pipefail
 
 old_version="$(svu current)"
-new_version="$(svu next)"
+new_version="$(svu next --force-patch-increment)"
 
 test -z "$GH_TOKEN" && { echo "GH_TOKEN is not set"; exit 1; }
-
-test "${old_version}" = "${new_version}" && { echo "No version change"; exit 0; }
 
 echo "Version updating from ${old_version} to ${new_version}"
 
