@@ -104,8 +104,8 @@ jobs:
       - name: Push Helm Chart
         run: |
           helm registry login -u ftl0 -p "$PASSWORD" registry-1.docker.io
-          version="$(git describe --tags --abbrev=0)"
-          just chart release oci://registry-1.docker.io/ftl0/ftl-charts "$version"
+          version="$(git describe --tags --abbrev=0 | sed 's/v//')"
+          just chart release oci://registry-1.docker.io/ftl0 "$version"
         env:
           PASSWORD: ${{ secrets.FTL_DOCKER_PUSH_TOKEN }}
       - name: Push Docker Images
