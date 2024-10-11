@@ -159,3 +159,6 @@ postgresql:
         username: ftl
         password: ftl
         database: ftl
+
+istio:
+  enabled: false # set to true to have this chart install the grpc config to enable trailers
