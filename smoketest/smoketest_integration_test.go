@@ -27,7 +27,7 @@ func TestJecho(t *testing.T) {
 		in.CopyModule("jecho"),
 		in.Deploy("jecho"),
 		in.Call("jecho", "echo", "Joe", func(t testing.TB, response string) {
-			expected := fmt.Sprintf("Hello, %s!!!", "Joe")
+			expected := fmt.Sprintf("Hello, %s!", "Joe")
 			assert.Equal(t, expected, response)
 		}),
 		in.Exec("ftl", "--version"),
