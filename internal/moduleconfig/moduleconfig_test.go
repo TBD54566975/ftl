@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 )
 
 func TestDefaulting(t *testing.T) {
@@ -21,9 +22,9 @@ func TestDefaulting(t *testing.T) {
 				Language: "test",
 			},
 			defaults: CustomDefaults{
-				Build:              "build",
+				Build:              optional.Some("build"),
 				DeployDir:          "deploydir",
-				GeneratedSchemaDir: "generatedschemadir",
+				GeneratedSchemaDir: optional.Some("generatedschemadir"),
 				Watch:              []string{"a", "b", "c"},
 			},
 			expected: ModuleConfig{
@@ -52,9 +53,9 @@ func TestDefaulting(t *testing.T) {
 				},
 			},
 			defaults: CustomDefaults{
-				Build:              "build",
+				Build:              optional.Some("build"),
 				DeployDir:          "deploydir",
-				GeneratedSchemaDir: "generatedschemadir",
+				GeneratedSchemaDir: optional.Some("generatedschemadir"),
 				Watch:              []string{"a", "b", "c"},
 			},
 			expected: ModuleConfig{

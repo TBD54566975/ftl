@@ -487,7 +487,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				}
 				if meta, ok := e.moduleMetas.Load(event.Config.Module); ok {
 					meta.plugin.Updates().Unsubscribe(meta.events)
-					err := meta.plugin.Kill(ctx)
+					err := meta.plugin.Kill()
 					if err != nil {
 						didError = true
 						e.reportBuildFailed(err)
@@ -633,7 +633,6 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 type buildCallback func(ctx context.Context, module Module) error
 
 func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, moduleNames ...string) error {
-
 	if len(moduleNames) == 0 {
 		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
 			moduleNames = append(moduleNames, name)
@@ -813,9 +812,14 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, sch, meta.module.Config, e.buildEnv, e.devMode)
+	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, languageplugin.BuildContext{
+		Config:       meta.module.Config,
+		Schema:       sch,
+		Dependencies: meta.module.Dependencies,
+	}, e.buildEnv, e.devMode)
 	if err != nil {
 		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
+		// TODO: handle errInvalidateDependencies
 		return err
 	}
 	// update files to deploy

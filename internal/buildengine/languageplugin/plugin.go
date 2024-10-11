@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/pubsub"
+	"github.com/alecthomas/types/result"
 
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/builderrors"
@@ -30,6 +31,9 @@ type BuildResult struct {
 
 	// Files to deploy, relative to the module config's DeployDir
 	Deploy []string
+
+	// Whether the module needs to recalculate its dependencies
+	InvalidateDependencies bool
 }
 
 // PluginEvent is used to notify of updates from the plugin.
@@ -51,11 +55,20 @@ func (e AutoRebuildStartedEvent) ModuleName() string { return e.Module }
 // AutoRebuildEndedEvent is sent when the plugin ends an automatic rebuild.
 type AutoRebuildEndedEvent struct {
 	Module string
-	Result either.Either[BuildResult, error]
+	Result result.Result[BuildResult]
 }
 
 func (AutoRebuildEndedEvent) pluginEvent()         {}
 func (e AutoRebuildEndedEvent) ModuleName() string { return e.Module }
+
+// BuildContext contains contextual information needed to build.
+//
+// Any change to the build context would require a new build.
+type BuildContext struct {
+	Config       moduleconfig.ModuleConfig
+	Schema       *schema.Schema
+	Dependencies []string
+}
 
 // LanguagePlugin handles building and scaffolding modules in a specific language.
 type LanguagePlugin interface {
@@ -66,10 +79,10 @@ type LanguagePlugin interface {
 	// GetModuleConfigDefaults provides custom defaults for the module config.
 	//
 	// The result may be cached by FTL, so defaulting logic should not be changing due to normal module changes.
-	// For example it is valid to return defaults based on which build tool is configured within the module directory,
+	// For example, it is valid to return defaults based on which build tool is configured within the module directory,
 	// as that is not expected to change during normal operation.
 	// It is not recommended to read the module's toml file to determine defaults, as when the toml file is updated,
-	// the defaults will not be recalculated.
+	// the module defaults will not be recalculated.
 	ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error)
 
 	// GetCreateModuleFlags returns the flags that can be used to create a module for this language.
@@ -79,15 +92,15 @@ type LanguagePlugin interface {
 	CreateModule(ctx context.Context, projConfig projectconfig.Config, moduleConfig moduleconfig.ModuleConfig, flags map[string]string) error
 
 	// GetDependencies returns the dependencies of the module.
-	GetDependencies(ctx context.Context, config moduleconfig.ModuleConfig) ([]string, error)
+	GetDependencies(ctx context.Context, moduleConfig moduleconfig.ModuleConfig) ([]string, error)
 
 	// Build builds the module with the latest config and schema.
 	// In dev mode, plugin is responsible for automatically rebuilding as relevant files within the module change,
 	// and publishing these automatic builds updates to Updates().
-	Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error)
+	Build(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error)
 
 	// Kill stops the plugin and cleans up any resources.
-	Kill(ctx context.Context) error
+	Kill() error
 }
 
 // PluginFromConfig creates a new language plugin from the given config.
@@ -100,7 +113,7 @@ func New(ctx context.Context, bindAllocator *bind.BindAllocator, language string
 	case "rust":
 		return newRustPlugin(ctx), nil
 	default:
-		return p, fmt.Errorf("unknown language %q", language)
+		return newExternalPlugin(ctx, bindAllocator.Next(), language)
 	}
 }
 
@@ -110,11 +123,10 @@ type pluginCommand interface {
 }
 
 type buildCommand struct {
-	projectRoot string
-	config      moduleconfig.ModuleConfig
-	schema      *schema.Schema
-	buildEnv    []string
-	devMode     bool
+	BuildContext
+	projectRoot          string
+	buildEnv             []string
+	rebuildAutomatically bool
 
 	result chan either.Either[BuildResult, error]
 }
@@ -130,7 +142,7 @@ type getDependenciesCommand struct {
 
 func (getDependenciesCommand) pluginCmd() {}
 
-type buildFunc = func(ctx context.Context, projectRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error)
+type buildFunc = func(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool, transaction watch.ModifyFilesTransaction) (BuildResult, error)
 
 type CompilerBuildError struct {
 	err error
@@ -175,19 +187,18 @@ func (p *internalPlugin) Updates() *pubsub.Topic[PluginEvent] {
 	return p.updates
 }
 
-func (p *internalPlugin) Kill(ctx context.Context) error {
+func (p *internalPlugin) Kill() error {
 	p.cancel()
 	return nil
 }
 
-func (p *internalPlugin) Build(ctx context.Context, projectRoot string, config moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool) (BuildResult, error) {
+func (p *internalPlugin) Build(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error) {
 	cmd := buildCommand{
-		projectRoot: projectRoot,
-		config:      config,
-		schema:      sch,
-		buildEnv:    buildEnv,
-		devMode:     devMode,
-		result:      make(chan either.Either[BuildResult, error]),
+		BuildContext:         bctx,
+		projectRoot:          projectRoot,
+		buildEnv:             buildEnv,
+		rebuildAutomatically: rebuildAutomatically,
+		result:               make(chan either.Either[BuildResult, error]),
 	}
 	p.commands <- cmd
 	select {
@@ -232,11 +243,10 @@ func (p *internalPlugin) run(ctx context.Context) {
 
 	// State
 	// This is updated when given explicit build commands and used for automatic rebuilds
-	var config moduleconfig.ModuleConfig
+	var bctx BuildContext
 	var projectRoot string
-	var schema *schema.Schema
 	var buildEnv []string
-	devMode := false
+	watching := false
 
 	for {
 		select {
@@ -244,19 +254,18 @@ func (p *internalPlugin) run(ctx context.Context) {
 			switch c := cmd.(type) {
 			case buildCommand:
 				// update state
+				bctx = c.BuildContext
 				projectRoot = c.projectRoot
-				config = c.config
-				schema = c.schema
 				buildEnv = c.buildEnv
 
 				if watcher == nil {
-					watcher = watch.NewWatcher(config.Watch...)
+					watcher = watch.NewWatcher(bctx.Config.Watch...)
 				}
 
 				// begin watching if needed
-				if c.devMode && !devMode {
-					devMode = true
-					topic, err := watcher.Watch(ctx, time.Second, []string{config.Abs().Dir})
+				if c.rebuildAutomatically && !watching {
+					watching = true
+					topic, err := watcher.Watch(ctx, time.Second, []string{bctx.Config.Abs().Dir})
 					if err != nil {
 						c.result <- either.RightOf[BuildResult](fmt.Errorf("failed to start watching: %w", err))
 						continue
@@ -265,7 +274,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 				}
 
 				// build
-				result, err := buildAndLoadResult(ctx, projectRoot, config, schema, buildEnv, devMode, watcher, p.buildFunc)
+				result, err := buildAndLoadResult(ctx, projectRoot, bctx, buildEnv, c.rebuildAutomatically, watcher, p.buildFunc)
 				if err != nil {
 					c.result <- either.RightOf[BuildResult](err)
 					continue
@@ -285,18 +294,10 @@ func (p *internalPlugin) run(ctx context.Context) {
 			case watch.WatchEventModuleChanged:
 				// automatic rebuild
 
-				p.updates.Publish(AutoRebuildStartedEvent{Module: config.Module})
-				result, err := buildAndLoadResult(ctx, projectRoot, config, schema, buildEnv, devMode, watcher, p.buildFunc)
-				if err != nil {
-					p.updates.Publish(AutoRebuildEndedEvent{
-						Module: config.Module,
-						Result: either.RightOf[BuildResult](err),
-					})
-					continue
-				}
+				p.updates.Publish(AutoRebuildStartedEvent{Module: bctx.Config.Module})
 				p.updates.Publish(AutoRebuildEndedEvent{
-					Module: config.Module,
-					Result: either.LeftOf[error](result),
+					Module: bctx.Config.Module,
+					Result: result.From(buildAndLoadResult(ctx, projectRoot, bctx, buildEnv, true, watcher, p.buildFunc)),
 				})
 			case watch.WatchEventModuleAdded:
 				// ignore
@@ -311,8 +312,8 @@ func (p *internalPlugin) run(ctx context.Context) {
 	}
 }
 
-func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.ModuleConfig, sch *schema.Schema, buildEnv []string, devMode bool, watcher *watch.Watcher, build buildFunc) (BuildResult, error) {
-	config := c.Abs()
+func buildAndLoadResult(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, watcher *watch.Watcher, build buildFunc) (BuildResult, error) {
+	config := bctx.Config.Abs()
 	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err)
@@ -329,7 +330,7 @@ func buildAndLoadResult(ctx context.Context, projectRoot string, c moduleconfig.
 	}
 
 	transaction := watcher.GetTransaction(config.Dir)
-	result, err := build(ctx, projectRoot, config, sch, buildEnv, devMode, transaction)
+	result, err := build(ctx, projectRoot, bctx, buildEnv, devMode, transaction)
 	if err != nil {
 		return BuildResult{}, err
 	}
