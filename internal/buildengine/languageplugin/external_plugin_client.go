@@ -81,8 +81,12 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language 
 		close(pingErr)
 	}()
 
+	// Wait for ping result, or for the plugin to exit. Which ever happens first.
 	select {
 	case err := <-cmdErr:
+		if err == nil {
+			return fmt.Errorf("plugin exited with status 0 before ping was registered")
+		}
 		return err
 	case err := <-pingErr:
 		if err != nil {
