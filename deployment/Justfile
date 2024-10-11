@@ -73,9 +73,7 @@ apply:
   helm upgrade --install ftl ../charts -f values.yaml
 
 deploy-version version: setup-cluster
-  # Ideally this would point to https://github.com/TBD54566975/ftl//deployment/overlays/dev/?ref={{version}} but that doesn't work due to symlinks
-  # For now this is using the new config with a released image
-  helm upgrade --install ftl ../charts -f values.yaml --set controller.image.tag={{version}} --set controller.image.repository=ftl0/ftl-controller
+  helm upgrade --install ftl oci://registry-1.docker.io/ftl0/ftl-chart --version={{version}} -f values-release.yaml
 
 delete:
   helm uninstall ftl

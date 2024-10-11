@@ -56,6 +56,7 @@ type InteractiveCLI struct {
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
 	Pubsub   pubsubCmd   `cmd:"" help:"Manage pub/sub."`
+	Release  releaseCmd  `cmd:"" help:"Manage releases."`
 }
 
 type CLI struct {

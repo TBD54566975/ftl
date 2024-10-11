@@ -1,8 +1,9 @@
 {{- if .Values.dbMigration.enabled }}
+{{ $version := printf "v%s" .Chart.Version -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "ftl.fullname" . }}-dbmig-{{ .Values.controller.image.tag | default .Chart.Version }}
+  name: {{ include "ftl.fullname" . }}-dbmig-{{ .Values.controller.image.tag | default $version }}
   labels:
     {{- include "ftl.labels" . | nindent 4 }}
 spec:
@@ -18,7 +19,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: dbmig
-          image: "{{ .Values.controller.image.repository | replace "controller" "runner" }}:{{ .Values.controller.image.tag | default .Chart.Version }}"
+          image: "{{ .Values.controller.image.repository | replace "controller" "runner" }}:{{ .Values.controller.image.tag | default $version }}"
           env:
             {{- if not .Values.postgresql.enabled }}
             - name: FTL_CONTROLLER_DSN

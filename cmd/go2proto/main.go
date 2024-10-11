@@ -9,7 +9,7 @@ import (
 	"maps"
 	"os"
 	"reflect"
-	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -92,6 +92,65 @@ And this is the corresponding protobuf schema:
 	  repeated Entity entities = 2;
 	}
 `
+
+type File struct {
+	Decls []Decl
+}
+
+func (f File) OrderedDecls() []Decl {
+	decls := make([]Decl, len(f.Decls))
+	copy(decls, f.Decls)
+	sort.Slice(decls, func(i, j int) bool {
+		return decls[i].DeclName() < decls[j].DeclName()
+	})
+	return decls
+}
+
+//sumtype:decl
+type Decl interface {
+	decl()
+	DeclName() string
+}
+
+type Message struct {
+	Name   string
+	Fields []Field
+}
+
+func (Message) decl()              {}
+func (m Message) DeclName() string { return m.Name }
+
+type Field struct {
+	ID       int
+	Name     string
+	Type     string
+	Optional bool
+	Repeated bool
+}
+
+type Enum struct {
+	Name   string
+	Values map[string]int
+}
+
+func (e Enum) ByValue() map[int]string {
+	m := map[int]string{}
+	for k, v := range e.Values {
+		m[v] = k
+	}
+	return m
+}
+
+func (Enum) decl()              {}
+func (e Enum) DeclName() string { return e.Name }
+
+type SumType struct {
+	Name  string
+	Elems map[string]int
+}
+
+func (SumType) decl()              {}
+func (s SumType) DeclName() string { return s.Name }
 
 type Config struct {
 	Output    string   `help:"Output file to write generated protobuf schema to." short:"o"`
@@ -179,18 +238,10 @@ type PkgRefs struct {
 }
 
 type State struct {
+	Dest File
+	Seen map[string]bool
 	Config
-	Decls   map[string]string
-	Renamed map[string]string
 	*PkgRefs
-}
-
-func (s State) String() string {
-	w := &strings.Builder{}
-	for _, name := range slices.Sorted(maps.Keys(s.Decls)) {
-		w.WriteString(s.Decls[name])
-	}
-	return w.String()
 }
 
 func genErrorf(pos token.Pos, format string, args ...any) error {
@@ -202,6 +253,14 @@ func genErrorf(pos token.Pos, format string, args ...any) error {
 }
 
 var tmpl = template.Must(template.New("proto").
+	Funcs(template.FuncMap{
+		"typeof":       func(t any) string { return reflect.Indirect(reflect.ValueOf(t)).Type().Name() },
+		"toLowerCamel": strcase.ToLowerCamel,
+		"toUpperCamel": strcase.ToUpperCamel,
+		"toLowerSnake": strcase.ToLowerSnake,
+		"toUpperSnake": strcase.ToUpperSnake,
+		"trimPrefix":   strings.TrimPrefix,
+	}).
 	Parse(`
 // THIS FILE IS GENERATED; DO NOT MODIFY
 syntax = "proto3";
@@ -215,16 +274,36 @@ option go_package = "{{ .GoPackage }}";
 {{ end -}}
 option java_multiple_files = true;
 
-{{ range $name, $decl := .Decls }}
-{{- $decl }}
-{{ end}}
+{{ range $decl := .Dest.OrderedDecls }}
+{{- if eq (typeof $decl) "Message" }}
+message {{ .Name }} {
+{{- range $name, $field := .Fields }}
+	{{ if .Repeated }}repeated {{else if .Optional}}optional {{ end }}{{ .Type }} {{ .Name | toLowerSnake }} = {{ .ID }};
+{{- end }}
+}
+{{- else if eq (typeof $decl) "Enum" }}
+enum {{ .Name }} {
+{{- range $value, $name := .ByValue }}
+	{{ $name | toUpperSnake }} = {{ $value }};
+{{- end }}
+}
+{{- else if eq (typeof $decl) "SumType" }}
+{{ $sumtype := . }}
+message {{ .Name }}  {
+	oneof value {
+{{- range $name, $id := .Elems }}
+		{{ $name }} {{ trimPrefix $name $sumtype.Name | toLowerSnake }} = {{ $id }};
+{{- end }}
+	}
+}
+{{- end }}
+{{ end }}
 `))
 
 func generate(out *os.File, config Config, pkg *PkgRefs) error {
 	state := State{
+		Seen:    map[string]bool{},
 		Config:  config,
-		Decls:   map[string]string{},
-		Renamed: map[string]string{},
 		PkgRefs: pkg,
 	}
 	for _, sym := range pkg.Refs {
@@ -232,7 +311,7 @@ func generate(out *os.File, config Config, pkg *PkgRefs) error {
 		if obj == nil {
 			return fmt.Errorf("%s: not found in package %s", sym, pkg.Pkg.ID)
 		}
-		if err := state.generateType(obj, obj.Type()); err != nil {
+		if err := state.extractDecl(obj, obj.Type()); err != nil {
 			return fmt.Errorf("%s: %w", sym, err)
 		}
 	}
@@ -240,15 +319,6 @@ func generate(out *os.File, config Config, pkg *PkgRefs) error {
 		return fmt.Errorf("template error: %w", err)
 	}
 	return nil
-}
-
-func (s *State) resolve(name string) (resolvedName string, ok bool) {
-	resolvedName, ok = s.Renamed[name]
-	if ok {
-		name = resolvedName
-	}
-	_, ok = s.Decls[name]
-	return name, ok
 }
 
 func (s *State) addImport(name string) {
@@ -260,43 +330,29 @@ func (s *State) addImport(name string) {
 	s.Imports = append(s.Imports, name)
 }
 
-func (s *State) generateType(obj types.Object, t types.Type) error {
-	switch t := t.(type) {
-	case *types.Named:
-		if t.TypeParams() != nil {
-			return genErrorf(obj.Pos(), "generic types are not supported")
+func (s *State) extractDecl(obj types.Object, t types.Type) error {
+	named, ok := t.(*types.Named)
+	if !ok {
+		return genErrorf(obj.Pos(), "expected named type, got %T", t)
+	}
+	if named.TypeParams() != nil {
+		return genErrorf(obj.Pos(), "generic types are not supported")
+	}
+	switch u := t.Underlying().(type) {
+	case *types.Struct:
+		if err := s.extractStruct(named, u); err != nil {
+			return genErrorf(obj.Pos(), "%w", err)
 		}
-		switch u := t.Underlying().(type) {
-		case *types.Struct:
-			if err := s.extractStruct(t, u); err != nil {
-				return genErrorf(obj.Pos(), "%w", err)
-			}
-			return nil
-
-		case *types.Interface:
-			return s.extractSumType(t.Obj(), u)
-
-		case *types.Basic:
-			return s.extractEnum(t)
-
-		default:
-			return genErrorf(obj.Pos(), "unsupported named type %T", u)
-		}
-
-	case *types.Basic:
 		return nil
 
-	case *types.Slice:
-		return s.generateType(obj, t.Elem())
-
-	case *types.Pointer:
-		return s.generateType(obj, t.Elem())
-
 	case *types.Interface:
-		return genErrorf(obj.Pos(), "unnamed interfaces are not supported")
+		return s.extractSumType(named.Obj(), u)
+
+	case *types.Basic:
+		return s.extractEnum(named)
 
 	default:
-		return genErrorf(obj.Pos(), "unsupported type %T", obj.Type())
+		return genErrorf(obj.Pos(), "unsupported named type %T", u)
 	}
 }
 
@@ -316,49 +372,55 @@ func (s *State) extractStruct(n *types.Named, t *types.Struct) error {
 		return nil
 	}
 
-	name, ok := s.resolve(n.Obj().Name())
-	if ok {
+	name := n.Obj().Name()
+	if _, ok := s.Seen[name]; ok {
 		return nil
 	}
-	s.Decls[name] = ""
-	w := &strings.Builder{}
-	fmt.Fprintf(w, "message %s {\n", name)
+	s.Seen[name] = true
+	decl := &Message{
+		Name: name,
+	}
 	for i := range t.NumFields() {
-		field := t.Field(i)
+		rf := t.Field(i)
 		pb := reflect.StructTag(t.Tag(i)).Get("protobuf")
 		if pb == "-" {
 			continue
 		} else if pb == "" {
-			return genErrorf(n.Obj().Pos(), "%s: missing protobuf tag", field.Name())
+			return genErrorf(n.Obj().Pos(), "%s: missing protobuf tag", rf.Name())
+		}
+		field := Field{
+			Name: rf.Name(),
+		}
+		if err := s.applyFieldType(rf.Type(), &field); err != nil {
+			return fmt.Errorf("%s: %w", rf.Name(), err)
 		}
 		tag, err := parsePBTag(pb)
 		if err != nil {
-			return genErrorf(n.Obj().Pos(), "%s: %w", field.Name(), err)
+			return genErrorf(n.Obj().Pos(), "%s: %w", rf.Name(), err)
 		}
-		prefix := ""
-		if tag.Optional {
-			prefix = "optional "
+		field.ID = tag.ID
+		field.Optional = tag.Optional
+		decl.Fields = append(decl.Fields, field)
+		if nt, ok := rf.Type().(*types.Named); ok {
+			if err := s.extractDecl(rf, nt); err != nil {
+				return fmt.Errorf("%s: %w", rf.Name(), err)
+			}
 		}
-		if err := s.generateType(field, field.Type()); err != nil {
-			return fmt.Errorf("%s: %w", field.Name(), err)
-		}
-		fmt.Fprintf(w, "  %s%s %s = %d;\n", prefix, typeRef(field.Type()), strcase.ToLowerSnake(field.Name()), tag.ID)
 	}
-	fmt.Fprintf(w, "}\n")
-	s.Decls[name] = w.String()
+	s.Dest.Decls = append(s.Dest.Decls, decl)
 	return nil
 }
 
 func (s *State) extractSumType(obj types.Object, i *types.Interface) error {
-	sumTypeName, ok := s.resolve(obj.Name())
-	if ok {
+	sumTypeName := obj.Name()
+	if _, ok := s.Seen[sumTypeName]; ok {
 		return nil
 	}
-	s.Decls[sumTypeName] = ""
-	w := &strings.Builder{}
-	sums := map[string]int{}
-	fmt.Fprintf(w, "message %s {\n", sumTypeName)
-	fmt.Fprintf(w, "  oneof value {\n")
+	s.Seen[sumTypeName] = true
+	decl := SumType{
+		Name:  sumTypeName,
+		Elems: map[string]int{},
+	}
 	scope := s.Pkg.Types.Scope()
 	for _, name := range scope.Names() {
 		sym := scope.Lookup(name)
@@ -381,33 +443,26 @@ func (s *State) extractSumType(obj types.Object, i *types.Interface) error {
 			if directive == nil {
 				return genErrorf(sym.Pos(), "sum type element is missing //protobuf:<id> directive")
 			}
-			if err := s.generateType(sym, sym.Type()); err != nil {
+			if err := s.extractDecl(sym, sym.Type()); err != nil {
 				return genErrorf(sym.Pos(), "%s: %w", name, err)
 			}
-			sums[name] = directive.ID
+			decl.Elems[name] = directive.ID
 		}
 	}
-	// The ID's we generate here aren't stable. Not sure what to do about that, but for now we just sort them and deal with
-	// the backwards incompatibility. The buf linter will pick this up in PRs though.
-	for _, sum := range slices.Sorted(maps.Keys(sums)) {
-		fieldName := strcase.ToLowerCamel(strings.TrimPrefix(sum, sumTypeName))
-		fmt.Fprintf(w, "    %s %s = %d;\n", sum, fieldName, sums[sum])
-	}
-	fmt.Fprintf(w, "  }\n")
-	fmt.Fprintf(w, "}\n")
-	s.Decls[sumTypeName] = w.String()
+	s.Dest.Decls = append(s.Dest.Decls, decl)
 	return nil
 }
 
 func (s *State) extractEnum(t *types.Named) error {
-	enumName, ok := s.resolve(t.Obj().Name())
-	if ok {
+	enumName := t.Obj().Name()
+	if _, ok := s.Seen[enumName]; ok {
 		return nil
 	}
-	s.Decls[enumName] = ""
-	w := &strings.Builder{}
-	enums := map[string]int{}
-	fmt.Fprintf(w, "enum %s {\n", enumName)
+	s.Seen[enumName] = true
+	decl := Enum{
+		Name:   enumName,
+		Values: map[string]int{},
+	}
 	scope := s.Pkg.Types.Scope()
 	for _, name := range scope.Names() {
 		sym := scope.Lookup(name)
@@ -428,13 +483,9 @@ func (s *State) extractEnum(t *types.Named) error {
 		if !strings.HasPrefix(name, enumName) {
 			return genErrorf(sym.Pos(), "enum value %q must start with %q", name, enumName)
 		}
-		enums[name] = n
+		decl.Values[name] = n
 	}
-	for i, sum := range slices.Sorted(maps.Keys(enums)) {
-		fmt.Fprintf(w, "  %s = %d;\n", strcase.ToUpperSnake(sum), i)
-	}
-	fmt.Fprintf(w, "}\n")
-	s.Decls[enumName] = w.String()
+	s.Dest.Decls = append(s.Dest.Decls, decl)
 	return nil
 }
 
@@ -465,46 +516,53 @@ func parsePBTag(tag string) (pbTag, error) {
 	return out, nil
 }
 
-func typeRef(t types.Type) string {
+func (s *State) applyFieldType(t types.Type, field *Field) error {
 	switch t := t.(type) {
 	case *types.Named:
-		ref := t.Obj().Pkg().Path() + "." + t.Obj().Name()
-		if t, ok := builtinTypes[ref]; ok {
-			return t.ref
+		if err := s.extractDecl(t.Obj(), t); err != nil {
+			return err
 		}
-		return t.Obj().Name()
+		ref := t.Obj().Pkg().Path() + "." + t.Obj().Name()
+		if bt, ok := builtinTypes[ref]; ok {
+			field.Type = bt.ref
+		} else {
+			field.Type = t.Obj().Name()
+		}
 
 	case *types.Slice:
 		if t.Elem().String() == "byte" {
-			return "bytes"
+			field.Type = "bytes"
+		} else {
+			field.Repeated = true
+			return s.applyFieldType(t.Elem(), field)
 		}
-		return "repeated " + typeRef(t.Elem())
 
 	case *types.Pointer:
-		return typeRef(t.Elem())
+		return s.applyFieldType(t.Elem(), field)
 
 	default:
 		switch t.String() {
 		case "int":
-			return "int64"
+			field.Type = "int64"
 
 		case "uint":
-			return "uint64"
+			field.Type = "uint64"
 
 		case "float64":
-			return "double"
+			field.Type = "double"
 
 		case "float32":
-			return "float"
+			field.Type = "float"
 
 		case "string", "bool", "uint64", "int64", "uint32", "int32":
-			return t.String()
+			field.Type = t.String()
 
 		default:
-			panic(fmt.Sprintf("unsupported type %s", t.String()))
+			return fmt.Errorf("unsupported type %s", t.String())
 
 		}
 	}
+	return nil
 }
 
 func findCommentsForObject(obj types.Object, syntax []*ast.File) *ast.CommentGroup {

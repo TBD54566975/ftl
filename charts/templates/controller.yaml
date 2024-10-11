@@ -1,3 +1,4 @@
+{{ $version := printf "v%s" .Chart.Version -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,10 +20,10 @@ spec:
         {{- toYaml .Values.controller.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ include "ftl.fullname" . }}-controller
+      serviceAccountName: {{ .Values.controller.serviceAccountName }}
       containers:
         - name: app
-          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default .Chart.Version }}"
+          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default $version }}"
           {{- if .Values.controller.envFrom }}
           envFrom:
             {{- if .Values.controller.envFrom }}
