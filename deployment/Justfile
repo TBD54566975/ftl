@@ -70,6 +70,7 @@ teardown-cluster:
 teardown: teardown-cluster teardown-registry
 
 apply:
+  kubectl delete job --ignore-not-found=true ftl-dbmig-latest
   helm upgrade --install ftl ../charts -f values.yaml
 
 deploy-version version: setup-cluster

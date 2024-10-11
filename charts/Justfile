@@ -16,6 +16,6 @@ publish repo version:
     helm push output/ftl-{{version}}.tgz {{repo}}
 
 release repo version:
-    just set-version version={{version}}
+    just set-version {{version}}
     just package
-    just publish repo={{repo}} version={{version}}
+    just publish {{repo}} {{version}}
