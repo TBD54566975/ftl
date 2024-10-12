@@ -10,8 +10,8 @@ ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-modul
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
-PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
-PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
+PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto"
+PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
 
 _help:
   @just -l
@@ -112,6 +112,7 @@ package-extension: build-extension
 publish-extension: package-extension
   @cd frontend/vscode && vsce publish --no-dependencies
 
+# Build the IntelliJ plugin
 build-intellij-plugin:
   @cd frontend/intellij && gradle buildPlugin
 
@@ -125,15 +126,18 @@ pnpm-install:
 
 # Regenerate protos
 build-protos: pnpm-install
-  @mk {{SCHEMA_OUT}} : internal/schema -- "just build-protos-unconditionally"
-  @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
+  @mk {{SCHEMA_OUT}} : internal/schema -- "just go2proto"
+  @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "just build-protos-unconditionally"
 
-# Unconditionally rebuild protos
-build-protos-unconditionally: pnpm-install
+# Generate .proto files from .go types.
+go2proto:
   go2proto -o "{{SCHEMA_OUT}}" \
     -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb"' \
     -O 'java_multiple_files=true' \
     xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
+
+# Unconditionally rebuild protos
+build-protos-unconditionally: pnpm-install go2proto
   cd backend/protos && buf generate
 
 # Run integration test(s)
