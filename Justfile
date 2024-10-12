@@ -125,12 +125,15 @@ pnpm-install:
 
 # Regenerate protos
 build-protos: pnpm-install
-  @mk {{SCHEMA_OUT}} : internal/schema -- "go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint"
+  @mk {{SCHEMA_OUT}} : internal/schema -- "just build-protos-unconditionally"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: pnpm-install
-  go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
+  go2proto -o "{{SCHEMA_OUT}}" \
+    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb"' \
+    -O 'java_multiple_files=true' \
+    xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
   cd backend/protos && buf generate
 
 # Run integration test(s)
@@ -227,7 +230,7 @@ otel-dev *args:
   # export FTL_O11Y_LOG_LEVEL="debug"
   ftl dev {{args}}
 
-# runs the otel-lgtm observability stack locallt which includes 
+# runs the otel-lgtm observability stack locallt which includes
 # an otel collector, loki (for logs), prometheus metrics db (for metrics), tempo (trace storage) and grafana (for visualization)
 observe:
   docker compose up otel-lgtm
