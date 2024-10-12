@@ -5,7 +5,7 @@ import { bgColor, textColor } from '../utils'
 import { sidePanelColor } from '../utils/style.utils'
 
 export const SidePanel = () => {
-  const { isOpen, component } = useContext(SidePanelContext)
+  const { isOpen, header, component } = useContext(SidePanelContext)
 
   return (
     <div className={`absolute z-20 top-0 ${bgColor} ${textColor}`}>
@@ -19,7 +19,8 @@ export const SidePanel = () => {
         leaveFrom='translate-x-0'
         leaveTo='translate-x-full'
       >
-        <div className={`fixed right-0 sm:w-1/3 w-3/4 h-full ${sidePanelColor} dark:bg-slate-800 dark:shadow-black-600 shadow-2xl`}>
+        <div className={`fixed inset-y-0 right-0 sm:w-1/3 w-3/4 ${sidePanelColor} dark:bg-slate-800 dark:shadow-black-600 shadow-2xl flex flex-col`}>
+          {header && <div className='flex-shrink-0'>{header}</div>}
           <div className='overflow-y-auto h-full'>{component}</div>
         </div>
       </Transition>

@@ -21,7 +21,7 @@ export const TraceGraphHeader = ({ requestKey, eventId }: { requestKey?: string;
   const totalDurationMillis = (firstDuration.nanos ?? 0) / 1000000
 
   return (
-    <div className='flex items-end justify-between'>
+    <div className='flex items-center justify-between'>
       <span className='text-xs font-mono'>
         Total <span>{totalDurationMillis}ms</span>
       </span>

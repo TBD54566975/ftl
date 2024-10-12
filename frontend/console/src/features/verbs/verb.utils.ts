@@ -5,8 +5,11 @@ import type { MetadataCalls, MetadataCronJob, MetadataIngress, Ref } from '../..
 
 const basePath = 'http://localhost:8891/'
 
-export const verbRefString = (verb: Ref): string => {
-  return `${verb.module}.${verb.name}`
+export const refString = (ref?: Ref): string => {
+  if (!ref) {
+    return ''
+  }
+  return `${ref.module}.${ref.name}`
 }
 
 interface JsonMap {
