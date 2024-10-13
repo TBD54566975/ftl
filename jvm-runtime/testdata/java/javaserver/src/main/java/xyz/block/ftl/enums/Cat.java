@@ -2,6 +2,9 @@ package xyz.block.ftl.enums;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Comment on Type Enum variant
+ */
 public class Cat implements Animal {
     private @NotNull String name;
 

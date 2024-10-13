@@ -4,7 +4,7 @@ import xyz.block.ftl.Enum;
 import xyz.block.ftl.Export;
 
 /**
- * Comment on an enum type
+ * Comment on a value enum
  */
 @Enum
 @Export

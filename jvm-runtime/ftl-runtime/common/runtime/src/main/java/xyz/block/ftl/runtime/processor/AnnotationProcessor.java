@@ -28,8 +28,10 @@ import javax.tools.FileObject;
 import javax.tools.StandardLocation;
 
 import xyz.block.ftl.Config;
+import xyz.block.ftl.Enum;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Secret;
+import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.Verb;
 
 /**
@@ -52,7 +54,7 @@ public class AnnotationProcessor implements Processor {
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
-        return Set.of(Verb.class.getName(), Export.class.getName());
+        return Set.of(Verb.class.getName(), Enum.class.getName(), Export.class.getName(), TypeAlias.class.getName());
     }
 
     @Override
@@ -68,32 +70,26 @@ public class AnnotationProcessor implements Processor {
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         //TODO: @VerbName, HTTP, CRON etc
-        roundEnv.getElementsAnnotatedWithAny(Set.of(Verb.class, Export.class))
+        roundEnv.getElementsAnnotatedWithAny(Set.of(Verb.class, Enum.class, Export.class, TypeAlias.class))
                 .forEach(element -> {
                     Optional<String> javadoc = getJavadoc(element);
-
                     javadoc.ifPresent(doc -> {
                         String strippedDownDoc = stripJavadocTags(doc);
-                        String key = element.getSimpleName().toString();
-
-                        if (element.getKind() == ElementKind.METHOD) {
-                            saved.put("verb." + key, strippedDownDoc);
-                        } else if (element.getKind() == ElementKind.CLASS) {
-                            saved.put("data." + key, strippedDownDoc);
-                        } else if (element.getKind() == ElementKind.ENUM) {
-                            saved.put("enum." + key, strippedDownDoc);
+                        if (element.getAnnotation(TypeAlias.class) != null) {
+                            saved.put(element.getAnnotation(TypeAlias.class).name(), strippedDownDoc);
+                        } else {
+                            saved.put(element.getSimpleName().toString(), strippedDownDoc);
                         }
-
                         if (element.getKind() == ElementKind.METHOD) {
                             var executableElement = (ExecutableElement) element;
                             executableElement.getParameters().forEach(param -> {
                                 Config config = param.getAnnotation(Config.class);
                                 if (config != null) {
-                                    saved.put("config." + config.value(), extractCommentForParam(doc, param));
+                                    saved.put(config.value(), extractCommentForParam(doc, param));
                                 }
                                 Secret secret = param.getAnnotation(Secret.class);
                                 if (secret != null) {
-                                    saved.put("secret." + secret.value(), extractCommentForParam(doc, param));
+                                    saved.put(secret.value(), extractCommentForParam(doc, param));
                                 }
                             });
                         }

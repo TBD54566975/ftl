@@ -95,13 +95,13 @@ public class ModuleBuilder {
     private final Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics;
     private final Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients;
     private final FTLRecorder recorder;
-    private final Map<String, Iterable<String>> comments;
+    private final CommentsBuildItem comments;
     private final List<ValidationFailure> validationFailures = new ArrayList<>();
     private final boolean defaultToOptional;
 
     public ModuleBuilder(IndexView index, String moduleName, Map<DotName, TopicsBuildItem.DiscoveredTopic> knownTopics,
             Map<DotName, VerbClientBuildItem.DiscoveredClients> verbClients, FTLRecorder recorder,
-            Map<String, Iterable<String>> comments, boolean defaultToOptional) {
+            CommentsBuildItem comments, boolean defaultToOptional) {
         this.index = index;
         this.moduleName = moduleName;
         this.protoModuleBuilder = Module.newBuilder()
@@ -203,9 +203,8 @@ public class ModuleBuilder {
                     if (!knownSecrets.contains(name)) {
                         xyz.block.ftl.v1.schema.Secret.Builder secretBuilder = xyz.block.ftl.v1.schema.Secret.newBuilder()
                                 .setType(buildType(param.type(), false, param))
-                                .setName(name);
-                        Optional.ofNullable(comments.get(CommentKey.ofSecret(name)))
-                                .ifPresent(secretBuilder::addAllComments);
+                                .setName(name)
+                                .addAllComments(comments.getComments(name));
                         addDecls(Decl.newBuilder().setSecret(secretBuilder).build());
                         knownSecrets.add(name);
                     }
@@ -218,9 +217,8 @@ public class ModuleBuilder {
                     if (!knownConfig.contains(name)) {
                         xyz.block.ftl.v1.schema.Config.Builder configBuilder = xyz.block.ftl.v1.schema.Config.newBuilder()
                                 .setType(buildType(param.type(), false, param))
-                                .setName(name);
-                        Optional.ofNullable(comments.get(CommentKey.ofConfig(name)))
-                                .ifPresent(configBuilder::addAllComments);
+                                .setName(name)
+                                .addAllComments(comments.getComments(name));
                         addDecls(Decl.newBuilder().setConfig(configBuilder).build());
                         knownConfig.add(name);
                     }
@@ -271,15 +269,12 @@ public class ModuleBuilder {
                     Class.forName(className, false, Thread.currentThread().getContextClassLoader()), paramMappers,
                     method.returnType() == VoidType.VOID);
 
-            verbBuilder
-                    .setName(verbName)
+            verbBuilder.setName(verbName)
                     .setExport(exported)
                     .setPos(PositionUtils.forMethod(method))
                     .setRequest(buildType(bodyParamType, exported, bodyParamNullability))
-                    .setResponse(buildType(method.returnType(), exported, method));
-            Optional.ofNullable(comments.get(CommentKey.ofVerb(verbName)))
-                    .ifPresent(verbBuilder::addAllComments);
-
+                    .setResponse(buildType(method.returnType(), exported, method))
+                    .addAllComments(comments.getComments(verbName));
             if (metadataCallback != null) {
                 metadataCallback.accept(verbBuilder);
             }
@@ -402,23 +397,21 @@ public class ModuleBuilder {
 
                 if (info.isEnum() || info.hasAnnotation(ENUM)) {
                     // Set only the name and export here. EnumProcessor will fill in the rest
-                    xyz.block.ftl.v1.schema.Enum ennum = xyz.block.ftl.v1.schema.Enum.newBuilder()
+                    xyz.block.ftl.v1.schema.Enum.Builder ennum = xyz.block.ftl.v1.schema.Enum.newBuilder()
                             .setName(name)
-                            .setExport(type.hasAnnotation(EXPORT) || export)
-                            .build();
-                    addDecls(Decl.newBuilder().setEnum(ennum).build());
+                            .setExport(type.hasAnnotation(EXPORT) || export);
+                    addDecls(Decl.newBuilder().setEnum(ennum.build()).build());
                     return ref;
                 } else {
                     // If this data was processed already, skip early
                     if (setDeclExport(name, type.hasAnnotation(EXPORT) || export)) {
                         return ref;
                     }
-                    Data.Builder data = Data.newBuilder();
-                    data.setPos(PositionUtils.forClass(clazz.name().toString()));
-                    data.setName(name);
-                    data.setExport(type.hasAnnotation(EXPORT) || export);
-                    Optional.ofNullable(comments.get(CommentKey.ofData(name)))
-                            .ifPresent(data::addAllComments);
+                    Data.Builder data = Data.newBuilder()
+                            .setPos(PositionUtils.forClass(clazz.name().toString()))
+                            .setName(name)
+                            .setExport(type.hasAnnotation(EXPORT) || export)
+                            .addAllComments(comments.getComments(name));
                     buildDataElement(data, clazz.name());
                     addDecls(Decl.newBuilder().setData(data).build());
                     return ref;
@@ -555,10 +548,11 @@ public class ModuleBuilder {
     public void registerTypeAlias(String name, org.jboss.jandex.Type finalT, org.jboss.jandex.Type finalS, boolean exported,
             Map<String, String> languageMappings) {
         validateName(finalT.name().toString(), name);
-        TypeAlias.Builder typeAlias = TypeAlias.newBuilder().setType(buildType(finalS, exported, Nullability.NOT_NULL))
+        TypeAlias.Builder typeAlias = TypeAlias.newBuilder()
+                .setType(buildType(finalS, exported, Nullability.NOT_NULL))
                 .setName(name)
-                .addMetadata(Metadata
-                        .newBuilder()
+                .addAllComments(comments.getComments(name))
+                .addMetadata(Metadata.newBuilder()
                         .setTypeMap(MetadataTypeMap.newBuilder().setRuntime("java").setNativeName(finalT.toString())
                                 .build())
                         .build());
@@ -566,9 +560,7 @@ public class ModuleBuilder {
             typeAlias.addMetadata(Metadata.newBuilder().setTypeMap(MetadataTypeMap.newBuilder().setRuntime(entry.getKey())
                     .setNativeName(entry.getValue()).build()).build());
         }
-        addDecls(Decl.newBuilder()
-                .setTypeAlias(typeAlias)
-                .build());
+        addDecls(Decl.newBuilder().setTypeAlias(typeAlias).build());
     }
 
     /**

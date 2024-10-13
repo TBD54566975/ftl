@@ -29,5 +29,5 @@ public class CommentedModule {
         return EnumType.PORTENTOUS;
     }
 
-    //TODO TypeAlias, Database, Topic, Subscription, Lease, Cron
+    //TODO Database, Topic, Subscription, Lease, Cron
 }
