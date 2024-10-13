@@ -244,8 +244,10 @@ jobs:
           git config pull.rebase true
       - name: Sync Charts to Charts Repository
         run: |
+          cd .ftl
           version="$(git describe --tags --abbrev=0 | sed 's/v//')"
-          ( cd .ftl && just chart set-version "$version" )
+          just chart set-version "$version"
+          cd ..
           cp -r .ftl/charts/ charts/
           git add charts
           git commit -a -m "Update charts"
