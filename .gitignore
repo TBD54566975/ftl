@@ -46,5 +46,5 @@ junit*.xml
 .ftl.lock
 docker-build/
 **/.ftl
-charts/charts/
-charts/output/
+charts/**/charts/
+charts/**/output/
