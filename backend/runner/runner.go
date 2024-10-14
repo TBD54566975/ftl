@@ -35,6 +35,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/identity"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	ftlobservability "github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -516,6 +517,7 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 	if requestKey, _ := rpc.RequestKeyFromContext(ctx); requestKey.Ok() { //nolint:errcheck // best effort
 		attrs["request"] = requestKey.MustGet().String()
 	}
+	ctx = ftlobservability.AddSpanContextToLogger(ctx)
 
 	sink := newDeploymentLogsSink(s.deploymentLogQueue)
 	return log.FromContext(ctx).AddSink(sink).Attrs(attrs)

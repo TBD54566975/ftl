@@ -79,6 +79,7 @@ func HandleCall[Req, Resp any](verb any) Handler {
 			if err != nil {
 				return nil, fmt.Errorf("invalid request to verb %s: %w", ref, err)
 			}
+			ctx = observability.AddSpanContextToLogger(ctx)
 
 			// Call Verb.
 			resp, err := Call[Req, Resp](ref)(ctx, req)

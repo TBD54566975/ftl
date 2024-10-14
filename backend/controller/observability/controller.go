@@ -6,6 +6,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/TBD54566975/ftl/internal/observability"
 )
 
 const (
@@ -30,5 +32,5 @@ func (m *ControllerTracing) BeginSpan(ctx context.Context, name string) (context
 	attrs := []attribute.KeyValue{
 		attribute.String(operation, name),
 	}
-	return m.polling.Start(ctx, controllerPollingOperation, trace.WithAttributes(attrs...))
+	return observability.AddSpanToLogger(m.polling.Start(ctx, controllerPollingOperation, trace.WithAttributes(attrs...)))
 }

@@ -1,12 +1,37 @@
 package observability
 
 import (
+	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/go-logr/logr"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/TBD54566975/ftl/internal/log"
 )
+
+func AddSpanToLogger(ctx context.Context, span trace.Span) (context.Context, trace.Span) {
+	ctx = wrapLogger(ctx, span.SpanContext())
+	return ctx, span
+}
+
+func AddSpanContextToLogger(ctx context.Context) context.Context {
+	sc := trace.SpanContextFromContext(ctx)
+	return wrapLogger(ctx, sc)
+}
+func wrapLogger(ctx context.Context, sc trace.SpanContext) context.Context {
+	logger := log.FromContext(ctx)
+	attributes := map[string]string{}
+	if sc.HasSpanID() {
+		attributes["dd.span_id"] = convertTraceID(sc.SpanID().String())
+	}
+	if sc.HasTraceID() {
+		attributes["dd.trace_id"] = convertTraceID(sc.TraceID().String())
+	}
+	return log.ContextWithLogger(ctx, logger.Attrs(attributes))
+}
 
 type logSink struct {
 	keyValues map[string]interface{}
@@ -98,4 +123,18 @@ func otelLevelToLevel(level int) log.Level {
 	default:
 		return log.Trace
 	}
+}
+func convertTraceID(id string) string {
+	// See https://docs.datadoghq.com/tracing/other_telemetry/connect_logs_and_traces/opentelemetry/?tab=go
+	if len(id) < 16 {
+		return ""
+	}
+	if len(id) > 16 {
+		id = id[16:]
+	}
+	intValue, err := strconv.ParseUint(id, 16, 64)
+	if err != nil {
+		return ""
+	}
+	return strconv.FormatUint(intValue, 10)
 }
