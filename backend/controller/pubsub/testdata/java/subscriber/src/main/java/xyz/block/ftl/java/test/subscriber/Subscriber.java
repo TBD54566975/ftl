@@ -10,7 +10,7 @@ import io.quarkus.logging.Log;
 import xyz.block.ftl.Retry;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.Verb;
-import xyz.block.ftl.VerbName;
+import xyz.block.ftl.Name;
 
 public class Subscriber {
 
@@ -34,7 +34,7 @@ public class Subscriber {
     }
 
     @Verb
-    @VerbName("catch")
+    @Name("catch")
     public void catchVerb(CatchRequest<PubSubEvent> req) {
         if (!req.getError().contains("always error: event")) {
             throw new RuntimeException("unexpected error: " + req.getError());

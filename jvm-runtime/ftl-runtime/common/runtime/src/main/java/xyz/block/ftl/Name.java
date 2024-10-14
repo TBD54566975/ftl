@@ -4,9 +4,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /**
- * Used to override the name of a verb. Without this annotation it defaults to the method name.
+ * Used to specify the name of a FTL element within the current module.
+ *
+ * For elements outside the module use
  */
 @Retention(RetentionPolicy.RUNTIME)
-public @interface VerbName {
+public @interface Name {
     String value();
 }

@@ -21,7 +21,7 @@ import com.squareup.kotlinpoet.TypeSpec;
 import com.squareup.kotlinpoet.TypeVariableName;
 import com.squareup.kotlinpoet.WildcardTypeName;
 
-import xyz.block.ftl.GeneratedRef;
+import xyz.block.ftl.Ref;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
@@ -98,7 +98,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.enumBuilder(thisType)
                 .addAnnotation(
-                        AnnotationSpec.builder(GeneratedRef.class)
+                        AnnotationSpec.builder(Ref.class)
                                 .addMember("name=\"" + data.getName() + "\"")
                                 .addMember("module=\"" + module.getName() + "\"").build())
                 .addModifiers(KModifier.PUBLIC);
@@ -119,7 +119,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         String thisType = className(data.getName());
         TypeSpec.Builder dataBuilder = TypeSpec.classBuilder(thisType)
                 .addAnnotation(
-                        AnnotationSpec.builder(GeneratedRef.class)
+                        AnnotationSpec.builder(Ref.class)
                                 .addMember("name=\"" + data.getName() + "\"")
                                 .addMember("module=\"" + module.getName() + "\"").build())
                 .addModifiers(KModifier.PUBLIC);

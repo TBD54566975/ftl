@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -41,7 +40,7 @@ import io.quarkus.arc.processor.DotNames;
 import xyz.block.ftl.Config;
 import xyz.block.ftl.LeaseClient;
 import xyz.block.ftl.Secret;
-import xyz.block.ftl.VerbName;
+import xyz.block.ftl.Name;
 import xyz.block.ftl.runtime.FTLRecorder;
 import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
@@ -115,8 +114,8 @@ public class ModuleBuilder {
     }
 
     public static @NotNull String methodToName(MethodInfo method) {
-        if (method.hasAnnotation(VerbName.class)) {
-            return method.annotation(VerbName.class).value().asString();
+        if (method.hasAnnotation(Name.class)) {
+            return method.annotation(Name.class).value().asString();
         }
         return method.name();
     }

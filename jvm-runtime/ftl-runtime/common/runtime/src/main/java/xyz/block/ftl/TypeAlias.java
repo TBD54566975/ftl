@@ -9,9 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface TypeAlias {
 
-    String name();
-
-    String module() default "";
+    Ref value();
 
     LanguageTypeMapping[] languageTypeMappings() default {};
 }

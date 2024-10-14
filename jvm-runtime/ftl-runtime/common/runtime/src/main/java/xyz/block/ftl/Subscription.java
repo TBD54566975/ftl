@@ -9,21 +9,15 @@ import java.lang.annotation.Target;
 @Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })
 public @interface Subscription {
     /**
-     * @return The module of the topic to subscribe to, if empty then the topic is assumed to be in the current module.
+     * The topic to subscribe to.
      */
-    String module() default "";
+    Ref value();
 
     /**
      *
-     * @return The name of the topic to subscribe to. Cannot be used in conjunction with {@link #topicClass()}.
+     * @return The subscription name, defaults to {verbName}{topicModule?}{topicName}Subscription
      */
-    String topic() default "";
-
-    /**
-     *
-     * @return The subscription name
-     */
-    String name();
+    String name() default "";
 
     /**
      * The class of the topic to subscribe to, which can be used in place of directly specifying the topic name and module.

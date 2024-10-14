@@ -29,7 +29,7 @@ import com.squareup.javapoet.TypeVariableName;
 import com.squareup.javapoet.WildcardTypeName;
 
 import xyz.block.ftl.EnumHolder;
-import xyz.block.ftl.GeneratedRef;
+import xyz.block.ftl.Ref;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
@@ -450,7 +450,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     }
 
     private static @NotNull AnnotationSpec getGeneratedRefAnnotation(String module, String name) {
-        return AnnotationSpec.builder(GeneratedRef.class)
+        return AnnotationSpec.builder(Ref.class)
                 .addMember("name", "\"" + name + "\"")
                 .addMember("module", "\"" + module + "\"").build();
     }
