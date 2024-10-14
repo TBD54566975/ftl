@@ -26,7 +26,7 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 
 			for _, dep := range rc.Dependencies {
 				if psql, ok := dep.Resource.(*provisioner.Resource_Postgres); ok {
-					if psql.Postgres.Output == nil {
+					if psql.Postgres == nil || psql.Postgres.Output == nil {
 						return nil, fmt.Errorf("postgres resource has not been provisioned")
 					}
 

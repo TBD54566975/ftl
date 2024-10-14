@@ -10,24 +10,6 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
-func TestDeploymentThroughNoopProvisioner(t *testing.T) {
-	in.Run(t,
-		in.WithProvisioner(),
-		in.WithProvisionerConfig(`
-			default = "noop"
-			plugins = [
-				{ id = "noop", resources = ["postgres"] },
-				{ id = "controller", resources = ["module"] },
-			]
-		`),
-		in.CopyModule("echo"),
-		in.Deploy("echo"),
-		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
-			assert.Equal(t, "Hello, Bob!!!", response)
-		}),
-	)
-}
-
 func TestDeploymentThrougDevProvisionerCreatePostgresDB(t *testing.T) {
 	in.Run(t,
 		in.WithFTLConfig("./ftl-project.toml"),

@@ -71,7 +71,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/rpc/headers"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/ftl/internal/schema/strcase"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 	status "github.com/TBD54566975/ftl/internal/terminal"
@@ -1168,8 +1167,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 
 	sm := cf.SecretsFromContext(ctx)
 	for _, d := range module.Decls {
-		if db, ok := d.(*schema.Database); ok {
-			key := fmt.Sprintf("FTL_DSN_%s_%s", strcase.ToUpperSnake(module.Name), strcase.ToUpperSnake(db.Name))
+		if db, ok := d.(*schema.Database); ok && db.Runtime != nil {
+			key := dsnSecretKey(module.Name, db.Name)
 			// TODO: Use a cluster specific default provider
 			if err := sm.Set(ctx, providers.InlineProviderKey, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
 				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
@@ -1202,6 +1201,26 @@ func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ft
 		return nil, fmt.Errorf("could not reset subscription: %w", err)
 	}
 	return connect.NewResponse(&ftlv1.ResetSubscriptionResponse{}), nil
+}
+
+func dsnSecretKey(module string, db string) string {
+	return fmt.Sprintf("FTL_DSN_%s_%s",
+		strings.ToUpper(stripNonAlphanumeric(module)),
+		strings.ToUpper(stripNonAlphanumeric(db)),
+	)
+}
+
+func stripNonAlphanumeric(s string) string {
+	var result strings.Builder
+	for i := range len(s) {
+		b := s[i]
+		if ('a' <= b && b <= 'z') ||
+			('A' <= b && b <= 'Z') ||
+			('0' <= b && b <= '9') {
+			result.WriteByte(b)
+		}
+	}
+	return result.String()
 }
 
 // Load schemas for existing modules, combine with our new one, and validate the new module in the context

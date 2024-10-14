@@ -25,7 +25,7 @@ func NewDevProvisioner(postgresPort int) *InMemProvisioner {
 			logger := log.FromContext(ctx)
 			logger.Infof("provisioning postgres database: %s_%s", module, id)
 
-			dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
+			dbName := strcase.ToLowerCamel(module) + "_" + strcase.ToLowerCamel(id)
 
 			if postgresDSN == "" {
 				// We assume that the DB hsas already been started when running in dev mode
