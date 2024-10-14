@@ -248,6 +248,7 @@ jobs:
           version="$(git describe --tags --abbrev=0 | sed 's/v//')"
           just chart set-version "$version"
           cd ..
+          rm -rf charts/
           cp -r .ftl/charts/ charts/
           git add charts
           git commit -a -m "Update charts"
