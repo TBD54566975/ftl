@@ -38,7 +38,8 @@ public class SubscriptionProcessor {
                 continue;
             }
             annotations.put(subscriptions.target().asClass().name(),
-                    SubscriptionMetaAnnotationsBuildItem.fromJandex(subscriptions, moduleNameBuildItem.getModuleName()));
+                    SubscriptionMetaAnnotationsBuildItem.fromJandex(combinedIndexBuildItem.getComputingIndex(), subscriptions,
+                            moduleNameBuildItem.getModuleName()));
         }
         return new SubscriptionMetaAnnotationsBuildItem(annotations);
     }
@@ -52,7 +53,7 @@ public class SubscriptionProcessor {
         AdditionalBeanBuildItem.Builder beans = AdditionalBeanBuildItem.builder().setUnremovable();
         var moduleName = moduleNameBuildItem.getModuleName();
         for (var subscription : index.getIndex().getAnnotations(FTLDotNames.SUBSCRIPTION)) {
-            var info = SubscriptionMetaAnnotationsBuildItem.fromJandex(subscription, moduleName);
+            var info = SubscriptionMetaAnnotationsBuildItem.fromJandex(index.getComputingIndex(), subscription, moduleName);
             if (subscription.target().kind() != AnnotationTarget.Kind.METHOD) {
                 continue;
             }
