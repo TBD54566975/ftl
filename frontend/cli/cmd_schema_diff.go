@@ -18,6 +18,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -40,11 +41,19 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 	if otherEndpoint == "" {
 		otherEndpoint = "Local Changes"
 		sameModulesOnly = true
-		other, err = localSchema(ctx, projConfig)
+
+		// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
+		var bindAllocator *bind.BindAllocator
+		bindAllocator, err = bind.NewBindAllocator(cli.Endpoint)
+		if err != nil {
+			return fmt.Errorf("could not create bind allocator: %w", err)
+		}
+		_ = bindAllocator.Next()
+
+		other, err = localSchema(ctx, projConfig, bindAllocator)
 	} else {
 		other, err = schemaForURL(ctx, d.OtherEndpoint)
 	}
-
 	if err != nil {
 		return fmt.Errorf("failed to get other schema: %w", err)
 	}
@@ -90,7 +99,7 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 	return nil
 }
 
-func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*schema.Schema, error) {
+func localSchema(ctx context.Context, projectConfig projectconfig.Config, bindAllocator *bind.BindAllocator) (*schema.Schema, error) {
 	errs := []error{}
 	modules, err := watch.DiscoverModules(ctx, projectConfig.AbsModuleDirs())
 	if err != nil {
@@ -103,11 +112,11 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 	for _, m := range modules {
 		go func() {
 			// Loading a plugin can be expensive. Is there a better way?
-			plugin, err := languageplugin.New(ctx, m.Language)
+			plugin, err := languageplugin.New(ctx, bindAllocator, m.Language)
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](err)
 			}
-			defer plugin.Kill(ctx) // nolint:errcheck
+			defer plugin.Kill() // nolint:errcheck
 
 			customDefaults, err := plugin.ModuleConfigDefaults(ctx, m.Dir)
 			if err != nil {

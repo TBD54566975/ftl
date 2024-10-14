@@ -10,8 +10,8 @@ ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-modul
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
-PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto backend/protos/xyz/block/ftl/v1/schema/runtime.proto"
-PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/runtime.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
+PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto"
+PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
 
 _help:
   @just -l
@@ -39,11 +39,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java generate-kube-migrations
-
-# Update the kube config map with the latest schema migrations
-generate-kube-migrations:
-    just k8s update-schema
+build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java
 
 # Run "go generate" on all packages
 build-generate:
@@ -116,6 +112,7 @@ package-extension: build-extension
 publish-extension: package-extension
   @cd frontend/vscode && vsce publish --no-dependencies
 
+# Build the IntelliJ plugin
 build-intellij-plugin:
   @cd frontend/intellij && gradle buildPlugin
 
@@ -129,12 +126,18 @@ pnpm-install:
 
 # Regenerate protos
 build-protos: pnpm-install
-  @mk {{SCHEMA_OUT}} : internal/schema -- "go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint"
-  @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "cd backend/protos && buf generate"
+  @mk {{SCHEMA_OUT}} : internal/schema -- "just go2proto"
+  @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "just build-protos-unconditionally"
+
+# Generate .proto files from .go types.
+go2proto:
+  go2proto -o "{{SCHEMA_OUT}}" \
+    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb"' \
+    -O 'java_multiple_files=true' \
+    xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
 
 # Unconditionally rebuild protos
-build-protos-unconditionally: pnpm-install
-  go2proto -o "{{SCHEMA_OUT}}" -g 'github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb' xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
+build-protos-unconditionally: pnpm-install go2proto
   cd backend/protos && buf generate
 
 # Run integration test(s)
@@ -220,17 +223,6 @@ debug *args:
   dlv_pid=$!
   wait "$dlv_pid"
 
-# Run otel collector in a docker container to stream local (i.e. from ftl dev) signals to
-# the terminal tab where this is running. To start FTL, opepn another terminal tab and run
-# `just otel-dev` with any args you would pass to `ftl dev`. To stop the otel stream, run
-# `just otel-stop` in a third terminal tab.
-otel-stream:
-  docker compose --profile infra up otel-collector
-
-# Stop the otel collector container.
-otel-stop:
-  docker compose --profile infra down otel-collector
-
 # Run `ftl dev` with the given args after setting the necessary envar.
 otel-dev *args:
   #!/bin/bash
@@ -242,16 +234,13 @@ otel-dev *args:
   # export FTL_O11Y_LOG_LEVEL="debug"
   ftl dev {{args}}
 
-# Runs a Grafana stack for storing and visualizing telemetry. This stack includes a
-# Prometheus database for metrics and a Tempo database for traces; both of which are
-# populated by the OTLP over GRPC collector that is integrated with this stack.
-#
-# Running `just otel-dev` will export ftl metrics to this Grafana stack.
-grafana:
-  docker compose up -d grafana
+# runs the otel-lgtm observability stack locallt which includes
+# an otel collector, loki (for logs), prometheus metrics db (for metrics), tempo (trace storage) and grafana (for visualization)
+observe:
+  docker compose up otel-lgtm
 
-grafana-stop:
-  docker compose down grafana
+observe-stop:
+  docker compose down otel-lgtm
 
 # Start storybook server
 storybook:
@@ -264,3 +253,6 @@ build-docker name:
     -t ftl0/ftl-{{name}}:"${GITHUB_SHA:-$(git rev-parse HEAD)}" \
     -t ftl0/ftl-{{name}}:latest \
     -f Dockerfile.{{name}} .
+
+chart *args:
+    @cd charts && just {{args}}

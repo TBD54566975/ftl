@@ -1,0 +1,165 @@
+fullnameOverride: ""
+nameOverride: ""
+
+ingress:
+  enabled: false
+  annotations:
+    kubernetes.io/ingress.class: nginx
+
+secrets:
+  logEncryptionKey: null
+  asyncEncryptionKey: null
+
+dbMigration:
+  enabled: true
+
+controller:
+  controllersRoleArn: arn:aws:iam::ftl-controllers-irsa-role
+  replicas: 2
+  revisionHistoryLimit: 0
+
+  image:
+    repository: "ftl0/ftl-controller"
+
+  envFrom: null
+  dbConnectionString: "postgres://$(endpoint):$(port)/tbd?sslmode=disable&user=$(username)&password=$(password)"
+  kmsUri: "fake-kms://CKbvh_ILElQKSAowdHlwZS5nb29nbGVhcGlzLmNvbS9nb29nbGUuY3J5cHRvLnRpbmsuQWVzR2NtS2V5EhIaEE6tD2yE5AWYOirhmkY-r3sYARABGKbvh_ILIAE"
+  serviceAccountName: ftl
+
+  env:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: FTL_CONTROLLER_BIND
+      value: "http://$(MY_POD_IP):8892"
+    - name: FTL_CONTROLLER_INGRESS_BIND
+      value: "http://$(MY_POD_IP):8891"
+    - name: FTL_CONTROLLER_ADVERTISE
+      value: "http://$(MY_POD_IP):8892"
+    - name: FTL_CONTROLLER_ALLOW_ORIGIN
+      value: "*"
+    - name: LOG_LEVEL
+      value: "debug"
+    - name: LOG_JSON
+      value: "true"
+    - name: HOST_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+#    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+#      value: "http://$(HOST_IP):4317"
+#    - name: OTEL_RESOURCE_ATTRIBUTES
+#      value: "env=ftlDefault"
+
+  ports:
+    - name: ingress
+      containerPort: 8891
+      protocol: TCP
+    - name: http
+      containerPort: 8892
+      protocol: TCP
+
+  readinessProbe: null
+
+  service:
+    type: ClusterIP
+    annotations: null
+    ports:
+      - name: "http-8892"
+        port: 80
+        protocol: TCP
+        targetPort: 8892
+
+  ingressService:
+    type: ClusterIP
+    annotations: null
+    ports:
+      - name: "http-8891"
+        port: 80
+        protocol: TCP
+        targetPort: 8891
+
+  podAnnotations: null
+  nodeSelector: null
+  affinity: null
+  topologySpreadConstraints: null
+  tolerations: null
+
+runner:
+  revisionHistoryLimit: 0
+
+  envFrom: null
+
+  env:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: FTL_ENDPOINT
+      value: "http://ftl-controller"
+    - name: FTL_RUNNER_BIND
+      value: "http://$(MY_POD_IP):8893"
+    - name: FTL_RUNNER_ADVERTISE
+      value: ""
+    - name: FTL_RUNNER_START_DELAY
+      value: "3s"
+    - name: LOG_LEVEL
+      value: "debug"
+    - name: LOG_JSON
+      value: "true"
+    - name: HOST_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+#    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+#      value: "http://$(HOST_IP):4317"
+#    - name: OTEL_RESOURCE_ATTRIBUTES
+#      value: "env=ftlDefault"
+
+  ports:
+    - name: http
+      containerPort: 8893
+      protocol: TCP
+
+  readinessProbe: null
+
+  headlessService:
+    ports:
+      - port: 8893
+        targetPort: 8893
+
+  podAnnotations: null
+  nodeSelector: null
+  affinity: null
+  topologySpreadConstraints: null
+  tolerations: null
+
+harbor:
+  enabled: true
+  expose:
+    tls:
+      enabled: false
+    type: nodePort
+  persistence:
+    enabled: true
+    resourcePolicy: ""
+
+postgresql:
+  enabled: true
+  architecture: standalone
+  primary:
+    resources:
+      requests:
+        memory: 512Mi
+      limits:
+        memory: 1024Mi
+  global:
+    postgresql:
+      auth:
+        username: ftl
+        password: ftl
+        database: ftl
+
+istio:
+  enabled: false # set to true to have this chart install the grpc config to enable trailers

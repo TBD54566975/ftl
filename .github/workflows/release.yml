@@ -113,6 +113,7 @@ jobs:
           docker tag ftl0/ftl-box:latest ftl0/ftl-box:"$GITHUB_SHA"
           docker tag ftl0/ftl-box:latest ftl0/ftl-box:"$version"
           docker push -a ftl0/ftl-box
+
   create-go-release:
     name: Release Go Binaries
     runs-on: ubuntu-latest
@@ -217,3 +218,37 @@ jobs:
           just publish-extension
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+  helm-release:
+    name: Release Helm Charts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: "Checkout Charts Repository"
+        with:
+          repository: '${{ github.repository_owner }}/ftl-charts'
+          token: '${{ secrets.FTL_CHARTS_TOKEN }}'
+          fetch-depth: 0
+      - name: Checkout FTL
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: .ftl
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1.1.3
+        with:
+          working-directory: '.ftl'
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git config pull.rebase true
+      - name: Sync Charts to Charts Repository
+        run: |
+          cd .ftl
+          version="$(git describe --tags --abbrev=0 | sed 's/v//')"
+          just chart set-version "$version"
+          cd ..
+          cp -r .ftl/charts/ charts/
+          git add charts
+          git commit -a -m "Update charts"
+          git push

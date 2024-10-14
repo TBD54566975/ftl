@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"go/token"
+	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -11,8 +12,10 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -32,33 +35,48 @@ type newCmd struct {
 // - help text (ftl new go --help)
 // - default values
 // - environment variable overrides
-func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) error {
+//
+// Language plugins take time to launch, so we return the one we created so it can be reused in Run().
+func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPlugin optional.Option[languageplugin.LanguagePlugin], err error) {
 	if len(args) < 2 {
-		return nil
+		return optionalPlugin, nil
 	} else if args[0] != "new" {
-		return nil
+		return optionalPlugin, nil
 	}
+
 	language := args[1]
 	// Default to `new` command handler if no language is provided, or option is specified on `new` command.
 	if len(language) == 0 || language[0] == '-' {
-		return nil
+		return optionalPlugin, nil
 	}
 
 	newCmdNode, ok := slices.Find(k.Model.Children, func(n *kong.Node) bool {
 		return n.Name == "new"
 	})
 	if !ok {
-		return fmt.Errorf("could not find new command")
+		return optionalPlugin, fmt.Errorf("could not find new command")
 	}
 
-	plugin, err := languageplugin.New(ctx, language)
+	// Too early to use any kong args here so we can't use cli.Endpoint.
+	// Hardcoding the default bind URL for now.
+	pluginBind, err := url.Parse("http://127.0.0.1:8893")
 	if err != nil {
-		return fmt.Errorf("could not create plugin for %v: %w", language, err)
+		return optionalPlugin, fmt.Errorf("could not parse default bind URL: %w", err)
+	}
+	var bindAllocator *bind.BindAllocator
+	bindAllocator, err = bind.NewBindAllocator(pluginBind)
+	if err != nil {
+		return optionalPlugin, fmt.Errorf("could not create bind allocator: %w", err)
+	}
+
+	plugin, err := languageplugin.New(ctx, bindAllocator, language)
+	if err != nil {
+		return optionalPlugin, fmt.Errorf("could not create plugin for %v: %w", language, err)
 	}
 
 	flags, err := plugin.GetCreateModuleFlags(ctx)
 	if err != nil {
-		return fmt.Errorf("could not get CLI flags for %v plugin: %w", language, err)
+		return optionalPlugin, fmt.Errorf("could not get CLI flags for %v plugin: %w", language, err)
 	}
 
 	registry := kong.NewRegistry().RegisterDefaults()
@@ -73,10 +91,10 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) error {
 		}
 	}
 	newCmdNode.Flags = append(newCmdNode.Flags, flags...)
-	return nil
+	return optional.Some(plugin), nil
 }
 
-func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config) error {
+func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config, plugin languageplugin.LanguagePlugin) error {
 	name, path, err := validateModule(i.Dir, i.Name)
 	if err != nil {
 		return err
@@ -105,10 +123,6 @@ func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconf
 		flags[f.Name] = flagValue
 	}
 
-	plugin, err := languageplugin.New(ctx, i.Language)
-	if err != nil {
-		return err
-	}
 	err = plugin.CreateModule(ctx, config, moduleConfig, flags)
 	if err != nil {
 		return err

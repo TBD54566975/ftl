@@ -8,6 +8,7 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/internal/container"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -75,7 +76,7 @@ func WaitForDBReady(ctx context.Context, port int) (string, error) {
 		return "", fmt.Errorf("db container failed to be healthy: %w", err)
 	}
 
-	dsn := fmt.Sprintf("postgres://postgres:secret@localhost:%d/ftl?sslmode=disable", port)
+	dsn := dsn.DSN("ftl", dsn.Port(port))
 	logger.Debugf("Postgres DSN: %s", dsn)
 	return dsn, nil
 }

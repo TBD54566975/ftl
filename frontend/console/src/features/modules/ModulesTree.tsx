@@ -3,14 +3,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
 import type { MultiselectOpt } from '../../components/Multiselect'
-import type { Decl } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { classNames } from '../../utils'
 import type { ModuleTreeItem } from './module.utils'
 import {
+  type DeclInfo,
   addModuleToLocalStorageIfMissing,
   collapseAllModulesInLocalStorage,
   declIcons,
-  declUrl,
+  declSumTypeIsExported,
+  declUrlFromInfo,
   listExpandedModulesFromLocalStorage,
   toggleModuleExpansionInLocalStorage,
 } from './module.utils'
@@ -22,12 +23,7 @@ const ExportedIcon = () => (
   </span>
 )
 
-type WithExport = { export?: boolean }
-
-const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSelected: boolean }) => {
-  if (!decl.value || !decl.value.case || !decl.value.value) {
-    return []
-  }
+const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; isSelected: boolean }) => {
   const navigate = useNavigate()
   const declRef = useRef<HTMLDivElement>(null)
 
@@ -42,12 +38,12 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
     }
   }, [isSelected])
 
-  const Icon = useMemo(() => declIcons[decl.value.case || ''] || CodeIcon, [decl.value.case])
+  const Icon = useMemo(() => declIcons[decl.declType || ''] || CodeIcon, [decl.declType])
   return (
     <li className='my-1'>
       <div
         ref={declRef}
-        id={`decl-${decl.value.value.name}`}
+        id={`decl-${decl.value.name}`}
         className={classNames(
           isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
           'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer scroll-mt-10',
@@ -58,8 +54,8 @@ const DeclNode = ({ decl, href, isSelected }: { decl: Decl; href: string; isSele
         }}
       >
         <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
-        {decl.value.value.name}
-        {(decl.value.value as WithExport).export === true ? <ExportedIcon /> : []}
+        {decl.value.name}
+        {declSumTypeIsExported(decl.value) ? <ExportedIcon /> : []}
       </div>
     </li>
   )
@@ -87,10 +83,7 @@ const ModuleSection = ({
     }
   }, [moduleName]) // moduleName is the selected module; module.name is the one being rendered
 
-  const filteredDecls = useMemo(
-    () => module.decls.filter((d) => d.value?.case && !!selectedDeclTypes.find((o) => o.key === d.value.case)),
-    [module.decls, selectedDeclTypes],
-  )
+  const filteredDecls = useMemo(() => module.decls.filter((d) => !!selectedDeclTypes.find((o) => o.key === d.declType)), [module.decls, selectedDeclTypes])
 
   return (
     <li key={module.name} id={`module-tree-module-${module.name}`} className='mb-2'>
@@ -121,7 +114,7 @@ const ModuleSection = ({
       {isExpanded && (
         <ul>
           {filteredDecls.map((d, i) => (
-            <DeclNode key={i} decl={d} href={declUrl(module.name, d)} isSelected={isSelected && declName === d.value.value?.name} />
+            <DeclNode key={i} decl={d} href={declUrlFromInfo(module.name, d)} isSelected={isSelected && declName === d.value.name} />
           ))}
         </ul>
       )}

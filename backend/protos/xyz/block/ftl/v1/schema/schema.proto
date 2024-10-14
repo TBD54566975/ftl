@@ -63,7 +63,7 @@ message Decl {
     Secret secret = 7;
     Subscription subscription = 10;
     Topic topic = 9;
-    TypeAlias typeAlias = 5;
+    TypeAlias type_alias = 5;
     Verb verb = 2;
   }
 }
@@ -114,8 +114,8 @@ message Float {
 
 message IngressPathComponent {
   oneof value {
-    IngressPathLiteral ingressPathLiteral = 1;
-    IngressPathParameter ingressPathParameter = 2;
+    IngressPathLiteral ingress_path_literal = 1;
+    IngressPathParameter ingress_path_parameter = 2;
   }
 }
 
@@ -149,14 +149,14 @@ message Metadata {
     MetadataAlias alias = 5;
     MetadataCalls calls = 1;
     MetadataConfig config = 10;
-    MetadataCronJob cronJob = 3;
+    MetadataCronJob cron_job = 3;
     MetadataDatabases databases = 4;
     MetadataEncoding encoding = 9;
     MetadataIngress ingress = 2;
     MetadataRetry retry = 6;
     MetadataSecrets secrets = 11;
     MetadataSubscriber subscriber = 7;
-    MetadataTypeMap typeMap = 8;
+    MetadataTypeMap type_map = 8;
   }
 }
 
@@ -340,9 +340,9 @@ message Unit {
 
 message Value {
   oneof value {
-    IntValue intValue = 2;
-    StringValue stringValue = 1;
-    TypeValue typeValue = 3;
+    IntValue int_value = 2;
+    StringValue string_value = 1;
+    TypeValue type_value = 3;
   }
 }
 
@@ -364,10 +364,10 @@ message VerbRuntime {
 }
 
 enum VerbStatus {
-  VERB_STATUS_ERROR = 0;
-  VERB_STATUS_OFFLINE = 1;
+  VERB_STATUS_OFFLINE = 0;
+  VERB_STATUS_STARTING = 1;
   VERB_STATUS_ONLINE = 2;
-  VERB_STATUS_STARTING = 3;
+  VERB_STATUS_STOPPING = 3;
   VERB_STATUS_STOPPED = 4;
-  VERB_STATUS_STOPPING = 5;
+  VERB_STATUS_ERROR = 5;
 }

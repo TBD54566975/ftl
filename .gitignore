@@ -1,5 +1,6 @@
 .hermit/
 .vscode/*
+.registry/
 !/.vscode/extensions.json
 !/.vscode/settings.json
 !/.vscode/launch.json
@@ -45,3 +46,5 @@ junit*.xml
 .ftl.lock
 docker-build/
 **/.ftl
+charts/**/charts/
+charts/**/output/

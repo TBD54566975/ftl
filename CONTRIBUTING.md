@@ -246,17 +246,24 @@ Run `Debug FTL` from the `Run/Debug Configurations` dropdown while in the FTL pr
 
 Run `Debug FTL` from the `Run and Debug` dropdown while in the FTL project.
 
-## Running with Grafana for Metrics and Tracing
+## Running OTEL LGTM stack locally
 
-Start the Grafana stack with:
+the [OTEL LGTM](https://github.com/grafana/docker-otel-lgtm) stack consists of the following components:
+* otel collector
+* loki (log storage)
+* grafana (visualization)
+* prometheus metrics db (metrics storage)
+* tempo (tracing storage)
+
+grafana provides a docker image that runs all of these components together intended for development, demo, and testing environments. To run the stack locally:
 
 ```sh
-just grafana
+just observe
 ```
 
-This will start Grafana (can be stopped via `just grafana-stop`). You can access Grafana at [http://localhost:3000](http://localhost:3000) with the default credentials `admin:admin`.
+This will start the otel-lgtm stack. You can access Grafana at [http://localhost:3000](http://localhost:3000). ctrl+c to stop the stack.
 
-Once Grafana is running, you can start FTL with otel enabled:
+Once the observability stack is running, you can start FTL with otel enabled:
 
 ```sh
 just otel-dev

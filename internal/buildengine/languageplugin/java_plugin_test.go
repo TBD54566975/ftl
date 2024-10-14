@@ -7,6 +7,7 @@ import (
 
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 )
 
 func TestExtractModuleDepsKotlin(t *testing.T) {
@@ -32,9 +33,9 @@ func TestJavaConfigDefaults(t *testing.T) {
 			language: "kotlin",
 			dir:      "testdata/echokotlin",
 			expected: moduleconfig.CustomDefaults{
-				Build:              "mvn -B package",
+				Build:              optional.Some("mvn -B package"),
 				DeployDir:          "target",
-				GeneratedSchemaDir: "src/main/ftl-module-schema",
+				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
 				Watch:              watch,
 				LanguageConfig: map[string]any{
 					"build-tool": "maven",
@@ -45,9 +46,9 @@ func TestJavaConfigDefaults(t *testing.T) {
 			language: "kotlin",
 			dir:      "testdata/externalkotlin",
 			expected: moduleconfig.CustomDefaults{
-				Build:              "mvn -B package",
+				Build:              optional.Some("mvn -B package"),
 				DeployDir:          "target",
-				GeneratedSchemaDir: "src/main/ftl-module-schema",
+				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
 				Watch:              watch,
 				LanguageConfig: map[string]any{
 					"build-tool": "maven",
@@ -62,7 +63,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			dir, err := filepath.Abs(tt.dir)
 			assert.NoError(t, err)
 
-			plugin, err := New(ctx, "java")
+			plugin, err := New(ctx, nil, "java")
 			assert.NoError(t, err)
 
 			defaults, err := plugin.ModuleConfigDefaults(ctx, dir)

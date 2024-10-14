@@ -19,6 +19,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -82,6 +83,7 @@ type Listener interface {
 // Engine for building a set of modules.
 type Engine struct {
 	client           DeployClient
+	bindAllocator    *bind.BindAllocator
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectRoot      string
 	moduleDirs       []string
@@ -485,7 +487,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				}
 				if meta, ok := e.moduleMetas.Load(event.Config.Module); ok {
 					meta.plugin.Updates().Unsubscribe(meta.events)
-					err := meta.plugin.Kill(ctx)
+					err := meta.plugin.Kill()
 					if err != nil {
 						didError = true
 						e.reportBuildFailed(err)
@@ -631,7 +633,6 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 type buildCallback func(ctx context.Context, module Module) error
 
 func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, moduleNames ...string) error {
-
 	if len(moduleNames) == 0 {
 		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
 			moduleNames = append(moduleNames, name)
@@ -811,9 +812,14 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		e.listener.OnBuildStarted(meta.module)
 	}
 
-	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, sch, meta.module.Config, e.buildEnv, e.devMode)
+	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, languageplugin.BuildContext{
+		Config:       meta.module.Config,
+		Schema:       sch,
+		Dependencies: meta.module.Dependencies,
+	}, e.buildEnv, e.devMode)
 	if err != nil {
 		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
+		// TODO: handle errInvalidateDependencies
 		return err
 	}
 	// update files to deploy
@@ -863,7 +869,7 @@ func (e *Engine) gatherSchemas(
 }
 
 func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.UnvalidatedModuleConfig) (moduleMeta, error) {
-	plugin, err := languageplugin.New(ctx, config.Language)
+	plugin, err := languageplugin.New(ctx, e.bindAllocator, config.Language)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}

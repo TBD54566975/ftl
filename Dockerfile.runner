@@ -6,11 +6,7 @@ RUN apt-get install -y curl git zip
 COPY ./bin /src/bin
 ENV PATH="/src/bin:$PATH"
 ENV HERMIT_STATE_DIR=/hermit
-RUN hermit uninstall jbr
-RUN hermit install openjre-18.0.2.1_1
-# openjre and jbr conflict, but we want the JRE in the cache
-RUN hermit uninstall openjre
-RUN hermit install jbr
+RUN hermit install openjdk-17.0.8_7
 RUN go version
 RUN mvn -B --version
 
@@ -36,8 +32,9 @@ RUN apt-get install -y ca-certificates
 
 WORKDIR /root/
 
-ENV PATH="/root/jre/bin:$PATH"
-COPY --from=builder /hermit/pkg/openjre-18.0.2.1_1/ ./jre/
+ENV PATH="/root/jdk/bin:$PATH"
+ENV JAVA_HOME="/root/jdk"
+COPY --from=builder /hermit/pkg/openjdk-17.0.8_7/ /root/jdk/
 COPY --from=builder /src/build/release/ftl-runner .
 COPY --from=builder /src/build/release/ftl .
 RUN mkdir deployments

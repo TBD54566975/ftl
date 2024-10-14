@@ -17,10 +17,12 @@ import (
 	kongcompletion "github.com/jotaen/kong-completion"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -54,6 +56,7 @@ type InteractiveCLI struct {
 	Secret   secretCmd   `cmd:"" help:"Manage secrets."`
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
 	Pubsub   pubsubCmd   `cmd:"" help:"Manage pub/sub."`
+	Release  releaseCmd  `cmd:"" help:"Manage releases."`
 }
 
 type CLI struct {
@@ -81,10 +84,20 @@ var cli CLI
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	csm := &currentStatusManager{}
+
 	app := createKongApplication(&cli, csm)
-	app.FatalIfErrorf(prepareNewCmd(ctx, app, os.Args[1:]))
+
+	// Dynamically update the kong app with language specific flags for the "ftl new" command.
+	languagePlugin, err := prepareNewCmd(log.ContextWithNewDefaultLogger(ctx), app, os.Args[1:])
+	app.FatalIfErrorf(err)
+
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
+
+	if plugin, ok := languagePlugin.Get(); ok {
+		// Plugins take time to launch, so we bind the "ftl new" plugin to the kong context.
+		kctx.BindTo(plugin, (*languageplugin.LanguagePlugin)(nil))
+	}
 
 	if !cli.Plain {
 		sm := terminal.NewStatusManager(ctx)
@@ -160,6 +173,8 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 			"arch":    runtime.GOARCH,
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 			"gitroot": gitRoot,
+			"dsn":     dsn.DSN("ftl"),
+			"boxdsn":  dsn.DSN("ftl", dsn.Port(5432)),
 		},
 		kong.Exit(func(code int) {
 			if sm, ok := csm.statusManager.Get(); ok {

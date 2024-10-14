@@ -28,6 +28,7 @@ import (
 
 	"github.com/TBD54566975/scaffolder"
 
+	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	ftlexec "github.com/TBD54566975/ftl/internal/exec"
@@ -463,7 +464,7 @@ func Fail(next Action, msg string, args ...any) Action {
 // fetched and returns a row's column values
 func GetRow(t testing.TB, ic TestContext, database, query string, fieldCount int) []any {
 	Infof("Querying %s: %s", database, query)
-	db, err := sql.Open("pgx", fmt.Sprintf("postgres://postgres:secret@localhost:15432/%s?sslmode=disable", database))
+	db, err := sql.Open("pgx", dsn.DSN(database))
 	assert.NoError(t, err)
 	defer db.Close()
 	actual := make([]any, fieldCount)
@@ -512,7 +513,7 @@ func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
 		dbName += "_test"
 	}
 	Infof("Creating database %s", dbName)
-	db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable")
+	db, err := sql.Open("pgx", dsn.DSN("ftl"))
 	assert.NoError(t, err, "failed to open database connection")
 	t.Cleanup(func() {
 		err := db.Close()
@@ -543,7 +544,7 @@ func DropDBAction(t testing.TB, dbName string) Action {
 
 func DropDB(t testing.TB, dbName string) {
 	Infof("Dropping database %s", dbName)
-	db, err := sql.Open("pgx", "postgres://postgres:secret@localhost:15432/postgres?sslmode=disable")
+	db, err := sql.Open("pgx", dsn.DSN("postgres"))
 	assert.NoError(t, err, "failed to open database connection")
 
 	terminateDanglingConnections(t, db, dbName)

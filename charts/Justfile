@@ -1,0 +1,13 @@
+_help:
+  @just -l
+
+dep-update:
+    helm dep update ftl
+
+set-version version:
+    @echo "Setting version to {{version}}"
+    yq -i  '.version="{{version}}",.appVersion="{{version}}"' ftl/Chart.yaml
+
+package:
+    helm lint ftl
+    helm package -u ftl -d output

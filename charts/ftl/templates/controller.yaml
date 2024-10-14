@@ -1,0 +1,86 @@
+{{ $version := printf "v%s" .Chart.Version -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ftl.fullname" . }}-controller
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.controller.replicas }}
+  revisionHistoryLimit: {{ .Values.controller.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ftl-controller.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ftl-controller.selectorLabels" . | nindent 8 }}
+      {{- if .Values.controller.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.controller.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.controller.serviceAccountName }}
+      containers:
+        - name: app
+          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default $version }}"
+          {{- if .Values.controller.envFrom }}
+          envFrom:
+            {{- if .Values.controller.envFrom }}
+            {{- toYaml .Values.controller.envFrom | nindent 12 }}
+            {{- end }}
+          {{- else if or .Values.secrets.logEncryptionKey .Values.secrets.asyncEncryptionKey }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ftl.fullname" . }}-secrets
+          {{- end }}
+          env:
+            {{- if .Values.controller.env }}
+            {{- toYaml .Values.controller.env | nindent 12 }}
+            {{- end }}
+            {{- if not .Values.postgresql.enabled }}
+            - name: FTL_CONTROLLER_DSN
+              value: "{{ .Values.controller.dbConnectionString }}"
+            {{- else }}
+            - name: FTL_CONTROLLER_DSN
+              value: "postgres://{{ .Release.Name }}-postgresql:5432/{{ .Values.postgresql.global.postgresql.auth.database }}?sslmode=disable&user={{ .Values.postgresql.global.postgresql.auth.username }}&password={{ .Values.postgresql.global.postgresql.auth.password }}"
+            {{- end }}
+            {{- if .Values.controller.kmsUri }}
+            - name: FTL_KMS_URI
+              value: "{{ .Values.controller.kmsUri }}"
+            {{- end }}
+          ports:
+            {{- range .Values.controller.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.controller.readinessProbe }}
+            {{- toYaml .Values.controller.readinessProbe | nindent 12 }}
+            {{- else }}
+            httpGet:
+              path: /healthz
+              port: 8892
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15
+            {{- end }}
+      {{- if .Values.controller.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.controller.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.controller.affinity }}
+      affinity:
+        {{- toYaml .Values.controller.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.controller.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.controller.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.controller.tolerations }}
+      tolerations:
+        {{- toYaml .Values.controller.tolerations | nindent 8 }}
+      {{- end }}

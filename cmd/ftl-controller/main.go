@@ -13,6 +13,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	"github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/k8sscaling"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
@@ -42,7 +43,11 @@ func main() {
 	kctx := kong.Parse(&cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
 		kong.UsageOnError(),
-		kong.Vars{"version": ftl.Version, "timestamp": time.Unix(t, 0).Format(time.RFC3339)},
+		kong.Vars{
+			"version":   ftl.Version,
+			"timestamp": time.Unix(t, 0).Format(time.RFC3339),
+			"dsn":       dsn.DSN("ftl"),
+		},
 	)
 	cli.ControllerConfig.SetDefaults()
 
