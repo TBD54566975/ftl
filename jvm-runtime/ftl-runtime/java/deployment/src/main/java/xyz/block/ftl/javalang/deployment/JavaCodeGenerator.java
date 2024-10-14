@@ -115,7 +115,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     .addAnnotation(AnnotationSpec.builder(xyz.block.ftl.Enum.class).build())
                     .addModifiers(Modifier.PUBLIC);
 
-            TypeName enumType = toAnnotatedJavaTypeName(data.getType(), typeAliasMap, nativeTypeAliasMap);
+            TypeName enumType = toAnnotatedJavaTypeName(data.getType(), typeAliasMap, nativeTypeAliasMap, false);
             dataBuilder.addField(enumType, "value", Modifier.PRIVATE, Modifier.FINAL);
             dataBuilder.addMethod(MethodSpec.constructorBuilder()
                     .addParameter(enumType, "value")
@@ -149,7 +149,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
 
             Map<String, TypeName> variantValuesTypes = data.getVariantsList().stream().collect(
                     Collectors.toMap(EnumVariant::getName, v -> toAnnotatedJavaTypeName(v.getValue().getTypeValue().getValue(),
-                            typeAliasMap, nativeTypeAliasMap)));
+                            typeAliasMap, nativeTypeAliasMap, false)));
             for (var variant : data.getVariantsList()) {
                 // Interface has isX and getX methods for each variant
                 String name = variant.getName();
@@ -217,7 +217,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                 Map<String, TypeName> variantValuesTypes = enumVariantInfo.otherVariants().stream().collect(
                         Collectors.toMap(EnumVariant::getName,
                                 v -> toAnnotatedJavaTypeName(v.getValue().getTypeValue().getValue(),
-                                        typeAliasMap, nativeTypeAliasMap)));
+                                        typeAliasMap, nativeTypeAliasMap, false)));
                 addTypeEnumInterfaceMethods(packageName, enumVariantInfo.interfaceType(), dataBuilder, name,
                         variantTypeName, variantValuesTypes, true);
             }
@@ -231,7 +231,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         Map<String, Runnable> sortedFields = new TreeMap<>();
 
         for (var i : data.getFieldsList()) {
-            TypeName dataType = toAnnotatedJavaTypeName(i.getType(), typeAliasMap, nativeTypeAliasMap);
+            TypeName dataType = toAnnotatedJavaTypeName(i.getType(), typeAliasMap, nativeTypeAliasMap, false);
             String name = i.getName();
             var fieldName = toJavaName(name);
             dataBuilder.addField(dataType, fieldName, Modifier.PRIVATE);
@@ -290,21 +290,21 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class),
                     toJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
-                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
+                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true))
                     .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build());
         } else if (verb.getResponse().hasUnit()) {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class),
                     toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call").returns(TypeName.VOID)
-                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
+                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true), "value")
                     .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build());
         } else {
             typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class),
                     toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true),
                     toJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
-                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
-                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
+                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true))
+                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true), "value")
                     .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build());
         }
 
@@ -325,8 +325,8 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     }
 
     private TypeName toAnnotatedJavaTypeName(Type type, Map<DeclRef, Type> typeAliasMap,
-            Map<DeclRef, String> nativeTypeAliasMap) {
-        var results = toJavaTypeName(type, typeAliasMap, nativeTypeAliasMap, false);
+            Map<DeclRef, String> nativeTypeAliasMap, boolean boxPrimitives) {
+        var results = toJavaTypeName(type, typeAliasMap, nativeTypeAliasMap, boxPrimitives);
         if (type.hasRef() || type.hasArray() || type.hasBytes() || type.hasString() || type.hasMap() || type.hasTime()) {
             return results.annotated(AnnotationSpec.builder(NotNull.class).build());
         }

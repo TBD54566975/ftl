@@ -280,3 +280,13 @@ func TypeEnumVerb(ctx context.Context, val AnimalWrapper) (AnimalWrapper, error)
 //func MixedEnumVerb(ctx context.Context, val Mixed) (Mixed, error) {
 //	return val, nil
 //}
+
+//ftl:verb export
+func PrimitiveResponseVerb(ctx context.Context, val string) (int, error) {
+	return 1, nil
+}
+
+//ftl:verb export
+func PrimitiveParamVerb(ctx context.Context, val int) (string, error) {
+	return "", nil
+}
