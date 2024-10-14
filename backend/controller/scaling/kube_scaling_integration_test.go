@@ -27,7 +27,7 @@ func TestKubeScaling(t *testing.T) {
 	routineStopped.Add(1)
 	echoDeployment := map[string]string{}
 	in.Run(t,
-		in.WithKubernetes(true),
+		in.WithKubernetes(),
 		in.CopyModule("echo"),
 		in.Deploy("echo"),
 		in.CopyModule("naughty"),

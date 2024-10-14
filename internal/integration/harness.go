@@ -1,4 +1,4 @@
-//go:build integration || infrastructure || smoketest
+//go:build integration || infrastructure
 
 package integration
 
@@ -81,7 +81,6 @@ func WithLanguages(languages ...string) Option {
 func WithKubernetes() Option {
 	return func(o *options) {
 		o.kube = true
-		o.kubeFullDeploy = kubeFullDeploy
 		o.startController = false
 	}
 }
@@ -166,7 +165,6 @@ type options struct {
 	envars            map[string]string
 	kube              bool
 	localstack        bool
-	kubeFullDeploy    bool
 }
 
 // Run an integration test.

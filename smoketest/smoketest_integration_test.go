@@ -17,10 +17,8 @@ import (
 )
 
 func TestJecho(t *testing.T) {
-	skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
-	fmt.Println("skipKubeFullDeploy:", skipKubeFullDeploy)
 	in.Run(t,
-		in.WithKubernetes(!skipKubeFullDeploy),
+		in.WithKubernetes(),
 		in.WithJavaBuild(),
 		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),
@@ -45,9 +43,6 @@ func DisabledTestExemplar(t *testing.T) {
 	var failedAgentId int = 99
 	nonce := randomString(4)
 
-	skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
-	fmt.Println("skipKubeFullDeploy:", skipKubeFullDeploy)
-
 	configProvider := "--inline"
 	if os.Getenv("USE_DB_CONFIG") == "true" {
 		configProvider = "--db"
@@ -55,7 +50,7 @@ func DisabledTestExemplar(t *testing.T) {
 	fmt.Println("configProvider:", configProvider)
 
 	in.Run(t,
-		in.WithKubernetes(!skipKubeFullDeploy),
+		in.WithKubernetes(),
 		in.WithJavaBuild(),
 		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),
