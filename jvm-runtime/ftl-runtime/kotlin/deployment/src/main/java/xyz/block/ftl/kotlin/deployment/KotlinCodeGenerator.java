@@ -25,7 +25,7 @@ import xyz.block.ftl.GeneratedRef;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
-import xyz.block.ftl.VerbClientDefinition;
+import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.deployment.JVMCodeGenerator;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Enum;
@@ -150,11 +150,12 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
             throws IOException {
         String thisType = className(verb.getName()) + CLIENT;
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(thisType)
-                .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
+                .addAnnotation(AnnotationSpec.builder(VerbClient.class)
                         .addMember("name=\"" + verb.getName() + "\"")
                         .addMember("module=\"" + module.getName() + "\"")
                         .build())
-                .addModifiers(KModifier.PUBLIC);
+                .addModifiers(KModifier.PUBLIC)
+                .addKdoc("A client for the %s.%s verb", module.getName(), verb.getName());
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
             typeBuilder.addFunction(FunSpec.builder("call")
                     .addModifiers(KModifier.ABSTRACT, KModifier.PUBLIC).build());

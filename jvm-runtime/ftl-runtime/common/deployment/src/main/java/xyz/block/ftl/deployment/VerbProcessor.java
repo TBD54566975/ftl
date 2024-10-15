@@ -28,7 +28,7 @@ import io.quarkus.deployment.builditem.LaunchModeBuildItem;
 import io.quarkus.gizmo.ClassCreator;
 import io.quarkus.gizmo.ClassOutput;
 import io.quarkus.gizmo.MethodDescriptor;
-import xyz.block.ftl.VerbClientDefinition;
+import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.runtime.VerbClientHelper;
 import xyz.block.ftl.v1.schema.Metadata;
 import xyz.block.ftl.v1.schema.MetadataCronJob;
@@ -43,14 +43,14 @@ public class VerbProcessor {
             BuildProducer<GeneratedBeanBuildItem> generatedBeanBuildItemBuildProducer,
             ModuleNameBuildItem moduleNameBuildItem,
             LaunchModeBuildItem launchModeBuildItem) {
-        var clientDefinitions = index.getComputingIndex().getAnnotations(VerbClientDefinition.class);
+        var clientDefinitions = index.getComputingIndex().getAnnotations(VerbClient.class);
         log.infof("Processing %d verb clients", clientDefinitions.size());
         Map<DotName, VerbClientBuildItem.DiscoveredClients> clients = new HashMap<>();
         for (var clientDefinition : clientDefinitions) {
             var iface = clientDefinition.target().asClass();
             if (!iface.isInterface()) {
                 throw new RuntimeException(
-                        "@VerbClientDefinition can only be applied to interfaces and " + iface.name() + " is not an interface");
+                        "@VerbClient can only be applied to interfaces and " + iface.name() + " is not an interface");
             }
             String name = clientDefinition.value("name").asString();
             AnnotationValue moduleValue = clientDefinition.value("module");
@@ -171,8 +171,7 @@ public class VerbProcessor {
                 return call;
             }
         }
-        throw new RuntimeException(
-                "@VerbClientDefinition can only be applied to interfaces that contain a valid call method");
+        throw new RuntimeException("@VerbClient can only be applied to interfaces that contain a valid call method");
     }
 
     private static VerbType getVerbType(MethodInfo call) {
