@@ -218,6 +218,20 @@ func (q *Queries) CreateRequest(ctx context.Context, origin Origin, key model.Re
 	return err
 }
 
+const deleteCronAsyncCallsForDeployment = `-- name: DeleteCronAsyncCallsForDeployment :exec
+DELETE FROM async_calls
+WHERE id IN (
+  SELECT last_async_call_id
+  FROM cron_jobs
+  WHERE deployment_id = (SELECT id FROM deployments WHERE key = $1::deployment_key LIMIT 1)
+)
+`
+
+func (q *Queries) DeleteCronAsyncCallsForDeployment(ctx context.Context, deploymentKey model.DeploymentKey) error {
+	_, err := q.db.ExecContext(ctx, deleteCronAsyncCallsForDeployment, deploymentKey)
+	return err
+}
+
 const deleteCronJobsForDeployment = `-- name: DeleteCronJobsForDeployment :exec
 DELETE FROM cron_jobs
 WHERE deployment_id = (SELECT id FROM deployments WHERE key = $1::deployment_key LIMIT 1)
