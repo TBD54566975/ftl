@@ -117,14 +117,14 @@ export class PostgresResource extends Message<PostgresResource> {
  */
 export class PostgresResource_PostgresResourceOutput extends Message<PostgresResource_PostgresResourceOutput> {
   /**
-   * @generated from field: string read_endpoint = 1;
+   * @generated from field: string read_dsn = 1;
    */
-  readEndpoint = "";
+  readDsn = "";
 
   /**
-   * @generated from field: string write_endpoint = 2;
+   * @generated from field: string write_dsn = 2;
    */
-  writeEndpoint = "";
+  writeDsn = "";
 
   constructor(data?: PartialMessage<PostgresResource_PostgresResourceOutput>) {
     super();
@@ -134,8 +134,8 @@ export class PostgresResource_PostgresResourceOutput extends Message<PostgresRes
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.PostgresResource.PostgresResourceOutput";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "read_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "write_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "read_dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "write_dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PostgresResource_PostgresResourceOutput {
@@ -197,14 +197,14 @@ export class MysqlResource extends Message<MysqlResource> {
  */
 export class MysqlResource_MysqlResourceOutput extends Message<MysqlResource_MysqlResourceOutput> {
   /**
-   * @generated from field: string read_endpoint = 1;
+   * @generated from field: string read_dsn = 1;
    */
-  readEndpoint = "";
+  readDsn = "";
 
   /**
-   * @generated from field: string write_endpoint = 2;
+   * @generated from field: string write_dsn = 2;
    */
-  writeEndpoint = "";
+  writeDsn = "";
 
   constructor(data?: PartialMessage<MysqlResource_MysqlResourceOutput>) {
     super();
@@ -214,8 +214,8 @@ export class MysqlResource_MysqlResourceOutput extends Message<MysqlResource_Mys
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.MysqlResource.MysqlResourceOutput";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "read_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "write_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "read_dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "write_dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MysqlResource_MysqlResourceOutput {

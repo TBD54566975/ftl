@@ -27,16 +27,16 @@ message Resource {
 
 message PostgresResource {
   message PostgresResourceOutput {
-    string read_endpoint = 1;
-    string write_endpoint = 2;
+    string read_dsn = 1;
+    string write_dsn = 2;
   }
   PostgresResourceOutput output = 1;
 }
 
 message MysqlResource {
   message MysqlResourceOutput {
-    string read_endpoint = 1;
-    string write_endpoint = 2;
+    string read_dsn = 1;
+    string write_dsn = 2;
   }
   MysqlResourceOutput output = 1;
 }

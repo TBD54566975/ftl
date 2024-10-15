@@ -208,6 +208,7 @@ func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, can
 		secretsRegistry := providers.NewRegistry[configuration.Secrets]()
 		secretsRegistry.Register(providers.NewEnvarFactory[configuration.Secrets]())
 		secretsRegistry.Register(providers.NewInlineFactory[configuration.Secrets]())
+
 		kongcompletion.Register(kctx.Kong, kongcompletion.WithPredictors(terminal.Predictors(ctx, controllerServiceClient)))
 		kctx.Bind(secretsRegistry)
 

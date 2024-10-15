@@ -13,7 +13,8 @@ const PostgresDatabaseType = "postgres"
 
 //protobuf:3
 type Database struct {
-	Pos Position `parser:"" protobuf:"1,optional"`
+	Pos     Position         `parser:"" protobuf:"1,optional"`
+	Runtime *DatabaseRuntime `parser:"" protobuf:"31634,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
 	Type     string   `parser:"'database' @'postgres'" protobuf:"4"`
@@ -27,6 +28,7 @@ func (d *Database) Position() Position     { return d.Pos }
 func (*Database) schemaDecl()              {}
 func (*Database) schemaSymbol()            {}
 func (d *Database) schemaChildren() []Node { return nil }
+func (d *Database) Redact()                { d.Runtime = nil }
 func (d *Database) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, EncodeComments(d.Comments))
@@ -40,6 +42,7 @@ func (d *Database) ToProto() proto.Message {
 		Comments: d.Comments,
 		Name:     d.Name,
 		Type:     d.Type,
+		Runtime:  d.Runtime.ToProto(),
 	}
 }
 
@@ -52,5 +55,24 @@ func DatabaseFromProto(s *schemapb.Database) *Database {
 		Comments: s.Comments,
 		Name:     s.Name,
 		Type:     s.Type,
+		Runtime:  DatabaseRuntimeFromProto(s.Runtime),
 	}
+}
+
+type DatabaseRuntime struct {
+	DSN string `parser:"" protobuf:"1"`
+}
+
+func (d *DatabaseRuntime) ToProto() *schemapb.DatabaseRuntime {
+	if d == nil {
+		return nil
+	}
+	return &schemapb.DatabaseRuntime{Dsn: d.DSN}
+}
+
+func DatabaseRuntimeFromProto(s *schemapb.DatabaseRuntime) *DatabaseRuntime {
+	if s == nil {
+		return nil
+	}
+	return &DatabaseRuntime{DSN: s.Dsn}
 }
