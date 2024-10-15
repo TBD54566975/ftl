@@ -1,7 +1,7 @@
 import { JSONSchemaFaker } from 'json-schema-faker'
 import type { JsonValue } from 'type-fest/source/basic'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { MetadataCalls, MetadataCronJob, MetadataIngress, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { MetadataCalls, MetadataCronJob, MetadataIngress, MetadataSubscriber, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 
 const basePath = 'http://localhost:8891/'
 
@@ -107,9 +107,21 @@ export const cron = (verb?: Verb) => {
 
 export const requestType = (verb?: Verb) => {
   const ingress = (verb?.verb?.metadata?.find((meta) => meta.value.case === 'ingress')?.value?.value as MetadataIngress) || null
-  const cron = (verb?.verb?.metadata?.find((meta) => meta.value.case === 'cronJob')?.value?.value as MetadataCronJob) || null
+  if (ingress) {
+    return ingress.method
+  }
 
-  return ingress?.method ?? cron?.cron?.toUpperCase() ?? 'CALL'
+  const cron = (verb?.verb?.metadata?.find((meta) => meta.value.case === 'cronJob')?.value?.value as MetadataCronJob) || null
+  if (cron) {
+    return 'CRON'
+  }
+
+  const subscriber = (verb?.verb?.metadata?.find((meta) => meta.value.case === 'subscriber')?.value?.value as MetadataSubscriber) || null
+  if (subscriber) {
+    return 'SUB'
+  }
+
+  return 'CALL'
 }
 
 export const httpRequestPath = (verb?: Verb) => {
@@ -134,10 +146,6 @@ export const fullRequestPath = (module?: Module, verb?: Verb) => {
   const ingress = (verb?.verb?.metadata?.find((meta) => meta.value.case === 'ingress')?.value?.value as MetadataIngress) || null
   if (ingress) {
     return basePath + httpRequestPath(verb)
-  }
-  const cron = (verb?.verb?.metadata?.find((meta) => meta.value.case === 'cronJob')?.value?.value as MetadataCronJob) || null
-  if (cron) {
-    return cron.cron
   }
 
   return [module?.name, verb?.verb?.name]
