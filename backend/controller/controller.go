@@ -1212,12 +1212,11 @@ func dsnSecretKey(module string, db string) string {
 
 func stripNonAlphanumeric(s string) string {
 	var result strings.Builder
-	for i := range len(s) {
-		b := s[i]
-		if ('a' <= b && b <= 'z') ||
-			('A' <= b && b <= 'Z') ||
-			('0' <= b && b <= '9') {
-			result.WriteByte(b)
+	for _, r := range s {
+		if ('a' <= r && r <= 'z') ||
+			('A' <= r && r <= 'Z') ||
+			('0' <= r && r <= '9') {
+			result.WriteRune(r)
 		}
 	}
 	return result.String()
