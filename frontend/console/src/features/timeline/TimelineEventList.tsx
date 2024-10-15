@@ -18,17 +18,13 @@ interface EventTimelineProps {
 const deploymentKey = (event: Event) => {
   switch (event.entry?.case) {
     case 'call':
-      return event.entry.value.deploymentKey
     case 'log':
-      return event.entry.value.deploymentKey
-    case 'deploymentCreated':
-      return event.entry.value.key
-    case 'deploymentUpdated':
-      return event.entry.value.key
     case 'ingress':
-      return event.entry.value.deploymentKey
     case 'cronScheduled':
       return event.entry.value.deploymentKey
+    case 'deploymentCreated':
+    case 'deploymentUpdated':
+      return event.entry.value.key
     default:
       return ''
   }

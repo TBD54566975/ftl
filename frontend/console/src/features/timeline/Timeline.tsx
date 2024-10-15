@@ -9,6 +9,7 @@ import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineCronScheduledDetails } from './details/TimelineCronScheduledDetails.tsx'
 import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCreatedDetails.tsx'
 import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUpdatedDetails.tsx'
+import { TimelineDetailsHeader } from './details/TimelineDetailsHeader.tsx'
 import { TimelineIngressDetails } from './details/TimelineIngressDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
 import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
@@ -48,22 +49,22 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
 
     switch (entry.entry?.case) {
       case 'call':
-        openPanel(<TimelineCallDetails event={entry} />, handlePanelClosed)
+        openPanel(<TimelineCallDetails event={entry} />, <TimelineDetailsHeader event={entry} />, handlePanelClosed)
         break
       case 'log':
-        openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />, handlePanelClosed)
+        openPanel(<TimelineLogDetails event={entry} log={entry.entry.value} />, <TimelineDetailsHeader event={entry} />, handlePanelClosed)
         break
       case 'deploymentCreated':
-        openPanel(<TimelineDeploymentCreatedDetails event={entry} deployment={entry.entry.value} />, handlePanelClosed)
+        openPanel(<TimelineDeploymentCreatedDetails event={entry} deployment={entry.entry.value} />, <TimelineDetailsHeader event={entry} />, handlePanelClosed)
         break
       case 'deploymentUpdated':
-        openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />, handlePanelClosed)
+        openPanel(<TimelineDeploymentUpdatedDetails event={entry} deployment={entry.entry.value} />, <TimelineDetailsHeader event={entry} />, handlePanelClosed)
         break
       case 'ingress':
-        openPanel(<TimelineIngressDetails event={entry} />, handlePanelClosed)
+        openPanel(<TimelineIngressDetails event={entry} />, <TimelineDetailsHeader event={entry} />, handlePanelClosed)
         break
       case 'cronScheduled':
-        openPanel(<TimelineCronScheduledDetails event={entry} />, handlePanelClosed)
+        openPanel(<TimelineCronScheduledDetails event={entry} />, <TimelineDetailsHeader event={entry} />, handlePanelClosed)
         break
       default:
         break
