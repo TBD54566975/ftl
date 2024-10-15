@@ -3,7 +3,6 @@ package schema
 import "github.com/TBD54566975/ftl/internal/reflect"
 
 type Redactable interface {
-	Node
 	Redact()
 }
 
