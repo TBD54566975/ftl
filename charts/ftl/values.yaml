@@ -136,7 +136,7 @@ runner:
   tolerations: null
 
 harbor:
-  enabled: true
+  enabled: false
   expose:
     tls:
       enabled: false

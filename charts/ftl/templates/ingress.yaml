@@ -17,8 +17,15 @@ spec:
               name: ftl-controller
               port:
                 number: 8892
+        - path: /ingress/
+          pathType: Prefix
+          backend:
+            service:
+              name: ftl-controller-ingress
+              port:
+                number: 8891
   {{- range $host := .Values.ingress.hosts }}
-  - host: {{ $host.host }}
+  - host: "{{ $host.host }}"
     http:
       paths:
       {{- range $host.paths }}
@@ -26,7 +33,7 @@ spec:
         pathType: {{ .pathType }}
         backend:
           service:
-            name: {{ $fullName }}-controller
+            name: {{ $host.service.name }}
             port:
               number: {{ $host.service.port }}
       {{- end }}
