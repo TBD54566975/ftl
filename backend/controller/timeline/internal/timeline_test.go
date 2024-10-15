@@ -1,4 +1,4 @@
-package timeline
+package internal
 
 import (
 	"bytes"
@@ -8,13 +8,16 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
+	timeline2 "github.com/TBD54566975/ftl/backend/controller/timeline"
 
 	controllerdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
@@ -35,11 +38,14 @@ func TestTimeline(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	timeline := New(ctx, conn, encryption)
+	timeline := timeline2.New(ctx, conn, encryption)
 	registry := artefacts.New(conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
+
+	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
+	cjs := cronjobs.New(ctx, key, "test.com", encryption, timeline, conn)
+	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, cjs)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 
@@ -62,7 +68,7 @@ func TestTimeline(t *testing.T) {
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
-		}}, nil, nil)
+		}}, nil)
 		assert.NoError(t, err)
 	})
 
@@ -77,7 +83,7 @@ func TestTimeline(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	callEvent := &CallEvent{
+	callEvent := &timeline2.CallEvent{
 		Time:          time.Now().Round(time.Millisecond),
 		DeploymentKey: deploymentKey,
 		RequestKey:    optional.Some(requestKey),
@@ -87,13 +93,13 @@ func TestTimeline(t *testing.T) {
 	}
 
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		call := callEventToCall(callEvent)
+		call := timeline2.CallEventToCallForTesting(callEvent)
 		timeline.EnqueueEvent(ctx, call)
 		time.Sleep(200 * time.Millisecond)
 	})
 
-	logEvent := &LogEvent{
-		Log: Log{
+	logEvent := &timeline2.LogEvent{
+		Log: timeline2.Log{
 			Time:          time.Now().Round(time.Millisecond),
 			DeploymentKey: deploymentKey,
 			RequestKey:    optional.Some(requestKey),
@@ -107,7 +113,7 @@ func TestTimeline(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	})
 
-	ingressEvent := &IngressEvent{
+	ingressEvent := &timeline2.IngressEvent{
 		DeploymentKey:  deploymentKey,
 		RequestKey:     optional.Some(requestKey),
 		Verb:           schema.Ref{Module: "echo", Name: "echo"},
@@ -122,7 +128,7 @@ func TestTimeline(t *testing.T) {
 	}
 
 	t.Run("InsertHTTPIngressEvent", func(t *testing.T) {
-		timeline.EnqueueEvent(ctx, &Ingress{
+		timeline.EnqueueEvent(ctx, &timeline2.Ingress{
 			DeploymentKey: ingressEvent.DeploymentKey,
 			RequestKey:    ingressEvent.RequestKey.MustGet(),
 			StartTime:     ingressEvent.Time,
@@ -142,8 +148,8 @@ func TestTimeline(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	})
 
-	cronEvent := &CronScheduledEvent{
-		CronScheduled: CronScheduled{
+	cronEvent := &timeline2.CronScheduledEvent{
+		CronScheduled: timeline2.CronScheduled{
 			DeploymentKey: deploymentKey,
 			Verb:          schema.Ref{Module: "time", Name: "time"},
 			Time:          time.Now().Round(time.Millisecond),
@@ -154,7 +160,7 @@ func TestTimeline(t *testing.T) {
 	}
 
 	t.Run("InsertCronScheduledEvent", func(t *testing.T) {
-		timeline.EnqueueEvent(ctx, &CronScheduled{
+		timeline.EnqueueEvent(ctx, &timeline2.CronScheduled{
 			DeploymentKey: cronEvent.DeploymentKey,
 			Verb:          cronEvent.Verb,
 			Time:          cronEvent.Time,
@@ -165,7 +171,7 @@ func TestTimeline(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	})
 
-	expectedDeploymentUpdatedEvent := &DeploymentUpdatedEvent{
+	expectedDeploymentUpdatedEvent := &timeline2.DeploymentUpdatedEvent{
 		DeploymentKey: deploymentKey,
 		MinReplicas:   1,
 	}
@@ -180,48 +186,48 @@ func TestTimeline(t *testing.T) {
 		t.Run("NoFilters", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000)
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
-			events, err := timeline.QueryTimeline(ctx, 1000, FilterDeployments(deploymentKey))
+			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterDeployments(deploymentKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
-			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeCall), FilterCall(optional.None[string](), "time", optional.None[string]()))
+			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterTypes(timeline2.EventTypeCall), timeline2.FilterCall(optional.None[string](), "time", optional.None[string]()))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{callEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{callEvent}, events)
 		})
 
 		t.Run("ByModule", func(t *testing.T) {
-			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeIngress), FilterModule("echo", optional.None[string]()))
+			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterTypes(timeline2.EventTypeIngress), timeline2.FilterModule("echo", optional.None[string]()))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{ingressEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{ingressEvent}, events)
 		})
 
 		t.Run("ByModuleWithVerb", func(t *testing.T) {
-			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeIngress), FilterModule("echo", optional.Some("echo")))
+			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterTypes(timeline2.EventTypeIngress), timeline2.FilterModule("echo", optional.Some("echo")))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{ingressEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{ingressEvent}, events)
 		})
 
 		t.Run("ByLogLevel", func(t *testing.T) {
-			events, err := timeline.QueryTimeline(ctx, 1000, FilterTypes(EventTypeLog), FilterLogLevel(log.Trace))
+			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterTypes(timeline2.EventTypeLog), timeline2.FilterLogLevel(log.Trace))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{logEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{logEvent}, events)
 		})
 
 		t.Run("ByRequests", func(t *testing.T) {
-			events, err := timeline.QueryTimeline(ctx, 1000, FilterRequests(requestKey))
+			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterRequests(requestKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []Event{callEvent, logEvent, ingressEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{callEvent, logEvent, ingressEvent}, events)
 		})
 	})
 }
 
-func normaliseEvents(events []Event) []Event {
+func normaliseEvents(events []timeline2.Event) []timeline2.Event {
 	for i := range events {
 		event := events[i]
 		re := reflect.Indirect(reflect.ValueOf(event))
@@ -235,7 +241,7 @@ func normaliseEvents(events []Event) []Event {
 	return events
 }
 
-func assertEventsEqual(t *testing.T, expected, actual []Event) {
+func assertEventsEqual(t *testing.T, expected, actual []timeline2.Event) {
 	t.Helper()
 	assert.Equal(t, normaliseEvents(expected), normaliseEvents(actual), assert.Exclude[time.Duration](), assert.Exclude[time.Time]())
 }
@@ -246,11 +252,11 @@ func TestDeleteOldEvents(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	timeline := New(ctx, conn, encryption)
+	timeline := timeline2.New(ctx, conn, encryption)
 	registry := artefacts.New(conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
+	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, nil)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSha sha256.SHA256
@@ -267,13 +273,13 @@ func TestDeleteOldEvents(t *testing.T) {
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
-		}}, nil, nil)
+		}}, nil)
 		assert.NoError(t, err)
 	})
 
 	requestKey := model.NewRequestKey(model.OriginIngress, "GET /test")
 	// week old event
-	callEvent := &CallEvent{
+	callEvent := &timeline2.CallEvent{
 		Time:          time.Now().Add(-24 * 7 * time.Hour).Round(time.Millisecond),
 		DeploymentKey: deploymentKey,
 		RequestKey:    optional.Some(requestKey),
@@ -283,12 +289,12 @@ func TestDeleteOldEvents(t *testing.T) {
 	}
 
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		call := callEventToCall(callEvent)
+		call := timeline2.CallEventToCallForTesting(callEvent)
 		timeline.EnqueueEvent(ctx, call)
 		time.Sleep(200 * time.Millisecond)
 	})
 	// hour old event
-	callEvent = &CallEvent{
+	callEvent = &timeline2.CallEvent{
 		Time:          time.Now().Add(-1 * time.Hour).Round(time.Millisecond),
 		DeploymentKey: deploymentKey,
 		RequestKey:    optional.Some(requestKey),
@@ -297,14 +303,14 @@ func TestDeleteOldEvents(t *testing.T) {
 		DestVerb:      schema.Ref{Module: "time", Name: "time"},
 	}
 	t.Run("InsertCallEvent", func(t *testing.T) {
-		call := callEventToCall(callEvent)
+		call := timeline2.CallEventToCallForTesting(callEvent)
 		timeline.EnqueueEvent(ctx, call)
 		time.Sleep(200 * time.Millisecond)
 	})
 
 	// week old event
-	logEvent := &LogEvent{
-		Log: Log{
+	logEvent := &timeline2.LogEvent{
+		Log: timeline2.Log{
 			Time:          time.Now().Add(-24 * 7 * time.Hour).Round(time.Millisecond),
 			DeploymentKey: deploymentKey,
 			RequestKey:    optional.Some(requestKey),
@@ -319,8 +325,8 @@ func TestDeleteOldEvents(t *testing.T) {
 	})
 
 	// hour old event
-	logEvent = &LogEvent{
-		Log: Log{
+	logEvent = &timeline2.LogEvent{
+		Log: timeline2.Log{
 			Time:          time.Now().Add(-1 * time.Hour).Round(time.Millisecond),
 			DeploymentKey: deploymentKey,
 			RequestKey:    optional.Some(requestKey),
@@ -335,15 +341,15 @@ func TestDeleteOldEvents(t *testing.T) {
 	})
 
 	t.Run("DeleteOldEvents", func(t *testing.T) {
-		count, err := timeline.DeleteOldEvents(ctx, EventTypeCall, 2*24*time.Hour)
+		count, err := timeline.DeleteOldEvents(ctx, timeline2.EventTypeCall, 2*24*time.Hour)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), count)
 
-		count, err = timeline.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
+		count, err = timeline.DeleteOldEvents(ctx, timeline2.EventTypeLog, time.Minute)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(2), count)
 
-		count, err = timeline.DeleteOldEvents(ctx, EventTypeLog, time.Minute)
+		count, err = timeline.DeleteOldEvents(ctx, timeline2.EventTypeLog, time.Minute)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(0), count)
 	})

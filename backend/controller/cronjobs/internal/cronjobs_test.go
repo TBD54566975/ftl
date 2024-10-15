@@ -1,4 +1,4 @@
-package cronjobs
+package internal
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"github.com/benbjohnson/clock"
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/cronjobs/internal/dal"
 	parentdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
@@ -37,7 +38,6 @@ func TestNewCronJobsForModule(t *testing.T) {
 	clk := clock.NewMock()
 	clk.Add(time.Second) // half way between cron job executions
 
-	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
 	conn := sqltest.OpenForTesting(ctx, t)
 	dal := dal.New(conn)
 
@@ -45,27 +45,45 @@ func TestNewCronJobsForModule(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder().WithKMSURI(optional.Some(uri)))
 	assert.NoError(t, err)
 
+	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
+	timelineSrv := timeline.New(ctx, conn, encryption)
+	cjs := cronjobs.NewForTesting(ctx, key, "test.com", encryption, timelineSrv, *dal, clk)
+
 	scheduler := scheduledtask.New(ctx, key, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	parentDAL := parentdal.New(ctx, conn, encryption, pubSub)
+	parentDAL := parentdal.New(ctx, conn, encryption, pubSub, cjs)
 	moduleName := "initial"
 	jobsToCreate := newCronJobs(t, moduleName, "* * * * * *", clk, 2) // every minute
-
-	deploymentKey, err := parentDAL.CreateDeployment(ctx, "go", &schema.Module{
-		Name: moduleName,
-	}, []dalmodel.DeploymentArtefact{}, []parentdal.IngressRoutingEntry{}, jobsToCreate)
+	decls := []schema.Decl{}
+	for _, job := range jobsToCreate {
+		decls = append(decls, &schema.Verb{
+			Name:     job.Verb.Name,
+			Metadata: []schema.Metadata{&schema.MetadataCronJob{Cron: job.Schedule}},
+			Request:  &schema.Unit{},
+			Response: &schema.Unit{},
+		})
+	}
+	moduleSchema := &schema.Module{
+		Name:  moduleName,
+		Decls: decls,
+	}
+	deploymentKey, err := parentDAL.CreateDeployment(ctx, "go", moduleSchema, []dalmodel.DeploymentArtefact{}, []parentdal.IngressRoutingEntry{})
 	assert.NoError(t, err)
 	err = parentDAL.ReplaceDeployment(ctx, deploymentKey, 1)
 	assert.NoError(t, err)
 
-	timelineSrv := timeline.New(ctx, conn, encryption)
-
 	// Progress so that start_time is valid
 	clk.Add(time.Second)
-	cjs := NewForTesting(ctx, key, "test.com", encryption, timelineSrv, *dal, clk)
 	// All jobs need to be scheduled
 	expectUnscheduledJobs(t, dal, clk, 2)
 	unscheduledJobs, err := dal.GetUnscheduledCronJobs(ctx, clk.Now())
+	jobsByVerb := map[string]model.CronJob{}
+	for _, job := range unscheduledJobs {
+		jobsByVerb[job.Verb.Name] = job
+	}
+	for i := range jobsToCreate {
+		jobsToCreate[i].Key = jobsByVerb[jobsToCreate[i].Verb.Name].Key
+	}
 	assert.NoError(t, err)
 	assert.Equal(t, len(unscheduledJobs), 2)
 
@@ -74,7 +92,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	assert.IsError(t, err, libdal.ErrNotFound)
 	assert.EqualError(t, err, "no pending async calls: not found")
 
-	err = cjs.scheduleCronJobs(ctx)
+	err = cjs.ScheduleCronJobs(ctx)
 	assert.NoError(t, err)
 	expectUnscheduledJobs(t, dal, clk, 0)
 	for _, job := range jobsToCreate {

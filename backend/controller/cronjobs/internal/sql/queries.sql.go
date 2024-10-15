@@ -47,6 +47,16 @@ func (q *Queries) CreateCronJob(ctx context.Context, arg CreateCronJobParams) er
 	return err
 }
 
+const deleteCronJobsForDeployment = `-- name: DeleteCronJobsForDeployment :exec
+DELETE FROM cron_jobs
+WHERE deployment_id = (SELECT id FROM deployments WHERE key = $1::deployment_key LIMIT 1)
+`
+
+func (q *Queries) DeleteCronJobsForDeployment(ctx context.Context, deploymentKey model.DeploymentKey) error {
+	_, err := q.db.ExecContext(ctx, deleteCronJobsForDeployment, deploymentKey)
+	return err
+}
+
 const getCronJobByKey = `-- name: GetCronJobByKey :one
 SELECT j.id, j.key, j.deployment_id, j.verb, j.schedule, j.start_time, j.next_execution, j.module_name, j.last_execution, j.last_async_call_id, d.id, d.created_at, d.module_id, d.key, d.schema, d.labels, d.min_replicas, d.last_activated_at
 FROM cron_jobs j

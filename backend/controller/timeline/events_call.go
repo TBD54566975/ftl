@@ -149,7 +149,7 @@ func callToCallEvent(call *Call) *CallEvent {
 	}
 }
 
-func callEventToCall(event *CallEvent) *Call {
+func CallEventToCallForTesting(event *CallEvent) *Call {
 	var response either.Either[*ftlv1.CallResponse, error]
 	if eventErr, ok := event.Error.Get(); ok {
 		response = either.RightOf[*ftlv1.CallResponse](errors.New(eventErr))

@@ -26,7 +26,7 @@ func TestNoCallToAcquire(t *testing.T) {
 	assert.NoError(t, err)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	dal := New(ctx, conn, encryption, pubSub)
+	dal := New(ctx, conn, encryption, pubSub, nil)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, libdal.ErrNotFound)

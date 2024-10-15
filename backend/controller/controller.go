@@ -279,13 +279,11 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 	svc.registry = artefacts.New(conn)
 
-	svc.dal = dal.New(ctx, conn, encryption, pubSub)
-
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
-
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, timelineSvc, conn)
 	svc.cronJobs = cronSvc
+	svc.dal = dal.New(ctx, conn, encryption, pubSub, cronSvc)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 
@@ -1164,13 +1162,12 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 
 	ingressRoutes := extractIngressRoutingEntries(req.Msg)
-	cronJobs, err := s.cronJobs.NewCronJobsForModule(ctx, req.Msg.Schema)
 	if err != nil {
 		logger.Errorf(err, "Could not generate cron jobs for new deployment")
 		return nil, fmt.Errorf("could not generate cron jobs for new deployment: %w", err)
 	}
 
-	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes, cronJobs)
+	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes)
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment")
 		return nil, fmt.Errorf("could not create deployment: %w", err)
