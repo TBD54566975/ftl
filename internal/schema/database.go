@@ -37,16 +37,12 @@ func (d *Database) String() string {
 }
 
 func (d *Database) ToProto() proto.Message {
-	var runtime *schemapb.DatabaseRuntime
-	if d.Runtime != nil {
-		runtime = &schemapb.DatabaseRuntime{Dsn: d.Runtime.DSN}
-	}
 	return &schemapb.Database{
 		Pos:      posToProto(d.Pos),
 		Comments: d.Comments,
 		Name:     d.Name,
 		Type:     d.Type,
-		Runtime:  runtime,
+		Runtime:  d.Runtime.ToProto(),
 	}
 }
 
@@ -65,6 +61,13 @@ func DatabaseFromProto(s *schemapb.Database) *Database {
 
 type DatabaseRuntime struct {
 	DSN string `parser:"" protobuf:"1"`
+}
+
+func (d *DatabaseRuntime) ToProto() *schemapb.DatabaseRuntime {
+	if d == nil {
+		return nil
+	}
+	return &schemapb.DatabaseRuntime{Dsn: d.DSN}
 }
 
 func DatabaseRuntimeFromProto(s *schemapb.DatabaseRuntime) *DatabaseRuntime {
