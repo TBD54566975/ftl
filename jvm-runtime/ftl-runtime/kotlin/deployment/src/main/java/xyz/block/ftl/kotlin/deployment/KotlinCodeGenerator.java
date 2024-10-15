@@ -25,11 +25,7 @@ import xyz.block.ftl.GeneratedRef;
 import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
-import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.VerbClientDefinition;
-import xyz.block.ftl.VerbClientEmpty;
-import xyz.block.ftl.VerbClientSink;
-import xyz.block.ftl.VerbClientSource;
 import xyz.block.ftl.deployment.JVMCodeGenerator;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Enum;
@@ -160,33 +156,25 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
                         .build())
                 .addModifiers(KModifier.PUBLIC);
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
-            typeBuilder.addSuperinterface(className(VerbClientEmpty.class), CodeBlock.of(""));
+            typeBuilder.addFunction(FunSpec.builder("call")
+                    .addModifiers(KModifier.ABSTRACT, KModifier.PUBLIC).build());
         } else if (verb.getRequest().hasUnit()) {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClientSource.class),
-                    toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
                     .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
-                    .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE, KModifier.ABSTRACT).build());
+                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT).build());
         } else if (verb.getResponse().hasUnit()) {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClientSink.class),
-                    toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
-                    .addModifiers(KModifier.OVERRIDE, KModifier.ABSTRACT)
+                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT)
                     .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap)).build());
         } else {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClient.class),
-                    toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap),
-                    toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
                     .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap))
-                    .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE, KModifier.ABSTRACT).build());
+                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT).build());
         }
-
         FileSpec javaFile = FileSpec.builder(packageName, thisType)
                 .addType(typeBuilder.build())
                 .build();
-
         javaFile.writeTo(outputDir);
     }
 
