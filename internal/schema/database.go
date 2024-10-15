@@ -28,6 +28,7 @@ func (d *Database) Position() Position     { return d.Pos }
 func (*Database) schemaDecl()              {}
 func (*Database) schemaSymbol()            {}
 func (d *Database) schemaChildren() []Node { return nil }
+func (d *Database) Redact()                { d.Runtime = nil }
 func (d *Database) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, EncodeComments(d.Comments))
@@ -36,13 +37,17 @@ func (d *Database) String() string {
 }
 
 func (d *Database) ToProto() proto.Message {
+	var runtime *schemapb.DatabaseRuntime
+	if d.Runtime != nil {
+		runtime = &schemapb.DatabaseRuntime{Dsn: d.Runtime.DSN}
+	}
 	return &schemapb.Database{
 		Pos:      posToProto(d.Pos),
 		Comments: d.Comments,
 		Name:     d.Name,
 		Type:     d.Type,
+		Runtime:  runtime,
 	}
-	// We are not serializing runtime, as it can contain sensitive information
 }
 
 func (d *Database) GetName() string  { return d.Name }
