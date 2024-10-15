@@ -2,11 +2,14 @@ package xyz.block.ftl.enums;
 
 import org.jetbrains.annotations.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Comment on Type Enum variant
  */
 public class Cat implements Animal {
-    private @NotNull String name;
+    @JsonProperty("name")
+    private @NotNull String petName;
 
     private @NotNull String breed;
 
@@ -18,7 +21,7 @@ public class Cat implements Animal {
     public Cat(@NotNull String breed, long furLength, @NotNull String name) {
         this.breed = breed;
         this.furLength = furLength;
-        this.name = name;
+        this.petName = name;
     }
 
     public boolean isCat() {
@@ -37,8 +40,8 @@ public class Cat implements Animal {
         return null;
     }
 
-    public @NotNull String getName() {
-        return name;
+    public @NotNull String getPetName() {
+        return petName;
     }
 
     public @NotNull String getBreed() {

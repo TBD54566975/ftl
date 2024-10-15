@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -26,6 +25,7 @@ import org.jboss.jandex.ArrayType;
 import org.jboss.jandex.ClassInfo;
 import org.jboss.jandex.ClassType;
 import org.jboss.jandex.DotName;
+import org.jboss.jandex.FieldInfo;
 import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.PrimitiveType;
@@ -34,6 +34,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -477,7 +478,7 @@ public class ModuleBuilder {
         //TODO: handle getters and setters properly, also Jackson annotations etc
         for (var field : clazz.fields()) {
             if (!Modifier.isStatic(field.flags())) {
-                Field.Builder builder = Field.newBuilder().setName(field.name())
+                Field.Builder builder = Field.newBuilder().setName(getFieldName(field))
                         .setType(buildType(field.type(), data.getExport(), field));
                 if (field.hasAnnotation(JsonAlias.class)) {
                     var aliases = field.annotation(JsonAlias.class);
@@ -493,6 +494,13 @@ public class ModuleBuilder {
             }
         }
         buildDataElement(data, clazz.superName());
+    }
+
+    private static String getFieldName(FieldInfo field) {
+        if (field.hasAnnotation(JsonProperty.class)) {
+            return (String) field.annotation(JsonProperty.class).value().value();
+        }
+        return field.name();
     }
 
     public ModuleBuilder addDecls(Decl decl) {
