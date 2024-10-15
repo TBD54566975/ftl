@@ -20,7 +20,8 @@
     "managerBranchPrefix": "java-"
   },
   lockFileMaintenance: {
-    enabled: true, // Automatically update lock files like pnpm-lock.yaml
+    "enabled": true,
+    "automerge": true
   },
   postUpdateOptions: ["gomodTidy", "pnpmDedupe"],
   packageRules: [
@@ -65,13 +66,6 @@
     {
       matchPackageNames: ["connectrpc.com/connect"],
       enabled: false,
-    },
-    {
-      "matchPaths": ["frontend/console/**", "frontend/vscode/**"],
-      "postUpgradeTasks": {
-        "commands": ["pnpm install"],
-        "fileFilters": ["pnpm-lock.yaml"]
-      }
     }
   ],
 }
