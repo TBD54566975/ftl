@@ -42,6 +42,25 @@ jobs:
           name: docker-controller-artifact
           path: artifacts/ftl-controller
           retention-days: 1
+  build-provisioner:
+    name: Build Provisioner Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1.1.3
+      - name: Build
+        run: |
+          just build-docker provisioner
+          mkdir -p artifacts/ftl-provisioner
+          docker save -o artifacts/ftl-provisioner/ftl-provisioner.tar ftl0/ftl-provisioner:latest
+      - name: Temporarily save Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-provisioner-artifact
+          path: artifacts/ftl-provisioner
+          retention-days: 1
   build-box:
     name: Build FTL-in-a-box Docker Image
     runs-on: ubuntu-latest
@@ -85,6 +104,11 @@ jobs:
         with:
           name: docker-controller-artifact
           path: artifacts/ftl-controller
+      - name: Retrieve Provisioner Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-provisioner-artifact
+          path: artifacts/ftl-provisioner
       - name: Retrieve FTL-in-a-box Docker image
         uses: actions/download-artifact@v4
         with:
@@ -94,6 +118,8 @@ jobs:
         run: docker load -i artifacts/ftl-runner/ftl-runner.tar
       - name: Load Controller Docker image
         run: docker load -i artifacts/ftl-controller/ftl-controller.tar
+      - name: Load Provisioner Docker image
+        run: docker load -i artifacts/ftl-provisioner/ftl-provisioner.tar
       - name: Load FTL-in-a-box Docker image
         run: docker load -i artifacts/ftl-box/ftl-box.tar
       - name: Log in to the Container registry
@@ -110,6 +136,9 @@ jobs:
           docker tag ftl0/ftl-controller:latest ftl0/ftl-controller:"$GITHUB_SHA"
           docker tag ftl0/ftl-controller:latest ftl0/ftl-controller:"$version"
           docker push -a ftl0/ftl-controller
+          docker tag ftl0/ftl-provisioner:latest ftl0/ftl-provisioner:"$GITHUB_SHA"
+          docker tag ftl0/ftl-provisioner:latest ftl0/ftl-provisioner:"$version"
+          docker push -a ftl0/ftl-provisioner
           docker tag ftl0/ftl-box:latest ftl0/ftl-box:"$GITHUB_SHA"
           docker tag ftl0/ftl-box:latest ftl0/ftl-box:"$version"
           docker push -a ftl0/ftl-box
