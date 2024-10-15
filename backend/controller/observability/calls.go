@@ -60,7 +60,7 @@ func (m *CallMetrics) BeginSpan(ctx context.Context, verb *schemapb.Ref) (contex
 	attrs := []attribute.KeyValue{
 		attribute.String(callVerbRefAttr, schema.RefFromProto(verb).String()),
 	}
-	return m.callTracer.Start(ctx, callMeterName, trace.WithAttributes(attrs...))
+	return observability.AddSpanToLogger(m.callTracer.Start(ctx, callMeterName, trace.WithAttributes(attrs...)))
 }
 func (m *CallMetrics) Request(ctx context.Context, verb *schemapb.Ref, startTime time.Time, maybeFailureMode optional.Option[string]) {
 	attrs := []attribute.KeyValue{
