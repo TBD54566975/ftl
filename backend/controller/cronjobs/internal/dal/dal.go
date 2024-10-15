@@ -102,7 +102,11 @@ func (d *DAL) UpdateCronJobExecution(ctx context.Context, params UpdateCronJobEx
 }
 
 func (d *DAL) DeleteCronJobsForDeployment(ctx context.Context, key model.DeploymentKey) error {
-	err := d.db.DeleteCronJobsForDeployment(ctx, key)
+	err := d.db.DeleteCronAsyncCallsForDeployment(ctx, key)
+	if err != nil {
+		return fmt.Errorf("failed to delete cron job async calls for deployment %v: %w", key, libdal.TranslatePGError(err))
+	}
+	err = d.db.DeleteCronJobsForDeployment(ctx, key)
 	if err != nil {
 		return fmt.Errorf("failed to delete cron jobs for deployment %v: %w", key, libdal.TranslatePGError(err))
 	}
