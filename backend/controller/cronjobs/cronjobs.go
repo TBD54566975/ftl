@@ -15,7 +15,6 @@ import (
 	encryptionsvc "github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -47,22 +46,22 @@ func NewForTesting(ctx context.Context, key model.ControllerKey, requestSource s
 	return svc
 }
 
-func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Module) ([]model.CronJob, error) {
+func (s *Service) NewCronJobsForModule(ctx context.Context, module *schema.Module) ([]model.CronJob, error) {
 	logger := log.FromContext(ctx).Scope("cron").Module(module.Name)
 	start := s.clock.Now().UTC()
 	newJobs := []model.CronJob{}
 	merr := []error{}
 	for _, decl := range module.Decls {
-		verb, ok := decl.Value.(*schemapb.Decl_Verb)
+		verb, ok := decl.(*schema.Verb)
 		if !ok {
 			continue
 		}
-		for _, metadata := range verb.Verb.Metadata {
-			cronMetadata, ok := metadata.Value.(*schemapb.Metadata_CronJob)
+		for _, metadata := range verb.Metadata {
+			cronMetadata, ok := metadata.(*schema.MetadataCronJob)
 			if !ok {
 				continue
 			}
-			cronStr := cronMetadata.CronJob.Cron
+			cronStr := cronMetadata.Cron
 			schedule, err := cron.Parse(cronStr)
 			if err != nil {
 				merr = append(merr, fmt.Errorf("failed to parse cron schedule %q: %w", cronStr, err))
@@ -70,12 +69,12 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 			}
 			next, err := cron.NextAfter(schedule, start, false)
 			if err != nil {
-				merr = append(merr, fmt.Errorf("failed to calculate next execution for cron job %v:%v with schedule %q: %w", module.Name, verb.Verb.Name, schedule, err))
+				merr = append(merr, fmt.Errorf("failed to calculate next execution for cron job %v:%v with schedule %q: %w", module.Name, verb.Name, schedule, err))
 				continue
 			}
 			newJobs = append(newJobs, model.CronJob{
-				Key:           model.NewCronJobKey(module.Name, verb.Verb.Name),
-				Verb:          schema.Ref{Module: module.Name, Name: verb.Verb.Name},
+				Key:           model.NewCronJobKey(module.Name, verb.Name),
+				Verb:          schema.Ref{Module: module.Name, Name: verb.Name},
 				Schedule:      cronStr,
 				StartTime:     start,
 				NextExecution: next,
@@ -96,7 +95,7 @@ func (s *Service) NewCronJobsForModule(ctx context.Context, module *schemapb.Mod
 func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context) error {
 	logger := log.FromContext(ctx).Scope("cron")
 	logger.Tracef("New deployment; scheduling cron jobs")
-	err := s.scheduleCronJobs(ctx)
+	err := s.ScheduleCronJobs(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to schedule cron jobs: %w", err)
 	}
@@ -104,7 +103,7 @@ func (s *Service) CreatedOrReplacedDeloyment(ctx context.Context) error {
 }
 
 // scheduleCronJobs schedules all cron jobs that are not already scheduled.
-func (s *Service) scheduleCronJobs(ctx context.Context) (err error) {
+func (s *Service) ScheduleCronJobs(ctx context.Context) (err error) {
 	logger := log.FromContext(ctx).Scope("cron")
 	now := s.clock.Now().UTC()
 
@@ -235,5 +234,15 @@ func (s *Service) scheduleCronJob(ctx context.Context, tx *dal.DAL, job model.Cr
 		ScheduledAt:   nextAttemptForJob,
 		Schedule:      job.Schedule,
 	})
+	return nil
+}
+
+func (s *Service) DeleteCronJobsForDeployment(ctx context.Context, key model.DeploymentKey) error {
+	logger := log.FromContext(ctx).Scope("cron")
+	logger.Tracef("Deleting cron jobs for deployment %q", key)
+	err := s.dal.DeleteCronJobsForDeployment(ctx, key)
+	if err != nil {
+		return fmt.Errorf("failed to remove cron jobs for deployment %q: %w", key, err)
+	}
 	return nil
 }
