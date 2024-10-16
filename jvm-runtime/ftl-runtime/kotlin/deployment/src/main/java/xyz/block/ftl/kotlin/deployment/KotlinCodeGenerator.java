@@ -26,10 +26,6 @@ import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.VerbClient;
-import xyz.block.ftl.VerbClientDefinition;
-import xyz.block.ftl.VerbClientEmpty;
-import xyz.block.ftl.VerbClientSink;
-import xyz.block.ftl.VerbClientSource;
 import xyz.block.ftl.deployment.JVMCodeGenerator;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Enum;
@@ -158,47 +154,41 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
             throws IOException {
         String thisType = className(verb.getName()) + CLIENT;
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(thisType)
-                .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
+                .addAnnotation(AnnotationSpec.builder(VerbClient.class)
                         .addMember("name=\"" + verb.getName() + "\"")
                         .addMember("module=\"" + module.getName() + "\"")
                         .build())
-                .addModifiers(KModifier.PUBLIC);
+                .addModifiers(KModifier.PUBLIC)
+                .addKdoc("A client for the %L.%L verb", module.getName(), verb.getName());
         String comments = String.join("\n", verb.getCommentsList());
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
-            typeBuilder.addSuperinterface(className(VerbClientEmpty.class), CodeBlock.of(""))
-                    .addKdoc(comments);
+            typeBuilder.addFunction(FunSpec.builder("call")
+                    .addModifiers(KModifier.ABSTRACT, KModifier.PUBLIC)
+                    .addKdoc(comments)
+                    .build());
         } else if (verb.getRequest().hasUnit()) {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClientSource.class),
-                    toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
                     .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
-                    .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE, KModifier.ABSTRACT)
+                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT)
                     .addKdoc(comments)
                     .build());
         } else if (verb.getResponse().hasUnit()) {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClientSink.class),
-                    toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
-                    .addModifiers(KModifier.OVERRIDE, KModifier.ABSTRACT)
+                    .addModifiers(KModifier.ABSTRACT)
                     .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap))
                     .addKdoc(comments)
                     .build());
         } else {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(className(VerbClient.class),
-                    toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap),
-                    toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap)), CodeBlock.of(""));
             typeBuilder.addFunction(FunSpec.builder("call")
                     .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap))
-                    .addModifiers(KModifier.PUBLIC, KModifier.OVERRIDE, KModifier.ABSTRACT)
+                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT)
                     .addKdoc(comments)
                     .build());
         }
-
         FileSpec javaFile = FileSpec.builder(packageName, thisType)
                 .addType(typeBuilder.build())
                 .build();
-
         javaFile.writeTo(outputDir);
     }
 

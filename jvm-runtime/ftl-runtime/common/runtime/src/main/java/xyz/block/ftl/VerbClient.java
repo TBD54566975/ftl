@@ -1,15 +1,18 @@
 package xyz.block.ftl;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
- * A client for a specific verb.
- *
- * The sink source and empty interfaces allow for different call signatures.
- *
- * @param <P> The verb parameter type
- * @param <R> The verb return type
+ * Annotation that is used to define a verb client
  */
-public interface VerbClient<P, R> {
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface VerbClient {
 
-    R call(P param);
+    String module() default "";
 
+    String name();
 }

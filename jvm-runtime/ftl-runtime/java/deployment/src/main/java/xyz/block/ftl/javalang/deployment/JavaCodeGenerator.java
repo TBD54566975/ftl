@@ -34,10 +34,6 @@ import xyz.block.ftl.Subscription;
 import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.VerbClient;
-import xyz.block.ftl.VerbClientDefinition;
-import xyz.block.ftl.VerbClientEmpty;
-import xyz.block.ftl.VerbClientSink;
-import xyz.block.ftl.VerbClientSource;
 import xyz.block.ftl.deployment.JVMCodeGenerator;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Enum;
@@ -280,26 +276,24 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
             throws IOException {
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
-                .addAnnotation(AnnotationSpec.builder(VerbClientDefinition.class)
+                .addAnnotation(AnnotationSpec.builder(VerbClient.class)
                         .addMember("name", "\"" + verb.getName() + "\"")
                         .addMember("module", "\"" + module.getName() + "\"")
                         .build())
-                .addModifiers(Modifier.PUBLIC);
+                .addModifiers(Modifier.PUBLIC)
+                .addJavadoc("A client for the $L.$L verb", module.getName(), verb.getName());
         var comments = String.join("\n", verb.getCommentsList());
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
-            typeBuilder.addSuperinterface(ClassName.get(VerbClientEmpty.class))
+            typeBuilder.addMethod(MethodSpec.methodBuilder("call")
+                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build())
                     .addJavadoc(comments);
         } else if (verb.getRequest().hasUnit()) {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSource.class),
-                    toJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
                     .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
                     .addJavadoc(comments)
                     .build());
         } else if (verb.getResponse().hasUnit()) {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClientSink.class),
-                    toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
                     .returns(TypeName.VOID)
                     .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
@@ -307,9 +301,6 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     .addJavadoc(comments)
                     .build());
         } else {
-            typeBuilder.addSuperinterface(ParameterizedTypeName.get(ClassName.get(VerbClient.class),
-                    toJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap, true),
-                    toJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap, true)));
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
                     .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
@@ -318,7 +309,8 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     .build());
         }
 
-        JavaFile javaFile = JavaFile.builder(packageName, typeBuilder.build()).build();
+        TypeSpec client = typeBuilder.build();
+        JavaFile javaFile = JavaFile.builder(packageName, client).build();
         javaFile.writeTo(outputDir);
     }
 
