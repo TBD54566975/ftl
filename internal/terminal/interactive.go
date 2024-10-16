@@ -72,7 +72,6 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 	for {
 		line, err := l.Readline()
 		if errors.Is(err, readline.ErrInterrupt) {
-
 			if len(line) == 0 {
 				break
 			}

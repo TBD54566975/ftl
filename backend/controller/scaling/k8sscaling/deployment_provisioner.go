@@ -341,33 +341,20 @@ func (r *DeploymentProvisioner) handleExistingDeployment(ctx context.Context, de
 }
 
 func (r *DeploymentProvisioner) syncDeployment(ctx context.Context, thisImage string, deployment *kubeapps.Deployment, ftlDeployment *schemapb.Module) ([]func(*kubeapps.Deployment), error) {
-	logger := log.FromContext(ctx)
 	changes := []func(*kubeapps.Deployment){}
-	ourVersion, err := extractTag(thisImage)
-	if err != nil {
-		return nil, err
-	}
-	deploymentVersion, err := extractTag(deployment.Spec.Template.Spec.Containers[0].Image)
-	if err != nil {
-		return nil, err
-	}
-	if ourVersion != deploymentVersion {
+
+	existingImage := deployment.Spec.Template.Spec.Containers[0].Image
+	newImage := strings.ReplaceAll(thisImage, "ftl-controller", "ftl-runner")
+
+	if existingImage != newImage {
 		// This means there has been an FTL upgrade
 		// We are assuming the runner and provisioner run the same version
 		// If they are different it means the provisioner has been upgraded and we need
 		// to upgrade the deployments
 
-		base, err := extractBase(deployment.Spec.Template.Spec.Containers[0].Image)
-		if err != nil {
-			logger.Errorf(err, "Could not determine base image for FTL deployment")
-		} else {
-			changes = append(changes, func(deployment *kubeapps.Deployment) {
-				deployment.Spec.Template.Spec.Containers[0].Image = base + ":" + ourVersion
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
+		changes = append(changes, func(deployment *kubeapps.Deployment) {
+			deployment.Spec.Template.Spec.Containers[0].Image = newImage
+		})
 	}
 
 	// For now we just make sure the number of replicas match

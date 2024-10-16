@@ -27,6 +27,7 @@ wait-for-kube:
   #!/bin/bash
   while [ -z "$(kubectl get pod ftl-postgresql-0)" ]; do sleep 1; done
   kubectl wait --for=condition=ready pod/ftl-postgresql-0 --timeout=5m
+  kubectl rollout restart deployment ftl-controller || true # restart now the DB is up, otherwise it might be in crash loop backoff and take a while
   kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m
   sleep 1
   ftl status
@@ -112,19 +113,19 @@ build-executables:
   cp ../build/release/* ./docker-build/
 
 build-controller: build-executables setup-registry setup-cluster
-  docker build --platform linux/amd64 -t ftl-controller:latest -f Dockerfile.controller.test .
-  docker tag ftl-controller:latest {{registry_local}}/ftl-controller:latest
-  docker push {{registry_local}}/ftl-controller:latest
+  docker build --platform linux/amd64 -t ftl:ftl-controller -f Dockerfile.controller.test .
+  docker tag ftl:ftl-controller {{registry_local}}/ftl:ftl-controller
+  docker push {{registry_local}}/ftl:ftl-controller
 
 build-runner: build-executables setup-registry setup-cluster
-  docker build --platform linux/amd64 -t ftl-runner:latest -f Dockerfile.runner.test .
-  docker tag ftl-runner:latest {{registry_local}}/ftl-runner:latest
-  docker push {{registry_local}}/ftl-runner:latest
+  docker build --platform linux/amd64 -t ftl:ftl-runner -f Dockerfile.runner.test .
+  docker tag ftl:ftl-runner {{registry_local}}/ftl:ftl-runner
+  docker push {{registry_local}}/ftl:ftl-runner
 
 build-provisioner: build-executables setup-registry setup-cluster
-  docker build --platform linux/amd64 -t ftl-provisioner:latest -f Dockerfile.provisioner.test .
-  docker tag ftl-provisioner:latest {{registry_local}}/ftl-provisioner:latest
-  docker push {{registry_local}}/ftl-provisioner:latest
+  docker build --platform linux/amd64 -t ftl:ftl-provisioner -f Dockerfile.provisioner.test .
+  docker tag ftl:ftl-provisioner {{registry_local}}/ftl:ftl-provisioner
+  docker push {{registry_local}}/ftl:ftl-provisioner
 
 build: build-controller build-runner build-provisioner
 

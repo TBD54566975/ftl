@@ -369,7 +369,7 @@ jobs:
         run: just teardown-cluster
       - name: Delete Images
         if: always() # We don't want to cache these images, delete them before the cache action
-        run: docker image rm localhost:5000/ftl-runner:latest ftl-runner:latest ftl-controller:latest localhost:5000/ftl-controller:latest
+        run: docker image rm localhost:5000/ftl:ftl-runner ftl:ftl-runner ftl:ftl-controller localhost:5000/ftl:ftl-controller ftl:ftl-provisioner localhost:5000/ftl:ftl-provisioner
   integration-success:
     name: Integration Success
     needs: [integration-run]

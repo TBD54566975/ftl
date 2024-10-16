@@ -6,8 +6,8 @@ ingress:
     kubernetes.io/ingress.class: traefik
 controller:
   image:
-    repository: "ftl:5000/ftl-controller"
-    tag: "latest"
+    repository: "ftl:5000/ftl"
+    tag: "ftl-controller"
     pullPolicy: Always
   service:
     ports:
@@ -20,14 +20,14 @@ controller:
 
 
 provisioner:
-  enabled: true
+  enabled: false
   image:
-    repository: "ftl:5000/ftl-provisioner"
-    tag: "latest"
+    repository: "ftl:5000/ftl"
+    tag: "ftl-provisioner"
     pullPolicy: Always
   service:
     ports:
-      - name: "http-8893"
+      - name: "http"
         port: 8893
 istio:
   enabled: true
