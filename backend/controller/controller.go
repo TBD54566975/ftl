@@ -234,7 +234,8 @@ type Service struct {
 	clients *ttlcache.Cache[string, clients]
 
 	// Complete schema synchronised from the database.
-	schemaState atomic.Value[schemaState]
+	schemaState    atomic.Value[schemaState]
+	schemaSyncLock sync.Mutex
 
 	config Config
 
@@ -1802,6 +1803,8 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 // We do this in a single function so the routing table and schema are always consistent
 // And they both need the same info from the DB
 func (s *Service) syncRoutesAndSchema(ctx context.Context) (ret time.Duration, err error) {
+	s.schemaSyncLock.Lock() // This can result in confusing log messages if it is called concurrently
+	defer s.schemaSyncLock.Unlock()
 	deployments, err := s.dal.GetActiveDeployments(ctx)
 	if errors.Is(err, libdal.ErrNotFound) {
 		deployments = []dalmodel.Deployment{}
