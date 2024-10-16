@@ -65,9 +65,13 @@ func (reg *ProvisionerRegistry) listProvisioners() []provisionerconnect.Provisio
 }
 
 func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
-	def, err := provisionerIDToProvisioner(ctx, cfg.Default, controller)
-	if err != nil {
-		return nil, err
+	var def provisionerconnect.ProvisionerPluginServiceClient
+	if cfg.Default != "" {
+		d, err := provisionerIDToProvisioner(ctx, cfg.Default, controller)
+		if err != nil {
+			return nil, err
+		}
+		def = d
 	}
 	result := &ProvisionerRegistry{Default: def}
 	if err := cfg.Validate(); err != nil {
@@ -236,7 +240,7 @@ func (reg *ProvisionerRegistry) groupByProvisioner(resources []*provisioner.Reso
 				}
 			}
 		}
-		if !found {
+		if !found && reg.Default != nil {
 			result[reg.Default] = append(result[reg.Default], r)
 		}
 	}
