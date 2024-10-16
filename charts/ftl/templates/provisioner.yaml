@@ -59,6 +59,13 @@ spec:
             successThreshold: 1
             failureThreshold: 15
             {{- end }}
+          volumeMounts:
+            - mountPath: /config
+              name: config
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Values.provisioner.configMap }}
       {{- if .Values.provisioner.nodeSelector }}
       nodeSelector:
         {{- toYaml .Values.provisioner.nodeSelector | nindent 8 }}
