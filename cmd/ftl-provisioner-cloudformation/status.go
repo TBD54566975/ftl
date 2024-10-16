@@ -97,20 +97,24 @@ func updateResources(outputs []types.Output, update []*provisioner.Resource) err
 				if postgres, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
 					switch key.PropertyName {
 					case PropertyDBReadEndpoint:
-						postgres.Postgres.Output.ReadEndpoint = *output.OutputValue
+						postgres.Postgres.Output.ReadDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
 					case PropertyDBWriteEndpoint:
-						postgres.Postgres.Output.WriteEndpoint = *output.OutputValue
+						postgres.Postgres.Output.WriteDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
 					}
 				} else if mysql, ok := resource.Resource.(*provisioner.Resource_Mysql); ok {
 					switch key.PropertyName {
 					case PropertyDBReadEndpoint:
-						mysql.Mysql.Output.ReadEndpoint = *output.OutputValue
+						mysql.Mysql.Output.ReadDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
 					case PropertyDBWriteEndpoint:
-						mysql.Mysql.Output.WriteEndpoint = *output.OutputValue
+						mysql.Mysql.Output.WriteDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 3306)
 					}
 				}
 			}
 		}
 	}
 	return nil
+}
+
+func endpointToDSN(endpoint, database string, port int) string {
+	return fmt.Sprintf("postgres://%s:%d/%s?user=postgres&password=password", endpoint, port, database)
 }

@@ -43,7 +43,13 @@ var _ Symbol = (*Module)(nil)
 var _ sql.Scanner = (*Module)(nil)
 var _ driver.Valuer = (*Module)(nil)
 
-func (m *Module) Value() (driver.Value, error) { return proto.Marshal(m.ToProto()) }
+func (m *Module) Value() (driver.Value, error) {
+	value, err := proto.Marshal(Redact(m).ToProto())
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Module to proto: %w", err)
+	}
+	return value, nil
+}
 func (m *Module) Scan(src any) error {
 	switch src := src.(type) {
 	case []byte:

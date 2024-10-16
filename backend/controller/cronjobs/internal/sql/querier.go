@@ -15,6 +15,8 @@ type Querier interface {
 	AsyncCallQueueDepth(ctx context.Context) (int64, error)
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
 	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
+	DeleteCronAsyncCallsForDeployment(ctx context.Context, deploymentKey model.DeploymentKey) error
+	DeleteCronJobsForDeployment(ctx context.Context, deploymentKey model.DeploymentKey) error
 	GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error)
 	GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]GetUnscheduledCronJobsRow, error)
 	IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error)

@@ -10,6 +10,17 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
+// Comment on topic
+//
+//ftl:export
+var TestTopic = ftl.Topic[TestObject]("testTopic")
+
+// Comment on subscription
+//
+//ftl:export
+var testSubscription = ftl.Subscription(TestTopic, "testSubscription")
+
+// Comment on data
 type TestObject struct {
 	IntField    int
 	FloatField  float64
@@ -21,6 +32,8 @@ type TestObject struct {
 	MapField    map[string]string
 }
 
+// Multiline comment
+// Is longer than others
 type TestObjectOptionalFields struct {
 	IntField    ftl.Option[int]
 	FloatField  ftl.Option[float64]
@@ -39,6 +52,8 @@ type ParameterizedType[T any] struct {
 	Map    map[string]T
 }
 
+// Comment on value enum
+//
 //ftl:enum export
 type ColorInt int
 
@@ -77,6 +92,8 @@ type TypeEnumWrapper struct {
 	Type TypeWrapperEnum
 }
 
+// Comment on type enum
+//
 //ftl:enum
 type Animal interface{ animal() }
 type Cat struct {
@@ -84,6 +101,8 @@ type Cat struct {
 	Breed     string
 	FurLength int
 }
+
+// Comment on type enum variant
 type Dog struct{}
 
 func (Cat) animal() {}
@@ -101,12 +120,16 @@ type AnimalWrapper struct {
 //func (Word) mixed() {}
 //func (Dog) mixed()  {}
 
+// Comment on type alias
+//
 //ftl:typealias
 //ftl:typemap kotlin "web5.sdk.dids.didcore.Did"
 type DID = did.DID
 
 // Test different signatures
 
+// Comment on source verb
+//
 //ftl:verb export
 func SourceVerb(ctx context.Context) (string, error) {
 	return "Source Verb", nil
@@ -117,11 +140,15 @@ type ExportedType[T any, S any] interface {
 	FTLDecode(in S) (T, error)
 }
 
+// Comment on sink verb
+//
 //ftl:verb export
 func SinkVerb(ctx context.Context, req string) error {
 	return nil
 }
 
+// Comment on empty verb
+//
 //ftl:verb export
 func EmptyVerb(ctx context.Context) error {
 	return nil
@@ -134,6 +161,8 @@ func ErrorEmptyVerb(ctx context.Context) error {
 
 // Test different param and return types
 
+// Comment on verb
+//
 //ftl:verb export
 func IntVerb(ctx context.Context, val int) (int, error) {
 	return val, nil

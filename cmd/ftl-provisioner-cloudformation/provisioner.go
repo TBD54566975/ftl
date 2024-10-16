@@ -134,6 +134,7 @@ func (c *CloudformationProvisioner) resourceToCF(cluster, module string, templat
 			ManageMasterUserPassword: ptr(true),
 			DBSubnetGroupName:        ptr(c.confg.DatabaseSubnetGroupARN),
 			EngineMode:               ptr("provisioned"),
+			Port:                     ptr(5432),
 			ServerlessV2ScalingConfiguration: &rds.DBCluster_ServerlessV2ScalingConfiguration{
 				MinCapacity: ptr(0.5),
 				MaxCapacity: ptr(10.0),

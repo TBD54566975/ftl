@@ -58,7 +58,9 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -279,13 +281,11 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 	svc.registry = artefacts.New(conn)
 
-	svc.dal = dal.New(ctx, conn, encryption, pubSub)
-
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
-
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, timelineSvc, conn)
 	svc.cronJobs = cronSvc
+	svc.dal = dal.New(ctx, conn, encryption, pubSub, cronSvc)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 
@@ -1163,14 +1163,25 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("invalid module schema: %w", err)
 	}
 
+	sm := cf.SecretsFromContext(ctx)
+	for _, d := range module.Decls {
+		if db, ok := d.(*schema.Database); ok && db.Runtime != nil {
+			key := dsnSecretKey(module.Name, db.Name)
+			// TODO: Use a cluster specific default provider
+			if err := sm.Set(ctx, providers.InlineProviderKey, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
+				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
+			}
+			logger.Infof("Database declaration: %s -> %s", db.Name, db.Runtime.DSN)
+		}
+	}
+
 	ingressRoutes := extractIngressRoutingEntries(req.Msg)
-	cronJobs, err := s.cronJobs.NewCronJobsForModule(ctx, req.Msg.Schema)
 	if err != nil {
 		logger.Errorf(err, "Could not generate cron jobs for new deployment")
 		return nil, fmt.Errorf("could not generate cron jobs for new deployment: %w", err)
 	}
 
-	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes, cronJobs)
+	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes)
 	if err != nil {
 		logger.Errorf(err, "Could not create deployment")
 		return nil, fmt.Errorf("could not create deployment: %w", err)
@@ -1187,6 +1198,25 @@ func (s *Service) ResetSubscription(ctx context.Context, req *connect.Request[ft
 		return nil, fmt.Errorf("could not reset subscription: %w", err)
 	}
 	return connect.NewResponse(&ftlv1.ResetSubscriptionResponse{}), nil
+}
+
+func dsnSecretKey(module string, db string) string {
+	return fmt.Sprintf("FTL_DSN_%s_%s",
+		strings.ToUpper(stripNonAlphanumeric(module)),
+		strings.ToUpper(stripNonAlphanumeric(db)),
+	)
+}
+
+func stripNonAlphanumeric(s string) string {
+	var result strings.Builder
+	for _, r := range s {
+		if ('a' <= r && r <= 'z') ||
+			('A' <= r && r <= 'Z') ||
+			('0' <= r && r <= '9') {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
 }
 
 // Load schemas for existing modules, combine with our new one, and validate the new module in the context

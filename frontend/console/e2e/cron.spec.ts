@@ -1,23 +1,19 @@
 import { expect, test } from '@playwright/test'
 import { navigateToDecl } from './helpers'
 
-test('shows echo verb form', async ({ page }) => {
-  await navigateToDecl(page, 'echo', 'echo')
+test('shows cron verb form', async ({ page }) => {
+  await navigateToDecl(page, 'cron', 'thirtySeconds')
 
-  await expect(page.getByText('CALL', { exact: true })).toBeVisible()
-  await expect(page.locator('input#request-path')).toHaveValue('echo.echo')
+  await expect(page.getByText('CRON', { exact: true })).toBeVisible()
+  await expect(page.locator('input#request-path')).toHaveValue('cron.thirtySeconds')
 
   await expect(page.getByText('Body', { exact: true })).toBeVisible()
   await expect(page.getByText('Verb Schema', { exact: true })).toBeVisible()
   await expect(page.getByText('JSONSchema', { exact: true })).toBeVisible()
 })
 
-test('send echo request', async ({ page }) => {
-  await navigateToDecl(page, 'echo', 'echo')
-
-  const bodyEditor = page.locator('#body-editor .cm-content[contenteditable="true"]')
-  await expect(bodyEditor).toBeVisible()
-  await bodyEditor.fill('{\n  "name": "wicket"\n}')
+test('send cron request', async ({ page }) => {
+  await navigateToDecl(page, 'cron', 'thirtySeconds')
 
   await page.getByRole('button', { name: 'Send' }).click()
 
@@ -27,6 +23,5 @@ test('send echo request', async ({ page }) => {
   const responseText = await responseEditor.textContent()
   const responseJson = JSON.parse(responseText?.trim() || '{}')
 
-  const expectedStart = 'Hello, wicket!!! It is '
-  expect(responseJson.message.startsWith(expectedStart)).toBe(true)
+  expect(responseJson).toEqual({})
 })

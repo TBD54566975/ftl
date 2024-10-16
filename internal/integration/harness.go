@@ -78,8 +78,6 @@ func WithLanguages(languages ...string) Option {
 }
 
 // WithKubernetes is a Run* option that specifies tests should be run on a kube cluster
-//
-// This is only compatible with go tests
 func WithKubernetes() Option {
 	return func(o *options) {
 		o.kube = true
@@ -209,10 +207,6 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	ctx := log.ContextWithLogger(context.Background(), logger)
 	binDir := filepath.Join(rootDir, "build", "release")
 
-	if opts.kube && len(opts.languages) != 1 && opts.languages[0] != "go" {
-		t.Fatal("Kubernetes tests are only supported for golang")
-	}
-
 	var kubeClient *kubernetes.Clientset
 	var kubeNamespace string
 	buildOnce.Do(func() {
@@ -226,8 +220,14 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			assert.NoError(t, err)
 			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "install-istio").RunBuffered(ctx)
 			assert.NoError(t, err)
-			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "full-deploy").RunBuffered(ctx)
-			assert.NoError(t, err)
+
+			skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"
+			if skipKubeFullDeploy {
+				Infof("Skipping full deploy since SKIP_KUBE_FULL_DEPLOY is set")
+			} else {
+				err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "full-deploy").RunBuffered(ctx)
+				assert.NoError(t, err)
+			}
 			if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
 				// If we are already on linux/amd64 we don't need to rebuild, otherwise we now need a native one to interact with the kube cluster
 				Infof("Building FTL for native OS")

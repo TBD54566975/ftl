@@ -6,6 +6,7 @@ import (
 
 	"github.com/XSAM/otelsql"
 
+	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -24,15 +25,16 @@ func NewDevProvisioner(postgresPort int) *InMemProvisioner {
 			logger := log.FromContext(ctx)
 			logger.Infof("provisioning postgres database: %s_%s", module, id)
 
+			dbName := strcase.ToLowerCamel(module) + "_" + strcase.ToLowerCamel(id)
+
 			if postgresDSN == "" {
 				// We assume that the DB hsas already been started when running in dev mode
-				dsn, err := dev.WaitForDBReady(ctx, postgresPort)
+				pdsn, err := dev.WaitForDBReady(ctx, postgresPort)
 				if err != nil {
 					return nil, fmt.Errorf("failed to wait for postgres to be ready: %w", err)
 				}
-				postgresDSN = dsn
+				postgresDSN = pdsn
 			}
-			dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 			conn, err := otelsql.Open("pgx", postgresDSN)
 			if err != nil {
 				return nil, fmt.Errorf("failed to connect to postgres: %w", err)
@@ -54,9 +56,10 @@ func NewDevProvisioner(postgresPort int) *InMemProvisioner {
 			if pg.Postgres == nil {
 				pg.Postgres = &provisioner.PostgresResource{}
 			}
+			dsn := dsn.DSN(dbName, dsn.Port(postgresPort))
 			pg.Postgres.Output = &provisioner.PostgresResource_PostgresResourceOutput{
-				ReadEndpoint:  postgresDSN,
-				WriteEndpoint: postgresDSN,
+				WriteDsn: dsn,
+				ReadDsn:  dsn,
 			}
 			return rc.Resource, nil
 		},

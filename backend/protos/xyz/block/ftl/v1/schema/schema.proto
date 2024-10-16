@@ -48,9 +48,14 @@ message Data {
 
 message Database {
   optional Position pos = 1;
+  optional DatabaseRuntime runtime = 31634;
   repeated string comments = 2;
   string type = 4;
   string name = 3;
+}
+
+message DatabaseRuntime {
+  string dsn = 1;
 }
 
 message Decl {

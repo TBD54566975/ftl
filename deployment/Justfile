@@ -17,7 +17,7 @@ start: setup full-deploy
 
 rm: teardown
 
-full-deploy: build-controller build-runner setup-cluster
+full-deploy: build-controller build-runner build-provisioner setup-cluster
   #!/bin/bash
   kubectl rollout restart deployment ftl-controller || true # if this exists already restart it to get the latest image
   just apply || sleep 5 # wait for CRDs to be created, the initial apply will usually fail
@@ -41,7 +41,7 @@ setup-registry:
 setup-cluster: setup-registry
   #!/bin/bash
   if [ -z "$(k3d cluster list | grep ftl)" ]; then
-  k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer"  --agents 2 \
+  k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" -p "8891:80@loadbalancer" -p "8893:80@loadbalancer"  --agents 2 \
       --registry-use {{registry_full}} \
       --registry-config '{{mirrors}}'
   fi
@@ -70,7 +70,7 @@ teardown: teardown-cluster teardown-registry
 
 apply:
   kubectl delete job --ignore-not-found=true ftl-dbmig-latest
-  helm upgrade --install ftl ../charts -f values.yaml
+  helm upgrade --install ftl ../charts/ftl -f values.yaml
 
 deploy-version version: setup-cluster
   helm repo add ftl https://tbd54566975.github.io/ftl-charts --force-update
@@ -108,7 +108,7 @@ build-executables:
   # it is way faster than building in the docker files
   java -version #make sure hermit has downloaded Java
   mkdir -p "docker-build"
-  cd ../ && GOARCH=amd64 GOOS=linux CGO_ENABLED=0 just build ftl-controller ftl-runner ftl-initdb ftl
+  cd ../ && GOARCH=amd64 GOOS=linux CGO_ENABLED=0 just build ftl-controller ftl-runner ftl-initdb ftl ftl-provisioner ftl-provisioner-cloudformation
   cp ../build/release/* ./docker-build/
 
 build-controller: build-executables setup-registry setup-cluster
@@ -121,7 +121,12 @@ build-runner: build-executables setup-registry setup-cluster
   docker tag ftl-runner:latest {{registry_local}}/ftl-runner:latest
   docker push {{registry_local}}/ftl-runner:latest
 
-build: build-controller build-runner
+build-provisioner: build-executables setup-registry setup-cluster
+  docker build --platform linux/amd64 -t ftl-provisioner:latest -f Dockerfile.provisioner.test .
+  docker tag ftl-provisioner:latest {{registry_local}}/ftl-provisioner:latest
+  docker push {{registry_local}}/ftl-provisioner:latest
+
+build: build-controller build-runner build-provisioner
 
 deploy path:
 	#!/usr/bin/env bash

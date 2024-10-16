@@ -3,7 +3,6 @@ package dal
 import (
 	"bytes"
 	"context"
-	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"io"
 	"sync"
 	"testing"
@@ -12,6 +11,10 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
+	"github.com/TBD54566975/ftl/backend/controller/timeline"
 
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
@@ -34,7 +37,10 @@ func TestDAL(t *testing.T) {
 
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	dal := New(ctx, conn, encryption, pubSub)
+	timelineSrv := timeline.New(ctx, conn, encryption)
+	key := model.NewControllerKey("localhost", "8081")
+	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
+	dal := New(ctx, conn, encryption, pubSub, cjs)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
@@ -68,7 +74,7 @@ func TestDAL(t *testing.T) {
 			Digest:     testSha,
 			Executable: true,
 			Path:       "dir/filename",
-		}}, nil, nil)
+		}}, nil)
 		assert.NoError(t, err)
 	})
 
@@ -194,7 +200,11 @@ func TestCreateArtefactConflict(t *testing.T) {
 
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	dal := New(ctx, conn, encryption, pubSub)
+
+	timelineSrv := timeline.New(ctx, conn, encryption)
+	key := model.NewControllerKey("localhost", "8081")
+	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
+	dal := New(ctx, conn, encryption, pubSub, cjs)
 
 	idch := make(chan sha256.SHA256, 2)
 

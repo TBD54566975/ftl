@@ -3,7 +3,7 @@ import { CodeBlock } from '../../../components/CodeBlock'
 import type { CallEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
-import { verbRefString } from '../../verbs/verb.utils'
+import { refString } from '../../verbs/verb.utils'
 
 export const TraceDetailsCall = ({ event }: { event: Event }) => {
   const call = event.entry.value as CallEvent
@@ -46,12 +46,12 @@ export const TraceDetailsCall = ({ event }: { event: Event }) => {
         </li>
         {call.destinationVerbRef && (
           <li>
-            <AttributeBadge name='Destination' value={verbRefString(call.destinationVerbRef)} />
+            <AttributeBadge name='Destination' value={refString(call.destinationVerbRef)} />
           </li>
         )}
         {call.sourceVerbRef && (
           <li>
-            <AttributeBadge name='Source' value={verbRefString(call.sourceVerbRef)} />
+            <AttributeBadge name='Source' value={refString(call.sourceVerbRef)} />
           </li>
         )}
       </ul>

@@ -22,6 +22,7 @@ import xyz.block.ftl.v1.schema.EnumVariant;
 import xyz.block.ftl.v1.schema.Module;
 import xyz.block.ftl.v1.schema.Topic;
 import xyz.block.ftl.v1.schema.Type;
+import xyz.block.ftl.v1.schema.TypeAlias;
 import xyz.block.ftl.v1.schema.Verb;
 
 public abstract class JVMCodeGenerator implements CodeGenProvider {
@@ -77,7 +78,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                                     if (existing != null) {
                                         nativeTypeAliasMap.put(new DeclRef(module.getName(), data.getName()),
                                                 nativeName);
-                                        generateTypeAliasMapper(module.getName(), data.getName(), packageName,
+                                        generateTypeAliasMapper(module.getName(), data, packageName,
                                                 Optional.of(nativeName),
                                                 context.outDir());
                                         handled = true;
@@ -87,7 +88,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
                             }
                         }
                         if (!handled) {
-                            generateTypeAliasMapper(module.getName(), data.getName(), packageName, Optional.empty(),
+                            generateTypeAliasMapper(module.getName(), data, packageName, Optional.empty(),
                                     context.outDir());
                             typeAliasMap.put(new DeclRef(module.getName(), data.getName()), data.getType());
                         }
@@ -141,7 +142,7 @@ public abstract class JVMCodeGenerator implements CodeGenProvider {
         return true;
     }
 
-    protected abstract void generateTypeAliasMapper(String module, String name, String packageName,
+    protected abstract void generateTypeAliasMapper(String module, TypeAlias typeAlias, String packageName,
             Optional<String> nativeTypeAlias, Path outputDir) throws IOException;
 
     protected abstract void generateTopicSubscription(Module module, Topic data, String packageName,

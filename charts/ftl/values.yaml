@@ -20,6 +20,7 @@ controller:
 
   image:
     repository: "ftl0/ftl-controller"
+    pullPolicy: IfNotPresent
 
   envFrom: null
   dbConnectionString: "postgres://$(endpoint):$(port)/tbd?sslmode=disable&user=$(username)&password=$(password)"
@@ -86,6 +87,58 @@ controller:
   topologySpreadConstraints: null
   tolerations: null
 
+provisioner:
+  enabled: false
+  replicas: 1
+  revisionHistoryLimit: 0
+
+  image:
+    repository: "ftl0/ftl-provisioner"
+    pullPolicy: IfNotPresent
+
+  envFrom: null
+  serviceAccountName: ftl
+
+  env:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    - name: FTL_PROVISIONER_BIND
+      value: "http://$(MY_POD_IP):8893"
+    - name: FTL_ENDPOINT
+      value: "http://ftl-controller:8892"
+    - name: LOG_LEVEL
+      value: "debug"
+    - name: LOG_JSON
+      value: "true"
+    - name: HOST_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
+
+  ports:
+    - name: http
+      containerPort: 8893
+      protocol: TCP
+
+  readinessProbe: null
+
+  service:
+    type: ClusterIP
+    annotations: null
+    ports:
+      - name: "http-8893"
+        port: 80
+        protocol: TCP
+        targetPort: 8893
+
+  podAnnotations: null
+  nodeSelector: null
+  affinity: null
+  topologySpreadConstraints: null
+  tolerations: null
+
 runner:
   revisionHistoryLimit: 0
 
@@ -136,7 +189,7 @@ runner:
   tolerations: null
 
 harbor:
-  enabled: true
+  enabled: false
   expose:
     tls:
       enabled: false

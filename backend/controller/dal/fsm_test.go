@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
+	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	leasedal "github.com/TBD54566975/ftl/backend/controller/leases/dbleaser"
@@ -30,7 +31,8 @@ func TestSendFSMEvent(t *testing.T) {
 
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	dal := New(ctx, conn, encryption, pubSub)
+	cron := cronjobs.New(ctx, model.ControllerKey{}, "test", encryption, nil, conn)
+	dal := New(ctx, conn, encryption, pubSub, cron)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, libdal.ErrNotFound)

@@ -3,14 +3,14 @@ import { SidePanel } from '../layout/SidePanel'
 
 interface SidePanelContextType {
   isOpen: boolean
-  component: React.ReactNode
-  openPanel: (component: React.ReactNode, onClose?: () => void) => void
+  header?: React.ReactNode
+  component?: React.ReactNode
+  openPanel: (component: React.ReactNode, header?: React.ReactNode, onClose?: () => void) => void
   closePanel: () => void
 }
 
 const defaultContextValue: SidePanelContextType = {
   isOpen: false,
-  component: null,
   openPanel: () => {},
   closePanel: () => {},
 }
@@ -19,12 +19,14 @@ export const SidePanelContext = React.createContext<SidePanelContextType>(defaul
 
 export const SidePanelProvider = ({ children }: PropsWithChildren) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [component, setComponent] = useState<React.ReactNode | null>(null)
-  const [onCloseCallback, setOnCloseCallback] = useState<(() => void) | null>(null)
+  const [header, setHeader] = useState<React.ReactNode>()
+  const [component, setComponent] = useState<React.ReactNode>()
+  const [onCloseCallback, setOnCloseCallback] = useState<() => void>()
 
-  const openPanel = React.useCallback((comp: React.ReactNode, onClose?: () => void) => {
+  const openPanel = React.useCallback((component?: React.ReactNode, header?: React.ReactNode, onClose?: () => void) => {
     setIsOpen(true)
-    setComponent(comp)
+    setComponent(component)
+    setHeader(header)
     if (onClose) {
       setOnCloseCallback(() => onClose)
     }
@@ -32,15 +34,16 @@ export const SidePanelProvider = ({ children }: PropsWithChildren) => {
 
   const closePanel = React.useCallback(() => {
     setIsOpen(false)
-    setComponent(null)
+    setComponent(undefined)
+    setHeader(undefined)
     if (onCloseCallback) {
       onCloseCallback()
     }
-    setOnCloseCallback(null)
+    setOnCloseCallback(undefined)
   }, [onCloseCallback])
 
   return (
-    <SidePanelContext.Provider value={{ isOpen, openPanel, closePanel, component }}>
+    <SidePanelContext.Provider value={{ isOpen, header, component, openPanel, closePanel }}>
       {children}
       <SidePanel />
     </SidePanelContext.Provider>

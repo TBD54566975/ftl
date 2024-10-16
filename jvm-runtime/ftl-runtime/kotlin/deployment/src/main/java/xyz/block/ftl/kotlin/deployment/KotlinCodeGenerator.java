@@ -40,15 +40,17 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
     public static final String PACKAGE_PREFIX = "ftl.";
 
     @Override
-    protected void generateTypeAliasMapper(String module, String name, String packageName, Optional<String> nativeTypeAlias,
+    protected void generateTypeAliasMapper(String module, xyz.block.ftl.v1.schema.TypeAlias typeAlias, String packageName,
+            Optional<String> nativeTypeAlias,
             Path outputDir) throws IOException {
-        String thisType = className(name) + TYPE_MAPPER;
+        String thisType = className(typeAlias.getName()) + TYPE_MAPPER;
         TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(thisType)
                 .addAnnotation(AnnotationSpec.builder(TypeAlias.class)
-                        .addMember("name=\"" + name + "\"")
+                        .addMember("name=\"" + typeAlias.getName() + "\"")
                         .addMember("module=\"" + module + "\"")
                         .build())
-                .addModifiers(KModifier.PUBLIC);
+                .addModifiers(KModifier.PUBLIC)
+                .addKdoc(String.join("\n", typeAlias.getCommentsList()));
         if (nativeTypeAlias.isEmpty()) {
             TypeVariableName finalType = TypeVariableName.get("T");
             typeBuilder.addTypeVariable(finalType);
@@ -97,7 +99,8 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
                         AnnotationSpec.builder(GeneratedRef.class)
                                 .addMember("name=\"" + data.getName() + "\"")
                                 .addMember("module=\"" + module.getName() + "\"").build())
-                .addModifiers(KModifier.PUBLIC);
+                .addModifiers(KModifier.PUBLIC)
+                .addKdoc(String.join("\n", data.getCommentsList()));
 
         for (var i : data.getVariantsList()) {
             dataBuilder.addEnumConstant(i.getName());
@@ -118,7 +121,8 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
                         AnnotationSpec.builder(GeneratedRef.class)
                                 .addMember("name=\"" + data.getName() + "\"")
                                 .addMember("module=\"" + module.getName() + "\"").build())
-                .addModifiers(KModifier.PUBLIC);
+                .addModifiers(KModifier.PUBLIC)
+                .addKdoc(String.join("\n", data.getCommentsList()));
         if (!data.getFieldsList().isEmpty()) {
             dataBuilder.addModifiers(KModifier.DATA);
         }
@@ -156,22 +160,31 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
                         .build())
                 .addModifiers(KModifier.PUBLIC)
                 .addKdoc("A client for the %L.%L verb", module.getName(), verb.getName());
+        String comments = String.join("\n", verb.getCommentsList());
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
             typeBuilder.addFunction(FunSpec.builder("call")
-                    .addModifiers(KModifier.ABSTRACT, KModifier.PUBLIC).build());
+                    .addModifiers(KModifier.ABSTRACT, KModifier.PUBLIC)
+                    .addKdoc(comments)
+                    .build());
         } else if (verb.getRequest().hasUnit()) {
             typeBuilder.addFunction(FunSpec.builder("call")
                     .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
-                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT).build());
+                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT)
+                    .addKdoc(comments)
+                    .build());
         } else if (verb.getResponse().hasUnit()) {
             typeBuilder.addFunction(FunSpec.builder("call")
-                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT)
-                    .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap)).build());
+                    .addModifiers(KModifier.ABSTRACT)
+                    .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap))
+                    .addKdoc(comments)
+                    .build());
         } else {
             typeBuilder.addFunction(FunSpec.builder("call")
                     .returns(toKotlinTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
                     .addParameter("value", toKotlinTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap))
-                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT).build());
+                    .addModifiers(KModifier.PUBLIC, KModifier.ABSTRACT)
+                    .addKdoc(comments)
+                    .build());
         }
         FileSpec javaFile = FileSpec.builder(packageName, thisType)
                 .addType(typeBuilder.build())
