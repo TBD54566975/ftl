@@ -155,7 +155,7 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
                         .addMember("module=\"" + module.getName() + "\"")
                         .build())
                 .addModifiers(KModifier.PUBLIC)
-                .addKdoc("A client for the %s.%s verb", module.getName(), verb.getName());
+                .addKdoc("A client for the %L.%L verb", module.getName(), verb.getName());
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
             typeBuilder.addFunction(FunSpec.builder("call")
                     .addModifiers(KModifier.ABSTRACT, KModifier.PUBLIC).build());

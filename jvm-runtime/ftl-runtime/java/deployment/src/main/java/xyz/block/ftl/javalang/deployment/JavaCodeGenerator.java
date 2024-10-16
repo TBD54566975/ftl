@@ -280,7 +280,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                         .addMember("module", "\"" + module.getName() + "\"")
                         .build())
                 .addModifiers(Modifier.PUBLIC)
-                .addJavadoc("A client for the %s.%s verb", module.getName(), verb.getName());
+                .addJavadoc("A client for the $L.$L verb", module.getName(), verb.getName());
         if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
             typeBuilder.addMethod(MethodSpec.methodBuilder("call")
                     .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build());
