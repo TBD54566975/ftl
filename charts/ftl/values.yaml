@@ -91,7 +91,7 @@ provisioner:
   enabled: false
   replicas: 1
   revisionHistoryLimit: 0
-
+  configMap: "ftl-provisioner-default-config"
   image:
     repository: "ftl0/ftl-provisioner"
     pullPolicy: IfNotPresent
