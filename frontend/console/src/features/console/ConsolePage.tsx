@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { type NavigateFunction, useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
+import { Loader } from '../../components/Loader'
 import { ResizablePanels } from '../../components/ResizablePanels'
-import { Page } from '../../layout'
 import { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { type FTLNode, GraphPane } from '../graph/GraphPane'
-import BottomPanel from './BottomPanel'
+import { Timeline } from '../timeline/Timeline'
 import type { ExpandablePanelProps } from './ExpandablePanel'
 import { configPanels } from './right-panel/ConfigPanels'
 import { modulePanels } from './right-panel/ModulePanels'
@@ -19,20 +19,22 @@ export const ConsolePage = () => {
   const [selectedNode, setSelectedNode] = useState<FTLNode | null>(null)
 
   if (!modules.isSuccess) {
-    return <Page>Loading...</Page>
+    return (
+      <div className='flex justify-center items-center h-full'>
+        <Loader />
+      </div>
+    )
   }
 
   return (
-    <Page>
-      <Page.Body className='flex h-full'>
-        <ResizablePanels
-          mainContent={<GraphPane onTapped={setSelectedNode} />}
-          rightPanelHeader={headerForNode(selectedNode)}
-          rightPanelPanels={panelsForNode(modules.data.modules, selectedNode, navigate)}
-          bottomPanelContent={<BottomPanel />}
-        />
-      </Page.Body>
-    </Page>
+    <div className='flex h-full'>
+      <ResizablePanels
+        mainContent={<GraphPane onTapped={setSelectedNode} />}
+        rightPanelHeader={headerForNode(selectedNode)}
+        rightPanelPanels={panelsForNode(modules.data.modules, selectedNode, navigate)}
+        bottomPanelContent={<Timeline timeSettings={{ isTailing: true, isPaused: false }} filters={[]} />}
+      />
+    </div>
   )
 }
 

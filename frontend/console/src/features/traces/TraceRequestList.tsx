@@ -4,6 +4,8 @@ import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../providers/side-panel-provider'
 import TimelineEventList from '../timeline/TimelineEventList'
 import { TimelineCallDetails } from '../timeline/details/TimelineCallDetails'
+import { TimelineDetailsHeader } from '../timeline/details/TimelineDetailsHeader'
+import { TimelineIngressDetails } from '../timeline/details/TimelineIngressDetails'
 import { groupEventsByRequestKey } from './traces.utils'
 
 export const TraceRequestList = ({ module, verb }: { module: string; verb?: string }) => {
@@ -22,7 +24,14 @@ export const TraceRequestList = ({ module, verb }: { module: string; verb?: stri
       return
     }
     setSelectedEventId(event.id)
-    openPanel(<TimelineCallDetails event={event} />)
+    switch (event.entry?.case) {
+      case 'call':
+        openPanel(<TimelineCallDetails event={event} />, <TimelineDetailsHeader event={event} />)
+        break
+      case 'ingress':
+        openPanel(<TimelineIngressDetails event={event} />, <TimelineDetailsHeader event={event} />)
+        break
+    }
   }
 
   const events = Object.entries(traceEvents).map(([_, events]) => events[0])
