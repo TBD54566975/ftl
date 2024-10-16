@@ -24,6 +24,7 @@ spec:
       containers:
         - name: app
           image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
           {{- if .Values.controller.envFrom }}
           envFrom:
             {{- if .Values.controller.envFrom }}

@@ -1,0 +1,78 @@
+{{- if .Values.provisioner.enabled }}
+{{ $version := printf "v%s" .Chart.Version -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ftl.fullname" . }}-provisioner
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.provisioner.replicas }}
+  revisionHistoryLimit: {{ .Values.provisioner.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "ftl-provisioner.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ftl-provisioner.selectorLabels" . | nindent 8 }}
+      {{- if .Values.provisioner.podAnnotations }}
+      annotations:
+        {{- toYaml .Values.provisioner.podAnnotations | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.provisioner.serviceAccountName }}
+      containers:
+        - name: app
+          image: "{{ .Values.provisioner.image.repository }}:{{ .Values.provisioner.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.provisioner.image.pullPolicy }}
+          {{- if .Values.provisioner.envFrom }}
+          envFrom:
+            {{- if .Values.provisioner.envFrom }}
+            {{- toYaml .Values.provisioner.envFrom | nindent 12 }}
+            {{- end }}
+          {{- else if or .Values.secrets.logEncryptionKey .Values.secrets.asyncEncryptionKey }}
+          envFrom:
+            - secretRef:
+                name: {{ include "ftl.fullname" . }}-secrets
+          {{- end }}
+          env:
+            {{- if .Values.provisioner.env }}
+            {{- toYaml .Values.provisioner.env | nindent 12 }}
+            {{- end }}
+          ports:
+            {{- range .Values.provisioner.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .containerPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          readinessProbe:
+            {{- if .Values.provisioner.readinessProbe }}
+            {{- toYaml .Values.provisioner.readinessProbe | nindent 12 }}
+            {{- else }}
+            httpGet:
+              path: /healthz
+              port: 8893
+            initialDelaySeconds: 1
+            periodSeconds: 2
+            timeoutSeconds: 2
+            successThreshold: 1
+            failureThreshold: 15
+            {{- end }}
+      {{- if .Values.provisioner.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.provisioner.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.provisioner.affinity }}
+      affinity:
+        {{- toYaml .Values.provisioner.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.provisioner.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.provisioner.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.provisioner.tolerations }}
+      tolerations:
+        {{- toYaml .Values.provisioner.tolerations | nindent 8 }}
+      {{- end }}
+{{- end }}

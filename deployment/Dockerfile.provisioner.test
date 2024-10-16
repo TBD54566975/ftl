@@ -1,0 +1,14 @@
+FROM ubuntu:24.04
+
+WORKDIR /root/
+
+COPY docker-build/ftl-provisioner .
+COPY docker-build/ftl-provisioner-cloudformation /plugins/
+COPY docker-build/ftl .
+EXPOSE 8893
+# Temp hack, this should be a configmap
+COPY ftl-provisioner-config.toml /plugins/config.toml
+ENV FTL_PROVISIONER_PLUGIN_CONFIG_FILE="/plugins/config.toml"
+ENV PATH="$PATH:/plugins/"
+
+CMD ["/root/ftl-provisioner"]
