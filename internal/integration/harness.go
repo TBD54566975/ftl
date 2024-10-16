@@ -517,13 +517,13 @@ func (i TestContext) dumpKubePods() {
 					path := filepath.Join(dumpPath, pod.Name, container.Name+".log")
 					req := client.CoreV1().Pods(i.kubeNamespace).GetLogs(pod.Name, &kubecore.PodLogOptions{Container: container.Name})
 					podLogs, err := req.Stream(context.Background())
-					defer func() {
-						_ = podLogs.Close()
-					}()
 					if err != nil {
 						Infof("Error getting logs for pod %s: %v", pod.Name, err)
 						continue
 					}
+					defer func() {
+						_ = podLogs.Close()
+					}()
 					buf := new(bytes.Buffer)
 					_, err = io.Copy(buf, podLogs)
 					if err != nil {
