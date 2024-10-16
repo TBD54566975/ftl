@@ -41,7 +41,7 @@ setup-registry:
 setup-cluster: setup-registry
   #!/bin/bash
   if [ -z "$(k3d cluster list | grep ftl)" ]; then
-  k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer"  --agents 2 \
+  k3d cluster create ftl --api-port 6550 -p "8892:80@loadbalancer" -p "8891:80@loadbalancer"  --agents 2 \
       --registry-use {{registry_full}} \
       --registry-config '{{mirrors}}'
   fi

@@ -12,6 +12,10 @@ controller:
     ports:
       - name: "http-8892"
         port: 8892
-
+  ingressService:
+    ports:
+      - name: "http-8891"
+        port: 8891
 istio:
   enabled: true
+
