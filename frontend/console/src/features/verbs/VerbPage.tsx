@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
 import { Loader } from '../../components/Loader'
 import { ResizablePanels } from '../../components/ResizablePanels'
-import { Page } from '../../layout'
 import type { Module, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
@@ -55,16 +54,16 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
 
   return (
     <SidePanelProvider>
-      <Page>
-        <Page.Body className='flex h-full'>
+      <div className='flex flex-col h-full'>
+        <div className='flex h-full'>
           <ResizablePanels
             mainContent={<VerbRequestForm module={module} verb={verb} />}
             rightPanelHeader={header}
             rightPanelPanels={verbPanels(verb)}
             bottomPanelContent={<TraceRequestList module={module.name} verb={verb.verb?.name} />}
           />
-        </Page.Body>
-      </Page>
+        </div>
+      </div>
     </SidePanelProvider>
   )
 }

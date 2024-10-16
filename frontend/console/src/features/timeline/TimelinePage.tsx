@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Page } from '../../layout'
 import type { EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { Timeline } from './Timeline'
@@ -33,17 +32,15 @@ export const TimelinePage = () => {
 
   return (
     <SidePanelProvider>
-      <Page>
-        <Page.Body className='flex'>
-          <div className='sticky top-0 flex-none overflow-y-auto'>
-            <TimelineTimeControls selectedTimeRange={selectedTimeRange} isTimelinePaused={isTimelinePaused} onTimeSettingsChange={handleTimeSettingsChanged} />
-            <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
-          </div>
-          <div className='flex-grow overflow-y-scroll'>
-            <Timeline timeSettings={timeSettings} filters={filters} />
-          </div>
-        </Page.Body>
-      </Page>
+      <div className='flex h-full'>
+        <div className='flex-none overflow-y-auto'>
+          <TimelineTimeControls selectedTimeRange={selectedTimeRange} isTimelinePaused={isTimelinePaused} onTimeSettingsChange={handleTimeSettingsChanged} />
+          <TimelineFilterPanel onFiltersChanged={handleFiltersChanged} />
+        </div>
+        <div className='flex-grow overflow-y-scroll'>
+          <Timeline timeSettings={timeSettings} filters={filters} />
+        </div>
+      </div>
     </SidePanelProvider>
   )
 }
