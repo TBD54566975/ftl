@@ -162,7 +162,7 @@ func RegistryFromConfigFile(ctx context.Context, file *os.File, controller ftlv1
 	config := provisionerPluginConfig{}
 	bytes, err := io.ReadAll(bufio.NewReader(file))
 	if err != nil {
-		return nil, fmt.Errorf("error reading plugin configuration: %w", err)
+		return nil, fmt.Errorf("error reading plugin configuration from %s: %w", file.Name(), err)
 	}
 	if err := toml.Unmarshal(bytes, &config); err != nil {
 		return nil, fmt.Errorf("error parsing plugin configuration: %w", err)

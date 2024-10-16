@@ -1,3 +1,4 @@
+{{- if .Values.provisioner.enabled }}
 {{ $version := printf "v%s" .Chart.Version -}}
 apiVersion: apps/v1
 kind: Deployment
@@ -24,6 +25,7 @@ spec:
       containers:
         - name: app
           image: "{{ .Values.provisioner.image.repository }}:{{ .Values.provisioner.image.tag | default $version }}"
+          imagePullPolicy: {{ .Values.provisioner.image.pullPolicy }}
           {{- if .Values.provisioner.envFrom }}
           envFrom:
             {{- if .Values.provisioner.envFrom }}
@@ -73,3 +75,4 @@ spec:
       tolerations:
         {{- toYaml .Values.provisioner.tolerations | nindent 8 }}
       {{- end }}
+{{- end }}

@@ -108,7 +108,7 @@ build-executables:
   # it is way faster than building in the docker files
   java -version #make sure hermit has downloaded Java
   mkdir -p "docker-build"
-  cd ../ && GOARCH=amd64 GOOS=linux CGO_ENABLED=0 just build ftl-controller ftl-runner ftl-initdb ftl
+  cd ../ && GOARCH=amd64 GOOS=linux CGO_ENABLED=0 just build ftl-controller ftl-runner ftl-initdb ftl ftl-provisioner ftl-provisioner-cloudformation
   cp ../build/release/* ./docker-build/
 
 build-controller: build-executables setup-registry setup-cluster
@@ -121,7 +121,12 @@ build-runner: build-executables setup-registry setup-cluster
   docker tag ftl-runner:latest {{registry_local}}/ftl-runner:latest
   docker push {{registry_local}}/ftl-runner:latest
 
-build: build-controller build-runner
+build-provisioner: build-executables setup-registry setup-cluster
+  docker build --platform linux/amd64 -t ftl-provisioner:latest -f Dockerfile.provisioner.test .
+  docker tag ftl-provisioner:latest {{registry_local}}/ftl-provisioner:latest
+  docker push {{registry_local}}/ftl-provisioner:latest
+
+build: build-controller build-runner build-provisioner
 
 deploy path:
 	#!/usr/bin/env bash

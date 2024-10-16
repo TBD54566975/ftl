@@ -20,6 +20,7 @@ controller:
 
   image:
     repository: "ftl0/ftl-controller"
+    pullPolicy: IfNotPresent
 
   envFrom: null
   dbConnectionString: "postgres://$(endpoint):$(port)/tbd?sslmode=disable&user=$(username)&password=$(password)"
@@ -87,11 +88,13 @@ controller:
   tolerations: null
 
 provisioner:
+  enabled: false
   replicas: 1
   revisionHistoryLimit: 0
 
   image:
     repository: "ftl0/ftl-provisioner"
+    pullPolicy: IfNotPresent
 
   envFrom: null
   serviceAccountName: ftl

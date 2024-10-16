@@ -13,5 +13,14 @@ controller:
     ports:
       - name: "http-8891"
         port: 8891
+provisioner:
+  enabled: true
+  image:
+    repository: "ftl:5000/ftl-provisioner"
+    tag: "latest"
+  service:
+    ports:
+      - name: "http-8893"
+        port: 8893
 istio:
   enabled: true
