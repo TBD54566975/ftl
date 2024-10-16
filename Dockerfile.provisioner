@@ -45,6 +45,6 @@ EXPOSE 8893
 
 ENV PATH="$PATH:/plugins/"
 ENV FTL_PROVISIONER_BIND="http://0.0.0.0:8893"
-ENV FTL_PROVISIONER_PLUGIN_CONFIG_FILE="/plugins/config.toml"
+ENV FTL_PROVISIONER_PLUGIN_CONFIG_FILE="/plugins/ftl-provisioner-config.toml"
 
 CMD ["/service/ftl-provisioner"]
