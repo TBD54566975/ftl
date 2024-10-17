@@ -162,6 +162,7 @@ func customDefaultsFromProto(proto *langpb.ModuleConfigDefaultsResponse) modulec
 		DeployDir:          proto.DeployDir,
 		Watch:              proto.Watch,
 		Build:              optional.Ptr(proto.Build),
+		BuildLock:          optional.Ptr(proto.BuildLock),
 		GeneratedSchemaDir: optional.Ptr(proto.GeneratedSchemaDir),
 		LanguageConfig:     proto.LanguageConfig.AsMap(),
 	}

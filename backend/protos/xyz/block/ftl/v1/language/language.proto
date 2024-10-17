@@ -22,14 +22,16 @@ message ModuleConfig {
   string deploy_dir = 4;
   // Build is the command to build the module.
   optional string build = 5;
+  // Build lock path to prevent concurrent builds
+  string build_lock = 6;
   // The directory to generate protobuf schema files into. These can be picked up by language specific build tools
-  optional string generated_schema_dir = 6;
+  optional string generated_schema_dir = 7;
   // Patterns to watch for file changes
-  repeated string watch = 7;
+  repeated string watch = 8;
 
   // LanguageConfig contains any metadata specific to a specific language.
   // These are stored in the ftl.toml file under the same key as the language (eg: "go", "java")
-  google.protobuf.Struct language_config = 8;
+  google.protobuf.Struct language_config = 9;
 }
 
 // ProjectConfig contains the configuration for a project, found in the ftl-project.toml file.
@@ -92,15 +94,18 @@ message ModuleConfigDefaultsResponse {
   // Default build command
   optional string build = 2;
 
+  // Build lock path to prevent concurrent builds
+  optional string build_lock = 3;
+
   // Default relative path to the directory containing generated schema files
-  optional string generated_schema_dir = 3;
+  optional string generated_schema_dir = 4;
 
   // Default patterns to watch for file changes, relative to the module directory
-  repeated string watch = 4;
+  repeated string watch = 5;  
 
   // Default language specific configuration.
   // These defaults are filled in by looking at each root key only. If the key is not present, the default is used.
-  google.protobuf.Struct language_config = 5;
+  google.protobuf.Struct language_config = 6;
 }
 
 message DependenciesRequest {
