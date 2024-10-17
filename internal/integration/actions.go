@@ -229,7 +229,7 @@ func Deploy(module string) Action {
 				args = append(args, "--use-provisioner", "--provisioner-endpoint=http://localhost:8893")
 			}
 			if ic.kubeClient.Ok() {
-				args = append(args, "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0", "--use-provisioner")
+				args = append(args, "--build-env", "GOOS=linux", "--build-env", "GOARCH=amd64", "--build-env", "CGO_ENABLED=0")
 			}
 			args = append(args, module)
 
