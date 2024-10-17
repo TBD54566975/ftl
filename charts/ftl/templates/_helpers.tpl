@@ -42,8 +42,3 @@ app.kubernetes.io/name: {{ include "ftl.fullname" . }}
 app.kubernetes.io/component: runner
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
-{{- define "ftl-provisioner.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "ftl.fullname" . }}
-app.kubernetes.io/component: provisioner
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end -}}
