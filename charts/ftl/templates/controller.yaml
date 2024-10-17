@@ -25,6 +25,13 @@ spec:
         - name: app
           image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag | default $version }}"
           imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "{{ .Values.controller.resources.limits.cpu }}"
+              memory: "{{ .Values.controller.resources.limits.memory }}"
+            requests:
+              cpu: "{{ .Values.controller.resources.requests.cpu }}"
+              memory: "{{ .Values.controller.resources.requests.memory }}"
           {{- if .Values.controller.envFrom }}
           envFrom:
             {{- if .Values.controller.envFrom }}
