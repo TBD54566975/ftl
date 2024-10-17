@@ -88,6 +88,7 @@ controller:
   tolerations: null
 
 provisioner:
+  provisionersRoleArn: arn:aws:iam::ftl-provisioners-irsa-role
   enabled: false
   replicas: 1
   revisionHistoryLimit: 0
@@ -97,7 +98,7 @@ provisioner:
     pullPolicy: IfNotPresent
 
   envFrom: null
-  serviceAccountName: ftl
+  serviceAccountName: ftl-provisioner
 
   env:
     - name: MY_POD_IP

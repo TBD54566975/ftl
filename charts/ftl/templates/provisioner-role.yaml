@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.provisioner.serviceAccountName }}
+  namespace: {{ .Release.Namespace }}
+  {{- if .Values.provisioner.provisionersRoleArn }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ .Values.provisioner.provisionersRoleArn }}
+  {{- end }}
