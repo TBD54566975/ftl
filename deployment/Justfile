@@ -47,7 +47,7 @@ setup-cluster: setup-registry
   fi
   kubectl config set-context --current --namespace=default
 
-install-istio: setup-cluster
+install-istio:
   #!/bin/bash
   if [ -z "$(kubectl get namespace | grep istio-system)" ]; then
       kubectl create namespace istio-system
