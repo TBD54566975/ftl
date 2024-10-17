@@ -15,9 +15,9 @@ import xyz.block.ftl.Cron;
 public class Pulse {
 
     @Cron("1s")
-    public void cron10s(GetNonceClient getNonceClient, GetLogFileClient client) throws Exception {
-        GetNonceResponse nr = getNonceClient.call(new GetNonceRequest());
-        GetLogFileResponse lfr = client.getLogFile(new GetLogFileRequest());
+    public void cron10s(GetNonceClient nonceClient, GetLogFileClient logClient) throws Exception {
+        GetNonceResponse nr = nonceClient.getNonce(new GetNonceRequest());
+        GetLogFileResponse lfr = logClient.getLogFile(new GetLogFileRequest());
         Log.infof("Cron job triggered, nonce %s, log file: %s", nr.getNonce(), lfr.getPath());
         appendLog(lfr.getPath(), "cron %s", nr.getNonce());
     }
