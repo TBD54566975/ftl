@@ -15,12 +15,20 @@ dbMigration:
 
 controller:
   controllersRoleArn: arn:aws:iam::ftl-controllers-irsa-role
-  replicas: 2
+  replicas: 1
   revisionHistoryLimit: 0
 
   image:
     repository: "ftl0/ftl-controller"
     pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 10m
+    limits:
+      memory: 256Mi
+      cpu: 2
 
   envFrom: null
   dbConnectionString: "postgres://$(endpoint):$(port)/tbd?sslmode=disable&user=$(username)&password=$(password)"
@@ -148,7 +156,15 @@ runner:
   revisionHistoryLimit: 0
 
   envFrom: null
-
+  image:
+    pullPolicy: IfNotPresent
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 10m
+    limits:
+      memory: 256Mi
+      cpu: 2
   env:
     - name: MY_POD_IP
       valueFrom:
@@ -211,7 +227,7 @@ postgresql:
   primary:
     resources:
       requests:
-        memory: 512Mi
+        memory: 1024Mi
       limits:
         memory: 1024Mi
   global:
