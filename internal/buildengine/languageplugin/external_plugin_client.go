@@ -25,6 +25,9 @@ type externalPluginClient interface {
 	moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error)
 	getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error)
 
+	generateStubs(ctx context.Context, req *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error)
+	syncStubReferences(ctx context.Context, req *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error)
+
 	build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error)
 	buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error)
 
@@ -44,7 +47,7 @@ func newExternalPluginImpl(ctx context.Context, bind *url.URL, language string) 
 	}
 	err := impl.start(ctx, bind, language)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start plugin: %w", err)
+		return nil, err
 	}
 	return impl, nil
 }
@@ -84,15 +87,15 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language 
 	// Wait for ping result, or for the plugin to exit. Which ever happens first.
 	select {
 	case err := <-cmdErr:
-		if err == nil {
-			return fmt.Errorf("plugin exited with status 0 before ping was registered")
+		if err != nil {
+			return err
 		}
-		return err
+		return fmt.Errorf("plugin exited with status 0 before ping was registered")
 	case err := <-pingErr:
 		if err != nil {
-			return nil
+			return fmt.Errorf("failed to start plugin: %w", err)
 		}
-		return fmt.Errorf("failed to start plugin: %w", err)
+		return nil
 	case <-ctx.Done():
 		return fmt.Errorf("failed to start plugin: %w", ctx.Err())
 	}
@@ -148,6 +151,22 @@ func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.R
 	return resp, nil
 }
 
+func (p *externalPluginImpl) generateStubs(ctx context.Context, req *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error) {
+	resp, err := p.client.GenerateStubs(ctx, req)
+	if err != nil {
+		return nil, err //nolint:wrapcheck
+	}
+	return resp, nil
+}
+
+func (p *externalPluginImpl) syncStubReferences(ctx context.Context, req *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
+	resp, err := p.client.SyncStubReferences(ctx, req)
+	if err != nil {
+		return nil, err //nolint:wrapcheck
+	}
+	return resp, nil
+}
+
 func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
 	stream, err := p.client.Build(ctx, req)
 	if err != nil {
@@ -158,8 +177,8 @@ func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[lan
 	go streamToChan(stream, streamChan)
 
 	return streamChan, func() {
+		// closing the stream causes the steamToChan goroutine to close the chan
 		stream.Close()
-		close(streamChan)
 	}, nil
 }
 

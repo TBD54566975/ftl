@@ -53,16 +53,6 @@ func copyMetaWithUpdatedDependencies(ctx context.Context, m moduleMeta) (moduleM
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not get dependencies for %v: %w", m.module.Config.Module, err)
 	}
-	containsBuiltin := false
-	for _, dep := range dependencies {
-		if dep == "builtin" {
-			containsBuiltin = true
-			break
-		}
-	}
-	if !containsBuiltin {
-		dependencies = append(dependencies, "builtin")
-	}
 
 	m.module = m.module.CopyWithDependencies(dependencies)
 	return m, nil
@@ -275,7 +265,7 @@ func (e *Engine) buildGraph(moduleName string, out map[string][]string) error {
 	foundModule := false
 	if meta, ok := e.moduleMetas.Load(moduleName); ok {
 		foundModule = true
-		deps = meta.module.Dependencies
+		deps = meta.module.Dependencies(AlwaysIncludeBuiltin)
 	}
 	if !foundModule {
 		if sch, ok := e.controllerSchema.Load(moduleName); ok {
@@ -580,7 +570,7 @@ func computeModuleHash(module *schema.Module) ([]byte, error) {
 func (e *Engine) getDependentModuleNames(moduleName string) []string {
 	dependentModuleNames := map[string]bool{}
 	e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
-		for _, dep := range meta.module.Dependencies {
+		for _, dep := range meta.module.Dependencies(AlwaysIncludeBuiltin) {
 			if dep == moduleName {
 				dependentModuleNames[name] = true
 			}
@@ -690,12 +680,12 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 			return err
 		}
 
-		metas := e.allModuleMetas()
-		moduleConfigs := make([]moduleconfig.ModuleConfig, len(metas))
-		for i, meta := range metas {
-			moduleConfigs[i] = meta.module.Config
-		}
-		err = GenerateStubs(ctx, e.projectRoot, maps.Values(knownSchemas), moduleConfigs)
+		metasMap := map[string]moduleMeta{}
+		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
+			metasMap[name] = meta
+			return true
+		})
+		err = GenerateStubs(ctx, e.projectRoot, maps.Values(knownSchemas), metasMap)
 		if err != nil {
 			return err
 		}
@@ -735,7 +725,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		}
 
 		// Sync references to stubs if needed by the runtime
-		err = SyncStubReferences(ctx, e.projectRoot, moduleNames, moduleConfigs)
+		err = SyncStubReferences(ctx, e.projectRoot, moduleNames, metasMap)
 		if err != nil {
 			return err
 		}
@@ -766,7 +756,7 @@ func (e *Engine) tryBuild(ctx context.Context, mustBuild map[string]bool, module
 		return fmt.Errorf("module %q not found", moduleName)
 	}
 
-	for _, dep := range meta.module.Dependencies {
+	for _, dep := range meta.module.Dependencies(Raw) {
 		if _, ok := builtModules[dep]; !ok {
 			logger.Warnf("build skipped because dependency %q failed to build", dep)
 			return nil
@@ -815,7 +805,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, languageplugin.BuildContext{
 		Config:       meta.module.Config,
 		Schema:       sch,
-		Dependencies: meta.module.Dependencies,
+		Dependencies: meta.module.Dependencies(Raw),
 	}, e.buildEnv, e.devMode)
 	if err != nil {
 		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
@@ -834,15 +824,6 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilt)
 	schemas <- moduleSchema
 	return nil
-}
-
-func (e *Engine) allModuleMetas() []moduleMeta {
-	var out []moduleMeta
-	e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
-		out = append(out, meta)
-		return true
-	})
-	return out
 }
 
 // Construct a combined schema for a module and its transitive dependencies.
@@ -903,10 +884,7 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.Unvalida
 		return moduleMeta{}, fmt.Errorf("could not apply defaults for %s: %w", config.Module, err)
 	}
 	return moduleMeta{
-		module: Module{
-			Config:       validConfig,
-			Dependencies: []string{},
-		},
+		module:         newModule(validConfig),
 		plugin:         plugin,
 		events:         events,
 		configDefaults: customDefaults,

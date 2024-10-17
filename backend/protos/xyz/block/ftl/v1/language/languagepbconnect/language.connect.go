@@ -53,6 +53,12 @@ const (
 	// LanguageServiceBuildContextUpdatedProcedure is the fully-qualified name of the LanguageService's
 	// BuildContextUpdated RPC.
 	LanguageServiceBuildContextUpdatedProcedure = "/xyz.block.ftl.v1.language.LanguageService/BuildContextUpdated"
+	// LanguageServiceGenerateStubsProcedure is the fully-qualified name of the LanguageService's
+	// GenerateStubs RPC.
+	LanguageServiceGenerateStubsProcedure = "/xyz.block.ftl.v1.language.LanguageService/GenerateStubs"
+	// LanguageServiceSyncStubReferencesProcedure is the fully-qualified name of the LanguageService's
+	// SyncStubReferences RPC.
+	LanguageServiceSyncStubReferencesProcedure = "/xyz.block.ftl.v1.language.LanguageService/SyncStubReferences"
 )
 
 // LanguageServiceClient is a client for the xyz.block.ftl.v1.language.LanguageService service.
@@ -84,6 +90,22 @@ type LanguageServiceClient interface {
 	// Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
 	// event with the updated build context id with "is_automatic_rebuild" as false.
 	BuildContextUpdated(context.Context, *connect.Request[language.BuildContextUpdatedRequest]) (*connect.Response[language.BuildContextUpdatedResponse], error)
+	// Generate stubs for a module.
+	//
+	// Stubs allow modules to import other module's exported interface. If a language does not need this step,
+	// then it is not required to do anything in this call.
+	//
+	// This call is not tied to the module that this plugin is responsible for. A plugin of each language will
+	// be chosen to generate stubs for each module.
+	GenerateStubs(context.Context, *connect.Request[language.GenerateStubsRequest]) (*connect.Response[language.GenerateStubsResponse], error)
+	// SyncStubReferences is called when module stubs have been updated. This allows the plugin to update
+	// references to external modules, regardless of whether they are dependencies.
+	//
+	// For example, go plugin adds references to all modules into the go.work file so that tools can automatically
+	// import the modules when users start reference them.
+	//
+	// It is optional to do anything with this call.
+	SyncStubReferences(context.Context, *connect.Request[language.SyncStubReferencesRequest]) (*connect.Response[language.SyncStubReferencesResponse], error)
 }
 
 // NewLanguageServiceClient constructs a client for the xyz.block.ftl.v1.language.LanguageService
@@ -132,6 +154,16 @@ func NewLanguageServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			baseURL+LanguageServiceBuildContextUpdatedProcedure,
 			opts...,
 		),
+		generateStubs: connect.NewClient[language.GenerateStubsRequest, language.GenerateStubsResponse](
+			httpClient,
+			baseURL+LanguageServiceGenerateStubsProcedure,
+			opts...,
+		),
+		syncStubReferences: connect.NewClient[language.SyncStubReferencesRequest, language.SyncStubReferencesResponse](
+			httpClient,
+			baseURL+LanguageServiceSyncStubReferencesProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -144,6 +176,8 @@ type languageServiceClient struct {
 	getDependencies      *connect.Client[language.DependenciesRequest, language.DependenciesResponse]
 	build                *connect.Client[language.BuildRequest, language.BuildEvent]
 	buildContextUpdated  *connect.Client[language.BuildContextUpdatedRequest, language.BuildContextUpdatedResponse]
+	generateStubs        *connect.Client[language.GenerateStubsRequest, language.GenerateStubsResponse]
+	syncStubReferences   *connect.Client[language.SyncStubReferencesRequest, language.SyncStubReferencesResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.language.LanguageService.Ping.
@@ -181,6 +215,16 @@ func (c *languageServiceClient) BuildContextUpdated(ctx context.Context, req *co
 	return c.buildContextUpdated.CallUnary(ctx, req)
 }
 
+// GenerateStubs calls xyz.block.ftl.v1.language.LanguageService.GenerateStubs.
+func (c *languageServiceClient) GenerateStubs(ctx context.Context, req *connect.Request[language.GenerateStubsRequest]) (*connect.Response[language.GenerateStubsResponse], error) {
+	return c.generateStubs.CallUnary(ctx, req)
+}
+
+// SyncStubReferences calls xyz.block.ftl.v1.language.LanguageService.SyncStubReferences.
+func (c *languageServiceClient) SyncStubReferences(ctx context.Context, req *connect.Request[language.SyncStubReferencesRequest]) (*connect.Response[language.SyncStubReferencesResponse], error) {
+	return c.syncStubReferences.CallUnary(ctx, req)
+}
+
 // LanguageServiceHandler is an implementation of the xyz.block.ftl.v1.language.LanguageService
 // service.
 type LanguageServiceHandler interface {
@@ -211,6 +255,22 @@ type LanguageServiceHandler interface {
 	// Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
 	// event with the updated build context id with "is_automatic_rebuild" as false.
 	BuildContextUpdated(context.Context, *connect.Request[language.BuildContextUpdatedRequest]) (*connect.Response[language.BuildContextUpdatedResponse], error)
+	// Generate stubs for a module.
+	//
+	// Stubs allow modules to import other module's exported interface. If a language does not need this step,
+	// then it is not required to do anything in this call.
+	//
+	// This call is not tied to the module that this plugin is responsible for. A plugin of each language will
+	// be chosen to generate stubs for each module.
+	GenerateStubs(context.Context, *connect.Request[language.GenerateStubsRequest]) (*connect.Response[language.GenerateStubsResponse], error)
+	// SyncStubReferences is called when module stubs have been updated. This allows the plugin to update
+	// references to external modules, regardless of whether they are dependencies.
+	//
+	// For example, go plugin adds references to all modules into the go.work file so that tools can automatically
+	// import the modules when users start reference them.
+	//
+	// It is optional to do anything with this call.
+	SyncStubReferences(context.Context, *connect.Request[language.SyncStubReferencesRequest]) (*connect.Response[language.SyncStubReferencesResponse], error)
 }
 
 // NewLanguageServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -255,6 +315,16 @@ func NewLanguageServiceHandler(svc LanguageServiceHandler, opts ...connect.Handl
 		svc.BuildContextUpdated,
 		opts...,
 	)
+	languageServiceGenerateStubsHandler := connect.NewUnaryHandler(
+		LanguageServiceGenerateStubsProcedure,
+		svc.GenerateStubs,
+		opts...,
+	)
+	languageServiceSyncStubReferencesHandler := connect.NewUnaryHandler(
+		LanguageServiceSyncStubReferencesProcedure,
+		svc.SyncStubReferences,
+		opts...,
+	)
 	return "/xyz.block.ftl.v1.language.LanguageService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case LanguageServicePingProcedure:
@@ -271,6 +341,10 @@ func NewLanguageServiceHandler(svc LanguageServiceHandler, opts ...connect.Handl
 			languageServiceBuildHandler.ServeHTTP(w, r)
 		case LanguageServiceBuildContextUpdatedProcedure:
 			languageServiceBuildContextUpdatedHandler.ServeHTTP(w, r)
+		case LanguageServiceGenerateStubsProcedure:
+			languageServiceGenerateStubsHandler.ServeHTTP(w, r)
+		case LanguageServiceSyncStubReferencesProcedure:
+			languageServiceSyncStubReferencesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -306,4 +380,12 @@ func (UnimplementedLanguageServiceHandler) Build(context.Context, *connect.Reque
 
 func (UnimplementedLanguageServiceHandler) BuildContextUpdated(context.Context, *connect.Request[language.BuildContextUpdatedRequest]) (*connect.Response[language.BuildContextUpdatedResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.language.LanguageService.BuildContextUpdated is not implemented"))
+}
+
+func (UnimplementedLanguageServiceHandler) GenerateStubs(context.Context, *connect.Request[language.GenerateStubsRequest]) (*connect.Response[language.GenerateStubsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.language.LanguageService.GenerateStubs is not implemented"))
+}
+
+func (UnimplementedLanguageServiceHandler) SyncStubReferences(context.Context, *connect.Request[language.SyncStubReferencesRequest]) (*connect.Response[language.SyncStubReferencesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.language.LanguageService.SyncStubReferences is not implemented"))
 }

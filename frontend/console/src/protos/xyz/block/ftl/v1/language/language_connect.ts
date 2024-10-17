@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { BuildContextUpdatedRequest, BuildContextUpdatedResponse, BuildEvent, BuildRequest, CreateModuleRequest, CreateModuleResponse, DependenciesRequest, DependenciesResponse, GetCreateModuleFlagsRequest, GetCreateModuleFlagsResponse, ModuleConfigDefaultsRequest, ModuleConfigDefaultsResponse } from "./language_pb.js";
+import { BuildContextUpdatedRequest, BuildContextUpdatedResponse, BuildEvent, BuildRequest, CreateModuleRequest, CreateModuleResponse, DependenciesRequest, DependenciesResponse, GenerateStubsRequest, GenerateStubsResponse, GetCreateModuleFlagsRequest, GetCreateModuleFlagsResponse, ModuleConfigDefaultsRequest, ModuleConfigDefaultsResponse, SyncStubReferencesRequest, SyncStubReferencesResponse } from "./language_pb.js";
 
 /**
  * LanguageService allows a plugin to add support for a programming language.
@@ -104,6 +104,40 @@ export const LanguageService = {
       name: "BuildContextUpdated",
       I: BuildContextUpdatedRequest,
       O: BuildContextUpdatedResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Generate stubs for a module.
+     *
+     * Stubs allow modules to import other module's exported interface. If a language does not need this step,
+     * then it is not required to do anything in this call.
+     *
+     * This call is not tied to the module that this plugin is responsible for. A plugin of each language will
+     * be chosen to generate stubs for each module.
+     *
+     * @generated from rpc xyz.block.ftl.v1.language.LanguageService.GenerateStubs
+     */
+    generateStubs: {
+      name: "GenerateStubs",
+      I: GenerateStubsRequest,
+      O: GenerateStubsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * SyncStubReferences is called when module stubs have been updated. This allows the plugin to update
+     * references to external modules, regardless of whether they are dependencies.
+     *
+     * For example, go plugin adds references to all modules into the go.work file so that tools can automatically
+     * import the modules when users start reference them.
+     *
+     * It is optional to do anything with this call.
+     *
+     * @generated from rpc xyz.block.ftl.v1.language.LanguageService.SyncStubReferences
+     */
+    syncStubReferences: {
+      name: "SyncStubReferences",
+      I: SyncStubReferencesRequest,
+      O: SyncStubReferencesResponse,
       kind: MethodKind.Unary,
     },
   }

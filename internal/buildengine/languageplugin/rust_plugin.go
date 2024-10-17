@@ -49,7 +49,7 @@ func (p *rustPlugin) GetDependencies(ctx context.Context, config moduleconfig.Mo
 	return nil, fmt.Errorf("not implemented")
 }
 
-func buildRust(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+func buildRust(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
 	config := bctx.Config.Abs()
 	logger := log.FromContext(ctx)
 	logger.Debugf("Using build command '%s'", config.Build)

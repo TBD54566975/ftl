@@ -1,17 +1,41 @@
-package buildengine
+package compile
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
+
+func setUp(t *testing.T) (ctx context.Context, projectRoot, fakeGoModDir string) {
+	t.Helper()
+
+	ctx = log.ContextWithNewDefaultLogger(context.Background())
+
+	projectRoot = t.TempDir()
+	fakeDir := filepath.Join(projectRoot, "fakegomod")
+	err := os.MkdirAll(fakeDir, 0700)
+	assert.NoError(t, err)
+	ftlPath, err := filepath.Abs("../..")
+	assert.NoError(t, err)
+	err = os.WriteFile(filepath.Join(fakeDir, "go.mod"), []byte(fmt.Sprintf(`
+	module ftl/fake
+	go 1.23.0
+
+	replace github.com/TBD54566975/ftl => %s
+	`, ftlPath)), 0600)
+	// err := copy.Copy(filepath.Join("testdata", "go", "time"), filepath.Join(projectRoot, "time"))
+	assert.NoError(t, err)
+	return ctx, projectRoot, fakeDir
+}
 
 func TestGenerateGoStubs(t *testing.T) {
 	if testing.Short() {
@@ -170,11 +194,21 @@ func init() {
   )
 }
 `
+	ctx, projectRoot, fakeDir := setUp(t)
+	for _, module := range modules {
+		path := filepath.Join(projectRoot, ".ftl", "go", "modules", module.Name)
+		err := os.MkdirAll(path, 0700)
+		assert.NoError(t, err)
 
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	projectRoot := t.TempDir()
-	err := GenerateStubs(ctx, projectRoot, modules, []moduleconfig.ModuleConfig{{Language: "go"}})
-	assert.NoError(t, err)
+		// Generate stubs needs a go.mod file to check for go version
+		// Force each of these test modules to point to time's dir just so it can read the go.mod file
+		config := moduleconfig.AbsModuleConfig{
+			Language: "go",
+			Dir:      fakeDir,
+		}
+		err = GenerateStubs(ctx, path, module, config, optional.None[moduleconfig.AbsModuleConfig]())
+		assert.NoError(t, err)
+	}
 
 	generatedPath := filepath.Join(projectRoot, ".ftl/go/modules/other/external_module.go")
 	fileContent, err := os.ReadFile(generatedPath)
@@ -229,10 +263,23 @@ type Resp struct {
 //ftl:verb
 type CallClient func(context.Context, Req) (Resp, error)
 `
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	projectRoot := t.TempDir()
-	err := GenerateStubs(ctx, projectRoot, modules, []moduleconfig.ModuleConfig{{Language: "go"}})
-	assert.NoError(t, err)
+
+	ctx, projectRoot, fakeDir := setUp(t)
+
+	for _, module := range modules {
+		path := filepath.Join(projectRoot, ".ftl", "go", "modules", module.Name)
+		err := os.MkdirAll(path, 0700)
+		assert.NoError(t, err)
+
+		// Generate stubs needs a go.mod file to check for go version
+		// Force each of these test modules to point to time's dir just so it can read the go.mod file
+		config := moduleconfig.AbsModuleConfig{
+			Language: "go",
+			Dir:      fakeDir,
+		}
+		err = GenerateStubs(ctx, path, module, config, optional.None[moduleconfig.AbsModuleConfig]())
+		assert.NoError(t, err)
+	}
 
 	generatedPath := filepath.Join(projectRoot, ".ftl/go/modules/test/external_module.go")
 	fileContent, err := os.ReadFile(generatedPath)

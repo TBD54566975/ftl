@@ -8,7 +8,6 @@ import (
 
 	"github.com/alecthomas/types/pubsub"
 
-	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -172,8 +171,6 @@ type modifyFilesTransaction struct {
 }
 
 var _ ModifyFilesTransaction = (*modifyFilesTransaction)(nil)
-
-var _ compile.ModifyFilesTransaction = (*modifyFilesTransaction)(nil)
 
 func (t *modifyFilesTransaction) Begin() error {
 	if t.isActive {

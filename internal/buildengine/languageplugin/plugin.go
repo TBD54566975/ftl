@@ -9,6 +9,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/either"
+	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/alecthomas/types/result"
 
@@ -97,7 +98,19 @@ type LanguagePlugin interface {
 	// Build builds the module with the latest config and schema.
 	// In dev mode, plugin is responsible for automatically rebuilding as relevant files within the module change,
 	// and publishing these automatic builds updates to Updates().
-	Build(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error)
+	Build(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error)
+
+	// Generate stubs for the given module.
+	GenerateStubs(ctx context.Context, dir string, module *schema.Module, moduleConfig moduleconfig.ModuleConfig, nativeModuleConfig optional.Option[moduleconfig.ModuleConfig]) error
+
+	// SyncStubReferences is called when module stubs have been updated. This allows the plugin to update
+	// references to external modules, regardless of whether they are dependencies.
+	//
+	// For example, go plugin adds references to all modules into the go.work file so that tools can automatically
+	// import the modules when users start reference them.
+	//
+	// It is optional to do anything with this call.
+	SyncStubReferences(ctx context.Context, config moduleconfig.ModuleConfig, dir string, moduleNames []string) error
 
 	// Kill stops the plugin and cleans up any resources.
 	Kill() error
@@ -125,6 +138,7 @@ type pluginCommand interface {
 type buildCommand struct {
 	BuildContext
 	projectRoot          string
+	stubsRoot            string
 	buildEnv             []string
 	rebuildAutomatically bool
 
@@ -142,7 +156,7 @@ type getDependenciesCommand struct {
 
 func (getDependenciesCommand) pluginCmd() {}
 
-type buildFunc = func(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool, transaction watch.ModifyFilesTransaction) (BuildResult, error)
+type buildFunc = func(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool, transaction watch.ModifyFilesTransaction) (BuildResult, error)
 
 type CompilerBuildError struct {
 	err error
@@ -192,10 +206,19 @@ func (p *internalPlugin) Kill() error {
 	return nil
 }
 
-func (p *internalPlugin) Build(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error) {
+func (p *internalPlugin) GenerateStubs(ctx context.Context, dir string, module *schema.Module, moduleConfig moduleconfig.ModuleConfig, nativeModuleConfig optional.Option[moduleconfig.ModuleConfig]) error {
+	return nil
+}
+
+func (p *internalPlugin) SyncStubReferences(ctx context.Context, config moduleconfig.ModuleConfig, dir string, moduleNames []string) error {
+	return nil
+}
+
+func (p *internalPlugin) Build(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error) {
 	cmd := buildCommand{
 		BuildContext:         bctx,
 		projectRoot:          projectRoot,
+		stubsRoot:            stubsRoot,
 		buildEnv:             buildEnv,
 		rebuildAutomatically: rebuildAutomatically,
 		result:               make(chan either.Either[BuildResult, error]),
@@ -245,6 +268,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 	// This is updated when given explicit build commands and used for automatic rebuilds
 	var bctx BuildContext
 	var projectRoot string
+	var stubsRoot string
 	var buildEnv []string
 	watching := false
 
@@ -256,6 +280,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 				// update state
 				bctx = c.BuildContext
 				projectRoot = c.projectRoot
+				stubsRoot = c.stubsRoot
 				buildEnv = c.buildEnv
 
 				if watcher == nil {
@@ -274,7 +299,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 				}
 
 				// build
-				result, err := buildAndLoadResult(ctx, projectRoot, bctx, buildEnv, c.rebuildAutomatically, watcher, p.buildFunc)
+				result, err := buildAndLoadResult(ctx, projectRoot, stubsRoot, bctx, buildEnv, c.rebuildAutomatically, watcher, p.buildFunc)
 				if err != nil {
 					c.result <- either.RightOf[BuildResult](err)
 					continue
@@ -297,7 +322,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 				p.updates.Publish(AutoRebuildStartedEvent{Module: bctx.Config.Module})
 				p.updates.Publish(AutoRebuildEndedEvent{
 					Module: bctx.Config.Module,
-					Result: result.From(buildAndLoadResult(ctx, projectRoot, bctx, buildEnv, true, watcher, p.buildFunc)),
+					Result: result.From(buildAndLoadResult(ctx, projectRoot, stubsRoot, bctx, buildEnv, true, watcher, p.buildFunc)),
 				})
 			case watch.WatchEventModuleAdded:
 				// ignore
@@ -312,7 +337,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 	}
 }
 
-func buildAndLoadResult(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, watcher *watch.Watcher, build buildFunc) (BuildResult, error) {
+func buildAndLoadResult(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, devMode bool, watcher *watch.Watcher, build buildFunc) (BuildResult, error) {
 	config := bctx.Config.Abs()
 	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
 	if err != nil {
@@ -330,7 +355,7 @@ func buildAndLoadResult(ctx context.Context, projectRoot string, bctx BuildConte
 	}
 
 	transaction := watcher.GetTransaction(config.Dir)
-	result, err := build(ctx, projectRoot, bctx, buildEnv, devMode, transaction)
+	result, err := build(ctx, projectRoot, stubsRoot, bctx, buildEnv, devMode, transaction)
 	if err != nil {
 		return BuildResult{}, err
 	}

@@ -28,9 +28,11 @@ const launchTimeout = 10 * time.Second
 type externalBuildCommand struct {
 	BuildContext
 	projectRoot          string
+	stubsRoot            string
 	rebuildAutomatically bool
 
-	result chan result.Result[BuildResult]
+	startTime time.Time
+	result    chan result.Result[BuildResult]
 }
 
 type externalPlugin struct {
@@ -125,15 +127,19 @@ func (p *externalPlugin) GetCreateModuleFlags(ctx context.Context) ([]*kong.Flag
 
 // CreateModule creates a new module in the given directory with the given name and language.
 func (p *externalPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Config, moduleConfig moduleconfig.ModuleConfig, flags map[string]string) error {
-	_, err := p.client.createModule(ctx, connect.NewRequest(&langpb.CreateModuleRequest{
-		Name: moduleConfig.Module,
-		Path: moduleConfig.Dir,
-		ProjectConfig: &langpb.ProjectConfig{
-			Path:   projConfig.Path,
-			Name:   projConfig.Name,
-			NoGit:  projConfig.NoGit,
-			Hermit: projConfig.Hermit,
-		},
+	genericFlags := map[string]any{}
+	for k, v := range flags {
+		genericFlags[k] = v
+	}
+	flagsProto, err := structpb.NewStruct(genericFlags)
+	if err != nil {
+		return fmt.Errorf("failed to convert flags to proto: %w", err)
+	}
+	_, err = p.client.createModule(ctx, connect.NewRequest(&langpb.CreateModuleRequest{
+		Name:          moduleConfig.Module,
+		Dir:           moduleConfig.Dir,
+		ProjectConfig: langpb.ProjectConfigToProto(projConfig),
+		Flags:         flagsProto,
 	}))
 	if err != nil {
 		return fmt.Errorf("failed to create module: %w", err)
@@ -143,22 +149,26 @@ func (p *externalPlugin) CreateModule(ctx context.Context, projConfig projectcon
 
 func (p *externalPlugin) ModuleConfigDefaults(ctx context.Context, dir string) (moduleconfig.CustomDefaults, error) {
 	resp, err := p.client.moduleConfigDefaults(ctx, connect.NewRequest(&langpb.ModuleConfigDefaultsRequest{
-		Path: dir,
+		Dir: dir,
 	}))
 	if err != nil {
 		return moduleconfig.CustomDefaults{}, fmt.Errorf("failed to get module config defaults from plugin: %w", err)
 	}
+	return customDefaultsFromProto(resp.Msg), nil
+}
+
+func customDefaultsFromProto(proto *langpb.ModuleConfigDefaultsResponse) moduleconfig.CustomDefaults {
 	return moduleconfig.CustomDefaults{
-		DeployDir:          resp.Msg.DeployDir,
-		Watch:              resp.Msg.Watch,
-		Build:              optional.Ptr(resp.Msg.Build),
-		GeneratedSchemaDir: optional.Ptr(resp.Msg.GeneratedSchemaDir),
-		LanguageConfig:     resp.Msg.LanguageConfig.AsMap(),
-	}, nil
+		DeployDir:          proto.DeployDir,
+		Watch:              proto.Watch,
+		Build:              optional.Ptr(proto.Build),
+		GeneratedSchemaDir: optional.Ptr(proto.GeneratedSchemaDir),
+		LanguageConfig:     proto.LanguageConfig.AsMap(),
+	}
 }
 
 func (p *externalPlugin) GetDependencies(ctx context.Context, config moduleconfig.ModuleConfig) ([]string, error) {
-	configProto, err := protoFromModuleConfig(config)
+	configProto, err := langpb.ModuleConfigToProto(config.Abs())
 	if err != nil {
 		return nil, err
 	}
@@ -171,12 +181,55 @@ func (p *externalPlugin) GetDependencies(ctx context.Context, config moduleconfi
 	return resp.Msg.Modules, nil
 }
 
+func (p *externalPlugin) GenerateStubs(ctx context.Context, dir string, module *schema.Module, moduleConfig moduleconfig.ModuleConfig, nativeModuleConfig optional.Option[moduleconfig.ModuleConfig]) error {
+	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	configProto, err := langpb.ModuleConfigToProto(moduleConfig.Abs())
+	if err != nil {
+		return fmt.Errorf("could not create proto for module config: %w", err)
+	}
+	var nativeConfigProto *langpb.ModuleConfig
+	if config, ok := nativeModuleConfig.Get(); ok {
+		nativeConfigProto, err = langpb.ModuleConfigToProto(config.Abs())
+		if err != nil {
+			return fmt.Errorf("could not create proto for native module config: %w", err)
+		}
+	}
+	_, err = p.client.generateStubs(ctx, connect.NewRequest(&langpb.GenerateStubsRequest{
+		Dir:                dir,
+		Module:             moduleProto,
+		ModuleConfig:       configProto,
+		NativeModuleConfig: nativeConfigProto,
+	}))
+	if err != nil {
+		return fmt.Errorf("plugin failed to generate stubs: %w", err)
+	}
+	return nil
+}
+
+func (p *externalPlugin) SyncStubReferences(ctx context.Context, config moduleconfig.ModuleConfig, dir string, moduleNames []string) error {
+	configProto, err := langpb.ModuleConfigToProto(config.Abs())
+	if err != nil {
+		return fmt.Errorf("could not create proto for native module config: %w", err)
+	}
+	_, err = p.client.syncStubReferences(ctx, connect.NewRequest(&langpb.SyncStubReferencesRequest{
+		StubsRoot:    dir,
+		Modules:      moduleNames,
+		ModuleConfig: configProto,
+	}))
+	if err != nil {
+		return fmt.Errorf("plugin failed to sync stub references: %w", err)
+	}
+	return nil
+}
+
 // Build may result in a Build or BuildContextUpdated grpc call with the plugin, depending if a build stream is already set up
-func (p *externalPlugin) Build(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error) {
+func (p *externalPlugin) Build(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error) {
 	cmd := externalBuildCommand{
 		BuildContext:         bctx,
 		projectRoot:          projectRoot,
+		stubsRoot:            stubsRoot,
 		rebuildAutomatically: rebuildAutomatically,
+		startTime:            time.Now(),
 		result:               make(chan result.Result[BuildResult]),
 	}
 	p.commands <- cmd
@@ -186,40 +239,18 @@ func (p *externalPlugin) Build(ctx context.Context, projectRoot string, bctx Bui
 		if err != nil {
 			return BuildResult{}, err //nolint:wrapcheck
 		}
+		result.StartTime = cmd.startTime
 		return result, nil
 	case <-ctx.Done():
 		return BuildResult{}, fmt.Errorf("error waiting for build to complete: %w", ctx.Err())
 	}
 }
 
-func protoFromModuleConfig(c moduleconfig.ModuleConfig) (*langpb.ModuleConfig, error) {
-	config := c.Abs()
-	proto := &langpb.ModuleConfig{
-		Name:      config.Module,
-		Path:      config.Dir,
-		DeployDir: config.DeployDir,
-		Watch:     config.Watch,
-	}
-	if config.Build != "" {
-		proto.Build = &config.Build
-	}
-	if config.GeneratedSchemaDir != "" {
-		proto.GeneratedSchemaDir = &config.GeneratedSchemaDir
-	}
-
-	langConfigProto, err := structpb.NewStruct(config.LanguageConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal language config: %w", err)
-	}
-	proto.LanguageConfig = langConfigProto
-
-	return proto, nil
-}
-
 func (p *externalPlugin) run(ctx context.Context) {
 	// State
 	var bctx BuildContext
 	var projectRoot string
+	var stubsRoot string
 
 	// if a current build stream is active, this is non-nil
 	// this does not indicate if the stream is listening to automatic rebuilds
@@ -244,6 +275,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 			contextCounter++
 			bctx = c.BuildContext
 			projectRoot = c.projectRoot
+			stubsRoot = c.stubsRoot
 
 			// module name may have changed, update logger scope
 			logger = log.FromContext(ctx).Scope(bctx.Config.Module)
@@ -252,7 +284,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 				c.result <- result.Err[BuildResult](fmt.Errorf("build already in progress"))
 				continue
 			}
-			configProto, err := protoFromModuleConfig(bctx.Config)
+			configProto, err := langpb.ModuleConfigToProto(bctx.Config.Abs())
 			if err != nil {
 				c.result <- result.Err[BuildResult](err)
 				continue
@@ -279,7 +311,8 @@ func (p *externalPlugin) run(ctx context.Context) {
 			}
 
 			newStreamChan, newCancelFunc, err := p.client.build(ctx, connect.NewRequest(&langpb.BuildRequest{
-				ProjectPath:          projectRoot,
+				ProjectRoot:          projectRoot,
+				StubsRoot:            stubsRoot,
 				RebuildAutomatically: c.rebuildAutomatically,
 				BuildContext: &langpb.BuildContext{
 					Id:           contextID(bctx.Config, contextCounter),
@@ -394,13 +427,10 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 	switch result := result.(type) {
 	case either.Left[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]:
 		buildSuccess := result.Get().BuildSuccess
-		var moduleSch *schema.Module
-		if buildSuccess.Module != nil {
-			sch, err := schema.ModuleFromProto(buildSuccess.Module)
-			if err != nil {
-				return BuildResult{}, fmt.Errorf("failed to parse schema: %w", err)
-			}
-			moduleSch = sch
+
+		moduleSch, err := schema.ModuleFromProto(buildSuccess.Module)
+		if err != nil {
+			return BuildResult{}, fmt.Errorf("failed to parse schema: %w", err)
 		}
 
 		errs := langpb.ErrorsFromProto(buildSuccess.Errors)
@@ -408,6 +438,7 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 		return BuildResult{
 			Errors: errs,
 			Schema: moduleSch,
+			Deploy: buildSuccess.Deploy,
 		}, nil
 	case either.Right[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]:
 		buildFailure := result.Get().BuildFailure
