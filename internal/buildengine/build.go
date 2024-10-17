@@ -21,7 +21,7 @@ var errInvalidateDependencies = errors.New("dependencies need to be updated")
 
 // Build a module in the given directory given the schema and module config.
 //
-// A lock file is used to ensure that only one build is running at a time.
+// Plugins must use a lock file to ensure that only one build is running at a time.
 //
 // Returns invalidateDependenciesError if the build failed due to a change in dependencies.
 func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRootDir string, bctx languageplugin.BuildContext, buildEnv []string, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
