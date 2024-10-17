@@ -1,6 +1,6 @@
 import { CellsIcon, type HugeiconsProps } from 'hugeicons-react'
 import type { PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/ftl_pb'
-import { declIcons, declUrl } from '../modules/module.utils'
+import { declIcon, declUrl } from '../modules/module.utils'
 
 export interface PaletteItem {
   id: string
@@ -29,7 +29,7 @@ export const paletteItems = (schema: PullSchemaResponse[]): PaletteItem[] => {
 
       items.push({
         id: `${module.moduleName}-${decl.value.value.name}`,
-        icon: declIcons[decl.value.case],
+        icon: declIcon(decl.value.case),
         title: decl.value.value.name,
         subtitle: `${module.moduleName}.${decl.value.value.name}`,
         url: declUrl(module.moduleName, decl),
@@ -39,7 +39,7 @@ export const paletteItems = (schema: PullSchemaResponse[]): PaletteItem[] => {
         for (const field of decl.value.value.fields) {
           items.push({
             id: `${module.moduleName}-${decl.value.value.name}-${field.name}`,
-            icon: declIcons[decl.value.case],
+            icon: declIcon(decl.value.case),
             title: field.name,
             subtitle: `${module.moduleName}.${decl.value.value.name}.${field.name}`,
             url: declUrl(module.moduleName, decl),

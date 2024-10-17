@@ -75,6 +75,7 @@ export type DeclSumType = Config | Data | Database | Enum | FSM | Topic | TypeAl
 export interface DeclInfo {
   declType: string
   value: DeclSumType
+  decl: Decl
 }
 
 export interface ModuleTreeItem {
@@ -92,7 +93,7 @@ export const moduleTreeFromStream = (modules: Module[]) => {
         deploymentKey: module.deploymentKey,
         isBuiltin: module.name === 'builtin',
         decls: [
-          ...module.configs.map((d) => ({ declType: 'config', value: d.config })),
+          ...module.configs.map((d) => ({ declType: 'config', value: d.config, decl: d })),
           ...module.secrets.map((d) => ({ declType: 'secret', value: d.secret })),
           ...module.databases.map((d) => ({ declType: 'database', value: d.database })),
           ...module.topics.map((d) => ({ declType: 'topic', value: d.topic })),
@@ -167,21 +168,30 @@ export const addModuleToLocalStorageIfMissing = (moduleName?: string) => {
 
 export const collapseAllModulesInLocalStorage = () => localStorage.setItem('tree_m', '')
 
-type IconMap = Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>>
-export const declIcons: IconMap = {
-  config: Settings02Icon,
-  data: CodeIcon,
-  database: DatabaseIcon,
-  enum: LeftToRightListNumberIcon,
-  fsm: FlowIcon,
-  topic: BubbleChatIcon,
-  typealias: AnonymousIcon,
-  secret: SquareLock02Icon,
-  subscription: MessageIncoming02Icon,
-  verb: FunctionIcon,
+export const declIcon = (declCase?: string) => {
+  const declIcons: Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>> = {
+    config: Settings02Icon,
+    data: CodeIcon,
+    database: DatabaseIcon,
+    enum: LeftToRightListNumberIcon,
+    fsm: FlowIcon,
+    topic: BubbleChatIcon,
+    typealias: AnonymousIcon,
+    secret: SquareLock02Icon,
+    subscription: MessageIncoming02Icon,
+    verb: FunctionIcon,
+  }
+
+  const normalizedDeclCase = declCase?.toLowerCase()
+  if (!normalizedDeclCase || !declIcons[normalizedDeclCase]) {
+    console.warn(`No icon for decl case: ${declCase}`)
+    return CodeIcon
+  }
+
+  return declIcons[normalizedDeclCase]
 }
 
-export const declUrl = (moduleName: string, decl: Decl) => `/modules/${moduleName}/${decl.value.case}/${decl.value.value?.name}`
+export const declUrl = (moduleName: string, decl: Decl) => `/modules/${moduleName}/${decl.value.case?.toLowerCase()}/${decl.value.value?.name}`
 
 export const declUrlFromInfo = (moduleName: string, decl: DeclInfo) => `/modules/${moduleName}/${decl.declType}/${decl.value.name}`
 

@@ -1,4 +1,4 @@
-import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, CodeIcon, FileExportIcon, PackageIcon } from 'hugeicons-react'
+import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, FileExportIcon, PackageIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
@@ -9,7 +9,7 @@ import {
   type DeclInfo,
   addModuleToLocalStorageIfMissing,
   collapseAllModulesInLocalStorage,
-  declIcons,
+  declIcon,
   declSumTypeIsExported,
   declUrlFromInfo,
   listExpandedModulesFromLocalStorage,
@@ -38,7 +38,7 @@ const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; is
     }
   }, [isSelected])
 
-  const Icon = useMemo(() => declIcons[decl.declType || ''] || CodeIcon, [decl.declType])
+  const Icon = useMemo(() => declIcon(decl.declType), [decl.declType])
   return (
     <li className='my-1'>
       <div

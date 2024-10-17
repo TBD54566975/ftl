@@ -25,20 +25,23 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
     }
   }, [schemaData])
 
-  const fuse = useMemo(() => {
-    return new Fuse(items, {
-      keys: ['title', { name: 'subtitle', weight: 1 }],
-      minMatchCharLength: 2,
-      fieldNormWeight: 2,
-    })
-  }, [items])
+  const fuseOptions = {
+    keys: ['title', { name: 'subtitle', weight: 1 }],
+    minMatchCharLength: 2,
+    fieldNormWeight: 2,
+  }
+
+  const fuseIndex = useMemo(() => Fuse.createIndex(fuseOptions.keys, items), [items])
+  const fuse = useMemo(() => new Fuse(items, fuseOptions, fuseIndex), [items, fuseIndex])
 
   useEffect(() => {
     if (query === '') {
       setFilteredItems([])
     } else {
       const results = fuse.search(query).map((result) => result.item)
-      setFilteredItems(results)
+
+      // only show first 25 results
+      setFilteredItems(results.slice(0, 25))
     }
   }, [query, fuse])
 
