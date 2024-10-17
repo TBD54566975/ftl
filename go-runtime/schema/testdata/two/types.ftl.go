@@ -49,6 +49,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			Three,
+			server.MappedHandle[DBMapper](server.PostgresDatabaseHandle[FooConfig]()),
 		),
 		reflection.ProvideResourcesForVerb(
 			Ingress,
