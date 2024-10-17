@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -15,7 +16,23 @@ import (
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func TestSmokeTest(t *testing.T) {
+func DisabledTestJecho(t *testing.T) {
+	in.Run(t,
+		in.WithKubernetes(),
+		in.WithJavaBuild(),
+		in.WithFTLConfig("../../../ftl-project.toml"),
+		in.WithTestDataDir("."),
+		in.CopyModule("jecho"),
+		in.Deploy("jecho"),
+		in.Call("jecho", "echo", "Joe", func(t testing.TB, response string) {
+			expected := fmt.Sprintf("Hello, %s!", "Joe")
+			assert.Equal(t, expected, response)
+		}),
+		in.Exec("ftl", "--version"),
+	)
+}
+
+func TestExemplar(t *testing.T) {
 	tmpDir := t.TempDir()
 	logFilePath := filepath.Join(tmpDir, "smoketest.log")
 
@@ -26,20 +43,34 @@ func TestSmokeTest(t *testing.T) {
 	var failedAgentId int = 99
 	nonce := randomString(4)
 
+	configProvider := "--inline"
+	if os.Getenv("USE_DB_CONFIG") == "true" {
+		configProvider = "--db"
+	}
+	fmt.Println("configProvider:", configProvider)
+
+	// endpoint := os.Getenv("FTL_ENDPOINT")
+	endpoint := "http://127.0.0.1:8891"
+	// endpoint := "http://ingress.networking.k8s.io/ftl-controller"
+	// endpoint := "http://service/ftl-controller-ingress"
+	// endpoint := "http://ftl-controller:8891"
+	fmt.Printf("FTL_ENDPOINT: %s\n", endpoint)
+
 	in.Run(t,
+		in.WithKubernetes(),
 		in.WithJavaBuild(),
 		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),
 		in.CopyModule("origin"),
 		in.CopyModule("relay"),
 		in.CopyModule("pulse"),
-		in.CreateDBAction("relay", "exemplardb", false),
+		// in.CreateDBAction("relay", "exemplardb", false),
 
-		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", "--inline", nonce}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", configProvider, nonce}, func(output string) {
 			fmt.Println(output)
 		}),
 
-		in.ExecWithOutput("ftl", []string{"config", "set", "relay.log_file", "--inline", logFilePath}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"config", "set", "relay.log_file", configProvider, logFilePath}, func(output string) {
 			fmt.Println(output)
 		}),
 
@@ -47,19 +78,21 @@ func TestSmokeTest(t *testing.T) {
 		in.Deploy("relay"),
 		in.Deploy("pulse"),
 
-		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/http/agent", "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "james", "license_to_kill": true, "hired_at": "2023-10-23T23:20:45.00Z"}`, successAgentId)}, func(output string) {
+		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", fmt.Sprintf("%s/ingress/agent", endpoint), "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "james", "license_to_kill": true, "hired_at": "2023-10-23T23:20:45.00Z"}`, successAgentId)}, func(output string) {
+			fmt.Printf("output: %s\n", output)
 			err := json.Unmarshal([]byte(output), &postResult)
 			assert.NoError(t, err)
 			assert.Equal(t, successAgentId, postResult.ID)
 		}),
 
-		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/http/agent", "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "bill", "license_to_kill": false, "hired_at": "2024-08-12T21:10:37.00Z"}`, failedAgentId)}, func(output string) {
+		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", fmt.Sprintf("%s/ingress/agent", endpoint), "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "bill", "license_to_kill": false, "hired_at": "2024-08-12T21:10:37.00Z"}`, failedAgentId)}, func(output string) {
+			fmt.Printf("output: %s\n", output)
 			err := json.Unmarshal([]byte(output), &postResult)
 			assert.NoError(t, err)
 			assert.Equal(t, failedAgentId, postResult.ID)
 		}),
 
-		in.Sleep(2*time.Second),
+		in.Sleep(5*time.Second),
 
 		in.ExecWithOutput("ftl", []string{"call", "relay.missionResult", fmt.Sprintf(`{"agentId": %v, "successful": true}`, successAgentId)}, func(output string) {
 			fmt.Println(output)
@@ -70,6 +103,10 @@ func TestSmokeTest(t *testing.T) {
 		}),
 
 		in.Sleep(2*time.Second),
+
+		in.Call("relay", "fetchLogs", in.Obj{}, func(t testing.TB, resp in.Obj) {
+			fmt.Printf("fetchLogs: %v\n", resp)
+		}),
 
 		in.FileContains(logFilePath, fmt.Sprintf("deployed %d", successAgentId)),
 		in.FileContains(logFilePath, fmt.Sprintf("deployed %d", failedAgentId)),
