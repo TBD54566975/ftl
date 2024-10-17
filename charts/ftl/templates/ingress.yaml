@@ -17,13 +17,6 @@ spec:
               name: ftl-controller
               port:
                 number: 8892
-        - path: /ingress/
-          pathType: Prefix
-          backend:
-            service:
-              name: ftl-controller-ingress
-              port:
-                number: 8891
         {{- if .Values.provisioner.enabled }}
         - path: /xyz.block.ftl.v1beta1.provisioner.ProvisionerService/
           pathType: Prefix
