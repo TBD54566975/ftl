@@ -24,6 +24,8 @@ type ModuleConfig struct {
 	Module   string `toml:"module"`
 	// Build is the command to build the module.
 	Build string `toml:"build"`
+	// BuildLock is file lock path to prevent concurrent builds of a module.
+	BuildLock string `toml:"build-lock"`
 	// DeployDir is the directory to deploy from, relative to the module directory.
 	DeployDir string `toml:"deploy-dir"`
 	// GeneratedSchemaDir is the directory to generate protobuf schema files into. These can be picked up by language specific build tools
@@ -54,6 +56,7 @@ type UnvalidatedModuleConfig ModuleConfig
 type CustomDefaults struct {
 	DeployDir          string
 	Watch              []string
+	BuildLock          optional.Option[string]
 	Build              optional.Option[string]
 	GeneratedSchemaDir optional.Option[string]
 
@@ -117,6 +120,7 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 	if !strings.HasPrefix(clone.DeployDir, clone.Dir) {
 		panic(fmt.Sprintf("deploy-dir %q is not beneath module directory %q", clone.DeployDir, clone.Dir))
 	}
+	clone.BuildLock = filepath.Clean(filepath.Join(clone.Dir, clone.BuildLock))
 	if clone.GeneratedSchemaDir != "" {
 		clone.GeneratedSchemaDir = filepath.Clean(filepath.Join(clone.Dir, clone.GeneratedSchemaDir))
 		if !strings.HasPrefix(clone.GeneratedSchemaDir, clone.Dir) {
@@ -142,6 +146,13 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	if defaultValue, ok := customDefaults.Build.Get(); ok && c.Build == "" {
 		c.Build = defaultValue
 	}
+	if c.BuildLock == "" {
+		if defaultValue, ok := customDefaults.BuildLock.Get(); ok {
+			c.BuildLock = defaultValue
+		} else {
+			c.BuildLock = ".ftl.lock"
+		}
+	}
 	if c.DeployDir == "" {
 		c.DeployDir = customDefaults.DeployDir
 	}
@@ -165,6 +176,9 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	// Validate
 	if c.DeployDir == "" {
 		return ModuleConfig{}, fmt.Errorf("no deploy directory configured")
+	}
+	if c.BuildLock == "" {
+		return ModuleConfig{}, fmt.Errorf("no build lock path configured")
 	}
 	if !isBeneath(c.Dir, c.DeployDir) {
 		return ModuleConfig{}, fmt.Errorf("deploy-dir %s must be relative to the module directory %s", c.DeployDir, c.Dir)

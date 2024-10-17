@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -339,7 +338,7 @@ func (p *internalPlugin) run(ctx context.Context) {
 
 func buildAndLoadResult(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, devMode bool, watcher *watch.Watcher, build buildFunc) (BuildResult, error) {
 	config := bctx.Config.Abs()
-	release, err := flock.Acquire(ctx, filepath.Join(config.Dir, ".ftl.lock"), BuildLockTimeout)
+	release, err := flock.Acquire(ctx, config.BuildLock, BuildLockTimeout)
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("could not acquire build lock for %v: %w", config.Module, err)
 	}

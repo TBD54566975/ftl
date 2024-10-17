@@ -119,6 +119,7 @@ func ModuleConfigToProto(config moduleconfig.AbsModuleConfig) (*ModuleConfig, er
 		Name:      config.Module,
 		Dir:       config.Dir,
 		DeployDir: config.DeployDir,
+		BuildLock: config.BuildLock,
 		Watch:     config.Watch,
 		Language:  config.Language,
 	}
@@ -147,6 +148,7 @@ func ModuleConfigFromProto(proto *ModuleConfig) moduleconfig.AbsModuleConfig {
 		Watch:              proto.Watch,
 		Language:           proto.Language,
 		Build:              proto.GetBuild(),
+		BuildLock:          proto.BuildLock,
 		GeneratedSchemaDir: proto.GetGeneratedSchemaDir(),
 	}
 	if proto.LanguageConfig != nil {
