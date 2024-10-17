@@ -23,12 +23,15 @@ import (
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
 	islices "github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
+
+const BuildLockTimeout = time.Minute
 
 //sumtype:decl
 type updateEvent interface{ updateEvent() }
@@ -254,7 +257,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 		select {
 		case e := <-events:
 			var isAutomaticRebuild bool
-			buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(buildCtx, events, e)
+			buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(ctx, buildCtx, events, e)
 			log.FromContext(ctx).Infof("Building (auto = %v) with context id: %s", isAutomaticRebuild, buildCtx.Id)
 			if isAutomaticRebuild {
 				err = stream.Send(&langpb.BuildEvent{
@@ -342,28 +345,34 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 }
 
 // TODO: explain
-func buildContextFromPendingEvents(buildCtx buildContext, events chan updateEvent, firstEvent updateEvent) (newBuildCtx buildContext, isAutomaticRebuild bool) {
-	hasExplicitBuilt := false
-
-	switch e := firstEvent.(type) {
-	case buildContextUpdatedEvent:
-		buildCtx = e.buildCtx
-		hasExplicitBuilt = true
-	case filesUpdatedEvent:
-	}
-
-	// process any other events in the queue
+func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, events chan updateEvent, firstEvent updateEvent) (newBuildCtx buildContext, isAutomaticRebuild bool) {
+	allEvents := []updateEvent{firstEvent}
+	// find any other events in the queue
 	for {
 		select {
 		case e := <-events:
-			switch e := e.(type) {
+			allEvents = append(allEvents, e)
+		case <-ctx.Done():
+			return buildCtx, false
+		default:
+			log.FromContext(ctx).Infof("processing events: %v", allEvents)
+			// No more events waiting to be processed
+			hasExplicitBuilt := false
+			for _, e := range allEvents {
+				switch e := e.(type) {
+				case buildContextUpdatedEvent:
+					buildCtx = e.buildCtx
+					hasExplicitBuilt = true
+				case filesUpdatedEvent:
+				}
+
+			}
+			switch e := firstEvent.(type) {
 			case buildContextUpdatedEvent:
 				buildCtx = e.buildCtx
 				hasExplicitBuilt = true
 			case filesUpdatedEvent:
 			}
-		default:
-			// No more events waiting to be processed
 			return buildCtx, !hasExplicitBuilt
 		}
 	}
@@ -394,6 +403,12 @@ func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.Build
 }
 
 func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction compile.ModifyFilesTransaction) (*langpb.BuildEvent, error) {
+	release, err := flock.Acquire(ctx, filepath.Join(buildCtx.Config.BuildLock), time.Second*1) //BuildLockTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("could not acquire build lock: %w", err)
+	}
+	defer release() //nolint:errcheck
+
 	deps, err := compile.ExtractDependencies(buildCtx.Config)
 	if err != nil {
 		return nil, err

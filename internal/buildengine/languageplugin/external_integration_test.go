@@ -18,6 +18,7 @@ import (
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/flock"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -39,7 +40,7 @@ import (
 // test suite.
 //
 // Each language must provide a module with the name plugintest, which has:
-// - A verb which includes in its name the string "aabbcc" (case sensitive), eg: "func Verbaabbcc(...)"
+// - A verb which includes in its name the string VERB_NAME_SNIPPET (case sensitive), eg: "func Verbaabbcc(...)"
 // - No dependencies, but has lines that include the string "uncommentForDependency:", which enable a
 //     on dependency on the module "dependable" when everything before the colon is removed.
 //     - dependable.Data is a data type which can be used to avoid unused dependency warnings.
@@ -56,6 +57,9 @@ var config moduleconfig.ModuleConfig
 var buildChan chan result.Result[*langpb.BuildEvent]
 var buildChanCancel streamCancelFunc
 
+const MODULE_NAME = "plugintest"
+const VERB_NAME_SNIPPET = "aabbcc"
+
 type BuildResultType int
 
 const (
@@ -69,9 +73,9 @@ func TestBuilds(t *testing.T) {
 	in.Run(t,
 		in.WithLanguages("go"),
 		in.WithoutController(),
-		in.CopyModule("plugintest"),
+		in.CopyModule(MODULE_NAME),
 		startPlugin(),
-		setUpModuleConfig("plugintest"),
+		setUpModuleConfig(MODULE_NAME),
 		generateStubs(sch.Modules...),
 		syncStubReferences("builtin", "dependable"),
 
@@ -84,7 +88,7 @@ func TestBuilds(t *testing.T) {
 		waitForBuildToEnd(SUCCESS, "build-and-watch", false, nil),
 
 		// Update verb name and expect auto rebuild started and ended
-		modifyVerbName("plugintest", "aabbcc", "aaabbbccc"),
+		modifyVerbName(MODULE_NAME, VERB_NAME_SNIPPET, "aaabbbccc"),
 		waitForAutoRebuildToStart("build-and-watch"),
 		waitForBuildToEnd(SUCCESS, "build-and-watch", true, func(t testing.TB, ic in.TestContext, event *langpb.BuildEvent) {
 			successEvent, ok := event.Event.(*langpb.BuildEvent_BuildSuccess)
@@ -102,7 +106,7 @@ func TestBuilds(t *testing.T) {
 
 		// Trigger an auto rebuild, but when we are told of the build being started, send a build context update
 		// to force a new build
-		modifyVerbName("plugintest", "aaabbbccc", "aaaabbbbcccc"),
+		modifyVerbName(MODULE_NAME, "aaabbbccc", "aaaabbbbcccc"),
 		waitForAutoRebuildToStart("build-and-watch"),
 		sendUpdatedBuildContext("explicit-build", []string{}, sch),
 		waitForBuildToEnd(SUCCESSORFAILURE, "build-and-watch", true, nil),
@@ -124,9 +128,9 @@ func TestDependenciesUpdate(t *testing.T) {
 	in.Run(t,
 		in.WithLanguages("go"),
 		in.WithoutController(),
-		in.CopyModule("plugintest"),
+		in.CopyModule(MODULE_NAME),
 		startPlugin(),
-		setUpModuleConfig("plugintest"),
+		setUpModuleConfig(MODULE_NAME),
 		generateStubs(sch.Modules...),
 		syncStubReferences("builtin", "dependable"),
 
@@ -135,7 +139,7 @@ func TestDependenciesUpdate(t *testing.T) {
 		waitForBuildToEnd(SUCCESS, "initial-ctx", false, nil),
 
 		// Add dependency, build, and expect a failure due to invalidated dependencies
-		addDependency("plugintest", "dependable"),
+		addDependency(MODULE_NAME, "dependable"),
 		build(false, []string{}, sch, "detect-dep"),
 		waitForBuildToEnd(FAILURE, "detect-dep", false, func(t testing.TB, ic in.TestContext, event *langpb.BuildEvent) {
 			failureEvent, ok := event.Event.(*langpb.BuildEvent_BuildFailure)
@@ -148,6 +152,65 @@ func TestDependenciesUpdate(t *testing.T) {
 		waitForBuildToEnd(SUCCESS, "dep-added", false, nil),
 
 		killPlugin(),
+	)
+}
+
+// TestBuildLock tests that the build lock file is created and removed as expected for each build.
+func TestBuildLock(t *testing.T) {
+	sch := generateInitialSchema(t)
+
+	in.Run(t,
+		in.WithLanguages("go"),
+		in.WithoutController(),
+		in.CopyModule(MODULE_NAME),
+		startPlugin(),
+		setUpModuleConfig(MODULE_NAME),
+		generateStubs(sch.Modules...),
+		syncStubReferences("builtin", "dependable"),
+
+		// Build and enable rebuilding automatically
+		checkBuildLockLifecycle(
+			build(true, []string{}, sch, "build-and-watch"),
+			waitForBuildToEnd(SUCCESS, "build-and-watch", false, nil),
+		),
+
+		// Update verb name and expect auto rebuild started and ended
+		modifyVerbName(MODULE_NAME, VERB_NAME_SNIPPET, "aaabbbccc"),
+		checkBuildLockLifecycle(
+			waitForAutoRebuildToStart("build-and-watch"),
+			waitForBuildToEnd(SUCCESS, "build-and-watch", true, nil),
+		),
+	)
+}
+
+// TestBuildsWhenAlreadyLocked tests how builds work if there are locks already present.
+func TestBuildsWhenAlreadyLocked(t *testing.T) {
+	sch := generateInitialSchema(t)
+
+	in.Run(t,
+		in.WithLanguages("go"),
+		in.WithoutController(),
+		in.CopyModule(MODULE_NAME),
+		startPlugin(),
+		setUpModuleConfig(MODULE_NAME),
+		generateStubs(sch.Modules...),
+		syncStubReferences("builtin", "dependable"),
+
+		// Build and enable rebuilding automatically
+		checkBuildLockLifecycle(
+			build(true, []string{}, sch, "build-and-watch"),
+			waitForBuildToEnd(SUCCESS, "build-and-watch", false, nil),
+		),
+
+		// Confirm that build lock changes do not trigger a rebuild triggered by file changes
+		obtainAndReleaseBuildLock(3*time.Second),
+		checkForNoEvents(3*time.Second),
+
+		// Confirm that builds fail or stall when a lock file is already present
+		checkLockedBehavior(
+			sendUpdatedBuildContext("updated-ctx", []string{}, sch),
+			waitForBuildToEnd(FAILURE, "updated-ctx", false, nil),
+		),
 	)
 }
 
@@ -362,7 +425,7 @@ func waitForAutoRebuildToStart(contextId string) in.Action {
 					logger.Warnf("ignoring build failure for unexpected context %q while waiting for auto rebuild started event for %q", event.BuildFailure.ContextId, contextId)
 				}
 			case *langpb.BuildEvent_LogMessage:
-				logger.Debugf("ignoring log message: %s", event.LogMessage.Message)
+				logger.Debugf("plugin: %s", event.LogMessage.Message)
 			}
 		}
 	}
@@ -426,7 +489,36 @@ func waitForBuildToEnd(success BuildResultType, contextId string, automaticRebui
 				return
 
 			case *langpb.BuildEvent_LogMessage:
+				logger.Infof("plugin log: %v", event.LogMessage.Message)
+			}
+		}
+	}
+}
 
+func checkForNoEvents(duration time.Duration) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.Infof("Checking for no events for %v", duration)
+		logger := log.FromContext(ic.Context)
+		for {
+			select {
+			case result := <-buildChan:
+				e, err := result.Result()
+				assert.NoError(t, err, "did not expect a build stream error")
+				switch event := e.Event.(type) {
+				case *langpb.BuildEvent_AutoRebuildStarted:
+					panic(fmt.Sprintf("rebuild started event when expecting no events: %v", event))
+				case *langpb.BuildEvent_BuildSuccess:
+					panic(fmt.Sprintf("build success event when expecting no events: %v", event))
+				case *langpb.BuildEvent_BuildFailure:
+					panic(fmt.Sprintf("build failure event when expecting no events: %v", event))
+				case *langpb.BuildEvent_LogMessage:
+					logger.Infof("plugin log: %v", event.LogMessage.Message)
+					continue
+				}
+			case <-time.After(duration):
+				return
+			case <-ic.Context.Done():
+				return
 			}
 		}
 	}
@@ -510,4 +602,79 @@ func walkWatchedFiles(t testing.TB, ic in.TestContext, moduleName string, visit 
 		}
 		return nil
 	})
+}
+
+func checkBuildLockLifecycle(childActions ...in.Action) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.Infof("Checking build lock is unlocked")
+		_, err := os.Stat(config.Abs().BuildLock)
+		assert.Error(t, err, "expected build lock file to not exist before building at %v", config.Abs().BuildLock)
+
+		lockFound := make(chan bool)
+		go func() {
+			defer close(lockFound)
+			startTime := time.Now()
+			for {
+				select {
+				case <-time.After(1 * time.Second):
+					if _, err := os.Stat(config.Abs().BuildLock); err == nil {
+						lockFound <- true
+						return
+					}
+					if time.Since(startTime) > 3*time.Second {
+						lockFound <- false
+						return
+					}
+				case <-ic.Context.Done():
+					lockFound <- false
+					return
+				}
+			}
+		}()
+
+		// do build actions
+		for _, childAction := range childActions {
+			childAction(t, ic)
+		}
+		// confirm that at some point we did find the lock file
+		assert.True(t, (<-lockFound), "never found build lock file at %v while building", config.Abs().BuildLock)
+
+		in.Infof("Checking build lock is unlocked")
+		_, err = os.Stat(config.Abs().BuildLock)
+		assert.Error(t, err, "expected build lock file to not exist after building at %v", config.Abs().BuildLock)
+	}
+}
+
+func obtainAndReleaseBuildLock(duration time.Duration) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.Infof("Obtaining and releasing build lock")
+		release, err := flock.Acquire(ic.Context, config.Abs().BuildLock, BuildLockTimeout)
+		assert.NoError(t, err, "could not get build lock")
+		time.Sleep(duration)
+		err = release()
+		assert.NoError(t, err, "could not release build lock")
+	}
+}
+
+func checkLockedBehavior(buildFailureActions ...in.Action) in.Action {
+	return func(t testing.TB, ic in.TestContext) {
+		in.Infof("Acquiring build lock: %v", config.Abs().BuildLock)
+		release, err := flock.Acquire(ic.Context, config.Abs().BuildLock, BuildLockTimeout)
+		assert.NoError(t, err, "could not get build lock")
+
+		// build on a separate goroutine
+		buildEnded := make(chan bool)
+		go func() {
+			for _, buildAction := range buildFailureActions {
+				buildAction(t, ic)
+			}
+			close(buildEnded)
+		}()
+
+		// wait for build to fail due to file lock
+		_ = <-buildEnded
+
+		err = release() //nolint:errcheck
+		assert.NoError(t, err, "could not release build lock")
+	}
 }
