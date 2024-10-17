@@ -14,5 +14,4 @@ public @interface VerbClient {
 
     String module() default "";
 
-    String name();
 }

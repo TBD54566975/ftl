@@ -162,7 +162,6 @@ public class KotlinCodeGenerator extends JVMCodeGenerator {
         FunSpec.Builder callFunc = FunSpec.builder(name)
                 .addModifiers(KModifier.ABSTRACT, KModifier.PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(VerbClient.class)
-                        .addMember("name=\"" + name + "\"")
                         .addMember("module=\"" + module.getName() + "\"")
                         .build())
                 .addKdoc(String.join("\n", verb.getCommentsList()));

@@ -52,7 +52,7 @@ public class VerbProcessor {
                 throw new RuntimeException(
                         "@VerbClient can only be applied to interfaces and " + iface.name() + " is not an interface");
             }
-            String name = clientDefinition.value("name").asString();
+            String name = callMethod.name();
             AnnotationValue moduleValue = clientDefinition.value("module");
             String module = moduleValue == null || moduleValue.asString().isEmpty() ? moduleNameBuildItem.getModuleName()
                     : moduleValue.asString();

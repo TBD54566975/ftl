@@ -283,7 +283,6 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         MethodSpec.Builder callMethod = MethodSpec.methodBuilder(verb.getName())
                 .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(VerbClient.class)
-                        .addMember("name", "\"" + verb.getName() + "\"")
                         .addMember("module", "\"" + module.getName() + "\"")
                         .build())
                 .addJavadoc(String.join("\n", verb.getCommentsList()));
