@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
  * Annotation that is used to define a verb client
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Target(ElementType.METHOD)
 public @interface VerbClient {
 
     String module() default "";

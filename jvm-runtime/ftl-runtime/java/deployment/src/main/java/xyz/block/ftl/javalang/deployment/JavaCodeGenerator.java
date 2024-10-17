@@ -35,6 +35,7 @@ import xyz.block.ftl.TypeAlias;
 import xyz.block.ftl.TypeAliasMapper;
 import xyz.block.ftl.VerbClient;
 import xyz.block.ftl.deployment.JVMCodeGenerator;
+import xyz.block.ftl.deployment.VerbType;
 import xyz.block.ftl.v1.schema.Data;
 import xyz.block.ftl.v1.schema.Enum;
 import xyz.block.ftl.v1.schema.EnumVariant;
@@ -275,42 +276,26 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     protected void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
             Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
             throws IOException {
-        TypeSpec.Builder typeBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
+        TypeSpec.Builder clientBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
+                .addModifiers(Modifier.PUBLIC)
+                .addJavadoc("A client for the $L.$L verb", module.getName(), verb.getName());
+
+        MethodSpec.Builder callMethod = MethodSpec.methodBuilder(verb.getName())
+                .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(VerbClient.class)
                         .addMember("name", "\"" + verb.getName() + "\"")
                         .addMember("module", "\"" + module.getName() + "\"")
                         .build())
-                .addModifiers(Modifier.PUBLIC)
-                .addJavadoc("A client for the $L.$L verb", module.getName(), verb.getName());
-        var comments = String.join("\n", verb.getCommentsList());
-        if (verb.getRequest().hasUnit() && verb.getResponse().hasUnit()) {
-            typeBuilder.addMethod(MethodSpec.methodBuilder("call")
-                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC).build())
-                    .addJavadoc(comments);
-        } else if (verb.getRequest().hasUnit()) {
-            typeBuilder.addMethod(MethodSpec.methodBuilder("call")
-                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
-                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
-                    .addJavadoc(comments)
-                    .build());
-        } else if (verb.getResponse().hasUnit()) {
-            typeBuilder.addMethod(MethodSpec.methodBuilder("call")
-                    .returns(TypeName.VOID)
-                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
-                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
-                    .addJavadoc(comments)
-                    .build());
-        } else {
-            typeBuilder.addMethod(MethodSpec.methodBuilder("call")
-                    .returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap))
-                    .addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value")
-                    .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
-                    .addJavadoc(comments)
-                    .build());
+                .addJavadoc(String.join("\n", verb.getCommentsList()));
+        VerbType verbType = VerbType.of(verb);
+        if (verbType == VerbType.SOURCE || verbType == VerbType.VERB) {
+            callMethod.returns(toAnnotatedJavaTypeName(verb.getResponse(), typeAliasMap, nativeTypeAliasMap));
         }
-
-        TypeSpec client = typeBuilder.build();
-        JavaFile javaFile = JavaFile.builder(packageName, client).build();
+        if (verbType == VerbType.SINK || verbType == VerbType.VERB) {
+            callMethod.addParameter(toAnnotatedJavaTypeName(verb.getRequest(), typeAliasMap, nativeTypeAliasMap), "value");
+        }
+        clientBuilder.addMethod(callMethod.build());
+        JavaFile javaFile = JavaFile.builder(packageName, clientBuilder.build()).build();
         javaFile.writeTo(outputDir);
     }
 
