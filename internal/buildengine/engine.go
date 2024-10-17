@@ -932,6 +932,14 @@ func (e *Engine) listenForBuildUpdates(originalCtx context.Context) {
 			}
 
 		case <-originalCtx.Done():
+			// kill all plugins
+			e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
+				err := meta.plugin.Kill()
+				if err != nil {
+					log.FromContext(originalCtx).Errorf(err, "could not kill plugin")
+				}
+				return true
+			})
 			return
 		}
 	}

@@ -47,7 +47,6 @@ import (
 
 // TODO: Things to test:
 // - Broken build stream
-// - Build locks
 // - Sending build context updates without a build stream
 // - Multiple build streams
 
