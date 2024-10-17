@@ -74,6 +74,17 @@ build-backend-tests:
 build-java *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}
 
+# Build ftl-language-go
+build-go: build-protos
+  #!/bin/bash
+  shopt -s extglob
+
+  if [ "${FTL_DEBUG:-}" = "true" ]; then
+    go build -o "{{RELEASE}}/ftl-language-go" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/cmd"
+  else
+    mk "{{RELEASE}}/ftl-language-go" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-go" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/cmd"
+  fi
+
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
 
 # Explicitly initialise the database

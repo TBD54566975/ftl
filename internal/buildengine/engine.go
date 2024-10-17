@@ -132,7 +132,7 @@ func WithStartTime(startTime time.Time) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client DeployClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client DeployClient, projectRoot string, moduleDirs []string, bindAllocator *bind.BindAllocator, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -145,6 +145,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		pluginEvents:     make(chan languageplugin.PluginEvent, 128),
 		parallelism:      runtime.NumCPU(),
 		modulesToBuild:   xsync.NewMapOf[string, bool](),
+		bindAllocator:    bindAllocator,
 	}
 	for _, option := range options {
 		option(e)

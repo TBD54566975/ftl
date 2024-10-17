@@ -56,10 +56,14 @@ type serveCmd struct {
 const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
 func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	return s.run(ctx, projConfig, optional.None[chan bool](), false)
+	bindAllocator, err := bind.NewBindAllocator(s.Bind)
+	if err != nil {
+		return err
+	}
+	return s.run(ctx, projConfig, optional.None[chan bool](), false, bindAllocator)
 }
 
-func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], devMode bool) error {
+func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], devMode bool, bindAllocator *bind.BindAllocator) error {
 	logger := log.FromContext(ctx)
 	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 	provisionerClient := rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
@@ -111,11 +115,6 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 	}
 
 	wg, ctx := errgroup.WithContext(ctx)
-
-	bindAllocator, err := bind.NewBindAllocator(s.Bind)
-	if err != nil {
-		return err
-	}
 
 	controllerAddresses := make([]*url.URL, 0, s.Controllers)
 	controllerIngressAddresses := make([]*url.URL, 0, s.Controllers)
