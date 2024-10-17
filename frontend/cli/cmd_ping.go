@@ -15,5 +15,5 @@ type pingCmd struct {
 }
 
 func (c *pingCmd) Run(ctx context.Context, controller ftlv1connect.ControllerServiceClient) error {
-	return rpc.Wait(ctx, backoff.Backoff{Max: time.Second}, c.Wait, controller)
+	return rpc.Wait(ctx, backoff.Backoff{Max: time.Second}, c.Wait, controller) //nolint:wrapcheck
 }
