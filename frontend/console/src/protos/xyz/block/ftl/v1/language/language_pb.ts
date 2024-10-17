@@ -14,38 +14,51 @@ import { Module, Schema } from "../schema/schema_pb.js";
  */
 export class ModuleConfig extends Message<ModuleConfig> {
   /**
-   * name of the module
+   * Name of the module
    *
    * @generated from field: string name = 1;
    */
   name = "";
 
   /**
-   * absolute path to the module's directory
+   * Absolute path to the module's directory
    *
-   * @generated from field: string path = 2;
+   * @generated from field: string dir = 2;
    */
-  path = "";
+  dir = "";
 
   /**
-   * absolute path
+   * The language of the module
    *
-   * @generated from field: string deployDir = 3;
+   * @generated from field: string language = 3;
+   */
+  language = "";
+
+  /**
+   * Absolute path to the directory containing all of this module's build artifacts for deployments
+   *
+   * @generated from field: string deploy_dir = 4;
    */
   deployDir = "";
 
   /**
-   * @generated from field: optional string build = 4;
+   * Build is the command to build the module.
+   *
+   * @generated from field: optional string build = 5;
    */
   build?: string;
 
   /**
-   * @generated from field: optional string generated_schema_dir = 5;
+   * The directory to generate protobuf schema files into. These can be picked up by language specific build tools
+   *
+   * @generated from field: optional string generated_schema_dir = 6;
    */
   generatedSchemaDir?: string;
 
   /**
-   * @generated from field: repeated string watch = 6;
+   * Patterns to watch for file changes
+   *
+   * @generated from field: repeated string watch = 7;
    */
   watch: string[] = [];
 
@@ -53,7 +66,7 @@ export class ModuleConfig extends Message<ModuleConfig> {
    * LanguageConfig contains any metadata specific to a specific language.
    * These are stored in the ftl.toml file under the same key as the language (eg: "go", "java")
    *
-   * @generated from field: google.protobuf.Struct language_config = 7;
+   * @generated from field: google.protobuf.Struct language_config = 8;
    */
   languageConfig?: Struct;
 
@@ -66,12 +79,13 @@ export class ModuleConfig extends Message<ModuleConfig> {
   static readonly typeName = "xyz.block.ftl.v1.language.ModuleConfig";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "deployDir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 7, name: "language_config", kind: "message", T: Struct },
+    { no: 2, name: "dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "deploy_dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 8, name: "language_config", kind: "message", T: Struct },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfig {
@@ -98,9 +112,9 @@ export class ModuleConfig extends Message<ModuleConfig> {
  */
 export class ProjectConfig extends Message<ProjectConfig> {
   /**
-   * @generated from field: string path = 1;
+   * @generated from field: string dir = 1;
    */
-  path = "";
+  dir = "";
 
   /**
    * @generated from field: string name = 2;
@@ -125,7 +139,7 @@ export class ProjectConfig extends Message<ProjectConfig> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.language.ProjectConfig";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "no_git", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "hermit", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
@@ -303,12 +317,12 @@ export class CreateModuleRequest extends Message<CreateModuleRequest> {
   name = "";
 
   /**
-   * The root path for the module, which does not yet exist.
+   * The root directory for the module, which does not yet exist.
    * The plugin should create the directory.
    *
-   * @generated from field: string path = 2;
+   * @generated from field: string dir = 2;
    */
-  path = "";
+  dir = "";
 
   /**
    * The project configuration
@@ -333,7 +347,7 @@ export class CreateModuleRequest extends Message<CreateModuleRequest> {
   static readonly typeName = "xyz.block.ftl.v1.language.CreateModuleRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "project_config", kind: "message", T: ProjectConfig },
     { no: 4, name: "Flags", kind: "message", T: Struct },
   ]);
@@ -393,9 +407,9 @@ export class CreateModuleResponse extends Message<CreateModuleResponse> {
  */
 export class ModuleConfigDefaultsRequest extends Message<ModuleConfigDefaultsRequest> {
   /**
-   * @generated from field: string path = 1;
+   * @generated from field: string dir = 1;
    */
-  path = "";
+  dir = "";
 
   constructor(data?: PartialMessage<ModuleConfigDefaultsRequest>) {
     super();
@@ -405,7 +419,7 @@ export class ModuleConfigDefaultsRequest extends Message<ModuleConfigDefaultsReq
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.language.ModuleConfigDefaultsRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfigDefaultsRequest {
@@ -440,7 +454,7 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
   /**
    * Default relative path to the directory containing all build artifacts for deployments
    *
-   * @generated from field: string deployDir = 1;
+   * @generated from field: string deploy_dir = 1;
    */
   deployDir = "";
 
@@ -459,7 +473,7 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
   generatedSchemaDir?: string;
 
   /**
-   * Default patterns to watch for file changes
+   * Default patterns to watch for file changes, relative to the module directory
    *
    * @generated from field: repeated string watch = 4;
    */
@@ -481,7 +495,7 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.language.ModuleConfigDefaultsResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "deployDir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "deploy_dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 3, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
@@ -892,19 +906,26 @@ export class BuildRequest extends Message<BuildRequest> {
   /**
    * The root path for the FTL project
    *
-   * @generated from field: string project_path = 1;
+   * @generated from field: string project_root = 1;
    */
-  projectPath = "";
+  projectRoot = "";
+
+  /**
+   * The path to the directory containing all module stubs. Each module stub is in a subdirectory.
+   *
+   * @generated from field: string stubs_root = 2;
+   */
+  stubsRoot = "";
 
   /**
    * Indicates whether to watch for file changes and automatically rebuild
    *
-   * @generated from field: bool rebuild_automatically = 2;
+   * @generated from field: bool rebuild_automatically = 3;
    */
   rebuildAutomatically = false;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.language.BuildContext build_context = 3;
+   * @generated from field: xyz.block.ftl.v1.language.BuildContext build_context = 4;
    */
   buildContext?: BuildContext;
 
@@ -916,9 +937,10 @@ export class BuildRequest extends Message<BuildRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.language.BuildRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "project_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "rebuild_automatically", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "build_context", kind: "message", T: BuildContext },
+    { no: 1, name: "project_root", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "stubs_root", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "rebuild_automatically", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "build_context", kind: "message", T: BuildContext },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildRequest {
@@ -1276,6 +1298,186 @@ export class BuildEvent extends Message<BuildEvent> {
 
   static equals(a: BuildEvent | PlainMessage<BuildEvent> | undefined, b: BuildEvent | PlainMessage<BuildEvent> | undefined): boolean {
     return proto3.util.equals(BuildEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.GenerateStubsRequest
+ */
+export class GenerateStubsRequest extends Message<GenerateStubsRequest> {
+  /**
+   * The directory path to generate stubs into
+   *
+   * @generated from field: string dir = 1;
+   */
+  dir = "";
+
+  /**
+   * The schema of the module to generate stubs for
+   *
+   * @generated from field: xyz.block.ftl.v1.schema.Module module = 2;
+   */
+  module?: Module;
+
+  /**
+   * The module's configuration to generate stubs for
+   *
+   * @generated from field: xyz.block.ftl.v1.language.ModuleConfig module_config = 3;
+   */
+  moduleConfig?: ModuleConfig;
+
+  /**
+   * Native module configuration is the configuration for a module that uses the plugin's language, if
+   * the main moduleConfig provided is of a different language. It is provided as a mechanism to derive
+   * language specific information. For example, the language version.
+   *
+   * @generated from field: optional xyz.block.ftl.v1.language.ModuleConfig native_module_config = 4;
+   */
+  nativeModuleConfig?: ModuleConfig;
+
+  constructor(data?: PartialMessage<GenerateStubsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.GenerateStubsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "module", kind: "message", T: Module },
+    { no: 3, name: "module_config", kind: "message", T: ModuleConfig },
+    { no: 4, name: "native_module_config", kind: "message", T: ModuleConfig, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GenerateStubsRequest {
+    return new GenerateStubsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GenerateStubsRequest {
+    return new GenerateStubsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GenerateStubsRequest {
+    return new GenerateStubsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GenerateStubsRequest | PlainMessage<GenerateStubsRequest> | undefined, b: GenerateStubsRequest | PlainMessage<GenerateStubsRequest> | undefined): boolean {
+    return proto3.util.equals(GenerateStubsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.GenerateStubsResponse
+ */
+export class GenerateStubsResponse extends Message<GenerateStubsResponse> {
+  constructor(data?: PartialMessage<GenerateStubsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.GenerateStubsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GenerateStubsResponse {
+    return new GenerateStubsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GenerateStubsResponse {
+    return new GenerateStubsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GenerateStubsResponse {
+    return new GenerateStubsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GenerateStubsResponse | PlainMessage<GenerateStubsResponse> | undefined, b: GenerateStubsResponse | PlainMessage<GenerateStubsResponse> | undefined): boolean {
+    return proto3.util.equals(GenerateStubsResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.SyncStubReferencesRequest
+ */
+export class SyncStubReferencesRequest extends Message<SyncStubReferencesRequest> {
+  /**
+   * @generated from field: xyz.block.ftl.v1.language.ModuleConfig module_config = 1;
+   */
+  moduleConfig?: ModuleConfig;
+
+  /**
+   * The path of the directory containing all module stubs. Each module is in a subdirectory
+   *
+   * @generated from field: string stubs_root = 2;
+   */
+  stubsRoot = "";
+
+  /**
+   * The names of all modules that have had stubs generated
+   *
+   * @generated from field: repeated string modules = 3;
+   */
+  modules: string[] = [];
+
+  constructor(data?: PartialMessage<SyncStubReferencesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.SyncStubReferencesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "module_config", kind: "message", T: ModuleConfig },
+    { no: 2, name: "stubs_root", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "modules", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SyncStubReferencesRequest {
+    return new SyncStubReferencesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SyncStubReferencesRequest {
+    return new SyncStubReferencesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SyncStubReferencesRequest {
+    return new SyncStubReferencesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SyncStubReferencesRequest | PlainMessage<SyncStubReferencesRequest> | undefined, b: SyncStubReferencesRequest | PlainMessage<SyncStubReferencesRequest> | undefined): boolean {
+    return proto3.util.equals(SyncStubReferencesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.language.SyncStubReferencesResponse
+ */
+export class SyncStubReferencesResponse extends Message<SyncStubReferencesResponse> {
+  constructor(data?: PartialMessage<SyncStubReferencesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.language.SyncStubReferencesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SyncStubReferencesResponse {
+    return new SyncStubReferencesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SyncStubReferencesResponse {
+    return new SyncStubReferencesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SyncStubReferencesResponse {
+    return new SyncStubReferencesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SyncStubReferencesResponse | PlainMessage<SyncStubReferencesResponse> | undefined, b: SyncStubReferencesResponse | PlainMessage<SyncStubReferencesResponse> | undefined): boolean {
+    return proto3.util.equals(SyncStubReferencesResponse, a, b);
   }
 }
 

@@ -248,7 +248,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 	return modules, nil
 }
 
-func buildJava(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+func buildJava(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
 	config := bctx.Config.Abs()
 	logger := log.FromContext(ctx)
 	javaConfig, err := loadJavaConfig(config.LanguageConfig, config.Language)

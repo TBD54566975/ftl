@@ -3,18 +3,13 @@ package languageplugin
 import (
 	"context"
 	"fmt"
-	"go/parser"
-	"go/token"
-	"io/fs"
 	"path/filepath"
 	"runtime"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/kong"
-	"golang.org/x/exp/maps"
+	"github.com/alecthomas/types/optional"
 
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
@@ -23,6 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -116,51 +112,33 @@ func (p *goPlugin) CreateModule(ctx context.Context, projConfig projectconfig.Co
 
 func (p *goPlugin) GetDependencies(ctx context.Context, config moduleconfig.ModuleConfig) ([]string, error) {
 	return p.internalPlugin.getDependencies(ctx, func() ([]string, error) {
-		dependencies := map[string]bool{}
-		fset := token.NewFileSet()
-		err := watch.WalkDir(config.Abs().Dir, func(path string, d fs.DirEntry) error {
-			if !d.IsDir() {
-				return nil
-			}
-			if strings.HasPrefix(d.Name(), "_") || d.Name() == "testdata" {
-				return watch.ErrSkip
-			}
-			pkgs, err := parser.ParseDir(fset, path, nil, parser.ImportsOnly)
-			if pkgs == nil {
-				return fmt.Errorf("could parse directory in search of dependencies: %w", err)
-			}
-			for _, pkg := range pkgs {
-				for _, file := range pkg.Files {
-					for _, imp := range file.Imports {
-						path, err := strconv.Unquote(imp.Path.Value)
-						if err != nil {
-							continue
-						}
-						if !strings.HasPrefix(path, "ftl/") {
-							continue
-						}
-						module := strings.Split(strings.TrimPrefix(path, "ftl/"), "/")[0]
-						if module == config.Module {
-							continue
-						}
-						dependencies[module] = true
-					}
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", config.Module, err)
-		}
-		modules := maps.Keys(dependencies)
-		sort.Strings(modules)
-		return modules, nil
+		return compile.ExtractDependencies(config.Abs())
 	})
 }
 
-func buildGo(ctx context.Context, projectRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
+func (p *goPlugin) GenerateStubs(ctx context.Context, dir string, module *schema.Module, moduleConfig moduleconfig.ModuleConfig, nativeModuleConfig optional.Option[moduleconfig.ModuleConfig]) error {
+	var absNativeModuleConfig optional.Option[moduleconfig.AbsModuleConfig]
+	if c, ok := nativeModuleConfig.Get(); ok {
+		absNativeModuleConfig = optional.Some(c.Abs())
+	}
+	err := compile.GenerateStubs(ctx, dir, module, moduleConfig.Abs(), absNativeModuleConfig)
+	if err != nil {
+		return fmt.Errorf("could not generate stubs: %w", err)
+	}
+	return nil
+
+}
+func (p *goPlugin) SyncStubReferences(ctx context.Context, config moduleconfig.ModuleConfig, dir string, moduleNames []string) error {
+	err := compile.SyncGeneratedStubReferences(ctx, config, dir, moduleNames)
+	if err != nil {
+		return fmt.Errorf("could not sync stub references: %w", err)
+	}
+	return nil
+}
+
+func buildGo(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, devMode bool, transaction watch.ModifyFilesTransaction) (BuildResult, error) {
 	config := bctx.Config.Abs()
-	moduleSch, buildErrs, err := compile.Build(ctx, projectRoot, config.Dir, config, bctx.Schema, transaction, buildEnv, devMode)
+	moduleSch, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, config, bctx.Schema, transaction, buildEnv, devMode)
 	if err != nil {
 		return BuildResult{}, CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
 	}

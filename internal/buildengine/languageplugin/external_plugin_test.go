@@ -76,7 +76,7 @@ func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 		Schema:       sch,
 		Dependencies: proto.Dependencies,
 		Config: moduleconfig.ModuleConfig{
-			Dir:                proto.ModuleConfig.Path,
+			Dir:                proto.ModuleConfig.Dir,
 			Language:           "test",
 			Realm:              "test",
 			Module:             proto.ModuleConfig.Name,
@@ -87,6 +87,14 @@ func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 			LanguageConfig:     proto.ModuleConfig.LanguageConfig.AsMap(),
 		},
 	}, nil
+}
+
+func (p *mockExternalPluginClient) generateStubs(context.Context, *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error) {
+	panic("not implemented")
+}
+
+func (p *mockExternalPluginClient) syncStubReferences(context.Context, *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
+	panic("not implemented")
 }
 
 func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
@@ -415,7 +423,7 @@ func (p *mockExternalPluginClient) publishBuildEvent(event *langpb.BuildEvent) {
 func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, autoRebuild bool) chan result.Result[BuildResult] {
 	resultChan := make(chan result.Result[BuildResult])
 	go func() {
-		resultChan <- result.From(plugin.Build(ctx, "", bctx, []string{}, autoRebuild))
+		resultChan <- result.From(plugin.Build(ctx, "", "", bctx, []string{}, autoRebuild))
 	}()
 	// sleep to make sure impl has received the build context
 	time.Sleep(300 * time.Millisecond)
