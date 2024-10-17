@@ -149,6 +149,25 @@ type DatabaseConfig struct {
 
 func (*DatabaseConfig) schemaFactValue() {}
 
+// VerbResourceParamOrder is a fact for marking the order of resource parameters used by a verb, where the signature
+// is (context.Context, <request>, <resource1>, <resource2>, ...).
+//
+// This is used in the generated code that registers verb resources. The order of parameters is important because it
+// will determine the order in which resources are passed to the verb when the call is constructed via reflection at
+// runtime.
+type VerbResourceParamOrder struct {
+	Resources []VerbResourceParam
+}
+
+type VerbResourceParam struct {
+	Ref  *schema.Ref
+	Type schema.Metadata
+	// The mapper specifying an object that the resource is mapped to, if applicable.
+	Mapper optional.Option[types.Object]
+}
+
+func (*VerbResourceParamOrder) schemaFactValue() {}
+
 // MarkSchemaDecl marks the given object as having been extracted to the given schema decl.
 func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	fact := newFact(pass, obj)
@@ -217,6 +236,13 @@ func MarkDatabaseConfig(pass *analysis.Pass, obj types.Object, dbType DatabaseTy
 	method DatabaseConfigMethod, value any) {
 	fact := newFact(pass, obj)
 	fact.Add(&DatabaseConfig{Type: dbType, Method: method, Value: value})
+	pass.ExportObjectFact(obj, fact)
+}
+
+// MarkVerbResourceParamOrder marks the given verb object with the order of its parameters.
+func MarkVerbResourceParamOrder(pass *analysis.Pass, obj types.Object, resources []VerbResourceParam) {
+	fact := newFact(pass, obj)
+	fact.Add(&VerbResourceParamOrder{Resources: resources})
 	pass.ExportObjectFact(obj, fact)
 }
 

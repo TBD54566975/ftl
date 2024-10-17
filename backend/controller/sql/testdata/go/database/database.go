@@ -2,15 +2,28 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
 
-type MyDbConfig struct {
+type MyDBConfig struct {
 	ftl.DefaultPostgresDatabaseConfig
 }
 
-func (MyDbConfig) Name() string { return "testdb" }
+func (MyDBConfig) Name() string { return "testdb" }
+
+type NewType struct {
+	*sql.DB
+}
+
+type MyDBMapper struct {
+	ftl.DatabaseHandle[MyDBConfig]
+}
+
+func (d MyDBMapper) Map(ctx context.Context, db *sql.DB) (NewType, error) {
+	return NewType{db}, nil
+}
 
 type InsertRequest struct {
 	Data string
@@ -19,8 +32,9 @@ type InsertRequest struct {
 type InsertResponse struct{}
 
 //ftl:verb
-func Insert(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDbConfig]) (InsertResponse, error) {
-	err := persistRequest(ctx, req, db)
+func Mapped(ctx context.Context, req InsertRequest, db ftl.MappedHandle[MyDBMapper, *sql.DB, NewType]) (InsertResponse, error) {
+	conn := db.Get(ctx)
+	err := persistRequest(ctx, req, conn.DB)
 	if err != nil {
 		return InsertResponse{}, err
 	}
@@ -28,8 +42,19 @@ func Insert(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDbCo
 	return InsertResponse{}, nil
 }
 
-func persistRequest(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDbConfig]) error {
-	_, err := db.Get(ctx).Exec(`CREATE TABLE IF NOT EXISTS requests
+//ftl:verb
+func Insert(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDBConfig]) (InsertResponse, error) {
+	conn := db.Get(ctx)
+	err := persistRequest(ctx, req, conn)
+	if err != nil {
+		return InsertResponse{}, err
+	}
+
+	return InsertResponse{}, nil
+}
+
+func persistRequest(ctx context.Context, req InsertRequest, db *sql.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS requests
 	       (
 	         data TEXT,
 	         created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
@@ -38,7 +63,7 @@ func persistRequest(ctx context.Context, req InsertRequest, db ftl.DatabaseHandl
 	if err != nil {
 		return err
 	}
-	_, err = db.Get(ctx).Exec("INSERT INTO requests (data) VALUES ($1);", req.Data)
+	_, err = db.Exec("INSERT INTO requests (data) VALUES ($1);", req.Data)
 	if err != nil {
 		return err
 	}

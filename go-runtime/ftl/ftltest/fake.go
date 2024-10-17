@@ -147,7 +147,7 @@ func makeMapKey(mapper any) uintptr {
 		panic("fakeFTL received object that was not a pointer, expected *MapHandle")
 	}
 	underlying := v.Elem().Type().Name()
-	if !strings.HasPrefix(underlying, "MapHandle[") {
+	if !(strings.HasPrefix(underlying, "MapHandle[") || strings.HasPrefix(underlying, "MappedHandle[")) {
 		panic(fmt.Sprintf("fakeFTL received *%s, expected *MapHandle", underlying))
 	}
 	return v.Pointer()

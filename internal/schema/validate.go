@@ -378,6 +378,54 @@ func SortModuleDecls(module *Module) {
 	})
 }
 
+func sortMetadata(md []Metadata) {
+	sort.SliceStable(md, func(i, j int) bool {
+		iMd := md[i]
+		jMd := md[j]
+		sortMetadataType(iMd)
+		sortMetadataType(jMd)
+		iPriority := getMetadataSortingPriority(iMd)
+		jPriority := getMetadataSortingPriority(jMd)
+		return iPriority < jPriority
+	})
+}
+
+func sortMetadataType(md Metadata) {
+	sortRefs := func(refs []*Ref) {
+		sort.SliceStable(refs, func(i, j int) bool {
+			if refs[i].Module == refs[j].Module {
+				return refs[i].Name < refs[j].Name
+			}
+			return refs[i].Module < refs[j].Module
+		})
+	}
+
+	switch m := md.(type) {
+	case *MetadataAlias:
+		return
+	case *MetadataCalls:
+		sortRefs(m.Calls)
+	case *MetadataConfig:
+		sortRefs(m.Config)
+	case *MetadataCronJob:
+		return
+	case *MetadataDatabases:
+		sortRefs(m.Calls)
+	case *MetadataEncoding:
+		return
+	case *MetadataIngress:
+		return
+	case *MetadataRetry:
+		return
+	case *MetadataSecrets:
+		sortRefs(m.Secrets)
+	case *MetadataSubscriber:
+		return
+	case *MetadataTypeMap:
+		return
+	}
+}
+
 // getDeclSortingPriority (used for schema sorting) is pulled out into it's own switch so the Go sumtype check will fail
 // if a new Decl is added but not explicitly prioritized
 func getDeclSortingPriority(decl Decl) int {
@@ -401,6 +449,35 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 8
 	case *Verb:
 		priority = 9
+	}
+	return priority
+}
+
+func getMetadataSortingPriority(metadata Metadata) int {
+	priority := 0
+	switch metadata.(type) {
+	case *MetadataAlias:
+		priority = 1
+	case *MetadataCalls:
+		priority = 2
+	case *MetadataConfig:
+		priority = 3
+	case *MetadataCronJob:
+		priority = 4
+	case *MetadataDatabases:
+		priority = 5
+	case *MetadataEncoding:
+		priority = 6
+	case *MetadataIngress:
+		priority = 7
+	case *MetadataRetry:
+		priority = 8
+	case *MetadataSecrets:
+		priority = 9
+	case *MetadataSubscriber:
+		priority = 10
+	case *MetadataTypeMap:
+		priority = 11
 	}
 	return priority
 }

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/types/optional"
 	sets "github.com/deckarep/golang-set/v2"
@@ -232,6 +233,7 @@ type goSumTypeVariant struct {
 func (g goSumTypeVariant) getNativeType() nativeType { return g.nativeType }
 
 type verbResource interface {
+	TypeName() string
 	resource()
 }
 
@@ -252,6 +254,18 @@ type goDBHandle struct {
 func (d goDBHandle) resource() {}
 
 func (d goDBHandle) getNativeType() nativeType {
+	return d.nativeType
+}
+
+type goMappedHandle struct {
+	Resource verbResource
+
+	nativeType
+}
+
+func (d goMappedHandle) resource() {}
+
+func (d goMappedHandle) getNativeType() nativeType {
 	return d.nativeType
 }
 
@@ -403,10 +417,11 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 }
 
 type mainModuleContextBuilder struct {
-	sch         *schema.Schema
-	mainModule  *schema.Module
-	nativeNames extract.NativeNames
-	imports     map[string]string
+	sch                     *schema.Schema
+	mainModule              *schema.Module
+	nativeNames             extract.NativeNames
+	verbResourceParamOrders map[*schema.Verb][]common.VerbResourceParam
+	imports                 map[string]string
 }
 
 func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVersion, ftlVersion, projectName string,
@@ -415,10 +430,11 @@ func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVers
 		Modules: append(sch.Modules, result.Module),
 	}
 	builder := &mainModuleContextBuilder{
-		sch:         combinedSch,
-		mainModule:  result.Module,
-		nativeNames: result.NativeNames,
-		imports:     imports(result.Module, false),
+		sch:                     combinedSch,
+		mainModule:              result.Module,
+		nativeNames:             result.NativeNames,
+		verbResourceParamOrders: result.VerbResourceParamOrder,
+		imports:                 imports(result.Module, false),
 	}
 	return builder.build(goModVersion, ftlVersion, projectName, sharedModulesPaths, replacements)
 }
@@ -635,55 +651,29 @@ func (b *mainModuleContextBuilder) processExternalTypeAlias(alias *schema.TypeAl
 
 func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error) {
 	var resources []verbResource
-	for _, m := range verb.Metadata {
-		switch md := m.(type) {
-		case *schema.MetadataCalls:
-			for _, call := range md.Calls {
-				resolved, ok := b.sch.Resolve(call).Get()
-				if !ok {
-					return goVerb{}, fmt.Errorf("failed to resolve %s client, used by %s.%s", call,
-						b.mainModule.Name, verb.Name)
-				}
-				callee, ok := resolved.(*schema.Verb)
-				if !ok {
-					return goVerb{}, fmt.Errorf("%s.%s uses %s client, but %s is not a verb",
-						b.mainModule.Name, verb.Name, call, call)
-				}
-				calleeNativeName, ok := b.nativeNames[call]
-				if !ok {
-					return goVerb{}, fmt.Errorf("missing native name for verb client %s", call)
-				}
-				calleeverb, err := b.getGoVerb(calleeNativeName, callee)
-				if err != nil {
-					return goVerb{}, err
-				}
-				resources = append(resources, verbClient{
-					calleeverb,
-				})
-			}
-		case *schema.MetadataDatabases:
-			for _, call := range md.Calls {
-				resolved, ok := b.sch.Resolve(call).Get()
-				if !ok {
-					return goVerb{}, fmt.Errorf("failed to resolve %s database, used by %s.%s", call,
-						b.mainModule.Name, verb.Name)
-				}
-				db, ok := resolved.(*schema.Database)
-				if !ok {
-					return goVerb{}, fmt.Errorf("%s.%s uses %s database handle, but %s is not a database",
-						b.mainModule.Name, verb.Name, call, call)
-				}
-
-				dbHandle, err := b.processDatabase(call.Module, db)
-				if err != nil {
-					return goVerb{}, err
-				}
-				resources = append(resources, dbHandle)
-			}
-
-		default:
-			// TODO: implement other resources
+	verbResourceParams, ok := b.verbResourceParamOrders[verb]
+	if !ok {
+		return goVerb{}, fmt.Errorf("missing verb resource param order for %s", verb.Name)
+	}
+	for _, m := range verbResourceParams {
+		resource, err := b.getVerbResource(verb, m)
+		if err != nil {
+			return goVerb{}, err
 		}
+
+		if mapper, ok := m.Mapper.Get(); ok {
+			nt, err := b.getNativeType(mapper.Pkg().Path() + "." + mapper.Name())
+			if err != nil {
+				return goVerb{}, err
+			}
+			resources = append(resources, goMappedHandle{
+				Resource:   resource,
+				nativeType: nt,
+			})
+			continue
+		}
+
+		resources = append(resources, resource)
 	}
 
 	nativeName, ok := b.nativeNames[verb]
@@ -691,6 +681,51 @@ func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error
 		return goVerb{}, fmt.Errorf("missing native name for verb %s", verb.Name)
 	}
 	return b.getGoVerb(nativeName, verb, resources...)
+}
+
+func (b *mainModuleContextBuilder) getVerbResource(verb *schema.Verb, param common.VerbResourceParam) (verbResource, error) {
+	ref := param.Ref
+	switch param.Type.(type) {
+	case *schema.MetadataCalls:
+		resolved, ok := b.sch.Resolve(ref).Get()
+		if !ok {
+			return verbClient{}, fmt.Errorf("failed to resolve %s client, used by %s.%s", ref,
+				b.mainModule.Name, verb.Name)
+		}
+		callee, ok := resolved.(*schema.Verb)
+		if !ok {
+			return verbClient{}, fmt.Errorf("%s.%s uses %s client, but %s is not a verb",
+				b.mainModule.Name, verb.Name, ref, ref)
+		}
+		calleeNativeName, ok := b.nativeNames[ref]
+		if !ok {
+			return verbClient{}, fmt.Errorf("missing native name for verb client %s", ref)
+		}
+		calleeverb, err := b.getGoVerb(calleeNativeName, callee)
+		if err != nil {
+			return verbClient{}, err
+		}
+		return verbClient{
+			calleeverb,
+		}, nil
+	case *schema.MetadataDatabases:
+		resolved, ok := b.sch.Resolve(ref).Get()
+		if !ok {
+			return goDBHandle{}, fmt.Errorf("failed to resolve %s database, used by %s.%s", ref,
+				b.mainModule.Name, verb.Name)
+		}
+		db, ok := resolved.(*schema.Database)
+		if !ok {
+			return goDBHandle{}, fmt.Errorf("%s.%s uses %s database handle, but %s is not a database",
+				b.mainModule.Name, verb.Name, ref, ref)
+		}
+
+		return b.processDatabase(ref.Module, db)
+
+	default:
+		// TODO: implement other resources
+		return nil, fmt.Errorf("unsupported resource type for verb %q", verb.Name)
+	}
 }
 
 func (b *mainModuleContextBuilder) processDatabase(moduleName string, db *schema.Database) (goDBHandle, error) {
@@ -870,12 +905,7 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		return out
 	},
-	"trimModuleQualifier": func(moduleName string, str string) string {
-		if strings.HasPrefix(str, moduleName+".") {
-			return strings.TrimPrefix(str, moduleName+".")
-		}
-		return str
-	},
+	"trimModuleQualifier": trimModuleQualifier,
 	"typeAliasType": func(m *schema.Module, t *schema.TypeAlias) string {
 		for _, md := range t.Metadata {
 			md, ok := md.(*schema.MetadataTypeMap)
@@ -890,18 +920,45 @@ var scaffoldFuncs = scaffolder.FuncMap{
 		}
 		return genType(m, t.Type)
 	},
-	"getVerbClient": func(resource verbResource) *verbClient {
-		if c, ok := resource.(verbClient); ok {
-			return &c
+	"getResourceProvider": getResourceProviderString,
+}
+
+func getResourceProviderString(moduleName string, resource verbResource, isLocal bool) string {
+	var typeName string
+	if isLocal {
+		typeName = trimModuleQualifier(moduleName, resource.TypeName())
+	} else {
+		typeName = resource.TypeName()
+	}
+	switch r := resource.(type) {
+	case verbClient:
+		var reqTypeName, respTypeName string
+		if isLocal {
+			reqTypeName = r.Request.LocalTypeName
+			respTypeName = r.Response.LocalTypeName
+		} else {
+			reqTypeName = r.Request.TypeName
+			respTypeName = r.Response.TypeName
 		}
-		return nil
-	},
-	"getDatabaseHandle": func(resource verbResource) *goDBHandle {
-		if c, ok := resource.(goDBHandle); ok {
-			return &c
+
+		if r.Request.TypeName == "ftl.Unit" && r.Response.TypeName == "ftl.Unit" {
+			return fmt.Sprintf("server.EmptyClient[%s]()", typeName)
+		} else if r.Request.TypeName == "ftl.Unit" {
+			return fmt.Sprintf("server.SourceClient[%s, %s]()", typeName, respTypeName)
+		} else if r.Response.TypeName == "ftl.Unit" {
+			return fmt.Sprintf("server.SinkClient[%s, %s]()", typeName, reqTypeName)
+		} else {
+			return fmt.Sprintf("server.VerbClient[%s, %s, %s]()", typeName, reqTypeName, respTypeName)
 		}
-		return nil
-	},
+	case goDBHandle:
+		if r.Type == "postgres" {
+			return fmt.Sprintf("server.PostgresDatabaseHandle[%s]()", typeName)
+		}
+	case goMappedHandle:
+		return fmt.Sprintf("server.MappedHandle[%s](%s)", typeName,
+			getResourceProviderString(moduleName, r.Resource, isLocal))
+	}
+	return ""
 }
 
 // returns the import path and the directory name for a type alias if there is an associated go library
@@ -922,6 +979,13 @@ func nativeTypeForWidenedType(t *schema.TypeAlias) (nt nativeType, ok bool) {
 		}
 	}
 	return nt, false
+}
+
+func trimModuleQualifier(moduleName string, str string) string {
+	if strings.HasPrefix(str, moduleName+".") {
+		return strings.TrimPrefix(str, moduleName+".")
+	}
+	return str
 }
 
 func schemaType(t schema.Type) string {

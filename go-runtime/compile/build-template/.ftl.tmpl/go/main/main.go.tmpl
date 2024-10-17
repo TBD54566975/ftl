@@ -34,22 +34,7 @@ func init() {
 		reflection.ProvideResourcesForVerb(
             {{.TypeName}},
             {{- range .Resources}}
-                {{- with getVerbClient . }}
-            	{{- if and (eq .Request.TypeName "ftl.Unit") (eq .Response.TypeName "ftl.Unit") }}
-            server.EmptyClient[{{.TypeName}}](),
-            	{{- else if eq .Request.TypeName "ftl.Unit" }}
-            server.SourceClient[{{.TypeName}}, {{.Response.TypeName}}](),
-            	{{- else if eq .Response.TypeName "ftl.Unit" }}
-            server.SinkClient[{{.TypeName}}, {{.Request.TypeName}}](),
-            	{{- else }}
-            server.VerbClient[{{.TypeName}}, {{.Request.TypeName}}, {{.Response.TypeName}}](),
-            	{{- end -}}
-                {{- end }}
-                {{- with getDatabaseHandle . }}
-                	{{- if eq .Type "postgres" }}
-			server.PostgresDatabaseHandle[{{.TypeName}}](),
-                	{{- end }}
-                {{- end }}
+            {{ getResourceProvider "" . false }},
 			{{- end}}
 		),
 {{- end}}

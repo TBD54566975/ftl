@@ -9,12 +9,18 @@ import (
 
 type InsertClient func(context.Context, InsertRequest) (InsertResponse, error)
 
+type MappedClient func(context.Context, InsertRequest) (InsertResponse, error)
+
 func init() {
 	reflection.Register(
-		reflection.Database[MyDbConfig](server.InitPostgres),
+		reflection.Database[MyDBConfig]("testdb", server.InitPostgres),
 		reflection.ProvideResourcesForVerb(
 			Insert,
-			server.PostgresDatabaseHandle[MyDbConfig](),
+			server.PostgresDatabaseHandle[MyDBConfig](),
+		),
+		reflection.ProvideResourcesForVerb(
+			Mapped,
+			server.MappedHandle[MyDBMapper](server.PostgresDatabaseHandle[MyDBConfig]()),
 		),
 	)
 }

@@ -27,6 +27,20 @@ func TestDatabase(t *testing.T) {
 	)
 }
 
+func TestMappedDatabase(t *testing.T) {
+	in.Run(t,
+		// only run this for the Go module, testing the ftl.MappedHandle feature
+		in.WithLanguages("go"),
+		in.WithFTLConfig("database/ftl-project.toml"),
+		// deploy real module against "testdb"
+		in.CopyModule("database"),
+		in.CreateDBAction("database", "testdb", false),
+		in.Deploy("database"),
+		in.Call[in.Obj, in.Obj]("database", "mapped", in.Obj{"data": "hello"}, nil),
+		in.QueryRow("testdb", "SELECT data FROM requests", "hello"),
+	)
+}
+
 func TestMigrate(t *testing.T) {
 	dbName := "ftl_test"
 	dbUri := dsn.DSN(dbName)

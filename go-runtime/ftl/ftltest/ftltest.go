@@ -533,6 +533,48 @@ func GetDatabaseHandle[T ftl.DatabaseConfig]() (ftl.DatabaseHandle[T], error) {
 	return ftl.NewDatabaseHandle[T](defaultDatabaseConfig[T](), dbType, reflectedDB.DB), nil
 }
 
+// GetMappedHandle returns a mapped resource handle using the given mapper.
+//
+// e.g.
+// db, err := ftltest.GetDatabaseHandle[MyConfig]()
+// ...
+// mappedDB, err := ftltest.GetMappedHandle[MyDBMapper, *sql.DB, NewType](db)
+func GetMappedHandle[R ftl.ResourceMapper[From, To], From, To any](handle ftl.Handle[From]) (m ftl.MappedHandle[R, From, To], err error) {
+	var instance R
+	var wasSet bool
+	handleType := reflect.TypeOf(handle)
+	val := reflect.ValueOf(&instance).Elem()
+	for i := range val.NumField() {
+		field := val.Field(i)
+		if handleType.AssignableTo(field.Type()) {
+			if field.CanSet() {
+				handleValue := reflect.ValueOf(handle).Convert(field.Type())
+				field.Set(handleValue)
+				wasSet = true
+				break
+			}
+			return m, fmt.Errorf("mapper must contain a field of type %s that is settable", handleType)
+		}
+	}
+	if !wasSet {
+		return m, fmt.Errorf("mapper must contain a field of type %s", handleType)
+	}
+	return ftl.NewMappedHandle(instance), nil
+}
+
+// GetMappedDatabaseHandle returns a mapped database handle using the given mapper.
+func GetMappedDatabaseHandle[M ftl.ResourceMapper[*sql.DB, To], C ftl.DatabaseConfig, To any]() (m ftl.MappedHandle[M, *sql.DB, To], e error) {
+	db, err := GetDatabaseHandle[C]()
+	if err != nil {
+		return m, err
+	}
+	mapped, err := GetMappedHandle[M, *sql.DB, To](db)
+	if err != nil {
+		return m, err
+	}
+	return mapped, nil
+}
+
 func call[VerbClient, Req, Resp any](ctx context.Context, req Req) (resp Resp, err error) {
 	ref := reflection.ClientRef[VerbClient]()
 	// always allow direct behavior for the verb triggered by this call

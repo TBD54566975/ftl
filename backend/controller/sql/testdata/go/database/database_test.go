@@ -11,9 +11,9 @@ import (
 
 func TestDatabase(t *testing.T) {
 	ctx := ftltest.Context(
-		ftltest.WithCallsAllowedWithinModule(),
+		ftltest.WithMapsAllowed(),
 		ftltest.WithProjectFile("ftl-project.toml"),
-		ftltest.WithDatabase[MyDbConfig](),
+		ftltest.WithDatabase[MyDBConfig](),
 	)
 
 	_, err := ftltest.Call[InsertClient, InsertRequest, InsertResponse](ctx, InsertRequest{Data: "unit test 1"})
@@ -22,11 +22,15 @@ func TestDatabase(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(list))
 	assert.Equal(t, "unit test 1", list[0])
+	list, err = getAllMapped(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(list))
+	assert.Equal(t, "unit test 1", list[0])
 
 	ctx = ftltest.Context(
-		ftltest.WithCallsAllowedWithinModule(),
+		ftltest.WithMapsAllowed(),
 		ftltest.WithProjectFile("ftl-project.toml"),
-		ftltest.WithDatabase[MyDbConfig](),
+		ftltest.WithDatabase[MyDBConfig](),
 	)
 
 	_, err = ftltest.Call[InsertClient, InsertRequest, InsertResponse](ctx, InsertRequest{Data: "unit test 2"})
@@ -35,12 +39,16 @@ func TestDatabase(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(list))
 	assert.Equal(t, "unit test 2", list[0])
+	list, err = getAllMapped(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(list))
+	assert.Equal(t, "unit test 2", list[0])
 }
 
 func TestOptionOrdering(t *testing.T) {
 	ctx := ftltest.Context(
 		ftltest.WithCallsAllowedWithinModule(),
-		ftltest.WithDatabase[MyDbConfig](),          // <--- consumes DSNs
+		ftltest.WithDatabase[MyDBConfig](),          // <--- consumes DSNs
 		ftltest.WithProjectFile("ftl-project.toml"), // <--- provides DSNs
 	)
 
@@ -53,11 +61,34 @@ func TestOptionOrdering(t *testing.T) {
 }
 
 func getAll(ctx context.Context) ([]string, error) {
-	db, err := ftltest.GetDatabaseHandle[MyDbConfig]()
+	db, err := ftltest.GetDatabaseHandle[MyDBConfig]()
 	if err != nil {
 		return nil, err
 	}
 	rows, err := db.Get(ctx).Query("SELECT data FROM requests ORDER BY created_at;")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	list := []string{}
+	for rows.Next() {
+		var data string
+		err := rows.Scan(&data)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, data)
+	}
+	return list, nil
+}
+
+func getAllMapped(ctx context.Context) ([]string, error) {
+	mapped, err := ftltest.GetMappedDatabaseHandle[MyDBMapper, MyDBConfig, NewType]()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := mapped.Get(ctx).Query("SELECT data FROM requests ORDER BY created_at;")
 	if err != nil {
 		return nil, err
 	}

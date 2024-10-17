@@ -292,12 +292,13 @@ func testExtractModuleSchemaTwo(t *testing.T) {
 				+calls two.two, two.three
 
 			export verb ingress(builtin.HttpRequest<two.PostRequest, Unit, Unit>) builtin.HttpResponse<two.PostResponse, String>
-				+ingress http POST /users
 				+encoding json lenient
+				+ingress http POST /users
 
 			export verb returnsUser(Unit) two.UserResponse
 
 			export verb three(two.Payload<String>) two.Payload<String>
+				+database calls two.foo
 
 			export verb two(two.Payload<String>) two.Payload<String>
 				+database calls two.foo
@@ -424,8 +425,8 @@ func testExtractModulePubSub(t *testing.T) {
         verb payin(Unit) Unit
 
         verb processBroadcast(pubsub.PayinEvent) Unit
-        	+subscribe broadcastSubscription
 			+retry 10 1s
+        	+subscribe broadcastSubscription
 
         verb processPayin(pubsub.PayinEvent) Unit
         	+subscribe paymentProcessing

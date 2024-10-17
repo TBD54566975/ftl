@@ -2,6 +2,7 @@ package two
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	lib "github.com/TBD54566975/ftl/go-runtime/schema/testdata"
@@ -10,11 +11,23 @@ import (
 	"ftl/builtin"
 )
 
+type NewType struct {
+	*sql.DB
+}
+
 type FooConfig struct {
 	ftl.DefaultPostgresDatabaseConfig
 }
 
 func (FooConfig) Name() string { return "foo" }
+
+type DBMapper struct {
+	ftl.DatabaseHandle[FooConfig]
+}
+
+func (h DBMapper) Map(ctx context.Context, db *sql.DB) (NewType, error) {
+	return NewType{db}, nil
+}
 
 //ftl:enum export
 type TwoEnum string
@@ -64,7 +77,7 @@ func Two(ctx context.Context, req Payload[string], handle ftl.DatabaseHandle[Foo
 }
 
 //ftl:verb export
-func Three(ctx context.Context, req Payload[string]) (Payload[string], error) {
+func Three(ctx context.Context, req Payload[string], mapped ftl.MappedHandle[DBMapper, *sql.DB, NewType]) (Payload[string], error) {
 	return Payload[string]{}, nil
 }
 

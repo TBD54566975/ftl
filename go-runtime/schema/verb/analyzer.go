@@ -1,6 +1,7 @@
 package verb
 
 import (
+	"fmt"
 	"go/ast"
 	"go/types"
 	"strings"
@@ -21,6 +22,7 @@ const (
 	none resourceType = iota
 	verbClient
 	databaseHandle
+	mappedHandle
 )
 
 // Extractor extracts verbs to the module schema.
@@ -35,55 +37,54 @@ func Extract(pass *analysis.Pass, node *ast.FuncDecl, obj types.Object) optional
 	loaded := pass.ResultOf[initialize.Analyzer].(initialize.Result) //nolint:forcetypeassert
 
 	hasRequest := false
+	var orderedResourceParams []common.VerbResourceParam
 	if !common.ApplyMetadata[*schema.Verb](pass, obj, func(md *common.ExtractedMetadata) {
 		verb.Comments = md.Comments
 		verb.Export = md.IsExported
 		verb.Metadata = md.Metadata
 		for idx, param := range node.Type.Params.List {
-			paramObj, hasObj := common.GetObjectForNode(pass.TypesInfo, param.Type).Get()
-			switch getParamResourceType(pass, paramObj) {
-			case none:
+			r, err := resolveResource(pass, param.Type)
+			if err != nil {
+				common.Wrapf(pass, param, err, "")
+				continue
+			}
+
+			// if there is no resolved resource, this must either be the context or request parameter:
+			// Verb(context.Context, <request>, <resource1>, <resource2>, ...)
+			if r == nil {
 				if idx > 1 {
 					common.Errorf(pass, param, "unsupported verb parameter type; verbs must have the "+
 						"signature func(Context, Request?, Resources...)")
-					continue
 				}
 				if idx == 1 {
 					hasRequest = true
 				}
+				continue
+			}
+
+			if r.ref != nil {
+				rt, err := r.toMetadataType()
+				if err != nil {
+					common.Wrapf(pass, param, err, "")
+				}
+				orderedResourceParams = append(orderedResourceParams, common.VerbResourceParam{
+					Ref:    r.ref,
+					Type:   rt,
+					Mapper: r.mapper,
+				})
+			}
+			switch r.typ {
 			case verbClient:
-				if !hasObj {
-					common.Errorf(pass, param, "unsupported verb parameter type")
-					continue
-				}
-				calleeRef := getResourceRef(paramObj, pass, param)
-				calleeRef.Name = strings.TrimSuffix(calleeRef.Name, "Client")
-				verb.AddCall(calleeRef)
-				common.MarkIncludeNativeName(pass, paramObj, calleeRef)
+				paramObj := common.GetObjectForNode(pass.TypesInfo, param.Type).MustGet()
+				common.MarkIncludeNativeName(pass, paramObj, r.ref)
+				verb.AddCall(r.ref)
 			case databaseHandle:
-				idxExpr, ok := param.Type.(*ast.IndexExpr)
-				if !ok {
-					common.Errorf(pass, param, "unsupported verb parameter type")
-					continue
-				}
-				idxObj, ok := common.GetObjectForNode(pass.TypesInfo, idxExpr.Index).Get()
-				if !ok {
-					common.Errorf(pass, param, "unsupported verb parameter type")
-					continue
-				}
-				decl, ok := common.GetFactForObject[*common.ExtractedDecl](pass, idxObj).Get()
-				if !ok {
-					common.Errorf(pass, param, "unsupported verb parameter type")
-					continue
-				}
-				db, ok := decl.Decl.(*schema.Database)
-				if !ok {
-					common.Errorf(pass, param, "no database found for config provided to database handle")
-					continue
-				}
-				ref := getResourceRef(idxObj, pass, param)
-				ref.Name = db.Name
-				verb.AddDatabase(ref)
+				verb.AddDatabase(r.ref)
+			case mappedHandle:
+				common.Errorf(pass, param, "could not resolve underlying resource for mapped handle")
+			case none:
+				common.Errorf(pass, param, "unsupported verb parameter type; verbs must have the "+
+					"signature func(Context, Request?, Resources...)")
 			}
 		}
 	}) {
@@ -120,7 +121,8 @@ func Extract(pass *analysis.Pass, node *ast.FuncDecl, obj types.Object) optional
 	}
 	verb.Request = reqV
 	verb.Response = resV
-
+	verb.SortMetadata()
+	common.MarkVerbResourceParamOrder(pass, obj, orderedResourceParams)
 	return optional.Some(verb)
 }
 
@@ -175,18 +177,156 @@ func checkSignature(
 	return req, resp
 }
 
-func getParamResourceType(pass *analysis.Pass, paramObj types.Object) resourceType {
-	if paramObj == nil {
+type resource struct {
+	ref    *schema.Ref
+	typ    resourceType
+	mapper optional.Option[types.Object]
+}
+
+func (r resource) toMetadataType() (schema.Metadata, error) {
+	switch r.typ {
+	case verbClient:
+		return &schema.MetadataCalls{}, nil
+	case databaseHandle:
+		return &schema.MetadataDatabases{}, nil
+	default:
+		return nil, fmt.Errorf("unsupported resource type")
+	}
+}
+
+func resolveResource(pass *analysis.Pass, typ ast.Expr) (*resource, error) {
+	obj := common.GetObjectForNode(pass.TypesInfo, typ)
+	if o, ok := obj.Get(); ok {
+		if _, ok := o.Type().(*types.Alias); ok {
+			ident, ok := typ.(*ast.Ident)
+			if !ok || ident.Obj == nil || ident.Obj.Decl == nil {
+				return nil, fmt.Errorf("unsupported verb parameter type")
+			}
+			ts, ok := ident.Obj.Decl.(*ast.TypeSpec)
+			if !ok {
+				return nil, fmt.Errorf("unsupported verb parameter type")
+			}
+			return resolveResource(pass, ts.Type)
+		}
+	}
+
+	var ref *schema.Ref
+	rType := getParamResourceType(pass, obj)
+	switch rType {
+	case none:
+		return nil, nil
+	case verbClient:
+		o, ok := obj.Get()
+		if !ok {
+			return nil, fmt.Errorf("unsupported verb parameter type")
+		}
+		calleeRef, err := getResourceRef(o)
+		if err != nil {
+			return nil, err
+		}
+		calleeRef.Name = strings.TrimSuffix(calleeRef.Name, "Client")
+		ref = calleeRef
+	case databaseHandle:
+		idxExpr, ok := typ.(*ast.IndexExpr)
+		if !ok {
+			return nil, fmt.Errorf("unsupported verb parameter type; expected ftl.DatabaseHandle[Config]")
+		}
+		idxObj, ok := common.GetObjectForNode(pass.TypesInfo, idxExpr.Index).Get()
+		if !ok {
+			return nil, fmt.Errorf("unsupported database verb parameter type")
+		}
+		decl, ok := common.GetFactForObject[*common.ExtractedDecl](pass, idxObj).Get()
+		if !ok {
+			return nil, fmt.Errorf("no database found for config provided to database handle")
+		}
+		db, ok := decl.Decl.(*schema.Database)
+		if !ok {
+			return nil, fmt.Errorf("no database found for config provided to database handle")
+		}
+		r, err := getResourceRef(idxObj)
+		if err != nil {
+			return nil, err
+		}
+		r.Name = db.Name
+		ref = r
+	case mappedHandle:
+		idxListExpr, ok := typ.(*ast.IndexListExpr)
+		if !ok {
+			return nil, fmt.Errorf("unsupported verb parameter type; expected ftl.MappedHandle[ResourceMapper, From, To]")
+		}
+
+		if len(idxListExpr.Indices) != 3 {
+			return nil, fmt.Errorf("unsupported verb parameter type; expected ftl.MappedHandle[ResourceMapper, From, To]")
+		}
+
+		mapper, ok := idxListExpr.Indices[0].(*ast.Ident)
+		if !ok {
+			return nil, fmt.Errorf("unsupported verb parameter type")
+		}
+		if mapper.Obj == nil {
+			return nil, fmt.Errorf("unsupported verb parameter type")
+		}
+		if mapper.Obj.Decl == nil {
+			return nil, fmt.Errorf("unsupported verb parameter type")
+		}
+		ts, ok := mapper.Obj.Decl.(*ast.TypeSpec)
+		if !ok {
+			return nil, fmt.Errorf("unsupported verb parameter type")
+		}
+		st, ok := ts.Type.(*ast.StructType)
+		if !ok {
+			return nil, fmt.Errorf("unsupported verb parameter type")
+		}
+
+		var handle ast.Expr
+		var handleType resourceType
+		var handleObj optional.Option[types.Object]
+		for _, field := range st.Fields.List {
+			handleObj = common.GetObjectForNode(pass.TypesInfo, field.Type)
+			if hType := getParamResourceType(pass, handleObj); hType != none {
+				if handleType != none {
+					return nil, fmt.Errorf("mapper contains multiple resource types")
+				}
+				handleType = hType
+				handle = field.Type
+			}
+		}
+		if handleType == none {
+			return nil, fmt.Errorf("resource mapper does not contain a resource type; " +
+				"must be a field or embedded field")
+		}
+
+		resolved, err := resolveResource(pass, handle)
+		if err != nil {
+			return nil, err
+		}
+		resolved.mapper = common.GetObjectForNode(pass.TypesInfo, mapper)
+		return resolved, nil
+
+	}
+	if ref == nil {
+		return nil, fmt.Errorf("unsupported verb parameter type")
+	}
+	return &resource{ref: ref, typ: rType}, nil
+}
+
+func getParamResourceType(pass *analysis.Pass, maybeObj optional.Option[types.Object]) resourceType {
+	obj, ok := maybeObj.Get()
+	if !ok {
 		return none
 	}
-	if paramObj.Pkg() == nil {
+	if obj.Pkg() == nil {
 		return none
 	}
 
-	switch t := paramObj.Type().(type) {
+	switch t := obj.Type().(type) {
 	case *types.Named:
 		if isDatabaseHandleType(pass, t) {
 			return databaseHandle
+		}
+
+		if isMappedHandleType(t) {
+			return mappedHandle
 		}
 
 		if _, ok := t.Underlying().(*types.Signature); !ok {
@@ -199,23 +339,27 @@ func getParamResourceType(pass *analysis.Pass, paramObj types.Object) resourceTy
 		if !ok {
 			return none
 		}
-		return getParamResourceType(pass, named.Obj())
+		namedObj := optional.Some[types.Object](named.Obj())
+		if named.Obj() == nil {
+			namedObj = optional.None[types.Object]()
+		}
+		return getParamResourceType(pass, namedObj)
 
 	default:
 		return none
 	}
 }
 
-func getResourceRef(paramObj types.Object, pass *analysis.Pass, param *ast.Field) *schema.Ref {
+func getResourceRef(paramObj types.Object) (*schema.Ref, error) {
 	paramModule, err := common.FtlModuleFromGoPackage(paramObj.Pkg().Path())
 	if err != nil {
-		common.Errorf(pass, param, "failed to resolve module for type: %v", err)
+		return nil, fmt.Errorf("failed to resolve module for type: %w", err)
 	}
 	dbRef := &schema.Ref{
 		Module: paramModule,
 		Name:   strcase.ToLowerCamel(paramObj.Name()),
 	}
-	return dbRef
+	return dbRef, nil
 }
 
 func isDatabaseHandleType(pass *analysis.Pass, named *types.Named) bool {
@@ -230,4 +374,14 @@ func isDatabaseHandleType(pass *analysis.Pass, named *types.Named) bool {
 
 	// type argument implements `DatabaseConfig`, e.g. DatabaseHandle[MyConfig] where MyConfig implements DatabaseConfig
 	return common.IsDatabaseConfigType(pass, typeArg)
+}
+
+func isMappedHandleType(named *types.Named) bool {
+	if named.Obj().Pkg().Path()+"."+named.Obj().Name() != "github.com/TBD54566975/ftl/go-runtime/ftl.MappedHandle" {
+		return false
+	}
+	if named.TypeParams().Len() != 3 {
+		return false
+	}
+	return true
 }
