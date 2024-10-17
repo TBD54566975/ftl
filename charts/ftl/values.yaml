@@ -152,6 +152,14 @@ provisioner:
   topologySpreadConstraints: null
   tolerations: null
 
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 10m
+    limits:
+      memory: 256Mi
+      cpu: 2
+
 runner:
   revisionHistoryLimit: 0
 
@@ -227,9 +235,9 @@ postgresql:
   primary:
     resources:
       requests:
-        memory: 1024Mi
+        memory: 512Mi
       limits:
-        memory: 1024Mi
+        memory: 512Mi
   global:
     postgresql:
       auth:
