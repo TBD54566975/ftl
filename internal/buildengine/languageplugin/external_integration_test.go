@@ -79,7 +79,7 @@ func TestBuilds(t *testing.T) {
 		build(false, []string{}, sch, "build-once"),
 		waitForBuildToEnd(SUCCESS, "build-once", false, nil),
 
-		// Build and rebuild automatically
+		// Build and enable rebuilding automatically
 		build(true, []string{}, sch, "build-and-watch"),
 		waitForBuildToEnd(SUCCESS, "build-and-watch", false, nil),
 
@@ -107,6 +107,12 @@ func TestBuilds(t *testing.T) {
 		sendUpdatedBuildContext("explicit-build", []string{}, sch),
 		waitForBuildToEnd(SUCCESSORFAILURE, "build-and-watch", true, nil),
 		waitForBuildToEnd(SUCCESS, "explicit-build", false, nil),
+
+		// Trigger 2 explicit builds, make sure we get a response for both of them (first one can fail)
+		sendUpdatedBuildContext("double-build-1", []string{}, sch),
+		sendUpdatedBuildContext("double-build-2", []string{}, sch),
+		waitForBuildToEnd(SUCCESSORFAILURE, "double-build-1", false, nil),
+		waitForBuildToEnd(SUCCESS, "double-build-2", false, nil),
 
 		killPlugin(),
 	)
