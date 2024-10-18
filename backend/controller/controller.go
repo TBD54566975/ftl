@@ -352,7 +352,17 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 
 func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", r.Method, r.URL.Path))
+	method := strings.ToLower(r.Method)
+	requestKey := model.NewRequestKey(model.OriginIngress, fmt.Sprintf("%s %s", method, r.URL.Path))
+
+	sourceAddress := r.RemoteAddr
+	err := s.dal.CreateRequest(r.Context(), requestKey, sourceAddress)
+	if err != nil {
+		observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.None[*schemapb.Ref](), start, optional.Some("failed to create request"))
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	routes := s.schemaState.Load().httpRoutes[r.Method]
 	if len(routes) == 0 {
 		http.NotFound(w, r)
@@ -1029,30 +1039,17 @@ func (s *Service) callWithRequest(
 	}
 
 	module := verbRef.Module
-
-	if currentCaller != nil && currentCaller.Module != module && !verb.IsExported() {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
-		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
-	}
-
-	err = validateCallBody(req.Msg.Body, verb, sch)
-	if err != nil {
-		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
-		return nil, err
-	}
-
 	route, ok := sstate.routes[module]
 	if !ok {
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("no routes for module"))
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("no routes for module %q", module))
 	}
-	client := s.clientsForEndpoint(route.Endpoint)
 
 	var requestKey model.RequestKey
-	isNewRequestKey := false
+	var isNewRequestKey bool
 	if k, ok := key.Get(); ok {
 		requestKey = k
-		isNewRequestKey = true
+		isNewRequestKey = false
 	} else {
 		k, ok, err := headers.GetRequestKey(req.Header())
 		if err != nil {
@@ -1064,6 +1061,7 @@ func (s *Service) callWithRequest(
 			isNewRequestKey = true
 		} else {
 			requestKey = k
+			isNewRequestKey = false
 		}
 	}
 	if isNewRequestKey {
@@ -1074,6 +1072,34 @@ func (s *Service) callWithRequest(
 		}
 	}
 
+	callEvent := &timeline.Call{
+		DeploymentKey:    route.Deployment,
+		RequestKey:       requestKey,
+		ParentRequestKey: parentKey,
+		StartTime:        start,
+		DestVerb:         verbRef,
+		Callers:          callers,
+		Request:          req.Msg,
+	}
+
+	if currentCaller != nil && currentCaller.Module != module && !verb.IsExported() {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: verb not exported"))
+		err = connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
+		callEvent.Response = either.RightOf[*ftlv1.CallResponse](err)
+		s.timeline.EnqueueEvent(ctx, callEvent)
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("verb %q is not exported", verbRef))
+	}
+
+	err = validateCallBody(req.Msg.Body, verb, sch)
+	if err != nil {
+		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("invalid request: invalid call body"))
+		callEvent.Response = either.RightOf[*ftlv1.CallResponse](err)
+		s.timeline.EnqueueEvent(ctx, callEvent)
+		return nil, err
+	}
+
+	client := s.clientsForEndpoint(route.Endpoint)
+
 	if pk, ok := parentKey.Get(); ok {
 		ctx = rpc.WithParentRequestKey(ctx, pk)
 	}
@@ -1083,26 +1109,17 @@ func (s *Service) callWithRequest(
 
 	response, err := client.verb.Call(ctx, req)
 	var resp *connect.Response[ftlv1.CallResponse]
-	var callResponse either.Either[*ftlv1.CallResponse, error]
 	if err == nil {
 		resp = connect.NewResponse(response.Msg)
-		callResponse = either.LeftOf[error](resp.Msg)
+		callEvent.Response = either.LeftOf[error](resp.Msg)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.None[string]())
 	} else {
-		callResponse = either.RightOf[*ftlv1.CallResponse](err)
+		callEvent.Response = either.RightOf[*ftlv1.CallResponse](err)
 		observability.Calls.Request(ctx, req.Msg.Verb, start, optional.Some("verb call failed"))
 		logger.Errorf(err, "Call failed to verb %s for deployment %s", verbRef.String(), route.Deployment)
 	}
-	s.timeline.EnqueueEvent(ctx, &timeline.Call{
-		DeploymentKey:    route.Deployment,
-		RequestKey:       requestKey,
-		ParentRequestKey: parentKey,
-		StartTime:        start,
-		DestVerb:         verbRef,
-		Callers:          callers,
-		Request:          req.Msg,
-		Response:         callResponse,
-	})
+
+	s.timeline.EnqueueEvent(ctx, callEvent)
 	return resp, err
 }
 
@@ -1177,10 +1194,6 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 
 	ingressRoutes := extractIngressRoutingEntries(req.Msg)
-	if err != nil {
-		logger.Errorf(err, "Could not generate cron jobs for new deployment")
-		return nil, fmt.Errorf("could not generate cron jobs for new deployment: %w", err)
-	}
 
 	dkey, err := s.dal.CreateDeployment(ctx, ms.Runtime.Language, module, artefacts, ingressRoutes)
 	if err != nil {
@@ -1954,7 +1967,7 @@ func validateCallBody(body []byte, verb *schema.Verb, sch *schema.Schema) error 
 	}
 	err = schema.ValidateJSONValue(verb.Request, []string{verb.Request.String()}, root, sch, opts...)
 	if err != nil {
-		return fmt.Errorf("could not validate HTTP request body: %w", err)
+		return fmt.Errorf("could not validate call request body: %w", err)
 	}
 	return nil
 }

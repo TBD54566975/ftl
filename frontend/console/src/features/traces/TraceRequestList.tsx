@@ -13,9 +13,7 @@ export const TraceRequestList = ({ module, verb }: { module: string; verb?: stri
   const [selectedEventId, setSelectedEventId] = useState<bigint | undefined>()
 
   const traceEventsRequest = useModuleTraceEvents(module, verb)
-  const traceEvents = useMemo(() => {
-    return groupEventsByRequestKey(traceEventsRequest.data)
-  }, [traceEventsRequest.data])
+  const traceEvents = useMemo(() => groupEventsByRequestKey(traceEventsRequest.data), [traceEventsRequest.data])
 
   const handleCallClicked = (event: Event) => {
     if (selectedEventId === event.id) {

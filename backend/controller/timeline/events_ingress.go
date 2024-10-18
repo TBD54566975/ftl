@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	ftlencryption "github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/timeline/internal/sql"
 	"github.com/TBD54566975/ftl/backend/libdal"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
@@ -51,59 +51,52 @@ type eventIngressJSON struct {
 }
 
 type Ingress struct {
-	DeploymentKey model.DeploymentKey
-	RequestKey    model.RequestKey
-	StartTime     time.Time
-	Verb          *schema.Ref
-	Request       *http.Request
-	Response      *http.Response
-	Error         optional.Option[string]
+	DeploymentKey   model.DeploymentKey
+	RequestKey      model.RequestKey
+	StartTime       time.Time
+	Verb            *schema.Ref
+	RequestMethod   string
+	RequestPath     string
+	RequestHeaders  http.Header
+	ResponseStatus  int
+	ResponseHeaders http.Header
+	RequestBody     []byte
+	ResponseBody    []byte
+	Error           optional.Option[string]
 }
 
 func (*Ingress) inEvent() {}
 
 func (s *Service) insertHTTPIngress(ctx context.Context, querier sql.Querier, ingress *Ingress) error {
-	requestBody, err := io.ReadAll(ingress.Request.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read request body: %w", err)
-	}
+	requestBody := ingress.RequestBody
 	if len(requestBody) == 0 {
 		requestBody = []byte("{}")
 	}
 
-	var responseBody []byte
-	if ingress.Response.Body != nil {
-		responseBody, err = io.ReadAll(ingress.Response.Body)
-		if err != nil {
-			return fmt.Errorf("failed to read response body: %w", err)
-		}
+	responseBody := ingress.ResponseBody
+	if len(responseBody) == 0 {
+		responseBody = []byte("{}")
 	}
 
 	if len(responseBody) == 0 {
 		responseBody = []byte("{}")
 	}
 
-	reqHeaderBytes, err := json.Marshal(ingress.Request.Header)
+	reqHeaderBytes, err := json.Marshal(ingress.RequestHeaders)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request header: %w", err)
 	}
-	if len(reqHeaderBytes) == 0 {
-		reqHeaderBytes = []byte("{}")
-	}
 
-	respHeaderBytes, err := json.Marshal(ingress.Response.Header)
+	respHeaderBytes, err := json.Marshal(ingress.ResponseHeaders)
 	if err != nil {
 		return fmt.Errorf("failed to marshal response header: %w", err)
-	}
-	if len(respHeaderBytes) == 0 {
-		respHeaderBytes = []byte("{}")
 	}
 
 	ingressJSON := eventIngressJSON{
 		DurationMS:     time.Since(ingress.StartTime).Milliseconds(),
-		Method:         ingress.Request.Method,
-		Path:           ingress.Request.URL.Path,
-		StatusCode:     ingress.Response.StatusCode,
+		Method:         ingress.RequestMethod,
+		Path:           ingress.RequestPath,
+		StatusCode:     ingress.ResponseStatus,
 		Request:        json.RawMessage(requestBody),
 		RequestHeader:  json.RawMessage(reqHeaderBytes),
 		Response:       json.RawMessage(responseBody),
@@ -121,6 +114,8 @@ func (s *Service) insertHTTPIngress(ctx context.Context, querier sql.Querier, in
 	if err != nil {
 		return fmt.Errorf("failed to encrypt ingress payload: %w", err)
 	}
+
+	log.FromContext(ctx).Warnf("Inserting ingress event for %s %s", ingress.RequestKey, ingress.RequestPath)
 
 	err = libdal.TranslatePGError(querier.InsertTimelineIngressEvent(ctx, sql.InsertTimelineIngressEventParams{
 		DeploymentKey: ingress.DeploymentKey,
