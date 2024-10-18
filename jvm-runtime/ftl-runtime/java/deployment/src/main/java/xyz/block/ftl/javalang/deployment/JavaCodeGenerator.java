@@ -387,14 +387,13 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
         dataBuilder.addMethod(makeIsMethod(enumVariantName, true));
         dataBuilder.addMethod(makeGetMethod(enumVariantName, variantTypeName, "return " + (returnSelf ? "this" : "value")));
 
-        for (var thingIAmNot : variantValuesTypes.entrySet()) {
-            if (thingIAmNot.getKey().equals(enumVariantName)) {
+        for (var variant : variantValuesTypes.entrySet()) {
+            if (variant.getKey().equals(enumVariantName)) {
                 continue;
             }
             // Negative implementation of isX, getX for other types
-            dataBuilder.addMethod(makeIsMethod(thingIAmNot.getKey(), false));
-            dataBuilder.addMethod(
-                    makeGetMethod(thingIAmNot.getKey(), thingIAmNot.getValue(), "throw new UnsupportedOperationException()"));
+            dataBuilder.addMethod(makeIsMethod(variant.getKey(), false));
+            dataBuilder.addMethod(makeGetMethod(variant.getKey(), variant.getValue(), "throw new UnsupportedOperationException()"));
         }
     }
 
