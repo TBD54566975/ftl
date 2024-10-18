@@ -75,7 +75,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), []string{b.Dir})
+	engine, err := buildengine.New(ctx, client, projConfig.Root(), []string{b.Dir}, runnerPortAllocator)
 	if err != nil {
 		return fmt.Errorf("failed to create build engine: %w", err)
 	}

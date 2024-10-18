@@ -11,7 +11,7 @@ import (
 )
 
 func TestExtractModuleDepsKotlin(t *testing.T) {
-	deps, err := extractKotlinFTLImports("test", "testdata/alphakotlin")
+	deps, err := extractKotlinFTLImports("test", "testdata/kotlin/alpha")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"builtin", "other"}, deps)
 }
@@ -31,7 +31,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 	}{
 		{
 			language: "kotlin",
-			dir:      "testdata/echokotlin",
+			dir:      "testdata/kotlin/echo",
 			expected: moduleconfig.CustomDefaults{
 				Build:              optional.Some("mvn -B package"),
 				DeployDir:          "target",
@@ -44,7 +44,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 		},
 		{
 			language: "kotlin",
-			dir:      "testdata/externalkotlin",
+			dir:      "testdata/kotlin/external",
 			expected: moduleconfig.CustomDefaults{
 				Build:              optional.Some("mvn -B package"),
 				DeployDir:          "target",

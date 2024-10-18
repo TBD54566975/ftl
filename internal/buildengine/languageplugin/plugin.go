@@ -118,8 +118,6 @@ type LanguagePlugin interface {
 // PluginFromConfig creates a new language plugin from the given config.
 func New(ctx context.Context, bindAllocator *bind.BindAllocator, language string) (p LanguagePlugin, err error) {
 	switch language {
-	case "go":
-		return newGoPlugin(ctx), nil
 	case "java", "kotlin":
 		return newJavaPlugin(ctx, language), nil
 	case "rust":
