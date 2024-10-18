@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://tbd54566975.github.io/ftl/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://tbd54566975.github.io/ftl/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://tbd54566975.github.io/ftl/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>Metrics | FTL</title>
+<meta name="description" content="FTL metrics and attributes">
+<link rel="canonical" href="https://tbd54566975.github.io/ftl/docs/observability/metrics/">
+
+
+
+
+
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://tbd54566975.github.io/ftl/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://tbd54566975.github.io/ftl/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Observability",
+            "item": "https://tbd54566975.github.io/ftl/docs/observability/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Metrics",
+            "item": "https://tbd54566975.github.io/ftl/docs/observability/metrics/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://tbd54566975.github.io/ftl/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://tbd54566975.github.io/ftl/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://tbd54566975.github.io/ftl/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://tbd54566975.github.io/ftl/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://tbd54566975.github.io/ftl/">FTL</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://twitter.com/TBD54566975"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg><span class="ms-2 visually-hidden">Twitter</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/TBD54566975/ftl"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://tbd54566975.github.io/ftl/docs/getting-started/introduction/">Docs</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/getting-started/introduction/">Introduction</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/getting-started/quick-start/">Quick Start</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Reference</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/start/">Start</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/verbs/">Verbs</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/types/">Types</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/visibility/">Visibility</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/ingress/">HTTP Ingress</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/cron/">Cron</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/secretsconfig/">Secrets&#x2F;Config</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/pubsub/">PubSub</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/fsm/">FSM</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/retries/">Retries</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/externaltypes/">External Types</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/unittests/">Unit Tests</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/matrix/">Feature Matrix</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Observability</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link active" href="https://tbd54566975.github.io/ftl/docs/observability/metrics/">Metrics</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Help</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/help/faq/">FAQ</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/help/glossary/">Glossary</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://tbd54566975.github.io/ftl/docs/observability/metrics/#ftl-metrics">FTL Metrics</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://tbd54566975.github.io/ftl/docs/observability/metrics/#metrics-table">Metrics Table</a></li>
+  											
+  											<li><a href="https://tbd54566975.github.io/ftl/docs/observability/metrics/#attributes">Attributes</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://tbd54566975.github.io/ftl/docs/observability/metrics/#db-metrics">DB Metrics</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://tbd54566975.github.io/ftl/docs/observability/metrics/#metrics-table-1">Metrics Table</a></li>
+  											
+  											<li><a href="https://tbd54566975.github.io/ftl/docs/observability/metrics/#attributes-1">Attributes</a></li>
+  											
+  									</ul>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>Metrics</h1>
+        
+        <p>FTL collects and exports a variety of metrics to help you monitor and understand the behavior of your FTL deployment using OTEL. This allows cluster operators to consume metrics in their preferred monitoring system e.g. Prometheus, Grafana, Datadog etc.</p>
+<p><strong>Note on Metric Types:</strong></p>
+<ul>
+<li><strong>Counters</strong> typically have a <code>_total</code> suffix in Prometheus, which is omitted here for brevity.</li>
+<li><strong>Histograms</strong> typically have <code>_bucket</code>, <code>_sum</code>, and <code>_count</code> variants, with <code>_bucket</code> including multiple entries for different bucket boundaries.</li>
+<li><strong>Gauges</strong> represent a single numerical value that can go up and down.</li>
+</ul>
+<p><em>Note: this documentation is incomplete</em></p>
+<h2 id="ftl-metrics">FTL Metrics</h2>
+<h3 id="metrics-table">Metrics Table</h3>
+<table><thead><tr><th>Metric Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>ftl.async_call.acquired</code></td><td>Counter</td><td>Number of times an async call was acquired</td></tr>
+<tr><td><code>ftl.async_call.completed</code></td><td>Counter</td><td>Number of completed async calls</td></tr>
+<tr><td><code>ftl.async_call.created</code></td><td>Counter</td><td>Number of created async calls</td></tr>
+<tr><td><code>ftl.async_call.executed</code></td><td>Counter</td><td>Number of executed async calls</td></tr>
+<tr><td><code>ftl.async_call.ms_to_complete</code></td><td>Histogram</td><td>Time taken to complete async calls in milliseconds</td></tr>
+<tr><td><code>ftl.async_call.queue_depth_ratio</code></td><td>Gauge</td><td>Ratio of queued async calls</td></tr>
+<tr><td><code>ftl.call.ms_to_complete</code></td><td>Histogram</td><td>Time taken to complete calls in milliseconds</td></tr>
+<tr><td><code>ftl.call.requests</code></td><td>Counter</td><td>Total number of call requests</td></tr>
+<tr><td><code>ftl.deployments.runner.active</code></td><td>Gauge</td><td>Number of active deployment runners</td></tr>
+<tr><td><code>ftl.runner.registration.heartbeats</code></td><td>Counter</td><td>Total number of runner registration heartbeats</td></tr>
+<tr><td><code>ftl.timeline.inserted</code></td><td>Counter</td><td>Total number of timeline insertions</td></tr>
+</tbody></table>
+<h3 id="attributes">Attributes</h3>
+<p>Attributes provide additional context and dimensions for metrics and are often used for analysis and filtering. Each section below represents an attribute key that is collected for a specific set of metrics.</p>
+<h4 id="ftl-async-call-catching">ftl.async_call.catching</h4>
+<ul>
+<li><code>ftl.async_call.acquired</code></li>
+<li><code>ftl.async_call.completed</code></li>
+<li><code>ftl.async_call.created</code></li>
+<li><code>ftl.async_call.executed</code></li>
+<li><code>ftl.async_call.ms_to_complete</code></li>
+</ul>
+<h4 id="ftl-async-call-origin">ftl.async_call.origin</h4>
+<ul>
+<li><code>ftl.async_call.acquired</code></li>
+<li><code>ftl.async_call.completed</code></li>
+<li><code>ftl.async_call.created</code></li>
+<li><code>ftl.async_call.executed</code></li>
+<li><code>ftl.async_call.ms_to_complete</code></li>
+</ul>
+<h4 id="ftl-async-call-time-since-scheduled-at-ms-bucket">ftl.async_call.time_since_scheduled_at_ms.bucket</h4>
+<ul>
+<li><code>ftl.async_call.acquired</code></li>
+<li><code>ftl.async_call.completed</code></li>
+<li><code>ftl.async_call.executed</code></li>
+</ul>
+<h4 id="ftl-async-call-verb-ref">ftl.async_call.verb.ref</h4>
+<ul>
+<li><code>ftl.async_call.acquired</code></li>
+<li><code>ftl.async_call.completed</code></li>
+<li><code>ftl.async_call.created</code></li>
+<li><code>ftl.async_call.executed</code></li>
+<li><code>ftl.async_call.ms_to_complete</code></li>
+</ul>
+<h4 id="ftl-module-name">ftl.module.name</h4>
+<ul>
+<li><code>ftl.async_call.acquired</code></li>
+<li><code>ftl.async_call.completed</code></li>
+<li><code>ftl.async_call.created</code></li>
+<li><code>ftl.async_call.executed</code></li>
+<li><code>ftl.async_call.ms_to_complete</code></li>
+<li><code>ftl.call.ms_to_complete</code></li>
+<li><code>ftl.call.requests</code></li>
+</ul>
+<h4 id="ftl-outcome-status">ftl.outcome.status</h4>
+<ul>
+<li><code>ftl.async_call.acquired</code></li>
+<li><code>ftl.async_call.completed</code></li>
+<li><code>ftl.async_call.created</code></li>
+<li><code>ftl.async_call.executed</code></li>
+<li><code>ftl.async_call.ms_to_complete</code></li>
+<li><code>ftl.call.ms_to_complete</code></li>
+<li><code>ftl.call.requests</code></li>
+</ul>
+<h4 id="ftl-async-call-remaining-attempts">ftl.async_call.remaining_attempts</h4>
+<ul>
+<li><code>ftl.async_call.created</code></li>
+</ul>
+<h4 id="ftl-call-verb-ref">ftl.call.verb.ref</h4>
+<ul>
+<li><code>ftl.call.ms_to_complete</code></li>
+<li><code>ftl.call.requests</code></li>
+</ul>
+<h4 id="ftl-call-run-time-ms-bucket">ftl.call.run_time_ms.bucket</h4>
+<ul>
+<li><code>ftl.call.requests</code></li>
+</ul>
+<h4 id="ftl-deployment-key">ftl.deployment.key</h4>
+<ul>
+<li><code>ftl.deployments.runner.active</code></li>
+<li><code>ftl.runner.registration.heartbeats</code></li>
+</ul>
+<h2 id="db-metrics">DB Metrics</h2>
+<p>DB Metrics are collected from the SQL database used by FTL. These metrics provide insights into the database connection pool, query latency etc.</p>
+<h3 id="metrics-table-1">Metrics Table</h3>
+<table><thead><tr><th>Metric Name</th><th>Type</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>db.sql.connection.closed_max_idle_time</code></td><td>Counter</td><td>Total number of connections closed due to max idle time</td></tr>
+<tr><td><code>db.sql.connection.closed_max_idle</code></td><td>Counter</td><td>Total number of connections closed due to max idle connections</td></tr>
+<tr><td><code>db.sql.connection.closed_max_lifetime</code></td><td>Counter</td><td>Total number of connections closed due to max lifetime</td></tr>
+<tr><td><code>db.sql.connection.max_open</code></td><td>Gauge</td><td>Maximum number of open connections</td></tr>
+<tr><td><code>db.sql.connection.open</code></td><td>Gauge</td><td>Number of open connections</td></tr>
+<tr><td><code>db.sql.connection.wait_duration_milliseconds</code></td><td>Histogram</td><td>Duration of connection wait times in milliseconds</td></tr>
+<tr><td><code>db.sql.connection.wait</code></td><td>Counter</td><td>Total number of connection waits</td></tr>
+<tr><td><code>db.sql.latency_milliseconds</code></td><td>Histogram</td><td>SQL query latency in milliseconds</td></tr>
+</tbody></table>
+<h3 id="attributes-1">Attributes</h3>
+<h4 id="db-system">db.system</h4>
+<ul>
+<li><code>db.sql.connection.closed_max_idle_time</code></li>
+<li><code>db.sql.connection.closed_max_idle</code></li>
+<li><code>db.sql.connection.closed_max_lifetime</code></li>
+<li><code>db.sql.connection.max_open</code></li>
+<li><code>db.sql.connection.open</code></li>
+<li><code>db.sql.connection.wait_duration_milliseconds</code></li>
+<li><code>db.sql.connection.wait</code></li>
+</ul>
+<h4 id="status">status</h4>
+<ul>
+<li><code>db.sql.connection.open</code></li>
+<li><code>db.sql.latency_milliseconds</code></li>
+</ul>
+<h4 id="method">method</h4>
+<ul>
+<li><code>db.sql.latency_milliseconds</code></li>
+</ul>
+<h4 id="le-less-than-or-equal-to">le (less than or equal to)</h4>
+<ul>
+<li><code>db.sql.latency_milliseconds_bucket</code></li>
+</ul>
+<p>Note: The <code>job</code> attribute with value "ftl-serve" is common to all metrics and has been omitted from the individual listings for brevity.</p>
+
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;tbd54566975.github.io&#x2F;ftl&#x2F;docs&#x2F;reference&#x2F;matrix&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Feature Matrix
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+        
+        
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;tbd54566975.github.io&#x2F;ftl&#x2F;docs&#x2F;help&#x2F;faq&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                FAQ &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item">Powered by <a href="https://www.getzola.org/">Zola</a>, and <a href="https://github.com/aaranxu/adidoks">AdiDoks</a></li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+<script src="https://tbd54566975.github.io/ftl/js/code-selector.js" defer>
+</script>
+
+
+  
+<script type="text/javascript" src="https://tbd54566975.github.io/ftl/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://tbd54566975.github.io/ftl/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://tbd54566975.github.io/ftl/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://tbd54566975.github.io/ftl/js/search.js" defer></script>
+
+  
+</body>
+</html>

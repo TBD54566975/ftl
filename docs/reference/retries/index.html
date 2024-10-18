@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://tbd54566975.github.io/ftl/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://tbd54566975.github.io/ftl/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://tbd54566975.github.io/ftl/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>Retries | FTL</title>
+<meta name="description" content="Retrying asynchronous verbs">
+<link rel="canonical" href="https://tbd54566975.github.io/ftl/docs/reference/retries/">
+
+
+
+
+
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://tbd54566975.github.io/ftl/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://tbd54566975.github.io/ftl/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Reference",
+            "item": "https://tbd54566975.github.io/ftl/docs/reference/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Retries",
+            "item": "https://tbd54566975.github.io/ftl/docs/reference/retries/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://tbd54566975.github.io/ftl/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://tbd54566975.github.io/ftl/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://tbd54566975.github.io/ftl/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://tbd54566975.github.io/ftl/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://tbd54566975.github.io/ftl/">FTL</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://twitter.com/TBD54566975"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-twitter"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg><span class="ms-2 visually-hidden">Twitter</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/TBD54566975/ftl"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://tbd54566975.github.io/ftl/docs/getting-started/introduction/">Docs</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/getting-started/introduction/">Introduction</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/getting-started/quick-start/">Quick Start</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Reference</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/start/">Start</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/verbs/">Verbs</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/types/">Types</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/visibility/">Visibility</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/ingress/">HTTP Ingress</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/cron/">Cron</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/secretsconfig/">Secrets&#x2F;Config</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/pubsub/">PubSub</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/fsm/">FSM</a></li>
+							                           
+									<li><a class="docs-link active" href="https://tbd54566975.github.io/ftl/docs/reference/retries/">Retries</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/externaltypes/">External Types</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/unittests/">Unit Tests</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/reference/matrix/">Feature Matrix</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Observability</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/observability/metrics/">Metrics</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Help</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/help/faq/">FAQ</a></li>
+							                           
+									<li><a class="docs-link" href="https://tbd54566975.github.io/ftl/docs/help/glossary/">Glossary</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://tbd54566975.github.io/ftl/docs/reference/retries/#pubsub">PubSub</a></li>
+  							
+  							
+  							<li><a href="https://tbd54566975.github.io/ftl/docs/reference/retries/#fsm">FSM</a></li>
+  							
+  							
+  							<li><a href="https://tbd54566975.github.io/ftl/docs/reference/retries/#catching">Catching</a></li>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>Retries</h1>
+        
+        <p>Some FTL features allow specifying a retry policy via a Go comment directive. Retries back off exponentially until the maximum is reached.</p>
+<p>The directive has the following syntax:</p>
+<div class="code-selector">
+<ul class="nav nav-tabs mb-2">
+</ul>
+<!-- go -->
+<pre data-lang="go" style="background-color:#2b303b;color:#c0c5ce;" class="language-go "><code class="language-go" data-lang="go"><span style="color:#65737e;">//ftl:retry [&lt;attempts=10&gt;] &lt;min-backoff&gt; [&lt;max-backoff=1hr&gt;] [catch &lt;catchVerb&gt;]
+</span></code></pre>
+<!-- kotlin -->
+<pre data-lang="kotlin" style="background-color:#2b303b;color:#c0c5ce;" class="language-kotlin "><code class="language-kotlin" data-lang="kotlin"><span>@Retry(attempts = </span><span style="color:#d08770;">10</span><span>, minBackoff = &quot;</span><span style="color:#a3be8c;">5s</span><span>&quot;, maxBackoff = &quot;</span><span style="color:#a3be8c;">1h</span><span>&quot;, catchVerb = &quot;</span><span style="color:#a3be8c;">&lt;catchVerb&gt;</span><span>&quot;, catchModule = &quot;</span><span style="color:#a3be8c;">&lt;catchModule&gt;</span><span>&quot;)
+</span></code></pre>
+<!-- java -->
+<pre data-lang="java" style="background-color:#2b303b;color:#c0c5ce;" class="language-java "><code class="language-java" data-lang="java"><span>@</span><span style="color:#bf616a;">Retry</span><span>(</span><span style="color:#bf616a;">attempts </span><span>= </span><span style="color:#d08770;">10</span><span>, </span><span style="color:#bf616a;">minBackoff </span><span>= &quot;</span><span style="color:#a3be8c;">5s</span><span>&quot;, </span><span style="color:#bf616a;">maxBackoff </span><span>= &quot;</span><span style="color:#a3be8c;">1h</span><span>&quot;, </span><span style="color:#bf616a;">catchVerb </span><span>= &quot;</span><span style="color:#a3be8c;">&lt;catchVerb&gt;</span><span>&quot;, </span><span style="color:#bf616a;">catchModule </span><span>= &quot;</span><span style="color:#a3be8c;">&lt;catchModule&gt;</span><span>&quot;)
+</span></code></pre>
+</div>
+<p>For example, the following function will retry up to 10 times, with a delay of 5s, 10s, 20s, 40s, 60s, 60s, etc.</p>
+<div class="code-selector">
+<ul class="nav nav-tabs mb-2">
+</ul>
+<!-- go -->
+<pre data-lang="go" style="background-color:#2b303b;color:#c0c5ce;" class="language-go "><code class="language-go" data-lang="go"><span style="color:#65737e;">//ftl:retry 10 5s 1m
+</span><span style="color:#b48ead;">func </span><span style="color:#8fa1b3;">Process</span><span>(</span><span style="color:#bf616a;">ctx context</span><span>.</span><span style="color:#b48ead;">Context</span><span>, </span><span style="color:#bf616a;">in </span><span style="color:#b48ead;">Invoice</span><span>) </span><span style="color:#b48ead;">error </span><span>{
+</span><span>  </span><span style="color:#65737e;">// ...
+</span><span>}
+</span></code></pre>
+<!-- kotlin -->
+<pre data-lang="kotlin" style="background-color:#2b303b;color:#c0c5ce;" class="language-kotlin "><code class="language-kotlin" data-lang="kotlin"><span>@Retry(count = </span><span style="color:#d08770;">10</span><span>, minBackoff = &quot;</span><span style="color:#a3be8c;">5s</span><span>&quot;, maxBackoff = &quot;</span><span style="color:#a3be8c;">1m</span><span>&quot;)
+</span><span style="color:#b48ead;">fun </span><span style="color:#8fa1b3;">process</span><span>(inv: Invoice) {
+</span><span>    </span><span style="color:#65737e;">// ... 
+</span><span>}
+</span></code></pre>
+<!-- java -->
+<pre data-lang="java" style="background-color:#2b303b;color:#c0c5ce;" class="language-java "><code class="language-java" data-lang="java"><span>@</span><span style="color:#bf616a;">Retry</span><span>(</span><span style="color:#bf616a;">count </span><span>= </span><span style="color:#d08770;">10</span><span>, </span><span style="color:#bf616a;">minBackoff </span><span>= &quot;</span><span style="color:#a3be8c;">5s</span><span>&quot;, </span><span style="color:#bf616a;">maxBackoff </span><span>= &quot;</span><span style="color:#a3be8c;">1m</span><span>&quot;)
+</span><span style="color:#b48ead;">public</span><span> void </span><span style="color:#bf616a;">process</span><span>(</span><span style="color:#ebcb8b;">Invoice</span><span> in) {
+</span><span>    </span><span style="color:#65737e;">// ... 
+</span><span>}
+</span></code></pre>
+</div>
+<h3 id="pubsub">PubSub</h3>
+<p>Subscribers can have a retry policy. For example:</p>
+<div class="code-selector">
+<ul class="nav nav-tabs mb-2">
+</ul>
+<!-- go -->
+<pre data-lang="go" style="background-color:#2b303b;color:#c0c5ce;" class="language-go "><code class="language-go" data-lang="go"><span style="color:#65737e;">//ftl:subscribe exampleSubscription
+</span><span style="color:#65737e;">//ftl:retry 5 1s catch recoverPaymentProcessing
+</span><span style="color:#b48ead;">func </span><span style="color:#8fa1b3;">ProcessPayment</span><span>(</span><span style="color:#bf616a;">ctx context</span><span>.</span><span style="color:#b48ead;">Context</span><span>, </span><span style="color:#bf616a;">payment </span><span style="color:#b48ead;">Payment</span><span>) </span><span style="color:#b48ead;">error </span><span>{
+</span><span>...
+</span><span>}
+</span></code></pre>
+<!-- kotlin -->
+<pre data-lang="kotlin" style="background-color:#2b303b;color:#c0c5ce;" class="language-kotlin "><code class="language-kotlin" data-lang="kotlin"><span>@Subscription(topic = &quot;</span><span style="color:#a3be8c;">example</span><span>&quot;, module = &quot;</span><span style="color:#a3be8c;">publisher</span><span>&quot;, name = &quot;</span><span style="color:#a3be8c;">exampleSubscription</span><span>&quot;)
+</span><span>@Retry(count = </span><span style="color:#d08770;">5</span><span>, minBackoff = &quot;</span><span style="color:#a3be8c;">1s</span><span>&quot;, catchVerb = &quot;</span><span style="color:#a3be8c;">recoverPaymentProcessing</span><span>&quot;)
+</span><span style="color:#b48ead;">fun </span><span style="color:#8fa1b3;">processPayment</span><span>(payment: Payment) {
+</span><span>    </span><span style="color:#65737e;">// ... 
+</span><span>}
+</span></code></pre>
+<!-- java -->
+<pre data-lang="java" style="background-color:#2b303b;color:#c0c5ce;" class="language-java "><code class="language-java" data-lang="java"><span>@</span><span style="color:#bf616a;">Subscription</span><span>(</span><span style="color:#bf616a;">topic </span><span>= &quot;</span><span style="color:#a3be8c;">example</span><span>&quot;, </span><span style="color:#bf616a;">module </span><span>= &quot;</span><span style="color:#a3be8c;">publisher</span><span>&quot;, </span><span style="color:#bf616a;">name </span><span>= &quot;</span><span style="color:#a3be8c;">exampleSubscription</span><span>&quot;)
+</span><span>@</span><span style="color:#bf616a;">Retry</span><span>(</span><span style="color:#bf616a;">count </span><span>= </span><span style="color:#d08770;">5</span><span>, </span><span style="color:#bf616a;">minBackoff </span><span>= &quot;</span><span style="color:#a3be8c;">1s</span><span>&quot;, </span><span style="color:#bf616a;">catchVerb </span><span>= &quot;</span><span style="color:#a3be8c;">recoverPaymentProcessing</span><span>&quot;)
+</span><span style="color:#b48ead;">public</span><span> void </span><span style="color:#bf616a;">processPayment</span><span>(</span><span style="color:#ebcb8b;">Payment</span><span> payment) {
+</span><span>    </span><span style="color:#65737e;">// ... 
+</span><span>}
+</span></code></pre>
+</div>
+<h3 id="fsm">FSM</h3>
+<p>Retries can be declared on the FSM or on individual transition verbs. Retries declared on a verb take precedence over ones declared on the FSM. For example:</p>
+<pre data-lang="go" style="background-color:#2b303b;color:#c0c5ce;" class="language-go "><code class="language-go" data-lang="go"><span style="color:#65737e;">//ftl:retry 10 1s 10s
+</span><span style="color:#b48ead;">var </span><span style="color:#bf616a;">fsm </span><span>= </span><span style="color:#bf616a;">ftl</span><span>.</span><span style="color:#bf616a;">FSM</span><span>(&quot;</span><span style="color:#a3be8c;">fsm</span><span>&quot;,
+</span><span>	</span><span style="color:#bf616a;">ftl</span><span>.</span><span style="color:#bf616a;">Start</span><span>(</span><span style="color:#bf616a;">Start</span><span>),
+</span><span>	</span><span style="color:#bf616a;">ftl</span><span>.</span><span style="color:#bf616a;">Transition</span><span>(</span><span style="color:#bf616a;">Start</span><span>, </span><span style="color:#bf616a;">End</span><span>),
+</span><span>)
+</span><span>
+</span><span style="color:#65737e;">//ftl:verb
+</span><span style="color:#65737e;">//ftl:retry 1 1s 1s
+</span><span style="color:#b48ead;">func </span><span style="color:#8fa1b3;">Start</span><span>(</span><span style="color:#bf616a;">ctx context</span><span>.</span><span style="color:#b48ead;">Context</span><span>, </span><span style="color:#bf616a;">in </span><span style="color:#b48ead;">Event</span><span>) </span><span style="color:#b48ead;">error </span><span>{
+</span><span>	</span><span style="color:#65737e;">// Start uses its own retry policy
+</span><span>}
+</span><span>
+</span><span>
+</span><span style="color:#65737e;">//ftl:verb
+</span><span style="color:#b48ead;">func </span><span style="color:#8fa1b3;">End</span><span>(</span><span style="color:#bf616a;">ctx context</span><span>.</span><span style="color:#b48ead;">Context</span><span>, </span><span style="color:#bf616a;">in </span><span style="color:#b48ead;">Event</span><span>) </span><span style="color:#b48ead;">error </span><span>{
+</span><span>	</span><span style="color:#65737e;">// End inherits the default retry policy from the FSM
+</span><span>}
+</span></code></pre>
+<h2 id="catching">Catching</h2>
+<p>After all retries have failed, a catch verb can be used to safely recover.</p>
+<p>These catch verbs have a request type of <code>builtin.CatchRequest&lt;Req&gt;</code> and no response type. If a catch verb returns an error, it will be retried until it succeeds so it is important to handle errors carefully.</p>
+<div class="code-selector">
+<ul class="nav nav-tabs mb-2">
+</ul>
+<!-- go -->
+<pre data-lang="go" style="background-color:#2b303b;color:#c0c5ce;" class="language-go "><code class="language-go" data-lang="go"><span style="color:#65737e;">//ftl:retry 5 1s catch recoverPaymentProcessing
+</span><span style="color:#b48ead;">func </span><span style="color:#8fa1b3;">ProcessPayment</span><span>(</span><span style="color:#bf616a;">ctx context</span><span>.</span><span style="color:#b48ead;">Context</span><span>, </span><span style="color:#bf616a;">payment </span><span style="color:#b48ead;">Payment</span><span>) </span><span style="color:#b48ead;">error </span><span>{
+</span><span>...
+</span><span>}
+</span><span>
+</span><span style="color:#65737e;">//ftl:verb
+</span><span style="color:#b48ead;">func </span><span style="color:#8fa1b3;">RecoverPaymentProcessing</span><span>(</span><span style="color:#bf616a;">ctx context</span><span>.</span><span style="color:#b48ead;">Context</span><span>, </span><span style="color:#bf616a;">request builtin</span><span>.</span><span style="color:#b48ead;">CatchRequest</span><span>[</span><span style="color:#bf616a;">Payment</span><span>]) </span><span style="color:#b48ead;">error </span><span>{
+</span><span style="color:#65737e;">// safely handle final failure of the payment
+</span><span>}
+</span></code></pre>
+<!-- kotlin -->
+<pre data-lang="kotlin" style="background-color:#2b303b;color:#c0c5ce;" class="language-kotlin "><code class="language-kotlin" data-lang="kotlin"><span>
+</span><span>@Retry(count = </span><span style="color:#d08770;">5</span><span>, minBackoff = &quot;</span><span style="color:#a3be8c;">1s</span><span>&quot;, catchVerb = &quot;</span><span style="color:#a3be8c;">recoverPaymentProcessing</span><span>&quot;)
+</span><span style="color:#b48ead;">fun </span><span style="color:#8fa1b3;">processPayment</span><span>(payment: Payment) {
+</span><span>    </span><span style="color:#65737e;">// ... 
+</span><span>}
+</span><span>
+</span><span>@Verb
+</span><span style="color:#b48ead;">fun </span><span style="color:#8fa1b3;">recoverPaymentProcessing</span><span>(req: CatchRequest&lt;Payment&gt;) {
+</span><span>    </span><span style="color:#65737e;">// safely handle final failure of the payment
+</span><span>}
+</span></code></pre>
+<!-- java -->
+<pre data-lang="java" style="background-color:#2b303b;color:#c0c5ce;" class="language-java "><code class="language-java" data-lang="java"><span>@</span><span style="color:#bf616a;">Retry</span><span>(</span><span style="color:#bf616a;">count </span><span>= </span><span style="color:#d08770;">5</span><span>, </span><span style="color:#bf616a;">minBackoff </span><span>= &quot;</span><span style="color:#a3be8c;">1s</span><span>&quot;, </span><span style="color:#bf616a;">catchVerb </span><span>= &quot;</span><span style="color:#a3be8c;">recoverPaymentProcessing</span><span>&quot;)
+</span><span style="color:#b48ead;">public</span><span> void </span><span style="color:#bf616a;">processPayment</span><span>(</span><span style="color:#ebcb8b;">Payment</span><span> payment) {
+</span><span>    </span><span style="color:#65737e;">// ... 
+</span><span>}
+</span><span>
+</span><span>@</span><span style="color:#bf616a;">Verb
+</span><span style="color:#b48ead;">public</span><span> void </span><span style="color:#bf616a;">recoverPaymentProcessing</span><span>(</span><span style="color:#ebcb8b;">CatchRequest</span><span>&lt;</span><span style="color:#ebcb8b;">Payment</span><span>&gt; req) {
+</span><span>    </span><span style="color:#65737e;">// safely handle final failure of the payment
+</span><span>}
+</span></code></pre>
+</div>
+<p>For FSMs, after a catch verb has been successfully called the FSM will moved to the failed state.</p>
+
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;tbd54566975.github.io&#x2F;ftl&#x2F;docs&#x2F;getting-started&#x2F;quick-start&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Quick Start
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;tbd54566975.github.io&#x2F;ftl&#x2F;docs&#x2F;observability&#x2F;metrics&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                Metrics &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+      
+      
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item">Powered by <a href="https://www.getzola.org/">Zola</a>, and <a href="https://github.com/aaranxu/adidoks">AdiDoks</a></li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+<script src="https://tbd54566975.github.io/ftl/js/code-selector.js" defer>
+</script>
+
+
+  
+<script type="text/javascript" src="https://tbd54566975.github.io/ftl/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://tbd54566975.github.io/ftl/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://tbd54566975.github.io/ftl/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://tbd54566975.github.io/ftl/js/search.js" defer></script>
+
+  
+</body>
+</html>
