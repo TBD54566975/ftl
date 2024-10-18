@@ -137,7 +137,7 @@ func TestJVMCoreFunctionality(t *testing.T) {
 	tests = append(tests, AllRuntimesVerbTest("optionalTestObjectVerb", exampleObject)...)
 	tests = append(tests, AllRuntimesVerbTest("optionalTestObjectOptionalFieldsVerb", exampleOptionalFieldsObject)...)
 	tests = append(tests, AllRuntimesVerbTest("externalTypeVerb", "did:web:abc123")...)
-	tests = append(tests, JavaAndGoVerbTest("typeEnumVerb", AnimalWrapper{Animal: Animal{
+	tests = append(tests, AllRuntimesVerbTest("typeEnumVerb", AnimalWrapper{Animal: Animal{
 		Name: "Cat",
 		Value: Cat{
 			Name:      "Fluffy",
@@ -145,7 +145,8 @@ func TestJVMCoreFunctionality(t *testing.T) {
 			Breed:     "Siamese",
 		},
 	}})...)
-	tests = append(tests, JavaAndGoVerbTest("valueEnumVerb", ColorWrapper{Color: Red})...)
+	tests = append(tests, AllRuntimesVerbTest("valueEnumVerb", ColorWrapper{Color: Red})...)
+	tests = append(tests, AllRuntimesVerbTest("stringEnumVerb", ShapeWrapper{Shape: Square})...)
 	//tests = append(tests, AllRuntimesVerbTest("typeWrapperEnumVerb", "hello")...)
 	//tests = append(tests, AllRuntimesVerbTest("mixedEnumVerb", Thing{})...)
 	// tests = append(tests, PairedPrefixVerbTest("nilvalue", "optionalIntVerb", ftl.None[int]())...)
@@ -400,6 +401,18 @@ const (
 
 type ColorWrapper struct {
 	Color ColorInt `json:"color"`
+}
+
+type Shape string
+
+const (
+	Circle   Shape = "circle"
+	Square   Shape = "square"
+	Triangle Shape = "triangle"
+)
+
+type ShapeWrapper struct {
+	Shape Shape `json:"shape"`
 }
 
 type TypeWrapperEnum interface{ typeEnum() }

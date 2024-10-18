@@ -117,12 +117,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                     .addParameter(enumType, "value")
                     .addStatement("this.value = value")
                     .build());
-            dataBuilder.addMethod(MethodSpec.methodBuilder("getValue")
-                    .addModifiers(Modifier.PUBLIC)
-                    .addAnnotation(JsonIgnore.class)
-                    .returns(enumType)
-                    .addStatement("return value")
-                    .build());
+            dataBuilder.addMethod(makeGetMethod("Value", enumType, "return value"));
 
             var format = ennum.getType().hasString() ? "$S" : "$L";
             for (var i : ennum.getVariantsList()) {
@@ -190,10 +185,10 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                             .build();
                     javaFile.writeTo(outputDir);
                 }
-                JavaFile javaFile = JavaFile.builder(packageName, interfaceBuilder.build())
-                        .build();
-                javaFile.writeTo(outputDir);
             }
+            JavaFile javaFile = JavaFile.builder(packageName, interfaceBuilder.build())
+                    .build();
+            javaFile.writeTo(outputDir);
         }
     }
 
@@ -260,7 +255,6 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             }
         }
         if (!sortedFields.isEmpty()) {
-
             for (var v : sortedFields.values()) {
                 v.run();
             }
@@ -388,46 +382,38 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
      */
     private static void addTypeEnumInterfaceMethods(String packageName, String interfaceType, TypeSpec.Builder dataBuilder,
             String enumVariantName, TypeName variantTypeName, Map<String, TypeName> variantValuesTypes, boolean returnSelf) {
-
         dataBuilder.addSuperinterface(ClassName.get(packageName, interfaceType));
-
         // Positive implementation of isX, getX for its type
-        dataBuilder.addMethod(MethodSpec.methodBuilder("is" + enumVariantName)
-                .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(JsonIgnore.class)
-                .returns(TypeName.BOOLEAN)
-                .addStatement("return true")
-                .build());
-
-        MethodSpec.Builder getMethod = MethodSpec.methodBuilder("get" + enumVariantName)
-                .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(JsonIgnore.class)
-                .returns(variantTypeName);
-        if (returnSelf) {
-            getMethod.addStatement("return this");
-        } else {
-            getMethod.addStatement("return value");
-        }
-        dataBuilder.addMethod(getMethod.build());
+        dataBuilder.addMethod(makeIsMethod(enumVariantName, true));
+        dataBuilder.addMethod(makeGetMethod(enumVariantName, variantTypeName, "return " + (returnSelf ? "this" : "value")));
 
         for (var thingIAmNot : variantValuesTypes.entrySet()) {
             if (thingIAmNot.getKey().equals(enumVariantName)) {
                 continue;
             }
             // Negative implementation of isX, getX for other types
-            dataBuilder.addMethod(MethodSpec.methodBuilder("is" + thingIAmNot.getKey())
-                    .addModifiers(Modifier.PUBLIC)
-                    .addAnnotation(JsonIgnore.class)
-                    .returns(TypeName.BOOLEAN)
-                    .addStatement("return false")
-                    .build());
-            dataBuilder.addMethod(MethodSpec.methodBuilder("get" + thingIAmNot.getKey())
-                    .addModifiers(Modifier.PUBLIC)
-                    .addAnnotation(JsonIgnore.class)
-                    .returns(thingIAmNot.getValue())
-                    .addStatement("throw new UnsupportedOperationException()")
-                    .build());
+            dataBuilder.addMethod(makeIsMethod(thingIAmNot.getKey(), false));
+            dataBuilder.addMethod(
+                    makeGetMethod(thingIAmNot.getKey(), thingIAmNot.getValue(), "throw new UnsupportedOperationException()"));
         }
+    }
+
+    private static @NotNull MethodSpec makeIsMethod(String name, boolean val) {
+        return MethodSpec.methodBuilder("is" + name)
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(JsonIgnore.class)
+                .returns(TypeName.BOOLEAN)
+                .addStatement("return " + val)
+                .build();
+    }
+
+    private static @NotNull MethodSpec makeGetMethod(String name, TypeName enumType, String returnStatement) {
+        return MethodSpec.methodBuilder("get" + name)
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(JsonIgnore.class)
+                .returns(enumType)
+                .addStatement(returnStatement)
+                .build();
     }
 
     private static @NotNull AnnotationSpec getGeneratedRefAnnotation(String module, String name) {
