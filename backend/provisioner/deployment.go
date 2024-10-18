@@ -3,9 +3,11 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
+	"github.com/jpillora/backoff"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
@@ -75,19 +77,27 @@ func (t *Task) Progress(ctx context.Context) error {
 		return fmt.Errorf("task state is not running: %s", t.state)
 	}
 
-	resp, err := t.handler.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
-		ProvisioningToken: t.runningToken,
-		DesiredResources:  t.desired.Resources(),
-	}))
-	if err != nil {
-		t.state = TaskStateFailed
-		return fmt.Errorf("error getting state: %w", err)
+	retry := backoff.Backoff{
+		Min: 50 * time.Millisecond,
+		Max: 30 * time.Second,
 	}
-	if succ, ok := resp.Msg.Status.(*provisioner.StatusResponse_Success); ok {
-		t.state = TaskStateDone
-		t.output = succ.Success.UpdatedResources
+
+	for {
+		resp, err := t.handler.Status(ctx, connect.NewRequest(&provisioner.StatusRequest{
+			ProvisioningToken: t.runningToken,
+			DesiredResources:  t.desired.Resources(),
+		}))
+		if err != nil {
+			t.state = TaskStateFailed
+			return fmt.Errorf("error getting state: %w", err)
+		}
+		if succ, ok := resp.Msg.Status.(*provisioner.StatusResponse_Success); ok {
+			t.state = TaskStateDone
+			t.output = succ.Success.UpdatedResources
+			return nil
+		}
+		time.Sleep(retry.Duration())
 	}
-	return nil
 }
 
 // Deployment is a single deployment of resources for a single module
