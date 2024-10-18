@@ -124,8 +124,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                 Object value = toJavaValue(i.getValue());
                 dataBuilder.addEnumConstant(i.getName(), TypeSpec.anonymousClassBuilder(format, value).build());
             }
-            JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
-                    .build();
+            JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build()).build();
             javaFile.writeTo(outputDir);
         } else {
             // Enums without a type are (confusingly) "type enums". Java can't represent these directly, so we use a
@@ -181,13 +180,11 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                             .build());
                     addTypeEnumInterfaceMethods(packageName, interfaceType, dataBuilder, name, valueType,
                             variantValuesTypes, false);
-                    JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
-                            .build();
+                    JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build()).build();
                     javaFile.writeTo(outputDir);
                 }
             }
-            JavaFile javaFile = JavaFile.builder(packageName, interfaceBuilder.build())
-                    .build();
+            JavaFile javaFile = JavaFile.builder(packageName, interfaceBuilder.build()).build();
             javaFile.writeTo(outputDir);
         }
     }
