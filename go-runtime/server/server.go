@@ -8,6 +8,8 @@ import (
 	"runtime/debug"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/common/plugin"
