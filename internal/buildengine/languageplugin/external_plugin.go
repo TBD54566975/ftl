@@ -23,7 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-const launchTimeout = 10 * time.Second
+const launchTimeout = 15 * time.Second
 
 type externalBuildCommand struct {
 	BuildContext

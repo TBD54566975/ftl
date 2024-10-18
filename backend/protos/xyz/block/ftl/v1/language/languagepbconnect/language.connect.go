@@ -89,6 +89,9 @@ type LanguageServiceClient interface {
 	//
 	// Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
 	// event with the updated build context id with "is_automatic_rebuild" as false.
+	//
+	// If the plugin will not be able to return a BuildSuccess or BuildFailure, such as when there is no active
+	// build stream, it must fail the BuildContextUpdated call.
 	BuildContextUpdated(context.Context, *connect.Request[language.BuildContextUpdatedRequest]) (*connect.Response[language.BuildContextUpdatedResponse], error)
 	// Generate stubs for a module.
 	//
@@ -254,6 +257,9 @@ type LanguageServiceHandler interface {
 	//
 	// Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
 	// event with the updated build context id with "is_automatic_rebuild" as false.
+	//
+	// If the plugin will not be able to return a BuildSuccess or BuildFailure, such as when there is no active
+	// build stream, it must fail the BuildContextUpdated call.
 	BuildContextUpdated(context.Context, *connect.Request[language.BuildContextUpdatedRequest]) (*connect.Response[language.BuildContextUpdatedResponse], error)
 	// Generate stubs for a module.
 	//
