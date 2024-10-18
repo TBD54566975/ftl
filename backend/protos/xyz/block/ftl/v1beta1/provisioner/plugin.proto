@@ -32,7 +32,6 @@ message ProvisionResponse {
   enum ProvisionResponseStatus {
     UNKNOWN = 0;
     SUBMITTED = 1;
-    NO_CHANGES = 2;
   }
 
   string provisioning_token = 1;

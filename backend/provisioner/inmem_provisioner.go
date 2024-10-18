@@ -97,12 +97,6 @@ func (d *InMemProvisioner) Provision(ctx context.Context, req *connect.Request[p
 		}
 	}
 
-	if len(task.steps) == 0 {
-		return connect.NewResponse(&provisioner.ProvisionResponse{
-			Status: provisioner.ProvisionResponse_NO_CHANGES,
-		}), nil
-	}
-
 	token := uuid.New().String()
 	logger.Debugf("started a task with token %s", token)
 	d.running.Store(token, task)
