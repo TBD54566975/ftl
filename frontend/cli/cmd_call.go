@@ -29,9 +29,7 @@ type callCmd struct {
 }
 
 func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli ftlv1connect.ControllerServiceClient) error {
-	ctx, cancel := context.WithTimeout(ctx, c.Wait)
-	defer cancel()
-	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, client); err != nil {
+	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait, client); err != nil {
 		return err
 	}
 
