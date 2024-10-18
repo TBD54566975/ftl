@@ -170,17 +170,11 @@ export enum ProvisionResponse_ProvisionResponseStatus {
    * @generated from enum value: SUBMITTED = 1;
    */
   SUBMITTED = 1,
-
-  /**
-   * @generated from enum value: NO_CHANGES = 2;
-   */
-  NO_CHANGES = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ProvisionResponse_ProvisionResponseStatus)
 proto3.util.setEnumType(ProvisionResponse_ProvisionResponseStatus, "xyz.block.ftl.v1beta1.provisioner.ProvisionResponse.ProvisionResponseStatus", [
   { no: 0, name: "UNKNOWN" },
   { no: 1, name: "SUBMITTED" },
-  { no: 2, name: "NO_CHANGES" },
 ]);
 
 /**

@@ -67,10 +67,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if resp.Msg.Status == provisioner.ProvisionResponse_NO_CHANGES {
-		println("no changes")
-		return
-	}
 
 	retry := backoff.Backoff{
 		Min:    100 * time.Millisecond,

@@ -53,10 +53,6 @@ func (t *Task) Start(ctx context.Context) error {
 		t.state = TaskStateFailed
 		return fmt.Errorf("error provisioning resources: %w", err)
 	}
-	if resp.Msg.Status == provisioner.ProvisionResponse_NO_CHANGES {
-		t.state = TaskStateDone
-		t.output = t.desired.Resources()
-	}
 	t.runningToken = resp.Msg.ProvisioningToken
 	return nil
 }

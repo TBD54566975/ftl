@@ -25,11 +25,13 @@ func (d *NoopProvisioner) Plan(context.Context, *connect.Request[provisioner.Pla
 
 func (d *NoopProvisioner) Provision(context.Context, *connect.Request[provisioner.ProvisionRequest]) (*connect.Response[provisioner.ProvisionResponse], error) {
 	return connect.NewResponse(&provisioner.ProvisionResponse{
-		Status:            provisioner.ProvisionResponse_NO_CHANGES,
-		ProvisioningToken: "",
+		Status:            provisioner.ProvisionResponse_SUBMITTED,
+		ProvisioningToken: "token",
 	}), nil
 }
 
 func (d *NoopProvisioner) Status(context.Context, *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
-	panic("should not be called")
+	return connect.NewResponse(&provisioner.StatusResponse{
+		Status: &provisioner.StatusResponse_Success{},
+	}), nil
 }

@@ -58,7 +58,9 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	}
 	if !updated {
 		return connect.NewResponse(&provisioner.ProvisionResponse{
-			Status: provisioner.ProvisionResponse_NO_CHANGES,
+			// even if there are no changes, return the stack id so that any resource outputs can be populated
+			Status:            provisioner.ProvisionResponse_SUBMITTED,
+			ProvisioningToken: *res.StackId,
 		}), nil
 	}
 	_, err = c.client.ExecuteChangeSet(ctx, &cloudformation.ExecuteChangeSetInput{
