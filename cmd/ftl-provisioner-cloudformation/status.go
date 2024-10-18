@@ -95,6 +95,13 @@ func updateResources(outputs []types.Output, update []*provisioner.Resource) err
 		for _, resource := range update {
 			if resource.ResourceId == key.ResourceID {
 				if postgres, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
+					if postgres.Postgres == nil {
+						postgres.Postgres = &provisioner.PostgresResource{}
+					}
+					if postgres.Postgres.Output == nil {
+						postgres.Postgres.Output = &provisioner.PostgresResource_PostgresResourceOutput{}
+					}
+
 					switch key.PropertyName {
 					case PropertyDBReadEndpoint:
 						postgres.Postgres.Output.ReadDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
@@ -102,6 +109,13 @@ func updateResources(outputs []types.Output, update []*provisioner.Resource) err
 						postgres.Postgres.Output.WriteDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
 					}
 				} else if mysql, ok := resource.Resource.(*provisioner.Resource_Mysql); ok {
+					if mysql.Mysql == nil {
+						mysql.Mysql = &provisioner.MysqlResource{}
+					}
+					if mysql.Mysql.Output == nil {
+						mysql.Mysql.Output = &provisioner.MysqlResource_MysqlResourceOutput{}
+					}
+
 					switch key.PropertyName {
 					case PropertyDBReadEndpoint:
 						mysql.Mysql.Output.ReadDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
