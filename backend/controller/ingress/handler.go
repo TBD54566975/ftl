@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -55,12 +53,14 @@ func Handle(
 	verbRef := &schemapb.Ref{Module: route.Module, Name: route.Verb}
 
 	ingressEvent := timeline.Ingress{
-		DeploymentKey: route.Deployment,
-		RequestKey:    requestKey,
-		StartTime:     startTime,
-		Verb:          &schema.Ref{Name: route.Verb, Module: route.Module},
-		Request:       r,
-		Response:      &http.Response{Header: make(http.Header)},
+		DeploymentKey:   route.Deployment,
+		RequestKey:      requestKey,
+		StartTime:       startTime,
+		Verb:            &schema.Ref{Name: route.Verb, Module: route.Module},
+		RequestMethod:   r.Method,
+		RequestPath:     r.URL.Path,
+		RequestHeaders:  r.Header.Clone(),
+		ResponseHeaders: make(http.Header),
 	}
 
 	body, err := BuildRequestBody(route, r, sch)
@@ -72,6 +72,7 @@ func Handle(
 		recordIngressErrorEvent(r.Context(), timelineService, &ingressEvent, http.StatusBadRequest, err.Error())
 		return
 	}
+	ingressEvent.RequestBody = body
 
 	creq := connect.NewRequest(&ftlv1.CallRequest{
 		Metadata: &ftlv1.Metadata{},
@@ -129,7 +130,7 @@ func Handle(
 
 			for k, v := range responseHeaders {
 				w.Header()[k] = v
-				ingressEvent.Response.Header.Set(k, v[0])
+				ingressEvent.ResponseHeaders.Set(k, v[0])
 			}
 
 			statusCode := http.StatusOK
@@ -140,19 +141,19 @@ func Handle(
 				w.WriteHeader(statusCode)
 			}
 
-			ingressEvent.Response.StatusCode = statusCode
+			ingressEvent.ResponseStatus = statusCode
 		} else {
 			w.WriteHeader(http.StatusOK)
-			ingressEvent.Response.StatusCode = http.StatusOK
+			ingressEvent.ResponseStatus = http.StatusOK
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			ingressEvent.Response.Header.Set("Content-Type", "application/json; charset=utf-8")
+			ingressEvent.ResponseHeaders.Set("Content-Type", "application/json; charset=utf-8")
 			responseBody = msg.Body
 			rawBody = responseBody
 		}
 		_, err = w.Write(responseBody)
 		if err == nil {
 			observability.Ingress.Request(r.Context(), r.Method, r.URL.Path, optional.Some(verbRef), startTime, optional.None[string]())
-			ingressEvent.Response.Body = io.NopCloser(strings.NewReader(string(rawBody)))
+			ingressEvent.ResponseBody = rawBody
 			timelineService.EnqueueEvent(r.Context(), &ingressEvent)
 		} else {
 			logger.Errorf(err, "could not write response body")
@@ -174,7 +175,7 @@ func recordIngressErrorEvent(
 	statusCode int,
 	errorMsg string,
 ) {
-	ingressEvent.Response.StatusCode = statusCode
+	ingressEvent.ResponseStatus = statusCode
 	ingressEvent.Error = optional.Some(errorMsg)
 	timelineService.EnqueueEvent(ctx, ingressEvent)
 }

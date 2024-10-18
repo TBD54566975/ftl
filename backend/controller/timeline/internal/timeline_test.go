@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
-	"net/url"
 	"reflect"
 	"strconv"
 	"testing"
@@ -129,21 +127,17 @@ func TestTimeline(t *testing.T) {
 
 	t.Run("InsertHTTPIngressEvent", func(t *testing.T) {
 		timeline.EnqueueEvent(ctx, &timeline2.Ingress{
-			DeploymentKey: ingressEvent.DeploymentKey,
-			RequestKey:    ingressEvent.RequestKey.MustGet(),
-			StartTime:     ingressEvent.Time,
-			Verb:          &ingressEvent.Verb,
-			Request: &http.Request{
-				Method: ingressEvent.Method,
-				URL:    &url.URL{Path: ingressEvent.Path},
-				Body:   io.NopCloser(bytes.NewReader(ingressEvent.Request)),
-				Header: http.Header(map[string][]string{"request": {"header"}}),
-			},
-			Response: &http.Response{
-				StatusCode: ingressEvent.StatusCode,
-				Body:       io.NopCloser(bytes.NewReader(ingressEvent.Response)),
-				Header:     http.Header(map[string][]string{"response": {"header"}}),
-			},
+			DeploymentKey:   ingressEvent.DeploymentKey,
+			RequestKey:      ingressEvent.RequestKey.MustGet(),
+			StartTime:       ingressEvent.Time,
+			Verb:            &ingressEvent.Verb,
+			RequestMethod:   ingressEvent.Method,
+			RequestPath:     ingressEvent.Path,
+			RequestHeaders:  http.Header(map[string][]string{"request": {"header"}}),
+			RequestBody:     ingressEvent.Request,
+			ResponseStatus:  ingressEvent.StatusCode,
+			ResponseHeaders: http.Header(map[string][]string{"response": {"header"}}),
+			ResponseBody:    ingressEvent.Response,
 		})
 		time.Sleep(200 * time.Millisecond)
 	})

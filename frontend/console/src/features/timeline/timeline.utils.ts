@@ -10,7 +10,12 @@ const eventBackgroundColorMap: Record<string, string> = {
   '': 'bg-gray-500',
 }
 
-export const eventBackgroundColor = (event: Event) => eventBackgroundColorMap[event.entry.case || '']
+export const eventBackgroundColor = (event: Event) => {
+  if (isError(event)) {
+    return 'bg-red-500'
+  }
+  return eventBackgroundColorMap[event.entry.case || '']
+}
 
 const eventTextColorMap: Record<string, string> = {
   log: 'text-gray-500',
@@ -22,4 +27,19 @@ const eventTextColorMap: Record<string, string> = {
   '': 'text-gray-500',
 }
 
-export const eventTextColor = (event: Event) => eventTextColorMap[event.entry.case || '']
+export const eventTextColor = (event: Event) => {
+  if (isError(event)) {
+    return 'text-red-500'
+  }
+  return eventTextColorMap[event.entry.case || '']
+}
+
+const isError = (event: Event) => {
+  if (event.entry.case === 'call' && event.entry.value.error) {
+    return true
+  }
+  if (event.entry.case === 'ingress' && event.entry.value.error) {
+    return true
+  }
+  return false
+}
