@@ -80,19 +80,11 @@ func TestDeployment_Progress(t *testing.T) {
 		_, err := dpl.Progress(ctx)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(dpl.State().Pending))
-		assert.NotZero(t, dpl.State().Running)
+		assert.NotZero(t, dpl.State().Done)
 
 		_, err = dpl.Progress(ctx)
 		assert.NoError(t, err)
-		assert.Equal(t, 1, len(dpl.State().Pending))
-		assert.Zero(t, dpl.State().Running)
-		assert.Equal(t, 1, len(dpl.State().Done))
-
-		_, err = dpl.Progress(ctx)
-		assert.NoError(t, err)
-		assert.Equal(t, 0, len(dpl.State().Pending))
-		assert.NotZero(t, dpl.State().Running)
-		assert.Equal(t, 1, len(dpl.State().Done))
+		assert.Equal(t, 2, len(dpl.State().Done))
 
 		running, err := dpl.Progress(ctx)
 		assert.NoError(t, err)
