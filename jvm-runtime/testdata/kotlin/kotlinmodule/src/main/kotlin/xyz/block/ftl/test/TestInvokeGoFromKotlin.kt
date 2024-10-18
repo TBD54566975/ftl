@@ -198,3 +198,43 @@ fun stringAliasedType(type: CustomSerializedType): CustomSerializedType {
 fun anyAliasedType(type: AnySerializedType): AnySerializedType {
   return type
 }
+
+@Export
+@Verb
+fun typeEnumVerb(wrapper: AnimalWrapper, client: TypeEnumVerbClient): AnimalWrapper {
+  return if (wrapper.animal.isCat()) {
+    client.typeEnumVerb(AnimalWrapper(wrapper.animal.getCat()))
+  } else {
+    client.typeEnumVerb(AnimalWrapper(wrapper.animal.getDog()))
+  }
+}
+
+@Export
+@Verb
+fun valueEnumVerb(color: ColorWrapper, client: ValueEnumVerbClient): ColorWrapper {
+  return client.valueEnumVerb(color)
+}
+
+@Export
+@Verb
+fun stringEnumVerb(shape: ShapeWrapper, client: StringEnumVerbClient): ShapeWrapper {
+  return client.stringEnumVerb(shape)
+}
+
+@Export
+@Verb
+fun typeWrapperEnumVerb(wrapper: TypeEnumWrapper, client: TypeWrapperEnumVerbClient): TypeEnumWrapper {
+  return if (wrapper.type.isScalar()) {
+    client.typeWrapperEnumVerb(TypeEnumWrapper(StringList(listOf("a", "b", "c"))))
+  } else if (wrapper.type.isStringList()) {
+    client.typeWrapperEnumVerb(TypeEnumWrapper(Scalar("scalar")))
+  } else {
+    throw IllegalArgumentException("unexpected value")
+  }
+}
+
+//    @Export
+//    @Verb
+//    public Mixed mixedEnumVerb(Mixed mixed, MixedEnumVerbClient client) {
+//        return client.call(mixed);
+//    }
