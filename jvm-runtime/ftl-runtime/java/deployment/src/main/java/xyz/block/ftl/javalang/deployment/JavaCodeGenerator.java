@@ -393,7 +393,8 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             }
             // Negative implementation of isX, getX for other types
             dataBuilder.addMethod(makeIsMethod(variant.getKey(), false));
-            dataBuilder.addMethod(makeGetMethod(variant.getKey(), variant.getValue(), "throw new UnsupportedOperationException()"));
+            dataBuilder.addMethod(
+                    makeGetMethod(variant.getKey(), variant.getValue(), "throw new UnsupportedOperationException()"));
         }
     }
 
