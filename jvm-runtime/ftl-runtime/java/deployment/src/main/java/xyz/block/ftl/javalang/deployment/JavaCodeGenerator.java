@@ -145,7 +145,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
             for (var variant : ennum.getVariantsList()) {
                 // Interface has isX and getX methods for each variant
                 String name = variant.getName();
-                TypeName valueTypeName = variantValuesTypes.get(name);
+                TypeName valueType = variantValuesTypes.get(name);
                 interfaceBuilder.addMethod(MethodSpec.methodBuilder("is" + name)
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                         .addAnnotation(JsonIgnore.class)
@@ -154,7 +154,7 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                 interfaceBuilder.addMethod(MethodSpec.methodBuilder("get" + name)
                         .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                         .addAnnotation(JsonIgnore.class)
-                        .returns(valueTypeName)
+                        .returns(valueType)
                         .build());
 
                 if (variant.getValue().getTypeValue().getValue().hasRef()) {
@@ -169,17 +169,17 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
                             .addAnnotation(getGeneratedRefAnnotation(module.getName(), name))
                             .addAnnotation(AnnotationSpec.builder(EnumHolder.class).build())
                             .addModifiers(Modifier.PUBLIC, Modifier.FINAL);
-                    dataBuilder.addField(valueTypeName, "value", Modifier.PRIVATE, Modifier.FINAL);
+                    dataBuilder.addField(valueType, "value", Modifier.PRIVATE, Modifier.FINAL);
                     dataBuilder.addMethod(MethodSpec.constructorBuilder()
                             .addStatement("this.value = null")
                             .addModifiers(Modifier.PRIVATE)
                             .build());
                     dataBuilder.addMethod(MethodSpec.constructorBuilder()
-                            .addParameter(valueTypeName, "value")
+                            .addParameter(valueType, "value")
                             .addStatement("this.value = value")
                             .addModifiers(Modifier.PUBLIC)
                             .build());
-                    addTypeEnumInterfaceMethods(packageName, interfaceType, dataBuilder, name, valueTypeName,
+                    addTypeEnumInterfaceMethods(packageName, interfaceType, dataBuilder, name, valueType,
                             variantValuesTypes, false);
                     JavaFile javaFile = JavaFile.builder(packageName, dataBuilder.build())
                             .build();
