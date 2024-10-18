@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/types/optional"
+
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/encoding"
@@ -17,7 +19,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/observability"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/alecthomas/types/optional"
 )
 
 // Handler for a Verb.
