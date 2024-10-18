@@ -11,6 +11,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/TBD54566975/scaffolder"
+	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
 
@@ -69,7 +70,8 @@ func buildContextFromProto(proto *langpb.BuildContext) (buildContext, error) {
 }
 
 type Service struct {
-	updatesTopic *pubsub.Topic[updateEvent]
+	updatesTopic          *pubsub.Topic[updateEvent]
+	acceptsContextUpdates atomic.Value[bool]
 }
 
 var _ langconnect.LanguageServiceHandler = &Service{}
@@ -239,6 +241,9 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 
 	watcher := watch.NewWatcher(watchPatterns...)
 	if req.Msg.RebuildAutomatically {
+		s.acceptsContextUpdates.Store(true)
+		defer s.acceptsContextUpdates.Store(false)
+
 		if err := watchFiles(ctx, watcher, buildCtx, events); err != nil {
 			return err
 		}
@@ -287,6 +292,9 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 // Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
 // event with the updated build context id with "is_automatic_rebuild" as false.
 func (s *Service) BuildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
+	if !s.acceptsContextUpdates.Load() {
+		return nil, fmt.Errorf("plugin does not accept context updates because these is no build stream allowing rebuilds")
+	}
 	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return nil, err

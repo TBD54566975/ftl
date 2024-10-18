@@ -47,7 +47,6 @@ import (
 
 // TODO: Things to test:
 // - Broken build stream
-// - Sending build context updates without a build stream
 // - Multiple build streams
 
 var client *externalPluginImpl
@@ -82,6 +81,12 @@ func TestBuilds(t *testing.T) {
 		build(false, []string{}, sch, "build-once"),
 		waitForBuildToEnd(SUCCESS, "build-once", false, nil),
 
+		// Sending build context updates should fail if the plugin has no way to send back a build result
+		in.Fail(
+			sendUpdatedBuildContext("no-build-stream", []string{}, sch),
+			"expected error when sending build context update without a build stream",
+		),
+
 		// Build and enable rebuilding automatically
 		build(true, []string{}, sch, "build-and-watch"),
 		waitForBuildToEnd(SUCCESS, "build-and-watch", false, nil),
@@ -100,7 +105,6 @@ func TestBuilds(t *testing.T) {
 				return strings.Contains(verb.Verb.Name, "aaabbbccc")
 			})
 			assert.True(t, found, "expected verb name to be updated to include %q", "aaabbbccc")
-
 		}),
 
 		// Trigger an auto rebuild, but when we are told of the build being started, send a build context update
