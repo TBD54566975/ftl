@@ -58,11 +58,12 @@ const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to st
 func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
 	bindAllocator, err := bind.NewBindAllocator(s.Bind)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
 	return s.run(ctx, projConfig, optional.None[chan bool](), false, bindAllocator)
 }
 
+//nolint:maintidx
 func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], devMode bool, bindAllocator *bind.BindAllocator) error {
 	logger := log.FromContext(ctx)
 	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)

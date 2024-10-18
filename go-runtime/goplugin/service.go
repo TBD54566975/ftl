@@ -49,7 +49,7 @@ func (filesUpdatedEvent) updateEvent() {}
 
 // buildContext contains contextual information needed to build.
 type buildContext struct {
-	Id           string
+	ID           string
 	Config       moduleconfig.AbsModuleConfig
 	Schema       *schema.Schema
 	Dependencies []string
@@ -58,11 +58,11 @@ type buildContext struct {
 func buildContextFromProto(proto *langpb.BuildContext) (buildContext, error) {
 	sch, err := schema.FromProto(proto.Schema)
 	if err != nil {
-		return buildContext{}, err
+		return buildContext{}, fmt.Errorf("could not parse schema from proto: %w", err)
 	}
 	config := langpb.ModuleConfigFromProto(proto.ModuleConfig)
 	return buildContext{
-		Id:           proto.Id,
+		ID:           proto.Id,
 		Config:       config,
 		Schema:       sch,
 		Dependencies: proto.Dependencies,
@@ -107,7 +107,7 @@ type scaffoldingContext struct {
 	Replace   map[string]string
 }
 
-// Generates files for a new module with the requested name
+// CreateModule generates files for a new module with the requested name
 func (s *Service) CreateModule(ctx context.Context, req *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error) {
 	logger := log.FromContext(ctx)
 	flags := req.Msg.Flags.AsMap()
@@ -152,7 +152,7 @@ func (s *Service) CreateModule(ctx context.Context, req *connect.Request[langpb.
 	return connect.NewResponse(&langpb.CreateModuleResponse{}), nil
 }
 
-// Provide default values for ModuleConfig for values that are not configured in the ftl.toml file.
+// ModuleConfigDefaults provides default values for ModuleConfig for values that are not configured in the ftl.toml file.
 func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
 	deployDir := ".ftl"
 	watch := []string{"**/*.go", "go.mod", "go.sum"}
@@ -167,13 +167,12 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 	}), nil
 }
 
-// Extract dependencies for a module
-// FTL will ensure that these dependencies are built before requesting a build for this module.
+// GetDependencies extracts dependencies for a module
 func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
 	config := langpb.ModuleConfigFromProto(req.Msg.ModuleConfig)
 	deps, err := compile.ExtractDependencies(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not extract dependencies: %w", err)
 	}
 	return connect.NewResponse(&langpb.DependenciesResponse{
 		Modules: deps,
@@ -263,12 +262,12 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 		case e := <-events:
 			var isAutomaticRebuild bool
 			buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(ctx, buildCtx, events, e)
-			log.FromContext(ctx).Infof("Building (auto = %v) with context id: %s", isAutomaticRebuild, buildCtx.Id)
+			log.FromContext(ctx).Infof("Building (auto = %v) with context id: %s", isAutomaticRebuild, buildCtx.ID)
 			if isAutomaticRebuild {
 				err = stream.Send(&langpb.BuildEvent{
 					Event: &langpb.BuildEvent_AutoRebuildStarted{
 						AutoRebuildStarted: &langpb.AutoRebuildStarted{
-							ContextId: buildCtx.Id,
+							ContextId: buildCtx.ID,
 						},
 					},
 				})
@@ -286,8 +285,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	}
 }
 
-// While a Build call with "rebuild_automatically" set is active, BuildContextUpdated is called whenever the
-// build context is updated.
+// BuildContextUpdated is called whenever the build context is update while a Build call with "rebuild_automatically" is active.
 //
 // Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
 // event with the updated build context id with "is_automatic_rebuild" as false.
@@ -329,7 +327,7 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 	case <-time.After(3 * time.Second):
 		return fmt.Errorf("expected module added event, got no event")
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("context done: %w", ctx.Err())
 	}
 
 	go func() {
@@ -394,10 +392,10 @@ func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.Build
 		buildEvent = &langpb.BuildEvent{
 			Event: &langpb.BuildEvent_BuildFailure{
 				BuildFailure: &langpb.BuildFailure{
-					ContextId:          buildCtx.Id,
+					ContextId:          buildCtx.ID,
 					IsAutomaticRebuild: isAutomaticRebuild,
 					Errors: langpb.ErrorsToProto([]builderrors.Error{
-						builderrors.Errorf(builderrors.Position{}, err.Error()),
+						builderrors.Errorf(builderrors.Position{}, "%s", err.Error()),
 					}),
 					InvalidateDependencies: false,
 				},
@@ -411,7 +409,7 @@ func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.Build
 }
 
 func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction compile.ModifyFilesTransaction) (*langpb.BuildEvent, error) {
-	release, err := flock.Acquire(ctx, filepath.Join(buildCtx.Config.BuildLock), time.Second*1) //BuildLockTimeout)
+	release, err := flock.Acquire(ctx, buildCtx.Config.BuildLock, BuildLockTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire build lock: %w", err)
 	}
@@ -419,7 +417,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 
 	deps, err := compile.ExtractDependencies(buildCtx.Config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not extract dependencies: %w", err)
 	}
 
 	if !slices.Equal(islices.Sort(deps), islices.Sort(buildCtx.Dependencies)) {
@@ -427,7 +425,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 		return &langpb.BuildEvent{
 			Event: &langpb.BuildEvent_BuildFailure{
 				BuildFailure: &langpb.BuildFailure{
-					ContextId:              buildCtx.Id,
+					ContextId:              buildCtx.ID,
 					IsAutomaticRebuild:     isAutomaticRebuild,
 					InvalidateDependencies: true,
 				},
@@ -438,14 +436,14 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	// TODO: figure out buildEnv
 	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, transaction, []string{}, false)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not build: %w", err)
 	}
 	module, ok := m.Get()
 	if !ok {
 		return &langpb.BuildEvent{
 			Event: &langpb.BuildEvent_BuildFailure{
 				BuildFailure: &langpb.BuildFailure{
-					ContextId:              buildCtx.Id,
+					ContextId:              buildCtx.ID,
 					IsAutomaticRebuild:     isAutomaticRebuild,
 					Errors:                 langpb.ErrorsToProto(buildErrs),
 					InvalidateDependencies: false,
@@ -457,7 +455,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildSuccess{
 			BuildSuccess: &langpb.BuildSuccess{
-				ContextId:          buildCtx.Id,
+				ContextId:          buildCtx.ID,
 				IsAutomaticRebuild: isAutomaticRebuild,
 				Errors:             langpb.ErrorsToProto(buildErrs),
 				Module:             moduleProto,

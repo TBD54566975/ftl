@@ -69,7 +69,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 
 	bindAllocator, err := bind.NewBindAllocator(d.ServeCmd.Bind)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
 
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready

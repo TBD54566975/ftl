@@ -23,7 +23,7 @@ type GoPluginCLI struct {
 func main() {
 	var cli GoPluginCLI
 	kctx := kong.Parse(&cli,
-		kong.Description(`Go langauge plugin for FTL`),
+		kong.Description(`Go language plugin for FTL`),
 		kong.ShortUsageOnError(),
 		kong.HelpOptions{Compact: true, WrapUpperBound: 80},
 	)

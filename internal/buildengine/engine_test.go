@@ -16,9 +16,9 @@ import (
 func TestGraph(t *testing.T) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	bindUrl, err := url.Parse("http://127.0.0.1:8893")
+	bindURL, err := url.Parse("http://127.0.0.1:8893")
 	assert.NoError(t, err)
-	bindAllocator, err := bind.NewBindAllocator(bindUrl)
+	bindAllocator, err := bind.NewBindAllocator(bindURL)
 	assert.NoError(t, err)
 
 	engine, err := buildengine.New(ctx, nil, t.TempDir(), []string{"testdata/alpha", "testdata/other", "testdata/another"}, bindAllocator)

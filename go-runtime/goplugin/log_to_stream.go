@@ -1,6 +1,8 @@
 package goplugin
 
 import (
+	"fmt"
+
 	"connectrpc.com/connect"
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
@@ -18,7 +20,7 @@ func newLoggerForStream(level log.Level, stream *connect.ServerStream[langpb.Bui
 }
 
 func (s streamLogSink) Log(e log.Entry) error {
-	return s.stream.Send(&langpb.BuildEvent{
+	err := s.stream.Send(&langpb.BuildEvent{
 		Event: &langpb.BuildEvent_LogMessage{
 			LogMessage: &langpb.LogMessage{
 				Level:   langpb.LogLevelToProto(e.Level),
@@ -26,4 +28,8 @@ func (s streamLogSink) Log(e log.Entry) error {
 			},
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("could not stream log to FTL: %w", err)
+	}
+	return nil
 }
