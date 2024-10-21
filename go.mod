@@ -21,7 +21,7 @@ require (
 	github.com/amacneil/dbmate/v2 v2.21.0
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2 v1.32.2
-	github.com/aws/aws-sdk-go-v2/config v1.27.43
+	github.com/aws/aws-sdk-go-v2/config v1.28.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.41
 	github.com/aws/aws-sdk-go-v2/service/kms v1.37.2
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.2
@@ -62,7 +62,7 @@ require (
 	github.com/tliron/kutil v0.3.26
 	github.com/tmc/langchaingo v0.1.12
 	github.com/zalando/go-keyring v0.2.5
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.55.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0
 	go.opentelemetry.io/otel v1.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.31.0
@@ -164,7 +164,7 @@ require (
 	github.com/akamensky/base58 v0.0.0-20210829145138-ce8bf8802e8f
 	github.com/alecthomas/repr v0.4.0
 	github.com/alessio/shellescape v1.4.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.55.2
+	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.55.3
 	github.com/awslabs/goformation/v7 v7.14.9
 	github.com/benbjohnson/clock v1.3.5
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
