@@ -2,22 +2,14 @@ package buildengine
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/alecthomas/types/pubsub"
 
 	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
-type terminalUpdater struct{}
-
-func newTerminalUpdater(ctx context.Context, topic *pubsub.Topic[EngineEvent]) terminalUpdater {
-	updater := terminalUpdater{}
-
-	updater.run(ctx, topic)
-	return updater
-}
-
-func (b terminalUpdater) run(ctx context.Context, topic *pubsub.Topic[EngineEvent]) {
+func updateTerminalWithEngineEvents(ctx context.Context, topic *pubsub.Topic[EngineEvent]) {
 	events := make(chan EngineEvent, 64)
 	topic.Subscribe(events)
 
@@ -48,6 +40,9 @@ func (b terminalUpdater) run(ctx context.Context, topic *pubsub.Topic[EngineEven
 					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateDeployed)
 				case ModuleDeployFailed:
 					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateFailed)
+
+				case rawEngineEvent:
+					panic(fmt.Sprintf("unhandled event %T", event))
 				}
 			case <-ctx.Done():
 				return

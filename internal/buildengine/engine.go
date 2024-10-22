@@ -58,7 +58,7 @@ func copyMetaWithUpdatedDependencies(ctx context.Context, m moduleMeta) (moduleM
 	return m, nil
 }
 
-// Engine events are published as the engine builds and deploys modules.
+// EngineEvent is an event published by the engine as modules get built and deployed.
 //
 //sumtype:decl
 type EngineEvent interface {
@@ -107,7 +107,7 @@ type ModuleRemoved struct {
 func (ModuleRemoved) buildEvent()    {}
 func (ModuleRemoved) rawBuildEvent() {}
 
-// BuildStarted is published when a build is started for a module.
+// ModuleBuildStarted is published when a build has started for a module.
 type ModuleBuildStarted struct {
 	Config        moduleconfig.ModuleConfig
 	IsAutoRebuild bool
@@ -116,7 +116,7 @@ type ModuleBuildStarted struct {
 func (ModuleBuildStarted) buildEvent()    {}
 func (ModuleBuildStarted) rawBuildEvent() {}
 
-// BuildFailed is published for any build failures.
+// ModuleBuildFailed is published for any build failures.
 type ModuleBuildFailed struct {
 	Config        moduleconfig.ModuleConfig
 	Error         error
@@ -126,7 +126,7 @@ type ModuleBuildFailed struct {
 func (ModuleBuildFailed) buildEvent()    {}
 func (ModuleBuildFailed) rawBuildEvent() {}
 
-// BuildSuccess is published when all modules have been built successfully and deployed.
+// ModuleBuildSuccess is published when all modules have been built successfully built.
 type ModuleBuildSuccess struct {
 	Config        moduleconfig.ModuleConfig
 	IsAutoRebuild bool
@@ -135,7 +135,7 @@ type ModuleBuildSuccess struct {
 func (ModuleBuildSuccess) buildEvent()    {}
 func (ModuleBuildSuccess) rawBuildEvent() {}
 
-// ModuleDeployStarted is published when a deploy is started for a module.
+// ModuleDeployStarted is published when a deploy has begun for a module.
 type ModuleDeployStarted struct {
 	Module string
 }
@@ -152,7 +152,7 @@ type ModuleDeployFailed struct {
 func (ModuleDeployFailed) buildEvent()    {}
 func (ModuleDeployFailed) rawBuildEvent() {}
 
-// BuildSuccess is published when all modules have been built successfully and deployed.
+// ModuleDeploySuccess is published when all modules have been built successfully deployed.
 type ModuleDeploySuccess struct {
 	Module string
 }
@@ -250,7 +250,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		return nil, fmt.Errorf("failed to clean stubs: %w", err)
 	}
 
-	_ = newTerminalUpdater(ctx, e.BuildUpdates)
+	updateTerminalWithEngineEvents(ctx, e.BuildUpdates)
 
 	go e.watchForAutoRebuilds(ctx)
 	go e.watchForEventsToPublish(ctx)
@@ -522,7 +522,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 					}
 					e.moduleMetas.Store(config.Module, meta)
 					e.rawBuildUpdates <- ModuleAdded{Module: config.Module}
-					_ = e.BuildAndDeploy(ctx, 1, true, config.Module)
+					_ = e.BuildAndDeploy(ctx, 1, true, config.Module) //nolint:errcheck
 				}
 			case watch.WatchEventModuleRemoved:
 				err := terminateModuleDeployment(ctx, e.client, event.Config.Module)
@@ -559,7 +559,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				meta.module.Config = validConfig
 				e.moduleMetas.Store(event.Config.Module, meta)
 
-				_ = e.BuildAndDeploy(ctx, 1, true, event.Config.Module)
+				_ = e.BuildAndDeploy(ctx, 1, true, event.Config.Module) //nolint:errcheck
 			}
 		case change := <-schemaChanges:
 			if change.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
@@ -586,7 +586,7 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 			dependentModuleNames := e.getDependentModuleNames(change.Name)
 			if len(dependentModuleNames) > 0 {
 				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join(dependentModuleNames, ", "))
-				_ = e.BuildAndDeploy(ctx, 1, true, dependentModuleNames...)
+				_ = e.BuildAndDeploy(ctx, 1, true, dependentModuleNames...) //nolint:errcheck
 			}
 		}
 	}
