@@ -81,7 +81,9 @@ controller:
         protocol: TCP
         targetPort: 8891
 
-  podAnnotations: null
+  podAnnotations:
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
   nodeSelector: null
   affinity: null
   topologySpreadConstraints: null
@@ -134,7 +136,9 @@ provisioner:
         protocol: TCP
         targetPort: 8893
 
-  podAnnotations: null
+  podAnnotations:
+      proxy.istio.io/config: |
+        holdApplicationUntilProxyStarts: true
   nodeSelector: null
   affinity: null
   topologySpreadConstraints: null
@@ -183,7 +187,9 @@ runner:
       - port: 8893
         targetPort: 8893
 
-  podAnnotations: null
+  podAnnotations:
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
   nodeSelector: null
   affinity: null
   topologySpreadConstraints: null
