@@ -19,12 +19,12 @@ export const TimelineLogDetails = ({ log }: { event: Event; log: LogEvent }) => 
       <ul className='pt-4 space-y-2'>
         {log.requestKey && (
           <li>
-            <AttributeBadge name='Request' value={log.requestKey} />
+            <AttributeBadge name='request' value={log.requestKey} />
           </li>
         )}
         {log.error && (
           <li>
-            <AttributeBadge name='Error' value={log.error} />
+            <AttributeBadge name='error' value={log.error} />
           </li>
         )}
       </ul>

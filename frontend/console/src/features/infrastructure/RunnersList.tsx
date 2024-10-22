@@ -23,7 +23,7 @@ export const RunnersList = ({ runners }: { runners: StatusResponse_Runner[] }) =
             </div>
           </div>
           <div className='flex gap-x-4 items-center w-1/2'>
-            <div className='flex flex-wrap gap-1 justify-end'>
+            <div className='flex flex-wrap gap-2 justify-end'>
               {Object.entries(runner.labels?.fields || {}).map(([key, value]) => (
                 <AttributeBadge key={key} name={key} value={renderValue(value)} />
               ))}

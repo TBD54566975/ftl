@@ -23,7 +23,7 @@ export const DeploymentsList = ({ deployments }: { deployments: StatusResponse_D
             </div>
           </div>
           <div className='flex gap-x-4 items-center w-1/2 justify-end'>
-            <div className='flex flex-wrap gap-1'>
+            <div className='flex flex-wrap gap-2'>
               <AttributeBadge key='replicas' name='replicas' value={deployment.replicas.toString()} />
               <AttributeBadge key='min_replicas' name='min_replicas' value={deployment.minReplicas.toString()} />
               {Object.entries(deployment.labels?.fields || {}).map(([key, value]) => (

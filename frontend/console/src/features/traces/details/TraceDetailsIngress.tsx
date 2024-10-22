@@ -45,25 +45,25 @@ export const TraceDetailsIngress = ({ event }: { event: Event }) => {
 
       <ul className='pt-4 space-y-2'>
         <li>
-          <AttributeBadge name='Status' value={ingress.statusCode.toString()} />
+          <AttributeBadge name='status' value={ingress.statusCode.toString()} />
         </li>
         <li>
-          <AttributeBadge name='Method' value={ingress.method} />
+          <AttributeBadge name='method' value={ingress.method} />
         </li>
         <li>
-          <AttributeBadge name='Path' value={ingress.path} />
+          <AttributeBadge name='path' value={ingress.path} />
         </li>
         {ingress.requestKey && (
           <li>
-            <AttributeBadge name='Request' value={ingress.requestKey} />
+            <AttributeBadge name='request' value={ingress.requestKey} />
           </li>
         )}
         <li>
-          <AttributeBadge name='Duration' value={formatDuration(ingress.duration)} />
+          <AttributeBadge name='duration' value={formatDuration(ingress.duration)} />
         </li>
         {ingress.verbRef && (
           <li>
-            <AttributeBadge name='Verb' value={refString(ingress.verbRef)} />
+            <AttributeBadge name='verb' value={refString(ingress.verbRef)} />
           </li>
         )}
       </ul>

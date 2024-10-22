@@ -5,10 +5,11 @@ export interface AttributeBadgeProps {
 
 export const AttributeBadge = ({ name, value, ...props }: AttributeBadgeProps) => {
   return (
-    <span className='inline-flex items-center px-2 py-0.5 space-x-1 rounded-md text-sm bg-gray-100 dark:bg-slate-700' {...props}>
-      <span className='text-gray-500 dark:text-gray-400'>{name}</span>
-      <span>:</span>
-      <span className='text-gray-900 dark:text-gray-100 font-medium'>{value}</span>
-    </span>
+    <div className='inline-flex rounded-md text-xs font-medium' {...props}>
+      <span className='px-2 py-1 text-gray-400 bg-gray-100 border border-gray-200 dark:border-gray-600 rounded-s-md dark:bg-gray-700'>{name}</span>
+      <span className='px-2 py-1 text-gray-900 border-t border-b border-r border-gray-200 dark:border-gray-600 rounded-r-md dark:bg-gray-800 dark:text-white'>
+        {value}
+      </span>
+    </div>
   )
 }
