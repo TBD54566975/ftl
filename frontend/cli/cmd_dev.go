@@ -95,7 +95,6 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(true), buildengine.WithStartTime(startTime)}
 		if d.Lsp {
 			d.languageServer = lsp.NewServer(ctx)
-			opts = append(opts, buildengine.WithListener(d.languageServer))
 			ctx = log.ContextWithLogger(ctx, log.FromContext(ctx).AddSink(lsp.NewLogSink(d.languageServer)))
 			g.Go(func() error {
 				return d.languageServer.Run()
@@ -105,6 +104,9 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 		engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Build.Dirs, opts...)
 		if err != nil {
 			return err
+		}
+		if d.languageServer != nil {
+			d.languageServer.Subscribe(ctx, engine.BuildUpdates)
 		}
 		return engine.Dev(ctx, d.Watch)
 	})
