@@ -106,7 +106,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 			return err
 		}
 		if d.languageServer != nil {
-			d.languageServer.Subscribe(ctx, engine.BuildUpdates)
+			d.languageServer.Subscribe(ctx, engine.EngineUpdates)
 		}
 		return engine.Dev(ctx, d.Watch)
 	})

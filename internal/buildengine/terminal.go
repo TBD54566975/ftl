@@ -2,7 +2,6 @@ package buildengine
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/alecthomas/types/pubsub"
 
@@ -40,9 +39,6 @@ func updateTerminalWithEngineEvents(ctx context.Context, topic *pubsub.Topic[Eng
 					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateDeployed)
 				case ModuleDeployFailed:
 					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateFailed)
-
-				case rawEngineEvent:
-					panic(fmt.Sprintf("unhandled event %T", event))
 				}
 			case <-ctx.Done():
 				return
