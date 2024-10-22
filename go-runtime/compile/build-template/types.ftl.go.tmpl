@@ -1,4 +1,5 @@
 {{- $verbs := .Verbs -}}
+{{- $dbs := .Databases -}}
 {{- $name := .Name -}}
 {{- with .TypesCtx -}}
 {{- $moduleName := .MainModulePkg -}}
@@ -42,6 +43,11 @@ func init() {
 {{- range .ExternalTypes}}
 		reflection.ExternalType(*new({{.TypeName}})),
 {{- end}}
+{{- range $dbs}}
+		{{- if eq .Type "postgres" }}
+		reflection.Database[{{ trimModuleQualifier $moduleName .TypeName }}]("{{.Name}}", server.InitPostgres),
+		{{- end }}
+{{- end}}
 {{- range $verbs}}
 		reflection.ProvideResourcesForVerb(
             {{ trimModuleQualifier $moduleName .TypeName }},
@@ -58,6 +64,11 @@ func init() {
             	{{- else }}
             server.VerbClient[{{$verb}}, {{.Request.LocalTypeName}}, {{.Response.LocalTypeName}}](),
             	{{- end }}
+                {{- end }}
+                {{- with getDatabaseHandle . }}
+                	{{- if eq .Type "postgres" }}
+			server.PostgresDatabaseHandle[{{ trimModuleQualifier $moduleName .TypeName }}](),
+                	{{- end }}
                 {{- end }}
 			{{- end}}
 		),

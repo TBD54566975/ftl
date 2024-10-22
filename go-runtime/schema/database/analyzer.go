@@ -11,43 +11,76 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-const ftlPostgresDBFuncPath = "github.com/TBD54566975/ftl/go-runtime/ftl.PostgresDatabase"
-
 // Extractor extracts databases to the module schema.
-var Extractor = common.NewCallDeclExtractor[*schema.Database]("database", Extract, ftlPostgresDBFuncPath)
+var Extractor = common.NewResourceDeclExtractor[*schema.Database]("database", Extract, matchFunc)
 
-func Extract(pass *analysis.Pass, obj types.Object, node *ast.GenDecl, callExpr *ast.CallExpr,
-	callPath string) optional.Option[*schema.Database] {
+func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional.Option[*schema.Database] {
 	var comments []string
 	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
 		comments = md.Comments
 	}
-	if callPath == ftlPostgresDBFuncPath {
-		return extractDatabase(pass, callExpr, schema.PostgresDatabaseType, comments)
+	switch getDBType(pass, node) {
+	case postgres:
+		return extractDatabase(pass, obj, node, schema.PostgresDatabaseType, comments)
+	default:
+		return optional.None[*schema.Database]()
 	}
-	return optional.None[*schema.Database]()
 }
 
 func extractDatabase(
 	pass *analysis.Pass,
-	node *ast.CallExpr,
+	obj types.Object,
+	node *ast.TypeSpec,
 	dbType string,
 	comments []string,
 ) optional.Option[*schema.Database] {
-	name := common.ExtractStringLiteralArg(pass, node, 0)
-	if name == "" {
-		return optional.None[*schema.Database]()
-	}
-
-	if !schema.ValidateName(name) {
-		common.Errorf(pass, node, "invalid database name %q", name)
-		return optional.None[*schema.Database]()
-	}
-
-	return optional.Some(&schema.Database{
+	db := &schema.Database{
 		Pos:      common.GoPosToSchemaPos(pass.Fset, node.Pos()),
 		Comments: comments,
-		Name:     name,
 		Type:     dbType,
-	})
+	}
+
+	for _, cfg := range common.GetFactsForObject[*common.DatabaseConfig](pass, obj) {
+		if cfg.Method == common.DatabaseConfigMethodName {
+			name, ok := cfg.Value.(string)
+			if !ok {
+				common.Errorf(pass, node, "database name must be a string, was %T", cfg.Value)
+				return optional.None[*schema.Database]()
+			}
+			if !schema.ValidateName(name) {
+				common.Errorf(pass, node, "invalid database name %q", name)
+				return optional.None[*schema.Database]()
+			}
+			db.Name = name
+		}
+	}
+	if db.Name == "" {
+		common.Errorf(pass, node.Type, "database config must provide a name")
+		return optional.None[*schema.Database]()
+	}
+
+	return optional.Some(db)
+}
+
+func matchFunc(pass *analysis.Pass, node ast.Node) bool {
+	return getDBType(pass, node) != none
+}
+
+type dbType int
+
+const (
+	none dbType = iota
+	postgres
+)
+
+func getDBType(pass *analysis.Pass, node ast.Node) dbType {
+	ts := node.(*ast.TypeSpec) //nolint:forcetypeassert
+	typ, ok := common.GetTypeInfoForNode(ts.Name, pass.TypesInfo).Get()
+	if !ok {
+		return none
+	}
+	if common.IsPostgresDatabaseConfigType(pass, typ) {
+		return postgres
+	}
+	return none
 }

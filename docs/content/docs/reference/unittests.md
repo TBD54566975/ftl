@@ -60,19 +60,22 @@ ctx := ftltest.Context(
 ```
 
 ### Databases
-By default, calling `Get(ctx)` on a database panics.
-
 To enable database access in a test, you must first [provide a DSN via a project file](#project-files-configs-and-secrets). You can then set up a test database:
 ```go
 ctx := ftltest.Context(
     ftltest.WithDefaultProjectFile(),
-    ftltest.WithDatabase(db),
+    ftltest.WithDatabase[MyDBConfig](),
 )
 ```
 This will:
 - Take the provided DSN and appends `_test` to the database name. Eg: `accounts` becomes `accounts_test`
 - Wipe all tables in the database so each test run happens on a clean database
 
+You can access the database in your test using its handle:
+```go
+db, err := ftltest.GetDatabaseHandle[MyDBConfig]()
+db.Get(ctx).Exec(...)
+```
 
 ### Maps
 By default, calling `Get(ctx)` on a map handle will panic.
