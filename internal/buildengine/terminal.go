@@ -3,8 +3,9 @@ package buildengine
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/internal/terminal"
 	"github.com/alecthomas/types/pubsub"
+
+	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type terminalUpdater struct{}
