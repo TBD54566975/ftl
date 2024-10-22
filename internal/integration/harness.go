@@ -234,11 +234,15 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
 				assert.NoError(t, err)
 			}
-			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "wait-for-kube").RunBuffered(ctx)
-			assert.NoError(t, err)
 			kubeClient, err = k8sscaling.CreateClientSet()
 			assert.NoError(t, err)
 			kubeNamespace, err = k8sscaling.GetCurrentNamespace()
+			assert.NoError(t, err)
+			// We create the client before, as kube itself is up, we are just waiting for the deployments
+			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "wait-for-kube").RunBuffered(ctx)
+			if err != nil {
+				dumpKubePods(ctx, optional.Ptr(kubeClient), kubeNamespace)
+			}
 			assert.NoError(t, err)
 		} else {
 			Infof("Building ftl")
@@ -303,7 +307,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				kubeNamespace: kubeNamespace,
 				kubeClient:    optional.Ptr(kubeClient),
 			}
-			defer ic.dumpKubePods()
+			defer dumpKubePods(ctx, ic.kubeClient, ic.kubeNamespace)
 
 			if opts.startController || opts.kube {
 				ic.Controller = controller
@@ -490,10 +494,10 @@ func startProcess(ctx context.Context, t testing.TB, args ...string) context.Con
 	return ctx
 }
 
-func (i TestContext) dumpKubePods() {
-	if client, ok := i.kubeClient.Get(); ok {
+func dumpKubePods(ctx context.Context, kubeClient optional.Option[kubernetes.Clientset], kubeNamespace string) {
+	if client, ok := kubeClient.Get(); ok {
 		_ = os.RemoveAll(dumpPath) // #nosec
-		list, err := client.CoreV1().Pods(i.kubeNamespace).List(i, kubemeta.ListOptions{})
+		list, err := client.CoreV1().Pods(kubeNamespace).List(ctx, kubemeta.ListOptions{})
 		if err == nil {
 			for _, pod := range list.Items {
 				Infof("Dumping logs for pod %s", pod.Name)
@@ -515,15 +519,15 @@ func (i TestContext) dumpKubePods() {
 				}
 				for _, container := range pod.Spec.Containers {
 					path := filepath.Join(dumpPath, pod.Name, container.Name+".log")
-					req := client.CoreV1().Pods(i.kubeNamespace).GetLogs(pod.Name, &kubecore.PodLogOptions{Container: container.Name})
+					req := client.CoreV1().Pods(kubeNamespace).GetLogs(pod.Name, &kubecore.PodLogOptions{Container: container.Name})
 					podLogs, err := req.Stream(context.Background())
-					defer func() {
-						_ = podLogs.Close()
-					}()
 					if err != nil {
 						Infof("Error getting logs for pod %s: %v", pod.Name, err)
 						continue
 					}
+					defer func() {
+						_ = podLogs.Close()
+					}()
 					buf := new(bytes.Buffer)
 					_, err = io.Copy(buf, podLogs)
 					if err != nil {
