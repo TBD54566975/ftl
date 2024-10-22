@@ -112,8 +112,8 @@ func (s *Server) Subscribe(ctx context.Context, topic *pubsub.Topic[buildengine.
 					})
 
 				case buildengine.ModuleBuildSuccess, buildengine.ModuleBuildFailed, buildengine.ModuleAdded,
-					buildengine.ModuleRemoved, buildengine.ModuleDeployStarted, buildengine.ModuleDeploySuccess,
-					buildengine.ModuleDeployFailed:
+					buildengine.ModuleRemoved, buildengine.ModuleBuildWaiting, buildengine.ModuleDeployStarted,
+					buildengine.ModuleDeploySuccess, buildengine.ModuleDeployFailed:
 				}
 			}
 		}

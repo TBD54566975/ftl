@@ -26,7 +26,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/internal/terminal"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -105,6 +104,14 @@ type ModuleRemoved struct {
 
 func (ModuleRemoved) buildEvent()    {}
 func (ModuleRemoved) rawBuildEvent() {}
+
+// ModuleBuildWaiting is published when a build is waiting for dependencies to build
+type ModuleBuildWaiting struct {
+	Config moduleconfig.ModuleConfig
+}
+
+func (ModuleBuildWaiting) buildEvent()    {}
+func (ModuleBuildWaiting) rawBuildEvent() {}
 
 // ModuleBuildStarted is published when a build has started for a module.
 type ModuleBuildStarted struct {
@@ -642,6 +649,8 @@ func (e *Engine) watchForEventsToPublish(ctx context.Context) {
 				delete(moduleErrors, event.Module)
 				delete(explicitlyBuilding, event.Module)
 				delete(autoRebuilding, event.Module)
+			case ModuleBuildWaiting:
+
 			case ModuleBuildStarted:
 				if isIdle {
 					isIdle = false
@@ -732,8 +741,6 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 		return e.buildWithCallback(ctx, func(buildCtx context.Context, module Module) error {
 			buildGroup.Go(func() error {
 				e.modulesToBuild.Store(module.Config.Module, false)
-				terminal.UpdateModuleState(ctx, module.Config.Module, terminal.BuildStateDeploying)
-
 				e.rawEngineUpdates <- ModuleDeployStarted{Module: module.Config.Module}
 				err := Deploy(buildCtx, module, module.Deploy, replicas, waitForDeployOnline, e.client)
 				if err != nil {
@@ -776,7 +783,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		})
 	}
 
-	mustBuildChan := make(chan string, len(moduleNames))
+	mustBuildChan := make(chan moduleconfig.ModuleConfig, len(moduleNames))
 	wg := errgroup.Group{}
 	for _, name := range moduleNames {
 		wg.Go(func() error {
@@ -791,7 +798,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 			}
 
 			e.moduleMetas.Store(name, meta)
-			mustBuildChan <- name
+			mustBuildChan <- meta.module.Config
 			return nil
 		})
 	}
@@ -800,10 +807,9 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 	}
 	close(mustBuildChan)
 	mustBuild := map[string]bool{}
-	for name := range mustBuildChan {
-		mustBuild[name] = true
-
-		terminal.UpdateModuleState(ctx, name, terminal.BuildStateWaiting)
+	for config := range mustBuildChan {
+		mustBuild[config.Module] = true
+		e.rawEngineUpdates <- ModuleBuildWaiting{Config: config}
 	}
 
 	graph, err := e.Graph(moduleNames...)
@@ -847,7 +853,6 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 				ctx := log.ContextWithLogger(ctx, logger)
 				err := e.tryBuild(ctx, mustBuild, moduleName, builtModules, schemas, callback)
 				if err != nil {
-					terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 					errCh <- err
 				}
 				return nil
@@ -941,10 +946,8 @@ func (e *Engine) mustSchema(ctx context.Context, moduleName string, builtModules
 //
 // Assumes that all dependencies have been built and are available in "built".
 func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[string]*schema.Module, schemas chan<- *schema.Module) error {
-	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilding)
 	meta, ok := e.moduleMetas.Load(moduleName)
 	if !ok {
-		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 		return fmt.Errorf("module %q not found", moduleName)
 	}
 
@@ -956,7 +959,6 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		Dependencies: meta.module.Dependencies(Raw),
 	}, e.buildEnv, e.devMode)
 	if err != nil {
-		terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateFailed)
 		// TODO: handle errInvalidateDependencies
 		return err
 	}
@@ -968,8 +970,6 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		meta.module = meta.module.CopyWithDeploy(deploy)
 		return meta, false
 	})
-
-	terminal.UpdateModuleState(ctx, moduleName, terminal.BuildStateBuilt)
 	schemas <- moduleSchema
 	return nil
 }

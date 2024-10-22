@@ -26,6 +26,8 @@ func updateTerminalWithEngineEvents(ctx context.Context, topic *pubsub.Topic[Eng
 				case ModuleRemoved:
 					terminal.UpdateModuleState(ctx, event.Module, terminal.BuildStateTerminated)
 
+				case ModuleBuildWaiting:
+					terminal.UpdateModuleState(ctx, event.Config.Module, terminal.BuildStateWaiting)
 				case ModuleBuildStarted:
 					terminal.UpdateModuleState(ctx, event.Config.Module, terminal.BuildStateBuilding)
 				case ModuleBuildSuccess:
