@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/alecthomas/types/pubsub"
 	"github.com/puzpuzpuz/xsync/v3"
 	_ "github.com/tliron/commonlog/simple"
 	"github.com/tliron/glsp"
@@ -73,28 +74,50 @@ func (s *Server) Run() error {
 
 type errSet []builderrors.Error
 
-// OnBuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
-// Also emit an FTL message to set the status.
-func (s *Server) OnBuildStarted(module buildengine.Module) {
-	dirURI := "file://" + module.Config.Dir
+func (s *Server) Subscribe(ctx context.Context, topic *pubsub.Topic[buildengine.EngineEvent]) {
+	events := make(chan buildengine.EngineEvent, 64)
+	topic.Subscribe(events)
+	go func() {
+		defer topic.Unsubscribe(events)
+		for {
+			select {
+			case <-ctx.Done():
+				return
 
-	s.diagnostics.Range(func(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) bool {
-		if strings.HasPrefix(uri, dirURI) {
-			s.diagnostics.Delete(uri)
-			s.publishDiagnostics(uri, []protocol.Diagnostic{})
+			case event := <-events:
+				switch event := event.(type) {
+				case buildengine.EngineStarted:
+					s.publishBuildState(buildStateBuilding, nil)
+
+				case buildengine.EngineEnded:
+					if len(event.ModuleErrors) == 0 {
+						s.publishBuildState(buildStateSuccess, nil)
+						continue
+					}
+					errs := []error{}
+					for module, e := range event.ModuleErrors {
+						errs = append(errs, fmt.Errorf("%s: %w", module, e))
+					}
+					s.publishBuildState(buildStateFailure, errors.Join(errs...))
+
+				case buildengine.ModuleBuildStarted:
+					dirURI := "file://" + event.Config.Dir
+
+					s.diagnostics.Range(func(uri protocol.DocumentUri, diagnostics []protocol.Diagnostic) bool {
+						if strings.HasPrefix(uri, dirURI) {
+							s.diagnostics.Delete(uri)
+							s.publishDiagnostics(uri, []protocol.Diagnostic{})
+						}
+						return true
+					})
+
+				case buildengine.ModuleBuildSuccess, buildengine.ModuleBuildFailed, buildengine.ModuleAdded,
+					buildengine.ModuleRemoved, buildengine.ModuleBuildWaiting, buildengine.ModuleDeployStarted,
+					buildengine.ModuleDeploySuccess, buildengine.ModuleDeployFailed:
+				}
+			}
 		}
-		return true
-	})
-
-	s.publishBuildState(buildStateBuilding, nil)
-}
-
-func (s *Server) OnBuildSuccess() {
-	s.publishBuildState(buildStateSuccess, nil)
-}
-
-func (s *Server) OnBuildFailed(err error) {
-	s.publishBuildState(buildStateFailure, err)
+	}()
 }
 
 // Post sends diagnostics to the client.
