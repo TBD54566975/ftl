@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"text/template"
 
 	"github.com/alecthomas/kong"
 	"golang.org/x/tools/go/packages"
@@ -98,6 +97,26 @@ type File struct {
 	Decls   []Decl
 }
 
+// FindDecl finds a declaration by name or returns nil if not found.
+func (f *File) FindDecl(name string) Decl {
+	for _, decl := range f.Decls {
+		if decl.DeclName() == name {
+			return decl
+		}
+	}
+	return nil
+}
+
+func (f *File) KindOf(name string) Kind {
+	if _, ok := stdlibTypes[name]; ok {
+		return KindStdlib
+	}
+	if decl := f.FindDecl(name); decl != nil {
+		return decl.Kind()
+	}
+	return KindUnknown
+}
+
 func (f *File) AddImport(name string) {
 	for _, imp := range f.Imports {
 		if imp == name {
@@ -120,6 +139,7 @@ func (f File) OrderedDecls() []Decl {
 type Decl interface {
 	decl()
 	DeclName() string
+	Kind() Kind
 }
 
 type Message struct {
@@ -129,10 +149,23 @@ type Message struct {
 
 func (Message) decl()              {}
 func (m Message) DeclName() string { return m.Name }
+func (Message) Kind() Kind         { return KindMessage }
+
+type Kind string
+
+const (
+	KindUnknown Kind = ""        // unknown
+	KindMessage Kind = "message" // message
+	KindEnum    Kind = "enum"    // enum
+	KindSum     Kind = "sum"     // message with oneof field
+	KindStdlib  Kind = "stdlib"  // google.protobuf.* types
+	KindBuiltin Kind = "builtin" // int, uint, string, etc.
+)
 
 type Field struct {
 	ID       int
 	Name     string
+	Kind     Kind
 	Type     string
 	Optional bool
 	Repeated bool
@@ -153,6 +186,7 @@ func (e Enum) ByValue() map[int]string {
 
 func (Enum) decl()              {}
 func (e Enum) DeclName() string { return e.Name }
+func (Enum) Kind() Kind         { return KindEnum }
 
 type SumType struct {
 	Name  string
@@ -161,11 +195,12 @@ type SumType struct {
 
 func (SumType) decl()              {}
 func (s SumType) DeclName() string { return s.Name }
+func (SumType) Kind() Kind         { return KindSum }
 
 type Config struct {
 	Output  string            `help:"Output file to write generated protobuf schema to." short:"o"`
 	Options map[string]string `placeholder:"OPTION=VALUE" help:"Additional options to include in the generated protobuf schema. Note: strings must be double quoted." short:"O" mapsep:"\\0"`
-	// Mappers bool              `help:"Generate ToProto and FromProto mappers for each message." short:"m"`
+	Mappers bool              `help:"Generate ToProto and FromProto mappers for each message." short:"m"`
 
 	Package string   `arg:"" help:"Package name to use in the generated protobuf schema."`
 	Ref     []string `arg:"" help:"Type to generate protobuf schema from in the form PKG.TYPE. eg. github.com/foo/bar/waz.Waz or ./waz.Waz" required:"true" placeholder:"PKG.TYPE"`
@@ -229,6 +264,11 @@ func main() {
 	err = render(out, cli, file)
 	kctx.FatalIfErrorf(err)
 
+	if cli.Mappers {
+		err = renderMappers(resolved.Path, cli, file)
+		kctx.FatalIfErrorf(err)
+	}
+
 	if cli.Output != "" {
 		err = os.Rename(cli.Output+"~", cli.Output)
 	}
@@ -251,13 +291,6 @@ type PkgRefs struct {
 	Pkg      *packages.Package
 }
 
-type State struct {
-	Dest File
-	Seen map[string]bool
-	Config
-	*PkgRefs
-}
-
 func genErrorf(pos token.Pos, format string, args ...any) error {
 	err := fmt.Errorf(format, args...)
 	if gerr := new(GenError); errors.As(err, &gerr) {
@@ -266,67 +299,12 @@ func genErrorf(pos token.Pos, format string, args ...any) error {
 	return &GenError{pos: pos, err: err}
 }
 
-var tmpl = template.Must(template.New("proto").
-	Funcs(template.FuncMap{
-		"typeof":       func(t any) string { return reflect.Indirect(reflect.ValueOf(t)).Type().Name() },
-		"toLowerCamel": strcase.ToLowerCamel,
-		"toUpperCamel": strcase.ToUpperCamel,
-		"toLowerSnake": strcase.ToLowerSnake,
-		"toUpperSnake": strcase.ToUpperSnake,
-		"trimPrefix":   strings.TrimPrefix,
-	}).
-	Parse(`
-// THIS FILE IS GENERATED; DO NOT MODIFY
-syntax = "proto3";
-
-package {{ .Package }};
-{{ range .Imports }}
-import "{{.}}";
-{{- end}}
-{{ range $name, $value := .Options }}
-option {{ $name }} = {{ $value }};
-{{ end -}}
-
-{{ range $decl := .OrderedDecls }}
-{{- if eq (typeof $decl) "Message" }}
-message {{ .Name }} {
-{{- range $name, $field := .Fields }}
-	{{ if .Repeated }}repeated {{else if .Optional}}optional {{ end }}{{ .Type }} {{ .Name | toLowerSnake }} = {{ .ID }};
-{{- end }}
-}
-{{- else if eq (typeof $decl) "Enum" }}
-enum {{ .Name }} {
-{{- range $value, $name := .ByValue }}
-	{{ $name | toUpperSnake }} = {{ $value }};
-{{- end }}
-}
-{{- else if eq (typeof $decl) "SumType" }}
-{{ $sumtype := . }}
-message {{ .Name }}  {
-	oneof value {
-{{- range $name, $id := .Elems }}
-		{{ $name }} {{ trimPrefix $name $sumtype.Name | toLowerSnake }} = {{ $id }};
-{{- end }}
-	}
-}
-{{- end }}
-{{ end }}
-`))
-
-type RenderContext struct {
+// State is the intermediate state of the extraction process.
+type State struct {
+	Dest File
+	Seen map[string]bool
 	Config
-	File
-}
-
-func render(out *os.File, config Config, file File) error {
-	err := tmpl.Execute(out, RenderContext{
-		Config: config,
-		File:   file,
-	})
-	if err != nil {
-		return fmt.Errorf("template error: %w", err)
-	}
-	return nil
+	*PkgRefs
 }
 
 func extract(config Config, pkg *PkgRefs) (File, error) {
@@ -378,13 +356,14 @@ type builtinType struct {
 	path string
 }
 
-var builtinTypes = map[string]builtinType{
+// Types defined in the protobuf "standard library".
+var stdlibTypes = map[string]builtinType{
 	"time.Time":     {"google.protobuf.Timestamp", "google/protobuf/timestamp.proto"},
 	"time.Duration": {"google.protobuf.Duration", "google/protobuf/duration.proto"},
 }
 
 func (s *State) extractStruct(n *types.Named, t *types.Struct) error {
-	if imp, ok := builtinTypes[n.String()]; ok {
+	if imp, ok := stdlibTypes[n.String()]; ok {
 		s.Dest.AddImport(imp.path)
 		return nil
 	}
@@ -540,8 +519,9 @@ func (s *State) applyFieldType(t types.Type, field *Field) error {
 			return err
 		}
 		ref := t.Obj().Pkg().Path() + "." + t.Obj().Name()
-		if bt, ok := builtinTypes[ref]; ok {
+		if bt, ok := stdlibTypes[ref]; ok {
 			field.Type = bt.ref
+			field.Kind = KindMessage
 		} else {
 			field.Type = t.Obj().Name()
 		}
@@ -549,6 +529,7 @@ func (s *State) applyFieldType(t types.Type, field *Field) error {
 	case *types.Slice:
 		if t.Elem().String() == "byte" {
 			field.Type = "bytes"
+			field.Kind = KindBuiltin
 		} else {
 			field.Repeated = true
 			return s.applyFieldType(t.Elem(), field)
@@ -558,6 +539,7 @@ func (s *State) applyFieldType(t types.Type, field *Field) error {
 		return s.applyFieldType(t.Elem(), field)
 
 	default:
+		field.Kind = KindBuiltin
 		switch t.String() {
 		case "int":
 			field.Type = "int64"

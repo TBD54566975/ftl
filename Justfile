@@ -131,7 +131,9 @@ build-protos: pnpm-install
 
 # Generate .proto files from .go types.
 go2proto:
-  go2proto -o "{{SCHEMA_OUT}}" \
+  go2proto \
+    --mappers \
+    -o "{{SCHEMA_OUT}}" \
     -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb"' \
     -O 'java_multiple_files=true' \
     xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
