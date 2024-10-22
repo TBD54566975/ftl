@@ -120,20 +120,6 @@ func (s *Server) Subscribe(ctx context.Context, topic *pubsub.Topic[buildengine.
 	}()
 }
 
-// OnBuildStarted clears diagnostics for the given directory. New errors will arrive later if they still exist.
-// Also emit an FTL message to set the status.
-func (s *Server) OnBuildStarted(module buildengine.Module) {
-
-}
-
-func (s *Server) OnBuildSuccess() {
-	s.publishBuildState(buildStateSuccess, nil)
-}
-
-func (s *Server) OnBuildFailed(err error) {
-	s.publishBuildState(buildStateFailure, err)
-}
-
 // Post sends diagnostics to the client.
 func (s *Server) post(err error) {
 	errByFilename := make(map[string]errSet)
