@@ -251,7 +251,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 
 	updateTerminalWithEngineEvents(ctx, e.EngineUpdates)
 
-	go e.watchForAutoRebuilds(ctx)
+	go e.watchForPluginEvents(ctx)
 	go e.watchForEventsToPublish(ctx)
 
 	configs, err := watch.DiscoverModules(ctx, moduleDirs)
@@ -1039,12 +1039,11 @@ func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.Unvalida
 	}, nil
 }
 
-// listenForBuildUpdates listens for adhoc build updates and reports them to the listener.
+// watchForPluginEvents listens for build updates from language plugins and reports them to the listener.
 // These happen when a plugin for a module detects a change and automatically rebuilds.
-func (e *Engine) watchForAutoRebuilds(originalCtx context.Context) {
+func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 	for {
 		select {
-
 		case event := <-e.pluginEvents:
 			logger := log.FromContext(originalCtx).Module(event.ModuleName()).Scope("build")
 			ctx := log.ContextWithLogger(originalCtx, logger)
