@@ -24,10 +24,10 @@ controller:
 
   resources:
     requests:
-      memory: 256Mi
+      memory: 512Mi
       cpu: 10m
     limits:
-      memory: 256Mi
+      memory: 512Mi
       cpu: 2
 
   envFrom: null
