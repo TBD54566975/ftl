@@ -28,7 +28,6 @@ func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRoo
 	logger := log.FromContext(ctx).Module(bctx.Config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	logger.Infof("Building module")
 	stubsRoot := stubsLanguageDir(projectRootDir, bctx.Config.Language)
 	return handleBuildResult(ctx, bctx.Config, result.From(plugin.Build(ctx, projectRootDir, stubsRoot, bctx, buildEnv, devMode)))
 }
