@@ -14,17 +14,17 @@ export const TimelineDeploymentCreatedDetails = ({
 
       <ul className='pt-4 space-y-2'>
         <li>
-          <AttributeBadge name='Module' value={deployment.moduleName} />
+          <AttributeBadge name='module' value={deployment.moduleName} />
         </li>
         <li>
-          <AttributeBadge name='Language' value={deployment.language} />
+          <AttributeBadge name='language' value={deployment.language} />
         </li>
         <li>
-          <AttributeBadge name='MinReplicas' value={deployment.minReplicas.toString()} />
+          <AttributeBadge name='min_replicas' value={deployment.minReplicas.toString()} />
         </li>
         {deployment.replaced && (
           <li>
-            <AttributeBadge name='Replaced' value={deployment.replaced} />
+            <AttributeBadge name='replaced' value={deployment.replaced} />
           </li>
         )}
       </ul>

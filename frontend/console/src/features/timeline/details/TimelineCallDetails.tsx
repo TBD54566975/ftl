@@ -45,20 +45,20 @@ export const TimelineCallDetails = ({ event }: { event: Event }) => {
       <ul className='pt-4 space-y-2'>
         {call.requestKey && (
           <li>
-            <AttributeBadge name='Request' value={call.requestKey} />
+            <AttributeBadge name='request' value={call.requestKey} />
           </li>
         )}
         <li>
-          <AttributeBadge name='Duration' value={formatDuration(call.duration)} />
+          <AttributeBadge name='duration' value={formatDuration(call.duration)} />
         </li>
         {call.destinationVerbRef && (
           <li>
-            <AttributeBadge name='Destination' value={refString(call.destinationVerbRef)} />
+            <AttributeBadge name='destination' value={refString(call.destinationVerbRef)} />
           </li>
         )}
         {call.sourceVerbRef && (
           <li>
-            <AttributeBadge name='Source' value={refString(call.sourceVerbRef)} />
+            <AttributeBadge name='source' value={refString(call.sourceVerbRef)} />
           </li>
         )}
       </ul>

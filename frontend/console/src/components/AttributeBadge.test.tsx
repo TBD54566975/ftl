@@ -7,12 +7,11 @@ describe('AttributeBadge', () => {
     render(<AttributeBadge name='Role' value='Admin' />)
     expect(screen.getByText('Role')).toBeInTheDocument()
     expect(screen.getByText('Admin')).toBeInTheDocument()
-    expect(screen.getByText(':')).toBeInTheDocument()
   })
 
   it('passes additional props to the span element', () => {
     const { container } = render(<AttributeBadge name='Role' value='Admin' data-testid='badge' />)
-    const spanElement = container.querySelector('span')
+    const spanElement = container.querySelector('div')
     expect(spanElement).toHaveAttribute('data-testid', 'badge')
   })
 })

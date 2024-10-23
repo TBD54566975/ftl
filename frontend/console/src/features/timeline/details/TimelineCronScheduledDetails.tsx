@@ -22,21 +22,21 @@ export const TimelineCronScheduledDetails = ({ event }: { event: Event }) => {
 
         <ul className='pt-4 space-y-2'>
           <li>
-            <AttributeBadge name='Duration' value={formatDuration(cron.duration)} />
+            <AttributeBadge name='duration' value={formatDuration(cron.duration)} />
           </li>
           {cron.verbRef && (
             <li>
-              <AttributeBadge name='Destination' value={refString(cron.verbRef)} />
+              <AttributeBadge name='destination' value={refString(cron.verbRef)} />
             </li>
           )}
           {cron.schedule && (
             <li>
-              <AttributeBadge name='Schedule' value={cron.schedule} />
+              <AttributeBadge name='schedule' value={cron.schedule} />
             </li>
           )}
           {cron.scheduledAt && (
             <li>
-              <AttributeBadge name='Scheduled for' value={formatTimestampShort(cron.scheduledAt)} />
+              <AttributeBadge name='scheduled for' value={formatTimestampShort(cron.scheduledAt)} />
             </li>
           )}
         </ul>

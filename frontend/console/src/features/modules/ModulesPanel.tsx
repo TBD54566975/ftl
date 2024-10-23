@@ -31,7 +31,7 @@ export const ModulesPanel = () => {
               </div>
             </div>
             <div className='flex gap-x-4 items-center w-1/2 justify-end'>
-              <div className='flex flex-wrap gap-1'>
+              <div className='flex flex-wrap gap-2'>
                 <AttributeBadge name='language' value={module.language} />
               </div>
             </div>
