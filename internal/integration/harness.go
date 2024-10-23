@@ -244,6 +244,8 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				dumpKubePods(ctx, optional.Ptr(kubeClient), kubeNamespace)
 			}
 			assert.NoError(t, err)
+			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "docker", "system", "prune", "-f").RunBuffered(ctx)
+			assert.NoError(t, err)
 		} else {
 			Infof("Building ftl")
 			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
