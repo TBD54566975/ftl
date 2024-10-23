@@ -7,7 +7,7 @@ version: 0.0.1
 appVersion: 0.0.1
 dependencies:
   - name: postgresql
-    version: 15.5.38
+    version: 16.0.5
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: postgresql.enabled
   - name: harbor
