@@ -166,6 +166,12 @@ type ModuleDeploySuccess struct {
 func (ModuleDeploySuccess) buildEvent()    {}
 func (ModuleDeploySuccess) rawBuildEvent() {}
 
+// invalidateDependenciesEvent is published when a module needs to be rebuilt when a module
+// failed to buuld due to a change in dependencies.
+type invalidateDependenciesEvent struct {
+	module string
+}
+
 // Engine for building a set of modules.
 type Engine struct {
 	client           DeployClient
@@ -185,6 +191,8 @@ type Engine struct {
 
 	// events coming in from plugins
 	pluginEvents chan languageplugin.PluginEvent
+
+	invalidateDeps chan invalidateDependenciesEvent
 
 	// internal channel for raw engine updates (does not include all state changes)
 	rawEngineUpdates chan rawEngineEvent
@@ -241,6 +249,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		pluginEvents:     make(chan languageplugin.PluginEvent, 128),
 		parallelism:      runtime.NumCPU(),
 		modulesToBuild:   xsync.NewMapOf[string, bool](),
+		invalidateDeps:   make(chan invalidateDependenciesEvent, 128),
 		rawEngineUpdates: make(chan rawEngineEvent, 128),
 		EngineUpdates:    pubsub.New[EngineEvent](),
 	}
@@ -594,6 +603,9 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				logger.Infof("%s's schema changed; processing %s", change.Name, strings.Join(dependentModuleNames, ", "))
 				_ = e.BuildAndDeploy(ctx, 1, true, dependentModuleNames...) //nolint:errcheck
 			}
+
+		case event := <-e.invalidateDeps:
+			_ = e.BuildAndDeploy(ctx, 1, true, event.module) //nolint:errcheck
 		}
 	}
 }
@@ -959,7 +971,11 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		Dependencies: meta.module.Dependencies(Raw),
 	}, e.buildEnv, e.devMode)
 	if err != nil {
-		// TODO: handle errInvalidateDependencies
+		if errors.Is(err, errInvalidateDependencies) {
+			// Do not start a build directly as we are already building out a graph of modules.
+			// Instead we send to a chan so that it can be processed after.
+			e.invalidateDeps <- invalidateDependenciesEvent{module: moduleName}
+		}
 		return err
 	}
 	// update files to deploy
@@ -1060,6 +1076,11 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 				_, deploy, err := handleBuildResult(ctx, meta.module.Config, event.Result)
 				if err != nil {
 					e.rawEngineUpdates <- ModuleBuildFailed{Config: meta.module.Config, IsAutoRebuild: true, Error: err}
+					if errors.Is(err, errInvalidateDependencies) {
+						// Do not block this goroutine by building a module here.
+						// Instead we send to a chan so that it can be processed elsewhere.
+						e.invalidateDeps <- invalidateDependenciesEvent{module: event.ModuleName()}
+					}
 					continue
 				}
 				e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
