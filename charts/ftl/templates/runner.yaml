@@ -43,6 +43,14 @@ data:
           containers:
             - name: app
               image: "(replaced)"
+              imagePullPolicy: {{ .Values.runner.image.pullPolicy }}
+              resources:
+                limits:
+                  cpu: "{{ .Values.runner.resources.limits.cpu }}"
+                  memory: "{{ .Values.runner.resources.limits.memory }}"
+                requests:
+                  cpu: "{{ .Values.runner.resources.requests.cpu }}"
+                  memory: "{{ .Values.runner.resources.requests.memory }}"
               {{- if .Values.runner.envFrom }}
               envFrom:
                 {{- toYaml .Values.runner.envFrom | nindent 16 }}
