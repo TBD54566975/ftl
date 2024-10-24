@@ -22,7 +22,7 @@ func (c *gooseCmd) Run(ctx context.Context) error {
 	args := []string{"goose", "run"}
 	if first {
 		first = false
-		data = "You are working with a system called FTL within an existing project, the docs are at https://github.com/TBD54566975/ftl/tree/main/docs/content/docs/reference. You can verify that the project builds via ftl build. Files that end in .ftl.go are auto generated and must not be modified. You can interact with the FTL cluster using the FTL command, run ftl --help for more details. " + data
+		data = "You are working with a system called FTL within an existing project, the docs are at https://raw.githubusercontent.com/michaelneale/ftl-goosehints/refs/heads/main/ftl.txt, please read the docs before doing anything else. You can verify that the project builds via ftl build. Files that end in .ftl.go are auto generated and must not be modified. You can interact with the FTL cluster using the FTL command, run ftl --help for more details. You should not create a new ftl project, module or directory unless explicitly asked. " + data
 	} else {
 		args = append(args, "--resume-session")
 	}
