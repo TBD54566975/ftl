@@ -247,6 +247,7 @@ type Service struct {
 	identity   *identity.Store
 	lock       sync.Mutex
 	deployment atomic.Value[optional.Option[*deployment]]
+	readyTime  atomic.Value[time.Time]
 
 	config           Config
 	controllerClient ftlv1connect.ControllerServiceClient
@@ -363,6 +364,7 @@ func (s *Service) deploy(ctx context.Context) error {
 	}
 
 	dep := s.makeDeployment(cmdCtx, key, deployment)
+	s.readyTime.Store(time.Now().Add(time.Second * 2)) // Istio is a bit flakey, add a small delay for readiness
 	s.deployment.Store(optional.Some(dep))
 	logger.Debugf("Deployed %s", key)
 	context.AfterFunc(ctx, func() {
@@ -525,6 +527,10 @@ func (s *Service) getDeploymentLogger(ctx context.Context, deploymentKey model.D
 
 func (s *Service) healthCheck(writer http.ResponseWriter, request *http.Request) {
 	if s.deployment.Load().Ok() {
+		if s.readyTime.Load().After(time.Now()) {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
 		writer.WriteHeader(http.StatusOK)
 		return
 	}
