@@ -122,10 +122,6 @@ func (p *externalPluginImpl) kill() error {
 	return nil
 }
 
-func (p *externalPluginImpl) err() chan error {
-	return p.cmdErr
-}
-
 func (p *externalPluginImpl) getCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
 	select {
 	case err := <-p.cmdErr:
