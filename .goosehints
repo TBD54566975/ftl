@@ -1,0 +1,133 @@
+# FTL Build and Test Instructions
+
+## Prerequisites
+
+1. Install OrbStack (recommended over Docker desktop):
+   ```bash
+   brew install orbstack
+   ```
+
+2. Activate Hermit environment:
+   ```bash
+   . ./bin/activate-hermit
+   ```
+
+3. Install dependencies:
+   ```bash
+   hermit install
+   ```
+
+## Development Environment Setup
+
+### IDE Setup
+- For IDEA: Install the Hermit IDEA plugin
+- For VSCode: Start from activated Hermit environment:
+  ```bash
+  . ./bin/activate-hermit
+  code .
+  ```
+
+## Building
+
+### Standard Build
+```bash
+just build ftl
+```
+
+### Debug Build
+```bash
+FTL_DEBUG=true just build ftl
+```
+
+### Live Rebuild (for local testing)
+```bash
+just live-rebuild
+```
+
+## Running
+
+### Development Mode
+```bash
+ftl dev --recreate ./examples/go
+```
+
+### With OpenTelemetry
+1. Start OTEL stack:
+   ```bash
+   just observe
+   ```
+
+2. Run FTL with OTEL:
+   ```bash
+   just otel-dev
+   ```
+
+## Debugging
+
+### Using Delve
+
+1. Start debug session:
+   ```bash
+   just debug <args>
+   ```
+   This provides a debug endpoint at 127.0.0.1:2345
+
+2. Attach debugger:
+   - IntelliJ: Run "Debug FTL" from Run/Debug Configurations
+   - VSCode: Run "Debug FTL" from Run and Debug dropdown
+
+## Testing Local Changes
+
+1. Start live rebuild:
+   ```bash
+   just live-rebuild
+   ```
+
+2. In another terminal, test against a separate project:
+   ```bash
+   ${FTL_HOME}/build/release/ftl dev
+   ```
+
+## VSCode Extension Development
+
+### Building
+```bash
+just build-extension
+```
+
+### Packaging
+```bash
+just package-extension
+```
+
+### Publishing
+```bash
+just publish-extension
+```
+
+## Database Changes
+
+1. Generate SQL code:
+   ```bash
+   just build-sqlc
+   ```
+
+2. Create new migration:
+   ```bash
+   dbmate new <migration_name>
+   ```
+
+## Useful Tips
+
+- Use `rg` (ripgrep) for searching code:
+  ```bash
+  # Find files by name
+  rg --files | rg example.py
+  
+  # Search content
+  rg 'class Example'
+  ```
+
+- Access Grafana dashboard at http://localhost:3000 when running OTEL stack
+
+- For local testing, always run FTL from the project root directory
