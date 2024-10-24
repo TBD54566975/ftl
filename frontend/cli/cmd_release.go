@@ -4,13 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/slices"
 
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	internalobservability "github.com/TBD54566975/ftl/internal/observability"
 	sh "github.com/TBD54566975/ftl/internal/sha256"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 type releaseCmd struct {
