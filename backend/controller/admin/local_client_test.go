@@ -4,13 +4,11 @@ package admin
 
 import (
 	"context"
-	"net/url"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/bind"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
@@ -22,13 +20,8 @@ import (
 
 func getDiskSchema(t testing.TB, ctx context.Context) (*schema.Schema, error) {
 	t.Helper()
-
-	bindURL, err := url.Parse("http://127.0.0.1:8893")
-	assert.NoError(t, err)
-	bindAllocator, err := bind.NewBindAllocator(bindURL)
-	assert.NoError(t, err)
 	dsr := &diskSchemaRetriever{}
-	return dsr.GetActiveSchema(ctx, optional.Some(bindAllocator))
+	return dsr.GetActiveSchema(ctx)
 }
 
 func TestDiskSchemaRetrieverWithBuildArtefact(t *testing.T) {
@@ -76,10 +69,10 @@ func TestAdminNoValidationWithNoSchema(t *testing.T) {
 	assert.NoError(t, err)
 
 	dsr := &diskSchemaRetriever{deployRoot: optional.Some(string(t.TempDir()))}
-	_, err = dsr.GetActiveSchema(ctx, optional.None[*bind.BindAllocator]())
+	_, err = dsr.GetActiveSchema(ctx)
 	assert.Error(t, err)
 
-	admin := NewAdminService(cm, sm, dsr, optional.None[*bind.BindAllocator]())
+	admin := NewAdminService(cm, sm, dsr)
 	testSetConfig(t, ctx, admin, "batmobile", "color", "Red", "")
 	testSetSecret(t, ctx, admin, "batmobile", "owner", 99, "")
 }

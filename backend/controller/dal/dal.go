@@ -23,7 +23,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
 	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -584,7 +583,7 @@ func (d *DAL) GetActiveDeployments(ctx context.Context) ([]dalmodel.Deployment, 
 }
 
 // GetActiveSchema returns the schema for all active deployments.
-func (d *DAL) GetActiveSchema(ctx context.Context, bindAllocator optional.Option[*bind.BindAllocator]) (*schema.Schema, error) {
+func (d *DAL) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 	deployments, err := d.GetActiveDeployments(ctx)
 	if err != nil {
 		return nil, err

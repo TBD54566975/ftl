@@ -13,7 +13,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/routers"
@@ -87,15 +86,7 @@ func setUpAdminClient(ctx context.Context, config projectconfig.Config) (ctxOut 
 			return ctx, client, fmt.Errorf("could not create secrets manager: %w", err)
 		}
 		ctx = manager.ContextWithSecrets(ctx, sm)
-
-		// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
-		bindAllocator, err := bind.NewBindAllocator(cli.Endpoint)
-		if err != nil {
-			return ctx, client, fmt.Errorf("could not create bind allocator: %w", err)
-		}
-		_ = bindAllocator.Next()
-
-		return ctx, admin.NewLocalClient(cm, sm, bindAllocator), nil
+		return ctx, admin.NewLocalClient(cm, sm), nil
 	}
 	return ctx, adminServiceClient, nil
 }

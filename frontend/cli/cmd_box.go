@@ -132,7 +132,7 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	}
 	_ = bindAllocator.Next()
 
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Build.Dirs, bindAllocator, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
+	engine, err := buildengine.New(ctx, client, projConfig, b.Build.Dirs, bindAllocator, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 			return err
 		}
 		files = append(files, filepath.Join(config.Dir, "ftl.toml"))
-		files = append(files, config.Schema())
+		files = append(files, projConfig.SchemaPath(config.Module))
 		for _, file := range files {
 			relFile, err := filepath.Rel(config.Dir, file)
 			if err != nil {

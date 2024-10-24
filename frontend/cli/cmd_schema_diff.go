@@ -127,7 +127,7 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config, bindAl
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](err)
 			}
-			module, err := schema.ModuleFromProtoFile(config.Abs().Schema())
+			module, err := schema.ModuleFromProtoFile(projectConfig.SchemaPath(config.Module))
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](err)
 				return

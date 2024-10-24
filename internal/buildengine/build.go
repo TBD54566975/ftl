@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/alecthomas/types/result"
@@ -14,6 +15,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
@@ -24,16 +26,16 @@ var errInvalidateDependencies = errors.New("dependencies need to be updated")
 // Plugins must use a lock file to ensure that only one build is running at a time.
 //
 // Returns invalidateDependenciesError if the build failed due to a change in dependencies.
-func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectRootDir string, bctx languageplugin.BuildContext, buildEnv []string, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
+func build(ctx context.Context, plugin languageplugin.LanguagePlugin, projectConfig projectconfig.Config, bctx languageplugin.BuildContext, buildEnv []string, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx).Module(bctx.Config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
-	stubsRoot := stubsLanguageDir(projectRootDir, bctx.Config.Language)
-	return handleBuildResult(ctx, bctx.Config, result.From(plugin.Build(ctx, projectRootDir, stubsRoot, bctx, buildEnv, devMode)))
+	stubsRoot := stubsLanguageDir(projectConfig.Root(), bctx.Config.Language)
+	return handleBuildResult(ctx, projectConfig, bctx.Config, result.From(plugin.Build(ctx, projectConfig.Root(), stubsRoot, bctx, buildEnv, devMode)))
 }
 
 // handleBuildResult processes the result of a build
-func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherResult result.Result[languageplugin.BuildResult]) (moduleSchema *schema.Module, deploy []string, err error) {
+func handleBuildResult(ctx context.Context, projectConfig projectconfig.Config, c moduleconfig.ModuleConfig, eitherResult result.Result[languageplugin.BuildResult]) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx)
 	config := c.Abs()
 
@@ -66,7 +68,12 @@ func handleBuildResult(ctx context.Context, c moduleconfig.ModuleConfig, eitherR
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal schema: %w", err)
 	}
-	if err := os.WriteFile(config.Schema(), schemaBytes, 0600); err != nil {
+	schemaPath := projectConfig.SchemaPath(config.Module)
+	err = os.MkdirAll(filepath.Dir(schemaPath), 0700)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create schema directory: %w", err)
+	}
+	if err := os.WriteFile(schemaPath, schemaBytes, 0600); err != nil {
 		return nil, nil, fmt.Errorf("failed to write schema: %w", err)
 	}
 	return result.Schema, result.Deploy, nil

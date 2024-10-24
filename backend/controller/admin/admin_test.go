@@ -13,7 +13,6 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
@@ -36,7 +35,7 @@ func TestAdminService(t *testing.T) {
 			providers.Inline[configuration.Secrets]{},
 		})
 	assert.NoError(t, err)
-	admin := NewAdminService(cm, sm, &diskSchemaRetriever{}, optional.None[*bind.BindAllocator]())
+	admin := NewAdminService(cm, sm, &diskSchemaRetriever{})
 	assert.NotZero(t, admin)
 
 	expectedEnvarValue, err := json.MarshalIndent(map[string]string{"bar": "barfoo"}, "", "  ")
@@ -200,7 +199,7 @@ var testSchema = schema.MustValidate(&schema.Schema{
 type mockSchemaRetriever struct {
 }
 
-func (d *mockSchemaRetriever) GetActiveSchema(ctx context.Context, bindAllocator optional.Option[*bind.BindAllocator]) (*schema.Schema, error) {
+func (d *mockSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 	return testSchema, nil
 }
 
@@ -218,7 +217,7 @@ func TestAdminValidation(t *testing.T) {
 			providers.Inline[configuration.Secrets]{},
 		})
 	assert.NoError(t, err)
-	admin := NewAdminService(cm, sm, &mockSchemaRetriever{}, optional.None[*bind.BindAllocator]())
+	admin := NewAdminService(cm, sm, &mockSchemaRetriever{})
 	assert.NotZero(t, admin)
 
 	testSetConfig(t, ctx, admin, "batmobile", "color", "Black", "")

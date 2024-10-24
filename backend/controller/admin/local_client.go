@@ -7,8 +7,6 @@ import (
 	"github.com/alecthomas/types/either"
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/internal/bind"
-	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/errors"
@@ -30,15 +28,11 @@ type diskSchemaRetriever struct {
 }
 
 // NewLocalClient creates a admin client that reads and writes from the provided config and secret managers
-func NewLocalClient(cm *manager.Manager[cf.Configuration], sm *manager.Manager[cf.Secrets], bindAllocator *bind.BindAllocator) Client {
-	return &localClient{NewAdminService(cm, sm, &diskSchemaRetriever{}, optional.Some(bindAllocator))}
+func NewLocalClient(cm *manager.Manager[cf.Configuration], sm *manager.Manager[cf.Secrets]) Client {
+	return &localClient{NewAdminService(cm, sm, &diskSchemaRetriever{})}
 }
 
-func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context, bAllocator optional.Option[*bind.BindAllocator]) (*schema.Schema, error) {
-	bindAllocator, ok := bAllocator.Get()
-	if !ok {
-		return nil, fmt.Errorf("no bind allocator available")
-	}
+func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context) (*schema.Schema, error) {
 	path, ok := projectconfig.DefaultConfigPath().Get()
 	if !ok {
 		return nil, fmt.Errorf("no project config path available")
@@ -57,23 +51,7 @@ func (s *diskSchemaRetriever) GetActiveSchema(ctx context.Context, bAllocator op
 
 	for _, m := range modules {
 		go func() {
-			// Loading a plugin can be expensive. Is there a better way?
-			plugin, err := languageplugin.New(ctx, bindAllocator, m.Language)
-			if err != nil {
-				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not load plugin for %s: %w", m.Module, err))
-			}
-			defer plugin.Kill() // nolint:errcheck
-
-			customDefaults, err := plugin.ModuleConfigDefaults(ctx, m.Dir)
-			if err != nil {
-				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not get module config defaults for %s: %w", m.Module, err))
-			}
-
-			config, err := m.FillDefaultsAndValidate(customDefaults)
-			if err != nil {
-				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not validate module config for %s: %w", m.Module, err))
-			}
-			module, err := schema.ModuleFromProtoFile(config.Abs().Schema())
+			module, err := schema.ModuleFromProtoFile(projConfig.SchemaPath(m.Module))
 			if err != nil {
 				moduleSchemas <- either.RightOf[*schema.Module](fmt.Errorf("could not load module schema: %w", err))
 				return

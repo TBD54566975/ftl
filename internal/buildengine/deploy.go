@@ -17,6 +17,7 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
@@ -39,7 +40,7 @@ type DeployClient interface {
 }
 
 // Deploy a module to the FTL controller with the given number of replicas. Optionally wait for the deployment to become ready.
-func Deploy(ctx context.Context, module Module, deploy []string, replicas int32, waitForDeployOnline bool, client DeployClient) error {
+func Deploy(ctx context.Context, projectConfig projectconfig.Config, module Module, deploy []string, replicas int32, waitForDeployOnline bool, client DeployClient) error {
 	logger := log.FromContext(ctx).Module(module.Config.Module).Scope("deploy")
 	ctx = log.ContextWithLogger(ctx, logger)
 	logger.Infof("Deploying module")
@@ -61,9 +62,9 @@ func Deploy(ctx context.Context, module Module, deploy []string, replicas int32,
 		return fmt.Errorf("failed to get artefact diffs: %w", err)
 	}
 
-	moduleSchema, err := loadProtoSchema(moduleConfig, replicas)
+	moduleSchema, err := loadProtoSchema(projectConfig, moduleConfig, replicas)
 	if err != nil {
-		return fmt.Errorf("failed to load protobuf schema from %q: %w", moduleConfig.Schema(), err)
+		return err
 	}
 
 	logger.Debugf("Uploading %d/%d files", len(gadResp.Msg.MissingDigests), len(files))
@@ -135,15 +136,16 @@ func terminateModuleDeployment(ctx context.Context, client DeployClient, module 
 	return err
 }
 
-func loadProtoSchema(config moduleconfig.AbsModuleConfig, replicas int32) (*schemapb.Module, error) {
-	content, err := os.ReadFile(config.Schema())
+func loadProtoSchema(projectConfig projectconfig.Config, config moduleconfig.AbsModuleConfig, replicas int32) (*schemapb.Module, error) {
+	schPath := projectConfig.SchemaPath(config.Module)
+	content, err := os.ReadFile(schPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load protobuf schema from %q: %w", schPath, err)
 	}
 	module := &schemapb.Module{}
 	err = proto.Unmarshal(content, module)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load protobuf schema from %q: %w", schPath, err)
 	}
 	runtime := module.Runtime
 	if runtime == nil {

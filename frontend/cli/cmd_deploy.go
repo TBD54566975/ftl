@@ -34,7 +34,7 @@ func (d *deployCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	}
 	_ = bindAllocator.Next()
 
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Build.Dirs, bindAllocator, buildengine.BuildEnv(d.Build.BuildEnv), buildengine.Parallelism(d.Build.Parallelism))
+	engine, err := buildengine.New(ctx, client, projConfig, d.Build.Dirs, bindAllocator, buildengine.BuildEnv(d.Build.BuildEnv), buildengine.Parallelism(d.Build.Parallelism))
 	if err != nil {
 		return err
 	}
