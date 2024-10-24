@@ -32,7 +32,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
-type InteractiveCLI struct {
+type BaseCLI struct {
 	Version             kong.VersionFlag `help:"Show version."`
 	Endpoint            *url.URL         `default:"http://127.0.0.1:8892" help:"FTL endpoint to bind/connect to." env:"FTL_ENDPOINT"`
 	ProvisionerEndpoint *url.URL         `help:"Provisioner endpoint." env:"FTL_PROVISIONER_ENDPOINT" default:"http://127.0.0.1:8893" hidden:"true"`
@@ -57,6 +57,10 @@ type InteractiveCLI struct {
 	Config   configCmd   `cmd:"" help:"Manage configuration."`
 	Pubsub   pubsubCmd   `cmd:"" help:"Manage pub/sub."`
 	Release  releaseCmd  `cmd:"" help:"Manage releases."`
+}
+type InteractiveCLI struct {
+	BaseCLI
+	Goose gooseCmd `cmd:"" help:"Run a goose command."`
 }
 
 type CLI struct {
