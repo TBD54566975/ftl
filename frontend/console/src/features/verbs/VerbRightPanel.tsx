@@ -7,8 +7,8 @@ import { type VerbRef, httpRequestPath, ingress, isHttpIngress, verbCalls } from
 
 const PanelRow = ({ verb }: { verb: VerbRef }) => {
   return (
-    <Link className='flex items-center space-x-2 cursor-pointer' to={`/modules/${verb?.module}/verb/${verb?.name}`}>
-      <InboxUploadIcon className='h-4 w-4 text-blue-600' />
+    <Link className='flex items-center space-x-2 space-y-1 cursor-pointer' to={`/modules/${verb?.module}/verb/${verb?.name}`}>
+      <InboxUploadIcon className='h-4 w-4 text-blue-600 mt-1' />
       <div className='truncate text-xs'>{`${verb?.module}.${verb?.name}`}</div>
     </Link>
   )
