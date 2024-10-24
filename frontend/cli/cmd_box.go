@@ -126,7 +126,6 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	}
 
 	// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
-	// TODO: is this ok?
 	bindAllocator, err := bind.NewBindAllocator(cli.Endpoint)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
