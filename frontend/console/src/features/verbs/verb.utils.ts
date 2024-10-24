@@ -199,6 +199,24 @@ export const verbCalls = (verb?: Verb) => {
   return verb?.verb?.metadata.filter((meta) => meta.value.case === 'calls').map((meta) => meta.value.value as MetadataCalls) ?? null
 }
 
+export interface VerbRef {
+  module: string
+  name: string
+}
+
+export const findCallers = (verb: Verb, moduleName: string, modules: Module[]) =>
+  modules.flatMap((m: Module) => {
+    const callers = m.verbs.filter((v: Verb) => {
+      const calls = v.verb?.metadata.find((m) => m.value.case === 'calls')
+      if (!calls) return false
+      return !!(calls.value.value as MetadataCalls)?.calls.find((ref: Ref) => ref.module === moduleName && ref.name === verb.verb?.name)
+    })
+    return callers.map((c) => ({
+      module: m.name,
+      name: c.verb?.name || '',
+    }))
+  })
+
 export const generateCliCommand = (verb: Verb, path: string, header: string, body: string) => {
   const method = requestType(verb)
   return method === 'CALL' ? generateFtlCallCommand(path, body) : generateCurlCommand(method, path, header, body)

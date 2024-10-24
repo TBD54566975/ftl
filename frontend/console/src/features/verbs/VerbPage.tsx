@@ -10,6 +10,7 @@ import { SidePanelProvider } from '../../providers/side-panel-provider'
 import { TraceRequestList } from '../traces/TraceRequestList'
 import { VerbRequestForm } from './VerbRequestForm'
 import { verbPanels } from './VerbRightPanel'
+import { type VerbRef, findCallers } from './verb.utils'
 
 export const VerbPage = ({ moduleName, declName }: { moduleName: string; declName: string }) => {
   const notification = useContext(NotificationsContext)
@@ -17,6 +18,7 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
   const modules = useModules()
   const [module, setModule] = useState<Module | undefined>()
   const [verb, setVerb] = useState<Verb | undefined>()
+  const [callers, setCallers] = useState<VerbRef[] | undefined>()
 
   useEffect(() => {
     if (!modules.isSuccess) return
@@ -35,6 +37,9 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
     setModule(module)
     const verb = module?.verbs.find((verb) => verb.verb?.name.toLocaleLowerCase() === declName?.toLocaleLowerCase())
     setVerb(verb)
+    if (verb) {
+      setCallers(findCallers(verb, moduleName, modules.data.modules))
+    }
   }, [modules.data, moduleName, declName])
 
   if (!module || !verb) {
@@ -59,7 +64,7 @@ export const VerbPage = ({ moduleName, declName }: { moduleName: string; declNam
           <ResizablePanels
             mainContent={<VerbRequestForm module={module} verb={verb} />}
             rightPanelHeader={header}
-            rightPanelPanels={verbPanels(verb)}
+            rightPanelPanels={verbPanels(verb, callers)}
             bottomPanelContent={<TraceRequestList module={module.name} verb={verb.verb?.name} />}
           />
         </div>
