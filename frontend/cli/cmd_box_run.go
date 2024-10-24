@@ -69,9 +69,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 
 	// Wait for the controller to come up.
 	client := ftlv1connect.NewControllerServiceClient(rpc.GetHTTPClient(b.Bind.String()), b.Bind.String())
-	waitCtx, cancel := context.WithTimeout(ctx, b.ControllerTimeout)
-	defer cancel()
-	if err := rpc.Wait(waitCtx, backoff.Backoff{}, client); err != nil {
+	if err := rpc.Wait(ctx, backoff.Backoff{}, b.ControllerTimeout, client); err != nil {
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
