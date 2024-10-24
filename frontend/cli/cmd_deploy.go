@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -24,7 +26,15 @@ func (d *deployCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	} else {
 		client = rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 	}
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Build.Dirs, buildengine.BuildEnv(d.Build.BuildEnv), buildengine.Parallelism(d.Build.Parallelism))
+
+	// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
+	bindAllocator, err := bind.NewBindAllocator(cli.Endpoint)
+	if err != nil {
+		return fmt.Errorf("could not create bind allocator: %w", err)
+	}
+	_ = bindAllocator.Next()
+
+	engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Build.Dirs, bindAllocator, buildengine.BuildEnv(d.Build.BuildEnv), buildengine.Parallelism(d.Build.Parallelism))
 	if err != nil {
 		return err
 	}
