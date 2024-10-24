@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/slices"
 
 	"github.com/google/uuid"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	internalobservability "github.com/TBD54566975/ftl/internal/observability"
+	sh "github.com/TBD54566975/ftl/internal/sha256"
 )
 
 type releaseCmd struct {
@@ -18,7 +20,7 @@ type releaseCmd struct {
 	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 
 	Publish releasePublishCmd `cmd:"" help:"Packages the project into a release and publishes it."`
-	List    releaseListCmd    `cmd:"" help:"Lists all published releases."`
+	Exists  releaseExistsCmd  `cmd:"" help:"Lists all published releases."`
 }
 
 type releasePublishCmd struct {
@@ -45,30 +47,32 @@ func (d *releasePublishCmd) Run(release *releaseCmd) error {
 	return nil
 }
 
-type releaseListCmd struct {
+type releaseExistsCmd struct {
+	Digests []string `help:"Digest sha256:hex" default:""`
 }
 
-func (d *releaseListCmd) Run(release *releaseCmd) error {
+func (d *releaseExistsCmd) Run(release *releaseCmd) error {
 	svc, err := createContainerService(release)
 	if err != nil {
 		return fmt.Errorf("failed to create container service: %w", err)
 	}
-	modules, err := svc.DiscoverModuleArtefacts(context.Background())
+	digests := slices.Map(slices.Unique(d.Digests), func(s string) sh.SHA256 {
+		return sh.MustParseSHA256(s)
+	})
+	keys, missing, err := svc.GetDigestsKeys(context.Background(), digests)
 	if err != nil {
-		return fmt.Errorf("failed to discover module artefacts: %w", err)
+		return fmt.Errorf("failed to get keys: %w", err)
 	}
-	if len(modules) == 0 {
-		fmt.Println("No module artefacts found.")
-		return nil
+	fmt.Printf("\033[31m%d\033[0m FTL module blobs located\n", len(keys))
+	for i, key := range keys {
+		fmt.Printf("  \u001B[34m%02d\u001B[0m - sha256:\u001B[32m%s\u001B[0m\n", i+1, key.Digest)
 	}
-
-	format := "    Digest        : %s\n    Size          : %-7d\n    Repo Digest   : %s\n    Media Type    : %s\n    Artefact Type : %s\n"
-	fmt.Printf("Found %d module artefacts:\n", len(modules))
-	for i, m := range modules {
-		fmt.Printf("\033[31m  Artefact %d\033[0m\n", i)
-		fmt.Printf(format, m.ModuleDigest, m.Size, m.RepositoryDigest, m.MediaType, m.ArtefactType)
+	if len(missing) > 0 {
+		fmt.Printf("\033[31m%d\033[0m FTL module blobs keys \033[31mnot found\033[0m\n", len(missing))
+		for i, key := range missing {
+			fmt.Printf("  \u001B[34m%02d\u001B[0m - sha256:\u001B[31m%s\u001B[0m\n", i+1, key)
+		}
 	}
-
 	return nil
 }
 
