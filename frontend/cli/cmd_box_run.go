@@ -75,7 +75,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), []string{b.Dir}, runnerPortAllocator)
+	engine, err := buildengine.New(ctx, client, projConfig, []string{b.Dir}, runnerPortAllocator)
 	if err != nil {
 		return fmt.Errorf("failed to create build engine: %w", err)
 	}
@@ -85,7 +85,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	// Manually import the schema for each module to get the dependency graph.
 	err = engine.Each(func(m buildengine.Module) error {
 		logger.Debugf("Loading schema for module %q", m.Config.Module)
-		mod, err := schema.ModuleFromProtoFile(m.Config.Abs().Schema())
+		mod, err := schema.ModuleFromProtoFile(projConfig.SchemaPath(m.Config.Module))
 		if err != nil {
 			return fmt.Errorf("failed to read schema for module %q: %w", m.Config.Module, err)
 		}

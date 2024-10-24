@@ -31,7 +31,7 @@ func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServic
 	}
 	_ = bindAllocator.Next()
 
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Dirs, bindAllocator, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
+	engine, err := buildengine.New(ctx, client, projConfig, b.Dirs, bindAllocator, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
 	if err != nil {
 		return err
 	}

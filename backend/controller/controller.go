@@ -57,7 +57,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	frontend "github.com/TBD54566975/ftl/frontend/console"
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
@@ -164,7 +163,7 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 	cm := cf.ConfigFromContext(ctx)
 	sm := cf.SecretsFromContext(ctx)
 
-	admin := admin.NewAdminService(cm, sm, svc.dal, optional.None[*bind.BindAllocator]())
+	admin := admin.NewAdminService(cm, sm, svc.dal)
 	console := console.NewService(svc.dal, svc.timeline)
 
 	ingressHandler := otelhttp.NewHandler(http.Handler(svc), "ftl.ingress")

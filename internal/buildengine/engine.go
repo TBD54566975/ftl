@@ -23,6 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -177,7 +178,7 @@ type Engine struct {
 	client           DeployClient
 	bindAllocator    *bind.BindAllocator
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
-	projectRoot      string
+	projectConfig    projectconfig.Config
 	moduleDirs       []string
 	watcher          *watch.Watcher // only watches for module toml changes
 	controllerSchema *xsync.MapOf[string, *schema.Module]
@@ -236,11 +237,11 @@ func WithStartTime(startTime time.Time) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client DeployClient, projectRoot string, moduleDirs []string, bindAllocator *bind.BindAllocator, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client DeployClient, projectConfig projectconfig.Config, moduleDirs []string, bindAllocator *bind.BindAllocator, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
-		projectRoot:      projectRoot,
+		projectConfig:    projectConfig,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
 		watcher:          watch.NewWatcher("ftl.toml"),
@@ -261,7 +262,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 	ctx, cancel := context.WithCancel(ctx)
 	e.cancel = cancel
 
-	err := CleanStubs(ctx, projectRoot)
+	err := CleanStubs(ctx, projectConfig.Root())
 	if err != nil {
 		return nil, fmt.Errorf("failed to clean stubs: %w", err)
 	}
@@ -450,7 +451,7 @@ func (e *Engine) Deploy(ctx context.Context, replicas int32, waitForDeployOnline
 					return fmt.Errorf("no files found to deploy for %q", moduleName)
 				}
 				e.rawEngineUpdates <- ModuleDeployStarted{Module: moduleName}
-				err := Deploy(ctx, meta.module, meta.module.Deploy, replicas, waitForDeployOnline, e.client)
+				err := Deploy(ctx, e.projectConfig, meta.module, meta.module.Deploy, replicas, waitForDeployOnline, e.client)
 				if err != nil {
 					e.rawEngineUpdates <- ModuleDeployFailed{Module: moduleName, Error: err}
 					return err
@@ -755,7 +756,7 @@ func (e *Engine) BuildAndDeploy(ctx context.Context, replicas int32, waitForDepl
 			buildGroup.Go(func() error {
 				e.modulesToBuild.Store(module.Config.Module, false)
 				e.rawEngineUpdates <- ModuleDeployStarted{Module: module.Config.Module}
-				err := Deploy(buildCtx, module, module.Deploy, replicas, waitForDeployOnline, e.client)
+				err := Deploy(buildCtx, e.projectConfig, module, module.Deploy, replicas, waitForDeployOnline, e.client)
 				if err != nil {
 					e.rawEngineUpdates <- ModuleDeployFailed{Module: module.Config.Module, Error: err}
 					return err
@@ -850,7 +851,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 			metasMap[name] = meta
 			return true
 		})
-		err = GenerateStubs(ctx, e.projectRoot, maps.Values(knownSchemas), metasMap)
+		err = GenerateStubs(ctx, e.projectConfig.Root(), maps.Values(knownSchemas), metasMap)
 		if err != nil {
 			return err
 		}
@@ -889,7 +890,7 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		}
 
 		// Sync references to stubs if needed by the runtime
-		err = SyncStubReferences(ctx, e.projectRoot, moduleNames, metasMap)
+		err = SyncStubReferences(ctx, e.projectConfig.Root(), moduleNames, metasMap)
 		if err != nil {
 			return err
 		}
@@ -966,7 +967,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 
 	sch := &schema.Schema{Modules: maps.Values(builtModules)}
 
-	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectRoot, languageplugin.BuildContext{
+	moduleSchema, deploy, err := build(ctx, meta.plugin, e.projectConfig, languageplugin.BuildContext{
 		Config:       meta.module.Config,
 		Schema:       sch,
 		Dependencies: meta.module.Dependencies(Raw),
@@ -1074,7 +1075,7 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 				e.rawEngineUpdates <- ModuleBuildStarted{Config: meta.module.Config, IsAutoRebuild: true}
 
 			case languageplugin.AutoRebuildEndedEvent:
-				_, deploy, err := handleBuildResult(ctx, meta.module.Config, event.Result)
+				_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result)
 				if err != nil {
 					e.rawEngineUpdates <- ModuleBuildFailed{Config: meta.module.Config, IsAutoRebuild: true, Error: err}
 					if errors.Is(err, errInvalidateDependencies) {
@@ -1087,7 +1088,7 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 				e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
 
 				e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
-				if err := Deploy(ctx, meta.module, deploy, 1, true, e.client); err != nil {
+				if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
 					e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
 					continue
 				}

@@ -108,7 +108,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 			})
 		}
 
-		engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Build.Dirs, bindAllocator, opts...)
+		engine, err := buildengine.New(ctx, client, projConfig, d.Build.Dirs, bindAllocator, opts...)
 		if err != nil {
 			return err
 		}

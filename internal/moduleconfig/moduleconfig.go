@@ -191,11 +191,3 @@ func isBeneath(moduleDir, path string) bool {
 	resolved := filepath.Clean(filepath.Join(moduleDir, path))
 	return strings.HasPrefix(resolved, strings.TrimSuffix(moduleDir, "/")+"/")
 }
-
-func (c ModuleConfig) Schema() string {
-	return "schema.pb"
-}
-
-func (c AbsModuleConfig) Schema() string {
-	return filepath.Join(c.DeployDir, "schema.pb")
-}

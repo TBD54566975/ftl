@@ -3,6 +3,7 @@ package languageplugin
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
@@ -69,7 +70,7 @@ func buildRust(ctx context.Context, projectRoot, stubsRoot string, bctx BuildCon
 		return result, nil
 	}
 
-	moduleSchema, err := schema.ModuleFromProtoFile(config.Schema())
+	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(config.DeployDir, "schema.pb"))
 	if err != nil {
 		return BuildResult{}, fmt.Errorf("failed to read schema for module: %w", err)
 	}

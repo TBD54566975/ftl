@@ -199,3 +199,8 @@ func Save(config Config) error {
 	}
 	return os.Rename(w.Name(), config.Path)
 }
+
+// SchemaPath returns the path to the schema file for the given module.
+func (c Config) SchemaPath(module string) string {
+	return filepath.Join(c.Root(), ".ftl", "schemas", module+".pb")
+}
