@@ -1063,36 +1063,65 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 	for {
 		select {
 		case event := <-e.pluginEvents:
-			logger := log.FromContext(originalCtx).Module(event.ModuleName()).Scope("build")
-			ctx := log.ContextWithLogger(originalCtx, logger)
-			meta, ok := e.moduleMetas.Load(event.ModuleName())
-			if !ok {
-				logger.Warnf("module not found for build update")
-				continue
-			}
 			switch event := event.(type) {
-			case languageplugin.AutoRebuildStartedEvent:
-				e.rawEngineUpdates <- ModuleBuildStarted{Config: meta.module.Config, IsAutoRebuild: true}
+			case languageplugin.PluginBuildEvent:
+				logger := log.FromContext(originalCtx).Module(event.ModuleName()).Scope("build")
+				ctx := log.ContextWithLogger(originalCtx, logger)
+				meta, ok := e.moduleMetas.Load(event.ModuleName())
+				if !ok {
+					logger.Warnf("module not found for build update")
+					continue
+				}
+				switch event := event.(type) {
+				case languageplugin.AutoRebuildStartedEvent:
+					e.rawEngineUpdates <- ModuleBuildStarted{Config: meta.module.Config, IsAutoRebuild: true}
 
-			case languageplugin.AutoRebuildEndedEvent:
-				_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result)
-				if err != nil {
-					e.rawEngineUpdates <- ModuleBuildFailed{Config: meta.module.Config, IsAutoRebuild: true, Error: err}
-					if errors.Is(err, errInvalidateDependencies) {
-						// Do not block this goroutine by building a module here.
-						// Instead we send to a chan so that it can be processed elsewhere.
-						e.invalidateDeps <- invalidateDependenciesEvent{module: event.ModuleName()}
+				case languageplugin.AutoRebuildEndedEvent:
+					_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result)
+					if err != nil {
+						e.rawEngineUpdates <- ModuleBuildFailed{Config: meta.module.Config, IsAutoRebuild: true, Error: err}
+						if errors.Is(err, errInvalidateDependencies) {
+							// Do not block this goroutine by building a module here.
+							// Instead we send to a chan so that it can be processed elsewhere.
+							e.invalidateDeps <- invalidateDependenciesEvent{module: event.ModuleName()}
+						}
+						continue
 					}
-					continue
-				}
-				e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
+					e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
 
-				e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
-				if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
-					e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
-					continue
+					e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
+					if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
+						e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
+						continue
+					}
+					e.rawEngineUpdates <- ModuleDeploySuccess{Module: event.Module}
 				}
-				e.rawEngineUpdates <- ModuleDeploySuccess{Module: event.Module}
+			case languageplugin.PluginDiedEvent:
+				// TODO: before killig a plugin make sure it is no longer in meta
+				// TODO: find meta based on plugin value, recreate plugin, schedule rebuild
+				e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
+					if meta.plugin != event.Plugin {
+						return true
+					}
+					logger := log.FromContext(originalCtx).Module(name)
+					logger.Errorf(event.Error, "Plugin died, recreating")
+
+					c, err := moduleconfig.LoadConfig(meta.module.Config.Dir)
+					if err != nil {
+						logger.Errorf(err, "Could not recreate plugin: could not load config")
+						return false
+					}
+					newMeta, err := e.newModuleMeta(originalCtx, c)
+					if err != nil {
+						logger.Errorf(err, "Could not recreate plugin")
+						return false
+					}
+					e.moduleMetas.Store(name, newMeta)
+
+					// TODO: rename...
+					e.invalidateDeps <- invalidateDependenciesEvent{module: name}
+					return false
+				})
 			}
 		case <-originalCtx.Done():
 			// kill all plugins

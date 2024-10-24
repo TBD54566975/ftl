@@ -359,7 +359,7 @@ func (s *Service) deploy(ctx context.Context) error {
 	)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return fmt.Errorf("failed to spawn plugin: %w", err)
+		return fmt.Errorf("failed to spawn plugin (%s): %w", deploymentDir, err)
 	}
 
 	dep := s.makeDeployment(cmdCtx, key, deployment)

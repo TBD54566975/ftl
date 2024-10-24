@@ -23,7 +23,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-const launchTimeout = 10 * time.Second
+const launchTimeout = 15 * time.Second
 
 type externalBuildCommand struct {
 	BuildContext
@@ -54,7 +54,28 @@ func newExternalPlugin(ctx context.Context, bind *url.URL, language string) (*ex
 	if err != nil {
 		return nil, err
 	}
-	return newExternalPluginForTesting(ctx, impl), nil
+
+	plugin := newExternalPluginForTesting(ctx, impl)
+
+	go func() {
+		select {
+		case err := <-impl.cmdErr:
+			if err != nil {
+				plugin.updates.Publish(PluginDiedEvent{
+					Plugin: plugin,
+					Error:  fmt.Errorf("%w: %w", ErrPluginNotRunning, err),
+				})
+				return
+			}
+			plugin.updates.Publish(PluginDiedEvent{
+				Plugin: plugin,
+				Error:  ErrPluginNotRunning,
+			})
+		case <-ctx.Done():
+		}
+	}()
+
+	return plugin, nil
 }
 
 func newExternalPluginForTesting(ctx context.Context, client externalPluginClient) *externalPlugin {
