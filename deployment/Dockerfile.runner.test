@@ -1,12 +1,13 @@
-FROM ubuntu:24.04 AS builder
-RUN apt-get update
-
-WORKDIR /src
-
-# Finally create the runtime image.
+# Huge hack, we want the JVM and same runtime environment as the runner
+# So we just take the latest published runner image and copy the JDK from it
+FROM ftl0/ftl-runner:latest as jdk
+# Create the runtime image.
 FROM ubuntu:24.04
 
 WORKDIR /root/
+ENV PATH="/root/jdk/bin:$PATH"
+ENV JAVA_HOME="/root/jdk"
+COPY --from=jdk /root/jdk/ /root/jdk/
 
 COPY docker-build/ftl-runner .
 COPY docker-build/ftl .
