@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/atomic"
@@ -54,7 +55,7 @@ func TestKubeScaling(t *testing.T) {
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
-						failure.Store(fmt.Errorf("panic in verb: %v", r))
+						failure.Store(fmt.Errorf("panic in verb: %v at %v", r, time.Now()))
 					}
 					routineStopped.Done()
 				}()

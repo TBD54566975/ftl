@@ -237,6 +237,14 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 		logger.Debugf("Service account %s already exists", name)
 	}
 
+	// Sync the istio policy if applicable
+	if sec, ok := r.IstioSecurity.Get(); ok {
+		err = r.syncIstioPolicy(ctx, sec, name, service, thisDeployment)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Now create the deployment
 
 	logger.Debugf("Creating new kube deployment %s", name)
@@ -271,12 +279,7 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	deployment.Spec.Template.ObjectMeta.Labels = addLabel(deployment.Spec.Template.ObjectMeta.Labels, "app", name)
 	deployment.Spec.Template.Spec.ServiceAccountName = name
 	changes, err := r.syncDeployment(ctx, thisImage, deployment, dep)
-	if sec, ok := r.IstioSecurity.Get(); ok {
-		err = r.syncIstioPolicy(ctx, sec, name, service, thisDeployment)
-		if err != nil {
-			return err
-		}
-	}
+
 	if err != nil {
 		return err
 	}
