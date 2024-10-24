@@ -236,7 +236,7 @@ func WithStartTime(startTime time.Time) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client DeployClient, projectRoot string, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client DeployClient, projectRoot string, moduleDirs []string, bindAllocator *bind.BindAllocator, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -252,6 +252,7 @@ func New(ctx context.Context, client DeployClient, projectRoot string, moduleDir
 		invalidateDeps:   make(chan invalidateDependenciesEvent, 128),
 		rawEngineUpdates: make(chan rawEngineEvent, 128),
 		EngineUpdates:    pubsub.New[EngineEvent](),
+		bindAllocator:    bindAllocator,
 	}
 	for _, option := range options {
 		option(e)

@@ -12,6 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -65,6 +66,12 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 	}
 	sm := terminal.FromContext(ctx)
 	starting := sm.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
+
+	bindAllocator, err := bind.NewBindAllocator(d.ServeCmd.Bind)
+	if err != nil {
+		return fmt.Errorf("could not create bind allocator: %w", err)
+	}
+
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
@@ -80,7 +87,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), true)
+			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), true, bindAllocator)
 		})
 	}
 
@@ -101,7 +108,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 			})
 		}
 
-		engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Build.Dirs, opts...)
+		engine, err := buildengine.New(ctx, client, projConfig.Root(), d.Build.Dirs, bindAllocator, opts...)
 		if err != nil {
 			return err
 		}

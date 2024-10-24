@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
+	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
@@ -23,7 +24,14 @@ func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServic
 	if len(b.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
-	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Dirs, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
+	// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
+	bindAllocator, err := bind.NewBindAllocator(cli.Endpoint)
+	if err != nil {
+		return fmt.Errorf("could not create bind allocator: %w", err)
+	}
+	_ = bindAllocator.Next()
+
+	engine, err := buildengine.New(ctx, client, projConfig.Root(), b.Dirs, bindAllocator, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
 	if err != nil {
 		return err
 	}
