@@ -1,10 +1,20 @@
 import { InboxUploadIcon } from 'hugeicons-react'
+import { Link } from 'react-router-dom'
 import { RightPanelAttribute } from '../../components/RightPanelAttribute'
 import type { Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { ExpandablePanelProps } from '../console/ExpandablePanel'
-import { httpRequestPath, ingress, isHttpIngress, verbCalls } from './verb.utils'
+import { type VerbRef, httpRequestPath, ingress, isHttpIngress, verbCalls } from './verb.utils'
 
-export const verbPanels = (verb?: Verb) => {
+const PanelRow = ({ verb }: { verb: VerbRef }) => {
+  return (
+    <Link className='flex items-center space-x-2 space-y-1 cursor-pointer' to={`/modules/${verb?.module}/verb/${verb?.name}`}>
+      <InboxUploadIcon className='h-4 w-4 text-blue-600 mt-1' />
+      <div className='truncate text-xs'>{`${verb?.module}.${verb?.name}`}</div>
+    </Link>
+  )
+}
+
+export const verbPanels = (verb?: Verb, callers?: VerbRef[]) => {
   const panels = [] as ExpandablePanelProps[]
 
   if (isHttpIngress(verb)) {
@@ -27,12 +37,15 @@ export const verbPanels = (verb?: Verb) => {
     panels.push({
       title: 'Calls',
       expanded: true,
-      children: calls?.map((c, index) => (
-        <div key={`verb-call-${index}-${c.module}-${c.name}`} className='flex items-center space-x-2 space-y-1'>
-          <InboxUploadIcon className='h-4 w-4 text-blue-600' />
-          <div className='truncate text-xs'>{`${c?.module}.${c?.name}`}</div>
-        </div>
-      )),
+      children: calls?.map((c, index) => <PanelRow key={`verb-call-${index}-${c.module}-${c.name}`} verb={c} />),
+    })
+  }
+
+  if (callers && callers.length > 0) {
+    panels.push({
+      title: 'Callers',
+      expanded: true,
+      children: callers.map((c, index) => <PanelRow key={`verb-caller-${index}-${c.module}-${c.name}`} verb={c} />),
     })
   }
 
