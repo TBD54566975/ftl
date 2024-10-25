@@ -67,6 +67,7 @@ func newExternalPluginForTesting(ctx context.Context, client externalPluginClien
 	var runCtx context.Context
 	runCtx, plugin.cancel = context.WithCancel(ctx)
 	go plugin.run(runCtx)
+	go plugin.watchForCmdError(runCtx)
 
 	return plugin
 }
@@ -244,6 +245,23 @@ func (p *externalPlugin) Build(ctx context.Context, projectRoot, stubsRoot strin
 		return result, nil
 	case <-ctx.Done():
 		return BuildResult{}, fmt.Errorf("error waiting for build to complete: %w", ctx.Err())
+	}
+}
+
+func (p *externalPlugin) watchForCmdError(ctx context.Context) {
+	select {
+	case err := <-p.client.cmdErr():
+		if err == nil {
+			// closed
+			return
+		}
+		p.updates.Publish(PluginDiedEvent{
+			Plugin: p,
+			Error:  err,
+		})
+
+	case <-ctx.Done():
+
 	}
 }
 
