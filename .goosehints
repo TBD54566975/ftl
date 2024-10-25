@@ -40,6 +40,8 @@ just live-rebuild
 
 ## Running
 
+NOTE: ftl dev command will run things as a server so you will need to run it as a background process when needed.
+
 ### Development Mode
 ```bash
 ftl dev --recreate ./examples/go
