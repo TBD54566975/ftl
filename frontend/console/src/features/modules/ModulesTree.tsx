@@ -40,16 +40,13 @@ const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; is
   const Icon = useMemo(() => declIcon(decl.declType), [decl.declType])
   return (
     <li className='my-1'>
-      <Link
-        id={`decl-${decl.value.name}`}
-        to={href}
-      >
+      <Link id={`decl-${decl.value.name}`} to={href}>
         <div
           ref={declRef}
           className={classNames(
             isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
             'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer scroll-mt-10',
-        )}
+          )}
         >
           <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
           {decl.value.name}
@@ -96,14 +93,8 @@ const ModuleSection = ({
       >
         <PackageIcon aria-hidden='true' className='size-4 my-1 ml-3 shrink-0' />
         {module.name}
-        <Link
-          to={`/modules/${module.name}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <CircleArrowRight02Icon
-            id={`module-${module.name}-view-icon`}
-            className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600'
-          />
+        <Link to={`/modules/${module.name}`} onClick={(e) => e.stopPropagation()}>
+          <CircleArrowRight02Icon id={`module-${module.name}-view-icon`} className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600' />
         </Link>
         {filteredDecls.length === 0 || (
           <ArrowRight01Icon aria-hidden='true' className={`ml-auto mr-2 h-4 w-4 shrink-0 ${isExpanded ? 'rotate-90 text-gray-500' : ''}`} />
