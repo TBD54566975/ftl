@@ -1,4 +1,4 @@
-package languageplugin
+package goplugin
 
 import (
 	"context"
@@ -6,13 +6,17 @@ import (
 	"reflect"
 	"testing"
 
+	"connectrpc.com/connect"
+	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal/slices"
 
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/optional"
 )
 
 func TestParseImportsFromTestData(t *testing.T) {
+	// TODO: move this test to compile package?
 	testFilePath := filepath.Join("testdata", "imports.go")
 	expectedImports := []string{"fmt", "os"}
 	imports, err := parseImports(testFilePath)
@@ -26,24 +30,30 @@ func TestParseImportsFromTestData(t *testing.T) {
 }
 
 func TestExtractModuleDepsGo(t *testing.T) {
+	// TODO: move this test to compile package?
 	ctx := context.Background()
-	dir, err := filepath.Abs("../testdata/alpha")
+	dir, err := filepath.Abs("testdata/alpha")
 	assert.NoError(t, err)
 	uncheckedConfig, err := moduleconfig.LoadConfig(dir)
 	assert.NoError(t, err)
 
-	plugin, err := New(ctx, nil, uncheckedConfig.Language)
+	service := New()
+
+	customDefaultsResp, err := service.ModuleConfigDefaults(ctx, connect.NewRequest(&langpb.ModuleConfigDefaultsRequest{
+		Dir: uncheckedConfig.Dir,
+	}))
 	assert.NoError(t, err)
 
-	customDefaults, err := plugin.ModuleConfigDefaults(ctx, uncheckedConfig.Dir)
+	config, err := uncheckedConfig.FillDefaultsAndValidate(defaultsFromProto(customDefaultsResp.Msg))
 	assert.NoError(t, err)
 
-	config, err := uncheckedConfig.FillDefaultsAndValidate(customDefaults)
+	configProto, err := langpb.ModuleConfigToProto(config.Abs())
 	assert.NoError(t, err)
-
-	deps, err := plugin.GetDependencies(ctx, config)
+	depsResp, err := service.GetDependencies(ctx, connect.NewRequest(&langpb.DependenciesRequest{
+		ModuleConfig: configProto,
+	}))
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"another", "other"}, deps)
+	assert.Equal(t, []string{"another", "other"}, depsResp.Msg.Modules)
 }
 
 func TestGoConfigDefaults(t *testing.T) {
@@ -53,7 +63,7 @@ func TestGoConfigDefaults(t *testing.T) {
 		expected moduleconfig.CustomDefaults
 	}{
 		{
-			dir: "../testdata/alpha",
+			dir: "testdata/alpha",
 			expected: moduleconfig.CustomDefaults{
 				DeployDir: ".ftl",
 				Watch: []string{
@@ -65,7 +75,7 @@ func TestGoConfigDefaults(t *testing.T) {
 			},
 		},
 		{
-			dir: "../testdata/another",
+			dir: "testdata/another",
 			expected: moduleconfig.CustomDefaults{
 				DeployDir: ".ftl",
 				Watch: []string{
@@ -85,15 +95,27 @@ func TestGoConfigDefaults(t *testing.T) {
 			dir, err := filepath.Abs(tt.dir)
 			assert.NoError(t, err)
 
-			plugin, err := New(ctx, nil, "go")
+			service := New()
+
+			defaultsResp, err := service.ModuleConfigDefaults(ctx, connect.NewRequest(&langpb.ModuleConfigDefaultsRequest{
+				Dir: dir,
+			}))
 			assert.NoError(t, err)
 
-			defaults, err := plugin.ModuleConfigDefaults(ctx, dir)
-			assert.NoError(t, err)
-
+			defaults := defaultsFromProto(defaultsResp.Msg)
 			defaults.Watch = slices.Sort(defaults.Watch)
 			tt.expected.Watch = slices.Sort(tt.expected.Watch)
 			assert.Equal(t, tt.expected, defaults)
 		})
+	}
+}
+
+func defaultsFromProto(proto *langpb.ModuleConfigDefaultsResponse) moduleconfig.CustomDefaults {
+	return moduleconfig.CustomDefaults{
+		DeployDir:          proto.DeployDir,
+		Watch:              proto.Watch,
+		Build:              optional.Ptr(proto.Build),
+		GeneratedSchemaDir: optional.Ptr(proto.GeneratedSchemaDir),
+		LanguageConfig:     proto.LanguageConfig.AsMap(),
 	}
 }
