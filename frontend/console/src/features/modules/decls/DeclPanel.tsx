@@ -52,7 +52,7 @@ export const DeclPanel = () => {
       return <SubscriptionPanel {...commonProps} value={decl as Subscription} />
     case 'topic':
       return <TopicPanel {...commonProps} value={decl as Topic} />
-    case 'typeAlias':
+    case 'typealias':
       return <TypeAliasPanel {...commonProps} value={decl as TypeAlias} />
     case 'verb':
       return <VerbPage {...nameProps} />

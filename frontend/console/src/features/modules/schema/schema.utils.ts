@@ -163,7 +163,7 @@ export function declFromModuleSchemaString(declName: string, schema: string) {
 }
 
 function findDeclLinkIdx(declName: string, lines: string[]) {
-  const regex = new RegExp(`^  (export )?\\w+ ${declName}`)
+  const regex = new RegExp(`^  (export )?\\w+ ${declName}[ (<:]`)
   const foundIdx = lines.findIndex((line) => line.match(regex))
   if (foundIdx !== -1) {
     return foundIdx
