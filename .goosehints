@@ -1,31 +1,20 @@
-# FTL Build and Test Instructions
+# FTL project
 
-## Prerequisites
+This project is the ftl (faster than light) platform. 
 
-1. Install OrbStack (recommended over Docker desktop):
-   ```bash
-   brew install orbstack
-   ```
+# first steps always:
 
-2. Activate Hermit environment:
-   ```bash
-   . ./bin/activate-hermit
-   ```
+always run this first: . ./bin/activate-hermit && hermit install to prepare env
 
-3. Install dependencies:
-   ```bash
-   hermit install
-   ```
+`just build ftl` is also a useful starting point.
 
-## Development Environment Setup
+to run tests, for example: `just test-backend` is a good place to start, also look in the Justfile.
 
-### IDE Setup
-- For IDEA: Install the Hermit IDEA plugin
-- For VSCode: Start from activated Hermit environment:
-  ```bash
-  . ./bin/activate-hermit
-  code .
-  ```
+
+# Relevant content
+list files in this dir, note CONTRIBUTING.md and README.md.
+
+# More detailed instructions follow
 
 ## Building
 
