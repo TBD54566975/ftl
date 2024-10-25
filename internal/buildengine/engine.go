@@ -1076,15 +1076,16 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 		select {
 		case event := <-e.pluginEvents:
 			switch event := event.(type) {
-			case languageplugin.PluginBuildEvent:
-				logger := log.FromContext(originalCtx).Module(event.ModuleName()).Scope("build")
+			case languageplugin.PluginBuildEvent, languageplugin.AutoRebuildStartedEvent, languageplugin.AutoRebuildEndedEvent:
+				buildEvent := event.(languageplugin.PluginBuildEvent) //nolint:forcetypeassert
+				logger := log.FromContext(originalCtx).Module(buildEvent.ModuleName()).Scope("build")
 				ctx := log.ContextWithLogger(originalCtx, logger)
-				meta, ok := e.moduleMetas.Load(event.ModuleName())
+				meta, ok := e.moduleMetas.Load(buildEvent.ModuleName())
 				if !ok {
 					logger.Warnf("module not found for build update")
 					continue
 				}
-				switch event := event.(type) {
+				switch event := buildEvent.(type) {
 				case languageplugin.AutoRebuildStartedEvent:
 					e.rawEngineUpdates <- ModuleBuildStarted{Config: meta.module.Config, IsAutoRebuild: true}
 
@@ -1130,7 +1131,7 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rebuildRequests <- rebuildRequest{module: name}
 					return false
 				})
-			}
+
 		case <-originalCtx.Done():
 			// kill all plugins
 			e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
