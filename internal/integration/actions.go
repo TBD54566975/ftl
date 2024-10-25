@@ -626,7 +626,7 @@ func IfLanguage(language string, action Action) Action {
 
 func IfLanguages(action Action, languages ...string) Action {
 	return func(t testing.TB, ic TestContext) {
-		if slices.Contains(languages, ic.language) {
+		if slices.Contains(languages, ic.Language) {
 			action(t, ic)
 		}
 	}

@@ -303,7 +303,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				binDir:        binDir,
 				Verbs:         verbs,
 				realT:         t,
-				language:      language,
+				Language:      language,
 				kubeNamespace: kubeNamespace,
 				kubeClient:    optional.Ptr(kubeClient),
 			}
@@ -380,7 +380,7 @@ type TestContext struct {
 	// Path to the "bin" directory.
 	binDir string
 	// The Language under test
-	language string
+	Language string
 	// Set if the test is running on kubernetes
 	kubeClient    optional.Option[kubernetes.Clientset]
 	kubeNamespace string
