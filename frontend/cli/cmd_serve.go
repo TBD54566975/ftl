@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	osExec "os/exec" //nolint:depguard
@@ -64,8 +65,18 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 }
 
 //nolint:maintidx
+func isPortAvailable(host string, port string) bool {
+	ln, err := net.Listen("tcp", net.JoinHostPort(host, port))
+	if err != nil {
+		return false
+	}
+	ln.Close()
+	return true
+}
+
 func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], devMode bool, bindAllocator *bind.BindAllocator) error {
 	logger := log.FromContext(ctx)
+
 	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 	provisionerClient := rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
 
@@ -73,6 +84,13 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		if s.Stop {
 			// allow usage of --background and --stop together to "restart" the background process
 			_ = KillBackgroundServe(logger) //nolint:errcheck // ignore error here if the process is not running
+		}
+
+		// Check port availability before starting in background
+		host := s.Bind.Hostname()
+		port := s.Bind.Port()
+		if !isPortAvailable(host, port) {
+			return fmt.Errorf("port %s is already in use on %s", port, host)
 		}
 
 		if err := runInBackground(logger); err != nil {
