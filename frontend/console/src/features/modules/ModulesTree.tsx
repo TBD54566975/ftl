@@ -24,7 +24,6 @@ const ExportedIcon = () => (
 )
 
 const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; isSelected: boolean }) => {
-  const navigate = useNavigate()
   const declRef = useRef<HTMLDivElement>(null)
 
   // Scroll to the selected decl on page load
@@ -42,17 +41,20 @@ const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; is
   return (
     <li className='my-1'>
       <Link
-        ref={declRef}
         id={`decl-${decl.value.name}`}
-        className={classNames(
-          isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
-          'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer scroll-mt-10',
-        )}
         to={href}
       >
-        <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
-        {decl.value.name}
-        {declSumTypeIsExported(decl.value) ? <ExportedIcon /> : []}
+        <div
+          ref={declRef}
+          className={classNames(
+            isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
+            'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer scroll-mt-10',
+        )}
+        >
+          <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
+          {decl.value.name}
+          {declSumTypeIsExported(decl.value) ? <ExportedIcon /> : []}
+        </div>
       </Link>
     </li>
   )
