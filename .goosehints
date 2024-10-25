@@ -1,0 +1,129 @@
+# FTL project
+
+This project is the ftl (faster than light) platform. 
+
+# first steps always:
+
+always run this first: . ./bin/activate-hermit && hermit install to prepare env
+
+`just build ftl` is also a useful starting point.
+
+to run tests, for example: `just test-backend` is a good place to start, also look in the Justfile.
+
+# developing workflow
+
+* Developer will ask how to do things, where things are, or to run tests, or fix bugs. 
+* The issue tracker is here: https://github.com/TBD54566975/ftl/issues you can use the `gh` cli to look at issues etc if needed.
+* If you aren't sure how to solve something, you can use `gh` command line to look through recent merged pull requests to see if any descriptions may match, and then note the code changes in there.
+
+# Relevant content
+list files in this dir, note CONTRIBUTING.md and README.md.
+
+# More detailed instructions follow
+
+## Building
+
+### Standard Build
+```bash
+just build ftl
+```
+
+### Debug Build
+```bash
+FTL_DEBUG=true just build ftl
+```
+
+### Live Rebuild (for local testing)
+```bash
+just live-rebuild
+```
+
+## Running
+
+NOTE: ftl dev command will run things as a server so you will need to run it as a background process when needed.
+
+### Development Mode
+```bash
+ftl dev --recreate ./examples/go
+```
+
+### With OpenTelemetry
+1. Start OTEL stack:
+   ```bash
+   just observe
+   ```
+
+2. Run FTL with OTEL:
+   ```bash
+   just otel-dev
+   ```
+
+## Debugging
+
+### Using Delve
+
+1. Start debug session:
+   ```bash
+   just debug <args>
+   ```
+   This provides a debug endpoint at 127.0.0.1:2345
+
+2. Attach debugger:
+   - IntelliJ: Run "Debug FTL" from Run/Debug Configurations
+   - VSCode: Run "Debug FTL" from Run and Debug dropdown
+
+## Testing Local Changes
+
+1. Start live rebuild:
+   ```bash
+   just live-rebuild
+   ```
+
+2. In another terminal, test against a separate project:
+   ```bash
+   ${FTL_HOME}/build/release/ftl dev
+   ```
+
+## VSCode Extension Development
+
+### Building
+```bash
+just build-extension
+```
+
+### Packaging
+```bash
+just package-extension
+```
+
+### Publishing
+```bash
+just publish-extension
+```
+
+## Database Changes
+
+1. Generate SQL code:
+   ```bash
+   just build-sqlc
+   ```
+
+2. Create new migration:
+   ```bash
+   dbmate new <migration_name>
+   ```
+
+## Useful Tips
+
+- Use `rg` (ripgrep) for searching code:
+  ```bash
+  # Find files by name
+  rg --files | rg example.py
+  
+  # Search content
+  rg 'class Example'
+  ```
+
+- Access Grafana dashboard at http://localhost:3000 when running OTEL stack
+
+- For local testing, always run FTL from the project root directory
