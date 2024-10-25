@@ -12,13 +12,12 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
-	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
-	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
+	pythonruntime "github.com/TBD54566975/ftl/python-runtime"
 	"github.com/TBD54566975/ftl/python-runtime/compile"
 )
 
@@ -56,7 +55,7 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
-func (s *Service) GetCreateModuleFlags(context.Context, *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
+func (s *Service) GetCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
 	return connect.NewResponse(&langpb.GetCreateModuleFlagsResponse{}), nil
 }
 
@@ -80,24 +79,20 @@ func (s *Service) CreateModule(ctx context.Context, req *connect.Request[langpb.
 
 	// scaffold at one directory above the module directory
 	parentPath := filepath.Dir(req.Msg.Dir)
-	if err := internal.ScaffoldZip(goruntime.Files(), parentPath, sctx, opts...); err != nil {
+	if err := internal.ScaffoldZip(pythonruntime.Files(), parentPath, sctx, opts...); err != nil {
 		return nil, fmt.Errorf("failed to scaffold: %w", err)
-	}
-	logger.Debugf("Running go mod tidy: %s", req.Msg.Dir)
-	if err := exec.Command(ctx, log.Debug, req.Msg.Dir, "go", "mod", "tidy").RunBuffered(ctx); err != nil {
-		return nil, fmt.Errorf("could not tidy: %w", err)
 	}
 	return connect.NewResponse(&langpb.CreateModuleResponse{}), nil
 }
 
-func (s *Service) ModuleConfigDefaults(context.Context, *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
+func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
 	return connect.NewResponse(&langpb.ModuleConfigDefaultsResponse{
 		Watch:     []string{"**/*.py"},
 		DeployDir: ".ftl",
 	}), nil
 }
 
-func (s *Service) GetDependencies(context.Context, *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
+func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
 	return connect.NewResponse(&langpb.DependenciesResponse{}), nil
 }
 
@@ -136,7 +131,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	return nil
 }
 
-func (s *Service) BuildContextUpdated(context.Context, *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
+func (s *Service) BuildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
 	return connect.NewResponse(&langpb.BuildContextUpdatedResponse{}), nil
 }
 
@@ -158,6 +153,6 @@ func (s *Service) GenerateStubs(ctx context.Context, req *connect.Request[langpb
 	return connect.NewResponse(&langpb.GenerateStubsResponse{}), nil
 }
 
-func (s *Service) SyncStubReferences(context.Context, *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
+func (s *Service) SyncStubReferences(ctx context.Context, req *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
 	return connect.NewResponse(&langpb.SyncStubReferencesResponse{}), nil
 }
