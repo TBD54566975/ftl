@@ -169,7 +169,7 @@ func (ModuleDeploySuccess) rawBuildEvent() {}
 
 // invalidateDependenciesEvent is published when a module needs to be rebuilt when a module
 // failed to buuld due to a change in dependencies.
-type invalidateDependenciesEvent struct {
+type rebuildRequest struct {
 	module string
 }
 
@@ -193,7 +193,8 @@ type Engine struct {
 	// events coming in from plugins
 	pluginEvents chan languageplugin.PluginEvent
 
-	invalidateDeps chan invalidateDependenciesEvent
+	// requests to rebuild modules due to dependencies changing or plugins dying
+	rebuildRequests chan rebuildRequest
 
 	// internal channel for raw engine updates (does not include all state changes)
 	rawEngineUpdates chan rawEngineEvent
@@ -250,7 +251,7 @@ func New(ctx context.Context, client DeployClient, projectConfig projectconfig.C
 		pluginEvents:     make(chan languageplugin.PluginEvent, 128),
 		parallelism:      runtime.NumCPU(),
 		modulesToBuild:   xsync.NewMapOf[string, bool](),
-		invalidateDeps:   make(chan invalidateDependenciesEvent, 128),
+		rebuildRequests:  make(chan rebuildRequest, 128),
 		rawEngineUpdates: make(chan rawEngineEvent, 128),
 		EngineUpdates:    pubsub.New[EngineEvent](),
 		bindAllocator:    bindAllocator,
@@ -606,8 +607,19 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				_ = e.BuildAndDeploy(ctx, 1, true, dependentModuleNames...) //nolint:errcheck
 			}
 
-		case event := <-e.invalidateDeps:
-			_ = e.BuildAndDeploy(ctx, 1, true, event.module) //nolint:errcheck
+		case event := <-e.rebuildRequests:
+			// batch all pending requests together
+			modules := []string{event.module}
+		readLoop:
+			for {
+				select {
+				case event := <-e.rebuildRequests:
+					modules = append(modules, event.module)
+				default:
+					break readLoop
+				}
+			}
+			_ = e.BuildAndDeploy(ctx, 1, true, modules...) //nolint:errcheck
 		}
 	}
 }
@@ -976,7 +988,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		if errors.Is(err, errInvalidateDependencies) {
 			// Do not start a build directly as we are already building out a graph of modules.
 			// Instead we send to a chan so that it can be processed after.
-			e.invalidateDeps <- invalidateDependenciesEvent{module: moduleName}
+			e.rebuildRequests <- rebuildRequest{module: moduleName}
 		}
 		return err
 	}
@@ -1083,7 +1095,7 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 						if errors.Is(err, errInvalidateDependencies) {
 							// Do not block this goroutine by building a module here.
 							// Instead we send to a chan so that it can be processed elsewhere.
-							e.invalidateDeps <- invalidateDependenciesEvent{module: event.ModuleName()}
+							e.rebuildRequests <- rebuildRequest{module: event.ModuleName()}
 						}
 						continue
 					}
@@ -1097,8 +1109,6 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rawEngineUpdates <- ModuleDeploySuccess{Module: event.Module}
 				}
 			case languageplugin.PluginDiedEvent:
-				// TODO: before killig a plugin make sure it is no longer in meta
-				// TODO: find meta based on plugin value, recreate plugin, schedule rebuild
 				e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
 					if meta.plugin != event.Plugin {
 						return true
@@ -1117,9 +1127,7 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 						return false
 					}
 					e.moduleMetas.Store(name, newMeta)
-
-					// TODO: rename...
-					e.invalidateDeps <- invalidateDependenciesEvent{module: name}
+					e.rebuildRequests <- rebuildRequest{module: name}
 					return false
 				})
 			}

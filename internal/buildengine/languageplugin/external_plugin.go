@@ -55,27 +55,7 @@ func newExternalPlugin(ctx context.Context, bind *url.URL, language string) (*ex
 		return nil, err
 	}
 
-	plugin := newExternalPluginForTesting(ctx, impl)
-
-	go func() {
-		select {
-		case err := <-impl.cmdErr:
-			if err != nil {
-				plugin.updates.Publish(PluginDiedEvent{
-					Plugin: plugin,
-					Error:  fmt.Errorf("%w: %w", ErrPluginNotRunning, err),
-				})
-				return
-			}
-			plugin.updates.Publish(PluginDiedEvent{
-				Plugin: plugin,
-				Error:  ErrPluginNotRunning,
-			})
-		case <-ctx.Done():
-		}
-	}()
-
-	return plugin, nil
+	return newExternalPluginForTesting(ctx, impl), nil
 }
 
 func newExternalPluginForTesting(ctx context.Context, client externalPluginClient) *externalPlugin {
@@ -88,6 +68,7 @@ func newExternalPluginForTesting(ctx context.Context, client externalPluginClien
 	var runCtx context.Context
 	runCtx, plugin.cancel = context.WithCancel(ctx)
 	go plugin.run(runCtx)
+	go plugin.watchForCmdError(runCtx)
 
 	return plugin
 }
@@ -265,6 +246,23 @@ func (p *externalPlugin) Build(ctx context.Context, projectRoot, stubsRoot strin
 		return result, nil
 	case <-ctx.Done():
 		return BuildResult{}, fmt.Errorf("error waiting for build to complete: %w", ctx.Err())
+	}
+}
+
+func (p *externalPlugin) watchForCmdError(ctx context.Context) {
+	select {
+	case err := <-p.client.cmdErr():
+		if err == nil {
+			// closed
+			return
+		}
+		p.updates.Publish(PluginDiedEvent{
+			Plugin: p,
+			Error:  err,
+		})
+
+	case <-ctx.Done():
+
 	}
 }
 

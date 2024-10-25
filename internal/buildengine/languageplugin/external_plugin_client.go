@@ -32,6 +32,7 @@ type externalPluginClient interface {
 	buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error)
 
 	kill() error
+	cmdErr() <-chan error
 }
 
 var _ externalPluginClient = &externalPluginImpl{}
@@ -41,7 +42,7 @@ type externalPluginImpl struct {
 	client langconnect.LanguageServiceClient
 
 	// channel gets closed when the plugin exits
-	cmdErr chan error
+	cmdError chan error
 }
 
 func newExternalPluginImpl(ctx context.Context, bind *url.URL, language string) (*externalPluginImpl, error) {
@@ -66,17 +67,20 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language 
 
 	runCtx, cancel := context.WithCancel(ctx)
 
-	p.cmdErr = make(chan error)
+	p.cmdError = make(chan error)
 	pingErr := make(chan error)
 
 	// run the plugin and wait for it to finish executing
 	go func() {
 		err := p.cmd.RunBuffered(runCtx)
+		fmt.Printf("ended!")
 		if err != nil {
-			p.cmdErr <- fmt.Errorf("language plugin failed: %w", err)
-			cancel()
+			p.cmdError <- fmt.Errorf("language plugin failed: %w", err)
+		} else {
+			p.cmdError <- fmt.Errorf("language plugin ended with status 0")
 		}
-		close(p.cmdErr)
+		cancel()
+		close(p.cmdError)
 	}()
 	go func() {
 		// wait for the plugin to be ready
@@ -89,7 +93,7 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language 
 
 	// Wait for ping result, or for the plugin to exit. Which ever happens first.
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		if err != nil {
 			return err
 		}
@@ -116,15 +120,21 @@ func (p *externalPluginImpl) ping(ctx context.Context) error {
 }
 
 func (p *externalPluginImpl) kill() error {
+	// close cmdErr so that we don't publish cmd error.
+	close(p.cmdError)
 	if err := p.cmd.Kill(syscall.SIGINT); err != nil {
 		return err //nolint:wrapcheck
 	}
 	return nil
 }
 
+func (p *externalPluginImpl) cmdErr() <-chan error {
+	return p.cmdError
+}
+
 func (p *externalPluginImpl) getCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		return nil, wrapCmdError(err)
 	default:
 	}
@@ -137,7 +147,7 @@ func (p *externalPluginImpl) getCreateModuleFlags(ctx context.Context, req *conn
 
 func (p *externalPluginImpl) moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		return nil, wrapCmdError(err)
 	default:
 	}
@@ -150,7 +160,7 @@ func (p *externalPluginImpl) moduleConfigDefaults(ctx context.Context, req *conn
 
 func (p *externalPluginImpl) createModule(ctx context.Context, req *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error) {
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		return nil, wrapCmdError(err)
 	default:
 	}
@@ -163,7 +173,7 @@ func (p *externalPluginImpl) createModule(ctx context.Context, req *connect.Requ
 
 func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		return nil, wrapCmdError(err)
 	default:
 	}
@@ -176,7 +186,7 @@ func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.R
 
 func (p *externalPluginImpl) generateStubs(ctx context.Context, req *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error) {
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		return nil, wrapCmdError(err)
 	default:
 	}
@@ -189,7 +199,7 @@ func (p *externalPluginImpl) generateStubs(ctx context.Context, req *connect.Req
 
 func (p *externalPluginImpl) syncStubReferences(ctx context.Context, req *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		return nil, wrapCmdError(err)
 	default:
 	}
@@ -202,7 +212,7 @@ func (p *externalPluginImpl) syncStubReferences(ctx context.Context, req *connec
 
 func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		return nil, nil, wrapCmdError(err)
 	default:
 	}
@@ -232,7 +242,7 @@ func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch c
 
 func (p *externalPluginImpl) buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
 	select {
-	case err := <-p.cmdErr:
+	case err := <-p.cmdError:
 		return nil, wrapCmdError(err)
 	default:
 	}
