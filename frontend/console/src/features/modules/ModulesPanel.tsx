@@ -1,4 +1,3 @@
-import { useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
 import { AttributeBadge } from '../../components'
 import { List } from '../../components/List'
@@ -8,17 +7,14 @@ import { deploymentTextColor } from '../deployments/deployment.utils'
 
 export const ModulesPanel = () => {
   const modules = useModules()
-  const navigate = useNavigate()
 
-  const handleModuleClick = (module: Module) => {
-    navigate(`/modules/${module.name}`)
-  }
+  const moduleHref = (module: Module) => `/modules/${module.name}`
 
   return (
     <div className='p-2'>
       <List
         items={modules.data?.modules ?? []}
-        onClick={handleModuleClick}
+        href={moduleHref}
         renderItem={(module) => (
           <div className='flex w-full' data-module-row={module.name}>
             <div className='flex gap-x-4 items-center w-1/2'>
