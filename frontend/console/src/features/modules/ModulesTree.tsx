@@ -1,6 +1,6 @@
 import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, FileExportIcon, PackageIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
 import type { MultiselectOpt } from '../../components/Multiselect'
 import { classNames } from '../../utils'
@@ -24,7 +24,6 @@ const ExportedIcon = () => (
 )
 
 const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; isSelected: boolean }) => {
-  const navigate = useNavigate()
   const declRef = useRef<HTMLDivElement>(null)
 
   // Scroll to the selected decl on page load
@@ -41,22 +40,19 @@ const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; is
   const Icon = useMemo(() => declIcon(decl.declType), [decl.declType])
   return (
     <li className='my-1'>
-      <div
-        ref={declRef}
-        id={`decl-${decl.value.name}`}
-        className={classNames(
-          isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
-          'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer scroll-mt-10',
-        )}
-        onClick={(e) => {
-          e.preventDefault()
-          navigate(href)
-        }}
-      >
-        <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
-        {decl.value.name}
-        {declSumTypeIsExported(decl.value) ? <ExportedIcon /> : []}
-      </div>
+      <Link id={`decl-${decl.value.name}`} to={href}>
+        <div
+          ref={declRef}
+          className={classNames(
+            isSelected ? 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-gray-600' : 'hover:bg-gray-200 hover:dark:bg-gray-700',
+            'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer scroll-mt-10',
+          )}
+        >
+          <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
+          {decl.value.name}
+          {declSumTypeIsExported(decl.value) ? <ExportedIcon /> : []}
+        </div>
+      </Link>
     </li>
   )
 }
@@ -68,7 +64,6 @@ const ModuleSection = ({
   selectedDeclTypes,
 }: { module: ModuleTreeItem; isExpanded: boolean; toggleExpansion: (m: string) => void; selectedDeclTypes: MultiselectOpt[] }) => {
   const { moduleName, declName } = useParams()
-  const navigate = useNavigate()
   const isSelected = useMemo(() => moduleName === module.name, [moduleName, module.name])
   const moduleRef = useRef<HTMLDivElement>(null)
 
@@ -98,15 +93,9 @@ const ModuleSection = ({
       >
         <PackageIcon aria-hidden='true' className='size-4 my-1 ml-3 shrink-0' />
         {module.name}
-        <CircleArrowRight02Icon
-          id={`module-${module.name}-view-icon`}
-          className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600'
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            navigate(`/modules/${module.name}`)
-          }}
-        />
+        <Link to={`/modules/${module.name}`} onClick={(e) => e.stopPropagation()}>
+          <CircleArrowRight02Icon id={`module-${module.name}-view-icon`} className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600' />
+        </Link>
         {filteredDecls.length === 0 || (
           <ArrowRight01Icon aria-hidden='true' className={`ml-auto mr-2 h-4 w-4 shrink-0 ${isExpanded ? 'rotate-90 text-gray-500' : ''}`} />
         )}

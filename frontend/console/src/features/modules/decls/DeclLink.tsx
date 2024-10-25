@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useStreamModules } from '../../../api/modules/use-stream-modules'
 import { classNames } from '../../../utils'
 import { getTreeWidthFromLS } from '../module.utils'
@@ -60,14 +60,13 @@ export const DeclLink = ({
   if (!moduleName || !declName) {
     return
   }
-  const navigate = useNavigate()
   const modules = useStreamModules()
   const decl = useMemo(
     () => (moduleName && !!modules?.data ? declSchemaFromModules(moduleName, declName, modules?.data) : undefined),
     [moduleName, declName, modules?.data],
   )
   const [isHovering, setIsHovering] = useState(false)
-  const linkRef = useRef<HTMLSpanElement>(null)
+  const linkRef = useRef<HTMLAnchorElement>(null)
 
   const str = moduleName && slim !== true ? `${moduleName}.${declName}` : declName
 
@@ -81,9 +80,9 @@ export const DeclLink = ({
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      <span ref={linkRef} className={textColors} onClick={() => navigate(`/modules/${moduleName}/${decl.declType}/${declName}`)}>
+      <Link ref={linkRef} className={textColors} to={`/modules/${moduleName}/${decl.declType}/${declName}`}>
         {str}
-      </span>
+      </Link>
       {!slim && (
         <SnippetContainer
           decl={decl}
