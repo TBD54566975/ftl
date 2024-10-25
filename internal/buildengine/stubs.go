@@ -103,7 +103,7 @@ func generateStubsForEachLanguage(ctx context.Context, projectRoot string, modul
 	}
 	err := wg.Wait()
 	if err != nil {
-		return fmt.Errorf("failed to generate go stubs: %w", err)
+		return fmt.Errorf("failed to generate language stubs: %w", err)
 	}
 	return nil
 }

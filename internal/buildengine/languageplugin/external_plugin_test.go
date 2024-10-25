@@ -35,6 +35,8 @@ type mockExternalPluginClient struct {
 	buildEvents     chan result.Result[*langpb.BuildEvent]
 
 	latestBuildContext atomic.Value[testBuildContext]
+
+	cmdError chan error
 }
 
 var _ externalPluginClient = &mockExternalPluginClient{}
@@ -43,6 +45,7 @@ func newMockExternalPlugin() *mockExternalPluginClient {
 	return &mockExternalPluginClient{
 		buildEventsLock: &sync.Mutex{},
 		buildEvents:     make(chan result.Result[*langpb.BuildEvent], 64),
+		cmdError:        make(chan error),
 	}
 }
 
@@ -128,6 +131,10 @@ func (p *mockExternalPluginClient) buildContextUpdated(ctx context.Context, req 
 
 func (p *mockExternalPluginClient) kill() error {
 	return nil
+}
+
+func (p *mockExternalPluginClient) cmdErr() <-chan error {
+	return p.cmdError
 }
 
 func setUp() (context.Context, *externalPlugin, *mockExternalPluginClient, BuildContext) {

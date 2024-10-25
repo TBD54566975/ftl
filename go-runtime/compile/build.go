@@ -38,13 +38,6 @@ type MainWorkContext struct {
 	SharedModulesPaths []string
 }
 
-type ExternalModuleContext struct {
-	GoVersion    string
-	FTLVersion   string
-	Module       *schema.Module
-	Replacements []*modfile.Replace
-}
-
 type mainModuleContext struct {
 	GoVersion          string
 	FTLVersion         string

@@ -169,7 +169,7 @@ func (ModuleDeploySuccess) rawBuildEvent() {}
 
 // invalidateDependenciesEvent is published when a module needs to be rebuilt when a module
 // failed to buuld due to a change in dependencies.
-type invalidateDependenciesEvent struct {
+type rebuildRequest struct {
 	module string
 }
 
@@ -193,7 +193,8 @@ type Engine struct {
 	// events coming in from plugins
 	pluginEvents chan languageplugin.PluginEvent
 
-	invalidateDeps chan invalidateDependenciesEvent
+	// requests to rebuild modules due to dependencies changing or plugins dying
+	rebuildRequests chan rebuildRequest
 
 	// internal channel for raw engine updates (does not include all state changes)
 	rawEngineUpdates chan rawEngineEvent
@@ -250,7 +251,7 @@ func New(ctx context.Context, client DeployClient, projectConfig projectconfig.C
 		pluginEvents:     make(chan languageplugin.PluginEvent, 128),
 		parallelism:      runtime.NumCPU(),
 		modulesToBuild:   xsync.NewMapOf[string, bool](),
-		invalidateDeps:   make(chan invalidateDependenciesEvent, 128),
+		rebuildRequests:  make(chan rebuildRequest, 128),
 		rawEngineUpdates: make(chan rawEngineEvent, 128),
 		EngineUpdates:    pubsub.New[EngineEvent](),
 		bindAllocator:    bindAllocator,
@@ -606,8 +607,19 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 				_ = e.BuildAndDeploy(ctx, 1, true, dependentModuleNames...) //nolint:errcheck
 			}
 
-		case event := <-e.invalidateDeps:
-			_ = e.BuildAndDeploy(ctx, 1, true, event.module) //nolint:errcheck
+		case event := <-e.rebuildRequests:
+			// batch all pending requests together
+			modules := []string{event.module}
+		readLoop:
+			for {
+				select {
+				case event := <-e.rebuildRequests:
+					modules = append(modules, event.module)
+				default:
+					break readLoop
+				}
+			}
+			_ = e.BuildAndDeploy(ctx, 1, true, modules...) //nolint:errcheck
 		}
 	}
 }
@@ -976,7 +988,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		if errors.Is(err, errInvalidateDependencies) {
 			// Do not start a build directly as we are already building out a graph of modules.
 			// Instead we send to a chan so that it can be processed after.
-			e.invalidateDeps <- invalidateDependenciesEvent{module: moduleName}
+			e.rebuildRequests <- rebuildRequest{module: moduleName}
 		}
 		return err
 	}
@@ -1063,36 +1075,62 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 	for {
 		select {
 		case event := <-e.pluginEvents:
-			logger := log.FromContext(originalCtx).Module(event.ModuleName()).Scope("build")
-			ctx := log.ContextWithLogger(originalCtx, logger)
-			meta, ok := e.moduleMetas.Load(event.ModuleName())
-			if !ok {
-				logger.Warnf("module not found for build update")
-				continue
-			}
 			switch event := event.(type) {
-			case languageplugin.AutoRebuildStartedEvent:
-				e.rawEngineUpdates <- ModuleBuildStarted{Config: meta.module.Config, IsAutoRebuild: true}
+			case languageplugin.PluginBuildEvent, languageplugin.AutoRebuildStartedEvent, languageplugin.AutoRebuildEndedEvent:
+				buildEvent := event.(languageplugin.PluginBuildEvent) //nolint:forcetypeassert
+				logger := log.FromContext(originalCtx).Module(buildEvent.ModuleName()).Scope("build")
+				ctx := log.ContextWithLogger(originalCtx, logger)
+				meta, ok := e.moduleMetas.Load(buildEvent.ModuleName())
+				if !ok {
+					logger.Warnf("module not found for build update")
+					continue
+				}
+				switch event := buildEvent.(type) {
+				case languageplugin.AutoRebuildStartedEvent:
+					e.rawEngineUpdates <- ModuleBuildStarted{Config: meta.module.Config, IsAutoRebuild: true}
 
-			case languageplugin.AutoRebuildEndedEvent:
-				_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result)
-				if err != nil {
-					e.rawEngineUpdates <- ModuleBuildFailed{Config: meta.module.Config, IsAutoRebuild: true, Error: err}
-					if errors.Is(err, errInvalidateDependencies) {
-						// Do not block this goroutine by building a module here.
-						// Instead we send to a chan so that it can be processed elsewhere.
-						e.invalidateDeps <- invalidateDependenciesEvent{module: event.ModuleName()}
+				case languageplugin.AutoRebuildEndedEvent:
+					_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result)
+					if err != nil {
+						e.rawEngineUpdates <- ModuleBuildFailed{Config: meta.module.Config, IsAutoRebuild: true, Error: err}
+						if errors.Is(err, errInvalidateDependencies) {
+							// Do not block this goroutine by building a module here.
+							// Instead we send to a chan so that it can be processed elsewhere.
+							e.rebuildRequests <- rebuildRequest{module: event.ModuleName()}
+						}
+						continue
 					}
-					continue
-				}
-				e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
+					e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
 
-				e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
-				if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
-					e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
-					continue
+					e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
+					if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
+						e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
+						continue
+					}
+					e.rawEngineUpdates <- ModuleDeploySuccess{Module: event.Module}
 				}
-				e.rawEngineUpdates <- ModuleDeploySuccess{Module: event.Module}
+			case languageplugin.PluginDiedEvent:
+				e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
+					if meta.plugin != event.Plugin {
+						return true
+					}
+					logger := log.FromContext(originalCtx).Module(name)
+					logger.Errorf(event.Error, "Plugin died, recreating")
+
+					c, err := moduleconfig.LoadConfig(meta.module.Config.Dir)
+					if err != nil {
+						logger.Errorf(err, "Could not recreate plugin: could not load config")
+						return false
+					}
+					newMeta, err := e.newModuleMeta(originalCtx, c)
+					if err != nil {
+						logger.Errorf(err, "Could not recreate plugin")
+						return false
+					}
+					e.moduleMetas.Store(name, newMeta)
+					e.rebuildRequests <- rebuildRequest{module: name}
+					return false
+				})
 			}
 		case <-originalCtx.Done():
 			// kill all plugins

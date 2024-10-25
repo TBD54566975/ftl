@@ -2,6 +2,7 @@ package languageplugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -40,8 +41,12 @@ type BuildResult struct {
 //
 //sumtype:decl
 type PluginEvent interface {
-	ModuleName() string
 	pluginEvent()
+}
+
+type PluginBuildEvent interface {
+	PluginEvent
+	ModuleName() string
 }
 
 // AutoRebuildStartedEvent is sent when the plugin starts an automatic rebuild.
@@ -61,6 +66,15 @@ type AutoRebuildEndedEvent struct {
 func (AutoRebuildEndedEvent) pluginEvent()         {}
 func (e AutoRebuildEndedEvent) ModuleName() string { return e.Module }
 
+// PluginDiedEvent is sent when the plugin dies.
+type PluginDiedEvent struct {
+	// Plugins do not always have an associated module name, so we include the module
+	Plugin LanguagePlugin
+	Error  error
+}
+
+func (PluginDiedEvent) pluginEvent() {}
+
 // BuildContext contains contextual information needed to build.
 //
 // Any change to the build context would require a new build.
@@ -69,6 +83,8 @@ type BuildContext struct {
 	Schema       *schema.Schema
 	Dependencies []string
 }
+
+var ErrPluginNotRunning = errors.New("language plugin no longer running")
 
 // LanguagePlugin handles building and scaffolding modules in a specific language.
 type LanguagePlugin interface {
