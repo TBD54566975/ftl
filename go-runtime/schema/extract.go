@@ -3,7 +3,6 @@ package schema
 import (
 	"fmt"
 	"go/types"
-	"time"
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
@@ -37,60 +36,48 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
 
-// Extractors contains all schema extractors that will run.
+// extractors contains all schema extractors that will run.
 //
 // It is a list of lists, where each list is a round of tasks dependent on the prior round's execution (e.g. an analyzer
-// in Extractors[1] will only execute once all analyzers in Extractors[0] complete). Elements of the same list
+// in extractors[1] will only execute once all analyzers in extractors[0] complete). Elements of the same list
 // should be considered unordered and may run in parallel.
-func Extractors() [][]*analysis.Analyzer {
-	ret := [][]*analysis.Analyzer{
-		{
-			initialize.Analyzer,
-			inspect.Analyzer,
-		},
-		{
-			metadata.Extractor,
-		},
-		{
-			// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
-			// interfaces and typeenumvariant.Extractor determines any types that implement these
-			typeenum.Extractor,
-		},
-		{
-			configsecret.Extractor,
-			data.Extractor,
-			database.Extractor,
-			fsm.Extractor,
-			topic.Extractor,
-			typealias.Extractor,
-			typeenumvariant.Extractor,
-			valueenumvariant.Extractor,
-			verb.Extractor,
-		},
-		{
-			call.Extractor,
-			// must run after valueenumvariant.Extractor and typeenumvariant.Extractor;
-			// visits a node and aggregates its enum variants if present
-			enum.Extractor,
-			subscription.Extractor,
-		},
-		{
-			transitive.Extractor,
-		},
-		{
-			finalize.Analyzer,
-		},
-	}
-	for i := range ret {
-		for j := range ret[i] {
-			if ret[i][j] == nil {
-				// This should never happen, but we have seen something that looks like a go compiler bug
-				// If it happens again this should give us more information
-				panic(fmt.Sprintf("analyzer at Extractors[%d][%d] not yet initialized", i, j))
-			}
-		}
-	}
-	return ret
+var extractors = [][]*analysis.Analyzer{
+	{
+		initialize.Analyzer,
+		inspect.Analyzer,
+	},
+	{
+		metadata.Extractor,
+	},
+	{
+		// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
+		// interfaces and typeenumvariant.Extractor determines any types that implement these
+		typeenum.Extractor,
+	},
+	{
+		configsecret.Extractor,
+		data.Extractor,
+		database.Extractor,
+		fsm.Extractor,
+		topic.Extractor,
+		typealias.Extractor,
+		typeenumvariant.Extractor,
+		valueenumvariant.Extractor,
+		verb.Extractor,
+	},
+	{
+		call.Extractor,
+		// must run after valueenumvariant.Extractor and typeenumvariant.Extractor;
+		// visits a node and aggregates its enum variants if present
+		enum.Extractor,
+		subscription.Extractor,
+	},
+	{
+		transitive.Extractor,
+	},
+	{
+		finalize.Analyzer,
+	},
 }
 
 // NativeNames is a map of top-level declarations to their native Go names.
@@ -106,6 +93,24 @@ type Result struct {
 	Errors []builderrors.Error
 }
 
+var orderedAnalyzers []*analysis.Analyzer
+
+func init() {
+	// observes dependencies as specified by tiered list ordering in Extractors and applies the dependency
+	// requirements to the analyzers
+	//
+	// flattens Extractors (a list of lists) into a single list to provide as input for the checker
+	var beforeIndex []*analysis.Analyzer
+	for i, extractorRound := range extractors {
+		for _, extractor := range extractorRound {
+			extractor.RunDespiteErrors = true
+			beforeIndex = dependenciesBeforeIndex(i)
+			extractor.Requires = append(extractor.Requires, beforeIndex...)
+			orderedAnalyzers = append(orderedAnalyzers, extractor)
+		}
+	}
+}
+
 // Extract statically parses Go FTL module source into a schema.Module
 func Extract(moduleDir string) (Result, error) {
 	pkgConfig := packages.Config{
@@ -117,7 +122,7 @@ func Extract(moduleDir string) (Result, error) {
 		ReverseImportExecutionOrder: true,
 		Patterns:                    []string{"./..."},
 	}
-	results, diagnostics, err := checker.Run(cConfig, analyzersWithDependencies()...)
+	results, diagnostics, err := checker.Run(cConfig, orderedAnalyzers...)
 	if err != nil {
 		return Result{}, err
 	}
@@ -289,54 +294,10 @@ func (cd *combinedData) propagateTypeErrors() {
 	})
 }
 
-func analyzersWithDependencies() []*analysis.Analyzer {
-	var as []*analysis.Analyzer
-	// observes dependencies as specified by tiered list ordering in Extractors and applies the dependency
-	// requirements to the analyzers
-	//
-	// flattens Extractors (a list of lists) into a single list to provide as input for the checker
-	extractors := Extractors()
-	var beforeIndex []*analysis.Analyzer
-	var extractorRound []*analysis.Analyzer
-	var extractor *analysis.Analyzer
-	var i int
-	defer func() {
-		// This code is cursed, it randomly panics and I don't know why
-		// Lets recover from the panic and see what the actual state of the program is
-		// This is temporary and should be removed once the curse has been lifted
-		if r := recover(); r != nil {
-			fmt.Printf("Recovered from intermittent panic in analysers: %v\n", r)
-			fmt.Printf("i: %d\n", i)
-			fmt.Printf("extractor: %v\n", extractor)
-			fmt.Printf("extractors: %v\n", extractors)
-			fmt.Printf("extractorRound: %v\n", extractorRound)
-			fmt.Printf("beforeIndex: %v\n", beforeIndex)
-			time.Sleep(time.Second) // Make sure the output makes it before the crash
-			panic(r)                // re-panic
-		}
-	}()
-
-	for i, extractorRound = range extractors {
-		for _, extractor = range extractorRound {
-			extractor.RunDespiteErrors = true
-			beforeIndex = dependenciesBeforeIndex(i)
-			extractor.Requires = append(extractor.Requires, beforeIndex...)
-			as = append(as, extractor)
-
-		}
-	}
-	return as
-}
-
 func dependenciesBeforeIndex(idx int) []*analysis.Analyzer {
 	var deps []*analysis.Analyzer
 	for i := range idx {
-		extractors := Extractors()
 		for _, extractor := range extractors[i] {
-			if extractor == nil {
-				panic(fmt.Sprintf("analyzer at Extractors[%d] not yet initialized", i))
-			}
-
 			deps = append(deps, extractor)
 		}
 	}
