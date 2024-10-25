@@ -10,6 +10,11 @@ always run this first: . ./bin/activate-hermit && hermit install to prepare env
 
 to run tests, for example: `just test-backend` is a good place to start, also look in the Justfile.
 
+# developing workflow
+
+* Developer will ask how to do things, where things are, or to run tests, or fix bugs. 
+* The issue tracker is here: https://github.com/TBD54566975/ftl/issues you can use the `gh` cli to look at issues etc if needed.
+* If you aren't sure how to solve something, you can use `gh` command line to look through recent merged pull requests to see if any descriptions may match, and then note the code changes in there.
 
 # Relevant content
 list files in this dir, note CONTRIBUTING.md and README.md.
