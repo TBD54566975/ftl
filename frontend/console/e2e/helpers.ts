@@ -16,6 +16,6 @@ export async function navigateToDecl(page: Page, moduleName: string, declName: s
   await navigateToModule(page, moduleName)
 
   // Navigate to the decl page
-  await page.locator(`div#decl-${declName}`).click()
+  await page.locator(`a#decl-${declName}`).click()
   await expect(page).toHaveURL(new RegExp(`/modules/${moduleName}/verb/${declName}`))
 }
