@@ -20,6 +20,13 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
+type ExternalModuleContext struct {
+	GoVersion    string
+	FTLVersion   string
+	Module       *schema.Module
+	Replacements []*modfile.Replace
+}
+
 func GenerateStubs(ctx context.Context, dir string, moduleSch *schema.Module, config moduleconfig.AbsModuleConfig, nativeConfig optional.Option[moduleconfig.AbsModuleConfig]) error {
 	var goModVersion string
 	var replacements []*modfile.Replace
