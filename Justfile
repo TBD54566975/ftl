@@ -80,9 +80,9 @@ build-python-plugin: build-zips build-protos
   shopt -s extglob
 
   if [ "${FTL_DEBUG:-}" = "true" ]; then
-    go build -o "{{RELEASE}}/ftl-language-python" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./python-runtime/cmd"
+    go build -o "{{RELEASE}}/ftl-language-python" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./python-runtime/cmd/ftl-language-python"
   else
-    mk "{{RELEASE}}/ftl-language-python" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-python" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./python-runtime/cmd"
+    mk "{{RELEASE}}/ftl-language-python" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-python" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./python-runtime/cmd/ftl-language-python"
   fi
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
