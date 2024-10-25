@@ -9,13 +9,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/TBD54566975/scaffolder"
+
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
-	"github.com/TBD54566975/scaffolder"
 )
 
 type mainModuleContext struct {

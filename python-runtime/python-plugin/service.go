@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 
 	"connectrpc.com/connect"
+	"github.com/TBD54566975/scaffolder"
+	"github.com/alecthomas/types/optional"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
@@ -18,8 +20,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/python-runtime/compile"
-	"github.com/TBD54566975/scaffolder"
-	"github.com/alecthomas/types/optional"
 )
 
 // buildContext contains contextual information needed to build.

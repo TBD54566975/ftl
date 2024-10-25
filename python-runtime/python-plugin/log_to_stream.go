@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
+
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal/log"
 )

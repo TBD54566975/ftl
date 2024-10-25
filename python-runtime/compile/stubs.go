@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"maps"
 
+	"github.com/TBD54566975/scaffolder"
+	"github.com/alecthomas/types/optional"
+
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/TBD54566975/scaffolder"
-	"github.com/alecthomas/types/optional"
 )
 
 type ExternalModuleContext struct {
