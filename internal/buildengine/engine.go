@@ -1131,7 +1131,7 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rebuildRequests <- rebuildRequest{module: name}
 					return false
 				})
-
+			}
 		case <-originalCtx.Done():
 			// kill all plugins
 			e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
