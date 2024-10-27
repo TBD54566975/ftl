@@ -34,9 +34,6 @@ type Querier interface {
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
 	FailAsyncCall(ctx context.Context, error string, iD int64) (bool, error)
 	FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallWithRetryParams) (bool, error)
-	FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
-	// Mark an FSM transition as completed, updating the current state and clearing the async call ID.
-	FinishFSMTransition(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
 	GetActiveControllers(ctx context.Context) ([]Controller, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
@@ -49,7 +46,6 @@ type Querier interface {
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, schema []byte, count int64) ([]GetDeploymentsWithArtefactsRow, error)
 	GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error)
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
-	GetFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (FsmInstance, error)
 	// Get the runner endpoints corresponding to the given ingress route.
 	GetIngressRoutes(ctx context.Context) ([]GetIngressRoutesRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
@@ -77,17 +73,10 @@ type Querier interface {
 	KillStaleControllers(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error)
-	PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (FsmNextEvent, error)
 	PublishEventForTopic(ctx context.Context, arg PublishEventForTopicParams) error
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
-	SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error)
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
-	// Start a new FSM transition, populating the destination state and async call ID.
-	//
-	// "key" is the unique identifier for the FSM execution.
-	StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error)
 	SucceedAsyncCall(ctx context.Context, response api.OptionalEncryptedAsyncColumn, iD int64) (bool, error)
-	SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error)
 	UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)

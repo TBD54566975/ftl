@@ -95,14 +95,6 @@ module foo {
 }
 
 module payments {
-  fsm payment {
-    start payments.created
-    start payments.paid
-    transition payments.created to payments.paid
-    transition payments.created to payments.failed
-    transition payments.paid to payments.completed
-  }
-
   data OnlinePaymentCompleted {
   }
 
@@ -245,8 +237,6 @@ func TestParserRoundTrip(t *testing.T) {
 
 //nolint:maintidx
 func TestParsing(t *testing.T) {
-	zero := 0
-	ten := 10
 	tests := []struct {
 		name     string
 		input    string
@@ -420,232 +410,6 @@ func TestParsing(t *testing.T) {
 								Module:         "test",
 								Name:           "Data",
 								TypeParameters: []Type{&String{}},
-							},
-						},
-					},
-				}},
-			},
-		},
-		{name: "RetryFSM",
-			input: `
-				module test {
-					verb A(Empty) Unit
-						+retry 10 1m5s 90s
-					verb B(Empty) Unit
-						+retry 1h1m5s
-					verb C(Empty) Unit
-						+retry 0h0m5s 1h0m0s
-					verb D(Empty) Unit
-						+retry 0
-					verb E(Empty) Unit
-						+retry 0 1s catch test.catch
-					verb F(Empty) Unit
-						+retry 0 catch test.catch
-					verb catch(builtin.CatchRequest<Any>) Unit
-
-					fsm FSM
-						+ retry 10 1s 10s
-					{
-						start test.A
-						transition test.A to test.B
-						transition test.B to test.C
-						transition test.C to test.D
-						transition test.D to test.E
-						transition test.E to test.F
-					}
-				}
-				`,
-			expected: &Schema{
-				Modules: []*Module{{
-					Name: "test",
-					Decls: []Decl{
-						&FSM{
-							Name: "FSM",
-							Metadata: []Metadata{
-								&MetadataRetry{
-									Count:      &ten,
-									MinBackoff: "1s",
-									MaxBackoff: "10s",
-								},
-							},
-							Start: []*Ref{
-								{
-									Module: "test",
-									Name:   "A",
-								},
-							},
-							Transitions: []*FSMTransition{
-								{
-									From: &Ref{
-										Module: "test",
-										Name:   "A",
-									},
-									To: &Ref{
-										Module: "test",
-										Name:   "B",
-									},
-								},
-								{
-									From: &Ref{
-										Module: "test",
-										Name:   "B",
-									},
-									To: &Ref{
-										Module: "test",
-										Name:   "C",
-									},
-								},
-								{
-									From: &Ref{
-										Module: "test",
-										Name:   "C",
-									},
-									To: &Ref{
-										Module: "test",
-										Name:   "D",
-									},
-								},
-								{
-									From: &Ref{
-										Module: "test",
-										Name:   "D",
-									},
-									To: &Ref{
-										Module: "test",
-										Name:   "E",
-									},
-								},
-								{
-									From: &Ref{
-										Module: "test",
-										Name:   "E",
-									},
-									To: &Ref{
-										Module: "test",
-										Name:   "F",
-									},
-								},
-							},
-						},
-						&Verb{
-							Comments: []string{},
-							Name:     "A",
-							Request: &Ref{
-								Module: "builtin",
-								Name:   "Empty",
-							},
-							Response: &Unit{
-								Unit: true,
-							},
-							Metadata: []Metadata{
-								&MetadataRetry{
-									Count:      &ten,
-									MinBackoff: "1m5s",
-									MaxBackoff: "90s",
-								},
-							},
-						},
-						&Verb{
-							Comments: []string{},
-							Name:     "B",
-							Request: &Ref{
-								Module: "builtin",
-								Name:   "Empty",
-							},
-							Response: &Unit{
-								Unit: true,
-							},
-							Metadata: []Metadata{
-								&MetadataRetry{
-									Count:      nil,
-									MinBackoff: "1h1m5s",
-									MaxBackoff: "",
-								},
-							},
-						},
-						&Verb{
-							Comments: []string{},
-							Name:     "C",
-							Request: &Ref{
-								Module: "builtin",
-								Name:   "Empty",
-							},
-							Response: &Unit{
-								Unit: true,
-							},
-							Metadata: []Metadata{
-								&MetadataRetry{
-									Count:      nil,
-									MinBackoff: "0h0m5s",
-									MaxBackoff: "1h0m0s",
-								},
-							},
-						},
-						&Verb{
-							Name: "D",
-							Request: &Ref{
-								Module: "builtin",
-								Name:   "Empty",
-							},
-							Response: &Unit{
-								Unit: true,
-							},
-							Metadata: []Metadata{
-								&MetadataRetry{
-									Count: &zero,
-								},
-							},
-						},
-						&Verb{
-							Name: "E",
-							Request: &Ref{
-								Module: "builtin",
-								Name:   "Empty",
-							},
-							Response: &Unit{
-								Unit: true,
-							},
-							Metadata: []Metadata{
-								&MetadataRetry{
-									Count:      &zero,
-									MinBackoff: "1s",
-									Catch: &Ref{
-										Module: "test",
-										Name:   "catch",
-									},
-								},
-							},
-						},
-						&Verb{
-							Name: "F",
-							Request: &Ref{
-								Module: "builtin",
-								Name:   "Empty",
-							},
-							Response: &Unit{
-								Unit: true,
-							},
-							Metadata: []Metadata{
-								&MetadataRetry{
-									Count: &zero,
-									Catch: &Ref{
-										Module: "test",
-										Name:   "catch",
-									},
-								},
-							},
-						},
-						&Verb{
-							Name: "catch",
-							Request: &Ref{
-								Module: "builtin",
-								Name:   "CatchRequest",
-								TypeParameters: []Type{
-									&Any{},
-								},
-							},
-							Response: &Unit{
-								Unit: true,
 							},
 						},
 					},
@@ -1206,15 +970,6 @@ var testSchema = MustValidate(&Schema{
 				&Verb{Name: "completed",
 					Request:  &Ref{Module: "payments", Name: "OnlinePaymentCompleted"},
 					Response: &Unit{},
-				},
-				&FSM{
-					Name:  "payment",
-					Start: []*Ref{{Module: "payments", Name: "created"}, {Module: "payments", Name: "paid"}},
-					Transitions: []*FSMTransition{
-						{From: &Ref{Module: "payments", Name: "created"}, To: &Ref{Module: "payments", Name: "paid"}},
-						{From: &Ref{Module: "payments", Name: "created"}, To: &Ref{Module: "payments", Name: "failed"}},
-						{From: &Ref{Module: "payments", Name: "paid"}, To: &Ref{Module: "payments", Name: "completed"}},
-					},
 				},
 			},
 		},

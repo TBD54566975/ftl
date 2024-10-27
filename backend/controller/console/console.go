@@ -117,7 +117,7 @@ func (c *ConsoleService) GetModules(ctx context.Context, req *connect.Request[pb
 			case *schema.Config:
 				configs = append(configs, configFromDecl(decl))
 
-			case *schema.Database, *schema.Enum, *schema.TypeAlias, *schema.FSM, *schema.Topic, *schema.Subscription:
+			case *schema.Database, *schema.Enum, *schema.TypeAlias, *schema.Topic, *schema.Subscription:
 			}
 		}
 
@@ -172,7 +172,6 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module
 	var data []*pbconsole.Data
 	var databases []*pbconsole.Database
 	var enums []*pbconsole.Enum
-	var fsms []*pbconsole.FSM
 	var topics []*pbconsole.Topic
 	var typealiases []*pbconsole.TypeAlias
 	var secrets []*pbconsole.Secret
@@ -192,9 +191,6 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module
 
 		case *schema.Enum:
 			enums = append(enums, enumFromDecl(decl))
-
-		case *schema.FSM:
-			fsms = append(fsms, fsmFromDecl(decl))
 
 		case *schema.Topic:
 			topics = append(topics, topicFromDecl(decl))
@@ -222,7 +218,6 @@ func moduleFromDecls(decls []schema.Decl, sch *schema.Schema) (*pbconsole.Module
 		Data:          data,
 		Databases:     databases,
 		Enums:         enums,
-		Fsms:          fsms,
 		Topics:        topics,
 		Typealiases:   typealiases,
 		Secrets:       secrets,
@@ -258,13 +253,6 @@ func enumFromDecl(decl *schema.Enum) *pbconsole.Enum {
 	return &pbconsole.Enum{
 		//nolint:forcetypeassert
 		Enum: decl.ToProto().(*schemapb.Enum),
-	}
-}
-
-func fsmFromDecl(decl *schema.FSM) *pbconsole.FSM {
-	return &pbconsole.FSM{
-		//nolint:forcetypeassert
-		Fsm: decl.ToProto().(*schemapb.FSM),
 	}
 }
 

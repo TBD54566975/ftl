@@ -4,7 +4,7 @@ export const commentPrefix = '//'
 
 export const staticKeywords = ['module', 'export']
 
-export const declTypes = ['config', 'data', 'database', 'enum', 'fsm', 'topic', 'typealias', 'secret', 'subscription', 'verb']
+export const declTypes = ['config', 'data', 'database', 'enum', 'topic', 'typealias', 'secret', 'subscription', 'verb']
 
 export const declTypeMultiselectOpts = [
   {
@@ -22,10 +22,6 @@ export const declTypeMultiselectOpts = [
   {
     key: 'enum',
     displayName: 'Enum',
-  },
-  {
-    key: 'fsm',
-    displayName: 'FSM',
   },
   {
     key: 'topic',

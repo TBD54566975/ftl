@@ -58,7 +58,6 @@ public class ModuleProcessor {
         var ret = new BindableServiceBuildItem(DotName.createSimple(VerbHandler.class));
         ret.registerBlockingMethod("call");
         ret.registerBlockingMethod("publishEvent");
-        ret.registerBlockingMethod("sendFSMEvent");
         ret.registerBlockingMethod("acquireLease");
         ret.registerBlockingMethod("getModuleContext");
         ret.registerBlockingMethod("ping");

@@ -46,9 +46,9 @@ func Consume(ctx context.Context, event Event) error {
 }
 
 func appendLog(msg string, args ...interface{}) {
-	dest, ok := os.LookupEnv("FSM_LOG_FILE")
+	dest, ok := os.LookupEnv("TEST_LOG_FILE")
 	if !ok {
-		panic("FSM_LOG_FILE not set")
+		panic("TEST_LOG_FILE not set")
 	}
 	w, err := os.OpenFile(dest, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

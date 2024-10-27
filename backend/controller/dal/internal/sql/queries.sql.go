@@ -402,45 +402,6 @@ func (q *Queries) FailAsyncCallWithRetry(ctx context.Context, arg FailAsyncCallW
 	return column_1, err
 }
 
-const failFSMInstance = `-- name: FailFSMInstance :one
-UPDATE fsm_instances
-SET
-  current_state = NULL,
-  async_call_id = NULL,
-  status = 'failed'::fsm_status,
-  updated_at = NOW() AT TIME ZONE 'utc'
-WHERE
-  fsm = $1::schema_ref AND key = $2::TEXT
-RETURNING true
-`
-
-func (q *Queries) FailFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, failFSMInstance, fsm, key)
-	var column_1 bool
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const finishFSMTransition = `-- name: FinishFSMTransition :one
-UPDATE fsm_instances
-SET
-  current_state = destination_state,
-  destination_state = NULL,
-  async_call_id = NULL,
-  updated_at = NOW() AT TIME ZONE 'utc'
-WHERE
-  fsm = $1::schema_ref AND key = $2::TEXT
-RETURNING true
-`
-
-// Mark an FSM transition as completed, updating the current state and clearing the async call ID.
-func (q *Queries) FinishFSMTransition(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, finishFSMTransition, fsm, key)
-	var column_1 bool
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const getActiveControllers = `-- name: GetActiveControllers :many
 SELECT id, key, created, last_seen, state, endpoint
 FROM controllers c
@@ -905,29 +866,6 @@ func (q *Queries) GetExistingDeploymentForModule(ctx context.Context, name strin
 		&i.ID_2,
 		&i.Language,
 		&i.Name,
-	)
-	return i, err
-}
-
-const getFSMInstance = `-- name: GetFSMInstance :one
-SELECT id, created_at, fsm, key, status, current_state, destination_state, async_call_id, updated_at
-FROM fsm_instances
-WHERE fsm = $1::schema_ref AND key = $2
-`
-
-func (q *Queries) GetFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (FsmInstance, error) {
-	row := q.db.QueryRowContext(ctx, getFSMInstance, fsm, key)
-	var i FsmInstance
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.Fsm,
-		&i.Key,
-		&i.Status,
-		&i.CurrentState,
-		&i.DestinationState,
-		&i.AsyncCallID,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -1645,30 +1583,6 @@ func (q *Queries) LoadAsyncCall(ctx context.Context, id int64) (AsyncCall, error
 	return i, err
 }
 
-const popNextFSMEvent = `-- name: PopNextFSMEvent :one
-DELETE FROM fsm_next_event
-WHERE fsm_instance_id = (
-  SELECT id
-  FROM fsm_instances
-  WHERE fsm = $1::schema_ref AND key = $2
-)
-RETURNING id, created_at, fsm_instance_id, next_state, request, request_type
-`
-
-func (q *Queries) PopNextFSMEvent(ctx context.Context, fsm schema.RefKey, instanceKey string) (FsmNextEvent, error) {
-	row := q.db.QueryRowContext(ctx, popNextFSMEvent, fsm, instanceKey)
-	var i FsmNextEvent
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.FsmInstanceID,
-		&i.NextState,
-		&i.Request,
-		&i.RequestType,
-	)
-	return i, err
-}
-
 const publishEventForTopic = `-- name: PublishEventForTopic :exec
 INSERT INTO topic_events (
     "key",
@@ -1729,38 +1643,6 @@ func (q *Queries) SetDeploymentDesiredReplicas(ctx context.Context, key model.De
 	return err
 }
 
-const setNextFSMEvent = `-- name: SetNextFSMEvent :one
-INSERT INTO fsm_next_event (fsm_instance_id, next_state, request, request_type)
-VALUES (
-  (SELECT id FROM fsm_instances WHERE fsm = $1::schema_ref AND key = $2),
-  $3,
-  $4,
-  $5::schema_type
-)
-RETURNING id
-`
-
-type SetNextFSMEventParams struct {
-	Fsm         schema.RefKey
-	InstanceKey string
-	Event       schema.RefKey
-	Request     api.EncryptedAsyncColumn
-	RequestType sqltypes.Type
-}
-
-func (q *Queries) SetNextFSMEvent(ctx context.Context, arg SetNextFSMEventParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, setNextFSMEvent,
-		arg.Fsm,
-		arg.InstanceKey,
-		arg.Event,
-		arg.Request,
-		arg.RequestType,
-	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const setSubscriptionCursor = `-- name: SetSubscriptionCursor :exec
 WITH event AS (
     SELECT id, created_at, key, topic_id, payload
@@ -1777,61 +1659,6 @@ func (q *Queries) SetSubscriptionCursor(ctx context.Context, column1 model.Subsc
 	return err
 }
 
-const startFSMTransition = `-- name: StartFSMTransition :one
-INSERT INTO fsm_instances (
-  fsm,
-  key,
-  destination_state,
-  async_call_id
-) VALUES (
-  $1,
-  $2,
-  $3::schema_ref,
-  $4::BIGINT
-)
-ON CONFLICT(fsm, key) DO
-UPDATE SET
-  destination_state = $3::schema_ref,
-  async_call_id = $4::BIGINT,
-  updated_at = NOW() AT TIME ZONE 'utc'
-WHERE
-  fsm_instances.async_call_id IS NULL
-  AND fsm_instances.destination_state IS NULL
-RETURNING id, created_at, fsm, key, status, current_state, destination_state, async_call_id, updated_at
-`
-
-type StartFSMTransitionParams struct {
-	Fsm              schema.RefKey
-	Key              string
-	DestinationState schema.RefKey
-	AsyncCallID      int64
-}
-
-// Start a new FSM transition, populating the destination state and async call ID.
-//
-// "key" is the unique identifier for the FSM execution.
-func (q *Queries) StartFSMTransition(ctx context.Context, arg StartFSMTransitionParams) (FsmInstance, error) {
-	row := q.db.QueryRowContext(ctx, startFSMTransition,
-		arg.Fsm,
-		arg.Key,
-		arg.DestinationState,
-		arg.AsyncCallID,
-	)
-	var i FsmInstance
-	err := row.Scan(
-		&i.ID,
-		&i.CreatedAt,
-		&i.Fsm,
-		&i.Key,
-		&i.Status,
-		&i.CurrentState,
-		&i.DestinationState,
-		&i.AsyncCallID,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const succeedAsyncCall = `-- name: SucceedAsyncCall :one
 UPDATE async_calls
 SET
@@ -1844,26 +1671,6 @@ RETURNING true
 
 func (q *Queries) SucceedAsyncCall(ctx context.Context, response api.OptionalEncryptedAsyncColumn, iD int64) (bool, error) {
 	row := q.db.QueryRowContext(ctx, succeedAsyncCall, response, iD)
-	var column_1 bool
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const succeedFSMInstance = `-- name: SucceedFSMInstance :one
-UPDATE fsm_instances
-SET
-  current_state = destination_state,
-  destination_state = NULL,
-  async_call_id = NULL,
-  status = 'completed'::fsm_status,
-  updated_at = NOW() AT TIME ZONE 'utc'
-WHERE
-  fsm = $1::schema_ref AND key = $2::TEXT
-RETURNING true
-`
-
-func (q *Queries) SucceedFSMInstance(ctx context.Context, fsm schema.RefKey, key string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, succeedFSMInstance, fsm, key)
 	var column_1 bool
 	err := row.Scan(&column_1)
 	return column_1, err

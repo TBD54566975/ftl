@@ -20,7 +20,7 @@ const (
 	// RequestIDHeader is the header used to pass the inbound request ID.
 	RequestIDHeader = "Ftl-Request-Id"
 	// ParentRequestIDHeader is the header used to pass the parent request ID,
-	// i.e. the publisher or fsm call that initiated this call.
+	// i.e. the publisher that initiated this call.
 	ParentRequestIDHeader = "Ftl-Parent-Request-Id"
 )
 

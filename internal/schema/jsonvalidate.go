@@ -207,7 +207,7 @@ func validateJSONValue(fieldType Type, path path, value any, sch *Schema, opts *
 				return fmt.Errorf("%s is not a valid variant of enum %s", inputName, fieldType)
 			}
 
-		case *Config, *Database, *Secret, *Verb, *FSM, *Topic, *Subscription:
+		case *Config, *Database, *Secret, *Verb, *Topic, *Subscription:
 
 		}
 
@@ -354,7 +354,7 @@ func TransformAliasedFields(sch *Schema, t Type, obj any, aliaser func(obj map[s
 			}
 		case *TypeAlias:
 			return TransformAliasedFields(sch, decl.Type, obj, aliaser)
-		case *Config, *Database, *FSM, *Secret, *Verb, *Topic, *Subscription:
+		case *Config, *Database, *Secret, *Verb, *Topic, *Subscription:
 			return fmt.Errorf("%s: unsupported ref type %T", t.Pos, decl)
 		}
 

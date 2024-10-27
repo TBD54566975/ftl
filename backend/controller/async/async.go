@@ -21,7 +21,7 @@ var asyncOriginLexer = lexer.MustSimple([]lexer.SimpleRule{
 })
 
 var asyncOriginParser = participle.MustBuild[asyncOriginParseRoot](
-	participle.Union[AsyncOrigin](AsyncOriginCron{}, AsyncOriginFSM{}, AsyncOriginPubSub{}),
+	participle.Union[AsyncOrigin](AsyncOriginCron{}, AsyncOriginPubSub{}),
 	participle.Lexer(asyncOriginLexer),
 )
 
@@ -48,23 +48,9 @@ func (AsyncOriginCron) asyncOrigin()     {}
 func (a AsyncOriginCron) Origin() string { return "cron" }
 func (a AsyncOriginCron) String() string { return fmt.Sprintf("cron:%s", a.CronJobKey) }
 
-// AsyncOriginFSM represents the context for the originator of an FSM async call.
-//
-// It is in the form fsm:<module>.<name>:<key>
-type AsyncOriginFSM struct {
-	FSM schema.RefKey `parser:"'fsm' ':' @@"`
-	Key string        `parser:"':' @(~EOF)+"`
-}
-
-var _ AsyncOrigin = AsyncOriginFSM{}
-
-func (AsyncOriginFSM) asyncOrigin()     {}
-func (a AsyncOriginFSM) Origin() string { return "fsm" }
-func (a AsyncOriginFSM) String() string { return fmt.Sprintf("fsm:%s:%s", a.FSM, a.Key) }
-
 // AsyncOriginPubSub represents the context for the originator of an PubSub async call.
 //
-// It is in the form fsm:<module>.<subscription_name>
+// It is in the form sub:<module>.<subscription_name>
 type AsyncOriginPubSub struct {
 	Subscription schema.RefKey `parser:"'sub' ':' @@"`
 }

@@ -5,13 +5,14 @@ import (
 	"context"
 	ftlorigin "ftl/origin"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
 type BriefedClient func(context.Context, ftlorigin.Agent) error
 
-type ConsumeAgentBroadcastClient func(context.Context, ftlorigin.Agent) error
-
 type DeployedClient func(context.Context, AgentDeployment) error
+
+type ConsumeAgentBroadcastClient func(context.Context, ftlorigin.Agent) error
 
 type GetLogFileClient func(context.Context, GetLogFileRequest) (GetLogFileResponse, error)
 
@@ -25,18 +26,22 @@ func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
 			Briefed,
-		),
-		reflection.ProvideResourcesForVerb(
-			ConsumeAgentBroadcast,
+			server.SinkClient[DeployedClient, AgentDeployment](),
 		),
 		reflection.ProvideResourcesForVerb(
 			Deployed,
+		),
+		reflection.ProvideResourcesForVerb(
+			ConsumeAgentBroadcast,
+			server.SinkClient[BriefedClient, ftlorigin.Agent](),
 		),
 		reflection.ProvideResourcesForVerb(
 			GetLogFile,
 		),
 		reflection.ProvideResourcesForVerb(
 			MissionResult,
+			server.SinkClient[SucceededClient, MissionSuccess](),
+			server.SinkClient[TerminatedClient, AgentTerminated](),
 		),
 		reflection.ProvideResourcesForVerb(
 			Succeeded,

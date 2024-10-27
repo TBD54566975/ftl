@@ -102,28 +102,6 @@ public void processPayment(Payment payment) {
 ```
 
 {% end %}
-### FSM
-
-Retries can be declared on the FSM or on individual transition verbs. Retries declared on a verb take precedence over ones declared on the FSM. For example:
-```go
-//ftl:retry 10 1s 10s
-var fsm = ftl.FSM("fsm",
-	ftl.Start(Start),
-	ftl.Transition(Start, End),
-)
-
-//ftl:verb
-//ftl:retry 1 1s 1s
-func Start(ctx context.Context, in Event) error {
-	// Start uses its own retry policy
-}
-
-
-//ftl:verb
-func End(ctx context.Context, in Event) error {
-	// End inherits the default retry policy from the FSM
-}
-```
 
 
 ## Catching
@@ -175,5 +153,3 @@ public void recoverPaymentProcessing(CatchRequest<Payment> req) {
 ```
 
 {% end %}
-
-For FSMs, after a catch verb has been successfully called the FSM will moved to the failed state.

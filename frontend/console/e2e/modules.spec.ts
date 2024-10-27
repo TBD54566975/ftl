@@ -8,7 +8,7 @@ test('shows active modules', async ({ page }) => {
 
   const moduleNames = await page.$$eval('[data-module-row]', (elements) => elements.map((el) => el.getAttribute('data-module-row')))
 
-  const expectedModuleNames = ['fsm', 'cron', 'time', 'pubsub', 'http', 'echo']
+  const expectedModuleNames = ['cron', 'time', 'pubsub', 'http', 'echo']
   expect(moduleNames).toEqual(expect.arrayContaining(expectedModuleNames))
 })
 

@@ -290,57 +290,6 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestExtractModuleSchemaFSM(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	r, err := Extract("testdata/fsm")
-	assert.NoError(t, err)
-	assert.Equal(t, nil, r.Errors, "expected no schema errors")
-	actual := schema.Normalise(r.Module)
-	expected := `module fsm {
-		fsm payment
-			+retry 10 5s 10m
-		{
-			start fsm.created
-			start fsm.paid
-			transition fsm.created to fsm.paid
-			transition fsm.created to fsm.failed
-			transition fsm.paid to fsm.completed
-		}
-
-		// The message to be sent when the payment is completed.
-		//
-		// Otherwise, OnlinePaymentFailed will be sent.
-		data OnlinePaymentCompleted {
-		}
-
-		data OnlinePaymentCreated {
-		}
-
-		data OnlinePaymentFailed {
-		}
-
-		data OnlinePaymentPaid {
-		}
-
-		verb completed(fsm.OnlinePaymentCompleted) Unit
-			+retry 1s
-
-		verb created(fsm.OnlinePaymentCreated) Unit
-			+retry 5 1m30s 7m
-
-		verb failed(fsm.OnlinePaymentFailed) Unit
-			+retry 5 1h 1d
-
-		// The message to be sent when the payment is paid.
-		verb paid(fsm.OnlinePaymentPaid) Unit
-			+retry 5 60s
-	}
-`
-	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
-}
-
 func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()

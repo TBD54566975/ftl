@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { AcquireLeaseRequest, AcquireLeaseResponse, CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetConfigRequest, GetConfigResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, GetSecretRequest, GetSecretResponse, ListConfigRequest, ListConfigResponse, ListSecretsRequest, ListSecretsResponse, ModuleContextRequest, ModuleContextResponse, PingRequest, PingResponse, ProcessListRequest, ProcessListResponse, PublishEventRequest, PublishEventResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, SendFSMEventRequest, SendFSMEventResponse, SetConfigRequest, SetConfigResponse, SetSecretRequest, SetSecretResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UnsetConfigRequest, UnsetConfigResponse, UnsetSecretRequest, UnsetSecretResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
+import { AcquireLeaseRequest, AcquireLeaseResponse, CallRequest, CallResponse, CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetConfigRequest, GetConfigResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, GetSecretRequest, GetSecretResponse, ListConfigRequest, ListConfigResponse, ListSecretsRequest, ListSecretsResponse, ModuleContextRequest, ModuleContextResponse, PingRequest, PingResponse, ProcessListRequest, ProcessListResponse, PublishEventRequest, PublishEventResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, SetConfigRequest, SetConfigResponse, SetSecretRequest, SetSecretResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UnsetConfigRequest, UnsetConfigResponse, UnsetSecretRequest, UnsetSecretResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -83,28 +83,6 @@ export const ModuleService = {
       I: AcquireLeaseRequest,
       O: AcquireLeaseResponse,
       kind: MethodKind.BiDiStreaming,
-    },
-    /**
-     * Send an event to an FSM.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ModuleService.SendFSMEvent
-     */
-    sendFSMEvent: {
-      name: "SendFSMEvent",
-      I: SendFSMEventRequest,
-      O: SendFSMEventResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Set the next event for an FSM.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ModuleService.SetNextFSMEvent
-     */
-    setNextFSMEvent: {
-      name: "SetNextFSMEvent",
-      I: SendFSMEventRequest,
-      O: SendFSMEventResponse,
-      kind: MethodKind.Unary,
     },
     /**
      * Publish an event to a topic.

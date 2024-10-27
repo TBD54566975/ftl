@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"ftl/origin"
@@ -20,21 +19,10 @@ var db = ftl.PostgresDatabase("exemplardb")
 var _ = ftl.Subscription(origin.AgentBroadcast, "agentConsumer")
 
 //ftl:subscribe agentConsumer
-func ConsumeAgentBroadcast(ctx context.Context, agent origin.Agent) error {
+func ConsumeAgentBroadcast(ctx context.Context, agent origin.Agent, client BriefedClient) error {
 	ftl.LoggerFromContext(ctx).Infof("Received agent %v", agent.Id)
-	mission.Send(ctx, strconv.Itoa(agent.Id), agent)
-	return nil
+	return client(ctx, agent)
 }
-
-// FSM
-
-var mission = ftl.FSM(
-	"mission",
-	ftl.Start(Briefed),
-	ftl.Transition(Briefed, Deployed),
-	ftl.Transition(Deployed, Succeeded),
-	ftl.Transition(Deployed, Terminated),
-)
 
 type AgentDeployment struct {
 	Agent  origin.Agent
@@ -52,7 +40,7 @@ type AgentTerminated struct {
 }
 
 //ftl:verb
-func Briefed(ctx context.Context, agent origin.Agent) error {
+func Briefed(ctx context.Context, agent origin.Agent, deployed DeployedClient) error {
 	briefedAt := time.Now()
 	ftl.LoggerFromContext(ctx).Infof("Briefed agent %v at %s", agent.Id, briefedAt)
 	agent.BriefedAt = ftl.Some(briefedAt)
@@ -60,7 +48,7 @@ func Briefed(ctx context.Context, agent origin.Agent) error {
 		Agent:  agent,
 		Target: "villain",
 	}
-	return ftl.FSMNext(ctx, d)
+	return deployed(ctx, d)
 }
 
 //ftl:verb
@@ -91,7 +79,7 @@ type MissionResultRequest struct {
 type MissionResultResponse struct{}
 
 //ftl:verb export
-func MissionResult(ctx context.Context, req MissionResultRequest) (MissionResultResponse, error) {
+func MissionResult(ctx context.Context, req MissionResultRequest, success SucceededClient, failure TerminatedClient) (MissionResultResponse, error) {
 	ftl.LoggerFromContext(ctx).Infof("Mission result for agent %v: %t\n", req.AgentID, req.Successful)
 	agentID := req.AgentID
 	var event any
@@ -100,17 +88,21 @@ func MissionResult(ctx context.Context, req MissionResultRequest) (MissionResult
 			AgentID:   int(agentID),
 			SuccessAt: time.Now(),
 		}
+		err := success(ctx, event.(MissionSuccess))
+		if err != nil {
+			return MissionResultResponse{}, err
+		}
 	} else {
 		event = AgentTerminated{
 			AgentID:      int(agentID),
 			TerminatedAt: time.Now(),
 		}
+		err := failure(ctx, event.(AgentTerminated))
+		if err != nil {
+			return MissionResultResponse{}, err
+		}
 	}
 	ftl.LoggerFromContext(ctx).Infof("Sending event %v\n", event)
-	err := mission.Send(ctx, strconv.Itoa(int(agentID)), event)
-	if err != nil {
-		return MissionResultResponse{}, err
-	}
 	return MissionResultResponse{}, nil
 }
 

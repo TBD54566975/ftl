@@ -198,34 +198,6 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				}
 				return next()
 
-			case *FSM:
-				if len(n.Start) == 0 {
-					merr = append(merr, errorf(n, "%q has no start states", n.Name))
-				}
-				for _, start := range n.Start {
-					if sym, decl := ResolveAs[*Verb](scopes, *start); decl == nil {
-						merr = append(merr, errorf(start, "unknown start verb %q", start))
-					} else if sym == nil {
-						merr = append(merr, errorf(start, "start state %q must be a sink", start))
-					} else if sym.Kind() != VerbKindSink {
-						merr = append(merr, errorf(start, "start state %q must be a sink but is %s", start, sym.Kind()))
-					}
-				}
-
-			case *FSMTransition:
-				if sym, decl := ResolveAs[*Verb](scopes, *n.From); decl == nil {
-					merr = append(merr, errorf(n.From, "unknown source verb %q", n.From))
-				} else if sym == nil {
-					merr = append(merr, errorf(n.From, "source state %q is not a verb", n.From))
-				}
-				if sym, decl := ResolveAs[*Verb](scopes, *n.To); decl == nil {
-					merr = append(merr, errorf(n.To, "unknown destination verb %q", n.To))
-				} else if sym == nil {
-					merr = append(merr, errorf(n.To, "destination state %q is not a sink", n.To))
-				} else if sym.Kind() != VerbKindSink {
-					merr = append(merr, errorf(n.To, "destination state %q must be a sink but is %s", n.To, sym.Kind()))
-				}
-
 			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataCronJob,
@@ -330,12 +302,6 @@ func ValidateModule(module *Module) error {
 				merr = append(merr, errorf(n, "unknown reference %q, is the type annotated and exported?", n))
 			}
 
-		case *FSM:
-			if retry, ok := islices.FindVariant[*MetadataRetry](n.Metadata); ok {
-				suberrs := validateRetries(module, retry, optional.None[Type](), scopes, optional.None[*Schema]())
-				merr = append(merr, suberrs...)
-			}
-
 		case *Verb:
 			merr = append(merr, validateVerbMetadata(scopes, module, n)...)
 
@@ -386,7 +352,7 @@ func ValidateModule(module *Module) error {
 			*MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			*MetadataSecrets, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*Config, *FSMTransition, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding:
+			*Config, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -431,12 +397,10 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 6
 	case *Enum:
 		priority = 7
-	case *FSM:
-		priority = 8
 	case *Data:
-		priority = 9
+		priority = 8
 	case *Verb:
-		priority = 10
+		priority = 9
 	}
 	return priority
 }
@@ -621,26 +585,10 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 				merr = append(merr, errorf(md, "verb %s: cron job can not have a response type", n.Name))
 			}
 		case *MetadataRetry:
-			// Only allow retries on FSM transitions or pubsub subscribers for now
-			_, isPartOfFSM := islices.Find(module.Decls, func(d Decl) bool {
-				if d, ok := d.(*FSM); ok {
-					// check if this verb part of the FSM
-					if _, isStart := islices.Find(d.Start, func(ref *Ref) bool {
-						return ref.Name == n.Name
-					}); isStart {
-						return true
-					}
-					if _, isTransition := islices.Find(d.Transitions, func(t *FSMTransition) bool {
-						return t.To.Name == n.Name
-					}); isTransition {
-						return true
-					}
-				}
-				return false
-			})
+			// Only allow retries on pubsub subscribers for now
 			_, isSubscriber := islices.FindVariant[*MetadataSubscriber](n.Metadata)
-			if !isPartOfFSM && !isSubscriber {
-				merr = append(merr, errorf(md, `retries can only be added to subscribers or FSM transitions`))
+			if !isSubscriber {
+				merr = append(merr, errorf(md, `retries can only be added to subscribers`))
 				return
 			}
 
@@ -928,7 +876,6 @@ func validateRetries(module *Module, retry *MetadataRetry, requestType optional.
 	}
 	req, ok := requestType.Get()
 	if !ok {
-		// request type is not set for FSMs
 		merr = append(merr, errorf(retry, "catch can only be defined on verbs"))
 		return
 	}

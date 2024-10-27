@@ -3,7 +3,6 @@ import {
   BubbleChatIcon,
   CodeIcon,
   DatabaseIcon,
-  FlowIcon,
   FunctionIcon,
   type HugeiconsProps,
   LeftToRightListNumberIcon,
@@ -12,7 +11,7 @@ import {
   SquareLock02Icon,
 } from 'hugeicons-react'
 import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { Config, Data, Database, Decl, Enum, FSM, Secret, Subscription, Topic, TypeAlias, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Config, Data, Database, Decl, Enum, Secret, Subscription, Topic, TypeAlias, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import type { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { verbCalls } from '../verbs/verb.utils'
 
@@ -70,7 +69,7 @@ export const deploymentKeyModuleName = (deploymentKey: string) => {
   return null
 }
 
-export type DeclSumType = Config | Data | Database | Enum | FSM | Topic | TypeAlias | Secret | Subscription | Verb
+export type DeclSumType = Config | Data | Database | Enum | Topic | TypeAlias | Secret | Subscription | Verb
 
 export interface DeclInfo {
   declType: string
@@ -100,7 +99,6 @@ export const moduleTreeFromStream = (modules: Module[]) => {
           ...module.subscriptions.map((d) => ({ declType: 'subscription', value: d.subscription })),
           ...module.typealiases.map((d) => ({ declType: 'typealias', value: d.typealias })),
           ...module.enums.map((d) => ({ declType: 'enum', value: d.enum })),
-          ...module.fsms.map((d) => ({ declType: 'fsm', value: d.fsm })),
           ...module.data.map((d) => ({ declType: 'data', value: d.data })),
           ...module.verbs.map((d) => ({ declType: 'verb', value: d.verb })),
         ],
@@ -131,8 +129,6 @@ export const declFromModules = (moduleName: string, declCase: string, declName: 
       return module.databases.find((d) => d.database?.name === declName)?.database
     case 'enum':
       return module.enums.find((d) => d.enum?.name === declName)?.enum
-    case 'fsm':
-      return module.fsms.find((d) => d.fsm?.name === declName)?.fsm
     case 'secret':
       return module.secrets.find((d) => d.secret?.name === declName)?.secret
     case 'subscription':
@@ -174,7 +170,6 @@ export const declIcon = (declCase?: string) => {
     data: CodeIcon,
     database: DatabaseIcon,
     enum: LeftToRightListNumberIcon,
-    fsm: FlowIcon,
     topic: BubbleChatIcon,
     typealias: AnonymousIcon,
     secret: SquareLock02Icon,

@@ -3,7 +3,6 @@ package encryption
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/TBD54566975/ftl/go-runtime/ftl" // Import the FTL SDK.
 )
@@ -50,73 +49,5 @@ func Consume(ctx context.Context, e Event) error {
 	if e.Name != "AliceInWonderland" {
 		return fmt.Errorf("Unexpected event: %s", e.Name)
 	}
-	return nil
-}
-
-// FSM
-//
-// Used to test encryption of async_calls tables via FSM operations
-var fsm = ftl.FSM("payment",
-	ftl.Start(Created),
-	ftl.Start(Paid),
-	ftl.Transition(Created, Paid),
-	ftl.Transition(Paid, Completed),
-	ftl.Transition(Created, NextAndSleep),
-	ftl.Transition(NextAndSleep, Completed),
-)
-
-type OnlinePaymentCompleted struct {
-	Name string `json:"name"`
-}
-type OnlinePaymentPaid struct {
-	Name string `json:"name"`
-}
-type OnlinePaymentCreated struct {
-	Name string `json:"name"`
-}
-
-type NextAndSleepEvent struct {
-	Name string `json:"name"`
-}
-
-//ftl:verb
-func BeginFSM(ctx context.Context, req OnlinePaymentCreated) error {
-	return fsm.Send(ctx, req.Name, req)
-}
-
-//ftl:verb
-func TransitionToPaid(ctx context.Context, req OnlinePaymentPaid) error {
-	return fsm.Send(ctx, req.Name, req)
-}
-
-//ftl:verb
-func TransitionToNextAndSleep(ctx context.Context, req NextAndSleepEvent) error {
-	return fsm.Send(ctx, req.Name, req)
-}
-
-//ftl:verb
-func Completed(ctx context.Context, in OnlinePaymentCompleted) error {
-	return nil
-}
-
-//ftl:verb
-func Created(ctx context.Context, in OnlinePaymentCreated) error {
-	return nil
-}
-
-//ftl:verb
-func Paid(ctx context.Context, in OnlinePaymentPaid) error {
-	return nil
-}
-
-// NextAndSleep calls fsm.Next() and then sleeps so we can test what is put into the fsm next event table
-//
-//ftl:verb
-func NextAndSleep(ctx context.Context, in NextAndSleepEvent) error {
-	err := ftl.FSMNext(ctx, OnlinePaymentCompleted{Name: in.Name})
-	if err != nil {
-		return err
-	}
-	time.Sleep(1 * time.Minute)
 	return nil
 }

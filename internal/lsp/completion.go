@@ -49,9 +49,6 @@ var declarePubSubSubscriptionCompletionDocs string
 //go:embed markdown/completion/pubSubSink.md
 var definePubSubSinkCompletionDocs string
 
-//go:embed markdown/completion/fsmDeclare.md
-var fsmCompletionDocs string
-
 // Markdown is split by "---". First half is completion docs, second half is insert text.
 var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:verb", "FTL Verb", verbCompletionDocs),
@@ -67,7 +64,6 @@ var completionItems = []protocol.CompletionItem{
 	completionItem("ftl:pubsub:topic", "Declare PubSub topic", declarePubSubTopicCompletionDocs),
 	completionItem("ftl:pubsub:subscription", "Declare a PubSub subscription", declarePubSubSubscriptionCompletionDocs),
 	completionItem("ftl:pubsub:sink", "Define a PubSub sink", definePubSubSinkCompletionDocs),
-	completionItem("ftl:fsm", "Model a FSM", fsmCompletionDocs),
 }
 
 // Track which directives are //ftl: prefixed, so the we can autocomplete them via `/`.

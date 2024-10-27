@@ -112,10 +112,6 @@ message Enum {
   schema.Enum enum = 1;
 }
 
-message FSM {
-  schema.FSM fsm = 1;
-}
-
 message Topic {
   schema.Topic topic = 1;
 }
@@ -149,10 +145,9 @@ message Module {
   repeated Config configs = 8;
   repeated Database databases = 9;
   repeated Enum enums = 10;
-  repeated FSM fsms = 11;
-  repeated Topic topics = 12;
-  repeated TypeAlias typealiases = 13;
-  repeated Subscription subscriptions = 14;
+  repeated Topic topics = 11;
+  repeated TypeAlias typealiases = 12;
+  repeated Subscription subscriptions = 13;
 }
 
 message TopologyGroup {

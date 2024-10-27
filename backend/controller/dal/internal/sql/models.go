@@ -104,49 +104,6 @@ func (ns NullControllerState) Value() (driver.Value, error) {
 	return string(ns.ControllerState), nil
 }
 
-type FsmStatus string
-
-const (
-	FsmStatusRunning   FsmStatus = "running"
-	FsmStatusCompleted FsmStatus = "completed"
-	FsmStatusFailed    FsmStatus = "failed"
-)
-
-func (e *FsmStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = FsmStatus(s)
-	case string:
-		*e = FsmStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for FsmStatus: %T", src)
-	}
-	return nil
-}
-
-type NullFsmStatus struct {
-	FsmStatus FsmStatus
-	Valid     bool // Valid is true if FsmStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullFsmStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.FsmStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.FsmStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullFsmStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.FsmStatus), nil
-}
-
 type Origin string
 
 const (
@@ -283,27 +240,6 @@ type Deployment struct {
 	Labels          json.RawMessage
 	MinReplicas     int32
 	LastActivatedAt time.Time
-}
-
-type FsmInstance struct {
-	ID               int64
-	CreatedAt        time.Time
-	Fsm              schema.RefKey
-	Key              string
-	Status           FsmStatus
-	CurrentState     optional.Option[schema.RefKey]
-	DestinationState optional.Option[schema.RefKey]
-	AsyncCallID      optional.Option[int64]
-	UpdatedAt        time.Time
-}
-
-type FsmNextEvent struct {
-	ID            int64
-	CreatedAt     time.Time
-	FsmInstanceID int64
-	NextState     schema.RefKey
-	Request       api.EncryptedAsyncColumn
-	RequestType   sqltypes.Type
 }
 
 type Module struct {

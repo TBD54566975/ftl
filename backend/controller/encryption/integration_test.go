@@ -86,34 +86,6 @@ func TestEncryptionForPubSub(t *testing.T) {
 		validateAsyncCall("consume", "AliceInWonderland"),
 	)
 }
-
-func TestEncryptionForFSM(t *testing.T) {
-	in.Run(t,
-		WithEncryption(),
-		in.CopyModule("encryption"),
-		in.Deploy("encryption"),
-		// "Rosebud" goes from created -> paid to test normal encryption
-		in.Call[map[string]interface{}, any]("encryption", "beginFsm", map[string]interface{}{"name": "Rosebud"}, nil),
-		in.Sleep(2*time.Second),
-		in.Call[map[string]interface{}, any]("encryption", "transitionToPaid", map[string]interface{}{"name": "Rosebud"}, nil),
-		in.Sleep(2*time.Second),
-		validateAsyncCall("created", "Rosebud"),
-		validateAsyncCall("paid", "Rosebud"),
-
-		// "Next" goes from created -> nextAndSleep to test fsm next event encryption
-		in.Call[map[string]interface{}, any]("encryption", "beginFsm", map[string]interface{}{"name": "Next"}, nil),
-		in.Sleep(2*time.Second),
-		in.Call[map[string]interface{}, any]("encryption", "transitionToNextAndSleep", map[string]interface{}{"name": "Next"}, nil),
-		func(t testing.TB, ic in.TestContext) {
-			in.QueryRow("ftl", "SELECT COUNT(*) FROM fsm_next_event LIMIT 1", int64(1))(t, ic)
-			values := in.GetRow(t, ic, "ftl", "SELECT request FROM fsm_next_event LIMIT 1", 1)
-			request, ok := values[0].([]byte)
-			assert.True(t, ok, "could not convert payload to bytes")
-			assert.NotContains(t, string(request), "Next", "raw request string should not be stored in the table")
-		},
-	)
-}
-
 func validateAsyncCall(verb string, sensitive string) in.Action {
 	return func(t testing.TB, ic in.TestContext) {
 		in.QueryRow("ftl", fmt.Sprintf("SELECT COUNT(*) FROM async_calls WHERE verb = 'encryption.%s' AND state = 'success'", verb), int64(1))(t, ic)

@@ -11,7 +11,6 @@ import (
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/duration"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const (
@@ -136,20 +135,4 @@ func (m *MetadataRetry) RetryParams() (RetryParams, error) {
 		params.Catch = optional.Some(m.Catch.ToRefKey())
 	}
 	return params, nil
-}
-
-// RetryParamsForFSMTransition finds the retry metadata for the given transition and returns the retry count, min and max backoff.
-func RetryParamsForFSMTransition(fsm *FSM, verb *Verb) (RetryParams, error) {
-	// Find retry metadata
-	retryMetadata, ok := slices.FindVariant[*MetadataRetry](verb.Metadata)
-	if !ok {
-		// default to fsm's retry metadata
-		retryMetadata, ok = slices.FindVariant[*MetadataRetry](fsm.Metadata)
-		if !ok {
-			// no retry
-			return RetryParams{}, nil
-		}
-	}
-
-	return retryMetadata.RetryParams()
 }

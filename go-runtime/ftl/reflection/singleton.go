@@ -24,11 +24,6 @@ func Register(options ...Registree) {
 	}
 }
 
-// GetFSM returns the FSM with the given name, if any.
-func GetFSM(name string) optional.Option[ReflectedFSM] {
-	return singletonTypeRegistry.getFSM(name)
-}
-
 // GetVariantByType returns the variant name for the given discriminator and variant type.
 func GetVariantByType(discriminator reflect.Type, variantType reflect.Type) optional.Option[string] {
 	return singletonTypeRegistry.getVariantByType(discriminator, variantType)

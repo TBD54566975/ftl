@@ -29,8 +29,7 @@ top = false
 |               | Source          | ✔️  | ✔️  |      |
 |               | Empty           | ✔️  | ✔️  |      |
 |               | Visibility      | ✔️  | ✔️  |      |
-| **Core**      | FSM             | ✔️  | ️   |      |
-|               | Leases          | ✔️  | ✔️  |      |
+| **Core**      | Leases          | ✔️  | ✔️  |      |
 |               | Cron            | ✔️  | ✔️  |      |
 |               | Config          | ✔️  | ✔️  |      |
 |               | Secrets         | ✔️  | ✔️  |      |
