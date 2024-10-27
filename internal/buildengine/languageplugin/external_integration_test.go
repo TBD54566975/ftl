@@ -300,13 +300,11 @@ func generateStubs(moduleSchs ...*schema.Module) in.Action {
 					configForStub = moduleconfig.ModuleConfig{
 						Module:   "builtin",
 						Language: "go",
-						// TODO: fill in
 					}
 				} else {
 					configForStub = moduleconfig.ModuleConfig{
 						Module:   moduleSch.Name,
 						Language: "fake",
-						// TODO: fill in
 					}
 				}
 
