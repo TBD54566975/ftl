@@ -761,9 +761,14 @@ export class Error extends Message<Error> {
   level = Error_ErrorLevel.INFO;
 
   /**
-   * @generated from field: xyz.block.ftl.v1.language.Position pos = 5;
+   * @generated from field: optional xyz.block.ftl.v1.language.Position pos = 5;
    */
   pos?: Position;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.language.Error.ErrorType type = 6;
+   */
+  type = Error_ErrorType.FTL;
 
   constructor(data?: PartialMessage<Error>) {
     super();
@@ -775,7 +780,8 @@ export class Error extends Message<Error> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "msg", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "level", kind: "enum", T: proto3.getEnumType(Error_ErrorLevel) },
-    { no: 5, name: "pos", kind: "message", T: Position },
+    { no: 5, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 6, name: "type", kind: "enum", T: proto3.getEnumType(Error_ErrorType) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Error {
@@ -819,6 +825,30 @@ proto3.util.setEnumType(Error_ErrorLevel, "xyz.block.ftl.v1.language.Error.Error
   { no: 0, name: "INFO" },
   { no: 1, name: "WARN" },
   { no: 2, name: "ERROR" },
+]);
+
+/**
+ * @generated from enum xyz.block.ftl.v1.language.Error.ErrorType
+ */
+export enum Error_ErrorType {
+  /**
+   * @generated from enum value: FTL = 0;
+   */
+  FTL = 0,
+
+  /**
+   * Compiler errors are errors that are from the compiler. This is useful to avoid duplicate errors
+   * being shown to the user when combining errors from multiple sources (eg: an IDE showing compiler
+   * errors and FTL errors via LSP).
+   *
+   * @generated from enum value: COMPILER = 1;
+   */
+  COMPILER = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(Error_ErrorType)
+proto3.util.setEnumType(Error_ErrorType, "xyz.block.ftl.v1.language.Error.ErrorType", [
+  { no: 0, name: "FTL" },
+  { no: 1, name: "COMPILER" },
 ]);
 
 /**

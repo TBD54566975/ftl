@@ -328,7 +328,7 @@ func combineAllPackageResults(results map[*analysis.Analyzer][]any, diagnostics 
 				fqName, err := goQualifiedNameForWidenedType(obj, d.Metadata)
 				if err != nil {
 					cd.error(builderrors.Error{
-						Pos:   d.Position().ToErrorPos(),
+						Pos:   optional.Some(d.Position().ToErrorPos()),
 						Msg:   err.Error(),
 						Level: builderrors.ERROR})
 				}
@@ -395,7 +395,7 @@ func diagnosticsToSchemaErrors(diagnostics []analysis.SimpleDiagnostic) []builde
 	errors := make([]builderrors.Error, 0, len(diagnostics))
 	for _, d := range diagnostics {
 		errors = append(errors, builderrors.Error{
-			Pos:   simplePosToErrorPos(d.Pos, d.End.Column),
+			Pos:   optional.Some(simplePosToErrorPos(d.Pos, d.End.Column)),
 			Msg:   d.Message,
 			Level: common.DiagnosticCategory(d.Category).ToErrorLevel(),
 		})

@@ -17,7 +17,6 @@ import (
 	"github.com/tliron/kutil/version"
 
 	"github.com/TBD54566975/ftl/internal/buildengine"
-	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	ftlErrors "github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -130,20 +129,25 @@ func (s *Server) post(err error) {
 		if !ftlErrors.Innermost(e) {
 			continue
 		}
-
 		var ce builderrors.Error
-		var cbe languageplugin.CompilerBuildError
-		if errors.As(e, &ce) {
-			filename := ce.Pos.Filename
-			if _, exists := errByFilename[filename]; !exists {
-				errByFilename[filename] = errSet{}
-			}
-			errByFilename[filename] = append(errByFilename[filename], ce)
-		} else if errors.As(e, &cbe) {
-			continue
-		} else {
+		if !errors.As(e, &ce) {
 			errUnspecified = append(errUnspecified, err)
+			continue
 		}
+		if ce.Type == builderrors.COMPILER {
+			// ignore compiler errors
+			continue
+		}
+		pos, ok := ce.Pos.Get()
+		if !ok {
+			errUnspecified = append(errUnspecified, err)
+			continue
+		}
+		filename := pos.Filename
+		if _, exists := errByFilename[filename]; !exists {
+			errByFilename[filename] = errSet{}
+		}
+		errByFilename[filename] = append(errByFilename[filename], ce)
 	}
 
 	go publishPositionalErrors(errByFilename, s)
@@ -154,7 +158,11 @@ func publishPositionalErrors(errByFilename map[string]errSet, s *Server) {
 	for filename, errs := range errByFilename {
 		var diagnostics []protocol.Diagnostic
 		for _, e := range errs {
-			pp := e.Pos
+			pp, ok := e.Pos.Get()
+			if !ok {
+				// Errors without positions are not expected in this function.
+				continue
+			}
 			sourceName := "ftl"
 			var severity protocol.DiagnosticSeverity
 

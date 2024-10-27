@@ -173,18 +173,6 @@ func (getDependenciesCommand) pluginCmd() {}
 
 type buildFunc = func(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool, transaction watch.ModifyFilesTransaction) (BuildResult, error)
 
-type CompilerBuildError struct {
-	err error
-}
-
-func (e CompilerBuildError) Error() string {
-	return e.err.Error()
-}
-
-func (e CompilerBuildError) Unwrap() error {
-	return e.err
-}
-
 // internalPlugin is used by languages that have not been split off into their own external plugins yet.
 // It has standard behaviours around building and watching files.
 type internalPlugin struct {

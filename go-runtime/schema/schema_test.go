@@ -509,7 +509,7 @@ func TestErrorReporting(t *testing.T) {
 	for _, e := range r.Errors {
 		str := strings.ReplaceAll(e.Error(), subFilename+":", "")
 		str = strings.ReplaceAll(str, filename+":", "")
-		if e.Pos.Filename == filename {
+		if pos, ok := e.Pos.Get(); ok && pos.Filename == filename {
 			actualParent = append(actualParent, str)
 		} else {
 			actualChild = append(actualChild, str)
