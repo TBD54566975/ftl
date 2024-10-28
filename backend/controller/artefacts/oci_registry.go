@@ -125,7 +125,7 @@ func (s *ContainerService) GetDigestsKeys(ctx context.Context, digests []sha256.
 func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
 	repo, err := s.repoFactory()
 	if err != nil {
-		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s/%s': %w", s.host, err)
+		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s': %w", s.host, err)
 	}
 	desc := content.NewDescriptorFromBytes("application/x-octet-stream", artefact.Content)
 	if err = repo.Push(ctx, desc, bytes.NewReader(artefact.Content)); err != nil {

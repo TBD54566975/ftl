@@ -56,9 +56,7 @@ func (d *releaseExistsCmd) Run(release *releaseCmd) error {
 	if err != nil {
 		return fmt.Errorf("failed to create container service: %w", err)
 	}
-	digests := slices.Map(slices.Unique(d.Digests), func(s string) sh.SHA256 {
-		return sh.MustParseSHA256(s)
-	})
+	digests := slices.Map(slices.Unique(d.Digests), sh.MustParseSHA256)
 	keys, missing, err := svc.GetDigestsKeys(context.Background(), digests)
 	if err != nil {
 		return fmt.Errorf("failed to get keys: %w", err)
