@@ -61,7 +61,7 @@ require (
 	github.com/tliron/glsp v0.2.2
 	github.com/tliron/kutil v0.3.26
 	github.com/tmc/langchaingo v0.1.12
-	github.com/zalando/go-keyring v0.2.5
+	github.com/zalando/go-keyring v0.2.6
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0
 	go.opentelemetry.io/otel v1.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.31.0
@@ -79,17 +79,18 @@ require (
 	golang.org/x/tools v0.26.0
 	google.golang.org/protobuf v1.35.1
 	gotest.tools/v3 v3.5.1
-	istio.io/api v1.23.2
-	istio.io/client-go v1.23.2
-	k8s.io/api v0.31.1
-	k8s.io/apimachinery v0.31.1
-	k8s.io/client-go v0.31.1
+	istio.io/api v1.23.3
+	istio.io/client-go v1.23.3
+	k8s.io/api v0.31.2
+	k8s.io/apimachinery v0.31.2
+	k8s.io/client-go v0.31.2
 	modernc.org/sqlite v1.33.1
 	oras.land/oras-go/v2 v2.5.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
+	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.17 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.21 // indirect
@@ -142,7 +143,6 @@ require (
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/sourcegraph/jsonrpc2 v0.2.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.26.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
@@ -163,13 +163,12 @@ require (
 require (
 	github.com/akamensky/base58 v0.0.0-20210829145138-ce8bf8802e8f
 	github.com/alecthomas/repr v0.4.0
-	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.55.3
 	github.com/awslabs/goformation/v7 v7.14.9
 	github.com/benbjohnson/clock v1.3.5
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/chzyer/readline v1.5.1
-	github.com/danieljoos/wincred v1.2.0 // indirect
+	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/dop251/goja v0.0.0-20240822155948-fa6d1ed5e4b6 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
