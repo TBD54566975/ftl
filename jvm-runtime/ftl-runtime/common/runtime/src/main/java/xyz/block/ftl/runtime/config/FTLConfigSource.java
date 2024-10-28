@@ -5,6 +5,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -23,9 +24,11 @@ public class FTLConfigSource implements ConfigSource {
     final static String HOST = "quarkus.http.host";
 
     final static String FTL_BIND = "FTL_BIND";
+    private static final String OTEL_ENV_VAR = "OTEL_EXPORTER_OTLP_ENDPOINT";
 
     final FTLController controller;
 
+    private static final String OTEL_METRICS_DISABLED = "quarkus.otel.sdk.disabled";
     private static final String DEFAULT_USER = "quarkus.datasource.username";
     private static final String DEFAULT_PASSWORD = "quarkus.datasource.password";
     private static final String DEFAULT_URL = "quarkus.datasource.jdbc.url";
@@ -67,6 +70,12 @@ public class FTLConfigSource implements ConfigSource {
     @Override
     public String getValue(String s) {
         switch (s) {
+            case OTEL_METRICS_DISABLED -> {
+                var v = System.getenv(OTEL_ENV_VAR);
+                return Boolean
+                        .toString(v == null || Objects.equals(v, "false") || Objects.equals(v, "0") || Objects.equals(v, "no")
+                                || Objects.equals(v, ""));
+            }
             case SEPARATE_SERVER -> {
                 return "false";
             }
