@@ -105,6 +105,8 @@ type Router[R Role] interface {
 
 type ProviderKey string
 
+func (p ProviderKey) String() string { return string(p) }
+
 // Provider is a generic interface for storing and retrieving configuration and secrets.
 type Provider[R Role] interface {
 	Role() R

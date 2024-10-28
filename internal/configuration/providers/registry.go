@@ -3,6 +3,8 @@ package providers
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/TBD54566975/ftl/internal/configuration"
 )
@@ -18,6 +20,11 @@ func NewRegistry[R configuration.Role]() *Registry[R] {
 	return &Registry[R]{
 		factories: map[configuration.ProviderKey]Factory[R]{},
 	}
+}
+
+// Providers returns the list of registered provider keys.
+func (r *Registry[R]) Providers() []configuration.ProviderKey {
+	return slices.Collect(maps.Keys(r.factories))
 }
 
 func (r *Registry[R]) Register(name configuration.ProviderKey, factory Factory[R]) {

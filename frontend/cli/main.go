@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -29,6 +30,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/profiles"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
+	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
@@ -155,6 +157,9 @@ func main() {
 
 func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 	gitRoot, _ := internal.GitRoot(".").Get()
+	configRegistry, secretsRegistry := makeConfigurationRegistries()
+	configProviders := slices.Map(configRegistry.Providers(), func(key configuration.ProviderKey) string { return key.String() })
+	secretProviders := slices.Map(secretsRegistry.Providers(), func(key configuration.ProviderKey) string { return key.String() })
 	app := kong.Must(cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
 		kong.Configuration(kongtoml.Loader, ".ftl.toml", "~/.ftl.toml"),
@@ -168,13 +173,15 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 			return &kong.Group{Key: node.Name, Title: "Command flags:"}
 		}),
 		kong.Vars{
-			"version": ftl.Version,
-			"os":      runtime.GOOS,
-			"arch":    runtime.GOARCH,
-			"numcpu":  strconv.Itoa(runtime.NumCPU()),
-			"gitroot": gitRoot,
-			"dsn":     dsn.DSN("ftl"),
-			"boxdsn":  dsn.DSN("ftl", dsn.Port(5432)),
+			"version":         ftl.Version,
+			"os":              runtime.GOOS,
+			"arch":            runtime.GOARCH,
+			"numcpu":          strconv.Itoa(runtime.NumCPU()),
+			"gitroot":         gitRoot,
+			"dsn":             dsn.DSN("ftl"),
+			"boxdsn":          dsn.DSN("ftl", dsn.Port(5432)),
+			"configProviders": strings.Join(configProviders, ","),
+			"secretProviders": strings.Join(secretProviders, ","),
 		},
 		kong.Exit(func(code int) {
 			if sm, ok := csm.statusManager.Get(); ok {
@@ -200,17 +207,10 @@ func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, can
 		ctx = rpc.ContextWithClient(ctx, provisionerServiceClient)
 		kctx.BindTo(provisionerServiceClient, (*provisionerconnect.ProvisionerServiceClient)(nil))
 
-		// Initialise configuration registries.
-		configRegistry := providers.NewRegistry[configuration.Configuration]()
-		configRegistry.Register(providers.NewEnvarFactory[configuration.Configuration]())
-		configRegistry.Register(providers.NewInlineFactory[configuration.Configuration]())
-		kctx.Bind(configRegistry)
-		secretsRegistry := providers.NewRegistry[configuration.Secrets]()
-		secretsRegistry.Register(providers.NewEnvarFactory[configuration.Secrets]())
-		secretsRegistry.Register(providers.NewInlineFactory[configuration.Secrets]())
+		configRegistry, secretsRegistry := makeConfigurationRegistries()
+		kctx.Bind(configRegistry, secretsRegistry)
 
 		kongcompletion.Register(kctx.Kong, kongcompletion.WithPredictors(terminal.Predictors(ctx, controllerServiceClient)))
-		kctx.Bind(secretsRegistry)
 
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
@@ -226,6 +226,18 @@ func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, can
 		return ctx
 	}
 	return bindContext
+}
+
+func makeConfigurationRegistries() (configRegistry *providers.Registry[configuration.Configuration], secretsRegistry *providers.Registry[configuration.Secrets]) {
+	configRegistry = providers.NewRegistry[configuration.Configuration]()
+	configRegistry.Register(providers.NewEnvarFactory[configuration.Configuration]())
+	configRegistry.Register(providers.NewInlineFactory[configuration.Configuration]())
+	secretsRegistry = providers.NewRegistry[configuration.Secrets]()
+	secretsRegistry.Register(providers.NewEnvarFactory[configuration.Secrets]())
+	secretsRegistry.Register(providers.NewInlineFactory[configuration.Secrets]())
+	// secretsRegistry.Register(providers.NewOnePasswordFactory())
+	secretsRegistry.Register(providers.NewKeychainFactory())
+	return
 }
 
 type currentStatusManager struct {

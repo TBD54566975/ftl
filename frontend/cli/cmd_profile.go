@@ -18,7 +18,7 @@ type profileCmd struct {
 	List    profileListCmd    `cmd:"" help:"List all profiles."`
 	Default profileDefaultCmd `cmd:"" help:"Set a profile as default."`
 	Switch  profileSwitchCmd  `cmd:"" help:"Switch locally active profile."`
-	New     profileNewCmd     `cmd:"" help:"Create a new profile."`
+	New     profileNewCmd     `cmd:"" help:"Create a new local or remote profile."`
 }
 
 type profileInitCmd struct {
@@ -102,10 +102,33 @@ func (p profileSwitchCmd) Run(project *profiles.Project) error {
 
 type profileNewCmd struct {
 	Local         bool                      `help:"Create a local profile." xor:"location" and:"providers"`
-	Remote        *url.URL                  `help:"Create a remote profile." xor:"location"`
-	Secrets       configuration.ProviderKey `help:"Secrets provider." placeholder:"PROVIDER" default:"inline" and:"providers"`
-	Configuration configuration.ProviderKey `help:"Configuration provider." placeholder:"PROVIDER" default:"inline" and:"providers"`
+	Remote        *url.URL                  `help:"Create a remote profile." xor:"location" placeholder:"ENDPOINT"`
+	Secrets       configuration.ProviderKey `help:"Secrets provider (one of ${enum})." enum:"${secretProviders}" default:"inline" and:"providers"`
+	Configuration configuration.ProviderKey `help:"Configuration provider (one of ${enum})." enum:"${configProviders}" default:"inline" and:"providers"`
 	Name          string                    `arg:"" help:"Profile name."`
+}
+
+func (profileNewCmd) Help() string {
+	return `
+Specify either --local or --remote=ENDPOINT to create a new profile.
+
+A local profile (specified via --local) is used for local development and testing, and can be managed without a running
+FTL cluster. In a local profile, secrets and configuration are stored in locally accessible secret stores, including
+1Password (--secrets=op), Keychain (--secrets=keychain), and local files (--secrets=inline).
+
+A remote profile (specified via --remote=ENDPOINT) is used for persistent cloud deployments. In a remote profile, secrets
+and configuration are managed by the FTL cluster.
+
+eg.
+
+Create a new local profile with secrets stored in the Keychain, and configuration stored inline:
+
+    ftl profile new devel --local --secrets=keychain
+
+Create a new remote profile:
+
+    ftl profile new staging --remote=https://ftl.example.com
+`
 }
 
 func (p profileNewCmd) Run(project *profiles.Project) error {
