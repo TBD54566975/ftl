@@ -7,7 +7,6 @@ import org.eclipse.microprofile.config.spi.ConfigSource;
 public class StaticConfigSource implements ConfigSource {
 
     public static final String QUARKUS_BANNER_ENABLED = "quarkus.banner.enabled";
-    final static String OTEL_METRICS_ENABLED = "quarkus.otel.metrics.enabled";
 
     @Override
     public Set<String> getPropertyNames() {
@@ -16,13 +15,8 @@ public class StaticConfigSource implements ConfigSource {
 
     @Override
     public String getValue(String propertyName) {
-        switch (propertyName) {
-            case (QUARKUS_BANNER_ENABLED) -> {
-                return "false";
-            }
-            case OTEL_METRICS_ENABLED -> {
-                return "true";
-            }
+        if (propertyName.equals(QUARKUS_BANNER_ENABLED)) {
+            return "false";
         }
         return null;
     }
