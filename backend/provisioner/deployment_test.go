@@ -67,8 +67,8 @@ func TestDeployment_Progress(t *testing.T) {
 
 	t.Run("progresses each provisioner in order", func(t *testing.T) {
 		registry := provisioner.ProvisionerRegistry{}
-		registry.Register(&MockProvisioner{Token: "foo"}, provisioner.ResourceTypePostgres)
-		registry.Register(&MockProvisioner{Token: "bar"}, provisioner.ResourceTypeMysql)
+		registry.Register("mock", &MockProvisioner{Token: "foo"}, provisioner.ResourceTypePostgres)
+		registry.Register("mock", &MockProvisioner{Token: "bar"}, provisioner.ResourceTypeMysql)
 
 		graph := &provisioner.ResourceGraph{}
 		graph.AddNode(&proto.Resource{ResourceId: "a", Resource: &proto.Resource_Mysql{}})

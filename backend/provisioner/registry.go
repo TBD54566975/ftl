@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
@@ -47,6 +48,14 @@ type ProvisionerBinding struct {
 	Types       []ResourceType
 }
 
+func (p ProvisionerBinding) String() string {
+	types := []string{}
+	for _, t := range p.Types {
+		types = append(types, string(t))
+	}
+	return fmt.Sprintf("%s (%s)", p.ID, strings.Join(types, ","))
+}
+
 // ProvisionerRegistry contains all known resource handlers in the order they should be executed
 type ProvisionerRegistry struct {
 	Default      *ProvisionerBinding
@@ -59,13 +68,12 @@ func (reg *ProvisionerRegistry) listProvisioners() []*ProvisionerBinding {
 	if reg.Default != nil {
 		result = append(result, reg.Default)
 	}
-	for _, p := range reg.Provisioners {
-		result = append(result, p)
-	}
+	result = append(result, reg.Provisioners...)
 	return result
 }
 
 func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, controller ftlv1connect.ControllerServiceClient) (*ProvisionerRegistry, error) {
+	logger := log.FromContext(ctx)
 	var def provisionerconnect.ProvisionerPluginServiceClient
 	if cfg.Default != "" {
 		d, err := provisionerIDToProvisioner(ctx, cfg.Default, controller)
@@ -83,7 +91,8 @@ func registryFromConfig(ctx context.Context, cfg *provisionerPluginConfig, contr
 		if err != nil {
 			return nil, err
 		}
-		result.Register(provisioner, plugin.Resources...)
+		binding := result.Register(plugin.ID, provisioner, plugin.Resources...)
+		logger.Debugf("Registered provisioner %s", binding)
 	}
 	return result, nil
 }
@@ -112,11 +121,14 @@ func provisionerIDToProvisioner(ctx context.Context, id string, controller ftlv1
 }
 
 // Register to the registry, to be executed after all the previously added handlers
-func (reg *ProvisionerRegistry) Register(handler provisionerconnect.ProvisionerPluginServiceClient, types ...ResourceType) {
-	reg.Provisioners = append(reg.Provisioners, &ProvisionerBinding{
+func (reg *ProvisionerRegistry) Register(id string, handler provisionerconnect.ProvisionerPluginServiceClient, types ...ResourceType) *ProvisionerBinding {
+	binding := &ProvisionerBinding{
 		Provisioner: handler,
 		Types:       types,
-	})
+		ID:          id,
+	}
+	reg.Provisioners = append(reg.Provisioners, binding)
+	return binding
 }
 
 // CreateDeployment to take the system to the desired state
@@ -133,7 +145,7 @@ func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, module str
 		existing := existingByHandler[binding.Provisioner]
 
 		if !resourcesEqual(desired, existing) {
-			logger.Debugf("Adding task for module %s with provisioner %s", module, binding.ID)
+			logger.Debugf("Adding task for module %s: %s", module, binding)
 			result = append(result, &Task{
 				module:   module,
 				handler:  binding.Provisioner,
