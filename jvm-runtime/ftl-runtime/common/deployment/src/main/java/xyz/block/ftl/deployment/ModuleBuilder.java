@@ -518,8 +518,6 @@ public class ModuleBuilder {
             addDecl(decl, decl.getTypeAlias().getPos(), decl.getTypeAlias().getName());
         } else if (decl.hasTopic()) {
             addDecl(decl, decl.getTopic().getPos(), decl.getTopic().getName());
-        } else if (decl.hasFsm()) {
-            addDecl(decl, decl.getFsm().getPos(), decl.getFsm().getName());
         } else if (decl.hasSubscription()) {
             addDecl(decl, decl.getSubscription().getPos(), decl.getSubscription().getName());
         }

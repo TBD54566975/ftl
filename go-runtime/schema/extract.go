@@ -20,7 +20,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/database"
 	"github.com/TBD54566975/ftl/go-runtime/schema/enum"
 	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
-	"github.com/TBD54566975/ftl/go-runtime/schema/fsm"
 	"github.com/TBD54566975/ftl/go-runtime/schema/initialize"
 	"github.com/TBD54566975/ftl/go-runtime/schema/metadata"
 	"github.com/TBD54566975/ftl/go-runtime/schema/subscription"
@@ -58,7 +57,6 @@ var extractors = [][]*analysis.Analyzer{
 		configsecret.Extractor,
 		data.Extractor,
 		database.Extractor,
-		fsm.Extractor,
 		topic.Extractor,
 		typealias.Extractor,
 		typeenumvariant.Extractor,
@@ -382,7 +380,7 @@ func updateTransitiveVisibility(d schema.Decl, module *schema.Module) {
 				t.Export = true
 			case *schema.Verb:
 				t.Export = true
-			case *schema.Database, *schema.Config, *schema.FSM, *schema.Secret, *schema.Subscription:
+			case *schema.Database, *schema.Config, *schema.Secret, *schema.Subscription:
 			}
 			updateTransitiveVisibility(decl, module)
 		}

@@ -22,16 +22,6 @@ public class TestModuleServer extends ModuleServiceGrpc.ModuleServiceImplBase {
     }
 
     @Override
-    public void sendFSMEvent(SendFSMEventRequest request, StreamObserver<SendFSMEventResponse> responseObserver) {
-        super.sendFSMEvent(request, responseObserver);
-    }
-
-    @Override
-    public void setNextFSMEvent(SendFSMEventRequest request, StreamObserver<SendFSMEventResponse> responseObserver) {
-        super.setNextFSMEvent(request, responseObserver);
-    }
-
-    @Override
     public void publishEvent(PublishEventRequest request, StreamObserver<PublishEventResponse> responseObserver) {
         super.publishEvent(request, responseObserver);
     }

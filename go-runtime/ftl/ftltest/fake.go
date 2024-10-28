@@ -51,7 +51,6 @@ type subscription struct {
 type subscriber func(context.Context, any) error
 
 type fakeFTL struct {
-	fsm *fakeFSMManager
 
 	// We store the options used to construct this fake, so they can be
 	// replayed to extend the fake with new options
@@ -70,7 +69,6 @@ type mapImpl func(context.Context) (any, error)
 
 func contextWithFakeFTL(ctx context.Context, options ...Option) context.Context {
 	fake := &fakeFTL{
-		fsm:           newFakeFSMManager(),
 		mockMaps:      map[uintptr]mapImpl{},
 		allowMapCalls: false,
 		configValues:  map[string][]byte{},
@@ -81,8 +79,6 @@ func contextWithFakeFTL(ctx context.Context, options ...Option) context.Context 
 	fake.pubSub = newFakePubSub(ctx)
 	return ctx
 }
-
-var _ internal.FTL = &fakeFTL{}
 
 func (f *fakeFTL) setConfig(name string, value any) error {
 	data, err := json.Marshal(value)
@@ -116,14 +112,6 @@ func (f *fakeFTL) GetSecret(ctx context.Context, name string, dest any) error {
 		return fmt.Errorf("config value %q not found, did you remember to ctx := ftltest.Context(ftltest.WithDefaultProjectFile()) ?: %w", name, configuration.ErrNotFound)
 	}
 	return json.Unmarshal(data, dest)
-}
-
-func (f *fakeFTL) FSMSend(ctx context.Context, fsm string, instance string, event any) error {
-	return f.fsm.SendEvent(ctx, fsm, instance, event)
-}
-
-func (f *fakeFTL) FSMNext(ctx context.Context, fsm, instance string, event any) error {
-	return f.fsm.SetNextFSMEvent(ctx, fsm, instance, event)
 }
 
 // addMapMock saves a new mock of ftl.Map to the internal map in fakeFTL.

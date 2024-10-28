@@ -50,42 +50,6 @@ func (r *RealFTL) GetSecret(_ context.Context, name string, dest any) error {
 	return r.dmctx.CurrentContext().GetSecret(name, dest)
 }
 
-func (r *RealFTL) FSMSend(ctx context.Context, fsm, instance string, event any) error {
-	client := rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx)
-	body, err := encoding.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("failed to marshal event: %w", err)
-	}
-	_, err = client.SendFSMEvent(ctx, connect.NewRequest(&ftlv1.SendFSMEventRequest{
-		Fsm:      &schemapb.Ref{Module: reflection.Module(), Name: fsm},
-		Instance: instance,
-		Event:    schema.TypeToProto(reflection.ReflectTypeToSchemaType(reflect.TypeOf(event))),
-		Body:     body,
-	}))
-	if err != nil {
-		return fmt.Errorf("failed to send fsm event: %w", err)
-	}
-	return nil
-}
-
-func (r *RealFTL) FSMNext(ctx context.Context, fsm, instance string, event any) error {
-	client := rpc.ClientFromContext[ftlv1connect.ModuleServiceClient](ctx)
-	body, err := encoding.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("failed to marshal event: %w", err)
-	}
-	_, err = client.SetNextFSMEvent(ctx, connect.NewRequest(&ftlv1.SendFSMEventRequest{
-		Fsm:      &schemapb.Ref{Module: reflection.Module(), Name: fsm},
-		Instance: instance,
-		Event:    schema.TypeToProto(reflection.ReflectTypeToSchemaType(reflect.TypeOf(event))),
-		Body:     body,
-	}))
-	if err != nil {
-		return fmt.Errorf("failed to set next fsm event: %w", err)
-	}
-	return nil
-}
-
 func (r *RealFTL) PublishEvent(ctx context.Context, topic *schema.Ref, event any) error {
 	caller := reflection.CallingVerb()
 	if topic.Module != caller.Module {

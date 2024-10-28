@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useStreamModules } from '../../../api/modules/use-stream-modules'
-import type { Config, Data, Database, Enum, FSM, Secret, Subscription, Topic, TypeAlias } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Config, Data, Database, Enum, Secret, Subscription, Topic, TypeAlias } from '../../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { VerbPage } from '../../verbs/VerbPage'
 import { declFromModules } from '../module.utils'
 import { declSchemaFromModules } from '../schema/schema.utils'
@@ -9,7 +9,6 @@ import { ConfigPanel } from './ConfigPanel'
 import { DataPanel } from './DataPanel'
 import { DatabasePanel } from './DatabasePanel'
 import { EnumPanel } from './EnumPanel'
-import { FsmPanel } from './FsmPanel'
 import { SecretPanel } from './SecretPanel'
 import { SubscriptionPanel } from './SubscriptionPanel'
 import { TopicPanel } from './TopicPanel'
@@ -44,8 +43,6 @@ export const DeclPanel = () => {
       return <DatabasePanel {...commonProps} value={decl as Database} />
     case 'enum':
       return <EnumPanel {...commonProps} value={decl as Enum} />
-    case 'fsm':
-      return <FsmPanel {...commonProps} value={decl as FSM} />
     case 'secret':
       return <SecretPanel {...commonProps} value={decl as Secret} />
     case 'subscription':

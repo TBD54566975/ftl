@@ -84,13 +84,6 @@ impl VerbService for FtlService {
         todo!()
     }
 
-    async fn send_fsm_event(
-        &self,
-        _request: Request<protos::ftl::SendFsmEventRequest>,
-    ) -> Result<Response<protos::ftl::SendFsmEventResponse>, Status> {
-        todo!()
-    }
-
     async fn publish_event(
         &self,
         _request: Request<protos::ftl::PublishEventRequest>,

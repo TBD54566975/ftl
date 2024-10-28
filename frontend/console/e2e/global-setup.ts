@@ -9,7 +9,7 @@ const globalSetup = async (config: FullConfig) => {
   await page.goto('http://localhost:8892/modules')
 
   console.log('Waiting for modules to load...')
-  const moduleNames = ['time', 'echo', 'cron', 'fsm', 'http', 'pubsub']
+  const moduleNames = ['time', 'echo', 'cron', 'http', 'pubsub']
   await page.waitForFunction(
     (modules) => {
       const loadedModules = modules.filter((module) => document.querySelector(`li#module-tree-module-${module}`) !== null)

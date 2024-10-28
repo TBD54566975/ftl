@@ -269,49 +269,7 @@ func TestValidate(t *testing.T) {
 				`,
 			errs: []string{"4:7: enum variant \"A\" of type Int cannot have a value of type \"String\""},
 		},
-		{name: "InvalidFSM",
-			schema: `
-				module one {
-					verb A(Empty) Unit
-					verb B(one.C) Empty
-
-					fsm FSM {
-						transition one.C to one.B
-					}
-				}
-				`,
-			errs: []string{
-				`4:13: unknown reference "one.C", is the type annotated and exported?`,
-				`6:6: "FSM" has no start states`,
-				`7:18: unknown source verb "one.C"`,
-				`7:27: destination state "one.B" must be a sink but is verb`,
-			},
-		},
-		{name: "DuplicateFSM",
-			schema: `
-				module one {
-					verb A(Empty) Unit
-						+retry 10 5s 20m
-					verb B(Empty) Unit
-						+retry 1m5s 20m30s
-					verb C(Empty) Unit
-
-					fsm FSM {
-						start one.A
-						transition one.A to one.B
-					}
-
-					fsm FSM {
-						start one.A
-						transition one.A to one.B
-					}
-				}
-				`,
-			errs: []string{
-				`14:6: duplicate fsm "FSM", first defined at 9:6`,
-			},
-		},
-		{name: "NonFSMVerbsWithRetry",
+		{name: "NonSubscriberVerbsWithRetry",
 			schema: `
 				module one {
 					verb A(Empty) Unit
@@ -322,69 +280,70 @@ func TestValidate(t *testing.T) {
 				}
 				`,
 			errs: []string{
-				`4:7: retries can only be added to subscribers or FSM transitions`,
-				`6:7: retries can only be added to subscribers or FSM transitions`,
+				`4:7: retries can only be added to subscribers`,
+				`6:7: retries can only be added to subscribers`,
 			},
 		},
 		{name: "InvalidRetryDurations",
 			schema: `
 				module one {
-					verb A(Empty) Unit
+
+					data Event {}
+				    topic topicA one.Event
+
+					subscription subA one.topicA
+
+					verb A(one.Event) Unit
 						+retry 10 5s1m
-					verb B(Empty) Unit
+						+subscribe subA
+					verb B(one.Event) Unit
 						+retry 1d1m5s1d
-					verb C(Empty) Unit
+						+subscribe subA
+					verb C(one.Event) Unit
 						+retry 0h0m0s
-					verb D(Empty) Unit
+						+subscribe subA
+					verb D(one.Event) Unit
 						+retry 1
-					verb E(Empty) Unit
+						+subscribe subA
+					verb E(one.Event) Unit
 						+retry
-					verb F(Empty) Unit
+						+subscribe subA
+					verb F(one.Event) Unit
 						+retry 20m20m
-					verb G(Empty) Unit
+						+subscribe subA
+					verb G(one.Event) Unit
 						+retry 1s
 						+retry 1s
-					verb H(Empty) Unit
+						+subscribe subA
+					verb H(one.Event) Unit
 						+retry 2mins
-					verb I(Empty) Unit
+						+subscribe subA
+					verb I(one.Event) Unit
 						+retry 1m 1s
-					verb J(Empty) Unit
+						+subscribe subA
+					verb J(one.Event) Unit
 						+retry 1d1s
-					verb K(Empty) Unit
+						+subscribe subA
+					verb K(one.Event) Unit
 						+retry 0 5s
+						+subscribe subA
 
-					verb catchFSM(builtin.CatchRequest<Unit>) Unit
+					verb catchSub(builtin.CatchRequest<Unit>) Unit
 
-					fsm FSM
-						+retry 0 5s catch catchFSM
-					{
-						start one.A
-						transition one.A to one.B
-						transition one.A to one.C
-						transition one.A to one.D
-						transition one.A to one.E
-						transition one.A to one.F
-						transition one.A to one.G
-						transition one.A to one.H
-						transition one.A to one.I
-						transition one.A to one.J
-						transition one.A to one.K
-					}
 				}
 				`,
 			errs: []string{
-				`10:7: retry must have a minimum backoff`,
-				`12:7: retry must have a minimum backoff`,
-				`14:7: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
-				`17:7: verb can not have multiple instances of retry`,
-				`19:7: could not parse min backoff duration: could not parse retry duration: duration has unknown unit "mins" - use 'd', 'h', 'm' or 's', eg '1d' or '30s'`,
-				`21:7: max backoff duration (1s) needs to be at least as long as initial backoff (1m)`,
-				`23:7: could not parse min backoff duration: retry backoff can not be larger than 1d`,
-				`25:7: can not define a backoff duration when retry count is 0 and no catch is declared`,
-				`30:7: catch can only be defined on verbs`,
-				`4:7: could not parse min backoff duration: could not parse retry duration: duration has unit "m" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
-				`6:7: could not parse min backoff duration: could not parse retry duration: duration has unit "d" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'`,
-				`8:7: could not parse min backoff duration: retry must have a minimum backoff of 1s`,
+				"10:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"m\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
+				"13:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"d\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
+				"16:7: could not parse min backoff duration: retry must have a minimum backoff of 1s",
+				"19:7: retry must have a minimum backoff",
+				"22:7: retry must have a minimum backoff",
+				"25:7: could not parse min backoff duration: could not parse retry duration: duration has unit \"m\" out of order - units need to be ordered from largest to smallest - eg '1d3h2m'",
+				"29:7: verb can not have multiple instances of retry",
+				"32:7: could not parse min backoff duration: could not parse retry duration: duration has unknown unit \"mins\" - use 'd', 'h', 'm' or 's', eg '1d' or '30s'",
+				"35:7: max backoff duration (1s) needs to be at least as long as initial backoff (1m)",
+				"38:7: could not parse min backoff duration: retry backoff can not be larger than 1d",
+				"41:7: can not define a backoff duration when retry count is 0 and no catch is declared",
 			},
 		},
 		{name: "InvalidRetryInvalidSpace",

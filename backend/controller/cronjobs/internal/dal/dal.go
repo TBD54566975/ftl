@@ -52,7 +52,7 @@ func (d *DAL) CreateAsyncCall(ctx context.Context, params CreateAsyncCallParams)
 	observability.AsyncCalls.Created(ctx, params.Verb, optional.None[schema.RefKey](), params.Origin, 0, err)
 	queueDepth, err := d.db.AsyncCallQueueDepth(ctx)
 	if err == nil {
-		// Don't error out of an FSM transition just over a queue depth retrieval
+		// Don't error out of a transition just over a queue depth retrieval
 		// error because this is only used for an observability gauge.
 		observability.AsyncCalls.RecordQueueDepth(ctx, queueDepth)
 	}

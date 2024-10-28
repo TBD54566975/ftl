@@ -45,7 +45,6 @@ func TestParser(t *testing.T) {
 				Payload: model.CronJobPayload{Module: "initial", Verb: "verb0Cron"},
 				Suffix:  []byte("\xfd7\xe6*\xfcƹ\xe9.\x9c"),
 			}}},
-		{"FSM", `fsm:module.name:key`, async.AsyncOriginFSM{FSM: schema.RefKey{Module: "module", Name: "name"}, Key: "key"}},
 		{"PubSub", `sub:module.topic`, async.AsyncOriginPubSub{Subscription: schema.RefKey{Module: "module", Name: "topic"}}},
 	}
 	for _, tt := range tests {

@@ -35,8 +35,6 @@ func declListToSchema(s []*schemapb.Decl) []Decl {
 			out = append(out, ConfigFromProto(n.Config))
 		case *schemapb.Decl_Secret:
 			out = append(out, SecretFromProto(n.Secret))
-		case *schemapb.Decl_Fsm:
-			out = append(out, FSMFromProto(n.Fsm))
 		case *schemapb.Decl_Topic:
 			out = append(out, TopicFromProto(n.Topic))
 		case *schemapb.Decl_Subscription:

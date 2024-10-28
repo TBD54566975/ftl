@@ -64,7 +64,6 @@ message Decl {
     Data data = 1;
     Database database = 3;
     Enum enum = 4;
-    FSM fsm = 8;
     Secret secret = 7;
     Subscription subscription = 10;
     Topic topic = 9;
@@ -87,22 +86,6 @@ message EnumVariant {
   repeated string comments = 2;
   string name = 3;
   Value value = 4;
-}
-
-message FSM {
-  optional Position pos = 1;
-  repeated string comments = 2;
-  string name = 3;
-  repeated Metadata metadata = 6;
-  repeated Ref start = 4;
-  repeated FSMTransition transitions = 5;
-}
-
-message FSMTransition {
-  optional Position pos = 1;
-  repeated string comments = 2;
-  optional Ref from = 3;
-  Ref to = 4;
 }
 
 message Field {

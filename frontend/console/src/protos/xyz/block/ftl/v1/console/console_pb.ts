@@ -5,7 +5,7 @@
 
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Duration, Message, proto3, protoInt64, Timestamp } from "@bufbuild/protobuf";
-import { Config as Config$1, Data as Data$1, Database as Database$1, Enum as Enum$1, FSM as FSM$1, Ref, Secret as Secret$1, Subscription as Subscription$1, Topic as Topic$1, TypeAlias as TypeAlias$1, Verb as Verb$1 } from "../schema/schema_pb.js";
+import { Config as Config$1, Data as Data$1, Database as Database$1, Enum as Enum$1, Ref, Secret as Secret$1, Subscription as Subscription$1, Topic as Topic$1, TypeAlias as TypeAlias$1, Verb as Verb$1 } from "../schema/schema_pb.js";
 
 /**
  * @generated from enum xyz.block.ftl.v1.console.EventType
@@ -718,43 +718,6 @@ export class Enum extends Message<Enum> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.console.FSM
- */
-export class FSM extends Message<FSM> {
-  /**
-   * @generated from field: xyz.block.ftl.v1.schema.FSM fsm = 1;
-   */
-  fsm?: FSM$1;
-
-  constructor(data?: PartialMessage<FSM>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.console.FSM";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "fsm", kind: "message", T: FSM$1 },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FSM {
-    return new FSM().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FSM {
-    return new FSM().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FSM {
-    return new FSM().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: FSM | PlainMessage<FSM> | undefined, b: FSM | PlainMessage<FSM> | undefined): boolean {
-    return proto3.util.equals(FSM, a, b);
-  }
-}
-
-/**
  * @generated from message xyz.block.ftl.v1.console.Topic
  */
 export class Topic extends Message<Topic> {
@@ -1006,22 +969,17 @@ export class Module extends Message<Module> {
   enums: Enum[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.FSM fsms = 11;
-   */
-  fsms: FSM[] = [];
-
-  /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Topic topics = 12;
+   * @generated from field: repeated xyz.block.ftl.v1.console.Topic topics = 11;
    */
   topics: Topic[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.TypeAlias typealiases = 13;
+   * @generated from field: repeated xyz.block.ftl.v1.console.TypeAlias typealiases = 12;
    */
   typealiases: TypeAlias[] = [];
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.console.Subscription subscriptions = 14;
+   * @generated from field: repeated xyz.block.ftl.v1.console.Subscription subscriptions = 13;
    */
   subscriptions: Subscription[] = [];
 
@@ -1043,10 +1001,9 @@ export class Module extends Message<Module> {
     { no: 8, name: "configs", kind: "message", T: Config, repeated: true },
     { no: 9, name: "databases", kind: "message", T: Database, repeated: true },
     { no: 10, name: "enums", kind: "message", T: Enum, repeated: true },
-    { no: 11, name: "fsms", kind: "message", T: FSM, repeated: true },
-    { no: 12, name: "topics", kind: "message", T: Topic, repeated: true },
-    { no: 13, name: "typealiases", kind: "message", T: TypeAlias, repeated: true },
-    { no: 14, name: "subscriptions", kind: "message", T: Subscription, repeated: true },
+    { no: 11, name: "topics", kind: "message", T: Topic, repeated: true },
+    { no: 12, name: "typealiases", kind: "message", T: TypeAlias, repeated: true },
+    { no: 13, name: "subscriptions", kind: "message", T: Subscription, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Module {

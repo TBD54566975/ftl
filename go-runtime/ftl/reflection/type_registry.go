@@ -4,8 +4,6 @@ import (
 	"reflect"
 
 	"github.com/alecthomas/types/optional"
-
-	"github.com/TBD54566975/ftl/internal/schema"
 )
 
 // TypeRegistry is used for dynamic type resolution at runtime. It stores associations between sum type discriminators
@@ -15,7 +13,6 @@ import (
 type TypeRegistry struct {
 	sumTypes                 map[reflect.Type][]sumTypeVariant
 	variantsToDiscriminators map[reflect.Type]reflect.Type
-	fsm                      map[string]ReflectedFSM
 	externalTypes            map[reflect.Type]struct{}
 	verbCalls                map[Ref]verbCall
 }
@@ -40,22 +37,6 @@ func SumType[Discriminator any](variants ...Discriminator) Registree {
 	}
 }
 
-// Transition represents a transition between two states in an FSM.
-type Transition struct {
-	From reflect.Value
-	To   reflect.Value
-}
-
-type ReflectedFSM struct {
-	Transitions []Transition
-	Schema      *schema.FSM
-}
-
-// FSM adds a finite state machine to the type registry.
-func FSM(name string, transitions ...Transition) Registree {
-	return func(t *TypeRegistry) { t.registerFSM(name, transitions) }
-}
-
 // ExternalType adds a non-FTL type to the type registry.
 func ExternalType(goType any) Registree {
 	return func(t *TypeRegistry) {
@@ -70,7 +51,6 @@ func newTypeRegistry(options ...Registree) *TypeRegistry {
 	t := &TypeRegistry{
 		sumTypes:                 map[reflect.Type][]sumTypeVariant{},
 		variantsToDiscriminators: map[reflect.Type]reflect.Type{},
-		fsm:                      map[string]ReflectedFSM{},
 		externalTypes:            map[reflect.Type]struct{}{},
 		verbCalls:                map[Ref]verbCall{},
 	}
@@ -95,30 +75,8 @@ func (t *TypeRegistry) registerSumType(discriminator reflect.Type, variants map[
 	t.sumTypes[discriminator] = values
 }
 
-func (t *TypeRegistry) registerFSM(name string, transitions []Transition) {
-	fsm := &schema.FSM{Name: name}
-	for _, transition := range transitions {
-		if !transition.From.IsValid() {
-			fsm.Start = append(fsm.Start, FuncRef(transition.To.Interface()).ToSchema())
-		} else {
-			fsm.Transitions = append(fsm.Transitions, &schema.FSMTransition{
-				From: FuncRef(transition.From.Interface()).ToSchema(),
-				To:   FuncRef(transition.To.Interface()).ToSchema(),
-			})
-		}
-	}
-	t.fsm[name] = ReflectedFSM{
-		Transitions: transitions,
-		Schema:      fsm,
-	}
-}
-
 func (t *TypeRegistry) isSumTypeDiscriminator(discriminator reflect.Type) bool {
 	return t.getSumTypeVariants(discriminator).Ok()
-}
-
-func (t *TypeRegistry) getFSM(name string) optional.Option[ReflectedFSM] {
-	return optional.Zero(t.fsm[name])
 }
 
 func (t *TypeRegistry) getDiscriminatorByVariant(variant reflect.Type) optional.Option[reflect.Type] {
