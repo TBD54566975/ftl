@@ -14,10 +14,11 @@ import (
 )
 
 type CircularBuffer struct {
-	r    *ring.Ring
-	size int
-	mu   sync.Mutex
-	cap  int
+	r      *ring.Ring
+	size   int
+	mu     sync.Mutex
+	cap    int
+	stream chan string
 }
 
 func NewCircularBuffer(capacity int) *CircularBuffer {
@@ -32,6 +33,9 @@ func NewCircularBuffer(capacity int) *CircularBuffer {
 func (cb *CircularBuffer) Write(p string) error {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
+	if cb.stream != nil {
+		cb.stream <- p
+	}
 
 	cb.r.Value = p
 	cb.r = cb.r.Next()
@@ -46,6 +50,9 @@ func (cb *CircularBuffer) Write(p string) error {
 func (cb *CircularBuffer) Bytes() []byte {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
+	if cb.stream != nil {
+		close(cb.stream)
+	}
 
 	if cb.size == 0 {
 		return []byte{}
@@ -64,6 +71,37 @@ func (cb *CircularBuffer) Bytes() []byte {
 	}
 
 	return buf.Bytes()
+}
+
+// StreamBytes lets you stream the contents of the buffer.
+// It will first send the current contents of the buffer and then stream any new entries.
+func (cb *CircularBuffer) StreamBytes() <-chan string {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.stream = make(chan string)
+
+	if cb.size == 0 {
+		return cb.stream
+	}
+	data := []string{}
+
+	start := cb.r.Move(-cb.size) // Correctly calculate the starting position
+
+	for range cb.size {
+		if str, ok := start.Value.(string); ok {
+			data = append(data, str)
+		} else {
+			fmt.Println("Unexpected type or nil found in buffer")
+		}
+		start = start.Next()
+	}
+	go func() {
+		for _, d := range data {
+			cb.stream <- d
+		}
+	}()
+
+	return cb.stream
 }
 
 func (cb *CircularBuffer) WriterAt(ctx context.Context, level log.Level) *io.PipeWriter {

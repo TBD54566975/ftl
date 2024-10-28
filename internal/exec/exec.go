@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec" //nolint:depguard
 	"syscall"
+	"time"
 
 	"github.com/kballard/go-shellquote"
 
@@ -68,6 +69,53 @@ func (c *Cmd) RunBuffered(ctx context.Context) error {
 		if ctx.Err() == nil {
 			// Don't log on context cancellation
 			log.FromContext(ctx).Errorf(err, "%s", outputBuffer.Bytes())
+		}
+		return fmt.Errorf("command failed: %w", err)
+	}
+
+	return nil
+}
+
+// RunBufferedWithOutputTimeout runs the command and captures the output. If the command fails, the output is logged.
+// If the timeout is reached, the output is dumped, however the command execution continues.
+// This is useful for commands that are taking longer than usual, and we want to see the output.
+func (c *Cmd) RunBufferedWithOutputTimeout(ctx context.Context, timeout time.Duration) error {
+	outputBuffer := NewCircularBuffer(100)
+	output := outputBuffer.WriterAt(ctx, c.level)
+	c.Cmd.Stdout = output
+	c.Cmd.Stderr = output
+	ctx, done := context.WithCancel(ctx)
+	defer done()
+
+	logger := log.FromContext(ctx)
+	if logger.GetLevel() > log.Debug {
+		// If the log level is debug or lower we get the output anyway
+		// This only kicks in if the output would be buffered by default, and we exceed the timeout
+		go func() {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(timeout):
+			}
+
+			stream := outputBuffer.StreamBytes()
+			logger.Infof("Command output timeout reached, streaming output:\n")
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case str := <-stream:
+					logger.Infof("%s\n", str)
+				}
+			}
+		}()
+	}
+
+	err := c.Run()
+	if err != nil {
+		if ctx.Err() == nil {
+			// Don't log on context cancellation
+			logger.Errorf(err, "%s", outputBuffer.Bytes())
 		}
 		return fmt.Errorf("command failed: %w", err)
 	}
