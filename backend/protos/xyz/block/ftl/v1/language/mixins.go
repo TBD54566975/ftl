@@ -3,6 +3,7 @@ package languagepb
 import (
 	"fmt"
 
+	"github.com/alecthomas/types/optional"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/TBD54566975/ftl/internal/builderrors"
@@ -10,7 +11,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/slices"
-	"github.com/alecthomas/types/optional"
 )
 
 // ErrorsFromProto converts a protobuf ErrorList to a []builderrors.Error.
