@@ -98,6 +98,9 @@ export const LanguageService = {
      * Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
      * event with the updated build context id with "is_automatic_rebuild" as false.
      *
+     * If the plugin will not be able to return a BuildSuccess or BuildFailure, such as when there is no active
+     * build stream, it must fail the BuildContextUpdated call.
+     *
      * @generated from rpc xyz.block.ftl.v1.language.LanguageService.BuildContextUpdated
      */
     buildContextUpdated: {

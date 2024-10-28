@@ -421,8 +421,6 @@ func waitForAutoRebuildToStart(contextId string) in.Action {
 				} else {
 					logger.Warnf("ignoring build failure for unexpected context %q while waiting for auto rebuild started event for %q", event.BuildFailure.ContextId, contextId)
 				}
-			case *langpb.BuildEvent_LogMessage:
-				logger.Debugf("plugin: %s", event.LogMessage.Message)
 			}
 		}
 	}
@@ -484,9 +482,6 @@ func waitForBuildToEnd(success BuildResultType, contextId string, automaticRebui
 					additionalChecks(t, ic, e)
 				}
 				return
-
-			case *langpb.BuildEvent_LogMessage:
-				logger.Infof("plugin log: %v", event.LogMessage.Message)
 			}
 		}
 	}
@@ -495,7 +490,6 @@ func waitForBuildToEnd(success BuildResultType, contextId string, automaticRebui
 func checkForNoEvents(duration time.Duration) in.Action {
 	return func(t testing.TB, ic in.TestContext) {
 		in.Infof("Checking for no events for %v", duration)
-		logger := log.FromContext(ic.Context)
 		for {
 			select {
 			case result := <-buildChan:
@@ -508,9 +502,6 @@ func checkForNoEvents(duration time.Duration) in.Action {
 					panic(fmt.Sprintf("build success event when expecting no events: %v", event))
 				case *langpb.BuildEvent_BuildFailure:
 					panic(fmt.Sprintf("build failure event when expecting no events: %v", event))
-				case *langpb.BuildEvent_LogMessage:
-					logger.Infof("plugin log: %v", event.LogMessage.Message)
-					continue
 				}
 			case <-time.After(duration):
 				return

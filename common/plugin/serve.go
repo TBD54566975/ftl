@@ -112,7 +112,7 @@ func Start[Impl any, Iface any, Config any](
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// Configure logging to JSON on stdout. This will be read by the parent process.
+	// Configure logging to JSON on stderr. This will be read by the parent process.
 	logConfig := cli.LogConfig
 	logConfig.JSON = true
 	logger := log.Configure(os.Stderr, logConfig)

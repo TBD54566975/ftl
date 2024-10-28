@@ -105,8 +105,6 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	logger := log.FromContext(ctx)
 	logger.Infof("Do python build")
 
-	ctx = log.ContextWithLogger(ctx, newLoggerForStream(log.Debug, stream))
-
 	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return err
