@@ -7,6 +7,7 @@ replace github.com/TBD54566975/ftl => ../../../../..
 require github.com/TBD54566975/ftl v0.248.0
 
 require (
+	al.essio.dev/pkg/shellescape v1.5.1 // indirect
 	connectrpc.com/connect v1.16.2 // indirect
 	connectrpc.com/grpcreflect v1.2.0 // indirect
 	connectrpc.com/otelconnect v0.7.1 // indirect
@@ -15,9 +16,8 @@ require (
 	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/types v0.16.0 // indirect
-	github.com/alessio/shellescape v1.4.2 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
-	github.com/danieljoos/wincred v1.2.0 // indirect
+	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -34,7 +34,7 @@ require (
 	github.com/puzpuzpuz/xsync/v3 v3.4.0 // indirect
 	github.com/swaggest/jsonschema-go v0.3.72 // indirect
 	github.com/swaggest/refl v1.3.0 // indirect
-	github.com/zalando/go-keyring v0.2.5 // indirect
+	github.com/zalando/go-keyring v0.2.6 // indirect
 	go.opentelemetry.io/otel v1.31.0 // indirect
 	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
