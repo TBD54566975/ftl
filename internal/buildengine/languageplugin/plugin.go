@@ -141,7 +141,11 @@ func New(ctx context.Context, bindAllocator *bind.BindAllocator, language string
 	case "rust":
 		return newRustPlugin(ctx), nil
 	default:
-		return newExternalPlugin(ctx, bindAllocator.Next(), language)
+		port, err := bindAllocator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("failed to allocate port for external plugin: %w", err)
+		}
+		return newExternalPlugin(ctx, port, language)
 	}
 }
 

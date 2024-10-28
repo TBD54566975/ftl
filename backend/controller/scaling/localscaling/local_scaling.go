@@ -161,13 +161,20 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 	logger := log.FromContext(ctx)
 
-	bind := l.portAllocator.Next()
+	bind, err := l.portAllocator.Next()
+	if err != nil {
+		return fmt.Errorf("failed to start runner: %w", err)
+	}
 	var debug *localdebug.DebugInfo
 	debugPort := 0
 	if ide, ok := l.ideSupport.Get(); ok {
+		debugBind, err := l.portAllocator.NextPort()
+		if err != nil {
+			return fmt.Errorf("failed to start runner: %w", err)
+		}
 		debug = &localdebug.DebugInfo{
 			Language: info.language,
-			Port:     l.portAllocator.NextPort(),
+			Port:     debugBind,
 		}
 		l.debugPorts[info.module] = debug
 		ide.SyncIDEDebugIntegrations(ctx, l.debugPorts)

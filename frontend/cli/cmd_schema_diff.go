@@ -44,11 +44,11 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 
 		// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
 		var bindAllocator *bind.BindAllocator
-		bindAllocator, err = bind.NewBindAllocator(cli.Endpoint)
+		bindAllocator, err = bind.NewBindAllocator(cli.Endpoint, 0)
 		if err != nil {
 			return fmt.Errorf("could not create bind allocator: %w", err)
 		}
-		_ = bindAllocator.Next()
+		_, _ = bindAllocator.Next() //nolint:errcheck
 
 		other, err = localSchema(ctx, projConfig, bindAllocator)
 	} else {

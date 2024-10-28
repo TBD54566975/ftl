@@ -64,7 +64,7 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 		return optionalPlugin, fmt.Errorf("could not parse default bind URL: %w", err)
 	}
 	var bindAllocator *bind.BindAllocator
-	bindAllocator, err = bind.NewBindAllocator(pluginBind)
+	bindAllocator, err = bind.NewBindAllocator(pluginBind, 0)
 	if err != nil {
 		return optionalPlugin, fmt.Errorf("could not create bind allocator: %w", err)
 	}
