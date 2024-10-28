@@ -142,7 +142,7 @@ func buildGo(ctx context.Context, projectRoot, stubsRoot string, bctx BuildConte
 	moduleSch, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, config, bctx.Schema, transaction, buildEnv, devMode)
 	if err != nil {
 		return BuildResult{}, builderrors.Error{
-			Msg:   err.Error(),
+			Msg:   "compile: " + err.Error(),
 			Level: builderrors.ERROR,
 			Type:  builderrors.COMPILER,
 		}

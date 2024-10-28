@@ -52,7 +52,12 @@ type Error struct {
 	Level ErrorLevel
 }
 
-func (e Error) Error() string { return fmt.Sprintf("%s: %s", e.Pos, e.Msg) }
+func (e Error) Error() string {
+	if pos, ok := e.Pos.Get(); ok {
+		return fmt.Sprintf("%s: %s", pos, e.Msg)
+	}
+	return e.Msg
+}
 
 func makeError(level ErrorLevel, pos Position, format string, args ...any) Error {
 	return Error{Type: FTL, Msg: fmt.Sprintf(format, args...), Pos: optional.Some(pos), Level: level}
