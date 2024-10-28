@@ -145,9 +145,18 @@ message Error {
     ERROR = 2;
   }
 
+  enum ErrorType {
+    FTL = 0;
+    // Compiler errors are errors that are from the compiler. This is useful to avoid duplicate errors
+    // being shown to the user when combining errors from multiple sources (eg: an IDE showing compiler
+    // errors and FTL errors via LSP).
+    COMPILER = 1;
+  }
+
   string msg = 1;
   ErrorLevel level = 4;
-  Position pos = 5;
+  optional Position pos = 5;
+  ErrorType type = 6;
 }
 
 message Position {

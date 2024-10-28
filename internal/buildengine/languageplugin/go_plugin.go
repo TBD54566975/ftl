@@ -14,6 +14,7 @@ import (
 	goruntime "github.com/TBD54566975/ftl/go-runtime"
 	"github.com/TBD54566975/ftl/go-runtime/compile"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -140,7 +141,11 @@ func buildGo(ctx context.Context, projectRoot, stubsRoot string, bctx BuildConte
 	config := bctx.Config.Abs()
 	moduleSch, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, config, bctx.Schema, transaction, buildEnv, devMode)
 	if err != nil {
-		return BuildResult{}, CompilerBuildError{err: fmt.Errorf("failed to build module %q: %w", config.Module, err)}
+		return BuildResult{}, builderrors.Error{
+			Msg:   "compile: " + err.Error(),
+			Level: builderrors.ERROR,
+			Type:  builderrors.COMPILER,
+		}
 	}
 	return BuildResult{
 		Errors: buildErrs,

@@ -3,6 +3,7 @@ package languagepb
 import (
 	"fmt"
 
+	"github.com/alecthomas/types/optional"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/TBD54566975/ftl/internal/builderrors"
@@ -57,28 +58,32 @@ func errorFromProto(e *Error) builderrors.Error {
 }
 
 func errorToProto(e builderrors.Error) *Error {
+	var pos *Position
+	if bpos, ok := e.Pos.Get(); ok {
+		pos = &Position{
+			Filename:    bpos.Filename,
+			StartColumn: int64(bpos.StartColumn),
+			EndColumn:   int64(bpos.EndColumn),
+			Line:        int64(bpos.Line),
+		}
+	}
 	return &Error{
-		Msg: e.Msg,
-		Pos: &Position{
-			Filename:    e.Pos.Filename,
-			StartColumn: int64(e.Pos.StartColumn),
-			EndColumn:   int64(e.Pos.EndColumn),
-			Line:        int64(e.Pos.Line),
-		},
+		Msg:   e.Msg,
+		Pos:   pos,
 		Level: levelToProto(e.Level),
 	}
 }
 
-func PosFromProto(pos *Position) builderrors.Position {
+func PosFromProto(pos *Position) optional.Option[builderrors.Position] {
 	if pos == nil {
-		return builderrors.Position{}
+		return optional.None[builderrors.Position]()
 	}
-	return builderrors.Position{
+	return optional.Some(builderrors.Position{
 		Line:        int(pos.Line),
 		StartColumn: int(pos.StartColumn),
 		EndColumn:   int(pos.EndColumn),
 		Filename:    pos.Filename,
-	}
+	})
 }
 
 func LogLevelFromProto(level LogMessage_LogLevel) log.Level {

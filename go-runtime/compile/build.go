@@ -336,21 +336,21 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 
 	ftlTypesFilename := "types.ftl.go"
 	wg.Go(func() error {
-		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
+		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "mod", "tidy").RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", config.Dir, err)
 		}
 
-		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "fmt", ftlTypesFilename).RunBuffered(wgctx); err != nil {
+		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "fmt", ftlTypesFilename).RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to format module dir: %w", config.Dir, err)
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(config.Dir, "go.mod"), filepath.Join(config.Dir, "go.sum"), filepath.Join(config.Dir, ftlTypesFilename))
 	})
 	mainDir := filepath.Join(buildDir, "go", "main")
 	wg.Go(func() error {
-		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunBuffered(wgctx); err != nil {
+		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", mainDir, err)
 		}
-		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "fmt", "./...").RunBuffered(wgctx); err != nil {
+		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "fmt", "./...").RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to format main dir: %w", mainDir, err)
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(config.Dir, "go.sum"))
@@ -367,7 +367,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	// We have seen lots of upstream HTTP/2 failures that make CI unstable.
 	// Disable HTTP/2 for now during the build. This can probably be removed later
 	buildEnv = append(buildEnv, "GODEBUG=http2client=0")
-	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunBuffered(ctx)
+	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunStderrError(ctx)
 	if err != nil {
 		return moduleSch, nil, fmt.Errorf("failed to compile: %w", err)
 	}

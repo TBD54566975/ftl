@@ -112,7 +112,6 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 		return err
 	}
 
-	//TODO: Use real build errors
 	_, _, err = compile.Build(ctx, req.Msg.ProjectRoot, req.Msg.StubsRoot, buildCtx.Config, nil, nil, false)
 	logger.Errorf(err, "build failed")
 
@@ -123,7 +122,10 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 				ContextId:          req.Msg.BuildContext.Id,
 				IsAutomaticRebuild: false,
 				Errors: langpb.ErrorsToProto([]builderrors.Error{
-					builderrors.Errorf(builderrors.Position{}, "not implemented"),
+					{
+						Level: builderrors.ERROR,
+						Msg:   "not implemented",
+					},
 				}),
 				InvalidateDependencies: false,
 			},
