@@ -28,11 +28,11 @@ func (d *deployCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	}
 
 	// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
-	bindAllocator, err := bind.NewBindAllocator(cli.Endpoint)
+	bindAllocator, err := bind.NewBindAllocator(cli.Endpoint, 0)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	_ = bindAllocator.Next()
+	_, _ = bindAllocator.Next() //nolint:errcheck
 
 	engine, err := buildengine.New(ctx, client, projConfig, d.Build.Dirs, bindAllocator, buildengine.BuildEnv(d.Build.BuildEnv), buildengine.Parallelism(d.Build.Parallelism))
 	if err != nil {

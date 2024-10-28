@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/url"
 	"os"
 	osExec "os/exec" //nolint:depguard
@@ -57,7 +56,7 @@ type serveCmd struct {
 const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
 func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	bindAllocator, err := bind.NewBindAllocator(s.Bind)
+	bindAllocator, err := bind.NewBindAllocator(s.Bind, 2)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
@@ -65,18 +64,8 @@ func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) err
 }
 
 //nolint:maintidx
-func isPortAvailable(host string, port string) bool {
-	ln, err := net.Listen("tcp", net.JoinHostPort(host, port))
-	if err != nil {
-		return false
-	}
-	ln.Close()
-	return true
-}
-
 func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], devMode bool, bindAllocator *bind.BindAllocator) error {
 	logger := log.FromContext(ctx)
-
 	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 	provisionerClient := rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
 
@@ -84,13 +73,6 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		if s.Stop {
 			// allow usage of --background and --stop together to "restart" the background process
 			_ = KillBackgroundServe(logger) //nolint:errcheck // ignore error here if the process is not running
-		}
-
-		// Check port availability before starting in background
-		host := s.Bind.Hostname()
-		port := s.Bind.Port()
-		if !isPortAvailable(host, port) {
-			return fmt.Errorf("port %s is already in use on %s", port, host)
 		}
 
 		if err := runInBackground(logger); err != nil {
@@ -111,10 +93,6 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	if s.Stop {
 		return KillBackgroundServe(logger)
-	}
-
-	if s.isRunning(ctx, controllerClient) {
-		return errors.New(ftlRunningErrorMsg)
 	}
 
 	if s.Provisioners > 0 {
@@ -138,8 +116,16 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 	controllerAddresses := make([]*url.URL, 0, s.Controllers)
 	controllerIngressAddresses := make([]*url.URL, 0, s.Controllers)
 	for range s.Controllers {
-		controllerIngressAddresses = append(controllerIngressAddresses, bindAllocator.Next())
-		controllerAddresses = append(controllerAddresses, bindAllocator.Next())
+		ingressBind, err := bindAllocator.Next()
+		if err != nil {
+			return fmt.Errorf("could not allocate port for controller ingress: %w", err)
+		}
+		controllerIngressAddresses = append(controllerIngressAddresses, ingressBind)
+		controllerBind, err := bindAllocator.Next()
+		if err != nil {
+			return fmt.Errorf("could not allocate port for controller: %w", err)
+		}
+		controllerAddresses = append(controllerAddresses, controllerBind)
 	}
 
 	for _, addr := range controllerAddresses {
@@ -153,7 +139,11 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 
 	provisionerAddresses := make([]*url.URL, 0, s.Provisioners)
 	for range s.Provisioners {
-		provisionerAddresses = append(provisionerAddresses, bindAllocator.Next())
+		bind, err := bindAllocator.Next()
+		if err != nil {
+			return fmt.Errorf("could not allocate port for provisioner: %w", err)
+		}
+		provisionerAddresses = append(provisionerAddresses, bind)
 	}
 
 	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration)
@@ -425,9 +415,4 @@ func waitForControllerOnline(ctx context.Context, startupTimeout time.Duration, 
 			return ctx.Err()
 		}
 	}
-}
-
-func (s *serveCmd) isRunning(ctx context.Context, client rpc.Pingable) bool {
-	_, err := client.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
-	return err == nil
 }

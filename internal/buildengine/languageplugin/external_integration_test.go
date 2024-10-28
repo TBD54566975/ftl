@@ -15,6 +15,11 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/types/result"
+	"github.com/bmatcuk/doublestar/v4"
+	"golang.org/x/sync/errgroup"
+
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/bind"
@@ -25,10 +30,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
-	"github.com/alecthomas/assert/v2"
-	"github.com/alecthomas/types/result"
-	"github.com/bmatcuk/doublestar/v4"
-	"golang.org/x/sync/errgroup"
 )
 
 // These integration tests are meant as a test suite for external plugins.
@@ -238,10 +239,11 @@ func startPlugin() in.Action {
 		in.Infof("Starting plugin")
 		baseBind, err := url.Parse("http://127.0.0.1:8893")
 		assert.NoError(t, err)
-		bindAllocator, err := bind.NewBindAllocator(baseBind)
+		bindAllocator, err := bind.NewBindAllocator(baseBind, 0)
 		assert.NoError(t, err)
 
-		bindURL = bindAllocator.Next()
+		bindURL, err = bindAllocator.Next()
+		assert.NoError(t, err)
 		client, err = newExternalPluginImpl(ic.Context, bindURL, ic.Language)
 		assert.NoError(t, err)
 	}

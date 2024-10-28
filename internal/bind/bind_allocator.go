@@ -1,6 +1,7 @@
 package bind
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -9,11 +10,16 @@ import (
 )
 
 type BindAllocator struct {
-	baseURL *url.URL
-	port    atomic.Int32
+	baseURL           *url.URL
+	dynamicPortsAfter int
+	port              atomic.Int32
 }
 
-func NewBindAllocator(url *url.URL) (*BindAllocator, error) {
+// NewBindAllocator creates a BindAllocator, which dynamically allocates ports for binding local servers.
+//
+// "staticPorts" is the number of ports that are statically allocated and that must be free before dynamic ports
+// are allocated.
+func NewBindAllocator(url *url.URL, staticPorts int) (*BindAllocator, error) {
 	_, portStr, err := net.SplitHostPort(url.Host)
 	if err != nil {
 		return nil, err
@@ -25,12 +31,13 @@ func NewBindAllocator(url *url.URL) (*BindAllocator, error) {
 	}
 
 	return &BindAllocator{
-		baseURL: url,
-		port:    atomic.NewInt32(int32(port) - 1), //nolint:gosec
+		baseURL:           url,
+		port:              atomic.NewInt32(int32(port) - 1), //nolint:gosec
+		dynamicPortsAfter: port + staticPorts,
 	}, nil
 }
 
-func (b *BindAllocator) NextPort() int {
+func (b *BindAllocator) NextPort() (int, error) {
 	var l *net.TCPListener
 	var err error
 
@@ -43,6 +50,9 @@ func (b *BindAllocator) NextPort() int {
 		l, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP(b.baseURL.Hostname()), Port: port})
 
 		if err != nil {
+			if port < b.dynamicPortsAfter {
+				return 0, fmt.Errorf("failed to bind to port %d: %w", port, err)
+			}
 			if tries >= maxTries {
 				panic("failed to find an open port: " + err.Error())
 			}
@@ -50,12 +60,16 @@ func (b *BindAllocator) NextPort() int {
 		}
 		_ = l.Close()
 
-		return port
+		return port, nil
 	}
 }
 
-func (b *BindAllocator) Next() *url.URL {
+func (b *BindAllocator) Next() (*url.URL, error) {
 	newURL := *b.baseURL
-	newURL.Host = net.JoinHostPort(b.baseURL.Hostname(), strconv.Itoa(b.NextPort()))
-	return &newURL
+	nextPort, err := b.NextPort()
+	if err != nil {
+		return nil, err
+	}
+	newURL.Host = net.JoinHostPort(b.baseURL.Hostname(), strconv.Itoa(nextPort))
+	return &newURL, nil
 }

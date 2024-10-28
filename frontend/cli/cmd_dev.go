@@ -67,7 +67,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 	sm := terminal.FromContext(ctx)
 	starting := sm.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
 
-	bindAllocator, err := bind.NewBindAllocator(d.ServeCmd.Bind)
+	bindAllocator, err := bind.NewBindAllocator(d.ServeCmd.Bind, 1)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
@@ -81,9 +81,6 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 				return err
 			}
 			d.ServeCmd.Stop = false
-		}
-		if d.ServeCmd.isRunning(ctx, client) {
-			return errors.New(ftlRunningErrorMsg)
 		}
 
 		g.Go(func() error {

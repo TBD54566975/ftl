@@ -47,7 +47,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	config.SetDefaults()
 
 	// Start the controller.
-	runnerPortAllocator, err := bind.NewBindAllocator(b.RunnerBase)
+	runnerPortAllocator, err := bind.NewBindAllocator(b.RunnerBase, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create runner port allocator: %w", err)
 	}

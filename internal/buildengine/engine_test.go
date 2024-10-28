@@ -20,7 +20,7 @@ func TestGraph(t *testing.T) {
 
 	bindURL, err := url.Parse("http://127.0.0.1:8893")
 	assert.NoError(t, err)
-	bindAllocator, err := bind.NewBindAllocator(bindURL)
+	bindAllocator, err := bind.NewBindAllocator(bindURL, 0)
 	assert.NoError(t, err)
 
 	projConfig := projectconfig.Config{
