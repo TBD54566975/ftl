@@ -20,7 +20,7 @@ type releaseCmd struct {
 	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 
 	Publish releasePublishCmd `cmd:"" help:"Packages the project into a release and publishes it."`
-	Exists  releaseExistsCmd  `cmd:"" help:"Lists all published releases."`
+	Exists  releaseExistsCmd  `cmd:"" help:"Indicates whether modules, with the specified digests, have been published."`
 }
 
 type releasePublishCmd struct {
