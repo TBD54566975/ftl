@@ -39,7 +39,7 @@ type Registry interface {
 	// Download performs a streaming download of the artefact identified by the supplied digest
 	Download(context context.Context, digest sha256.SHA256) (io.ReadCloser, error)
 	// GetReleaseArtefacts locates the artefacts metadata corresponding with the specified release
-	GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ArtefactKey, error)
+	GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error)
 	// AddReleaseArtefact associates the given `release` with the artefact associated with the given `digest`
 	AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error
 }
