@@ -233,26 +233,12 @@ message BuildFailure {
   bool invalidate_dependencies = 4;
 }
 
-// Log message from the language service.
-message LogMessage {
-  enum LogLevel {
-    DEBUG = 0;
-    INFO = 1;
-    WARN = 2;
-    ERROR = 3;
-  }
-
-  string message = 1;
-  LogLevel level = 2;
-}
-
 // Every type of message that can be streamed from the language plugin for a build.
 message BuildEvent {
   oneof event {
     AutoRebuildStarted auto_rebuild_started = 2;
     BuildSuccess build_success = 3;
     BuildFailure build_failure = 4;
-    LogMessage log_message = 5;
   }
 }
 
@@ -320,6 +306,9 @@ service LanguageService {
   //
   // Each time this call is made, the Build call must send back a corresponding BuildSuccess or BuildFailure
   // event with the updated build context id with "is_automatic_rebuild" as false.
+  //
+  // If the plugin will not be able to return a BuildSuccess or BuildFailure, such as when there is no active
+  // build stream, it must fail the BuildContextUpdated call.
   rpc BuildContextUpdated(BuildContextUpdatedRequest) returns (BuildContextUpdatedResponse);
 
   // Generate stubs for a module.

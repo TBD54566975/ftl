@@ -1205,83 +1205,6 @@ export class BuildFailure extends Message<BuildFailure> {
 }
 
 /**
- * Log message from the language service.
- *
- * @generated from message xyz.block.ftl.v1.language.LogMessage
- */
-export class LogMessage extends Message<LogMessage> {
-  /**
-   * @generated from field: string message = 1;
-   */
-  message = "";
-
-  /**
-   * @generated from field: xyz.block.ftl.v1.language.LogMessage.LogLevel level = 2;
-   */
-  level = LogMessage_LogLevel.DEBUG;
-
-  constructor(data?: PartialMessage<LogMessage>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.language.LogMessage";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "level", kind: "enum", T: proto3.getEnumType(LogMessage_LogLevel) },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LogMessage {
-    return new LogMessage().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LogMessage {
-    return new LogMessage().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LogMessage {
-    return new LogMessage().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: LogMessage | PlainMessage<LogMessage> | undefined, b: LogMessage | PlainMessage<LogMessage> | undefined): boolean {
-    return proto3.util.equals(LogMessage, a, b);
-  }
-}
-
-/**
- * @generated from enum xyz.block.ftl.v1.language.LogMessage.LogLevel
- */
-export enum LogMessage_LogLevel {
-  /**
-   * @generated from enum value: DEBUG = 0;
-   */
-  DEBUG = 0,
-
-  /**
-   * @generated from enum value: INFO = 1;
-   */
-  INFO = 1,
-
-  /**
-   * @generated from enum value: WARN = 2;
-   */
-  WARN = 2,
-
-  /**
-   * @generated from enum value: ERROR = 3;
-   */
-  ERROR = 3,
-}
-// Retrieve enum metadata with: proto3.getEnumType(LogMessage_LogLevel)
-proto3.util.setEnumType(LogMessage_LogLevel, "xyz.block.ftl.v1.language.LogMessage.LogLevel", [
-  { no: 0, name: "DEBUG" },
-  { no: 1, name: "INFO" },
-  { no: 2, name: "WARN" },
-  { no: 3, name: "ERROR" },
-]);
-
-/**
  * Every type of message that can be streamed from the language plugin for a build.
  *
  * @generated from message xyz.block.ftl.v1.language.BuildEvent
@@ -1308,12 +1231,6 @@ export class BuildEvent extends Message<BuildEvent> {
      */
     value: BuildFailure;
     case: "buildFailure";
-  } | {
-    /**
-     * @generated from field: xyz.block.ftl.v1.language.LogMessage log_message = 5;
-     */
-    value: LogMessage;
-    case: "logMessage";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<BuildEvent>) {
@@ -1327,7 +1244,6 @@ export class BuildEvent extends Message<BuildEvent> {
     { no: 2, name: "auto_rebuild_started", kind: "message", T: AutoRebuildStarted, oneof: "event" },
     { no: 3, name: "build_success", kind: "message", T: BuildSuccess, oneof: "event" },
     { no: 4, name: "build_failure", kind: "message", T: BuildFailure, oneof: "event" },
-    { no: 5, name: "log_message", kind: "message", T: LogMessage, oneof: "event" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildEvent {

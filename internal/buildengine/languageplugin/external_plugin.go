@@ -366,9 +366,7 @@ func (p *externalPlugin) run(ctx context.Context) {
 				continue
 			}
 
-			switch event := e.Event.(type) {
-			case *langpb.BuildEvent_LogMessage:
-				logger.Logf(langpb.LogLevelFromProto(event.LogMessage.Level), "%s", event.LogMessage.Message)
+			switch e.Event.(type) {
 			case *langpb.BuildEvent_AutoRebuildStarted:
 				if _, ok := activeBuildCmd.Get(); ok {
 					logger.Debugf("ignoring automatic rebuild started during explicit build")
