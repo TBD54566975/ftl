@@ -222,8 +222,12 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 			Provisioners: []*provisioner.ProvisionerBinding{{
 				Provisioner: provisioner.NewControllerProvisioner(controllerClient),
 				Types:       []provisioner.ResourceType{provisioner.ResourceTypeModule},
+				ID:          "controller",
 			}},
-			Default: provisioner.NewDevProvisioner(s.DBPort),
+			Default: &provisioner.ProvisionerBinding{
+				Provisioner: provisioner.NewDevProvisioner(s.DBPort),
+				ID:          "dev",
+			},
 		}
 
 		// read provisioners from a config file if provided

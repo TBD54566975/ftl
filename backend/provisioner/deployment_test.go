@@ -9,6 +9,7 @@ import (
 	proto "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/provisioner"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/alecthomas/assert/v2"
 )
 
@@ -55,7 +56,7 @@ func (m *MockProvisioner) Status(ctx context.Context, req *connect.Request[proto
 }
 
 func TestDeployment_Progress(t *testing.T) {
-	ctx := context.Background()
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
 	t.Run("no tasks", func(t *testing.T) {
 		deployment := &provisioner.Deployment{}
@@ -73,7 +74,7 @@ func TestDeployment_Progress(t *testing.T) {
 		graph.AddNode(&proto.Resource{ResourceId: "a", Resource: &proto.Resource_Mysql{}})
 		graph.AddNode(&proto.Resource{ResourceId: "b", Resource: &proto.Resource_Postgres{}})
 
-		dpl := registry.CreateDeployment("test-module", graph, &provisioner.ResourceGraph{})
+		dpl := registry.CreateDeployment(ctx, "test-module", graph, &provisioner.ResourceGraph{})
 
 		assert.Equal(t, 2, len(dpl.State().Pending))
 

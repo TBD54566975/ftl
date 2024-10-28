@@ -71,7 +71,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, err
 	}
 
-	deployment := s.registry.CreateDeployment(moduleName, desiredGraph, existingResources)
+	deployment := s.registry.CreateDeployment(ctx, moduleName, desiredGraph, existingResources)
 	running := true
 	logger.Debugf("Running deployment for module %s", moduleName)
 	for running {
