@@ -267,11 +267,16 @@ public class JavaCodeGenerator extends JVMCodeGenerator {
     protected void generateVerb(Module module, Verb verb, String packageName, Map<DeclRef, Type> typeAliasMap,
             Map<DeclRef, String> nativeTypeAliasMap, Path outputDir)
             throws IOException {
-        TypeSpec.Builder clientBuilder = TypeSpec.interfaceBuilder(className(verb.getName()) + CLIENT)
+        String verbName = verb.getName();
+        TypeSpec.Builder clientBuilder = TypeSpec.interfaceBuilder(className(verbName) + CLIENT)
                 .addModifiers(Modifier.PUBLIC)
-                .addJavadoc("A client for the $L.$L verb", module.getName(), verb.getName());
+                .addJavadoc("A client for the $L.$L verb", module.getName(), verbName);
 
-        MethodSpec.Builder callMethod = MethodSpec.methodBuilder(verb.getName())
+        var methodName = verbName;
+        if (JAVA_KEYWORDS.contains(verbName)) {
+            methodName = verbName + "_";
+        }
+        MethodSpec.Builder callMethod = MethodSpec.methodBuilder(methodName)
                 .addModifiers(Modifier.ABSTRACT, Modifier.PUBLIC)
                 .addAnnotation(AnnotationSpec.builder(VerbClient.class)
                         .addMember("module", "\"" + module.getName() + "\"")
