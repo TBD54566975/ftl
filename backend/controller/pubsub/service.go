@@ -82,7 +82,9 @@ func (s *Service) poll(ctx context.Context) {
 			publishedAt = optional.None[time.Time]()
 
 		case <-time.After(poll):
-			s.progressSubscriptions(ctx)
+			if err := s.progressSubscriptions(ctx); err != nil {
+				logger.Warnf("%s", err)
+			}
 		}
 	}
 }
