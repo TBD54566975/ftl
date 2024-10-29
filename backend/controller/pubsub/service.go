@@ -3,6 +3,7 @@ package pubsub
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -22,7 +23,7 @@ const (
 	// Events can be added simultaneously, which can cause events with out of order create_at values
 	// By adding a delay, we ensure that by the time we read the events, no new events will be added
 	// with earlier created_at values.
-	eventConsumptionDelay = 200 * time.Millisecond
+	eventConsumptionDelay = 100 * time.Millisecond
 )
 
 type Scheduler interface {
@@ -36,23 +37,53 @@ type AsyncCallListener interface {
 
 type Service struct {
 	dal               *dal.DAL
-	scheduler         Scheduler
 	asyncCallListener optional.Option[AsyncCallListener]
+	eventPublished    chan struct{}
 }
 
-func New(conn libdal.Connection, encryption *encryption.Service, scheduler Scheduler, asyncCallListener optional.Option[AsyncCallListener]) *Service {
+func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, asyncCallListener optional.Option[AsyncCallListener]) *Service {
 	m := &Service{
 		dal:               dal.New(conn, encryption),
-		scheduler:         scheduler,
 		asyncCallListener: asyncCallListener,
+		eventPublished:    make(chan struct{}),
 	}
-	m.scheduler.Parallel("progress-subs", backoff.Backoff{
-		Min:    1 * time.Second,
-		Max:    5 * time.Second,
-		Jitter: true,
-		Factor: 1.5,
-	}, m.progressSubscriptions)
+	go m.poll(ctx)
 	return m
+}
+
+// poll waits for an event to be published (incl eventConsumptionDelay) or for a poll interval to pass
+func (s *Service) poll(ctx context.Context) {
+	var publishedAt optional.Option[time.Time]
+	for {
+		var publishTrigger <-chan time.Time
+		if pub, ok := publishedAt.Get(); ok {
+			publishTrigger = time.After(time.Until(pub.Add(eventConsumptionDelay)))
+		}
+
+		// poll interval with jitter (1s - 1.1s)
+		poll := time.Millisecond * (time.Duration(rand.Float64())*(100.0) + 1000.0)
+
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-s.eventPublished:
+			// published an event, so now we wait for eventConsumptionDelay before trying to progress subscriptions
+			if !publishedAt.Ok() {
+				publishedAt = optional.Some(time.Now())
+			}
+
+		case <-publishTrigger:
+			// an event has been published and we have waited for eventConsumptionDelay
+			log.FromContext(ctx).Infof("event published... progressing subscriptions")
+			s.progressSubscriptions(ctx)
+			publishedAt = optional.None[time.Time]()
+
+		case <-time.After(poll):
+			log.FromContext(ctx).Infof("polling to progress subscriptions")
+			s.progressSubscriptions(ctx)
+		}
+	}
 }
 
 func (s *Service) progressSubscriptions(ctx context.Context) (time.Duration, error) {
@@ -74,6 +105,7 @@ func (s *Service) PublishEventForTopic(ctx context.Context, module, topic, calle
 	if err != nil {
 		return fmt.Errorf("%s.%s: publish: %w", module, topic, err)
 	}
+	s.eventPublished <- struct{}{}
 	return nil
 }
 
