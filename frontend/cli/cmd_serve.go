@@ -83,7 +83,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 			return err
 		}
 		if s.Provisioners > 0 {
-			if err := rpc.Wait(ctx, backoff.Backoff{Max: s.StartupTimeout}, provisionerClient); err != nil {
+			if err := rpc.Wait(ctx, backoff.Backoff{Max: s.StartupTimeout}, s.StartupTimeout, provisionerClient); err != nil {
 				return fmt.Errorf("provisioner failed to start: %w", err)
 			}
 		}
@@ -244,7 +244,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 	if s.Provisioners > 0 {
-		if err := rpc.Wait(ctx, backoff.Backoff{Max: s.StartupTimeout}, provisionerClient); err != nil {
+		if err := rpc.Wait(ctx, backoff.Backoff{Max: s.StartupTimeout}, s.StartupTimeout, provisionerClient); err != nil {
 			return fmt.Errorf("provisioner failed to start: %w", err)
 		}
 	}
