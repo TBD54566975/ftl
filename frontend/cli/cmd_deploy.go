@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
@@ -28,7 +29,11 @@ func (d *deployCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	}
 
 	// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
-	bindAllocator, err := bind.NewBindAllocator(cli.Endpoint, 0)
+	bindURL, err := url.Parse("http://127.0.0.1:8892")
+	if err != nil {
+		return fmt.Errorf("could not parse default bind URL: %w", err)
+	}
+	bindAllocator, err := bind.NewBindAllocator(bindURL, 0)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
