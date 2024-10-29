@@ -12,7 +12,10 @@ import {
   declIcon,
   declSumTypeIsExported,
   declUrlFromInfo,
+  getHideUnexportedFromLocalStorage,
+  hasHideUnexportedInLocalStorage,
   listExpandedModulesFromLocalStorage,
+  setHideUnexportedFromLocalStorage,
   toggleModuleExpansionInLocalStorage,
 } from './module.utils'
 import { declTypeMultiselectOpts } from './schema/schema.utils'
@@ -128,7 +131,7 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     setExpandedModules(listExpandedModulesFromLocalStorage())
   }, [moduleName, declName])
 
-  const [hideUnexported, setHideUnexported] = useState(true)
+  const [hideUnexported, setHideUnexported] = useState(hasHideUnexportedInLocalStorage() ? getHideUnexportedFromLocalStorage() : true)
 
   function msOnChange(opts: MultiselectOpt[]) {
     const params = new URLSearchParams()
@@ -154,6 +157,11 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
     setExpandedModules(listExpandedModulesFromLocalStorage())
   }
 
+  function setHideUnexportedState(val: boolean) {
+    setHideUnexportedFromLocalStorage(val)
+    setHideUnexported(val)
+  }
+
   modules.sort((m1, m2) => Number(m1.isBuiltin) - Number(m2.isBuiltin))
   return (
     <div className='flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'>
@@ -164,7 +172,8 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
           </span>
           <span
             className='absolute inset-y-0 right-0 flex items-center px-1 mx-9 my-1.5 rounded-md cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-100'
-            onClick={() => setHideUnexported(!hideUnexported)}
+            onClick={() => setHideUnexportedState(!hideUnexported)}
+            id='hide-exported'
             title='show/hide unexported'
           >
             <Upload01Icon className={`size-5 ${hideUnexported ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-300'}`} />
