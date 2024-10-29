@@ -77,7 +77,10 @@ const ModuleSection = ({
   }, [moduleName]) // moduleName is the selected module; module.name is the one being rendered
 
   const filteredDecls = useMemo(
-    () => module.decls.filter((d) => !!selectedDeclTypes.find((o) => o.key === d.declType)).filter((d) => !hideUnexported || declSumTypeIsExported(d.value)),
+    () =>
+      module.decls
+        .filter((d) => !!selectedDeclTypes.find((o) => o.key === d.declType))
+        .filter((d) => !hideUnexported || (isSelected && declName === d.value.name) || declSumTypeIsExported(d.value)),
     [module.decls, selectedDeclTypes, hideUnexported],
   )
 
