@@ -62,7 +62,7 @@ func (s *Service) poll(ctx context.Context) {
 		}
 
 		// poll interval with jitter (1s - 1.1s)
-		poll := time.Millisecond * (time.Duration(rand.Float64())*(100.0) + 1000.0)
+		poll := time.Millisecond * (time.Duration(rand.Float64())*(100.0) + 1000.0) //nolint:gosec
 
 		select {
 		case <-ctx.Done():
