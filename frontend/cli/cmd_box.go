@@ -15,7 +15,6 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -126,11 +125,10 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	}
 
 	// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
-	bindAllocator, err := bind.NewBindAllocator(cli.Endpoint, 0)
+	bindAllocator, err := bindAllocatorWithoutController()
 	if err != nil {
-		return fmt.Errorf("could not create bind allocator: %w", err)
+		return err
 	}
-	_, _ = bindAllocator.Next() //nolint:errcheck
 
 	engine, err := buildengine.New(ctx, client, projConfig, b.Build.Dirs, bindAllocator, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
 	if err != nil {

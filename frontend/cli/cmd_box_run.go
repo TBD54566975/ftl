@@ -47,11 +47,11 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 	config.SetDefaults()
 
 	// Start the controller.
-	runnerPortAllocator, err := bind.NewBindAllocator(b.RunnerBase, 0)
+	bindAllocator, err := bind.NewBindAllocator(b.RunnerBase, 0)
 	if err != nil {
 		return fmt.Errorf("failed to create runner port allocator: %w", err)
 	}
-	runnerScaling, err := localscaling.NewLocalScaling(runnerPortAllocator, []*url.URL{b.Bind}, "", false)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, []*url.URL{b.Bind}, "", false)
 	if err != nil {
 		return fmt.Errorf("failed to create runner autoscaler: %w", err)
 	}
@@ -73,7 +73,7 @@ func (b *boxRunCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
-	engine, err := buildengine.New(ctx, client, projConfig, []string{b.Dir}, runnerPortAllocator)
+	engine, err := buildengine.New(ctx, client, projConfig, []string{b.Dir}, bindAllocator)
 	if err != nil {
 		return fmt.Errorf("failed to create build engine: %w", err)
 	}
