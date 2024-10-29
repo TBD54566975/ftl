@@ -72,7 +72,7 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language,
 	p.cmd.Stderr = nil
 	pipe, err := p.cmd.StderrPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create stderr pipe for %s: %w", name, err)
 	}
 	go func() {
 		err := log.JSONStreamer(pipe, logger, log.Error)
