@@ -49,8 +49,8 @@ type externalPlugin struct {
 
 var _ LanguagePlugin = &externalPlugin{}
 
-func newExternalPlugin(ctx context.Context, bind *url.URL, language string) (*externalPlugin, error) {
-	impl, err := newExternalPluginImpl(ctx, bind, language)
+func newExternalPlugin(ctx context.Context, bind *url.URL, language, name string) (*externalPlugin, error) {
+	impl, err := newExternalPluginImpl(ctx, bind, language, name)
 	if err != nil {
 		return nil, err
 	}

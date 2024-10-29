@@ -132,7 +132,7 @@ type LanguagePlugin interface {
 }
 
 // PluginFromConfig creates a new language plugin from the given config.
-func New(ctx context.Context, bindAllocator *bind.BindAllocator, language string) (p LanguagePlugin, err error) {
+func New(ctx context.Context, bindAllocator *bind.BindAllocator, language, name string) (p LanguagePlugin, err error) {
 	switch language {
 	case "go":
 		return newGoPlugin(ctx), nil
@@ -145,7 +145,7 @@ func New(ctx context.Context, bindAllocator *bind.BindAllocator, language string
 		if err != nil {
 			return nil, fmt.Errorf("failed to allocate port for external plugin: %w", err)
 		}
-		return newExternalPlugin(ctx, port, language)
+		return newExternalPlugin(ctx, port, language, name)
 	}
 }
 
