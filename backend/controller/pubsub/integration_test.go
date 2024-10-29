@@ -63,7 +63,7 @@ func TestConsumptionDelay(t *testing.T) {
 		in.Sleep(time.Second*2),
 
 		// Get all event created ats, and all async call created ats
-		// Compare each, make sure none are less than 0.2s of each other
+		// Compare each, make sure none are less than 0.1s of each other
 		in.QueryRow("ftl", `
 			WITH event_times AS (
 				SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
@@ -80,7 +80,7 @@ func TestConsumptionDelay(t *testing.T) {
 			SELECT COUNT(*)
 			FROM event_times
 			JOIN async_call_times ON event_times.row_num = async_call_times.row_num
-			WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) < 0.2;
+			WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) < 0.1;
 		`, 0),
 	)
 }
