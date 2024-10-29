@@ -33,12 +33,12 @@ type ContainerConfig struct {
 	AllowPlainHTTP bool   `help:"Allows OCI container requests to accept plain HTTP responses" env:"FTL_ARTEFACTS_ALLOW_HTTP"`
 }
 
-type ContainerService struct {
+type containerRegistry struct {
 	host        string
 	repoFactory func() (*remote.Repository, error)
 
 	// in the interim releases and artefacts will continue to be linked via the `deployment_artefacts` table
-	Handle *libdal.Handle[ContainerService]
+	Handle *libdal.Handle[containerRegistry]
 	db     sql.Querier
 }
 
@@ -56,7 +56,7 @@ type ArtefactBlobs struct {
 	Size      int64
 }
 
-func NewContainerService(c ContainerConfig, conn libdal.Connection) *ContainerService {
+func newContainerRegistry(c ContainerConfig, conn libdal.Connection) *containerRegistry {
 	// Connect the registry targeting the specified container
 	repoFactory := func() (*remote.Repository, error) {
 		ref := fmt.Sprintf("%s/%s", c.Registry, ModuleBlobsPrefix)
@@ -78,11 +78,11 @@ func NewContainerService(c ContainerConfig, conn libdal.Connection) *ContainerSe
 		return reg, nil
 	}
 
-	return &ContainerService{
+	return &containerRegistry{
 		host:        c.Registry,
 		repoFactory: repoFactory,
-		Handle: libdal.New(conn, func(h *libdal.Handle[ContainerService]) *ContainerService {
-			return &ContainerService{
+		Handle: libdal.New(conn, func(h *libdal.Handle[containerRegistry]) *containerRegistry {
+			return &containerRegistry{
 				host:        c.Registry,
 				repoFactory: repoFactory,
 				Handle:      h,
@@ -92,7 +92,7 @@ func NewContainerService(c ContainerConfig, conn libdal.Connection) *ContainerSe
 	}
 }
 
-func (s *ContainerService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
+func (s *containerRegistry) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
 	repo, err := s.repoFactory()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to connect to container registry '%s': %w", s.host, err)
@@ -122,7 +122,7 @@ func (s *ContainerService) GetDigestsKeys(ctx context.Context, digests []sha256.
 }
 
 // Upload uploads the specific artifact as a raw blob and links it to a manifest to prevent GC
-func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
+func (s *containerRegistry) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
 	repo, err := s.repoFactory()
 	if err != nil {
 		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s': %w", s.host, err)
@@ -134,7 +134,7 @@ func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha25
 	return artefact.Digest, nil
 }
 
-func (s *ContainerService) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
+func (s *containerRegistry) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
 	ref := createModuleRepositoryPathFromDigest(digest)
 	registry, err := s.repoFactory()
 	if err != nil {
@@ -147,11 +147,11 @@ func (s *ContainerService) Download(ctx context.Context, digest sha256.SHA256) (
 	return stream, nil
 }
 
-func (s *ContainerService) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
+func (s *containerRegistry) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
 	return getDatabaseReleaseArtefacts(ctx, s.db, releaseID)
 }
 
-func (s *ContainerService) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
+func (s *containerRegistry) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
 	return addReleaseArtefacts(ctx, s.db, key, ra)
 }
 

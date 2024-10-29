@@ -9,24 +9,29 @@ import (
 	"io"
 )
 
-type HybridService struct {
-	container *ContainerService
-	dal       *Service
-	Handle    *libdal.Handle[HybridService]
+type hybridRegistry struct {
+	container *containerRegistry
+	dal       *dalRegistry
+	Handle    *libdal.Handle[hybridRegistry]
 }
 
-func NewHybridService(c ContainerConfig, conn libdal.Connection) *HybridService {
-	return &HybridService{
-		container: NewContainerService(c, conn),
-		dal:       New(conn),
-		// TODO: discover a way to create an object graph from the TXN connection
-		Handle: nil,
+func newHybridRegistry(c ContainerConfig, conn libdal.Connection) *hybridRegistry {
+	return &hybridRegistry{
+		container: newContainerRegistry(c, conn),
+		dal:       newDALRegistry(conn),
+		Handle: libdal.New(conn, func(h *libdal.Handle[hybridRegistry]) *hybridRegistry {
+			return &hybridRegistry{
+				container: newContainerRegistry(c, h.Connection),
+				dal:       newDALRegistry(h.Connection),
+				Handle:    h,
+			}
+		}),
 	}
 }
 
 // GetDigestsKeys locates the `ArtefactKey` for each digest from the container store and database store. The entries
 // located on the container store take precedent.
-func (s *HybridService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
+func (s *hybridRegistry) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
 	ck, cm, err := s.container.GetDigestsKeys(ctx, digests)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to get digests keys from container store: %w", err)
@@ -38,11 +43,11 @@ func (s *HybridService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA
 	return append(ck, dk...), dm, nil
 }
 
-func (s *HybridService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
+func (s *hybridRegistry) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
 	return s.container.Upload(ctx, artefact)
 }
 
-func (s *HybridService) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
+func (s *hybridRegistry) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
 	present, _, err := s.container.GetDigestsKeys(ctx, []sha256.SHA256{digest})
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify artifact's (%s) presence in the container store: %w", digest, err)
@@ -53,11 +58,11 @@ func (s *HybridService) Download(ctx context.Context, digest sha256.SHA256) (io.
 	return s.dal.Download(ctx, digest)
 }
 
-func (s *HybridService) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
+func (s *hybridRegistry) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
 	// note: the container and database store currently use release_artefacts to associated
 	return s.container.GetReleaseArtefacts(ctx, releaseID)
 }
 
-func (s *HybridService) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
+func (s *hybridRegistry) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
 	return s.container.AddReleaseArtefact(ctx, key, ra)
 }

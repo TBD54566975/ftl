@@ -2,6 +2,7 @@ package dal
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -26,7 +27,9 @@ func TestNoCallToAcquire(t *testing.T) {
 	assert.NoError(t, err)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	dal := New(ctx, conn, encryption, pubSub, nil)
+	dal := New(ctx, conn, encryption, pubSub, nil, func(c libdal.Connection) artefacts.Service {
+		return nil
+	})
 
 	_, _, err = dal.AcquireAsyncCall(ctx)
 	assert.IsError(t, err, libdal.ErrNotFound)

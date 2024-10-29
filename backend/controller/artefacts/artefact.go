@@ -2,6 +2,7 @@ package artefacts
 
 import (
 	"context"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"io"
 
 	"github.com/TBD54566975/ftl/internal/model"
@@ -31,7 +32,7 @@ type ReleaseArtefact struct {
 	Executable bool
 }
 
-type Registry interface {
+type Service interface {
 	// GetDigestsKeys locates the `digests` corresponding `ArtefactKey`s and identifies the missing ones
 	GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error)
 	// Upload pushes the specified media, and metadata, to the registry and returns the computed digest
@@ -42,4 +43,8 @@ type Registry interface {
 	GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error)
 	// AddReleaseArtefact associates the given `release` with the artefact associated with the given `digest`
 	AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error
+}
+
+func New(c ContainerConfig, conn libdal.Connection) Service {
+	return newHybridRegistry(c, conn)
 }

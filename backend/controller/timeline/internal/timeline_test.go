@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/TBD54566975/ftl/backend/libdal"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -37,13 +38,15 @@ func TestTimeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := timeline2.New(ctx, conn, encryption)
-	registry := artefacts.New(conn)
+	registry := artefacts.New(artefacts.ContainerConfig{}, conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
 
 	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
 	cjs := cronjobs.New(ctx, key, "test.com", encryption, timeline, conn)
-	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, cjs)
+	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, cjs, func(c libdal.Connection) artefacts.Service {
+		return nil
+	})
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 
@@ -247,10 +250,12 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := timeline2.New(ctx, conn, encryption)
-	registry := artefacts.New(conn)
+	registry := artefacts.New(artefacts.ContainerConfig{}, conn)
 	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
 	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
-	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, nil)
+	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, nil, func(c libdal.Connection) artefacts.Service {
+		return nil
+	})
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSha sha256.SHA256

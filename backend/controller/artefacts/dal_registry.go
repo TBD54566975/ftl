@@ -19,22 +19,16 @@ type ArtefactRow struct {
 	Digest []byte
 }
 
-type DAL interface {
-	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]ArtefactRow, error)
-	CreateArtefact(ctx context.Context, digest []byte, content []byte) (int64, error)
-	GetArtefactContentRange(ctx context.Context, start int32, count int32, iD int64) ([]byte, error)
-}
-
-type Service struct {
-	*libdal.Handle[Service]
+type dalRegistry struct {
+	*libdal.Handle[dalRegistry]
 	db sql.Querier
 }
 
-func New(conn libdal.Connection) *Service {
-	return &Service{
+func newDALRegistry(conn libdal.Connection) *dalRegistry {
+	return &dalRegistry{
 		db: sql.New(conn),
-		Handle: libdal.New(conn, func(h *libdal.Handle[Service]) *Service {
-			return &Service{
+		Handle: libdal.New(conn, func(h *libdal.Handle[dalRegistry]) *dalRegistry {
+			return &dalRegistry{
 				Handle: h,
 				db:     sql.New(h.Connection),
 			}
@@ -42,7 +36,7 @@ func New(conn libdal.Connection) *Service {
 	}
 }
 
-func (s *Service) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
+func (s *dalRegistry) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
 	have, err := s.db.GetArtefactDigests(ctx, sha256esToBytes(digests))
 	if err != nil {
 		return nil, nil, libdal.TranslatePGError(err)
@@ -57,13 +51,13 @@ func (s *Service) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (
 	return keys, missing, nil
 }
 
-func (s *Service) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
+func (s *dalRegistry) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
 	sha256digest := sha256.Sum(artefact.Content)
 	_, err := s.db.CreateArtefact(ctx, sha256digest[:], artefact.Content)
 	return sha256digest, libdal.TranslatePGError(err)
 }
 
-func (s *Service) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
+func (s *dalRegistry) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
 	digests := [][]byte{digest[:]}
 	rows, err := s.db.GetArtefactDigests(ctx, digests)
 	if err != nil {
@@ -75,7 +69,7 @@ func (s *Service) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCl
 	return &dalArtefactStream{db: s.db, id: rows[0].ID}, nil
 }
 
-func (s *Service) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
+func (s *dalRegistry) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
 	return getDatabaseReleaseArtefacts(ctx, s.db, releaseID)
 }
 
@@ -93,7 +87,7 @@ func getDatabaseReleaseArtefacts(ctx context.Context, db sql.Querier, releaseID 
 	}), nil
 }
 
-func (s *Service) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
+func (s *dalRegistry) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
 	return addReleaseArtefacts(ctx, s.db, key, ra)
 }
 
