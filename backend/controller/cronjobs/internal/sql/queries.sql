@@ -57,8 +57,9 @@ WHERE deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployme
 
 -- name: DeleteCronAsyncCallsForDeployment :exec
 DELETE FROM async_calls
-WHERE id IN (
-  SELECT last_async_call_id
+WHERE state = 'pending' OR state = 'executing'
+AND origin IN (
+  SELECT CONCAT('cron:', key)
   FROM cron_jobs
   WHERE deployment_id = (SELECT id FROM deployments WHERE key = sqlc.arg('deployment_key')::deployment_key LIMIT 1)
 );
