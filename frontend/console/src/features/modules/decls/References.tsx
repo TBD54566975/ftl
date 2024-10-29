@@ -4,7 +4,7 @@ import { DeclLink } from './DeclLink'
 export const References = ({ references }: { references: Ref[] }) => {
   return (
     <div className='mt-8 text-sm'>
-      References:
+      Referenced By:
       {references.length === 0
         ? ' None'
         : references.map((r, i) => (
