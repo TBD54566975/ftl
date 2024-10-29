@@ -135,10 +135,13 @@ func (reg *ProvisionerRegistry) Register(id string, handler provisionerconnect.P
 func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, module string, desiredResources, existingResources *ResourceGraph) *Deployment {
 	logger := log.FromContext(ctx)
 
-	var result []*Task
-
 	existingByHandler := reg.groupByProvisioner(existingResources.Resources())
 	desiredByHandler := reg.groupByProvisioner(desiredResources.Resources())
+
+	deployment := &Deployment{
+		Module: module,
+		Graph:  desiredResources,
+	}
 
 	for _, binding := range reg.listProvisioners() {
 		desired := desiredByHandler[binding.Provisioner]
@@ -146,17 +149,17 @@ func (reg *ProvisionerRegistry) CreateDeployment(ctx context.Context, module str
 
 		if !resourcesEqual(desired, existing) {
 			logger.Debugf("Adding task for module %s: %s", module, binding)
-			result = append(result, &Task{
-				module:   module,
-				handler:  binding.Provisioner,
-				desired:  desiredResources.WithDirectDependencies(desired),
-				existing: existingResources.WithDirectDependencies(existing),
+			deployment.Tasks = append(deployment.Tasks, &Task{
+				module:     module,
+				handler:    binding.Provisioner,
+				deployment: deployment,
+				desired:    desiredResources.WithDirectDependencies(desired),
 			})
 		} else {
 			logger.Debugf("Skipping task for module %s with provisioner %s", module, binding.ID)
 		}
 	}
-	return &Deployment{Tasks: result, Module: module}
+	return deployment
 }
 
 func resourcesEqual(desired, existing []*provisioner.Resource) bool {
@@ -231,8 +234,8 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 	edges := make([]*ResourceEdge, len(deps))
 	for i, dep := range deps {
 		edges[i] = &ResourceEdge{
-			from: root,
-			to:   dep,
+			from: root.ResourceId,
+			to:   dep.ResourceId,
 		}
 	}
 

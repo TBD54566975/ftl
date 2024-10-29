@@ -83,7 +83,8 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	}
 	logger.Debugf("Finished deployment for module %s", moduleName)
 
-	s.currentResources[moduleName] = desiredGraph
+	// update the resource state to match the resources updated in the deployment
+	s.currentResources[moduleName] = deployment.Graph
 
 	deploymentKey := ""
 	for _, r := range desiredGraph.Resources() {

@@ -24,13 +24,12 @@ const (
 
 // Task is a unit of work for a deployment
 type Task struct {
-	handler  provisionerconnect.ProvisionerPluginServiceClient
-	module   string
-	state    TaskState
-	desired  *ResourceGraph
-	existing *ResourceGraph
-	// populated only when the task is done
-	output []*provisioner.Resource
+	handler provisionerconnect.ProvisionerPluginServiceClient
+	module  string
+	state   TaskState
+	desired *ResourceGraph
+
+	deployment *Deployment
 
 	// set if the task is currently running
 	runningToken string
@@ -42,27 +41,33 @@ func (t *Task) Start(ctx context.Context) error {
 	}
 	t.state = TaskStateRunning
 
+	ids := map[string]bool{}
+	for _, res := range t.desired.Roots() {
+		ids[res.ResourceId] = true
+	}
+
 	resp, err := t.handler.Provision(ctx, connect.NewRequest(&provisioner.ProvisionRequest{
 		Module: t.module,
 		// TODO: We need a proper cluster specific ID here
 		FtlClusterId:      "ftl",
-		ExistingResources: t.existing.Roots(),
-		DesiredResources:  t.constructResourceContext(t.desired),
+		ExistingResources: t.deployment.Graph.ByIDs(ids),
+		DesiredResources:  t.constructResourceContext(t.desired.Roots(), t.deployment.Graph),
 	}))
 	if err != nil {
 		t.state = TaskStateFailed
 		return fmt.Errorf("error provisioning resources: %w", err)
 	}
 	t.runningToken = resp.Msg.ProvisioningToken
+
 	return nil
 }
 
-func (t *Task) constructResourceContext(r *ResourceGraph) []*provisioner.ResourceContext {
-	result := make([]*provisioner.ResourceContext, len(r.Roots()))
-	for i, res := range r.Roots() {
+func (t *Task) constructResourceContext(resources []*provisioner.Resource, state *ResourceGraph) []*provisioner.ResourceContext {
+	result := make([]*provisioner.ResourceContext, len(resources))
+	for i, res := range resources {
 		result[i] = &provisioner.ResourceContext{
 			Resource:     res,
-			Dependencies: r.Dependencies(res),
+			Dependencies: state.Dependencies(res.ResourceId),
 		}
 	}
 	return result
@@ -89,7 +94,7 @@ func (t *Task) Progress(ctx context.Context) error {
 		}
 		if succ, ok := resp.Msg.Status.(*provisioner.StatusResponse_Success); ok {
 			t.state = TaskStateDone
-			t.output = succ.Success.UpdatedResources
+			t.deployment.Graph.Update(succ.Success.UpdatedResources)
 			return nil
 		}
 		time.Sleep(retry.Duration())
@@ -100,6 +105,8 @@ func (t *Task) Progress(ctx context.Context) error {
 type Deployment struct {
 	Module string
 	Tasks  []*Task
+	// Graph is the current state of the resources affected by the deployment
+	Graph *ResourceGraph
 }
 
 // next running or pending task. Nil if all tasks are done.
