@@ -244,7 +244,7 @@ func startPlugin() in.Action {
 
 		bindURL, err = bindAllocator.Next()
 		assert.NoError(t, err)
-		client, err = newExternalPluginImpl(ic.Context, bindURL, ic.Language)
+		client, err = newExternalPluginImpl(ic.Context, bindURL, ic.Language, "test")
 		assert.NoError(t, err)
 	}
 }
