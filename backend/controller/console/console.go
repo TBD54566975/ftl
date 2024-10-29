@@ -400,7 +400,7 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	builtin := schema.Builtins()
 	sch.Modules = append(sch.Modules, builtin)
 
-	refMap, err := getSchemaRefs(ctx, sch)
+	refMap, err := getSchemaRefs(sch)
 	if err != nil {
 		return fmt.Errorf("failed to find references: %w", err)
 	}
@@ -433,7 +433,7 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	return nil
 }
 
-func getSchemaRefs(ctx context.Context, sch *schema.Schema) (map[schema.RefKey]map[schema.RefKey]bool, error) {
+func getSchemaRefs(sch *schema.Schema) (map[schema.RefKey]map[schema.RefKey]bool, error) {
 	refsToReferers := map[schema.RefKey]map[schema.RefKey]bool{}
 	for _, module := range sch.Modules {
 		for _, parentDecl := range module.Decls {
@@ -448,7 +448,7 @@ func getSchemaRefs(ctx context.Context, sch *schema.Schema) (map[schema.RefKey]m
 				return next()
 			})
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("visit failed: %w", err)
 			}
 		}
 	}
