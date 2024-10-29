@@ -69,7 +69,7 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 		return optionalPlugin, fmt.Errorf("could not create bind allocator: %w", err)
 	}
 
-	plugin, err := languageplugin.New(ctx, bindAllocator, language)
+	plugin, err := languageplugin.New(ctx, bindAllocator, language, "new")
 	if err != nil {
 		return optionalPlugin, fmt.Errorf("could not create plugin for %v: %w", language, err)
 	}

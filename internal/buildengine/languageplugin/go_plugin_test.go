@@ -32,7 +32,7 @@ func TestExtractModuleDepsGo(t *testing.T) {
 	uncheckedConfig, err := moduleconfig.LoadConfig(dir)
 	assert.NoError(t, err)
 
-	plugin, err := New(ctx, nil, uncheckedConfig.Language)
+	plugin, err := New(ctx, nil, uncheckedConfig.Language, "test")
 	assert.NoError(t, err)
 
 	customDefaults, err := plugin.ModuleConfigDefaults(ctx, uncheckedConfig.Dir)
@@ -85,7 +85,7 @@ func TestGoConfigDefaults(t *testing.T) {
 			dir, err := filepath.Abs(tt.dir)
 			assert.NoError(t, err)
 
-			plugin, err := New(ctx, nil, "go")
+			plugin, err := New(ctx, nil, "go", "test")
 			assert.NoError(t, err)
 
 			defaults, err := plugin.ModuleConfigDefaults(ctx, dir)

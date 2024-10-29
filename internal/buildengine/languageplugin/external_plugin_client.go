@@ -45,11 +45,11 @@ type externalPluginImpl struct {
 	cmdError chan error
 }
 
-func newExternalPluginImpl(ctx context.Context, bind *url.URL, language string) (*externalPluginImpl, error) {
+func newExternalPluginImpl(ctx context.Context, bind *url.URL, language, name string) (*externalPluginImpl, error) {
 	impl := &externalPluginImpl{
 		client: rpc.Dial(langconnect.NewLanguageServiceClient, bind.String(), log.Error),
 	}
-	err := impl.start(ctx, bind, language)
+	err := impl.start(ctx, bind, language, name)
 	if err != nil {
 		return nil, err
 	}
@@ -57,13 +57,29 @@ func newExternalPluginImpl(ctx context.Context, bind *url.URL, language string) 
 }
 
 // Start launches the plugin and blocks until the plugin is ready.
-func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language string) error {
+func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language, name string) error {
+	logger := log.FromContext(ctx).Scope(name)
+
 	cmdName := "ftl-language-" + language
 	p.cmd = exec.Command(ctx, log.Debug, ".", cmdName, "--bind", bind.String())
+	p.cmd.Env = append(p.cmd.Env, "FTL_NAME="+name)
 	_, err := exec.LookPath(cmdName)
 	if err != nil {
 		return fmt.Errorf("failed to find plugin for %s: %w", language, err)
 	}
+
+	// Send the plugin's stderr to the logger.
+	p.cmd.Stderr = nil
+	pipe, err := p.cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	go func() {
+		err := log.JSONStreamer(pipe, logger, log.Error)
+		if err != nil {
+			logger.Errorf(err, "Error streaming plugin logs.")
+		}
+	}()
 
 	runCtx, cancel := context.WithCancel(ctx)
 
@@ -72,8 +88,7 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language 
 
 	// run the plugin and wait for it to finish executing
 	go func() {
-		err := p.cmd.RunBuffered(runCtx)
-		fmt.Printf("ended!")
+		err := p.cmd.Run()
 		if err != nil {
 			p.cmdError <- fmt.Errorf("language plugin failed: %w", err)
 		} else {
