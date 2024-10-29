@@ -97,41 +97,50 @@ message CronScheduledEvent {
 
 message Config {
   schema.Config config = 1;
+  repeated schema.Ref references = 2;
 }
 
 message Data {
   schema.Data data = 1;
   string schema = 2;
+  repeated schema.Ref references = 3;
 }
 
 message Database {
   schema.Database database = 1;
+  repeated schema.Ref references = 2;
 }
 
 message Enum {
   schema.Enum enum = 1;
+  repeated schema.Ref references = 2;
 }
 
 message Topic {
   schema.Topic topic = 1;
+  repeated schema.Ref references = 2;
 }
 
 message TypeAlias {
   schema.TypeAlias typealias = 1;
+  repeated schema.Ref references = 2;
 }
 
 message Secret {
   schema.Secret secret = 1;
+  repeated schema.Ref references = 2;
 }
 
 message Subscription {
   schema.Subscription subscription = 1;
+  repeated schema.Ref references = 2;
 }
 
 message Verb {
   schema.Verb verb = 1;
   string schema = 2;
   string json_request_schema = 3;
+  repeated schema.Ref references = 4;
 }
 
 message Module {
