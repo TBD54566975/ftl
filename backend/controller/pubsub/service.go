@@ -53,6 +53,7 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 
 // poll waits for an event to be published (incl eventConsumptionDelay) or for a poll interval to pass
 func (s *Service) poll(ctx context.Context) {
+	logger := log.FromContext(ctx).Scope("pubsub")
 	var publishedAt optional.Option[time.Time]
 	for {
 		var publishTrigger <-chan time.Time
@@ -75,21 +76,21 @@ func (s *Service) poll(ctx context.Context) {
 
 		case <-publishTrigger:
 			// an event has been published and we have waited for eventConsumptionDelay
-			log.FromContext(ctx).Infof("event published... progressing subscriptions")
-			s.progressSubscriptions(ctx)
+			if err := s.progressSubscriptions(ctx); err != nil {
+				logger.Warnf("%s", err)
+			}
 			publishedAt = optional.None[time.Time]()
 
 		case <-time.After(poll):
-			log.FromContext(ctx).Infof("polling to progress subscriptions")
 			s.progressSubscriptions(ctx)
 		}
 	}
 }
 
-func (s *Service) progressSubscriptions(ctx context.Context) (time.Duration, error) {
+func (s *Service) progressSubscriptions(ctx context.Context) error {
 	count, err := s.dal.ProgressSubscriptions(ctx, eventConsumptionDelay)
 	if err != nil {
-		return 0, fmt.Errorf("progress subscriptions: %w", err)
+		return fmt.Errorf("progress subscriptions: %w", err)
 	}
 	if count > 0 {
 		// notify controller that we added an async call
@@ -97,7 +98,7 @@ func (s *Service) progressSubscriptions(ctx context.Context) (time.Duration, err
 			listener.AsyncCallWasAdded(ctx)
 		}
 	}
-	return time.Second, nil
+	return nil
 }
 
 func (s *Service) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
@@ -132,8 +133,8 @@ func (s *Service) OnCallCompletion(ctx context.Context, tx libdal.Connection, or
 
 // AsyncCallDidCommit is called after a subscription's async call has been completed and committed to the database.
 func (s *Service) AsyncCallDidCommit(ctx context.Context, origin async.AsyncOriginPubSub) {
-	if _, err := s.progressSubscriptions(ctx); err != nil {
-		log.FromContext(ctx).Errorf(err, "failed to progress subscriptions")
+	if err := s.progressSubscriptions(ctx); err != nil {
+		log.FromContext(ctx).Scope("pubsub").Errorf(err, "failed to progress subscriptions")
 	}
 }
 
