@@ -165,6 +165,7 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
           <span
             className='absolute inset-y-0 right-0 flex items-center px-1 mx-9 my-1.5 rounded-md cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-100'
             onClick={() => setHideUnexported(!hideUnexported)}
+            title='show/hide unexported'
           >
             <Upload01Icon className={`size-5 ${hideUnexported ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-300'}`} />
             {hideUnexported ? <div className='absolute border-t border-gray-300 dark:border-gray-600 rotate-45 w-9 -ml-2' /> : ''}
@@ -172,6 +173,7 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
           <span
             className='absolute inset-y-0 right-0 flex items-center px-1 mx-1 my-1.5 rounded-md cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-100'
             onClick={collapseAll}
+            title='collapse all modules'
           >
             <ArrowShrink02Icon className='size-5 text-gray-500 dark:text-gray-300' />
           </span>
