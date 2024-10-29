@@ -10,6 +10,6 @@ data class EchoResponse(val message: String)
 @Export
 @Verb
 fun echo(req: EchoRequest, time: TimeClient): EchoResponse {
-  val response = time.call()
+  val response = time.time()
   return EchoResponse(message = "Hello, ${req.name ?: "anonymous"}! The time is ${response.time}.")
 }
