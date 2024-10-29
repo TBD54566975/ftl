@@ -122,23 +122,23 @@ export const declFromModules = (moduleName: string, declCase: string, declName: 
   }
   switch (declCase) {
     case 'config':
-      return module.configs.find((d) => d.config?.name === declName)?.config
+      return module.configs.find((d) => d.config?.name === declName)
     case 'data':
-      return module.data.find((d) => d.data?.name === declName)?.data
+      return module.data.find((d) => d.data?.name === declName)
     case 'database':
-      return module.databases.find((d) => d.database?.name === declName)?.database
+      return module.databases.find((d) => d.database?.name === declName)
     case 'enum':
-      return module.enums.find((d) => d.enum?.name === declName)?.enum
+      return module.enums.find((d) => d.enum?.name === declName)
     case 'secret':
-      return module.secrets.find((d) => d.secret?.name === declName)?.secret
+      return module.secrets.find((d) => d.secret?.name === declName)
     case 'subscription':
-      return module.subscriptions.find((d) => d.subscription?.name === declName)?.subscription
+      return module.subscriptions.find((d) => d.subscription?.name === declName)
     case 'topic':
-      return module.topics.find((d) => d.topic?.name === declName)?.topic
+      return module.topics.find((d) => d.topic?.name === declName)
     case 'typealias':
-      return module.typealiases.find((d) => d.typealias?.name === declName)?.typealias
+      return module.typealiases.find((d) => d.typealias?.name === declName)
     case 'verb':
-      return module.verbs.find((d) => d.verb?.name === declName)?.verb
+      return module.verbs.find((d) => d.verb?.name === declName)
   }
 }
 
