@@ -410,10 +410,6 @@ func VerifySchema(check func(ctx context.Context, t testing.TB, sch *schemapb.Sc
 			t.Errorf("failed to get schema: %v", err)
 			return
 		}
-		if err != nil {
-			t.Errorf("failed to deserialize schema: %v", err)
-			return
-		}
 		check(ic.Context, t, sch.Msg.GetSchema())
 	}
 }
@@ -424,10 +420,6 @@ func VerifySchemaVerb(module string, verb string, check func(ctx context.Context
 		sch, err := ic.Controller.GetSchema(ic, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 		if err != nil {
 			t.Errorf("failed to get schema: %v", err)
-			return
-		}
-		if err != nil {
-			t.Errorf("failed to deserialize schema: %v", err)
 			return
 		}
 		for _, m := range sch.Msg.GetSchema().Modules {
