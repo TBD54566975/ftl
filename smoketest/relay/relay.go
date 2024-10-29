@@ -42,9 +42,7 @@ type AgentTerminated struct {
 
 //ftl:verb
 func Briefed(ctx context.Context, agent origin.Agent, deployed DeployedClient) error {
-	briefedAt := time.Now()
-	ftl.LoggerFromContext(ctx).Infof("Briefed agent %v at %s", agent.Id, briefedAt)
-	agent.BriefedAt = ftl.Some(briefedAt)
+	ftl.LoggerFromContext(ctx).Infof("Briefed agent %v", agent.Id)
 	d := AgentDeployment{
 		Agent:  agent,
 		Target: "villain",
@@ -89,7 +87,7 @@ func MissionResult(ctx context.Context, req MissionResultRequest, success Succee
 			AgentID:   int(agentID),
 			SuccessAt: time.Now(),
 		}
-		err := success(ctx, event.(MissionSuccess))
+		err := success(ctx, event.(MissionSuccess)) //nolint:forcetypeassert
 		if err != nil {
 			return MissionResultResponse{}, err
 		}
@@ -98,7 +96,7 @@ func MissionResult(ctx context.Context, req MissionResultRequest, success Succee
 			AgentID:      int(agentID),
 			TerminatedAt: time.Now(),
 		}
-		err := failure(ctx, event.(AgentTerminated))
+		err := failure(ctx, event.(AgentTerminated)) //nolint:forcetypeassert
 		if err != nil {
 			return MissionResultResponse{}, err
 		}

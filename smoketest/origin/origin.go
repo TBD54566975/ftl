@@ -15,11 +15,10 @@ var nonce = ftl.Config[string]("nonce")
 var AgentBroadcast = ftl.Topic[Agent]("agentBroadcast")
 
 type Agent struct {
-	ID            int                   `json:"id"`
-	Alias         string                `json:"alias"`
-	LicenseToKill bool                  `json:"license_to_kill"`
-	HiredAt       time.Time             `json:"hired_at"`
-	BriefedAt     ftl.Option[time.Time] `json:"briefed_at"`
+	ID            int       `json:"id"`
+	Alias         string    `json:"alias"`
+	LicenseToKill bool      `json:"license_to_kill"`
+	HiredAt       time.Time `json:"hired_at"`
 }
 
 type PostAgentResponse struct {
@@ -28,7 +27,7 @@ type PostAgentResponse struct {
 
 type PostAgentErrorResponse string
 
-//ftl:ingress POST /ingress/agent
+//ftl:ingress POST /http/agent
 func PostAgent(ctx context.Context, req builtin.HttpRequest[Agent, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse], error) {
 	agent := Agent{
 		ID:            req.Body.ID,

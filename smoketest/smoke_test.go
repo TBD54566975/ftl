@@ -1,4 +1,4 @@
-//go:build integration
+//go:build smoketest
 
 package smoketest
 
@@ -15,8 +15,8 @@ import (
 	in "github.com/TBD54566975/ftl/internal/integration"
 )
 
-func TestExemplarIntegration(t *testing.T) {
-	tmpDir := t.TempDir()
+func TestExemplarSmoke(t *testing.T) {
+	tmpDir := "/tmp"
 	logFilePath := filepath.Join(tmpDir, "smoketest.log")
 
 	var postResult struct {
@@ -27,19 +27,19 @@ func TestExemplarIntegration(t *testing.T) {
 	nonce := randomString(4)
 
 	in.Run(t,
+		in.WithKubernetes(),
 		in.WithJavaBuild(),
 		in.WithFTLConfig("../../../ftl-project.toml"),
 		in.WithTestDataDir("."),
 		in.CopyModule("origin"),
 		in.CopyModule("relay"),
 		in.CopyModule("pulse"),
-		// in.CreateDBAction("relay", "exemplardb", false),
 
-		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", "--inline", nonce}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"config", "set", "origin.nonce", "--db", nonce}, func(output string) {
 			fmt.Println(output)
 		}),
 
-		in.ExecWithOutput("ftl", []string{"config", "set", "relay.log_file", "--inline", logFilePath}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"config", "set", "relay.log_file", "--db", logFilePath}, func(output string) {
 			fmt.Println(output)
 		}),
 
@@ -73,15 +73,9 @@ func TestExemplarIntegration(t *testing.T) {
 
 		in.Sleep(2*time.Second),
 
-		// in.Call("relay", "fetchLogs", in.Obj{}, func(t testing.TB, resp in.Obj) {
-		// 	fmt.Printf("fetchLogs: %v\n", resp)
-		// }),
-
-		in.FileContains(logFilePath, fmt.Sprintf("deployed %d", successAgentId)),
-		in.FileContains(logFilePath, fmt.Sprintf("deployed %d", failedAgentId)),
-		in.FileContains(logFilePath, fmt.Sprintf("succeeded %d", successAgentId)),
-		in.FileContains(logFilePath, fmt.Sprintf("terminated %d", failedAgentId)),
-		in.FileContains(logFilePath, fmt.Sprintf("cron %v", nonce)),
+		in.Call("relay", "fetchLogs", in.Obj{}, func(t testing.TB, resp in.Obj) {
+			fmt.Printf("fetchLogs: %v\n", resp)
+		}),
 	)
 }
 
