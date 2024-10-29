@@ -24,6 +24,8 @@ var _ readline.AutoCompleter = &FTLCompletion{}
 
 type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Context
 
+type exitPanic struct{}
+
 func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) error {
 
 	if !readline.DefaultIsTerminal() {
@@ -66,8 +68,9 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 			}
 			existing(i)
 		}
-		// For a normal exit from an interactive command we just ignore it
-		// This usually comes from --help or --version
+		// For a normal exit from an interactive command we need a special panic
+		// we recover from this and continue the loop
+		panic(exitPanic{})
 	}
 	for {
 		line, err := l.Readline()
@@ -93,6 +96,14 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 			continue
 		}
 		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					if _, ok := r.(exitPanic); ok {
+						return
+					}
+					panic(r)
+				}
+			}()
 			kctx, err := k.Parse(args)
 			if err != nil {
 				errorf("%s", err)
@@ -106,6 +117,7 @@ func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContext
 				return
 			}
 		}()
+		tsm.redrawStatus()
 	}
 	_ = l.Close()
 	return nil
