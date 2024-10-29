@@ -142,6 +142,12 @@ export const declFromModules = (moduleName: string, declCase: string, declName: 
   }
 }
 
+export const hasHideUnexportedInLocalStorage = () => localStorage.getItem('tree_hu') !== null
+
+export const getHideUnexportedFromLocalStorage = () => localStorage.getItem('tree_hu') === 'true'
+
+export const setHideUnexportedFromLocalStorage = (val: boolean) => localStorage.setItem('tree_hu', val ? 'true' : 'false')
+
 export const listExpandedModulesFromLocalStorage = () => (localStorage.getItem('tree_m') || '').split(',').filter((s) => s !== '')
 
 export const toggleModuleExpansionInLocalStorage = (moduleName: string) => {
