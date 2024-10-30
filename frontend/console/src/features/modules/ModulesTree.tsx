@@ -81,7 +81,7 @@ const ModuleSection = ({
       module.decls
         .filter((d) => !!selectedDeclTypes.find((o) => o.key === d.declType))
         .filter((d) => !hideUnexported || (isSelected && declName === d.value.name) || declSumTypeIsExported(d.value)),
-    [module.decls, selectedDeclTypes, hideUnexported],
+    [module.decls, selectedDeclTypes, hideUnexported, isSelected, declName],
   )
 
   return (
