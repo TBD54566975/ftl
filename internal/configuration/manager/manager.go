@@ -141,6 +141,15 @@ func (m *Manager[R]) availableProviderKeys() []string {
 	return keys
 }
 
+// ProviderKeys returns the keys of the available providers.
+func (m *Manager[R]) ProviderKeys() []configuration.ProviderKey {
+	keys := make([]configuration.ProviderKey, 0, len(m.providers))
+	for k := range m.providers {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // Set a configuration value, encoding "value" as JSON before storing it.
 func (m *Manager[R]) Set(ctx context.Context, pkey configuration.ProviderKey, ref configuration.Ref, value any) error {
 	data, err := json.Marshal(value)
