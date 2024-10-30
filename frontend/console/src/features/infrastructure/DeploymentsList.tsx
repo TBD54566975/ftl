@@ -1,7 +1,7 @@
 import { AttributeBadge } from '../../components'
 import { Badge } from '../../components/Badge'
 import { List } from '../../components/List'
-import type { StatusResponse_Deployment } from '../../protos/xyz/block/ftl/v1/ftl_pb'
+import type { StatusResponse_Deployment } from '../../protos/xyz/block/ftl/v1/controller_pb'
 import { classNames } from '../../utils'
 import { deploymentTextColor } from '../deployments/deployment.utils'
 import { renderValue } from './infrastructure.utils'

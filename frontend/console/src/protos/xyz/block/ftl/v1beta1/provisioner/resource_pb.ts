@@ -6,7 +6,7 @@
 import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
 import { Message, proto3, Struct } from "@bufbuild/protobuf";
 import { Module } from "../../v1/schema/schema_pb.js";
-import { DeploymentArtefact } from "../../v1/ftl_pb.js";
+import { DeploymentArtefact } from "../../v1/controller_pb.js";
 
 /**
  * Resource is an abstract resource extracted from FTL Schema.

@@ -3,8 +3,9 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetSchemaRequest, GetSchemaResponse, PingRequest, PingResponse, PullSchemaRequest, PullSchemaResponse, ReplaceDeployRequest, ReplaceDeployResponse, StatusRequest, StatusResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "../../v1/ftl_pb.js";
+import { PingRequest, PingResponse } from "../../v1/ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
+import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetSchemaRequest, GetSchemaResponse, PullSchemaRequest, PullSchemaResponse, ReplaceDeployRequest, ReplaceDeployResponse, StatusRequest, StatusResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "../../v1/controller_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1beta1.provisioner.ProvisionerService

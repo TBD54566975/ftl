@@ -1,7 +1,7 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { useQuery } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
-import { ControllerService } from '../../protos/xyz/block/ftl/v1/ftl_connect'
+import { ControllerService } from '../../protos/xyz/block/ftl/v1/controller_connect'
 
 const useStatusKey = 'status'
 
