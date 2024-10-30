@@ -1,0 +1,223 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1.contract;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb";
+option java_multiple_files = true;
+
+enum AliasKind {
+  ALIAS_KIND_JSON = 0;
+}
+
+message Any {
+}
+
+message Array {
+  Type element = 2;
+}
+
+message Bool {
+}
+
+message Bytes {
+}
+
+
+message Data {
+  bool export = 3;
+  string name = 4;
+  repeated TypeParameter type_parameters = 5;
+  repeated Field fields = 6;
+  repeated Metadata metadata = 7;
+}
+
+message Database {
+  optional DatabaseRuntime runtime = 31634;
+  string type = 4;
+  string name = 3;
+}
+
+message DatabaseRuntime {
+  string dsn = 1;
+}
+
+message Decl {
+  oneof value {
+    Data data = 1;
+    Database database = 3;
+    Enum enum = 4;
+    Subscription subscription = 10;
+    Topic topic = 9;
+    TypeAlias type_alias = 5;
+    Verb verb = 2;
+  }
+}
+
+message Enum {
+  bool export = 3;
+  string name = 4;
+  optional Type type = 5;
+  repeated EnumVariant variants = 6;
+}
+
+message EnumVariant {
+  string name = 3;
+  Value value = 4;
+}
+
+message Field {
+  string name = 2;
+  Type type = 4;
+  repeated Metadata metadata = 5;
+}
+
+message Float {
+}
+
+message Int {
+}
+
+message IntValue {
+  int64 value = 2;
+}
+
+message Map {
+  Type key = 2;
+  Type value = 3;
+}
+
+message Metadata {
+  oneof value {
+    MetadataAlias alias = 5;
+    MetadataEncoding encoding = 9;
+    MetadataSubscriber subscriber = 7;
+    MetadataTypeMap type_map = 8;
+  }
+}
+
+message MetadataAlias {
+  AliasKind kind = 2;
+  string alias = 3;
+}
+
+message MetadataEncoding {
+  string type = 2;
+  bool lenient = 3;
+}
+
+message MetadataSubscriber {
+  string name = 2;
+}
+
+message MetadataTypeMap {
+  string runtime = 2;
+  string native_name = 3;
+}
+
+message Module {
+  bool builtin = 3;
+  string name = 4;
+  repeated Decl decls = 5;
+}
+
+
+message Optional {
+  optional Type type = 2;
+}
+
+message Ref {
+  string module = 3;
+  string name = 2;
+  repeated Type type_parameters = 4;
+}
+
+message String {
+}
+
+message StringValue {
+  string value = 2;
+}
+
+message Subscription {
+  string name = 3;
+  Ref topic = 4;
+}
+
+message Time {
+}
+
+message Topic {
+  bool export = 3;
+  string name = 4;
+  Type event = 5;
+}
+
+message Type {
+  oneof value {
+    Any any = 9;
+    Array array = 7;
+    Bool bool = 5;
+    Bytes bytes = 4;
+    Float float = 2;
+    Int int = 1;
+    Map map = 8;
+    Optional optional = 12;
+    Ref ref = 11;
+    String string = 3;
+    Time time = 6;
+    Unit unit = 10;
+  }
+}
+
+message TypeAlias {
+  bool export = 3;
+  string name = 4;
+  Type type = 5;
+  repeated Metadata metadata = 6;
+}
+
+message TypeParameter {
+  string name = 2;
+}
+
+message TypeValue {
+  Type value = 2;
+}
+
+message Unit {
+}
+
+message Value {
+  oneof value {
+    IntValue int_value = 2;
+    StringValue string_value = 1;
+    TypeValue type_value = 3;
+  }
+}
+
+message Verb {
+  repeated string comments = 2;
+  bool export = 3;
+  string name = 4;
+  Type request = 5;
+  Type response = 6;
+  repeated Metadata metadata = 7;
+  optional VerbRuntime runtime = 31634;
+}
+
+message VerbRuntime {
+  google.protobuf.Timestamp create_time = 1;
+  google.protobuf.Timestamp start_time = 2;
+  VerbStatus status = 3;
+}
+
+enum VerbStatus {
+  VERB_STATUS_OFFLINE = 0;
+  VERB_STATUS_STARTING = 1;
+  VERB_STATUS_ONLINE = 2;
+  VERB_STATUS_STOPPING = 3;
+  VERB_STATUS_STOPPED = 4;
+  VERB_STATUS_ERROR = 5;
+}
