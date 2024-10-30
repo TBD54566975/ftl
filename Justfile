@@ -256,6 +256,12 @@ observe:
 observe-stop:
   docker compose down otel-lgtm
 
+localstack:
+    docker compose up localstack -d --wait
+
+localstack-stop:
+    docker compose down localstack
+
 # Start storybook server
 storybook:
   @cd {{CONSOLE_ROOT}} && pnpm run storybook

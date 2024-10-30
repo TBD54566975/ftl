@@ -85,6 +85,13 @@ func WithKubernetes() Option {
 	}
 }
 
+// WithLocalstack is a Run* option that specifies tests should be run on a localstack container
+func WithLocalstack() Option {
+	return func(o *options) {
+		o.localstack = true
+	}
+}
+
 // WithTestDataDir sets the directory from which to look for test data.
 //
 // Defaults to "testdata/<language>" if not provided.
@@ -157,6 +164,7 @@ type options struct {
 	requireJava       bool
 	envars            map[string]string
 	kube              bool
+	localstack        bool
 }
 
 // Run an integration test.
@@ -251,6 +259,10 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		}
 		if opts.requireJava || slices.Contains(opts.languages, "java") || slices.Contains(opts.languages, "kotlin") {
 			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-java", "-DskipTests", "-B").RunBuffered(ctx)
+			assert.NoError(t, err)
+		}
+		if opts.localstack {
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "localstack").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
 	})

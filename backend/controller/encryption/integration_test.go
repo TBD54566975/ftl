@@ -97,44 +97,50 @@ func validateAsyncCall(verb string, sensitive string) in.Action {
 	}
 }
 
-func TestKMSEncryptorLocalstack(t *testing.T) {
-	endpoint := "http://localhost:4566"
+func TestKMSEncryptorLocalstack(ts *testing.T) {
+	in.Run(ts,
+		in.WithLocalstack(),
+		in.WithoutController(),
+		in.Action(func(t testing.TB, ic in.TestContext) {
+			endpoint := "http://localhost:4566"
 
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	cfg := testutils.NewLocalstackConfig(t, ctx)
-	v2client := kms.NewFromConfig(cfg, func(o *kms.Options) {
-		o.BaseEndpoint = aws.String(endpoint)
-	})
-	createKey, err := v2client.CreateKey(ctx, &kms.CreateKeyInput{})
-	assert.NoError(t, err)
-	uri := fmt.Sprintf("aws-kms://%s", *createKey.KeyMetadata.Arn)
-	fmt.Printf("URI: %s\n", uri)
+			ctx := log.ContextWithNewDefaultLogger(context.Background())
+			cfg := testutils.NewLocalstackConfig(ts, ctx)
+			v2client := kms.NewFromConfig(cfg, func(o *kms.Options) {
+				o.BaseEndpoint = aws.String(endpoint)
+			})
+			createKey, err := v2client.CreateKey(ctx, &kms.CreateKeyInput{})
+			assert.NoError(t, err)
+			uri := fmt.Sprintf("aws-kms://%s", *createKey.KeyMetadata.Arn)
+			fmt.Printf("URI: %s\n", uri)
 
-	// tink does not support awsv2 yet so here be dragons
-	// https://github.com/tink-crypto/tink-go-awskms/issues/2
-	s := awsv1session.Must(awsv1session.NewSession())
-	v1client := awsv1kms.New(s, &awsv1.Config{
-		Credentials: awsv1credentials.NewStaticCredentials("test", "test", ""),
-		Endpoint:    awsv1.String(endpoint),
-		Region:      awsv1.String("us-west-2"),
-	})
+			// tink does not support awsv2 yet so here be dragons
+			// https://github.com/tink-crypto/tink-go-awskms/issues/2
+			s := awsv1session.Must(awsv1session.NewSession())
+			v1client := awsv1kms.New(s, &awsv1.Config{
+				Credentials: awsv1credentials.NewStaticCredentials("test", "test", ""),
+				Endpoint:    awsv1.String(endpoint),
+				Region:      awsv1.String("us-west-2"),
+			})
 
-	key, err := newKey(uri, v1client)
-	assert.NoError(t, err)
+			key, err := newKey(uri, v1client)
+			assert.NoError(t, err)
 
-	encryptor, err := NewKMSEncryptorWithKMS(uri, v1client, key)
-	assert.NoError(t, err)
+			encryptor, err := NewKMSEncryptorWithKMS(uri, v1client, key)
+			assert.NoError(t, err)
 
-	var encrypted api.EncryptedTimelineColumn
-	err = encryptor.Encrypt([]byte("hunter2"), &encrypted)
-	assert.NoError(t, err)
+			var encrypted api.EncryptedTimelineColumn
+			err = encryptor.Encrypt([]byte("hunter2"), &encrypted)
+			assert.NoError(t, err)
 
-	decrypted, err := encryptor.Decrypt(&encrypted)
-	assert.NoError(t, err)
-	assert.Equal(t, "hunter2", string(decrypted))
+			decrypted, err := encryptor.Decrypt(&encrypted)
+			assert.NoError(t, err)
+			assert.Equal(t, "hunter2", string(decrypted))
 
-	// Should fail to decrypt with the wrong subkey
-	wrongSubKey := api.EncryptedAsyncColumn(encrypted)
-	_, err = encryptor.Decrypt(&wrongSubKey)
-	assert.Error(t, err)
+			// Should fail to decrypt with the wrong subkey
+			wrongSubKey := api.EncryptedAsyncColumn(encrypted)
+			_, err = encryptor.Decrypt(&wrongSubKey)
+			assert.Error(t, err)
+		}))
+
 }
