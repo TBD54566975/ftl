@@ -3,6 +3,7 @@ package pubsub
 import (
 	"context"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"github.com/alecthomas/types/optional"
@@ -22,7 +23,7 @@ const (
 	// Events can be added simultaneously, which can cause events with out of order create_at values
 	// By adding a delay, we ensure that by the time we read the events, no new events will be added
 	// with earlier created_at values.
-	eventConsumptionDelay = 200 * time.Millisecond
+	eventConsumptionDelay = 100 * time.Millisecond
 )
 
 type Scheduler interface {
@@ -36,29 +37,62 @@ type AsyncCallListener interface {
 
 type Service struct {
 	dal               *dal.DAL
-	scheduler         Scheduler
 	asyncCallListener optional.Option[AsyncCallListener]
+	eventPublished    chan struct{}
 }
 
-func New(conn libdal.Connection, encryption *encryption.Service, scheduler Scheduler, asyncCallListener optional.Option[AsyncCallListener]) *Service {
+func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, asyncCallListener optional.Option[AsyncCallListener]) *Service {
 	m := &Service{
 		dal:               dal.New(conn, encryption),
-		scheduler:         scheduler,
 		asyncCallListener: asyncCallListener,
+		eventPublished:    make(chan struct{}),
 	}
-	m.scheduler.Parallel("progress-subs", backoff.Backoff{
-		Min:    1 * time.Second,
-		Max:    5 * time.Second,
-		Jitter: true,
-		Factor: 1.5,
-	}, m.progressSubscriptions)
+	go m.poll(ctx)
 	return m
 }
 
-func (s *Service) progressSubscriptions(ctx context.Context) (time.Duration, error) {
+// poll waits for an event to be published (incl eventConsumptionDelay) or for a poll interval to pass
+func (s *Service) poll(ctx context.Context) {
+	logger := log.FromContext(ctx).Scope("pubsub")
+	var publishedAt optional.Option[time.Time]
+	for {
+		var publishTrigger <-chan time.Time
+		if pub, ok := publishedAt.Get(); ok {
+			publishTrigger = time.After(time.Until(pub.Add(eventConsumptionDelay)))
+		}
+
+		// poll interval with jitter (1s - 1.1s)
+		poll := time.Millisecond * (time.Duration(rand.Float64())*(100.0) + 1000.0) //nolint:gosec
+
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-s.eventPublished:
+			// published an event, so now we wait for eventConsumptionDelay before trying to progress subscriptions
+			if !publishedAt.Ok() {
+				publishedAt = optional.Some(time.Now())
+			}
+
+		case <-publishTrigger:
+			// an event has been published and we have waited for eventConsumptionDelay
+			if err := s.progressSubscriptions(ctx); err != nil {
+				logger.Warnf("%s", err)
+			}
+			publishedAt = optional.None[time.Time]()
+
+		case <-time.After(poll):
+			if err := s.progressSubscriptions(ctx); err != nil {
+				logger.Warnf("%s", err)
+			}
+		}
+	}
+}
+
+func (s *Service) progressSubscriptions(ctx context.Context) error {
 	count, err := s.dal.ProgressSubscriptions(ctx, eventConsumptionDelay)
 	if err != nil {
-		return 0, fmt.Errorf("progress subscriptions: %w", err)
+		return fmt.Errorf("progress subscriptions: %w", err)
 	}
 	if count > 0 {
 		// notify controller that we added an async call
@@ -66,7 +100,7 @@ func (s *Service) progressSubscriptions(ctx context.Context) (time.Duration, err
 			listener.AsyncCallWasAdded(ctx)
 		}
 	}
-	return time.Second, nil
+	return nil
 }
 
 func (s *Service) PublishEventForTopic(ctx context.Context, module, topic, caller string, payload []byte) error {
@@ -74,6 +108,7 @@ func (s *Service) PublishEventForTopic(ctx context.Context, module, topic, calle
 	if err != nil {
 		return fmt.Errorf("%s.%s: publish: %w", module, topic, err)
 	}
+	s.eventPublished <- struct{}{}
 	return nil
 }
 
@@ -100,8 +135,8 @@ func (s *Service) OnCallCompletion(ctx context.Context, tx libdal.Connection, or
 
 // AsyncCallDidCommit is called after a subscription's async call has been completed and committed to the database.
 func (s *Service) AsyncCallDidCommit(ctx context.Context, origin async.AsyncOriginPubSub) {
-	if _, err := s.progressSubscriptions(ctx); err != nil {
-		log.FromContext(ctx).Errorf(err, "failed to progress subscriptions")
+	if err := s.progressSubscriptions(ctx); err != nil {
+		log.FromContext(ctx).Scope("pubsub").Errorf(err, "failed to progress subscriptions")
 	}
 }
 

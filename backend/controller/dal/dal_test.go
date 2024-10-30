@@ -18,9 +18,7 @@ import (
 
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
-	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -35,8 +33,7 @@ func TestDAL(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
-	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	key := model.NewControllerKey("localhost", "8081")
 	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
@@ -200,8 +197,7 @@ func TestCreateArtefactConflict(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
-	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	key := model.NewControllerKey("localhost", "8081")

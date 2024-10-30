@@ -21,9 +21,7 @@ import (
 	controllerdal "github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
-	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -39,8 +37,7 @@ func TestTimeline(t *testing.T) {
 
 	timeline := timeline2.New(ctx, conn, encryption)
 	registry := artefacts.New(artefacts.ContainerConfig{}, conn)
-	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
-	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 
 	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
 	cjs := cronjobs.New(ctx, key, "test.com", encryption, timeline, conn)
@@ -250,9 +247,8 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := timeline2.New(ctx, conn, encryption)
-	registry := artefacts.New(artefacts.ContainerConfig{}, conn)
-	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
-	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	registry := artefacts.New(conn)
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, nil, func(c libdal.Connection) artefacts.Service {
 		return nil
 	})
