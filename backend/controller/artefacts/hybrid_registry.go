@@ -3,10 +3,11 @@ package artefacts
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
-	"io"
 )
 
 type hybridRegistry struct {
