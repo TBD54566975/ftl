@@ -151,7 +151,7 @@ func Wait(ctx context.Context, retry backoff.Backoff, client Pingable) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return ctx.Err() //nolint:wrapcheck
 		default:
 		}
 		resp, err := client.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
