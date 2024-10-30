@@ -245,12 +245,6 @@ func RetryStreamingServerStream[Req, Resp any](
 	for {
 		stream, err := rpc(ctx, connect.NewRequest(req))
 		if err == nil {
-			defer func(stream *connect.ServerStreamForClient[Resp]) {
-				err := stream.Close()
-				if err != nil {
-					logger.Debugf("Failed to close stream: %s", err)
-				}
-			}(stream)
 			for {
 				if stream.Receive() {
 					resp := stream.Msg()
@@ -265,6 +259,10 @@ func RetryStreamingServerStream[Req, Resp any](
 					}
 					select {
 					case <-ctx.Done():
+						err := stream.Close()
+						if err != nil {
+							logger.Debugf("Failed to close stream: %s", err)
+						}
 						return
 					default:
 					}
@@ -276,6 +274,10 @@ func RetryStreamingServerStream[Req, Resp any](
 					logLevel = logLevelForError(err)
 					break
 				}
+			}
+			err := stream.Close()
+			if err != nil {
+				logger.Debugf("Failed to close stream: %s", err)
 			}
 		}
 
