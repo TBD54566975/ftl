@@ -40,8 +40,24 @@ export const declTypeMultiselectOpts = [
     displayName: 'Subscription',
   },
   {
+    group: 'Verb',
+    key: 'cronjob',
+    displayName: 'Cron Job',
+  },
+  {
+    group: 'Verb',
+    key: 'ingress',
+    displayName: 'Ingress Verb',
+  },
+  {
+    group: 'Verb',
+    key: 'subscriber',
+    displayName: 'Subscriber',
+  },
+  {
+    group: 'Verb',
     key: 'verb',
-    displayName: 'Verb',
+    displayName: 'All Other Verbs',
   },
 ]
 

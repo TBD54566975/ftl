@@ -89,7 +89,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
                     value={item}
                     className='group flex cursor-default select-none rounded-md px-2 py-2 data-[focus]:bg-indigo-600 data-[focus]:text-white dark:data-[focus]:bg-indigo-500'
                   >
-                    <div className='flex size-10 flex-none items-center justify-center rounded-lg'>
+                    <div title={item.iconType} className='flex size-10 flex-none items-center justify-center rounded-lg'>
                       <item.icon className='size-5 text-gray-500 dark:text-gray-400 group-data-[focus]:text-white' aria-hidden='true' />
                     </div>
                     <div className='ml-2 flex-auto'>

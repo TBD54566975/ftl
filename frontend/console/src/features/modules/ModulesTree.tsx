@@ -4,13 +4,13 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
 import type { MultiselectOpt } from '../../components/Multiselect'
 import { classNames } from '../../utils'
-import type { ModuleTreeItem } from './module.utils'
+import type { DeclInfo, ModuleTreeItem } from './module.utils'
 import {
-  type DeclInfo,
   addModuleToLocalStorageIfMissing,
   collapseAllModulesInLocalStorage,
   declIcon,
   declSumTypeIsExported,
+  declTypeName,
   declUrlFromInfo,
   getHideUnexportedFromLocalStorage,
   hasHideUnexportedInLocalStorage,
@@ -34,7 +34,8 @@ const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; is
     }
   }, [isSelected])
 
-  const Icon = useMemo(() => declIcon(decl.declType), [decl.declType])
+  const Icon = useMemo(() => declIcon(decl.declType, decl.value), [decl])
+  const declType = useMemo(() => declTypeName(decl.declType, decl.value), [decl])
   return (
     <li className='my-1'>
       <Link id={`decl-${decl.value.name}`} to={href}>
@@ -46,7 +47,9 @@ const DeclNode = ({ decl, href, isSelected }: { decl: DeclInfo; href: string; is
             'group flex items-center gap-x-2 pl-4 pr-2 text-sm font-light leading-6 w-full cursor-pointer scroll-mt-10',
           )}
         >
-          <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
+          <span title={declType}>
+            <Icon aria-hidden='true' className='size-4 shrink-0 ml-3' />
+          </span>
           {decl.value.name}
         </div>
       </Link>
@@ -79,7 +82,7 @@ const ModuleSection = ({
   const filteredDecls = useMemo(
     () =>
       module.decls
-        .filter((d) => !!selectedDeclTypes.find((o) => o.key === d.declType))
+        .filter((d) => !!selectedDeclTypes.find((o) => o.key === declTypeName(d.declType, d.value)))
         .filter((d) => !hideUnexported || (isSelected && declName === d.value.name) || declSumTypeIsExported(d.value)),
     [module.decls, selectedDeclTypes, hideUnexported, isSelected, declName],
   )
@@ -95,7 +98,9 @@ const ModuleSection = ({
         )}
         onClick={() => toggleExpansion(module.name)}
       >
-        <PackageIcon aria-hidden='true' className='size-4 my-1 ml-3 shrink-0' />
+        <span title='module'>
+          <PackageIcon aria-hidden='true' className='size-4 my-1 ml-3 shrink-0' />
+        </span>
         {module.name}
         <Link to={`/modules/${module.name}`} onClick={(e) => e.stopPropagation()}>
           <CircleArrowRight02Icon id={`module-${module.name}-view-icon`} className='size-4 shrink-0 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600' />

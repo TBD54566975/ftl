@@ -1,10 +1,11 @@
-import { CellsIcon, type HugeiconsProps } from 'hugeicons-react'
+import { type HugeiconsProps, PackageIcon } from 'hugeicons-react'
 import type { PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/ftl_pb'
-import { declIcon, declUrl } from '../modules/module.utils'
+import { declIcon, declTypeName, declUrl } from '../modules/module.utils'
 
 export interface PaletteItem {
   id: string
   icon: React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>
+  iconType: string
   title: string
   subtitle?: string
   url: string
@@ -16,7 +17,8 @@ export const paletteItems = (schema: PullSchemaResponse[]): PaletteItem[] => {
   for (const module of schema) {
     items.push({
       id: `${module.moduleName}-module`,
-      icon: CellsIcon,
+      icon: PackageIcon,
+      iconType: 'module',
       title: module.moduleName,
       subtitle: module.moduleName,
       url: `/modules/${module.moduleName}`,
@@ -29,7 +31,8 @@ export const paletteItems = (schema: PullSchemaResponse[]): PaletteItem[] => {
 
       items.push({
         id: `${module.moduleName}-${decl.value.value.name}`,
-        icon: declIcon(decl.value.case),
+        icon: declIcon(decl.value.case, decl.value.value),
+        iconType: declTypeName(decl.value.case, decl.value.value),
         title: decl.value.value.name,
         subtitle: `${module.moduleName}.${decl.value.value.name}`,
         url: declUrl(module.moduleName, decl),
@@ -39,7 +42,8 @@ export const paletteItems = (schema: PullSchemaResponse[]): PaletteItem[] => {
         for (const field of decl.value.value.fields) {
           items.push({
             id: `${module.moduleName}-${decl.value.value.name}-${field.name}`,
-            icon: declIcon(decl.value.case),
+            icon: declIcon(decl.value.case, decl.value.value),
+            iconType: declTypeName(decl.value.case, decl.value.value),
             title: field.name,
             subtitle: `${module.moduleName}.${decl.value.value.name}.${field.name}`,
             url: declUrl(module.moduleName, decl),
