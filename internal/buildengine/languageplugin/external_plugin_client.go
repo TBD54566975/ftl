@@ -124,7 +124,10 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language,
 }
 
 func (p *externalPluginImpl) ping(ctx context.Context) error {
-	err := rpc.Wait(ctx, backoff.Backoff{}, launchTimeout, p.client)
+	retry := backoff.Backoff{}
+	heartbeatCtx, cancel := context.WithTimeout(ctx, launchTimeout)
+	defer cancel()
+	err := rpc.Wait(heartbeatCtx, retry, p.client)
 	if err != nil {
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to connect to runner: %w", err))
 	}

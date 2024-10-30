@@ -140,66 +140,31 @@ func (m mergedContext) Value(key any) any {
 	return m.values.Value(key)
 }
 
-type noopLogSync struct{}
-
-var _ log.Sink = noopLogSync{}
-
-func (noopLogSync) Log(entry log.Entry) error { return nil }
-
 // Wait for a client to become available.
 //
-// This will repeatedly call Ping() according to the retry policy until the client is
-// ready or the deadline is reached.
+// This will repeatedly call Ping() every 100ms until the service becomes
+// ready. TODO: This will probably need to be smarter at some point.
 //
 // If "ctx" is cancelled this will return ctx.Err()
-//
-// Usually rpc errors are logged, but this function will silence ping call errors, and
-// returns the last error if the deadline is reached.
-func Wait(ctx context.Context, retry backoff.Backoff, deadline time.Duration, client Pingable) error {
-	errChan := make(chan error)
-	ctx, cancel := context.WithTimeout(ctx, deadline)
-	defer cancel()
-
-	go func() {
-		logger := log.FromContext(ctx)
-		// create a context logger with a new one that does not log debug messages (which include each ping call failures)
-		silencedCtx := log.ContextWithLogger(ctx, log.New(log.Error, noopLogSync{}))
-
-		start := time.Now()
-		// keep track of the last ping error
-		var err error
-		for {
-			select {
-			case <-ctx.Done():
-				if err != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
-					errChan <- err
-				} else {
-					errChan <- ctx.Err()
-				}
-				return
-			default:
-			}
-			var resp *connect.Response[ftlv1.PingResponse]
-			resp, err = client.Ping(silencedCtx, connect.NewRequest(&ftlv1.PingRequest{}))
-			if err == nil {
-				if resp.Msg.NotReady == nil {
-					logger.Debugf("Ping succeeded in %.2fs", time.Since(start).Seconds())
-					errChan <- nil
-					return
-				}
-				err = fmt.Errorf("service is not ready: %s", *resp.Msg.NotReady)
-			}
-			delay := retry.Duration()
-			logger.Tracef("Ping failed waiting %s for client: %+v", delay, err)
-			time.Sleep(delay)
+func Wait(ctx context.Context, retry backoff.Backoff, client Pingable) error {
+	logger := log.FromContext(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
-	}()
-
-	err := <-errChan
-	if err != nil {
-		return err
+		resp, err := client.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+		if err == nil {
+			if resp.Msg.NotReady == nil {
+				return nil
+			}
+			err = fmt.Errorf("service is not ready: %s", *resp.Msg.NotReady)
+		}
+		delay := retry.Duration()
+		logger.Tracef("Ping failed waiting %s for client: %+v", delay, err)
+		time.Sleep(delay)
 	}
-	return nil
 }
 
 // RetryStreamingClientStream will repeatedly call handler with the stream
