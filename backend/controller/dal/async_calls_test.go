@@ -9,9 +9,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
-	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
-	"github.com/TBD54566975/ftl/backend/controller/scheduledtask"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -24,8 +22,7 @@ func TestNoCallToAcquire(t *testing.T) {
 	conn := sqltest.OpenForTesting(ctx, t)
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
-	scheduler := scheduledtask.New(ctx, model.ControllerKey{}, leases.NewFakeLeaser())
-	pubSub := pubsub.New(conn, encryption, scheduler, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 	dal := New(ctx, conn, encryption, pubSub, nil)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)

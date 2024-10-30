@@ -11,6 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestPubSub(t *testing.T) {
@@ -62,7 +63,7 @@ func TestConsumptionDelay(t *testing.T) {
 		in.Sleep(time.Second*2),
 
 		// Get all event created ats, and all async call created ats
-		// Compare each, make sure none are less than 0.2s of each other
+		// Compare each, make sure none are less than 0.1s of each other
 		in.QueryRow("ftl", `
 			WITH event_times AS (
 				SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
@@ -79,7 +80,7 @@ func TestConsumptionDelay(t *testing.T) {
 			SELECT COUNT(*)
 			FROM event_times
 			JOIN async_call_times ON event_times.row_num = async_call_times.row_num
-			WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) < 0.2;
+			WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) < 0.1;
 		`, 0),
 	)
 }
@@ -209,5 +210,46 @@ func TestLeaseFailure(t *testing.T) {
 				"Haystack does not contain needle",
 			),
 		),
+	)
+}
+
+// TestIdlePerformance tests that async calls are created quickly after an event is published
+func TestIdlePerformance(t *testing.T) {
+	in.Run(t,
+		in.WithLanguages("go"),
+		in.CopyModule("publisher"),
+		in.CopyModule("subscriber"),
+		in.Deploy("publisher"),
+		in.Deploy("subscriber"),
+
+		// publish a number of events with a delay between each
+		in.Repeat(5, func(t testing.TB, ic in.TestContext) {
+			in.Call("publisher", "publishOne", in.Obj{}, func(t testing.TB, resp in.Obj) {})(t, ic)
+			in.Sleep(time.Millisecond*1200)(t, ic)
+		}),
+
+		// compare publication date and consumption date of each event
+		in.ExpectError(func(t testing.TB, ic in.TestContext) {
+			badResult := in.GetRow(t, ic, "ftl", `
+				WITH event_times AS (
+					SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
+					FROM (
+					select * from topic_events order by created_at
+					) AS sub_event_times
+				),
+				async_call_times AS (
+					SELECT created_at, ROW_NUMBER() OVER (ORDER BY created_at) AS row_num
+					FROM (
+					select * from async_calls ac order by created_at
+					) AS sub_async_calls
+				)
+				SELECT ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at)))
+				FROM event_times
+				JOIN async_call_times ON event_times.row_num = async_call_times.row_num
+				WHERE ABS(EXTRACT(EPOCH FROM (event_times.created_at - async_call_times.created_at))) > 0.2
+				LIMIT 1;
+			`, 1)
+			assert.True(t, false, "async calls should be created quickly after an event is published, but it took %vs", badResult[0])
+		}, "sql: no rows in result set"), // no rows found means that all events were consumed quickly
 	)
 }
