@@ -27,6 +27,8 @@ errtrace:
 clean:
   rm -rf build
   rm -rf node_modules
+  rm -rf frontend/console/dist
+  rm -rf frontend/console/node_modules
   find . -name '*.zip' -exec rm {} \;
   mvn -f jvm-runtime/ftl-runtime clean
 
@@ -48,7 +50,15 @@ build-generate:
 
 # Build command-line tools
 build +tools: build-protos build-zips build-frontend
+  @just build-without-frontend $@
+
+# Build command-line tools
+# This does not have a dependency on the frontend
+# But it will be included if it was already built
+build-without-frontend +tools: build-protos build-zips
   #!/bin/bash
+  mkdir -p frontend/console/dist
+  touch frontend/console/dist/.phoney
   shopt -s extglob
 
   export CGO_ENABLED=0
@@ -139,7 +149,7 @@ pnpm-install:
   @for i in {1..3}; do mk frontend/**/node_modules : frontend/**/package.json -- "pnpm install --frozen-lockfile" && break || sleep 5; done
 
 # Regenerate protos
-build-protos: pnpm-install
+build-protos:
   @mk {{SCHEMA_OUT}} : internal/schema -- "just go2proto"
   @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "just build-protos-unconditionally"
 
