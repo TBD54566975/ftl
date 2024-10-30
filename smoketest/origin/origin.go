@@ -15,11 +15,10 @@ var nonce = ftl.Config[string]("nonce")
 var AgentBroadcast = ftl.Topic[Agent]("agentBroadcast")
 
 type Agent struct {
-	ID            int                   `json:"id"`
-	Alias         string                `json:"alias"`
-	LicenseToKill bool                  `json:"license_to_kill"`
-	HiredAt       time.Time             `json:"hired_at"`
-	BriefedAt     ftl.Option[time.Time] `json:"briefed_at"`
+	ID            int       `json:"id"`
+	Alias         string    `json:"alias"`
+	LicenseToKill bool      `json:"license_to_kill"`
+	HiredAt       time.Time `json:"hired_at"`
 }
 
 type PostAgentResponse struct {
@@ -28,7 +27,7 @@ type PostAgentResponse struct {
 
 type PostAgentErrorResponse string
 
-//ftl:ingress POST /http/agent
+//ftl:ingress POST /ingress/agent
 func PostAgent(ctx context.Context, req builtin.HttpRequest[Agent, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse], error) {
 	agent := Agent{
 		ID:            req.Body.ID,
@@ -36,7 +35,13 @@ func PostAgent(ctx context.Context, req builtin.HttpRequest[Agent, ftl.Unit, ftl
 		LicenseToKill: req.Body.LicenseToKill,
 		HiredAt:       req.Body.HiredAt,
 	}
-	AgentBroadcast.Publish(ctx, agent)
+	err := AgentBroadcast.Publish(ctx, agent)
+	if err != nil {
+		return builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse]{
+			Status: 500,
+			Body:   ftl.None[PostAgentResponse](),
+		}, err
+	}
 	return builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse]{
 		Status: 201,
 		Body:   ftl.Some(PostAgentResponse{ID: agent.ID}),

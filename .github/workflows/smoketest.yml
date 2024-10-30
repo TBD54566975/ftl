@@ -1,0 +1,92 @@
+on:
+  push:
+    branches:
+      - main
+name: SmokeTest
+concurrency:
+  group: ${{ github.ref }}-smoketest
+  cancel-in-progress: true
+jobs:
+  smoke-test-upgrade-path:
+    name: Smoke Test Upgrade Path
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository with full history
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Get last tagged release
+        run: |
+          latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
+          echo "Latest release: $latest_release"
+          echo "LATEST_VERSION=${latest_release#v}" >> "$GITHUB_ENV"
+      - name: Check out the last tagged release
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ env.LATEST_VERSION }}
+          fetch-depth: 1
+          fetch-tags: true
+      # The following grabs the current smoke test and deployment Justfile from the HEAD. This
+      # is to solve the chicken-and-egg. Once it's in the tagged release, skip this.
+      - name: Check out the current smoke test
+        uses: actions/checkout@v4
+        with:
+          clean: false
+          repository: TBD54566975/ftl.git
+          path: tmpsmoketest
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          sparse-checkout: |
+            smoketest
+            deployment
+          sparse-checkout-cone-mode: false
+      # When we remove the above step to fetch the current smoke tests and deployment Justfile
+      # into tmpsmoketest, remove the overwrite step as well.
+      - name: Replace the tagged release smoketest with the current smoketest
+        run: |
+          set -euo pipefail
+          echo "Replacing tagged release smoketest with current smoketest"
+          rm -r ./smoketest && mv ./tmpsmoketest/smoketest ./smoketest
+          echo "Replacing deployment Justfile with current Justfile"
+          cp ./tmpsmoketest/deployment/Justfile ./deployment/Justfile
+          echo "Removing tmpsmoketest"
+          rm -r ./tmpsmoketest
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
+        with:
+          cache: true
+      - name: Build Cache
+        uses: ./.github/actions/build-cache
+      - name: Download Go Modules
+        run: go mod download
+      - name: Set up a kube cluster with the tagged release dockerhub image
+        run: |
+            set -euo pipefail
+            echo "Deploying the tagged release to the cluster"
+            cd deployment && just deploy-version ${{ env.LATEST_VERSION }} && cd ..
+      # We skip this since it requires an integration test change to skip the full kube deploy.
+      # Re-enable this step when the tagged release has the integration test change.
+      # - name: Smoke test the tagged release images
+      #   run: |
+      #       set -euo pipefail
+      #       echo "Running smoke test on the tagged release images"
+      #       USE_DB_CONFIG=true SKIP_KUBE_FULL_DEPLOY=true go test -v -tags smoketest -run '^Test' ./smoketest
+      - name: Check out HEAD of the current branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 1
+      - name: Smoke test HEAD with a full deploy to test upgrade path
+        run: |
+            set -euo pipefail
+            echo "Running smoke test on the HEAD images"
+            USE_DB_CONFIG=true go test -v -timeout 15m -tags smoketest -run '^Test' ./smoketest
+      - name: Archive Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kube-report-smoke-test-upgrade
+          path: /tmp/ftl-kube-report/
