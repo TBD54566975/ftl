@@ -55,11 +55,9 @@ type Call struct {
 	Response         either.Either[*ftlv1.CallResponse, error]
 }
 
-func (c *Call) inEvent() {}
+func (c *Call) toEvent() (Event, error) { return callToCallEvent(c), nil } //nolint:unparam
 
-func (s *Service) insertCallEvent(ctx context.Context, querier sql.Querier, call *Call) error {
-	callEvent := callToCallEvent(call)
-
+func (s *Service) insertCallEvent(ctx context.Context, querier sql.Querier, callEvent *CallEvent) error {
 	var sourceModule, sourceVerb optional.Option[string]
 	if sr, ok := callEvent.SourceVerb.Get(); ok {
 		sourceModule, sourceVerb = optional.Some(sr.Module), optional.Some(sr.Name)
@@ -95,7 +93,7 @@ func (s *Service) insertCallEvent(ctx context.Context, querier sql.Querier, call
 	}
 
 	err = libdal.TranslatePGError(querier.InsertTimelineCallEvent(ctx, sql.InsertTimelineCallEventParams{
-		DeploymentKey:    call.DeploymentKey,
+		DeploymentKey:    callEvent.DeploymentKey,
 		RequestKey:       requestKey,
 		ParentRequestKey: parentRequestKey,
 		TimeStamp:        callEvent.Time,
