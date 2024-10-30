@@ -161,21 +161,32 @@ func Spawn[Client PingableClient](
 		return nil, nil, err
 	}
 
+	dialCtx, cancel := context.WithTimeout(ctx, opts.startTimeout)
+	defer cancel()
+
 	// Wait for the plugin to start.
 	client := rpc.Dial(makeClient, pluginEndpoint.String(), log.Trace)
 	pingErr := make(chan error)
 	go func() {
 		retry := backoff.Backoff{Min: pluginRetryDelay, Max: pluginRetryDelay}
-		err := rpc.Wait(ctx, retry, opts.startTimeout, client)
+		err := rpc.Wait(dialCtx, retry, client)
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			// Deliberately don't close pingErr because the select loop below
+			// will catch dialCtx closing and return a better error.
+			return
+		}
 		pingErr <- err
 		close(pingErr)
 	}()
 
 	select {
+	case <-dialCtx.Done():
+		return nil, nil, fmt.Errorf("plugin timed out while starting: %w", dialCtx.Err())
+
 	case <-cmdCtx.Done():
 		return nil, nil, fmt.Errorf("plugin process died: %w", cmdCtx.Err())
 
-	case err = <-pingErr:
+	case err := <-pingErr:
 		if err != nil {
 			return nil, nil, fmt.Errorf("plugin failed to respond to ping: %w", err)
 		}

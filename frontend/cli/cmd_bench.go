@@ -29,7 +29,9 @@ type benchCmd struct {
 }
 
 func (c *benchCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient) error {
-	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait, client); err != nil {
+	ctx, cancel := context.WithTimeout(ctx, c.Wait)
+	defer cancel()
+	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, client); err != nil {
 		return fmt.Errorf("FTL cluster did not become ready: %w", err)
 	}
 	logger := log.FromContext(ctx)

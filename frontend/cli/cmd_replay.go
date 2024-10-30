@@ -26,15 +26,14 @@ type replayCmd struct {
 }
 
 func (c *replayCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli ftlv1connect.ControllerServiceClient) error {
-	// Wait timeout is for both pings to complete, not each ping individually
-	startTime := time.Now()
-
-	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait, client); err != nil {
+	ctx, cancel := context.WithTimeout(ctx, c.Wait)
+	defer cancel()
+	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, client); err != nil {
 		return fmt.Errorf("failed to wait for client: %w", err)
 	}
 
 	consoleServiceClient := rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, cli.Endpoint.String(), log.Error)
-	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait-time.Since(startTime), consoleServiceClient); err != nil {
+	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, consoleServiceClient); err != nil {
 		return fmt.Errorf("failed to wait for console service client: %w", err)
 	}
 
