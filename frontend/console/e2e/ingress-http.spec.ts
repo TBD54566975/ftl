@@ -16,10 +16,8 @@ test('send get request with path and query params', async ({ page }) => {
   await navigateToDecl(page, 'http', 'get')
 
   // Check the initial value of the path input
-  const pathInput = page.locator('#request-path')
-  await expect(pathInput).toBeVisible()
-  const currentValue = await pathInput.inputValue()
-  expect(currentValue).toBe('http://localhost:8891/get/name')
+  const pathInput = page.locator('input#request-path')
+  expect(pathInput).toHaveValue('http://localhost:8891/get/name')
 
   // Update the path input to test path and query params
   await pathInput.fill('http://localhost:8891/get/wicket?age=10')
@@ -40,11 +38,7 @@ test('send get request with path and query params', async ({ page }) => {
 test('send post request with body', async ({ page }) => {
   await navigateToDecl(page, 'http', 'post')
 
-  // Check the initial value of the path input
-  const pathInput = page.locator('#request-path')
-  await expect(pathInput).toBeVisible()
-  const currentValue = await pathInput.inputValue()
-  expect(currentValue).toBe('http://localhost:8891/post')
+  await expect(page.locator('input#request-path')).toHaveValue('http://localhost:8891/post')
 
   const bodyEditor = page.locator('#body-editor .cm-content[contenteditable="true"]')
   await expect(bodyEditor).toBeVisible()
