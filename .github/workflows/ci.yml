@@ -18,6 +18,8 @@ jobs:
         uses: ./.github/actions/build-cache
       - name: Docker Compose
         run: docker compose up -d --wait
+      - name: Build Language Plugins
+        run: just build-language-plugins
       - name: Test
         run: |
           go-test-annotate
@@ -34,6 +36,8 @@ jobs:
         uses: ./.github/actions/build-cache
       - name: Docker Compose
         run: docker compose up -d --wait
+      - name: Build Language Plugins
+        run: just build-language-plugins
       - name: Test README
         run: just test-readme
   test-scripts:
@@ -265,6 +269,8 @@ jobs:
         uses: ./.github/actions/build-cache
       - name: Console pnpm install
         run: just pnpm-install
+      - name: Build Language Plugins
+        run: just build-language-plugins
       - name: Console e2e
         run: just e2e-frontend
   integration-shard:
@@ -307,6 +313,8 @@ jobs:
         run: just init-db
       - name: Download Go Modules
         run: go mod download
+      - name: Build Language Plugins
+        run: just build-language-plugins
       - name: Run ${{ matrix.test }}
         run: |
           set -euo pipefail
@@ -352,6 +360,8 @@ jobs:
         run: just init-db
       - name: Download Go Modules
         run: go mod download
+      - name: Build Language Plugins
+        run: just build-language-plugins
       - name: Run ${{ matrix.test }}
         run: |
           set -euo pipefail

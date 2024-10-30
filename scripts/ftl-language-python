@@ -2,6 +2,11 @@
 set -euo pipefail
 ftldir="$(dirname "$(readlink -f "$0")")/.."
 name="ftl-language-python"
-dest="${ftldir}/build/devel"
-mkdir -p "$dest"
-(cd "${ftldir}/python-runtime/cmd/ftl-language-python" && "${ftldir}/bin/go" build -ldflags="-s -w -buildid=" -o "$dest/${name}" ./) && exec "$dest/${name}" "$@"
+if [ -n "${CI-}" ]; then
+  dest="${ftldir}/build/release"
+else
+  dest="${ftldir}/build/devel"
+  mkdir -p "$dest"
+  (cd "${ftldir}/python-runtime/cmd/ftl-language-python" && "${ftldir}/bin/go" build -ldflags="-s -w -buildid=" -o "$dest/${name}" ./)
+fi
+exec "$dest/${name}" "$@"
