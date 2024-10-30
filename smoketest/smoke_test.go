@@ -47,14 +47,14 @@ func TestExemplarSmoke(t *testing.T) {
 		in.Deploy("relay"),
 		in.Deploy("pulse"),
 
-		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/http/agent", "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "james", "license_to_kill": true, "hired_at": "2023-10-23T23:20:45.00Z"}`, successAgentId)}, func(output string) {
+		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/ingress/agent", "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "james", "license_to_kill": true, "hired_at": "2023-10-23T23:20:45.00Z"}`, successAgentId)}, func(output string) {
 			fmt.Printf("output: %s\n", output)
 			err := json.Unmarshal([]byte(output), &postResult)
 			assert.NoError(t, err)
 			assert.Equal(t, successAgentId, postResult.ID)
 		}),
 
-		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/http/agent", "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "bill", "license_to_kill": false, "hired_at": "2024-08-12T21:10:37.00Z"}`, failedAgentId)}, func(output string) {
+		in.ExecWithOutput("curl", []string{"-s", "-X", "POST", "http://127.0.0.1:8891/ingress/agent", "-H", "Content-Type: application/json", "-d", fmt.Sprintf(`{"id": %v, "alias": "bill", "license_to_kill": false, "hired_at": "2024-08-12T21:10:37.00Z"}`, failedAgentId)}, func(output string) {
 			fmt.Printf("output: %s\n", output)
 			err := json.Unmarshal([]byte(output), &postResult)
 			assert.NoError(t, err)

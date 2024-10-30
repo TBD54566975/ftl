@@ -27,7 +27,7 @@ type PostAgentResponse struct {
 
 type PostAgentErrorResponse string
 
-//ftl:ingress POST /http/agent
+//ftl:ingress POST /ingress/agent
 func PostAgent(ctx context.Context, req builtin.HttpRequest[Agent, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse], error) {
 	agent := Agent{
 		ID:            req.Body.ID,
