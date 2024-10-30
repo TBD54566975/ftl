@@ -54,6 +54,7 @@ func newExternalPlugin(ctx context.Context, bind *url.URL, language, name string
 	if err != nil {
 		return nil, err
 	}
+
 	return newExternalPluginForTesting(ctx, impl), nil
 }
 

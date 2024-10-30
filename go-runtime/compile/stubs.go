@@ -84,7 +84,7 @@ func GenerateStubs(ctx context.Context, dir string, moduleSch *schema.Module, co
 	return nil
 }
 
-func SyncGeneratedStubReferences(ctx context.Context, config moduleconfig.ModuleConfig, stubsDir string, stubbedModules []string) error {
+func SyncGeneratedStubReferences(ctx context.Context, config moduleconfig.AbsModuleConfig, stubsDir string, stubbedModules []string) error {
 	sharedModulePaths := []string{}
 	for _, mod := range stubbedModules {
 		if mod == config.Module {
@@ -93,13 +93,13 @@ func SyncGeneratedStubReferences(ctx context.Context, config moduleconfig.Module
 		sharedModulePaths = append(sharedModulePaths, filepath.Join(stubsDir, mod))
 	}
 
-	_, goModVersion, err := updateGoModule(filepath.Join(config.Abs().Dir, "go.mod"))
+	_, goModVersion, err := updateGoModule(filepath.Join(config.Dir, "go.mod"))
 	if err != nil {
 		return err
 	}
 
 	funcs := maps.Clone(scaffoldFuncs)
-	if err := internal.ScaffoldZip(mainWorkTemplateFiles(), config.Abs().Dir, MainWorkContext{
+	if err := internal.ScaffoldZip(mainWorkTemplateFiles(), config.Dir, MainWorkContext{
 		GoVersion:          goModVersion,
 		SharedModulesPaths: sharedModulePaths,
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {

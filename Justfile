@@ -75,7 +75,18 @@ build-java *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}
 
 # Builds all language plugins
-build-language-plugins: build-python
+build-language-plugins: build-go build-python
+
+# Build ftl-language-go
+build-go: build-zips build-protos 
+  #!/bin/bash
+  shopt -s extglob
+
+  if [ "${FTL_DEBUG:-}" = "true" ]; then
+    go build -o "{{RELEASE}}/ftl-language-go" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/cmd/ftl-language-go"
+  else
+    mk "{{RELEASE}}/ftl-language-go" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-go" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/cmd/ftl-language-go"
+  fi
 
 # Build ftl-language-python
 build-python: build-zips build-protos
