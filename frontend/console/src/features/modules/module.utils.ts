@@ -1,12 +1,15 @@
 import {
   AnonymousIcon,
   BubbleChatIcon,
+  Clock01Icon,
   CodeIcon,
   DatabaseIcon,
   FunctionIcon,
   type HugeiconsProps,
+  InternetIcon,
   LeftToRightListNumberIcon,
   MessageIncoming02Icon,
+  MessageProgrammingIcon,
   Settings02Icon,
   SquareLock02Icon,
 } from 'hugeicons-react'
@@ -170,26 +173,71 @@ export const addModuleToLocalStorageIfMissing = (moduleName?: string) => {
 
 export const collapseAllModulesInLocalStorage = () => localStorage.setItem('tree_m', '')
 
-export const declIcon = (declCase?: string) => {
-  const declIcons: Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>> = {
-    config: Settings02Icon,
-    data: CodeIcon,
-    database: DatabaseIcon,
-    enum: LeftToRightListNumberIcon,
-    topic: BubbleChatIcon,
-    typealias: AnonymousIcon,
-    secret: SquareLock02Icon,
-    subscription: MessageIncoming02Icon,
-    verb: FunctionIcon,
+export const declTypeName = (declCase: string, decl: DeclSumType) => {
+  const normalizedDeclCase = declCase?.toLowerCase()
+  if (normalizedDeclCase === 'verb') {
+    const vt = verbTypeFromMetadata(decl as Verb)
+    if (vt) {
+      return vt
+    }
+  }
+  return normalizedDeclCase || ''
+}
+
+const declIcons: Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>> = {
+  config: Settings02Icon,
+  data: CodeIcon,
+  database: DatabaseIcon,
+  enum: LeftToRightListNumberIcon,
+  topic: BubbleChatIcon,
+  typealias: AnonymousIcon,
+  secret: SquareLock02Icon,
+  subscription: MessageIncoming02Icon,
+  verb: FunctionIcon,
+}
+
+export const declIcon = (declCase: string, decl: DeclSumType) => {
+  const normalizedDeclCase = declCase?.toLowerCase()
+
+  // Verbs have subtypes as defined by metadata
+  const maybeVerbIcon = verbIcon(normalizedDeclCase, decl)
+  if (maybeVerbIcon) {
+    return maybeVerbIcon
   }
 
-  const normalizedDeclCase = declCase?.toLowerCase()
   if (!normalizedDeclCase || !declIcons[normalizedDeclCase]) {
     console.warn(`No icon for decl case: ${declCase}`)
     return CodeIcon
   }
 
   return declIcons[normalizedDeclCase]
+}
+
+const verbIcons: Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>> = {
+  cronjob: Clock01Icon,
+  ingress: InternetIcon,
+  subscriber: MessageProgrammingIcon,
+}
+
+const verbIcon = (declCase: string, decl: DeclSumType) => {
+  if (declCase !== 'verb') {
+    return
+  }
+  const vt = verbTypeFromMetadata(decl as Verb)
+  if (!vt || !verbIcons[vt]) {
+    return declIcons.verb
+  }
+
+  return verbIcons[vt]
+}
+
+// Most metadata is not mutually exclusive, but schema validation guarantees
+// that the ones in this list are.
+const verbTypesFromMetadata = ['cronjob', 'ingress', 'subscriber']
+
+export const verbTypeFromMetadata = (verb: Verb) => {
+  const found = verb.metadata.find((m) => m.value.case && verbTypesFromMetadata.includes(m.value.case.toLowerCase()))
+  return found?.value.case?.toLowerCase()
 }
 
 export const declUrl = (moduleName: string, decl: Decl) => `/modules/${moduleName}/${decl.value.case?.toLowerCase()}/${decl.value.value?.name}`
