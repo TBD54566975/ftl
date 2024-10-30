@@ -99,7 +99,7 @@ export const Multiselect = ({
               <GroupIcon group={group} allOpts={allOpts} selectedOpts={selectedOpts} />
               {group}
             </div>,
-            ...allOpts.filter((o) => o.group === group).map((o) => <Option key={o.key} o={o} p='7' />),
+            ...allOpts.filter((o) => o.group === group).map((o) => <Option key={o.key} o={o} p='6' />),
           ])}
 
           <div className='w-full text-center text-xs mt-2'>
