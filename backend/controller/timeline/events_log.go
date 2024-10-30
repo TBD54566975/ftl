@@ -24,7 +24,7 @@ type Log struct {
 	Error         optional.Option[string]
 }
 
-func (l *Log) inEvent() {}
+func (l *Log) toEvent() (Event, error) { return &LogEvent{Log: *l}, nil } //nolint:unparam
 
 type LogEvent struct {
 	ID int64
@@ -40,7 +40,7 @@ type eventLogJSON struct {
 	Error      optional.Option[string] `json:"error,omitempty"`
 }
 
-func (s *Service) insertLogEvent(ctx context.Context, querier sql.Querier, log *Log) error {
+func (s *Service) insertLogEvent(ctx context.Context, querier sql.Querier, log *LogEvent) error {
 	var requestKey optional.Option[string]
 	if name, ok := log.RequestKey.Get(); ok {
 		requestKey = optional.Some(name.String())

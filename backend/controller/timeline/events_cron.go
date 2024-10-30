@@ -34,7 +34,12 @@ type CronScheduled struct {
 	Error       optional.Option[string]
 }
 
-func (*CronScheduled) inEvent() {}
+func (e *CronScheduled) toEvent() (Event, error) { //nolint:unparam
+	return &CronScheduledEvent{
+		CronScheduled: *e,
+		Duration:      time.Since(e.Time),
+	}, nil
+}
 
 type eventCronScheduledJSON struct {
 	DurationMS  int64                   `json:"duration_ms"`
@@ -43,9 +48,9 @@ type eventCronScheduledJSON struct {
 	Error       optional.Option[string] `json:"error,omitempty"`
 }
 
-func (s *Service) insertCronScheduledEvent(ctx context.Context, querier sql.Querier, event *CronScheduled) error {
+func (s *Service) insertCronScheduledEvent(ctx context.Context, querier sql.Querier, event *CronScheduledEvent) error {
 	cronJSON := eventCronScheduledJSON{
-		DurationMS:  time.Since(event.Time).Milliseconds(),
+		DurationMS:  event.Duration.Milliseconds(),
 		ScheduledAt: event.ScheduledAt,
 		Schedule:    event.Schedule,
 		Error:       event.Error,

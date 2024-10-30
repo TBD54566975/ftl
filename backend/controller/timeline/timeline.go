@@ -41,21 +41,21 @@ type Event interface {
 
 // InEvent is a marker interface for events that are inserted into the timeline.
 type InEvent interface {
-	inEvent()
+	toEvent() (Event, error)
 }
 
 type Service struct {
 	ctx              context.Context
 	conn             *stdsql.DB
 	encryption       *encryption.Service
-	events           chan InEvent
+	events           chan Event
 	lastDroppedError atomic.Value[time.Time]
 	lastFailedError  atomic.Value[time.Time]
 }
 
 func New(ctx context.Context, conn *stdsql.DB, encryption *encryption.Service) *Service {
 	var s *Service
-	events := make(chan InEvent, 1000)
+	events := make(chan Event, 1000)
 	s = &Service{
 		ctx:        ctx,
 		conn:       conn,
@@ -72,7 +72,12 @@ func (s *Service) DeleteOldEvents(ctx context.Context, eventType EventType, age 
 }
 
 // EnqueueEvent asynchronously enqueues an event for insertion into the timeline.
-func (s *Service) EnqueueEvent(ctx context.Context, event InEvent) {
+func (s *Service) EnqueueEvent(ctx context.Context, inEvent InEvent) {
+	event, err := inEvent.toEvent()
+	if err != nil {
+		log.FromContext(ctx).Warnf("Failed to convert event to event: %v", err)
+		return
+	}
 	select {
 	case s.events <- event:
 	default:
@@ -85,7 +90,7 @@ func (s *Service) EnqueueEvent(ctx context.Context, event InEvent) {
 
 func (s *Service) processEvents() {
 	lastFlush := time.Now()
-	buffer := make([]InEvent, 0, maxBatchSize)
+	buffer := make([]Event, 0, maxBatchSize)
 	for {
 		select {
 		case event := <-s.events:
@@ -108,7 +113,7 @@ func (s *Service) processEvents() {
 }
 
 // Flush all events in the buffer to the database in a single transaction.
-func (s *Service) flushEvents(events []InEvent) {
+func (s *Service) flushEvents(events []Event) {
 	logger := log.FromContext(s.ctx).Scope("timeline")
 	tx, err := s.conn.Begin()
 	if err != nil {
@@ -121,14 +126,16 @@ func (s *Service) flushEvents(events []InEvent) {
 	for _, event := range events {
 		var err error
 		switch e := event.(type) {
-		case *Call:
+		case *CallEvent:
 			err = s.insertCallEvent(s.ctx, querier, e)
-		case *Log:
+		case *LogEvent:
 			err = s.insertLogEvent(s.ctx, querier, e)
-		case *Ingress:
+		case *IngressEvent:
 			err = s.insertHTTPIngress(s.ctx, querier, e)
-		case *CronScheduled:
+		case *CronScheduledEvent:
 			err = s.insertCronScheduledEvent(s.ctx, querier, e)
+		case *DeploymentCreatedEvent, *DeploymentUpdatedEvent:
+		// TODO: Implement
 		default:
 			panic(fmt.Sprintf("unexpected event type: %T", e))
 		}
