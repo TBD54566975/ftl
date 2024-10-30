@@ -1,6 +1,7 @@
 on:
-  pull_request:
-  merge_group:
+  push:
+    branches:
+      - main
 name: SmokeTest
 concurrency:
   group: ${{ github.ref }}-smoketest
@@ -8,7 +9,7 @@ concurrency:
 jobs:
   smoke-test-upgrade-path:
     name: Smoke Test Upgrade Path
-    # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
+    if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repository with full history
