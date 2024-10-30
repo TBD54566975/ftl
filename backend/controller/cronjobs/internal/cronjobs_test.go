@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"strconv"
 	"testing"
 	"time"
@@ -48,7 +49,9 @@ func TestNewCronJobsForModule(t *testing.T) {
 	cjs := cronjobs.NewForTesting(ctx, key, "test.com", encryption, timelineSrv, *dal, clk)
 
 	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
-	parentDAL := parentdal.New(ctx, conn, encryption, pubSub, cjs)
+	parentDAL := parentdal.New(ctx, conn, encryption, pubSub, cjs, func(c libdal.Connection) artefacts.Service {
+		return nil
+	})
 	moduleName := "initial"
 	jobsToCreate := newCronJobs(t, moduleName, "* * * * * *", clk, 2) // every minute
 	decls := []schema.Decl{}

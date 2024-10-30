@@ -74,7 +74,7 @@ func (d *releaseExistsCmd) Run(release *releaseCmd) error {
 	return nil
 }
 
-func createContainerService(release *releaseCmd) (*artefacts.ContainerService, error) {
+func createContainerService(release *releaseCmd) (artefacts.Service, error) {
 	conn, err := internalobservability.OpenDBAndInstrument(release.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open DB connection: %w", err)
@@ -82,7 +82,7 @@ func createContainerService(release *releaseCmd) (*artefacts.ContainerService, e
 	conn.SetMaxIdleConns(release.MaxIdleDBConnections)
 	conn.SetMaxOpenConns(release.MaxOpenDBConnections)
 
-	return artefacts.NewContainerService(artefacts.ContainerConfig{
+	return artefacts.New(artefacts.ContainerConfig{
 		Registry:       release.Registry,
 		AllowPlainHTTP: true,
 	}, conn), nil

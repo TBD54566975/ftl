@@ -52,14 +52,14 @@ type Reservation interface {
 	Rollback(ctx context.Context) error
 }
 
-func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, pubsub *pubsub.Service, cron *cronjobs.Service) *DAL {
+func New(_ context.Context, conn libdal.Connection, encryption *encryption.Service, pubsub *pubsub.Service, cron *cronjobs.Service, registryFactory func(c libdal.Connection) aregistry.Service) *DAL {
 	var d *DAL
 	db := dalsql.New(conn)
 	d = &DAL{
 		leaser:     dbleaser.NewDatabaseLeaser(conn),
 		db:         db,
 		encryption: encryption,
-		registry:   aregistry.New(conn),
+		registry:   registryFactory(conn),
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
@@ -67,7 +67,7 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 				leaser:            dbleaser.NewDatabaseLeaser(h.Connection),
 				pubsub:            pubsub,
 				encryption:        d.encryption,
-				registry:          aregistry.New(h.Connection),
+				registry:          registryFactory(h.Connection),
 				DeploymentChanges: d.DeploymentChanges,
 				cronjobs:          cron,
 			}
@@ -85,7 +85,7 @@ type DAL struct {
 	leaser     *dbleaser.DatabaseLeaser
 	pubsub     *pubsub.Service
 	encryption *encryption.Service
-	registry   *aregistry.Service
+	registry   aregistry.Service
 	cronjobs   *cronjobs.Service
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.

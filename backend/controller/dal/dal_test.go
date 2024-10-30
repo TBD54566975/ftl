@@ -37,7 +37,9 @@ func TestDAL(t *testing.T) {
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	key := model.NewControllerKey("localhost", "8081")
 	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
-	dal := New(ctx, conn, encryption, pubSub, cjs)
+	dal := New(ctx, conn, encryption, pubSub, cjs, func(c libdal.Connection) artefacts.Service {
+		return nil
+	})
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
@@ -200,7 +202,9 @@ func TestCreateArtefactConflict(t *testing.T) {
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	key := model.NewControllerKey("localhost", "8081")
 	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
-	dal := New(ctx, conn, encryption, pubSub, cjs)
+	dal := New(ctx, conn, encryption, pubSub, cjs, func(c libdal.Connection) artefacts.Service {
+		return nil
+	})
 
 	idch := make(chan sha256.SHA256, 2)
 

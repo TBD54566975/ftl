@@ -109,6 +109,7 @@ type Config struct {
 	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
 	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
 	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
+	ContainerConfig              artefacts.ContainerConfig
 	CommonConfig
 }
 
@@ -225,7 +226,7 @@ type Service struct {
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
 	pubSub                  *pubsub.Service
-	registry                *artefacts.Service
+	registry                artefacts.Service
 	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
@@ -279,13 +280,15 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc))
 	svc.pubSub = pubSub
 
-	svc.registry = artefacts.New(conn)
+	svc.registry = artefacts.New(config.ContainerConfig, conn)
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, timelineSvc, conn)
 	svc.cronJobs = cronSvc
-	svc.dal = dal.New(ctx, conn, encryption, pubSub, cronSvc)
+	svc.dal = dal.New(ctx, conn, encryption, pubSub, cronSvc, func(c libdal.Connection) artefacts.Service {
+		return artefacts.New(config.ContainerConfig, conn)
+	})
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 
