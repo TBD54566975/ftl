@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	goslices "slices"
 	"sort"
 	"strings"
 	"sync"
@@ -59,7 +60,6 @@ import (
 	frontend "github.com/TBD54566975/ftl/frontend/console"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
-	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/cors"
 	ftlhttp "github.com/TBD54566975/ftl/internal/http"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -1050,8 +1050,18 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 	for _, d := range module.Decls {
 		if db, ok := d.(*schema.Database); ok && db.Runtime != nil {
 			key := dsnSecretKey(module.Name, db.Name)
+
 			// TODO: Use a cluster specific default provider
-			if err := sm.Set(ctx, providers.InlineProviderKey, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
+			allKeys := sm.ProviderKeys()
+			var providerKey configuration.ProviderKey
+			for _, key := range []configuration.ProviderKey{"inline", "asm"} {
+				if goslices.Contains(allKeys, key) {
+					providerKey = key
+					break
+				}
+			}
+
+			if err := sm.Set(ctx, providerKey, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
 				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
 			}
 			logger.Infof("Database declaration: %s -> %s", db.Name, db.Runtime.DSN)
