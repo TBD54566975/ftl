@@ -236,7 +236,7 @@ const verbIcon = (declCase: string, decl: DeclSumType) => {
 const verbTypesFromMetadata = ['cronjob', 'ingress', 'subscriber']
 
 export const verbTypeFromMetadata = (verb: Verb) => {
-  const found = verb.metadata.find((m) => m.value.case && verbTypesFromMetadata.includes(m.value.case.toLowerCase()))
+  const found = verb.metadata?.find((m) => m.value.case && verbTypesFromMetadata.includes(m.value.case.toLowerCase()))
   return found?.value.case?.toLowerCase()
 }
 
