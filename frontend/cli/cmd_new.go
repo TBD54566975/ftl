@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"go/token"
-	"net/url"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -15,7 +14,6 @@ import (
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/internal"
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -57,16 +55,9 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 		return optionalPlugin, fmt.Errorf("could not find new command")
 	}
 
-	// Too early to use any kong args here so we can't use cli.Endpoint.
-	// Hardcoding the default bind URL for now.
-	pluginBind, err := url.Parse("http://127.0.0.1:8893")
+	bindAllocator, err := bindAllocatorWithoutController()
 	if err != nil {
-		return optionalPlugin, fmt.Errorf("could not parse default bind URL: %w", err)
-	}
-	var bindAllocator *bind.BindAllocator
-	bindAllocator, err = bind.NewBindAllocator(pluginBind, 0)
-	if err != nil {
-		return optionalPlugin, fmt.Errorf("could not create bind allocator: %w", err)
+		return optionalPlugin, err
 	}
 
 	plugin, err := languageplugin.New(ctx, bindAllocator, language, "new")
