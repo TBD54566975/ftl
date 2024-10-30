@@ -247,7 +247,7 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := timeline2.New(ctx, conn, encryption)
-	registry := artefacts.New(conn)
+	registry := artefacts.New(artefacts.ContainerConfig{}, conn)
 	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, nil, func(c libdal.Connection) artefacts.Service {
 		return nil
