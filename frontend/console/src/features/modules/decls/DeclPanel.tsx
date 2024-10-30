@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useStreamModules } from '../../../api/modules/use-stream-modules'
 import type { Config, Data, Database, Enum, Secret, Subscription, Topic, TypeAlias } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { VerbPage } from '../../verbs/VerbPage'
-import { declFromModules } from '../module.utils'
+import { declFromModules, declTypeName } from '../module.utils'
 import { declSchemaFromModules } from '../schema/schema.utils'
 import { ConfigPanel } from './ConfigPanel'
 import { DataPanel } from './DataPanel'
@@ -13,6 +13,27 @@ import { SecretPanel } from './SecretPanel'
 import { SubscriptionPanel } from './SubscriptionPanel'
 import { TopicPanel } from './TopicPanel'
 import { TypeAliasPanel } from './TypeAliasPanel'
+
+export const VerbPanel = ({ value, schema, moduleName, declName }: { value: Data; schema: string; moduleName: string; declName: string }) => {
+  if (!value || !schema) {
+    return
+  }
+  const decl = value.verb
+  if (!decl) {
+    return
+  }
+  const declType = declTypeName('verb', decl)
+  switch (declType) {
+    case 'cronjob':
+      return <div>cronjob</div>
+    case 'ingress':
+      return <div>ingress</div>
+    case 'subscriber':
+      return <div>subscriber</div>
+  }
+  const nameProps = { moduleName, declName }
+  return <VerbPage {...nameProps} />
+}
 
 export const DeclPanel = () => {
   const { moduleName, declCase, declName } = useParams()
@@ -32,7 +53,6 @@ export const DeclPanel = () => {
     return
   }
 
-  const nameProps = { moduleName, declName }
   const commonProps = { moduleName, declName, schema: declSchema.schema }
   switch (declCase) {
     case 'config':
@@ -52,7 +72,7 @@ export const DeclPanel = () => {
     case 'typealias':
       return <TypeAliasPanel {...commonProps} value={decl as TypeAlias} />
     case 'verb':
-      return <VerbPage {...nameProps} />
+      return <VerbPanel {...commonProps} value={decl as Verb} />
   }
   return (
     <div className='flex-1 py-2 px-4'>
