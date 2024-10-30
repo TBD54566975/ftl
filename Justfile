@@ -39,7 +39,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java build-python
+build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java build-language-plugins
 
 # Run "go generate" on all packages
 build-generate:
@@ -73,6 +73,9 @@ build-backend-tests:
 
 build-java *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}
+
+# Builds all language plugins
+build-language-plugins: build-python
 
 # Build ftl-language-python
 build-python: build-zips build-protos
