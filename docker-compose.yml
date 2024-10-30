@@ -36,7 +36,7 @@ services:
   localstack:
     image: localstack/localstack
     profiles:
-      - integration
+      - infra
     ports:
       - 4566:4566
     environment:
