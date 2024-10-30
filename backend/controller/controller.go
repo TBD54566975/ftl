@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	goslices "slices"
 	"sort"
 	"strings"
 	"sync"
@@ -71,9 +72,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/sha256"
 	"github.com/TBD54566975/ftl/internal/slices"
-
-	goslices "slices"
-
 	status "github.com/TBD54566975/ftl/internal/terminal"
 )
 
