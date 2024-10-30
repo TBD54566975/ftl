@@ -21,5 +21,6 @@ func TestBindLocalWithRemoteEndpoint(t *testing.T) {
 
 	assert.True(t, strings.HasPrefix(nextURL.String(), "http://127.0.0.1:"), nextURL.String())
 
-	bindAllocatorWithoutController()
+	_, err = bindAllocatorWithoutController()
+	assert.NoError(t, err)
 }
