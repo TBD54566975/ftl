@@ -24,9 +24,19 @@ type AsyncExecuteEvent struct {
 func (e *AsyncExecuteEvent) GetID() int64 { return e.ID }
 func (e *AsyncExecuteEvent) event()       {}
 
+type AsyncExecuteEventType string
+
+const (
+	AsyncExecuteEventTypeUnkown AsyncExecuteEventType = "unknown"
+	AsyncExecuteEventTypeCron   AsyncExecuteEventType = "cron"
+	AsyncExecuteEventTypeFSM    AsyncExecuteEventType = "fsm"
+	AsyncExecuteEventTypePubSub AsyncExecuteEventType = "pubsub"
+)
+
 type AsyncExecute struct {
 	DeploymentKey model.DeploymentKey
 	RequestKey    optional.Option[string]
+	EventType     AsyncExecuteEventType
 	Verb          schema.Ref
 	Time          time.Time
 	Error         optional.Option[string]
@@ -41,12 +51,14 @@ func (e *AsyncExecute) toEvent() (Event, error) { //nolint:unparam
 
 type eventAsyncExecuteJSON struct {
 	DurationMS int64                   `json:"duration_ms"`
+	EventType  AsyncExecuteEventType   `json:"event_type"`
 	Error      optional.Option[string] `json:"error,omitempty"`
 }
 
 func (s *Service) insertAsyncExecuteEvent(ctx context.Context, querier sql.Querier, event *AsyncExecuteEvent) error {
 	asyncJSON := eventAsyncExecuteJSON{
 		DurationMS: event.Duration.Milliseconds(),
+		EventType:  event.EventType,
 		Error:      event.Error,
 	}
 

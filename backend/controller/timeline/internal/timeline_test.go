@@ -167,6 +167,7 @@ func TestTimeline(t *testing.T) {
 		AsyncExecute: timeline2.AsyncExecute{
 			DeploymentKey: deploymentKey,
 			RequestKey:    optional.Some(requestKey.String()),
+			EventType:     timeline2.AsyncExecuteEventTypeCron,
 			Verb:          schema.Ref{Module: "time", Name: "time"},
 			Time:          time.Now().Round(time.Millisecond),
 			Error:         optional.None[string](),
@@ -177,6 +178,7 @@ func TestTimeline(t *testing.T) {
 		timeline.EnqueueEvent(ctx, &timeline2.AsyncExecute{
 			DeploymentKey: asyncEvent.DeploymentKey,
 			RequestKey:    asyncEvent.RequestKey,
+			EventType:     asyncEvent.EventType,
 			Verb:          asyncEvent.Verb,
 			Time:          asyncEvent.Time,
 			Error:         asyncEvent.Error,

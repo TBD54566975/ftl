@@ -1,3 +1,4 @@
+import { AsyncExecuteEventType } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 
 const eventBackgroundColorMap: Record<string, string> = {
@@ -27,6 +28,19 @@ const eventTextColorMap: Record<string, string> = {
   cronScheduled: 'text-blue-500',
   asyncExecute: 'text-indigo-500',
   '': 'text-gray-500',
+}
+
+export const asyncEventTypeString = (type: AsyncExecuteEventType) => {
+  switch (type) {
+    case AsyncExecuteEventType.CRON:
+      return 'cron'
+    case AsyncExecuteEventType.FSM:
+      return 'FSM'
+    case AsyncExecuteEventType.PUBSUB:
+      return 'PubSub'
+    default:
+      return 'unknown'
+  }
 }
 
 export const eventTextColor = (event: Event) => {

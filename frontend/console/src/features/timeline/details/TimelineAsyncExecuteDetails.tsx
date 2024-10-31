@@ -4,29 +4,33 @@ import type { AsyncExecuteEvent, Event } from '../../../protos/xyz/block/ftl/v1/
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
 import { refString } from '../../verbs/verb.utils'
+import { asyncEventTypeString } from '../timeline.utils'
 
 export const TimelineAsyncExecuteDetails = ({ event }: { event: Event }) => {
-  const cron = event.entry.value as AsyncExecuteEvent
+  const asyncEvent = event.entry.value as AsyncExecuteEvent
 
   return (
     <>
       <div className='p-4'>
-        {cron.error && (
+        {asyncEvent.error && (
           <>
             <h3>Error</h3>
-            <CodeBlock code={cron.error} language='text' />
+            <CodeBlock code={asyncEvent.error} language='text' />
           </>
         )}
 
-        <DeploymentCard deploymentKey={cron.deploymentKey} />
+        <DeploymentCard deploymentKey={asyncEvent.deploymentKey} />
 
         <ul className='pt-4 space-y-2'>
           <li>
-            <AttributeBadge name='duration' value={formatDuration(cron.duration)} />
+            <AttributeBadge name='duration' value={formatDuration(asyncEvent.duration)} />
           </li>
-          {cron.verbRef && (
+          <li>
+            <AttributeBadge name='type' value={asyncEventTypeString(asyncEvent.asyncEventType)} />
+          </li>
+          {asyncEvent.verbRef && (
             <li>
-              <AttributeBadge name='destination' value={refString(cron.verbRef)} />
+              <AttributeBadge name='destination' value={refString(asyncEvent.verbRef)} />
             </li>
           )}
         </ul>

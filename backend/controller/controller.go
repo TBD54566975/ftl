@@ -1188,6 +1188,17 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		module := call.Verb.Module
 		route, ok := sstate.routes[module]
 		if ok {
+			eventType := timeline.AsyncExecuteEventTypeUnkown
+			switch call.Origin.(type) {
+			case async.AsyncOriginCron:
+				eventType = timeline.AsyncExecuteEventTypeCron
+			case async.AsyncOriginPubSub:
+				eventType = timeline.AsyncExecuteEventTypePubSub
+			case *async.AsyncOriginPubSub:
+				eventType = timeline.AsyncExecuteEventTypePubSub
+			default:
+				break
+			}
 			errStr := optional.None[string]()
 			if e, ok := err.Get(); ok {
 				errStr = optional.Some(e.Error())
@@ -1195,6 +1206,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 			s.timeline.EnqueueEvent(ctx, &timeline.AsyncExecute{
 				DeploymentKey: route.Deployment,
 				RequestKey:    call.ParentRequestKey,
+				EventType:     eventType,
 				Verb:          *call.Verb.ToRef(),
 				Time:          now,
 				Error:         errStr,

@@ -404,6 +404,7 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				AsyncExecute: AsyncExecute{
 					DeploymentKey: row.DeploymentKey,
 					RequestKey:    requestKey,
+					EventType:     jsonPayload.EventType,
 					Verb:          schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
 					Time:          row.TimeStamp,
 					Error:         jsonPayload.Error,

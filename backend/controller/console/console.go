@@ -798,13 +798,27 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 		if rstr, ok := event.RequestKey.Get(); ok {
 			requestKey = &rstr
 		}
+
+		var asyncEventType pbconsole.AsyncExecuteEventType
+		switch event.EventType {
+		case timeline.AsyncExecuteEventTypeUnkown:
+			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN
+		case timeline.AsyncExecuteEventTypeCron:
+			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_CRON
+		case timeline.AsyncExecuteEventTypeFSM:
+			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_FSM
+		case timeline.AsyncExecuteEventTypePubSub:
+			asyncEventType = pbconsole.AsyncExecuteEventType_ASYNC_EXECUTE_EVENT_TYPE_PUBSUB
+		}
+
 		return &pbconsole.Event{
 			TimeStamp: timestamppb.New(event.Time),
 			Id:        event.ID,
 			Entry: &pbconsole.Event_AsyncExecute{
 				AsyncExecute: &pbconsole.AsyncExecuteEvent{
-					DeploymentKey: event.DeploymentKey.String(),
-					RequestKey:    requestKey,
+					DeploymentKey:  event.DeploymentKey.String(),
+					RequestKey:     requestKey,
+					AsyncEventType: asyncEventType,
 					VerbRef: &schemapb.Ref{
 						Module: event.Verb.Module,
 						Name:   event.Verb.Name,
