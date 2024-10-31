@@ -13,21 +13,9 @@ import (
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-type VerbStatus int
-
-const (
-	VerbStatusOffline VerbStatus = iota
-	VerbStatusStarting
-	VerbStatusOnline
-	VerbStatusStopping
-	VerbStatusStopped
-	VerbStatusError
-)
-
 type VerbRuntime struct {
-	CreateTime time.Time  `protobuf:"1"`
-	StartTime  time.Time  `protobuf:"2"`
-	Status     VerbStatus `protobuf:"3"`
+	CreateTime time.Time `protobuf:"1"`
+	StartTime  time.Time `protobuf:"2"`
 }
 
 //protobuf:2
@@ -158,7 +146,6 @@ func (v *Verb) ToProto() proto.Message {
 		runtime = &schemapb.VerbRuntime{
 			CreateTime: timestamppb.New(v.Runtime.CreateTime),
 			StartTime:  timestamppb.New(v.Runtime.StartTime),
-			Status:     schemapb.VerbStatus(v.Runtime.Status),
 		}
 	}
 	return &schemapb.Verb{
@@ -179,7 +166,6 @@ func VerbFromProto(s *schemapb.Verb) *Verb {
 		runtime = &VerbRuntime{
 			CreateTime: s.Runtime.CreateTime.AsTime(),
 			StartTime:  s.Runtime.StartTime.AsTime(),
-			Status:     VerbStatus(s.Runtime.Status),
 		}
 	}
 	return &Verb{

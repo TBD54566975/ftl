@@ -23,50 +23,6 @@ proto3.util.setEnumType(AliasKind, "xyz.block.ftl.v1.schema.AliasKind", [
 ]);
 
 /**
- * @generated from enum xyz.block.ftl.v1.schema.VerbStatus
- */
-export enum VerbStatus {
-  /**
-   * @generated from enum value: VERB_STATUS_OFFLINE = 0;
-   */
-  OFFLINE = 0,
-
-  /**
-   * @generated from enum value: VERB_STATUS_STARTING = 1;
-   */
-  STARTING = 1,
-
-  /**
-   * @generated from enum value: VERB_STATUS_ONLINE = 2;
-   */
-  ONLINE = 2,
-
-  /**
-   * @generated from enum value: VERB_STATUS_STOPPING = 3;
-   */
-  STOPPING = 3,
-
-  /**
-   * @generated from enum value: VERB_STATUS_STOPPED = 4;
-   */
-  STOPPED = 4,
-
-  /**
-   * @generated from enum value: VERB_STATUS_ERROR = 5;
-   */
-  ERROR = 5,
-}
-// Retrieve enum metadata with: proto3.getEnumType(VerbStatus)
-proto3.util.setEnumType(VerbStatus, "xyz.block.ftl.v1.schema.VerbStatus", [
-  { no: 0, name: "VERB_STATUS_OFFLINE" },
-  { no: 1, name: "VERB_STATUS_STARTING" },
-  { no: 2, name: "VERB_STATUS_ONLINE" },
-  { no: 3, name: "VERB_STATUS_STOPPING" },
-  { no: 4, name: "VERB_STATUS_STOPPED" },
-  { no: 5, name: "VERB_STATUS_ERROR" },
-]);
-
-/**
  * @generated from message xyz.block.ftl.v1.schema.Any
  */
 export class Any extends Message<Any> {
@@ -2730,11 +2686,6 @@ export class VerbRuntime extends Message<VerbRuntime> {
    */
   startTime?: Timestamp;
 
-  /**
-   * @generated from field: xyz.block.ftl.v1.schema.VerbStatus status = 3;
-   */
-  status = VerbStatus.OFFLINE;
-
   constructor(data?: PartialMessage<VerbRuntime>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2745,7 +2696,6 @@ export class VerbRuntime extends Message<VerbRuntime> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "create_time", kind: "message", T: Timestamp },
     { no: 2, name: "start_time", kind: "message", T: Timestamp },
-    { no: 3, name: "status", kind: "enum", T: proto3.getEnumType(VerbStatus) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerbRuntime {

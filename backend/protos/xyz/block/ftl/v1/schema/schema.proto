@@ -348,14 +348,4 @@ message Verb {
 message VerbRuntime {
   google.protobuf.Timestamp create_time = 1;
   google.protobuf.Timestamp start_time = 2;
-  VerbStatus status = 3;
-}
-
-enum VerbStatus {
-  VERB_STATUS_OFFLINE = 0;
-  VERB_STATUS_STARTING = 1;
-  VERB_STATUS_ONLINE = 2;
-  VERB_STATUS_STOPPING = 3;
-  VERB_STATUS_STOPPED = 4;
-  VERB_STATUS_ERROR = 5;
 }
