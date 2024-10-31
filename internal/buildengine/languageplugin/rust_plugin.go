@@ -3,12 +3,16 @@ package languageplugin
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
+	"google.golang.org/protobuf/proto"
 
+	languagepb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal/builderrors"
+	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -79,4 +83,23 @@ func buildRust(ctx context.Context, projectRoot, stubsRoot string, bctx BuildCon
 	result.Deploy = []string{"main"}
 
 	return result, nil
+}
+
+func loadProtoErrors(config moduleconfig.AbsModuleConfig) ([]builderrors.Error, error) {
+	errorsPath := filepath.Join(config.DeployDir, "errors.pb")
+	if _, err := os.Stat(errorsPath); errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+
+	content, err := os.ReadFile(errorsPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not load build errors file: %w", err)
+	}
+
+	errorspb := &languagepb.ErrorList{}
+	err = proto.Unmarshal(content, errorspb)
+	if err != nil {
+		return nil, fmt.Errorf("could not unmarshal build errors %w", err)
+	}
+	return languagepb.ErrorsFromProto(errorspb), nil
 }

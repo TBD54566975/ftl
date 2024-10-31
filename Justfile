@@ -41,7 +41,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-java build-language-plugins
+build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
 
 # Run "go generate" on all packages
 build-generate:
@@ -81,11 +81,12 @@ build-backend:
 build-backend-tests:
   go test -run ^NONE -tags integration,infrastructure ./...
 
-build-java *args:
+
+build-jvm *args:
   mvn -f jvm-runtime/ftl-runtime install {{args}}
 
 # Builds all language plugins
-build-language-plugins: build-go build-python
+build-language-plugins: build-go build-python build-java build-kotlin
 
 # Build ftl-language-go
 build-go: build-zips build-protos 
@@ -107,6 +108,25 @@ build-python: build-zips build-protos
     go build -o "{{RELEASE}}/ftl-language-python" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./python-runtime/cmd/ftl-language-python"
   else
     mk "{{RELEASE}}/ftl-language-python" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-python" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./python-runtime/cmd/ftl-language-python"
+  fi
+
+build-kotlin *args: build-zips build-protos
+  #!/bin/bash
+  shopt -s extglob
+  if [ "${FTL_DEBUG:-}" = "true" ]; then
+    go build -o "{{RELEASE}}/ftl-language-kotlin" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./go-runtime/cmd/ftl-language-kotlin"
+  else
+    mk "{{RELEASE}}/ftl-language-kotlin" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-kotlin" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./jvm-runtime/cmd/ftl-language-kotlin"
+  fi
+
+build-java *args: build-zips build-protos
+  #!/bin/bash
+  shopt -s extglob
+
+  if [ "${FTL_DEBUG:-}" = "true" ]; then
+    go build -o "{{RELEASE}}/ftl-language-java" -tags release -gcflags=all="-N -l" -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./jvm-runtime/cmd/ftl-language-java"
+  else
+    mk "{{RELEASE}}/ftl-language-java" : !(build|integration) -- go build -o "{{RELEASE}}/ftl-language-java" -tags release -ldflags "-X github.com/TBD54566975/ftl.Version={{VERSION}} -X github.com/TBD54566975/ftl.Timestamp={{TIMESTAMP}}" "./jvm-runtime/cmd/ftl-language-java"
   fi
 
 export DATABASE_URL := "postgres://postgres:secret@localhost:15432/ftl?sslmode=disable"
