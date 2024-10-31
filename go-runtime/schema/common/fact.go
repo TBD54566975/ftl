@@ -128,6 +128,27 @@ type IncludeNativeName struct {
 
 func (*IncludeNativeName) schemaFactValue() {}
 
+type DatabaseConfigMethod int
+
+const (
+	DatabaseConfigMethodName DatabaseConfigMethod = iota
+)
+
+type DatabaseType string
+
+const (
+	DatabaseTypePostgres DatabaseType = "postgres"
+)
+
+// DatabaseConfig marks a database node with an extracted configuration value.
+type DatabaseConfig struct {
+	Type   DatabaseType
+	Method DatabaseConfigMethod
+	Value  any
+}
+
+func (*DatabaseConfig) schemaFactValue() {}
+
 // MarkSchemaDecl marks the given object as having been extracted to the given schema decl.
 func MarkSchemaDecl(pass *analysis.Pass, obj types.Object, decl schema.Decl) {
 	fact := newFact(pass, obj)
@@ -188,6 +209,14 @@ func MarkFunctionCall(pass *analysis.Pass, obj types.Object, callee types.Object
 func MarkIncludeNativeName(pass *analysis.Pass, obj types.Object, node schema.Node) {
 	fact := newFact(pass, obj)
 	fact.Add(&IncludeNativeName{Node: node})
+	pass.ExportObjectFact(obj, fact)
+}
+
+// MarkDatabaseConfig marks the given database object with an extracted config value.
+func MarkDatabaseConfig(pass *analysis.Pass, obj types.Object, dbType DatabaseType,
+	method DatabaseConfigMethod, value any) {
+	fact := newFact(pass, obj)
+	fact.Add(&DatabaseConfig{Type: dbType, Method: method, Value: value})
 	pass.ExportObjectFact(obj, fact)
 }
 
@@ -291,7 +320,7 @@ func GetFactForObject[T SchemaFactValue](pass *analysis.Pass, obj types.Object) 
 	return optional.None[T]()
 }
 
-// GetFactsForObject returns the all facts of the provided type marked on the object.
+// GetFactsForObject returns all facts of the provided type marked on the object.
 func GetFactsForObject[T SchemaFactValue](pass *analysis.Pass, obj types.Object) []T {
 	facts := []T{}
 	for _, fact := range allFacts(pass) {
