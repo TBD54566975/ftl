@@ -1,3 +1,5 @@
+//go:build integration
+
 package schema
 
 import (
@@ -12,11 +14,13 @@ import (
 
 	"github.com/otiai10/copy"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/alecthomas/assert/v2"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 var symbols = []string{
@@ -386,4 +390,8 @@ module test {
 	}
 
 	return result.String()
+}
+
+func normaliseString(s string) string {
+	return strings.TrimSpace(strings.Join(slices.Map(strings.Split(s, "\n"), strings.TrimSpace), "\n"))
 }
