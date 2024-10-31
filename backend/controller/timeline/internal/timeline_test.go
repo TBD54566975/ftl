@@ -65,6 +65,7 @@ func TestTimeline(t *testing.T) {
 			Path:       "dir/filename",
 		}}, nil)
 		assert.NoError(t, err)
+		time.Sleep(200 * time.Millisecond)
 	})
 
 	t.Run("SetDeploymentReplicas", func(t *testing.T) {
@@ -162,6 +163,29 @@ func TestTimeline(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	})
 
+	asyncEvent := &timeline2.AsyncExecuteEvent{
+		AsyncExecute: timeline2.AsyncExecute{
+			DeploymentKey: deploymentKey,
+			RequestKey:    optional.Some(requestKey.String()),
+			EventType:     timeline2.AsyncExecuteEventTypeCron,
+			Verb:          schema.Ref{Module: "time", Name: "time"},
+			Time:          time.Now().Round(time.Millisecond),
+			Error:         optional.None[string](),
+		},
+	}
+
+	t.Run("InsertAsyncExecuteEvent", func(t *testing.T) {
+		timeline.EnqueueEvent(ctx, &timeline2.AsyncExecute{
+			DeploymentKey: asyncEvent.DeploymentKey,
+			RequestKey:    asyncEvent.RequestKey,
+			EventType:     asyncEvent.EventType,
+			Verb:          asyncEvent.Verb,
+			Time:          asyncEvent.Time,
+			Error:         asyncEvent.Error,
+		})
+		time.Sleep(200 * time.Millisecond)
+	})
+
 	expectedDeploymentUpdatedEvent := &timeline2.DeploymentUpdatedEvent{
 		DeploymentKey: deploymentKey,
 		MinReplicas:   1,
@@ -177,13 +201,13 @@ func TestTimeline(t *testing.T) {
 		t.Run("NoFilters", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000)
 			assert.NoError(t, err)
-			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent, asyncEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterDeployments(deploymentKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent, asyncEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
@@ -213,7 +237,7 @@ func TestTimeline(t *testing.T) {
 		t.Run("ByRequests", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterRequests(requestKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []timeline2.Event{callEvent, logEvent, ingressEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{callEvent, logEvent, ingressEvent, asyncEvent}, events)
 		})
 	})
 }

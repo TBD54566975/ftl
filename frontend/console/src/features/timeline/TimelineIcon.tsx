@@ -1,4 +1,4 @@
-import { Call02Icon, CallIncoming04Icon, Menu01Icon, PackageReceiveIcon, Rocket01Icon, TimeQuarterPassIcon } from 'hugeicons-react'
+import { Call02Icon, CallIncoming04Icon, CustomerServiceIcon, Menu01Icon, PackageReceiveIcon, Rocket01Icon, TimeQuarterPassIcon } from 'hugeicons-react'
 import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { LogLevelBadgeSmall } from '../logs/LogLevelBadgeSmall'
 import { eventTextColor } from './timeline.utils'
@@ -22,6 +22,8 @@ export const TimelineIcon = ({ event }: { event: Event }) => {
         return <PackageReceiveIcon className={`${style} ${textColor}`} />
       case 'cronScheduled':
         return <TimeQuarterPassIcon className={`${style} ${textColor}`} />
+      case 'asyncExecute':
+        return <CustomerServiceIcon className={`${style} ${textColor}`} />
       default:
         return <Menu01Icon className={`${style}`} />
     }

@@ -57,6 +57,51 @@ func (q *Queries) DummyQueryTimeline(ctx context.Context, id int64) (Timeline, e
 	return i, err
 }
 
+const insertTimelineAsyncExecuteEvent = `-- name: InsertTimelineAsyncExecuteEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
+  (CASE
+      WHEN $2::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT)
+    END),
+  $3::TIMESTAMPTZ,
+  'async_execute',
+  $4::TEXT,
+  $5::TEXT,
+  $6
+)
+`
+
+type InsertTimelineAsyncExecuteEventParams struct {
+	DeploymentKey model.DeploymentKey
+	RequestKey    optional.Option[string]
+	TimeStamp     time.Time
+	Module        string
+	Verb          string
+	Payload       api.EncryptedTimelineColumn
+}
+
+func (q *Queries) InsertTimelineAsyncExecuteEvent(ctx context.Context, arg InsertTimelineAsyncExecuteEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelineAsyncExecuteEvent,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.TimeStamp,
+		arg.Module,
+		arg.Verb,
+		arg.Payload,
+	)
+	return err
+}
+
 const insertTimelineCallEvent = `-- name: InsertTimelineCallEvent :exec
 INSERT INTO timeline (
   deployment_id,

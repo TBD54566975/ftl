@@ -45,6 +45,11 @@ export enum EventType {
    * @generated from enum value: EVENT_TYPE_CRON_SCHEDULED = 6;
    */
   CRON_SCHEDULED = 6,
+
+  /**
+   * @generated from enum value: EVENT_TYPE_ASYNC_EXECUTE = 7;
+   */
+  ASYNC_EXECUTE = 7,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EventType)
 proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
@@ -55,6 +60,39 @@ proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
   { no: 4, name: "EVENT_TYPE_DEPLOYMENT_UPDATED" },
   { no: 5, name: "EVENT_TYPE_INGRESS" },
   { no: 6, name: "EVENT_TYPE_CRON_SCHEDULED" },
+  { no: 7, name: "EVENT_TYPE_ASYNC_EXECUTE" },
+]);
+
+/**
+ * @generated from enum xyz.block.ftl.v1.console.AsyncExecuteEventType
+ */
+export enum AsyncExecuteEventType {
+  /**
+   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN = 0;
+   */
+  UNKNOWN = 0,
+
+  /**
+   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_CRON = 1;
+   */
+  CRON = 1,
+
+  /**
+   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_FSM = 2;
+   */
+  FSM = 2,
+
+  /**
+   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_PUBSUB = 3;
+   */
+  PUBSUB = 3,
+}
+// Retrieve enum metadata with: proto3.getEnumType(AsyncExecuteEventType)
+proto3.util.setEnumType(AsyncExecuteEventType, "xyz.block.ftl.v1.console.AsyncExecuteEventType", [
+  { no: 0, name: "ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN" },
+  { no: 1, name: "ASYNC_EXECUTE_EVENT_TYPE_CRON" },
+  { no: 2, name: "ASYNC_EXECUTE_EVENT_TYPE_FSM" },
+  { no: 3, name: "ASYNC_EXECUTE_EVENT_TYPE_PUBSUB" },
 ]);
 
 /**
@@ -560,6 +598,79 @@ export class CronScheduledEvent extends Message<CronScheduledEvent> {
 
   static equals(a: CronScheduledEvent | PlainMessage<CronScheduledEvent> | undefined, b: CronScheduledEvent | PlainMessage<CronScheduledEvent> | undefined): boolean {
     return proto3.util.equals(CronScheduledEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.AsyncExecuteEvent
+ */
+export class AsyncExecuteEvent extends Message<AsyncExecuteEvent> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: optional string request_key = 2;
+   */
+  requestKey?: string;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb_ref = 3;
+   */
+  verbRef?: Ref;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 4;
+   */
+  timeStamp?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Duration duration = 5;
+   */
+  duration?: Duration;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.console.AsyncExecuteEventType async_event_type = 6;
+   */
+  asyncEventType = AsyncExecuteEventType.UNKNOWN;
+
+  /**
+   * @generated from field: optional string error = 7;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<AsyncExecuteEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.AsyncExecuteEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "verb_ref", kind: "message", T: Ref },
+    { no: 4, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 5, name: "duration", kind: "message", T: Duration },
+    { no: 6, name: "async_event_type", kind: "enum", T: proto3.getEnumType(AsyncExecuteEventType) },
+    { no: 7, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): AsyncExecuteEvent {
+    return new AsyncExecuteEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): AsyncExecuteEvent {
+    return new AsyncExecuteEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): AsyncExecuteEvent {
+    return new AsyncExecuteEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: AsyncExecuteEvent | PlainMessage<AsyncExecuteEvent> | undefined, b: AsyncExecuteEvent | PlainMessage<AsyncExecuteEvent> | undefined): boolean {
+    return proto3.util.equals(AsyncExecuteEvent, a, b);
   }
 }
 
@@ -1983,6 +2094,12 @@ export class Event extends Message<Event> {
      */
     value: CronScheduledEvent;
     case: "cronScheduled";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.AsyncExecuteEvent async_execute = 9;
+     */
+    value: AsyncExecuteEvent;
+    case: "asyncExecute";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Event>) {
@@ -2001,6 +2118,7 @@ export class Event extends Message<Event> {
     { no: 6, name: "deployment_updated", kind: "message", T: DeploymentUpdatedEvent, oneof: "entry" },
     { no: 7, name: "ingress", kind: "message", T: IngressEvent, oneof: "entry" },
     { no: 8, name: "cron_scheduled", kind: "message", T: CronScheduledEvent, oneof: "entry" },
+    { no: 9, name: "async_execute", kind: "message", T: AsyncExecuteEvent, oneof: "entry" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {

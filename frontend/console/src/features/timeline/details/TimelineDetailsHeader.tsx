@@ -39,6 +39,12 @@ const eventBadge = (event: Event) => {
           {refString(event.entry.value.destinationVerbRef)}
         </div>
       )
+    case 'asyncExecute':
+      return (
+        <div className={'inline-block rounded-md bg-indigo-200 dark:bg-indigo-700 px-2 py-1 mr-1 text-sm font-medium text-gray-700 dark:text-gray-100'}>
+          {refString(event.entry.value.verbRef)}
+        </div>
+      )
     case 'cronScheduled':
       return (
         <div className={'inline-block rounded-md bg-indigo-200 dark:bg-indigo-700 px-2 py-1 mr-1 text-sm font-medium text-gray-700 dark:text-gray-100'}>

@@ -14,6 +14,7 @@ type Querier interface {
 	DeleteOldTimelineEvents(ctx context.Context, timeout sqltypes.Duration, type_ EventType) (int64, error)
 	// This is a dummy query to ensure that the Timeline model is generated.
 	DummyQueryTimeline(ctx context.Context, id int64) (Timeline, error)
+	InsertTimelineAsyncExecuteEvent(ctx context.Context, arg InsertTimelineAsyncExecuteEventParams) error
 	InsertTimelineCallEvent(ctx context.Context, arg InsertTimelineCallEventParams) error
 	InsertTimelineCronScheduledEvent(ctx context.Context, arg InsertTimelineCronScheduledEventParams) error
 	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error

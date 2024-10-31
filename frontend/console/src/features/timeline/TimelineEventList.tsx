@@ -1,8 +1,9 @@
 import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatTimestampShort } from '../../utils'
 import { deploymentTextColor } from '../deployments/deployment.utils'
+import { TimelineAsyncExecute } from './TimelineAsyncExecute'
 import { TimelineCall } from './TimelineCall'
-import { TimelineCronScheduled } from './TimelineCronScheduled.tsx'
+import { TimelineCronScheduled } from './TimelineCronScheduled'
 import { TimelineDeploymentCreated } from './TimelineDeploymentCreated'
 import { TimelineDeploymentUpdated } from './TimelineDeploymentUpdated'
 import { TimelineIcon } from './TimelineIcon'
@@ -21,6 +22,7 @@ const deploymentKey = (event: Event) => {
     case 'log':
     case 'ingress':
     case 'cronScheduled':
+    case 'asyncExecute':
       return event.entry.value.deploymentKey
     case 'deploymentCreated':
     case 'deploymentUpdated':
@@ -73,6 +75,8 @@ export const TimelineEventList = ({ events, selectedEventId, handleEntryClicked 
                       return <TimelineIngress ingress={entry.entry.value} />
                     case 'cronScheduled':
                       return <TimelineCronScheduled cron={entry.entry.value} />
+                    case 'asyncExecute':
+                      return <TimelineAsyncExecute asyncExecute={entry.entry.value} />
                     default:
                       return null
                   }
