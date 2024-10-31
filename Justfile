@@ -41,7 +41,7 @@ dev *args:
   watchexec -r {{WATCHEXEC_ARGS}} -- "just build-sqlc && ftl dev --plain {{args}}"
 
 # Build everything
-build-all: build-protos-unconditionally build-backend build-backend-tests build-frontend build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
+build-all: build-protos-unconditionally build-backend build-frontend build-generate build-sqlc build-zips lsp-generate build-jvm build-language-plugins
 
 # Run "go generate" on all packages
 build-generate:
