@@ -85,7 +85,7 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 	return optional.Some(plugin), nil
 }
 
-func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config, plugin languageplugin.LanguagePlugin) error {
+func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config, plugin *languageplugin.LanguagePlugin) error {
 	name, path, err := validateModule(i.Dir, i.Name)
 	if err != nil {
 		return err
