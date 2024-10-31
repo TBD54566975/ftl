@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
@@ -28,11 +29,15 @@ func PostgresDatabase(name string) Database {
 		Name:   name,
 		DBType: modulecontext.DBTypePostgres,
 		db: once.Once(func(ctx context.Context) (*sql.DB, error) {
+			logger := log.FromContext(ctx)
+
 			provider := modulecontext.FromContext(ctx).CurrentContext()
 			dsn, err := provider.GetDatabase(name, modulecontext.DBTypePostgres)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get database %q: %w", name, err)
 			}
+
+			logger.Debugf("Opening database: %s", name)
 			db, err := otelsql.Open("pgx", dsn)
 			if err != nil {
 				return nil, fmt.Errorf("failed to open database %q: %w", name, err)
