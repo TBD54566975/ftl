@@ -1,3 +1,5 @@
+//go:build integration
+
 package schema
 
 import (
@@ -44,7 +46,18 @@ func prebuildTestModule(t *testing.T, args ...string) error {
 	return nil
 }
 
-func TestExtractModuleSchema(t *testing.T) {
+func TestExtractSchema(t *testing.T) {
+	t.Run("ExtractModuleSchema", testExtractModuleSchema)
+	t.Run("TestExtractModuleSchemaTwo", testExtractModuleSchemaTwo)
+	t.Run("TestExtractModuleSchemaNamedTypes", testExtractModuleSchemaNamedTypes)
+	t.Run("TestExtractModuleSchemaParent", testExtractModuleSchemaParent)
+	t.Run("TestExtractModulePubSub", testExtractModulePubSub)
+	t.Run("TestExtractModuleSubscriber", testExtractModuleSubscriber)
+	t.Run("TestParsedirectives", testParsedirectives)
+	t.Run("TestErrorReporting", testErrorReporting)
+	t.Run("TestValidationFailures", testValidationFailures)
+}
+func testExtractModuleSchema(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -181,7 +194,7 @@ func TestExtractModuleSchema(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestExtractModuleSchemaTwo(t *testing.T) {
+func testExtractModuleSchemaTwo(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -293,7 +306,7 @@ func TestExtractModuleSchemaTwo(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestExtractModuleSchemaNamedTypes(t *testing.T) {
+func testExtractModuleSchemaNamedTypes(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -343,7 +356,7 @@ func TestExtractModuleSchemaNamedTypes(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestExtractModuleSchemaParent(t *testing.T) {
+func testExtractModuleSchemaParent(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -383,7 +396,7 @@ func TestExtractModuleSchemaParent(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestExtractModulePubSub(t *testing.T) {
+func testExtractModulePubSub(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -421,7 +434,7 @@ func TestExtractModulePubSub(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestExtractModuleSubscriber(t *testing.T) {
+func testExtractModuleSubscriber(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -440,7 +453,7 @@ func TestExtractModuleSubscriber(t *testing.T) {
 	assert.Equal(t, normaliseString(expected), normaliseString(actual.String()))
 }
 
-func TestParsedirectives(t *testing.T) {
+func testParsedirectives(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -486,11 +499,7 @@ func TestParsedirectives(t *testing.T) {
 	}
 }
 
-func normaliseString(s string) string {
-	return strings.TrimSpace(strings.Join(slices.Map(strings.Split(s, "\n"), strings.TrimSpace), "\n"))
-}
-
-func TestErrorReporting(t *testing.T) {
+func testErrorReporting(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -577,7 +586,7 @@ func TestErrorReporting(t *testing.T) {
 }
 
 // Where parsing is correct but validation of the schema fails
-func TestValidationFailures(t *testing.T) {
+func testValidationFailures(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
