@@ -27,3 +27,14 @@ WHERE deployment_id = $1;
 -- name: AssociateArtefactWithDeployment :exec
 INSERT INTO deployment_artefacts (deployment_id, artefact_id, executable, path)
 VALUES ((SELECT id FROM deployments WHERE key = @key::deployment_key), (SELECT id FROM artefacts WHERE digest = @digest::bytea), $3, $4);
+
+-- name: GetReleaseArtefacts :many
+-- Get all artefacts associated with the specified release_id
+SELECT created_at, digest, executable, path
+FROM release_artefacts
+WHERE release_id = $1;
+
+-- name: PublishReleaseArtefact :exec
+INSERT INTO release_artefacts(release_id, digest, executable, path)
+VALUES ((SELECT id FROM deployments WHERE key = @key::deployment_key), $2, $3, $4)
+    ON CONFLICT (release_id, digest) DO NOTHING;

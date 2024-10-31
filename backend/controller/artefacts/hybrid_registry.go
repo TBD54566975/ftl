@@ -60,8 +60,12 @@ func (s *hybridRegistry) Download(ctx context.Context, digest sha256.SHA256) (io
 }
 
 func (s *hybridRegistry) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
-	// note: the container and database store currently use release_artefacts to associated
-	return s.container.GetReleaseArtefacts(ctx, releaseID)
+	if ras, err := s.dal.GetReleaseArtefacts(ctx, releaseID); err != nil {
+		return nil, fmt.Errorf("unable to get release artefacts from container store: %w", err)
+	} else if len(ras) > 0 {
+		return ras, nil
+	}
+	return s.dal.GetReleaseArtefacts(ctx, releaseID)
 }
 
 func (s *hybridRegistry) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {

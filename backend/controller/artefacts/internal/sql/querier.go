@@ -17,6 +17,9 @@ type Querier interface {
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([]GetArtefactDigestsRow, error)
 	// Get all artefacts matching the given digests.
 	GetDeploymentArtefacts(ctx context.Context, deploymentID int64) ([]GetDeploymentArtefactsRow, error)
+	// Get all artefacts associated with the specified release_id
+	GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]GetReleaseArtefactsRow, error)
+	PublishReleaseArtefact(ctx context.Context, arg PublishReleaseArtefactParams) error
 }
 
 var _ Querier = (*Queries)(nil)

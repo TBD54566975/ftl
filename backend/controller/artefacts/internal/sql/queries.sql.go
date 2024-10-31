@@ -145,3 +145,68 @@ func (q *Queries) GetDeploymentArtefacts(ctx context.Context, deploymentID int64
 	}
 	return items, nil
 }
+
+const getReleaseArtefacts = `-- name: GetReleaseArtefacts :many
+SELECT created_at, digest, executable, path
+FROM release_artefacts
+WHERE release_id = $1
+`
+
+type GetReleaseArtefactsRow struct {
+	CreatedAt  time.Time
+	Digest     []byte
+	Executable bool
+	Path       string
+}
+
+// Get all artefacts associated with the specified release_id
+func (q *Queries) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]GetReleaseArtefactsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getReleaseArtefacts, releaseID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetReleaseArtefactsRow
+	for rows.Next() {
+		var i GetReleaseArtefactsRow
+		if err := rows.Scan(
+			&i.CreatedAt,
+			&i.Digest,
+			&i.Executable,
+			&i.Path,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const publishReleaseArtefact = `-- name: PublishReleaseArtefact :exec
+INSERT INTO release_artefacts(release_id, digest, executable, path)
+VALUES ((SELECT id FROM deployments WHERE key = $1::deployment_key), $2, $3, $4)
+    ON CONFLICT (release_id, digest) DO NOTHING
+`
+
+type PublishReleaseArtefactParams struct {
+	Key        model.DeploymentKey
+	Digest     []byte
+	Executable bool
+	Path       string
+}
+
+func (q *Queries) PublishReleaseArtefact(ctx context.Context, arg PublishReleaseArtefactParams) error {
+	_, err := q.db.ExecContext(ctx, publishReleaseArtefact,
+		arg.Key,
+		arg.Digest,
+		arg.Executable,
+		arg.Path,
+	)
+	return err
+}

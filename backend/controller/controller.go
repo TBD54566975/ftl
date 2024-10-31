@@ -109,7 +109,7 @@ type Config struct {
 	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
 	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
 	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
-	ContainerConfig              artefacts.ContainerConfig
+	artefacts.ContainerConfig
 	CommonConfig
 }
 

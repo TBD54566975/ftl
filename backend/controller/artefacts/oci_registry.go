@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/TBD54566975/ftl/internal/slices"
 	"io"
 
-	"github.com/opencontainers/go-digest"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/errdef"
@@ -23,14 +23,14 @@ import (
 )
 
 const (
-	ModuleBlobsPrefix = "ftl/modules/"
+	ModuleBlobsPrefix = "ftl/modules"
 )
 
 type ContainerConfig struct {
-	Registry       string `help:"OCI container registry host:port" env:"FTL_ARTEFACTS_REGISTRY"`
-	Username       string `help:"OCI container registry username" env:"FTL_ARTEFACTS_USER"`
-	Password       string `help:"OCI container registry password" env:"FTL_ARTEFACTS_PWD"`
-	AllowPlainHTTP bool   `help:"Allows OCI container requests to accept plain HTTP responses" env:"FTL_ARTEFACTS_ALLOW_HTTP"`
+	Registry          string `help:"OCI container registry host:port" default:"127.0.0.1:5001"  env:"FTL_ARTEFACTS_REGISTRY"`
+	RegistryUsername  string `help:"OCI container registry username" env:"FTL_ARTEFACTS_USER"`
+	RegistryPassword  string `help:"OCI container registry password" env:"FTL_ARTEFACTS_PWD"`
+	RegistryAllowHTTP bool   `help:"Allows OCI container requests to accept plain HTTP responses" default:"true" env:"FTL_ARTEFACTS_ALLOW_HTTP"`
 }
 
 type containerRegistry struct {
@@ -40,20 +40,6 @@ type containerRegistry struct {
 	// in the interim releases and artefacts will continue to be linked via the `deployment_artefacts` table
 	Handle *libdal.Handle[containerRegistry]
 	db     sql.Querier
-}
-
-type ArtefactRepository struct {
-	ModuleDigest     sha256.SHA256
-	MediaType        string
-	ArtefactType     string
-	RepositoryDigest digest.Digest
-	Size             int64
-}
-
-type ArtefactBlobs struct {
-	Digest    sha256.SHA256
-	MediaType string
-	Size      int64
 }
 
 func newContainerRegistry(c ContainerConfig, conn libdal.Connection) *containerRegistry {
@@ -69,11 +55,11 @@ func newContainerRegistry(c ContainerConfig, conn libdal.Connection) *containerR
 			Client: retry.DefaultClient,
 			Cache:  auth.NewCache(),
 			Credential: auth.StaticCredential(c.Registry, auth.Credential{
-				Username: c.Username,
-				Password: c.Password,
+				Username: c.RegistryUsername,
+				Password: c.RegistryPassword,
 			}),
 		}
-		reg.PlainHTTP = c.AllowPlainHTTP
+		reg.PlainHTTP = c.RegistryAllowHTTP
 
 		return reg, nil
 	}
@@ -148,11 +134,30 @@ func (s *containerRegistry) Download(ctx context.Context, digest sha256.SHA256) 
 }
 
 func (s *containerRegistry) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
-	return getDatabaseReleaseArtefacts(ctx, s.db, releaseID)
+	rows, err := s.db.GetReleaseArtefacts(ctx, releaseID)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get release artefacts: %w", libdal.TranslatePGError(err))
+	}
+	return slices.Map(rows, func(row sql.GetReleaseArtefactsRow) ReleaseArtefact {
+		return ReleaseArtefact{
+			Artefact:   ArtefactKey{Digest: sha256.FromBytes(row.Digest)},
+			Path:       row.Path,
+			Executable: row.Executable,
+		}
+	}), nil
 }
 
 func (s *containerRegistry) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
-	return addReleaseArtefacts(ctx, s.db, key, ra)
+	params := sql.PublishReleaseArtefactParams{
+		Key:        key,
+		Digest:     ra.Artefact.Digest[:],
+		Executable: ra.Executable,
+		Path:       ra.Path,
+	}
+	if err := s.db.PublishReleaseArtefact(ctx, params); err != nil {
+		return libdal.TranslatePGError(err)
+	}
+	return nil
 }
 
 // createModuleRepositoryPathFromDigest creates the path to the repository, relative to the registries root

@@ -83,7 +83,7 @@ func createContainerService(release *releaseCmd) (artefacts.Service, error) {
 	conn.SetMaxOpenConns(release.MaxOpenDBConnections)
 
 	return artefacts.New(artefacts.ContainerConfig{
-		Registry:       release.Registry,
-		AllowPlainHTTP: true,
+		Registry:          release.Registry,
+		RegistryAllowHTTP: true,
 	}, conn), nil
 }
