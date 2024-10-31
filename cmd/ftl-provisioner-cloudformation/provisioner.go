@@ -30,6 +30,8 @@ const (
 
 type Config struct {
 	DatabaseSubnetGroupARN string `help:"ARN for the subnet group to be used to create Databases in" env:"FTL_PROVISIONER_CF_DB_SUBNET_GROUP"`
+	// TODO: remove this once we have module specific security groups
+	DatabaseSecurityGroup string `help:"SG for databases" env:"FTL_PROVISIONER_CF_DB_SECURITY_GROUP"`
 }
 
 type CloudformationProvisioner struct {
@@ -140,6 +142,7 @@ func (c *CloudformationProvisioner) resourceToCF(cluster, module string, templat
 			MasterUsername:           ptr("root"),
 			ManageMasterUserPassword: ptr(true),
 			DBSubnetGroupName:        ptr(c.confg.DatabaseSubnetGroupARN),
+			VpcSecurityGroupIds:      []string{c.confg.DatabaseSecurityGroup},
 			EngineMode:               ptr("provisioned"),
 			Port:                     ptr(5432),
 			ServerlessV2ScalingConfiguration: &rds.DBCluster_ServerlessV2ScalingConfiguration{
