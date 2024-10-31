@@ -27,7 +27,7 @@ type testBuildContext struct {
 	IsRebuild bool
 }
 
-type mockExternalPluginClient struct {
+type mockPluginClient struct {
 	flags []*langpb.GetCreateModuleFlagsResponse_Flag
 
 	// atomic.Value does not allow us to atomically publish, close and replace the chan
@@ -39,34 +39,34 @@ type mockExternalPluginClient struct {
 	cmdError chan error
 }
 
-var _ externalPluginClient = &mockExternalPluginClient{}
+var _ pluginClient = &mockPluginClient{}
 
-func newMockExternalPlugin() *mockExternalPluginClient {
-	return &mockExternalPluginClient{
+func newMockPluginClient() *mockPluginClient {
+	return &mockPluginClient{
 		buildEventsLock: &sync.Mutex{},
 		buildEvents:     make(chan result.Result[*langpb.BuildEvent], 64),
 		cmdError:        make(chan error),
 	}
 }
 
-func (p *mockExternalPluginClient) getCreateModuleFlags(context.Context, *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
+func (p *mockPluginClient) getCreateModuleFlags(context.Context, *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
 	return connect.NewResponse(&langpb.GetCreateModuleFlagsResponse{
 		Flags: p.flags,
 	}), nil
 }
 
-func (p *mockExternalPluginClient) createModule(context.Context, *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error) {
+func (p *mockPluginClient) createModule(context.Context, *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error) {
 	panic("not implemented")
 }
 
-func (p *mockExternalPluginClient) moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
+func (p *mockPluginClient) moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
 	return connect.NewResponse(&langpb.ModuleConfigDefaultsResponse{
 		DeployDir: "test-deploy-dir",
 		Watch:     []string{"a", "b", "c"},
 	}), nil
 }
 
-func (p *mockExternalPluginClient) getDependencies(context.Context, *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
+func (p *mockPluginClient) getDependencies(context.Context, *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
 	panic("not implemented")
 }
 
@@ -92,15 +92,15 @@ func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 	}, nil
 }
 
-func (p *mockExternalPluginClient) generateStubs(context.Context, *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error) {
+func (p *mockPluginClient) generateStubs(context.Context, *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error) {
 	panic("not implemented")
 }
 
-func (p *mockExternalPluginClient) syncStubReferences(context.Context, *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
+func (p *mockPluginClient) syncStubReferences(context.Context, *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
 	panic("not implemented")
 }
 
-func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
+func (p *mockPluginClient) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
 
@@ -116,7 +116,7 @@ func (p *mockExternalPluginClient) build(ctx context.Context, req *connect.Reque
 	return p.buildEvents, func() {}, nil
 }
 
-func (p *mockExternalPluginClient) buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
+func (p *mockPluginClient) buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
 	bctx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return nil, err
@@ -129,19 +129,19 @@ func (p *mockExternalPluginClient) buildContextUpdated(ctx context.Context, req 
 	return connect.NewResponse(&langpb.BuildContextUpdatedResponse{}), nil
 }
 
-func (p *mockExternalPluginClient) kill() error {
+func (p *mockPluginClient) kill() error {
 	return nil
 }
 
-func (p *mockExternalPluginClient) cmdErr() <-chan error {
+func (p *mockPluginClient) cmdErr() <-chan error {
 	return p.cmdError
 }
 
-func setUp() (context.Context, *externalPlugin, *mockExternalPluginClient, BuildContext) {
+func setUp() (context.Context, *LanguagePlugin, *mockPluginClient, BuildContext) {
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	mockImpl := newMockExternalPlugin()
-	plugin := newExternalPluginForTesting(ctx, mockImpl)
+	mockImpl := newMockPluginClient()
+	plugin := newPluginForTesting(ctx, mockImpl)
 
 	bctx := BuildContext{
 		Config: moduleconfig.ModuleConfig{
@@ -420,14 +420,14 @@ func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg str
 	}
 }
 
-func (p *mockExternalPluginClient) publishBuildEvent(event *langpb.BuildEvent) {
+func (p *mockPluginClient) publishBuildEvent(event *langpb.BuildEvent) {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
 
 	p.buildEvents <- result.From(event, nil)
 }
 
-func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, autoRebuild bool) chan result.Result[BuildResult] {
+func beginBuild(ctx context.Context, plugin *LanguagePlugin, bctx BuildContext, autoRebuild bool) chan result.Result[BuildResult] {
 	resultChan := make(chan result.Result[BuildResult])
 	go func() {
 		resultChan <- result.From(plugin.Build(ctx, "", "", bctx, []string{}, autoRebuild))
@@ -437,7 +437,7 @@ func beginBuild(ctx context.Context, plugin *externalPlugin, bctx BuildContext, 
 	return resultChan
 }
 
-func (p *mockExternalPluginClient) breakStream() {
+func (p *mockPluginClient) breakStream() {
 	p.buildEventsLock.Lock()
 	defer p.buildEventsLock.Unlock()
 	p.buildEvents <- result.Err[*langpb.BuildEvent](fmt.Errorf("fake a broken stream"))

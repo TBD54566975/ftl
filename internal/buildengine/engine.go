@@ -38,7 +38,7 @@ type schemaChange struct {
 // moduleMeta is a wrapper around a module that includes the last build's start time.
 type moduleMeta struct {
 	module         Module
-	plugin         languageplugin.LanguagePlugin
+	plugin         *languageplugin.LanguagePlugin
 	events         chan languageplugin.PluginEvent
 	configDefaults moduleconfig.CustomDefaults
 }

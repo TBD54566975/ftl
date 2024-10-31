@@ -19,7 +19,7 @@ import (
 
 type streamCancelFunc func()
 
-type externalPluginClient interface {
+type pluginClient interface {
 	getCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error)
 	createModule(ctx context.Context, req *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error)
 	moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error)
@@ -35,9 +35,9 @@ type externalPluginClient interface {
 	cmdErr() <-chan error
 }
 
-var _ externalPluginClient = &externalPluginImpl{}
+var _ pluginClient = &pluginClientImpl{}
 
-type externalPluginImpl struct {
+type pluginClientImpl struct {
 	cmd    *exec.Cmd
 	client langconnect.LanguageServiceClient
 
@@ -45,8 +45,8 @@ type externalPluginImpl struct {
 	cmdError chan error
 }
 
-func newExternalPluginImpl(ctx context.Context, bind *url.URL, language, name string) (*externalPluginImpl, error) {
-	impl := &externalPluginImpl{
+func newClientImpl(ctx context.Context, bind *url.URL, language, name string) (*pluginClientImpl, error) {
+	impl := &pluginClientImpl{
 		client: rpc.Dial(langconnect.NewLanguageServiceClient, bind.String(), log.Error),
 	}
 	err := impl.start(ctx, bind, language, name)
@@ -57,7 +57,7 @@ func newExternalPluginImpl(ctx context.Context, bind *url.URL, language, name st
 }
 
 // Start launches the plugin and blocks until the plugin is ready.
-func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language, name string) error {
+func (p *pluginClientImpl) start(ctx context.Context, bind *url.URL, language, name string) error {
 	logger := log.FromContext(ctx).Scope(name)
 
 	cmdName := "ftl-language-" + language
@@ -125,7 +125,7 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language,
 	}
 }
 
-func (p *externalPluginImpl) ping(ctx context.Context) error {
+func (p *pluginClientImpl) ping(ctx context.Context) error {
 	err := rpc.Wait(ctx, backoff.Backoff{}, launchTimeout, p.client)
 	if err != nil {
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to connect to runner: %w", err))
@@ -133,18 +133,18 @@ func (p *externalPluginImpl) ping(ctx context.Context) error {
 	return nil
 }
 
-func (p *externalPluginImpl) kill() error {
+func (p *pluginClientImpl) kill() error {
 	if err := p.cmd.Kill(syscall.SIGINT); err != nil {
 		return err //nolint:wrapcheck
 	}
 	return nil
 }
 
-func (p *externalPluginImpl) cmdErr() <-chan error {
+func (p *pluginClientImpl) cmdErr() <-chan error {
 	return p.cmdError
 }
 
-func (p *externalPluginImpl) getCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
+func (p *pluginClientImpl) getCreateModuleFlags(ctx context.Context, req *connect.Request[langpb.GetCreateModuleFlagsRequest]) (*connect.Response[langpb.GetCreateModuleFlagsResponse], error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (p *externalPluginImpl) getCreateModuleFlags(ctx context.Context, req *conn
 	return resp, nil
 }
 
-func (p *externalPluginImpl) moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
+func (p *pluginClientImpl) moduleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (p *externalPluginImpl) moduleConfigDefaults(ctx context.Context, req *conn
 	return resp, nil
 }
 
-func (p *externalPluginImpl) createModule(ctx context.Context, req *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error) {
+func (p *pluginClientImpl) createModule(ctx context.Context, req *connect.Request[langpb.CreateModuleRequest]) (*connect.Response[langpb.CreateModuleResponse], error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (p *externalPluginImpl) createModule(ctx context.Context, req *connect.Requ
 	return resp, nil
 }
 
-func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
+func (p *pluginClientImpl) getDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (p *externalPluginImpl) getDependencies(ctx context.Context, req *connect.R
 	return resp, nil
 }
 
-func (p *externalPluginImpl) generateStubs(ctx context.Context, req *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error) {
+func (p *pluginClientImpl) generateStubs(ctx context.Context, req *connect.Request[langpb.GenerateStubsRequest]) (*connect.Response[langpb.GenerateStubsResponse], error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func (p *externalPluginImpl) generateStubs(ctx context.Context, req *connect.Req
 	return resp, nil
 }
 
-func (p *externalPluginImpl) syncStubReferences(ctx context.Context, req *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
+func (p *pluginClientImpl) syncStubReferences(ctx context.Context, req *connect.Request[langpb.SyncStubReferencesRequest]) (*connect.Response[langpb.SyncStubReferencesResponse], error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (p *externalPluginImpl) syncStubReferences(ctx context.Context, req *connec
 	return resp, nil
 }
 
-func (p *externalPluginImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
+func (p *pluginClientImpl) build(ctx context.Context, req *connect.Request[langpb.BuildRequest]) (chan result.Result[*langpb.BuildEvent], streamCancelFunc, error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, nil, err
 	}
@@ -238,7 +238,7 @@ func streamToChan(stream *connect.ServerStreamForClient[langpb.BuildEvent], ch c
 	close(ch)
 }
 
-func (p *externalPluginImpl) buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
+func (p *pluginClientImpl) buildContextUpdated(ctx context.Context, req *connect.Request[langpb.BuildContextUpdatedRequest]) (*connect.Response[langpb.BuildContextUpdatedResponse], error) {
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
@@ -249,7 +249,7 @@ func (p *externalPluginImpl) buildContextUpdated(ctx context.Context, req *conne
 	return resp, nil
 }
 
-func (p *externalPluginImpl) checkCmdIsAlive() error {
+func (p *pluginClientImpl) checkCmdIsAlive() error {
 	select {
 	case err := <-p.cmdError:
 		if err == nil {

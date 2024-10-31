@@ -46,7 +46,7 @@ import (
 //     on dependency on the module "dependable" when everything before the colon is removed.
 //     - dependable.Data is a data type which can be used to avoid unused dependency warnings.
 
-var client *externalPluginImpl
+var client *pluginClientImpl
 var bindURL *url.URL
 var config moduleconfig.ModuleConfig
 var buildChan chan result.Result[*langpb.BuildEvent]
@@ -244,7 +244,7 @@ func startPlugin() in.Action {
 
 		bindURL, err = bindAllocator.Next()
 		assert.NoError(t, err)
-		client, err = newExternalPluginImpl(ic.Context, bindURL, ic.Language, "test")
+		client, err = newClientImpl(ic.Context, bindURL, ic.Language, "test")
 		assert.NoError(t, err)
 	}
 }
