@@ -81,14 +81,16 @@ func (p *externalPluginImpl) start(ctx context.Context, bind *url.URL, language,
 		}
 	}()
 
+	// run the plugin and wait for it to finish executing
+	err = p.cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start plugin: %w", err)
+	}
 	runCtx, cancel := context.WithCancel(ctx)
-
 	p.cmdError = make(chan error)
 	pingErr := make(chan error)
-
-	// run the plugin and wait for it to finish executing
 	go func() {
-		err := p.cmd.Run()
+		err := p.cmd.Wait()
 		if err != nil {
 			p.cmdError <- fmt.Errorf("language plugin failed: %w", err)
 		} else {
@@ -132,8 +134,6 @@ func (p *externalPluginImpl) ping(ctx context.Context) error {
 }
 
 func (p *externalPluginImpl) kill() error {
-	// close cmdErr so that we don't publish cmd error.
-	close(p.cmdError)
 	if err := p.cmd.Kill(syscall.SIGINT); err != nil {
 		return err //nolint:wrapcheck
 	}

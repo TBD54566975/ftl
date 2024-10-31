@@ -1,6 +1,7 @@
-package languageplugin
+package goplugin
 
 import (
+	"errors"
 	"fmt"
 	"go/parser"
 	"go/token"
@@ -9,8 +10,6 @@ import (
 	"strings"
 
 	"golang.org/x/mod/modfile"
-
-	"github.com/TBD54566975/ftl/internal/errors"
 )
 
 func replacementWatches(moduleDir, deployDir string) ([]string, error) {

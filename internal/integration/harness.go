@@ -294,6 +294,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			var provisioner provisionerconnect.ProvisionerServiceClient
 			if opts.startController {
 				Infof("Starting ftl cluster")
+
 				args := []string{filepath.Join(binDir, "ftl"), "serve", "--recreate"}
 				if !opts.console {
 					args = append(args, "--no-console")

@@ -85,9 +85,20 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 
 	go func() {
 		wait := topic.Wait()
+
+		isFirstLoop := true
 		for {
+			var delayChan <-chan time.Time
+			if isFirstLoop {
+				// No delay on the first loop
+				isFirstLoop = false
+				delayChan = time.After(0)
+			} else {
+				delayChan = time.After(period)
+			}
+
 			select {
-			case <-time.After(period):
+			case <-delayChan:
 
 			case <-wait:
 				return

@@ -250,9 +250,9 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction ModifyFilesTransaction, buildEnv []string, devMode bool) (moduleSch *schema.Module, buildErrors []builderrors.Error, err error) {
+func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction ModifyFilesTransaction, devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, err error) {
 	if err := filesTransaction.Begin(); err != nil {
-		return nil, nil, fmt.Errorf("could not start a file transaction: %w", err)
+		return moduleSch, nil, fmt.Errorf("could not start a file transaction: %w", err)
 	}
 	defer func() {
 		if terr := filesTransaction.End(); terr != nil {
@@ -262,7 +262,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 
 	replacements, goModVersion, err := updateGoModule(filepath.Join(config.Dir, "go.mod"))
 	if err != nil {
-		return nil, nil, err
+		return moduleSch, nil, err
 	}
 
 	goVersion := runtime.Version()[2:]
@@ -366,7 +366,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	}
 	// We have seen lots of upstream HTTP/2 failures that make CI unstable.
 	// Disable HTTP/2 for now during the build. This can probably be removed later
-	buildEnv = append(buildEnv, "GODEBUG=http2client=0")
+	buildEnv := []string{"GODEBUG=http2client=0"}
 	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunStderrError(ctx)
 	if err != nil {
 		return moduleSch, nil, fmt.Errorf("failed to compile: %w", err)
@@ -381,7 +381,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	if err != nil {
 		return moduleSch, nil, fmt.Errorf("failed to write launch script: %w", err)
 	}
-	return result.Module, result.Errors, nil
+	return optional.Some(result.Module), result.Errors, nil
 }
 
 type mainModuleContextBuilder struct {
