@@ -1,4 +1,4 @@
-import { Call02Icon, PackageReceiveIcon, Rocket01Icon, TimeQuarterPassIcon } from 'hugeicons-react'
+import { Call02Icon, CustomerServiceIcon, PackageReceiveIcon, Rocket01Icon, TimeQuarterPassIcon } from 'hugeicons-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { useModules } from '../../../api/modules/use-modules'
@@ -17,6 +17,7 @@ interface EventFilter {
 
 const EVENT_TYPES: Record<string, EventFilter> = {
   call: { label: 'Call', type: EventType.CALL, icon: <Call02Icon className='w-4 h-4 text-indigo-500 ml-1' /> },
+  asyncExecute: { label: 'Async Call', type: EventType.ASYNC_EXECUTE, icon: <CustomerServiceIcon className='w-4 h-4 text-indigo-500 ml-1' /> },
   log: { label: 'Log', type: EventType.LOG, icon: <LogLevelBadgeSmall logLevel={LogLevel.INFO} /> },
   deploymentCreated: {
     label: 'Deployment Created',

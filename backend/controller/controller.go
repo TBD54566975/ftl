@@ -1181,6 +1181,27 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	logger := log.FromContext(ctx)
 	logger.Tracef("Acquiring async call")
 
+	now := time.Now().UTC()
+	sstate := s.schemaState.Load()
+
+	enqueueTimelineEvent := func(call *dal.AsyncCall, err optional.Option[error]) {
+		module := call.Verb.Module
+		route, ok := sstate.routes[module]
+		if ok {
+			errStr := optional.None[string]()
+			if e, ok := err.Get(); ok {
+				errStr = optional.Some(e.Error())
+			}
+			s.timeline.EnqueueEvent(ctx, &timeline.AsyncExecute{
+				DeploymentKey: route.Deployment,
+				RequestKey:    call.ParentRequestKey,
+				Verb:          *call.Verb.ToRef(),
+				Time:          now,
+				Error:         errStr,
+			})
+		}
+	}
+
 	call, leaseCtx, err := s.dal.AcquireAsyncCall(ctx)
 	if errors.Is(err, libdal.ErrNotFound) {
 		logger.Tracef("No async calls to execute")
@@ -1190,6 +1211,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 			observability.AsyncCalls.AcquireFailed(ctx, err)
 		} else {
 			observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
+			enqueueTimelineEvent(call, optional.Some(err))
 		}
 		return 0, err
 	}
@@ -1201,6 +1223,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	ctx, err = observability.ExtractTraceContextToContext(ctx, call.TraceContext)
 	if err != nil {
 		observability.AsyncCalls.Acquired(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, call.Catching, err)
+		enqueueTimelineEvent(call, optional.Some(err))
 		return 0, fmt.Errorf("failed to extract trace context: %w", err)
 	}
 
@@ -1270,6 +1293,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 	})
 	if err != nil {
 		observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, err)
+		enqueueTimelineEvent(call, optional.Some(err))
 		return 0, fmt.Errorf("failed to complete async call: %w", err)
 	}
 	if !didScheduleAnotherCall {
@@ -1278,6 +1302,7 @@ func (s *Service) executeAsyncCalls(ctx context.Context) (interval time.Duration
 		queueDepth = call.QueueDepth - 1
 	}
 	observability.AsyncCalls.Completed(ctx, call.Verb, call.CatchVerb, call.Origin.String(), call.ScheduledAt, false, queueDepth, nil)
+	enqueueTimelineEvent(call, optional.None[error]())
 	return 0, nil
 }
 

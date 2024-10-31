@@ -18,6 +18,14 @@ enum EventType {
   EVENT_TYPE_DEPLOYMENT_UPDATED = 4;
   EVENT_TYPE_INGRESS = 5;
   EVENT_TYPE_CRON_SCHEDULED = 6;
+  EVENT_TYPE_ASYNC_EXECUTE = 7;
+}
+
+enum AsyncExecuteEventType {
+  ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN = 0;
+  ASYNC_EXECUTE_EVENT_TYPE_CRON = 1;
+  ASYNC_EXECUTE_EVENT_TYPE_FSM = 2;
+  ASYNC_EXECUTE_EVENT_TYPE_PUBSUB = 3;
 }
 
 enum LogLevel {
@@ -92,6 +100,16 @@ message CronScheduledEvent {
   google.protobuf.Duration duration = 4;
   google.protobuf.Timestamp scheduled_at = 5;
   string schedule = 6;
+  optional string error = 7;
+}
+
+message AsyncExecuteEvent {
+  string deployment_key = 1;
+  optional string request_key = 2;
+  schema.Ref verb_ref = 3;
+  google.protobuf.Timestamp time_stamp = 4;
+  google.protobuf.Duration duration = 5;
+  AsyncExecuteEventType async_event_type = 6;
   optional string error = 7;
 }
 
@@ -270,6 +288,7 @@ message Event {
     DeploymentUpdatedEvent deployment_updated = 6;
     IngressEvent ingress = 7;
     CronScheduledEvent cron_scheduled = 8;
+    AsyncExecuteEvent async_execute = 9;
   }
 }
 

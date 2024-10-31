@@ -5,6 +5,7 @@ import { Loader } from '../../components/Loader.tsx'
 import type { Event, EventsQuery_Filter } from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
 import { SidePanelContext } from '../../providers/side-panel-provider.tsx'
 import TimelineEventList from './TimelineEventList.tsx'
+import { TimelineAsyncExecuteDetails } from './details/TimelineAsyncExecuteDetails.tsx'
 import { TimelineCallDetails } from './details/TimelineCallDetails.tsx'
 import { TimelineCronScheduledDetails } from './details/TimelineCronScheduledDetails.tsx'
 import { TimelineDeploymentCreatedDetails } from './details/TimelineDeploymentCreatedDetails.tsx'
@@ -65,6 +66,9 @@ export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings
         break
       case 'cronScheduled':
         openPanel(<TimelineCronScheduledDetails event={entry} />, <TimelineDetailsHeader event={entry} />, handlePanelClosed)
+        break
+      case 'asyncExecute':
+        openPanel(<TimelineAsyncExecuteDetails event={entry} />, <TimelineDetailsHeader event={entry} />, handlePanelClosed)
         break
       default:
         break

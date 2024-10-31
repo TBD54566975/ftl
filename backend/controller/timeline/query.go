@@ -370,6 +370,7 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				ResponseHeader: jsonPayload.ResponseHeader,
 				Error:          jsonPayload.Error,
 			})
+
 		case sql.EventTypeCronScheduled:
 			var jsonPayload eventCronScheduledJSON
 			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
@@ -384,6 +385,27 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 					Time:          row.TimeStamp,
 					ScheduledAt:   jsonPayload.ScheduledAt,
 					Schedule:      jsonPayload.Schedule,
+					Error:         jsonPayload.Error,
+				},
+			})
+
+		case sql.EventTypeAsyncExecute:
+			var jsonPayload eventAsyncExecuteJSON
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt async execute event: %w", err)
+			}
+			requestKey := optional.None[string]()
+			if rk, ok := row.RequestKey.Get(); ok {
+				requestKey = optional.Some(rk.String())
+			}
+			out = append(out, &AsyncExecuteEvent{
+				ID:       row.ID,
+				Duration: time.Duration(jsonPayload.DurationMS) * time.Millisecond,
+				AsyncExecute: AsyncExecute{
+					DeploymentKey: row.DeploymentKey,
+					RequestKey:    requestKey,
+					Verb:          schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
+					Time:          row.TimeStamp,
 					Error:         jsonPayload.Error,
 				},
 			})

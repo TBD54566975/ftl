@@ -70,7 +70,8 @@ func (d *DAL) AcquireAsyncCall(ctx context.Context) (call *AsyncCall, leaseCtx c
 
 	lease, leaseCtx := d.leaser.NewLease(ctx, row.LeaseKey, row.LeaseIdempotencyKey, ttl)
 	return &AsyncCall{
-		ID:                row.AsyncCallID,
+		ID: row.AsyncCallID,
+
 		Verb:              row.Verb,
 		Origin:            origin,
 		CatchVerb:         row.CatchVerb,
