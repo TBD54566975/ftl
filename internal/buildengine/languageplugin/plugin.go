@@ -133,16 +133,11 @@ type LanguagePlugin interface {
 
 // PluginFromConfig creates a new language plugin from the given config.
 func New(ctx context.Context, bindAllocator *bind.BindAllocator, language, name string) (p LanguagePlugin, err error) {
-	switch language {
-	case "rust":
-		return newRustPlugin(ctx), nil
-	default:
-		port, err := bindAllocator.Next()
-		if err != nil {
-			return nil, fmt.Errorf("failed to allocate port for external plugin: %w", err)
-		}
-		return newExternalPlugin(ctx, port, language, name)
+	port, err := bindAllocator.Next()
+	if err != nil {
+		return nil, fmt.Errorf("failed to allocate port for external plugin: %w", err)
 	}
+	return newExternalPlugin(ctx, port, language, name)
 }
 
 //sumtype:decl

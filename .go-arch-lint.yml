@@ -13,7 +13,6 @@ components:
   ftl-cmd: { in: frontend/cli/ftl/** }
   go-runtime: { in: go-runtime/** }
   jvm-runtime: { in: jvm-runtime/** }
-  rust-runtime: { in: rust-runtime/** }
   runner: { in: backend/runner/** }
   ftl-runner-cmd: { in: cmd/ftl-runner/** }
   frontend: { in: frontend/console/** }

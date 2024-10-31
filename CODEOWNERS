@@ -7,7 +7,6 @@
 # Below are team-specific overrides. These should supercede the default ftl-reviewers team.
 frontend/        @TBD54566975/ftl-frontend-team
 pnpm-*           @TBD54566975/ftl-frontend-team
-rust-runtime/    @gak
 go-runtime/      @TBD54566975/ftl-go-team
 jvm-runtime/     @TBD54566975/ftl-jvm-team
 deployment/      @TBD54566975/ftl-infra-team

@@ -195,7 +195,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	simpleName := fmt.Sprintf("runner%d", keySuffix)
 	if err := kong.ApplyDefaults(&config, kong.Vars{
 		"deploymentdir": filepath.Join(l.cacheDir, "ftl-runner", simpleName, "deployments"),
-		"language":      "go,kotlin,rust,java",
+		"language":      "go,kotlin,java",
 	}); err != nil {
 		return fmt.Errorf("failed to apply defaults: %w", err)
 	}
