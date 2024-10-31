@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"go/types"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/config"
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
 	checker "github.com/TBD54566975/golang-tools/go/analysis/programmaticchecker"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/TBD54566975/ftl/go-runtime/schema/call"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
+	"github.com/TBD54566975/ftl/go-runtime/schema/config"
 	"github.com/TBD54566975/ftl/go-runtime/schema/configsecret"
 	"github.com/TBD54566975/ftl/go-runtime/schema/data"
 	"github.com/TBD54566975/ftl/go-runtime/schema/database"

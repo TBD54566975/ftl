@@ -7,15 +7,15 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/XSAM/otelsql"
-
-	"github.com/TBD54566975/ftl/go-runtime/ftl"
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
 	"github.com/alecthomas/types/once"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
+	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
 func PostgresDatabaseHandle[T ftl.DatabaseConfig]() reflection.VerbResource {
