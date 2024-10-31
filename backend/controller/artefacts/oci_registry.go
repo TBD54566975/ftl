@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"io"
 
 	"oras.land/oras-go/v2"
@@ -20,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/sha256"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const (
