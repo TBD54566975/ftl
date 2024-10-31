@@ -67,6 +67,7 @@ func newContainerRegistry(c ContainerConfig, conn libdal.Connection) *containerR
 	return &containerRegistry{
 		host:        c.Registry,
 		repoFactory: repoFactory,
+		db:          sql.New(conn),
 		Handle: libdal.New(conn, func(h *libdal.Handle[containerRegistry]) *containerRegistry {
 			return &containerRegistry{
 				host:        c.Registry,

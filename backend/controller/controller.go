@@ -287,7 +287,7 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, timelineSvc, conn)
 	svc.cronJobs = cronSvc
 	svc.dal = dal.New(ctx, conn, encryption, pubSub, cronSvc, func(c libdal.Connection) artefacts.Service {
-		return artefacts.New(config.ContainerConfig, conn)
+		return artefacts.New(config.ContainerConfig, c)
 	})
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
