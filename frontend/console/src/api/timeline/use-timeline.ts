@@ -37,6 +37,10 @@ export const useTimeline = (isStreaming: boolean, filters: EventsQuery_Filter[],
     try {
       console.debug('streaming timeline')
       console.debug('timeline-filters:', filters)
+
+      // Clear the cache when starting a new stream
+      queryClient.setQueryData<Event[]>(queryKey, (_ = []) => [])
+
       for await (const response of client.streamEvents(
         { updateInterval: { seconds: BigInt(0), nanos: updateIntervalMs * 1000 }, query: { limit, filters, order } },
         { signal },
