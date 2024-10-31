@@ -97,9 +97,7 @@ func (f *asmFollower) store(ctx context.Context, ref configuration.Ref, obfuscat
 	if err != nil {
 		return nil, fmt.Errorf("asm follower could not unobfuscate: %w", err)
 	}
-	provider := ftlv1.SecretProvider_SECRET_ASM
 	_, err = f.client.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
-		Provider: &provider,
 		Ref: &ftlv1.ConfigRef{
 			Module: ref.Module.Ptr(),
 			Name:   ref.Name,
@@ -113,9 +111,7 @@ func (f *asmFollower) store(ctx context.Context, ref configuration.Ref, obfuscat
 }
 
 func (f *asmFollower) delete(ctx context.Context, ref configuration.Ref) error {
-	provider := ftlv1.SecretProvider_SECRET_ASM
 	_, err := f.client.SecretUnset(ctx, connect.NewRequest(&ftlv1.UnsetSecretRequest{
-		Provider: &provider,
 		Ref: &ftlv1.ConfigRef{
 			Module: ref.Module.Ptr(),
 			Name:   ref.Name,

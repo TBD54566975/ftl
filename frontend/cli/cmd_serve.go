@@ -28,7 +28,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/manager"
-	"github.com/TBD54566975/ftl/internal/configuration/routers"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -55,16 +54,29 @@ type serveCmd struct {
 
 const ftlRunningErrorMsg = "FTL is already running. Use 'ftl serve --stop' to stop it"
 
-func (s *serveCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
+func (s *serveCmd) Run(
+	ctx context.Context,
+	cm *manager.Manager[configuration.Configuration],
+	sm *manager.Manager[configuration.Secrets],
+	projConfig projectconfig.Config,
+) error {
 	bindAllocator, err := bind.NewBindAllocator(s.Bind, 2)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, optional.None[chan bool](), false, bindAllocator)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator)
 }
 
 //nolint:maintidx
-func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, initialised optional.Option[chan bool], devMode bool, bindAllocator *bind.BindAllocator) error {
+func (s *serveCmd) run(
+	ctx context.Context,
+	projConfig projectconfig.Config,
+	cm *manager.Manager[configuration.Configuration],
+	sm *manager.Manager[configuration.Secrets],
+	initialised optional.Option[chan bool],
+	devMode bool,
+	bindAllocator *bind.BindAllocator,
+) error {
 	logger := log.FromContext(ctx)
 	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 	provisionerClient := rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
@@ -164,22 +176,6 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		scope := fmt.Sprintf("controller%d", i)
 		controllerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
-		// create config manager for controller
-		cr := routers.ProjectConfig[configuration.Configuration]{Config: projConfig.Path}
-		cm, err := manager.NewConfigurationManager(controllerCtx, cr)
-		if err != nil {
-			return fmt.Errorf("could not create config manager: %w", err)
-		}
-		controllerCtx = manager.ContextWithConfig(controllerCtx, cm)
-
-		// create secrets manager for controller
-		sr := routers.ProjectConfig[configuration.Secrets]{Config: projConfig.Path}
-		sm, err := manager.NewSecretsManager(controllerCtx, sr, cli.Vault, projConfig.Path)
-		if err != nil {
-			return fmt.Errorf("could not create secrets manager: %w", err)
-		}
-		controllerCtx = manager.ContextWithSecrets(controllerCtx, sm)
-
 		// Bring up the DB connection and DAL.
 		conn, err := config.OpenDBAndInstrument()
 		if err != nil {
@@ -187,7 +183,7 @@ func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, ini
 		}
 
 		wg.Go(func() error {
-			if err := controller.Start(controllerCtx, config, runnerScaling, conn, true); err != nil {
+			if err := controller.Start(controllerCtx, config, runnerScaling, cm, sm, conn, true); err != nil {
 				logger.Errorf(err, "controller%d failed: %v", i, err)
 				return fmt.Errorf("controller%d failed: %w", i, err)
 			}

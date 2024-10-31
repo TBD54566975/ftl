@@ -57,15 +57,10 @@ func TestAdminNoValidationWithNoSchema(t *testing.T) {
 	config := tempConfigPath(t, "testdata/ftl-project.toml", "admin")
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cm, err := manager.NewConfigurationManager(ctx, routers.ProjectConfig[cf.Configuration]{Config: config})
+	cm, err := manager.New(ctx, routers.ProjectConfig[cf.Configuration]{Config: config}, providers.NewInline[cf.Configuration]())
 	assert.NoError(t, err)
 
-	sm, err := manager.New(ctx,
-		routers.ProjectConfig[cf.Secrets]{Config: config},
-		[]cf.Provider[cf.Secrets]{
-			providers.Envar[cf.Secrets]{},
-			providers.Inline[cf.Secrets]{},
-		})
+	sm, err := manager.New(ctx, routers.ProjectConfig[cf.Secrets]{Config: config}, providers.NewInline[cf.Secrets]())
 	assert.NoError(t, err)
 
 	dsr := &diskSchemaRetriever{deployRoot: optional.Some(string(t.TempDir()))}

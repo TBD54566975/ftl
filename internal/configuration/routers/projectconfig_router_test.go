@@ -50,17 +50,12 @@ func TestGetGlobal(t *testing.T) {
 	})
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cf, err := manager.New[configuration.Configuration](ctx,
-		routers.ProjectConfig[configuration.Configuration]{Config: config},
-		[]configuration.Provider[configuration.Configuration]{
-			providers.Envar[configuration.Configuration]{},
-			providers.Inline[configuration.Configuration]{},
-		})
+	cf, err := manager.New(ctx, routers.ProjectConfig[configuration.Configuration]{Config: config}, providers.Inline[configuration.Configuration]{})
 	assert.NoError(t, err)
 
 	var got *url.URL
 	want := URL("inline://qwertyqwerty")
-	err = cf.Set(ctx, "inline", configuration.Ref{Module: optional.None[string](), Name: "default"}, want)
+	err = cf.Set(ctx, configuration.Ref{Module: optional.None[string](), Name: "default"}, want)
 	assert.NoError(t, err)
 	err = cf.Get(ctx, configuration.Ref{Module: optional.Some[string]("somemodule"), Name: "default"}, &got)
 	assert.NoError(t, err)
@@ -74,17 +69,12 @@ func setAndAssert(t *testing.T, module string, config string) {
 
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 
-	cf, err := manager.New[configuration.Configuration](ctx,
-		routers.ProjectConfig[configuration.Configuration]{Config: config},
-		[]configuration.Provider[configuration.Configuration]{
-			providers.Envar[configuration.Configuration]{},
-			providers.Inline[configuration.Configuration]{},
-		})
+	cf, err := manager.New(ctx, routers.ProjectConfig[configuration.Configuration]{Config: config}, providers.Inline[configuration.Configuration]{})
 	assert.NoError(t, err)
 
 	var got *url.URL
 	want := URL("inline://asdfasdf")
-	err = cf.Set(ctx, "inline", configuration.Ref{Module: optional.Some[string](module), Name: "default"}, want)
+	err = cf.Set(ctx, configuration.Ref{Module: optional.Some[string](module), Name: "default"}, want)
 	assert.NoError(t, err)
 	err = cf.Get(ctx, configuration.Ref{Module: optional.Some[string](module), Name: "default"}, &got)
 	assert.NoError(t, err)

@@ -13,6 +13,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/internal"
+	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
@@ -26,11 +27,13 @@ type ConfigAndSecrets struct {
 }
 
 type Config struct {
-	// Path to the config file.
+	// Path to the config file populated on load.
 	Path string `toml:"-"`
 
 	Name                  string                      `toml:"name,omitempty"`
 	Global                ConfigAndSecrets            `toml:"global,omitempty"`
+	SecretsProvider       configuration.ProviderKey   `toml:"secrets-provider,omitempty"`
+	ConfigProvider        configuration.ProviderKey   `toml:"config-provider,omitempty"`
 	Modules               map[string]ConfigAndSecrets `toml:"modules,omitempty"`
 	ModuleDirs            []string                    `toml:"module-dirs,omitempty"`
 	Commands              Commands                    `toml:"commands,omitempty"`
@@ -49,7 +52,13 @@ func (c Config) Root() string {
 }
 
 // Validate checks that the configuration is valid.
-func (c Config) Validate() error {
+func (c *Config) Validate() error {
+	if c.SecretsProvider == "" {
+		c.SecretsProvider = "inline"
+	}
+	if c.ConfigProvider == "" {
+		c.ConfigProvider = "inline"
+	}
 	if c.Name == "" {
 		return fmt.Errorf("project name is required: %s", c.Path)
 	}
@@ -125,7 +134,7 @@ func DefaultConfigPath() optional.Option[string] {
 // Create creates the ftl-project.toml file with the given Config into dir.
 func Create(ctx context.Context, config Config, dir string) error {
 	if err := config.Validate(); err != nil {
-		return err
+		return fmt.Errorf("project config: %w", err)
 	}
 	logger := log.FromContext(ctx)
 	path, err := filepath.Abs(dir)
@@ -173,7 +182,7 @@ func Load(ctx context.Context, path string) (Config, error) {
 	config.Path = path
 
 	if err := config.Validate(); err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return config, nil
 }

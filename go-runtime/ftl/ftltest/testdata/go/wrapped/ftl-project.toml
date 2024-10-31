@@ -1,5 +1,7 @@
 name = "testdata"
 ftl-min-version = ""
+secrets-provider = "inline"
+config-provider = "inline"
 
 [global]
   [global.configuration]

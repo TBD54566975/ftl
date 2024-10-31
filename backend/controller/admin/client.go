@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -54,7 +55,9 @@ func ShouldUseLocalClient(ctx context.Context, adminClient ftlv1connect.AdminSer
 	if err != nil {
 		return false, err
 	}
-	_, err = adminClient.Ping(ctx, connect.NewRequest(&ftlv1.PingRequest{}))
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Millisecond*500)
+	defer cancel()
+	_, err = adminClient.Ping(timeoutCtx, connect.NewRequest(&ftlv1.PingRequest{}))
 	if isConnectUnavailableError(err) && isLocal {
 		return true, nil
 	}
@@ -63,7 +66,9 @@ func ShouldUseLocalClient(ctx context.Context, adminClient ftlv1connect.AdminSer
 
 func isConnectUnavailableError(err error) bool {
 	var connectErr *connect.Error
-	if errors.As(err, &connectErr) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	} else if errors.As(err, &connectErr) {
 		return connectErr.Code() == connect.CodeUnavailable
 	}
 	return false

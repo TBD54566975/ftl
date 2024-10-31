@@ -244,7 +244,7 @@ func (p *Project) Load(ctx context.Context, profile string) (Profile, error) {
 			return Profile{}, fmt.Errorf("get secrets provider: %w", err)
 		}
 		secretsRouter := routers.NewFileRouter[configuration.Secrets](p.project.LocalSecretsPath(profile))
-		sm, err = manager.New[configuration.Secrets](ctx, secretsRouter, []configuration.Provider[configuration.Secrets]{sp})
+		sm, err = manager.New[configuration.Secrets](ctx, secretsRouter, sp)
 		if err != nil {
 			return Profile{}, fmt.Errorf("create secrets manager: %w", err)
 		}
@@ -254,7 +254,7 @@ func (p *Project) Load(ctx context.Context, profile string) (Profile, error) {
 			return Profile{}, fmt.Errorf("get config provider: %w", err)
 		}
 		configRouter := routers.NewFileRouter[configuration.Configuration](p.project.LocalConfigPath(profile))
-		cm, err = manager.New[configuration.Configuration](ctx, configRouter, []configuration.Provider[configuration.Configuration]{cp})
+		cm, err = manager.New[configuration.Configuration](ctx, configRouter, cp)
 		if err != nil {
 			return Profile{}, fmt.Errorf("create configuration manager: %w", err)
 		}

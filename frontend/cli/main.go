@@ -18,12 +18,14 @@ import (
 	kongcompletion "github.com/jotaen/kong-completion"
 
 	"github.com/TBD54566975/ftl"
+	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/dsn"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/profiles"
@@ -204,20 +206,12 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		kctx.BindTo(provisionerServiceClient, (*provisionerconnect.ProvisionerServiceClient)(nil))
 
 		err = kctx.BindToProvider(func() (*providers.Registry[configuration.Configuration], error) {
-			configRegistry := providers.NewRegistry[configuration.Configuration]()
-			configRegistry.Register(providers.NewEnvarFactory[configuration.Configuration]())
-			configRegistry.Register(providers.NewInlineFactory[configuration.Configuration]())
-			return configRegistry, nil
+			return providers.NewDefaultConfigRegistry(), nil
 		})
 		kctx.FatalIfErrorf(err)
 
 		err = kctx.BindToProvider(func(cli *CLI, projectConfig projectconfig.Config) (*providers.Registry[configuration.Secrets], error) {
-			secretsRegistry := providers.NewRegistry[configuration.Secrets]()
-			secretsRegistry.Register(providers.NewEnvarFactory[configuration.Secrets]())
-			secretsRegistry.Register(providers.NewInlineFactory[configuration.Secrets]())
-			secretsRegistry.Register(providers.NewOnePasswordFactory(cli.Vault, projectConfig.Name))
-			secretsRegistry.Register(providers.NewKeychainFactory())
-			return secretsRegistry, nil
+			return providers.NewDefaultSecretsRegistry(projectConfig, cli.Vault), nil
 		})
 		kctx.FatalIfErrorf(err)
 
@@ -227,9 +221,18 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 		kctx.BindTo(verbServiceClient, (*ftlv1connect.VerbServiceClient)(nil))
 
+		err = kctx.BindToProvider(manager.NewDefaultConfigurationManagerFromConfig)
+		kctx.FatalIfErrorf(err)
+
+		err = kctx.BindToProvider(manager.NewDefaultSecretsManagerFromConfig)
+		kctx.FatalIfErrorf(err)
+
 		err = kctx.BindToProvider(func(projectConfig projectconfig.Config, secretsRegistry *providers.Registry[configuration.Secrets], configRegistry *providers.Registry[configuration.Configuration]) (*profiles.Project, error) {
 			return profiles.Open(filepath.Dir(projectConfig.Path), secretsRegistry, configRegistry)
 		})
+		kctx.FatalIfErrorf(err)
+
+		err = kctx.BindToProvider(provideAdminClient)
 		kctx.FatalIfErrorf(err)
 
 		kctx.Bind(cli.Endpoint)
@@ -243,4 +246,21 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 
 type currentStatusManager struct {
 	statusManager optional.Option[terminal.StatusManager]
+}
+
+func provideAdminClient(
+	ctx context.Context,
+	cli *CLI,
+	cm *manager.Manager[configuration.Configuration],
+	sm *manager.Manager[configuration.Secrets],
+) (client admin.Client, err error) {
+	adminServiceClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.Endpoint.String(), log.Error)
+	shouldUseLocalClient, err := admin.ShouldUseLocalClient(ctx, adminServiceClient, cli.Endpoint)
+	if err != nil {
+		return client, fmt.Errorf("could not create admin client: %w", err)
+	}
+	if shouldUseLocalClient {
+		return admin.NewLocalClient(cm, sm), nil
+	}
+	return adminServiceClient, nil
 }
