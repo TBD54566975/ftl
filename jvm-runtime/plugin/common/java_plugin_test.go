@@ -1,13 +1,19 @@
-package languageplugin
+package common
 
 import (
 	"context"
+	"net/url"
+	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/internal/bind"
+	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
+	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 func TestExtractModuleDepsKotlin(t *testing.T) {
@@ -17,7 +23,6 @@ func TestExtractModuleDepsKotlin(t *testing.T) {
 }
 
 func TestJavaConfigDefaults(t *testing.T) {
-	t.Parallel()
 	watch := []string{
 		"pom.xml",
 		"src/**",
@@ -57,13 +62,18 @@ func TestJavaConfigDefaults(t *testing.T) {
 		},
 	} {
 		t.Run(tt.dir, func(t *testing.T) {
-			t.Parallel()
 
 			ctx := context.Background()
+			logger := log.Configure(os.Stderr, log.Config{Level: log.Debug})
+			ctx = log.ContextWithLogger(ctx, logger)
 			dir, err := filepath.Abs(tt.dir)
 			assert.NoError(t, err)
 
-			plugin, err := New(ctx, nil, "java", "test")
+			baseBind, err := url.Parse("http://127.0.0.1:8893")
+			assert.NoError(t, err)
+			allocator, err := bind.NewBindAllocator(baseBind, 0)
+			assert.NoError(t, err)
+			plugin, err := languageplugin.New(ctx, allocator, "java", "test")
 			assert.NoError(t, err)
 
 			defaults, err := plugin.ModuleConfigDefaults(ctx, dir)
