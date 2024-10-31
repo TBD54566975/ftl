@@ -66,64 +66,6 @@ func (AliasKind) EnumDescriptor() ([]byte, []int) {
 	return file_xyz_block_ftl_v1_schema_schema_proto_rawDescGZIP(), []int{0}
 }
 
-type VerbStatus int32
-
-const (
-	VerbStatus_VERB_STATUS_OFFLINE  VerbStatus = 0
-	VerbStatus_VERB_STATUS_STARTING VerbStatus = 1
-	VerbStatus_VERB_STATUS_ONLINE   VerbStatus = 2
-	VerbStatus_VERB_STATUS_STOPPING VerbStatus = 3
-	VerbStatus_VERB_STATUS_STOPPED  VerbStatus = 4
-	VerbStatus_VERB_STATUS_ERROR    VerbStatus = 5
-)
-
-// Enum value maps for VerbStatus.
-var (
-	VerbStatus_name = map[int32]string{
-		0: "VERB_STATUS_OFFLINE",
-		1: "VERB_STATUS_STARTING",
-		2: "VERB_STATUS_ONLINE",
-		3: "VERB_STATUS_STOPPING",
-		4: "VERB_STATUS_STOPPED",
-		5: "VERB_STATUS_ERROR",
-	}
-	VerbStatus_value = map[string]int32{
-		"VERB_STATUS_OFFLINE":  0,
-		"VERB_STATUS_STARTING": 1,
-		"VERB_STATUS_ONLINE":   2,
-		"VERB_STATUS_STOPPING": 3,
-		"VERB_STATUS_STOPPED":  4,
-		"VERB_STATUS_ERROR":    5,
-	}
-)
-
-func (x VerbStatus) Enum() *VerbStatus {
-	p := new(VerbStatus)
-	*p = x
-	return p
-}
-
-func (x VerbStatus) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (VerbStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_xyz_block_ftl_v1_schema_schema_proto_enumTypes[1].Descriptor()
-}
-
-func (VerbStatus) Type() protoreflect.EnumType {
-	return &file_xyz_block_ftl_v1_schema_schema_proto_enumTypes[1]
-}
-
-func (x VerbStatus) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use VerbStatus.Descriptor instead.
-func (VerbStatus) EnumDescriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_schema_schema_proto_rawDescGZIP(), []int{1}
-}
-
 type Any struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3657,7 +3599,6 @@ type VerbRuntime struct {
 
 	CreateTime *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	StartTime  *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
-	Status     VerbStatus             `protobuf:"varint,3,opt,name=status,proto3,enum=xyz.block.ftl.v1.schema.VerbStatus" json:"status,omitempty"`
 }
 
 func (x *VerbRuntime) Reset() {
@@ -3702,13 +3643,6 @@ func (x *VerbRuntime) GetStartTime() *timestamppb.Timestamp {
 		return x.StartTime
 	}
 	return nil
-}
-
-func (x *VerbRuntime) GetStatus() VerbStatus {
-	if x != nil {
-		return x.Status
-	}
-	return VerbStatus_VERB_STATUS_OFFLINE
 }
 
 var File_xyz_block_ftl_v1_schema_schema_proto protoreflect.FileDescriptor
@@ -4312,7 +4246,7 @@ var file_xyz_block_ftl_v1_schema_schema_proto_rawDesc = []byte{
 	0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x2e, 0x56, 0x65, 0x72,
 	0x62, 0x52, 0x75, 0x6e, 0x74, 0x69, 0x6d, 0x65, 0x48, 0x01, 0x52, 0x07, 0x72, 0x75, 0x6e, 0x74,
 	0x69, 0x6d, 0x65, 0x88, 0x01, 0x01, 0x42, 0x06, 0x0a, 0x04, 0x5f, 0x70, 0x6f, 0x73, 0x42, 0x0a,
-	0x0a, 0x08, 0x5f, 0x72, 0x75, 0x6e, 0x74, 0x69, 0x6d, 0x65, 0x22, 0xc2, 0x01, 0x0a, 0x0b, 0x56,
+	0x0a, 0x08, 0x5f, 0x72, 0x75, 0x6e, 0x74, 0x69, 0x6d, 0x65, 0x22, 0x85, 0x01, 0x0a, 0x0b, 0x56,
 	0x65, 0x72, 0x62, 0x52, 0x75, 0x6e, 0x74, 0x69, 0x6d, 0x65, 0x12, 0x3b, 0x0a, 0x0b, 0x63, 0x72,
 	0x65, 0x61, 0x74, 0x65, 0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
@@ -4321,28 +4255,14 @@ var file_xyz_block_ftl_v1_schema_schema_proto_rawDesc = []byte{
 	0x5f, 0x74, 0x69, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f,
 	0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69,
 	0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x09, 0x73, 0x74, 0x61, 0x72, 0x74, 0x54, 0x69,
-	0x6d, 0x65, 0x12, 0x3b, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x03, 0x20, 0x01,
-	0x28, 0x0e, 0x32, 0x23, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66,
-	0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x2e, 0x56, 0x65, 0x72,
-	0x62, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x2a,
-	0x20, 0x0a, 0x09, 0x41, 0x6c, 0x69, 0x61, 0x73, 0x4b, 0x69, 0x6e, 0x64, 0x12, 0x13, 0x0a, 0x0f,
-	0x41, 0x4c, 0x49, 0x41, 0x53, 0x5f, 0x4b, 0x49, 0x4e, 0x44, 0x5f, 0x4a, 0x53, 0x4f, 0x4e, 0x10,
-	0x00, 0x2a, 0xa1, 0x01, 0x0a, 0x0a, 0x56, 0x65, 0x72, 0x62, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
-	0x12, 0x17, 0x0a, 0x13, 0x56, 0x45, 0x52, 0x42, 0x5f, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x5f,
-	0x4f, 0x46, 0x46, 0x4c, 0x49, 0x4e, 0x45, 0x10, 0x00, 0x12, 0x18, 0x0a, 0x14, 0x56, 0x45, 0x52,
-	0x42, 0x5f, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x5f, 0x53, 0x54, 0x41, 0x52, 0x54, 0x49, 0x4e,
-	0x47, 0x10, 0x01, 0x12, 0x16, 0x0a, 0x12, 0x56, 0x45, 0x52, 0x42, 0x5f, 0x53, 0x54, 0x41, 0x54,
-	0x55, 0x53, 0x5f, 0x4f, 0x4e, 0x4c, 0x49, 0x4e, 0x45, 0x10, 0x02, 0x12, 0x18, 0x0a, 0x14, 0x56,
-	0x45, 0x52, 0x42, 0x5f, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x5f, 0x53, 0x54, 0x4f, 0x50, 0x50,
-	0x49, 0x4e, 0x47, 0x10, 0x03, 0x12, 0x17, 0x0a, 0x13, 0x56, 0x45, 0x52, 0x42, 0x5f, 0x53, 0x54,
-	0x41, 0x54, 0x55, 0x53, 0x5f, 0x53, 0x54, 0x4f, 0x50, 0x50, 0x45, 0x44, 0x10, 0x04, 0x12, 0x15,
-	0x0a, 0x11, 0x56, 0x45, 0x52, 0x42, 0x5f, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x5f, 0x45, 0x52,
-	0x52, 0x4f, 0x52, 0x10, 0x05, 0x42, 0x4e, 0x50, 0x01, 0x5a, 0x4a, 0x67, 0x69, 0x74, 0x68, 0x75,
-	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x54, 0x42, 0x44, 0x35, 0x34, 0x35, 0x36, 0x36, 0x39, 0x37,
-	0x35, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2f, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x73, 0x2f, 0x78, 0x79, 0x7a, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2f, 0x66,
-	0x74, 0x6c, 0x2f, 0x76, 0x31, 0x2f, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x3b, 0x73, 0x63, 0x68,
-	0x65, 0x6d, 0x61, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6d, 0x65, 0x2a, 0x20, 0x0a, 0x09, 0x41, 0x6c, 0x69, 0x61, 0x73, 0x4b, 0x69, 0x6e, 0x64, 0x12,
+	0x13, 0x0a, 0x0f, 0x41, 0x4c, 0x49, 0x41, 0x53, 0x5f, 0x4b, 0x49, 0x4e, 0x44, 0x5f, 0x4a, 0x53,
+	0x4f, 0x4e, 0x10, 0x00, 0x42, 0x4e, 0x50, 0x01, 0x5a, 0x4a, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
+	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x54, 0x42, 0x44, 0x35, 0x34, 0x35, 0x36, 0x36, 0x39, 0x37, 0x35,
+	0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2f, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x73, 0x2f, 0x78, 0x79, 0x7a, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2f, 0x66, 0x74,
+	0x6c, 0x2f, 0x76, 0x31, 0x2f, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x3b, 0x73, 0x63, 0x68, 0x65,
+	0x6d, 0x61, 0x70, 0x62, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -4357,188 +4277,186 @@ func file_xyz_block_ftl_v1_schema_schema_proto_rawDescGZIP() []byte {
 	return file_xyz_block_ftl_v1_schema_schema_proto_rawDescData
 }
 
-var file_xyz_block_ftl_v1_schema_schema_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_xyz_block_ftl_v1_schema_schema_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_xyz_block_ftl_v1_schema_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_xyz_block_ftl_v1_schema_schema_proto_goTypes = []any{
 	(AliasKind)(0),                // 0: xyz.block.ftl.v1.schema.AliasKind
-	(VerbStatus)(0),               // 1: xyz.block.ftl.v1.schema.VerbStatus
-	(*Any)(nil),                   // 2: xyz.block.ftl.v1.schema.Any
-	(*Array)(nil),                 // 3: xyz.block.ftl.v1.schema.Array
-	(*Bool)(nil),                  // 4: xyz.block.ftl.v1.schema.Bool
-	(*Bytes)(nil),                 // 5: xyz.block.ftl.v1.schema.Bytes
-	(*Config)(nil),                // 6: xyz.block.ftl.v1.schema.Config
-	(*Data)(nil),                  // 7: xyz.block.ftl.v1.schema.Data
-	(*Database)(nil),              // 8: xyz.block.ftl.v1.schema.Database
-	(*DatabaseRuntime)(nil),       // 9: xyz.block.ftl.v1.schema.DatabaseRuntime
-	(*Decl)(nil),                  // 10: xyz.block.ftl.v1.schema.Decl
-	(*Enum)(nil),                  // 11: xyz.block.ftl.v1.schema.Enum
-	(*EnumVariant)(nil),           // 12: xyz.block.ftl.v1.schema.EnumVariant
-	(*Field)(nil),                 // 13: xyz.block.ftl.v1.schema.Field
-	(*Float)(nil),                 // 14: xyz.block.ftl.v1.schema.Float
-	(*IngressPathComponent)(nil),  // 15: xyz.block.ftl.v1.schema.IngressPathComponent
-	(*IngressPathLiteral)(nil),    // 16: xyz.block.ftl.v1.schema.IngressPathLiteral
-	(*IngressPathParameter)(nil),  // 17: xyz.block.ftl.v1.schema.IngressPathParameter
-	(*Int)(nil),                   // 18: xyz.block.ftl.v1.schema.Int
-	(*IntValue)(nil),              // 19: xyz.block.ftl.v1.schema.IntValue
-	(*Map)(nil),                   // 20: xyz.block.ftl.v1.schema.Map
-	(*Metadata)(nil),              // 21: xyz.block.ftl.v1.schema.Metadata
-	(*MetadataAlias)(nil),         // 22: xyz.block.ftl.v1.schema.MetadataAlias
-	(*MetadataCalls)(nil),         // 23: xyz.block.ftl.v1.schema.MetadataCalls
-	(*MetadataConfig)(nil),        // 24: xyz.block.ftl.v1.schema.MetadataConfig
-	(*MetadataCronJob)(nil),       // 25: xyz.block.ftl.v1.schema.MetadataCronJob
-	(*MetadataDatabases)(nil),     // 26: xyz.block.ftl.v1.schema.MetadataDatabases
-	(*MetadataEncoding)(nil),      // 27: xyz.block.ftl.v1.schema.MetadataEncoding
-	(*MetadataIngress)(nil),       // 28: xyz.block.ftl.v1.schema.MetadataIngress
-	(*MetadataRetry)(nil),         // 29: xyz.block.ftl.v1.schema.MetadataRetry
-	(*MetadataSecrets)(nil),       // 30: xyz.block.ftl.v1.schema.MetadataSecrets
-	(*MetadataSubscriber)(nil),    // 31: xyz.block.ftl.v1.schema.MetadataSubscriber
-	(*MetadataTypeMap)(nil),       // 32: xyz.block.ftl.v1.schema.MetadataTypeMap
-	(*Module)(nil),                // 33: xyz.block.ftl.v1.schema.Module
-	(*ModuleRuntime)(nil),         // 34: xyz.block.ftl.v1.schema.ModuleRuntime
-	(*Optional)(nil),              // 35: xyz.block.ftl.v1.schema.Optional
-	(*Position)(nil),              // 36: xyz.block.ftl.v1.schema.Position
-	(*Ref)(nil),                   // 37: xyz.block.ftl.v1.schema.Ref
-	(*Schema)(nil),                // 38: xyz.block.ftl.v1.schema.Schema
-	(*Secret)(nil),                // 39: xyz.block.ftl.v1.schema.Secret
-	(*String)(nil),                // 40: xyz.block.ftl.v1.schema.String
-	(*StringValue)(nil),           // 41: xyz.block.ftl.v1.schema.StringValue
-	(*Subscription)(nil),          // 42: xyz.block.ftl.v1.schema.Subscription
-	(*Time)(nil),                  // 43: xyz.block.ftl.v1.schema.Time
-	(*Topic)(nil),                 // 44: xyz.block.ftl.v1.schema.Topic
-	(*Type)(nil),                  // 45: xyz.block.ftl.v1.schema.Type
-	(*TypeAlias)(nil),             // 46: xyz.block.ftl.v1.schema.TypeAlias
-	(*TypeParameter)(nil),         // 47: xyz.block.ftl.v1.schema.TypeParameter
-	(*TypeValue)(nil),             // 48: xyz.block.ftl.v1.schema.TypeValue
-	(*Unit)(nil),                  // 49: xyz.block.ftl.v1.schema.Unit
-	(*Value)(nil),                 // 50: xyz.block.ftl.v1.schema.Value
-	(*Verb)(nil),                  // 51: xyz.block.ftl.v1.schema.Verb
-	(*VerbRuntime)(nil),           // 52: xyz.block.ftl.v1.schema.VerbRuntime
-	(*timestamppb.Timestamp)(nil), // 53: google.protobuf.Timestamp
+	(*Any)(nil),                   // 1: xyz.block.ftl.v1.schema.Any
+	(*Array)(nil),                 // 2: xyz.block.ftl.v1.schema.Array
+	(*Bool)(nil),                  // 3: xyz.block.ftl.v1.schema.Bool
+	(*Bytes)(nil),                 // 4: xyz.block.ftl.v1.schema.Bytes
+	(*Config)(nil),                // 5: xyz.block.ftl.v1.schema.Config
+	(*Data)(nil),                  // 6: xyz.block.ftl.v1.schema.Data
+	(*Database)(nil),              // 7: xyz.block.ftl.v1.schema.Database
+	(*DatabaseRuntime)(nil),       // 8: xyz.block.ftl.v1.schema.DatabaseRuntime
+	(*Decl)(nil),                  // 9: xyz.block.ftl.v1.schema.Decl
+	(*Enum)(nil),                  // 10: xyz.block.ftl.v1.schema.Enum
+	(*EnumVariant)(nil),           // 11: xyz.block.ftl.v1.schema.EnumVariant
+	(*Field)(nil),                 // 12: xyz.block.ftl.v1.schema.Field
+	(*Float)(nil),                 // 13: xyz.block.ftl.v1.schema.Float
+	(*IngressPathComponent)(nil),  // 14: xyz.block.ftl.v1.schema.IngressPathComponent
+	(*IngressPathLiteral)(nil),    // 15: xyz.block.ftl.v1.schema.IngressPathLiteral
+	(*IngressPathParameter)(nil),  // 16: xyz.block.ftl.v1.schema.IngressPathParameter
+	(*Int)(nil),                   // 17: xyz.block.ftl.v1.schema.Int
+	(*IntValue)(nil),              // 18: xyz.block.ftl.v1.schema.IntValue
+	(*Map)(nil),                   // 19: xyz.block.ftl.v1.schema.Map
+	(*Metadata)(nil),              // 20: xyz.block.ftl.v1.schema.Metadata
+	(*MetadataAlias)(nil),         // 21: xyz.block.ftl.v1.schema.MetadataAlias
+	(*MetadataCalls)(nil),         // 22: xyz.block.ftl.v1.schema.MetadataCalls
+	(*MetadataConfig)(nil),        // 23: xyz.block.ftl.v1.schema.MetadataConfig
+	(*MetadataCronJob)(nil),       // 24: xyz.block.ftl.v1.schema.MetadataCronJob
+	(*MetadataDatabases)(nil),     // 25: xyz.block.ftl.v1.schema.MetadataDatabases
+	(*MetadataEncoding)(nil),      // 26: xyz.block.ftl.v1.schema.MetadataEncoding
+	(*MetadataIngress)(nil),       // 27: xyz.block.ftl.v1.schema.MetadataIngress
+	(*MetadataRetry)(nil),         // 28: xyz.block.ftl.v1.schema.MetadataRetry
+	(*MetadataSecrets)(nil),       // 29: xyz.block.ftl.v1.schema.MetadataSecrets
+	(*MetadataSubscriber)(nil),    // 30: xyz.block.ftl.v1.schema.MetadataSubscriber
+	(*MetadataTypeMap)(nil),       // 31: xyz.block.ftl.v1.schema.MetadataTypeMap
+	(*Module)(nil),                // 32: xyz.block.ftl.v1.schema.Module
+	(*ModuleRuntime)(nil),         // 33: xyz.block.ftl.v1.schema.ModuleRuntime
+	(*Optional)(nil),              // 34: xyz.block.ftl.v1.schema.Optional
+	(*Position)(nil),              // 35: xyz.block.ftl.v1.schema.Position
+	(*Ref)(nil),                   // 36: xyz.block.ftl.v1.schema.Ref
+	(*Schema)(nil),                // 37: xyz.block.ftl.v1.schema.Schema
+	(*Secret)(nil),                // 38: xyz.block.ftl.v1.schema.Secret
+	(*String)(nil),                // 39: xyz.block.ftl.v1.schema.String
+	(*StringValue)(nil),           // 40: xyz.block.ftl.v1.schema.StringValue
+	(*Subscription)(nil),          // 41: xyz.block.ftl.v1.schema.Subscription
+	(*Time)(nil),                  // 42: xyz.block.ftl.v1.schema.Time
+	(*Topic)(nil),                 // 43: xyz.block.ftl.v1.schema.Topic
+	(*Type)(nil),                  // 44: xyz.block.ftl.v1.schema.Type
+	(*TypeAlias)(nil),             // 45: xyz.block.ftl.v1.schema.TypeAlias
+	(*TypeParameter)(nil),         // 46: xyz.block.ftl.v1.schema.TypeParameter
+	(*TypeValue)(nil),             // 47: xyz.block.ftl.v1.schema.TypeValue
+	(*Unit)(nil),                  // 48: xyz.block.ftl.v1.schema.Unit
+	(*Value)(nil),                 // 49: xyz.block.ftl.v1.schema.Value
+	(*Verb)(nil),                  // 50: xyz.block.ftl.v1.schema.Verb
+	(*VerbRuntime)(nil),           // 51: xyz.block.ftl.v1.schema.VerbRuntime
+	(*timestamppb.Timestamp)(nil), // 52: google.protobuf.Timestamp
 }
 var file_xyz_block_ftl_v1_schema_schema_proto_depIdxs = []int32{
-	36,  // 0: xyz.block.ftl.v1.schema.Any.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 1: xyz.block.ftl.v1.schema.Array.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 2: xyz.block.ftl.v1.schema.Array.element:type_name -> xyz.block.ftl.v1.schema.Type
-	36,  // 3: xyz.block.ftl.v1.schema.Bool.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 4: xyz.block.ftl.v1.schema.Bytes.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 5: xyz.block.ftl.v1.schema.Config.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 6: xyz.block.ftl.v1.schema.Config.type:type_name -> xyz.block.ftl.v1.schema.Type
-	36,  // 7: xyz.block.ftl.v1.schema.Data.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	47,  // 8: xyz.block.ftl.v1.schema.Data.type_parameters:type_name -> xyz.block.ftl.v1.schema.TypeParameter
-	13,  // 9: xyz.block.ftl.v1.schema.Data.fields:type_name -> xyz.block.ftl.v1.schema.Field
-	21,  // 10: xyz.block.ftl.v1.schema.Data.metadata:type_name -> xyz.block.ftl.v1.schema.Metadata
-	36,  // 11: xyz.block.ftl.v1.schema.Database.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	9,   // 12: xyz.block.ftl.v1.schema.Database.runtime:type_name -> xyz.block.ftl.v1.schema.DatabaseRuntime
-	6,   // 13: xyz.block.ftl.v1.schema.Decl.config:type_name -> xyz.block.ftl.v1.schema.Config
-	7,   // 14: xyz.block.ftl.v1.schema.Decl.data:type_name -> xyz.block.ftl.v1.schema.Data
-	8,   // 15: xyz.block.ftl.v1.schema.Decl.database:type_name -> xyz.block.ftl.v1.schema.Database
-	11,  // 16: xyz.block.ftl.v1.schema.Decl.enum:type_name -> xyz.block.ftl.v1.schema.Enum
-	39,  // 17: xyz.block.ftl.v1.schema.Decl.secret:type_name -> xyz.block.ftl.v1.schema.Secret
-	42,  // 18: xyz.block.ftl.v1.schema.Decl.subscription:type_name -> xyz.block.ftl.v1.schema.Subscription
-	44,  // 19: xyz.block.ftl.v1.schema.Decl.topic:type_name -> xyz.block.ftl.v1.schema.Topic
-	46,  // 20: xyz.block.ftl.v1.schema.Decl.type_alias:type_name -> xyz.block.ftl.v1.schema.TypeAlias
-	51,  // 21: xyz.block.ftl.v1.schema.Decl.verb:type_name -> xyz.block.ftl.v1.schema.Verb
-	36,  // 22: xyz.block.ftl.v1.schema.Enum.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 23: xyz.block.ftl.v1.schema.Enum.type:type_name -> xyz.block.ftl.v1.schema.Type
-	12,  // 24: xyz.block.ftl.v1.schema.Enum.variants:type_name -> xyz.block.ftl.v1.schema.EnumVariant
-	36,  // 25: xyz.block.ftl.v1.schema.EnumVariant.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	50,  // 26: xyz.block.ftl.v1.schema.EnumVariant.value:type_name -> xyz.block.ftl.v1.schema.Value
-	36,  // 27: xyz.block.ftl.v1.schema.Field.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 28: xyz.block.ftl.v1.schema.Field.type:type_name -> xyz.block.ftl.v1.schema.Type
-	21,  // 29: xyz.block.ftl.v1.schema.Field.metadata:type_name -> xyz.block.ftl.v1.schema.Metadata
-	36,  // 30: xyz.block.ftl.v1.schema.Float.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	16,  // 31: xyz.block.ftl.v1.schema.IngressPathComponent.ingress_path_literal:type_name -> xyz.block.ftl.v1.schema.IngressPathLiteral
-	17,  // 32: xyz.block.ftl.v1.schema.IngressPathComponent.ingress_path_parameter:type_name -> xyz.block.ftl.v1.schema.IngressPathParameter
-	36,  // 33: xyz.block.ftl.v1.schema.IngressPathLiteral.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 34: xyz.block.ftl.v1.schema.IngressPathParameter.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 35: xyz.block.ftl.v1.schema.Int.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 36: xyz.block.ftl.v1.schema.IntValue.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 37: xyz.block.ftl.v1.schema.Map.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 38: xyz.block.ftl.v1.schema.Map.key:type_name -> xyz.block.ftl.v1.schema.Type
-	45,  // 39: xyz.block.ftl.v1.schema.Map.value:type_name -> xyz.block.ftl.v1.schema.Type
-	22,  // 40: xyz.block.ftl.v1.schema.Metadata.alias:type_name -> xyz.block.ftl.v1.schema.MetadataAlias
-	23,  // 41: xyz.block.ftl.v1.schema.Metadata.calls:type_name -> xyz.block.ftl.v1.schema.MetadataCalls
-	24,  // 42: xyz.block.ftl.v1.schema.Metadata.config:type_name -> xyz.block.ftl.v1.schema.MetadataConfig
-	25,  // 43: xyz.block.ftl.v1.schema.Metadata.cron_job:type_name -> xyz.block.ftl.v1.schema.MetadataCronJob
-	26,  // 44: xyz.block.ftl.v1.schema.Metadata.databases:type_name -> xyz.block.ftl.v1.schema.MetadataDatabases
-	27,  // 45: xyz.block.ftl.v1.schema.Metadata.encoding:type_name -> xyz.block.ftl.v1.schema.MetadataEncoding
-	28,  // 46: xyz.block.ftl.v1.schema.Metadata.ingress:type_name -> xyz.block.ftl.v1.schema.MetadataIngress
-	29,  // 47: xyz.block.ftl.v1.schema.Metadata.retry:type_name -> xyz.block.ftl.v1.schema.MetadataRetry
-	30,  // 48: xyz.block.ftl.v1.schema.Metadata.secrets:type_name -> xyz.block.ftl.v1.schema.MetadataSecrets
-	31,  // 49: xyz.block.ftl.v1.schema.Metadata.subscriber:type_name -> xyz.block.ftl.v1.schema.MetadataSubscriber
-	32,  // 50: xyz.block.ftl.v1.schema.Metadata.type_map:type_name -> xyz.block.ftl.v1.schema.MetadataTypeMap
-	36,  // 51: xyz.block.ftl.v1.schema.MetadataAlias.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 0: xyz.block.ftl.v1.schema.Any.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 1: xyz.block.ftl.v1.schema.Array.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 2: xyz.block.ftl.v1.schema.Array.element:type_name -> xyz.block.ftl.v1.schema.Type
+	35,  // 3: xyz.block.ftl.v1.schema.Bool.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 4: xyz.block.ftl.v1.schema.Bytes.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 5: xyz.block.ftl.v1.schema.Config.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 6: xyz.block.ftl.v1.schema.Config.type:type_name -> xyz.block.ftl.v1.schema.Type
+	35,  // 7: xyz.block.ftl.v1.schema.Data.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	46,  // 8: xyz.block.ftl.v1.schema.Data.type_parameters:type_name -> xyz.block.ftl.v1.schema.TypeParameter
+	12,  // 9: xyz.block.ftl.v1.schema.Data.fields:type_name -> xyz.block.ftl.v1.schema.Field
+	20,  // 10: xyz.block.ftl.v1.schema.Data.metadata:type_name -> xyz.block.ftl.v1.schema.Metadata
+	35,  // 11: xyz.block.ftl.v1.schema.Database.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	8,   // 12: xyz.block.ftl.v1.schema.Database.runtime:type_name -> xyz.block.ftl.v1.schema.DatabaseRuntime
+	5,   // 13: xyz.block.ftl.v1.schema.Decl.config:type_name -> xyz.block.ftl.v1.schema.Config
+	6,   // 14: xyz.block.ftl.v1.schema.Decl.data:type_name -> xyz.block.ftl.v1.schema.Data
+	7,   // 15: xyz.block.ftl.v1.schema.Decl.database:type_name -> xyz.block.ftl.v1.schema.Database
+	10,  // 16: xyz.block.ftl.v1.schema.Decl.enum:type_name -> xyz.block.ftl.v1.schema.Enum
+	38,  // 17: xyz.block.ftl.v1.schema.Decl.secret:type_name -> xyz.block.ftl.v1.schema.Secret
+	41,  // 18: xyz.block.ftl.v1.schema.Decl.subscription:type_name -> xyz.block.ftl.v1.schema.Subscription
+	43,  // 19: xyz.block.ftl.v1.schema.Decl.topic:type_name -> xyz.block.ftl.v1.schema.Topic
+	45,  // 20: xyz.block.ftl.v1.schema.Decl.type_alias:type_name -> xyz.block.ftl.v1.schema.TypeAlias
+	50,  // 21: xyz.block.ftl.v1.schema.Decl.verb:type_name -> xyz.block.ftl.v1.schema.Verb
+	35,  // 22: xyz.block.ftl.v1.schema.Enum.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 23: xyz.block.ftl.v1.schema.Enum.type:type_name -> xyz.block.ftl.v1.schema.Type
+	11,  // 24: xyz.block.ftl.v1.schema.Enum.variants:type_name -> xyz.block.ftl.v1.schema.EnumVariant
+	35,  // 25: xyz.block.ftl.v1.schema.EnumVariant.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	49,  // 26: xyz.block.ftl.v1.schema.EnumVariant.value:type_name -> xyz.block.ftl.v1.schema.Value
+	35,  // 27: xyz.block.ftl.v1.schema.Field.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 28: xyz.block.ftl.v1.schema.Field.type:type_name -> xyz.block.ftl.v1.schema.Type
+	20,  // 29: xyz.block.ftl.v1.schema.Field.metadata:type_name -> xyz.block.ftl.v1.schema.Metadata
+	35,  // 30: xyz.block.ftl.v1.schema.Float.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	15,  // 31: xyz.block.ftl.v1.schema.IngressPathComponent.ingress_path_literal:type_name -> xyz.block.ftl.v1.schema.IngressPathLiteral
+	16,  // 32: xyz.block.ftl.v1.schema.IngressPathComponent.ingress_path_parameter:type_name -> xyz.block.ftl.v1.schema.IngressPathParameter
+	35,  // 33: xyz.block.ftl.v1.schema.IngressPathLiteral.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 34: xyz.block.ftl.v1.schema.IngressPathParameter.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 35: xyz.block.ftl.v1.schema.Int.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 36: xyz.block.ftl.v1.schema.IntValue.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 37: xyz.block.ftl.v1.schema.Map.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 38: xyz.block.ftl.v1.schema.Map.key:type_name -> xyz.block.ftl.v1.schema.Type
+	44,  // 39: xyz.block.ftl.v1.schema.Map.value:type_name -> xyz.block.ftl.v1.schema.Type
+	21,  // 40: xyz.block.ftl.v1.schema.Metadata.alias:type_name -> xyz.block.ftl.v1.schema.MetadataAlias
+	22,  // 41: xyz.block.ftl.v1.schema.Metadata.calls:type_name -> xyz.block.ftl.v1.schema.MetadataCalls
+	23,  // 42: xyz.block.ftl.v1.schema.Metadata.config:type_name -> xyz.block.ftl.v1.schema.MetadataConfig
+	24,  // 43: xyz.block.ftl.v1.schema.Metadata.cron_job:type_name -> xyz.block.ftl.v1.schema.MetadataCronJob
+	25,  // 44: xyz.block.ftl.v1.schema.Metadata.databases:type_name -> xyz.block.ftl.v1.schema.MetadataDatabases
+	26,  // 45: xyz.block.ftl.v1.schema.Metadata.encoding:type_name -> xyz.block.ftl.v1.schema.MetadataEncoding
+	27,  // 46: xyz.block.ftl.v1.schema.Metadata.ingress:type_name -> xyz.block.ftl.v1.schema.MetadataIngress
+	28,  // 47: xyz.block.ftl.v1.schema.Metadata.retry:type_name -> xyz.block.ftl.v1.schema.MetadataRetry
+	29,  // 48: xyz.block.ftl.v1.schema.Metadata.secrets:type_name -> xyz.block.ftl.v1.schema.MetadataSecrets
+	30,  // 49: xyz.block.ftl.v1.schema.Metadata.subscriber:type_name -> xyz.block.ftl.v1.schema.MetadataSubscriber
+	31,  // 50: xyz.block.ftl.v1.schema.Metadata.type_map:type_name -> xyz.block.ftl.v1.schema.MetadataTypeMap
+	35,  // 51: xyz.block.ftl.v1.schema.MetadataAlias.pos:type_name -> xyz.block.ftl.v1.schema.Position
 	0,   // 52: xyz.block.ftl.v1.schema.MetadataAlias.kind:type_name -> xyz.block.ftl.v1.schema.AliasKind
-	36,  // 53: xyz.block.ftl.v1.schema.MetadataCalls.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	37,  // 54: xyz.block.ftl.v1.schema.MetadataCalls.calls:type_name -> xyz.block.ftl.v1.schema.Ref
-	36,  // 55: xyz.block.ftl.v1.schema.MetadataConfig.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	37,  // 56: xyz.block.ftl.v1.schema.MetadataConfig.config:type_name -> xyz.block.ftl.v1.schema.Ref
-	36,  // 57: xyz.block.ftl.v1.schema.MetadataCronJob.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 58: xyz.block.ftl.v1.schema.MetadataDatabases.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	37,  // 59: xyz.block.ftl.v1.schema.MetadataDatabases.calls:type_name -> xyz.block.ftl.v1.schema.Ref
-	36,  // 60: xyz.block.ftl.v1.schema.MetadataEncoding.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 61: xyz.block.ftl.v1.schema.MetadataIngress.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	15,  // 62: xyz.block.ftl.v1.schema.MetadataIngress.path:type_name -> xyz.block.ftl.v1.schema.IngressPathComponent
-	36,  // 63: xyz.block.ftl.v1.schema.MetadataRetry.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	37,  // 64: xyz.block.ftl.v1.schema.MetadataRetry.catch:type_name -> xyz.block.ftl.v1.schema.Ref
-	36,  // 65: xyz.block.ftl.v1.schema.MetadataSecrets.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	37,  // 66: xyz.block.ftl.v1.schema.MetadataSecrets.secrets:type_name -> xyz.block.ftl.v1.schema.Ref
-	36,  // 67: xyz.block.ftl.v1.schema.MetadataSubscriber.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 68: xyz.block.ftl.v1.schema.MetadataTypeMap.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 69: xyz.block.ftl.v1.schema.Module.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	10,  // 70: xyz.block.ftl.v1.schema.Module.decls:type_name -> xyz.block.ftl.v1.schema.Decl
-	34,  // 71: xyz.block.ftl.v1.schema.Module.runtime:type_name -> xyz.block.ftl.v1.schema.ModuleRuntime
-	53,  // 72: xyz.block.ftl.v1.schema.ModuleRuntime.create_time:type_name -> google.protobuf.Timestamp
-	36,  // 73: xyz.block.ftl.v1.schema.Optional.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 74: xyz.block.ftl.v1.schema.Optional.type:type_name -> xyz.block.ftl.v1.schema.Type
-	36,  // 75: xyz.block.ftl.v1.schema.Ref.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 76: xyz.block.ftl.v1.schema.Ref.type_parameters:type_name -> xyz.block.ftl.v1.schema.Type
-	36,  // 77: xyz.block.ftl.v1.schema.Schema.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	33,  // 78: xyz.block.ftl.v1.schema.Schema.modules:type_name -> xyz.block.ftl.v1.schema.Module
-	36,  // 79: xyz.block.ftl.v1.schema.Secret.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 80: xyz.block.ftl.v1.schema.Secret.type:type_name -> xyz.block.ftl.v1.schema.Type
-	36,  // 81: xyz.block.ftl.v1.schema.String.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 82: xyz.block.ftl.v1.schema.StringValue.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 83: xyz.block.ftl.v1.schema.Subscription.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	37,  // 84: xyz.block.ftl.v1.schema.Subscription.topic:type_name -> xyz.block.ftl.v1.schema.Ref
-	36,  // 85: xyz.block.ftl.v1.schema.Time.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 86: xyz.block.ftl.v1.schema.Topic.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 87: xyz.block.ftl.v1.schema.Topic.event:type_name -> xyz.block.ftl.v1.schema.Type
-	2,   // 88: xyz.block.ftl.v1.schema.Type.any:type_name -> xyz.block.ftl.v1.schema.Any
-	3,   // 89: xyz.block.ftl.v1.schema.Type.array:type_name -> xyz.block.ftl.v1.schema.Array
-	4,   // 90: xyz.block.ftl.v1.schema.Type.bool:type_name -> xyz.block.ftl.v1.schema.Bool
-	5,   // 91: xyz.block.ftl.v1.schema.Type.bytes:type_name -> xyz.block.ftl.v1.schema.Bytes
-	14,  // 92: xyz.block.ftl.v1.schema.Type.float:type_name -> xyz.block.ftl.v1.schema.Float
-	18,  // 93: xyz.block.ftl.v1.schema.Type.int:type_name -> xyz.block.ftl.v1.schema.Int
-	20,  // 94: xyz.block.ftl.v1.schema.Type.map:type_name -> xyz.block.ftl.v1.schema.Map
-	35,  // 95: xyz.block.ftl.v1.schema.Type.optional:type_name -> xyz.block.ftl.v1.schema.Optional
-	37,  // 96: xyz.block.ftl.v1.schema.Type.ref:type_name -> xyz.block.ftl.v1.schema.Ref
-	40,  // 97: xyz.block.ftl.v1.schema.Type.string:type_name -> xyz.block.ftl.v1.schema.String
-	43,  // 98: xyz.block.ftl.v1.schema.Type.time:type_name -> xyz.block.ftl.v1.schema.Time
-	49,  // 99: xyz.block.ftl.v1.schema.Type.unit:type_name -> xyz.block.ftl.v1.schema.Unit
-	36,  // 100: xyz.block.ftl.v1.schema.TypeAlias.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 101: xyz.block.ftl.v1.schema.TypeAlias.type:type_name -> xyz.block.ftl.v1.schema.Type
-	21,  // 102: xyz.block.ftl.v1.schema.TypeAlias.metadata:type_name -> xyz.block.ftl.v1.schema.Metadata
-	36,  // 103: xyz.block.ftl.v1.schema.TypeParameter.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	36,  // 104: xyz.block.ftl.v1.schema.TypeValue.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 105: xyz.block.ftl.v1.schema.TypeValue.value:type_name -> xyz.block.ftl.v1.schema.Type
-	36,  // 106: xyz.block.ftl.v1.schema.Unit.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	19,  // 107: xyz.block.ftl.v1.schema.Value.int_value:type_name -> xyz.block.ftl.v1.schema.IntValue
-	41,  // 108: xyz.block.ftl.v1.schema.Value.string_value:type_name -> xyz.block.ftl.v1.schema.StringValue
-	48,  // 109: xyz.block.ftl.v1.schema.Value.type_value:type_name -> xyz.block.ftl.v1.schema.TypeValue
-	36,  // 110: xyz.block.ftl.v1.schema.Verb.pos:type_name -> xyz.block.ftl.v1.schema.Position
-	45,  // 111: xyz.block.ftl.v1.schema.Verb.request:type_name -> xyz.block.ftl.v1.schema.Type
-	45,  // 112: xyz.block.ftl.v1.schema.Verb.response:type_name -> xyz.block.ftl.v1.schema.Type
-	21,  // 113: xyz.block.ftl.v1.schema.Verb.metadata:type_name -> xyz.block.ftl.v1.schema.Metadata
-	52,  // 114: xyz.block.ftl.v1.schema.Verb.runtime:type_name -> xyz.block.ftl.v1.schema.VerbRuntime
-	53,  // 115: xyz.block.ftl.v1.schema.VerbRuntime.create_time:type_name -> google.protobuf.Timestamp
-	53,  // 116: xyz.block.ftl.v1.schema.VerbRuntime.start_time:type_name -> google.protobuf.Timestamp
-	1,   // 117: xyz.block.ftl.v1.schema.VerbRuntime.status:type_name -> xyz.block.ftl.v1.schema.VerbStatus
-	118, // [118:118] is the sub-list for method output_type
-	118, // [118:118] is the sub-list for method input_type
-	118, // [118:118] is the sub-list for extension type_name
-	118, // [118:118] is the sub-list for extension extendee
-	0,   // [0:118] is the sub-list for field type_name
+	35,  // 53: xyz.block.ftl.v1.schema.MetadataCalls.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	36,  // 54: xyz.block.ftl.v1.schema.MetadataCalls.calls:type_name -> xyz.block.ftl.v1.schema.Ref
+	35,  // 55: xyz.block.ftl.v1.schema.MetadataConfig.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	36,  // 56: xyz.block.ftl.v1.schema.MetadataConfig.config:type_name -> xyz.block.ftl.v1.schema.Ref
+	35,  // 57: xyz.block.ftl.v1.schema.MetadataCronJob.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 58: xyz.block.ftl.v1.schema.MetadataDatabases.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	36,  // 59: xyz.block.ftl.v1.schema.MetadataDatabases.calls:type_name -> xyz.block.ftl.v1.schema.Ref
+	35,  // 60: xyz.block.ftl.v1.schema.MetadataEncoding.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 61: xyz.block.ftl.v1.schema.MetadataIngress.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	14,  // 62: xyz.block.ftl.v1.schema.MetadataIngress.path:type_name -> xyz.block.ftl.v1.schema.IngressPathComponent
+	35,  // 63: xyz.block.ftl.v1.schema.MetadataRetry.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	36,  // 64: xyz.block.ftl.v1.schema.MetadataRetry.catch:type_name -> xyz.block.ftl.v1.schema.Ref
+	35,  // 65: xyz.block.ftl.v1.schema.MetadataSecrets.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	36,  // 66: xyz.block.ftl.v1.schema.MetadataSecrets.secrets:type_name -> xyz.block.ftl.v1.schema.Ref
+	35,  // 67: xyz.block.ftl.v1.schema.MetadataSubscriber.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 68: xyz.block.ftl.v1.schema.MetadataTypeMap.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 69: xyz.block.ftl.v1.schema.Module.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	9,   // 70: xyz.block.ftl.v1.schema.Module.decls:type_name -> xyz.block.ftl.v1.schema.Decl
+	33,  // 71: xyz.block.ftl.v1.schema.Module.runtime:type_name -> xyz.block.ftl.v1.schema.ModuleRuntime
+	52,  // 72: xyz.block.ftl.v1.schema.ModuleRuntime.create_time:type_name -> google.protobuf.Timestamp
+	35,  // 73: xyz.block.ftl.v1.schema.Optional.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 74: xyz.block.ftl.v1.schema.Optional.type:type_name -> xyz.block.ftl.v1.schema.Type
+	35,  // 75: xyz.block.ftl.v1.schema.Ref.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 76: xyz.block.ftl.v1.schema.Ref.type_parameters:type_name -> xyz.block.ftl.v1.schema.Type
+	35,  // 77: xyz.block.ftl.v1.schema.Schema.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	32,  // 78: xyz.block.ftl.v1.schema.Schema.modules:type_name -> xyz.block.ftl.v1.schema.Module
+	35,  // 79: xyz.block.ftl.v1.schema.Secret.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 80: xyz.block.ftl.v1.schema.Secret.type:type_name -> xyz.block.ftl.v1.schema.Type
+	35,  // 81: xyz.block.ftl.v1.schema.String.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 82: xyz.block.ftl.v1.schema.StringValue.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 83: xyz.block.ftl.v1.schema.Subscription.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	36,  // 84: xyz.block.ftl.v1.schema.Subscription.topic:type_name -> xyz.block.ftl.v1.schema.Ref
+	35,  // 85: xyz.block.ftl.v1.schema.Time.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 86: xyz.block.ftl.v1.schema.Topic.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 87: xyz.block.ftl.v1.schema.Topic.event:type_name -> xyz.block.ftl.v1.schema.Type
+	1,   // 88: xyz.block.ftl.v1.schema.Type.any:type_name -> xyz.block.ftl.v1.schema.Any
+	2,   // 89: xyz.block.ftl.v1.schema.Type.array:type_name -> xyz.block.ftl.v1.schema.Array
+	3,   // 90: xyz.block.ftl.v1.schema.Type.bool:type_name -> xyz.block.ftl.v1.schema.Bool
+	4,   // 91: xyz.block.ftl.v1.schema.Type.bytes:type_name -> xyz.block.ftl.v1.schema.Bytes
+	13,  // 92: xyz.block.ftl.v1.schema.Type.float:type_name -> xyz.block.ftl.v1.schema.Float
+	17,  // 93: xyz.block.ftl.v1.schema.Type.int:type_name -> xyz.block.ftl.v1.schema.Int
+	19,  // 94: xyz.block.ftl.v1.schema.Type.map:type_name -> xyz.block.ftl.v1.schema.Map
+	34,  // 95: xyz.block.ftl.v1.schema.Type.optional:type_name -> xyz.block.ftl.v1.schema.Optional
+	36,  // 96: xyz.block.ftl.v1.schema.Type.ref:type_name -> xyz.block.ftl.v1.schema.Ref
+	39,  // 97: xyz.block.ftl.v1.schema.Type.string:type_name -> xyz.block.ftl.v1.schema.String
+	42,  // 98: xyz.block.ftl.v1.schema.Type.time:type_name -> xyz.block.ftl.v1.schema.Time
+	48,  // 99: xyz.block.ftl.v1.schema.Type.unit:type_name -> xyz.block.ftl.v1.schema.Unit
+	35,  // 100: xyz.block.ftl.v1.schema.TypeAlias.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 101: xyz.block.ftl.v1.schema.TypeAlias.type:type_name -> xyz.block.ftl.v1.schema.Type
+	20,  // 102: xyz.block.ftl.v1.schema.TypeAlias.metadata:type_name -> xyz.block.ftl.v1.schema.Metadata
+	35,  // 103: xyz.block.ftl.v1.schema.TypeParameter.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	35,  // 104: xyz.block.ftl.v1.schema.TypeValue.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 105: xyz.block.ftl.v1.schema.TypeValue.value:type_name -> xyz.block.ftl.v1.schema.Type
+	35,  // 106: xyz.block.ftl.v1.schema.Unit.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	18,  // 107: xyz.block.ftl.v1.schema.Value.int_value:type_name -> xyz.block.ftl.v1.schema.IntValue
+	40,  // 108: xyz.block.ftl.v1.schema.Value.string_value:type_name -> xyz.block.ftl.v1.schema.StringValue
+	47,  // 109: xyz.block.ftl.v1.schema.Value.type_value:type_name -> xyz.block.ftl.v1.schema.TypeValue
+	35,  // 110: xyz.block.ftl.v1.schema.Verb.pos:type_name -> xyz.block.ftl.v1.schema.Position
+	44,  // 111: xyz.block.ftl.v1.schema.Verb.request:type_name -> xyz.block.ftl.v1.schema.Type
+	44,  // 112: xyz.block.ftl.v1.schema.Verb.response:type_name -> xyz.block.ftl.v1.schema.Type
+	20,  // 113: xyz.block.ftl.v1.schema.Verb.metadata:type_name -> xyz.block.ftl.v1.schema.Metadata
+	51,  // 114: xyz.block.ftl.v1.schema.Verb.runtime:type_name -> xyz.block.ftl.v1.schema.VerbRuntime
+	52,  // 115: xyz.block.ftl.v1.schema.VerbRuntime.create_time:type_name -> google.protobuf.Timestamp
+	52,  // 116: xyz.block.ftl.v1.schema.VerbRuntime.start_time:type_name -> google.protobuf.Timestamp
+	117, // [117:117] is the sub-list for method output_type
+	117, // [117:117] is the sub-list for method input_type
+	117, // [117:117] is the sub-list for extension type_name
+	117, // [117:117] is the sub-list for extension extendee
+	0,   // [0:117] is the sub-list for field type_name
 }
 
 func init() { file_xyz_block_ftl_v1_schema_schema_proto_init() }
@@ -4641,7 +4559,7 @@ func file_xyz_block_ftl_v1_schema_schema_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_xyz_block_ftl_v1_schema_schema_proto_rawDesc,
-			NumEnums:      2,
+			NumEnums:      1,
 			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   0,
