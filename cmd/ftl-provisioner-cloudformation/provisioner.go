@@ -11,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	goformation "github.com/awslabs/goformation/v7/cloudformation"
+	cf "github.com/awslabs/goformation/v7/cloudformation/cloudformation"
 	"github.com/awslabs/goformation/v7/cloudformation/rds"
 	"github.com/awslabs/goformation/v7/cloudformation/tags"
 	"golang.org/x/text/cases"
@@ -117,6 +118,10 @@ func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionReq
 		if err := c.resourceToCF(req.FtlClusterId, req.Module, template, resourceCtx.Resource); err != nil {
 			return "", err
 		}
+	}
+	// Stack can not be empty, insert a null resource to keep the stack around
+	if len(req.DesiredResources) == 0 {
+		template.Resources["NullResource"] = &cf.WaitConditionHandle{}
 	}
 
 	bytes, err := template.JSON()
