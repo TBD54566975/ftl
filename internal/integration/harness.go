@@ -92,6 +92,13 @@ func WithLocalstack() Option {
 	}
 }
 
+// WithConsole is a Run* option that specifies tests should build and start the console
+func WithConsole() Option {
+	return func(o *options) {
+		o.console = true
+	}
+}
+
 // WithTestDataDir sets the directory from which to look for test data.
 //
 // Defaults to "testdata/<language>" if not provided.
@@ -165,6 +172,7 @@ type options struct {
 	envars            map[string]string
 	kube              bool
 	localstack        bool
+	console           bool
 }
 
 // Run an integration test.
@@ -252,9 +260,13 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				dumpKubePods(ctx, optional.Ptr(kubeClient), kubeNamespace)
 			}
 			assert.NoError(t, err)
-		} else {
-			Infof("Building ftl")
+		} else if opts.console {
+			Infof("Building ftl with console")
 			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
+			assert.NoError(t, err)
+		} else {
+			Infof("Building ftl without console")
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-without-frontend", "ftl").RunBuffered(ctx)
 			assert.NoError(t, err)
 		}
 		if opts.requireJava || slices.Contains(opts.languages, "java") || slices.Contains(opts.languages, "kotlin") {
@@ -283,6 +295,9 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			if opts.startController {
 				Infof("Starting ftl cluster")
 				args := []string{filepath.Join(binDir, "ftl"), "serve", "--recreate"}
+				if !opts.console {
+					args = append(args, "--no-console")
+				}
 				if opts.startProvisioner {
 					args = append(args, "--provisioners=1")
 
