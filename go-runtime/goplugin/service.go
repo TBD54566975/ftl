@@ -419,8 +419,8 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, transaction, false)
 	if err != nil {
 		return buildFailure(buildCtx, isAutomaticRebuild, builderrors.Error{
-			Type:  builderrors.FTL,
-			Level: builderrors.ErrorLevel(builderrors.COMPILER),
+			Type:  builderrors.COMPILER,
+			Level: builderrors.ERROR,
 			Msg:   "compile: " + err.Error(),
 		}), nil
 	}

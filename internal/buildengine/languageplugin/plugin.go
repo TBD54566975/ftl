@@ -552,6 +552,17 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 
 		errs := langpb.ErrorsFromProto(buildFailure.Errors)
 		builderrors.SortErrorsByPosition(errs)
+
+		if !builderrors.ContainsTerminalError(errs) {
+			// This happens if the language plugin returns BuildFailure but does not include any errors with level ERROR.
+			// Language plugins should always include at least one error with level ERROR in the case of a build failure.
+			errs = append(errs, builderrors.Error{
+				Msg:   "unexpected build failure without error level ERROR",
+				Level: builderrors.ERROR,
+				Type:  builderrors.FTL,
+			})
+		}
+
 		return BuildResult{
 			Errors:                 errs,
 			InvalidateDependencies: buildFailure.InvalidateDependencies,

@@ -412,7 +412,8 @@ func buildEventWithBuildError(contextID string, isAutomaticRebuild bool, msg str
 				IsAutomaticRebuild: isAutomaticRebuild,
 				Errors: langpb.ErrorsToProto([]builderrors.Error{
 					{
-						Msg: msg,
+						Msg:   msg,
+						Level: builderrors.ERROR,
 					},
 				}),
 			},
