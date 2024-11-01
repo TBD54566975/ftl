@@ -846,24 +846,24 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 		"builtin": schema.Builtins(),
 	}
 
+	metasMap := map[string]moduleMeta{}
+	e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
+		metasMap[name] = meta
+		return true
+	})
+	err = GenerateStubs(ctx, e.projectConfig.Root(), maps.Values(builtModules), metasMap)
+	if err != nil {
+		return err
+	}
+
 	topology, err := TopologicalSort(graph)
 	if err != nil {
 		return err
 	}
 	errCh := make(chan error, 1024)
-	for _, group := range topology {
+	for idx, group := range topology {
 		knownSchemas := map[string]*schema.Module{}
 		err := e.gatherSchemas(builtModules, knownSchemas)
-		if err != nil {
-			return err
-		}
-
-		metasMap := map[string]moduleMeta{}
-		e.moduleMetas.Range(func(name string, meta moduleMeta) bool {
-			metasMap[name] = meta
-			return true
-		})
-		err = GenerateStubs(ctx, e.projectConfig.Root(), maps.Values(knownSchemas), metasMap)
 		if err != nil {
 			return err
 		}
@@ -892,8 +892,18 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 
 		// Now this group is built, collect all the schemas.
 		close(schemas)
+		newSchemas := []*schema.Module{}
 		for sch := range schemas {
 			builtModules[sch.Name] = sch
+			newSchemas = append(newSchemas, sch)
+		}
+
+		// Generate stubs for all but the last group
+		if idx < (len(topology) - 1) {
+			err = GenerateStubs(ctx, e.projectConfig.Root(), newSchemas, metasMap)
+			if err != nil {
+				return err
+			}
 		}
 
 		moduleNames := []string{}
