@@ -905,6 +905,10 @@ func (e *Engine) buildWithCallback(ctx context.Context, callback buildCallback, 
 				return err
 			}
 		}
+		err = WriteGenericSchemaFiles(newSchemas, metasMap)
+		if err != nil {
+			return err
+		}
 
 		moduleNames := []string{}
 		for _, module := range knownSchemas {

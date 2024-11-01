@@ -20,56 +20,6 @@ var buildDirName = ".ftl"
 //
 // Currently, only Go stubs are supported. Kotlin and other language stubs can be added in the future.
 func GenerateStubs(ctx context.Context, projectRoot string, modules []*schema.Module, metas map[string]moduleMeta) error {
-	err := generateStubsForEachLanguage(ctx, projectRoot, modules, metas)
-	if err != nil {
-		return err
-	}
-	return writeGenericSchemaFiles(modules, metas)
-}
-
-// CleanStubs removes all generated stubs.
-func CleanStubs(ctx context.Context, projectRoot string) error {
-	logger := log.FromContext(ctx)
-	logger.Debugf("Deleting all generated stubs")
-	sharedFtlDir := filepath.Join(projectRoot, buildDirName)
-
-	// Wipe the modules directory to ensure we don't have any stale modules.
-	err := os.RemoveAll(sharedFtlDir)
-	if err != nil {
-		return fmt.Errorf("failed to remove %s: %w", sharedFtlDir, err)
-	}
-
-	return nil
-}
-
-// SyncStubReferences syncs the references in the generated stubs.
-//
-// For Go, this means updating all the go.work files to include all known modules in the shared stubbed modules directory.
-func SyncStubReferences(ctx context.Context, projectRoot string, moduleNames []string, metas map[string]moduleMeta) error {
-	wg, wgctx := errgroup.WithContext(ctx)
-	for _, meta := range metas {
-		stubsRoot := stubsLanguageDir(projectRoot, meta.module.Config.Language)
-		if err := meta.plugin.SyncStubReferences(wgctx, meta.module.Config, stubsRoot, moduleNames); err != nil {
-			return err //nolint:wrapcheck
-		}
-		return nil
-	}
-	err := wg.Wait()
-	if err != nil {
-		return fmt.Errorf("failed to sync go stub references: %w", err)
-	}
-	return nil
-}
-
-func stubsLanguageDir(projectRoot, language string) string {
-	return filepath.Join(projectRoot, buildDirName, language, "modules")
-}
-
-func stubsModuleDir(projectRoot, language, module string) string {
-	return filepath.Join(stubsLanguageDir(projectRoot, language), module)
-}
-
-func generateStubsForEachLanguage(ctx context.Context, projectRoot string, modules []*schema.Module, metas map[string]moduleMeta) error {
 	modulesByName := map[string]*schema.Module{}
 	for _, module := range modules {
 		modulesByName[module.Name] = module
@@ -108,7 +58,42 @@ func generateStubsForEachLanguage(ctx context.Context, projectRoot string, modul
 	return nil
 }
 
-func writeGenericSchemaFiles(modules []*schema.Module, metas map[string]moduleMeta) error {
+// CleanStubs removes all generated stubs.
+func CleanStubs(ctx context.Context, projectRoot string) error {
+	logger := log.FromContext(ctx)
+	logger.Debugf("Deleting all generated stubs")
+	sharedFtlDir := filepath.Join(projectRoot, buildDirName)
+
+	// Wipe the modules directory to ensure we don't have any stale modules.
+	err := os.RemoveAll(sharedFtlDir)
+	if err != nil {
+		return fmt.Errorf("failed to remove %s: %w", sharedFtlDir, err)
+	}
+
+	return nil
+}
+
+// SyncStubReferences syncs the references in the generated stubs.
+//
+// For Go, this means updating all the go.work files to include all known modules in the shared stubbed modules directory.
+func SyncStubReferences(ctx context.Context, projectRoot string, moduleNames []string, metas map[string]moduleMeta) error {
+	wg, wgctx := errgroup.WithContext(ctx)
+	for _, meta := range metas {
+		stubsRoot := stubsLanguageDir(projectRoot, meta.module.Config.Language)
+		if err := meta.plugin.SyncStubReferences(wgctx, meta.module.Config, stubsRoot, moduleNames); err != nil {
+			return err //nolint:wrapcheck
+		}
+		return nil
+	}
+	err := wg.Wait()
+	if err != nil {
+		return fmt.Errorf("failed to sync go stub references: %w", err)
+	}
+	return nil
+}
+
+// WriteGenericSchemaFiles writes <module>.pb schema files for the given modules to the GeneratedSchemaDir
+func WriteGenericSchemaFiles(modules []*schema.Module, metas map[string]moduleMeta) error {
 	sch := &schema.Schema{Modules: modules}
 	for _, meta := range metas {
 		module := meta.module.Config
@@ -123,9 +108,6 @@ func writeGenericSchemaFiles(modules []*schema.Module, metas map[string]moduleMe
 		}
 
 		for _, mod := range sch.Modules {
-			if mod.Name == module.Module {
-				continue
-			}
 			data, err := schema.ModuleToBytes(mod)
 			if err != nil {
 				return fmt.Errorf("failed to export module schema for module %s %w", mod.Name, err)
@@ -137,4 +119,12 @@ func writeGenericSchemaFiles(modules []*schema.Module, metas map[string]moduleMe
 		}
 	}
 	return nil
+}
+
+func stubsLanguageDir(projectRoot, language string) string {
+	return filepath.Join(projectRoot, buildDirName, language, "modules")
+}
+
+func stubsModuleDir(projectRoot, language, module string) string {
+	return filepath.Join(stubsLanguageDir(projectRoot, language), module)
 }
