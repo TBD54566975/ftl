@@ -56,17 +56,15 @@ jobs:
           rm -r ./tmpsmoketest
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
-        with:
-          cache: true
       - name: Build Cache
         uses: ./.github/actions/build-cache
       - name: Download Go Modules
         run: go mod download
       - name: Set up a kube cluster with the tagged release dockerhub image
         run: |
-            set -euo pipefail
-            echo "Deploying the tagged release to the cluster"
-            cd deployment && just deploy-version ${{ env.LATEST_VERSION }} && cd ..
+          set -euo pipefail
+          echo "Deploying the tagged release to the cluster"
+          cd deployment && just deploy-version ${{ env.LATEST_VERSION }} && cd ..
       # We skip this since it requires an integration test change to skip the full kube deploy.
       # Re-enable this step when the tagged release has the integration test change.
       # - name: Smoke test the tagged release images
@@ -81,9 +79,9 @@ jobs:
           fetch-depth: 1
       - name: Smoke test HEAD with a full deploy to test upgrade path
         run: |
-            set -euo pipefail
-            echo "Running smoke test on the HEAD images"
-            USE_DB_CONFIG=true go test -v -timeout 15m -tags smoketest -run '^Test' ./smoketest
+          set -euo pipefail
+          echo "Running smoke test on the HEAD images"
+          USE_DB_CONFIG=true go test -v -timeout 15m -tags smoketest -run '^Test' ./smoketest
       - name: Archive Report
         uses: actions/upload-artifact@v4
         if: always()

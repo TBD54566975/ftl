@@ -7,7 +7,20 @@ runs:
     - id: find-go-build-cache
       shell: bash
       run: echo "cache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
-    - name: Cache Docker Images
+    - id: bin-hash
+      shell: bash
+      run: |
+        hash="$(find ./${{ inputs.working-directory }}/bin ! -type d | sort | xargs openssl sha256 | openssl sha256 -r | cut -d' ' -f1)"
+        echo "hash=$hash" >> "$GITHUB_OUTPUT"
+    - name: Restore Hermit Cache
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ runner.os == 'macOS' && '~/Library/Caches/hermit/pkg' || '~/.cache/hermit/pkg' }}
+        key: ${{ runner.os }}-hermit-cache-${{ steps.bin-hash.outputs.hash }}
+        restore-keys: |
+          ${{ runner.os }}-hermit-cache-${{ steps.bin-hash.outputs.hash }}
+          ${{ runner.os }}-hermit-cache-
+    - name: Restore Docker Images
       uses: ScribeMD/docker-cache@0.5.0
       with:
         key: docker-${{ runner.os }}-${{ hashFiles('docker-compose.yml') }}
