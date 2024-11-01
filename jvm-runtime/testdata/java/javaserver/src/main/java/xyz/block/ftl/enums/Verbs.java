@@ -4,6 +4,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import ftl.javaserver.Shape;
+import ftl.javaserver.StringEnumVerbClient;
 import xyz.block.ftl.Export;
 import xyz.block.ftl.Verb;
 
@@ -37,5 +39,11 @@ public class Verbs {
     @Verb
     public AnimalWrapper typeEnumVerb(AnimalWrapper animal) {
         return animal;
+    }
+
+    @Export
+    @Verb
+    public ftl.javaserver.ShapeWrapper localVerbCall(StringEnumVerbClient client) {
+        return client.stringEnumVerb(new ftl.javaserver.ShapeWrapper(Shape.SQUARE));
     }
 }
