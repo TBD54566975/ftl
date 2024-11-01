@@ -220,7 +220,7 @@ func (p *LanguagePlugin) CreateModule(ctx context.Context, projConfig projectcon
 	return nil
 }
 
-// GetModuleConfigDefaults provides custom defaults for the module config.
+// ModuleConfigDefaults provides custom defaults for the module config.
 //
 // The result may be cached by FTL, so defaulting logic should not be changing due to normal module changes.
 // For example, it is valid to return defaults based on which build tool is configured within the module directory,
@@ -252,7 +252,7 @@ func customDefaultsFromProto(proto *langpb.ModuleConfigDefaultsResponse) modulec
 func (p *LanguagePlugin) GetDependencies(ctx context.Context, config moduleconfig.ModuleConfig) ([]string, error) {
 	configProto, err := langpb.ModuleConfigToProto(config.Abs())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not convert module config to proto: %w", err)
 	}
 	resp, err := p.client.getDependencies(ctx, connect.NewRequest(&langpb.DependenciesRequest{
 		ModuleConfig: configProto,
@@ -263,7 +263,7 @@ func (p *LanguagePlugin) GetDependencies(ctx context.Context, config moduleconfi
 	return resp.Msg.Modules, nil
 }
 
-// Generate stubs for the given module.
+// GenerateStubs for the given module.
 func (p *LanguagePlugin) GenerateStubs(ctx context.Context, dir string, module *schema.Module, moduleConfig moduleconfig.ModuleConfig, nativeModuleConfig optional.Option[moduleconfig.ModuleConfig]) error {
 	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	configProto, err := langpb.ModuleConfigToProto(moduleConfig.Abs())
