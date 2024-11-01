@@ -470,7 +470,12 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 				cmdEnded := false
 				result, eventContextID, isAutomaticRebuild := getBuildSuccessOrFailure(e)
 				if activeBuildCmd.Ok() == isAutomaticRebuild {
-					logger.Debugf("ignoring automatic rebuild while expecting explicit build")
+					if isAutomaticRebuild {
+						logger.Debugf("ignoring automatic rebuild while expecting explicit build")
+					} else {
+						// This is likely a language plugin bug, but we can ignore it
+						logger.Warnf("ignoring explicit build while none was requested")
+					}
 					continue
 				} else if eventContextID != contextID(bctx.Config, contextCounter) {
 					logger.Debugf("received build for outdated context %q; expected %q", eventContextID, contextID(bctx.Config, contextCounter))

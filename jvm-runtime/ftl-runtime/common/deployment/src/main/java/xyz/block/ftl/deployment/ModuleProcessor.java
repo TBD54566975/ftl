@@ -52,6 +52,7 @@ public class ModuleProcessor {
     private static final String FEATURE = "ftl-java-runtime";
 
     private static final String SCHEMA_OUT = "schema.pb";
+    private static final String ERRORS_OUT = "errors.pb";
 
     @BuildStep
     BindableServiceBuildItem verbService() {
@@ -147,8 +148,11 @@ public class ModuleProcessor {
 
         log.infof("Generating module '%s' schema from %d decls", moduleName, moduleBuilder.getDeclsCount());
         Path output = outputTargetBuildItem.getOutputDirectory().resolve(SCHEMA_OUT);
+        Path errorOutput = outputTargetBuildItem.getOutputDirectory().resolve(ERRORS_OUT);
         try (var out = Files.newOutputStream(output)) {
-            moduleBuilder.writeTo(out);
+            try (var errorOut = Files.newOutputStream(errorOutput)) {
+                moduleBuilder.writeTo(out, errorOut);
+            }
         }
 
         output = outputTargetBuildItem.getOutputDirectory().resolve("launch");

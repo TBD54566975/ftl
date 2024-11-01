@@ -376,7 +376,7 @@ func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, e
 //
 // Build errors are sent over the stream as a BuildFailure event.
 // This function only returns an error if events could not be send over the stream.
-func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction compile.ModifyFilesTransaction) error {
+func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction) error {
 	buildEvent, err := build(ctx, projectRoot, stubsRoot, buildCtx, isAutomaticRebuild, transaction)
 	if err != nil {
 		buildEvent = buildFailure(buildCtx, isAutomaticRebuild, builderrors.Error{
@@ -391,7 +391,7 @@ func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.Build
 	return nil
 }
 
-func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction compile.ModifyFilesTransaction) (*langpb.BuildEvent, error) {
+func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction) (*langpb.BuildEvent, error) {
 	release, err := flock.Acquire(ctx, buildCtx.Config.BuildLock, BuildLockTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire build lock: %w", err)
