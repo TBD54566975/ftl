@@ -21,7 +21,26 @@ import { ModuleNode } from './ModuleNode'
 //import { VerbNode } from './VerbNode'
 //import { layoutNodes } from './create-layout'
 //const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode, secretNode: SecretNode, configNode: ConfigNode }
+
 const nodeTypes = { moduleNode: ModuleNode }
+
+function countDecls(m: Module) {
+  return (
+    m.configs.length +
+    m.data.length +
+    m.databases.length +
+    m.enums.length +
+    m.secrets.length +
+    m.subscriptions.length +
+    m.topics.length +
+    m.typealiases.length +
+    m.verbs.length
+  )
+}
+
+function moduleHeight(m: Module) {
+  return 32 * (countDecls(m) + 1)
+}
 
 export type FTLNode = Module | Verb | Secret | Config
 
@@ -88,7 +107,7 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
         draggable: true,
         style: {
           width: 200, //groupWidth,
-          height: 400, //moduleHeight(module),
+          height: moduleHeight(m),
           zIndex: -1,
         },
       })
@@ -97,77 +116,74 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
           addRef(r, m, d.config?.name)
         }
       }
-      //m.configs.forEach((d) => d.references.forEach((r) => addRef(r, m, d.config?.name)))
       for (const d of m.configs) {
         for (const r of d.references) {
           addRef(r, m, d.config?.name)
         }
       }
-      //m.data.forEach((d) => d.references.forEach((r) => addRef(r, m, d.data?.name)))
       for (const d of m.data) {
         for (const r of d.references) {
           addRef(r, m, d.data?.name)
         }
       }
-      //m.databases.forEach((d) => d.references.forEach((r) => addRef(r, m, d.database?.name)))
       for (const d of m.databases) {
         for (const r of d.references) {
           addRef(r, m, d.database?.name)
         }
       }
-      //m.enums.forEach((d) => d.references.forEach((r) => addRef(r, m, d.enum?.name)))
       for (const d of m.enums) {
         for (const r of d.references) {
           addRef(r, m, d.enum?.name)
         }
       }
-      //m.secrets.forEach((d) => d.references.forEach((r) => addRef(r, m, d.secret?.name)))
       for (const d of m.secrets) {
         for (const r of d.references) {
           addRef(r, m, d.secret?.name)
         }
       }
-      //m.subscriptions.forEach((d) => d.references.forEach((r) => addRef(r, m, d.subscription?.name)))
       for (const d of m.subscriptions) {
         for (const r of d.references) {
           addRef(r, m, d.subscription?.name)
         }
       }
-      //m.topics.forEach((d) => d.references.forEach((r) => addRef(r, m, d.topic?.name)))
       for (const d of m.topics) {
         for (const r of d.references) {
           addRef(r, m, d.topic?.name)
         }
       }
-      //m.typealiases.forEach((d) => d.references.forEach((r) => addRef(r, m, d.typealias?.name)))
       for (const d of m.verbs) {
         for (const r of d.references) {
           addRef(r, m, d.verb?.name)
         }
       }
-      //m.verbs.forEach((d) => d.references.forEach((r) => addRef(r, m, d.verb?.name)))
     })
 
     const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
-    g.setGraph({ rankdir: 'TB' })
+    g.setGraph({
+      rankdir: 'LR',
+      //nodesep: 80,
+      //ranksep: 60,
+    })
     for (const edge of edges) {
       g.setEdge(edge.source, edge.target)
     }
     for (const node of nodes) {
+      console.log(node)
       g.setNode(node.id, {
         ...node,
         width: 200, //node.measured?.width ?? 0,
-        height: 400, //node.measured?.height ?? 0,
+        height: moduleHeight(node.data.item), //node.measured?.height ?? 0,
       })
     }
 
+    g.graph().align
     Dagre.layout(g)
     nodes = nodes.map((node) => {
       const position = g.node(node.id)
       // We are shifting the dagre node position (anchor=center center) to the top left
       // so it matches the React Flow node anchor point (top left).
-      const x = position.x // - (node.measured?.width ?? 0) / 2;
-      const y = position.y // - (node.measured?.height ?? 0) / 2;
+      const x = position.x - 100 // - (node.measured?.width ?? 0) / 2;
+      const y = position.y - (moduleHeight(node.data.item) / 2) // - (node.measured?.height ?? 0) / 2;
 
       return { ...node, position: { x, y } }
     })
