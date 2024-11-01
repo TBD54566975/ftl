@@ -4,5 +4,16 @@
       "options": [
           "--proto_path=${workspaceRoot}/backend/protos"
       ]
-  }
+  },
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  },
+  "python.analysis.extraPaths": [
+    "./python-runtime/ftl/src"
+  ]
 }

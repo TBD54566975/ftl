@@ -1,0 +1,10 @@
+[project]
+name = "echo"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["ftl"]
+
+[tool.uv.sources]
+ftl = { path = "../../../python-runtime/ftl" }
