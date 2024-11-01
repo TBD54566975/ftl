@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"connectrpc.com/connect"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 )
@@ -32,7 +35,7 @@ func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Req
 	case types.StackStatusCreateFailed:
 		return failure(&stack)
 	case types.StackStatusCreateComplete:
-		return success(&stack, req.Msg.DesiredResources)
+		return c.success(ctx, &stack, req.Msg.DesiredResources)
 	case types.StackStatusRollbackInProgress:
 		return failure(&stack)
 	case types.StackStatusRollbackFailed:
@@ -44,13 +47,13 @@ func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Req
 	case types.StackStatusDeleteFailed:
 		return failure(&stack)
 	case types.StackStatusDeleteComplete:
-		return success(&stack, req.Msg.DesiredResources)
+		return c.success(ctx, &stack, req.Msg.DesiredResources)
 	case types.StackStatusUpdateInProgress:
 		return running()
 	case types.StackStatusUpdateCompleteCleanupInProgress:
 		return running()
 	case types.StackStatusUpdateComplete:
-		return success(&stack, req.Msg.DesiredResources)
+		return c.success(ctx, &stack, req.Msg.DesiredResources)
 	case types.StackStatusUpdateFailed:
 		return failure(&stack)
 	case types.StackStatusUpdateRollbackInProgress:
@@ -60,8 +63,8 @@ func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Req
 	}
 }
 
-func success(stack *types.Stack, resources []*provisioner.Resource) (*connect.Response[provisioner.StatusResponse], error) {
-	err := updateResources(stack.Outputs, resources)
+func (c *CloudformationProvisioner) success(ctx context.Context, stack *types.Stack, resources []*provisioner.Resource) (*connect.Response[provisioner.StatusResponse], error) {
+	err := c.updateResources(ctx, stack.Outputs, resources)
 	if err != nil {
 		return nil, err
 	}
@@ -86,49 +89,87 @@ func failure(stack *types.Stack) (*connect.Response[provisioner.StatusResponse],
 	return nil, connect.NewError(connect.CodeUnknown, errors.New(*stack.StackStatusReason))
 }
 
-func updateResources(outputs []types.Output, update []*provisioner.Resource) error {
+func outputsByResourceID(outputs []types.Output) (map[string][]types.Output, error) {
+	m := make(map[string][]types.Output)
 	for _, output := range outputs {
 		key, err := decodeOutputKey(output)
 		if err != nil {
-			return fmt.Errorf("failed to decode output key: %w", err)
+			return nil, fmt.Errorf("failed to decode output key: %w", err)
 		}
-		for _, resource := range update {
-			if resource.ResourceId == key.ResourceID {
-				if postgres, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
-					if postgres.Postgres == nil {
-						postgres.Postgres = &provisioner.PostgresResource{}
-					}
-					if postgres.Postgres.Output == nil {
-						postgres.Postgres.Output = &provisioner.PostgresResource_PostgresResourceOutput{}
-					}
+		m[key.ResourceID] = append(m[key.ResourceID], output)
+	}
+	return m, nil
+}
 
-					switch key.PropertyName {
-					case PropertyDBReadEndpoint:
-						postgres.Postgres.Output.ReadDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
-					case PropertyDBWriteEndpoint:
-						postgres.Postgres.Output.WriteDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
-					}
-				} else if mysql, ok := resource.Resource.(*provisioner.Resource_Mysql); ok {
-					if mysql.Mysql == nil {
-						mysql.Mysql = &provisioner.MysqlResource{}
-					}
-					if mysql.Mysql.Output == nil {
-						mysql.Mysql.Output = &provisioner.MysqlResource_MysqlResourceOutput{}
-					}
+func outputsByPropertyName(outputs []types.Output) (map[string]types.Output, error) {
+	m := make(map[string]types.Output)
+	for _, output := range outputs {
+		m[*output.OutputKey] = output
+	}
+	return m, nil
+}
 
-					switch key.PropertyName {
-					case PropertyDBReadEndpoint:
-						mysql.Mysql.Output.ReadDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 5432)
-					case PropertyDBWriteEndpoint:
-						mysql.Mysql.Output.WriteDsn = endpointToDSN(*output.OutputValue, key.ResourceID, 3306)
-					}
-				}
+func (c *CloudformationProvisioner) updateResources(ctx context.Context, outputs []types.Output, update []*provisioner.Resource) error {
+	byResourceID, err := outputsByResourceID(outputs)
+	if err != nil {
+		return fmt.Errorf("failed to group outputs by resource ID: %w", err)
+	}
+
+	for _, resource := range update {
+		if postgres, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
+			if postgres.Postgres == nil {
+				postgres.Postgres = &provisioner.PostgresResource{}
 			}
+			if postgres.Postgres.Output == nil {
+				postgres.Postgres.Output = &provisioner.PostgresResource_PostgresResourceOutput{}
+			}
+
+			if err := c.updatePostgresOutputs(ctx, postgres.Postgres.Output, resource.ResourceId, byResourceID[resource.ResourceId]); err != nil {
+				return fmt.Errorf("failed to update postgres outputs: %w", err)
+			}
+		} else if _, ok := resource.Resource.(*provisioner.Resource_Mysql); ok {
+			panic("mysql not implemented")
 		}
 	}
 	return nil
 }
 
-func endpointToDSN(endpoint, database string, port int) string {
-	return fmt.Sprintf("postgres://%s:%d/%s?user=postgres&password=password", endpoint, port, database)
+func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, to *provisioner.PostgresResource_PostgresResourceOutput, resourceID string, outputs []types.Output) error {
+	byName, err := outputsByPropertyName(outputs)
+	if err != nil {
+		return fmt.Errorf("failed to group outputs by property name: %w", err)
+	}
+
+	secretARN := *byName[PropertyMasterUserSecretARN].OutputValue
+	username, password, err := c.secretARNToUsernamePassword(ctx, secretARN)
+	if err != nil {
+		return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
+	}
+
+	to.ReadDsn = endpointToDSN(*byName[PropertyDBReadEndpoint].OutputValue, resourceID, 5432, username, password)
+	to.WriteDsn = endpointToDSN(*byName[PropertyDBWriteEndpoint].OutputValue, resourceID, 5432, username, password)
+
+	return nil
+}
+
+func endpointToDSN(endpoint, database string, port int, username, password string) string {
+	urlEncodedPassword := url.QueryEscape(password)
+	return fmt.Sprintf("postgres://%s:%d/%s?user=%s&password=%s", endpoint, port, database, username, urlEncodedPassword)
+}
+
+func (c *CloudformationProvisioner) secretARNToUsernamePassword(ctx context.Context, secretARN string) (string, string, error) {
+	secret, err := c.secrets.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+		SecretId: &secretARN,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get secret value: %w", err)
+	}
+	secretString := *secret.SecretString
+
+	var secretData map[string]string
+	if err := json.Unmarshal([]byte(secretString), &secretData); err != nil {
+		return "", "", fmt.Errorf("failed to unmarshal secret data: %w", err)
+	}
+
+	return secretData["username"], secretData["password"], nil
 }

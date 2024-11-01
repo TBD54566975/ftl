@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	goformation "github.com/awslabs/goformation/v7/cloudformation"
 	cf "github.com/awslabs/goformation/v7/cloudformation/cloudformation"
 	"github.com/awslabs/goformation/v7/cloudformation/rds"
@@ -24,8 +25,9 @@ import (
 )
 
 const (
-	PropertyDBReadEndpoint  = "db:read_endpoint"
-	PropertyDBWriteEndpoint = "db:write_endpoint"
+	PropertyDBReadEndpoint      = "db:read_endpoint"
+	PropertyDBWriteEndpoint     = "db:write_endpoint"
+	PropertyMasterUserSecretARN = "db:maser_user_secret_arn"
 )
 
 type Config struct {
@@ -35,8 +37,9 @@ type Config struct {
 }
 
 type CloudformationProvisioner struct {
-	client *cloudformation.Client
-	confg  *Config
+	client  *cloudformation.Client
+	secrets *secretsmanager.Client
+	confg   *Config
 }
 
 var _ provisionerconnect.ProvisionerPluginServiceHandler = (*CloudformationProvisioner)(nil)
@@ -46,8 +49,12 @@ func NewCloudformationProvisioner(ctx context.Context, config Config) (context.C
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create cloudformation client: %w", err)
 	}
+	secrets, err := createSecretsClient(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create secretsmanager client: %w", err)
+	}
 
-	return ctx, &CloudformationProvisioner{client: client, confg: &config}, nil
+	return ctx, &CloudformationProvisioner{client: client, secrets: secrets, confg: &config}, nil
 }
 
 func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -164,6 +171,10 @@ func (c *CloudformationProvisioner) resourceToCF(cluster, module string, templat
 		addOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &CloudformationOutputKey{
 			ResourceID:   resource.ResourceId,
 			PropertyName: PropertyDBReadEndpoint,
+		})
+		addOutput(template.Outputs, goformation.GetAtt(clusterID, "MasterUserSecret.SecretArn"), &CloudformationOutputKey{
+			ResourceID:   resource.ResourceId,
+			PropertyName: PropertyMasterUserSecretARN,
 		})
 		return nil
 	}

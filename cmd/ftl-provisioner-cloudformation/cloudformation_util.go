@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/smithy-go"
 	goformation "github.com/awslabs/goformation/v7/cloudformation"
 	"github.com/jpillora/backoff"
@@ -98,6 +99,19 @@ func createClient(ctx context.Context) (*cloudformation.Client, error) {
 
 	return cloudformation.New(
 		cloudformation.Options{
+			Credentials: cfg.Credentials,
+			Region:      cfg.Region,
+		},
+	), nil
+}
+
+func createSecretsClient(ctx context.Context) (*secretsmanager.Client, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load default aws config: %w", err)
+	}
+	return secretsmanager.New(
+		secretsmanager.Options{
 			Credentials: cfg.Credentials,
 			Region:      cfg.Region,
 		},
