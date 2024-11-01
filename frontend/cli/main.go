@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/alecthomas/kong"
@@ -29,7 +29,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/profiles"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"
-	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
@@ -143,11 +142,7 @@ func main() {
 		os.Exit(0)
 	}()
 
-	config, err := projectconfig.Load(ctx, configPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		kctx.FatalIfErrorf(err)
-	}
-	bindContext := makeBindContext(config, logger, cancel)
+	bindContext := makeBindContext(logger, cancel)
 	ctx = bindContext(ctx, kctx)
 
 	err = kctx.Run(ctx)
@@ -156,9 +151,6 @@ func main() {
 
 func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 	gitRoot, _ := internal.GitRoot(".").Get()
-	configRegistry, secretsRegistry := makeConfigurationRegistries()
-	configProviders := slices.Map(configRegistry.Providers(), func(key configuration.ProviderKey) string { return key.String() })
-	secretProviders := slices.Map(secretsRegistry.Providers(), func(key configuration.ProviderKey) string { return key.String() })
 	app := kong.Must(cli,
 		kong.Description(`FTL - Towards a 𝝺-calculus for large-scale systems`),
 		kong.Configuration(kongtoml.Loader, ".ftl.toml", "~/.ftl.toml"),
@@ -172,15 +164,13 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 			return &kong.Group{Key: node.Name, Title: "Command flags:"}
 		}),
 		kong.Vars{
-			"version":         ftl.Version,
-			"os":              runtime.GOOS,
-			"arch":            runtime.GOARCH,
-			"numcpu":          strconv.Itoa(runtime.NumCPU()),
-			"gitroot":         gitRoot,
-			"dsn":             dsn.DSN("ftl"),
-			"boxdsn":          dsn.DSN("ftl", dsn.Port(5432)),
-			"configProviders": strings.Join(configProviders, ","),
-			"secretProviders": strings.Join(secretProviders, ","),
+			"version": ftl.Version,
+			"os":      runtime.GOOS,
+			"arch":    runtime.GOARCH,
+			"numcpu":  strconv.Itoa(runtime.NumCPU()),
+			"gitroot": gitRoot,
+			"dsn":     dsn.DSN("ftl"),
+			"boxdsn":  dsn.DSN("ftl", dsn.Port(5432)),
 		},
 		kong.Exit(func(code int) {
 			if sm, ok := csm.statusManager.Get(); ok {
@@ -192,10 +182,17 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 	return app
 }
 
-func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, cancel context.CancelFunc) terminal.KongContextBinder {
+func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.KongContextBinder {
 	var bindContext terminal.KongContextBinder
 	bindContext = func(ctx context.Context, kctx *kong.Context) context.Context {
-		kctx.Bind(projectConfig)
+		err := kctx.BindToProvider(func(cli *CLI) (projectconfig.Config, error) {
+			config, err := projectconfig.Load(ctx, cli.ConfigFlag)
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return config, fmt.Errorf("%w", err)
+			}
+			return config, nil
+		})
+		kctx.FatalIfErrorf(err)
 		kctx.Bind(logger)
 
 		controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
@@ -206,17 +203,34 @@ func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, can
 		ctx = rpc.ContextWithClient(ctx, provisionerServiceClient)
 		kctx.BindTo(provisionerServiceClient, (*provisionerconnect.ProvisionerServiceClient)(nil))
 
-		configRegistry, secretsRegistry := makeConfigurationRegistries()
-		kctx.Bind(configRegistry, secretsRegistry)
+		err = kctx.BindToProvider(func() (*providers.Registry[configuration.Configuration], error) {
+			configRegistry := providers.NewRegistry[configuration.Configuration]()
+			configRegistry.Register(providers.NewEnvarFactory[configuration.Configuration]())
+			configRegistry.Register(providers.NewInlineFactory[configuration.Configuration]())
+			return configRegistry, nil
+		})
+		kctx.FatalIfErrorf(err)
+
+		err = kctx.BindToProvider(func(cli *CLI, projectConfig projectconfig.Config) (*providers.Registry[configuration.Secrets], error) {
+			secretsRegistry := providers.NewRegistry[configuration.Secrets]()
+			secretsRegistry.Register(providers.NewEnvarFactory[configuration.Secrets]())
+			secretsRegistry.Register(providers.NewInlineFactory[configuration.Secrets]())
+			secretsRegistry.Register(providers.NewOnePasswordFactory(cli.Vault, projectConfig.Name))
+			secretsRegistry.Register(providers.NewKeychainFactory())
+			return secretsRegistry, nil
+		})
+		kctx.FatalIfErrorf(err)
 
 		kongcompletion.Register(kctx.Kong, kongcompletion.WithPredictors(terminal.Predictors(ctx, controllerServiceClient)))
 
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)
 		kctx.BindTo(verbServiceClient, (*ftlv1connect.VerbServiceClient)(nil))
-		project, err := profiles.Open(filepath.Dir(projectConfig.Path), secretsRegistry, configRegistry)
+
+		err = kctx.BindToProvider(func(projectConfig projectconfig.Config, secretsRegistry *providers.Registry[configuration.Secrets], configRegistry *providers.Registry[configuration.Configuration]) (*profiles.Project, error) {
+			return profiles.Open(filepath.Dir(projectConfig.Path), secretsRegistry, configRegistry)
+		})
 		kctx.FatalIfErrorf(err)
-		kctx.Bind(project)
 
 		kctx.Bind(cli.Endpoint)
 		kctx.BindTo(ctx, (*context.Context)(nil))
@@ -225,18 +239,6 @@ func makeBindContext(projectConfig projectconfig.Config, logger *log.Logger, can
 		return ctx
 	}
 	return bindContext
-}
-
-func makeConfigurationRegistries() (configRegistry *providers.Registry[configuration.Configuration], secretsRegistry *providers.Registry[configuration.Secrets]) {
-	configRegistry = providers.NewRegistry[configuration.Configuration]()
-	configRegistry.Register(providers.NewEnvarFactory[configuration.Configuration]())
-	configRegistry.Register(providers.NewInlineFactory[configuration.Configuration]())
-	secretsRegistry = providers.NewRegistry[configuration.Secrets]()
-	secretsRegistry.Register(providers.NewEnvarFactory[configuration.Secrets]())
-	secretsRegistry.Register(providers.NewInlineFactory[configuration.Secrets]())
-	// secretsRegistry.Register(providers.NewOnePasswordFactory())
-	secretsRegistry.Register(providers.NewKeychainFactory())
-	return
 }
 
 type currentStatusManager struct {

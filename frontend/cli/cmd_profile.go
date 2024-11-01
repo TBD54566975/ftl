@@ -103,8 +103,8 @@ func (p profileSwitchCmd) Run(project *profiles.Project) error {
 type profileNewCmd struct {
 	Local         bool                      `help:"Create a local profile." xor:"location" and:"providers"`
 	Remote        *url.URL                  `help:"Create a remote profile." xor:"location" placeholder:"ENDPOINT"`
-	Secrets       configuration.ProviderKey `help:"Secrets provider (one of ${enum})." enum:"${secretProviders}" default:"inline" and:"providers"`
-	Configuration configuration.ProviderKey `help:"Configuration provider (one of ${enum})." enum:"${configProviders}" default:"inline" and:"providers"`
+	Secrets       configuration.ProviderKey `help:"Secrets provider." default:"inline" and:"providers"`
+	Configuration configuration.ProviderKey `help:"Configuration provider." default:"inline" and:"providers"`
 	Name          string                    `arg:"" help:"Profile name."`
 }
 

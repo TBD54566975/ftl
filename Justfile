@@ -89,7 +89,7 @@ build-jvm *args:
 build-language-plugins: build-go build-python build-java build-kotlin
 
 # Build ftl-language-go
-build-go: build-zips build-protos 
+build-go: build-zips build-protos
   #!/bin/bash
   shopt -s extglob
 
@@ -215,7 +215,7 @@ test-readme *args:
 
 # Run "go mod tidy" on all packages including tests
 tidy:
-  find . -name go.mod -print -execdir go mod tidy \;
+  git ls-files | grep go.mod | grep -v '{{{{' | xargs -n1 dirname | xargs -I {} sh -c 'cd {} && echo {} && go mod tidy'
 
 # Check for changes in existing SQL migrations compared to main
 ensure-frozen-migrations:

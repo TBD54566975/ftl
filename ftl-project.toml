@@ -1,13 +1,9 @@
 name = "ftl"
 module-dirs = ["examples/go"]
-ftl-min-version = ""
-hermit = false
-no-git = false
 disable-ide-integration = true
 
 [global]
   [global.configuration]
-    CUSTOMER_TOKEN_TBD = "inline://InNvbWVDb25maWci"
     key = "inline://InZhbHVlIg"
 
 [modules]
