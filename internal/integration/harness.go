@@ -270,7 +270,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			assert.NoError(t, err)
 		}
 		if opts.requireJava || slices.Contains(opts.languages, "java") || slices.Contains(opts.languages, "kotlin") {
-			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-jvm", "-DskipTests", "-B").RunBuffered(ctx)
+			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build-jvm", "-DskipTests", "-B").Run()
 			assert.NoError(t, err)
 		}
 		if opts.localstack {
