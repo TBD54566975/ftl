@@ -35,7 +35,7 @@ type newCmd struct {
 // - environment variable overrides
 //
 // Language plugins take time to launch, so we return the one we created so it can be reused in Run().
-func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPlugin optional.Option[languageplugin.LanguagePlugin], err error) {
+func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPlugin optional.Option[*languageplugin.LanguagePlugin], err error) {
 	if len(args) < 2 {
 		return optionalPlugin, nil
 	} else if args[0] != "new" {
@@ -85,7 +85,7 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 	return optional.Some(plugin), nil
 }
 
-func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config, plugin languageplugin.LanguagePlugin) error {
+func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config, plugin *languageplugin.LanguagePlugin) error {
 	name, path, err := validateModule(i.Dir, i.Name)
 	if err != nil {
 		return err

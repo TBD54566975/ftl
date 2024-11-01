@@ -23,7 +23,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
-	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -98,7 +97,7 @@ func main() {
 
 	if plugin, ok := languagePlugin.Get(); ok {
 		// Plugins take time to launch, so we bind the "ftl new" plugin to the kong context.
-		kctx.BindTo(plugin, (*languageplugin.LanguagePlugin)(nil))
+		kctx.Bind(plugin)
 	}
 
 	if !cli.Plain {
