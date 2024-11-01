@@ -12,3 +12,7 @@ plugins:
   - plugin: connect-es
     out: ../../frontend/console/src/protos
     opt: target=ts
+  - plugin: python
+    out: ../../python-runtime/ftl/src/ftl/protos
+    opt:
+      - pyi_out=../../python-runtime/ftl/src/ftl/protos
