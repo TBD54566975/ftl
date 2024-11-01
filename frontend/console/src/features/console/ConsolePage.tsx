@@ -26,7 +26,7 @@ export const ConsolePage = () => {
     )
   }
 
-  return <GraphPane/>
+  return <GraphPane />
   /*return (
     <div className='flex h-full'>
       <ResizablePanels

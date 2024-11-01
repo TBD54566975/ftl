@@ -10,18 +10,18 @@ import Dagre from '@dagrejs/dagre'
 
 import 'reactflow/dist/style.css'
 import React from 'react'
-import { useModules } from '../../api/modules/use-modules'
+//import { useModules } from '../../api/modules/use-modules'
 import { useStreamModules } from '../../api/modules/use-stream-modules'
 import type { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { ConfigNode } from './ConfigNode'
-import { GroupNode } from './GroupNode'
+//import { ConfigNode } from './ConfigNode'
+//import { GroupNode } from './GroupNode'
 import { ModuleNode } from './ModuleNode'
-import { SecretNode } from './SecretNode'
-import { VerbNode } from './VerbNode'
-import { layoutNodes } from './create-layout'
+//import { SecretNode } from './SecretNode'
+//import { VerbNode } from './VerbNode'
+//import { layoutNodes } from './create-layout'
 //const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode, secretNode: SecretNode, configNode: ConfigNode }
-const nodeTypes = {moduleNode: ModuleNode}
+const nodeTypes = { moduleNode: ModuleNode }
 
 export type FTLNode = Module | Verb | Secret | Config
 
@@ -30,7 +30,7 @@ interface GraphPaneProps {
 }
 
 export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
-  const modules = useModules()
+  //const modules = useModules()
   const streamed = useStreamModules()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
@@ -59,7 +59,7 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
     }
     let nodes: Node[] = []
     const edges: Edge[] = []
-    const existingEdges = {}
+    const existingEdges: { [key: string]: boolean } = {}
     const addRef = (r: Ref, m: Module, name?: string) => {
       if (!name) {
         return
@@ -87,42 +87,89 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
         type: 'moduleNode',
         draggable: true,
         style: {
-          width: 200,//groupWidth,
-          height: 400,//moduleHeight(module),
+          width: 200, //groupWidth,
+          height: 400, //moduleHeight(module),
           zIndex: -1,
         },
       })
-      m.configs.forEach((d) => d.references.forEach((r) => addRef(r, m, d.config?.name)))
-      m.data.forEach((d) => d.references.forEach((r) => addRef(r, m, d.data?.name)))
-      m.databases.forEach((d) => d.references.forEach((r) => addRef(r, m, d.database?.name)))
-      m.enums.forEach((d) => d.references.forEach((r) => addRef(r, m, d.enum?.name)))
-      m.secrets.forEach((d) => d.references.forEach((r) => addRef(r, m, d.secret?.name)))
-      m.subscriptions.forEach((d) => d.references.forEach((r) => addRef(r, m, d.subscription?.name)))
-      m.topics.forEach((d) => d.references.forEach((r) => addRef(r, m, d.topic?.name)))
-      m.typealiases.forEach((d) => d.references.forEach((r) => addRef(r, m, d.typealias?.name)))
-      m.verbs.forEach((d) => d.references.forEach((r) => addRef(r, m, d.verb?.name)))
+      for (const d of m.configs) {
+        for (const r of d.references) {
+          addRef(r, m, d.config?.name)
+        }
+      }
+      //m.configs.forEach((d) => d.references.forEach((r) => addRef(r, m, d.config?.name)))
+      for (const d of m.configs) {
+        for (const r of d.references) {
+          addRef(r, m, d.config?.name)
+        }
+      }
+      //m.data.forEach((d) => d.references.forEach((r) => addRef(r, m, d.data?.name)))
+      for (const d of m.data) {
+        for (const r of d.references) {
+          addRef(r, m, d.data?.name)
+        }
+      }
+      //m.databases.forEach((d) => d.references.forEach((r) => addRef(r, m, d.database?.name)))
+      for (const d of m.databases) {
+        for (const r of d.references) {
+          addRef(r, m, d.database?.name)
+        }
+      }
+      //m.enums.forEach((d) => d.references.forEach((r) => addRef(r, m, d.enum?.name)))
+      for (const d of m.enums) {
+        for (const r of d.references) {
+          addRef(r, m, d.enum?.name)
+        }
+      }
+      //m.secrets.forEach((d) => d.references.forEach((r) => addRef(r, m, d.secret?.name)))
+      for (const d of m.secrets) {
+        for (const r of d.references) {
+          addRef(r, m, d.secret?.name)
+        }
+      }
+      //m.subscriptions.forEach((d) => d.references.forEach((r) => addRef(r, m, d.subscription?.name)))
+      for (const d of m.subscriptions) {
+        for (const r of d.references) {
+          addRef(r, m, d.subscription?.name)
+        }
+      }
+      //m.topics.forEach((d) => d.references.forEach((r) => addRef(r, m, d.topic?.name)))
+      for (const d of m.topics) {
+        for (const r of d.references) {
+          addRef(r, m, d.topic?.name)
+        }
+      }
+      //m.typealiases.forEach((d) => d.references.forEach((r) => addRef(r, m, d.typealias?.name)))
+      for (const d of m.verbs) {
+        for (const r of d.references) {
+          addRef(r, m, d.verb?.name)
+        }
+      }
+      //m.verbs.forEach((d) => d.references.forEach((r) => addRef(r, m, d.verb?.name)))
     })
 
     const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
     g.setGraph({ rankdir: 'TB' })
-    edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-    nodes.forEach((node) =>
+    for (const edge of edges) {
+      g.setEdge(edge.source, edge.target)
+    }
+    for (const node of nodes) {
       g.setNode(node.id, {
         ...node,
-        width: 200,//node.measured?.width ?? 0,
-        height: 400,//node.measured?.height ?? 0,
-      }),
-    )
+        width: 200, //node.measured?.width ?? 0,
+        height: 400, //node.measured?.height ?? 0,
+      })
+    }
 
     Dagre.layout(g)
     nodes = nodes.map((node) => {
-      const position = g.node(node.id);
+      const position = g.node(node.id)
       // We are shifting the dagre node position (anchor=center center) to the top left
       // so it matches the React Flow node anchor point (top left).
-      const x = position.x - (node.measured?.width ?? 0) / 2;
-      const y = position.y - (node.measured?.height ?? 0) / 2;
+      const x = position.x // - (node.measured?.width ?? 0) / 2;
+      const y = position.y // - (node.measured?.height ?? 0) / 2;
 
-      return { ...node, position: { x, y } };
+      return { ...node, position: { x, y } }
     })
 
     // Need to update after render loop for ReactFlow to pick up the changes
@@ -170,7 +217,6 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
     </ReactFlow>
   )
 }
-
 
 /*export const GraphPane = () => {
   const graph = {
