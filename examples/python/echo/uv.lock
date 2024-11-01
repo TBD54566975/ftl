@@ -1,0 +1,18 @@
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "echo"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "ftl" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "ftl", directory = "../../../python-runtime/ftl" }]
+
+[[package]]
+name = "ftl"
+version = "0.1.0"
+source = { directory = "../../../python-runtime/ftl" }
