@@ -161,6 +161,7 @@ jobs:
         run: |
           just errtrace
           just build ftl # Ensure all the prerequisites are built before we use goreleaser
+          just build-language-plugins
           goreleaser release --skip=validate
         env:
           GITHUB_TOKEN: ${{ github.token }}
