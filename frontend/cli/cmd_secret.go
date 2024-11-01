@@ -15,6 +15,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
+	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
 type secretCmd struct {
@@ -116,6 +117,8 @@ type secretSetCmd struct {
 }
 
 func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, projConfig projectconfig.Config) error {
+	// We don't need the terminal status display, and it does not currently handle partial line writes
+	terminal.FromContext(ctx).Close()
 	// Prompt for a secret if stdin is a terminal, otherwise read from stdin.
 	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
 	if err != nil {
