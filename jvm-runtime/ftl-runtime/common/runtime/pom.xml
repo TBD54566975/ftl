@@ -147,6 +147,12 @@
                     <protoSourceRoot>${rootDir}/backend/protos</protoSourceRoot>
                     <pluginId>grpc-java</pluginId>
                     <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.65.1:exe:${os.detected.classifier}</pluginArtifact>
+                    <includes>
+                        <include>**/schema.proto</include>
+                        <include>**/verb.proto</include>
+                        <include>**/module.proto</include>
+                        <include>**/ftl.proto</include>
+                    </includes>
                 </configuration>
             </plugin>
         </plugins>

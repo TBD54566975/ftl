@@ -1,6 +1,6 @@
 import { AttributeBadge } from '../../components'
 import { List } from '../../components/List'
-import type { StatusResponse_Route } from '../../protos/xyz/block/ftl/v1/ftl_pb'
+import type { StatusResponse_Route } from '../../protos/xyz/block/ftl/v1/controller_pb'
 
 export const RoutesList = ({ routes }: { routes: StatusResponse_Route[] }) => {
   return (

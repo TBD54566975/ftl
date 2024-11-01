@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1;
+
+import "xyz/block/ftl/v1/ftl.proto";
+import "xyz/block/ftl/v1/schema/schema.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1";
+option java_multiple_files = true;
+
+message CallRequest {
+  Metadata metadata = 1;
+
+  schema.Ref verb = 2;
+  bytes body = 3;
+}
+
+message CallResponse {
+  message Error {
+    string message = 1;
+    optional string stack = 2;
+    // TODO: Richer error type.
+  }
+
+  oneof response {
+    bytes body = 1;
+    Error error = 2;
+  }
+}
+
+// VerbService is a common interface shared by multiple services for calling Verbs.
+service VerbService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Issue a synchronous call to a Verb.
+  rpc Call(CallRequest) returns (CallResponse);
+}

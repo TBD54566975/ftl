@@ -2,8 +2,8 @@ import { Code, ConnectError } from '@connectrpc/connect'
 import { type UseQueryResult, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client.ts'
 import { useVisibility } from '../../hooks/use-visibility.ts'
-import { ControllerService } from '../../protos/xyz/block/ftl/v1/ftl_connect.ts'
-import { DeploymentChangeType, type PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/ftl_pb.ts'
+import { ControllerService } from '../../protos/xyz/block/ftl/v1/controller_connect.ts'
+import { DeploymentChangeType, type PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/controller_pb.ts'
 
 const streamingSchemaKey = 'streamingSchema'
 const currentDeployments: Record<string, string> = {}
