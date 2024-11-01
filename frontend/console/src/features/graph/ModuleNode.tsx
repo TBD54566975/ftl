@@ -11,7 +11,7 @@ interface Props extends NodeProps {
 
 export const ModuleNode = ({ data }: Props) => {
   const handleColor = 'rgb(49 46 129)'
-  const decls = []
+  /*const decls = []
   for (const d of data.item.configs) {
     decls.push(<div key={d.config?.name || 'd'} className='ml-4 text-xs'>config: {d.config?.name}</div>)
   }
@@ -38,14 +38,13 @@ export const ModuleNode = ({ data }: Props) => {
   }
   for (const d of data.item.verbs) {
     decls.push(<div key={d.verb?.name || 'd'} className='ml-4 text-xs'>verb: {d.verb?.name}</div>)
-  }
+  }*/
   return (
     <>
       <Handle type='target' position={Position.Left} style={{ border: 0, backgroundColor: handleColor }} isConnectable={true} />
 
-      <div className={`grid h-full w-full bg-indigo-600 rounded-md ${data.selected ? 'bg-pink-600' : ''}`}>
-        <div className='place-self-center text-xs text-gray-100 truncate max-w-[90%]'>{data.title}</div>
-        {decls}
+      <div className={`justify-center grid h-full w-full bg-indigo-600 rounded-md ${data.selected ? 'bg-pink-600' : ''}`}>
+        <div className='mt-1 text-xs text-gray-100 truncate'>{data.title}</div>
       </div>
 
       <Handle type='source' position={Position.Right} style={{ border: 0, backgroundColor: handleColor }} className='bg-indigo-600' isConnectable={true} />

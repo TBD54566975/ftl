@@ -1,8 +1,10 @@
 import { useEffect } from 'react'
-import ReactFlow, { Background, Controls, useEdgesState, useNodesState } from 'reactflow'
+import ReactFlow, { Background, Controls, useEdgesState, useNodesState, useReactFlow } from 'reactflow'
 import type { Edge, Node } from 'reactflow'
 
-import Dagre from '@dagrejs/dagre'
+import ELK from 'elkjs/lib/elk.bundled.js'
+
+//import Dagre from '@dagrejs/dagre'
 
 //import ReactECharts from 'echarts-for-react'
 //import ReactEChartsCore from 'echarts-for-react/lib/core'
@@ -16,13 +18,17 @@ import type { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1
 import type { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 //import { ConfigNode } from './ConfigNode'
 //import { GroupNode } from './GroupNode'
+import { DeclNode } from './DeclNode'
 import { ModuleNode } from './ModuleNode'
 //import { SecretNode } from './SecretNode'
 //import { VerbNode } from './VerbNode'
 //import { layoutNodes } from './create-layout'
 //const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode, secretNode: SecretNode, configNode: ConfigNode }
 
-const nodeTypes = { moduleNode: ModuleNode }
+const nodeTypes = { declNode: DeclNode, moduleNode: ModuleNode }
+const moduleWidth = 200
+const declWidth = 160
+const declHeight = 28
 
 function countDecls(m: Module) {
   return (
@@ -76,8 +82,11 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
     if (!streamed?.data) {
       return
     }
+    const modules = streamed.data.map((m) => m.name)
     let nodes: Node[] = []
     const edges: Edge[] = []
+    let declNodes: Node[] = []
+    const declEdges: Edge[] = []
     const existingEdges: { [key: string]: boolean } = {}
     const addRef = (r: Ref, m: Module, name?: string) => {
       if (!name) {
@@ -86,79 +95,121 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
       if (r.module === m.name) {
         return
       }
-      if (existingEdges[`${m.name}-${r.module}`]) {
+      if (!modules.includes(r.module)) {
         return
       }
-      existingEdges[`${m.name}-${r.module}`] = true
       edges.push({
         id: `${m.name}.${name}-${r.module}.${r.name}`,
-        source: `${m.name}`,
-        target: `${r.module}`,
-        style: { stroke: 'rgb(251 113 133)' },
+        source: `${m.name}.${name}`,
+        target: `${r.module}.${r.name}`,
+        style: { stroke: 'rgb(151 13 33)' },
         animated: true,
       })
+      if (!existingEdges[`${m.name}-${r.module}`]) {
+        existingEdges[`${m.name}-${r.module}`] = true
+        edges.push({
+          id: `${m.name}-${r.module}`,
+          source: `${m.name}`,
+          target: `${r.module}`,
+          style: { stroke: 'rgb(251 113 133)' },
+          animated: true,
+        })
+      }
     }
     streamed.data.forEach((m, i) => {
-      nodes.push({
-        id: m.name ?? '',
-        position: { x: i * 210, y: 0 },
-        data: { title: m.name, item: m },
-        type: 'moduleNode',
-        draggable: true,
-        style: {
-          width: 200, //groupWidth,
-          height: moduleHeight(m),
-          zIndex: -1,
-        },
-      })
-      for (const d of m.configs) {
-        for (const r of d.references) {
-          addRef(r, m, d.config?.name)
+      const children: Node[] = []
+      const addChild = (d, name?: string) => {
+        if (!name) {
+          return
         }
+        children.push({
+          id: `${m.name}.${name}`,
+          parentId: `${m.name}`,
+          extent: 'parent',
+          position: { x: 0, y: 0 },
+          data: { title: name, item: d },
+          type: 'declNode',
+          draggable: true,
+          style: {
+            width: declWidth, //groupWidth,
+            height: declHeight,
+            zIndex: 0,
+          },
+          layoutOptions: {
+            'elk.direction': 'DOWN',
+          },
+        })
       }
       for (const d of m.configs) {
+        addChild(d, d.config?.name)
         for (const r of d.references) {
           addRef(r, m, d.config?.name)
         }
       }
       for (const d of m.data) {
+        addChild(d, d.data?.name)
         for (const r of d.references) {
           addRef(r, m, d.data?.name)
         }
       }
       for (const d of m.databases) {
+        addChild(d, d.database?.name)
         for (const r of d.references) {
           addRef(r, m, d.database?.name)
         }
       }
       for (const d of m.enums) {
+        addChild(d, d.enum?.name)
         for (const r of d.references) {
           addRef(r, m, d.enum?.name)
         }
       }
       for (const d of m.secrets) {
+        addChild(d, d.secret?.name)
         for (const r of d.references) {
           addRef(r, m, d.secret?.name)
         }
       }
       for (const d of m.subscriptions) {
+        addChild(d, d.subscription?.name)
         for (const r of d.references) {
           addRef(r, m, d.subscription?.name)
         }
       }
       for (const d of m.topics) {
+        addChild(d, d.topic?.name)
         for (const r of d.references) {
           addRef(r, m, d.topic?.name)
         }
       }
+      for (const d of m.typealiases) {
+        addChild(d, d.typealias?.name)
+        for (const r of d.references) {
+          addRef(r, m, d.typealias?.name)
+        }
+      }
       for (const d of m.verbs) {
+        addChild(d, d.verb?.name)
         for (const r of d.references) {
           addRef(r, m, d.verb?.name)
         }
       }
+      nodes.push({
+        id: m.name ?? '',
+        position: { x: i * 210, y: 0 },
+        children,
+        data: { title: m.name, item: m },
+        type: 'moduleNode',
+        draggable: true,
+        style: {
+          width: moduleWidth, //groupWidth,
+          height: moduleHeight(m),
+          zIndex: -1,
+        },
+      })
     })
 
-    const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
+    /*const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}))
     g.setGraph({
       rankdir: 'LR',
       //nodesep: 80,
@@ -168,11 +219,10 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
       g.setEdge(edge.source, edge.target)
     }
     for (const node of nodes) {
-      console.log(node)
       g.setNode(node.id, {
         ...node,
-        width: 200, //node.measured?.width ?? 0,
-        height: moduleHeight(node.data.item), //node.measured?.height ?? 0,
+        width: moduleWidth, //node.measured?.width ?? 0,
+        height: (node.type === 'moduleNode' ? moduleHeight(node.data.item) : declHeight), //node.measured?.height ?? 0,
       })
     }
 
@@ -182,15 +232,50 @@ export const GraphPane: React.FC<GraphPaneProps> = ({ onTapped }) => {
       const position = g.node(node.id)
       // We are shifting the dagre node position (anchor=center center) to the top left
       // so it matches the React Flow node anchor point (top left).
-      const x = position.x - 100 // - (node.measured?.width ?? 0) / 2;
-      const y = position.y - (moduleHeight(node.data.item) / 2) // - (node.measured?.height ?? 0) / 2;
+      const x = position.x - (moduleWidth / 2) // - (node.measured?.width ?? 0) / 2;
+      const y = position.y - ((node.type === 'moduleNode' ? moduleHeight(node.data.item) : declHeight) / 2) // - (node.measured?.height ?? 0) / 2;
 
       return { ...node, position: { x, y } }
+       })*/
+
+    const elk = new ELK()
+    const graph = {
+      id: 'root',
+      layoutOptions: {
+        'elk.layered.spacing.nodeNodeBetweenLayers': 100,
+        'elk.spacing.nodeNode': 90,
+        'elk.algorithm': 'layered',
+      },
+      children: nodes.map((node) => ({
+        ...node,
+        width: moduleWidth, //node.measured.width,
+        height: (node.type === 'moduleNode' ? moduleHeight(node.data.item) : declHeight), //node.measured.height,
+      })),
+      edges,
+    }
+    const finalNodes: Node[] = []
+    elk.layout(graph).then(({ children }) => {
+      // By mutating the children in-place we saves ourselves from creating a
+      // needless copy of the nodes array.
+      children.forEach((node) => {
+        node.position = { x: node.x, y: node.y }
+        node.children?.forEach((c) => {
+          c.position = { x: c.x, y: c.y }
+          finalNodes.push(c)
+        })
+        finalNodes.push(node)
+      });
+
+      //setNodes(finalNodes)
+      //window.requestAnimationFrame(() => {
+      //  fitView()
+      //})
     })
+    console.log(nodes)
 
     // Need to update after render loop for ReactFlow to pick up the changes
     setTimeout(() => {
-      setNodes(nodes)
+      setNodes(finalNodes)
       setEdges(edges)
     }, 0)
   }, [streamed?.data])
