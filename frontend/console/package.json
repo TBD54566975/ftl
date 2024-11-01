@@ -24,9 +24,13 @@
     "build-storybook": "storybook build"
   },
   "lint-staged": {
-    "*.(js|cjs|tsx|ts)": ["pnpm run lint:fix"]
+    "*.(js|cjs|tsx|ts)": [
+      "pnpm run lint:fix"
+    ]
   },
-  "browserslist": ["> 2%"],
+  "browserslist": [
+    "> 2%"
+  ],
   "source": "index.html",
   "dependencies": {
     "@bufbuild/protobuf": "^1.10.0",
@@ -47,6 +51,7 @@
     "@vitejs/plugin-react": "^4.0.4",
     "codemirror-json-schema": "0.7.0",
     "codemirror-json5": "^1.0.3",
+    "echarts-for-react": "^3.0.2",
     "fnv1a": "^1.1.1",
     "fuse.js": "^7.0.0",
     "highlight.js": "^11.8.0",
