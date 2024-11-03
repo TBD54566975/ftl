@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -32,9 +33,11 @@ import (
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
 	"github.com/TBD54566975/ftl/internal/exec"
+	"github.com/TBD54566975/ftl/internal/flock"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
+	islices "github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -193,7 +196,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	}
 
 	// Initial build
-	if err := buildAndSend(ctx, stream, buildCtx, false); err != nil {
+	if err := buildAndSend(ctx, stream, buildCtx, false, watcher.GetTransaction(buildCtx.Config.Dir)); err != nil {
 		return err
 	}
 	if !req.Msg.RebuildAutomatically {
@@ -218,7 +221,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 					return fmt.Errorf("could not send auto rebuild started event: %w", err)
 				}
 			}
-			if err = buildAndSend(ctx, stream, buildCtx, isAutomaticRebuild); err != nil {
+			if err = buildAndSend(ctx, stream, buildCtx, isAutomaticRebuild, watcher.GetTransaction(buildCtx.Config.Dir)); err != nil {
 				return err
 			}
 		case <-ctx.Done():
@@ -228,15 +231,46 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	}
 }
 
-func build(ctx context.Context, bctx buildContext) (*langpb.BuildEvent, error) {
-	config := bctx.Config
+func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction watch.ModifyFilesTransaction) (*langpb.BuildEvent, error) {
 	logger := log.FromContext(ctx)
+	release, err := flock.Acquire(ctx, bctx.Config.BuildLock, BuildLockTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("could not acquire build lock: %w", err)
+	}
+	defer release() //nolint:errcheck
+	if err := transaction.Begin(); err != nil {
+		return nil, fmt.Errorf("could not start a file transaction: %w", err)
+	}
+	defer func() {
+		if terr := transaction.End(); terr != nil {
+			logger.Errorf(terr, "failed to end file transaction")
+		}
+	}()
+
+	deps, err := extractDependencies(bctx.Config.Module, bctx.Config.Dir)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract dependencies: %w", err)
+	}
+
+	if !slices.Equal(islices.Sort(deps), islices.Sort(bctx.Dependencies)) {
+		// dependencies have changed
+		return &langpb.BuildEvent{
+			Event: &langpb.BuildEvent_BuildFailure{
+				BuildFailure: &langpb.BuildFailure{
+					ContextId:              bctx.ID,
+					IsAutomaticRebuild:     autoRebuild,
+					InvalidateDependencies: true,
+				},
+			},
+		}, nil
+	}
+	config := bctx.Config
 	javaConfig, err := loadJavaConfig(config.LanguageConfig, config.Language)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build module %q: %w", config.Module, err)
 	}
 	if javaConfig.BuildTool == JavaBuildToolMaven {
-		if err := setPOMProperties(ctx, config.Dir); err != nil {
+		if err := setPOMProperties(ctx, config.Dir, transaction); err != nil {
 			// This is not a critical error, things will probably work fine
 			// TBH updating the pom is maybe not the best idea anyway
 			logger.Warnf("unable to update ftl.version in %s: %s", config.Dir, err.Error())
@@ -246,7 +280,11 @@ func build(ctx context.Context, bctx buildContext) (*langpb.BuildEvent, error) {
 	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
 	err = command.RunBuffered(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build module %q: %w", config.Module, err)
+		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{&langpb.BuildFailure{
+			IsAutomaticRebuild: autoRebuild,
+			ContextId:          bctx.ID,
+			Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_COMPILER}}},
+		}}}, nil
 	}
 
 	buildErrs, err := loadProtoErrors(config)
@@ -256,8 +294,9 @@ func build(ctx context.Context, bctx buildContext) (*langpb.BuildEvent, error) {
 	if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
 		// skip reading schema
 		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{&langpb.BuildFailure{
-			ContextId: bctx.ID,
-			Errors:    buildErrs,
+			IsAutomaticRebuild: autoRebuild,
+			ContextId:          bctx.ID,
+			Errors:             buildErrs,
 		}}}, nil
 	}
 
@@ -270,10 +309,11 @@ func build(ctx context.Context, bctx buildContext) (*langpb.BuildEvent, error) {
 	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildSuccess{
 			BuildSuccess: &langpb.BuildSuccess{
-				ContextId: bctx.ID,
-				Errors:    buildErrs,
-				Module:    moduleProto,
-				Deploy:    []string{"launch", "quarkus-app"},
+				IsAutomaticRebuild: autoRebuild,
+				ContextId:          bctx.ID,
+				Errors:             buildErrs,
+				Module:             moduleProto,
+				Deploy:             []string{"launch", "quarkus-app"},
 			},
 		},
 	}, nil
@@ -325,8 +365,8 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 		for {
 			select {
 			case e := <-watchEvents:
-				if _, ok := e.(watch.WatchEventModuleChanged); ok {
-					log.FromContext(ctx).Infof("Found file changes: %s", buildCtx.Config.Dir)
+				if change, ok := e.(watch.WatchEventModuleChanged); ok {
+					log.FromContext(ctx).Infof("Found file changes: %s", change.Path)
 					events <- filesUpdatedEvent{}
 				}
 
@@ -375,8 +415,8 @@ func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, e
 //
 // Build errors are sent over the stream as a BuildFailure event.
 // This function only returns an error if events could not be send over the stream.
-func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], buildCtx buildContext, isAutomaticRebuild bool) error {
-	buildEvent, err := build(ctx, buildCtx)
+func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], buildCtx buildContext, isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction) error {
+	buildEvent, err := build(ctx, buildCtx, isAutomaticRebuild, transaction)
 	if err != nil {
 		buildEvent = buildFailure(buildCtx, isAutomaticRebuild, builderrors.Error{
 			Type:  builderrors.FTL,
@@ -464,10 +504,18 @@ func fileExists(filename string) bool {
 }
 
 func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[langpb.DependenciesRequest]) (*connect.Response[langpb.DependenciesResponse], error) {
+	modules, err := extractDependencies(req.Msg.ModuleConfig.Name, req.Msg.ModuleConfig.Dir)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse[langpb.DependenciesResponse](&langpb.DependenciesResponse{Modules: modules}), nil
+}
+
+func extractDependencies(moduleName string, dir string) ([]string, error) {
 	dependencies := map[string]bool{}
 	// We also attempt to look at kotlin files
 	// As the Java module supports both
-	kotin, kotlinErr := extractKotlinFTLImports(req.Msg.ModuleConfig.Name, req.Msg.ModuleConfig.Dir)
+	kotin, kotlinErr := extractKotlinFTLImports(moduleName, dir)
 	if kotlinErr == nil {
 		// We don't really care about the error case, its probably a Java project
 		for _, imp := range kotin {
@@ -476,7 +524,7 @@ func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[lang
 	}
 	javaImportRegex := regexp.MustCompile(`^import ftl\.([A-Za-z0-9_.]+)`)
 
-	err := filepath.WalkDir(filepath.Join(req.Msg.ModuleConfig.Dir, "src/main/java"), func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(filepath.Join(dir, "src/main/java"), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("failed to walk directory: %w", err)
 		}
@@ -494,7 +542,7 @@ func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[lang
 			matches := javaImportRegex.FindStringSubmatch(scanner.Text())
 			if len(matches) > 1 {
 				module := strings.Split(matches[1], ".")[0]
-				if module == req.Msg.ModuleConfig.Name {
+				if module == moduleName {
 					continue
 				}
 				dependencies[module] = true
@@ -505,11 +553,11 @@ func (s *Service) GetDependencies(ctx context.Context, req *connect.Request[lang
 
 	// We only error out if they both failed
 	if err != nil && kotlinErr != nil {
-		return nil, fmt.Errorf("%s: failed to extract dependencies from Java module: %w", req.Msg.ModuleConfig.Name, err)
+		return nil, fmt.Errorf("%s: failed to extract dependencies from Java module: %w", moduleName, err)
 	}
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
-	return connect.NewResponse[langpb.DependenciesResponse](&langpb.DependenciesResponse{Modules: modules}), nil
+	return modules, nil
 }
 
 func extractKotlinFTLImports(self, dir string) ([]string, error) {
@@ -553,7 +601,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 
 // setPOMProperties updates the ftl.version properties in the
 // pom.xml file in the given base directory.
-func setPOMProperties(ctx context.Context, baseDir string) error {
+func setPOMProperties(ctx context.Context, baseDir string, transaction watch.ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx)
 	ftlVersion := ftl.Version
 	// If we are running in dev mode, ftl.Version will be "dev"
@@ -597,6 +645,10 @@ func setPOMProperties(ctx context.Context, baseDir string) error {
 	err = tree.WriteToFile(pomFile)
 	if err != nil {
 		return fmt.Errorf("unable to write %s: %w", pomFile, err)
+	}
+	err = transaction.ModifiedFiles(pomFile)
+	if err != nil {
+		return fmt.Errorf("could not mark %s as modified: %w", pomFile, err)
 	}
 	return nil
 }

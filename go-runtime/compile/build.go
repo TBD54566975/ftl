@@ -31,6 +31,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 type MainWorkContext struct {
@@ -255,12 +256,6 @@ func (d goDBHandle) getNativeType() nativeType {
 	return d.nativeType
 }
 
-type ModifyFilesTransaction interface {
-	Begin() error
-	ModifiedFiles(paths ...string) error
-	End() error
-}
-
 const buildDirName = ".ftl"
 
 func buildDir(moduleDir string) string {
@@ -268,7 +263,7 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction ModifyFilesTransaction, devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, err error) {
+func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction watch.ModifyFilesTransaction, devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return moduleSch, nil, fmt.Errorf("could not start a file transaction: %w", err)
 	}

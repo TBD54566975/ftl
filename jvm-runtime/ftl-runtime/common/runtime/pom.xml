@@ -152,6 +152,7 @@
                         <include>**/verb.proto</include>
                         <include>**/module.proto</include>
                         <include>**/ftl.proto</include>
+                        <include>**/language.proto</include>
                     </includes>
                 </configuration>
             </plugin>

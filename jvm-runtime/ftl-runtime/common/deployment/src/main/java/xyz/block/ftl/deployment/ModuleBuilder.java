@@ -30,6 +30,7 @@ import org.jboss.jandex.IndexView;
 import org.jboss.jandex.MethodInfo;
 import org.jboss.jandex.PrimitiveType;
 import org.jboss.jandex.VoidType;
+import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,6 +48,8 @@ import xyz.block.ftl.runtime.VerbRegistry;
 import xyz.block.ftl.runtime.builtin.HttpRequest;
 import xyz.block.ftl.runtime.builtin.HttpResponse;
 import xyz.block.ftl.v1.CallRequest;
+import xyz.block.ftl.v1.language.Error;
+import xyz.block.ftl.v1.language.ErrorList;
 import xyz.block.ftl.v1.schema.AliasKind;
 import xyz.block.ftl.v1.schema.Any;
 import xyz.block.ftl.v1.schema.Array;
@@ -84,6 +87,8 @@ public class ModuleBuilder {
     public static final DotName OFFSET_DATE_TIME = DotName.createSimple(OffsetDateTime.class.getName());
 
     private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
+
+    private static final Logger log = Logger.getLogger(ModuleBuilder.class);
 
     private final IndexView index;
     private final Module.Builder protoModuleBuilder;
@@ -529,17 +534,19 @@ public class ModuleBuilder {
         return decls.size();
     }
 
-    public void writeTo(OutputStream out) throws IOException {
+    public void writeTo(OutputStream out, OutputStream errorOut) throws IOException {
         decls.values().stream().forEachOrdered(protoModuleBuilder::addDecls);
-
+        ErrorList.Builder builder = ErrorList.newBuilder();
         if (!validationFailures.isEmpty()) {
-            StringBuilder sb = new StringBuilder();
+            List<String> errors = new ArrayList<>();
             for (var failure : validationFailures) {
-                sb.append("Validation failure: ").append(failure.className).append(": ").append(failure.message)
-                        .append("\n");
+                errors.add("Validation failure: " + failure.className + ": " + failure.message);
             }
-            throw new RuntimeException(sb.toString());
+            errors.forEach(error -> builder.addErrors(Error.newBuilder().setLevelValue(Error.ErrorLevel.ERROR_VALUE)
+                    .setMsg(error).setTypeValue(Error.ErrorType.FTL_VALUE)));
+            errors.forEach(log::error);
         }
+        builder.build().writeTo(errorOut);
         protoModuleBuilder.build().writeTo(out);
     }
 
