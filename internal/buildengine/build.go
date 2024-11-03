@@ -64,6 +64,14 @@ func handleBuildResult(ctx context.Context, projectConfig projectconfig.Config, 
 	logger.Infof("Module built (%.2fs)", time.Since(result.StartTime).Seconds())
 
 	// write schema proto to deploy directory
+	sch := result.Schema
+	// TODO: decide if image is passed along specially or if plugin should just return runtime info optionally and we default things here
+	sch.Runtime = &schema.ModuleRuntime{
+		CreateTime:  time.Now(),
+		Language:    c.Language,
+		MinReplicas: 1,
+		Image:       result.Image,
+	}
 	schemaBytes, err := proto.Marshal(result.Schema.ToProto())
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to marshal schema: %w", err)

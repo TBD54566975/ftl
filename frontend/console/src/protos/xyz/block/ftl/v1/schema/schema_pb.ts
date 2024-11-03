@@ -1716,6 +1716,11 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
    */
   arch?: string;
 
+  /**
+   * @generated from field: string image = 6;
+   */
+  image = "";
+
   constructor(data?: PartialMessage<ModuleRuntime>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1729,6 +1734,7 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
     { no: 3, name: "min_replicas", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "os", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "arch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntime {

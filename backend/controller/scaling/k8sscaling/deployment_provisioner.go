@@ -266,7 +266,14 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	if err != nil {
 		return err
 	}
-	runnerImage := strings.ReplaceAll(ourImage, "controller", "runner")
+
+	// runner images use the same tag as the controller
+	var runnerImage string
+	if dep.Runtime.Image != "" {
+		runnerImage = strings.ReplaceAll(ourImage, "ftl0/ftl-controller", dep.Runtime.Image)
+	} else {
+		runnerImage = strings.ReplaceAll(ourImage, "ftl0/ftl-controller", "ftl0/ftl-runner")
+	}
 
 	deployment.Name = name
 	deployment.OwnerReferences = []v1.OwnerReference{{APIVersion: "v1", Kind: "service", Name: name, UID: service.UID}}

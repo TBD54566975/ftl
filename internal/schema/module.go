@@ -25,6 +25,7 @@ type ModuleRuntime struct {
 	MinReplicas int32     `protobuf:"3"`
 	OS          string    `protobuf:"4,optional"`
 	Arch        string    `protobuf:"5,optional"`
+	Image       string    `protobuf:"6"`
 }
 
 type Module struct {
@@ -231,6 +232,7 @@ func (m *Module) ToProto() proto.Message {
 			CreateTime:  timestamppb.New(m.Runtime.CreateTime),
 			Language:    m.Runtime.Language,
 			MinReplicas: m.Runtime.MinReplicas,
+			Image:       m.Runtime.Image,
 		}
 		if m.Runtime.OS != "" {
 			runtime.Os = &m.Runtime.OS
@@ -277,6 +279,7 @@ func ModuleFromProto(s *schemapb.Module) (*Module, error) {
 			MinReplicas: s.Runtime.MinReplicas,
 			OS:          s.Runtime.GetOs(),
 			Arch:        s.Runtime.GetArch(),
+			Image:       s.Runtime.GetImage(),
 		}
 	}
 	return module, ValidateModule(module)
