@@ -4,69 +4,74 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
-	"github.com/XSAM/otelsql"
 	"github.com/alecthomas/types/once"
 	_ "github.com/jackc/pgx/v5/stdlib" // Register Postgres driver
-	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
-type Database struct {
-	Name   string
-	DBType modulecontext.DBType
-
-	db *once.Handle[*sql.DB]
+type DatabaseConfig interface {
+	// Name returns the name of the database.
+	Name() string
+	/*
+		// RAM returns the amount of memory (in bytes) allocated to the database.
+		RAM() int64
+		// Disk returns the path or identifier for the disk where the database data is stored.
+		Disk() string
+		// Timeout returns the timeout value (in milliseconds) for database operations, such as queries or connections.
+		Timeout() int64
+		// MaxConnections returns the maximum number of concurrent database connections allowed.
+		MaxConnections() int
+	*/
+	db()
 }
 
-// PostgresDatabase returns a handler for the named database.
-func PostgresDatabase(name string) Database {
-	return Database{
-		Name:   name,
-		DBType: modulecontext.DBTypePostgres,
-		db: once.Once(func(ctx context.Context) (*sql.DB, error) {
-			logger := log.FromContext(ctx)
-
-			provider := modulecontext.FromContext(ctx).CurrentContext()
-			dsn, err := provider.GetDatabase(name, modulecontext.DBTypePostgres)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get database %q: %w", name, err)
-			}
-
-			logger.Debugf("Opening database: %s", name)
-			db, err := otelsql.Open("pgx", dsn)
-			if err != nil {
-				return nil, fmt.Errorf("failed to open database %q: %w", name, err)
-			}
-
-			// sets db.system and db.name attributes
-			metricAttrs := otelsql.WithAttributes(
-				semconv.DBSystemPostgreSQL,
-				semconv.DBNameKey.String(name),
-				attribute.Bool("ftl.is_user_service", true),
-			)
-			err = otelsql.RegisterDBStatsMetrics(db, metricAttrs)
-			if err != nil {
-				return nil, fmt.Errorf("failed to register database metrics: %w", err)
-			}
-			db.SetConnMaxIdleTime(time.Minute)
-			db.SetMaxOpenConns(20)
-			return db, nil
-		}),
-	}
+type PostgresDatabaseConfig interface {
+	DatabaseConfig
+	pg()
 }
 
-func (d Database) String() string { return fmt.Sprintf("database %q", d.Name) }
+// DefaultPostgresDatabaseConfig is a default implementation of PostgresDatabaseConfig. It does not provide
+// an implementation for the Name method and should be embedded in a struct that does.
+type DefaultPostgresDatabaseConfig struct{}
+
+func (DefaultPostgresDatabaseConfig) db() {} //nolint:unused
+func (DefaultPostgresDatabaseConfig) pg() {} //nolint:unused
+
+type DatabaseType string
+
+const (
+	DatabaseTypePostgres DatabaseType = "postgres"
+)
+
+type DatabaseHandle[T DatabaseConfig] struct {
+	name  string
+	_type DatabaseType
+	db    *once.Handle[*sql.DB]
+}
+
+// Name returns the name of the database.
+func (d DatabaseHandle[T]) Name() string { return d.name }
+
+// Type returns the type of the database, e.g. "postgres"
+func (d DatabaseHandle[T]) Type() DatabaseType {
+	return d._type
+}
+
+// String returns a string representation of the database handle.
+func (d DatabaseHandle[T]) String() string {
+	return fmt.Sprintf("database %q", d.name)
+}
 
 // Get returns the SQL DB connection for the database.
-func (d Database) Get(ctx context.Context) *sql.DB {
+func (d DatabaseHandle[T]) Get(ctx context.Context) *sql.DB {
 	db, err := d.db.Get(ctx)
 	if err != nil {
 		panic(err)
 	}
 	return db
+}
+
+// NewDatabaseHandle is managed by FTL.
+func NewDatabaseHandle[T DatabaseConfig](config T, dbType DatabaseType, db *once.Handle[*sql.DB]) DatabaseHandle[T] {
+	return DatabaseHandle[T]{name: config.Name(), db: db, _type: dbType}
 }

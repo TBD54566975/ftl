@@ -27,8 +27,8 @@ type Result struct {
 	types map[string]*types.Interface
 }
 
-// IsFtlErrorType will return true if the provided type is assertable to the `builtin.error` type.
-func (r Result) IsFtlErrorType(typ types.Type) bool {
+// IsStdlibErrorType will return true if the provided type is assertable to the stdlib `error` type.
+func (r Result) IsStdlibErrorType(typ types.Type) bool {
 	return r.assertableToType(typ, "builtin", "error")
 }
 
@@ -46,11 +46,11 @@ func (r Result) assertableToType(typ types.Type, pkg string, name string) bool {
 }
 
 func Run(pass *analysis.Pass) (interface{}, error) {
-	ctxType, err := loadRef("context", "Context")
+	ctxType, err := loadRef(pass, "context", "Context")
 	if err != nil {
 		return nil, err
 	}
-	errType, err := loadRef("builtin", "error")
+	errType, err := loadRef(pass, "builtin", "error")
 	if err != nil {
 		return nil, err
 	}
@@ -61,17 +61,33 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 	}}, nil
 }
 
-// Lazy load the compile-time reference from a package.
-func loadRef(pkg, name string) (*types.Interface, error) {
-	pkgs, err := packages.Load(&packages.Config{Fset: token.NewFileSet(), Mode: packages.NeedTypes}, pkg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load package %q: %w", pkg, err)
+// Lazy load the compile-time reference from a package. First attempts to derive the package from imports, then if not
+// found attempts to load the package directly.
+func loadRef(pass *analysis.Pass, pkg, name string) (*types.Interface, error) {
+	var importedPkg *types.Package
+	for _, p := range pass.Pkg.Imports() {
+		if p.Path() == pkg {
+			importedPkg = p
+		}
 	}
-	if len(pkgs) != 1 {
-		return nil, fmt.Errorf("expected one package, got %s",
-			strings.Join(slices.Map(pkgs, func(p *packages.Package) string { return p.Name }), ", "))
+
+	// if the package is not imported, attempt to load it.
+	if importedPkg == nil {
+		pkgs, err := packages.Load(&packages.Config{Fset: token.NewFileSet(), Mode: packages.NeedTypes}, pkg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load package %q: %w", pkg, err)
+		}
+		if len(pkgs) != 1 {
+			return nil, fmt.Errorf("expected one package, got %s",
+				strings.Join(slices.Map(pkgs, func(p *packages.Package) string { return p.Name }), ", "))
+		}
+		importedPkg = pkgs[0].Types
 	}
-	obj := pkgs[0].Types.Scope().Lookup(name)
+	if importedPkg == nil {
+		return nil, fmt.Errorf("package %q not found", pkg)
+	}
+
+	obj := importedPkg.Scope().Lookup(name)
 	if obj == nil {
 		return nil, fmt.Errorf("interface %q not found", name)
 	}
