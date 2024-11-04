@@ -90,6 +90,12 @@ func main() {
 	// Dynamically update the kong app with language specific flags for the "ftl new" command.
 	languagePlugin, err := prepareNewCmd(log.ContextWithNewDefaultLogger(ctx), app, os.Args[1:])
 	app.FatalIfErrorf(err)
+	if plugin, ok := languagePlugin.Get(); ok {
+		// Kill the plugin when the app exits due to an error, or after showing help.
+		addToExit(app, func(code int) {
+			plugin.Kill()
+		})
+	}
 
 	kctx, err := app.Parse(os.Args[1:])
 	app.FatalIfErrorf(err)
@@ -180,6 +186,18 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 		},
 		))
 	return app
+}
+
+func addToExit(k *kong.Kong, cleanup func(code int)) {
+	originalExit := k.Exit
+	k.Exit = func(code int) {
+		cleanup(code)
+		if originalExit == nil {
+			// Should not happen, but no harm being cautious
+			os.Exit(code)
+		}
+		originalExit(code)
+	}
 }
 
 func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.KongContextBinder {
