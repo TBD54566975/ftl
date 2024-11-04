@@ -45,6 +45,7 @@ type mainModuleContext struct {
 	Name               string
 	SharedModulesPaths []string
 	Verbs              []goVerb
+	Databases          []goDBHandle
 	Replacements       []*modfile.Replace
 	MainCtx            mainFileContext
 	TypesCtx           typesFileContext
@@ -87,6 +88,9 @@ func (c *mainModuleContext) generateTypesImports(mainModuleImport string) []stri
 	}
 	if len(c.Verbs) > 0 {
 		imports.Add(`"context"`)
+	}
+	if len(c.Databases) > 0 {
+		imports.Add(`"github.com/TBD54566975/ftl/go-runtime/server"`)
 	}
 	for _, st := range c.TypesCtx.SumTypes {
 		imports.Add(st.importStatement())
@@ -238,10 +242,18 @@ type verbClient struct {
 
 func (v verbClient) resource() {}
 
-type ModifyFilesTransaction interface {
-	Begin() error
-	ModifiedFiles(paths ...string) error
-	End() error
+type goDBHandle struct {
+	Type   string
+	Name   string
+	Module string
+
+	nativeType
+}
+
+func (d goDBHandle) resource() {}
+
+func (d goDBHandle) getNativeType() nativeType {
+	return d.nativeType
 }
 
 const buildDirName = ".ftl"
@@ -416,6 +428,7 @@ func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName s
 		SharedModulesPaths: sharedModulesPaths,
 		Replacements:       replacements,
 		Verbs:              make([]goVerb, 0, len(b.mainModule.Decls)),
+		Databases:          make([]goDBHandle, 0, len(b.mainModule.Decls)),
 		MainCtx: mainFileContext{
 			ProjectName:   projectName,
 			SumTypes:      []goSumType{},
@@ -498,6 +511,8 @@ func (b *mainModuleContextBuilder) visit(
 		case goExternalType:
 			ctx.TypesCtx.ExternalTypes = append(ctx.TypesCtx.ExternalTypes, n)
 			ctx.MainCtx.ExternalTypes = append(ctx.MainCtx.ExternalTypes, n)
+		case goDBHandle:
+			ctx.Databases = append(ctx.Databases, n)
 		}
 		return next()
 	})
@@ -535,6 +550,15 @@ func (b *mainModuleContextBuilder) getGoType(module *schema.Module, node schema.
 			return optional.None[goType](), isLocal, nil
 		}
 		return b.processExternalTypeAlias(n), isLocal, nil
+	case *schema.Database:
+		if !isLocal {
+			return optional.None[goType](), false, nil
+		}
+		dbHandle, err := b.processDatabase(module.Name, n)
+		if err != nil {
+			return optional.None[goType](), isLocal, err
+		}
+		return optional.Some[goType](dbHandle), isLocal, nil
 
 	default:
 	}
@@ -633,6 +657,26 @@ func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error
 					calleeverb,
 				})
 			}
+		case *schema.MetadataDatabases:
+			for _, call := range md.Calls {
+				resolved, ok := b.sch.Resolve(call).Get()
+				if !ok {
+					return goVerb{}, fmt.Errorf("failed to resolve %s database, used by %s.%s", call,
+						b.mainModule.Name, verb.Name)
+				}
+				db, ok := resolved.(*schema.Database)
+				if !ok {
+					return goVerb{}, fmt.Errorf("%s.%s uses %s database handle, but %s is not a database",
+						b.mainModule.Name, verb.Name, call, call)
+				}
+
+				dbHandle, err := b.processDatabase(call.Module, db)
+				if err != nil {
+					return goVerb{}, err
+				}
+				resources = append(resources, dbHandle)
+			}
+
 		default:
 			// TODO: implement other resources
 		}
@@ -643,6 +687,24 @@ func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error
 		return goVerb{}, fmt.Errorf("missing native name for verb %s", verb.Name)
 	}
 	return b.getGoVerb(nativeName, verb, resources...)
+}
+
+func (b *mainModuleContextBuilder) processDatabase(moduleName string, db *schema.Database) (goDBHandle, error) {
+	nn, ok := b.nativeNames[db]
+	if !ok {
+		return goDBHandle{}, fmt.Errorf("missing native name for database %s.%s", moduleName, db.Name)
+	}
+
+	nt, err := b.getNativeType(nn)
+	if err != nil {
+		return goDBHandle{}, err
+	}
+	return goDBHandle{
+		Name:       db.Name,
+		Module:     moduleName,
+		Type:       db.Type,
+		nativeType: nt,
+	}, nil
 }
 
 func (b *mainModuleContextBuilder) getGoVerb(nativeName string, verb *schema.Verb, resources ...verbResource) (goVerb, error) {
@@ -826,6 +888,12 @@ var scaffoldFuncs = scaffolder.FuncMap{
 	},
 	"getVerbClient": func(resource verbResource) *verbClient {
 		if c, ok := resource.(verbClient); ok {
+			return &c
+		}
+		return nil
+	},
+	"getDatabaseHandle": func(resource verbResource) *goDBHandle {
+		if c, ok := resource.(goDBHandle); ok {
 			return &c
 		}
 		return nil

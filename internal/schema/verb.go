@@ -126,6 +126,15 @@ func (v *Verb) AddSecret(secret *Ref) {
 	v.Metadata = append(v.Metadata, &MetadataSecrets{Secrets: []*Ref{secret}})
 }
 
+// AddDatabase adds a DB reference to the Verb.
+func (v *Verb) AddDatabase(db *Ref) {
+	if c, ok := slices.FindVariant[*MetadataDatabases](v.Metadata); ok {
+		c.Calls = append(c.Calls, db)
+		return
+	}
+	v.Metadata = append(v.Metadata, &MetadataDatabases{Calls: []*Ref{db}})
+}
+
 func (v *Verb) GetMetadataIngress() optional.Option[*MetadataIngress] {
 	if m, ok := slices.FindVariant[*MetadataIngress](v.Metadata); ok {
 		return optional.Some(m)

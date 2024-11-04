@@ -217,21 +217,16 @@ func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
 }
 
 // WithDatabase sets up a database for testing by appending "_test" to the DSN and emptying all tables
-//
-// To be used when setting up a context for a test:
-//
-//	ctx := ftltest.Context(
-//		ftltest.WithDatabase(db),
-//		// ... other options
-//	)
-func WithDatabase(dbHandle ftl.Database) Option {
+func WithDatabase[T ftl.DatabaseConfig]() Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
+			cfg := defaultDatabaseConfig[T]()
+			name := cfg.Name()
 			fftl := internal.FromContext(ctx)
-			originalDSN, err := getDSNFromSecret(fftl, moduleGetter(), dbHandle.Name)
+			originalDSN, err := getDSNFromSecret(fftl, moduleGetter(), name)
 			if err != nil {
-				return err
+				return fmt.Errorf("could not get DSN for database %q, try adding ftltest.WithProject[MyConfig] as an option with ftltest.Context(...): %w", name, err)
 			}
 
 			// convert DSN by appending "_test" to table name
@@ -242,7 +237,7 @@ func WithDatabase(dbHandle ftl.Database) Option {
 				return fmt.Errorf("could not parse DSN: %w", err)
 			}
 			if dsnURL.Path == "" {
-				return fmt.Errorf("DSN for %s must include table name: %s", dbHandle.Name, originalDSN)
+				return fmt.Errorf("DSN for %s must include table name: %s", name, originalDSN)
 			}
 			dsnURL.Path += "_test"
 			dsn := dsnURL.String()
@@ -250,7 +245,7 @@ func WithDatabase(dbHandle ftl.Database) Option {
 			// connect to db and clear out the contents of each table
 			sqlDB, err := sql.Open("pgx", dsn)
 			if err != nil {
-				return fmt.Errorf("could not create database %q with DSN %q: %w", dbHandle.Name, dsn, err)
+				return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
 			}
 			_, err = sqlDB.ExecContext(ctx, `DO $$
 		DECLARE
@@ -264,15 +259,15 @@ func WithDatabase(dbHandle ftl.Database) Option {
 			END LOOP;
 		END $$;`)
 			if err != nil {
-				return fmt.Errorf("could not clear tables in database %q: %w", dbHandle.Name, err)
+				return fmt.Errorf("could not clear tables in database %q: %w", name, err)
 			}
 
 			// replace original database with test database
 			replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypePostgres, dsn)
 			if err != nil {
-				return fmt.Errorf("could not create database %q with DSN %q: %w", dbHandle.Name, dsn, err)
+				return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
 			}
-			state.databases[dbHandle.Name] = replacementDB
+			state.databases[name] = replacementDB
 			return nil
 		},
 	}
@@ -526,6 +521,23 @@ func CallEmpty[VerbClient any](ctx context.Context) error {
 	return err
 }
 
+// GetDatabaseHandle returns a database handle using the given database config.
+func GetDatabaseHandle[T ftl.DatabaseConfig]() (ftl.DatabaseHandle[T], error) {
+	reflectedDB := reflection.GetDatabase[T]()
+	if reflectedDB == nil {
+		return ftl.DatabaseHandle[T]{}, fmt.Errorf("could not find database for config")
+	}
+
+	var dbType ftl.DatabaseType
+	switch reflectedDB.DBType {
+	case "postgres":
+		dbType = ftl.DatabaseTypePostgres
+	default:
+		return ftl.DatabaseHandle[T]{}, fmt.Errorf("unsupported database type %v", reflectedDB.DBType)
+	}
+	return ftl.NewDatabaseHandle[T](defaultDatabaseConfig[T](), dbType, reflectedDB.DB), nil
+}
+
 func call[VerbClient, Req, Resp any](ctx context.Context, req Req) (resp Resp, err error) {
 	ref := reflection.ClientRef[VerbClient]()
 	// always allow direct behavior for the verb triggered by this call
@@ -534,7 +546,7 @@ func call[VerbClient, Req, Resp any](ctx context.Context, req Req) (resp Resp, e
 	).AddAllowedDirectVerb(ref).Build()
 	ctx = mcu.MakeDynamic(ctx, moduleCtx).ApplyToContext(ctx)
 
-	inline := server.Call[Req, Resp](ref)
+	inline := server.InvokeVerb[Req, Resp](ref)
 	override, err := moduleCtx.BehaviorForVerb(schema.Ref{Module: ref.Module, Name: ref.Name})
 	if err != nil {
 		return resp, fmt.Errorf("test harness failed to retrieve behavior for verb %s: %w", ref, err)
@@ -560,4 +572,15 @@ func widenVerb[Req, Resp any](verb ftl.Verb[Req, Resp]) ftl.Verb[any, any] {
 		}
 		return verb(ctx, req)
 	}
+}
+
+func defaultDatabaseConfig[T ftl.DatabaseConfig]() T {
+	typ := reflect.TypeFor[T]()
+	var cfg T
+	if typ.Kind() == reflect.Ptr {
+		cfg = reflect.New(typ.Elem()).Interface().(T) //nolint:forcetypeassert
+	} else {
+		cfg = reflect.New(typ).Elem().Interface().(T) //nolint:forcetypeassert
+	}
+	return cfg
 }
