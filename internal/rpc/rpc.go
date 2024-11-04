@@ -21,6 +21,40 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
+// rbacWorkaroundTransport is a RoundTripper that retries requests when they fail due to RBAC errors.
+// We have seen a persistent Istio bug where RBAC errors are returned constantly if a connection is established too early
+type rbacWorkaroundTransport struct{ next http.RoundTripper }
+
+func (r rbacWorkaroundTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	resp, err := r.next.RoundTrip(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	if resp.StatusCode != http.StatusForbidden {
+		return resp, nil
+	}
+	// Retry the request with close = true, which should shut down the connection and force a new one to be created
+	// Although that is after this request is processed
+	request.Close = true
+	resp, err = r.next.RoundTrip(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	if resp.StatusCode != http.StatusForbidden {
+		return resp, nil
+	}
+	time.Sleep(500 * time.Millisecond)
+	trip, err := r.next.RoundTrip(request)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+	return trip, nil
+}
+
+func rbacErrorRetryTransport(next http.RoundTripper) http.RoundTripper {
+	return rbacWorkaroundTransport{next: next}
+}
+
 // InitialiseClients initialises global HTTP clients used by the RPC system.
 //
 // "authenticators" are authenticator executables to use for each endpoint. The key is the URL of the endpoint, the
@@ -31,8 +65,9 @@ func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 	// We can't have a client-wide timeout because it also applies to
 	// streaming RPCs, timing them out.
 	h2cClient = &http.Client{
-		Transport: authn.Transport(&http2.Transport{
+		Transport: authn.Transport(rbacErrorRetryTransport(&http2.Transport{
 			AllowHTTP: true,
+
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: allowInsecure, // #nosec G402
 			},
@@ -40,10 +75,10 @@ func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 				conn, err := dialer.Dial(network, addr)
 				return conn, err
 			},
-		}, authenticators),
+		}), authenticators),
 	}
 	tlsClient = &http.Client{
-		Transport: authn.Transport(&http2.Transport{
+		Transport: authn.Transport(rbacErrorRetryTransport(&http2.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: allowInsecure, // #nosec G402
 			},
@@ -52,12 +87,12 @@ func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 				conn, err := tlsDialer.DialContext(ctx, network, addr)
 				return conn, err
 			},
-		}, authenticators),
+		}), authenticators),
 	}
 
 	// Use a separate client for HTTP/1.1 with TLS.
 	http1TLSClient = &http.Client{
-		Transport: authn.Transport(&http.Transport{
+		Transport: authn.Transport(rbacErrorRetryTransport(&http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: allowInsecure, // #nosec G402
 			},
@@ -69,7 +104,7 @@ func InitialiseClients(authenticators map[string]string, allowInsecure bool) {
 				conn, err := tlsDialer.DialContext(ctx, network, addr)
 				return conn, fmt.Errorf("HTTP/1.1 TLS dial failed: %w", err)
 			},
-		}, authenticators),
+		}), authenticators),
 	}
 }
 

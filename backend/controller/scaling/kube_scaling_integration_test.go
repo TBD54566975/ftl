@@ -55,7 +55,7 @@ func TestKubeScaling(t *testing.T) {
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
-						failure.Store(fmt.Errorf("panic in verb: %v at %v", r, time.Now()))
+						failure.Store(fmt.Errorf("panic calling verb: %v at %v", r, time.Now()))
 					}
 					routineStopped.Done()
 				}()
