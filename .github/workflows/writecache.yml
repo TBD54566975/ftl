@@ -66,6 +66,12 @@ jobs:
             ~/.pnpm-store
             node_modules
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+      - name: Save Playwright Browser Cache
+        id: cache-playwright
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
       - name: Save Docker Images
         uses: ScribeMD/docker-cache@0.5.0
         with:
