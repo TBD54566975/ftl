@@ -431,7 +431,7 @@ func (p *mockPluginClient) publishBuildEvent(event *langpb.BuildEvent) {
 func beginBuild(ctx context.Context, plugin *LanguagePlugin, bctx BuildContext, autoRebuild bool) chan result.Result[BuildResult] {
 	resultChan := make(chan result.Result[BuildResult])
 	go func() {
-		resultChan <- result.From(plugin.Build(ctx, "", "", bctx, []string{}, autoRebuild))
+		resultChan <- result.From(plugin.Build(ctx, "", "", bctx, autoRebuild))
 	}()
 	// sleep to make sure impl has received the build context
 	time.Sleep(300 * time.Millisecond)
