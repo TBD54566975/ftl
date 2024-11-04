@@ -230,11 +230,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 		if opts.kube {
 			// This command will build a linux/amd64 version of FTL and deploy it to the kube cluster
 			Infof("Building FTL and deploying to kube")
-			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "chart", "dep-update").RunBuffered(ctx)
-			assert.NoError(t, err)
-			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "setup-cluster").RunBuffered(ctx)
-			assert.NoError(t, err)
-			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "install-istio").RunBuffered(ctx)
+			err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "setup-istio-cluster").RunBuffered(ctx)
 			assert.NoError(t, err)
 
 			skipKubeFullDeploy := os.Getenv("SKIP_KUBE_FULL_DEPLOY") == "true"

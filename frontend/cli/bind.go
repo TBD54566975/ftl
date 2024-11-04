@@ -39,7 +39,8 @@ func bindAllocatorWithoutController() (*bind.BindAllocator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	// Skip initial port as it is reserved for the controller
+	// Skip initial ports as it is reserved for the controller and provisioner
+	_, _ = bindAllocator.Next() //nolint:errcheck
 	_, _ = bindAllocator.Next() //nolint:errcheck
 	return bindAllocator, nil
 }
