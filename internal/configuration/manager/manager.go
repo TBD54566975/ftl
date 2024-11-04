@@ -21,10 +21,9 @@ import (
 // Manager is a high-level configuration manager that abstracts the details of
 // the Router and Provider interfaces.
 type Manager[R configuration.Role] struct {
-	provider   configuration.Provider[R]
-	router     configuration.Router[R]
-	obfuscator optional.Option[configuration.Obfuscator]
-	cache      *cache[R]
+	provider configuration.Provider[R]
+	router   configuration.Router[R]
+	cache    *cache[R]
 }
 
 func ConfigFromEnvironment() []string {
@@ -59,9 +58,6 @@ func NewDefaultConfigurationManagerFromConfig(ctx context.Context, registry *pro
 // New configuration manager.
 func New[R configuration.Role](ctx context.Context, router configuration.Router[R], provider configuration.Provider[R]) (*Manager[R], error) {
 	m := &Manager[R]{provider: provider}
-	if provider, ok := any(new(R)).(configuration.ObfuscatorProvider); ok {
-		m.obfuscator = optional.Some(provider.Obfuscator())
-	}
 	m.router = router
 
 	var asyncProvider optional.Option[configuration.AsynchronousProvider[R]]
@@ -110,12 +106,6 @@ func (m *Manager[R]) getData(ctx context.Context, ref configuration.Ref) ([]byte
 			return nil, fmt.Errorf("provider for %s does not support on demand access or syncing", ref)
 		}
 	}
-	if obfuscator, ok := m.obfuscator.Get(); ok {
-		data, err = obfuscator.Reveal(data)
-		if err != nil {
-			return nil, fmt.Errorf("could not reveal obfuscated value: %w", err)
-		}
-	}
 	return data, nil
 }
 
@@ -153,22 +143,11 @@ func (m *Manager[R]) SetJSON(ctx context.Context, ref configuration.Ref, value j
 	if err := checkJSON(value); err != nil {
 		return fmt.Errorf("invalid value for %s, must be JSON: %w", m.router.Role(), err)
 	}
-	var bytes []byte
-	if obfuscator, ok := m.obfuscator.Get(); ok {
-		var err error
-		bytes, err = obfuscator.Obfuscate(value)
-		if err != nil {
-			return fmt.Errorf("could not obfuscate: %w", err)
-		}
-	} else {
-		bytes = value
-	}
-
-	key, err := m.provider.Store(ctx, ref, bytes)
+	key, err := m.provider.Store(ctx, ref, value)
 	if err != nil {
 		return err
 	}
-	m.cache.updatedValue(ref, bytes, key)
+	m.cache.updatedValue(ref, value, key)
 	return m.router.Set(ctx, ref, key)
 }
 
