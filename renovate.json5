@@ -19,10 +19,6 @@
   "java": {
     "managerBranchPrefix": "java-"
   },
-  lockFileMaintenance: {
-    "enabled": true,
-    "automerge": true
-  },
   postUpdateOptions: ["gomodTidy", "pnpmDedupe"],
   packageRules: [
     {
