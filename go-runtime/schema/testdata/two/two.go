@@ -10,12 +10,6 @@ import (
 	"ftl/builtin"
 )
 
-type FooConfig struct {
-	ftl.DefaultPostgresDatabaseConfig
-}
-
-func (FooConfig) Name() string { return "foo" }
-
 //ftl:enum export
 type TwoEnum string
 
@@ -59,7 +53,7 @@ type UserResponse struct {
 }
 
 //ftl:verb export
-func Two(ctx context.Context, req Payload[string], handle ftl.DatabaseHandle[FooConfig]) (Payload[string], error) {
+func Two(ctx context.Context, req Payload[string]) (Payload[string], error) {
 	return Payload[string]{}, nil
 }
 
