@@ -128,6 +128,8 @@ message BuildContext {
   schema.Schema schema = 3;
   // The dependencies for the module
   repeated string dependencies = 4;
+  // Build environment provides environment variables to be set for the build command
+  repeated string build_env = 5;
 }
 
 message BuildContextUpdatedRequest {

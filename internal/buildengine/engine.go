@@ -993,7 +993,8 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		Config:       meta.module.Config,
 		Schema:       sch,
 		Dependencies: meta.module.Dependencies(Raw),
-	}, e.buildEnv, e.devMode)
+		BuildEnv:     e.buildEnv,
+	}, e.devMode)
 	if err != nil {
 		if errors.Is(err, errInvalidateDependencies) {
 			// Do not start a build directly as we are already building out a graph of modules.

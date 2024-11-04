@@ -53,6 +53,7 @@ type buildContext struct {
 	Config       moduleconfig.AbsModuleConfig
 	Schema       *schema.Schema
 	Dependencies []string
+	BuildEnv     []string
 }
 
 func buildContextFromProto(proto *langpb.BuildContext) (buildContext, error) {
@@ -66,6 +67,7 @@ func buildContextFromProto(proto *langpb.BuildContext) (buildContext, error) {
 		Config:       config,
 		Schema:       sch,
 		Dependencies: proto.Dependencies,
+		BuildEnv:     proto.BuildEnv,
 	}, nil
 }
 
@@ -416,7 +418,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 		}, nil
 	}
 
-	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, transaction, false)
+	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, transaction, buildCtx.BuildEnv, false)
 	if err != nil {
 		return buildFailure(buildCtx, isAutomaticRebuild, builderrors.Error{
 			Type:  builderrors.COMPILER,
