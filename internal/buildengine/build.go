@@ -26,12 +26,12 @@ var errInvalidateDependencies = errors.New("dependencies need to be updated")
 // Plugins must use a lock file to ensure that only one build is running at a time.
 //
 // Returns invalidateDependenciesError if the build failed due to a change in dependencies.
-func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectConfig projectconfig.Config, bctx languageplugin.BuildContext, buildEnv []string, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
+func build(ctx context.Context, plugin *languageplugin.LanguagePlugin, projectConfig projectconfig.Config, bctx languageplugin.BuildContext, devMode bool) (moduleSchema *schema.Module, deploy []string, err error) {
 	logger := log.FromContext(ctx).Module(bctx.Config.Module).Scope("build")
 	ctx = log.ContextWithLogger(ctx, logger)
 
 	stubsRoot := stubsLanguageDir(projectConfig.Root(), bctx.Config.Language)
-	return handleBuildResult(ctx, projectConfig, bctx.Config, result.From(plugin.Build(ctx, projectConfig.Root(), stubsRoot, bctx, buildEnv, devMode)))
+	return handleBuildResult(ctx, projectConfig, bctx.Config, result.From(plugin.Build(ctx, projectConfig.Root(), stubsRoot, bctx, devMode)))
 }
 
 // handleBuildResult processes the result of a build

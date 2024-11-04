@@ -263,7 +263,7 @@ func buildDir(moduleDir string) string {
 }
 
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction watch.ModifyFilesTransaction, devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, err error) {
+func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction watch.ModifyFilesTransaction, buildEnv []string, devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return moduleSch, nil, fmt.Errorf("could not start a file transaction: %w", err)
 	}
@@ -379,7 +379,8 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	}
 	// We have seen lots of upstream HTTP/2 failures that make CI unstable.
 	// Disable HTTP/2 for now during the build. This can probably be removed later
-	buildEnv := []string{"GODEBUG=http2client=0"}
+	buildEnv = slices.Clone(buildEnv)
+	buildEnv = append(buildEnv, "GODEBUG=http2client=0")
 	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunStderrError(ctx)
 	if err != nil {
 		return moduleSch, nil, fmt.Errorf("failed to compile: %w", err)

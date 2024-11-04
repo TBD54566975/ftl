@@ -644,6 +644,13 @@ export class BuildContext extends Message<BuildContext> {
    */
   dependencies: string[] = [];
 
+  /**
+   * Build environment provides environment variables to be set for the build command
+   *
+   * @generated from field: repeated string build_env = 5;
+   */
+  buildEnv: string[] = [];
+
   constructor(data?: PartialMessage<BuildContext>) {
     super();
     proto3.util.initPartial(data, this);
@@ -656,6 +663,7 @@ export class BuildContext extends Message<BuildContext> {
     { no: 2, name: "module_config", kind: "message", T: ModuleConfig },
     { no: 3, name: "schema", kind: "message", T: Schema },
     { no: 4, name: "dependencies", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "build_env", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildContext {

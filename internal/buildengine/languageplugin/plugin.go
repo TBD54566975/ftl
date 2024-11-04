@@ -85,6 +85,7 @@ type BuildContext struct {
 	Config       moduleconfig.ModuleConfig
 	Schema       *schema.Schema
 	Dependencies []string
+	BuildEnv     []string
 }
 
 var ErrPluginNotRunning = errors.New("language plugin no longer running")
@@ -315,7 +316,7 @@ func (p *LanguagePlugin) SyncStubReferences(ctx context.Context, config moduleco
 // Build builds the module with the latest config and schema.
 // In dev mode, plugin is responsible for automatically rebuilding as relevant files within the module change,
 // and publishing these automatic builds updates to Updates().
-func (p *LanguagePlugin) Build(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, buildEnv []string, rebuildAutomatically bool) (BuildResult, error) {
+func (p *LanguagePlugin) Build(ctx context.Context, projectRoot, stubsRoot string, bctx BuildContext, rebuildAutomatically bool) (BuildResult, error) {
 	cmd := buildCommand{
 		BuildContext:         bctx,
 		projectRoot:          projectRoot,
@@ -409,6 +410,7 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 						ModuleConfig: configProto,
 						Schema:       schemaProto,
 						Dependencies: bctx.Dependencies,
+						BuildEnv:     c.BuildEnv,
 					},
 				}))
 				if err != nil {
@@ -428,6 +430,7 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 					ModuleConfig: configProto,
 					Schema:       schemaProto,
 					Dependencies: bctx.Dependencies,
+					BuildEnv:     c.BuildEnv,
 				},
 			}))
 			if err != nil {
