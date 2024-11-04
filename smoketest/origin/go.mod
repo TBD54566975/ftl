@@ -2,7 +2,7 @@ module ftl/origin
 
 go 1.23.0
 
-require github.com/TBD54566975/ftl v0.386.3
+require github.com/TBD54566975/ftl v0.393.1
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
