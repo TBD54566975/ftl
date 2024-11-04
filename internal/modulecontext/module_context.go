@@ -165,7 +165,7 @@ func (m ModuleContext) GetDatabase(name string, dbType DBType) (string, error) {
 		return "", fmt.Errorf("database %s does not match expected type of %s", name, dbType)
 	}
 	if m.isTesting && !db.isTestDB {
-		return "", fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase[MyConfig]() as an option with ftltest.Context(...)", name)
+		return "", fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase(db) as an option with ftltest.Context(...)", name)
 	}
 	return db.DSN, nil
 }

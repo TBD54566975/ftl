@@ -13,6 +13,8 @@ import (
 
 var logFile = ftl.Config[string]("log_file")
 
+// var db = ftl.PostgresDatabase("exemplardb")
+
 // PubSub
 
 var _ = ftl.Subscription(origin.AgentBroadcast, "agentConsumer")

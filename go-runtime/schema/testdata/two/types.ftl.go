@@ -33,14 +33,12 @@ func init() {
 		),
 		reflection.ExternalType(*new(backoff.Backoff)),
 		reflection.ExternalType(*new(lib.NonFTLType)),
-		reflection.Database[FooConfig]("foo", server.InitPostgres),
 		reflection.ProvideResourcesForVerb(
 			CallsTwo,
 			server.VerbClient[TwoClient, Payload[string], Payload[string]](),
 		),
 		reflection.ProvideResourcesForVerb(
 			Two,
-			server.PostgresDatabaseHandle[FooConfig](),
 		),
 		reflection.ProvideResourcesForVerb(
 			CallsTwoAndThree,

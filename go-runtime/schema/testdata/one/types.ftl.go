@@ -6,7 +6,6 @@ import (
 	ftlbuiltin "ftl/builtin"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
-	"github.com/TBD54566975/ftl/go-runtime/server"
 	stdtime "time"
 )
 
@@ -41,7 +40,6 @@ func init() {
 			*new(Option),
 			*new(ValueEnum),
 		),
-		reflection.Database[MyDbConfig]("testDb", server.InitPostgres),
 		reflection.ProvideResourcesForVerb(
 			BatchStringToTime,
 		),

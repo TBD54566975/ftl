@@ -34,14 +34,6 @@ func GetVariantByName(discriminator reflect.Type, name string) optional.Option[r
 	return singletonTypeRegistry.getVariantByName(discriminator, name)
 }
 
-func GetDatabase[T any]() *ReflectedDatabaseHandle {
-	ref := Ref{
-		Module: moduleForType(reflect.TypeFor[T]()),
-		Name:   getDatabaseName[T](),
-	}
-	return singletonTypeRegistry.databases[ref]
-}
-
 // GetDiscriminatorByVariant returns the discriminator type for the given variant type.
 func GetDiscriminatorByVariant(variant reflect.Type) optional.Option[reflect.Type] {
 	return singletonTypeRegistry.getDiscriminatorByVariant(variant)

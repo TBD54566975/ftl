@@ -17,11 +17,8 @@ var goodConfig = ftl.Config[string]("FTL_CONFIG_ENDPOINT")
 // var duplSecret = ftl.Secret[string]("FTL_ENDPOINT")
 var goodSecret = ftl.Secret[string]("FTL_SECRET_ENDPOINT")
 
-type DuplDbConfig struct {
-	ftl.DefaultPostgresDatabaseConfig
-}
-
-func (DuplDbConfig) Name() string { return "testdb" }
+// var duplDB = ftl.PostgresDatabase("testDb")
+var goodDB = ftl.PostgresDatabase("testDb")
 
 type Request struct {
 	BadParam error

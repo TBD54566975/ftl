@@ -143,11 +143,7 @@ func DataFunc(ctx context.Context, req Data) (Data, error) {
 }
 
 
-type MyDbConfig struct {
-    ftl.DefaultPostgresDatabaseConfig
-}
-
-func (MyDbConfig) Name() string { return "testdb" }
+var db = ftl.PostgresDatabase("testDb")
 
 ` + (func() string {
 		if symbol == "int" || symbol == "string" {
@@ -340,7 +336,7 @@ module test {
   config cfg {{.TypeName}}
   secret secret {{.TypeName}}
 
-  database postgres testdb
+  database postgres testDb
 
   export topic exportedTopic {{.TypeName}}
   topic topic {{.TypeName}}
