@@ -65,7 +65,7 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 func loadRef(pkg, name string) (*types.Interface, error) {
 	pkgs, err := packages.Load(&packages.Config{Fset: token.NewFileSet(), Mode: packages.NeedTypes}, pkg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load package %q: %w", pkg, err)
 	}
 	if len(pkgs) != 1 {
 		return nil, fmt.Errorf("expected one package, got %s",
