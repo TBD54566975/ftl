@@ -28,6 +28,8 @@ jobs:
         run: go mod download -x
       - name: Download pnpm dependencies
         run: pnpm install
+      - name: Download playwright browsers
+        run: npx playwright install
       - id: find-go-build-cache
         shell: bash
         run: echo "cache=$(go env GOCACHE)" >> "$GITHUB_OUTPUT"
