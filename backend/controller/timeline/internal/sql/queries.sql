@@ -121,6 +121,56 @@ VALUES (
   sqlc.arg('payload')
 );
 
+-- name: InsertTimelinePubsubPublishEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  custom_key_3,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
+  (CASE
+      WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT)
+    END),
+  sqlc.arg('time_stamp')::TIMESTAMPTZ,
+  'pubsub_publish',
+  sqlc.arg('source_module')::TEXT,
+  sqlc.arg('source_verb')::TEXT,
+  sqlc.arg('topic')::TEXT,
+  sqlc.arg('payload')
+);
+
+-- name: InsertTimelinePubsubConsumeEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  custom_key_3,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = sqlc.arg('deployment_key')::deployment_key LIMIT 1),
+  (CASE
+      WHEN sqlc.narg('request_key')::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = sqlc.narg('request_key')::TEXT)
+    END),
+  sqlc.arg('time_stamp')::TIMESTAMPTZ,
+  'pubsub_consume',
+  sqlc.narg('dest_module')::TEXT,
+  sqlc.narg('dest_verb')::TEXT,
+  sqlc.arg('topic')::TEXT,
+  sqlc.arg('payload')
+);
+
 -- name: DeleteOldTimelineEvents :one
 WITH deleted AS (
     DELETE FROM timeline

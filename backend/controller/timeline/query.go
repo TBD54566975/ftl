@@ -411,6 +411,60 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 				},
 			})
 
+		case sql.EventTypePubsubPublish:
+			var jsonPayload eventPubSubPublishJSON
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt pubsub publish event: %w", err)
+			}
+			requestKey := optional.None[string]()
+			if rk, ok := row.RequestKey.Get(); ok {
+				requestKey = optional.Some(rk.String())
+			}
+			out = append(out, &PubSubPublishEvent{
+				ID:       row.ID,
+				Duration: time.Duration(jsonPayload.DurationMS) * time.Millisecond,
+				Request:  jsonPayload.Request,
+				PubSubPublish: PubSubPublish{
+					DeploymentKey: row.DeploymentKey,
+					RequestKey:    requestKey,
+					Time:          row.TimeStamp,
+					SourceVerb:    schema.Ref{Module: row.CustomKey1.MustGet(), Name: row.CustomKey2.MustGet()},
+					Topic:         jsonPayload.Topic,
+					Error:         jsonPayload.Error,
+				},
+			})
+
+		case sql.EventTypePubsubConsume:
+			var jsonPayload eventPubSubConsumeJSON
+			if err := s.encryption.DecryptJSON(&row.Payload, &jsonPayload); err != nil {
+				return nil, fmt.Errorf("failed to decrypt pubsub consume event: %w", err)
+			}
+			requestKey := optional.None[string]()
+			if rk, ok := row.RequestKey.Get(); ok {
+				requestKey = optional.Some(rk.String())
+			}
+			destVerb := optional.None[schema.RefKey]()
+			if dv, ok := row.CustomKey2.Get(); ok {
+				dvr := schema.RefKey{Name: dv}
+				dm, ok := row.CustomKey1.Get()
+				if ok {
+					dvr.Module = dm
+				}
+				destVerb = optional.Some(dvr)
+			}
+			out = append(out, &PubSubConsumeEvent{
+				ID:       row.ID,
+				Duration: time.Since(row.TimeStamp),
+				PubSubConsume: PubSubConsume{
+					DeploymentKey: row.DeploymentKey,
+					RequestKey:    requestKey,
+					Time:          row.TimeStamp,
+					DestVerb:      destVerb,
+					Topic:         jsonPayload.Topic,
+					Error:         jsonPayload.Error,
+				},
+			})
+
 		default:
 			panic("unknown event type: " + row.Type)
 		}

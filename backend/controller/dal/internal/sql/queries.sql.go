@@ -1055,9 +1055,11 @@ SELECT
     subscribers.retry_attempts as retry_attempts,
     subscribers.backoff as backoff,
     subscribers.max_backoff as max_backoff,
-    subscribers.catch_verb as catch_verb
+    subscribers.catch_verb as catch_verb,
+    deployments.key as deployment_key
 FROM topic_subscribers as subscribers
          JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
+         JOIN deployments ON subscribers.deployment_id = deployments.id
 WHERE topic_subscriptions.key = $1::subscription_key
 ORDER BY RANDOM()
 LIMIT 1
@@ -1069,6 +1071,7 @@ type GetRandomSubscriberRow struct {
 	Backoff       sqltypes.Duration
 	MaxBackoff    sqltypes.Duration
 	CatchVerb     optional.Option[schema.RefKey]
+	DeploymentKey model.DeploymentKey
 }
 
 func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.SubscriptionKey) (GetRandomSubscriberRow, error) {
@@ -1080,6 +1083,7 @@ func (q *Queries) GetRandomSubscriber(ctx context.Context, key model.Subscriptio
 		&i.Backoff,
 		&i.MaxBackoff,
 		&i.CatchVerb,
+		&i.DeploymentKey,
 	)
 	return i, err
 }
@@ -1236,9 +1240,12 @@ SELECT
     subs.key::subscription_key as key,
     curser.key as cursor,
     topics.key::topic_key as topic,
-    subs.name
+    subs.name,
+    deployments.key as deployment_key,
+    curser.request_key as request_key
 FROM topic_subscriptions subs
          JOIN runner_count on subs.deployment_id = runner_count.deployment
+         JOIN deployments ON subs.deployment_id = deployments.id
          LEFT JOIN topics ON subs.topic_id = topics.id
          LEFT JOIN topic_events curser ON subs.cursor = curser.id
 WHERE subs.cursor IS DISTINCT FROM topics.head
@@ -1249,10 +1256,12 @@ LIMIT 3
 `
 
 type GetSubscriptionsNeedingUpdateRow struct {
-	Key    model.SubscriptionKey
-	Cursor optional.Option[model.TopicEventKey]
-	Topic  model.TopicKey
-	Name   string
+	Key           model.SubscriptionKey
+	Cursor        optional.Option[model.TopicEventKey]
+	Topic         model.TopicKey
+	Name          string
+	DeploymentKey model.DeploymentKey
+	RequestKey    optional.Option[string]
 }
 
 // Results may not be ready to be scheduled yet due to event consumption delay
@@ -1273,6 +1282,8 @@ func (q *Queries) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubsc
 			&i.Cursor,
 			&i.Topic,
 			&i.Name,
+			&i.DeploymentKey,
+			&i.RequestKey,
 		); err != nil {
 			return nil, err
 		}

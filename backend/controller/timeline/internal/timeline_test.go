@@ -36,7 +36,7 @@ func TestTimeline(t *testing.T) {
 
 	timeline := timeline2.New(ctx, conn, encryption)
 	registry := artefacts.New(conn)
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timeline)
 
 	key := model.NewControllerKey("localhost", strconv.Itoa(8080+1))
 	cjs := cronjobs.New(ctx, key, "test.com", encryption, timeline, conn)
@@ -186,6 +186,53 @@ func TestTimeline(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	})
 
+	pubSubPublishEvent := &timeline2.PubSubPublishEvent{
+		Request: []byte("null"),
+		PubSubPublish: timeline2.PubSubPublish{
+			DeploymentKey: deploymentKey,
+			RequestKey:    optional.Some(requestKey.String()),
+			Time:          time.Now().Round(time.Millisecond),
+			SourceVerb:    schema.Ref{Module: "time", Name: "time"},
+			Topic:         "test",
+			Error:         optional.None[string](),
+		},
+	}
+
+	t.Run("InsertPubSubPublishEvent", func(t *testing.T) {
+		timeline.EnqueueEvent(ctx, &timeline2.PubSubPublish{
+			DeploymentKey: pubSubPublishEvent.DeploymentKey,
+			RequestKey:    pubSubPublishEvent.RequestKey,
+			Time:          pubSubPublishEvent.Time,
+			SourceVerb:    pubSubPublishEvent.SourceVerb,
+			Topic:         pubSubPublishEvent.Topic,
+			Error:         pubSubPublishEvent.Error,
+		})
+		time.Sleep(200 * time.Millisecond)
+	})
+
+	pubSubConsumeEvent := &timeline2.PubSubConsumeEvent{
+		PubSubConsume: timeline2.PubSubConsume{
+			DeploymentKey: deploymentKey,
+			RequestKey:    optional.Some(requestKey.String()),
+			Time:          time.Now().Round(time.Millisecond),
+			DestVerb:      optional.Some(schema.RefKey{Module: "time", Name: "time"}),
+			Topic:         "test",
+			Error:         optional.None[string](),
+		},
+	}
+
+	t.Run("InsertPubSubConsumeEvent", func(t *testing.T) {
+		timeline.EnqueueEvent(ctx, &timeline2.PubSubConsume{
+			DeploymentKey: pubSubConsumeEvent.DeploymentKey,
+			RequestKey:    pubSubConsumeEvent.RequestKey,
+			Time:          pubSubConsumeEvent.Time,
+			DestVerb:      pubSubConsumeEvent.DestVerb,
+			Topic:         pubSubConsumeEvent.Topic,
+			Error:         pubSubConsumeEvent.Error,
+		})
+		time.Sleep(200 * time.Millisecond)
+	})
+
 	expectedDeploymentUpdatedEvent := &timeline2.DeploymentUpdatedEvent{
 		DeploymentKey: deploymentKey,
 		MinReplicas:   1,
@@ -201,13 +248,13 @@ func TestTimeline(t *testing.T) {
 		t.Run("NoFilters", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000)
 			assert.NoError(t, err)
-			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent, asyncEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent, asyncEvent, pubSubPublishEvent, pubSubConsumeEvent}, events)
 		})
 
 		t.Run("ByDeployment", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterDeployments(deploymentKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent, asyncEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{expectedDeploymentUpdatedEvent, callEvent, logEvent, ingressEvent, cronEvent, asyncEvent, pubSubPublishEvent, pubSubConsumeEvent}, events)
 		})
 
 		t.Run("ByCall", func(t *testing.T) {
@@ -237,7 +284,7 @@ func TestTimeline(t *testing.T) {
 		t.Run("ByRequests", func(t *testing.T) {
 			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterRequests(requestKey))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []timeline2.Event{callEvent, logEvent, ingressEvent, asyncEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{callEvent, logEvent, ingressEvent, asyncEvent, pubSubPublishEvent, pubSubConsumeEvent}, events)
 		})
 	})
 }
@@ -269,7 +316,7 @@ func TestDeleteOldEvents(t *testing.T) {
 
 	timeline := timeline2.New(ctx, conn, encryption)
 	registry := artefacts.New(conn)
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timeline)
 	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, nil)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)

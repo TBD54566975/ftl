@@ -27,6 +27,8 @@ const (
 	EventTypeIngress           = sql.EventTypeIngress
 	EventTypeCronScheduled     = sql.EventTypeCronScheduled
 	EventTypeAsyncExecute      = sql.EventTypeAsyncExecute
+	EventTypePubSubPublish     = sql.EventTypePubsubPublish
+	EventTypePubSubConsume     = sql.EventTypePubsubConsume
 
 	maxBatchSize  = 16
 	maxBatchDelay = 100 * time.Millisecond
@@ -137,6 +139,10 @@ func (s *Service) flushEvents(events []Event) {
 			err = s.insertCronScheduledEvent(s.ctx, querier, e)
 		case *AsyncExecuteEvent:
 			err = s.insertAsyncExecuteEvent(s.ctx, querier, e)
+		case *PubSubPublishEvent:
+			err = s.insertPubSubPublishEvent(s.ctx, querier, e)
+		case *PubSubConsumeEvent:
+			err = s.insertPubSubConsumeEvent(s.ctx, querier, e)
 		case *DeploymentCreatedEvent, *DeploymentUpdatedEvent:
 		// TODO: Implement
 		default:

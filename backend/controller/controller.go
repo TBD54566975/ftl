@@ -293,13 +293,12 @@ func New(
 	}
 	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
 
-	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc))
-	svc.pubSub = pubSub
-
 	svc.registry = artefacts.New(conn)
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
+	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc), timelineSvc)
+	svc.pubSub = pubSub
 	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, timelineSvc, conn)
 	svc.cronJobs = cronSvc
 	svc.dal = dal.New(ctx, conn, encryption, pubSub, cronSvc)
@@ -859,7 +858,36 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 
 func (s *Service) PublishEvent(ctx context.Context, req *connect.Request[ftlv1.PublishEventRequest]) (*connect.Response[ftlv1.PublishEventResponse], error) {
 	// Publish the event.
+	now := time.Now().UTC()
+	pubishError := optional.None[string]()
 	err := s.pubSub.PublishEventForTopic(ctx, req.Msg.Topic.Module, req.Msg.Topic.Name, req.Msg.Caller, req.Msg.Body)
+	if err != nil {
+		pubishError = optional.Some(err.Error())
+	}
+
+	requestKey := optional.None[string]()
+	if rk, err := rpc.RequestKeyFromContext(ctx); err == nil {
+		if rk, ok := rk.Get(); ok {
+			requestKey = optional.Some(rk.String())
+		}
+	}
+
+	// Add to timeline.
+	sstate := s.schemaState.Load()
+	module := req.Msg.Topic.Module
+	route, ok := sstate.routes[module]
+	if ok {
+		s.timeline.EnqueueEvent(ctx, &timeline.PubSubPublish{
+			DeploymentKey: route.Deployment,
+			RequestKey:    requestKey,
+			Time:          now,
+			SourceVerb:    schema.Ref{Name: req.Msg.Caller, Module: req.Msg.Topic.Module},
+			Topic:         req.Msg.Topic.Name,
+			Request:       req.Msg,
+			Error:         pubishError,
+		})
+	}
+
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to publish a event to topic %s:%s: %w", req.Msg.Topic.Module, req.Msg.Topic.Name, err))
 	}

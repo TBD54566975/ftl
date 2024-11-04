@@ -293,3 +293,101 @@ func (q *Queries) InsertTimelineLogEvent(ctx context.Context, arg InsertTimeline
 	)
 	return err
 }
+
+const insertTimelinePubsubConsumeEvent = `-- name: InsertTimelinePubsubConsumeEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  custom_key_3,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
+  (CASE
+      WHEN $2::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT)
+    END),
+  $3::TIMESTAMPTZ,
+  'pubsub_consume',
+  $4::TEXT,
+  $5::TEXT,
+  $6::TEXT,
+  $7
+)
+`
+
+type InsertTimelinePubsubConsumeEventParams struct {
+	DeploymentKey model.DeploymentKey
+	RequestKey    optional.Option[string]
+	TimeStamp     time.Time
+	DestModule    optional.Option[string]
+	DestVerb      optional.Option[string]
+	Topic         string
+	Payload       api.EncryptedTimelineColumn
+}
+
+func (q *Queries) InsertTimelinePubsubConsumeEvent(ctx context.Context, arg InsertTimelinePubsubConsumeEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelinePubsubConsumeEvent,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.TimeStamp,
+		arg.DestModule,
+		arg.DestVerb,
+		arg.Topic,
+		arg.Payload,
+	)
+	return err
+}
+
+const insertTimelinePubsubPublishEvent = `-- name: InsertTimelinePubsubPublishEvent :exec
+INSERT INTO timeline (
+  deployment_id,
+  request_id,
+  time_stamp,
+  type,
+  custom_key_1,
+  custom_key_2,
+  custom_key_3,
+  payload
+)
+VALUES (
+  (SELECT id FROM deployments d WHERE d.key = $1::deployment_key LIMIT 1),
+  (CASE
+      WHEN $2::TEXT IS NULL THEN NULL
+      ELSE (SELECT id FROM requests ir WHERE ir.key = $2::TEXT)
+    END),
+  $3::TIMESTAMPTZ,
+  'pubsub_publish',
+  $4::TEXT,
+  $5::TEXT,
+  $6::TEXT,
+  $7
+)
+`
+
+type InsertTimelinePubsubPublishEventParams struct {
+	DeploymentKey model.DeploymentKey
+	RequestKey    optional.Option[string]
+	TimeStamp     time.Time
+	SourceModule  string
+	SourceVerb    string
+	Topic         string
+	Payload       api.EncryptedTimelineColumn
+}
+
+func (q *Queries) InsertTimelinePubsubPublishEvent(ctx context.Context, arg InsertTimelinePubsubPublishEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertTimelinePubsubPublishEvent,
+		arg.DeploymentKey,
+		arg.RequestKey,
+		arg.TimeStamp,
+		arg.SourceModule,
+		arg.SourceVerb,
+		arg.Topic,
+		arg.Payload,
+	)
+	return err
+}
