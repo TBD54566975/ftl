@@ -1,4 +1,7 @@
 name = "testdata"
+secrets-provider = "inline"
+config-provider = "inline"
+
 [global]
 [global.secrets]
 bar = "envar://baza"
@@ -10,6 +13,6 @@ foo = "inline://ImZvb2JhciI"
 mutable = "inline://ImhlbGxvd29ybGQi"
 
 [modules]
-  [modules.echo]
-    [modules.echo.configuration]
-      default = "inline://ImFub255bW91cyI"
+[modules.echo]
+[modules.echo.configuration]
+default = "inline://ImFub255bW91cyI"

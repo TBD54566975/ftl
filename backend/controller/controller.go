@@ -13,7 +13,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	goslices "slices"
 	"sort"
 	"strings"
 	"sync"
@@ -132,7 +131,15 @@ func (c *Config) OpenDBAndInstrument() (*sql.DB, error) {
 }
 
 // Start the Controller. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScaling, conn *sql.DB, devel bool) error {
+func Start(
+	ctx context.Context,
+	config Config,
+	runnerScaling scaling.RunnerScaling,
+	cm *cf.Manager[configuration.Configuration],
+	sm *cf.Manager[configuration.Secrets],
+	conn *sql.DB,
+	devel bool,
+) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
@@ -153,15 +160,12 @@ func Start(ctx context.Context, config Config, runnerScaling scaling.RunnerScali
 		logger.Infof("Web console available at: %s", config.Bind)
 	}
 
-	svc, err := New(ctx, conn, config, devel, runnerScaling)
+	svc, err := New(ctx, conn, cm, sm, config, devel, runnerScaling)
 	if err != nil {
 		return err
 	}
 	logger.Debugf("Listening on %s", config.Bind)
 	logger.Debugf("Advertising as %s", config.Advertise)
-
-	cm := cf.ConfigFromContext(ctx)
-	sm := cf.SecretsFromContext(ctx)
 
 	admin := admin.NewAdminService(cm, sm, svc.dal)
 	console := console.NewService(svc.dal, svc.timeline)
@@ -222,6 +226,9 @@ type Service struct {
 	key                model.ControllerKey
 	deploymentLogsSink *deploymentLogsSink
 
+	cm *cf.Manager[configuration.Configuration]
+	sm *cf.Manager[configuration.Secrets]
+
 	tasks                   *scheduledtask.Scheduler
 	cronJobs                *cronjobs.Service
 	pubSub                  *pubsub.Service
@@ -243,7 +250,15 @@ type Service struct {
 	runnerScaling           scaling.RunnerScaling
 }
 
-func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerScaling scaling.RunnerScaling) (*Service, error) {
+func New(
+	ctx context.Context,
+	conn *sql.DB,
+	cm *cf.Manager[configuration.Configuration],
+	sm *cf.Manager[configuration.Secrets],
+	config Config,
+	devel bool,
+	runnerScaling scaling.RunnerScaling,
+) (*Service, error) {
 	key := config.Key
 	if config.Key.IsZero() {
 		key = model.NewControllerKey(config.Bind.Hostname(), config.Bind.Port())
@@ -265,6 +280,8 @@ func New(ctx context.Context, conn *sql.DB, config Config, devel bool, runnerSca
 	scheduler := scheduledtask.New(ctx, key, ldb)
 
 	svc := &Service{
+		cm:                      cm,
+		sm:                      sm,
 		tasks:                   scheduler,
 		dbleaser:                ldb,
 		conn:                    conn,
@@ -729,20 +746,17 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftlv1.ModuleContextRequest], resp *connect.ServerStream[ftlv1.ModuleContextResponse]) error {
 	name := req.Msg.Module
 
-	cm := cf.ConfigFromContext(ctx)
-	sm := cf.SecretsFromContext(ctx)
-
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
 	lastChecksum := int64(-1)
 
 	for {
 		h := sha.New()
 
-		configs, err := cm.MapForModule(ctx, name)
+		configs, err := s.cm.MapForModule(ctx, name)
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get configs: %w", err))
 		}
-		secrets, err := sm.MapForModule(ctx, name)
+		secrets, err := s.sm.MapForModule(ctx, name)
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 		}
@@ -1043,22 +1057,11 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 		return nil, fmt.Errorf("invalid module schema: %w", err)
 	}
 
-	sm := cf.SecretsFromContext(ctx)
 	for _, d := range module.Decls {
 		if db, ok := d.(*schema.Database); ok && db.Runtime != nil {
 			key := dsnSecretKey(module.Name, db.Name)
 
-			// TODO: Use a cluster specific default provider
-			allKeys := sm.ProviderKeys()
-			var providerKey configuration.ProviderKey
-			for _, key := range []configuration.ProviderKey{"inline", "asm"} {
-				if goslices.Contains(allKeys, key) {
-					providerKey = key
-					break
-				}
-			}
-
-			if err := sm.Set(ctx, providerKey, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
+			if err := s.sm.Set(ctx, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
 				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
 			}
 			logger.Infof("Database declaration: %s -> %s", db.Name, db.Runtime.DSN)

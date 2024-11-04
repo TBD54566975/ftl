@@ -12,13 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/configuration/manager"
-	"github.com/TBD54566975/ftl/internal/configuration/routers"
-	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type configCmd struct {
@@ -65,37 +59,7 @@ type configListCmd struct {
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List configuration only in this module."`
 }
 
-func setUpAdminClient(ctx context.Context, config projectconfig.Config) (ctxOut context.Context, client admin.Client, err error) {
-	adminServiceClient := rpc.Dial(ftlv1connect.NewAdminServiceClient, cli.Endpoint.String(), log.Error)
-	shouldUseLocalClient, err := admin.ShouldUseLocalClient(ctx, adminServiceClient, cli.Endpoint)
-	if err != nil {
-		return ctx, client, fmt.Errorf("could not create admin client: %w", err)
-	}
-	if shouldUseLocalClient {
-		// create config and secret managers
-		cr := routers.ProjectConfig[configuration.Configuration]{Config: config.Path}
-		cm, err := manager.NewConfigurationManager(ctx, cr)
-		if err != nil {
-			return ctx, client, fmt.Errorf("could not create config manager: %w", err)
-		}
-		ctx = manager.ContextWithConfig(ctx, cm)
-
-		sr := routers.ProjectConfig[configuration.Secrets]{Config: config.Path}
-		sm, err := manager.NewSecretsManager(ctx, sr, cli.Vault, config.Path)
-		if err != nil {
-			return ctx, client, fmt.Errorf("could not create secrets manager: %w", err)
-		}
-		ctx = manager.ContextWithSecrets(ctx, sm)
-		return ctx, admin.NewLocalClient(cm, sm), nil
-	}
-	return ctx, adminServiceClient, nil
-}
-
-func (s *configListCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *configListCmd) Run(ctx context.Context, adminClient admin.Client) error {
 	resp, err := adminClient.ConfigList(ctx, connect.NewRequest(&ftlv1.ListConfigRequest{
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
@@ -125,11 +89,7 @@ Returns a JSON-encoded configuration value.
 `
 }
 
-func (s *configGetCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *configGetCmd) Run(ctx context.Context, adminClient admin.Client) error {
 	resp, err := adminClient.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
 		Ref: configRefFromRef(s.Ref),
 	}))
@@ -146,11 +106,7 @@ type configSetCmd struct {
 	Value *string           `arg:"" placeholder:"VALUE" help:"Configuration value (read from stdin if omitted)." optional:""`
 }
 
-func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *configSetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.Client) (err error) {
 	var config []byte
 	if s.Value != nil {
 		config = []byte(*s.Value)
@@ -193,18 +149,14 @@ type configUnsetCmd struct {
 	Ref configuration.Ref `arg:"" help:"Configuration reference in the form [<module>.]<name>."`
 }
 
-func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *configUnsetCmd) Run(ctx context.Context, scmd *configCmd, adminClient admin.Client) error {
 	req := &ftlv1.UnsetConfigRequest{
 		Ref: configRefFromRef(s.Ref),
 	}
 	if provider, ok := scmd.provider().Get(); ok {
 		req.Provider = &provider
 	}
-	_, err = adminClient.ConfigUnset(ctx, connect.NewRequest(req))
+	_, err := adminClient.ConfigUnset(ctx, connect.NewRequest(req))
 	if err != nil {
 		return err
 	}
@@ -221,11 +173,7 @@ Imports configuration values from a JSON object.
 `
 }
 
-func (s *configImportCmd) Run(ctx context.Context, cmd *configCmd, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *configImportCmd) Run(ctx context.Context, cmd *configCmd, adminClient admin.Client) error {
 	input, err := io.ReadAll(s.Input)
 	if err != nil {
 		return fmt.Errorf("failed to read input: %w", err)
@@ -268,11 +216,7 @@ Outputs configuration values in a JSON object. A provider can be used to filter 
 `
 }
 
-func (s *configExportCmd) Run(ctx context.Context, cmd *configCmd, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *configExportCmd) Run(ctx context.Context, cmd *configCmd, adminClient admin.Client) error {
 	req := &ftlv1.ListConfigRequest{
 		IncludeValues: optional.Some(true).Ptr(),
 	}

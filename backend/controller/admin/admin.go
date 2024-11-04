@@ -120,8 +120,7 @@ func (s *AdminService) ConfigSet(ctx context.Context, req *connect.Request[ftlv1
 		return nil, err
 	}
 
-	pkey := configProviderKey(req.Msg.Provider)
-	err = s.cm.SetJSON(ctx, pkey, refFromConfigRef(req.Msg.GetRef()), req.Msg.Value)
+	err = s.cm.SetJSON(ctx, refFromConfigRef(req.Msg.GetRef()), req.Msg.Value)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set config: %w", err)
 	}
@@ -130,8 +129,7 @@ func (s *AdminService) ConfigSet(ctx context.Context, req *connect.Request[ftlv1
 
 // ConfigUnset unsets the config value at the given ref.
 func (s *AdminService) ConfigUnset(ctx context.Context, req *connect.Request[ftlv1.UnsetConfigRequest]) (*connect.Response[ftlv1.UnsetConfigResponse], error) {
-	pkey := configProviderKey(req.Msg.Provider)
-	err := s.cm.Unset(ctx, pkey, refFromConfigRef(req.Msg.GetRef()))
+	err := s.cm.Unset(ctx, refFromConfigRef(req.Msg.GetRef()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to unset config: %w", err)
 	}
@@ -146,10 +144,6 @@ func (s *AdminService) SecretsList(ctx context.Context, req *connect.Request[ftl
 	}
 	secrets := []*ftlv1.ListSecretsResponse_Secret{}
 	for _, secret := range listing {
-		if req.Msg.Provider != nil && manager.ProviderKeyForAccessor(secret.Accessor) != secretProviderKey(req.Msg.Provider) {
-			// Skip secrets that don't match the provider in the request
-			continue
-		}
 		module, ok := secret.Module.Get()
 		if req.Msg.Module != nil && *req.Msg.Module != "" && module != *req.Msg.Module {
 			continue
@@ -192,25 +186,6 @@ func (s *AdminService) SecretGet(ctx context.Context, req *connect.Request[ftlv1
 	return connect.NewResponse(&ftlv1.GetSecretResponse{Value: vb}), nil
 }
 
-func secretProviderKey(p *ftlv1.SecretProvider) configuration.ProviderKey {
-	if p == nil {
-		return ""
-	}
-	switch *p {
-	case ftlv1.SecretProvider_SECRET_INLINE:
-		return providers.InlineProviderKey
-	case ftlv1.SecretProvider_SECRET_ENVAR:
-		return providers.EnvarProviderKey
-	case ftlv1.SecretProvider_SECRET_KEYCHAIN:
-		return providers.KeychainProviderKey
-	case ftlv1.SecretProvider_SECRET_OP:
-		return providers.OnePasswordProviderKey
-	case ftlv1.SecretProvider_SECRET_ASM:
-		return providers.ASMProviderKey
-	}
-	return ""
-}
-
 // SecretSet sets the secret at the given ref to the provided value.
 func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1.SetSecretRequest]) (*connect.Response[ftlv1.SetSecretResponse], error) {
 	err := s.validateAgainstSchema(ctx, true, refFromConfigRef(req.Msg.GetRef()), req.Msg.Value)
@@ -218,8 +193,7 @@ func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1
 		return nil, err
 	}
 
-	pkey := secretProviderKey(req.Msg.Provider)
-	err = s.sm.SetJSON(ctx, pkey, refFromConfigRef(req.Msg.GetRef()), req.Msg.Value)
+	err = s.sm.SetJSON(ctx, refFromConfigRef(req.Msg.GetRef()), req.Msg.Value)
 	if err != nil {
 		return nil, fmt.Errorf("failed to set secret: %w", err)
 	}
@@ -228,8 +202,7 @@ func (s *AdminService) SecretSet(ctx context.Context, req *connect.Request[ftlv1
 
 // SecretUnset unsets the secret value at the given ref.
 func (s *AdminService) SecretUnset(ctx context.Context, req *connect.Request[ftlv1.UnsetSecretRequest]) (*connect.Response[ftlv1.UnsetSecretResponse], error) {
-	pkey := secretProviderKey(req.Msg.Provider)
-	err := s.sm.Unset(ctx, pkey, refFromConfigRef(req.Msg.GetRef()))
+	err := s.sm.Unset(ctx, refFromConfigRef(req.Msg.GetRef()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to unset secret: %w", err)
 	}

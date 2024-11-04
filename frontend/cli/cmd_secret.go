@@ -12,9 +12,9 @@ import (
 	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 
+	"github.com/TBD54566975/ftl/backend/controller/admin"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	cf "github.com/TBD54566975/ftl/internal/configuration"
-	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/terminal"
 )
 
@@ -43,31 +43,12 @@ variables, and so on.
 `
 }
 
-func (s *secretCmd) provider() optional.Option[ftlv1.SecretProvider] {
-	if s.Envar {
-		return optional.Some(ftlv1.SecretProvider_SECRET_ENVAR)
-	} else if s.Inline {
-		return optional.Some(ftlv1.SecretProvider_SECRET_INLINE)
-	} else if s.Keychain {
-		return optional.Some(ftlv1.SecretProvider_SECRET_KEYCHAIN)
-	} else if s.Op {
-		return optional.Some(ftlv1.SecretProvider_SECRET_OP)
-	} else if s.ASM {
-		return optional.Some(ftlv1.SecretProvider_SECRET_ASM)
-	}
-	return optional.None[ftlv1.SecretProvider]()
-}
-
 type secretListCmd struct {
 	Values bool   `help:"List secret values."`
 	Module string `optional:"" arg:"" placeholder:"MODULE" help:"List secrets only in this module."`
 }
 
-func (s *secretListCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *secretListCmd) Run(ctx context.Context, adminClient admin.Client) error {
 	resp, err := adminClient.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
 		Module:        &s.Module,
 		IncludeValues: &s.Values,
@@ -96,11 +77,7 @@ Returns a JSON-encoded secret value.
 `
 }
 
-func (s *secretGetCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *secretGetCmd) Run(ctx context.Context, adminClient admin.Client) error {
 	resp, err := adminClient.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{
 		Ref: configRefFromRef(s.Ref),
 	}))
@@ -116,14 +93,10 @@ type secretSetCmd struct {
 	Ref  cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, projConfig projectconfig.Config) error {
+func (s *secretSetCmd) Run(ctx context.Context, adminClient admin.Client) (err error) {
 	// We don't need the terminal status display, and it does not currently handle partial line writes
 	terminal.FromContext(ctx).Close()
 	// Prompt for a secret if stdin is a terminal, otherwise read from stdin.
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
 	var secret []byte
 	if isatty.IsTerminal(0) {
 		fmt.Print("Secret: ")
@@ -157,9 +130,6 @@ func (s *secretSetCmd) Run(ctx context.Context, scmd *secretCmd, projConfig proj
 		Ref:   configRefFromRef(s.Ref),
 		Value: secretJSON,
 	}
-	if provider, ok := scmd.provider().Get(); ok {
-		req.Provider = &provider
-	}
 	_, err = adminClient.SecretSet(ctx, connect.NewRequest(req))
 	if err != nil {
 		return err
@@ -171,16 +141,9 @@ type secretUnsetCmd struct {
 	Ref cf.Ref `arg:"" help:"Secret reference in the form [<module>.]<name>."`
 }
 
-func (s *secretUnsetCmd) Run(ctx context.Context, scmd *secretCmd, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *secretUnsetCmd) Run(ctx context.Context, adminClient admin.Client) (err error) {
 	req := &ftlv1.UnsetSecretRequest{
 		Ref: configRefFromRef(s.Ref),
-	}
-	if provider, ok := scmd.provider().Get(); ok {
-		req.Provider = &provider
 	}
 	_, err = adminClient.SecretUnset(ctx, connect.NewRequest(req))
 	if err != nil {
@@ -199,11 +162,7 @@ Imports secrets from a JSON object.
 `
 }
 
-func (s *secretImportCmd) Run(ctx context.Context, scmd *secretCmd, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *secretImportCmd) Run(ctx context.Context, adminClient admin.Client) (err error) {
 	input, err := io.ReadAll(s.Input)
 	if err != nil {
 		return fmt.Errorf("failed to read input: %w", err)
@@ -226,9 +185,6 @@ func (s *secretImportCmd) Run(ctx context.Context, scmd *secretCmd, projConfig p
 			Ref:   configRefFromRef(ref),
 			Value: bytes,
 		}
-		if provider, ok := scmd.provider().Get(); ok {
-			req.Provider = &provider
-		}
 		_, err = adminClient.SecretSet(ctx, connect.NewRequest(req))
 		if err != nil {
 			return fmt.Errorf("could not import secret for %q: %w", refPath, err)
@@ -246,16 +202,9 @@ Outputs secrets in a JSON object. A provider can be used to filter which secrets
 `
 }
 
-func (s *secretExportCmd) Run(ctx context.Context, scmd *secretCmd, projConfig projectconfig.Config) error {
-	ctx, adminClient, err := setUpAdminClient(ctx, projConfig)
-	if err != nil {
-		return err
-	}
+func (s *secretExportCmd) Run(ctx context.Context, adminClient admin.Client) (err error) {
 	req := &ftlv1.ListSecretsRequest{
 		IncludeValues: optional.Some(true).Ptr(),
-	}
-	if provider, ok := scmd.provider().Get(); ok {
-		req.Provider = &provider
 	}
 	listResponse, err := adminClient.SecretsList(ctx, connect.NewRequest(req))
 	if err != nil {

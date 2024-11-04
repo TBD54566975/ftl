@@ -11,13 +11,14 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/configuration/providers"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/profiles"
 )
 
 func TestProfile(t *testing.T) {
 	root := t.TempDir()
 
-	ctx := context.Background()
+	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	projectConfig := profiles.ProjectConfig{
 		Root:          root,
 		Realm:         "test",
@@ -55,7 +56,7 @@ func TestProfile(t *testing.T) {
 
 	cm := profile.ConfigurationManager()
 	passwordKey := configuration.NewRef("echo", "password")
-	err = cm.Set(ctx, providers.InlineProviderKey, passwordKey, "hello")
+	err = cm.Set(ctx, passwordKey, "hello")
 	assert.NoError(t, err)
 
 	var passwordValue string

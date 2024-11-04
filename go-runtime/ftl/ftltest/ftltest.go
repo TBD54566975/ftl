@@ -19,6 +19,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/go-runtime/server"
 	cf "github.com/TBD54566975/ftl/internal/configuration/manager"
+	"github.com/TBD54566975/ftl/internal/configuration/providers"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 	pc "github.com/TBD54566975/ftl/internal/projectconfig"
@@ -128,7 +129,11 @@ func WithProjectFile(path string) Option {
 			if _, err := os.Stat(path); err != nil {
 				return fmt.Errorf("error accessing project file: %w", err)
 			}
-			cm, err := cf.NewDefaultConfigurationManagerFromConfig(ctx, path)
+			projectConfig, err := pc.Load(ctx, path)
+			if err != nil {
+				return fmt.Errorf("project: %w", err)
+			}
+			cm, err := cf.NewDefaultConfigurationManagerFromConfig(ctx, providers.NewDefaultConfigRegistry(), projectConfig)
 			if err != nil {
 				return fmt.Errorf("could not set up configs: %w", err)
 			}
@@ -144,7 +149,7 @@ func WithProjectFile(path string) Option {
 				}
 			}
 
-			sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, path, "")
+			sm, err := cf.NewDefaultSecretsManagerFromConfig(ctx, providers.NewDefaultSecretsRegistry(projectConfig, ""), projectConfig)
 			if err != nil {
 				return fmt.Errorf("could not set up secrets: %w", err)
 			}

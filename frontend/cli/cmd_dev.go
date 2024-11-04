@@ -14,6 +14,8 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine"
+	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/configuration/manager"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/lsp"
@@ -32,7 +34,14 @@ type devCmd struct {
 	Build          buildCmd `embed:""`
 }
 
-func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig.Config, bindContext terminal.KongContextBinder) error {
+func (d *devCmd) Run(
+	ctx context.Context,
+	k *kong.Kong,
+	cm *manager.Manager[configuration.Configuration],
+	sm *manager.Manager[configuration.Secrets],
+	projConfig projectconfig.Config,
+	bindContext terminal.KongContextBinder,
+) error {
 	startTime := time.Now()
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
@@ -64,8 +73,8 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 		fmt.Println(dsn)
 		return nil
 	}
-	sm := terminal.FromContext(ctx)
-	starting := sm.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
+	statusManager := terminal.FromContext(ctx)
+	starting := statusManager.NewStatus("\u001B[92mStarting FTL Server 🚀\u001B[39m")
 
 	bindAllocator, err := bind.NewBindAllocator(d.ServeCmd.Bind, 1)
 	if err != nil {
@@ -76,7 +85,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
-			err := d.ServeCmd.Run(ctx, projConfig)
+			err := d.ServeCmd.Run(ctx, cm, sm, projConfig)
 			if err != nil {
 				return err
 			}
@@ -84,7 +93,7 @@ func (d *devCmd) Run(ctx context.Context, k *kong.Kong, projConfig projectconfig
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, optional.Some(controllerReady), true, bindAllocator)
+			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator)
 		})
 	}
 

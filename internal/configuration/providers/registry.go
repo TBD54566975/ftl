@@ -7,11 +7,30 @@ import (
 	"slices"
 
 	"github.com/TBD54566975/ftl/internal/configuration"
+	"github.com/TBD54566975/ftl/internal/projectconfig"
 )
 
 type Factory[R configuration.Role] func(ctx context.Context) (configuration.Provider[R], error)
 
-// Registry that lazily constructs configuration providers.
+// NewDefaultConfigRegistry creates a new registry with the default configuration providers.
+func NewDefaultConfigRegistry() *Registry[configuration.Configuration] {
+	registry := NewRegistry[configuration.Configuration]()
+	registry.Register(NewEnvarFactory[configuration.Configuration]())
+	registry.Register(NewInlineFactory[configuration.Configuration]())
+	return registry
+}
+
+// NewDefaultSecretsRegistry creates a new registry with the default secrets providers.
+func NewDefaultSecretsRegistry(config projectconfig.Config, onePasswordVault string) *Registry[configuration.Secrets] {
+	registry := NewRegistry[configuration.Secrets]()
+	registry.Register(NewEnvarFactory[configuration.Secrets]())
+	registry.Register(NewInlineFactory[configuration.Secrets]())
+	registry.Register(NewOnePasswordFactory(onePasswordVault, config.Name))
+	registry.Register(NewKeychainFactory())
+	return registry
+}
+
+// Registry that lazily constructs configuration
 type Registry[R configuration.Role] struct {
 	factories map[configuration.ProviderKey]Factory[R]
 }

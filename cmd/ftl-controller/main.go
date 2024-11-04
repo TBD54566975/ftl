@@ -64,22 +64,18 @@ func main() {
 
 	configDal := cfdal.New(conn)
 	kctx.FatalIfErrorf(err)
-	configProviders := []cf.Provider[cf.Configuration]{providers.NewDatabaseConfig(configDal)}
 	configResolver := routers.NewDatabaseConfig(configDal)
-	cm, err := manager.New(ctx, configResolver, configProviders)
+	cm, err := manager.New(ctx, configResolver, providers.NewDatabaseConfig(configDal))
 	kctx.FatalIfErrorf(err)
-
-	ctx = manager.ContextWithConfig(ctx, cm)
 
 	// The FTL controller currently only supports AWS Secrets Manager as a secrets provider.
 	awsConfig, err := config.LoadDefaultConfig(ctx)
 	kctx.FatalIfErrorf(err)
 	asmSecretProvider := providers.NewASM(ctx, secretsmanager.NewFromConfig(awsConfig), cli.ControllerConfig.Advertise, dal)
 	dbSecretResolver := routers.NewDatabaseSecrets(configDal)
-	sm, err := manager.New[cf.Secrets](ctx, dbSecretResolver, []cf.Provider[cf.Secrets]{asmSecretProvider})
+	sm, err := manager.New[cf.Secrets](ctx, dbSecretResolver, asmSecretProvider)
 	kctx.FatalIfErrorf(err)
-	ctx = manager.ContextWithSecrets(ctx, sm)
 
-	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling(cli.DisableIstio), conn, false)
+	err = controller.Start(ctx, cli.ControllerConfig, k8sscaling.NewK8sScaling(cli.DisableIstio), cm, sm, conn, false)
 	kctx.FatalIfErrorf(err)
 }
