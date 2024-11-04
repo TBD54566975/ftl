@@ -12,17 +12,27 @@ import {
   useReactFlow,
   Controls,
   Background,
+  Handle,
+  Position,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import ELK from 'elkjs/lib/elk.bundled.js'
 
 const CustomNodeA = ({ data }) => {
-  console.log('called!!')
   return (
-    <div style={{ padding: '10px', border: '2px solid blue', borderRadius: '5px' }}>
-      <strong>Custom Node A</strong>
-      <div>{data.label}</div>
+    <div className='h-full w-full border border-gray-600 rounded-sm bg-indigo-100 truncate px-4 py-2 text-center'>
+      <Handle
+        type="target"
+        position={Position.Top}
+        isConnectable={true}
+      />
+      <div>{data?.label}</div>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        isConnectable={true}
+      />
     </div>
   );
 };
@@ -34,9 +44,7 @@ const nodeTypes = {
 const initialNodes = [
   {
     id: "A",
-    group: "1",
-    type: 'customNodeA',
-    data: {label: 'my label'},
+    group: "1"
   },
   {
     id: "B",
@@ -138,7 +146,6 @@ export default async function createLayout() {
     result.push({
       id: current.id,
       position: { x: current.x, y: current.y },
-      data: { label: current.id },
       style: { width: current.width, height: current.height }
     });
 
@@ -146,9 +153,10 @@ export default async function createLayout() {
       result.push({
         id: child.id,
         position: { x: child.x, y: child.y },
-        data: { label: child.id },
+        type: 'customNodeA',
+        data: { label: child.id, title: 'title' },
         style: { width: child.width, height: child.height },
-        parentId: current.id
+        parentId: current.id,
       })
     );
 
