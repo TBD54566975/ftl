@@ -390,7 +390,7 @@ func waitForControllerOnline(ctx context.Context, startupTimeout time.Duration, 
 	ctx, cancel := context.WithTimeout(ctx, startupTimeout)
 	defer cancel()
 
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Millisecond * 50)
 	defer ticker.Stop()
 
 	for {
