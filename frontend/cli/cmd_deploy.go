@@ -30,6 +30,9 @@ func (d *deployCmd) Run(ctx context.Context, projConfig projectconfig.Config) er
 		return err
 	}
 
+	// Cancel build engine context to ensure all language plugins are killed.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	engine, err := buildengine.New(ctx, client, projConfig, d.Build.Dirs, bindAllocator, buildengine.BuildEnv(d.Build.BuildEnv), buildengine.Parallelism(d.Build.Parallelism))
 	if err != nil {
 		return err

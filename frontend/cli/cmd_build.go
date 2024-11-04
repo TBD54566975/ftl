@@ -29,6 +29,9 @@ func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServic
 		return err
 	}
 
+	// Cancel build engine context to ensure all language plugins are killed.
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	engine, err := buildengine.New(ctx, client, projConfig, b.Dirs, bindAllocator, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
 	if err != nil {
 		return err
