@@ -16,7 +16,8 @@ import (
 )
 
 func TestGraph(t *testing.T) {
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
+	ctx, cancel := context.WithCancel(log.ContextWithNewDefaultLogger(context.Background()))
+	t.Cleanup(cancel)
 
 	bindURL, err := url.Parse("http://127.0.0.1:8893")
 	assert.NoError(t, err)
