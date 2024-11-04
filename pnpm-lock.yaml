@@ -221,8 +221,8 @@ importers:
         specifier: ^10.0.6
         version: 10.0.9
       '@types/node':
-        specifier: 20.x
-        version: 20.17.6
+        specifier: 22.x
+        version: 22.8.7
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
