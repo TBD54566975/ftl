@@ -93,7 +93,7 @@ func main() {
 	if plugin, ok := languagePlugin.Get(); ok {
 		// Kill the plugin when the app exits due to an error, or after showing help.
 		addToExit(app, func(code int) {
-			plugin.Kill()
+			_ = plugin.Kill() //nolint:errcheck
 		})
 	}
 
