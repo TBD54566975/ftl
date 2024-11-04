@@ -1,5 +1,5 @@
-import type { PubSubPublishEvent } from "../../protos/xyz/block/ftl/v1/console/console_pb";
-import { refString } from "../verbs/verb.utils";
+import type { PubSubPublishEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { refString } from '../verbs/verb.utils'
 
 export const TimelinePubSubPublish = ({ pubSubPublish }: { pubSubPublish: PubSubPublishEvent }) => {
   const title = `${pubSubPublish.verbRef?.module ? `${refString(pubSubPublish.verbRef)} -> ` : ''} topic ${pubSubPublish.topic}`

@@ -1,4 +1,14 @@
-import { Call02Icon, CallIncoming04Icon, CustomerServiceIcon, Menu01Icon, PackageReceiveIcon, Rocket01Icon, SatelliteIcon, Satellite03Icon, TimeQuarterPassIcon } from 'hugeicons-react'
+import {
+  Call02Icon,
+  CallIncoming04Icon,
+  CustomerServiceIcon,
+  Menu01Icon,
+  PackageReceiveIcon,
+  Rocket01Icon,
+  SatelliteIcon,
+  Satellite03Icon,
+  TimeQuarterPassIcon,
+} from 'hugeicons-react'
 import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { LogLevelBadgeSmall } from '../logs/LogLevelBadgeSmall'
 import { eventTextColor } from './timeline.utils'
