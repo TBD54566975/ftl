@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+# We only want to build this for the current platform
+# This may get invoked as part of a build for a different platform
+unset GOARCH
+unset GOOS
+
 FTL_DIR="$(dirname "$(readlink -f "$0")")/.."
 export FTL_DIR
 
