@@ -4,7 +4,7 @@ go 1.23.0
 
 replace github.com/TBD54566975/ftl => ../..
 
-require github.com/TBD54566975/ftl v0.0.0-00010101000000-000000000000
+require github.com/TBD54566975/ftl v0.393.1
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
