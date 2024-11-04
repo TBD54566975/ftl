@@ -16,6 +16,8 @@ https://tbd54566975.github.io/ftl/
 brew tap TBD54566975/ftl && brew install ftl
 ```
 
+yo
+
 ### Create a sample project (Go)
 
 <!-- This is for [mdcode](https://github.com/szkiba/mdcode) to test snippets in our README. -->
