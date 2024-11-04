@@ -1,16 +1,42 @@
 // https://codesandbox.io/p/sandbox/elkjs-layout-subflows-9og9hl?file=%2FApp.js%3A6%2C1
+// Imports slightly refactored:
+//  - older flow package to xyflow
+//  - elk import from bundled js
 
 import { useEffect, useState } from "react";
-import ReactFlow, { Controls, Background, ReactFlowProvider } from "reactflow";
-import "reactflow/dist/style.css";
+import {
+  ReactFlow,
+  ReactFlowProvider,
+  useNodesState,
+  useEdgesState,
+  useReactFlow,
+  Controls,
+  Background,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 
-//import ELK from "elkjs";
 import ELK from 'elkjs/lib/elk.bundled.js'
+
+const CustomNodeA = ({ data }) => {
+  console.log('called!!')
+  return (
+    <div style={{ padding: '10px', border: '2px solid blue', borderRadius: '5px' }}>
+      <strong>Custom Node A</strong>
+      <div>{data.label}</div>
+    </div>
+  );
+};
+
+const nodeTypes = {
+  customNodeA: CustomNodeA,
+}
 
 const initialNodes = [
   {
     id: "A",
-    group: "1"
+    group: "1",
+    type: 'customNodeA',
+    data: {label: 'my label'},
   },
   {
     id: "B",
@@ -70,7 +96,7 @@ const initialEdges = [
   { id: "3", source: "A", target: "B" },
   { id: "4", source: "A", target: "I" },
   { id: "5", source: "B", target: "C" },
-  { id: "6", source: "B", target: "H" }
+  { id: "6", source: "B", target: "H" },
 ];
 
 const elk = new ELK();
@@ -122,7 +148,7 @@ export default async function createLayout() {
         position: { x: child.x, y: child.y },
         data: { label: child.id },
         style: { width: child.width, height: child.height },
-        parentNode: current.id
+        parentId: current.id
       })
     );
 
@@ -151,6 +177,7 @@ function Flow() {
         <ReactFlow
           defaultNodes={graph.nodes}
           defaultEdges={graph.edges}
+          nodeTypes={nodeTypes}
           fitView
           defaultEdgeOptions={{
             type: "step",
