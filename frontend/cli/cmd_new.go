@@ -131,6 +131,7 @@ func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconf
 			return err
 		}
 	}
+	_ = plugin.Kill() //nolint:errcheck
 	return nil
 }
 

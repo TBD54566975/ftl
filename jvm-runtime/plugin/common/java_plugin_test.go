@@ -75,6 +75,9 @@ func TestJavaConfigDefaults(t *testing.T) {
 			assert.NoError(t, err)
 			plugin, err := languageplugin.New(ctx, allocator, "java", "test")
 			assert.NoError(t, err)
+			t.Cleanup(func() {
+				_ = plugin.Kill() //nolint:errcheck
+			})
 
 			defaults, err := plugin.ModuleConfigDefaults(ctx, dir)
 			assert.NoError(t, err)
