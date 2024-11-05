@@ -50,6 +50,8 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 1
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1
       - name: Smoke test HEAD with a full deploy to test upgrade path
         run: |
           set -euo pipefail
