@@ -51,14 +51,14 @@ type Reservation interface {
 	Rollback(ctx context.Context) error
 }
 
-func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, pubsub *pubsub.Service) *DAL {
+func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Service, pubsub *pubsub.Service, registry aregistry.Service) *DAL {
 	var d *DAL
 	db := dalsql.New(conn)
 	d = &DAL{
 		leaser:     dbleaser.NewDatabaseLeaser(conn),
 		db:         db,
 		encryption: encryption,
-		registry:   aregistry.New(conn),
+		registry:   registry,
 		Handle: libdal.New(conn, func(h *libdal.Handle[DAL]) *DAL {
 			return &DAL{
 				Handle:            h,
@@ -66,7 +66,7 @@ func New(ctx context.Context, conn libdal.Connection, encryption *encryption.Ser
 				leaser:            dbleaser.NewDatabaseLeaser(h.Connection),
 				pubsub:            pubsub,
 				encryption:        d.encryption,
-				registry:          aregistry.New(h.Connection),
+				registry:          registry,
 				DeploymentChanges: d.DeploymentChanges,
 			}
 		}),
@@ -83,7 +83,7 @@ type DAL struct {
 	leaser     *dbleaser.DatabaseLeaser
 	pubsub     *pubsub.Service
 	encryption *encryption.Service
-	registry   *aregistry.Service
+	registry   aregistry.Service
 
 	// DeploymentChanges is a Topic that receives changes to the deployments table.
 	DeploymentChanges *inprocesspubsub.Topic[DeploymentNotification]
@@ -279,8 +279,9 @@ func (d *DAL) CreateDeployment(ctx context.Context, language string, moduleSchem
 	// Associate the artefacts with the deployment
 	for _, row := range keys {
 		artefact := artefactsByDigest[row.Digest]
-		err = tx.registry.AddReleaseArtefact(ctx, deploymentKey, aregistry.ReleaseArtefact{
-			Artefact:   aregistry.ArtefactKey{Digest: row.Digest},
+		err = tx.db.AssociateArtefactWithDeployment(ctx, dalsql.AssociateArtefactWithDeploymentParams{
+			Key:        deploymentKey,
+			Digest:     row.Digest[:],
 			Executable: artefact.Executable,
 			Path:       artefact.Path,
 		})
@@ -668,26 +669,17 @@ func (d *DAL) loadDeployment(ctx context.Context, deployment dalsql.GetDeploymen
 		Key:      deployment.Deployment.Key,
 		Schema:   deployment.Deployment.Schema,
 	}
-	ras, err := d.registry.GetReleaseArtefacts(ctx, deployment.Deployment.ID)
-
+	artefacts, err := d.db.GetDeploymentArtefacts(ctx, deployment.Deployment.ID)
 	if err != nil {
 		return nil, libdal.TranslatePGError(err)
 	}
-	out.Artefacts, err = slices.MapErr(ras, func(ra aregistry.ReleaseArtefact) (*model.Artefact, error) {
-		content, err := d.registry.Download(ctx, ra.Artefact.Digest)
-		if err != nil {
-			return nil, fmt.Errorf("artefact download failed: %w", libdal.TranslatePGError(err))
-		}
+	out.Artefacts = slices.Map(artefacts, func(row dalsql.GetDeploymentArtefactsRow) *model.Artefact {
 		return &model.Artefact{
-			Path:       ra.Path,
-			Executable: ra.Executable,
-			Content:    content,
-			Digest:     ra.Artefact.Digest,
-		}, nil
+			Path:       row.Path,
+			Executable: row.Executable,
+			Digest:     sha256.FromBytes(row.Digest),
+		}
 	})
-	if err != nil {
-		return nil, fmt.Errorf("an artefact download failed: %w", err)
-	}
 	return out, nil
 }
 

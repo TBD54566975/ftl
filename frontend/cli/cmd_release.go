@@ -14,13 +14,13 @@ import (
 )
 
 type releaseCmd struct {
-	Registry             string `help:"Registry host:port" default:"127.0.0.1:5001"`
 	DSN                  string `help:"DAL DSN." default:"postgres://127.0.0.1:15432/ftl?sslmode=disable&user=postgres&password=secret" env:"FTL_CONTROLLER_DSN"`
 	MaxOpenDBConnections int    `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
 	MaxIdleDBConnections int    `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
 
-	Publish releasePublishCmd `cmd:"" help:"Packages the project into a release and publishes it."`
-	Exists  releaseExistsCmd  `cmd:"" help:"Indicates whether modules, with the specified digests, have been published."`
+	Publish  releasePublishCmd        `cmd:"" help:"Packages the project into a release and publishes it."`
+	Exists   releaseExistsCmd         `cmd:"" help:"Indicates whether modules, with the specified digests, have been published."`
+	Registry artefacts.RegistryConfig `embed:""`
 }
 
 type releasePublishCmd struct {
@@ -74,7 +74,7 @@ func (d *releaseExistsCmd) Run(release *releaseCmd) error {
 	return nil
 }
 
-func createContainerService(release *releaseCmd) (*artefacts.ContainerService, error) {
+func createContainerService(release *releaseCmd) (*artefacts.OCIArtifactService, error) {
 	conn, err := internalobservability.OpenDBAndInstrument(release.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open DB connection: %w", err)
@@ -82,8 +82,5 @@ func createContainerService(release *releaseCmd) (*artefacts.ContainerService, e
 	conn.SetMaxIdleConns(release.MaxIdleDBConnections)
 	conn.SetMaxOpenConns(release.MaxOpenDBConnections)
 
-	return artefacts.NewContainerService(artefacts.ContainerConfig{
-		Registry:       release.Registry,
-		AllowPlainHTTP: true,
-	}, conn), nil
+	return artefacts.NewOCIRegistryStorage(release.Registry), nil
 }

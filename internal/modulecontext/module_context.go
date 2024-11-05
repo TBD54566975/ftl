@@ -223,7 +223,7 @@ func (g grpcModuleContextSupplier) Subscribe(ctx context.Context, moduleName str
 		sink(ctx, mc)
 		return nil
 	}
-	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{}, request, g.client.GetModuleContext, callback, errorRetryCallback)
+	go rpc.RetryStreamingServerStream(ctx, "module-context", backoff.Backoff{}, request, g.client.GetModuleContext, callback, errorRetryCallback)
 }
 
 // NewDynamicContext creates a new DynamicModuleContext. This operation blocks

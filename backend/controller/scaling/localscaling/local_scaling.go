@@ -13,6 +13,7 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/alecthomas/types/optional"
 
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
 	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -40,6 +41,7 @@ type localScaling struct {
 
 	prevRunnerSuffix int
 	ideSupport       optional.Option[localdebug.IDEIntegration]
+	registryConfig   artefacts.RegistryConfig
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
@@ -80,7 +82,7 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, registryConfig artefacts.RegistryConfig) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -94,6 +96,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		controllerAddresses: controllerAddresses,
 		prevRunnerSuffix:    -1,
 		debugPorts:          map[string]*localdebug.DebugInfo{},
+		registryConfig:      registryConfig,
 	}
 	if enableIDEIntegration && configPath != "" {
 		local.ideSupport = optional.Ptr(localdebug.NewIDEIntegration(configPath))
@@ -197,6 +200,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		Key:                model.NewLocalRunnerKey(keySuffix),
 		Deployment:         deploymentKey,
 		DebugPort:          debugPort,
+		Registry:           l.registryConfig,
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)

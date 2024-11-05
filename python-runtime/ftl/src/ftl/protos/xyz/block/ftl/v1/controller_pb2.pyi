@@ -131,22 +131,6 @@ class CreateDeploymentResponse(_message.Message):
     active_deployment_key: str
     def __init__(self, deployment_key: _Optional[str] = ..., active_deployment_key: _Optional[str] = ...) -> None: ...
 
-class GetDeploymentArtefactsRequest(_message.Message):
-    __slots__ = ("deployment_key", "have_artefacts")
-    DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
-    HAVE_ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
-    deployment_key: str
-    have_artefacts: _containers.RepeatedCompositeFieldContainer[DeploymentArtefact]
-    def __init__(self, deployment_key: _Optional[str] = ..., have_artefacts: _Optional[_Iterable[_Union[DeploymentArtefact, _Mapping]]] = ...) -> None: ...
-
-class GetDeploymentArtefactsResponse(_message.Message):
-    __slots__ = ("artefact", "chunk")
-    ARTEFACT_FIELD_NUMBER: _ClassVar[int]
-    CHUNK_FIELD_NUMBER: _ClassVar[int]
-    artefact: DeploymentArtefact
-    chunk: bytes
-    def __init__(self, artefact: _Optional[_Union[DeploymentArtefact, _Mapping]] = ..., chunk: _Optional[bytes] = ...) -> None: ...
-
 class GetDeploymentRequest(_message.Message):
     __slots__ = ("deployment_key",)
     DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]

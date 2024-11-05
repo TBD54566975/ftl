@@ -245,7 +245,7 @@ func RetryStreamingClientStream[Req, Resp any](
 		errored = true
 		delay := retry.Duration()
 		if !errors.Is(err, context.Canceled) {
-			logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
+			logger.Logf(logLevel, "Stream handler failed retrying in %s: %s", delay, err)
 		}
 		select {
 		case <-ctx.Done():
@@ -268,6 +268,7 @@ func AlwaysRetry() func(error) bool {
 // cancelled.
 func RetryStreamingServerStream[Req, Resp any](
 	ctx context.Context,
+	name string,
 	retry backoff.Backoff,
 	req *Req,
 	rpc func(context.Context, *connect.Request[Req]) (*connect.ServerStreamForClient[Resp], error),
@@ -324,7 +325,7 @@ func RetryStreamingServerStream[Req, Resp any](
 				return
 			}
 
-			logger.Logf(logLevel, "Stream handler failed, retrying in %s: %s", delay, err)
+			logger.Logf(logLevel, "Stream handler failed for %s, retrying in %s: %s", name, delay, err)
 		} else if err == nil {
 			logger.Debugf("Stream finished, retrying in %s", delay)
 		}

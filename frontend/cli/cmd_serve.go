@@ -20,6 +20,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -40,6 +41,7 @@ import (
 type serveCmd struct {
 	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress, runner and language plugin will increment the port by 1" default:"http://127.0.0.1:8891"`
 	DBPort              int                  `help:"Port to use for the database." default:"15432"`
+	RegistryPort        int                  `help:"Port to use for the registry." default:"15000"`
 	Recreate            bool                 `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
 	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"0" hidden:"true"`
@@ -48,6 +50,7 @@ type serveCmd struct {
 	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"1m"`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	DatabaseImage       string               `help:"The container image to start for the database" default:"postgres:15.8" env:"FTL_DATABASE_IMAGE" hidden:""`
+	RegistryImage       string               `help:"The container image to start for the image registry" default:"registry:2" env:"FTL_REGISTRY_IMAGE" hidden:""`
 	controller.CommonConfig
 	provisioner.CommonProvisionerConfig
 }
@@ -117,6 +120,13 @@ func (s *serveCmd) run(
 	if err != nil {
 		return fmt.Errorf("observability init failed: %w", err)
 	}
+	// Bring up the image registry we use to store deployment content
+	err = dev.SetupRegistry(ctx, s.RegistryImage, s.RegistryPort)
+	if err != nil {
+		return fmt.Errorf("registry init failed: %w", err)
+	}
+	s.CommonConfig.Registry.AllowInsecure = true
+	s.CommonConfig.Registry.Registry = fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort)
 	// Bring up the DB and DAL.
 	dsn, err := dev.SetupDB(ctx, s.DatabaseImage, s.DBPort, s.Recreate)
 	if err != nil {
@@ -163,7 +173,7 @@ func (s *serveCmd) run(
 		provisionerAddresses = append(provisionerAddresses, bind)
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, s.CommonConfig.Registry)
 	if err != nil {
 		return err
 	}
@@ -174,6 +184,10 @@ func (s *serveCmd) run(
 			IngressBind:  controllerIngressAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
+		}
+		s.CommonConfig.Registry = artefacts.RegistryConfig{
+			Registry:      fmt.Sprintf("localhost:%d", s.RegistryPort),
+			AllowInsecure: true,
 		}
 		config.SetDefaults()
 		config.ModuleUpdateFrequency = time.Second * 1

@@ -1,8 +1,6 @@
 package model
 
 import (
-	"errors"
-	"io"
 	"strconv"
 	"strings"
 
@@ -18,21 +16,10 @@ type Deployment struct {
 	Artefacts []*Artefact
 }
 
-// Close is a convenience function to close all artefacts.
-func (d *Deployment) Close() error {
-	errs := make([]error, 0, len(d.Artefacts))
-	for _, a := range d.Artefacts {
-		errs = append(errs, a.Content.Close())
-	}
-	return errors.Join(errs...)
-}
-
 type Artefact struct {
 	Path       string
 	Executable bool
 	Digest     sha256.SHA256
-	// ~Zero-cost on-demand reader.
-	Content io.ReadCloser
 }
 
 type Labels map[string]any

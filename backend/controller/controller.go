@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -75,12 +74,13 @@ import (
 
 // CommonConfig between the production controller and development server.
 type CommonConfig struct {
-	AllowOrigins   []*url.URL    `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
-	AllowHeaders   []string      `help:"Allow these headers in CORS requests. (Requires AllowOrigins)" env:"FTL_CONTROLLER_ALLOW_HEADERS"`
-	NoConsole      bool          `help:"Disable the console."`
-	IdleRunners    int           `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
-	WaitFor        []string      `help:"Wait for these modules to be deployed before becoming ready." placeholder:"MODULE"`
-	CronJobTimeout time.Duration `help:"Timeout for cron jobs." default:"5m"`
+	AllowOrigins   []*url.URL               `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
+	AllowHeaders   []string                 `help:"Allow these headers in CORS requests. (Requires AllowOrigins)" env:"FTL_CONTROLLER_ALLOW_HEADERS"`
+	NoConsole      bool                     `help:"Disable the console."`
+	IdleRunners    int                      `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
+	WaitFor        []string                 `help:"Wait for these modules to be deployed before becoming ready." placeholder:"MODULE"`
+	CronJobTimeout time.Duration            `help:"Timeout for cron jobs." default:"5m"`
+	Registry       artefacts.RegistryConfig `embed:""`
 }
 
 func (c *CommonConfig) Validate() error {
@@ -230,7 +230,7 @@ type Service struct {
 
 	tasks                   *scheduledtask.Scheduler
 	pubSub                  *pubsub.Service
-	registry                *artefacts.Service
+	registry                artefacts.Service
 	timeline                *timeline.Service
 	controllerListListeners []ControllerListListener
 
@@ -293,13 +293,13 @@ func New(
 	}
 	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
 
-	svc.registry = artefacts.New(conn)
+	svc.registry = artefacts.NewOCIRegistryStorage(config.Registry)
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
 	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc), timelineSvc)
 	svc.pubSub = pubSub
-	svc.dal = dal.New(ctx, conn, encryption, pubSub)
+	svc.dal = dal.New(ctx, conn, encryption, pubSub, svc.registry)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 
@@ -673,44 +673,6 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 		Schema:    deployment.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 		Artefacts: slices.Map(deployment.Artefacts, ftlv1.ArtefactToProto),
 	}), nil
-}
-
-func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentArtefactsRequest], resp *connect.ServerStream[ftlv1.GetDeploymentArtefactsResponse]) error {
-	deployment, err := s.getDeployment(ctx, req.Msg.DeploymentKey)
-	if err != nil {
-		return err
-	}
-	defer deployment.Close()
-
-	logger := s.getDeploymentLogger(ctx, deployment.Key)
-	logger.Debugf("Get deployment artefacts for: %s", deployment.Key.String())
-
-	chunk := make([]byte, s.config.ArtefactChunkSize)
-nextArtefact:
-	for _, artefact := range deployment.Artefacts {
-		for _, clientArtefact := range req.Msg.HaveArtefacts {
-			if proto.Equal(ftlv1.ArtefactToProto(artefact), clientArtefact) {
-				continue nextArtefact
-			}
-		}
-		for {
-			n, err := artefact.Content.Read(chunk)
-			if n != 0 {
-				if err := resp.Send(&ftlv1.GetDeploymentArtefactsResponse{
-					Artefact: ftlv1.ArtefactToProto(artefact),
-					Chunk:    chunk[:n],
-				}); err != nil {
-					return fmt.Errorf("could not send artefact chunk: %w", err)
-				}
-			}
-			if errors.Is(err, io.EOF) {
-				break
-			} else if err != nil {
-				return fmt.Errorf("could not read artefact chunk: %w", err)
-			}
-		}
-	}
-	return nil
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {

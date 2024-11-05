@@ -3,7 +3,6 @@ package dal
 import (
 	"bytes"
 	"context"
-	"io"
 	"sync"
 	"testing"
 	"time"
@@ -34,7 +33,7 @@ func TestDAL(t *testing.T) {
 
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
-	dal := New(ctx, conn, encryption, pubSub)
+	dal := New(ctx, conn, encryption, pubSub, artefacts.NewForTesting())
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
@@ -81,15 +80,15 @@ func TestDAL(t *testing.T) {
 			{Path: "dir/filename",
 				Executable: true,
 				Digest:     testSHA,
-				Content:    io.NopCloser(bytes.NewReader(testContent))},
+			},
 		},
 	}
-	expectedContent := artefactContent(t, deployment.Artefacts)
+	expectedContent := artefactHashes(t, deployment.Artefacts)
 
 	t.Run("GetDeployment", func(t *testing.T) {
 		actual, err := dal.GetDeployment(ctx, deploymentKey)
 		assert.NoError(t, err)
-		actualContent := artefactContent(t, actual.Artefacts)
+		actualContent := artefactHashes(t, actual.Artefacts)
 		assert.Equal(t, expectedContent, actualContent)
 		assert.Equal(t, deployment, actual)
 	})
@@ -195,7 +194,7 @@ func TestCreateArtefactConflict(t *testing.T) {
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
 
-	dal := New(ctx, conn, encryption, pubSub)
+	dal := New(ctx, conn, encryption, pubSub, artefacts.NewForTesting())
 
 	idch := make(chan sha256.SHA256, 2)
 
@@ -232,14 +231,11 @@ func TestCreateArtefactConflict(t *testing.T) {
 	assert.Equal(t, ids[0], ids[1])
 }
 
-func artefactContent(t testing.TB, artefacts []*model.Artefact) [][]byte {
+func artefactHashes(t testing.TB, artefacts []*model.Artefact) []sha256.SHA256 {
 	t.Helper()
-	var result [][]byte
+	var result []sha256.SHA256
 	for _, a := range artefacts {
-		content, err := io.ReadAll(a.Content)
-		assert.NoError(t, err)
-		result = append(result, content)
-		a.Content = nil
+		result = append(result, a.Digest)
 	}
 	return result
 }

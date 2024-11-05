@@ -18,6 +18,22 @@ WHERE id = ANY (@ids::BIGINT[]);
 INSERT INTO deployments (module_id, "schema", "key")
 VALUES ((SELECT id FROM modules WHERE name = @module_name::TEXT LIMIT 1), @schema::BYTEA, @key::deployment_key);
 
+-- name: GetArtefactDigests :many
+-- Return the digests that exist in the database.
+SELECT DISTINCT digest
+FROM deployment_artefacts
+WHERE digest = ANY (@digests::bytea[]);
+
+-- name: GetDeploymentArtefacts :many
+-- Get all artefacts matching the given digests.
+SELECT da.created_at, executable, path, digest, executable
+FROM deployment_artefacts da
+WHERE deployment_id = $1;
+
+-- name: AssociateArtefactWithDeployment :exec
+INSERT INTO deployment_artefacts (deployment_id, digest, executable, path)
+VALUES ((SELECT id FROM deployments WHERE key = @key::deployment_key), $2, $3, $4);
+
 -- name: GetDeployment :one
 SELECT sqlc.embed(d), m.language, m.name AS module_name, d.min_replicas
 FROM deployments d
@@ -31,8 +47,7 @@ FROM deployments d
          INNER JOIN modules m ON d.module_id = m.id
 WHERE EXISTS (SELECT 1
               FROM deployment_artefacts da
-                       INNER JOIN artefacts a ON da.artefact_id = a.id
-              WHERE a.digest = ANY (@digests::bytea[])
+              WHERE da.digest = ANY (@digests::bytea[])
                 AND da.deployment_id = d.id
                 AND d.schema = @schema::BYTEA
               HAVING COUNT(*) = @count::BIGINT -- Number of unique digests provided

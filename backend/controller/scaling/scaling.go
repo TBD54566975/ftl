@@ -62,6 +62,6 @@ func runGrpcScaling(ctx context.Context, url url.URL, handler func(ctx context.C
 	logger.Debugf("Starting Runner Scaling")
 	logger.Debugf("Using FTL endpoint: %s", url.String())
 
-	rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, handler, rpc.AlwaysRetry())
+	rpc.RetryStreamingServerStream(ctx, "local-scaling", backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, handler, rpc.AlwaysRetry())
 	logger.Debugf("Stopped Runner Scaling")
 }

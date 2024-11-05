@@ -56,9 +56,6 @@ const (
 	// ControllerServiceGetDeploymentProcedure is the fully-qualified name of the ControllerService's
 	// GetDeployment RPC.
 	ControllerServiceGetDeploymentProcedure = "/xyz.block.ftl.v1.ControllerService/GetDeployment"
-	// ControllerServiceGetDeploymentArtefactsProcedure is the fully-qualified name of the
-	// ControllerService's GetDeploymentArtefacts RPC.
-	ControllerServiceGetDeploymentArtefactsProcedure = "/xyz.block.ftl.v1.ControllerService/GetDeploymentArtefacts"
 	// ControllerServiceRegisterRunnerProcedure is the fully-qualified name of the ControllerService's
 	// RegisterRunner RPC.
 	ControllerServiceRegisterRunnerProcedure = "/xyz.block.ftl.v1.ControllerService/RegisterRunner"
@@ -99,11 +96,6 @@ type ControllerServiceClient interface {
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
 	// Get the schema and artefact metadata for a deployment.
 	GetDeployment(context.Context, *connect.Request[v1.GetDeploymentRequest]) (*connect.Response[v1.GetDeploymentResponse], error)
-	// Stream deployment artefacts from the server.
-	//
-	// Each artefact is streamed one after the other as a sequence of max 1MB
-	// chunks.
-	GetDeploymentArtefacts(context.Context, *connect.Request[v1.GetDeploymentArtefactsRequest]) (*connect.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error)
 	// Register a Runner with the Controller.
 	//
 	// Each runner issue a RegisterRunnerRequest to the ControllerService
@@ -180,11 +172,6 @@ func NewControllerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			baseURL+ControllerServiceGetDeploymentProcedure,
 			opts...,
 		),
-		getDeploymentArtefacts: connect.NewClient[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse](
-			httpClient,
-			baseURL+ControllerServiceGetDeploymentArtefactsProcedure,
-			opts...,
-		),
 		registerRunner: connect.NewClient[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse](
 			httpClient,
 			baseURL+ControllerServiceRegisterRunnerProcedure,
@@ -225,22 +212,21 @@ func NewControllerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 
 // controllerServiceClient implements ControllerServiceClient.
 type controllerServiceClient struct {
-	ping                   *connect.Client[v1.PingRequest, v1.PingResponse]
-	processList            *connect.Client[v1.ProcessListRequest, v1.ProcessListResponse]
-	status                 *connect.Client[v1.StatusRequest, v1.StatusResponse]
-	getCertification       *connect.Client[v1.GetCertificationRequest, v1.GetCertificationResponse]
-	getArtefactDiffs       *connect.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
-	uploadArtefact         *connect.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
-	createDeployment       *connect.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
-	getDeployment          *connect.Client[v1.GetDeploymentRequest, v1.GetDeploymentResponse]
-	getDeploymentArtefacts *connect.Client[v1.GetDeploymentArtefactsRequest, v1.GetDeploymentArtefactsResponse]
-	registerRunner         *connect.Client[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
-	updateDeploy           *connect.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
-	replaceDeploy          *connect.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
-	streamDeploymentLogs   *connect.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
-	getSchema              *connect.Client[v1.GetSchemaRequest, v1.GetSchemaResponse]
-	pullSchema             *connect.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
-	resetSubscription      *connect.Client[v1.ResetSubscriptionRequest, v1.ResetSubscriptionResponse]
+	ping                 *connect.Client[v1.PingRequest, v1.PingResponse]
+	processList          *connect.Client[v1.ProcessListRequest, v1.ProcessListResponse]
+	status               *connect.Client[v1.StatusRequest, v1.StatusResponse]
+	getCertification     *connect.Client[v1.GetCertificationRequest, v1.GetCertificationResponse]
+	getArtefactDiffs     *connect.Client[v1.GetArtefactDiffsRequest, v1.GetArtefactDiffsResponse]
+	uploadArtefact       *connect.Client[v1.UploadArtefactRequest, v1.UploadArtefactResponse]
+	createDeployment     *connect.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
+	getDeployment        *connect.Client[v1.GetDeploymentRequest, v1.GetDeploymentResponse]
+	registerRunner       *connect.Client[v1.RegisterRunnerRequest, v1.RegisterRunnerResponse]
+	updateDeploy         *connect.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
+	replaceDeploy        *connect.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
+	streamDeploymentLogs *connect.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
+	getSchema            *connect.Client[v1.GetSchemaRequest, v1.GetSchemaResponse]
+	pullSchema           *connect.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
+	resetSubscription    *connect.Client[v1.ResetSubscriptionRequest, v1.ResetSubscriptionResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.ControllerService.Ping.
@@ -281,11 +267,6 @@ func (c *controllerServiceClient) CreateDeployment(ctx context.Context, req *con
 // GetDeployment calls xyz.block.ftl.v1.ControllerService.GetDeployment.
 func (c *controllerServiceClient) GetDeployment(ctx context.Context, req *connect.Request[v1.GetDeploymentRequest]) (*connect.Response[v1.GetDeploymentResponse], error) {
 	return c.getDeployment.CallUnary(ctx, req)
-}
-
-// GetDeploymentArtefacts calls xyz.block.ftl.v1.ControllerService.GetDeploymentArtefacts.
-func (c *controllerServiceClient) GetDeploymentArtefacts(ctx context.Context, req *connect.Request[v1.GetDeploymentArtefactsRequest]) (*connect.ServerStreamForClient[v1.GetDeploymentArtefactsResponse], error) {
-	return c.getDeploymentArtefacts.CallServerStream(ctx, req)
 }
 
 // RegisterRunner calls xyz.block.ftl.v1.ControllerService.RegisterRunner.
@@ -340,11 +321,6 @@ type ControllerServiceHandler interface {
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
 	// Get the schema and artefact metadata for a deployment.
 	GetDeployment(context.Context, *connect.Request[v1.GetDeploymentRequest]) (*connect.Response[v1.GetDeploymentResponse], error)
-	// Stream deployment artefacts from the server.
-	//
-	// Each artefact is streamed one after the other as a sequence of max 1MB
-	// chunks.
-	GetDeploymentArtefacts(context.Context, *connect.Request[v1.GetDeploymentArtefactsRequest], *connect.ServerStream[v1.GetDeploymentArtefactsResponse]) error
 	// Register a Runner with the Controller.
 	//
 	// Each runner issue a RegisterRunnerRequest to the ControllerService
@@ -417,11 +393,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 		svc.GetDeployment,
 		opts...,
 	)
-	controllerServiceGetDeploymentArtefactsHandler := connect.NewServerStreamHandler(
-		ControllerServiceGetDeploymentArtefactsProcedure,
-		svc.GetDeploymentArtefacts,
-		opts...,
-	)
 	controllerServiceRegisterRunnerHandler := connect.NewClientStreamHandler(
 		ControllerServiceRegisterRunnerProcedure,
 		svc.RegisterRunner,
@@ -475,8 +446,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 			controllerServiceCreateDeploymentHandler.ServeHTTP(w, r)
 		case ControllerServiceGetDeploymentProcedure:
 			controllerServiceGetDeploymentHandler.ServeHTTP(w, r)
-		case ControllerServiceGetDeploymentArtefactsProcedure:
-			controllerServiceGetDeploymentArtefactsHandler.ServeHTTP(w, r)
 		case ControllerServiceRegisterRunnerProcedure:
 			controllerServiceRegisterRunnerHandler.ServeHTTP(w, r)
 		case ControllerServiceUpdateDeployProcedure:
@@ -530,10 +499,6 @@ func (UnimplementedControllerServiceHandler) CreateDeployment(context.Context, *
 
 func (UnimplementedControllerServiceHandler) GetDeployment(context.Context, *connect.Request[v1.GetDeploymentRequest]) (*connect.Response[v1.GetDeploymentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.GetDeployment is not implemented"))
-}
-
-func (UnimplementedControllerServiceHandler) GetDeploymentArtefacts(context.Context, *connect.Request[v1.GetDeploymentArtefactsRequest], *connect.ServerStream[v1.GetDeploymentArtefactsResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.GetDeploymentArtefacts is not implemented"))
 }
 
 func (UnimplementedControllerServiceHandler) RegisterRunner(context.Context, *connect.ClientStream[v1.RegisterRunnerRequest]) (*connect.Response[v1.RegisterRunnerResponse], error) {

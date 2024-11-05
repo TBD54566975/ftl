@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, ProcessListRequest, ProcessListResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./controller_pb.js";
+import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, ProcessListRequest, ProcessListResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./controller_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.ControllerService
@@ -99,20 +99,6 @@ export const ControllerService = {
       I: GetDeploymentRequest,
       O: GetDeploymentResponse,
       kind: MethodKind.Unary,
-    },
-    /**
-     * Stream deployment artefacts from the server.
-     *
-     * Each artefact is streamed one after the other as a sequence of max 1MB
-     * chunks.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ControllerService.GetDeploymentArtefacts
-     */
-    getDeploymentArtefacts: {
-      name: "GetDeploymentArtefacts",
-      I: GetDeploymentArtefactsRequest,
-      O: GetDeploymentArtefactsResponse,
-      kind: MethodKind.ServerStreaming,
     },
     /**
      * Register a Runner with the Controller.
