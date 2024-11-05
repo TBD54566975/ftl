@@ -265,6 +265,14 @@ jobs:
         uses: cashapp/activate-hermit@v1.1.3
       - name: Build Cache
         uses: ./.github/actions/build-cache
+      - name: Restore playwright browser cache
+        id: cache-playwright
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
       - name: Console pnpm install
         run: just pnpm-install
       - name: Build Language Plugins
