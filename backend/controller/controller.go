@@ -1585,11 +1585,14 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				delete(moduleByDeploymentKey, deletion.String())
 			} else if message, ok := notification.Message.Get(); ok {
 				moduleSchema := message.Schema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-				moduleSchema.Runtime = &schemapb.ModuleRuntime{
-					Language:    message.Language,
-					CreateTime:  timestamppb.New(message.CreatedAt),
-					MinReplicas: int32(message.MinReplicas),
+				if moduleSchema.Runtime == nil {
+					moduleSchema.Runtime = &schemapb.ModuleRuntime{
+						Language: message.Language,
+						Image:    "ftl0/ftl-runner",
+					}
 				}
+				moduleSchema.Runtime.CreateTime = timestamppb.New(message.CreatedAt)
+				moduleSchema.Runtime.MinReplicas = int32(message.MinReplicas)
 
 				hasher := sha.New()
 				data := []byte(moduleSchema.String())
