@@ -34,10 +34,8 @@ export const asyncEventTypeString = (type: AsyncExecuteEventType) => {
   switch (type) {
     case AsyncExecuteEventType.CRON:
       return 'cron'
-    case AsyncExecuteEventType.FSM:
-      return 'FSM'
     case AsyncExecuteEventType.PUBSUB:
-      return 'PubSub'
+      return 'pubsub'
     default:
       return 'unknown'
   }

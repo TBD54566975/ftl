@@ -78,21 +78,15 @@ export enum AsyncExecuteEventType {
   CRON = 1,
 
   /**
-   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_FSM = 2;
+   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_PUBSUB = 2;
    */
-  FSM = 2,
-
-  /**
-   * @generated from enum value: ASYNC_EXECUTE_EVENT_TYPE_PUBSUB = 3;
-   */
-  PUBSUB = 3,
+  PUBSUB = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(AsyncExecuteEventType)
 proto3.util.setEnumType(AsyncExecuteEventType, "xyz.block.ftl.v1.console.AsyncExecuteEventType", [
   { no: 0, name: "ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN" },
   { no: 1, name: "ASYNC_EXECUTE_EVENT_TYPE_CRON" },
-  { no: 2, name: "ASYNC_EXECUTE_EVENT_TYPE_FSM" },
-  { no: 3, name: "ASYNC_EXECUTE_EVENT_TYPE_PUBSUB" },
+  { no: 2, name: "ASYNC_EXECUTE_EVENT_TYPE_PUBSUB" },
 ]);
 
 /**

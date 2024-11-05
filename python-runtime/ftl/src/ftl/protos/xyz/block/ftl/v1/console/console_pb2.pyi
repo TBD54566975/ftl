@@ -25,7 +25,6 @@ class AsyncExecuteEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN: _ClassVar[AsyncExecuteEventType]
     ASYNC_EXECUTE_EVENT_TYPE_CRON: _ClassVar[AsyncExecuteEventType]
-    ASYNC_EXECUTE_EVENT_TYPE_FSM: _ClassVar[AsyncExecuteEventType]
     ASYNC_EXECUTE_EVENT_TYPE_PUBSUB: _ClassVar[AsyncExecuteEventType]
 
 class LogLevel(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
@@ -46,7 +45,6 @@ EVENT_TYPE_CRON_SCHEDULED: EventType
 EVENT_TYPE_ASYNC_EXECUTE: EventType
 ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN: AsyncExecuteEventType
 ASYNC_EXECUTE_EVENT_TYPE_CRON: AsyncExecuteEventType
-ASYNC_EXECUTE_EVENT_TYPE_FSM: AsyncExecuteEventType
 ASYNC_EXECUTE_EVENT_TYPE_PUBSUB: AsyncExecuteEventType
 LOG_LEVEL_UNKNOWN: LogLevel
 LOG_LEVEL_TRACE: LogLevel
