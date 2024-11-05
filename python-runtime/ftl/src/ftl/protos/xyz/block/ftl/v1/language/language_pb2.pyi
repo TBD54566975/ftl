@@ -121,16 +121,18 @@ class DependenciesResponse(_message.Message):
     def __init__(self, modules: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class BuildContext(_message.Message):
-    __slots__ = ("id", "module_config", "schema", "dependencies")
+    __slots__ = ("id", "module_config", "schema", "dependencies", "build_env")
     ID_FIELD_NUMBER: _ClassVar[int]
     MODULE_CONFIG_FIELD_NUMBER: _ClassVar[int]
     SCHEMA_FIELD_NUMBER: _ClassVar[int]
     DEPENDENCIES_FIELD_NUMBER: _ClassVar[int]
+    BUILD_ENV_FIELD_NUMBER: _ClassVar[int]
     id: str
     module_config: ModuleConfig
     schema: _schema_pb2.Schema
     dependencies: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, id: _Optional[str] = ..., module_config: _Optional[_Union[ModuleConfig, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Schema, _Mapping]] = ..., dependencies: _Optional[_Iterable[str]] = ...) -> None: ...
+    build_env: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, id: _Optional[str] = ..., module_config: _Optional[_Union[ModuleConfig, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Schema, _Mapping]] = ..., dependencies: _Optional[_Iterable[str]] = ..., build_env: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class BuildContextUpdatedRequest(_message.Message):
     __slots__ = ("buildContext",)
