@@ -439,7 +439,6 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 				Errors:             langpb.ErrorsToProto(buildErrs),
 				Module:             moduleProto,
 				Deploy:             []string{"main", "launch"},
-				DockerImage:        "ftl0/ftl-runner",
 			},
 		},
 	}, nil

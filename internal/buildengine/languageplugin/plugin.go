@@ -36,9 +36,6 @@ type BuildResult struct {
 	// Files to deploy, relative to the module config's DeployDir
 	Deploy []string
 
-	// Docker image to use for the runner
-	Image string
-
 	// Whether the module needs to recalculate its dependencies
 	InvalidateDependencies bool
 }

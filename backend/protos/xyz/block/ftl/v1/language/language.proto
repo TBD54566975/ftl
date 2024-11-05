@@ -208,13 +208,11 @@ message BuildSuccess {
   schema.Module module = 3;
   // Paths for files/directories to be deployed
   repeated string deploy = 4;
-  // Name of the docker image to use for the runner
-  string docker_image = 5;
 
   // Errors contains any errors that occurred during the build
   // No errors can have a level of ERROR, instead a BuildFailure should be sent
   // Instead this is useful for INFO and WARN level errors.
-  ErrorList errors = 6;
+  ErrorList errors = 5;
 }
 
 // BuildFailure should be sent when a build fails.
