@@ -150,17 +150,15 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 			return 0, err
 		}
 		if !nextCursor.Ready {
-			s := fmt.Sprintf("Skipping subscription %s because event is too new", subscription.Key)
-			logger.Tracef(s)
-			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(s))
+			logger.Tracef("Skipping subscription %s because event is too new", subscription.Key)
+			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(fmt.Sprintf("Skipping subscription %s because event is too new", subscription.Key)))
 			continue
 		}
 
 		subscriber, err := tx.db.GetRandomSubscriber(ctx, subscription.Key)
 		if err != nil {
-			s := fmt.Sprintf("no subscriber for subscription %s", subscription.Key)
-			logger.Tracef(s)
-			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(s))
+			logger.Tracef("no subscriber for subscription %s", subscription.Key)
+			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(fmt.Sprintf("no subscriber for subscription %s", subscription.Key)))
 			continue
 		}
 

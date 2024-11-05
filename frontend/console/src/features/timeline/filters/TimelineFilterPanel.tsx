@@ -1,4 +1,4 @@
-import { Call02Icon, CustomerServiceIcon, PackageReceiveIcon, Rocket01Icon, SatelliteIcon, Satellite03Icon, TimeQuarterPassIcon } from 'hugeicons-react'
+import { Call02Icon, CustomerServiceIcon, PackageReceiveIcon, Rocket01Icon, Satellite03Icon, SatelliteIcon, TimeQuarterPassIcon } from 'hugeicons-react'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { useModules } from '../../../api/modules/use-modules'

@@ -33,7 +33,7 @@ type PubSubConsume struct {
 	Error         optional.Option[string]
 }
 
-func (e *PubSubConsume) toEvent() (Event, error) {
+func (e *PubSubConsume) toEvent() (Event, error) { //nolint:unparam
 	return &PubSubConsumeEvent{
 		PubSubConsume: *e,
 		Duration:      time.Since(e.Time),

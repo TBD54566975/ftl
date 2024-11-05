@@ -5,8 +5,8 @@ import {
   Menu01Icon,
   PackageReceiveIcon,
   Rocket01Icon,
-  SatelliteIcon,
   Satellite03Icon,
+  SatelliteIcon,
   TimeQuarterPassIcon,
 } from 'hugeicons-react'
 import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'

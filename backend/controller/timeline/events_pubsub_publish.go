@@ -36,7 +36,7 @@ type PubSubPublish struct {
 	Error         optional.Option[string]
 }
 
-func (e *PubSubPublish) toEvent() (Event, error) {
+func (e *PubSubPublish) toEvent() (Event, error) { //nolint:unparam
 	return &PubSubPublishEvent{
 		PubSubPublish: *e,
 		Duration:      time.Since(e.Time),

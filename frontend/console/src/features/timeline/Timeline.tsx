@@ -13,9 +13,9 @@ import { TimelineDeploymentUpdatedDetails } from './details/TimelineDeploymentUp
 import { TimelineDetailsHeader } from './details/TimelineDetailsHeader.tsx'
 import { TimelineIngressDetails } from './details/TimelineIngressDetails.tsx'
 import { TimelineLogDetails } from './details/TimelineLogDetails.tsx'
-import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
-import { TimelinePubSubPublishDetails } from './details/TimelinePubSubPublishDetails.tsx'
 import { TimelinePubSubConsumeDetails } from './details/TimelinePubSubConsumeDetails.tsx'
+import { TimelinePubSubPublishDetails } from './details/TimelinePubSubPublishDetails.tsx'
+import type { TimeSettings } from './filters/TimelineTimeControls.tsx'
 
 export const Timeline = ({ timeSettings, filters }: { timeSettings: TimeSettings; filters: EventsQuery_Filter[] }) => {
   const [searchParams, setSearchParams] = useSearchParams()
