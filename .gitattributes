@@ -1,3 +1,4 @@
 /frontend/console/src/protos/**/* linguist-generated=true
 go.sum linguist-generated=true
 go.work.sum linguist-generated=true
+/python-runtime/ftl/src/ftl/protos/**/* linguist-generated=true
