@@ -9,6 +9,10 @@ ingress:
 secrets:
   logEncryptionKey: null
   asyncEncryptionKey: null
+  controllerRegistryUsername: null
+  controllerRegistryPassword: null
+  runnerRegistryUsername: null
+  runnerRegistryPassword: null
 
 dbMigration:
   enabled: true
@@ -207,16 +211,6 @@ runner:
   topologySpreadConstraints: null
   tolerations: null
 
-harbor:
-  enabled: false
-  expose:
-    tls:
-      enabled: false
-    type: nodePort
-  persistence:
-    enabled: true
-    resourcePolicy: ""
-
 postgresql:
   enabled: true
   architecture: standalone
@@ -235,3 +229,8 @@ postgresql:
 
 istio:
   enabled: false # set to true to have this chart install the grpc config to enable trailers
+
+registry:
+  repository: ""
+  allowInsecure: false
+  create: false

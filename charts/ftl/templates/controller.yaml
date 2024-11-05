@@ -57,6 +57,22 @@ spec:
             - name: FTL_KMS_URI
               value: "{{ .Values.controller.kmsUri }}"
             {{- end }}
+            - name: FTL_ARTEFACT_REGISTRY
+              value: "{{ .Values.registry.repository }}"
+            - name: FTL_ARTEFACT_REGISTRY_ALLOW_INSECURE
+              value: "{{ .Values.registry.allowInsecure }}"
+            - name: FTL_ARTEFACT_REGISTRY_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ftl.fullname" . }}-secrets
+                  key: FTL_CONTROLLER_REGISTRY_USERNAME
+                  optional: true
+            - name: FTL_ARTEFACT_REGISTRY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ftl.fullname" . }}-secrets
+                  key: FTL_CONTROLLER_REGISTRY_PASSWORD
+                  optional: true
           ports:
             {{- range .Values.controller.ports }}
             - name: {{ .name }}

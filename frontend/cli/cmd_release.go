@@ -20,7 +20,7 @@ type releaseCmd struct {
 
 	Publish  releasePublishCmd        `cmd:"" help:"Packages the project into a release and publishes it."`
 	Exists   releaseExistsCmd         `cmd:"" help:"Indicates whether modules, with the specified digests, have been published."`
-	Registry artefacts.RegistryConfig `embed:""`
+	Registry artefacts.RegistryConfig `embed:"" prefix:"oci-"`
 }
 
 type releasePublishCmd struct {
@@ -74,7 +74,7 @@ func (d *releaseExistsCmd) Run(release *releaseCmd) error {
 	return nil
 }
 
-func createContainerService(release *releaseCmd) (*artefacts.OCIArtifactService, error) {
+func createContainerService(release *releaseCmd) (*artefacts.OCIArtefactService, error) {
 	conn, err := internalobservability.OpenDBAndInstrument(release.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open DB connection: %w", err)

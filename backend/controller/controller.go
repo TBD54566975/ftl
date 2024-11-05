@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -74,13 +75,12 @@ import (
 
 // CommonConfig between the production controller and development server.
 type CommonConfig struct {
-	AllowOrigins   []*url.URL               `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
-	AllowHeaders   []string                 `help:"Allow these headers in CORS requests. (Requires AllowOrigins)" env:"FTL_CONTROLLER_ALLOW_HEADERS"`
-	NoConsole      bool                     `help:"Disable the console."`
-	IdleRunners    int                      `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
-	WaitFor        []string                 `help:"Wait for these modules to be deployed before becoming ready." placeholder:"MODULE"`
-	CronJobTimeout time.Duration            `help:"Timeout for cron jobs." default:"5m"`
-	Registry       artefacts.RegistryConfig `embed:""`
+	AllowOrigins   []*url.URL    `help:"Allow CORS requests to ingress endpoints from these origins." env:"FTL_CONTROLLER_ALLOW_ORIGIN"`
+	AllowHeaders   []string      `help:"Allow these headers in CORS requests. (Requires AllowOrigins)" env:"FTL_CONTROLLER_ALLOW_HEADERS"`
+	NoConsole      bool          `help:"Disable the console."`
+	IdleRunners    int           `help:"Number of idle runners to keep around (not supported in production)." default:"3"`
+	WaitFor        []string      `help:"Wait for these modules to be deployed before becoming ready." placeholder:"MODULE"`
+	CronJobTimeout time.Duration `help:"Timeout for cron jobs." default:"5m"`
 }
 
 func (c *CommonConfig) Validate() error {
@@ -91,22 +91,23 @@ func (c *CommonConfig) Validate() error {
 }
 
 type Config struct {
-	Bind                         *url.URL            `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_CONTROLLER_BIND"`
-	IngressBind                  *url.URL            `help:"Socket to bind to for ingress." default:"http://127.0.0.1:8891" env:"FTL_CONTROLLER_INGRESS_BIND"`
-	Key                          model.ControllerKey `help:"Controller key (auto)." placeholder:"KEY"`
-	DSN                          string              `help:"DAL DSN." default:"${dsn}" env:"FTL_CONTROLLER_DSN"`
-	Advertise                    *url.URL            `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
-	ConsoleURL                   *url.URL            `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
-	ContentTime                  time.Time           `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
-	RunnerTimeout                time.Duration       `help:"Runner heartbeat timeout." default:"10s"`
-	ControllerTimeout            time.Duration       `help:"Controller heartbeat timeout." default:"10s"`
-	DeploymentReservationTimeout time.Duration       `help:"Deployment reservation timeout." default:"120s"`
-	ModuleUpdateFrequency        time.Duration       `help:"Frequency to send module updates." default:"30s"`
-	EventLogRetention            *time.Duration      `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
-	ArtefactChunkSize            int                 `help:"Size of each chunk streamed to the client." default:"1048576"`
-	KMSURI                       *string             `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
-	MaxOpenDBConnections         int                 `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
-	MaxIdleDBConnections         int                 `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
+	Bind                         *url.URL                 `help:"Socket to bind to." default:"http://127.0.0.1:8892" env:"FTL_CONTROLLER_BIND"`
+	IngressBind                  *url.URL                 `help:"Socket to bind to for ingress." default:"http://127.0.0.1:8891" env:"FTL_CONTROLLER_INGRESS_BIND"`
+	Key                          model.ControllerKey      `help:"Controller key (auto)." placeholder:"KEY"`
+	DSN                          string                   `help:"DAL DSN." default:"${dsn}" env:"FTL_CONTROLLER_DSN"`
+	Advertise                    *url.URL                 `help:"Endpoint the Controller should advertise (must be unique across the cluster, defaults to --bind if omitted)." env:"FTL_CONTROLLER_ADVERTISE"`
+	ConsoleURL                   *url.URL                 `help:"The public URL of the console (for CORS)." env:"FTL_CONTROLLER_CONSOLE_URL"`
+	ContentTime                  time.Time                `help:"Time to use for console resource timestamps." default:"${timestamp=1970-01-01T00:00:00Z}"`
+	RunnerTimeout                time.Duration            `help:"Runner heartbeat timeout." default:"10s"`
+	ControllerTimeout            time.Duration            `help:"Controller heartbeat timeout." default:"10s"`
+	DeploymentReservationTimeout time.Duration            `help:"Deployment reservation timeout." default:"120s"`
+	ModuleUpdateFrequency        time.Duration            `help:"Frequency to send module updates." default:"30s"`
+	EventLogRetention            *time.Duration           `help:"Delete call logs after this time period. 0 to disable" env:"FTL_EVENT_LOG_RETENTION" default:"24h"`
+	ArtefactChunkSize            int                      `help:"Size of each chunk streamed to the client." default:"1048576"`
+	KMSURI                       *string                  `help:"URI for KMS key e.g. with fake-kms:// or aws-kms://arn:aws:kms:ap-southeast-2:12345:key/0000-1111" env:"FTL_KMS_URI"`
+	MaxOpenDBConnections         int                      `help:"Maximum number of database connections." default:"20" env:"FTL_MAX_OPEN_DB_CONNECTIONS"`
+	MaxIdleDBConnections         int                      `help:"Maximum number of idle database connections." default:"20" env:"FTL_MAX_IDLE_DB_CONNECTIONS"`
+	Registry                     artefacts.RegistryConfig `embed:"" prefix:"oci-"`
 	CommonConfig
 }
 
@@ -673,6 +674,49 @@ func (s *Service) GetDeployment(ctx context.Context, req *connect.Request[ftlv1.
 		Schema:    deployment.Schema.ToProto().(*schemapb.Module), //nolint:forcetypeassert
 		Artefacts: slices.Map(deployment.Artefacts, ftlv1.ArtefactToProto),
 	}), nil
+}
+
+func (s *Service) GetDeploymentArtefacts(ctx context.Context, req *connect.Request[ftlv1.GetDeploymentArtefactsRequest], resp *connect.ServerStream[ftlv1.GetDeploymentArtefactsResponse]) error {
+	deployment, err := s.getDeployment(ctx, req.Msg.DeploymentKey)
+	if err != nil {
+		return fmt.Errorf("could not get deployment: %w", err)
+	}
+
+	logger := s.getDeploymentLogger(ctx, deployment.Key)
+	logger.Debugf("Get deployment artefacts for: %s", deployment.Key.String())
+
+	chunk := make([]byte, s.config.ArtefactChunkSize)
+nextArtefact:
+	for _, artefact := range deployment.Artefacts {
+		for _, clientArtefact := range req.Msg.HaveArtefacts {
+			if proto.Equal(ftlv1.ArtefactToProto(artefact), clientArtefact) {
+				continue nextArtefact
+			}
+		}
+		reader, err := s.registry.Download(ctx, artefact.Digest)
+		if err != nil {
+			return fmt.Errorf("could not download artefact: %w", err)
+		}
+		defer reader.Close()
+		for {
+
+			n, err := reader.Read(chunk)
+			if n != 0 {
+				if err := resp.Send(&ftlv1.GetDeploymentArtefactsResponse{
+					Artefact: ftlv1.ArtefactToProto(artefact),
+					Chunk:    chunk[:n],
+				}); err != nil {
+					return fmt.Errorf("could not send artefact chunk: %w", err)
+				}
+			}
+			if errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				return fmt.Errorf("could not read artefact chunk: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {

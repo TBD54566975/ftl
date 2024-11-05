@@ -56,7 +56,7 @@ type Config struct {
 	HeartbeatJitter       time.Duration            `help:"Jitter to add to heartbeat period." default:"2s"`
 	Deployment            string                   `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
 	DebugPort             int                      `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
-	Registry              artefacts.RegistryConfig `embed:""`
+	Registry              artefacts.RegistryConfig `embed:"" prefix:"oci-"`
 }
 
 func Start(ctx context.Context, config Config) error {
@@ -333,7 +333,7 @@ func (s *Service) deploy(ctx context.Context) error {
 			return fmt.Errorf("failed to create deployment directory: %w", err)
 		}
 	}
-	err = download.Artefacts(ctx, s.controllerClient, key, deploymentDir, s.config.Registry)
+	err = download.ArtefactsFromOCI(ctx, s.controllerClient, key, deploymentDir, artefacts.NewOCIRegistryStorage(s.config.Registry))
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
 		return fmt.Errorf("failed to download artefacts: %w", err)

@@ -10,7 +10,3 @@ dependencies:
     version: 15.5.38
     repository: oci://registry-1.docker.io/bitnamicharts
     condition: postgresql.enabled
-  - name: harbor
-    version: v1.15.1
-    repository: https://helm.goharbor.io
-    condition: harbor.enabled

@@ -25,19 +25,20 @@ import (
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
-var _ Service = &OCIArtifactService{}
+var _ Service = &OCIArtefactService{}
 
 type RegistryConfig struct {
-	Registry      string `help:"OCI container registry, in the form host[:port]/repository" env:"FTL_ARTEFACTS_REGISTRY"`
-	Username      string `help:"OCI container registry username" env:"FTL_ARTEFACTS_USER"`
-	Password      string `help:"OCI container registry password" env:"FTL_ARTEFACTS_PWD"`
-	AllowInsecure bool   `help:"Allows the use of insecure HTTP based registries." env:"FTL_ARTEFACTS_ALLOW_INSECURE"`
+	Registry      string `help:"OCI container registry, in the form host[:port]/repository" env:"FTL_ARTEFACT_REGISTRY"`
+	Username      string `help:"OCI container registry username" env:"FTL_ARTEFACT_REGISTRY_USERNAME"`
+	Password      string `help:"OCI container registry password" env:"FTL_ARTEFACT_REGISTRY_PASSWORD"`
+	AllowInsecure bool   `help:"Allows the use of insecure HTTP based registries." env:"FTL_ARTEFACT_REGISTRY_ALLOW_INSECURE"`
 }
 
-type OCIArtifactService struct {
-	repository  string
-	repoFactory func() (*remote.Repository, error)
-	auth        authn.AuthConfig
+type OCIArtefactService struct {
+	repository    string
+	repoFactory   func() (*remote.Repository, error)
+	auth          authn.AuthConfig
+	allowInsecure bool
 }
 
 type ArtefactRepository struct {
@@ -54,11 +55,11 @@ type ArtefactBlobs struct {
 	Size      int64
 }
 
-func NewForTesting() *OCIArtifactService {
+func NewForTesting() *OCIArtefactService {
 	return NewOCIRegistryStorage(RegistryConfig{Registry: "127.0.0.1:15000/ftl-tests", AllowInsecure: true})
 }
 
-func NewOCIRegistryStorage(c RegistryConfig) *OCIArtifactService {
+func NewOCIRegistryStorage(c RegistryConfig) *OCIArtefactService {
 	// Connect the registry targeting the specified container
 	repoFactory := func() (*remote.Repository, error) {
 		reg, err := remote.NewRepository(c.Registry)
@@ -79,14 +80,15 @@ func NewOCIRegistryStorage(c RegistryConfig) *OCIArtifactService {
 		return reg, nil
 	}
 
-	return &OCIArtifactService{
-		repository:  c.Registry,
-		repoFactory: repoFactory,
-		auth:        authn.AuthConfig{Username: c.Username, Password: c.Password},
+	return &OCIArtefactService{
+		repository:    c.Registry,
+		repoFactory:   repoFactory,
+		auth:          authn.AuthConfig{Username: c.Username, Password: c.Password},
+		allowInsecure: c.AllowInsecure,
 	}
 }
 
-func (s *OCIArtifactService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
+func (s *OCIArtefactService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
 	repo, err := s.repoFactory()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to connect to container registry '%s': %w", s.repository, err)
@@ -116,7 +118,7 @@ func (s *OCIArtifactService) GetDigestsKeys(ctx context.Context, digests []sha25
 }
 
 // Upload uploads the specific artifact as a raw blob and links it to a manifest to prevent GC
-func (s *OCIArtifactService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
+func (s *OCIArtefactService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
 	repo, err := s.repoFactory()
 	logger := log.FromContext(ctx)
 	if err != nil {
@@ -140,7 +142,7 @@ func (s *OCIArtifactService) Upload(ctx context.Context, artefact Artefact) (sha
 	logger.Debugf("Tagging module blob with digest '%s'", tag)
 
 	fileDescriptors := []ocispec.Descriptor{desc}
-	configBlob := []byte("")
+	var configBlob []byte
 	configDesc, err := pushBlob(ctx, ocispec.MediaTypeImageConfig, configBlob, store) // push config blob
 	if err != nil {
 		return sha256.SHA256{}, fmt.Errorf("unable to push config to in memory repository %w", err)
@@ -166,11 +168,15 @@ func (s *OCIArtifactService) Upload(ctx context.Context, artefact Artefact) (sha
 	return artefact.Digest, nil
 }
 
-func (s *OCIArtifactService) Download(ctx context.Context, dg sha256.SHA256) (io.ReadCloser, error) {
+func (s *OCIArtefactService) Download(ctx context.Context, dg sha256.SHA256) (io.ReadCloser, error) {
 	// ORAS is really annoying, and needs you to know the size of the blob you're downloading
 	// So we are using google's go-containerregistry to do the actual download
 	// This is not great, we should remove oras at some point
-	newDigest, err := name.NewDigest(fmt.Sprintf("%s@sha256:%s", s.repository, dg.String()))
+	opts := []name.Option{}
+	if s.allowInsecure {
+		opts = append(opts, name.Insecure)
+	}
+	newDigest, err := name.NewDigest(fmt.Sprintf("%s@sha256:%s", s.repository, dg.String()), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create digest '%s': %w", dg, err)
 	}

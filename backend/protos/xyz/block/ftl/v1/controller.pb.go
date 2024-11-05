@@ -840,6 +840,112 @@ func (x *CreateDeploymentResponse) GetActiveDeploymentKey() string {
 	return ""
 }
 
+type GetDeploymentArtefactsRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	DeploymentKey string                `protobuf:"bytes,1,opt,name=deployment_key,json=deploymentKey,proto3" json:"deployment_key,omitempty"`
+	HaveArtefacts []*DeploymentArtefact `protobuf:"bytes,2,rep,name=have_artefacts,json=haveArtefacts,proto3" json:"have_artefacts,omitempty"`
+}
+
+func (x *GetDeploymentArtefactsRequest) Reset() {
+	*x = GetDeploymentArtefactsRequest{}
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDeploymentArtefactsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDeploymentArtefactsRequest) ProtoMessage() {}
+
+func (x *GetDeploymentArtefactsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDeploymentArtefactsRequest.ProtoReflect.Descriptor instead.
+func (*GetDeploymentArtefactsRequest) Descriptor() ([]byte, []int) {
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetDeploymentArtefactsRequest) GetDeploymentKey() string {
+	if x != nil {
+		return x.DeploymentKey
+	}
+	return ""
+}
+
+func (x *GetDeploymentArtefactsRequest) GetHaveArtefacts() []*DeploymentArtefact {
+	if x != nil {
+		return x.HaveArtefacts
+	}
+	return nil
+}
+
+type GetDeploymentArtefactsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Artefact *DeploymentArtefact `protobuf:"bytes,1,opt,name=artefact,proto3" json:"artefact,omitempty"`
+	Chunk    []byte              `protobuf:"bytes,2,opt,name=chunk,proto3" json:"chunk,omitempty"`
+}
+
+func (x *GetDeploymentArtefactsResponse) Reset() {
+	*x = GetDeploymentArtefactsResponse{}
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDeploymentArtefactsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDeploymentArtefactsResponse) ProtoMessage() {}
+
+func (x *GetDeploymentArtefactsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDeploymentArtefactsResponse.ProtoReflect.Descriptor instead.
+func (*GetDeploymentArtefactsResponse) Descriptor() ([]byte, []int) {
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetDeploymentArtefactsResponse) GetArtefact() *DeploymentArtefact {
+	if x != nil {
+		return x.Artefact
+	}
+	return nil
+}
+
+func (x *GetDeploymentArtefactsResponse) GetChunk() []byte {
+	if x != nil {
+		return x.Chunk
+	}
+	return nil
+}
+
 type GetDeploymentRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -850,7 +956,7 @@ type GetDeploymentRequest struct {
 
 func (x *GetDeploymentRequest) Reset() {
 	*x = GetDeploymentRequest{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[15]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -862,7 +968,7 @@ func (x *GetDeploymentRequest) String() string {
 func (*GetDeploymentRequest) ProtoMessage() {}
 
 func (x *GetDeploymentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[15]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +981,7 @@ func (x *GetDeploymentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDeploymentRequest.ProtoReflect.Descriptor instead.
 func (*GetDeploymentRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{15}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetDeploymentRequest) GetDeploymentKey() string {
@@ -896,7 +1002,7 @@ type GetDeploymentResponse struct {
 
 func (x *GetDeploymentResponse) Reset() {
 	*x = GetDeploymentResponse{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[16]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -908,7 +1014,7 @@ func (x *GetDeploymentResponse) String() string {
 func (*GetDeploymentResponse) ProtoMessage() {}
 
 func (x *GetDeploymentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[16]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -921,7 +1027,7 @@ func (x *GetDeploymentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDeploymentResponse.ProtoReflect.Descriptor instead.
 func (*GetDeploymentResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{16}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetDeploymentResponse) GetSchema() *schema.Module {
@@ -951,7 +1057,7 @@ type RegisterRunnerRequest struct {
 
 func (x *RegisterRunnerRequest) Reset() {
 	*x = RegisterRunnerRequest{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[17]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -963,7 +1069,7 @@ func (x *RegisterRunnerRequest) String() string {
 func (*RegisterRunnerRequest) ProtoMessage() {}
 
 func (x *RegisterRunnerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[17]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -976,7 +1082,7 @@ func (x *RegisterRunnerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRunnerRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRunnerRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{17}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RegisterRunnerRequest) GetKey() string {
@@ -1015,7 +1121,7 @@ type RegisterRunnerResponse struct {
 
 func (x *RegisterRunnerResponse) Reset() {
 	*x = RegisterRunnerResponse{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[18]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1027,7 +1133,7 @@ func (x *RegisterRunnerResponse) String() string {
 func (*RegisterRunnerResponse) ProtoMessage() {}
 
 func (x *RegisterRunnerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[18]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1040,7 +1146,7 @@ func (x *RegisterRunnerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRunnerResponse.ProtoReflect.Descriptor instead.
 func (*RegisterRunnerResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{18}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{20}
 }
 
 type UpdateDeployRequest struct {
@@ -1054,7 +1160,7 @@ type UpdateDeployRequest struct {
 
 func (x *UpdateDeployRequest) Reset() {
 	*x = UpdateDeployRequest{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[19]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1066,7 +1172,7 @@ func (x *UpdateDeployRequest) String() string {
 func (*UpdateDeployRequest) ProtoMessage() {}
 
 func (x *UpdateDeployRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[19]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1079,7 +1185,7 @@ func (x *UpdateDeployRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDeployRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDeployRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{19}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *UpdateDeployRequest) GetDeploymentKey() string {
@@ -1104,7 +1210,7 @@ type UpdateDeployResponse struct {
 
 func (x *UpdateDeployResponse) Reset() {
 	*x = UpdateDeployResponse{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[20]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1116,7 +1222,7 @@ func (x *UpdateDeployResponse) String() string {
 func (*UpdateDeployResponse) ProtoMessage() {}
 
 func (x *UpdateDeployResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[20]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1129,7 +1235,7 @@ func (x *UpdateDeployResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDeployResponse.ProtoReflect.Descriptor instead.
 func (*UpdateDeployResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{20}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{22}
 }
 
 type ReplaceDeployRequest struct {
@@ -1143,7 +1249,7 @@ type ReplaceDeployRequest struct {
 
 func (x *ReplaceDeployRequest) Reset() {
 	*x = ReplaceDeployRequest{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[21]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1155,7 +1261,7 @@ func (x *ReplaceDeployRequest) String() string {
 func (*ReplaceDeployRequest) ProtoMessage() {}
 
 func (x *ReplaceDeployRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[21]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1168,7 +1274,7 @@ func (x *ReplaceDeployRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplaceDeployRequest.ProtoReflect.Descriptor instead.
 func (*ReplaceDeployRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{21}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ReplaceDeployRequest) GetDeploymentKey() string {
@@ -1193,7 +1299,7 @@ type ReplaceDeployResponse struct {
 
 func (x *ReplaceDeployResponse) Reset() {
 	*x = ReplaceDeployResponse{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[22]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1205,7 +1311,7 @@ func (x *ReplaceDeployResponse) String() string {
 func (*ReplaceDeployResponse) ProtoMessage() {}
 
 func (x *ReplaceDeployResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[22]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1218,7 +1324,7 @@ func (x *ReplaceDeployResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReplaceDeployResponse.ProtoReflect.Descriptor instead.
 func (*ReplaceDeployResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{22}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{24}
 }
 
 type StreamDeploymentLogsRequest struct {
@@ -1237,7 +1343,7 @@ type StreamDeploymentLogsRequest struct {
 
 func (x *StreamDeploymentLogsRequest) Reset() {
 	*x = StreamDeploymentLogsRequest{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[23]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1249,7 +1355,7 @@ func (x *StreamDeploymentLogsRequest) String() string {
 func (*StreamDeploymentLogsRequest) ProtoMessage() {}
 
 func (x *StreamDeploymentLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[23]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1262,7 +1368,7 @@ func (x *StreamDeploymentLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamDeploymentLogsRequest.ProtoReflect.Descriptor instead.
 func (*StreamDeploymentLogsRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{23}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *StreamDeploymentLogsRequest) GetDeploymentKey() string {
@@ -1322,7 +1428,7 @@ type StreamDeploymentLogsResponse struct {
 
 func (x *StreamDeploymentLogsResponse) Reset() {
 	*x = StreamDeploymentLogsResponse{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[24]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1334,7 +1440,7 @@ func (x *StreamDeploymentLogsResponse) String() string {
 func (*StreamDeploymentLogsResponse) ProtoMessage() {}
 
 func (x *StreamDeploymentLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[24]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1347,7 +1453,7 @@ func (x *StreamDeploymentLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamDeploymentLogsResponse.ProtoReflect.Descriptor instead.
 func (*StreamDeploymentLogsResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{24}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{26}
 }
 
 type StatusRequest struct {
@@ -1358,7 +1464,7 @@ type StatusRequest struct {
 
 func (x *StatusRequest) Reset() {
 	*x = StatusRequest{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[25]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1370,7 +1476,7 @@ func (x *StatusRequest) String() string {
 func (*StatusRequest) ProtoMessage() {}
 
 func (x *StatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[25]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1383,7 +1489,7 @@ func (x *StatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
 func (*StatusRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{25}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{27}
 }
 
 type StatusResponse struct {
@@ -1400,7 +1506,7 @@ type StatusResponse struct {
 
 func (x *StatusResponse) Reset() {
 	*x = StatusResponse{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[26]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1412,7 +1518,7 @@ func (x *StatusResponse) String() string {
 func (*StatusResponse) ProtoMessage() {}
 
 func (x *StatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[26]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1425,7 +1531,7 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{26}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *StatusResponse) GetControllers() []*StatusResponse_Controller {
@@ -1471,7 +1577,7 @@ type ProcessListRequest struct {
 
 func (x *ProcessListRequest) Reset() {
 	*x = ProcessListRequest{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[27]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1483,7 +1589,7 @@ func (x *ProcessListRequest) String() string {
 func (*ProcessListRequest) ProtoMessage() {}
 
 func (x *ProcessListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[27]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1496,7 +1602,7 @@ func (x *ProcessListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessListRequest.ProtoReflect.Descriptor instead.
 func (*ProcessListRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{27}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{29}
 }
 
 type ProcessListResponse struct {
@@ -1509,7 +1615,7 @@ type ProcessListResponse struct {
 
 func (x *ProcessListResponse) Reset() {
 	*x = ProcessListResponse{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[28]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1521,7 +1627,7 @@ func (x *ProcessListResponse) String() string {
 func (*ProcessListResponse) ProtoMessage() {}
 
 func (x *ProcessListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[28]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1534,7 +1640,7 @@ func (x *ProcessListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessListResponse.ProtoReflect.Descriptor instead.
 func (*ProcessListResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ProcessListResponse) GetProcesses() []*ProcessListResponse_Process {
@@ -1554,7 +1660,7 @@ type ResetSubscriptionRequest struct {
 
 func (x *ResetSubscriptionRequest) Reset() {
 	*x = ResetSubscriptionRequest{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[29]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1566,7 +1672,7 @@ func (x *ResetSubscriptionRequest) String() string {
 func (*ResetSubscriptionRequest) ProtoMessage() {}
 
 func (x *ResetSubscriptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[29]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1579,7 +1685,7 @@ func (x *ResetSubscriptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetSubscriptionRequest.ProtoReflect.Descriptor instead.
 func (*ResetSubscriptionRequest) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{29}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *ResetSubscriptionRequest) GetSubscription() *schema.Ref {
@@ -1597,7 +1703,7 @@ type ResetSubscriptionResponse struct {
 
 func (x *ResetSubscriptionResponse) Reset() {
 	*x = ResetSubscriptionResponse{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[30]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1609,7 +1715,7 @@ func (x *ResetSubscriptionResponse) String() string {
 func (*ResetSubscriptionResponse) ProtoMessage() {}
 
 func (x *ResetSubscriptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[30]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1622,7 +1728,7 @@ func (x *ResetSubscriptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetSubscriptionResponse.ProtoReflect.Descriptor instead.
 func (*ResetSubscriptionResponse) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{30}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{32}
 }
 
 type StatusResponse_Controller struct {
@@ -1637,7 +1743,7 @@ type StatusResponse_Controller struct {
 
 func (x *StatusResponse_Controller) Reset() {
 	*x = StatusResponse_Controller{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[32]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1649,7 +1755,7 @@ func (x *StatusResponse_Controller) String() string {
 func (*StatusResponse_Controller) ProtoMessage() {}
 
 func (x *StatusResponse_Controller) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[32]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1662,7 +1768,7 @@ func (x *StatusResponse_Controller) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse_Controller.ProtoReflect.Descriptor instead.
 func (*StatusResponse_Controller) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{26, 0}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28, 0}
 }
 
 func (x *StatusResponse_Controller) GetKey() string {
@@ -1699,7 +1805,7 @@ type StatusResponse_Runner struct {
 
 func (x *StatusResponse_Runner) Reset() {
 	*x = StatusResponse_Runner{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[33]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1711,7 +1817,7 @@ func (x *StatusResponse_Runner) String() string {
 func (*StatusResponse_Runner) ProtoMessage() {}
 
 func (x *StatusResponse_Runner) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[33]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1724,7 +1830,7 @@ func (x *StatusResponse_Runner) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse_Runner.ProtoReflect.Descriptor instead.
 func (*StatusResponse_Runner) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{26, 1}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28, 1}
 }
 
 func (x *StatusResponse_Runner) GetKey() string {
@@ -1771,7 +1877,7 @@ type StatusResponse_Deployment struct {
 
 func (x *StatusResponse_Deployment) Reset() {
 	*x = StatusResponse_Deployment{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[34]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1783,7 +1889,7 @@ func (x *StatusResponse_Deployment) String() string {
 func (*StatusResponse_Deployment) ProtoMessage() {}
 
 func (x *StatusResponse_Deployment) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[34]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1796,7 +1902,7 @@ func (x *StatusResponse_Deployment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse_Deployment.ProtoReflect.Descriptor instead.
 func (*StatusResponse_Deployment) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{26, 2}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28, 2}
 }
 
 func (x *StatusResponse_Deployment) GetKey() string {
@@ -1861,7 +1967,7 @@ type StatusResponse_IngressRoute struct {
 
 func (x *StatusResponse_IngressRoute) Reset() {
 	*x = StatusResponse_IngressRoute{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[35]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1873,7 +1979,7 @@ func (x *StatusResponse_IngressRoute) String() string {
 func (*StatusResponse_IngressRoute) ProtoMessage() {}
 
 func (x *StatusResponse_IngressRoute) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[35]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1886,7 +1992,7 @@ func (x *StatusResponse_IngressRoute) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse_IngressRoute.ProtoReflect.Descriptor instead.
 func (*StatusResponse_IngressRoute) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{26, 3}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28, 3}
 }
 
 func (x *StatusResponse_IngressRoute) GetDeploymentKey() string {
@@ -1929,7 +2035,7 @@ type StatusResponse_Route struct {
 
 func (x *StatusResponse_Route) Reset() {
 	*x = StatusResponse_Route{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[36]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1941,7 +2047,7 @@ func (x *StatusResponse_Route) String() string {
 func (*StatusResponse_Route) ProtoMessage() {}
 
 func (x *StatusResponse_Route) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[36]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1954,7 +2060,7 @@ func (x *StatusResponse_Route) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse_Route.ProtoReflect.Descriptor instead.
 func (*StatusResponse_Route) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{26, 4}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28, 4}
 }
 
 func (x *StatusResponse_Route) GetModule() string {
@@ -1990,7 +2096,7 @@ type ProcessListResponse_ProcessRunner struct {
 
 func (x *ProcessListResponse_ProcessRunner) Reset() {
 	*x = ProcessListResponse_ProcessRunner{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[37]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2002,7 +2108,7 @@ func (x *ProcessListResponse_ProcessRunner) String() string {
 func (*ProcessListResponse_ProcessRunner) ProtoMessage() {}
 
 func (x *ProcessListResponse_ProcessRunner) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[37]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2015,7 +2121,7 @@ func (x *ProcessListResponse_ProcessRunner) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ProcessListResponse_ProcessRunner.ProtoReflect.Descriptor instead.
 func (*ProcessListResponse_ProcessRunner) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28, 0}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{30, 0}
 }
 
 func (x *ProcessListResponse_ProcessRunner) GetKey() string {
@@ -2052,7 +2158,7 @@ type ProcessListResponse_Process struct {
 
 func (x *ProcessListResponse_Process) Reset() {
 	*x = ProcessListResponse_Process{}
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[38]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2064,7 +2170,7 @@ func (x *ProcessListResponse_Process) String() string {
 func (*ProcessListResponse_Process) ProtoMessage() {}
 
 func (x *ProcessListResponse_Process) ProtoReflect() protoreflect.Message {
-	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[38]
+	mi := &file_xyz_block_ftl_v1_controller_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2077,7 +2183,7 @@ func (x *ProcessListResponse_Process) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProcessListResponse_Process.ProtoReflect.Descriptor instead.
 func (*ProcessListResponse_Process) Descriptor() ([]byte, []int) {
-	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{28, 1}
+	return file_xyz_block_ftl_v1_controller_proto_rawDescGZIP(), []int{30, 1}
 }
 
 func (x *ProcessListResponse_Process) GetDeployment() string {
@@ -2221,7 +2327,24 @@ var file_xyz_block_ftl_v1_controller_proto_rawDesc = []byte{
 	0x6b, 0x65, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x13, 0x61, 0x63, 0x74,
 	0x69, 0x76, 0x65, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x4b, 0x65, 0x79,
 	0x88, 0x01, 0x01, 0x42, 0x18, 0x0a, 0x16, 0x5f, 0x61, 0x63, 0x74, 0x69, 0x76, 0x65, 0x5f, 0x64,
-	0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x5f, 0x6b, 0x65, 0x79, 0x22, 0x3d, 0x0a,
+	0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x5f, 0x6b, 0x65, 0x79, 0x22, 0x93, 0x01,
+	0x0a, 0x1d, 0x47, 0x65, 0x74, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x41,
+	0x72, 0x74, 0x65, 0x66, 0x61, 0x63, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x25, 0x0a, 0x0e, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x5f, 0x6b, 0x65,
+	0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d,
+	0x65, 0x6e, 0x74, 0x4b, 0x65, 0x79, 0x12, 0x4b, 0x0a, 0x0e, 0x68, 0x61, 0x76, 0x65, 0x5f, 0x61,
+	0x72, 0x74, 0x65, 0x66, 0x61, 0x63, 0x74, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x24,
+	0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76,
+	0x31, 0x2e, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x41, 0x72, 0x74, 0x65,
+	0x66, 0x61, 0x63, 0x74, 0x52, 0x0d, 0x68, 0x61, 0x76, 0x65, 0x41, 0x72, 0x74, 0x65, 0x66, 0x61,
+	0x63, 0x74, 0x73, 0x22, 0x78, 0x0a, 0x1e, 0x47, 0x65, 0x74, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79,
+	0x6d, 0x65, 0x6e, 0x74, 0x41, 0x72, 0x74, 0x65, 0x66, 0x61, 0x63, 0x74, 0x73, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a, 0x08, 0x61, 0x72, 0x74, 0x65, 0x66, 0x61, 0x63,
+	0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c,
+	0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65, 0x70, 0x6c, 0x6f,
+	0x79, 0x6d, 0x65, 0x6e, 0x74, 0x41, 0x72, 0x74, 0x65, 0x66, 0x61, 0x63, 0x74, 0x52, 0x08, 0x61,
+	0x72, 0x74, 0x65, 0x66, 0x61, 0x63, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x63, 0x68, 0x75, 0x6e, 0x6b,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x63, 0x68, 0x75, 0x6e, 0x6b, 0x22, 0x3d, 0x0a,
 	0x14, 0x47, 0x65, 0x74, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65,
 	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x25, 0x0a, 0x0e, 0x64, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d,
 	0x65, 0x6e, 0x74, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x64,
@@ -2404,7 +2527,7 @@ var file_xyz_block_ftl_v1_controller_proto_rawDesc = []byte{
 	0x54, 0x5f, 0x41, 0x44, 0x44, 0x45, 0x44, 0x10, 0x00, 0x12, 0x16, 0x0a, 0x12, 0x44, 0x45, 0x50,
 	0x4c, 0x4f, 0x59, 0x4d, 0x45, 0x4e, 0x54, 0x5f, 0x52, 0x45, 0x4d, 0x4f, 0x56, 0x45, 0x44, 0x10,
 	0x01, 0x12, 0x16, 0x0a, 0x12, 0x44, 0x45, 0x50, 0x4c, 0x4f, 0x59, 0x4d, 0x45, 0x4e, 0x54, 0x5f,
-	0x43, 0x48, 0x41, 0x4e, 0x47, 0x45, 0x44, 0x10, 0x02, 0x32, 0xd0, 0x0b, 0x0a, 0x11, 0x43, 0x6f,
+	0x43, 0x48, 0x41, 0x4e, 0x47, 0x45, 0x44, 0x10, 0x02, 0x32, 0xcf, 0x0c, 0x0a, 0x11, 0x43, 0x6f,
 	0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x6c, 0x65, 0x72, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12,
 	0x4a, 0x0a, 0x04, 0x50, 0x69, 0x6e, 0x67, 0x12, 0x1d, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c,
 	0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x69, 0x6e, 0x67, 0x52,
@@ -2453,56 +2576,64 @@ var file_xyz_block_ftl_v1_controller_proto_rawDesc = []byte{
 	0x65, 0x74, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75,
 	0x65, 0x73, 0x74, 0x1a, 0x27, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e,
 	0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79,
-	0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x65, 0x0a, 0x0e,
-	0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x12, 0x27,
-	0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76,
-	0x31, 0x2e, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x28, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c,
-	0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x67, 0x69, 0x73,
-	0x74, 0x65, 0x72, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x28, 0x01, 0x12, 0x5d, 0x0a, 0x0c, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x65, 0x70,
-	0x6c, 0x6f, 0x79, 0x12, 0x25, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e,
-	0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x65, 0x70,
-	0x6c, 0x6f, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x26, 0x2e, 0x78, 0x79, 0x7a,
-	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x70,
-	0x64, 0x61, 0x74, 0x65, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x12, 0x60, 0x0a, 0x0d, 0x52, 0x65, 0x70, 0x6c, 0x61, 0x63, 0x65, 0x44, 0x65, 0x70,
-	0x6c, 0x6f, 0x79, 0x12, 0x26, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e,
-	0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x70, 0x6c, 0x61, 0x63, 0x65, 0x44, 0x65,
-	0x70, 0x6c, 0x6f, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x27, 0x2e, 0x78, 0x79,
-	0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x52,
-	0x65, 0x70, 0x6c, 0x61, 0x63, 0x65, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x77, 0x0a, 0x14, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x44, 0x65,
-	0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x4c, 0x6f, 0x67, 0x73, 0x12, 0x2d, 0x2e, 0x78,
-	0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e,
-	0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74,
-	0x4c, 0x6f, 0x67, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2e, 0x2e, 0x78, 0x79,
+	0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x7d, 0x0a, 0x16,
+	0x47, 0x65, 0x74, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x41, 0x72, 0x74,
+	0x65, 0x66, 0x61, 0x63, 0x74, 0x73, 0x12, 0x2f, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f,
+	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x44, 0x65, 0x70,
+	0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x41, 0x72, 0x74, 0x65, 0x66, 0x61, 0x63, 0x74, 0x73,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x30, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c,
+	0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x44, 0x65,
+	0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x41, 0x72, 0x74, 0x65, 0x66, 0x61, 0x63, 0x74,
+	0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x65, 0x0a, 0x0e, 0x52,
+	0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x12, 0x27, 0x2e,
+	0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31,
+	0x2e, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x28, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f,
+	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74,
+	0x65, 0x72, 0x52, 0x75, 0x6e, 0x6e, 0x65, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x28, 0x01, 0x12, 0x5d, 0x0a, 0x0c, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x65, 0x70, 0x6c,
+	0x6f, 0x79, 0x12, 0x25, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66,
+	0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x44, 0x65, 0x70, 0x6c,
+	0x6f, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x26, 0x2e, 0x78, 0x79, 0x7a, 0x2e,
+	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x55, 0x70, 0x64,
+	0x61, 0x74, 0x65, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x60, 0x0a, 0x0d, 0x52, 0x65, 0x70, 0x6c, 0x61, 0x63, 0x65, 0x44, 0x65, 0x70, 0x6c,
+	0x6f, 0x79, 0x12, 0x26, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66,
+	0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x70, 0x6c, 0x61, 0x63, 0x65, 0x44, 0x65, 0x70,
+	0x6c, 0x6f, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x27, 0x2e, 0x78, 0x79, 0x7a,
+	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65,
+	0x70, 0x6c, 0x61, 0x63, 0x65, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x77, 0x0a, 0x14, 0x53, 0x74, 0x72, 0x65, 0x61, 0x6d, 0x44, 0x65, 0x70,
+	0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x4c, 0x6f, 0x67, 0x73, 0x12, 0x2d, 0x2e, 0x78, 0x79,
 	0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53,
 	0x74, 0x72, 0x65, 0x61, 0x6d, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x4c,
-	0x6f, 0x67, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x28, 0x01, 0x12, 0x54, 0x0a,
-	0x09, 0x47, 0x65, 0x74, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x12, 0x22, 0x2e, 0x78, 0x79, 0x7a,
-	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65,
-	0x74, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23,
+	0x6f, 0x67, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2e, 0x2e, 0x78, 0x79, 0x7a,
+	0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x74,
+	0x72, 0x65, 0x61, 0x6d, 0x44, 0x65, 0x70, 0x6c, 0x6f, 0x79, 0x6d, 0x65, 0x6e, 0x74, 0x4c, 0x6f,
+	0x67, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x28, 0x01, 0x12, 0x54, 0x0a, 0x09,
+	0x47, 0x65, 0x74, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x12, 0x22, 0x2e, 0x78, 0x79, 0x7a, 0x2e,
+	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x47, 0x65, 0x74,
+	0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x23, 0x2e,
+	0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31,
+	0x2e, 0x47, 0x65, 0x74, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x59, 0x0a, 0x0a, 0x50, 0x75, 0x6c, 0x6c, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61,
+	0x12, 0x23, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c,
+	0x2e, 0x76, 0x31, 0x2e, 0x50, 0x75, 0x6c, 0x6c, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63,
+	0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x75, 0x6c, 0x6c, 0x53, 0x63, 0x68,
+	0x65, 0x6d, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x6c, 0x0a,
+	0x11, 0x52, 0x65, 0x73, 0x65, 0x74, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69,
+	0x6f, 0x6e, 0x12, 0x2a, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66,
+	0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x73, 0x65, 0x74, 0x53, 0x75, 0x62, 0x73, 0x63,
+	0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2b,
 	0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76,
-	0x31, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x59, 0x0a, 0x0a, 0x50, 0x75, 0x6c, 0x6c, 0x53, 0x63, 0x68, 0x65, 0x6d,
-	0x61, 0x12, 0x23, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74,
-	0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x75, 0x6c, 0x6c, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x24, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f,
-	0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x75, 0x6c, 0x6c, 0x53, 0x63,
-	0x68, 0x65, 0x6d, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x6c,
-	0x0a, 0x11, 0x52, 0x65, 0x73, 0x65, 0x74, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
-	0x69, 0x6f, 0x6e, 0x12, 0x2a, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e,
-	0x66, 0x74, 0x6c, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x73, 0x65, 0x74, 0x53, 0x75, 0x62, 0x73,
-	0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x2b, 0x2e, 0x78, 0x79, 0x7a, 0x2e, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2e, 0x66, 0x74, 0x6c, 0x2e,
-	0x76, 0x31, 0x2e, 0x52, 0x65, 0x73, 0x65, 0x74, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70,
-	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x44, 0x50, 0x01,
-	0x5a, 0x40, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x54, 0x42, 0x44,
-	0x35, 0x34, 0x35, 0x36, 0x36, 0x39, 0x37, 0x35, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x62, 0x61, 0x63,
-	0x6b, 0x65, 0x6e, 0x64, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2f, 0x78, 0x79, 0x7a, 0x2f,
-	0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x76, 0x31, 0x3b, 0x66, 0x74, 0x6c,
-	0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x31, 0x2e, 0x52, 0x65, 0x73, 0x65, 0x74, 0x53, 0x75, 0x62, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
+	0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x44, 0x50, 0x01, 0x5a,
+	0x40, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x54, 0x42, 0x44, 0x35,
+	0x34, 0x35, 0x36, 0x36, 0x39, 0x37, 0x35, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x62, 0x61, 0x63, 0x6b,
+	0x65, 0x6e, 0x64, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x2f, 0x78, 0x79, 0x7a, 0x2f, 0x62,
+	0x6c, 0x6f, 0x63, 0x6b, 0x2f, 0x66, 0x74, 0x6c, 0x2f, 0x76, 0x31, 0x3b, 0x66, 0x74, 0x6c, 0x76,
+	0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -2518,7 +2649,7 @@ func file_xyz_block_ftl_v1_controller_proto_rawDescGZIP() []byte {
 }
 
 var file_xyz_block_ftl_v1_controller_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_xyz_block_ftl_v1_controller_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
+var file_xyz_block_ftl_v1_controller_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_xyz_block_ftl_v1_controller_proto_goTypes = []any{
 	(DeploymentChangeType)(0),                 // 0: xyz.block.ftl.v1.DeploymentChangeType
 	(*GetCertificationRequest)(nil),           // 1: xyz.block.ftl.v1.GetCertificationRequest
@@ -2536,103 +2667,109 @@ var file_xyz_block_ftl_v1_controller_proto_goTypes = []any{
 	(*DeploymentArtefact)(nil),                // 13: xyz.block.ftl.v1.DeploymentArtefact
 	(*CreateDeploymentRequest)(nil),           // 14: xyz.block.ftl.v1.CreateDeploymentRequest
 	(*CreateDeploymentResponse)(nil),          // 15: xyz.block.ftl.v1.CreateDeploymentResponse
-	(*GetDeploymentRequest)(nil),              // 16: xyz.block.ftl.v1.GetDeploymentRequest
-	(*GetDeploymentResponse)(nil),             // 17: xyz.block.ftl.v1.GetDeploymentResponse
-	(*RegisterRunnerRequest)(nil),             // 18: xyz.block.ftl.v1.RegisterRunnerRequest
-	(*RegisterRunnerResponse)(nil),            // 19: xyz.block.ftl.v1.RegisterRunnerResponse
-	(*UpdateDeployRequest)(nil),               // 20: xyz.block.ftl.v1.UpdateDeployRequest
-	(*UpdateDeployResponse)(nil),              // 21: xyz.block.ftl.v1.UpdateDeployResponse
-	(*ReplaceDeployRequest)(nil),              // 22: xyz.block.ftl.v1.ReplaceDeployRequest
-	(*ReplaceDeployResponse)(nil),             // 23: xyz.block.ftl.v1.ReplaceDeployResponse
-	(*StreamDeploymentLogsRequest)(nil),       // 24: xyz.block.ftl.v1.StreamDeploymentLogsRequest
-	(*StreamDeploymentLogsResponse)(nil),      // 25: xyz.block.ftl.v1.StreamDeploymentLogsResponse
-	(*StatusRequest)(nil),                     // 26: xyz.block.ftl.v1.StatusRequest
-	(*StatusResponse)(nil),                    // 27: xyz.block.ftl.v1.StatusResponse
-	(*ProcessListRequest)(nil),                // 28: xyz.block.ftl.v1.ProcessListRequest
-	(*ProcessListResponse)(nil),               // 29: xyz.block.ftl.v1.ProcessListResponse
-	(*ResetSubscriptionRequest)(nil),          // 30: xyz.block.ftl.v1.ResetSubscriptionRequest
-	(*ResetSubscriptionResponse)(nil),         // 31: xyz.block.ftl.v1.ResetSubscriptionResponse
-	nil,                                       // 32: xyz.block.ftl.v1.StreamDeploymentLogsRequest.AttributesEntry
-	(*StatusResponse_Controller)(nil),         // 33: xyz.block.ftl.v1.StatusResponse.Controller
-	(*StatusResponse_Runner)(nil),             // 34: xyz.block.ftl.v1.StatusResponse.Runner
-	(*StatusResponse_Deployment)(nil),         // 35: xyz.block.ftl.v1.StatusResponse.Deployment
-	(*StatusResponse_IngressRoute)(nil),       // 36: xyz.block.ftl.v1.StatusResponse.IngressRoute
-	(*StatusResponse_Route)(nil),              // 37: xyz.block.ftl.v1.StatusResponse.Route
-	(*ProcessListResponse_ProcessRunner)(nil), // 38: xyz.block.ftl.v1.ProcessListResponse.ProcessRunner
-	(*ProcessListResponse_Process)(nil),       // 39: xyz.block.ftl.v1.ProcessListResponse.Process
-	(*schema.Schema)(nil),                     // 40: xyz.block.ftl.v1.schema.Schema
-	(*schema.Module)(nil),                     // 41: xyz.block.ftl.v1.schema.Module
-	(*structpb.Struct)(nil),                   // 42: google.protobuf.Struct
-	(*timestamppb.Timestamp)(nil),             // 43: google.protobuf.Timestamp
-	(*schema.Ref)(nil),                        // 44: xyz.block.ftl.v1.schema.Ref
-	(*PingRequest)(nil),                       // 45: xyz.block.ftl.v1.PingRequest
-	(*PingResponse)(nil),                      // 46: xyz.block.ftl.v1.PingResponse
+	(*GetDeploymentArtefactsRequest)(nil),     // 16: xyz.block.ftl.v1.GetDeploymentArtefactsRequest
+	(*GetDeploymentArtefactsResponse)(nil),    // 17: xyz.block.ftl.v1.GetDeploymentArtefactsResponse
+	(*GetDeploymentRequest)(nil),              // 18: xyz.block.ftl.v1.GetDeploymentRequest
+	(*GetDeploymentResponse)(nil),             // 19: xyz.block.ftl.v1.GetDeploymentResponse
+	(*RegisterRunnerRequest)(nil),             // 20: xyz.block.ftl.v1.RegisterRunnerRequest
+	(*RegisterRunnerResponse)(nil),            // 21: xyz.block.ftl.v1.RegisterRunnerResponse
+	(*UpdateDeployRequest)(nil),               // 22: xyz.block.ftl.v1.UpdateDeployRequest
+	(*UpdateDeployResponse)(nil),              // 23: xyz.block.ftl.v1.UpdateDeployResponse
+	(*ReplaceDeployRequest)(nil),              // 24: xyz.block.ftl.v1.ReplaceDeployRequest
+	(*ReplaceDeployResponse)(nil),             // 25: xyz.block.ftl.v1.ReplaceDeployResponse
+	(*StreamDeploymentLogsRequest)(nil),       // 26: xyz.block.ftl.v1.StreamDeploymentLogsRequest
+	(*StreamDeploymentLogsResponse)(nil),      // 27: xyz.block.ftl.v1.StreamDeploymentLogsResponse
+	(*StatusRequest)(nil),                     // 28: xyz.block.ftl.v1.StatusRequest
+	(*StatusResponse)(nil),                    // 29: xyz.block.ftl.v1.StatusResponse
+	(*ProcessListRequest)(nil),                // 30: xyz.block.ftl.v1.ProcessListRequest
+	(*ProcessListResponse)(nil),               // 31: xyz.block.ftl.v1.ProcessListResponse
+	(*ResetSubscriptionRequest)(nil),          // 32: xyz.block.ftl.v1.ResetSubscriptionRequest
+	(*ResetSubscriptionResponse)(nil),         // 33: xyz.block.ftl.v1.ResetSubscriptionResponse
+	nil,                                       // 34: xyz.block.ftl.v1.StreamDeploymentLogsRequest.AttributesEntry
+	(*StatusResponse_Controller)(nil),         // 35: xyz.block.ftl.v1.StatusResponse.Controller
+	(*StatusResponse_Runner)(nil),             // 36: xyz.block.ftl.v1.StatusResponse.Runner
+	(*StatusResponse_Deployment)(nil),         // 37: xyz.block.ftl.v1.StatusResponse.Deployment
+	(*StatusResponse_IngressRoute)(nil),       // 38: xyz.block.ftl.v1.StatusResponse.IngressRoute
+	(*StatusResponse_Route)(nil),              // 39: xyz.block.ftl.v1.StatusResponse.Route
+	(*ProcessListResponse_ProcessRunner)(nil), // 40: xyz.block.ftl.v1.ProcessListResponse.ProcessRunner
+	(*ProcessListResponse_Process)(nil),       // 41: xyz.block.ftl.v1.ProcessListResponse.Process
+	(*schema.Schema)(nil),                     // 42: xyz.block.ftl.v1.schema.Schema
+	(*schema.Module)(nil),                     // 43: xyz.block.ftl.v1.schema.Module
+	(*structpb.Struct)(nil),                   // 44: google.protobuf.Struct
+	(*timestamppb.Timestamp)(nil),             // 45: google.protobuf.Timestamp
+	(*schema.Ref)(nil),                        // 46: xyz.block.ftl.v1.schema.Ref
+	(*PingRequest)(nil),                       // 47: xyz.block.ftl.v1.PingRequest
+	(*PingResponse)(nil),                      // 48: xyz.block.ftl.v1.PingResponse
 }
 var file_xyz_block_ftl_v1_controller_proto_depIdxs = []int32{
 	3,  // 0: xyz.block.ftl.v1.GetCertificationRequest.request:type_name -> xyz.block.ftl.v1.CertificateContent
 	4,  // 1: xyz.block.ftl.v1.GetCertificationResponse.certificate:type_name -> xyz.block.ftl.v1.Certificate
 	3,  // 2: xyz.block.ftl.v1.Certificate.content:type_name -> xyz.block.ftl.v1.CertificateContent
-	40, // 3: xyz.block.ftl.v1.GetSchemaResponse.schema:type_name -> xyz.block.ftl.v1.schema.Schema
-	41, // 4: xyz.block.ftl.v1.PullSchemaResponse.schema:type_name -> xyz.block.ftl.v1.schema.Module
+	42, // 3: xyz.block.ftl.v1.GetSchemaResponse.schema:type_name -> xyz.block.ftl.v1.schema.Schema
+	43, // 4: xyz.block.ftl.v1.PullSchemaResponse.schema:type_name -> xyz.block.ftl.v1.schema.Module
 	0,  // 5: xyz.block.ftl.v1.PullSchemaResponse.change_type:type_name -> xyz.block.ftl.v1.DeploymentChangeType
 	13, // 6: xyz.block.ftl.v1.GetArtefactDiffsResponse.client_artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
-	41, // 7: xyz.block.ftl.v1.CreateDeploymentRequest.schema:type_name -> xyz.block.ftl.v1.schema.Module
+	43, // 7: xyz.block.ftl.v1.CreateDeploymentRequest.schema:type_name -> xyz.block.ftl.v1.schema.Module
 	13, // 8: xyz.block.ftl.v1.CreateDeploymentRequest.artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
-	42, // 9: xyz.block.ftl.v1.CreateDeploymentRequest.labels:type_name -> google.protobuf.Struct
-	41, // 10: xyz.block.ftl.v1.GetDeploymentResponse.schema:type_name -> xyz.block.ftl.v1.schema.Module
-	13, // 11: xyz.block.ftl.v1.GetDeploymentResponse.artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
-	42, // 12: xyz.block.ftl.v1.RegisterRunnerRequest.labels:type_name -> google.protobuf.Struct
-	43, // 13: xyz.block.ftl.v1.StreamDeploymentLogsRequest.time_stamp:type_name -> google.protobuf.Timestamp
-	32, // 14: xyz.block.ftl.v1.StreamDeploymentLogsRequest.attributes:type_name -> xyz.block.ftl.v1.StreamDeploymentLogsRequest.AttributesEntry
-	33, // 15: xyz.block.ftl.v1.StatusResponse.controllers:type_name -> xyz.block.ftl.v1.StatusResponse.Controller
-	34, // 16: xyz.block.ftl.v1.StatusResponse.runners:type_name -> xyz.block.ftl.v1.StatusResponse.Runner
-	35, // 17: xyz.block.ftl.v1.StatusResponse.deployments:type_name -> xyz.block.ftl.v1.StatusResponse.Deployment
-	36, // 18: xyz.block.ftl.v1.StatusResponse.ingress_routes:type_name -> xyz.block.ftl.v1.StatusResponse.IngressRoute
-	37, // 19: xyz.block.ftl.v1.StatusResponse.routes:type_name -> xyz.block.ftl.v1.StatusResponse.Route
-	39, // 20: xyz.block.ftl.v1.ProcessListResponse.processes:type_name -> xyz.block.ftl.v1.ProcessListResponse.Process
-	44, // 21: xyz.block.ftl.v1.ResetSubscriptionRequest.subscription:type_name -> xyz.block.ftl.v1.schema.Ref
-	42, // 22: xyz.block.ftl.v1.StatusResponse.Runner.labels:type_name -> google.protobuf.Struct
-	42, // 23: xyz.block.ftl.v1.StatusResponse.Deployment.labels:type_name -> google.protobuf.Struct
-	41, // 24: xyz.block.ftl.v1.StatusResponse.Deployment.schema:type_name -> xyz.block.ftl.v1.schema.Module
-	44, // 25: xyz.block.ftl.v1.StatusResponse.IngressRoute.verb:type_name -> xyz.block.ftl.v1.schema.Ref
-	42, // 26: xyz.block.ftl.v1.ProcessListResponse.ProcessRunner.labels:type_name -> google.protobuf.Struct
-	42, // 27: xyz.block.ftl.v1.ProcessListResponse.Process.labels:type_name -> google.protobuf.Struct
-	38, // 28: xyz.block.ftl.v1.ProcessListResponse.Process.runner:type_name -> xyz.block.ftl.v1.ProcessListResponse.ProcessRunner
-	45, // 29: xyz.block.ftl.v1.ControllerService.Ping:input_type -> xyz.block.ftl.v1.PingRequest
-	28, // 30: xyz.block.ftl.v1.ControllerService.ProcessList:input_type -> xyz.block.ftl.v1.ProcessListRequest
-	26, // 31: xyz.block.ftl.v1.ControllerService.Status:input_type -> xyz.block.ftl.v1.StatusRequest
-	1,  // 32: xyz.block.ftl.v1.ControllerService.GetCertification:input_type -> xyz.block.ftl.v1.GetCertificationRequest
-	9,  // 33: xyz.block.ftl.v1.ControllerService.GetArtefactDiffs:input_type -> xyz.block.ftl.v1.GetArtefactDiffsRequest
-	11, // 34: xyz.block.ftl.v1.ControllerService.UploadArtefact:input_type -> xyz.block.ftl.v1.UploadArtefactRequest
-	14, // 35: xyz.block.ftl.v1.ControllerService.CreateDeployment:input_type -> xyz.block.ftl.v1.CreateDeploymentRequest
-	16, // 36: xyz.block.ftl.v1.ControllerService.GetDeployment:input_type -> xyz.block.ftl.v1.GetDeploymentRequest
-	18, // 37: xyz.block.ftl.v1.ControllerService.RegisterRunner:input_type -> xyz.block.ftl.v1.RegisterRunnerRequest
-	20, // 38: xyz.block.ftl.v1.ControllerService.UpdateDeploy:input_type -> xyz.block.ftl.v1.UpdateDeployRequest
-	22, // 39: xyz.block.ftl.v1.ControllerService.ReplaceDeploy:input_type -> xyz.block.ftl.v1.ReplaceDeployRequest
-	24, // 40: xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs:input_type -> xyz.block.ftl.v1.StreamDeploymentLogsRequest
-	5,  // 41: xyz.block.ftl.v1.ControllerService.GetSchema:input_type -> xyz.block.ftl.v1.GetSchemaRequest
-	7,  // 42: xyz.block.ftl.v1.ControllerService.PullSchema:input_type -> xyz.block.ftl.v1.PullSchemaRequest
-	30, // 43: xyz.block.ftl.v1.ControllerService.ResetSubscription:input_type -> xyz.block.ftl.v1.ResetSubscriptionRequest
-	46, // 44: xyz.block.ftl.v1.ControllerService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
-	29, // 45: xyz.block.ftl.v1.ControllerService.ProcessList:output_type -> xyz.block.ftl.v1.ProcessListResponse
-	27, // 46: xyz.block.ftl.v1.ControllerService.Status:output_type -> xyz.block.ftl.v1.StatusResponse
-	2,  // 47: xyz.block.ftl.v1.ControllerService.GetCertification:output_type -> xyz.block.ftl.v1.GetCertificationResponse
-	10, // 48: xyz.block.ftl.v1.ControllerService.GetArtefactDiffs:output_type -> xyz.block.ftl.v1.GetArtefactDiffsResponse
-	12, // 49: xyz.block.ftl.v1.ControllerService.UploadArtefact:output_type -> xyz.block.ftl.v1.UploadArtefactResponse
-	15, // 50: xyz.block.ftl.v1.ControllerService.CreateDeployment:output_type -> xyz.block.ftl.v1.CreateDeploymentResponse
-	17, // 51: xyz.block.ftl.v1.ControllerService.GetDeployment:output_type -> xyz.block.ftl.v1.GetDeploymentResponse
-	19, // 52: xyz.block.ftl.v1.ControllerService.RegisterRunner:output_type -> xyz.block.ftl.v1.RegisterRunnerResponse
-	21, // 53: xyz.block.ftl.v1.ControllerService.UpdateDeploy:output_type -> xyz.block.ftl.v1.UpdateDeployResponse
-	23, // 54: xyz.block.ftl.v1.ControllerService.ReplaceDeploy:output_type -> xyz.block.ftl.v1.ReplaceDeployResponse
-	25, // 55: xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs:output_type -> xyz.block.ftl.v1.StreamDeploymentLogsResponse
-	6,  // 56: xyz.block.ftl.v1.ControllerService.GetSchema:output_type -> xyz.block.ftl.v1.GetSchemaResponse
-	8,  // 57: xyz.block.ftl.v1.ControllerService.PullSchema:output_type -> xyz.block.ftl.v1.PullSchemaResponse
-	31, // 58: xyz.block.ftl.v1.ControllerService.ResetSubscription:output_type -> xyz.block.ftl.v1.ResetSubscriptionResponse
-	44, // [44:59] is the sub-list for method output_type
-	29, // [29:44] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	44, // 9: xyz.block.ftl.v1.CreateDeploymentRequest.labels:type_name -> google.protobuf.Struct
+	13, // 10: xyz.block.ftl.v1.GetDeploymentArtefactsRequest.have_artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
+	13, // 11: xyz.block.ftl.v1.GetDeploymentArtefactsResponse.artefact:type_name -> xyz.block.ftl.v1.DeploymentArtefact
+	43, // 12: xyz.block.ftl.v1.GetDeploymentResponse.schema:type_name -> xyz.block.ftl.v1.schema.Module
+	13, // 13: xyz.block.ftl.v1.GetDeploymentResponse.artefacts:type_name -> xyz.block.ftl.v1.DeploymentArtefact
+	44, // 14: xyz.block.ftl.v1.RegisterRunnerRequest.labels:type_name -> google.protobuf.Struct
+	45, // 15: xyz.block.ftl.v1.StreamDeploymentLogsRequest.time_stamp:type_name -> google.protobuf.Timestamp
+	34, // 16: xyz.block.ftl.v1.StreamDeploymentLogsRequest.attributes:type_name -> xyz.block.ftl.v1.StreamDeploymentLogsRequest.AttributesEntry
+	35, // 17: xyz.block.ftl.v1.StatusResponse.controllers:type_name -> xyz.block.ftl.v1.StatusResponse.Controller
+	36, // 18: xyz.block.ftl.v1.StatusResponse.runners:type_name -> xyz.block.ftl.v1.StatusResponse.Runner
+	37, // 19: xyz.block.ftl.v1.StatusResponse.deployments:type_name -> xyz.block.ftl.v1.StatusResponse.Deployment
+	38, // 20: xyz.block.ftl.v1.StatusResponse.ingress_routes:type_name -> xyz.block.ftl.v1.StatusResponse.IngressRoute
+	39, // 21: xyz.block.ftl.v1.StatusResponse.routes:type_name -> xyz.block.ftl.v1.StatusResponse.Route
+	41, // 22: xyz.block.ftl.v1.ProcessListResponse.processes:type_name -> xyz.block.ftl.v1.ProcessListResponse.Process
+	46, // 23: xyz.block.ftl.v1.ResetSubscriptionRequest.subscription:type_name -> xyz.block.ftl.v1.schema.Ref
+	44, // 24: xyz.block.ftl.v1.StatusResponse.Runner.labels:type_name -> google.protobuf.Struct
+	44, // 25: xyz.block.ftl.v1.StatusResponse.Deployment.labels:type_name -> google.protobuf.Struct
+	43, // 26: xyz.block.ftl.v1.StatusResponse.Deployment.schema:type_name -> xyz.block.ftl.v1.schema.Module
+	46, // 27: xyz.block.ftl.v1.StatusResponse.IngressRoute.verb:type_name -> xyz.block.ftl.v1.schema.Ref
+	44, // 28: xyz.block.ftl.v1.ProcessListResponse.ProcessRunner.labels:type_name -> google.protobuf.Struct
+	44, // 29: xyz.block.ftl.v1.ProcessListResponse.Process.labels:type_name -> google.protobuf.Struct
+	40, // 30: xyz.block.ftl.v1.ProcessListResponse.Process.runner:type_name -> xyz.block.ftl.v1.ProcessListResponse.ProcessRunner
+	47, // 31: xyz.block.ftl.v1.ControllerService.Ping:input_type -> xyz.block.ftl.v1.PingRequest
+	30, // 32: xyz.block.ftl.v1.ControllerService.ProcessList:input_type -> xyz.block.ftl.v1.ProcessListRequest
+	28, // 33: xyz.block.ftl.v1.ControllerService.Status:input_type -> xyz.block.ftl.v1.StatusRequest
+	1,  // 34: xyz.block.ftl.v1.ControllerService.GetCertification:input_type -> xyz.block.ftl.v1.GetCertificationRequest
+	9,  // 35: xyz.block.ftl.v1.ControllerService.GetArtefactDiffs:input_type -> xyz.block.ftl.v1.GetArtefactDiffsRequest
+	11, // 36: xyz.block.ftl.v1.ControllerService.UploadArtefact:input_type -> xyz.block.ftl.v1.UploadArtefactRequest
+	14, // 37: xyz.block.ftl.v1.ControllerService.CreateDeployment:input_type -> xyz.block.ftl.v1.CreateDeploymentRequest
+	18, // 38: xyz.block.ftl.v1.ControllerService.GetDeployment:input_type -> xyz.block.ftl.v1.GetDeploymentRequest
+	16, // 39: xyz.block.ftl.v1.ControllerService.GetDeploymentArtefacts:input_type -> xyz.block.ftl.v1.GetDeploymentArtefactsRequest
+	20, // 40: xyz.block.ftl.v1.ControllerService.RegisterRunner:input_type -> xyz.block.ftl.v1.RegisterRunnerRequest
+	22, // 41: xyz.block.ftl.v1.ControllerService.UpdateDeploy:input_type -> xyz.block.ftl.v1.UpdateDeployRequest
+	24, // 42: xyz.block.ftl.v1.ControllerService.ReplaceDeploy:input_type -> xyz.block.ftl.v1.ReplaceDeployRequest
+	26, // 43: xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs:input_type -> xyz.block.ftl.v1.StreamDeploymentLogsRequest
+	5,  // 44: xyz.block.ftl.v1.ControllerService.GetSchema:input_type -> xyz.block.ftl.v1.GetSchemaRequest
+	7,  // 45: xyz.block.ftl.v1.ControllerService.PullSchema:input_type -> xyz.block.ftl.v1.PullSchemaRequest
+	32, // 46: xyz.block.ftl.v1.ControllerService.ResetSubscription:input_type -> xyz.block.ftl.v1.ResetSubscriptionRequest
+	48, // 47: xyz.block.ftl.v1.ControllerService.Ping:output_type -> xyz.block.ftl.v1.PingResponse
+	31, // 48: xyz.block.ftl.v1.ControllerService.ProcessList:output_type -> xyz.block.ftl.v1.ProcessListResponse
+	29, // 49: xyz.block.ftl.v1.ControllerService.Status:output_type -> xyz.block.ftl.v1.StatusResponse
+	2,  // 50: xyz.block.ftl.v1.ControllerService.GetCertification:output_type -> xyz.block.ftl.v1.GetCertificationResponse
+	10, // 51: xyz.block.ftl.v1.ControllerService.GetArtefactDiffs:output_type -> xyz.block.ftl.v1.GetArtefactDiffsResponse
+	12, // 52: xyz.block.ftl.v1.ControllerService.UploadArtefact:output_type -> xyz.block.ftl.v1.UploadArtefactResponse
+	15, // 53: xyz.block.ftl.v1.ControllerService.CreateDeployment:output_type -> xyz.block.ftl.v1.CreateDeploymentResponse
+	19, // 54: xyz.block.ftl.v1.ControllerService.GetDeployment:output_type -> xyz.block.ftl.v1.GetDeploymentResponse
+	17, // 55: xyz.block.ftl.v1.ControllerService.GetDeploymentArtefacts:output_type -> xyz.block.ftl.v1.GetDeploymentArtefactsResponse
+	21, // 56: xyz.block.ftl.v1.ControllerService.RegisterRunner:output_type -> xyz.block.ftl.v1.RegisterRunnerResponse
+	23, // 57: xyz.block.ftl.v1.ControllerService.UpdateDeploy:output_type -> xyz.block.ftl.v1.UpdateDeployResponse
+	25, // 58: xyz.block.ftl.v1.ControllerService.ReplaceDeploy:output_type -> xyz.block.ftl.v1.ReplaceDeployResponse
+	27, // 59: xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs:output_type -> xyz.block.ftl.v1.StreamDeploymentLogsResponse
+	6,  // 60: xyz.block.ftl.v1.ControllerService.GetSchema:output_type -> xyz.block.ftl.v1.GetSchemaResponse
+	8,  // 61: xyz.block.ftl.v1.ControllerService.PullSchema:output_type -> xyz.block.ftl.v1.PullSchemaResponse
+	33, // 62: xyz.block.ftl.v1.ControllerService.ResetSubscription:output_type -> xyz.block.ftl.v1.ResetSubscriptionResponse
+	47, // [47:63] is the sub-list for method output_type
+	31, // [31:47] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_xyz_block_ftl_v1_controller_proto_init() }
@@ -2644,16 +2781,16 @@ func file_xyz_block_ftl_v1_controller_proto_init() {
 	file_xyz_block_ftl_v1_controller_proto_msgTypes[7].OneofWrappers = []any{}
 	file_xyz_block_ftl_v1_controller_proto_msgTypes[13].OneofWrappers = []any{}
 	file_xyz_block_ftl_v1_controller_proto_msgTypes[14].OneofWrappers = []any{}
-	file_xyz_block_ftl_v1_controller_proto_msgTypes[23].OneofWrappers = []any{}
-	file_xyz_block_ftl_v1_controller_proto_msgTypes[33].OneofWrappers = []any{}
-	file_xyz_block_ftl_v1_controller_proto_msgTypes[38].OneofWrappers = []any{}
+	file_xyz_block_ftl_v1_controller_proto_msgTypes[25].OneofWrappers = []any{}
+	file_xyz_block_ftl_v1_controller_proto_msgTypes[35].OneofWrappers = []any{}
+	file_xyz_block_ftl_v1_controller_proto_msgTypes[40].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_xyz_block_ftl_v1_controller_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   39,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

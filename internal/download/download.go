@@ -20,9 +20,9 @@ import (
 )
 
 // Artefacts downloads artefacts for a deployment from the Controller.
-func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient, key model.DeploymentKey, dest string, registry artefacts.RegistryConfig) error {
+func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient, key model.DeploymentKey, dest string) error {
 	logger := log.FromContext(ctx)
-	response, err := client.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{
+	stream, err := client.GetDeploymentArtefacts(ctx, connect.NewRequest(&ftlv1.GetDeploymentArtefactsRequest{
 		DeploymentKey: key.String(),
 	}))
 	if err != nil {
@@ -30,7 +30,58 @@ func Artefacts(ctx context.Context, client ftlv1connect.ControllerServiceClient,
 	}
 	start := time.Now()
 	count := 0
-	service := artefacts.NewOCIRegistryStorage(registry)
+	var digest string
+	var w *os.File
+	for stream.Receive() {
+		msg := stream.Msg()
+		artefact := msg.Artefact
+		if digest != artefact.Digest {
+			if w != nil {
+				w.Close()
+			}
+			count++
+			if !filepath.IsLocal(artefact.Path) {
+				return fmt.Errorf("path %q is not local", artefact.Path)
+			}
+			logger.Debugf("Downloading %s", filepath.Join(dest, artefact.Path))
+			err = os.MkdirAll(filepath.Join(dest, filepath.Dir(artefact.Path)), 0700)
+			if err != nil {
+				return err
+			}
+			var mode os.FileMode = 0600
+			if artefact.Executable {
+				mode = 0700
+			}
+			w, err = os.OpenFile(filepath.Join(dest, artefact.Path), os.O_CREATE|os.O_WRONLY, mode)
+			if err != nil {
+				return err
+			}
+			digest = artefact.Digest
+		}
+
+		if _, err := w.Write(msg.Chunk); err != nil {
+			_ = w.Close()
+			return err
+		}
+	}
+	if w != nil {
+		w.Close()
+	}
+	logger.Debugf("Downloaded %d artefacts in %s", count, time.Since(start))
+	return stream.Err()
+}
+
+// ArtefactsFromOCI downloads artefacts for a deployment from an OCI registry.
+func ArtefactsFromOCI(ctx context.Context, client ftlv1connect.ControllerServiceClient, key model.DeploymentKey, dest string, service *artefacts.OCIArtefactService) error {
+	logger := log.FromContext(ctx)
+	response, err := client.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{
+		DeploymentKey: key.String(),
+	}))
+	if err != nil {
+		return fmt.Errorf("failed to get deployment %q: %w", key, err)
+	}
+	start := time.Now()
+	count := 0
 	for _, artefact := range response.Msg.Artefacts {
 		parseSHA256, err := sha256.ParseSHA256(artefact.Digest)
 		if err != nil {

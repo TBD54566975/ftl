@@ -34,7 +34,7 @@ type boxRunCmd struct {
 	RunnerBase        *url.URL                 `help:"Base bind address for FTL runners." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
 	Dir               string                   `arg:"" help:"Directory to scan for precompiled modules." default:"."`
 	ControllerTimeout time.Duration            `help:"Timeout for Controller start." default:"30s"`
-	Registry          artefacts.RegistryConfig `embed:""`
+	Registry          artefacts.RegistryConfig `embed:"" prefix:"oci-"`
 }
 
 func (b *boxRunCmd) Run(

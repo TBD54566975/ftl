@@ -87,6 +87,15 @@ message CreateDeploymentResponse {
   optional string active_deployment_key = 2;
 }
 
+message GetDeploymentArtefactsRequest {
+  string deployment_key = 1;
+  repeated DeploymentArtefact have_artefacts = 2;
+}
+message GetDeploymentArtefactsResponse {
+  DeploymentArtefact artefact = 1;
+  bytes chunk = 2;
+}
+
 message GetDeploymentRequest {
   string deployment_key = 1;
 }
@@ -217,6 +226,12 @@ service ControllerService {
 
   // Get the schema and artefact metadata for a deployment.
   rpc GetDeployment(GetDeploymentRequest) returns (GetDeploymentResponse);
+
+  // Stream deployment artefacts from the server.
+  //
+  // Each artefact is streamed one after the other as a sequence of max 1MB
+  // chunks.
+  rpc GetDeploymentArtefacts(GetDeploymentArtefactsRequest) returns (stream GetDeploymentArtefactsResponse);
 
   // Register a Runner with the Controller.
   //

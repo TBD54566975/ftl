@@ -125,8 +125,9 @@ func (s *serveCmd) run(
 	if err != nil {
 		return fmt.Errorf("registry init failed: %w", err)
 	}
-	s.CommonConfig.Registry.AllowInsecure = true
-	s.CommonConfig.Registry.Registry = fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort)
+	var registry artefacts.RegistryConfig
+	registry.AllowInsecure = true
+	registry.Registry = fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort)
 	// Bring up the DB and DAL.
 	dsn, err := dev.SetupDB(ctx, s.DatabaseImage, s.DBPort, s.Recreate)
 	if err != nil {
@@ -173,7 +174,7 @@ func (s *serveCmd) run(
 		provisionerAddresses = append(provisionerAddresses, bind)
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, s.CommonConfig.Registry)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, registry)
 	if err != nil {
 		return err
 	}
@@ -184,10 +185,7 @@ func (s *serveCmd) run(
 			IngressBind:  controllerIngressAddresses[i],
 			Key:          model.NewLocalControllerKey(i),
 			DSN:          dsn,
-		}
-		s.CommonConfig.Registry = artefacts.RegistryConfig{
-			Registry:      fmt.Sprintf("localhost:%d", s.RegistryPort),
-			AllowInsecure: true,
+			Registry:     registry,
 		}
 		config.SetDefaults()
 		config.ModuleUpdateFrequency = time.Second * 1
