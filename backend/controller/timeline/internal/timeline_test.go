@@ -112,9 +112,9 @@ func TestTimeline(t *testing.T) {
 	ingressEvent := &timeline2.IngressEvent{
 		DeploymentKey:  deploymentKey,
 		RequestKey:     optional.Some(requestKey),
-		Verb:           schema.Ref{Module: "echo", Name: "echo"},
+		Verb:           schema.Ref{Module: "time", Name: "time"},
 		Method:         "GET",
-		Path:           "/echo",
+		Path:           "/time",
 		StatusCode:     200,
 		Time:           time.Now().Round(time.Millisecond),
 		Request:        []byte(`{"request":"body"}`),
@@ -264,13 +264,20 @@ func TestTimeline(t *testing.T) {
 		})
 
 		t.Run("ByModule", func(t *testing.T) {
-			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterTypes(timeline2.EventTypeIngress), timeline2.FilterModule("echo", optional.None[string]()))
+			eventTypes := []timeline2.EventType{
+				timeline2.EventTypeCall,
+				timeline2.EventTypeIngress,
+				timeline2.EventTypeAsyncExecute,
+				timeline2.EventTypePubSubPublish,
+				timeline2.EventTypePubSubConsume,
+			}
+			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterTypes(eventTypes...), timeline2.FilterModule("time", optional.None[string]()))
 			assert.NoError(t, err)
-			assertEventsEqual(t, []timeline2.Event{ingressEvent}, events)
+			assertEventsEqual(t, []timeline2.Event{callEvent, ingressEvent, asyncEvent, pubSubPublishEvent, pubSubConsumeEvent}, events)
 		})
 
 		t.Run("ByModuleWithVerb", func(t *testing.T) {
-			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterTypes(timeline2.EventTypeIngress), timeline2.FilterModule("echo", optional.Some("echo")))
+			events, err := timeline.QueryTimeline(ctx, 1000, timeline2.FilterTypes(timeline2.EventTypeIngress), timeline2.FilterModule("time", optional.Some("time")))
 			assert.NoError(t, err)
 			assertEventsEqual(t, []timeline2.Event{ingressEvent}, events)
 		})

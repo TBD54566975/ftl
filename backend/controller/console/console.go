@@ -820,6 +820,7 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 				AsyncExecute: &pbconsole.AsyncExecuteEvent{
 					DeploymentKey:  event.DeploymentKey.String(),
 					RequestKey:     requestKey,
+					TimeStamp:      timestamppb.New(event.Time),
 					AsyncEventType: asyncEventType,
 					VerbRef: &schemapb.Ref{
 						Module: event.Verb.Module,

@@ -1,4 +1,4 @@
-import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, PackageIcon, Upload01Icon } from 'hugeicons-react'
+import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, CodeFolderIcon, Upload01Icon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
@@ -99,7 +99,7 @@ const ModuleSection = ({
         onClick={() => toggleExpansion(module.name)}
       >
         <span title='module'>
-          <PackageIcon aria-hidden='true' className='size-4 my-1 ml-3 shrink-0' />
+          <CodeFolderIcon aria-hidden='true' className='size-4 my-1 ml-3 shrink-0' />
         </span>
         {module.name}
         <Link to={`/modules/${module.name}`} onClick={(e) => e.stopPropagation()}>

@@ -59,5 +59,8 @@ const isError = (event: Event) => {
   if (event.entry.case === 'ingress' && event.entry.value.error) {
     return true
   }
+  if (event.entry.case === 'asyncExecute' && event.entry.value.error) {
+    return true
+  }
   return false
 }

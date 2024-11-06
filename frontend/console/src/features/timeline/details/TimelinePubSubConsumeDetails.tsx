@@ -18,6 +18,12 @@ export const TimelinePubSubConsumeDetails = ({ event }: { event: Event }) => {
         <DeploymentCard className='mt-4' deploymentKey={pubSubConsume.deploymentKey} />
 
         <ul className='pt-4 space-y-2'>
+          {pubSubConsume.requestKey && (
+            <li>
+              <AttributeBadge name='request' value={pubSubConsume.requestKey} />
+            </li>
+          )}
+
           <li>
             <AttributeBadge name='sink' value={destModule} />
           </li>

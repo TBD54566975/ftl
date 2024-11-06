@@ -39,3 +39,9 @@ export const compareTimestamps = (a?: Timestamp, b?: Timestamp): number => {
   const compareTo = (a?: bigint, b?: bigint): number => Number((a || 0n) - (b || 0n))
   return a?.seconds !== b?.seconds ? compareTo(a?.seconds, b?.seconds) : compareTo(BigInt(a?.nanos || 0), BigInt(b?.nanos || 0))
 }
+
+export const durationToMillis = (duration: Duration): number => {
+  const secondsInMillis = Number(duration.seconds) * 1000
+  const nanosInMillis = duration.nanos / 1_000_000
+  return secondsInMillis + nanosInMillis
+}
