@@ -1322,17 +1322,17 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
   key = "";
 
   /**
-   * @generated from field: string endpoint = 3;
+   * @generated from field: string endpoint = 2;
    */
   endpoint = "";
 
   /**
-   * @generated from field: optional string deployment = 5;
+   * @generated from field: optional string deployment = 3;
    */
   deployment?: string;
 
   /**
-   * @generated from field: google.protobuf.Struct labels = 6;
+   * @generated from field: google.protobuf.Struct labels = 4;
    */
   labels?: Struct;
 
@@ -1345,9 +1345,9 @@ export class StatusResponse_Runner extends Message<StatusResponse_Runner> {
   static readonly typeName = "xyz.block.ftl.v1.StatusResponse.Runner";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 5, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "labels", kind: "message", T: Struct },
+    { no: 2, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "labels", kind: "message", T: Struct },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StatusResponse_Runner {
