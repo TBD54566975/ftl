@@ -80,10 +80,6 @@ type Secrets struct{}
 
 func (Secrets) String() string { return "secrets" }
 
-func (Secrets) Obfuscator() Obfuscator {
-	return NewObfuscator([]byte("obfuscatesecrets")) // 16 characters (AES-128), not meant to provide security
-}
-
 type Configuration struct{}
 
 func (Configuration) String() string { return "configuration" }

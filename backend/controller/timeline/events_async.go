@@ -29,7 +29,6 @@ type AsyncExecuteEventType string
 const (
 	AsyncExecuteEventTypeUnkown AsyncExecuteEventType = "unknown"
 	AsyncExecuteEventTypeCron   AsyncExecuteEventType = "cron"
-	AsyncExecuteEventTypeFSM    AsyncExecuteEventType = "fsm"
 	AsyncExecuteEventTypePubSub AsyncExecuteEventType = "pubsub"
 )
 

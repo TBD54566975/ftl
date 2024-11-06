@@ -158,6 +158,13 @@ func (l *localScaling) reconcileRunners(ctx context.Context, deploymentRunners *
 }
 
 func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, info *deploymentInfo) error {
+	select {
+	case <-ctx.Done():
+		// In some cases this gets called with an expired context, generally after the lease is released
+		// We don't want to start a runner in that case
+		return nil
+	default:
+	}
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 	logger := log.FromContext(ctx)
 
@@ -210,12 +217,14 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	go func() {
 		logger.Debugf("Starting runner: %s", config.Key)
 		err := runner.Start(runnerCtx, config)
-		if err != nil && !errors.Is(err, context.Canceled) {
-			logger.Errorf(err, "Runner failed: %s", err)
-		}
 		l.lock.Lock()
 		defer l.lock.Unlock()
-		info.exits++
+		if err != nil && !errors.Is(err, context.Canceled) {
+			logger.Errorf(err, "Runner failed: %s", err)
+		} else {
+			// Don't count context.Canceled as an a restart error
+			info.exits++
+		}
 		if info.exits >= maxExits {
 			logger.Errorf(fmt.Errorf("too many restarts"), "Runner failed too many times, not restarting")
 		}

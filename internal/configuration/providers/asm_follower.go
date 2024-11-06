@@ -47,7 +47,6 @@ func (f *asmFollower) syncInterval() time.Duration {
 func (f *asmFollower) sync(ctx context.Context, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
 	// values must store obfuscated values, but f.client gives unobfuscated values
 	logger := log.FromContext(ctx)
-	obfuscator := configuration.Secrets{}.Obfuscator()
 	module := ""
 	includeValues := true
 	resp, err := f.client.SecretsList(ctx, connect.NewRequest(&ftlv1.ListSecretsRequest{
@@ -72,13 +71,9 @@ func (f *asmFollower) sync(ctx context.Context, values *xsync.MapOf[configuratio
 		if err != nil {
 			return fmt.Errorf("invalid ref %q: %w", s.RefPath, err)
 		}
-		obfuscatedValue, err := obfuscator.Obfuscate(s.Value)
-		if err != nil {
-			return fmt.Errorf("asm follower could not obfuscate value for ref %q: %w", s.RefPath, err)
-		}
 		visited[ref] = true
 		values.Store(ref, configuration.SyncedValue{
-			Value: obfuscatedValue,
+			Value: s.Value,
 		})
 	}
 	// delete old values
@@ -91,18 +86,13 @@ func (f *asmFollower) sync(ctx context.Context, values *xsync.MapOf[configuratio
 	return nil
 }
 
-func (f *asmFollower) store(ctx context.Context, ref configuration.Ref, obfuscatedValue []byte) (*url.URL, error) {
-	obfuscator := configuration.Secrets{}.Obfuscator()
-	unobfuscatedValue, err := obfuscator.Reveal(obfuscatedValue)
-	if err != nil {
-		return nil, fmt.Errorf("asm follower could not unobfuscate: %w", err)
-	}
-	_, err = f.client.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
+func (f *asmFollower) store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
+	_, err := f.client.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
 		Ref: &ftlv1.ConfigRef{
 			Module: ref.Module.Ptr(),
 			Name:   ref.Name,
 		},
-		Value: unobfuscatedValue,
+		Value: value,
 	}))
 	if err != nil {
 		return nil, err
