@@ -13,6 +13,13 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - name: Checkout the repository with full history
         uses: actions/checkout@v4
         with:
@@ -68,3 +75,7 @@ jobs:
         with:
           name: kube-report-smoke-test-upgrade
           path: /tmp/ftl-kube-report/
+      - name: Print Disk Space
+        if: always()
+        run: |
+          df
