@@ -24,15 +24,19 @@ type RunnerScaling interface {
 
 func BeginGrpcScaling(ctx context.Context, url url.URL, leaser leases.Leaser, handler func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error) {
 	leaseTimeout := time.Second * 20
+	var leaseDone <-chan struct{}
+
 	for {
 		// Grab a lease to take control of runner scaling
 		lease, leaseContext, err := leaser.AcquireLease(ctx, leases.SystemKey("ftl-scaling", "runner-creation"), leaseTimeout, optional.None[any]())
 		if err == nil {
+			leaseDone = leaseContext.Done()
 			// If we get it then we take over runner scaling
 			runGrpcScaling(leaseContext, url, handler)
 		} else if !errors.Is(err, leases.ErrConflict) {
 			logger := log.FromContext(ctx)
 			logger.Errorf(err, "Failed to acquire lease")
+			leaseDone = nil
 		}
 		select {
 		case <-ctx.Done():
@@ -44,7 +48,8 @@ func BeginGrpcScaling(ctx context.Context, url url.URL, leaser leases.Leaser, ha
 				}
 			}
 			return
-		case <-leaseContext.Done():
+		case <-time.After(leaseTimeout):
+		case <-leaseDone:
 		}
 	}
 }
