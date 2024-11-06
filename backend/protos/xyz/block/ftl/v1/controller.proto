@@ -147,7 +147,6 @@ message StatusResponse {
 
   message Runner {
     string key = 1;
-    repeated string languages = 2;
     string endpoint = 3;
     optional string deployment = 5;
     google.protobuf.Struct labels = 6;
