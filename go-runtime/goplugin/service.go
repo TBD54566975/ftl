@@ -430,12 +430,6 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	if !ok {
 		return buildFailure(buildCtx, isAutomaticRebuild, buildErrs...), nil
 	}
-	module.Runtime = &schema.ModuleRuntime{
-		CreateTime:  time.Now(),
-		Language:    "go",
-		MinReplicas: 1,
-		Image:       "ftl0/ftl-runner",
-	}
 
 	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	return &langpb.BuildEvent{

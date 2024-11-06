@@ -1588,7 +1588,6 @@ func (s *Service) watchModuleChanges(ctx context.Context, sendChange func(respon
 				if moduleSchema.Runtime == nil {
 					moduleSchema.Runtime = &schemapb.ModuleRuntime{
 						Language: message.Language,
-						Image:    "ftl0/ftl-runner",
 					}
 				}
 				moduleSchema.Runtime.CreateTime = timestamppb.New(message.CreatedAt)

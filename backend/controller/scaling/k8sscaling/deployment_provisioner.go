@@ -268,21 +268,21 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	}
 
 	// runner images use the same tag as the controller
+	rawRunnerImage := optional.Ptr(dep.Runtime.Image).Default("ftl0/ftl-runner")
 	var runnerImage string
-	if dep.Runtime.Image != "" {
-		if strings.HasPrefix(dep.Runtime.Image, "ftl0/") {
-			// Images in the ftl0 namespace should use the same tag as the controller and use the same namespace as ourImage
-			runnerImage = strings.ReplaceAll(ourImage, "ftl-controller", dep.Runtime.Image[len(`ftl0/`):])
-		} else {
-			// Images outside of the ftl0 namespace should use the same tag as the controller
-			ourImageComponents := strings.Split(ourImage, ":")
-			if len(ourImageComponents) != 2 {
-				return fmt.Errorf("expected <name>:<tag> for image name %q", ourImage)
-			}
-			runnerImage = dep.Runtime.Image + ":" + ourImageComponents[1]
-		}
+	if len(strings.Split(rawRunnerImage, ":")) != 1 {
+		return fmt.Errorf("module runtime's image should not contain a tag: %s", rawRunnerImage)
+	}
+	if strings.HasPrefix(rawRunnerImage, "ftl0/") {
+		// Images in the ftl0 namespace should use the same tag as the controller and use the same namespace as ourImage
+		runnerImage = strings.ReplaceAll(ourImage, "ftl-controller", rawRunnerImage[len(`ftl0/`):])
 	} else {
-		runnerImage = strings.ReplaceAll(ourImage, "controller", "runner")
+		// Images outside of the ftl0 namespace should use the same tag as the controller
+		ourImageComponents := strings.Split(ourImage, ":")
+		if len(ourImageComponents) != 2 {
+			return fmt.Errorf("expected <name>:<tag> for image name %q", ourImage)
+		}
+		runnerImage = rawRunnerImage + ":" + ourImageComponents[1]
 	}
 
 	deployment.Name = name

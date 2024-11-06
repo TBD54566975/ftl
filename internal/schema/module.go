@@ -25,7 +25,9 @@ type ModuleRuntime struct {
 	MinReplicas int32     `protobuf:"3"`
 	OS          string    `protobuf:"4,optional"`
 	Arch        string    `protobuf:"5,optional"`
-	Image       string    `protobuf:"6"`
+	// Image is the name of the runner image. Defaults to "ftl0/ftl-runner".
+	// Must not include a tag, as FTL's version will be used as the tag.
+	Image string `protobuf:"6,optional"`
 }
 
 type Module struct {
@@ -232,13 +234,15 @@ func (m *Module) ToProto() proto.Message {
 			CreateTime:  timestamppb.New(m.Runtime.CreateTime),
 			Language:    m.Runtime.Language,
 			MinReplicas: m.Runtime.MinReplicas,
-			Image:       m.Runtime.Image,
 		}
 		if m.Runtime.OS != "" {
 			runtime.Os = &m.Runtime.OS
 		}
 		if m.Runtime.Arch != "" {
 			runtime.Arch = &m.Runtime.Arch
+		}
+		if m.Runtime.Arch != "" {
+			runtime.Image = &m.Runtime.Image
 		}
 	}
 	return &schemapb.Module{
