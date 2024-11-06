@@ -4,129 +4,126 @@
 # source: xyz/block/ftl/v1/controller.proto
 # Protobuf Python Version: 5.28.3
 """Generated protocol buffer code."""
-
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import runtime_version as _runtime_version
 from google.protobuf import symbol_database as _symbol_database
 from google.protobuf.internal import builder as _builder
-
 _runtime_version.ValidateProtobufRuntimeVersion(
-    _runtime_version.Domain.PUBLIC, 5, 28, 3, "", "xyz/block/ftl/v1/controller.proto"
+    _runtime_version.Domain.PUBLIC,
+    5,
+    28,
+    3,
+    '',
+    'xyz/block/ftl/v1/controller.proto'
 )
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
-    b'\n!xyz/block/ftl/v1/controller.proto\x12\x10xyz.block.ftl.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\x1a$xyz/block/ftl/v1/schema/schema.proto"w\n\x17GetCertificationRequest\x12>\n\x07request\x18\x01 \x01(\x0b\x32$.xyz.block.ftl.v1.CertificateContentR\x07request\x12\x1c\n\tsignature\x18\x02 \x01(\x0cR\tsignature"[\n\x18GetCertificationResponse\x12?\n\x0b\x63\x65rtificate\x18\x01 \x01(\x0b\x32\x1d.xyz.block.ftl.v1.CertificateR\x0b\x63\x65rtificate"O\n\x12\x43\x65rtificateContent\x12\x1a\n\x08identity\x18\x01 \x01(\tR\x08identity\x12\x1d\n\npublic_key\x18\x02 \x01(\x0cR\tpublicKey"\x80\x01\n\x0b\x43\x65rtificate\x12>\n\x07\x63ontent\x18\x01 \x01(\x0b\x32$.xyz.block.ftl.v1.CertificateContentR\x07\x63ontent\x12\x31\n\x14\x63ontroller_signature\x18\x03 \x01(\x0cR\x13\x63ontrollerSignature"\x12\n\x10GetSchemaRequest"L\n\x11GetSchemaResponse\x12\x37\n\x06schema\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.SchemaR\x06schema"\x13\n\x11PullSchemaRequest"\x82\x02\n\x12PullSchemaResponse\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12\x1f\n\x0bmodule_name\x18\x02 \x01(\tR\nmoduleName\x12<\n\x06schema\x18\x04 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleH\x00R\x06schema\x88\x01\x01\x12\x12\n\x04more\x18\x03 \x01(\x08R\x04more\x12G\n\x0b\x63hange_type\x18\x05 \x01(\x0e\x32&.xyz.block.ftl.v1.DeploymentChangeTypeR\nchangeTypeB\t\n\x07_schema"@\n\x17GetArtefactDiffsRequest\x12%\n\x0e\x63lient_digests\x18\x01 \x03(\tR\rclientDigests"\x94\x01\n\x18GetArtefactDiffsResponse\x12\'\n\x0fmissing_digests\x18\x01 \x03(\tR\x0emissingDigests\x12O\n\x10\x63lient_artefacts\x18\x02 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\x0f\x63lientArtefacts"1\n\x15UploadArtefactRequest\x12\x18\n\x07\x63ontent\x18\x01 \x01(\x0cR\x07\x63ontent"0\n\x16UploadArtefactResponse\x12\x16\n\x06\x64igest\x18\x02 \x01(\x0cR\x06\x64igest"`\n\x12\x44\x65ploymentArtefact\x12\x16\n\x06\x64igest\x18\x01 \x01(\tR\x06\x64igest\x12\x12\n\x04path\x18\x02 \x01(\tR\x04path\x12\x1e\n\nexecutable\x18\x03 \x01(\x08R\nexecutable"\xd7\x01\n\x17\x43reateDeploymentRequest\x12\x37\n\x06schema\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleR\x06schema\x12\x42\n\tartefacts\x18\x02 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\tartefacts\x12\x34\n\x06labels\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructH\x00R\x06labels\x88\x01\x01\x42\t\n\x07_labels"\x94\x01\n\x18\x43reateDeploymentResponse\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12\x37\n\x15\x61\x63tive_deployment_key\x18\x02 \x01(\tH\x00R\x13\x61\x63tiveDeploymentKey\x88\x01\x01\x42\x18\n\x16_active_deployment_key"\x93\x01\n\x1dGetDeploymentArtefactsRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12K\n\x0ehave_artefacts\x18\x02 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\rhaveArtefacts"x\n\x1eGetDeploymentArtefactsResponse\x12@\n\x08\x61rtefact\x18\x01 \x01(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\x08\x61rtefact\x12\x14\n\x05\x63hunk\x18\x02 \x01(\x0cR\x05\x63hunk"=\n\x14GetDeploymentRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey"\x94\x01\n\x15GetDeploymentResponse\x12\x37\n\x06schema\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleR\x06schema\x12\x42\n\tartefacts\x18\x02 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\tartefacts"\x96\x01\n\x15RegisterRunnerRequest\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n\x08\x65ndpoint\x18\x02 \x01(\tR\x08\x65ndpoint\x12\x1e\n\ndeployment\x18\x03 \x01(\tR\ndeployment\x12/\n\x06labels\x18\x05 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labels"\x18\n\x16RegisterRunnerResponse"_\n\x13UpdateDeployRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12!\n\x0cmin_replicas\x18\x02 \x01(\x05R\x0bminReplicas"\x16\n\x14UpdateDeployResponse"`\n\x14ReplaceDeployRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12!\n\x0cmin_replicas\x18\x02 \x01(\x05R\x0bminReplicas"\x17\n\x15ReplaceDeployResponse"\xaf\x03\n\x1bStreamDeploymentLogsRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12$\n\x0brequest_key\x18\x02 \x01(\tH\x00R\nrequestKey\x88\x01\x01\x12\x39\n\ntime_stamp\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\ttimeStamp\x12\x1b\n\tlog_level\x18\x04 \x01(\x05R\x08logLevel\x12]\n\nattributes\x18\x05 \x03(\x0b\x32=.xyz.block.ftl.v1.StreamDeploymentLogsRequest.AttributesEntryR\nattributes\x12\x18\n\x07message\x18\x06 \x01(\tR\x07message\x12\x19\n\x05\x65rror\x18\x07 \x01(\tH\x01R\x05\x65rror\x88\x01\x01\x1a=\n\x0f\x41ttributesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\x42\x0e\n\x0c_request_keyB\x08\n\x06_error"\x1e\n\x1cStreamDeploymentLogsResponse"\x0f\n\rStatusRequest"\x86\t\n\x0eStatusResponse\x12M\n\x0b\x63ontrollers\x18\x01 \x03(\x0b\x32+.xyz.block.ftl.v1.StatusResponse.ControllerR\x0b\x63ontrollers\x12\x41\n\x07runners\x18\x02 \x03(\x0b\x32\'.xyz.block.ftl.v1.StatusResponse.RunnerR\x07runners\x12M\n\x0b\x64\x65ployments\x18\x03 \x03(\x0b\x32+.xyz.block.ftl.v1.StatusResponse.DeploymentR\x0b\x64\x65ployments\x12T\n\x0eingress_routes\x18\x04 \x03(\x0b\x32-.xyz.block.ftl.v1.StatusResponse.IngressRouteR\ringressRoutes\x12>\n\x06routes\x18\x05 \x03(\x0b\x32&.xyz.block.ftl.v1.StatusResponse.RouteR\x06routes\x1aT\n\nController\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n\x08\x65ndpoint\x18\x02 \x01(\tR\x08\x65ndpoint\x12\x18\n\x07version\x18\x03 \x01(\tR\x07version\x1a\xb9\x01\n\x06Runner\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1c\n\tlanguages\x18\x02 \x03(\tR\tlanguages\x12\x1a\n\x08\x65ndpoint\x18\x03 \x01(\tR\x08\x65ndpoint\x12#\n\ndeployment\x18\x05 \x01(\tH\x00R\ndeployment\x88\x01\x01\x12/\n\x06labels\x18\x06 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labelsB\r\n\x0b_deployment\x1a\xf7\x01\n\nDeployment\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n\x08language\x18\x02 \x01(\tR\x08language\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12!\n\x0cmin_replicas\x18\x04 \x01(\x05R\x0bminReplicas\x12\x1a\n\x08replicas\x18\x07 \x01(\x05R\x08replicas\x12/\n\x06labels\x18\x05 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labels\x12\x37\n\x06schema\x18\x06 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleR\x06schema\x1a\x93\x01\n\x0cIngressRoute\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12\x30\n\x04verb\x18\x02 \x01(\x0b\x32\x1c.xyz.block.ftl.v1.schema.RefR\x04verb\x12\x16\n\x06method\x18\x03 \x01(\tR\x06method\x12\x12\n\x04path\x18\x04 \x01(\tR\x04path\x1a[\n\x05Route\x12\x16\n\x06module\x18\x01 \x01(\tR\x06module\x12\x1e\n\ndeployment\x18\x02 \x01(\tR\ndeployment\x12\x1a\n\x08\x65ndpoint\x18\x03 \x01(\tR\x08\x65ndpoint"\x14\n\x12ProcessListRequest"\xaf\x03\n\x13ProcessListResponse\x12K\n\tprocesses\x18\x01 \x03(\x0b\x32-.xyz.block.ftl.v1.ProcessListResponse.ProcessR\tprocesses\x1an\n\rProcessRunner\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n\x08\x65ndpoint\x18\x02 \x01(\tR\x08\x65ndpoint\x12/\n\x06labels\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labels\x1a\xda\x01\n\x07Process\x12\x1e\n\ndeployment\x18\x01 \x01(\tR\ndeployment\x12!\n\x0cmin_replicas\x18\x02 \x01(\x05R\x0bminReplicas\x12/\n\x06labels\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labels\x12P\n\x06runner\x18\x04 \x01(\x0b\x32\x33.xyz.block.ftl.v1.ProcessListResponse.ProcessRunnerH\x00R\x06runner\x88\x01\x01\x42\t\n\x07_runner"\\\n\x18ResetSubscriptionRequest\x12@\n\x0csubscription\x18\x01 \x01(\x0b\x32\x1c.xyz.block.ftl.v1.schema.RefR\x0csubscription"\x1b\n\x19ResetSubscriptionResponse*\\\n\x14\x44\x65ploymentChangeType\x12\x14\n\x10\x44\x45PLOYMENT_ADDED\x10\x00\x12\x16\n\x12\x44\x45PLOYMENT_REMOVED\x10\x01\x12\x16\n\x12\x44\x45PLOYMENT_CHANGED\x10\x02\x32\xcf\x0c\n\x11\x43ontrollerService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse"\x03\x90\x02\x01\x12Z\n\x0bProcessList\x12$.xyz.block.ftl.v1.ProcessListRequest\x1a%.xyz.block.ftl.v1.ProcessListResponse\x12K\n\x06Status\x12\x1f.xyz.block.ftl.v1.StatusRequest\x1a .xyz.block.ftl.v1.StatusResponse\x12i\n\x10GetCertification\x12).xyz.block.ftl.v1.GetCertificationRequest\x1a*.xyz.block.ftl.v1.GetCertificationResponse\x12i\n\x10GetArtefactDiffs\x12).xyz.block.ftl.v1.GetArtefactDiffsRequest\x1a*.xyz.block.ftl.v1.GetArtefactDiffsResponse\x12\x63\n\x0eUploadArtefact\x12\'.xyz.block.ftl.v1.UploadArtefactRequest\x1a(.xyz.block.ftl.v1.UploadArtefactResponse\x12i\n\x10\x43reateDeployment\x12).xyz.block.ftl.v1.CreateDeploymentRequest\x1a*.xyz.block.ftl.v1.CreateDeploymentResponse\x12`\n\rGetDeployment\x12&.xyz.block.ftl.v1.GetDeploymentRequest\x1a\'.xyz.block.ftl.v1.GetDeploymentResponse\x12}\n\x16GetDeploymentArtefacts\x12/.xyz.block.ftl.v1.GetDeploymentArtefactsRequest\x1a\x30.xyz.block.ftl.v1.GetDeploymentArtefactsResponse0\x01\x12\x65\n\x0eRegisterRunner\x12\'.xyz.block.ftl.v1.RegisterRunnerRequest\x1a(.xyz.block.ftl.v1.RegisterRunnerResponse(\x01\x12]\n\x0cUpdateDeploy\x12%.xyz.block.ftl.v1.UpdateDeployRequest\x1a&.xyz.block.ftl.v1.UpdateDeployResponse\x12`\n\rReplaceDeploy\x12&.xyz.block.ftl.v1.ReplaceDeployRequest\x1a\'.xyz.block.ftl.v1.ReplaceDeployResponse\x12w\n\x14StreamDeploymentLogs\x12-.xyz.block.ftl.v1.StreamDeploymentLogsRequest\x1a..xyz.block.ftl.v1.StreamDeploymentLogsResponse(\x01\x12T\n\tGetSchema\x12".xyz.block.ftl.v1.GetSchemaRequest\x1a#.xyz.block.ftl.v1.GetSchemaResponse\x12Y\n\nPullSchema\x12#.xyz.block.ftl.v1.PullSchemaRequest\x1a$.xyz.block.ftl.v1.PullSchemaResponse0\x01\x12l\n\x11ResetSubscription\x12*.xyz.block.ftl.v1.ResetSubscriptionRequest\x1a+.xyz.block.ftl.v1.ResetSubscriptionResponseBDP\x01Z@github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1b\x06proto3'
-)
+from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
+from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
+from xyz.block.ftl.v1 import ftl_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_ftl__pb2
+from xyz.block.ftl.v1.schema import schema_pb2 as xyz_dot_block_dot_ftl_dot_v1_dot_schema_dot_schema__pb2
+
+
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n!xyz/block/ftl/v1/controller.proto\x12\x10xyz.block.ftl.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1axyz/block/ftl/v1/ftl.proto\x1a$xyz/block/ftl/v1/schema/schema.proto\"w\n\x17GetCertificationRequest\x12>\n\x07request\x18\x01 \x01(\x0b\x32$.xyz.block.ftl.v1.CertificateContentR\x07request\x12\x1c\n\tsignature\x18\x02 \x01(\x0cR\tsignature\"[\n\x18GetCertificationResponse\x12?\n\x0b\x63\x65rtificate\x18\x01 \x01(\x0b\x32\x1d.xyz.block.ftl.v1.CertificateR\x0b\x63\x65rtificate\"O\n\x12\x43\x65rtificateContent\x12\x1a\n\x08identity\x18\x01 \x01(\tR\x08identity\x12\x1d\n\npublic_key\x18\x02 \x01(\x0cR\tpublicKey\"\x80\x01\n\x0b\x43\x65rtificate\x12>\n\x07\x63ontent\x18\x01 \x01(\x0b\x32$.xyz.block.ftl.v1.CertificateContentR\x07\x63ontent\x12\x31\n\x14\x63ontroller_signature\x18\x03 \x01(\x0cR\x13\x63ontrollerSignature\"\x12\n\x10GetSchemaRequest\"L\n\x11GetSchemaResponse\x12\x37\n\x06schema\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.SchemaR\x06schema\"\x13\n\x11PullSchemaRequest\"\x82\x02\n\x12PullSchemaResponse\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12\x1f\n\x0bmodule_name\x18\x02 \x01(\tR\nmoduleName\x12<\n\x06schema\x18\x04 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleH\x00R\x06schema\x88\x01\x01\x12\x12\n\x04more\x18\x03 \x01(\x08R\x04more\x12G\n\x0b\x63hange_type\x18\x05 \x01(\x0e\x32&.xyz.block.ftl.v1.DeploymentChangeTypeR\nchangeTypeB\t\n\x07_schema\"@\n\x17GetArtefactDiffsRequest\x12%\n\x0e\x63lient_digests\x18\x01 \x03(\tR\rclientDigests\"\x94\x01\n\x18GetArtefactDiffsResponse\x12\'\n\x0fmissing_digests\x18\x01 \x03(\tR\x0emissingDigests\x12O\n\x10\x63lient_artefacts\x18\x02 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\x0f\x63lientArtefacts\"1\n\x15UploadArtefactRequest\x12\x18\n\x07\x63ontent\x18\x01 \x01(\x0cR\x07\x63ontent\"0\n\x16UploadArtefactResponse\x12\x16\n\x06\x64igest\x18\x02 \x01(\x0cR\x06\x64igest\"`\n\x12\x44\x65ploymentArtefact\x12\x16\n\x06\x64igest\x18\x01 \x01(\tR\x06\x64igest\x12\x12\n\x04path\x18\x02 \x01(\tR\x04path\x12\x1e\n\nexecutable\x18\x03 \x01(\x08R\nexecutable\"\xd7\x01\n\x17\x43reateDeploymentRequest\x12\x37\n\x06schema\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleR\x06schema\x12\x42\n\tartefacts\x18\x02 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\tartefacts\x12\x34\n\x06labels\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructH\x00R\x06labels\x88\x01\x01\x42\t\n\x07_labels\"\x94\x01\n\x18\x43reateDeploymentResponse\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12\x37\n\x15\x61\x63tive_deployment_key\x18\x02 \x01(\tH\x00R\x13\x61\x63tiveDeploymentKey\x88\x01\x01\x42\x18\n\x16_active_deployment_key\"\x93\x01\n\x1dGetDeploymentArtefactsRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12K\n\x0ehave_artefacts\x18\x02 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\rhaveArtefacts\"x\n\x1eGetDeploymentArtefactsResponse\x12@\n\x08\x61rtefact\x18\x01 \x01(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\x08\x61rtefact\x12\x14\n\x05\x63hunk\x18\x02 \x01(\x0cR\x05\x63hunk\"=\n\x14GetDeploymentRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\"\x94\x01\n\x15GetDeploymentResponse\x12\x37\n\x06schema\x18\x01 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleR\x06schema\x12\x42\n\tartefacts\x18\x02 \x03(\x0b\x32$.xyz.block.ftl.v1.DeploymentArtefactR\tartefacts\"\x96\x01\n\x15RegisterRunnerRequest\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n\x08\x65ndpoint\x18\x02 \x01(\tR\x08\x65ndpoint\x12\x1e\n\ndeployment\x18\x03 \x01(\tR\ndeployment\x12/\n\x06labels\x18\x05 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labels\"\x18\n\x16RegisterRunnerResponse\"_\n\x13UpdateDeployRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12!\n\x0cmin_replicas\x18\x02 \x01(\x05R\x0bminReplicas\"\x16\n\x14UpdateDeployResponse\"`\n\x14ReplaceDeployRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12!\n\x0cmin_replicas\x18\x02 \x01(\x05R\x0bminReplicas\"\x17\n\x15ReplaceDeployResponse\"\xaf\x03\n\x1bStreamDeploymentLogsRequest\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12$\n\x0brequest_key\x18\x02 \x01(\tH\x00R\nrequestKey\x88\x01\x01\x12\x39\n\ntime_stamp\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\ttimeStamp\x12\x1b\n\tlog_level\x18\x04 \x01(\x05R\x08logLevel\x12]\n\nattributes\x18\x05 \x03(\x0b\x32=.xyz.block.ftl.v1.StreamDeploymentLogsRequest.AttributesEntryR\nattributes\x12\x18\n\x07message\x18\x06 \x01(\tR\x07message\x12\x19\n\x05\x65rror\x18\x07 \x01(\tH\x01R\x05\x65rror\x88\x01\x01\x1a=\n\x0f\x41ttributesEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\x42\x0e\n\x0c_request_keyB\x08\n\x06_error\"\x1e\n\x1cStreamDeploymentLogsResponse\"\x0f\n\rStatusRequest\"\x86\t\n\x0eStatusResponse\x12M\n\x0b\x63ontrollers\x18\x01 \x03(\x0b\x32+.xyz.block.ftl.v1.StatusResponse.ControllerR\x0b\x63ontrollers\x12\x41\n\x07runners\x18\x02 \x03(\x0b\x32\'.xyz.block.ftl.v1.StatusResponse.RunnerR\x07runners\x12M\n\x0b\x64\x65ployments\x18\x03 \x03(\x0b\x32+.xyz.block.ftl.v1.StatusResponse.DeploymentR\x0b\x64\x65ployments\x12T\n\x0eingress_routes\x18\x04 \x03(\x0b\x32-.xyz.block.ftl.v1.StatusResponse.IngressRouteR\ringressRoutes\x12>\n\x06routes\x18\x05 \x03(\x0b\x32&.xyz.block.ftl.v1.StatusResponse.RouteR\x06routes\x1aT\n\nController\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n\x08\x65ndpoint\x18\x02 \x01(\tR\x08\x65ndpoint\x12\x18\n\x07version\x18\x03 \x01(\tR\x07version\x1a\xb9\x01\n\x06Runner\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1c\n\tlanguages\x18\x02 \x03(\tR\tlanguages\x12\x1a\n\x08\x65ndpoint\x18\x03 \x01(\tR\x08\x65ndpoint\x12#\n\ndeployment\x18\x05 \x01(\tH\x00R\ndeployment\x88\x01\x01\x12/\n\x06labels\x18\x06 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labelsB\r\n\x0b_deployment\x1a\xf7\x01\n\nDeployment\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n\x08language\x18\x02 \x01(\tR\x08language\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12!\n\x0cmin_replicas\x18\x04 \x01(\x05R\x0bminReplicas\x12\x1a\n\x08replicas\x18\x07 \x01(\x05R\x08replicas\x12/\n\x06labels\x18\x05 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labels\x12\x37\n\x06schema\x18\x06 \x01(\x0b\x32\x1f.xyz.block.ftl.v1.schema.ModuleR\x06schema\x1a\x93\x01\n\x0cIngressRoute\x12%\n\x0e\x64\x65ployment_key\x18\x01 \x01(\tR\rdeploymentKey\x12\x30\n\x04verb\x18\x02 \x01(\x0b\x32\x1c.xyz.block.ftl.v1.schema.RefR\x04verb\x12\x16\n\x06method\x18\x03 \x01(\tR\x06method\x12\x12\n\x04path\x18\x04 \x01(\tR\x04path\x1a[\n\x05Route\x12\x16\n\x06module\x18\x01 \x01(\tR\x06module\x12\x1e\n\ndeployment\x18\x02 \x01(\tR\ndeployment\x12\x1a\n\x08\x65ndpoint\x18\x03 \x01(\tR\x08\x65ndpoint\"\x14\n\x12ProcessListRequest\"\xaf\x03\n\x13ProcessListResponse\x12K\n\tprocesses\x18\x01 \x03(\x0b\x32-.xyz.block.ftl.v1.ProcessListResponse.ProcessR\tprocesses\x1an\n\rProcessRunner\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x1a\n\x08\x65ndpoint\x18\x02 \x01(\tR\x08\x65ndpoint\x12/\n\x06labels\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labels\x1a\xda\x01\n\x07Process\x12\x1e\n\ndeployment\x18\x01 \x01(\tR\ndeployment\x12!\n\x0cmin_replicas\x18\x02 \x01(\x05R\x0bminReplicas\x12/\n\x06labels\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructR\x06labels\x12P\n\x06runner\x18\x04 \x01(\x0b\x32\x33.xyz.block.ftl.v1.ProcessListResponse.ProcessRunnerH\x00R\x06runner\x88\x01\x01\x42\t\n\x07_runner\"\\\n\x18ResetSubscriptionRequest\x12@\n\x0csubscription\x18\x01 \x01(\x0b\x32\x1c.xyz.block.ftl.v1.schema.RefR\x0csubscription\"\x1b\n\x19ResetSubscriptionResponse*\\\n\x14\x44\x65ploymentChangeType\x12\x14\n\x10\x44\x45PLOYMENT_ADDED\x10\x00\x12\x16\n\x12\x44\x45PLOYMENT_REMOVED\x10\x01\x12\x16\n\x12\x44\x45PLOYMENT_CHANGED\x10\x02\x32\xcf\x0c\n\x11\x43ontrollerService\x12J\n\x04Ping\x12\x1d.xyz.block.ftl.v1.PingRequest\x1a\x1e.xyz.block.ftl.v1.PingResponse\"\x03\x90\x02\x01\x12Z\n\x0bProcessList\x12$.xyz.block.ftl.v1.ProcessListRequest\x1a%.xyz.block.ftl.v1.ProcessListResponse\x12K\n\x06Status\x12\x1f.xyz.block.ftl.v1.StatusRequest\x1a .xyz.block.ftl.v1.StatusResponse\x12i\n\x10GetCertification\x12).xyz.block.ftl.v1.GetCertificationRequest\x1a*.xyz.block.ftl.v1.GetCertificationResponse\x12i\n\x10GetArtefactDiffs\x12).xyz.block.ftl.v1.GetArtefactDiffsRequest\x1a*.xyz.block.ftl.v1.GetArtefactDiffsResponse\x12\x63\n\x0eUploadArtefact\x12\'.xyz.block.ftl.v1.UploadArtefactRequest\x1a(.xyz.block.ftl.v1.UploadArtefactResponse\x12i\n\x10\x43reateDeployment\x12).xyz.block.ftl.v1.CreateDeploymentRequest\x1a*.xyz.block.ftl.v1.CreateDeploymentResponse\x12`\n\rGetDeployment\x12&.xyz.block.ftl.v1.GetDeploymentRequest\x1a\'.xyz.block.ftl.v1.GetDeploymentResponse\x12}\n\x16GetDeploymentArtefacts\x12/.xyz.block.ftl.v1.GetDeploymentArtefactsRequest\x1a\x30.xyz.block.ftl.v1.GetDeploymentArtefactsResponse0\x01\x12\x65\n\x0eRegisterRunner\x12\'.xyz.block.ftl.v1.RegisterRunnerRequest\x1a(.xyz.block.ftl.v1.RegisterRunnerResponse(\x01\x12]\n\x0cUpdateDeploy\x12%.xyz.block.ftl.v1.UpdateDeployRequest\x1a&.xyz.block.ftl.v1.UpdateDeployResponse\x12`\n\rReplaceDeploy\x12&.xyz.block.ftl.v1.ReplaceDeployRequest\x1a\'.xyz.block.ftl.v1.ReplaceDeployResponse\x12w\n\x14StreamDeploymentLogs\x12-.xyz.block.ftl.v1.StreamDeploymentLogsRequest\x1a..xyz.block.ftl.v1.StreamDeploymentLogsResponse(\x01\x12T\n\tGetSchema\x12\".xyz.block.ftl.v1.GetSchemaRequest\x1a#.xyz.block.ftl.v1.GetSchemaResponse\x12Y\n\nPullSchema\x12#.xyz.block.ftl.v1.PullSchemaRequest\x1a$.xyz.block.ftl.v1.PullSchemaResponse0\x01\x12l\n\x11ResetSubscription\x12*.xyz.block.ftl.v1.ResetSubscriptionRequest\x1a+.xyz.block.ftl.v1.ResetSubscriptionResponseBDP\x01Z@github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(
-    DESCRIPTOR, "xyz.block.ftl.v1.controller_pb2", _globals
-)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'xyz.block.ftl.v1.controller_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-    _globals["DESCRIPTOR"]._loaded_options = None
-    _globals[
-        "DESCRIPTOR"
-    ]._serialized_options = (
-        b"P\001Z@github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1"
-    )
-    _globals["_STREAMDEPLOYMENTLOGSREQUEST_ATTRIBUTESENTRY"]._loaded_options = None
-    _globals[
-        "_STREAMDEPLOYMENTLOGSREQUEST_ATTRIBUTESENTRY"
-    ]._serialized_options = b"8\001"
-    _globals["_CONTROLLERSERVICE"].methods_by_name["Ping"]._loaded_options = None
-    _globals["_CONTROLLERSERVICE"].methods_by_name[
-        "Ping"
-    ]._serialized_options = b"\220\002\001"
-    _globals["_DEPLOYMENTCHANGETYPE"]._serialized_start = 4907
-    _globals["_DEPLOYMENTCHANGETYPE"]._serialized_end = 4999
-    _globals["_GETCERTIFICATIONREQUEST"]._serialized_start = 184
-    _globals["_GETCERTIFICATIONREQUEST"]._serialized_end = 303
-    _globals["_GETCERTIFICATIONRESPONSE"]._serialized_start = 305
-    _globals["_GETCERTIFICATIONRESPONSE"]._serialized_end = 396
-    _globals["_CERTIFICATECONTENT"]._serialized_start = 398
-    _globals["_CERTIFICATECONTENT"]._serialized_end = 477
-    _globals["_CERTIFICATE"]._serialized_start = 480
-    _globals["_CERTIFICATE"]._serialized_end = 608
-    _globals["_GETSCHEMAREQUEST"]._serialized_start = 610
-    _globals["_GETSCHEMAREQUEST"]._serialized_end = 628
-    _globals["_GETSCHEMARESPONSE"]._serialized_start = 630
-    _globals["_GETSCHEMARESPONSE"]._serialized_end = 706
-    _globals["_PULLSCHEMAREQUEST"]._serialized_start = 708
-    _globals["_PULLSCHEMAREQUEST"]._serialized_end = 727
-    _globals["_PULLSCHEMARESPONSE"]._serialized_start = 730
-    _globals["_PULLSCHEMARESPONSE"]._serialized_end = 988
-    _globals["_GETARTEFACTDIFFSREQUEST"]._serialized_start = 990
-    _globals["_GETARTEFACTDIFFSREQUEST"]._serialized_end = 1054
-    _globals["_GETARTEFACTDIFFSRESPONSE"]._serialized_start = 1057
-    _globals["_GETARTEFACTDIFFSRESPONSE"]._serialized_end = 1205
-    _globals["_UPLOADARTEFACTREQUEST"]._serialized_start = 1207
-    _globals["_UPLOADARTEFACTREQUEST"]._serialized_end = 1256
-    _globals["_UPLOADARTEFACTRESPONSE"]._serialized_start = 1258
-    _globals["_UPLOADARTEFACTRESPONSE"]._serialized_end = 1306
-    _globals["_DEPLOYMENTARTEFACT"]._serialized_start = 1308
-    _globals["_DEPLOYMENTARTEFACT"]._serialized_end = 1404
-    _globals["_CREATEDEPLOYMENTREQUEST"]._serialized_start = 1407
-    _globals["_CREATEDEPLOYMENTREQUEST"]._serialized_end = 1622
-    _globals["_CREATEDEPLOYMENTRESPONSE"]._serialized_start = 1625
-    _globals["_CREATEDEPLOYMENTRESPONSE"]._serialized_end = 1773
-    _globals["_GETDEPLOYMENTARTEFACTSREQUEST"]._serialized_start = 1776
-    _globals["_GETDEPLOYMENTARTEFACTSREQUEST"]._serialized_end = 1923
-    _globals["_GETDEPLOYMENTARTEFACTSRESPONSE"]._serialized_start = 1925
-    _globals["_GETDEPLOYMENTARTEFACTSRESPONSE"]._serialized_end = 2045
-    _globals["_GETDEPLOYMENTREQUEST"]._serialized_start = 2047
-    _globals["_GETDEPLOYMENTREQUEST"]._serialized_end = 2108
-    _globals["_GETDEPLOYMENTRESPONSE"]._serialized_start = 2111
-    _globals["_GETDEPLOYMENTRESPONSE"]._serialized_end = 2259
-    _globals["_REGISTERRUNNERREQUEST"]._serialized_start = 2262
-    _globals["_REGISTERRUNNERREQUEST"]._serialized_end = 2412
-    _globals["_REGISTERRUNNERRESPONSE"]._serialized_start = 2414
-    _globals["_REGISTERRUNNERRESPONSE"]._serialized_end = 2438
-    _globals["_UPDATEDEPLOYREQUEST"]._serialized_start = 2440
-    _globals["_UPDATEDEPLOYREQUEST"]._serialized_end = 2535
-    _globals["_UPDATEDEPLOYRESPONSE"]._serialized_start = 2537
-    _globals["_UPDATEDEPLOYRESPONSE"]._serialized_end = 2559
-    _globals["_REPLACEDEPLOYREQUEST"]._serialized_start = 2561
-    _globals["_REPLACEDEPLOYREQUEST"]._serialized_end = 2657
-    _globals["_REPLACEDEPLOYRESPONSE"]._serialized_start = 2659
-    _globals["_REPLACEDEPLOYRESPONSE"]._serialized_end = 2682
-    _globals["_STREAMDEPLOYMENTLOGSREQUEST"]._serialized_start = 2685
-    _globals["_STREAMDEPLOYMENTLOGSREQUEST"]._serialized_end = 3116
-    _globals["_STREAMDEPLOYMENTLOGSREQUEST_ATTRIBUTESENTRY"]._serialized_start = 3029
-    _globals["_STREAMDEPLOYMENTLOGSREQUEST_ATTRIBUTESENTRY"]._serialized_end = 3090
-    _globals["_STREAMDEPLOYMENTLOGSRESPONSE"]._serialized_start = 3118
-    _globals["_STREAMDEPLOYMENTLOGSRESPONSE"]._serialized_end = 3148
-    _globals["_STATUSREQUEST"]._serialized_start = 3150
-    _globals["_STATUSREQUEST"]._serialized_end = 3165
-    _globals["_STATUSRESPONSE"]._serialized_start = 3168
-    _globals["_STATUSRESPONSE"]._serialized_end = 4326
-    _globals["_STATUSRESPONSE_CONTROLLER"]._serialized_start = 3561
-    _globals["_STATUSRESPONSE_CONTROLLER"]._serialized_end = 3645
-    _globals["_STATUSRESPONSE_RUNNER"]._serialized_start = 3648
-    _globals["_STATUSRESPONSE_RUNNER"]._serialized_end = 3833
-    _globals["_STATUSRESPONSE_DEPLOYMENT"]._serialized_start = 3836
-    _globals["_STATUSRESPONSE_DEPLOYMENT"]._serialized_end = 4083
-    _globals["_STATUSRESPONSE_INGRESSROUTE"]._serialized_start = 4086
-    _globals["_STATUSRESPONSE_INGRESSROUTE"]._serialized_end = 4233
-    _globals["_STATUSRESPONSE_ROUTE"]._serialized_start = 4235
-    _globals["_STATUSRESPONSE_ROUTE"]._serialized_end = 4326
-    _globals["_PROCESSLISTREQUEST"]._serialized_start = 4328
-    _globals["_PROCESSLISTREQUEST"]._serialized_end = 4348
-    _globals["_PROCESSLISTRESPONSE"]._serialized_start = 4351
-    _globals["_PROCESSLISTRESPONSE"]._serialized_end = 4782
-    _globals["_PROCESSLISTRESPONSE_PROCESSRUNNER"]._serialized_start = 4451
-    _globals["_PROCESSLISTRESPONSE_PROCESSRUNNER"]._serialized_end = 4561
-    _globals["_PROCESSLISTRESPONSE_PROCESS"]._serialized_start = 4564
-    _globals["_PROCESSLISTRESPONSE_PROCESS"]._serialized_end = 4782
-    _globals["_RESETSUBSCRIPTIONREQUEST"]._serialized_start = 4784
-    _globals["_RESETSUBSCRIPTIONREQUEST"]._serialized_end = 4876
-    _globals["_RESETSUBSCRIPTIONRESPONSE"]._serialized_start = 4878
-    _globals["_RESETSUBSCRIPTIONRESPONSE"]._serialized_end = 4905
-    _globals["_CONTROLLERSERVICE"]._serialized_start = 5002
-    _globals["_CONTROLLERSERVICE"]._serialized_end = 6617
+  _globals['DESCRIPTOR']._loaded_options = None
+  _globals['DESCRIPTOR']._serialized_options = b'P\001Z@github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1'
+  _globals['_STREAMDEPLOYMENTLOGSREQUEST_ATTRIBUTESENTRY']._loaded_options = None
+  _globals['_STREAMDEPLOYMENTLOGSREQUEST_ATTRIBUTESENTRY']._serialized_options = b'8\001'
+  _globals['_CONTROLLERSERVICE'].methods_by_name['Ping']._loaded_options = None
+  _globals['_CONTROLLERSERVICE'].methods_by_name['Ping']._serialized_options = b'\220\002\001'
+  _globals['_DEPLOYMENTCHANGETYPE']._serialized_start=4907
+  _globals['_DEPLOYMENTCHANGETYPE']._serialized_end=4999
+  _globals['_GETCERTIFICATIONREQUEST']._serialized_start=184
+  _globals['_GETCERTIFICATIONREQUEST']._serialized_end=303
+  _globals['_GETCERTIFICATIONRESPONSE']._serialized_start=305
+  _globals['_GETCERTIFICATIONRESPONSE']._serialized_end=396
+  _globals['_CERTIFICATECONTENT']._serialized_start=398
+  _globals['_CERTIFICATECONTENT']._serialized_end=477
+  _globals['_CERTIFICATE']._serialized_start=480
+  _globals['_CERTIFICATE']._serialized_end=608
+  _globals['_GETSCHEMAREQUEST']._serialized_start=610
+  _globals['_GETSCHEMAREQUEST']._serialized_end=628
+  _globals['_GETSCHEMARESPONSE']._serialized_start=630
+  _globals['_GETSCHEMARESPONSE']._serialized_end=706
+  _globals['_PULLSCHEMAREQUEST']._serialized_start=708
+  _globals['_PULLSCHEMAREQUEST']._serialized_end=727
+  _globals['_PULLSCHEMARESPONSE']._serialized_start=730
+  _globals['_PULLSCHEMARESPONSE']._serialized_end=988
+  _globals['_GETARTEFACTDIFFSREQUEST']._serialized_start=990
+  _globals['_GETARTEFACTDIFFSREQUEST']._serialized_end=1054
+  _globals['_GETARTEFACTDIFFSRESPONSE']._serialized_start=1057
+  _globals['_GETARTEFACTDIFFSRESPONSE']._serialized_end=1205
+  _globals['_UPLOADARTEFACTREQUEST']._serialized_start=1207
+  _globals['_UPLOADARTEFACTREQUEST']._serialized_end=1256
+  _globals['_UPLOADARTEFACTRESPONSE']._serialized_start=1258
+  _globals['_UPLOADARTEFACTRESPONSE']._serialized_end=1306
+  _globals['_DEPLOYMENTARTEFACT']._serialized_start=1308
+  _globals['_DEPLOYMENTARTEFACT']._serialized_end=1404
+  _globals['_CREATEDEPLOYMENTREQUEST']._serialized_start=1407
+  _globals['_CREATEDEPLOYMENTREQUEST']._serialized_end=1622
+  _globals['_CREATEDEPLOYMENTRESPONSE']._serialized_start=1625
+  _globals['_CREATEDEPLOYMENTRESPONSE']._serialized_end=1773
+  _globals['_GETDEPLOYMENTARTEFACTSREQUEST']._serialized_start=1776
+  _globals['_GETDEPLOYMENTARTEFACTSREQUEST']._serialized_end=1923
+  _globals['_GETDEPLOYMENTARTEFACTSRESPONSE']._serialized_start=1925
+  _globals['_GETDEPLOYMENTARTEFACTSRESPONSE']._serialized_end=2045
+  _globals['_GETDEPLOYMENTREQUEST']._serialized_start=2047
+  _globals['_GETDEPLOYMENTREQUEST']._serialized_end=2108
+  _globals['_GETDEPLOYMENTRESPONSE']._serialized_start=2111
+  _globals['_GETDEPLOYMENTRESPONSE']._serialized_end=2259
+  _globals['_REGISTERRUNNERREQUEST']._serialized_start=2262
+  _globals['_REGISTERRUNNERREQUEST']._serialized_end=2412
+  _globals['_REGISTERRUNNERRESPONSE']._serialized_start=2414
+  _globals['_REGISTERRUNNERRESPONSE']._serialized_end=2438
+  _globals['_UPDATEDEPLOYREQUEST']._serialized_start=2440
+  _globals['_UPDATEDEPLOYREQUEST']._serialized_end=2535
+  _globals['_UPDATEDEPLOYRESPONSE']._serialized_start=2537
+  _globals['_UPDATEDEPLOYRESPONSE']._serialized_end=2559
+  _globals['_REPLACEDEPLOYREQUEST']._serialized_start=2561
+  _globals['_REPLACEDEPLOYREQUEST']._serialized_end=2657
+  _globals['_REPLACEDEPLOYRESPONSE']._serialized_start=2659
+  _globals['_REPLACEDEPLOYRESPONSE']._serialized_end=2682
+  _globals['_STREAMDEPLOYMENTLOGSREQUEST']._serialized_start=2685
+  _globals['_STREAMDEPLOYMENTLOGSREQUEST']._serialized_end=3116
+  _globals['_STREAMDEPLOYMENTLOGSREQUEST_ATTRIBUTESENTRY']._serialized_start=3029
+  _globals['_STREAMDEPLOYMENTLOGSREQUEST_ATTRIBUTESENTRY']._serialized_end=3090
+  _globals['_STREAMDEPLOYMENTLOGSRESPONSE']._serialized_start=3118
+  _globals['_STREAMDEPLOYMENTLOGSRESPONSE']._serialized_end=3148
+  _globals['_STATUSREQUEST']._serialized_start=3150
+  _globals['_STATUSREQUEST']._serialized_end=3165
+  _globals['_STATUSRESPONSE']._serialized_start=3168
+  _globals['_STATUSRESPONSE']._serialized_end=4326
+  _globals['_STATUSRESPONSE_CONTROLLER']._serialized_start=3561
+  _globals['_STATUSRESPONSE_CONTROLLER']._serialized_end=3645
+  _globals['_STATUSRESPONSE_RUNNER']._serialized_start=3648
+  _globals['_STATUSRESPONSE_RUNNER']._serialized_end=3833
+  _globals['_STATUSRESPONSE_DEPLOYMENT']._serialized_start=3836
+  _globals['_STATUSRESPONSE_DEPLOYMENT']._serialized_end=4083
+  _globals['_STATUSRESPONSE_INGRESSROUTE']._serialized_start=4086
+  _globals['_STATUSRESPONSE_INGRESSROUTE']._serialized_end=4233
+  _globals['_STATUSRESPONSE_ROUTE']._serialized_start=4235
+  _globals['_STATUSRESPONSE_ROUTE']._serialized_end=4326
+  _globals['_PROCESSLISTREQUEST']._serialized_start=4328
+  _globals['_PROCESSLISTREQUEST']._serialized_end=4348
+  _globals['_PROCESSLISTRESPONSE']._serialized_start=4351
+  _globals['_PROCESSLISTRESPONSE']._serialized_end=4782
+  _globals['_PROCESSLISTRESPONSE_PROCESSRUNNER']._serialized_start=4451
+  _globals['_PROCESSLISTRESPONSE_PROCESSRUNNER']._serialized_end=4561
+  _globals['_PROCESSLISTRESPONSE_PROCESS']._serialized_start=4564
+  _globals['_PROCESSLISTRESPONSE_PROCESS']._serialized_end=4782
+  _globals['_RESETSUBSCRIPTIONREQUEST']._serialized_start=4784
+  _globals['_RESETSUBSCRIPTIONREQUEST']._serialized_end=4876
+  _globals['_RESETSUBSCRIPTIONRESPONSE']._serialized_start=4878
+  _globals['_RESETSUBSCRIPTIONRESPONSE']._serialized_end=4905
+  _globals['_CONTROLLERSERVICE']._serialized_start=5002
+  _globals['_CONTROLLERSERVICE']._serialized_end=6617
 # @@protoc_insertion_point(module_scope)
