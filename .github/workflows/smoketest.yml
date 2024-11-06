@@ -1,4 +1,5 @@
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -40,6 +41,8 @@ jobs:
           set -euo pipefail
           echo "Deploying the tagged release to the cluster"
           cd deployment && just deploy-version ${{ env.LATEST_VERSION }} && cd ..
+      - name: Build Language Plugins
+        run: just build-language-plugins
       - name: Smoke test the tagged release images
         run: |
           set -euo pipefail
@@ -52,6 +55,8 @@ jobs:
           fetch-depth: 1
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
+      - name: Build Language Plugins
+        run: just build-language-plugins
       - name: Smoke test HEAD with a full deploy to test upgrade path
         run: |
           set -euo pipefail
