@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	PropertyDBReadEndpoint      = "db:read_endpoint"
-	PropertyDBWriteEndpoint     = "db:write_endpoint"
-	PropertyMasterUserSecretARN = "db:maser_user_secret_arn"
+	PropertyDBReadEndpoint  = "db:read_endpoint"
+	PropertyDBWriteEndpoint = "db:write_endpoint"
+	PropertyMasterUserARN   = "db:maser_user_secret_arn"
 )
 
 type Config struct {
@@ -174,7 +174,7 @@ func (c *CloudformationProvisioner) resourceToCF(cluster, module string, templat
 		})
 		addOutput(template.Outputs, goformation.GetAtt(clusterID, "MasterUserSecret.SecretArn"), &CloudformationOutputKey{
 			ResourceID:   resource.ResourceId,
-			PropertyName: PropertyMasterUserSecretARN,
+			PropertyName: PropertyMasterUserARN,
 		})
 		return nil
 	}

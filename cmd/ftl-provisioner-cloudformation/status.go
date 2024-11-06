@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -13,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+
+	_ "github.com/lib/pq"
 )
 
 func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
@@ -104,7 +109,11 @@ func outputsByResourceID(outputs []types.Output) (map[string][]types.Output, err
 func outputsByPropertyName(outputs []types.Output) (map[string]types.Output, error) {
 	m := make(map[string]types.Output)
 	for _, output := range outputs {
-		m[*output.OutputKey] = output
+		key, err := decodeOutputKey(output)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode output key: %w", err)
+		}
+		m[key.PropertyName] = output
 	}
 	return m, nil
 }
@@ -140,7 +149,10 @@ func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, t
 		return fmt.Errorf("failed to group outputs by property name: %w", err)
 	}
 
-	secretARN := *byName[PropertyMasterUserSecretARN].OutputValue
+	fmt.Fprintf(os.Stderr, "byName: %v\n", byName)
+
+	// TODO: Move to provisioner workflow
+	secretARN := *byName[PropertyMasterUserARN].OutputValue
 	username, password, err := c.secretARNToUsernamePassword(ctx, secretARN)
 	if err != nil {
 		return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
@@ -148,6 +160,22 @@ func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, t
 
 	to.ReadDsn = endpointToDSN(*byName[PropertyDBReadEndpoint].OutputValue, resourceID, 5432, username, password)
 	to.WriteDsn = endpointToDSN(*byName[PropertyDBWriteEndpoint].OutputValue, resourceID, 5432, username, password)
+	adminEndpoint := endpointToDSN(*byName[PropertyDBReadEndpoint].OutputValue, "postgres", 5432, username, password)
+
+	// Connect to postgres without a specific database to create the new one
+	db, err := sql.Open("postgres", adminEndpoint)
+	if err != nil {
+		return fmt.Errorf("failed to connect to postgres: %w", err)
+	}
+	defer db.Close()
+
+	// Create the database if it doesn't exist
+	if _, err := db.ExecContext(ctx, "CREATE DATABASE "+resourceID); err != nil {
+		// Ignore if database already exists
+		if !strings.Contains(err.Error(), "already exists") {
+			return fmt.Errorf("failed to create database: %w", err)
+		}
+	}
 
 	return nil
 }
