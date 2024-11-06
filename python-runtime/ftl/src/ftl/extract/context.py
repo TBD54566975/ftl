@@ -91,4 +91,4 @@ class RefKey:
         return hash((self.module, self.name))
 
     def __repr__(self):
-        return f"VerbKey(module={self.module}, name={self.name})"
+        return f"RefKey(module={self.module}, name={self.name})"
