@@ -59,6 +59,7 @@ jobs:
             ["jvm"]=2439
             ["security"]=2438
             ["dx"]=2436
+            ["python"]=3339
           )
 
           issue_number=${label_to_issue_map["${{ matrix.label }}"]}
