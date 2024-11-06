@@ -270,9 +270,19 @@ func (r *DeploymentProvisioner) handleNewDeployment(ctx context.Context, dep *sc
 	// runner images use the same tag as the controller
 	var runnerImage string
 	if dep.Runtime.Image != "" {
-		runnerImage = strings.ReplaceAll(ourImage, "ftl0/ftl-controller", dep.Runtime.Image)
+		if strings.HasPrefix(dep.Runtime.Image, "ftl0/") {
+			// Images in the ftl0 namespace should use the same tag as the controller and use the same namespace as ourImage
+			runnerImage = strings.ReplaceAll(ourImage, "ftl-controller", dep.Runtime.Image[len(`ftl0/`):])
+		} else {
+			// Images outside of the ftl0 namespace should use the same tag as the controller
+			ourImageComponents := strings.Split(ourImage, ":")
+			if len(ourImageComponents) != 2 {
+				return fmt.Errorf("expected <name>:<tag> for image name %q", ourImage)
+			}
+			runnerImage = dep.Runtime.Image + ":" + ourImageComponents[1]
+		}
 	} else {
-		runnerImage = strings.ReplaceAll(ourImage, "ftl0/ftl-controller", "ftl0/ftl-runner")
+		runnerImage = strings.ReplaceAll(ourImage, "controller", "runner")
 	}
 
 	deployment.Name = name
