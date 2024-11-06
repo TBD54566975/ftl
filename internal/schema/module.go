@@ -241,7 +241,7 @@ func (m *Module) ToProto() proto.Message {
 		if m.Runtime.Arch != "" {
 			runtime.Arch = &m.Runtime.Arch
 		}
-		if m.Runtime.Arch != "" {
+		if m.Runtime.Image != "" {
 			runtime.Image = &m.Runtime.Image
 		}
 	}
