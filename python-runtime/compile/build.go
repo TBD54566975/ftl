@@ -40,6 +40,9 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 
 	buildDir := buildDir(config.Dir)
 
+	// TODO: call the python schema extractor. grab the output of le script. unmarshal into schema proto. unmarshal that into go type. return
+	// same with build errors
+
 	if err := internal.ScaffoldZip(buildTemplateFiles(), buildDir, mctx, scaffolder.Functions(scaffoldFuncs)); err != nil {
 		return moduleSch, nil, fmt.Errorf("failed to scaffold build template: %w", err)
 	}
