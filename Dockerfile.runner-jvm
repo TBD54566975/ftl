@@ -17,4 +17,3 @@ WORKDIR /root/
 ENV PATH="/root/jdk/bin:$PATH"
 ENV JAVA_HOME="/root/jdk"
 COPY --from=builder /hermit/pkg/openjdk-17.0.8_7/ /root/jdk/
-RUN mkdir deployments
