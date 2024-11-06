@@ -28,13 +28,6 @@ func BeginGrpcScaling(ctx context.Context, url url.URL, leaser leases.Leaser, ha
 		// Grab a lease to take control of runner scaling
 		lease, leaseContext, err := leaser.AcquireLease(ctx, leases.SystemKey("ftl-scaling", "runner-creation"), leaseTimeout, optional.None[any]())
 		if err == nil {
-			defer func(lease leases.Lease) {
-				err := lease.Release()
-				if err != nil {
-					logger := log.FromContext(ctx)
-					logger.Errorf(err, "Failed to release lease")
-				}
-			}(lease)
 			// If we get it then we take over runner scaling
 			runGrpcScaling(leaseContext, url, handler)
 		} else if !errors.Is(err, leases.ErrConflict) {
@@ -43,8 +36,15 @@ func BeginGrpcScaling(ctx context.Context, url url.URL, leaser leases.Leaser, ha
 		}
 		select {
 		case <-ctx.Done():
+			if lease != nil {
+				err := lease.Release()
+				if err != nil {
+					logger := log.FromContext(ctx)
+					logger.Errorf(err, "Failed to release lease")
+				}
+			}
 			return
-		case <-time.After(leaseTimeout):
+		case <-leaseContext.Done():
 		}
 	}
 }
