@@ -4,36 +4,10 @@ import threading
 
 from ftl.protos.xyz.block.ftl.v1.schema import schema_pb2 as schemapb
 
-"""Global context across multiple files in a package."""
-
-
-class GlobalExtractionContext:
-    def __init__(self):
-        manager = multiprocessing.Manager()
-        self.needs_extraction = manager.dict()
-        self.verbs = manager.dict()
-        self.data = manager.dict()
-
-    def deserialize(self):
-        deserialized_decls = {}
-        for ref_key, serialized_decl in self.verbs.items():
-            decl = schemapb.Verb()
-            decl.ParseFromString(serialized_decl)
-            deserialized_decls[ref_key] = decl
-        for ref_key, serialized_decl in self.data.items():
-            decl = schemapb.Data()
-            decl.ParseFromString(serialized_decl)
-            deserialized_decls[ref_key] = decl
-        return deserialized_decls
-
-    def init_local_context(self):
-        return LocalExtractionContext(self.needs_extraction, self.verbs, self.data)
-
-
-"""Local context for a single Python file."""
-
 
 class LocalExtractionContext:
+    """Local context for a single Python file."""
+
     def __init__(self, needs_extraction, verbs, data):
         self.verbs = verbs
         self.data = data
@@ -76,6 +50,31 @@ class LocalExtractionContext:
             spec.loader.exec_module(module)
             self.module_cache[file_path] = module
             return module
+
+
+class GlobalExtractionContext:
+    """Global context across multiple files in a package."""
+
+    def __init__(self):
+        manager = multiprocessing.Manager()
+        self.needs_extraction = manager.dict()
+        self.verbs = manager.dict()
+        self.data = manager.dict()
+
+    def deserialize(self):
+        deserialized_decls = {}
+        for ref_key, serialized_decl in self.verbs.items():
+            decl = schemapb.Verb()
+            decl.ParseFromString(serialized_decl)
+            deserialized_decls[ref_key] = decl
+        for ref_key, serialized_decl in self.data.items():
+            decl = schemapb.Data()
+            decl.ParseFromString(serialized_decl)
+            deserialized_decls[ref_key] = decl
+        return deserialized_decls
+
+    def init_local_context(self) -> LocalExtractionContext:
+        return LocalExtractionContext(self.needs_extraction, self.verbs, self.data)
 
 
 class RefKey:
