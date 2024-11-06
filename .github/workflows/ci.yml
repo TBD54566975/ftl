@@ -236,7 +236,7 @@ jobs:
       - uses: cashapp/activate-hermit@v1.1.3
       - uses: ./.github/actions/build-cache
       - run: just build-docker provisioner
-  docker-build-runner:
+  docker-build-runners:
     name: Build Runner Docker Images
     # if: github.event_name != 'pull_request' || github.event.action == 'enqueued' || contains( github.event.pull_request.labels.*.name, 'run-all')
     runs-on: ubuntu-latest
