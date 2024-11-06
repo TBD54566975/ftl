@@ -1,3 +1,3 @@
-from .decorators import verb
+from .verb import verb
 
 __all__ = ["verb"]
