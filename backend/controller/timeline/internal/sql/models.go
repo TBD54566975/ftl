@@ -23,6 +23,8 @@ const (
 	EventTypeIngress           EventType = "ingress"
 	EventTypeCronScheduled     EventType = "cron_scheduled"
 	EventTypeAsyncExecute      EventType = "async_execute"
+	EventTypePubsubPublish     EventType = "pubsub_publish"
+	EventTypePubsubConsume     EventType = "pubsub_consume"
 )
 
 func (e *EventType) Scan(src interface{}) error {

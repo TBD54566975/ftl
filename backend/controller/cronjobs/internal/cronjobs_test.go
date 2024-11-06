@@ -47,7 +47,7 @@ func TestNewCronJobsForModule(t *testing.T) {
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	cjs := cronjobs.NewForTesting(ctx, key, "test.com", encryption, timelineSrv, *dal, clk)
 
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
 	parentDAL := parentdal.New(ctx, conn, encryption, pubSub, cjs)
 	moduleName := "initial"
 	jobsToCreate := newCronJobs(t, moduleName, "* * * * * *", clk, 2) // every minute

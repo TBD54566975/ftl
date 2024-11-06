@@ -19,6 +19,8 @@ enum EventType {
   EVENT_TYPE_INGRESS = 5;
   EVENT_TYPE_CRON_SCHEDULED = 6;
   EVENT_TYPE_ASYNC_EXECUTE = 7;
+  EVENT_TYPE_PUBSUB_PUBLISH = 8;
+  EVENT_TYPE_PUBSUB_CONSUME = 9;
 }
 
 enum AsyncExecuteEventType {
@@ -110,6 +112,28 @@ message AsyncExecuteEvent {
   google.protobuf.Duration duration = 5;
   AsyncExecuteEventType async_event_type = 6;
   optional string error = 7;
+}
+
+message PubSubPublishEvent {
+  string deployment_key = 1;
+  optional string request_key = 2;
+  schema.Ref verb_ref = 3;
+  google.protobuf.Timestamp time_stamp = 4;
+  google.protobuf.Duration duration = 5;
+  string topic = 6;
+  string request = 7;
+  optional string error = 8;
+}
+
+message PubSubConsumeEvent {
+  string deployment_key = 1;
+  optional string request_key = 2;
+  optional string dest_verb_module = 3;
+  optional string dest_verb_name = 4;
+  google.protobuf.Timestamp time_stamp = 5;
+  google.protobuf.Duration duration = 6;
+  string topic = 7;
+  optional string error = 8;
 }
 
 message Config {
@@ -288,6 +312,8 @@ message Event {
     IngressEvent ingress = 7;
     CronScheduledEvent cron_scheduled = 8;
     AsyncExecuteEvent async_execute = 9;
+    PubSubPublishEvent pubsub_publish = 10;
+    PubSubConsumeEvent pubsub_consume = 11;
   }
 }
 

@@ -50,6 +50,16 @@ export enum EventType {
    * @generated from enum value: EVENT_TYPE_ASYNC_EXECUTE = 7;
    */
   ASYNC_EXECUTE = 7,
+
+  /**
+   * @generated from enum value: EVENT_TYPE_PUBSUB_PUBLISH = 8;
+   */
+  PUBSUB_PUBLISH = 8,
+
+  /**
+   * @generated from enum value: EVENT_TYPE_PUBSUB_CONSUME = 9;
+   */
+  PUBSUB_CONSUME = 9,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EventType)
 proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
@@ -61,6 +71,8 @@ proto3.util.setEnumType(EventType, "xyz.block.ftl.v1.console.EventType", [
   { no: 5, name: "EVENT_TYPE_INGRESS" },
   { no: 6, name: "EVENT_TYPE_CRON_SCHEDULED" },
   { no: 7, name: "EVENT_TYPE_ASYNC_EXECUTE" },
+  { no: 8, name: "EVENT_TYPE_PUBSUB_PUBLISH" },
+  { no: 9, name: "EVENT_TYPE_PUBSUB_CONSUME" },
 ]);
 
 /**
@@ -665,6 +677,164 @@ export class AsyncExecuteEvent extends Message<AsyncExecuteEvent> {
 
   static equals(a: AsyncExecuteEvent | PlainMessage<AsyncExecuteEvent> | undefined, b: AsyncExecuteEvent | PlainMessage<AsyncExecuteEvent> | undefined): boolean {
     return proto3.util.equals(AsyncExecuteEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.PubSubPublishEvent
+ */
+export class PubSubPublishEvent extends Message<PubSubPublishEvent> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: optional string request_key = 2;
+   */
+  requestKey?: string;
+
+  /**
+   * @generated from field: xyz.block.ftl.v1.schema.Ref verb_ref = 3;
+   */
+  verbRef?: Ref;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 4;
+   */
+  timeStamp?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Duration duration = 5;
+   */
+  duration?: Duration;
+
+  /**
+   * @generated from field: string topic = 6;
+   */
+  topic = "";
+
+  /**
+   * @generated from field: string request = 7;
+   */
+  request = "";
+
+  /**
+   * @generated from field: optional string error = 8;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<PubSubPublishEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.PubSubPublishEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "verb_ref", kind: "message", T: Ref },
+    { no: 4, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 5, name: "duration", kind: "message", T: Duration },
+    { no: 6, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PubSubPublishEvent {
+    return new PubSubPublishEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PubSubPublishEvent {
+    return new PubSubPublishEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PubSubPublishEvent {
+    return new PubSubPublishEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PubSubPublishEvent | PlainMessage<PubSubPublishEvent> | undefined, b: PubSubPublishEvent | PlainMessage<PubSubPublishEvent> | undefined): boolean {
+    return proto3.util.equals(PubSubPublishEvent, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.PubSubConsumeEvent
+ */
+export class PubSubConsumeEvent extends Message<PubSubConsumeEvent> {
+  /**
+   * @generated from field: string deployment_key = 1;
+   */
+  deploymentKey = "";
+
+  /**
+   * @generated from field: optional string request_key = 2;
+   */
+  requestKey?: string;
+
+  /**
+   * @generated from field: optional string dest_verb_module = 3;
+   */
+  destVerbModule?: string;
+
+  /**
+   * @generated from field: optional string dest_verb_name = 4;
+   */
+  destVerbName?: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp time_stamp = 5;
+   */
+  timeStamp?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Duration duration = 6;
+   */
+  duration?: Duration;
+
+  /**
+   * @generated from field: string topic = 7;
+   */
+  topic = "";
+
+  /**
+   * @generated from field: optional string error = 8;
+   */
+  error?: string;
+
+  constructor(data?: PartialMessage<PubSubConsumeEvent>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.PubSubConsumeEvent";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "deployment_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "request_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "dest_verb_module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "dest_verb_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "time_stamp", kind: "message", T: Timestamp },
+    { no: 6, name: "duration", kind: "message", T: Duration },
+    { no: 7, name: "topic", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "error", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): PubSubConsumeEvent {
+    return new PubSubConsumeEvent().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): PubSubConsumeEvent {
+    return new PubSubConsumeEvent().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): PubSubConsumeEvent {
+    return new PubSubConsumeEvent().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: PubSubConsumeEvent | PlainMessage<PubSubConsumeEvent> | undefined, b: PubSubConsumeEvent | PlainMessage<PubSubConsumeEvent> | undefined): boolean {
+    return proto3.util.equals(PubSubConsumeEvent, a, b);
   }
 }
 
@@ -2094,6 +2264,18 @@ export class Event extends Message<Event> {
      */
     value: AsyncExecuteEvent;
     case: "asyncExecute";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.PubSubPublishEvent pubsub_publish = 10;
+     */
+    value: PubSubPublishEvent;
+    case: "pubsubPublish";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1.console.PubSubConsumeEvent pubsub_consume = 11;
+     */
+    value: PubSubConsumeEvent;
+    case: "pubsubConsume";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Event>) {
@@ -2113,6 +2295,8 @@ export class Event extends Message<Event> {
     { no: 7, name: "ingress", kind: "message", T: IngressEvent, oneof: "entry" },
     { no: 8, name: "cron_scheduled", kind: "message", T: CronScheduledEvent, oneof: "entry" },
     { no: 9, name: "async_execute", kind: "message", T: AsyncExecuteEvent, oneof: "entry" },
+    { no: 10, name: "pubsub_publish", kind: "message", T: PubSubPublishEvent, oneof: "entry" },
+    { no: 11, name: "pubsub_consume", kind: "message", T: PubSubConsumeEvent, oneof: "entry" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Event {

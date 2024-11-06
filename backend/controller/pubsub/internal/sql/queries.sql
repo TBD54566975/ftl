@@ -127,9 +127,12 @@ SELECT
     subs.key::subscription_key as key,
     curser.key as cursor,
     topics.key::topic_key as topic,
-    subs.name
+    subs.name,
+    deployments.key as deployment_key,
+    curser.request_key as request_key
 FROM topic_subscriptions subs
          JOIN runner_count on subs.deployment_id = runner_count.deployment
+         JOIN deployments ON subs.deployment_id = deployments.id
          LEFT JOIN topics ON subs.topic_id = topics.id
          LEFT JOIN topic_events curser ON subs.cursor = curser.id
 WHERE subs.cursor IS DISTINCT FROM topics.head
@@ -137,6 +140,7 @@ WHERE subs.cursor IS DISTINCT FROM topics.head
 ORDER BY curser.created_at
 LIMIT 3
     FOR UPDATE OF subs SKIP LOCKED;
+
 
 -- name: GetNextEventForSubscription :one
 WITH cursor AS (
@@ -166,9 +170,11 @@ SELECT
     subscribers.retry_attempts as retry_attempts,
     subscribers.backoff as backoff,
     subscribers.max_backoff as max_backoff,
-    subscribers.catch_verb as catch_verb
+    subscribers.catch_verb as catch_verb,
+    deployments.key as deployment_key
 FROM topic_subscribers as subscribers
          JOIN topic_subscriptions ON subscribers.topic_subscriptions_id = topic_subscriptions.id
+         JOIN deployments ON subscribers.deployment_id = deployments.id
 WHERE topic_subscriptions.key = sqlc.arg('key')::subscription_key
 ORDER BY RANDOM()
 LIMIT 1;
