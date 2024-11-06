@@ -33,8 +33,8 @@ func TestDAL(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
 	timelineSrv := timeline.New(ctx, conn, encryption)
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
 	key := model.NewControllerKey("localhost", "8081")
 	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
 	dal := New(ctx, conn, encryption, pubSub, cjs)
@@ -110,7 +110,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	runnerID := model.NewRunnerKey("localhost", "8080")
-	labels := map[string]any{"languages": []any{"go"}}
+	labels := map[string]any{}
 
 	t.Run("RegisterRunner", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, dalmodel.Runner{
@@ -195,9 +195,9 @@ func TestCreateArtefactConflict(t *testing.T) {
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
 
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
-
 	timelineSrv := timeline.New(ctx, conn, encryption)
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
+
 	key := model.NewControllerKey("localhost", "8081")
 	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
 	dal := New(ctx, conn, encryption, pubSub, cjs)

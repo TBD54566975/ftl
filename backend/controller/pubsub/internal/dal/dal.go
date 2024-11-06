@@ -14,6 +14,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/observability"
 	dalsql "github.com/TBD54566975/ftl/backend/controller/pubsub/internal/sql"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
+	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -97,7 +98,7 @@ func (d *DAL) GetSubscriptionsNeedingUpdate(ctx context.Context) ([]model.Subscr
 	}), nil
 }
 
-func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay time.Duration) (count int, err error) {
+func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay time.Duration, timelineSvc *timeline.Service) (count int, err error) {
 	tx, err := d.Begin(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("failed to begin transaction: %w", err)
@@ -115,36 +116,58 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 
 	successful := 0
 	for _, subscription := range subs {
+		now := time.Now().UTC()
+		enqueueTimelineEvent := func(destVerb optional.Option[schema.RefKey], err optional.Option[string]) {
+			timelineSvc.EnqueueEvent(ctx, &timeline.PubSubConsume{
+				DeploymentKey: subscription.DeploymentKey,
+				RequestKey:    subscription.RequestKey,
+				Time:          now,
+				DestVerb:      destVerb,
+				Topic:         subscription.Topic.Payload.Name,
+				Error:         err,
+			})
+		}
+
 		nextCursor, err := tx.db.GetNextEventForSubscription(ctx, sqltypes.Duration(eventConsumptionDelay), subscription.Topic, subscription.Cursor)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
-			return 0, fmt.Errorf("failed to get next cursor: %w", libdal.TranslatePGError(err))
+			err = fmt.Errorf("failed to get next cursor: %w", libdal.TranslatePGError(err))
+			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(err.Error()))
+			return 0, err
 		}
 		payload, ok := nextCursor.Payload.Get()
 		if !ok {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Payload.Get", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
-			return 0, fmt.Errorf("could not find payload to progress subscription: %w", libdal.TranslatePGError(err))
+			err = fmt.Errorf("could not find payload to progress subscription: %w", libdal.TranslatePGError(err))
+			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(err.Error()))
+			return 0, err
 		}
 		nextCursorKey, ok := nextCursor.Event.Get()
 		if !ok {
 			observability.PubSub.PropagationFailed(ctx, "GetNextEventForSubscription-->Event.Get", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.None[schema.RefKey]())
-			return 0, fmt.Errorf("could not find event to progress subscription: %w", libdal.TranslatePGError(err))
+			err = fmt.Errorf("could not find event to progress subscription: %w", libdal.TranslatePGError(err))
+			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(err.Error()))
+			return 0, err
 		}
 		if !nextCursor.Ready {
 			logger.Tracef("Skipping subscription %s because event is too new", subscription.Key)
+			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(fmt.Sprintf("Skipping subscription %s because event is too new", subscription.Key)))
 			continue
 		}
 
 		subscriber, err := tx.db.GetRandomSubscriber(ctx, subscription.Key)
 		if err != nil {
 			logger.Tracef("no subscriber for subscription %s", subscription.Key)
+			enqueueTimelineEvent(optional.None[schema.RefKey](), optional.Some(fmt.Sprintf("no subscriber for subscription %s", subscription.Key)))
 			continue
 		}
 
 		err = tx.db.BeginConsumingTopicEvent(ctx, subscription.Key, nextCursorKey)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "BeginConsumingTopicEvent", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
-			return 0, fmt.Errorf("failed to progress subscription: %w", libdal.TranslatePGError(err))
+			err = fmt.Errorf("failed to progress subscription: %w", libdal.TranslatePGError(err))
+			enqueueTimelineEvent(optional.Some(subscriber.Sink), optional.Some(err.Error()))
+			return 0, err
 		}
 
 		origin := async.AsyncOriginPubSub{
@@ -169,10 +192,13 @@ func (d *DAL) ProgressSubscriptions(ctx context.Context, eventConsumptionDelay t
 		observability.AsyncCalls.Created(ctx, subscriber.Sink, subscriber.CatchVerb, origin.String(), int64(subscriber.RetryAttempts), err)
 		if err != nil {
 			observability.PubSub.PropagationFailed(ctx, "CreateAsyncCall", subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), optional.Some(subscriber.Sink))
-			return 0, fmt.Errorf("failed to schedule async task for subscription: %w", libdal.TranslatePGError(err))
+			err = fmt.Errorf("failed to schedule async task for subscription: %w", libdal.TranslatePGError(err))
+			enqueueTimelineEvent(optional.Some(subscriber.Sink), optional.Some(err.Error()))
+			return 0, err
 		}
 
 		observability.PubSub.SinkCalled(ctx, subscription.Topic.Payload, nextCursor.Caller, subscriptionRef(subscription), subscriber.Sink)
+		enqueueTimelineEvent(optional.Some(subscriber.Sink), optional.None[string]())
 		successful++
 	}
 

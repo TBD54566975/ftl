@@ -20,6 +20,8 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     EVENT_TYPE_INGRESS: _ClassVar[EventType]
     EVENT_TYPE_CRON_SCHEDULED: _ClassVar[EventType]
     EVENT_TYPE_ASYNC_EXECUTE: _ClassVar[EventType]
+    EVENT_TYPE_PUBSUB_PUBLISH: _ClassVar[EventType]
+    EVENT_TYPE_PUBSUB_CONSUME: _ClassVar[EventType]
 
 class AsyncExecuteEventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -43,6 +45,8 @@ EVENT_TYPE_DEPLOYMENT_UPDATED: EventType
 EVENT_TYPE_INGRESS: EventType
 EVENT_TYPE_CRON_SCHEDULED: EventType
 EVENT_TYPE_ASYNC_EXECUTE: EventType
+EVENT_TYPE_PUBSUB_PUBLISH: EventType
+EVENT_TYPE_PUBSUB_CONSUME: EventType
 ASYNC_EXECUTE_EVENT_TYPE_UNKNOWN: AsyncExecuteEventType
 ASYNC_EXECUTE_EVENT_TYPE_CRON: AsyncExecuteEventType
 ASYNC_EXECUTE_EVENT_TYPE_PUBSUB: AsyncExecuteEventType
@@ -193,6 +197,46 @@ class AsyncExecuteEvent(_message.Message):
     async_event_type: AsyncExecuteEventType
     error: str
     def __init__(self, deployment_key: _Optional[str] = ..., request_key: _Optional[str] = ..., verb_ref: _Optional[_Union[_schema_pb2.Ref, _Mapping]] = ..., time_stamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., async_event_type: _Optional[_Union[AsyncExecuteEventType, str]] = ..., error: _Optional[str] = ...) -> None: ...
+
+class PubSubPublishEvent(_message.Message):
+    __slots__ = ("deployment_key", "request_key", "verb_ref", "time_stamp", "duration", "topic", "request", "error")
+    DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_KEY_FIELD_NUMBER: _ClassVar[int]
+    VERB_REF_FIELD_NUMBER: _ClassVar[int]
+    TIME_STAMP_FIELD_NUMBER: _ClassVar[int]
+    DURATION_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    deployment_key: str
+    request_key: str
+    verb_ref: _schema_pb2.Ref
+    time_stamp: _timestamp_pb2.Timestamp
+    duration: _duration_pb2.Duration
+    topic: str
+    request: str
+    error: str
+    def __init__(self, deployment_key: _Optional[str] = ..., request_key: _Optional[str] = ..., verb_ref: _Optional[_Union[_schema_pb2.Ref, _Mapping]] = ..., time_stamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., topic: _Optional[str] = ..., request: _Optional[str] = ..., error: _Optional[str] = ...) -> None: ...
+
+class PubSubConsumeEvent(_message.Message):
+    __slots__ = ("deployment_key", "request_key", "dest_verb_module", "dest_verb_name", "time_stamp", "duration", "topic", "error")
+    DEPLOYMENT_KEY_FIELD_NUMBER: _ClassVar[int]
+    REQUEST_KEY_FIELD_NUMBER: _ClassVar[int]
+    DEST_VERB_MODULE_FIELD_NUMBER: _ClassVar[int]
+    DEST_VERB_NAME_FIELD_NUMBER: _ClassVar[int]
+    TIME_STAMP_FIELD_NUMBER: _ClassVar[int]
+    DURATION_FIELD_NUMBER: _ClassVar[int]
+    TOPIC_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    deployment_key: str
+    request_key: str
+    dest_verb_module: str
+    dest_verb_name: str
+    time_stamp: _timestamp_pb2.Timestamp
+    duration: _duration_pb2.Duration
+    topic: str
+    error: str
+    def __init__(self, deployment_key: _Optional[str] = ..., request_key: _Optional[str] = ..., dest_verb_module: _Optional[str] = ..., dest_verb_name: _Optional[str] = ..., time_stamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., duration: _Optional[_Union[_duration_pb2.Duration, _Mapping]] = ..., topic: _Optional[str] = ..., error: _Optional[str] = ...) -> None: ...
 
 class Config(_message.Message):
     __slots__ = ("config", "references")
@@ -443,7 +487,7 @@ class StreamEventsResponse(_message.Message):
     def __init__(self, events: _Optional[_Iterable[_Union[Event, _Mapping]]] = ...) -> None: ...
 
 class Event(_message.Message):
-    __slots__ = ("time_stamp", "id", "log", "call", "deployment_created", "deployment_updated", "ingress", "cron_scheduled", "async_execute")
+    __slots__ = ("time_stamp", "id", "log", "call", "deployment_created", "deployment_updated", "ingress", "cron_scheduled", "async_execute", "pubsub_publish", "pubsub_consume")
     TIME_STAMP_FIELD_NUMBER: _ClassVar[int]
     ID_FIELD_NUMBER: _ClassVar[int]
     LOG_FIELD_NUMBER: _ClassVar[int]
@@ -453,6 +497,8 @@ class Event(_message.Message):
     INGRESS_FIELD_NUMBER: _ClassVar[int]
     CRON_SCHEDULED_FIELD_NUMBER: _ClassVar[int]
     ASYNC_EXECUTE_FIELD_NUMBER: _ClassVar[int]
+    PUBSUB_PUBLISH_FIELD_NUMBER: _ClassVar[int]
+    PUBSUB_CONSUME_FIELD_NUMBER: _ClassVar[int]
     time_stamp: _timestamp_pb2.Timestamp
     id: int
     log: LogEvent
@@ -462,7 +508,9 @@ class Event(_message.Message):
     ingress: IngressEvent
     cron_scheduled: CronScheduledEvent
     async_execute: AsyncExecuteEvent
-    def __init__(self, time_stamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., id: _Optional[int] = ..., log: _Optional[_Union[LogEvent, _Mapping]] = ..., call: _Optional[_Union[CallEvent, _Mapping]] = ..., deployment_created: _Optional[_Union[DeploymentCreatedEvent, _Mapping]] = ..., deployment_updated: _Optional[_Union[DeploymentUpdatedEvent, _Mapping]] = ..., ingress: _Optional[_Union[IngressEvent, _Mapping]] = ..., cron_scheduled: _Optional[_Union[CronScheduledEvent, _Mapping]] = ..., async_execute: _Optional[_Union[AsyncExecuteEvent, _Mapping]] = ...) -> None: ...
+    pubsub_publish: PubSubPublishEvent
+    pubsub_consume: PubSubConsumeEvent
+    def __init__(self, time_stamp: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., id: _Optional[int] = ..., log: _Optional[_Union[LogEvent, _Mapping]] = ..., call: _Optional[_Union[CallEvent, _Mapping]] = ..., deployment_created: _Optional[_Union[DeploymentCreatedEvent, _Mapping]] = ..., deployment_updated: _Optional[_Union[DeploymentUpdatedEvent, _Mapping]] = ..., ingress: _Optional[_Union[IngressEvent, _Mapping]] = ..., cron_scheduled: _Optional[_Union[CronScheduledEvent, _Mapping]] = ..., async_execute: _Optional[_Union[AsyncExecuteEvent, _Mapping]] = ..., pubsub_publish: _Optional[_Union[PubSubPublishEvent, _Mapping]] = ..., pubsub_consume: _Optional[_Union[PubSubConsumeEvent, _Mapping]] = ...) -> None: ...
 
 class GetEventsResponse(_message.Message):
     __slots__ = ("events", "cursor")

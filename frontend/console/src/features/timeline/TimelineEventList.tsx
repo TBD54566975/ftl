@@ -9,6 +9,8 @@ import { TimelineDeploymentUpdated } from './TimelineDeploymentUpdated'
 import { TimelineIcon } from './TimelineIcon'
 import { TimelineIngress } from './TimelineIngress'
 import { TimelineLog } from './TimelineLog'
+import { TimelinePubSubConsume } from './TimelinePubSubConsume'
+import { TimelinePubSubPublish } from './TimelinePubSubPublish'
 
 interface EventTimelineProps {
   events: Event[]
@@ -23,6 +25,8 @@ const deploymentKey = (event: Event) => {
     case 'ingress':
     case 'cronScheduled':
     case 'asyncExecute':
+    case 'pubsubConsume':
+    case 'pubsubPublish':
       return event.entry.value.deploymentKey
     case 'deploymentCreated':
     case 'deploymentUpdated':
@@ -77,6 +81,10 @@ export const TimelineEventList = ({ events, selectedEventId, handleEntryClicked 
                       return <TimelineCronScheduled cron={entry.entry.value} />
                     case 'asyncExecute':
                       return <TimelineAsyncExecute asyncExecute={entry.entry.value} />
+                    case 'pubsubPublish':
+                      return <TimelinePubSubPublish pubSubPublish={entry.entry.value} />
+                    case 'pubsubConsume':
+                      return <TimelinePubSubConsume pubSubConsume={entry.entry.value} />
                     default:
                       return null
                   }

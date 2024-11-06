@@ -9,6 +9,8 @@ const eventBackgroundColorMap: Record<string, string> = {
   deploymentUpdated: 'bg-green-500 dark:bg-green-300',
   cronScheduled: 'bg-blue-500',
   asyncExecute: 'bg-indigo-500',
+  pubsubPublish: 'bg-violet-500',
+  pubsubConsume: 'bg-violet-500',
   '': 'bg-gray-500',
 }
 
@@ -27,6 +29,8 @@ const eventTextColorMap: Record<string, string> = {
   deploymentUpdated: 'text-green-500 dark:text-green-300',
   cronScheduled: 'text-blue-500',
   asyncExecute: 'text-indigo-500',
+  pubsubPublish: 'text-violet-500',
+  pubsubConsume: 'text-violet-500',
   '': 'text-gray-500',
 }
 

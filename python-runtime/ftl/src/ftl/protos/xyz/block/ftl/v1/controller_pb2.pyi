@@ -246,18 +246,16 @@ class StatusResponse(_message.Message):
         version: str
         def __init__(self, key: _Optional[str] = ..., endpoint: _Optional[str] = ..., version: _Optional[str] = ...) -> None: ...
     class Runner(_message.Message):
-        __slots__ = ("key", "languages", "endpoint", "deployment", "labels")
+        __slots__ = ("key", "endpoint", "deployment", "labels")
         KEY_FIELD_NUMBER: _ClassVar[int]
-        LANGUAGES_FIELD_NUMBER: _ClassVar[int]
         ENDPOINT_FIELD_NUMBER: _ClassVar[int]
         DEPLOYMENT_FIELD_NUMBER: _ClassVar[int]
         LABELS_FIELD_NUMBER: _ClassVar[int]
         key: str
-        languages: _containers.RepeatedScalarFieldContainer[str]
         endpoint: str
         deployment: str
         labels: _struct_pb2.Struct
-        def __init__(self, key: _Optional[str] = ..., languages: _Optional[_Iterable[str]] = ..., endpoint: _Optional[str] = ..., deployment: _Optional[str] = ..., labels: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+        def __init__(self, key: _Optional[str] = ..., endpoint: _Optional[str] = ..., deployment: _Optional[str] = ..., labels: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
     class Deployment(_message.Message):
         __slots__ = ("key", "language", "name", "min_replicas", "replicas", "labels", "schema")
         KEY_FIELD_NUMBER: _ClassVar[int]

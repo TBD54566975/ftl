@@ -51,7 +51,6 @@ type Config struct {
 	TemplateDir           string              `help:"Template directory to copy into each deployment, if any." type:"existingdir"`
 	DeploymentDir         string              `help:"Directory to store deployments in." default:"${deploymentdir}"`
 	DeploymentKeepHistory int                 `help:"Number of deployments to keep history for." default:"3"`
-	Language              []string            `short:"l" help:"Languages the runner supports." env:"FTL_LANGUAGE" default:"go,kotlin,java"`
 	HeartbeatPeriod       time.Duration       `help:"Minimum period between heartbeats." default:"3s"`
 	HeartbeatJitter       time.Duration       `help:"Jitter to add to heartbeat period." default:"2s"`
 	Deployment            string              `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
@@ -90,11 +89,10 @@ func Start(ctx context.Context, config Config) error {
 		key = model.NewRunnerKey(config.Bind.Hostname(), config.Bind.Port())
 	}
 	labels, err := structpb.NewStruct(map[string]any{
-		"hostname":  hostname,
-		"pid":       pid,
-		"os":        runtime.GOOS,
-		"arch":      runtime.GOARCH,
-		"languages": slices.Map(config.Language, func(t string) any { return t }),
+		"hostname": hostname,
+		"pid":      pid,
+		"os":       runtime.GOOS,
+		"arch":     runtime.GOARCH,
 	})
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)

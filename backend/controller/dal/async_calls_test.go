@@ -11,6 +11,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/encryption"
 	"github.com/TBD54566975/ftl/backend/controller/pubsub"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltest"
+	"github.com/TBD54566975/ftl/backend/controller/timeline"
 	"github.com/TBD54566975/ftl/backend/libdal"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -22,7 +23,9 @@ func TestNoCallToAcquire(t *testing.T) {
 	conn := sqltest.OpenForTesting(ctx, t)
 	encryption, err := encryption.New(ctx, conn, encryption.NewBuilder())
 	assert.NoError(t, err)
-	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener]())
+
+	timelineSvc := timeline.New(ctx, conn, encryption)
+	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSvc)
 	dal := New(ctx, conn, encryption, pubSub, nil)
 
 	_, _, err = dal.AcquireAsyncCall(ctx)

@@ -21,6 +21,8 @@ type Querier interface {
 	InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error
 	InsertTimelineIngressEvent(ctx context.Context, arg InsertTimelineIngressEventParams) error
 	InsertTimelineLogEvent(ctx context.Context, arg InsertTimelineLogEventParams) error
+	InsertTimelinePubsubConsumeEvent(ctx context.Context, arg InsertTimelinePubsubConsumeEventParams) error
+	InsertTimelinePubsubPublishEvent(ctx context.Context, arg InsertTimelinePubsubPublishEventParams) error
 }
 
 var _ Querier = (*Queries)(nil)

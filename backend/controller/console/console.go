@@ -597,6 +597,10 @@ func eventsQueryProtoToDAL(pb *pbconsole.EventsQuery) ([]timeline.TimelineFilter
 					eventTypes = append(eventTypes, timeline.EventTypeCronScheduled)
 				case pbconsole.EventType_EVENT_TYPE_ASYNC_EXECUTE:
 					eventTypes = append(eventTypes, timeline.EventTypeAsyncExecute)
+				case pbconsole.EventType_EVENT_TYPE_PUBSUB_PUBLISH:
+					eventTypes = append(eventTypes, timeline.EventTypePubSubPublish)
+				case pbconsole.EventType_EVENT_TYPE_PUBSUB_CONSUME:
+					eventTypes = append(eventTypes, timeline.EventTypePubSubConsume)
 				default:
 					return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown event type %v", eventType))
 				}
@@ -823,6 +827,59 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 					},
 					Duration: durationpb.New(event.Duration),
 					Error:    event.Error.Ptr(),
+				},
+			},
+		}
+
+	case *timeline.PubSubPublishEvent:
+		var requestKey *string
+		if r, ok := event.RequestKey.Get(); ok {
+			requestKey = &r
+		}
+
+		return &pbconsole.Event{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.Event_PubsubPublish{
+				PubsubPublish: &pbconsole.PubSubPublishEvent{
+					DeploymentKey: event.DeploymentKey.String(),
+					RequestKey:    requestKey,
+					VerbRef:       event.SourceVerb.ToProto().(*schemapb.Ref), //nolint:forcetypeassert
+					TimeStamp:     timestamppb.New(event.Time),
+					Duration:      durationpb.New(event.Duration),
+					Topic:         event.Topic,
+					Request:       string(event.Request),
+					Error:         event.Error.Ptr(),
+				},
+			},
+		}
+
+	case *timeline.PubSubConsumeEvent:
+		var requestKey *string
+		if r, ok := event.RequestKey.Get(); ok {
+			requestKey = &r
+		}
+
+		var destVerbModule string
+		var destVerbName string
+		if destVerb, ok := event.DestVerb.Get(); ok {
+			destVerbModule = destVerb.Module
+			destVerbName = destVerb.Name
+		}
+
+		return &pbconsole.Event{
+			TimeStamp: timestamppb.New(event.Time),
+			Id:        event.ID,
+			Entry: &pbconsole.Event_PubsubConsume{
+				PubsubConsume: &pbconsole.PubSubConsumeEvent{
+					DeploymentKey:  event.DeploymentKey.String(),
+					RequestKey:     requestKey,
+					DestVerbModule: &destVerbModule,
+					DestVerbName:   &destVerbName,
+					TimeStamp:      timestamppb.New(event.Time),
+					Duration:       durationpb.New(event.Duration),
+					Topic:          event.Topic,
+					Error:          event.Error.Ptr(),
 				},
 			},
 		}
