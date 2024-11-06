@@ -34,6 +34,7 @@ func main() {
 		"ftl-provisioner-cloudformation",
 		provisionerconnect.NewProvisionerPluginServiceClient,
 		plugin.WithEnvars("FTL_PROVISIONER_CF_DB_SUBNET_GROUP=aurora-postgres-subnet-group"),
+		plugin.WithEnvars("FTL_PROVISIONER_CF_DB_SECURITY_GROUP=aurora-postgres-security-group"),
 	)
 	if err != nil {
 		panic(err)
