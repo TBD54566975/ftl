@@ -224,7 +224,7 @@ func ExpectError(action Action, expectedErrorMsg ...string) Action {
 func Deploy(module string) Action {
 	return Chain(
 		func(t testing.TB, ic TestContext) {
-			args := []string{"deploy"}
+			args := []string{"deploy", "-t", "4m"}
 			if ic.Provisioner != nil {
 				args = append(args, "--provisioner-endpoint=http://localhost:8893")
 			}
