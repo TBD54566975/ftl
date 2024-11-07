@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager/types"
 	"github.com/aws/smithy-go"
-	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -43,14 +42,7 @@ func (l *asmLeader) syncInterval() time.Duration {
 }
 
 // sync retrieves all secrets from ASM and updates the cache
-func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
-	previous := map[configuration.Ref]configuration.SyncedValue{}
-	values.Range(func(ref configuration.Ref, value configuration.SyncedValue) bool {
-		previous[ref] = value
-		return true
-	})
-	seen := map[configuration.Ref]bool{}
-
+func (l *asmLeader) sync(ctx context.Context) (map[configuration.Ref]configuration.SyncedValue, error) {
 	// get list of secrets
 	refsToLoad := map[configuration.Ref]time.Time{}
 	nextToken := optional.None[string]()
@@ -63,21 +55,16 @@ func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[configuration.
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("unable to get list of secrets from ASM: %w", err)
+			return nil, fmt.Errorf("unable to get list of secrets from ASM: %w", err)
 		}
-		var activeSecrets = slices.Filter(out.SecretList, func(s types.SecretListEntry) bool {
+		activeSecrets := slices.Filter(out.SecretList, func(s types.SecretListEntry) bool {
 			return s.DeletedDate == nil
 		})
+
 		for _, s := range activeSecrets {
 			ref, err := configuration.ParseRef(*s.Name)
 			if err != nil {
-				return fmt.Errorf("unable to parse ref from ASM secret: %w", err)
-			}
-			seen[ref] = true
-
-			// check if we already have the value from previous sync
-			if pValue, ok := previous[ref]; ok && pValue.VersionToken == optional.Some[configuration.VersionToken](*s.LastChangedDate) {
-				continue
+				return nil, fmt.Errorf("unable to parse ref from ASM secret: %w", err)
 			}
 			refsToLoad[ref] = *s.LastChangedDate
 		}
@@ -88,13 +75,7 @@ func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[configuration.
 		}
 	}
 
-	// remove secrets not found in ASM
-	for ref := range previous {
-		if _, ok := seen[ref]; !ok {
-			values.Delete(ref)
-		}
-	}
-
+	values := map[configuration.Ref]configuration.SyncedValue{}
 	// get values for new and updated secrets
 	for len(refsToLoad) > 0 {
 		// ASM returns an error when there are more than 10 filters
@@ -114,26 +95,26 @@ func (l *asmLeader) sync(ctx context.Context, values *xsync.MapOf[configuration.
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("unable to get batch of secret values from ASM: %w", err)
+			return nil, fmt.Errorf("unable to get batch of secret values from ASM: %w", err)
 		}
 		for _, s := range out.SecretValues {
 			ref, err := configuration.ParseRef(*s.Name)
 			if err != nil {
-				return fmt.Errorf("unable to parse ref: %w", err)
+				return nil, fmt.Errorf("unable to parse ref: %w", err)
 			}
 			// Expect secrets to be strings, not binary
 			if s.SecretBinary != nil {
-				return fmt.Errorf("secret for %s in ASM is not a string", ref)
+				return nil, fmt.Errorf("secret for %s in ASM is not a string", ref)
 			}
 			data := unwrapComments([]byte(*s.SecretString))
-			values.Store(ref, configuration.SyncedValue{
+			values[ref] = configuration.SyncedValue{
 				Value:        data,
 				VersionToken: optional.Some[configuration.VersionToken](refsToLoad[ref]),
-			})
+			}
 			delete(refsToLoad, ref)
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // store and if the secret already exists, update it.

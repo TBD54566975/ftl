@@ -9,7 +9,6 @@ import (
 
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/optional"
-	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/internal/configuration"
 )
@@ -72,16 +71,12 @@ func (a *ManualSyncProvider[R]) SyncInterval() time.Duration {
 	return time.Hour * 24 * 365
 }
 
-func (a *ManualSyncProvider[R]) Sync(ctx context.Context, entries []configuration.Entry, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
-	err := a.provider.Sync(ctx, entries, values)
+func (a *ManualSyncProvider[R]) Sync(ctx context.Context) (map[configuration.Ref]configuration.SyncedValue, error) {
+	values, err := a.provider.Sync(ctx)
 
 	if block, ok := a.syncRequested.Load().Get(); ok {
 		a.syncRequested.Store(optional.None[manualSyncBlock]())
-		if err == nil {
-			block.sync <- optional.None[error]()
-		} else {
-			block.sync <- optional.Some(err)
-		}
+		block.sync <- optional.Zero(err)
 	}
-	return err //nolint:wrapcheck
+	return values, err //nolint:wrapcheck
 }
