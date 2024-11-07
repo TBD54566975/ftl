@@ -1,7 +1,6 @@
 # Huge hack, we want the JVM and same runtime environment as the runner
 # So we just take the latest published runner image and copy the JDK from it
-# TODO: change this to ftl-runner-jvm once we have released it
-FROM ftl0/ftl-runner:latest AS jdk
+FROM ftl0/ftl-runner-jvm:latest AS jdk
 # Create the runtime image.
 FROM ubuntu:24.04
 
