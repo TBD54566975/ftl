@@ -1,6 +1,5 @@
-import type { Timestamp } from '@bufbuild/protobuf'
 import type { TraceEvent } from '../../api/timeline/use-request-trace-events'
-import { CallEvent, type Event, IngressEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { AsyncExecuteEvent, CallEvent, type Event, IngressEvent, PubSubPublishEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { classNames } from '../../utils'
 import { TimelineIcon } from '../timeline/TimelineIcon'
 import { eventBackgroundColor } from '../timeline/timeline.utils'
@@ -11,7 +10,7 @@ interface TraceDetailItemProps {
   traceEvent: TraceEvent
   eventDurationMs: number
   requestDurationMs: number
-  requestStartTime: Timestamp | undefined
+  requestStartTime: number
   selectedEventId: bigint | undefined
   handleEventClick: (eventId: bigint) => void
 }
@@ -40,6 +39,12 @@ export const TraceDetailItem: React.FC<TraceDetailItemProps> = ({
   } else if (traceEvent instanceof IngressEvent) {
     action = `HTTP ${traceEvent.method}`
     eventName = `${traceEvent.path}`
+  } else if (traceEvent instanceof AsyncExecuteEvent) {
+    action = 'Async'
+    eventName = `${traceEvent.verbRef?.module}.${traceEvent.verbRef?.name}`
+  } else if (traceEvent instanceof PubSubPublishEvent) {
+    action = 'Publish'
+    eventName = `${traceEvent.topic}`
   }
 
   const barColor = event.id === selectedEventId ? 'bg-green-500' : eventBackgroundColor(event)

@@ -3,6 +3,7 @@ import {
   BubbleChatIcon,
   Clock01Icon,
   CodeIcon,
+  CodeSquareIcon,
   DatabaseIcon,
   FunctionIcon,
   type HugeiconsProps,
@@ -186,7 +187,7 @@ export const declTypeName = (declCase: string, decl: DeclSumType) => {
 
 const declIcons: Record<string, React.FC<Omit<HugeiconsProps, 'ref'> & React.RefAttributes<SVGSVGElement>>> = {
   config: Settings02Icon,
-  data: CodeIcon,
+  data: CodeSquareIcon,
   database: DatabaseIcon,
   enum: LeftToRightListNumberIcon,
   topic: BubbleChatIcon,

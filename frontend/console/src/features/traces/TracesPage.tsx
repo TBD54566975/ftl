@@ -4,8 +4,10 @@ import { useRequestTraceEvents } from '../../api/timeline/use-request-trace-even
 import { Divider } from '../../components/Divider'
 import { Loader } from '../../components/Loader'
 import { TraceDetails } from './TraceDetails'
+import { TraceDetailsAsyncCall } from './details/TraceDetailsAsyncCall'
 import { TraceDetailsCall } from './details/TraceDetailsCall'
 import { TraceDetailsIngress } from './details/TraceDetailsIngress'
+import { TraceDetailsPubsubPublish } from './details/TraceDetailsPubsubPublish'
 
 export const TracesPage = () => {
   const navigate = useNavigate()
@@ -50,6 +52,12 @@ export const TracesPage = () => {
       break
     case 'ingress':
       eventDetailsComponent = <TraceDetailsIngress event={selectedEvent} />
+      break
+    case 'asyncExecute':
+      eventDetailsComponent = <TraceDetailsAsyncCall event={selectedEvent} />
+      break
+    case 'pubsubPublish':
+      eventDetailsComponent = <TraceDetailsPubsubPublish event={selectedEvent} />
       break
     default:
       eventDetailsComponent = <p>No details available for this event type.</p>

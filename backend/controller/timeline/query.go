@@ -224,11 +224,28 @@ func (s *Service) QueryTimeline(ctx context.Context, limit int, filters ...Timel
 				q += " OR "
 			}
 			if verb, ok := module.verb.Get(); ok {
-				q += fmt.Sprintf("((e.type = 'call' AND e.custom_key_3 = $%d AND e.custom_key_4 = $%d) OR (e.type = 'ingress' AND e.custom_key_1 = $%d AND e.custom_key_2 = $%d))",
-					param(module.module), param(verb), param(module.module), param(verb))
+				q += fmt.Sprintf(
+					"((e.type = 'call' AND e.custom_key_3 = $%d AND e.custom_key_4 = $%d) OR "+
+						"(e.type = 'ingress' AND e.custom_key_1 = $%d AND e.custom_key_2 = $%d) OR "+
+						"(e.type = 'async_execute' AND e.custom_key_1 = $%d AND e.custom_key_2 = $%d) OR "+
+						"(e.type = 'pubsub_publish' AND e.custom_key_1 = $%d AND e.custom_key_2 = $%d) OR "+
+						"(e.type = 'pubsub_consume' AND e.custom_key_1 = $%d AND e.custom_key_2 = $%d))",
+					param(module.module), param(verb),
+					param(module.module), param(verb),
+					param(module.module), param(verb),
+					param(module.module), param(verb),
+					param(module.module), param(verb),
+				)
 			} else {
-				q += fmt.Sprintf("((e.type = 'call' AND e.custom_key_3 = $%d) OR (e.type = 'ingress' AND e.custom_key_1 = $%d))",
-					param(module.module), param(module.module))
+				q += fmt.Sprintf(
+					"((e.type = 'call' AND e.custom_key_3 = $%d) OR "+
+						"(e.type = 'ingress' AND e.custom_key_1 = $%d) OR "+
+						"(e.type = 'async_execute' AND e.custom_key_1 = $%d) OR "+
+						"(e.type = 'pubsub_publish' AND e.custom_key_1 = $%d) OR "+
+						"(e.type = 'pubsub_consume' AND e.custom_key_1 = $%d))",
+					param(module.module), param(module.module), param(module.module),
+					param(module.module), param(module.module),
+				)
 			}
 		}
 		q += ")\n"
@@ -454,7 +471,7 @@ func (s *Service) transformRowsToTimelineEvents(deploymentKeys map[int64]model.D
 			}
 			out = append(out, &PubSubConsumeEvent{
 				ID:       row.ID,
-				Duration: time.Since(row.TimeStamp),
+				Duration: time.Duration(jsonPayload.DurationMS) * time.Millisecond,
 				PubSubConsume: PubSubConsume{
 					DeploymentKey: row.DeploymentKey,
 					RequestKey:    requestKey,

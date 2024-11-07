@@ -1,8 +1,14 @@
-import type { Duration, Timestamp } from '@bufbuild/protobuf'
 import { useState } from 'react'
 import { type TraceEvent, useRequestTraceEvents } from '../../api/timeline/use-request-trace-events'
-import { CallEvent, type Event, IngressEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { classNames } from '../../utils'
+import {
+  AsyncExecuteEvent,
+  CallEvent,
+  type Event,
+  IngressEvent,
+  PubSubConsumeEvent,
+  PubSubPublishEvent,
+} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { classNames, durationToMillis } from '../../utils'
 import { eventBackgroundColor } from '../timeline/timeline.utils'
 import { eventBarLeftOffsetPercentage } from './traces.utils'
 
@@ -14,27 +20,38 @@ const EventBlock = ({
 }: {
   event: Event
   isSelected: boolean
-  requestStartTime: Timestamp
-  requestDuration: Duration
+  requestStartTime: number
+  requestDuration: number
 }) => {
   const [isHovering, setIsHovering] = useState(false)
 
   const traceEvent = event.entry.value as TraceEvent
-  const totalDurationMillis = (requestDuration.nanos ?? 0) / 1000000
-  const durationInMillis = (traceEvent.duration?.nanos ?? 0) / 1000000
-  let width = (durationInMillis / totalDurationMillis) * 100
+  const durationInMillis = traceEvent.duration ? durationToMillis(traceEvent.duration) : 0
+  let width = (durationInMillis / requestDuration) * 100
   if (width < 1) {
     width = 1
   }
 
-  const leftOffsetPercentage = eventBarLeftOffsetPercentage(event, requestStartTime, totalDurationMillis)
+  const leftOffsetPercentage = eventBarLeftOffsetPercentage(event, requestStartTime, requestDuration)
 
+  let eventType = ''
   let eventTarget = ''
 
   if (traceEvent instanceof CallEvent) {
+    eventType = 'call'
     eventTarget = `${traceEvent.destinationVerbRef?.module}.${traceEvent.destinationVerbRef?.name}`
   } else if (traceEvent instanceof IngressEvent) {
+    eventType = 'ingress'
     eventTarget = traceEvent.path
+  } else if (traceEvent instanceof AsyncExecuteEvent) {
+    eventType = 'async'
+    eventTarget = `${traceEvent.verbRef?.module}.${traceEvent.verbRef?.name}`
+  } else if (traceEvent instanceof PubSubPublishEvent) {
+    eventType = 'publish'
+    eventTarget = traceEvent.topic
+  } else if (traceEvent instanceof PubSubConsumeEvent) {
+    eventType = 'consume'
+    eventTarget = traceEvent.topic
   }
 
   const barColor = isSelected ? 'bg-green-500' : eventBackgroundColor(event)
@@ -52,8 +69,7 @@ const EventBlock = ({
         {isHovering && (
           <div className='absolute top-[-40px] right-0 bg-gray-100 dark:bg-gray-700  text-xs p-2 rounded shadow-lg z-10 w-max flex flex-col items-end'>
             <p>
-              {event instanceof CallEvent ? 'Call ' : 'Ingress '}
-              <span className='text-indigo-500 dark:text-indigo-400'>{eventTarget}</span>
+              {eventType} <span className='text-indigo-500 dark:text-indigo-400'>{eventTarget}</span>
               {` (${durationInMillis} ms)`}
             </p>
           </div>
@@ -71,19 +87,22 @@ export const TraceGraph = ({ requestKey, selectedEventId }: { requestKey?: strin
     return
   }
 
-  const requestStartTime = events[0].timeStamp
-  const traceEvent = events[0].entry.value as TraceEvent
-  const firstEventDuration = traceEvent.duration
-  if (requestStartTime === undefined || firstEventDuration === undefined) {
-    return
-  }
+  const traceEvents = events.map((event) => event.entry.value as TraceEvent)
+  const requestStartTime = Math.min(...traceEvents.map((event) => event.timeStamp?.toDate().getTime() ?? 0))
+  const requestEndTime = Math.max(
+    ...traceEvents.map((event) => {
+      const eventDuration = event.duration ? durationToMillis(event.duration) : 0
+      return (event.timeStamp?.toDate().getTime() ?? 0) + eventDuration
+    }),
+  )
+  const totalEventDuration = requestEndTime - requestStartTime
 
   return (
     <div className='flex flex-col'>
       {events.map((c, index) => (
         <div key={index} className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm'>
           <div className='w-full relative'>
-            <EventBlock event={c} isSelected={c.id === selectedEventId} requestStartTime={requestStartTime} requestDuration={firstEventDuration} />
+            <EventBlock event={c} isSelected={c.id === selectedEventId} requestStartTime={requestStartTime} requestDuration={totalEventDuration} />
           </div>
         </div>
       ))}
