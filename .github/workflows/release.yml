@@ -4,15 +4,15 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 name: Automatically Build Release
 jobs:
-  build-runner:
-    name: Build Runner Docker Image
+  build-runners:
+    name: Build Runner Docker Images
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1.1.3
-      - name: Build
+      - name: Build Runner
         run: |
           just build-docker runner
           mkdir -p artifacts/ftl-runner
@@ -22,6 +22,17 @@ jobs:
         with:
           name: docker-runner-artifact
           path: artifacts/ftl-runner/ftl-runner.tar
+          retention-days: 1
+      - name: Build JVM Runner
+        run: |
+          just build-docker runner-jvm
+          mkdir -p artifacts/ftl-runner-jvm
+          docker save -o artifacts/ftl-runner-jvm/ftl-runner-jvm.tar ftl0/ftl-runner-jvm:latest
+      - name: Temporarily save JVM Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-runner-jvm-artifact
+          path: artifacts/ftl-runner-jvm/ftl-runner-jvm.tar
           retention-days: 1
   build-controller:
     name: Build Controller Docker Image
@@ -86,7 +97,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    needs: [build-runner, build-controller, build-provisioner, build-box]
+    needs: [build-runners, build-controller, build-provisioner, build-box]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -99,6 +110,11 @@ jobs:
         with:
           name: docker-runner-artifact
           path: artifacts/ftl-runner
+      - name: Retrieve JVM Runner Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-runner-jvm-artifact
+          path: artifacts/ftl-runner-jvm
       - name: Retrieve Controller Docker image
         uses: actions/download-artifact@v4
         with:
@@ -116,6 +132,8 @@ jobs:
           path: artifacts/ftl-box
       - name: Load Runner Docker image
         run: docker load -i artifacts/ftl-runner/ftl-runner.tar
+      - name: Load JVM Runner Docker image
+        run: docker load -i artifacts/ftl-runner-jvm/ftl-runner-jvm.tar
       - name: Load Controller Docker image
         run: docker load -i artifacts/ftl-controller/ftl-controller.tar
       - name: Load Provisioner Docker image
@@ -133,6 +151,9 @@ jobs:
           docker tag ftl0/ftl-runner:latest ftl0/ftl-runner:"$GITHUB_SHA"
           docker tag ftl0/ftl-runner:latest ftl0/ftl-runner:"$version"
           docker push -a ftl0/ftl-runner
+          docker tag ftl0/ftl-runner-jvm:latest ftl0/ftl-runner-jvm:"$GITHUB_SHA"
+          docker tag ftl0/ftl-runner-jvm:latest ftl0/ftl-runner-jvm:"$version"
+          docker push -a ftl0/ftl-runner-jvm
           docker tag ftl0/ftl-controller:latest ftl0/ftl-controller:"$GITHUB_SHA"
           docker tag ftl0/ftl-controller:latest ftl0/ftl-controller:"$version"
           docker push -a ftl0/ftl-controller

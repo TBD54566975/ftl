@@ -17,7 +17,7 @@ start: setup full-deploy
 
 rm: teardown
 
-full-deploy: build-controller build-runner build-provisioner setup-istio-cluster
+full-deploy: build-controller build-runners build-provisioner setup-istio-cluster
   #!/bin/bash
   kubectl rollout restart deployment ftl-controller || true # if this exists already restart it to get the latest image
   just apply || sleep 5 # wait for CRDs to be created, the initial apply will usually fail
@@ -118,17 +118,21 @@ build-controller: build-executables setup-registry setup-istio-cluster
   docker tag ftl-controller:latest {{registry_local}}/ftl-controller:latest
   docker push {{registry_local}}/ftl-controller:latest
 
-build-runner: build-executables setup-registry setup-istio-cluster
-  docker build --platform linux/amd64 -t ftl-runner:latest -f Dockerfile.runner.test .
-  docker tag ftl-runner:latest {{registry_local}}/ftl-runner:latest
-  docker push {{registry_local}}/ftl-runner:latest
+build-runners: build-executables setup-registry setup-istio-cluster
+  just build-runner runner
+  just build-runner runner-jvm
+
+@build-runner name:
+  docker build --platform linux/amd64 -t ftl-{{name}}:latest -f Dockerfile.{{name}}.test .
+  docker tag ftl-{{name}}:latest {{registry_local}}/ftl-{{name}}:latest
+  docker push {{registry_local}}/ftl-{{name}}:latest
 
 build-provisioner: build-executables setup-registry setup-istio-cluster
   docker build --platform linux/amd64 -t ftl-provisioner:latest -f Dockerfile.provisioner.test .
   docker tag ftl-provisioner:latest {{registry_local}}/ftl-provisioner:latest
   docker push {{registry_local}}/ftl-provisioner:latest
 
-build: build-controller build-runner build-provisioner
+build: build-controller build-runners build-provisioner
 
 deploy path:
 	#!/usr/bin/env bash
