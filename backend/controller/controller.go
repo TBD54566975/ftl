@@ -248,6 +248,8 @@ type Service struct {
 	increaseReplicaFailures map[string]int
 	asyncCallsLock          sync.Mutex
 	runnerScaling           scaling.RunnerScaling
+
+	clientLock sync.Mutex
 }
 
 func New(
@@ -1175,6 +1177,14 @@ func (s *Service) clientsForEndpoint(endpoint string) clients {
 	if clientItem != nil {
 		return clientItem.Value()
 	}
+	s.clientLock.Lock()
+	defer s.clientLock.Unlock()
+	// Double check it was not added while we were waiting for the lock
+	clientItem = s.clients.Get(endpoint)
+	if clientItem != nil {
+		return clientItem.Value()
+	}
+
 	client := clients{
 		verb: rpc.Dial(ftlv1connect.NewVerbServiceClient, endpoint, log.Error),
 	}
