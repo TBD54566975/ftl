@@ -9,8 +9,14 @@ export const TraceDetailsPubsubPublish = ({ event }: { event: Event }) => {
   const pubsubPublish = event.entry.value as PubSubPublishEvent
   return (
     <>
-      <span className='text-xl font-semibold'>Pubsub Publish Details</span>
+      <span className='text-xl font-semibold'>PubSub Publish Details</span>
 
+      {pubsubPublish.request && (
+        <>
+          <h3 className='pt-4'>Request</h3>
+          <CodeBlock code={pubsubPublish.request} language='json' />
+        </>
+      )}
       {pubsubPublish.error && (
         <>
           <h3 className='pt-4'>Error</h3>
@@ -21,22 +27,20 @@ export const TraceDetailsPubsubPublish = ({ event }: { event: Event }) => {
       <DeploymentCard className='mt-4' deploymentKey={pubsubPublish.deploymentKey} />
 
       <ul className='pt-4 space-y-2'>
+        <li>
+          <AttributeBadge name='topic' value={pubsubPublish.topic} />
+        </li>
+        <li>
+          <AttributeBadge name='duration' value={formatDuration(pubsubPublish.duration)} />
+        </li>
         {pubsubPublish.requestKey && (
           <li>
             <AttributeBadge name='request' value={pubsubPublish.requestKey} />
           </li>
         )}
-        <li>
-          <AttributeBadge name='duration' value={formatDuration(pubsubPublish.duration)} />
-        </li>
         {pubsubPublish.verbRef && (
           <li>
-            <AttributeBadge name='destination' value={refString(pubsubPublish.verbRef)} />
-          </li>
-        )}
-        {pubsubPublish.verbRef && (
-          <li>
-            <AttributeBadge name='source' value={refString(pubsubPublish.verbRef)} />
+            <AttributeBadge name='verb_ref' value={refString(pubsubPublish.verbRef)} />
           </li>
         )}
       </ul>

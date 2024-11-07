@@ -1,5 +1,6 @@
+import type { TraceEvent } from '../../api/timeline/use-request-trace-events'
 import type { Event } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { compareTimestamps } from '../../utils'
+import { compareTimestamps, durationToMillis } from '../../utils'
 
 export const eventBarLeftOffsetPercentage = (event: Event, requestStartTime: number, requestDurationMs: number) => {
   if (!event.timeStamp) {
@@ -36,4 +37,20 @@ export const groupEventsByRequestKey = (events: Event[]): Record<string, Event[]
 
     return acc
   }, {})
+}
+
+export const requestStartTime = (events: Event[]): number => {
+  const traceEvents = events.map((event) => event.entry.value as TraceEvent)
+  return Math.min(...traceEvents.map((event) => event.timeStamp?.toDate().getTime() ?? 0))
+}
+
+export const totalDurationForRequest = (events: Event[]): number => {
+  const traceEvents = events.map((event) => event.entry.value as TraceEvent)
+  const requestEndTime = Math.max(
+    ...traceEvents.map((event) => {
+      const eventDuration = event.duration ? durationToMillis(event.duration) : 0
+      return (event.timeStamp?.toDate().getTime() ?? 0) + eventDuration
+    }),
+  )
+  return requestEndTime - requestStartTime(events)
 }
