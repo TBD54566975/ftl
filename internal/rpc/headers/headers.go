@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 
 	"github.com/TBD54566975/ftl/internal/model"
@@ -23,6 +24,19 @@ const (
 	// i.e. the publisher that initiated this call.
 	ParentRequestIDHeader = "Ftl-Parent-Request-Id"
 )
+
+var headers = []string{DirectRoutingHeader, VerbHeader, RequestIDHeader, ParentRequestIDHeader}
+
+// CopyRequestForForwarding creates a new request with the same message as the original, but with only the FTL specific headers
+func CopyRequestForForwarding[T any](req *connect.Request[T]) *connect.Request[T] {
+	ret := connect.NewRequest(req.Msg)
+	for _, header := range headers {
+		if req.Header()[header] != nil {
+			ret.Header()[header] = req.Header()[header]
+		}
+	}
+	return ret
+}
 
 func IsDirectRouted(header http.Header) bool {
 	return header.Get(DirectRoutingHeader) != ""
