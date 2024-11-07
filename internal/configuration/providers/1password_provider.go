@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
-	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -59,54 +58,27 @@ func (o OnePassword) SyncInterval() time.Duration {
 
 // Sync will fetch all secrets from the 1Password vault and store them in the values map.
 // Do not just sync the o.Vault, instead find all vaults found in entries and sync them.
-func (o OnePassword) Sync(ctx context.Context, entries []configuration.Entry, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
-	if len(entries) == 0 {
-		// Do not check for 1Password binary or call 1Password's CLI at all.
-		// Those checks can log unnecessary errors or prompt the user to unlock 1Password.
-		values.Clear()
-		return nil
-	}
+func (o OnePassword) Sync(ctx context.Context) (map[configuration.Ref]configuration.SyncedValue, error) {
 	logger := log.FromContext(ctx)
 	if err := checkOpBinary(); err != nil {
-		return err
+		return nil, err
 	}
-	// find vaults
-	vaults := map[string]bool{}
-	for _, e := range entries {
-		vault := e.Accessor.Host
-		if vault == "" {
-			logger.Warnf("empty vault name for %s", e.Ref)
+	values := map[configuration.Ref]configuration.SyncedValue{}
+	full, err := o.getItem(ctx, o.Vault)
+	if err != nil {
+		return nil, fmt.Errorf("get item failed: %w", err)
+	}
+	for _, field := range full.Fields {
+		ref, err := configuration.ParseRef(field.Label)
+		if err != nil {
+			logger.Warnf("invalid field label found in 1Password: %q", field.Label)
 			continue
 		}
-		vaults[e.Accessor.Host] = true
-	}
-	// get all secrets from all vaults
-	refs := map[configuration.Ref]bool{}
-	for vault := range vaults {
-		full, err := o.getItem(ctx, vault)
-		if err != nil {
-			return fmt.Errorf("get item failed: %w", err)
-		}
-		for _, field := range full.Fields {
-			ref, err := configuration.ParseRef(field.Label)
-			if err != nil {
-				logger.Warnf("invalid field label found in 1Password: %q", field.Label)
-				continue
-			}
-			refs[ref] = true
-			values.Store(ref, configuration.SyncedValue{
-				Value: []byte(field.Value),
-			})
+		values[ref] = configuration.SyncedValue{
+			Value: []byte(field.Value),
 		}
 	}
-	// delete old values
-	values.Range(func(ref configuration.Ref, _ configuration.SyncedValue) bool {
-		if _, ok := refs[ref]; !ok {
-			values.Delete(ref)
-		}
-		return true
-	})
-	return nil
+	return values, nil
 }
 
 var vaultRegex = regexp.MustCompile(`^[a-zA-Z0-9_\-.]+$`)

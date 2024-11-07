@@ -8,7 +8,6 @@ import (
 
 	"github.com/alecthomas/types/optional"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/backend/controller/leader"
 	"github.com/TBD54566975/ftl/backend/controller/leases"
@@ -23,7 +22,7 @@ const ASMProviderKey configuration.ProviderKey = "asm"
 type asmClient interface {
 	name() string
 	syncInterval() time.Duration
-	sync(ctx context.Context, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error
+	sync(ctx context.Context) (map[configuration.Ref]configuration.SyncedValue, error)
 	store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error)
 	delete(ctx context.Context, ref configuration.Ref) error
 }
@@ -101,16 +100,16 @@ func (a *ASM) SyncInterval() time.Duration {
 	return client.syncInterval()
 }
 
-func (a *ASM) Sync(ctx context.Context, entries []configuration.Entry, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
+func (a *ASM) Sync(ctx context.Context) (map[configuration.Ref]configuration.SyncedValue, error) {
 	client, err := a.coordinator.Get()
 	if err != nil {
-		return fmt.Errorf("could not coordinate ASM: %w", err)
+		return nil, fmt.Errorf("could not coordinate ASM: %w", err)
 	}
-	err = client.sync(ctx, values)
+	values, err := client.sync(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: %w", client.name(), err)
+		return nil, fmt.Errorf("%s: %w", client.name(), err)
 	}
-	return nil
+	return values, nil
 }
 
 // Store and if the secret already exists, update it.

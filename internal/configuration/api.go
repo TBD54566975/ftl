@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/alecthomas/types/optional"
-	"github.com/puzpuzpuz/xsync/v3"
 )
 
 // ErrNotFound is returned when a configuration entry is not found or cannot be resolved.
@@ -132,11 +131,9 @@ type AsynchronousProvider[R Role] interface {
 	// Sync is called periodically to update the cache with the latest values.
 	//
 	// SyncInterval() provides the expected time between syncs.
-	// If Sync() returns an error, sync will be retried with an exponential backoff.
 	//
-	// Values should be updated by Sync().
-	// An array of known entries from the router is provided in case it is helpful, but the provider can store any values it wants.
-	Sync(ctx context.Context, entries []Entry, values *xsync.MapOf[Ref, SyncedValue]) error
+	// If Sync() returns an error, sync will be retried with an exponential backoff.
+	Sync(ctx context.Context) (map[Ref]SyncedValue, error)
 }
 
 type VersionToken any
