@@ -9,11 +9,9 @@ import (
 
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
-	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/internal/configuration"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 const (
@@ -53,7 +51,7 @@ func newCache[R configuration.Role](ctx context.Context, provider optional.Optio
 	cache := &cache[R]{
 		provider: &cacheProvider[R]{
 			provider:   provider,
-			values:     xsync.NewMapOf[configuration.Ref, configuration.SyncedValue](),
+			values:     map[configuration.Ref]configuration.SyncedValue{},
 			loaded:     make(chan bool),
 			loadedOnce: &sync.Once{},
 		},
@@ -71,7 +69,7 @@ func (c *cache[R]) load(ref configuration.Ref, key *url.URL) ([]byte, error) {
 	if err := c.provider.waitForInitialSync(); err != nil {
 		return nil, err
 	}
-	value, ok := c.provider.values.Load(ref)
+	value, ok := c.provider.load(ref)
 	if !ok {
 		return nil, fmt.Errorf("secret not found: %s", ref)
 	}
@@ -115,8 +113,6 @@ func (c *cache[R]) deletedValue(ref configuration.Ref, pkey configuration.Provid
 //
 // Events are processed when all providers are not being synced
 func (c *cache[R]) sync(ctx context.Context) {
-	logger := log.FromContext(ctx)
-
 	events := make(chan updateCacheEvent, 64)
 	c.topic.Subscribe(events)
 	defer c.topic.Unsubscribe(events)
@@ -138,16 +134,7 @@ func (c *cache[R]) sync(ctx context.Context) {
 			if !c.provider.needsSync() {
 				continue
 			}
-			entries, err := c.listProvider.List(ctx)
-			if err != nil {
-				logger.Warnf("could not sync: could not get list: %v", err)
-				continue
-			}
-			entriesForProvider := slices.Filter(entries, func(e configuration.Entry) bool {
-				provider, ok := c.provider.provider.Get()
-				return ok && ProviderKeyForAccessor(e.Accessor) == provider.Key()
-			})
-			c.provider.sync(ctx, entriesForProvider)
+			c.provider.sync(ctx)
 		}
 	}
 }
@@ -160,8 +147,9 @@ func (c *cache[R]) processEvent(e updateCacheEvent) {
 
 // cacheProvider wraps an asynchronous provider and caches its values.
 type cacheProvider[R configuration.Role] struct {
-	provider optional.Option[configuration.AsynchronousProvider[R]]
-	values   *xsync.MapOf[configuration.Ref, configuration.SyncedValue]
+	provider   optional.Option[configuration.AsynchronousProvider[R]]
+	valuesLock sync.RWMutex
+	values     map[configuration.Ref]configuration.SyncedValue
 
 	loaded     chan bool  // closed when values have been synced for the first time
 	loadedOnce *sync.Once // ensures we close the loaded channel only once
@@ -203,7 +191,7 @@ func (c *cacheProvider[R]) needsSync() bool {
 }
 
 // sync executes sync on the provider and updates the cacheProvider sync state
-func (c *cacheProvider[R]) sync(ctx context.Context, entries []configuration.Entry) {
+func (c *cacheProvider[R]) sync(ctx context.Context) {
 	provider, ok := c.provider.Get()
 	if !ok {
 		return
@@ -211,7 +199,7 @@ func (c *cacheProvider[R]) sync(ctx context.Context, entries []configuration.Ent
 	logger := log.FromContext(ctx)
 
 	c.lastSyncAttempt = optional.Some(time.Now())
-	err := provider.Sync(ctx, entries, c.values)
+	values, err := provider.Sync(ctx)
 	if err != nil {
 		logger.Errorf(err, "Error syncing %s", provider.Key())
 		if backoff, ok := c.currentBackoff.Get(); ok {
@@ -221,7 +209,10 @@ func (c *cacheProvider[R]) sync(ctx context.Context, entries []configuration.Ent
 		}
 		return
 	}
-	logger.Tracef("Synced provider cache for %s with %d values\n", provider.Key(), c.values.Size())
+	c.valuesLock.Lock()
+	defer c.valuesLock.Unlock()
+	c.values = values
+	logger.Tracef("Synced provider cache for %s with %d values\n", provider.Key(), len(c.values))
 	c.currentBackoff = optional.None[time.Duration]()
 	c.loadedOnce.Do(func() {
 		close(c.loaded)
@@ -237,14 +228,23 @@ func (c *cacheProvider[R]) processEvent(e updateCacheEvent) {
 		// skip event if initial sync has not successfully completed
 		return
 	}
+	c.valuesLock.Lock()
+	defer c.valuesLock.Unlock()
 	if data, ok := e.value.Get(); ok {
 		// updated value
-		c.values.Store(e.ref, configuration.SyncedValue{
+		c.values[e.ref] = configuration.SyncedValue{
 			Value:        data,
 			VersionToken: optional.None[configuration.VersionToken](),
-		})
+		}
 	} else {
 		// removed value
-		c.values.Delete(e.ref)
+		delete(c.values, e.ref)
 	}
+}
+
+func (c *cacheProvider[R]) load(ref configuration.Ref) (configuration.SyncedValue, bool) {
+	c.valuesLock.RLock()
+	defer c.valuesLock.RUnlock()
+	value, ok := c.values[ref]
+	return value, ok
 }

@@ -1095,18 +1095,11 @@ export class BuildSuccess extends Message<BuildSuccess> {
   deploy: string[] = [];
 
   /**
-   * Name of the docker image to use for the runner
-   *
-   * @generated from field: string docker_image = 5;
-   */
-  dockerImage = "";
-
-  /**
    * Errors contains any errors that occurred during the build
    * No errors can have a level of ERROR, instead a BuildFailure should be sent
    * Instead this is useful for INFO and WARN level errors.
    *
-   * @generated from field: xyz.block.ftl.v1.language.ErrorList errors = 6;
+   * @generated from field: xyz.block.ftl.v1.language.ErrorList errors = 5;
    */
   errors?: ErrorList;
 
@@ -1122,8 +1115,7 @@ export class BuildSuccess extends Message<BuildSuccess> {
     { no: 2, name: "is_automatic_rebuild", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 3, name: "module", kind: "message", T: Module },
     { no: 4, name: "deploy", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "docker_image", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 6, name: "errors", kind: "message", T: ErrorList },
+    { no: 5, name: "errors", kind: "message", T: ErrorList },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildSuccess {

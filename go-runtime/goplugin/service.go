@@ -430,6 +430,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	if !ok {
 		return buildFailure(buildCtx, isAutomaticRebuild, buildErrs...), nil
 	}
+
 	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildSuccess{

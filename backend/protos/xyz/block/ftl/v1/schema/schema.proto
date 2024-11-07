@@ -226,6 +226,7 @@ message ModuleRuntime {
   int32 min_replicas = 3;
   optional string os = 4;
   optional string arch = 5;
+  optional string image = 6;
 }
 
 message Optional {

@@ -293,16 +293,24 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 	}
 	if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
 		// skip reading schema
-		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{&langpb.BuildFailure{
-			IsAutomaticRebuild: autoRebuild,
-			ContextId:          bctx.ID,
-			Errors:             buildErrs,
-		}}}, nil
+		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+			BuildFailure: &langpb.BuildFailure{
+				IsAutomaticRebuild: autoRebuild,
+				ContextId:          bctx.ID,
+				Errors:             buildErrs,
+			}}}, nil
 	}
 
 	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(config.DeployDir, "schema.pb"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read schema for module: %w", err)
+	}
+
+	moduleSchema.Runtime = &schema.ModuleRuntime{
+		CreateTime:  time.Now(),
+		Language:    bctx.Config.Language,
+		MinReplicas: 1,
+		Image:       "ftl0/ftl-runner-jvm",
 	}
 
 	moduleProto := moduleSchema.ToProto().(*schemapb.Module) //nolint:forcetypeassert

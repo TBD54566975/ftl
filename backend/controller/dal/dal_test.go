@@ -110,7 +110,7 @@ func TestDAL(t *testing.T) {
 	})
 
 	runnerID := model.NewRunnerKey("localhost", "8080")
-	labels := map[string]any{"languages": []any{"go"}}
+	labels := map[string]any{}
 
 	t.Run("RegisterRunner", func(t *testing.T) {
 		err = dal.UpsertRunner(ctx, dalmodel.Runner{

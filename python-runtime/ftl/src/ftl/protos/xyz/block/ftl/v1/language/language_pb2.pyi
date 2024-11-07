@@ -207,20 +207,18 @@ class AutoRebuildStarted(_message.Message):
     def __init__(self, context_id: _Optional[str] = ...) -> None: ...
 
 class BuildSuccess(_message.Message):
-    __slots__ = ("context_id", "is_automatic_rebuild", "module", "deploy", "docker_image", "errors")
+    __slots__ = ("context_id", "is_automatic_rebuild", "module", "deploy", "errors")
     CONTEXT_ID_FIELD_NUMBER: _ClassVar[int]
     IS_AUTOMATIC_REBUILD_FIELD_NUMBER: _ClassVar[int]
     MODULE_FIELD_NUMBER: _ClassVar[int]
     DEPLOY_FIELD_NUMBER: _ClassVar[int]
-    DOCKER_IMAGE_FIELD_NUMBER: _ClassVar[int]
     ERRORS_FIELD_NUMBER: _ClassVar[int]
     context_id: str
     is_automatic_rebuild: bool
     module: _schema_pb2.Module
     deploy: _containers.RepeatedScalarFieldContainer[str]
-    docker_image: str
     errors: ErrorList
-    def __init__(self, context_id: _Optional[str] = ..., is_automatic_rebuild: bool = ..., module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., deploy: _Optional[_Iterable[str]] = ..., docker_image: _Optional[str] = ..., errors: _Optional[_Union[ErrorList, _Mapping]] = ...) -> None: ...
+    def __init__(self, context_id: _Optional[str] = ..., is_automatic_rebuild: bool = ..., module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., deploy: _Optional[_Iterable[str]] = ..., errors: _Optional[_Union[ErrorList, _Mapping]] = ...) -> None: ...
 
 class BuildFailure(_message.Message):
     __slots__ = ("context_id", "is_automatic_rebuild", "errors", "invalidate_dependencies")

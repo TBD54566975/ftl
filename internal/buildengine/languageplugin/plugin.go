@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -546,6 +547,9 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 		moduleSch, err := schema.ModuleFromProto(buildSuccess.Module)
 		if err != nil {
 			return BuildResult{}, fmt.Errorf("failed to parse schema: %w", err)
+		}
+		if moduleSch.Runtime != nil && len(strings.Split(moduleSch.Runtime.Image, ":")) != 1 {
+			return BuildResult{}, fmt.Errorf("image tag not supported in runtime image: %s", moduleSch.Runtime.Image)
 		}
 
 		errs := langpb.ErrorsFromProto(buildSuccess.Errors)

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/TBD54566975/ftl/backend/controller/leader"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
@@ -44,7 +43,7 @@ func (f *asmFollower) syncInterval() time.Duration {
 	return asmFollowerSyncInterval
 }
 
-func (f *asmFollower) sync(ctx context.Context, values *xsync.MapOf[configuration.Ref, configuration.SyncedValue]) error {
+func (f *asmFollower) sync(ctx context.Context) (map[configuration.Ref]configuration.SyncedValue, error) {
 	// values must store obfuscated values, but f.client gives unobfuscated values
 	logger := log.FromContext(ctx)
 	module := ""
@@ -58,32 +57,24 @@ func (f *asmFollower) sync(ctx context.Context, values *xsync.MapOf[configuratio
 			if connectErr.Code() == connect.CodeInternal || connectErr.Code() == connect.CodeUnavailable {
 				if !f.errorFilter.ReportLeaseError() {
 					logger.Warnf("error getting secrets list from leader, possible leader failover %s", err.Error())
-					return nil
+					return nil, nil
 				}
 			}
 		}
-		return fmt.Errorf("error getting secrets list from leader: %w", err)
+		return nil, fmt.Errorf("error getting secrets list from leader: %w", err)
 	}
 	f.errorFilter.ReportOperationSuccess()
-	visited := map[configuration.Ref]bool{}
+	values := map[configuration.Ref]configuration.SyncedValue{}
 	for _, s := range resp.Msg.Secrets {
 		ref, err := configuration.ParseRef(s.RefPath)
 		if err != nil {
-			return fmt.Errorf("invalid ref %q: %w", s.RefPath, err)
+			return nil, fmt.Errorf("invalid ref %q: %w", s.RefPath, err)
 		}
-		visited[ref] = true
-		values.Store(ref, configuration.SyncedValue{
+		values[ref] = configuration.SyncedValue{
 			Value: s.Value,
-		})
-	}
-	// delete old values
-	values.Range(func(ref configuration.Ref, _ configuration.SyncedValue) bool {
-		if !visited[ref] {
-			values.Delete(ref)
 		}
-		return true
-	})
-	return nil
+	}
+	return values, nil
 }
 
 func (f *asmFollower) store(ctx context.Context, ref configuration.Ref, value []byte) (*url.URL, error) {
