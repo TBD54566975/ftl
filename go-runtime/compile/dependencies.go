@@ -16,9 +16,15 @@ import (
 )
 
 func ExtractDependencies(config moduleconfig.AbsModuleConfig) ([]string, error) {
+	deps, _, err := extractDependenciesAndImports(config)
+	return deps, err
+}
+
+func extractDependenciesAndImports(config moduleconfig.AbsModuleConfig) (deps []string, imports []string, err error) {
+	importsMap := map[string]bool{}
 	dependencies := map[string]bool{}
 	fset := token.NewFileSet()
-	err := watch.WalkDir(config.Dir, func(path string, d fs.DirEntry) error {
+	err = watch.WalkDir(config.Dir, func(path string, d fs.DirEntry) error {
 		if !d.IsDir() {
 			return nil
 		}
@@ -36,6 +42,7 @@ func ExtractDependencies(config moduleconfig.AbsModuleConfig) ([]string, error) 
 					if err != nil {
 						continue
 					}
+					importsMap[path] = true
 					if !strings.HasPrefix(path, "ftl/") {
 						continue
 					}
@@ -50,9 +57,11 @@ func ExtractDependencies(config moduleconfig.AbsModuleConfig) ([]string, error) 
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", config.Module, err)
+		return nil, nil, fmt.Errorf("%s: failed to extract dependencies from Go module: %w", config.Module, err)
 	}
 	modules := maps.Keys(dependencies)
 	sort.Strings(modules)
-	return modules, nil
+	imports = maps.Keys(importsMap)
+	sort.Strings(imports)
+	return modules, imports, nil
 }

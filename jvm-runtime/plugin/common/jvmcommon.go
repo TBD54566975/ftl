@@ -366,7 +366,7 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 			select {
 			case e := <-watchEvents:
 				if change, ok := e.(watch.WatchEventModuleChanged); ok {
-					log.FromContext(ctx).Infof("Found file changes: %s", change.Path)
+					log.FromContext(ctx).Infof("Found file changes: %s", change)
 					events <- filesUpdatedEvent{}
 				}
 

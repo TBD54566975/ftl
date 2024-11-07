@@ -5,4 +5,7 @@ use (
 {{- range .SharedModulesPaths }}
     {{ . }}
 {{- end }}
+{{ if .IncludeMainPackage }}
+    .ftl/go/main
+{{ end }}
 )

@@ -2,7 +2,9 @@ package compile
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 
@@ -102,8 +104,15 @@ func SyncGeneratedStubReferences(ctx context.Context, config moduleconfig.AbsMod
 	if err := internal.ScaffoldZip(mainWorkTemplateFiles(), config.Dir, MainWorkContext{
 		GoVersion:          goModVersion,
 		SharedModulesPaths: sharedModulePaths,
+		IncludeMainPackage: mainPackageExists(config),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return fmt.Errorf("failed to scaffold zip: %w", err)
 	}
 	return nil
+}
+
+func mainPackageExists(config moduleconfig.AbsModuleConfig) bool {
+	// check if main package exists, otherwise do not include it
+	_, err := os.Stat(filepath.Join(buildDir(config.Dir), "go", "main", "go.mod"))
+	return !errors.Is(err, os.ErrNotExist)
 }

@@ -2,6 +2,7 @@ package compile
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -31,12 +32,17 @@ import (
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/reflect"
 	"github.com/TBD54566975/ftl/internal/schema"
+	islices "github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
+
+var ErrInvalidateDependencies = errors.New("dependencies need to be updated")
+var ftlTypesFilename = "types.ftl.go"
 
 type MainWorkContext struct {
 	GoVersion          string
 	SharedModulesPaths []string
+	IncludeMainPackage bool
 }
 
 type mainModuleContext struct {
@@ -78,7 +84,9 @@ func (c *mainModuleContext) generateMainImports() []string {
 	for _, e := range c.MainCtx.ExternalTypes {
 		imports.Add(e.importStatement())
 	}
-	return imports.ToSlice()
+	out := imports.ToSlice()
+	slices.Sort(out)
+	return out
 }
 
 func (c *mainModuleContext) generateTypesImports(mainModuleImport string) []string {
@@ -112,6 +120,7 @@ func (c *mainModuleContext) generateTypesImports(mainModuleImport string) []stri
 		}
 		filteredImports = append(filteredImports, im)
 	}
+	slices.Sort(filteredImports)
 	return filteredImports
 }
 
@@ -262,8 +271,55 @@ func buildDir(moduleDir string) string {
 	return filepath.Join(moduleDir, buildDirName)
 }
 
+// OngoingState maintains state between builds, allowing the Build function to skip steps if nothing has changed.
+type OngoingState struct {
+	imports   []string
+	moduleCtx mainModuleContext
+}
+
+func (s *OngoingState) checkIfImportsChanged(imports []string) (changed bool) {
+	if slices.Equal(s.imports, imports) {
+		return false
+	}
+	s.imports = imports
+	return true
+}
+
+func (s *OngoingState) checkIfMainModuleContextChanged(moduleCtx mainModuleContext) (changed bool) {
+	if stdreflect.DeepEqual(s.moduleCtx, moduleCtx) {
+		return false
+	}
+	s.moduleCtx = moduleCtx
+	return true
+}
+
+// DetectedFileChanges should be called whenever file changes are detected outside of the Build() function.
+// This allows the OngoingState to detect if files need to be reprocessed.
+func (s *OngoingState) DetectedFileChanges(config moduleconfig.AbsModuleConfig, changes []watch.FileChange) {
+	paths := []string{
+		filepath.Join(config.Dir, ftlTypesFilename),
+		filepath.Join(config.Dir, "go.mod"),
+		filepath.Join(config.Dir, "go.sum"),
+	}
+	for _, change := range changes {
+		if !slices.Contains(paths, change.Path) {
+			continue
+		}
+		// If files altered by Build() have been manually changed, reset state to make sure we correct them if needed.
+		s.reset()
+		return
+	}
+}
+
+func (s *OngoingState) reset() {
+	s.imports = nil
+	s.moduleCtx = mainModuleContext{}
+}
+
 // Build the given module.
-func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig, sch *schema.Schema, filesTransaction watch.ModifyFilesTransaction, buildEnv []string, devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, err error) {
+func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig,
+	sch *schema.Schema, deps, buildEnv []string, filesTransaction watch.ModifyFilesTransaction, ongoingState *OngoingState,
+	devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, err error) {
 	if err := filesTransaction.Begin(); err != nil {
 		return moduleSch, nil, fmt.Errorf("could not start a file transaction: %w", err)
 	}
@@ -271,7 +327,23 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		if terr := filesTransaction.End(); terr != nil {
 			err = fmt.Errorf("failed to end file transaction: %w", terr)
 		}
+		if err != nil {
+			// If we failed, reset the state to ensure we don't skip steps on the next build.
+			// Example: If `go mod tidy` fails due to a network failure, we need to try again next time, even if nothing else has changed.
+			ongoingState.reset()
+		}
 	}()
+
+	// Check dependencies
+	newDeps, imports, err := extractDependenciesAndImports(config)
+	if err != nil {
+		return moduleSch, nil, fmt.Errorf("could not extract dependencies: %w", err)
+	}
+	importsChanged := ongoingState.checkIfImportsChanged(imports)
+	if !slices.Equal(islices.Sort(newDeps), islices.Sort(deps)) {
+		// dependencies have changed
+		return moduleSch, nil, ErrInvalidateDependencies
+	}
 
 	replacements, goModVersion, err := updateGoModule(filepath.Join(config.Dir, "go.mod"))
 	if err != nil {
@@ -281,11 +353,6 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	goVersion := runtime.Version()[2:]
 	if semver.Compare("v"+goVersion, "v"+goModVersion) < 0 {
 		return moduleSch, nil, fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
-	}
-
-	ftlVersion := ""
-	if ftl.IsRelease(ftl.Version) {
-		ftlVersion = ftl.Version
 	}
 
 	projectName := ""
@@ -317,6 +384,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	if err := internal.ScaffoldZip(mainWorkTemplateFiles(), config.Dir, MainWorkContext{
 		GoVersion:          goModVersion,
 		SharedModulesPaths: sharedModulesPaths,
+		IncludeMainPackage: mainPackageExists(config),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
 		return moduleSch, nil, fmt.Errorf("failed to scaffold zip: %w", err)
 	}
@@ -334,25 +402,33 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	}
 
 	logger.Debugf("Generating main module")
-	mctx, err := buildMainModuleContext(sch, result, goModVersion, ftlVersion, projectName, sharedModulesPaths,
+	mctx, err := buildMainModuleContext(sch, result, goModVersion, projectName, sharedModulesPaths,
 		replacements)
 	if err != nil {
 		return moduleSch, nil, err
 	}
-	if err := internal.ScaffoldZip(buildTemplateFiles(), config.Dir, mctx, scaffolder.Exclude("^go.mod$"),
-		scaffolder.Functions(funcs)); err != nil {
-		return moduleSch, nil, fmt.Errorf("failed to scaffold build template: %w", err)
-	}
 
+	mainModuleCtxChanged := ongoingState.checkIfMainModuleContextChanged(mctx)
+	if mainModuleCtxChanged {
+		if err := internal.ScaffoldZip(buildTemplateFiles(), config.Dir, mctx, scaffolder.Exclude("^go.mod$"),
+			scaffolder.Functions(funcs)); err != nil {
+			return moduleSch, nil, fmt.Errorf("failed to scaffold build template: %w", err)
+		}
+		if err := filesTransaction.ModifiedFiles(filepath.Join(config.Dir, ftlTypesFilename)); err != nil {
+			return moduleSch, nil, fmt.Errorf("failed to mark %s as modified: %w", ftlTypesFilename, err)
+		}
+	}
 	logger.Debugf("Tidying go.mod files")
 	wg, wgctx := errgroup.WithContext(ctx)
 
-	ftlTypesFilename := "types.ftl.go"
 	wg.Go(func() error {
+		if !importsChanged {
+			log.FromContext(ctx).Debugf("skipped go mod tidy (module dir)\n")
+			return nil
+		}
 		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "mod", "tidy").RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", config.Dir, err)
 		}
-
 		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "fmt", ftlTypesFilename).RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to format module dir: %w", config.Dir, err)
 		}
@@ -360,6 +436,10 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	})
 	mainDir := filepath.Join(buildDir, "go", "main")
 	wg.Go(func() error {
+		if !mainModuleCtxChanged {
+			log.FromContext(ctx).Debugf("skipped go mod tidy (build dir)\n")
+			return nil
+		}
 		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to tidy go.mod: %w", mainDir, err)
 		}
@@ -405,8 +485,12 @@ type mainModuleContextBuilder struct {
 	imports     map[string]string
 }
 
-func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVersion, ftlVersion, projectName string,
+func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVersion, projectName string,
 	sharedModulesPaths []string, replacements []*modfile.Replace) (mainModuleContext, error) {
+	ftlVersion := ""
+	if ftl.IsRelease(ftl.Version) {
+		ftlVersion = ftl.Version
+	}
 	combinedSch := &schema.Schema{
 		Modules: append(sch.Modules, result.Module),
 	}
