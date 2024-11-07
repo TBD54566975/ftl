@@ -7,14 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 )
@@ -148,8 +147,6 @@ func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, t
 		return fmt.Errorf("failed to group outputs by property name: %w", err)
 	}
 
-	fmt.Fprintf(os.Stderr, "byName: %v\n", byName)
-
 	// TODO: Move to provisioner workflow
 	secretARN := *byName[PropertyMasterUserARN].OutputValue
 	username, password, err := c.secretARNToUsernamePassword(ctx, secretARN)
@@ -157,12 +154,12 @@ func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, t
 		return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
 	}
 
-	to.ReadDsn = endpointToDSN(*byName[PropertyDBReadEndpoint].OutputValue, resourceID, 5432, username, password)
-	to.WriteDsn = endpointToDSN(*byName[PropertyDBWriteEndpoint].OutputValue, resourceID, 5432, username, password)
-	adminEndpoint := endpointToDSN(*byName[PropertyDBReadEndpoint].OutputValue, "postgres", 5432, username, password)
+	to.ReadDsn = endpointToDSN(byName[PropertyDBReadEndpoint].OutputValue, resourceID, 5432, username, password)
+	to.WriteDsn = endpointToDSN(byName[PropertyDBWriteEndpoint].OutputValue, resourceID, 5432, username, password)
+	adminEndpoint := endpointToDSN(byName[PropertyDBReadEndpoint].OutputValue, "postgres", 5432, username, password)
 
 	// Connect to postgres without a specific database to create the new one
-	db, err := sql.Open("postgres", adminEndpoint)
+	db, err := sql.Open("pgx", adminEndpoint)
 	if err != nil {
 		return fmt.Errorf("failed to connect to postgres: %w", err)
 	}
@@ -179,9 +176,19 @@ func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, t
 	return nil
 }
 
-func endpointToDSN(endpoint, database string, port int, username, password string) string {
-	urlEncodedPassword := url.QueryEscape(password)
-	return fmt.Sprintf("postgres://%s:%d/%s?user=%s&password=%s", endpoint, port, database, username, urlEncodedPassword)
+func endpointToDSN(endpoint *string, database string, port int, username, password string) string {
+	url := url.URL{
+		Scheme: "postgres",
+		Host:   fmt.Sprintf("%s:%d", *endpoint, port),
+		Path:   database,
+	}
+
+	query := url.Query()
+	query.Add("user", username)
+	query.Add("password", password)
+	url.RawQuery = query.Encode()
+
+	return url.String()
 }
 
 func (c *CloudformationProvisioner) secretARNToUsernamePassword(ctx context.Context, secretARN string) (string, string, error) {
