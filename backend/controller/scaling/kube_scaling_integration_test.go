@@ -76,6 +76,10 @@ func TestKubeScaling(t *testing.T) {
 		in.Call("echo", "echo", "Bob", func(t testing.TB, response string) {
 			assert.Equal(t, "Bye, Bob!!!", response)
 		}),
+		func(t testing.TB, ic in.TestContext) {
+			err := failure.Load()
+			assert.NoError(t, err)
+		},
 		in.EditFile("echo", func(content []byte) []byte {
 			return []byte(strings.ReplaceAll(string(content), "Bye", "Bonjour"))
 		}, "echo.go"),
