@@ -10,7 +10,7 @@ import {
 } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { classNames, durationToMillis } from '../../utils'
 import { eventBackgroundColor } from '../timeline/timeline.utils'
-import { eventBarLeftOffsetPercentage } from './traces.utils'
+import { eventBarLeftOffsetPercentage, requestStartTime, totalDurationForRequest } from './traces.utils'
 
 const EventBlock = ({
   event,
@@ -87,22 +87,15 @@ export const TraceGraph = ({ requestKey, selectedEventId }: { requestKey?: strin
     return
   }
 
-  const traceEvents = events.map((event) => event.entry.value as TraceEvent)
-  const requestStartTime = Math.min(...traceEvents.map((event) => event.timeStamp?.toDate().getTime() ?? 0))
-  const requestEndTime = Math.max(
-    ...traceEvents.map((event) => {
-      const eventDuration = event.duration ? durationToMillis(event.duration) : 0
-      return (event.timeStamp?.toDate().getTime() ?? 0) + eventDuration
-    }),
-  )
-  const totalEventDuration = requestEndTime - requestStartTime
+  const startTime = requestStartTime(events)
+  const totalEventDuration = totalDurationForRequest(events)
 
   return (
     <div className='flex flex-col'>
       {events.map((c, index) => (
         <div key={index} className='flex hover:bg-indigo-500/60 hover:dark:bg-indigo-500/10 rounded-sm'>
           <div className='w-full relative'>
-            <EventBlock event={c} isSelected={c.id === selectedEventId} requestStartTime={requestStartTime} requestDuration={totalEventDuration} />
+            <EventBlock event={c} isSelected={c.id === selectedEventId} requestStartTime={startTime} requestDuration={totalEventDuration} />
           </div>
         </div>
       ))}

@@ -57,10 +57,10 @@ export const TraceDetailItem: React.FC<TraceDetailItemProps> = ({
 
   return (
     <li key={event.id.toString()} className={listItemClass} onClick={() => handleEventClick(event.id)}>
-      <span className='flex items-center w-1/2 text-sm font-medium'>
-        <span className='mr-2'>{icon}</span>
-        <span className='mr-2'>{action}</span>
-        {eventName}
+      <span className='flex items-center w-1/2 text-sm gap-x-2 font-medium'>
+        <span>{icon}</span>
+        <span>{action}</span>
+        <span>{eventName}</span>
       </span>
 
       <div className='relative w-2/3 h-4 flex-grow'>

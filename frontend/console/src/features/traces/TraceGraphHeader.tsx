@@ -1,26 +1,19 @@
 import { Activity03Icon } from 'hugeicons-react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { type TraceEvent, useRequestTraceEvents } from '../../api/timeline/use-request-trace-events'
-import { durationToMillis } from '../../utils'
+import { useRequestTraceEvents } from '../../api/timeline/use-request-trace-events'
+import { totalDurationForRequest } from './traces.utils'
 
 export const TraceGraphHeader = ({ requestKey, eventId }: { requestKey?: string; eventId: bigint }) => {
   const navigate = useNavigate()
   const requestEvents = useRequestTraceEvents(requestKey)
   const events = requestEvents.data?.reverse() ?? []
 
+  const totalEventDuration = useMemo(() => totalDurationForRequest(events), [events])
+
   if (events.length === 0) {
     return null
   }
-
-  const traceEvents = events.map((event) => event.entry.value as TraceEvent)
-  const requestStartTime = Math.min(...traceEvents.map((event) => event.timeStamp?.toDate().getTime() ?? 0))
-  const requestEndTime = Math.max(
-    ...traceEvents.map((event) => {
-      const eventDuration = event.duration ? durationToMillis(event.duration) : 0
-      return (event.timeStamp?.toDate().getTime() ?? 0) + eventDuration
-    }),
-  )
-  const totalEventDuration = requestEndTime - requestStartTime
 
   return (
     <div className='flex items-center justify-between'>
