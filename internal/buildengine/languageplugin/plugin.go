@@ -17,7 +17,6 @@ import (
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -92,16 +91,11 @@ type BuildContext struct {
 var ErrPluginNotRunning = errors.New("language plugin no longer running")
 
 // PluginFromConfig creates a new language plugin from the given config.
-func New(ctx context.Context, bindAllocator *bind.BindAllocator, language, name string) (p *LanguagePlugin, err error) {
-	bind, err := bindAllocator.Next()
-	if err != nil {
-		return nil, fmt.Errorf("failed to allocate port for external plugin: %w", err)
-	}
-	impl, err := newClientImpl(ctx, bind, language, name)
+func New(ctx context.Context, dir, language, name string) (p *LanguagePlugin, err error) {
+	impl, err := newClientImpl(ctx, dir, language, name)
 	if err != nil {
 		return nil, err
 	}
-
 	return newPluginForTesting(ctx, impl), nil
 }
 
