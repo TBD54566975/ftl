@@ -3,6 +3,8 @@ package watch
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/maps"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // A WatchEvent is an event that occurs when a module is added, removed, or
@@ -30,10 +33,24 @@ type WatchEventModuleRemoved struct {
 func (WatchEventModuleRemoved) watchEvent() {}
 
 type WatchEventModuleChanged struct {
-	Config moduleconfig.UnvalidatedModuleConfig
+	Config  moduleconfig.UnvalidatedModuleConfig
+	Changes []FileChange
+	Time    time.Time
+}
+
+func (c WatchEventModuleChanged) String() string {
+	return strings.Join(slices.Map(c.Changes, func(change FileChange) string {
+		p, err := filepath.Rel(c.Config.Dir, change.Path)
+		if err != nil {
+			p = change.Path
+		}
+		return fmt.Sprintf("%s%s", change.Change, p)
+	}), ", ")
+}
+
+type FileChange struct {
 	Change FileChangeType
 	Path   string
-	Time   time.Time
 }
 
 func (WatchEventModuleChanged) watchEvent() {}
@@ -147,12 +164,13 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 				}
 
 				if haveExistingModule {
-					changeType, path, equal := CompareFileHashes(existingModule.Hashes, hashes)
-					if equal {
+					changes := CompareFileHashes(existingModule.Hashes, hashes)
+					if len(changes) == 0 {
 						continue
 					}
-					logger.Debugf("changed %q: %c%s", config.Module, changeType, path)
-					topic.Publish(WatchEventModuleChanged{Config: existingModule.Config, Change: changeType, Path: path, Time: time.Now()})
+					event := WatchEventModuleChanged{Config: existingModule.Config, Changes: changes, Time: time.Now()}
+					logger.Debugf("changed %q: %s", config.Module, event)
+					topic.Publish(event)
 					w.existingModules[config.Dir] = moduleHashes{Hashes: hashes, Config: existingModule.Config}
 					continue
 				}

@@ -38,28 +38,26 @@ type FileHashes map[string][]byte
 
 // CompareFileHashes compares the hashes of the files in the oldFiles and newFiles maps.
 //
-// Returns true if the hashes are equal, false otherwise.
-//
-// If false, the returned string will be a file that caused the difference and the
-// returned FileChangeType will be the type of change that occurred.
-func CompareFileHashes(oldFiles, newFiles FileHashes) (FileChangeType, string, bool) {
+// Returns all file changes
+func CompareFileHashes(oldFiles, newFiles FileHashes) []FileChange {
+	changes := []FileChange{}
 	for key, hash1 := range oldFiles {
 		hash2, exists := newFiles[key]
 		if !exists {
-			return FileRemoved, key, false
+			changes = append(changes, FileChange{Change: FileRemoved, Path: key})
 		}
 		if !bytes.Equal(hash1, hash2) {
-			return FileChanged, key, false
+			changes = append(changes, FileChange{Change: FileChanged, Path: key})
 		}
 	}
 
 	for key := range newFiles {
 		if _, exists := oldFiles[key]; !exists {
-			return FileAdded, key, false
+			changes = append(changes, FileChange{Change: FileAdded, Path: key})
 		}
 	}
 
-	return ' ', "", true
+	return changes
 }
 
 // ComputeFileHashes computes the SHA256 hash of all (non-git-ignored) files in

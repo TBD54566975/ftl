@@ -2,10 +2,10 @@ package goplugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"time"
 
@@ -28,7 +28,6 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
-	islices "github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
@@ -43,7 +42,9 @@ type buildContextUpdatedEvent struct {
 
 func (buildContextUpdatedEvent) updateEvent() {}
 
-type filesUpdatedEvent struct{}
+type filesUpdatedEvent struct {
+	changes []watch.FileChange
+}
 
 func (filesUpdatedEvent) updateEvent() {}
 
@@ -237,6 +238,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	}
 
 	watcher := watch.NewWatcher(watchPatterns...)
+
 	if req.Msg.RebuildAutomatically {
 		s.acceptsContextUpdates.Store(true)
 		defer s.acceptsContextUpdates.Store(false)
@@ -247,7 +249,8 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 	}
 
 	// Initial build
-	if err := buildAndSend(ctx, stream, req.Msg.ProjectRoot, req.Msg.StubsRoot, buildCtx, false, watcher.GetTransaction(buildCtx.Config.Dir)); err != nil {
+	ongoingState := &compile.OngoingState{}
+	if err := buildAndSend(ctx, stream, req.Msg.ProjectRoot, req.Msg.StubsRoot, buildCtx, false, watcher.GetTransaction(buildCtx.Config.Dir), ongoingState); err != nil {
 		return err
 	}
 	if !req.Msg.RebuildAutomatically {
@@ -259,7 +262,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 		select {
 		case e := <-events:
 			var isAutomaticRebuild bool
-			buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(ctx, buildCtx, events, e)
+			buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(ctx, buildCtx, events, e, ongoingState)
 			if isAutomaticRebuild {
 				err = stream.Send(&langpb.BuildEvent{
 					Event: &langpb.BuildEvent_AutoRebuildStarted{
@@ -272,7 +275,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 					return fmt.Errorf("could not send auto rebuild started event: %w", err)
 				}
 			}
-			if err = buildAndSend(ctx, stream, req.Msg.ProjectRoot, req.Msg.StubsRoot, buildCtx, isAutomaticRebuild, watcher.GetTransaction(buildCtx.Config.Dir)); err != nil {
+			if err = buildAndSend(ctx, stream, req.Msg.ProjectRoot, req.Msg.StubsRoot, buildCtx, isAutomaticRebuild, watcher.GetTransaction(buildCtx.Config.Dir), ongoingState); err != nil {
 				return err
 			}
 		case <-ctx.Done():
@@ -294,11 +297,9 @@ func (s *Service) BuildContextUpdated(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-
 	s.updatesTopic.Publish(buildContextUpdatedEvent{
 		buildCtx: buildCtx,
 	})
-
 	return connect.NewResponse(&langpb.BuildContextUpdatedResponse{}), nil
 }
 
@@ -328,9 +329,9 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 		for {
 			select {
 			case e := <-watchEvents:
-				if _, ok := e.(watch.WatchEventModuleChanged); ok {
-					log.FromContext(ctx).Infof("Found file changes: %s", buildCtx.Config.Dir)
-					events <- filesUpdatedEvent{}
+				if change, ok := e.(watch.WatchEventModuleChanged); ok {
+					log.FromContext(ctx).Infof("Found file changes: %s", change)
+					events <- filesUpdatedEvent{changes: change.Changes}
 				}
 
 			case <-ctx.Done():
@@ -342,7 +343,7 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 }
 
 // buildContextFromPendingEvents processes all pending events to determine the latest context and whether the build is automatic.
-func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, events chan updateEvent, firstEvent updateEvent) (newBuildCtx buildContext, isAutomaticRebuild bool) {
+func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, events chan updateEvent, firstEvent updateEvent, ongoingState *compile.OngoingState) (newBuildCtx buildContext, isAutomaticRebuild bool) {
 	allEvents := []updateEvent{firstEvent}
 	// find any other events in the queue
 	for {
@@ -360,14 +361,15 @@ func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, e
 					buildCtx = e.buildCtx
 					hasExplicitBuilt = true
 				case filesUpdatedEvent:
+					ongoingState.DetectedFileChanges(buildCtx.Config, e.changes)
 				}
-
 			}
 			switch e := firstEvent.(type) {
 			case buildContextUpdatedEvent:
 				buildCtx = e.buildCtx
 				hasExplicitBuilt = true
 			case filesUpdatedEvent:
+				ongoingState.DetectedFileChanges(buildCtx.Config, e.changes)
 			}
 			return buildCtx, !hasExplicitBuilt
 		}
@@ -378,8 +380,9 @@ func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, e
 //
 // Build errors are sent over the stream as a BuildFailure event.
 // This function only returns an error if events could not be send over the stream.
-func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction) error {
-	buildEvent, err := build(ctx, projectRoot, stubsRoot, buildCtx, isAutomaticRebuild, transaction)
+func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], projectRoot, stubsRoot string, buildCtx buildContext,
+	isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction, ongoingState *compile.OngoingState) error {
+	buildEvent, err := build(ctx, projectRoot, stubsRoot, buildCtx, isAutomaticRebuild, transaction, ongoingState)
 	if err != nil {
 		buildEvent = buildFailure(buildCtx, isAutomaticRebuild, builderrors.Error{
 			Type:  builderrors.FTL,
@@ -393,33 +396,27 @@ func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.Build
 	return nil
 }
 
-func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction) (*langpb.BuildEvent, error) {
+func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildContext, isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction,
+	ongoingState *compile.OngoingState) (*langpb.BuildEvent, error) {
 	release, err := flock.Acquire(ctx, buildCtx.Config.BuildLock, BuildLockTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire build lock: %w", err)
 	}
 	defer release() //nolint:errcheck
 
-	deps, err := compile.ExtractDependencies(buildCtx.Config)
+	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, buildCtx.Dependencies, buildCtx.BuildEnv, transaction, ongoingState, false)
 	if err != nil {
-		return nil, fmt.Errorf("could not extract dependencies: %w", err)
-	}
-
-	if !slices.Equal(islices.Sort(deps), islices.Sort(buildCtx.Dependencies)) {
-		// dependencies have changed
-		return &langpb.BuildEvent{
-			Event: &langpb.BuildEvent_BuildFailure{
-				BuildFailure: &langpb.BuildFailure{
-					ContextId:              buildCtx.ID,
-					IsAutomaticRebuild:     isAutomaticRebuild,
-					InvalidateDependencies: true,
+		if errors.Is(err, compile.ErrInvalidateDependencies) {
+			return &langpb.BuildEvent{
+				Event: &langpb.BuildEvent_BuildFailure{
+					BuildFailure: &langpb.BuildFailure{
+						ContextId:              buildCtx.ID,
+						IsAutomaticRebuild:     isAutomaticRebuild,
+						InvalidateDependencies: true,
+					},
 				},
-			},
-		}, nil
-	}
-
-	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, transaction, buildCtx.BuildEnv, false)
-	if err != nil {
+			}, nil
+		}
 		return buildFailure(buildCtx, isAutomaticRebuild, builderrors.Error{
 			Type:  builderrors.COMPILER,
 			Level: builderrors.ERROR,
