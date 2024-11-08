@@ -23,16 +23,22 @@ const (
 	// ParentRequestIDHeader is the header used to pass the parent request ID,
 	// i.e. the publisher that initiated this call.
 	ParentRequestIDHeader = "Ftl-Parent-Request-Id"
+
+	transferEncoding = "Transfer-Encoding"
+	headerHost       = "Host"
 )
 
-var headers = []string{DirectRoutingHeader, VerbHeader, RequestIDHeader, ParentRequestIDHeader}
+var protocolHeaders = map[string]bool{
+	headerHost:       true,
+	transferEncoding: true,
+}
 
 // CopyRequestForForwarding creates a new request with the same message as the original, but with only the FTL specific headers
 func CopyRequestForForwarding[T any](req *connect.Request[T]) *connect.Request[T] {
 	ret := connect.NewRequest(req.Msg)
-	for _, header := range headers {
-		if req.Header()[header] != nil {
-			ret.Header()[header] = req.Header()[header]
+	for key, val := range req.Header() {
+		if !protocolHeaders[key] {
+			ret.Header()[key] = val
 		}
 	}
 	return ret
