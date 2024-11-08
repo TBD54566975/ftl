@@ -61,7 +61,7 @@ func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string
 		return fmt.Errorf("failed to find plugin for %s: %w", language, err)
 	}
 
-	plugin, _, err := plugin.Spawn(ctx,
+	plugin, cmdCtx, err := plugin.Spawn(ctx,
 		log.FromContext(ctx).GetLevel(),
 		name,
 		dir,
@@ -76,7 +76,8 @@ func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string
 
 	p.cmdError = make(chan error)
 	go func() {
-		err := p.plugin.Cmd.Wait()
+		<-cmdCtx.Done()
+		err := cmdCtx.Err()
 		if err != nil {
 			p.cmdError <- fmt.Errorf("language plugin failed: %w", err)
 		} else {
