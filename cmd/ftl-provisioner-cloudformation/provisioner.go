@@ -27,7 +27,7 @@ import (
 const (
 	PropertyDBReadEndpoint  = "db:read_endpoint"
 	PropertyDBWriteEndpoint = "db:write_endpoint"
-	PropertyMasterUserARN   = "db:maser_user_secret_arn"
+	PropertyMasterUserARN   = "db:master_user_secret_arn"
 )
 
 type Config struct {
