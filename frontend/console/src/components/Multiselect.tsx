@@ -77,10 +77,10 @@ export const Multiselect = ({
     <div className='w-full'>
       <Listbox multiple value={selectedOpts} onChange={onChange}>
         <div className='relative w-[calc(100%-0.75rem)]'>
-          <ListboxButton className='w-full m-1.5 py-1 px-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'>
+          <ListboxButton className='w-full m-2 py-1 px-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-900 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'>
             <span className='block truncate w-[calc(100%-30px)] h-5 text-left'>{getSelectionText(selectedOpts, allOpts)}</span>
-            <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1'>
-              <ArrowDown01Icon className='w-5 text-gray-400 dark:text-gray-500' />
+            <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center'>
+              <ArrowDown01Icon className='w-5 text-gray-400' />
             </span>
           </ListboxButton>
         </div>

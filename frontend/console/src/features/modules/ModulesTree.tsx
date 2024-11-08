@@ -1,4 +1,4 @@
-import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, CodeFolderIcon, Upload01Icon } from 'hugeicons-react'
+import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, CodeFolderIcon, ViewIcon, ViewOffSlashIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
@@ -132,6 +132,7 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
 
   const initialExpanded = listExpandedModulesFromLocalStorage()
   const [expandedModules, setExpandedModules] = useState(initialExpanded)
+
   useEffect(() => {
     if (moduleName && declName) {
       addModuleToLocalStorageIfMissing(moduleName)
@@ -171,29 +172,31 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
   }
 
   modules.sort((m1, m2) => Number(m1.isBuiltin) - Number(m2.isBuiltin))
+
   return (
     <div className='flex grow flex-col h-full gap-y-5 overflow-y-auto bg-gray-100 dark:bg-gray-900'>
       <nav>
-        <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 z-10'>
-          <span className='block w-[calc(100%-62px)]'>
+        <div className='sticky top-0 border-b border-gray-300 bg-gray-100 dark:border-gray-800 dark:bg-gray-900 z-10 flex items-center'>
+          <span className='w-full'>
             <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
           </span>
-          <span
-            className='absolute inset-y-0 right-0 flex items-center px-1 mx-9 my-1.5 rounded-md cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-100'
-            onClick={() => setHideUnexportedState(!hideUnexported)}
+          <button
             id='hide-exported'
-            title='show/hide unexported'
+            type='button'
+            className='flex items-center p-1 ml-1 mr-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+            onClick={() => setHideUnexportedState(!hideUnexported)}
+            title='Show/hide unexported'
           >
-            <Upload01Icon className={`size-5 ${hideUnexported ? 'text-gray-300 dark:text-gray-600' : 'text-gray-500 dark:text-gray-300'}`} />
-            {hideUnexported ? <div className='absolute border-t border-gray-300 dark:border-gray-600 rotate-45 w-9 -ml-2' /> : ''}
-          </span>
-          <span
-            className='absolute inset-y-0 right-0 flex items-center px-1 mx-1 my-1.5 rounded-md cursor-pointer bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-100'
+            {hideUnexported ? <ViewOffSlashIcon className='size-5 ' /> : <ViewIcon className='size-5' />}
+          </button>
+          <button
+            type='button'
+            className='flex items-center p-1 mr-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
             onClick={collapseAll}
-            title='collapse all modules'
+            title='Collapse all modules'
           >
-            <ArrowShrink02Icon className='size-5 text-gray-500 dark:text-gray-300' />
-          </span>
+            <ArrowShrink02Icon className='size-5 ' />
+          </button>
         </div>
         <ul>
           {modules.map((m) => (

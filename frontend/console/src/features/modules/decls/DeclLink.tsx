@@ -41,7 +41,7 @@ const SnippetContainer = ({
         fitsAbove ? 'bottom-full' : '',
         visible ? '' : 'invisible',
         horizontalAlignmentClassNames,
-        'absolute p-4 pl-0.5 rounded-md border-solid border border border-gray-400 bg-gray-200 dark:border-gray-800 dark:bg-gray-700 text-gray-700 dark:text-white text-xs font-normal z-10 drop-shadow-xl cursor-default',
+        'absolute p-4 pl-0.5 rounded-md border-solid border border-gray-400 bg-gray-200 dark:border-gray-800 dark:bg-gray-700 text-gray-700 dark:text-white text-xs font-normal z-10 drop-shadow-xl cursor-default',
       )}
     >
       <Schema schema={decl.schema} moduleName={moduleName} containerRect={containerRect} />
