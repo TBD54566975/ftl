@@ -80,7 +80,7 @@ func (b *boxRunCmd) Run(
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
-	engine, err := buildengine.New(ctx, client, projConfig, []string{b.Dir}, bindAllocator)
+	engine, err := buildengine.New(ctx, client, projConfig, []string{b.Dir})
 	if err != nil {
 		return fmt.Errorf("failed to create build engine: %w", err)
 	}

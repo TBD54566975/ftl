@@ -2,13 +2,11 @@ package buildengine_test
 
 import (
 	"context"
-	"net/url"
 	"path/filepath"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -18,17 +16,11 @@ import (
 func TestGraph(t *testing.T) {
 	ctx, cancel := context.WithCancel(log.ContextWithNewDefaultLogger(context.Background()))
 	t.Cleanup(cancel)
-
-	bindURL, err := url.Parse("http://127.0.0.1:8893")
-	assert.NoError(t, err)
-	bindAllocator, err := bind.NewBindAllocator(bindURL, 0)
-	assert.NoError(t, err)
-
 	projConfig := projectconfig.Config{
 		Path: filepath.Join(t.TempDir(), "ftl-project.toml"),
 		Name: "test",
 	}
-	engine, err := buildengine.New(ctx, nil, projConfig, []string{"testdata/alpha", "testdata/other", "testdata/another"}, bindAllocator)
+	engine, err := buildengine.New(ctx, nil, projConfig, []string{"testdata/alpha", "testdata/other", "testdata/another"})
 	assert.NoError(t, err)
 
 	defer engine.Close()
