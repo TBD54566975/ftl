@@ -542,28 +542,69 @@ func dumpKubePods(ctx context.Context, kubeClient optional.Option[kubernetes.Cli
 					continue
 				}
 				for _, container := range pod.Spec.Containers {
-					path := filepath.Join(dumpPath, pod.Name, container.Name+".log")
-					req := client.CoreV1().Pods(kubeNamespace).GetLogs(pod.Name, &kubecore.PodLogOptions{Container: container.Name})
-					podLogs, err := req.Stream(context.Background())
-					if err != nil {
-						Infof("Error getting logs for pod %s: %v", pod.Name, err)
-						continue
+					for _, prev := range []bool{false, true} {
+						var path string
+						if prev {
+							path = filepath.Join(dumpPath, pod.Name, container.Name+"-previous.log")
+						} else {
+							path = filepath.Join(dumpPath, pod.Name, container.Name+".log")
+						}
+						req := client.CoreV1().Pods(kubeNamespace).GetLogs(pod.Name, &kubecore.PodLogOptions{Container: container.Name, Previous: prev})
+						podLogs, err := req.Stream(context.Background())
+						if err != nil {
+							if prev {
+								// This is pretty normal not to have previous logs
+								continue
+							}
+							Infof("Error getting logs for pod %s: %v previous: %v", pod.Name, err, prev)
+							continue
+						}
+						defer func() {
+							_ = podLogs.Close()
+						}()
+						buf := new(bytes.Buffer)
+						_, err = io.Copy(buf, podLogs)
+						if err != nil {
+							Infof("Error copying logs for pod %s: %v", pod.Name, err)
+							continue
+						}
+						str := buf.String()
+						err = os.WriteFile(path, []byte(str), 0644) // #nosec
+						if err != nil {
+							Infof("Error writing logs for pod %s: %v", pod.Name, err)
+						}
+
 					}
-					defer func() {
-						_ = podLogs.Close()
-					}()
-					buf := new(bytes.Buffer)
-					_, err = io.Copy(buf, podLogs)
-					if err != nil {
-						Infof("Error copying logs for pod %s: %v", pod.Name, err)
-						continue
-					}
-					str := buf.String()
-					err = os.WriteFile(path, []byte(str), 0644) // #nosec
-					if err != nil {
-						Infof("Error writing logs for pod %s: %v", pod.Name, err)
-					}
+
 				}
+			}
+		}
+		istio, err := k8sscaling.CreateIstioClientSet()
+		if err != nil {
+			Infof("Error creating istio clientset: %v", err)
+			return
+		}
+		auths, err := istio.SecurityV1().AuthorizationPolicies(kubeNamespace).List(ctx, kubemeta.ListOptions{})
+		if err == nil {
+			for _, policy := range auths.Items {
+				Infof("Dumping yamp for auth policy %s", policy.Name)
+				policyPath := filepath.Join(dumpPath, policy.Name)
+				err := os.MkdirAll(policyPath, 0755) // #nosec
+				if err != nil {
+					Infof("Error creating directory %s: %v", policyPath, err)
+					continue
+				}
+				podYaml, err := yaml.Marshal(policy)
+				if err != nil {
+					Infof("Error marshalling pod %s: %v", policy.Name, err)
+					continue
+				}
+				err = os.WriteFile(filepath.Join(policyPath, "policy.yaml"), podYaml, 0644) // #nosec
+				if err != nil {
+					Infof("Error writing policy %s: %v", policy.Name, err)
+					continue
+				}
+
 			}
 		}
 	}

@@ -17,7 +17,16 @@ controller:
     ports:
       - name: "http-8891"
         port: 8891
+  podAnnotations:
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+    sidecar.istio.io/logLevel: "debug"
 
+runner:
+  podAnnotations:
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+    sidecar.istio.io/logLevel: "debug"
 
 provisioner:
   enabled: true
