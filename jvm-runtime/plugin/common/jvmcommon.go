@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/atomic"
 	"github.com/alecthomas/types/pubsub"
 	"github.com/beevik/etree"
+	"github.com/block/scaffolder"
 	"github.com/go-viper/mapstructure/v2"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"

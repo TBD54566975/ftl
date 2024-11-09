@@ -14,8 +14,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/types/optional"
+	"github.com/block/scaffolder"
 	sets "github.com/deckarep/golang-set/v2"
 	"golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
