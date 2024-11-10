@@ -37,6 +37,9 @@ type BuildResult struct {
 
 	// Whether the module needs to recalculate its dependencies
 	InvalidateDependencies bool
+
+	// Endpoint of an instance started by the plugin to use in dev mode
+	DevEndpoint optional.Option[string]
 }
 
 // PluginEvent is used to notify of updates from the plugin.
@@ -90,8 +93,8 @@ type BuildContext struct {
 var ErrPluginNotRunning = errors.New("language plugin no longer running")
 
 // PluginFromConfig creates a new language plugin from the given config.
-func New(ctx context.Context, dir, language, name string) (p *LanguagePlugin, err error) {
-	impl, err := newClientImpl(ctx, dir, language, name)
+func New(ctx context.Context, dir, language, name string, devMode bool) (p *LanguagePlugin, err error) {
+	impl, err := newClientImpl(ctx, dir, language, name, devMode)
 	if err != nil {
 		return nil, err
 	}
@@ -562,10 +565,11 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 		errs := langpb.ErrorsFromProto(buildSuccess.Errors)
 		builderrors.SortErrorsByPosition(errs)
 		return BuildResult{
-			Errors:    errs,
-			Schema:    moduleSch,
-			Deploy:    buildSuccess.Deploy,
-			StartTime: startTime,
+			Errors:      errs,
+			Schema:      moduleSch,
+			Deploy:      buildSuccess.Deploy,
+			StartTime:   startTime,
+			DevEndpoint: optional.Ptr(buildSuccess.DevEndpoint),
 		}, nil
 	case either.Right[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]:
 		buildFailure := result.Get().BuildFailure

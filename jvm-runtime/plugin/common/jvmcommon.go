@@ -82,14 +82,17 @@ type Service struct {
 	updatesTopic          *pubsub.Topic[updateEvent]
 	acceptsContextUpdates atomic.Value[bool]
 	scaffoldFiles         *zip.Reader
+	devMode               bool
 }
 
 var _ langconnect.LanguageServiceHandler = &Service{}
 
 func New(scaffoldFiles *zip.Reader) *Service {
+	devMode := os.Getenv("FTL_DEV_MODE") == "true"
 	return &Service{
 		updatesTopic:  pubsub.New[updateEvent](),
 		scaffoldFiles: scaffoldFiles,
+		devMode:       devMode,
 	}
 }
 

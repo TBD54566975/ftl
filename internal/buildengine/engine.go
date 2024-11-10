@@ -40,6 +40,7 @@ type moduleMeta struct {
 	plugin         *languageplugin.LanguagePlugin
 	events         chan languageplugin.PluginEvent
 	configDefaults moduleconfig.CustomDefaults
+	devModeRunner  optional.Option[devModeRunner]
 }
 
 // copyMetaWithUpdatedDependencies finds the dependencies for a module and returns a
@@ -1036,7 +1037,7 @@ func (e *Engine) gatherSchemas(
 }
 
 func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.UnvalidatedModuleConfig) (moduleMeta, error) {
-	plugin, err := languageplugin.New(ctx, config.Dir, config.Language, config.Module)
+	plugin, err := languageplugin.New(ctx, config.Dir, config.Language, config.Module, e.devMode)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}
@@ -1111,9 +1112,14 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
 
 					e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
-					if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
-						e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
-						continue
+					result, _ := event.Result.Get()
+					if endpoint, ok := result.DevEndpoint.Get(); ok {
+						launchDevModeRunner(ctx, e.projectConfig, meta.module, deploy, endpoint, e.client)
+					} else {
+						if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
+							e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
+							continue
+						}
 					}
 					e.rawEngineUpdates <- ModuleDeploySuccess{Module: event.Module}
 				}

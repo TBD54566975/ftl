@@ -55,6 +55,7 @@ type Config struct {
 	HeartbeatJitter       time.Duration       `help:"Jitter to add to heartbeat period." default:"2s"`
 	Deployment            string              `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
 	DebugPort             int                 `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
+	DevEndpoint           *url.URL            `help:"An existing endpoint to connect to in development mode" env:"FTL_DEV_ENDPOINT"`
 }
 
 func Start(ctx context.Context, config Config) error {

@@ -42,9 +42,9 @@ type pluginClientImpl struct {
 	cmdError chan error
 }
 
-func newClientImpl(ctx context.Context, dir, language, name string) (*pluginClientImpl, error) {
+func newClientImpl(ctx context.Context, dir, language, name string, devMode bool) (*pluginClientImpl, error) {
 	impl := &pluginClientImpl{}
-	err := impl.start(ctx, dir, language, name)
+	err := impl.start(ctx, dir, language, name, devMode)
 	if err != nil {
 		return nil, err
 	}
@@ -52,20 +52,24 @@ func newClientImpl(ctx context.Context, dir, language, name string) (*pluginClie
 }
 
 // Start launches the plugin and blocks until the plugin is ready.
-func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string) error {
+func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string, devMode bool) error {
 	cmdName := "ftl-language-" + language
 	cmdPath, err := exec.LookPath(cmdName)
+
 	if err != nil {
 		return fmt.Errorf("failed to find plugin for %s: %w", language, err)
 	}
-
+	envvars := []string{"FTL_NAME=" + name}
+	if devMode {
+		envvars = append(envvars, "FTL_DEV_MODE=true")
+	}
 	plugin, cmdCtx, err := plugin.Spawn(ctx,
 		log.FromContext(ctx).GetLevel(),
 		name,
 		dir,
 		cmdPath,
 		langconnect.NewLanguageServiceClient,
-		plugin.WithEnvars("FTL_NAME="+name),
+		plugin.WithEnvars(envvars...),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to spawn plugin for %s: %w", name, err)
