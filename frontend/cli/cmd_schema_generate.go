@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/TBD54566975/scaffolder"
-	"github.com/TBD54566975/scaffolder/extensions/javascript"
+	"github.com/block/scaffolder"
+	"github.com/block/scaffolder/extensions/javascript"
 	"github.com/radovskyb/watcher"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"

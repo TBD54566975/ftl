@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"connectrpc.com/connect"
-	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/types/optional"
+	"github.com/block/scaffolder"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"

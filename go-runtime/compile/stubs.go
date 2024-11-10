@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/TBD54566975/scaffolder"
 	"github.com/alecthomas/types/optional"
+	"github.com/block/scaffolder"
 	"golang.org/x/exp/maps"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"

@@ -8,7 +8,6 @@ require (
 	connectrpc.com/otelconnect v0.7.1
 	github.com/BurntSushi/toml v1.4.0
 	github.com/TBD54566975/golang-tools v0.2.1
-	github.com/TBD54566975/scaffolder v1.2.0
 	github.com/XSAM/otelsql v0.35.0
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/alecthomas/atomic v0.1.0-alpha2
@@ -27,6 +26,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.34.3
 	github.com/aws/smithy-go v1.22.0
 	github.com/beevik/etree v1.4.1
+	github.com/block/scaffolder v1.3.0
 	github.com/bmatcuk/doublestar/v4 v4.7.1
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/docker/docker v27.3.1+incompatible
@@ -170,7 +170,7 @@ require (
 	github.com/chzyer/readline v1.5.1
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
-	github.com/dop251/goja v0.0.0-20240822155948-fa6d1ed5e4b6 // indirect
+	github.com/dop251/goja v0.0.0-20241009100908-5f46f2705ca3 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
