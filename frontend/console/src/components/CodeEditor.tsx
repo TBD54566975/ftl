@@ -11,8 +11,9 @@ import { atomone } from '@uiw/codemirror-theme-atomone'
 import { githubLight } from '@uiw/codemirror-theme-github'
 
 import { defaultKeymap, indentWithTab } from '@codemirror/commands'
-import { handleRefresh, jsonSchemaHover, jsonSchemaLinter, stateExtensions } from 'codemirror-json-schema'
-import { json5, json5ParseLinter } from 'codemirror-json5'
+import { json, jsonLanguage, jsonParseLinter } from '@codemirror/lang-json'
+import { handleRefresh, jsonCompletion, jsonSchemaHover, jsonSchemaLinter, stateExtensions } from 'codemirror-json-schema'
+
 import { useEffect, useRef } from 'react'
 import { useUserPreferences } from '../providers/user-preferences-provider'
 
@@ -56,13 +57,15 @@ export const CodeEditor = ({
             indentOnInput(),
             drawSelection(),
             foldGutter(),
-            linter(json5ParseLinter(), {
-              delay: 300,
-            }),
+            linter(jsonParseLinter(), {}),
             linter(jsonSchemaLinter(), {
               needsRefresh: handleRefresh,
             }),
+            jsonLanguage.data.of({
+              autocomplete: jsonCompletion(),
+            }),
             hoverTooltip(jsonSchemaHover()),
+            stateExtensions(sch),
             EditorView.updateListener.of((update) => {
               if (update.docChanged) {
                 const currentText = update.state.doc.toString()
@@ -71,7 +74,6 @@ export const CodeEditor = ({
                 }
               }
             }),
-            stateExtensions(sch),
           ]
 
       const state = EditorState.create({
@@ -79,8 +81,8 @@ export const CodeEditor = ({
         extensions: [
           ...commonExtensions,
           isDarkMode ? atomone : githubLight,
-          json5(),
           editingExtensions,
+          json(),
           EditorView.theme({
             '&': { height: '100%' },
           }),
