@@ -115,7 +115,11 @@ func (c ModuleConfig) String() string {
 // validation separately. This is just a sanity check.
 func (c ModuleConfig) Abs() AbsModuleConfig {
 	clone := c
-	clone.Dir = filepath.Clean(clone.Dir)
+	dir, err := filepath.Abs(filepath.Clean(clone.Dir))
+	if err != nil {
+		panic(fmt.Sprintf("module dir %q can not be made absolute", c.Dir))
+	}
+	clone.Dir = dir
 	clone.DeployDir = filepath.Clean(filepath.Join(clone.Dir, clone.DeployDir))
 	if !strings.HasPrefix(clone.DeployDir, clone.Dir) {
 		panic(fmt.Sprintf("deploy-dir %q is not beneath module directory %q", clone.DeployDir, clone.Dir))
