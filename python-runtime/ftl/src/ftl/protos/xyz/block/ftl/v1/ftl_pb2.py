@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1axyz/block/ftl/v1/ftl.proto\x12\x10xyz.block.ftl.v1\"\r\n\x0bPingRequest\">\n\x0cPingResponse\x12 \n\tnot_ready\x18\x01 \x01(\tH\x00R\x08notReady\x88\x01\x01\x42\x0c\n\n_not_ready\"s\n\x08Metadata\x12\x37\n\x06values\x18\x01 \x03(\x0b\x32\x1f.xyz.block.ftl.v1.Metadata.PairR\x06values\x1a.\n\x04Pair\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05valueBDP\x01Z@github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1axyz/block/ftl/v1/ftl.proto\x12\x10xyz.block.ftl.v1\"\r\n\x0bPingRequest\"4\n\x0cPingResponse\x12\x16\n\tnot_ready\x18\x01 \x01(\tH\x00\x88\x01\x01\x42\x0c\n\n_not_ready\"_\n\x08Metadata\x12/\n\x06values\x18\x01 \x03(\x0b\x32\x1f.xyz.block.ftl.v1.Metadata.Pair\x1a\"\n\x04Pair\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\tBDP\x01Z@github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,9 +35,9 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_PINGREQUEST']._serialized_start=48
   _globals['_PINGREQUEST']._serialized_end=61
   _globals['_PINGRESPONSE']._serialized_start=63
-  _globals['_PINGRESPONSE']._serialized_end=125
-  _globals['_METADATA']._serialized_start=127
-  _globals['_METADATA']._serialized_end=242
-  _globals['_METADATA_PAIR']._serialized_start=196
-  _globals['_METADATA_PAIR']._serialized_end=242
+  _globals['_PINGRESPONSE']._serialized_end=115
+  _globals['_METADATA']._serialized_start=117
+  _globals['_METADATA']._serialized_end=212
+  _globals['_METADATA_PAIR']._serialized_start=178
+  _globals['_METADATA_PAIR']._serialized_end=212
 # @@protoc_insertion_point(module_scope)

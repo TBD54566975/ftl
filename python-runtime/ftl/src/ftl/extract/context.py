@@ -1,27 +1,50 @@
 import importlib.util
 import multiprocessing
 import threading
+from typing import Dict
 
 from ftl.protos.xyz.block.ftl.v1.schema import schema_pb2 as schemapb
+
+
+class RefKey:
+    def __init__(self, module: str, name: str):
+        self.module = module
+        self.name = name
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, RefKey):
+            return self.module == other.module and self.name == other.name
+        return False
+
+    def __hash__(self) -> int:
+        return hash((self.module, self.name))
+
+    def __repr__(self) -> str:
+        return f"RefKey(module={self.module}, name={self.name})"
 
 
 class LocalExtractionContext:
     """Local context for a single Python file."""
 
-    def __init__(self, needs_extraction, verbs, data):
+    def __init__(
+            self,
+            needs_extraction: Dict[RefKey, bool],
+            verbs: Dict[RefKey, str],
+            data: Dict[RefKey, str]
+    ):
         self.verbs = verbs
         self.data = data
         self.needs_extraction = needs_extraction
         self.module_cache = {}
         self.cache_lock = threading.Lock()
 
-    def add_verb(self, module_name, verb):
-        """Add a verb to the shared verbs map."""
+    def add_verb(self, module_name: str, verb: schemapb.Verb):
+        """Add a Verb to the shared verbs map."""
         ref_key = RefKey(module=module_name, name=verb.name)
         self.verbs[ref_key] = verb.SerializeToString()
 
-    def add_data(self, module_name, data):
-        """Add a verb to the shared verbs map."""
+    def add_data(self, module_name: str, data: schemapb.Data):
+        """Add Data to the shared data map."""
         ref_key = RefKey(module=module_name, name=data.name)
         self.data[ref_key] = data.SerializeToString()
 
@@ -35,11 +58,11 @@ class LocalExtractionContext:
         ref_key = RefKey(module=module, name=name)
         self.needs_extraction[ref_key] = False
 
-    def must_extract(self, module, name):
-        ref_key = RefKey(module=module, name=name)
+    def must_extract(self, module_name: str, name: str) -> bool:
+        ref_key = RefKey(module=module_name, name=name)
         return ref_key in self.needs_extraction
 
-    def load_python_module(self, module_name, file_path):
+    def load_python_module(self, module_name: str, file_path: str) -> object:
         """Load a Python module dynamically and cache it locally."""
         with self.cache_lock:
             if file_path in self.module_cache:
@@ -61,34 +84,25 @@ class GlobalExtractionContext:
         self.verbs = manager.dict()
         self.data = manager.dict()
 
-    def deserialize(self):
+    def deserialize(self) -> Dict[RefKey, schemapb.Decl]:
         deserialized_decls = {}
-        for ref_key, serialized_decl in self.verbs.items():
-            decl = schemapb.Verb()
-            decl.ParseFromString(serialized_decl)
+        for ref_key, serialized_verb in self.verbs.items():
+            verb = schemapb.Verb()
+            verb.ParseFromString(serialized_verb)
+            decl = schemapb.Decl(verb=verb)
             deserialized_decls[ref_key] = decl
-        for ref_key, serialized_decl in self.data.items():
-            decl = schemapb.Data()
-            decl.ParseFromString(serialized_decl)
+        for ref_key, serialized_data in self.data.items():
+            data = schemapb.Data()
+            data.ParseFromString(serialized_data)
+            decl = schemapb.Decl(data=data)
             deserialized_decls[ref_key] = decl
         return deserialized_decls
 
     def init_local_context(self) -> LocalExtractionContext:
         return LocalExtractionContext(self.needs_extraction, self.verbs, self.data)
 
-
-class RefKey:
-    def __init__(self, module, name):
-        self.module = module
-        self.name = name
-
-    def __eq__(self, other):
-        if isinstance(other, RefKey):
-            return self.module == other.module and self.name == other.name
-        return False
-
-    def __hash__(self):
-        return hash((self.module, self.name))
-
-    def __repr__(self):
-        return f"RefKey(module={self.module}, name={self.name})"
+    def to_module_schema(self, module_name: str) -> schemapb.Module:
+        return schemapb.Module(
+            name=module_name,
+            decls=self.deserialize().values(),
+        )

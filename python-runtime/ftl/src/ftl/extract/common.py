@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional, Type
 
 from ftl.protos.xyz.block.ftl.v1.schema import schema_pb2 as schemapb
 
-from .context import LocalExtractionContext
+from ftl.extract.context import LocalExtractionContext
 
 
 def extract_type(
@@ -86,7 +86,7 @@ def extract_basic_type(type_hint: Type[Any]) -> Optional[schemapb.Type]:
 def extract_class_type(
     local_ctx: LocalExtractionContext, type_hint: Type[Any]
 ) -> Optional[schemapb.Type]:
-    ref = schemapb.Ref(name=type_hint.__name__, module=type_hint.__module__)
+    ref = schemapb.Ref(name=get_base_module_name(type_hint.__name__), module=type_hint.__module__)
     local_ctx.add_needs_extraction(ref)
     return schemapb.Type(ref=ref)
 
@@ -94,6 +94,10 @@ def extract_class_type(
 def extract_function_type(
     local_ctx: LocalExtractionContext, type_hint: Type[Any]
 ) -> Optional[schemapb.Type]:
-    ref = schemapb.Ref(name=type_hint.__name__, module=type_hint.__module__)
+    ref = schemapb.Ref(name=get_base_module_name(type_hint.__name__), module=type_hint.__module__)
     local_ctx.add_needs_extraction(ref)
     return schemapb.Type(ref=ref)
+
+def get_base_module_name(fq_module_name: str) -> str:
+    """Return the base (root) module name from a fully qualified module name."""
+    return fq_module_name.split('.')[0]
