@@ -29,6 +29,7 @@ clean:
   rm -rf node_modules
   rm -rf frontend/console/dist
   rm -rf frontend/console/node_modules
+  rm -rf python-runtime/ftl/.venv
   find . -name '*.zip' -exec rm {} \;
   mvn -f jvm-runtime/ftl-runtime clean
 

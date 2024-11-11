@@ -1,19 +1,17 @@
 import ast
 from typing import Any, Optional, Type
 
+from ftl.extract.common import extract_type
+from ftl.extract.context import LocalExtractionContext
 from ftl.protos.xyz.block.ftl.v1.schema import schema_pb2 as schemapb
 
-from .common import extract_type
-from .context import LocalExtractionContext
-
-
 class TransitiveExtractor(ast.NodeVisitor):
-    def __init__(self, context: LocalExtractionContext, module_name, file_path):
+    def __init__(self, context: LocalExtractionContext, module_name: str, file_path: str):
         self.context = context
         self.module_name = module_name
         self.file_path = file_path
 
-    def load_function(self, func_name):
+    def load_function(self, func_name: str):
         try:
             module = self.context.load_python_module(self.module_name, self.file_path)
             func = getattr(module, func_name, None)
@@ -27,7 +25,7 @@ class TransitiveExtractor(ast.NodeVisitor):
 
     @staticmethod
     def convert_ast_annotation_to_type_hint(
-        annotation_node: ast.AST,
+            annotation_node: ast.AST,
     ) -> Optional[Type[Any]]:
         """Converts an AST annotation node to a Python type hint."""
         if isinstance(annotation_node, ast.Name):
@@ -53,7 +51,7 @@ class TransitiveExtractor(ast.NodeVisitor):
             fields = []
             for class_node in node.body:
                 if isinstance(
-                    class_node, ast.AnnAssign
+                        class_node, ast.AnnAssign
                 ):  # Annotated assignment (field)
                     field_name = (
                         class_node.target.id

@@ -3,6 +3,7 @@ package compile
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	stdreflect "reflect"
@@ -10,9 +11,12 @@ import (
 	"strings"
 
 	"github.com/block/scaffolder"
+	"google.golang.org/protobuf/proto"
 
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
+	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
@@ -40,14 +44,33 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 
 	buildDir := buildDir(config.Dir)
 
-	// TODO: call the python schema extractor. grab the output of le script. unmarshal into schema proto. unmarshal that into go type. return
-	// same with build errors
+	// Execute the Python schema extractor
+	if err := exec.Command(ctx, log.Debug, config.Dir, "uv", "run", "-m", "ftl.cli.schema_extractor", ".").RunBuffered(ctx); err != nil {
+		return nil, nil, fmt.Errorf("failed to extract schema: %w", err)
+	}
+
+	outputFile := filepath.Join(buildDir, "schema.pb")
+	serializedData, err := os.ReadFile(outputFile)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read serialized schema: %w", err)
+	}
+
+	var modulepb schemapb.Module
+	err = proto.Unmarshal(serializedData, &modulepb)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal module proto: %w", err)
+	}
+
+	module, err := schema.ModuleFromProto(&modulepb)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to deserialize module schema: %w", err)
+	}
 
 	if err := internal.ScaffoldZip(buildTemplateFiles(), buildDir, mctx, scaffolder.Functions(scaffoldFuncs)); err != nil {
 		return moduleSch, nil, fmt.Errorf("failed to scaffold build template: %w", err)
 	}
 
-	return nil, nil, nil
+	return module, nil, nil
 }
 
 var scaffoldFuncs = scaffolder.FuncMap{

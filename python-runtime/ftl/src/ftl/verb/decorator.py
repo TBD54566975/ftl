@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Callable, Optional, TypeVar, Union
 
-from .model import Verb
+from ftl.verb.model import Verb
 
 F = TypeVar("F", bound=Callable[..., Any])
 

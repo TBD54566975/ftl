@@ -4,7 +4,7 @@ from typing import Optional
 from ftl.extract import LocalExtractionContext, extract_type
 from ftl.protos.xyz.block.ftl.v1.schema import schema_pb2 as schemapb
 
-from .model import Verb
+from ftl.verb.model import Verb
 
 
 class VerbExtractor(ast.NodeVisitor):

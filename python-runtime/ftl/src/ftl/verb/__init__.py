@@ -1,5 +1,5 @@
-from .decorator import verb
-from .extractor import VerbExtractor
-from .model import Verb
+from ftl.verb.decorator import verb
+from ftl.verb.extractor import VerbExtractor
+from ftl.verb.model import Verb
 
 __all__ = ["verb", "Verb", "VerbExtractor"]
