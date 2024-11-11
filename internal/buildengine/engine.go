@@ -19,7 +19,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/internal/bind"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -176,7 +175,6 @@ type rebuildRequest struct {
 // Engine for building a set of modules.
 type Engine struct {
 	client           DeployClient
-	bindAllocator    *bind.BindAllocator
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectConfig    projectconfig.Config
 	moduleDirs       []string
@@ -238,7 +236,7 @@ func WithStartTime(startTime time.Time) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client DeployClient, projectConfig projectconfig.Config, moduleDirs []string, bindAllocator *bind.BindAllocator, options ...Option) (*Engine, error) {
+func New(ctx context.Context, client DeployClient, projectConfig projectconfig.Config, moduleDirs []string, options ...Option) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
@@ -254,7 +252,6 @@ func New(ctx context.Context, client DeployClient, projectConfig projectconfig.C
 		rebuildRequests:  make(chan rebuildRequest, 128),
 		rawEngineUpdates: make(chan rawEngineEvent, 128),
 		EngineUpdates:    pubsub.New[EngineEvent](),
-		bindAllocator:    bindAllocator,
 	}
 	for _, option := range options {
 		option(e)
@@ -1039,7 +1036,7 @@ func (e *Engine) gatherSchemas(
 }
 
 func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.UnvalidatedModuleConfig) (moduleMeta, error) {
-	plugin, err := languageplugin.New(ctx, e.bindAllocator, config.Language, config.Module)
+	plugin, err := languageplugin.New(ctx, config.Dir, config.Language, config.Module)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}

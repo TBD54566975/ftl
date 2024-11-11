@@ -123,14 +123,7 @@ func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceC
 	if len(b.Build.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
-
-	// use the cli endpoint to create the bind allocator, but leave the first port unused as it is meant to be reserved by a controller
-	bindAllocator, err := bindAllocatorWithoutController()
-	if err != nil {
-		return err
-	}
-
-	engine, err := buildengine.New(ctx, client, projConfig, b.Build.Dirs, bindAllocator, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
+	engine, err := buildengine.New(ctx, client, projConfig, b.Build.Dirs, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
 	if err != nil {
 		return err
 	}

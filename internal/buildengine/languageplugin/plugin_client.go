@@ -3,7 +3,6 @@ package languageplugin
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"syscall"
 
 	"connectrpc.com/connect"
@@ -12,6 +11,7 @@ import (
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
+	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/rpc"
@@ -38,18 +38,15 @@ type pluginClient interface {
 var _ pluginClient = &pluginClientImpl{}
 
 type pluginClientImpl struct {
-	cmd    *exec.Cmd
-	client langconnect.LanguageServiceClient
+	plugin *plugin.Plugin[langconnect.LanguageServiceClient]
 
 	// channel gets closed when the plugin exits
 	cmdError chan error
 }
 
-func newClientImpl(ctx context.Context, bind *url.URL, language, name string) (*pluginClientImpl, error) {
-	impl := &pluginClientImpl{
-		client: rpc.Dial(langconnect.NewLanguageServiceClient, bind.String(), log.Error),
-	}
-	err := impl.start(ctx, bind, language, name)
+func newClientImpl(ctx context.Context, dir, language, name string) (*pluginClientImpl, error) {
+	impl := &pluginClientImpl{}
+	err := impl.start(ctx, dir, language, name)
 	if err != nil {
 		return nil, err
 	}
@@ -57,76 +54,41 @@ func newClientImpl(ctx context.Context, bind *url.URL, language, name string) (*
 }
 
 // Start launches the plugin and blocks until the plugin is ready.
-func (p *pluginClientImpl) start(ctx context.Context, bind *url.URL, language, name string) error {
-	logger := log.FromContext(ctx).Scope(name)
-
+func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string) error {
 	cmdName := "ftl-language-" + language
-	p.cmd = exec.Command(ctx, log.Debug, ".", cmdName, "--bind", bind.String())
-	p.cmd.Env = append(p.cmd.Env, "FTL_NAME="+name)
-	_, err := exec.LookPath(cmdName)
+	cmdPath, err := exec.LookPath(cmdName)
 	if err != nil {
 		return fmt.Errorf("failed to find plugin for %s: %w", language, err)
 	}
 
-	// Send the plugin's stderr to the logger.
-	p.cmd.Stderr = nil
-	pipe, err := p.cmd.StderrPipe()
+	plugin, cmdCtx, err := plugin.Spawn(ctx,
+		log.FromContext(ctx).GetLevel(),
+		name,
+		dir,
+		cmdPath,
+		langconnect.NewLanguageServiceClient,
+		plugin.WithEnvars("FTL_Name="+name),
+	)
 	if err != nil {
-		return fmt.Errorf("could not create stderr pipe for %s: %w", name, err)
+		return fmt.Errorf("failed to spawn plugin for %s: %w", name, err)
 	}
-	go func() {
-		err := log.JSONStreamer(pipe, logger, log.Error)
-		if err != nil {
-			logger.Errorf(err, "Error streaming plugin logs.")
-		}
-	}()
+	p.plugin = plugin
 
-	// run the plugin and wait for it to finish executing
-	err = p.cmd.Start()
-	if err != nil {
-		return fmt.Errorf("failed to start plugin: %w", err)
-	}
-	runCtx, cancel := context.WithCancel(ctx)
 	p.cmdError = make(chan error)
-	pingErr := make(chan error)
 	go func() {
-		err := p.cmd.Wait()
+		<-cmdCtx.Done()
+		err := cmdCtx.Err()
 		if err != nil {
 			p.cmdError <- fmt.Errorf("language plugin failed: %w", err)
 		} else {
 			p.cmdError <- fmt.Errorf("language plugin ended with status 0")
 		}
-		cancel()
-		close(p.cmdError)
 	}()
-	go func() {
-		// wait for the plugin to be ready
-		if err := p.ping(runCtx); err != nil {
-			cancel()
-			pingErr <- fmt.Errorf("failed to ping plugin")
-		}
-		close(pingErr)
-	}()
-
-	// Wait for ping result, or for the plugin to exit. Which ever happens first.
-	select {
-	case err := <-p.cmdError:
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf("plugin exited with status 0 before ping was registered")
-	case err := <-pingErr:
-		if err != nil {
-			return fmt.Errorf("failed to start plugin: %w", err)
-		}
-		return nil
-	case <-ctx.Done():
-		return fmt.Errorf("failed to start plugin: %w", ctx.Err())
-	}
+	return nil
 }
 
 func (p *pluginClientImpl) ping(ctx context.Context) error {
-	err := rpc.Wait(ctx, backoff.Backoff{}, launchTimeout, p.client)
+	err := rpc.Wait(ctx, backoff.Backoff{}, launchTimeout, p.plugin.Client)
 	if err != nil {
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to connect to runner: %w", err))
 	}
@@ -134,7 +96,7 @@ func (p *pluginClientImpl) ping(ctx context.Context) error {
 }
 
 func (p *pluginClientImpl) kill() error {
-	if err := p.cmd.Kill(syscall.SIGINT); err != nil {
+	if err := p.plugin.Cmd.Kill(syscall.SIGINT); err != nil {
 		return err //nolint:wrapcheck
 	}
 	return nil
@@ -148,7 +110,7 @@ func (p *pluginClientImpl) getCreateModuleFlags(ctx context.Context, req *connec
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
-	resp, err := p.client.GetCreateModuleFlags(ctx, req)
+	resp, err := p.plugin.Client.GetCreateModuleFlags(ctx, req)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}
@@ -159,7 +121,7 @@ func (p *pluginClientImpl) moduleConfigDefaults(ctx context.Context, req *connec
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
-	resp, err := p.client.ModuleConfigDefaults(ctx, req)
+	resp, err := p.plugin.Client.ModuleConfigDefaults(ctx, req)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}
@@ -170,7 +132,7 @@ func (p *pluginClientImpl) createModule(ctx context.Context, req *connect.Reques
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
-	resp, err := p.client.CreateModule(ctx, req)
+	resp, err := p.plugin.Client.CreateModule(ctx, req)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}
@@ -181,7 +143,7 @@ func (p *pluginClientImpl) getDependencies(ctx context.Context, req *connect.Req
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
-	resp, err := p.client.GetDependencies(ctx, req)
+	resp, err := p.plugin.Client.GetDependencies(ctx, req)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}
@@ -192,7 +154,7 @@ func (p *pluginClientImpl) generateStubs(ctx context.Context, req *connect.Reque
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
-	resp, err := p.client.GenerateStubs(ctx, req)
+	resp, err := p.plugin.Client.GenerateStubs(ctx, req)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}
@@ -203,7 +165,7 @@ func (p *pluginClientImpl) syncStubReferences(ctx context.Context, req *connect.
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
-	resp, err := p.client.SyncStubReferences(ctx, req)
+	resp, err := p.plugin.Client.SyncStubReferences(ctx, req)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}
@@ -214,7 +176,7 @@ func (p *pluginClientImpl) build(ctx context.Context, req *connect.Request[langp
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, nil, err
 	}
-	stream, err := p.client.Build(ctx, req)
+	stream, err := p.plugin.Client.Build(ctx, req)
 	if err != nil {
 		return nil, nil, err //nolint:wrapcheck
 	}
@@ -242,7 +204,7 @@ func (p *pluginClientImpl) buildContextUpdated(ctx context.Context, req *connect
 	if err := p.checkCmdIsAlive(); err != nil {
 		return nil, err
 	}
-	resp, err := p.client.BuildContextUpdated(ctx, req)
+	resp, err := p.plugin.Client.BuildContextUpdated(ctx, req)
 	if err != nil {
 		return nil, err //nolint:wrapcheck
 	}

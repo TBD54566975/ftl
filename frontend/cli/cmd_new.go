@@ -55,12 +55,7 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 		return optionalPlugin, fmt.Errorf("could not find new command")
 	}
 
-	bindAllocator, err := bindAllocatorWithoutController()
-	if err != nil {
-		return optionalPlugin, err
-	}
-
-	plugin, err := languageplugin.New(ctx, bindAllocator, language, "new")
+	plugin, err := languageplugin.New(ctx, pluginDir(), language, "new")
 	if err != nil {
 		return optionalPlugin, fmt.Errorf("could not create plugin for %v: %w", language, err)
 	}
@@ -83,6 +78,15 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 	}
 	newCmdNode.Flags = append(newCmdNode.Flags, flags...)
 	return optional.Some(plugin), nil
+}
+
+// pluginDir returns the directory to base the plugin working directory off of.
+// It tries to find the root directory of the project, or uses "." as a fallback.
+func pluginDir() string {
+	if configPath, ok := projectconfig.DefaultConfigPath().Get(); ok {
+		return filepath.Dir(configPath)
+	}
+	return "."
 }
 
 func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config, plugin *languageplugin.LanguagePlugin) error {
