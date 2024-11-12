@@ -25,7 +25,6 @@ import (
 )
 
 const BuildLockTimeout = time.Minute
-const launchTimeout = 10 * time.Second
 
 type BuildResult struct {
 	StartTime time.Time
@@ -327,7 +326,6 @@ func (p *LanguagePlugin) Build(ctx context.Context, projectRoot, stubsRoot strin
 		if err != nil {
 			return BuildResult{}, err //nolint:wrapcheck
 		}
-		result.StartTime = cmd.startTime
 		return result, nil
 	case <-ctx.Done():
 		return BuildResult{}, fmt.Errorf("error waiting for build to complete: %w", ctx.Err())
@@ -365,6 +363,9 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 	// if an explicit build command is active, this is non-nil
 	// if this is nil, streamChan may still be open for automatic rebuilds
 	var activeBuildCmd optional.Option[buildCommand]
+
+	// if an automatic rebuild was started, this is the time it started
+	var autoRebuildStartTime optional.Option[time.Time]
 
 	// build counter is used to generate build request ids
 	var contextCounter = 0
@@ -460,6 +461,7 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 					logger.Debugf("ignoring automatic rebuild started during explicit build")
 					continue
 				}
+				autoRebuildStartTime = optional.Some(time.Now())
 				p.updates.Publish(AutoRebuildStartedEvent{
 					Module: bctx.Config.Module,
 				})
@@ -479,7 +481,17 @@ func (p *LanguagePlugin) run(ctx context.Context) {
 					logger.Debugf("received build for outdated context %q; expected %q", eventContextID, contextID(bctx.Config, contextCounter))
 					continue
 				}
-				streamEnded, cmdEnded = p.handleBuildResult(bctx.Config.Module, result, activeBuildCmd)
+
+				var startTime time.Time
+				if cmd, ok := activeBuildCmd.Get(); ok {
+					startTime = cmd.startTime
+				} else if t, ok := autoRebuildStartTime.Get(); ok {
+					startTime = t
+				} else {
+					// Plugin did not declare when it started to build.
+					startTime = time.Now()
+				}
+				streamEnded, cmdEnded = p.handleBuildResult(bctx.Config.Module, result, activeBuildCmd, startTime)
 				if streamEnded {
 					streamCancel()
 					streamCancel = nil
@@ -513,8 +525,9 @@ func getBuildSuccessOrFailure(e *langpb.BuildEvent) (result either.Either[*langp
 }
 
 // handleBuildResult processes the result of a build and publishes the appropriate events.
-func (p *LanguagePlugin) handleBuildResult(module string, r either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure], activeBuildCmd optional.Option[buildCommand]) (streamEnded, cmdEnded bool) {
-	buildResult, err := buildResultFromProto(r)
+func (p *LanguagePlugin) handleBuildResult(module string, r either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure],
+	activeBuildCmd optional.Option[buildCommand], startTime time.Time) (streamEnded, cmdEnded bool) {
+	buildResult, err := buildResultFromProto(r, startTime)
 	if cmd, ok := activeBuildCmd.Get(); ok {
 		// handle explicit build
 		cmd.result <- result.From(buildResult, err)
@@ -533,7 +546,7 @@ func (p *LanguagePlugin) handleBuildResult(module string, r either.Either[*langp
 	return
 }
 
-func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]) (buildResult BuildResult, err error) {
+func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure], startTime time.Time) (buildResult BuildResult, err error) {
 	switch result := result.(type) {
 	case either.Left[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]:
 		buildSuccess := result.Get().BuildSuccess
@@ -549,9 +562,10 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 		errs := langpb.ErrorsFromProto(buildSuccess.Errors)
 		builderrors.SortErrorsByPosition(errs)
 		return BuildResult{
-			Errors: errs,
-			Schema: moduleSch,
-			Deploy: buildSuccess.Deploy,
+			Errors:    errs,
+			Schema:    moduleSch,
+			Deploy:    buildSuccess.Deploy,
+			StartTime: startTime,
 		}, nil
 	case either.Right[*langpb.BuildEvent_BuildSuccess, *langpb.BuildEvent_BuildFailure]:
 		buildFailure := result.Get().BuildFailure
@@ -570,6 +584,7 @@ func buildResultFromProto(result either.Either[*langpb.BuildEvent_BuildSuccess, 
 		}
 
 		return BuildResult{
+			StartTime:              startTime,
 			Errors:                 errs,
 			InvalidateDependencies: buildFailure.InvalidateDependencies,
 		}, nil

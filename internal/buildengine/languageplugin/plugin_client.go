@@ -7,14 +7,12 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/alecthomas/types/result"
-	"github.com/jpillora/backoff"
 
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
-	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type streamCancelFunc func()
@@ -84,14 +82,6 @@ func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string
 			p.cmdError <- fmt.Errorf("language plugin ended with status 0")
 		}
 	}()
-	return nil
-}
-
-func (p *pluginClientImpl) ping(ctx context.Context) error {
-	err := rpc.Wait(ctx, backoff.Backoff{}, launchTimeout, p.plugin.Client)
-	if err != nil {
-		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to connect to runner: %w", err))
-	}
 	return nil
 }
 
