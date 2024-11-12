@@ -31,6 +31,10 @@ wait-for-kube:
   sleep 1
   ftl status || sleep 5 && ftl status
 
+wait-for-version-upgrade oldversion:
+  #!/bin/bash
+  while [ "$(ftl status | yq '.controllers[0].version')" == {{oldversion}} ]; do sleep 1; done
+  ftl status
 
 setup-registry:
   #!/bin/bash

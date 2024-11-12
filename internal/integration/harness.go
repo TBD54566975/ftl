@@ -256,6 +256,10 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				dumpKubePods(ctx, optional.Ptr(kubeClient), kubeNamespace)
 			}
 			assert.NoError(t, err)
+			ver := os.Getenv("OLD_FTL_VERSION")
+			if ver != "" {
+				err = ftlexec.Command(ctx, log.Debug, filepath.Join(rootDir, "deployment"), "just", "wait-for-version-upgrade", ver).RunBuffered(ctx)
+			}
 		} else if opts.console {
 			Infof("Building ftl with console")
 			err = ftlexec.Command(ctx, log.Debug, rootDir, "just", "build", "ftl").RunBuffered(ctx)
