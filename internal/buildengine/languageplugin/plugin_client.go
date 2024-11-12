@@ -65,7 +65,7 @@ func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string
 		dir,
 		cmdPath,
 		langconnect.NewLanguageServiceClient,
-		plugin.WithEnvars("FTL_Name="+name),
+		plugin.WithEnvars("FTL_NAME="+name),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to spawn plugin for %s: %w", name, err)

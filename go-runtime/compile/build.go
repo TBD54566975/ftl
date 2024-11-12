@@ -423,7 +423,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 
 	wg.Go(func() error {
 		if !importsChanged {
-			log.FromContext(ctx).Debugf("skipped go mod tidy (module dir)\n")
+			log.FromContext(ctx).Debugf("skipped go mod tidy (module dir)")
 			return nil
 		}
 		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "mod", "tidy").RunStderrError(wgctx); err != nil {
@@ -437,7 +437,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	mainDir := filepath.Join(buildDir, "go", "main")
 	wg.Go(func() error {
 		if !mainModuleCtxChanged {
-			log.FromContext(ctx).Debugf("skipped go mod tidy (build dir)\n")
+			log.FromContext(ctx).Debugf("skipped go mod tidy (build dir)")
 			return nil
 		}
 		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunStderrError(wgctx); err != nil {
