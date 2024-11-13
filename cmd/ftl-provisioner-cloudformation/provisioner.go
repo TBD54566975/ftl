@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -13,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	goformation "github.com/awslabs/goformation/v7/cloudformation"
 	cf "github.com/awslabs/goformation/v7/cloudformation/cloudformation"
-	"github.com/awslabs/goformation/v7/cloudformation/rds"
 	"github.com/awslabs/goformation/v7/cloudformation/tags"
+	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -25,9 +24,9 @@ import (
 )
 
 const (
-	PropertyDBReadEndpoint  = "db:read_endpoint"
-	PropertyDBWriteEndpoint = "db:write_endpoint"
-	PropertyMasterUserARN   = "db:master_user_secret_arn"
+	PropertyPsqlReadEndpoint  = "psql:read_endpoint"
+	PropertyPsqlWriteEndpoint = "psql:write_endpoint"
+	PropertyPsqlMasterUserARN = "psql:master_user_secret_arn"
 )
 
 type Config struct {
@@ -40,6 +39,8 @@ type CloudformationProvisioner struct {
 	client  *cloudformation.Client
 	secrets *secretsmanager.Client
 	confg   *Config
+
+	running *xsync.MapOf[string, *task]
 }
 
 var _ provisionerconnect.ProvisionerPluginServiceHandler = (*CloudformationProvisioner)(nil)
@@ -54,7 +55,12 @@ func NewCloudformationProvisioner(ctx context.Context, config Config) (context.C
 		return nil, nil, fmt.Errorf("failed to create secretsmanager client: %w", err)
 	}
 
-	return ctx, &CloudformationProvisioner{client: client, secrets: secrets, confg: &config}, nil
+	return ctx, &CloudformationProvisioner{
+		client:  client,
+		secrets: secrets,
+		confg:   &config,
+		running: xsync.NewMapOf[string, *task](),
+	}, nil
 }
 
 func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
@@ -66,24 +72,25 @@ func (c *CloudformationProvisioner) Provision(ctx context.Context, req *connect.
 	if err != nil {
 		return nil, err
 	}
+	token := *res.StackId
+	changeSetID := *res.Id
+
 	if !updated {
 		return connect.NewResponse(&provisioner.ProvisionResponse{
 			// even if there are no changes, return the stack id so that any resource outputs can be populated
 			Status:            provisioner.ProvisionResponse_SUBMITTED,
-			ProvisioningToken: *res.StackId,
+			ProvisioningToken: token,
 		}), nil
 	}
-	_, err = c.client.ExecuteChangeSet(ctx, &cloudformation.ExecuteChangeSetInput{
-		ChangeSetName: res.Id,
-		StackName:     res.StackId,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute change-set: %w", err)
-	}
 
+	task := &task{stackID: token}
+	if _, ok := c.running.LoadOrStore(token, task); ok {
+		return nil, fmt.Errorf("provisioner already running: %s", token)
+	}
+	task.Start(ctx, c.client, c.secrets, changeSetID)
 	return connect.NewResponse(&provisioner.ProvisionResponse{
 		Status:            provisioner.ProvisionResponse_SUBMITTED,
-		ProvisioningToken: *res.StackId,
+		ProvisioningToken: token,
 	}), nil
 }
 
@@ -124,8 +131,18 @@ func generateChangeSetName(stack string) string {
 func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionRequest) (string, error) {
 	template := goformation.NewTemplate()
 	for _, resourceCtx := range req.DesiredResources {
-		if err := c.resourceToCF(req.FtlClusterId, req.Module, template, resourceCtx.Resource); err != nil {
-			return "", err
+		var templater ResourceTemplater
+		if _, ok := resourceCtx.Resource.Resource.(*provisioner.Resource_Postgres); ok {
+			templater = &PostgresTemplater{
+				resourceID: resourceCtx.Resource.ResourceId,
+				cluster:    req.FtlClusterId,
+				module:     req.Module,
+				config:     c.confg,
+			}
+		}
+
+		if err := templater.AddToTemplate(template); err != nil {
+			return "", fmt.Errorf("failed to add resource to template: %w", err)
 		}
 	}
 	// Stack can not be empty, insert a null resource to keep the stack around
@@ -140,45 +157,9 @@ func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionReq
 	return string(bytes), nil
 }
 
-func (c *CloudformationProvisioner) resourceToCF(cluster, module string, template *goformation.Template, resource *provisioner.Resource) error {
-	if _, ok := resource.Resource.(*provisioner.Resource_Postgres); ok {
-		clusterID := cloudformationResourceID(resource.ResourceId, "cluster")
-		instanceID := cloudformationResourceID(resource.ResourceId, "instance")
-		template.Resources[clusterID] = &rds.DBCluster{
-			Engine:                   ptr("aurora-postgresql"),
-			MasterUsername:           ptr("root"),
-			ManageMasterUserPassword: ptr(true),
-			DBSubnetGroupName:        ptr(c.confg.DatabaseSubnetGroupARN),
-			VpcSecurityGroupIds:      []string{c.confg.DatabaseSecurityGroup},
-			EngineMode:               ptr("provisioned"),
-			Port:                     ptr(5432),
-			ServerlessV2ScalingConfiguration: &rds.DBCluster_ServerlessV2ScalingConfiguration{
-				MinCapacity: ptr(0.5),
-				MaxCapacity: ptr(10.0),
-			},
-			Tags: ftlTags(cluster, module),
-		}
-		template.Resources[instanceID] = &rds.DBInstance{
-			Engine:              ptr("aurora-postgresql"),
-			DBInstanceClass:     ptr("db.serverless"),
-			DBClusterIdentifier: ptr(goformation.Ref(clusterID)),
-			Tags:                ftlTags(cluster, module),
-		}
-		addOutput(template.Outputs, goformation.GetAtt(clusterID, "Endpoint.Address"), &CloudformationOutputKey{
-			ResourceID:   resource.ResourceId,
-			PropertyName: PropertyDBWriteEndpoint,
-		})
-		addOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &CloudformationOutputKey{
-			ResourceID:   resource.ResourceId,
-			PropertyName: PropertyDBReadEndpoint,
-		})
-		addOutput(template.Outputs, goformation.GetAtt(clusterID, "MasterUserSecret.SecretArn"), &CloudformationOutputKey{
-			ResourceID:   resource.ResourceId,
-			PropertyName: PropertyMasterUserARN,
-		})
-		return nil
-	}
-	return errors.New("unsupported resource type")
+// ResourceTemplater interface for different resource types
+type ResourceTemplater interface {
+	AddToTemplate(tmpl *goformation.Template) error
 }
 
 func ftlTags(cluster, module string) []tags.Tag {

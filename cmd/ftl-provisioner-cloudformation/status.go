@@ -2,94 +2,48 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
 )
 
 func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
-	client, err := createClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cloudformation client: %w", err)
+	token := req.Msg.ProvisioningToken
+	// if the task is not in the map, it means that the provisioner has crashed since starting the task
+	// in that case, we start a new task to query the existing stack
+	task, _ := c.running.LoadOrStore(token, &task{stackID: token})
+
+	if task.err.Load() != nil {
+		c.running.Delete(token)
+		return nil, connect.NewError(connect.CodeUnknown, task.err.Load())
 	}
 
-	desc, err := client.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
-		StackName: &req.Msg.ProvisioningToken,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to describe stack: %w", err)
-	}
-	stack := desc.Stacks[0]
+	if task.outputs.Load() != nil {
+		c.running.Delete(token)
 
-	switch stack.StackStatus {
-	case types.StackStatusCreateInProgress:
-		return running()
-	case types.StackStatusCreateFailed:
-		return failure(&stack)
-	case types.StackStatusCreateComplete:
-		return c.success(ctx, &stack, req.Msg.DesiredResources)
-	case types.StackStatusRollbackInProgress:
-		return failure(&stack)
-	case types.StackStatusRollbackFailed:
-		return failure(&stack)
-	case types.StackStatusRollbackComplete:
-		return failure(&stack)
-	case types.StackStatusDeleteInProgress:
-		return running()
-	case types.StackStatusDeleteFailed:
-		return failure(&stack)
-	case types.StackStatusDeleteComplete:
-		return c.success(ctx, &stack, req.Msg.DesiredResources)
-	case types.StackStatusUpdateInProgress:
-		return running()
-	case types.StackStatusUpdateCompleteCleanupInProgress:
-		return running()
-	case types.StackStatusUpdateComplete:
-		return c.success(ctx, &stack, req.Msg.DesiredResources)
-	case types.StackStatusUpdateFailed:
-		return failure(&stack)
-	case types.StackStatusUpdateRollbackInProgress:
-		return running()
-	default:
-		return nil, errors.New("unsupported Cloudformation status code: " + string(desc.Stacks[0].StackStatus))
-	}
-}
-
-func (c *CloudformationProvisioner) success(ctx context.Context, stack *types.Stack, resources []*provisioner.Resource) (*connect.Response[provisioner.StatusResponse], error) {
-	err := c.updateResources(ctx, stack.Outputs, resources)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(&provisioner.StatusResponse{
-		Status: &provisioner.StatusResponse_Success{
-			Success: &provisioner.StatusResponse_ProvisioningSuccess{
-				UpdatedResources: resources,
+		resources := req.Msg.DesiredResources
+		if err := c.updateResources(ctx, task.outputs.Load(), resources); err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&provisioner.StatusResponse{
+			Status: &provisioner.StatusResponse_Success{
+				Success: &provisioner.StatusResponse_ProvisioningSuccess{
+					UpdatedResources: resources,
+				},
 			},
-		},
-	}), nil
-}
+		}), nil
+	}
 
-func running() (*connect.Response[provisioner.StatusResponse], error) {
 	return connect.NewResponse(&provisioner.StatusResponse{
 		Status: &provisioner.StatusResponse_Running{
 			Running: &provisioner.StatusResponse_ProvisioningRunning{},
 		},
 	}), nil
-}
-
-func failure(stack *types.Stack) (*connect.Response[provisioner.StatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnknown, errors.New(*stack.StackStatusReason))
 }
 
 func outputsByResourceID(outputs []types.Output) (map[string][]types.Output, error) {
@@ -147,31 +101,15 @@ func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, t
 		return fmt.Errorf("failed to group outputs by property name: %w", err)
 	}
 
-	// TODO: Move to provisioner workflow
-	secretARN := *byName[PropertyMasterUserARN].OutputValue
-	username, password, err := c.secretARNToUsernamePassword(ctx, secretARN)
+	// TODO: mind the secret rotation
+	secretARN := *byName[PropertyPsqlMasterUserARN].OutputValue
+	username, password, err := secretARNToUsernamePassword(ctx, c.secrets, secretARN)
 	if err != nil {
 		return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
 	}
 
-	to.ReadDsn = endpointToDSN(byName[PropertyDBReadEndpoint].OutputValue, resourceID, 5432, username, password)
-	to.WriteDsn = endpointToDSN(byName[PropertyDBWriteEndpoint].OutputValue, resourceID, 5432, username, password)
-	adminEndpoint := endpointToDSN(byName[PropertyDBReadEndpoint].OutputValue, "postgres", 5432, username, password)
-
-	// Connect to postgres without a specific database to create the new one
-	db, err := sql.Open("pgx", adminEndpoint)
-	if err != nil {
-		return fmt.Errorf("failed to connect to postgres: %w", err)
-	}
-	defer db.Close()
-
-	// Create the database if it doesn't exist
-	if _, err := db.ExecContext(ctx, "CREATE DATABASE "+resourceID); err != nil {
-		// Ignore if database already exists
-		if !strings.Contains(err.Error(), "already exists") {
-			return fmt.Errorf("failed to create database: %w", err)
-		}
-	}
+	to.ReadDsn = endpointToDSN(byName[PropertyPsqlReadEndpoint].OutputValue, resourceID, 5432, username, password)
+	to.WriteDsn = endpointToDSN(byName[PropertyPsqlWriteEndpoint].OutputValue, resourceID, 5432, username, password)
 
 	return nil
 }
@@ -189,21 +127,4 @@ func endpointToDSN(endpoint *string, database string, port int, username, passwo
 	url.RawQuery = query.Encode()
 
 	return url.String()
-}
-
-func (c *CloudformationProvisioner) secretARNToUsernamePassword(ctx context.Context, secretARN string) (string, string, error) {
-	secret, err := c.secrets.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
-		SecretId: &secretARN,
-	})
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get secret value: %w", err)
-	}
-	secretString := *secret.SecretString
-
-	var secretData map[string]string
-	if err := json.Unmarshal([]byte(secretString), &secretData); err != nil {
-		return "", "", fmt.Errorf("failed to unmarshal secret data: %w", err)
-	}
-
-	return secretData["username"], secretData["password"], nil
 }
