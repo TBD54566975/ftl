@@ -86,7 +86,7 @@ func New() *Service {
 }
 
 func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {
-	log.FromContext(ctx).Infof("Received Ping")
+	log.FromContext(ctx).Debugf("Received Ping")
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
@@ -308,7 +308,7 @@ func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildConte
 	if err != nil {
 		return fmt.Errorf("could not watch for file changes: %w", err)
 	}
-	log.FromContext(ctx).Infof("Watching for file changes: %s", buildCtx.Config.Dir)
+	log.FromContext(ctx).Debugf("Watching for file changes: %s", buildCtx.Config.Dir)
 	watchEvents := make(chan watch.WatchEvent, 32)
 	watchTopic.Subscribe(watchEvents)
 
