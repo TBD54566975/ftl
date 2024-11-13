@@ -13,7 +13,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
-	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
 
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
@@ -35,9 +34,7 @@ func TestDAL(t *testing.T) {
 
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
-	key := model.NewControllerKey("localhost", "8081")
-	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
-	dal := New(ctx, conn, encryption, pubSub, cjs)
+	dal := New(ctx, conn, encryption, pubSub)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSHA = sha256.Sum(testContent)
@@ -198,9 +195,7 @@ func TestCreateArtefactConflict(t *testing.T) {
 	timelineSrv := timeline.New(ctx, conn, encryption)
 	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timelineSrv)
 
-	key := model.NewControllerKey("localhost", "8081")
-	cjs := cronjobs.New(ctx, key, "test.com", encryption, timelineSrv, conn)
-	dal := New(ctx, conn, encryption, pubSub, cjs)
+	dal := New(ctx, conn, encryption, pubSub)
 
 	idch := make(chan sha256.SHA256, 2)
 

@@ -38,7 +38,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/async"
 	"github.com/TBD54566975/ftl/backend/controller/console"
-	"github.com/TBD54566975/ftl/backend/controller/cronjobs"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/dsn"
@@ -230,7 +229,6 @@ type Service struct {
 	sm *cf.Manager[configuration.Secrets]
 
 	tasks                   *scheduledtask.Scheduler
-	cronJobs                *cronjobs.Service
 	pubSub                  *pubsub.Service
 	registry                *artefacts.Service
 	timeline                *timeline.Service
@@ -301,9 +299,7 @@ func New(
 	svc.timeline = timelineSvc
 	pubSub := pubsub.New(ctx, conn, encryption, optional.Some[pubsub.AsyncCallListener](svc), timelineSvc)
 	svc.pubSub = pubSub
-	cronSvc := cronjobs.New(ctx, key, svc.config.Advertise.Host, encryption, timelineSvc, conn)
-	svc.cronJobs = cronSvc
-	svc.dal = dal.New(ctx, conn, encryption, pubSub, cronSvc)
+	svc.dal = dal.New(ctx, conn, encryption, pubSub)
 
 	svc.deploymentLogsSink = newDeploymentLogsSink(ctx, timelineSvc)
 
@@ -601,11 +597,6 @@ func (s *Service) ReplaceDeploy(ctx context.Context, c *connect.Request[ftlv1.Re
 			logger.Errorf(err, "Could not replace deployment: %s", newDeploymentKey)
 			return nil, fmt.Errorf("could not replace deployment: %w", err)
 		}
-	}
-
-	err = s.cronJobs.CreatedOrReplacedDeloyment(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("could not schedule cron jobs: %w", err)
 	}
 
 	return connect.NewResponse(&ftlv1.ReplaceDeployResponse{}), nil
@@ -1482,11 +1473,6 @@ func (s *Service) finaliseAsyncCall(ctx context.Context, tx *dal.DAL, call *dal.
 
 	// Allow for handling of completion based on origin
 	switch origin := call.Origin.(type) {
-	case async.AsyncOriginCron:
-		if err := s.cronJobs.OnJobCompletion(ctx, origin.CronJobKey, failed); err != nil {
-			return fmt.Errorf("failed to finalize cron async call: %w", err)
-		}
-
 	case async.AsyncOriginPubSub:
 		if err := s.pubSub.OnCallCompletion(ctx, tx.Connection, origin, failed, isFinalResult); err != nil {
 			return fmt.Errorf("failed to finalize pubsub async call: %w", err)
