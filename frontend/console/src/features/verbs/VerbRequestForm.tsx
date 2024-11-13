@@ -166,7 +166,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
     }
   }, [verb, bodyTextKey])
 
-  const bottomText = response ?? error ?? ''
+  const bottomText = response || error || ''
   const schemaString = verb ? JSON.stringify(simpleJsonSchema(verb)) : ''
 
   return (

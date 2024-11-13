@@ -149,6 +149,11 @@ func (s *serveCmd) run(
 		s.CommonConfig.AllowOrigins = append(s.CommonConfig.AllowOrigins, addr)
 	}
 
+	if devMode && len(s.CommonConfig.AllowHeaders) == 0 {
+		// Default to allowing all headers for console requests in local dev mode.
+		s.CommonConfig.AllowHeaders = []string{"*"}
+	}
+
 	provisionerAddresses := make([]*url.URL, 0, s.Provisioners)
 	for range s.Provisioners {
 		bind, err := bindAllocator.Next()
