@@ -19,8 +19,8 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	"github.com/TBD54566975/ftl/backend/runner"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -42,7 +42,6 @@ type moduleMeta struct {
 	plugin         *languageplugin.LanguagePlugin
 	events         chan languageplugin.PluginEvent
 	configDefaults moduleconfig.CustomDefaults
-	devModeRunner  optional.Option[devModeRunner]
 }
 
 // copyMetaWithUpdatedDependencies finds the dependencies for a module and returns a
@@ -188,7 +187,6 @@ type Engine struct {
 	parallelism      int
 	modulesToBuild   *xsync.MapOf[string, bool]
 	buildEnv         []string
-	devMode          bool
 	startTime        optional.Option[time.Time]
 
 	// events coming in from plugins
@@ -202,6 +200,9 @@ type Engine struct {
 
 	// topic to subscribe to engine events
 	EngineUpdates *pubsub.Topic[EngineEvent]
+
+	devModeEndpointUpdates chan scaling.DevModeEndpoints
+	devMode                bool
 }
 
 type Option func(o *Engine)
@@ -219,9 +220,10 @@ func BuildEnv(env []string) Option {
 }
 
 // WithDevMode sets the engine to dev mode.
-func WithDevMode(devMode bool) Option {
+func WithDevMode(updates chan scaling.DevModeEndpoints) Option {
 	return func(o *Engine) {
-		o.devMode = devMode
+		o.devModeEndpointUpdates = updates
+		o.devMode = true
 	}
 }
 
@@ -649,7 +651,7 @@ func (e *Engine) watchForEventsToPublish(ctx context.Context) {
 			}
 			isIdle = true
 
-			if e.devMode && isFirstRound {
+			if e.devModeEndpointUpdates != nil && isFirstRound {
 				logger := log.FromContext(ctx)
 				if len(moduleErrors) > 0 {
 					logger.Errorf(errors.Join(maps.Values(moduleErrors)...), "Initial build failed")
@@ -1116,18 +1118,13 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
 					result, _ := event.Result.Get()
 					if endpoint, ok := result.DevEndpoint.Get(); ok {
-						if _, ok := meta.devModeRunner.Get(); !ok {
+						if e.devModeEndpointUpdates != nil {
 							parsed, err := url.Parse(endpoint)
 							if err != nil {
 								e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
 								continue
 							}
-							ru := &devModeRunner{config: runner.Config{
-								DevEndpoint: parsed,
-							},
-							}
-							meta.devModeRunner = optional.Ptr(ru)
-							ru.Launch(ctx)
+							e.devModeEndpointUpdates <- scaling.DevModeEndpoints{Module: event.Module, Endpoint: *parsed}
 						}
 					} else {
 						if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {

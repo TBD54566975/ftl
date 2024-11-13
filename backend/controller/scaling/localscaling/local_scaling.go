@@ -41,7 +41,12 @@ type localScaling struct {
 	prevRunnerSuffix        int
 	ideSupport              optional.Option[localdebug.IDEIntegration]
 	devModeEndpointsUpdates <-chan scaling.DevModeEndpoints
-	devModeEndpoints        map[string]*scaling.DevModeEndpoints
+	devModeEndpoints        map[string]*devModeRunner
+}
+
+type devModeRunner struct {
+	uri     url.URL
+	running bool
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
@@ -52,7 +57,9 @@ func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser lease
 				return
 			case devEndpoints := <-l.devModeEndpointsUpdates:
 				l.lock.Lock()
-				l.devModeEndpoints[devEndpoints.Module] = &devEndpoints
+				l.devModeEndpoints[devEndpoints.Module] = &devModeRunner{
+					uri: devEndpoints.Endpoint,
+				}
 				l.lock.Unlock()
 			}
 		}
@@ -180,6 +187,17 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		return nil
 	default:
 	}
+
+	devEndpoint := l.devModeEndpoints[info.module]
+	devUri := optional.None[url.URL]()
+	if devEndpoint != nil {
+		devUri = optional.Some(devEndpoint.uri)
+		if devEndpoint.running {
+			// Already running, don't start another
+			return nil
+		}
+		devEndpoint.running = true
+	}
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 	logger := log.FromContext(ctx)
 
@@ -206,11 +224,6 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	keySuffix := l.prevRunnerSuffix + 1
 	l.prevRunnerSuffix = keySuffix
 
-	devEndpoint := l.devModeEndpoints[info.module]
-	devUri := optional.None[url.URL]()
-	if devEndpoint != nil {
-		devUri = optional.Some(devEndpoint.Endpoint)
-	}
 	config := runner.Config{
 		Bind:               bind,
 		ControllerEndpoint: controllerEndpoint,
@@ -235,11 +248,17 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
 	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port()})
 
+	if devEndpoint != nil {
+		devEndpoint.running = true
+	}
 	go func() {
 		logger.Debugf("Starting runner: %s", config.Key)
 		err := runner.Start(runnerCtx, config)
 		l.lock.Lock()
 		defer l.lock.Unlock()
+		if devEndpoint != nil {
+			devEndpoint.running = true
+		}
 		if err != nil && !errors.Is(err, context.Canceled) {
 			logger.Errorf(err, "Runner failed: %s", err)
 		} else {

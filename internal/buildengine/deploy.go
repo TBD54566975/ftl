@@ -2,7 +2,6 @@ package buildengine
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,7 +15,6 @@ import (
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/backend/runner"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
@@ -288,25 +286,4 @@ func checkReadiness(ctx context.Context, client DeployClient, deploymentKey stri
 			return ctx.Err()
 		}
 	}
-}
-
-type devModeRunner struct {
-	config runner.Config
-}
-
-func (r *devModeRunner) Launch(ctx context.Context) {
-	logger := log.FromContext(ctx)
-	go func() {
-		for restarts := 0; restarts < 10; restarts++ {
-			logger.Debugf("Starting runner: %s", r.config.Key)
-			err := runner.Start(ctx, r.config)
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-			if err != nil {
-				logger.Errorf(err, "Runner failed: %s", err)
-			}
-		}
-		logger.Errorf(fmt.Errorf("too many restarts"), "Runner failed too many times, not restarting")
-	}()
 }
