@@ -41,8 +41,8 @@ github.com/alecthomas/repr v0.4.0 h1:GhI2A8MACjfegCPVq9f1FLvIBS+DrQ2KQBFZP1iFzXc
 github.com/alecthomas/repr v0.4.0/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/alecthomas/types v0.16.0 h1:o9+JSwCRB6DDaWDeR/Mg7v/zh3R+MlknM6DrnDyY7U0=
 github.com/alecthomas/types v0.16.0/go.mod h1:Tswm0qQpjpVq8rn70OquRsUtFxbQKub/8TMyYYGI0+k=
-github.com/amacneil/dbmate/v2 v2.22.0 h1:Ja4sRvUvPJIuPaoLl8ywMT0ln2Nrbe0W/WCQHPCdXz8=
-github.com/amacneil/dbmate/v2 v2.22.0/go.mod h1:1fPPjNwuUFqBsFjs+J8pwi9p9tpEs6ZV8kgKTSvDd90=
+github.com/amacneil/dbmate/v2 v2.23.0 h1:KsolutitPR4yTKHj33tdZ6Vn/bGMxXSmpg7eulBwJSc=
+github.com/amacneil/dbmate/v2 v2.23.0/go.mod h1:1fPPjNwuUFqBsFjs+J8pwi9p9tpEs6ZV8kgKTSvDd90=
 github.com/aws/aws-sdk-go v1.55.5 h1:KKUZBfBoyqy5d3swXyiC7Q76ic40rYcbqH7qjh59kzU=
 github.com/aws/aws-sdk-go v1.55.5/go.mod h1:eRwEWoyTWFMVYVQzKMNHWP5/RV4xIUGMQfXQHfHkpNU=
 github.com/aws/aws-sdk-go-v2 v1.32.4 h1:S13INUiTxgrPueTmrm5DZ+MiAo99zYzHEFh1UNkOxNE=
