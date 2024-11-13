@@ -40,7 +40,7 @@ func discoverModules(dirs ...string) ([]moduleconfig.UnvalidatedModuleConfig, er
 	}
 	out := []moduleconfig.UnvalidatedModuleConfig{}
 	for _, dir := range dirs {
-		err := WalkDir(dir, func(path string, d fs.DirEntry) error {
+		err := WalkDir(dir, true, func(path string, d fs.DirEntry) error {
 			if filepath.Base(path) != "ftl.toml" {
 				return nil
 			}

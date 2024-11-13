@@ -157,7 +157,7 @@ func (w *Watcher) Watch(ctx context.Context, period time.Duration, moduleDirs []
 					continue
 				}
 				existingModule, haveExistingModule := w.existingModules[config.Dir]
-				hashes, err := computeFileHashes(config.Dir, w.patterns)
+				hashes, err := ComputeFileHashes(config.Dir, true, w.patterns)
 				if err != nil {
 					logger.Tracef("error computing file hashes for %s: %v", config.Dir, err)
 					continue

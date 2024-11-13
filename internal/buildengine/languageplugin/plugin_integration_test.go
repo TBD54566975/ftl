@@ -575,7 +575,7 @@ func modifyVerbName(moduleName, old, new string) in.Action {
 
 func walkWatchedFiles(t testing.TB, ic in.TestContext, moduleName string, visit func(path string)) error {
 	path := filepath.Join(ic.WorkingDir(), moduleName)
-	return watch.WalkDir(path, func(srcPath string, entry fs.DirEntry) error {
+	return watch.WalkDir(path, true, func(srcPath string, entry fs.DirEntry) error {
 		if entry.IsDir() {
 			return nil
 		}

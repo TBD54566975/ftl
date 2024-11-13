@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/alecthomas/types/optional"
+	"github.com/alecthomas/types/result"
 	"github.com/block/scaffolder"
 	sets "github.com/deckarep/golang-set/v2"
 	"golang.org/x/exp/maps"
@@ -355,19 +356,12 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		return moduleSch, nil, fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
 	}
 
-	projectName := ""
-	if pcpath, ok := projectconfig.DefaultConfigPath().Get(); ok {
-		pc, err := projectconfig.Load(ctx, pcpath)
-		if err != nil {
-			return moduleSch, nil, fmt.Errorf("failed to load project config: %w", err)
-		}
-		projectName = pc.Name
-	}
-
 	logger := log.FromContext(ctx)
 	funcs := maps.Clone(scaffoldFuncs)
 
 	buildDir := buildDir(config.Dir)
+	mainDir := filepath.Join(buildDir, "go", "main")
+
 	err = os.MkdirAll(buildDir, 0750)
 	if err != nil {
 		return moduleSch, nil, fmt.Errorf("failed to create build directory: %w", err)
@@ -389,41 +383,127 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		return moduleSch, nil, fmt.Errorf("failed to scaffold zip: %w", err)
 	}
 
-	logger.Debugf("Extracting schema")
-	result, err := extract.Extract(config.Dir)
+	// In parallel, extract schema and optimistically compile.
+	// These two steps take the longest, and only sometimes depend on each other.
+	// After both have completed, we will scaffold out the build template and only use the optimistic compile
+	// if the extracted schema has not caused any changes.
+	extractResultChan := make(chan result.Result[extract.Result])
+	go func() {
+		logger.Debugf("Extracting schema")
+		extractResultChan <- result.From(extract.Extract(config.Dir))
+	}()
+	optimisticCompileChan := make(chan result.Result[watch.FileHashes])
+	go func() {
+		hashes, err := fileHashesForOptimisticCompilation(config, mainDir)
+		if err != nil {
+			optimisticCompileChan <- result.Err[watch.FileHashes](fmt.Errorf("could not compute file hashes: %w", err))
+			return
+		}
+		if len(hashes) == 0 {
+			// main package is not scaffolded yet, can not optimistically compile
+			optimisticCompileChan <- result.Err[watch.FileHashes](fmt.Errorf("main package not scaffolded yet"))
+			return
+		}
+		logger.Debugf("Optimistically compiling")
+		optimisticCompileChan <- result.From(hashes, compile(ctx, mainDir, buildEnv, devMode))
+	}()
+
+	// wait for schema extraction to complete
+	extractResult, err := (<-extractResultChan).Result()
 	if err != nil {
 		return moduleSch, nil, fmt.Errorf("could not extract schema: %w", err)
 	}
-
-	if builderrors.ContainsTerminalError(result.Errors) {
+	if builderrors.ContainsTerminalError(extractResult.Errors) {
 		// Only bail if schema errors contain elements at level ERROR.
 		// If errors are only at levels below ERROR (e.g. INFO, WARN), the schema can still be used.
-		return moduleSch, result.Errors, nil
+		return moduleSch, extractResult.Errors, nil
 	}
 
-	logger.Debugf("Generating main module")
-	mctx, err := buildMainModuleContext(sch, result, goModVersion, projectName, sharedModulesPaths,
-		replacements)
+	// Wait for optimistic compile to complete
+	optimisticCompileResult := <-optimisticCompileChan
+
+	logger.Debugf("Generating main package")
+	projectName := ""
+	if pcpath, ok := projectconfig.DefaultConfigPath().Get(); ok {
+		pc, err := projectconfig.Load(ctx, pcpath)
+		if err != nil {
+			return moduleSch, nil, fmt.Errorf("failed to load project config: %w", err)
+		}
+		projectName = pc.Name
+	}
+	mctx, err := buildMainModuleContext(sch, extractResult, goModVersion, projectName, sharedModulesPaths, replacements)
 	if err != nil {
 		return moduleSch, nil, err
 	}
-
 	mainModuleCtxChanged := ongoingState.checkIfMainModuleContextChanged(mctx)
+	if err := scaffoldBuildTemplateAndTidy(ctx, sch, extractResult.Module, config, mainDir, importsChanged, mainModuleCtxChanged, mctx, funcs, filesTransaction); err != nil {
+		return moduleSch, nil, err // nolint:wrapcheck
+	}
+
+	logger.Debugf("Writing launch script")
+	if err := writeLaunchScript(buildDir); err != nil {
+		return moduleSch, nil, err
+	}
+
+	// Compare main package hashes to when we optimistically compiled
+	if originalHashes, ok := optimisticCompileResult.Get(); ok {
+		currentHashes, err := fileHashesForOptimisticCompilation(config, mainDir)
+		if err == nil && len(watch.CompareFileHashes(originalHashes, currentHashes)) == 0 {
+			logger.Debugf("Accepting optimistic compilation")
+			return optional.Some(extractResult.Module), extractResult.Errors, nil
+		}
+	}
+
+	logger.Debugf("Compiling")
+	err = compile(ctx, mainDir, buildEnv, devMode)
+	if err != nil {
+		return moduleSch, nil, err
+	}
+	return optional.Some(extractResult.Module), extractResult.Errors, nil
+}
+
+func fileHashesForOptimisticCompilation(config moduleconfig.AbsModuleConfig, mainDir string) (watch.FileHashes, error) {
+	// Include every file that may change while scaffolding the build template or tidying.
+	return watch.ComputeFileHashes(config.Dir, false, []string{filepath.Join(mainDir, "*"), "go.mod", "go.tidy", ftlTypesFilename})
+}
+
+func compile(ctx context.Context, mainDir string, buildEnv []string, devMode bool) error {
+	args := []string{"build", "-o", "../../main", "."}
+	if devMode {
+		args = []string{"build", "-gcflags=all=-N -l", "-o", "../../main", "."}
+	}
+	// We have seen lots of upstream HTTP/2 failures that make CI unstable.
+	// Disable HTTP/2 for now during the build. This can probably be removed later
+	buildEnv = slices.Clone(buildEnv)
+	buildEnv = append(buildEnv, "GODEBUG=http2client=0")
+	err := exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunStderrError(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to compile: %w", err)
+	}
+	return nil
+}
+
+func scaffoldBuildTemplateAndTidy(ctx context.Context, sch *schema.Schema, moduleSch *schema.Module,
+	config moduleconfig.AbsModuleConfig, mainDir string, importsChanged, mainModuleCtxChanged bool, mctx mainModuleContext,
+	funcs scaffolder.FuncMap, filesTransaction watch.ModifyFilesTransaction) error {
+	logger := log.FromContext(ctx)
 	if mainModuleCtxChanged {
 		if err := internal.ScaffoldZip(buildTemplateFiles(), config.Dir, mctx, scaffolder.Exclude("^go.mod$"),
 			scaffolder.Functions(funcs)); err != nil {
-			return moduleSch, nil, fmt.Errorf("failed to scaffold build template: %w", err)
+			return fmt.Errorf("failed to scaffold build template: %w", err)
 		}
 		if err := filesTransaction.ModifiedFiles(filepath.Join(config.Dir, ftlTypesFilename)); err != nil {
-			return moduleSch, nil, fmt.Errorf("failed to mark %s as modified: %w", ftlTypesFilename, err)
+			return fmt.Errorf("failed to mark %s as modified: %w", ftlTypesFilename, err)
 		}
+	} else {
+		logger.Debugf("Skipped scaffolding build template")
 	}
 	logger.Debugf("Tidying go.mod files")
 	wg, wgctx := errgroup.WithContext(ctx)
 
 	wg.Go(func() error {
 		if !importsChanged {
-			log.FromContext(ctx).Debugf("skipped go mod tidy (module dir)")
+			log.FromContext(ctx).Debugf("Skipped go mod tidy (module dir)")
 			return nil
 		}
 		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "mod", "tidy").RunStderrError(wgctx); err != nil {
@@ -434,10 +514,9 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		}
 		return filesTransaction.ModifiedFiles(filepath.Join(config.Dir, "go.mod"), filepath.Join(config.Dir, "go.sum"), filepath.Join(config.Dir, ftlTypesFilename))
 	})
-	mainDir := filepath.Join(buildDir, "go", "main")
 	wg.Go(func() error {
 		if !mainModuleCtxChanged {
-			log.FromContext(ctx).Debugf("skipped go mod tidy (build dir)")
+			log.FromContext(ctx).Debugf("Skipped go mod tidy (build dir)")
 			return nil
 		}
 		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "mod", "tidy").RunStderrError(wgctx); err != nil {
@@ -446,36 +525,9 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "fmt", "./...").RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to format main dir: %w", mainDir, err)
 		}
-		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(config.Dir, "go.sum"))
+		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(mainDir, "go.sum"))
 	})
-	if err := wg.Wait(); err != nil {
-		return moduleSch, nil, err // nolint:wrapcheck
-	}
-
-	logger.Debugf("Compiling")
-	args := []string{"build", "-o", "../../main", "."}
-	if devMode {
-		args = []string{"build", "-gcflags=all=-N -l", "-o", "../../main", "."}
-	}
-	// We have seen lots of upstream HTTP/2 failures that make CI unstable.
-	// Disable HTTP/2 for now during the build. This can probably be removed later
-	buildEnv = slices.Clone(buildEnv)
-	buildEnv = append(buildEnv, "GODEBUG=http2client=0")
-	err = exec.CommandWithEnv(ctx, log.Debug, mainDir, buildEnv, "go", args...).RunStderrError(ctx)
-	if err != nil {
-		return moduleSch, nil, fmt.Errorf("failed to compile: %w", err)
-	}
-	err = os.WriteFile(filepath.Join(mainDir, "../../launch"), []byte(`#!/bin/bash
-	if [ -n "$FTL_DEBUG_PORT" ] && command -v dlv &> /dev/null ; then
-	    dlv --listen=localhost:$FTL_DEBUG_PORT --headless=true --api-version=2 --accept-multiclient --allow-non-terminal-interactive exec --continue ./main
-	else
-		exec ./main
-	fi
-	`), 0770) // #nosec
-	if err != nil {
-		return moduleSch, nil, fmt.Errorf("failed to write launch script: %w", err)
-	}
-	return optional.Some(result.Module), result.Errors, nil
+	return wg.Wait()
 }
 
 type mainModuleContextBuilder struct {
@@ -545,6 +597,20 @@ func (b *mainModuleContextBuilder) build(goModVersion, ftlVersion, projectName s
 	}
 	ctx.withImports(mainModuleImport)
 	return *ctx, nil
+}
+
+func writeLaunchScript(buildDir string) error {
+	err := os.WriteFile(filepath.Join(buildDir, "launch"), []byte(`#!/bin/bash
+	if [ -n "$FTL_DEBUG_PORT" ] && command -v dlv &> /dev/null ; then
+	    dlv --listen=localhost:$FTL_DEBUG_PORT --headless=true --api-version=2 --accept-multiclient --allow-non-terminal-interactive exec --continue ./main
+	else
+		exec ./main
+	fi
+	`), 0770) // #nosec
+	if err != nil {
+		return fmt.Errorf("failed to write launch script: %w", err)
+	}
+	return nil
 }
 
 func (b *mainModuleContextBuilder) visit(
