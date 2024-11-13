@@ -8,8 +8,7 @@ test('shows cron verb form', async ({ page }) => {
   await expect(page.locator('input#request-path')).toHaveValue('cron.thirtySeconds')
 
   await expect(page.getByText('Body', { exact: true })).toBeVisible()
-  await expect(page.getByText('Verb Schema', { exact: true })).toBeVisible()
-  await expect(page.getByText('JSONSchema', { exact: true })).toBeVisible()
+  await expect(page.getByText('Schema', { exact: true })).toBeVisible()
 })
 
 test('send cron request', async ({ page }) => {

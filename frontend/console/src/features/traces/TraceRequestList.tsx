@@ -32,11 +32,12 @@ export const TraceRequestList = ({ module, verb }: { module: string; verb?: stri
     }
   }
 
-  const events = Object.entries(traceEvents).map(([_, events]) => events[0])
+  // Get the root/initial event from each request trace group
+  const rootEvents = Object.values(traceEvents).map((events) => events[0])
 
   return (
     <div className='flex flex-col h-full relative '>
-      <TimelineEventList events={events} selectedEventId={selectedEventId} handleEntryClicked={handleCallClicked} />
+      <TimelineEventList events={rootEvents} selectedEventId={selectedEventId} handleEntryClicked={handleCallClicked} />
     </div>
   )
 }

@@ -124,5 +124,9 @@ export const Schema = ({ schema, moduleName, containerRect }: { schema: string; 
       <SchemaLine line={l} moduleNameOverride={moduleName} containerRect={containerRect || rect} />
     </div>
   ))
-  return <div className='whitespace-pre font-mono text-xs'>{lines}</div>
+  return (
+    <div className='overflow-x-auto'>
+      <div className='whitespace-pre font-mono text-xs'>{lines}</div>
+    </div>
+  )
 }

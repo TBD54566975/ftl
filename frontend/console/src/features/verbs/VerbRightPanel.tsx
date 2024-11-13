@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { RightPanelAttribute } from '../../components/RightPanelAttribute'
 import type { Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { ExpandablePanelProps } from '../console/ExpandablePanel'
+import { Schema } from '../modules/schema/Schema'
 import { type VerbRef, httpRequestPath, ingress, isHttpIngress, verbCalls } from './verb.utils'
 
 const PanelRow = ({ verb }: { verb: VerbRef }) => {
@@ -48,6 +49,12 @@ export const verbPanels = (verb?: Verb, callers?: VerbRef[]) => {
       children: callers.map((c, index) => <PanelRow key={`verb-caller-${index}-${c.module}-${c.name}`} verb={c} />),
     })
   }
+
+  panels.push({
+    title: 'Schema',
+    expanded: true,
+    children: <Schema schema={verb?.schema || ''} />,
+  })
 
   return panels
 }

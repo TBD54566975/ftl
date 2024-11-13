@@ -9,6 +9,7 @@
   },
   "formatter": {
     "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx", "src/**/*.cjs", "src/**/*.mjs", "tests/**/*.ts", "e2e/**/*.ts"],
-    "ignore": ["./node_modules", "./dist", "./src/protos", "./playwright-report"]
+    "ignore": ["./node_modules", "./dist", "./src/protos", "./playwright-report"],
+    "formatWithErrors": true
   }
 }
