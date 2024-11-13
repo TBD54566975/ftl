@@ -291,14 +291,15 @@ func checkReadiness(ctx context.Context, client DeployClient, deploymentKey stri
 }
 
 type devModeRunner struct {
+	config runner.Config
 }
 
-func (*devModeRunner) Launch(ctx context.Context, config runner.Config) {
+func (r *devModeRunner) Launch(ctx context.Context) {
 	logger := log.FromContext(ctx)
 	go func() {
 		for restarts := 0; restarts < 10; restarts++ {
-			logger.Debugf("Starting runner: %s", config.Key)
-			err := runner.Start(ctx, config)
+			logger.Debugf("Starting runner: %s", r.config.Key)
+			err := runner.Start(ctx, r.config)
 			if errors.Is(err, context.Canceled) {
 				return
 			}
@@ -308,8 +309,4 @@ func (*devModeRunner) Launch(ctx context.Context, config runner.Config) {
 		}
 		logger.Errorf(fmt.Errorf("too many restarts"), "Runner failed too many times, not restarting")
 	}()
-}
-
-func launchDevModeRunner(ctx context.Context, config projectconfig.Config, module Module, deploy []string, endpoint string, client DeployClient) {
-
 }

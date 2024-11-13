@@ -20,6 +20,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -64,19 +65,11 @@ func (s *serveCmd) Run(
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, nil)
 }
 
 //nolint:maintidx
-func (s *serveCmd) run(
-	ctx context.Context,
-	projConfig projectconfig.Config,
-	cm *manager.Manager[configuration.Configuration],
-	sm *manager.Manager[configuration.Secrets],
-	initialised optional.Option[chan bool],
-	devMode bool,
-	bindAllocator *bind.BindAllocator,
-) error {
+func (s *serveCmd) run(ctx context.Context, projConfig projectconfig.Config, cm *manager.Manager[configuration.Configuration], sm *manager.Manager[configuration.Secrets], initialised optional.Option[chan bool], devMode bool, bindAllocator *bind.BindAllocator, devModeEndpoints <-chan scaling.DevModeEndpoints) error {
 	logger := log.FromContext(ctx)
 	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
 	provisionerClient := rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
@@ -163,7 +156,7 @@ func (s *serveCmd) run(
 		provisionerAddresses = append(provisionerAddresses, bind)
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, devModeEndpoints)
 	if err != nil {
 		return err
 	}

@@ -38,11 +38,25 @@ type localScaling struct {
 	portAllocator       *bind.BindAllocator
 	controllerAddresses []*url.URL
 
-	prevRunnerSuffix int
-	ideSupport       optional.Option[localdebug.IDEIntegration]
+	prevRunnerSuffix        int
+	ideSupport              optional.Option[localdebug.IDEIntegration]
+	devModeEndpointsUpdates <-chan scaling.DevModeEndpoints
+	devModeEndpoints        map[string]scaling.DevModeEndpoints
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case devEndpoints := <-l.devModeEndpointsUpdates:
+				l.lock.Lock()
+				defer l.lock.Unlock()
+				l.devModeEndpoints[devEndpoints.Module] = devEndpoints
+			}
+		}
+	}()
 	scaling.BeginGrpcScaling(ctx, endpoint, leaser, l.handleSchemaChange)
 	return nil
 }
@@ -80,20 +94,21 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, devModeEndpoints <-chan scaling.DevModeEndpoints) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return nil, err
 	}
 	local := localScaling{
-		lock:                sync.Mutex{},
-		cacheDir:            cacheDir,
-		runners:             map[string]map[string]*deploymentInfo{},
-		portAllocator:       portAllocator,
-		controllerAddresses: controllerAddresses,
-		prevRunnerSuffix:    -1,
-		debugPorts:          map[string]*localdebug.DebugInfo{},
+		lock:                    sync.Mutex{},
+		cacheDir:                cacheDir,
+		runners:                 map[string]map[string]*deploymentInfo{},
+		portAllocator:           portAllocator,
+		controllerAddresses:     controllerAddresses,
+		prevRunnerSuffix:        -1,
+		debugPorts:              map[string]*localdebug.DebugInfo{},
+		devModeEndpointsUpdates: devModeEndpoints,
 	}
 	if enableIDEIntegration && configPath != "" {
 		local.ideSupport = optional.Ptr(localdebug.NewIDEIntegration(configPath))

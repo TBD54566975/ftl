@@ -67,7 +67,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			dir, err := filepath.Abs(tt.dir)
 			assert.NoError(t, err)
 
-			plugin, err := languageplugin.New(ctx, t.TempDir(), "java", "test")
+			plugin, err := languageplugin.New(ctx, t.TempDir(), "java", "test", false)
 			assert.NoError(t, err)
 			t.Cleanup(func() {
 				_ = plugin.Kill() //nolint:errcheck

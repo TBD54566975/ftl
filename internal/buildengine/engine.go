@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"net/url"
 	"runtime"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
+	"github.com/TBD54566975/ftl/backend/runner"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -1114,7 +1116,19 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
 					result, _ := event.Result.Get()
 					if endpoint, ok := result.DevEndpoint.Get(); ok {
-						launchDevModeRunner(ctx, e.projectConfig, meta.module, deploy, endpoint, e.client)
+						if _, ok := meta.devModeRunner.Get(); !ok {
+							parsed, err := url.Parse(endpoint)
+							if err != nil {
+								e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
+								continue
+							}
+							ru := &devModeRunner{config: runner.Config{
+								DevEndpoint: parsed,
+							},
+							}
+							meta.devModeRunner = optional.Ptr(ru)
+							ru.Launch(ctx)
+						}
 					} else {
 						if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
 							e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}

@@ -65,3 +65,9 @@ func runGrpcScaling(ctx context.Context, url url.URL, handler func(ctx context.C
 	rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, handler, rpc.AlwaysRetry())
 	logger.Debugf("Stopped Runner Scaling")
 }
+
+type DevModeEndpoints struct {
+	Module     string
+	Deployment string
+	Endpoint   url.URL
+}

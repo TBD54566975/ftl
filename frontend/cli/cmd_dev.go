@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/bind"
@@ -81,6 +82,7 @@ func (d *devCmd) Run(
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
 
+	devModeRunners := make(chan scaling.DevModeEndpoints, 1)
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
@@ -93,7 +95,7 @@ func (d *devCmd) Run(
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator)
+			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, devModeRunners)
 		})
 	}
 
