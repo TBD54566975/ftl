@@ -6,7 +6,7 @@ import {
   type IngressEvent,
   type PubSubConsumeEvent,
   type PubSubPublishEvent,
-} from '../../protos/xyz/block/ftl/v1/console/console_pb.ts'
+} from '../../protos/xyz/block/ftl/console/v1/console_pb.ts'
 import { eventTypesFilter, requestKeysFilter } from './timeline-filters.ts'
 import { useTimeline } from './use-timeline.ts'
 

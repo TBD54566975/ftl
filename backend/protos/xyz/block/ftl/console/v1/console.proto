@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-package xyz.block.ftl.v1.console;
+package xyz.block.ftl.console.v1;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
+import "xyz/block/ftl/schema/v1/schema.proto";
 import "xyz/block/ftl/v1/ftl.proto";
-import "xyz/block/ftl/v1/schema/schema.proto";
 
-option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console;pbconsole";
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1;pbconsole";
 option java_multiple_files = true;
 
 enum EventType {

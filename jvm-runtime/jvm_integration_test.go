@@ -12,7 +12,7 @@ import (
 
 	"github.com/alecthomas/repr"
 
-	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	in "github.com/TBD54566975/ftl/internal/integration"
 	"github.com/TBD54566975/ftl/internal/schema"

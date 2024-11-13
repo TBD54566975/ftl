@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package xyz.block.ftl.v1beta1.provisioner;
+package xyz.block.ftl.provisioner.v1beta1;
 
+import "xyz/block/ftl/provisioner/v1beta1/resource.proto";
 import "xyz/block/ftl/v1/ftl.proto";
-import "xyz/block/ftl/v1beta1/provisioner/resource.proto";
 
-option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner;provisioner";
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1;provisioner";
 option java_multiple_files = true;
 
 // ResourceContext is the context used to create a new resource

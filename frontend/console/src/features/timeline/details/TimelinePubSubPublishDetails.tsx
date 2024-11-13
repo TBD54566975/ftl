@@ -3,7 +3,7 @@ import { DeploymentCard } from '../../../features/deployments/DeploymentCard'
 import { TraceGraph } from '../../../features/traces/TraceGraph'
 import { TraceGraphHeader } from '../../../features/traces/TraceGraphHeader'
 import { refString } from '../../../features/verbs/verb.utils'
-import type { Event, PubSubPublishEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Event, PubSubPublishEvent } from '../../../protos/xyz/block/ftl/console/v1/console_pb'
 import { formatDuration } from '../../../utils/date.utils'
 
 export const TimelinePubSubPublishDetails = ({ event }: { event: Event }) => {

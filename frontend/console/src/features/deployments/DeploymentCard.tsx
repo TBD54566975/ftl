@@ -4,7 +4,7 @@ import { useModules } from '../../api/modules/use-modules'
 import { Badge } from '../../components/Badge'
 import { Card } from '../../components/Card'
 import { Chip } from '../../components/Chip'
-import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Module } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { deploymentTextColor } from './deployment.utils'
 
 export const DeploymentCard = ({ deploymentKey, className }: { deploymentKey: string; className?: string }) => {

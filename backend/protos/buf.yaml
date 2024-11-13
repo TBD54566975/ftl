@@ -1,7 +1,7 @@
 version: v1
 breaking:
   ignore:
-    - xyz/block/ftl/v1beta1
+    - xyz/block/ftl/provisioning/v1beta1
   use:
     - FILE
 lint:

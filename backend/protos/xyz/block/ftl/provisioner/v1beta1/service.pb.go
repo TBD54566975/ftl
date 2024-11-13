@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.35.1
 // 	protoc        (unknown)
-// source: xyz/block/ftl/v1beta1/provisioner/service.proto
+// source: xyz/block/ftl/provisioner/v1beta1/service.proto
 
 package provisioner
 

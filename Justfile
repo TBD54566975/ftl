@@ -5,13 +5,13 @@ WATCHEXEC_ARGS := "-d 1s -e proto -e go -e sql -f sqlc.yaml --ignore **/types.ft
 RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
-SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
+SCHEMA_OUT := "backend/protos/xyz/block/ftl/schema/v1/schema.proto"
 ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template internal/projectinit/scaffolding go-runtime/scaffolding jvm-runtime/java/scaffolding jvm-runtime/kotlin/scaffolding python-runtime/compile/build-template python-runtime/compile/external-module-template python-runtime/scaffolding"
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
-PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto"
-PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
+PROTOS_IN := "backend/protos/xyz/block/ftl/schema/v1/schema.proto backend/protos/xyz/block/ftl/console/v1/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto"
+PROTOS_OUT := "backend/protos/xyz/block/ftl/console/v1/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/schema/v1/schema.pb.go " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/console/v1/console_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/runtime_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/schema/v1/schema_pb.ts"
 
 _help:
   @just -l
@@ -188,9 +188,9 @@ build-protos:
 # Generate .proto files from .go types.
 go2proto:
   go2proto -o "{{SCHEMA_OUT}}" \
-    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb"' \
+    -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1;schemapb"' \
     -O 'java_multiple_files=true' \
-    xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
+    xyz.block.ftl.schema.v1 ./internal/schema.Schema && buf format -w && buf lint
 
 # Unconditionally rebuild protos
 build-protos-unconditionally: pnpm-install go2proto

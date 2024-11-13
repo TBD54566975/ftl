@@ -1,4 +1,4 @@
-import type { Enum } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Enum } from '../../../protos/xyz/block/ftl/console/v1/console_pb'
 import { Schema } from '../schema/Schema'
 import { PanelHeader } from './PanelHeader'
 import { References } from './References'

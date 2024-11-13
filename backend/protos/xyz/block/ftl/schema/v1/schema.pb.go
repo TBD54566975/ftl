@@ -4,7 +4,7 @@
 // versions:
 // 	protoc-gen-go v1.35.1
 // 	protoc        (unknown)
-// source: xyz/block/ftl/v1/schema/schema.proto
+// source: xyz/block/ftl/schema/v1/schema.proto
 
 package schemapb
 

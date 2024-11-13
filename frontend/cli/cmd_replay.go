@@ -9,9 +9,9 @@ import (
 	"connectrpc.com/connect"
 	"github.com/jpillora/backoff"
 
+	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/console/v1/pbconsoleconnect"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	pbconsole "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/console/pbconsoleconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/internal/log"

@@ -11,7 +11,7 @@ import {
   EventsQuery_RequestFilter,
   EventsQuery_TimeFilter,
   type LogLevel,
-} from '../../protos/xyz/block/ftl/v1/console/console_pb'
+} from '../../protos/xyz/block/ftl/console/v1/console_pb'
 
 export const requestKeysFilter = (requestKeys: string[]): EventsQuery_Filter => {
   const filter = new EventsQuery_Filter()

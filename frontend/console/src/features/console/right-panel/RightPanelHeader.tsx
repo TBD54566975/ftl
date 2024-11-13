@@ -1,5 +1,5 @@
 import { CellsIcon, FunctionIcon, PackageIcon, Settings02Icon, SquareLock02Icon } from 'hugeicons-react'
-import { Config, Module, Secret, Verb } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Config, Module, Secret, Verb } from '../../../protos/xyz/block/ftl/console/v1/console_pb'
 import type { FTLNode } from '../../graph/GraphPane'
 
 export const headerForNode = (node: FTLNode | null) => {

@@ -11,7 +11,7 @@ import {
 import type { NavigateFunction } from 'react-router-dom'
 import { CodeBlock } from '../../../components'
 import { RightPanelAttribute } from '../../../components/RightPanelAttribute'
-import type { Module } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Module } from '../../../protos/xyz/block/ftl/console/v1/console_pb'
 import { callsIn, callsOut } from '../../modules/module.utils'
 import type { ExpandablePanelProps } from '../ExpandablePanel'
 

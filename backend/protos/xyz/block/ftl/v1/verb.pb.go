@@ -7,7 +7,7 @@
 package ftlv1
 
 import (
-	schema "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	schema "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

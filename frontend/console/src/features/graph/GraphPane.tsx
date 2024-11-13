@@ -3,7 +3,7 @@ import ReactFlow, { Background, Controls, useEdgesState, useNodesState } from 'r
 import 'reactflow/dist/style.css'
 import React from 'react'
 import { useModules } from '../../api/modules/use-modules'
-import type { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 import { ConfigNode } from './ConfigNode'
 import { GroupNode } from './GroupNode'
 import { SecretNode } from './SecretNode'

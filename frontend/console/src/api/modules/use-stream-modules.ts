@@ -2,8 +2,8 @@ import { Code, ConnectError } from '@connectrpc/connect'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useClient } from '../../hooks/use-client'
 import { useVisibility } from '../../hooks/use-visibility'
-import { ConsoleService } from '../../protos/xyz/block/ftl/v1/console/console_connect'
-import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { ConsoleService } from '../../protos/xyz/block/ftl/console/v1/console_connect'
+import type { Module } from '../../protos/xyz/block/ftl/console/v1/console_pb'
 
 const streamModulesKey = 'streamModules'
 

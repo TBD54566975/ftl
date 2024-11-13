@@ -7,7 +7,7 @@ import (
 	"github.com/XSAM/otelsql"
 
 	"github.com/TBD54566975/ftl/backend/controller/dsn"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 	"github.com/TBD54566975/ftl/internal/dev"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"

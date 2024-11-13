@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
 	"github.com/TBD54566975/ftl/internal/rpc"

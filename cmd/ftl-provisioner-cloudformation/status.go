@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
+	provisioner "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1"
 )
 
 func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {

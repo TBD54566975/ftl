@@ -2,13 +2,13 @@
 // versions:
 // 	protoc-gen-go v1.35.1
 // 	protoc        (unknown)
-// source: xyz/block/ftl/v1/console/console.proto
+// source: xyz/block/ftl/console/v1/console.proto
 
 package pbconsole
 
 import (
 	v1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
-	schema "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	schema "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/schema/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"

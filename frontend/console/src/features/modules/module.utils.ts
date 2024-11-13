@@ -14,9 +14,9 @@ import {
   Settings02Icon,
   SquareLock02Icon,
 } from 'hugeicons-react'
-import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { Config, Data, Database, Decl, Enum, Secret, Subscription, Topic, TypeAlias, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import type { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
+import type { Module } from '../../protos/xyz/block/ftl/console/v1/console_pb'
+import type { Config, Data, Database, Decl, Enum, Secret, Subscription, Topic, TypeAlias, Verb } from '../../protos/xyz/block/ftl/schema/v1/schema_pb'
+import type { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/schema/v1/schema_pb'
 import { verbCalls } from '../verbs/verb.utils'
 
 interface InCall {

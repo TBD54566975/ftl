@@ -20,8 +20,8 @@ import (
 	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/dsn"
+	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/provisioner/v1beta1/provisionerconnect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
-	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal"
 	_ "github.com/TBD54566975/ftl/internal/automaxprocs" // Set GOMAXPROCS to match Linux container CPU quota.
 	"github.com/TBD54566975/ftl/internal/configuration"
