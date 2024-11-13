@@ -108,9 +108,9 @@ func (s *serveCmd) run(
 	}
 
 	if s.Provisioners > 0 {
-		logger.Infof("Starting FTL with %d controller(s) and %d provisioner(s)", s.Controllers, s.Provisioners)
+		logger.Debugf("Starting FTL with %d controller(s) and %d provisioner(s)", s.Controllers, s.Provisioners)
 	} else {
-		logger.Infof("Starting FTL with %d controller(s)", s.Controllers)
+		logger.Debugf("Starting FTL with %d controller(s)", s.Controllers)
 	}
 
 	err := observability.Init(ctx, false, "", "ftl-serve", ftl.Version, s.ObservabilityConfig)
