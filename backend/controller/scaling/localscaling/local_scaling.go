@@ -41,7 +41,7 @@ type localScaling struct {
 	prevRunnerSuffix        int
 	ideSupport              optional.Option[localdebug.IDEIntegration]
 	devModeEndpointsUpdates <-chan scaling.DevModeEndpoints
-	devModeEndpoints        map[string]scaling.DevModeEndpoints
+	devModeEndpoints        map[string]*scaling.DevModeEndpoints
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
@@ -52,8 +52,8 @@ func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser lease
 				return
 			case devEndpoints := <-l.devModeEndpointsUpdates:
 				l.lock.Lock()
-				defer l.lock.Unlock()
-				l.devModeEndpoints[devEndpoints.Module] = devEndpoints
+				l.devModeEndpoints[devEndpoints.Module] = &devEndpoints
+				l.lock.Unlock()
 			}
 		}
 	}()
@@ -206,12 +206,18 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	keySuffix := l.prevRunnerSuffix + 1
 	l.prevRunnerSuffix = keySuffix
 
+	devEndpoint := l.devModeEndpoints[info.module]
+	devUri := optional.None[url.URL]()
+	if devEndpoint != nil {
+		devUri = optional.Some(devEndpoint.Endpoint)
+	}
 	config := runner.Config{
 		Bind:               bind,
 		ControllerEndpoint: controllerEndpoint,
 		Key:                model.NewLocalRunnerKey(keySuffix),
 		Deployment:         deploymentKey,
 		DebugPort:          debugPort,
+		DevEndpoint:        devUri,
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)
