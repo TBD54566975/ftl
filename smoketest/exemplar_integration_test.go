@@ -81,7 +81,8 @@ func TestExemplarIntegration(t *testing.T) {
 		in.FileContains(logFilePath, fmt.Sprintf("deployed %d", failedAgentId)),
 		in.FileContains(logFilePath, fmt.Sprintf("succeeded %d", successAgentId)),
 		in.FileContains(logFilePath, fmt.Sprintf("terminated %d", failedAgentId)),
-		in.FileContains(logFilePath, fmt.Sprintf("cron %v", nonce)),
+		// TODO: Re-enable once cron is back.
+		// in.FileContains(logFilePath, fmt.Sprintf("cron %v", nonce)),
 	)
 }
 

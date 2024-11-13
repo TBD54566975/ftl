@@ -6,8 +6,6 @@ sql:
       - backend/controller/dal/internal/sql/queries.sql
       - backend/controller/dal/internal/sql/async_queries.sql
       - backend/controller/pubsub/internal/sql/queries.sql
-      # FIXME: Until we fully decouple cron from the controller, we need to include the cron queries here
-      - backend/controller/cronjobs/internal/sql/queries.sql
       # Some of the timeline entries happen within a controller transaction, so we need to include them here
       - backend/controller/timeline/internal/sql/deployment_queries.sql
     schema: "backend/controller/sql/schema"
@@ -61,12 +59,6 @@ sql:
             nullable: true
             go_type:
               type: "optional.Option[Type]"
-          - db_type: "cron_job_key"
-            go_type: "github.com/TBD54566975/ftl/internal/model.CronJobKey"
-          - db_type: "cron_job_key"
-            nullable: true
-            go_type:
-              type: "optional.Option[model.CronJobKey]"
           - db_type: "encrypted_identity"
             go_type: "github.com/TBD54566975/ftl/backend/controller/encryption/api.EncryptedIdentityColumn"
           - db_type: "encrypted_async"
@@ -154,14 +146,6 @@ sql:
       - sqlc/db-prepare
       # - postgresql-query-too-costly
       # - postgresql-no-seq-scan
-  - <<: *daldir
-    queries:
-      - backend/controller/cronjobs/internal/sql/queries.sql
-      - backend/controller/dal/internal/sql/async_queries.sql
-    gen:
-      go:
-        <<: *gengo
-        out: "backend/controller/cronjobs/internal/sql"
   - <<: *daldir
     queries: "internal/configuration/dal/internal/sql/queries.sql"
     gen:

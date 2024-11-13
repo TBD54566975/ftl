@@ -6,7 +6,6 @@ package sql
 
 import (
 	"context"
-	"time"
 
 	"github.com/TBD54566975/ftl/backend/controller/encryption/api"
 	"github.com/TBD54566975/ftl/backend/controller/sql/sqltypes"
@@ -23,12 +22,9 @@ type Querier interface {
 	BeginConsumingTopicEvent(ctx context.Context, subscription model.SubscriptionKey, event model.TopicEventKey) error
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
-	CreateCronJob(ctx context.Context, arg CreateCronJobParams) error
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
 	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
-	DeleteCronAsyncCallsForDeployment(ctx context.Context, deploymentKey model.DeploymentKey) error
-	DeleteCronJobsForDeployment(ctx context.Context, deploymentKey model.DeploymentKey) error
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
 	DeregisterRunner(ctx context.Context, key model.RunnerKey) (int64, error)
@@ -39,7 +35,6 @@ type Querier interface {
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
 	GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngressRoutesRow, error)
 	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
-	GetCronJobByKey(ctx context.Context, key model.CronJobKey) (GetCronJobByKeyRow, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
 	GetDeploymentsByID(ctx context.Context, ids []int64) ([]Deployment, error)
 	// Get all deployments that have artefacts matching the given digests.
@@ -63,12 +58,10 @@ type Querier interface {
 	GetSubscriptionsNeedingUpdate(ctx context.Context) ([]GetSubscriptionsNeedingUpdateRow, error)
 	GetTopic(ctx context.Context, dollar_1 int64) (Topic, error)
 	GetTopicEvent(ctx context.Context, dollar_1 int64) (TopicEvent, error)
-	GetUnscheduledCronJobs(ctx context.Context, startTime time.Time) ([]GetUnscheduledCronJobsRow, error)
 	GetZombieAsyncCalls(ctx context.Context, limit int32) ([]AsyncCall, error)
 	InsertSubscriber(ctx context.Context, arg InsertSubscriberParams) error
 	InsertTimelineDeploymentCreatedEvent(ctx context.Context, arg InsertTimelineDeploymentCreatedEventParams) error
 	InsertTimelineDeploymentUpdatedEvent(ctx context.Context, arg InsertTimelineDeploymentUpdatedEventParams) error
-	IsCronJobPending(ctx context.Context, key model.CronJobKey, startTime time.Time) (bool, error)
 	// Mark any controller entries that haven't been updated recently as dead.
 	KillStaleControllers(ctx context.Context, timeout sqltypes.Duration) (int64, error)
 	KillStaleRunners(ctx context.Context, timeout sqltypes.Duration) (int64, error)
@@ -77,7 +70,6 @@ type Querier interface {
 	SetDeploymentDesiredReplicas(ctx context.Context, key model.DeploymentKey, minReplicas int32) error
 	SetSubscriptionCursor(ctx context.Context, column1 model.SubscriptionKey, column2 model.TopicEventKey) error
 	SucceedAsyncCall(ctx context.Context, response api.OptionalEncryptedAsyncColumn, iD int64) (bool, error)
-	UpdateCronJobExecution(ctx context.Context, arg UpdateCronJobExecutionParams) error
 	UpsertController(ctx context.Context, key model.ControllerKey, endpoint string) (int64, error)
 	UpsertModule(ctx context.Context, language string, name string) (int64, error)
 	// Upsert a runner and return the deployment ID that it is assigned to, if any.

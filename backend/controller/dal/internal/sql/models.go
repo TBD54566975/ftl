@@ -218,19 +218,6 @@ type Controller struct {
 	Endpoint string
 }
 
-type CronJob struct {
-	ID              int64
-	Key             model.CronJobKey
-	DeploymentID    int64
-	Verb            string
-	Schedule        string
-	StartTime       time.Time
-	NextExecution   time.Time
-	ModuleName      string
-	LastExecution   sqltypes.OptionalTime
-	LastAsyncCallID optional.Option[int64]
-}
-
 type Deployment struct {
 	ID              int64
 	CreatedAt       time.Time
