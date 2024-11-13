@@ -4,13 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
@@ -19,77 +17,37 @@ import (
 )
 
 func (c *CloudformationProvisioner) Status(ctx context.Context, req *connect.Request[provisioner.StatusRequest]) (*connect.Response[provisioner.StatusResponse], error) {
-	client, err := createClient(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create cloudformation client: %w", err)
+	token := req.Msg.ProvisioningToken
+	// if the task is not in the map, it means that the provisioner has crashed since starting the task
+	// in that case, we start a new task to query the existing stack
+	task, _ := c.running.LoadOrStore(token, &task{stackID: token})
+
+	if task.err.Load() != nil {
+		c.running.Delete(token)
+		return nil, connect.NewError(connect.CodeUnknown, task.err.Load())
 	}
 
-	desc, err := client.DescribeStacks(ctx, &cloudformation.DescribeStacksInput{
-		StackName: &req.Msg.ProvisioningToken,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to describe stack: %w", err)
-	}
-	stack := desc.Stacks[0]
+	if task.outputs.Load() != nil {
+		c.running.Delete(token)
 
-	switch stack.StackStatus {
-	case types.StackStatusCreateInProgress:
-		return running()
-	case types.StackStatusCreateFailed:
-		return failure(&stack)
-	case types.StackStatusCreateComplete:
-		return c.success(ctx, &stack, req.Msg.DesiredResources)
-	case types.StackStatusRollbackInProgress:
-		return failure(&stack)
-	case types.StackStatusRollbackFailed:
-		return failure(&stack)
-	case types.StackStatusRollbackComplete:
-		return failure(&stack)
-	case types.StackStatusDeleteInProgress:
-		return running()
-	case types.StackStatusDeleteFailed:
-		return failure(&stack)
-	case types.StackStatusDeleteComplete:
-		return c.success(ctx, &stack, req.Msg.DesiredResources)
-	case types.StackStatusUpdateInProgress:
-		return running()
-	case types.StackStatusUpdateCompleteCleanupInProgress:
-		return running()
-	case types.StackStatusUpdateComplete:
-		return c.success(ctx, &stack, req.Msg.DesiredResources)
-	case types.StackStatusUpdateFailed:
-		return failure(&stack)
-	case types.StackStatusUpdateRollbackInProgress:
-		return running()
-	default:
-		return nil, errors.New("unsupported Cloudformation status code: " + string(desc.Stacks[0].StackStatus))
-	}
-}
-
-func (c *CloudformationProvisioner) success(ctx context.Context, stack *types.Stack, resources []*provisioner.Resource) (*connect.Response[provisioner.StatusResponse], error) {
-	err := c.updateResources(ctx, stack.Outputs, resources)
-	if err != nil {
-		return nil, err
-	}
-	return connect.NewResponse(&provisioner.StatusResponse{
-		Status: &provisioner.StatusResponse_Success{
-			Success: &provisioner.StatusResponse_ProvisioningSuccess{
-				UpdatedResources: resources,
+		resources := req.Msg.DesiredResources
+		if err := c.updateResources(ctx, task.outputs.Load(), resources); err != nil {
+			return nil, err
+		}
+		return connect.NewResponse(&provisioner.StatusResponse{
+			Status: &provisioner.StatusResponse_Success{
+				Success: &provisioner.StatusResponse_ProvisioningSuccess{
+					UpdatedResources: resources,
+				},
 			},
-		},
-	}), nil
-}
+		}), nil
+	}
 
-func running() (*connect.Response[provisioner.StatusResponse], error) {
 	return connect.NewResponse(&provisioner.StatusResponse{
 		Status: &provisioner.StatusResponse_Running{
 			Running: &provisioner.StatusResponse_ProvisioningRunning{},
 		},
 	}), nil
-}
-
-func failure(stack *types.Stack) (*connect.Response[provisioner.StatusResponse], error) {
-	return nil, connect.NewError(connect.CodeUnknown, errors.New(*stack.StackStatusReason))
 }
 
 func outputsByResourceID(outputs []types.Output) (map[string][]types.Output, error) {
