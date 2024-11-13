@@ -126,7 +126,7 @@ func (s *Service) insertHTTPIngress(ctx context.Context, querier sql.Querier, in
 		return fmt.Errorf("failed to encrypt ingress payload: %w", err)
 	}
 
-	log.FromContext(ctx).Warnf("Inserting ingress event for %s %s", ingress.RequestKey, ingress.Path)
+	log.FromContext(ctx).Debugf("Inserting ingress event for %s %s", ingress.RequestKey, ingress.Path)
 
 	err = libdal.TranslatePGError(querier.InsertTimelineIngressEvent(ctx, sql.InsertTimelineIngressEventParams{
 		DeploymentKey: ingress.DeploymentKey,
