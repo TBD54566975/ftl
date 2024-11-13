@@ -1,16 +1,6 @@
 <settings>
     <servers>
         <server>
-            <id>tbd-oss-releases</id>
-            <username>${env.ARTIFACTORY_USERNAME}</username>
-            <password>${env.ARTIFACTORY_PASSWORD}</password>
-        </server>
-        <server>
-            <id>tbd-oss-snapshots</id>
-            <username>${env.ARTIFACTORY_USERNAME}</username>
-            <password>${env.ARTIFACTORY_PASSWORD}</password>
-        </server>
-        <server>
             <id>ossrh-snapshots</id>
             <username>${env.SONATYPE_USERNAME}</username>
             <password>${env.SONATYPE_PASSWORD}</password>
@@ -21,75 +11,4 @@
             <password>${env.SONATYPE_PASSWORD}</password>
         </server>
     </servers>
-
-    <profiles>
-        <profile>
-            <id>tbd-internal</id>
-            <!-- specifies where the project artifacts should be distributed or deployed.
-               tells Maven where to deploy your project's artifacts when you run mvn deploy -->
-            <distributionManagement>
-                <!-- primary release repository. not being used yet -->
-                <repository>
-                    <uniqueVersion>false</uniqueVersion>
-                    <id>tbd-oss-releases</id>
-                    <name>TBD OSS Releases Repository</name>
-                    <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-releases-maven2</url>
-                    <layout>default</layout>
-                </repository>
-                <!-- primary snapshot repository for all "*-SNAPSHOT" artifacts. not yet being used -->
-                <snapshotRepository>
-                    <uniqueVersion>false</uniqueVersion>
-                    <id>tbd-oss-snapshots</id>
-                    <name>TBD OSS Snapshots Repository</name>
-                    <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-snapshots-maven2</url>
-                    <layout>default</layout>
-                </snapshotRepository>
-            </distributionManagement>
-
-            <!-- additional repositories that we can pull dependencies from -->
-            <repositories>
-                <!-- mirror for all third-party dependencies. acts as a redundancy that we can failover to if third-party deps become
-                     unavailable -->
-                <repository>
-                    <id>tbd-oss-thirdparty</id>
-                    <name>tbd-oss-thirdparty</name>
-                    <releases>
-                        <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>false</enabled>
-                    </snapshots>
-                    <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-thirdparty-maven2/</url>
-                </repository>
-                <!-- snapshot repository. -->
-                <repository>
-                    <id>tbd-oss-snapshots</id>
-                    <name>tbd-oss-snapshots</name>
-                    <releases>
-                        <enabled>false</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>true</enabled>
-                    </snapshots>
-                    <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-snapshots-maven2/</url>
-                </repository>
-            </repositories>
-
-            <!-- additional repositories that we can pull plugins from -->
-            <pluginRepositories>
-                <pluginRepository>
-                    <id>tbd-oss-thirdparty</id>
-                    <name>tbd-oss-thirdparty</name>
-                    <releases>
-                        <enabled>true</enabled>
-                    </releases>
-                    <snapshots>
-                        <enabled>false</enabled>
-                    </snapshots>
-                    <url>https://blockxyz.jfrog.io/artifactory/tbd-oss-thirdparty-maven2/</url>
-                </pluginRepository>
-            </pluginRepositories>
-        </profile>
-    </profiles>
-
 </settings>
