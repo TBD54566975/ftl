@@ -2,15 +2,11 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation/types"
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner"
@@ -105,31 +101,15 @@ func (c *CloudformationProvisioner) updatePostgresOutputs(ctx context.Context, t
 		return fmt.Errorf("failed to group outputs by property name: %w", err)
 	}
 
-	// TODO: Move to provisioner workflow
-	secretARN := *byName[PropertyMasterUserARN].OutputValue
-	username, password, err := c.secretARNToUsernamePassword(ctx, secretARN)
+	// TODO: mind the secret rotation
+	secretARN := *byName[PropertyPsqlMasterUserARN].OutputValue
+	username, password, err := secretARNToUsernamePassword(ctx, c.secrets, secretARN)
 	if err != nil {
 		return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
 	}
 
-	to.ReadDsn = endpointToDSN(byName[PropertyDBReadEndpoint].OutputValue, resourceID, 5432, username, password)
-	to.WriteDsn = endpointToDSN(byName[PropertyDBWriteEndpoint].OutputValue, resourceID, 5432, username, password)
-	adminEndpoint := endpointToDSN(byName[PropertyDBReadEndpoint].OutputValue, "postgres", 5432, username, password)
-
-	// Connect to postgres without a specific database to create the new one
-	db, err := sql.Open("pgx", adminEndpoint)
-	if err != nil {
-		return fmt.Errorf("failed to connect to postgres: %w", err)
-	}
-	defer db.Close()
-
-	// Create the database if it doesn't exist
-	if _, err := db.ExecContext(ctx, "CREATE DATABASE "+resourceID); err != nil {
-		// Ignore if database already exists
-		if !strings.Contains(err.Error(), "already exists") {
-			return fmt.Errorf("failed to create database: %w", err)
-		}
-	}
+	to.ReadDsn = endpointToDSN(byName[PropertyPsqlReadEndpoint].OutputValue, resourceID, 5432, username, password)
+	to.WriteDsn = endpointToDSN(byName[PropertyPsqlWriteEndpoint].OutputValue, resourceID, 5432, username, password)
 
 	return nil
 }
@@ -147,21 +127,4 @@ func endpointToDSN(endpoint *string, database string, port int, username, passwo
 	url.RawQuery = query.Encode()
 
 	return url.String()
-}
-
-func (c *CloudformationProvisioner) secretARNToUsernamePassword(ctx context.Context, secretARN string) (string, string, error) {
-	secret, err := c.secrets.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
-		SecretId: &secretARN,
-	})
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get secret value: %w", err)
-	}
-	secretString := *secret.SecretString
-
-	var secretData map[string]string
-	if err := json.Unmarshal([]byte(secretString), &secretData); err != nil {
-		return "", "", fmt.Errorf("failed to unmarshal secret data: %w", err)
-	}
-
-	return secretData["username"], secretData["password"], nil
 }

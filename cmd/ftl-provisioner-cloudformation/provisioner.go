@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	PropertyDBReadEndpoint  = "db:read_endpoint"
-	PropertyDBWriteEndpoint = "db:write_endpoint"
-	PropertyMasterUserARN   = "db:master_user_secret_arn"
+	PropertyPsqlReadEndpoint  = "psql:read_endpoint"
+	PropertyPsqlWriteEndpoint = "psql:write_endpoint"
+	PropertyPsqlMasterUserARN = "psql:master_user_secret_arn"
 )
 
 type Config struct {
@@ -55,7 +55,12 @@ func NewCloudformationProvisioner(ctx context.Context, config Config) (context.C
 		return nil, nil, fmt.Errorf("failed to create secretsmanager client: %w", err)
 	}
 
-	return ctx, &CloudformationProvisioner{client: client, secrets: secrets, confg: &config}, nil
+	return ctx, &CloudformationProvisioner{
+		client:  client,
+		secrets: secrets,
+		confg:   &config,
+		running: xsync.NewMapOf[string, *task](),
+	}, nil
 }
 
 func (c *CloudformationProvisioner) Ping(context.Context, *connect.Request[ftlv1.PingRequest]) (*connect.Response[ftlv1.PingResponse], error) {

@@ -39,15 +39,15 @@ func (p *PostgresTemplater) AddToTemplate(template *goformation.Template) error 
 	}
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "Endpoint.Address"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
-		PropertyName: PropertyDBWriteEndpoint,
+		PropertyName: PropertyPsqlWriteEndpoint,
 	})
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "ReadEndpoint.Address"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
-		PropertyName: PropertyDBReadEndpoint,
+		PropertyName: PropertyPsqlReadEndpoint,
 	})
 	addOutput(template.Outputs, goformation.GetAtt(clusterID, "MasterUserSecret.SecretArn"), &CloudformationOutputKey{
 		ResourceID:   p.resourceID,
-		PropertyName: PropertyMasterUserARN,
+		PropertyName: PropertyPsqlMasterUserARN,
 	})
 	return nil
 }

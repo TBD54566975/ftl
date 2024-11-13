@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/atomic"
@@ -73,28 +76,85 @@ func (t *task) updateStack(ctx context.Context, client *cloudformation.Client, c
 		case types.StackStatusUpdateFailed:
 			return nil, fmt.Errorf("stack update failed: %s", *stack.StackStatusReason)
 		default:
-			return nil, fmt.Errorf("unsupported Cloudformation status code: %s", string(desc.Stacks[0].StackStatus))
+			return nil, fmt.Errorf("unsupported Cloudformation status code: %s", string(stack.StackStatus))
 		}
 
 		time.Sleep(retry.Duration())
 	}
 }
 
-func (t *task) postUpdate(ctx context.Context, client *cloudformation.Client, secrets *secretsmanager.Client, outputs []types.Output) error {
+func (t *task) postUpdate(ctx context.Context, secrets *secretsmanager.Client, outputs []types.Output) error {
+	byResourceID, err := outputsByResourceID(outputs)
+	if err != nil {
+		return fmt.Errorf("failed to group outputs by resource ID: %w", err)
+	}
+
+	for resourceID, outputs := range byResourceID {
+		byName, err := outputsByPropertyName(outputs)
+		if err != nil {
+			return fmt.Errorf("failed to group outputs by property name: %w", err)
+		}
+
+		if write, ok := byName[PropertyPsqlWriteEndpoint]; ok {
+			if secret, ok := byName[PropertyPsqlMasterUserARN]; ok {
+				secretARN := *secret.OutputValue
+				username, password, err := secretARNToUsernamePassword(ctx, secrets, secretARN)
+				if err != nil {
+					return fmt.Errorf("failed to get username and password from secret ARN: %w", err)
+				}
+
+				adminEndpoint := endpointToDSN(write.OutputValue, "postgres", 5432, username, password)
+
+				// Connect to postgres without a specific database to create the new one
+				db, err := sql.Open("pgx", adminEndpoint)
+				if err != nil {
+					return fmt.Errorf("failed to connect to postgres: %w", err)
+				}
+				defer db.Close()
+
+				// Create the database if it doesn't exist
+				if _, err := db.ExecContext(ctx, "CREATE DATABASE "+resourceID); err != nil {
+					// Ignore if database already exists
+					if !strings.Contains(err.Error(), "already exists") {
+						return fmt.Errorf("failed to create database: %w", err)
+					}
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
-func (t *task) Start(ctx context.Context, client *cloudformation.Client, secrets *secretsmanager.Client, changeSetID string) {
+func (t *task) Start(oldCtx context.Context, client *cloudformation.Client, secrets *secretsmanager.Client, changeSetID string) {
+	ctx := context.WithoutCancel(oldCtx)
 	go func() {
 		outputs, err := t.updateStack(ctx, client, changeSetID)
 		if err != nil {
 			t.err.Store(err)
 			return
 		}
-		if err := t.postUpdate(ctx, client, secrets, outputs); err != nil {
+		if err := t.postUpdate(ctx, secrets, outputs); err != nil {
 			t.err.Store(err)
 			return
 		}
 		t.outputs.Store(outputs)
 	}()
+}
+
+func secretARNToUsernamePassword(ctx context.Context, secrets *secretsmanager.Client, secretARN string) (string, string, error) {
+	secret, err := secrets.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
+		SecretId: &secretARN,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get secret value: %w", err)
+	}
+	secretString := *secret.SecretString
+
+	var secretData map[string]string
+	if err := json.Unmarshal([]byte(secretString), &secretData); err != nil {
+		return "", "", fmt.Errorf("failed to unmarshal secret data: %w", err)
+	}
+
+	return secretData["username"], secretData["password"], nil
 }
