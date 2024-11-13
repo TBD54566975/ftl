@@ -223,14 +223,18 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 func (s *Service) GetSchema(ctx context.Context, req *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
 	resp, err := s.controllerClient.GetSchema(ctx, req)
 	if err != nil {
+		logger := log.FromContext(ctx)
+		logger.Errorf(err, "get schema failed")
 		return nil, fmt.Errorf("call to ftl-controller failed: %w", err)
 	}
 	return connect.NewResponse(resp.Msg), nil
 }
 
 func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], to *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
+	logger := log.FromContext(ctx)
 	stream, err := s.controllerClient.PullSchema(ctx, req)
 	if err != nil {
+		logger.Errorf(err, "pull schema failed")
 		return fmt.Errorf("call to ftl-controller failed: %w", err)
 	}
 	defer stream.Close()
