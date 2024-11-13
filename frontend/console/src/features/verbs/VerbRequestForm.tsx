@@ -1,5 +1,5 @@
 import { Copy01Icon } from 'hugeicons-react'
-import { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { CodeEditor } from '../../components/CodeEditor'
 import { ResizableVerticalPanels } from '../../components/ResizableVerticalPanels'
 import { useClient } from '../../hooks/use-client'
@@ -8,7 +8,9 @@ import type { Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import { VerbService } from '../../protos/xyz/block/ftl/v1/verb_connect'
 import { NotificationType, NotificationsContext } from '../../providers/notifications-provider'
 import { classNames } from '../../utils'
+import { KeyValuePairForm } from './KeyValuePairForm'
 import { VerbFormInput } from './VerbFormInput'
+import { useKeyValuePairs } from './hooks/useKeyValuePairs'
 import {
   createVerbRequest as createCallRequest,
   defaultRequest,
@@ -25,17 +27,33 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
   const { showNotification } = useContext(NotificationsContext)
   const [activeTabId, setActiveTabId] = useState('body')
   const [bodyText, setBodyText] = useState('')
-  const [headersText, setHeadersText] = useState('')
   const [response, setResponse] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [path, setPath] = useState('')
 
   const bodyTextKey = `${module?.name}-${verb?.verb?.name}-body-text`
   const headersTextKey = `${module?.name}-${verb?.verb?.name}-headers-text`
+  const queryParamsTextKey = `${module?.name}-${verb?.verb?.name}-query-params-text`
+  const methodsWithBody = ['POST', 'PUT', 'PATCH', 'CALL', 'CRON', 'SUB']
 
-  useEffect(() => {
-    setPath(httpPopulatedRequestPath(module, verb))
+  const tabs = useMemo(() => {
+    const method = requestType(verb)
+    const tabsArray = methodsWithBody.includes(method) ? [{ id: 'body', name: 'Body' }] : []
+
+    if (isHttpIngress(verb)) {
+      tabsArray.push({ id: 'headers', name: 'Headers' })
+
+      if (['GET', 'DELETE', 'HEAD', 'OPTIONS'].includes(method)) {
+        tabsArray.push({ id: 'queryParams', name: 'Query Params' })
+      }
+    }
+
+    return tabsArray
   }, [module, verb])
+
+  const { pairs: headers, updatePairs: handleHeadersChanged, getPairsObject: getHeadersObject } = useKeyValuePairs(headersTextKey)
+
+  const { pairs: queryParams, updatePairs: handleQueryParamsChanged, getPairsObject: getQueryParamsObject } = useKeyValuePairs(queryParamsTextKey)
 
   useEffect(() => {
     if (verb) {
@@ -43,23 +61,21 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       const bodyValue = savedBodyValue ?? defaultRequest(verb)
       setBodyText(bodyValue)
 
-      const savedHeadersValue = localStorage.getItem(headersTextKey)
-      const headerValue = savedHeadersValue ?? '{}'
-      setHeadersText(headerValue)
-
       setResponse(null)
       setError(null)
+
+      // Set initial tab only when verb changes
+      setActiveTabId(tabs[0].id)
     }
-  }, [verb, activeTabId])
+  }, [verb, bodyTextKey, tabs])
+
+  useEffect(() => {
+    setPath(httpPopulatedRequestPath(module, verb))
+  }, [module, verb])
 
   const handleBodyTextChanged = (text: string) => {
     setBodyText(text)
     localStorage.setItem(bodyTextKey, text)
-  }
-
-  const handleHeadersTextChanged = (text: string) => {
-    setHeadersText(text)
-    localStorage.setItem(headersTextKey, text)
   }
 
   const handleTabClick = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
@@ -67,24 +83,24 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
     setActiveTabId(id)
   }
 
-  const tabs = [{ id: 'body', name: 'Body' }]
-
-  if (isHttpIngress(verb)) {
-    tabs.push({ id: 'headers', name: 'Headers' })
-  }
-
-  tabs.push({ id: 'verbschema', name: 'Verb Schema' }, { id: 'jsonschema', name: 'JSONSchema' })
-
   const httpCall = (path: string) => {
     const method = requestType(verb)
+    const headerObject = getHeadersObject()
+    const queryParamsObject = getQueryParamsObject()
 
-    fetch(path, {
+    // Construct URL with query parameters
+    const url = new URL(path)
+    for (const [key, value] of Object.entries(queryParamsObject)) {
+      url.searchParams.append(key, value)
+    }
+
+    fetch(url.toString(), {
       method,
       headers: {
         'Content-Type': 'application/json',
-        ...JSON.parse(headersText),
+        ...headerObject,
       },
-      ...(method === 'POST' || method === 'PUT' ? { body: bodyText } : {}),
+      ...(methodsWithBody.includes(method) ? { body: bodyText } : {}),
     })
       .then(async (response) => {
         if (response.ok) {
@@ -106,7 +122,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       module: module?.name,
     } as Ref
 
-    const requestBytes = createCallRequest(path, verb, bodyText, headersText)
+    const requestBytes = createCallRequest(path, verb, bodyText, JSON.stringify(headers))
     client
       .call({ verb: verbRef, body: requestBytes })
       .then((response) => {
@@ -145,7 +161,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
       return
     }
 
-    const cliCommand = generateCliCommand(verb, path, headersText, bodyText)
+    const cliCommand = generateCliCommand(verb, path, JSON.stringify(headers), bodyText)
     navigator.clipboard
       .writeText(cliCommand)
       .then(() => {
@@ -211,29 +227,31 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
           </div>
         </div>
       </div>
-      <div className='flex-1 overflow-hidden'>
-        <div className='h-full overflow-y-scroll'>
-          {activeTabId === 'body' && (
-            <ResizableVerticalPanels
-              topPanelContent={
-                <div className='relative h-full'>
-                  <button
-                    type='button'
-                    onClick={handleResetBody}
-                    className='text-sm absolute top-2 right-2 z-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-1 px-2 rounded'
-                  >
-                    Reset
-                  </button>
-                  <CodeEditor id='body-editor' value={bodyText} onTextChanged={handleBodyTextChanged} schema={schemaString} />
+      <div className='flex-1 overflow-hidden flex flex-col'>
+        <ResizableVerticalPanels
+          topPanelContent={
+            <div className='h-full overflow-auto'>
+              {activeTabId === 'body' && (
+                <div className='h-full'>
+                  <div className='relative h-full'>
+                    <button
+                      type='button'
+                      onClick={handleResetBody}
+                      className='text-sm absolute top-2 right-2 z-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-1 px-2 rounded'
+                    >
+                      Reset
+                    </button>
+                    <CodeEditor id='body-editor' value={bodyText} onTextChanged={handleBodyTextChanged} schema={schemaString} />
+                  </div>
                 </div>
-              }
-              bottomPanelContent={bottomText !== '' ? <CodeEditor id='response-editor' value={bottomText} readonly /> : null}
-            />
-          )}
-          {activeTabId === 'verbschema' && <CodeEditor readonly value={verb?.schema ?? ''} />}
-          {activeTabId === 'jsonschema' && <CodeEditor readonly value={verb?.jsonRequestSchema ?? ''} />}
-          {activeTabId === 'headers' && <CodeEditor value={headersText} onTextChanged={handleHeadersTextChanged} />}
-        </div>
+              )}
+
+              {activeTabId === 'headers' && <KeyValuePairForm keyValuePairs={headers} onChange={handleHeadersChanged} />}
+              {activeTabId === 'queryParams' && <KeyValuePairForm keyValuePairs={queryParams} onChange={handleQueryParamsChanged} />}
+            </div>
+          }
+          bottomPanelContent={bottomText !== '' ? <CodeEditor id='response-editor' value={bottomText} readonly /> : null}
+        />
       </div>
     </div>
   )

@@ -8,8 +8,7 @@ test('shows pubsub verb form', async ({ page }) => {
   await expect(page.locator('input#request-path')).toHaveValue('pubsub.cookPizza')
 
   await expect(page.getByText('Body', { exact: true })).toBeVisible()
-  await expect(page.getByText('Verb Schema', { exact: true })).toBeVisible()
-  await expect(page.getByText('JSONSchema', { exact: true })).toBeVisible()
+  await expect(page.getByText('Schema', { exact: true })).toBeVisible()
 })
 
 test('send pubsub request', async ({ page }) => {

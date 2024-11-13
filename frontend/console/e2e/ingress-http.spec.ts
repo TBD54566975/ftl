@@ -7,9 +7,7 @@ test('shows http ingress form', async ({ page }) => {
   await expect(page.locator('#call-type')).toHaveText('GET')
   await expect(page.locator('input#request-path')).toHaveValue('http://localhost:8891/get/name')
 
-  await expect(page.getByText('Body', { exact: true })).toBeVisible()
-  await expect(page.getByText('Verb Schema', { exact: true })).toBeVisible()
-  await expect(page.getByText('JSONSchema', { exact: true })).toBeVisible()
+  await expect(page.getByText('Schema', { exact: true })).toBeVisible()
 })
 
 test('send get request with path and query params', async ({ page }) => {
