@@ -17,7 +17,7 @@ require (
 	github.com/alecthomas/kong-toml v0.2.0
 	github.com/alecthomas/participle/v2 v2.1.1
 	github.com/alecthomas/types v0.16.0
-	github.com/amacneil/dbmate/v2 v2.22.0
+	github.com/amacneil/dbmate/v2 v2.23.0
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/aws/aws-sdk-go-v2 v1.32.4
 	github.com/aws/aws-sdk-go-v2/config v1.28.3
