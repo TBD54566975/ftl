@@ -5,13 +5,16 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -29,6 +32,7 @@ import (
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
@@ -83,6 +87,11 @@ type Service struct {
 	acceptsContextUpdates atomic.Value[bool]
 	scaffoldFiles         *zip.Reader
 	devMode               bool
+
+	devModeLock           sync.Mutex
+	devModeProcessRunning bool
+	devModePort           int
+	devModeBuildContext   string
 }
 
 var _ langconnect.LanguageServiceHandler = &Service{}
@@ -170,6 +179,9 @@ func (s *Service) SyncStubReferences(ctx context.Context, req *connect.Request[l
 // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
 // calls.
 func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
+	if s.devMode {
+		return s.handleDevModeRequest(ctx, req, stream)
+	}
 	events := make(chan updateEvent, 32)
 	s.updatesTopic.Subscribe(events)
 	defer s.updatesTopic.Unsubscribe(events)
@@ -232,6 +244,133 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 			return nil
 		}
 	}
+}
+
+func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
+	s.devModeLock.Lock()
+	defer s.devModeLock.Unlock()
+
+	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
+	if err != nil {
+		return err
+	}
+	s.devModeBuildContext = &buildCtx.ID
+	if !s.devModeProcessRunning {
+		port, err := plugin.AllocatePort()
+		if err != nil {
+			return fmt.Errorf("could not allocate port: %w", err)
+		}
+		s.devModePort = port.Port
+		s.devModeProcessRunning = true
+		w := watch.NewWatcher("errors.pb", "schema.pb")
+		fileWatch, err := w.Watch(ctx, time.Millisecond*100, []string{buildCtx.Config.DeployDir})
+		watchChannel := fileWatch.Subscribe(nil)
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithCancel(ctx)
+		go func() {
+			logger := log.FromContext(ctx)
+			logger.Infof("Using build command '%s'", buildCtx.Config.Build)
+			command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", buildCtx.Config.Build)
+			command.Env = append(command.Env, fmt.Sprintf("QUARKUS_HTTP_PORT=%d", s.devModePort))
+			err = command.RunBuffered(ctx)
+			s.devModeLock.Lock()
+			defer s.devModeLock.Unlock()
+			cancel()
+			_ = fileWatch.Close()
+			s.devModeProcessRunning = false
+		}()
+
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-fileWatch.Wait():
+					return
+				case <-watchChannel:
+					buildErrs, err := loadProtoErrors(buildCtx.Config)
+					if err != nil {
+						_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+							BuildFailure: &langpb.BuildFailure{
+								IsAutomaticRebuild: false,
+								ContextId:          s.devModeBuildContext,
+								Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
+							}}})
+						continue
+					}
+					if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
+						// skip reading schema
+						_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+							BuildFailure: &langpb.BuildFailure{
+								IsAutomaticRebuild: false,
+								ContextId:          buildCtx.ID,
+								Errors:             buildErrs,
+							}}})
+						continue
+					}
+
+					moduleProto, err := readSchema(buildCtx)
+					if err != nil {
+						_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+							BuildFailure: &langpb.BuildFailure{
+								IsAutomaticRebuild: false,
+								ContextId:          buildCtx.ID,
+								Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
+							}}})
+						continue
+					}
+
+					err = stream.Send(&langpb.BuildEvent{
+						Event: &langpb.BuildEvent_BuildSuccess{
+							BuildSuccess: &langpb.BuildSuccess{
+								ContextId:          req.Msg.BuildContext.Id,
+								IsAutomaticRebuild: false,
+								Module:             moduleProto,
+								DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", s.devModePort)),
+							},
+						},
+					})
+
+				}
+				s.devModeLock.Lock()
+				s.devModeBuildContext = ""
+				s.devModeLock.Unlock()
+			}
+		}()
+	} else {
+		// Bit of a hack, we just hit the dev mode endpoint
+		// TODO: we should be explicitly forcing a rebuild here
+		// This build gets picked up by the watcher that was initiated when the dev mode process was started
+		get, err := http.Get(fmt.Sprintf("http://localhost:%d/q/health", s.devModePort))
+		if err != nil {
+			return err
+		} else if get.StatusCode != 200 {
+			all, err := io.ReadAll(get.Body)
+			if err != nil {
+				return err
+			}
+			stream.Send(&langpb.BuildEvent{
+				Event: &langpb.BuildEvent_BuildFailure{
+					BuildFailure: &langpb.BuildFailure{
+						ContextId:          req.Msg.BuildContext.Id,
+						IsAutomaticRebuild: false,
+						Errors: &langpb.ErrorList{
+							Errors: []*langpb.Error{
+								{
+									Msg:   string(all),
+									Level: langpb.Error_ERROR,
+									Type:  langpb.Error_FTL,
+								},
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+	return nil
 }
 
 func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction watch.ModifyFilesTransaction) (*langpb.BuildEvent, error) {
@@ -304,7 +443,25 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 			}}}, nil
 	}
 
-	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(config.DeployDir, "schema.pb"))
+	moduleProto, err := readSchema(bctx)
+	if err != nil {
+		return nil, err
+	}
+	return &langpb.BuildEvent{
+		Event: &langpb.BuildEvent_BuildSuccess{
+			BuildSuccess: &langpb.BuildSuccess{
+				IsAutomaticRebuild: autoRebuild,
+				ContextId:          bctx.ID,
+				Errors:             buildErrs,
+				Module:             moduleProto,
+				Deploy:             []string{"launch", "quarkus-app"},
+			},
+		},
+	}, nil
+}
+
+func readSchema(bctx buildContext) (*schemapb.Module, error) {
+	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(bctx.Config.DeployDir, "schema.pb"))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read schema for module: %w", err)
 	}
@@ -317,17 +474,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 	}
 
 	moduleProto := moduleSchema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
-	return &langpb.BuildEvent{
-		Event: &langpb.BuildEvent_BuildSuccess{
-			BuildSuccess: &langpb.BuildSuccess{
-				IsAutomaticRebuild: autoRebuild,
-				ContextId:          bctx.ID,
-				Errors:             buildErrs,
-				Module:             moduleProto,
-				Deploy:             []string{"launch", "quarkus-app"},
-			},
-		},
-	}, nil
+	return moduleProto, nil
 }
 
 // BuildContextUpdated is called whenever the build context is update while a Build call with "rebuild_automatically" is active.
@@ -496,11 +643,19 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 	buildGradleKts := filepath.Join(dir, "build.gradle.kts")
 	if fileExists(pom) {
 		defaults.LanguageConfig.Fields["build-tool"] = structpb.NewStringValue(JavaBuildToolMaven)
-		defaults.Build = ptr("mvn -B package")
+		if s.devMode {
+			defaults.Build = ptr("mvn quarkus:dev")
+		} else {
+			defaults.Build = ptr("mvn -B package")
+		}
 		defaults.DeployDir = "target"
 	} else if fileExists(buildGradle) || fileExists(buildGradleKts) {
 		defaults.LanguageConfig.Fields["build-tool"] = structpb.NewStringValue(JavaBuildToolGradle)
-		defaults.Build = ptr("gradle build")
+		if s.devMode {
+			defaults.Build = ptr("gradle quarkusDev")
+		} else {
+			defaults.Build = ptr("gradle build")
+		}
 		defaults.DeployDir = "build"
 	} else {
 		return nil, fmt.Errorf("could not find JVM build file in %s", dir)
