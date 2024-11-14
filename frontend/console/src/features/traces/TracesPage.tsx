@@ -1,6 +1,7 @@
 import { ArrowLeft02Icon } from 'hugeicons-react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useRequestTraceEvents } from '../../api/timeline/use-request-trace-events'
+import { Button } from '../../components/Button'
 import { Divider } from '../../components/Divider'
 import { Loader } from '../../components/Loader'
 import { TraceDetails } from './TraceDetails'
@@ -68,9 +69,9 @@ export const TracesPage = () => {
     <div className='flex h-full'>
       <div className='w-1/2 p-4 h-full overflow-y-auto'>
         <div className='flex items-center mb-2'>
-          <button type='button' onClick={handleBack} className='flex items-center p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer'>
-            <ArrowLeft02Icon className='w-6 h-6' />
-          </button>
+          <Button variant='secondary' size='sm' onClick={handleBack} title='Back'>
+            <ArrowLeft02Icon className='size-6' />
+          </Button>
           <span className='text-xl font-semibold ml-2'>Trace Details</span>
         </div>
         <TraceDetails requestKey={requestKey} events={events} selectedEventId={selectedEventId} />

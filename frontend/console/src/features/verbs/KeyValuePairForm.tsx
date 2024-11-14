@@ -86,9 +86,9 @@ export const KeyValuePairForm = ({ keyValuePairs, onChange }: KeyValuePairFormPr
               placeholder='Value'
               className='flex-1 block rounded-md border-0 py-1.5 text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:bg-gray-800 sm:text-sm sm:leading-6'
             />
-            <div className='w-9 flex-shrink-0'>
+            <div className='w-8 flex-shrink-0'>
               {(pair.key || pair.value || keyValuePairs.length > 1) && index !== keyValuePairs.length - 1 && (
-                <button type='button' onClick={() => updatePair(pair.id, { key: '', value: '' })} className='p-2 text-gray-400 hover:text-gray-500'>
+                <button type='button' onClick={() => updatePair(pair.id, { key: '', value: '' })} className='p-2 text-gray-500 hover:text-gray-500'>
                   <Delete03Icon className='h-5 w-5' />
                 </button>
               )}

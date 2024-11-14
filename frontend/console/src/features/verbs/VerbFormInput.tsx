@@ -1,3 +1,6 @@
+import { Copy01Icon } from 'hugeicons-react'
+import { Button } from '../../components/Button'
+
 export const VerbFormInput = ({
   requestType,
   path,
@@ -5,6 +8,7 @@ export const VerbFormInput = ({
   requestPath,
   readOnly,
   onSubmit,
+  handleCopyButton,
 }: {
   requestType: string
   path: string
@@ -12,6 +16,7 @@ export const VerbFormInput = ({
   requestPath: string
   readOnly: boolean
   onSubmit: (path: string) => void
+  handleCopyButton?: () => void
 }) => {
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault()
@@ -20,7 +25,7 @@ export const VerbFormInput = ({
 
   return (
     <form onSubmit={handleSubmit} className='rounded-lg'>
-      <div className='flex rounded-md shadow-sm'>
+      <div className='flex rounded-md'>
         <span id='call-type' className='inline-flex items-center rounded-l-md border border-r-0 border-gray-300 dark:border-gray-500 px-3 ml-4 sm:text-sm'>
           {requestType}
         </span>
@@ -33,9 +38,12 @@ export const VerbFormInput = ({
           readOnly={readOnly}
           onChange={(event) => setPath(event.target.value)}
         />
-        <button type='submit' className='bg-indigo-700 text-white ml-2 mr-4 px-4 py-2 rounded-lg hover:bg-indigo-600 focus:outline-none focus:bg-indigo-600'>
+        <Button variant='primary' size='md' type='submit' title='Send' className='mx-2'>
           Send
-        </button>
+        </Button>
+        <Button variant='secondary' size='md' type='button' title='Copy' onClick={handleCopyButton} className='mr-2'>
+          <Copy01Icon className='size-5' />
+        </Button>
       </div>
       {!readOnly && <span className='ml-4 text-xs text-gray-500'>{requestPath}</span>}
     </form>

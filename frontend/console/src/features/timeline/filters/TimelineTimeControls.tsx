@@ -2,6 +2,7 @@ import { Timestamp } from '@bufbuild/protobuf'
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
 import { ArrowDown01Icon, Backward02Icon, Forward02Icon, PauseIcon, PlayIcon, Tick02Icon } from 'hugeicons-react'
 import { useEffect, useState } from 'react'
+import { Button } from '../../../components/Button'
 import { bgColor, borderColor, classNames, formatTimestampShort, formatTimestampTime, panelColor, textColor } from '../../../utils'
 
 interface TimeRange {
@@ -152,15 +153,9 @@ export const TimelineTimeControls = ({
           </div>
         </Listbox>
         {isTailing && (
-          <span className={`isolate inline-flex rounded-md shadow-sm h-6 ${textColor} ${isPaused ? bgColor : 'bg-indigo-600 text-white'} `}>
-            <button
-              type='button'
-              onClick={() => setIsPaused(!isPaused)}
-              className={`relative inline-flex items-center rounded-md px-3 text-sm font-semibold ring-1 ring-inset ${borderColor} hover:text-gray-600 hover:bg-gray-50 dark:hover:text-gray-300 dark:hover:bg-indigo-700`}
-            >
-              {isPaused ? <PlayIcon className='w-4 h-4' /> : <PauseIcon className='w-4 h-4' />}
-            </button>
-          </span>
+          <Button variant='secondary' size='xs' onClick={() => setIsPaused(!isPaused)} title={isPaused ? 'Resume' : 'Pause'}>
+            {isPaused ? <PlayIcon className='w-4 h-4' /> : <PauseIcon className='w-4 h-4' />}
+          </Button>
         )}
         {!isTailing && (
           <span className={`isolate inline-flex rounded-md shadow-sm h-6 ${textColor} ${bgColor}`}>
