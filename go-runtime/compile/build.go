@@ -392,20 +392,23 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		logger.Debugf("Extracting schema")
 		extractResultChan <- result.From(extract.Extract(config.Dir))
 	}()
-	optimisticCompileChan := make(chan result.Result[watch.FileHashes])
+	optimisticHashesChan := make(chan watch.FileHashes)
+	optimisticCompileChan := make(chan error)
 	go func() {
-		hashes, err := fileHashesForOptimisticCompilation(config, mainDir)
+		hashes, err := fileHashesForOptimisticCompilation(config)
 		if err != nil {
-			optimisticCompileChan <- result.Err[watch.FileHashes](fmt.Errorf("could not compute file hashes: %w", err))
+			optimisticHashesChan <- watch.FileHashes{}
 			return
 		}
-		if len(hashes) == 0 {
+		if _, ok := hashes[filepath.Join(mainDir, "main.go")]; !ok {
 			// main package is not scaffolded yet, can not optimistically compile
-			optimisticCompileChan <- result.Err[watch.FileHashes](fmt.Errorf("main package not scaffolded yet"))
+			optimisticHashesChan <- watch.FileHashes{}
 			return
 		}
+		optimisticHashesChan <- hashes
+
 		logger.Debugf("Optimistically compiling")
-		optimisticCompileChan <- result.From(hashes, compile(ctx, mainDir, buildEnv, devMode))
+		optimisticCompileChan <- compile(ctx, mainDir, buildEnv, devMode)
 	}()
 
 	// wait for schema extraction to complete
@@ -418,9 +421,6 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		// If errors are only at levels below ERROR (e.g. INFO, WARN), the schema can still be used.
 		return moduleSch, extractResult.Errors, nil
 	}
-
-	// Wait for optimistic compile to complete
-	optimisticCompileResult := <-optimisticCompileChan
 
 	logger.Debugf("Generating main package")
 	projectName := ""
@@ -446,11 +446,22 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	}
 
 	// Compare main package hashes to when we optimistically compiled
-	if originalHashes, ok := optimisticCompileResult.Get(); ok {
-		currentHashes, err := fileHashesForOptimisticCompilation(config, mainDir)
-		if err == nil && len(watch.CompareFileHashes(originalHashes, currentHashes)) == 0 {
-			logger.Debugf("Accepting optimistic compilation")
-			return optional.Some(extractResult.Module), extractResult.Errors, nil
+	if originalHashes := (<-optimisticHashesChan); len(originalHashes) > 0 {
+		currentHashes, err := fileHashesForOptimisticCompilation(config)
+		if err == nil {
+			changes := watch.CompareFileHashes(originalHashes, currentHashes)
+			// Wait for optimistic compile to complete if there has been no changes
+			if len(changes) == 0 && (<-optimisticCompileChan) == nil {
+				logger.Debugf("Accepting optimistic compilation")
+				return optional.Some(extractResult.Module), extractResult.Errors, nil
+			}
+			logger.Debugf("Discarding optimistic compilation due to file changes: %s", strings.Join(islices.Map(changes, func(change watch.FileChange) string {
+				p, err := filepath.Rel(config.Dir, change.Path)
+				if err != nil {
+					p = change.Path
+				}
+				return fmt.Sprintf("%s%s", change.Change, p)
+			}), ", "))
 		}
 	}
 
@@ -462,9 +473,9 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	return optional.Some(extractResult.Module), extractResult.Errors, nil
 }
 
-func fileHashesForOptimisticCompilation(config moduleconfig.AbsModuleConfig, mainDir string) (watch.FileHashes, error) {
+func fileHashesForOptimisticCompilation(config moduleconfig.AbsModuleConfig) (watch.FileHashes, error) {
 	// Include every file that may change while scaffolding the build template or tidying.
-	return watch.ComputeFileHashes(config.Dir, false, []string{filepath.Join(mainDir, "*"), "go.mod", "go.tidy", ftlTypesFilename})
+	return watch.ComputeFileHashes(config.Dir, false, []string{filepath.Join(buildDirName, "go", "main", "*"), "go.mod", "go.tidy", ftlTypesFilename})
 }
 
 func compile(ctx context.Context, mainDir string, buildEnv []string, devMode bool) error {
