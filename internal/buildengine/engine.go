@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"net/url"
 	"runtime"
 	"strings"
 	"time"
@@ -996,7 +995,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		Schema:       sch,
 		Dependencies: meta.module.Dependencies(Raw),
 		BuildEnv:     e.buildEnv,
-	}, e.devMode)
+	}, e.devMode, e.devModeEndpointUpdates)
 	if err != nil {
 		if errors.Is(err, errInvalidateDependencies) {
 			// Do not start a build directly as we are already building out a graph of modules.
@@ -1103,7 +1102,7 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rawEngineUpdates <- ModuleBuildStarted{Config: meta.module.Config, IsAutoRebuild: true}
 
 				case languageplugin.AutoRebuildEndedEvent:
-					_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result)
+					_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result, nil)
 					if err != nil {
 						e.rawEngineUpdates <- ModuleBuildFailed{Config: meta.module.Config, IsAutoRebuild: true, Error: err}
 						if errors.Is(err, errInvalidateDependencies) {
@@ -1116,22 +1115,12 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
 
 					e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
-					result, _ := event.Result.Get()
-					if endpoint, ok := result.DevEndpoint.Get(); ok {
-						if e.devModeEndpointUpdates != nil {
-							parsed, err := url.Parse(endpoint)
-							if err != nil {
-								e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
-								continue
-							}
-							e.devModeEndpointUpdates <- scaling.DevModeEndpoints{Module: event.Module, Endpoint: *parsed}
-						}
-					} else {
-						if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
-							e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
-							continue
-						}
+
+					if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
+						e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
+						continue
 					}
+
 					e.rawEngineUpdates <- ModuleDeploySuccess{Module: event.Module}
 				}
 			case languageplugin.PluginDiedEvent:

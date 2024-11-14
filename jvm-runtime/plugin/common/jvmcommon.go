@@ -241,6 +241,7 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
 	logger := log.FromContext(ctx)
 
+	first := true
 	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return err
@@ -278,7 +279,7 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 		case <-ctx.Done():
 			_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
 				BuildFailure: &langpb.BuildFailure{
-					IsAutomaticRebuild: false,
+					IsAutomaticRebuild: !first,
 					ContextId:          buildCtx.ID,
 					Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
 				}}})
@@ -301,20 +302,22 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 				if err != nil {
 					_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
 						BuildFailure: &langpb.BuildFailure{
-							IsAutomaticRebuild: false,
+							IsAutomaticRebuild: !first,
 							ContextId:          buildCtx.ID,
 							Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
 						}}})
+					first = false
 					continue
 				}
 				if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
 					// skip reading schema
 					_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
 						BuildFailure: &langpb.BuildFailure{
-							IsAutomaticRebuild: false,
+							IsAutomaticRebuild: !first,
 							ContextId:          buildCtx.ID,
 							Errors:             buildErrs,
 						}}})
+					first = false
 					continue
 				}
 
@@ -322,10 +325,11 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 				if err != nil {
 					_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
 						BuildFailure: &langpb.BuildFailure{
-							IsAutomaticRebuild: false,
+							IsAutomaticRebuild: !first,
 							ContextId:          buildCtx.ID,
 							Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
 						}}})
+					first = false
 					continue
 				}
 
@@ -333,12 +337,13 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 					Event: &langpb.BuildEvent_BuildSuccess{
 						BuildSuccess: &langpb.BuildSuccess{
 							ContextId:          req.Msg.BuildContext.Id,
-							IsAutomaticRebuild: false,
+							IsAutomaticRebuild: !first,
 							Module:             moduleProto,
 							DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", address.Port)),
 						},
 					},
 				})
+				first = false
 			}
 
 		}
@@ -435,9 +440,10 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 }
 
 func readSchema(bctx buildContext) (*schemapb.Module, error) {
-	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(bctx.Config.DeployDir, "schema.pb"))
+	path := filepath.Join(bctx.Config.DeployDir, "schema.pb")
+	moduleSchema, err := schema.ModuleFromProtoFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read schema for module: %w", err)
+		return nil, fmt.Errorf("failed to read schema for module: %s from %s %w", bctx.Config.Module, path, err)
 	}
 
 	moduleSchema.Runtime = &schema.ModuleRuntime{

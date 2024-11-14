@@ -2,5 +2,5 @@ package ftl.time;
 
 import java.time.OffsetDateTime;
 
-public record TimeResponse(OffsetDateTime time) {
+public record TimeResponse(OffsetDateTime time, String foo) {
 }

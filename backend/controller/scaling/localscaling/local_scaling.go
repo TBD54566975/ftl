@@ -116,6 +116,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		prevRunnerSuffix:        -1,
 		debugPorts:              map[string]*localdebug.DebugInfo{},
 		devModeEndpointsUpdates: devModeEndpoints,
+		devModeEndpoints:        map[string]*devModeRunner{},
 	}
 	if enableIDEIntegration && configPath != "" {
 		local.ideSupport = optional.Ptr(localdebug.NewIDEIntegration(configPath))
@@ -259,10 +260,9 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		if devEndpoint != nil {
 			devEndpoint.running = true
 		}
+		// Don't count context.Canceled as an a restart error
 		if err != nil && !errors.Is(err, context.Canceled) {
 			logger.Errorf(err, "Runner failed: %s", err)
-		} else {
-			// Don't count context.Canceled as an a restart error
 			info.exits++
 		}
 		if info.exits >= maxExits {

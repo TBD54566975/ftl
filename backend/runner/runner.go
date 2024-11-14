@@ -32,6 +32,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/runner/observability"
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/download"
+	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/identity"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
@@ -118,6 +119,7 @@ func Start(ctx context.Context, config Config) error {
 		labels:             labels,
 		deploymentLogQueue: make(chan log.Entry, 10000),
 		cancelFunc:         doneFunc,
+		devEndpoint:        config.DevEndpoint,
 	}
 	err = svc.deploy(ctx)
 	if err != nil {
@@ -235,10 +237,12 @@ func manageDeploymentDirectory(logger *log.Logger, config Config) error {
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
 
 type deployment struct {
-	key    model.DeploymentKey
-	plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]
+	key model.DeploymentKey
 	// Cancelled when plugin terminates
-	ctx context.Context
+	ctx      context.Context
+	cmd      optional.Option[exec.Cmd]
+	endpoint *url.URL // The endpoint the plugin is listening on.
+	client   ftlv1connect.VerbServiceClient
 }
 
 type Service struct {
@@ -255,6 +259,7 @@ type Service struct {
 	labels              *structpb.Struct
 	deploymentLogQueue  chan log.Entry
 	cancelFunc          func()
+	devEndpoint         optional.Option[url.URL]
 }
 
 func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallRequest]) (*connect.Response[ftlv1.CallResponse], error) {
@@ -262,7 +267,7 @@ func (s *Service) Call(ctx context.Context, req *connect.Request[ftlv1.CallReque
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnavailable, errors.New("no deployment"))
 	}
-	response, err := deployment.plugin.Client.Call(ctx, req)
+	response, err := deployment.client.Call(ctx, req)
 	if err != nil {
 		deploymentLogger := s.getDeploymentLogger(ctx, deployment.key)
 		deploymentLogger.Errorf(err, "Call to deployments %s failed to perform gRPC call", deployment.key)
@@ -332,37 +337,50 @@ func (s *Service) deploy(ctx context.Context) error {
 			return fmt.Errorf("failed to create deployment directory: %w", err)
 		}
 	}
-	err = download.Artefacts(ctx, s.controllerClient, key, deploymentDir)
-	if err != nil {
-		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return fmt.Errorf("failed to download artefacts: %w", err)
+	var dep *deployment
+	if ep, ok := s.devEndpoint.Get(); ok {
+		client := rpc.Dial(ftlv1connect.NewVerbServiceClient, ep.String(), log.Error)
+		dep = &deployment{
+			ctx:      ctx,
+			key:      key,
+			cmd:      optional.None[exec.Cmd](),
+			endpoint: &ep,
+			client:   client,
+		}
+	} else {
+
+		err = download.Artefacts(ctx, s.controllerClient, key, deploymentDir)
+		if err != nil {
+			observability.Deployment.Failure(ctx, optional.Some(key.String()))
+			return fmt.Errorf("failed to download artefacts: %w", err)
+		}
+
+		envVars := []string{"FTL_ENDPOINT=" + s.config.ControllerEndpoint.String(),
+			"FTL_CONFIG=" + strings.Join(s.config.Config, ","),
+			"FTL_OBSERVABILITY_ENDPOINT=" + s.config.ControllerEndpoint.String()}
+		if s.config.DebugPort > 0 {
+			envVars = append(envVars, fmt.Sprintf("FTL_DEBUG_PORT=%d", s.config.DebugPort))
+		}
+
+		verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Attrs(map[string]string{"module": module.Name}))
+		deployment, cmdCtx, err := plugin.Spawn(
+			unstoppable.Context(verbCtx),
+			log.FromContext(ctx).GetLevel(),
+			gdResp.Msg.Schema.Name,
+			deploymentDir,
+			"./launch",
+			ftlv1connect.NewVerbServiceClient,
+			plugin.WithEnvars(
+				envVars...,
+			),
+		)
+		if err != nil {
+			observability.Deployment.Failure(ctx, optional.Some(key.String()))
+			return fmt.Errorf("failed to spawn plugin: %w", err)
+		}
+		dep = s.makeDeployment(cmdCtx, key, deployment)
 	}
 
-	envVars := []string{"FTL_ENDPOINT=" + s.config.ControllerEndpoint.String(),
-		"FTL_CONFIG=" + strings.Join(s.config.Config, ","),
-		"FTL_OBSERVABILITY_ENDPOINT=" + s.config.ControllerEndpoint.String()}
-	if s.config.DebugPort > 0 {
-		envVars = append(envVars, fmt.Sprintf("FTL_DEBUG_PORT=%d", s.config.DebugPort))
-	}
-
-	verbCtx := log.ContextWithLogger(ctx, deploymentLogger.Attrs(map[string]string{"module": module.Name}))
-	deployment, cmdCtx, err := plugin.Spawn(
-		unstoppable.Context(verbCtx),
-		log.FromContext(ctx).GetLevel(),
-		gdResp.Msg.Schema.Name,
-		deploymentDir,
-		"./launch",
-		ftlv1connect.NewVerbServiceClient,
-		plugin.WithEnvars(
-			envVars...,
-		),
-	)
-	if err != nil {
-		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return fmt.Errorf("failed to spawn plugin: %w", err)
-	}
-
-	dep := s.makeDeployment(cmdCtx, key, deployment)
 	s.readyTime.Store(time.Now().Add(time.Second * 2)) // Istio is a bit flakey, add a small delay for readiness
 	s.deployment.Store(optional.Some(dep))
 	logger.Debugf("Deployed %s", key)
@@ -384,19 +402,21 @@ func (s *Service) Close() error {
 	if !ok {
 		return connect.NewError(connect.CodeNotFound, errors.New("no deployment"))
 	}
-	// Soft kill.
-	err := depl.plugin.Cmd.Kill(syscall.SIGTERM)
-	if err != nil {
-		return fmt.Errorf("failed to kill plugin: %w", err)
-	}
-	// Hard kill after 10 seconds.
-	select {
-	case <-depl.ctx.Done():
-	case <-time.After(10 * time.Second):
-		err := depl.plugin.Cmd.Kill(syscall.SIGKILL)
+	if cmd, ok := depl.cmd.Get(); ok {
+		// Soft kill.
+		err := cmd.Kill(syscall.SIGTERM)
 		if err != nil {
-			// Should we os.Exit(1) here?
 			return fmt.Errorf("failed to kill plugin: %w", err)
+		}
+		// Hard kill after 10 seconds.
+		select {
+		case <-depl.ctx.Done():
+		case <-time.After(10 * time.Second):
+			err := cmd.Kill(syscall.SIGKILL)
+			if err != nil {
+				// Should we os.Exit(1) here?
+				return fmt.Errorf("failed to kill plugin: %w", err)
+			}
 		}
 	}
 	s.deployment.Store(optional.None[*deployment]())
@@ -410,16 +430,18 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no deployment", http.StatusNotFound)
 		return
 	}
-	proxy := httputil.NewSingleHostReverseProxy(deployment.plugin.Endpoint)
+	proxy := httputil.NewSingleHostReverseProxy(deployment.endpoint)
 	proxy.ServeHTTP(w, r)
 
 }
 
 func (s *Service) makeDeployment(ctx context.Context, key model.DeploymentKey, plugin *plugin.Plugin[ftlv1connect.VerbServiceClient]) *deployment {
 	return &deployment{
-		ctx:    ctx,
-		key:    key,
-		plugin: plugin,
+		ctx:      ctx,
+		key:      key,
+		cmd:      optional.Ptr(plugin.Cmd),
+		endpoint: plugin.Endpoint,
+		client:   plugin.Client,
 	}
 }
 
