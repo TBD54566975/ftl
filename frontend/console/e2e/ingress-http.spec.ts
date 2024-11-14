@@ -17,8 +17,19 @@ test('send get request with path and query params', async ({ page }) => {
   const pathInput = page.locator('input#request-path')
   expect(pathInput).toHaveValue('http://localhost:8891/get/name')
 
-  // Update the path input to test path and query params
-  await pathInput.fill('http://localhost:8891/get/wicket?age=10')
+  await pathInput.fill('http://localhost:8891/get/wicket')
+
+  // Click the Query Params tab
+  await page.getByRole('button', { name: 'Query Params' }).click()
+
+  // Fill out query parameters using the key/value inputs
+  // Get the first pair of inputs in the form
+  const keyInput = page.locator('input[placeholder="Key"]').first()
+  const valueInput = page.locator('input[placeholder="Value"]').first()
+
+  await keyInput.fill('age')
+  await valueInput.fill('10')
+
   await page.getByRole('button', { name: 'Send' }).click()
 
   const responseEditor = page.locator('#response-editor .cm-content[role="textbox"]')
