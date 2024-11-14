@@ -5,16 +5,13 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -87,11 +84,6 @@ type Service struct {
 	acceptsContextUpdates atomic.Value[bool]
 	scaffoldFiles         *zip.Reader
 	devMode               bool
-
-	devModeLock           sync.Mutex
-	devModeProcessRunning bool
-	devModePort           int
-	devModeBuildContext   string
 }
 
 var _ langconnect.LanguageServiceHandler = &Service{}
@@ -179,7 +171,7 @@ func (s *Service) SyncStubReferences(ctx context.Context, req *connect.Request[l
 // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
 // calls.
 func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
-	if s.devMode {
+	if s.devMode && req.Msg.RebuildAutomatically {
 		return s.handleDevModeRequest(ctx, req, stream)
 	}
 	events := make(chan updateEvent, 32)
@@ -247,129 +239,111 @@ func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRe
 }
 
 func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
-	s.devModeLock.Lock()
-	defer s.devModeLock.Unlock()
+	logger := log.FromContext(ctx)
 
 	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return err
 	}
-	s.devModeBuildContext = &buildCtx.ID
-	if !s.devModeProcessRunning {
-		port, err := plugin.AllocatePort()
+	address, err := plugin.AllocatePort()
+	if err != nil {
+		return fmt.Errorf("could not allocate port: %w", err)
+	}
+	errorFile := filepath.Join(buildCtx.Config.DeployDir, "errors.pb")
+	schemaFile := filepath.Join(buildCtx.Config.DeployDir, "schema.pb")
+	info, _ := os.Stat(errorFile)
+	errorChangeTime := info.ModTime()
+	info, _ = os.Stat(schemaFile)
+	schemaChangeTime := info.ModTime()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	ctx = log.ContextWithLogger(ctx, logger)
+	go func() {
+		logger.Infof("Using build command '%s'", buildCtx.Config.Build)
+		command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", buildCtx.Config.Build)
+		command.Env = append(command.Env, fmt.Sprintf("FTL_BIND=http://127.0.0.1:%d", address.Port))
+		command.Stdout = os.Stdout
+		command.Stderr = os.Stderr
+		err = command.Run()
 		if err != nil {
-			return fmt.Errorf("could not allocate port: %w", err)
+			logger.Errorf(err, "Dev mode process exited with error")
+		} else {
+			logger.Infof("Dev mode process exited")
 		}
-		s.devModePort = port.Port
-		s.devModeProcessRunning = true
-		w := watch.NewWatcher("errors.pb", "schema.pb")
-		fileWatch, err := w.Watch(ctx, time.Millisecond*100, []string{buildCtx.Config.DeployDir})
-		watchChannel := fileWatch.Subscribe(nil)
-		if err != nil {
-			return err
-		}
-		ctx, cancel := context.WithCancel(ctx)
-		go func() {
-			logger := log.FromContext(ctx)
-			logger.Infof("Using build command '%s'", buildCtx.Config.Build)
-			command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", buildCtx.Config.Build)
-			command.Env = append(command.Env, fmt.Sprintf("QUARKUS_HTTP_PORT=%d", s.devModePort))
-			err = command.RunBuffered(ctx)
-			s.devModeLock.Lock()
-			defer s.devModeLock.Unlock()
-			cancel()
-			_ = fileWatch.Close()
-			s.devModeProcessRunning = false
-		}()
+		cancel()
+	}()
 
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-fileWatch.Wait():
-					return
-				case <-watchChannel:
-					buildErrs, err := loadProtoErrors(buildCtx.Config)
-					if err != nil {
-						_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
-							BuildFailure: &langpb.BuildFailure{
-								IsAutomaticRebuild: false,
-								ContextId:          s.devModeBuildContext,
-								Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
-							}}})
-						continue
-					}
-					if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
-						// skip reading schema
-						_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
-							BuildFailure: &langpb.BuildFailure{
-								IsAutomaticRebuild: false,
-								ContextId:          buildCtx.ID,
-								Errors:             buildErrs,
-							}}})
-						continue
-					}
-
-					moduleProto, err := readSchema(buildCtx)
-					if err != nil {
-						_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
-							BuildFailure: &langpb.BuildFailure{
-								IsAutomaticRebuild: false,
-								ContextId:          buildCtx.ID,
-								Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
-							}}})
-						continue
-					}
-
-					err = stream.Send(&langpb.BuildEvent{
-						Event: &langpb.BuildEvent_BuildSuccess{
-							BuildSuccess: &langpb.BuildSuccess{
-								ContextId:          req.Msg.BuildContext.Id,
-								IsAutomaticRebuild: false,
-								Module:             moduleProto,
-								DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", s.devModePort)),
-							},
-						},
-					})
-
+	for {
+		select {
+		case <-ctx.Done():
+			_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+				BuildFailure: &langpb.BuildFailure{
+					IsAutomaticRebuild: false,
+					ContextId:          buildCtx.ID,
+					Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
+				}}})
+			return nil
+		case <-time.After(100 * time.Millisecond):
+			info, _ := os.Stat(errorFile)
+			changed := false
+			if errorChangeTime != info.ModTime() {
+				changed = true
+				errorChangeTime = info.ModTime()
+			}
+			info, _ = os.Stat(schemaFile)
+			if schemaChangeTime != info.ModTime() {
+				changed = true
+				schemaChangeTime = info.ModTime()
+			}
+			if changed {
+				logger.Infof("File change detected, rebuilding")
+				buildErrs, err := loadProtoErrors(buildCtx.Config)
+				if err != nil {
+					_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+						BuildFailure: &langpb.BuildFailure{
+							IsAutomaticRebuild: false,
+							ContextId:          buildCtx.ID,
+							Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
+						}}})
+					continue
 				}
-				s.devModeLock.Lock()
-				s.devModeBuildContext = ""
-				s.devModeLock.Unlock()
-			}
-		}()
-	} else {
-		// Bit of a hack, we just hit the dev mode endpoint
-		// TODO: we should be explicitly forcing a rebuild here
-		// This build gets picked up by the watcher that was initiated when the dev mode process was started
-		get, err := http.Get(fmt.Sprintf("http://localhost:%d/q/health", s.devModePort))
-		if err != nil {
-			return err
-		} else if get.StatusCode != 200 {
-			all, err := io.ReadAll(get.Body)
-			if err != nil {
-				return err
-			}
-			stream.Send(&langpb.BuildEvent{
-				Event: &langpb.BuildEvent_BuildFailure{
-					BuildFailure: &langpb.BuildFailure{
-						ContextId:          req.Msg.BuildContext.Id,
-						IsAutomaticRebuild: false,
-						Errors: &langpb.ErrorList{
-							Errors: []*langpb.Error{
-								{
-									Msg:   string(all),
-									Level: langpb.Error_ERROR,
-									Type:  langpb.Error_FTL,
-								},
-							},
+				if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
+					// skip reading schema
+					_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+						BuildFailure: &langpb.BuildFailure{
+							IsAutomaticRebuild: false,
+							ContextId:          buildCtx.ID,
+							Errors:             buildErrs,
+						}}})
+					continue
+				}
+
+				moduleProto, err := readSchema(buildCtx)
+				if err != nil {
+					_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+						BuildFailure: &langpb.BuildFailure{
+							IsAutomaticRebuild: false,
+							ContextId:          buildCtx.ID,
+							Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
+						}}})
+					continue
+				}
+
+				err = stream.Send(&langpb.BuildEvent{
+					Event: &langpb.BuildEvent_BuildSuccess{
+						BuildSuccess: &langpb.BuildSuccess{
+							ContextId:          req.Msg.BuildContext.Id,
+							IsAutomaticRebuild: false,
+							Module:             moduleProto,
+							DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", address.Port)),
 						},
 					},
-				},
-			})
+				})
+			}
+
 		}
 	}
+
 	return nil
 }
 
