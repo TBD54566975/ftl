@@ -185,6 +185,12 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Lenient: s.Encoding.Lenient,
 		}
 
+	case *schemapb.Metadata_Publisher:
+		return &MetadataPublisher{
+			Pos:    PosFromProto(s.Publisher.Pos),
+			Topics: refListToSchema(s.Publisher.Topics),
+		}
+
 	default:
 		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}

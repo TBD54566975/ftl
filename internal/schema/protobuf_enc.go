@@ -96,6 +96,9 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataEncoding:
 			v = &schemapb.Metadata_Encoding{Encoding: n.ToProto().(*schemapb.MetadataEncoding)}
 
+		case *MetadataPublisher:
+			v = &schemapb.Metadata_Publisher{Publisher: n.ToProto().(*schemapb.MetadataPublisher)}
+
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}

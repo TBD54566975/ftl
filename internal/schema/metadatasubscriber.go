@@ -15,7 +15,7 @@ type MetadataSubscriber struct {
 	Name string `parser:"'+' 'subscribe' @Ident" protobuf:"2"`
 }
 
-var _ Metadata = (*MetadataRetry)(nil)
+var _ Metadata = (*MetadataSubscriber)(nil)
 
 func (*MetadataSubscriber) schemaMetadata()          {}
 func (m *MetadataSubscriber) schemaChildren() []Node { return nil }

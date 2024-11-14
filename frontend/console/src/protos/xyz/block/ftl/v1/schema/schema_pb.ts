@@ -1037,6 +1037,12 @@ export class Metadata extends Message<Metadata> {
     case: "ingress";
   } | {
     /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataPublisher publisher = 12;
+     */
+    value: MetadataPublisher;
+    case: "publisher";
+  } | {
+    /**
      * @generated from field: xyz.block.ftl.v1.schema.MetadataRetry retry = 6;
      */
     value: MetadataRetry;
@@ -1076,6 +1082,7 @@ export class Metadata extends Message<Metadata> {
     { no: 4, name: "databases", kind: "message", T: MetadataDatabases, oneof: "value" },
     { no: 9, name: "encoding", kind: "message", T: MetadataEncoding, oneof: "value" },
     { no: 2, name: "ingress", kind: "message", T: MetadataIngress, oneof: "value" },
+    { no: 12, name: "publisher", kind: "message", T: MetadataPublisher, oneof: "value" },
     { no: 6, name: "retry", kind: "message", T: MetadataRetry, oneof: "value" },
     { no: 11, name: "secrets", kind: "message", T: MetadataSecrets, oneof: "value" },
     { no: 7, name: "subscriber", kind: "message", T: MetadataSubscriber, oneof: "value" },
@@ -1421,6 +1428,49 @@ export class MetadataIngress extends Message<MetadataIngress> {
 
   static equals(a: MetadataIngress | PlainMessage<MetadataIngress> | undefined, b: MetadataIngress | PlainMessage<MetadataIngress> | undefined): boolean {
     return proto3.util.equals(MetadataIngress, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataPublisher
+ */
+export class MetadataPublisher extends Message<MetadataPublisher> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Ref topics = 2;
+   */
+  topics: Ref[] = [];
+
+  constructor(data?: PartialMessage<MetadataPublisher>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataPublisher";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "topics", kind: "message", T: Ref, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataPublisher {
+    return new MetadataPublisher().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataPublisher {
+    return new MetadataPublisher().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataPublisher {
+    return new MetadataPublisher().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataPublisher | PlainMessage<MetadataPublisher> | undefined, b: MetadataPublisher | PlainMessage<MetadataPublisher> | undefined): boolean {
+    return proto3.util.equals(MetadataPublisher, a, b);
   }
 }
 

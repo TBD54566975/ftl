@@ -141,6 +141,7 @@ message Metadata {
     MetadataDatabases databases = 4;
     MetadataEncoding encoding = 9;
     MetadataIngress ingress = 2;
+    MetadataPublisher publisher = 12;
     MetadataRetry retry = 6;
     MetadataSecrets secrets = 11;
     MetadataSubscriber subscriber = 7;
@@ -185,6 +186,11 @@ message MetadataIngress {
   string type = 2;
   string method = 3;
   repeated IngressPathComponent path = 4;
+}
+
+message MetadataPublisher {
+  optional Position pos = 1;
+  repeated Ref topics = 2;
 }
 
 message MetadataRetry {
