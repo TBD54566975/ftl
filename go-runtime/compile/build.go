@@ -400,11 +400,6 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 			optimisticHashesChan <- watch.FileHashes{}
 			return
 		}
-		if _, ok := hashes[filepath.Join(mainDir, "main.go")]; !ok {
-			// main package is not scaffolded yet, can not optimistically compile
-			optimisticHashesChan <- watch.FileHashes{}
-			return
-		}
 		optimisticHashesChan <- hashes
 
 		logger.Debugf("Optimistically compiling")
@@ -436,7 +431,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		return moduleSch, nil, err
 	}
 	mainModuleCtxChanged := ongoingState.checkIfMainModuleContextChanged(mctx)
-	if err := scaffoldBuildTemplateAndTidy(ctx, sch, extractResult.Module, config, mainDir, importsChanged, mainModuleCtxChanged, mctx, funcs, filesTransaction); err != nil {
+	if err := scaffoldBuildTemplateAndTidy(ctx, config, mainDir, importsChanged, mainModuleCtxChanged, mctx, funcs, filesTransaction); err != nil {
 		return moduleSch, nil, err // nolint:wrapcheck
 	}
 
@@ -475,7 +470,14 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 
 func fileHashesForOptimisticCompilation(config moduleconfig.AbsModuleConfig) (watch.FileHashes, error) {
 	// Include every file that may change while scaffolding the build template or tidying.
-	return watch.ComputeFileHashes(config.Dir, false, []string{filepath.Join(buildDirName, "go", "main", "*"), "go.mod", "go.tidy", ftlTypesFilename})
+	hashes, err := watch.ComputeFileHashes(config.Dir, false, []string{filepath.Join(buildDirName, "go", "main", "*"), "go.mod", "go.tidy", ftlTypesFilename})
+	if err != nil {
+		return nil, fmt.Errorf("could not calculate hashes for optimistic compilation: %w", err)
+	}
+	if _, ok := hashes[filepath.Join(config.Dir, buildDirName, "go", "main", "main.go")]; !ok {
+		return nil, fmt.Errorf("main package not scaffolded yet")
+	}
+	return hashes, nil
 }
 
 func compile(ctx context.Context, mainDir string, buildEnv []string, devMode bool) error {
@@ -494,9 +496,8 @@ func compile(ctx context.Context, mainDir string, buildEnv []string, devMode boo
 	return nil
 }
 
-func scaffoldBuildTemplateAndTidy(ctx context.Context, sch *schema.Schema, moduleSch *schema.Module,
-	config moduleconfig.AbsModuleConfig, mainDir string, importsChanged, mainModuleCtxChanged bool, mctx mainModuleContext,
-	funcs scaffolder.FuncMap, filesTransaction watch.ModifyFilesTransaction) error {
+func scaffoldBuildTemplateAndTidy(ctx context.Context, config moduleconfig.AbsModuleConfig, mainDir string, importsChanged,
+	mainModuleCtxChanged bool, mctx mainModuleContext, funcs scaffolder.FuncMap, filesTransaction watch.ModifyFilesTransaction) error {
 	logger := log.FromContext(ctx)
 	if mainModuleCtxChanged {
 		if err := internal.ScaffoldZip(buildTemplateFiles(), config.Dir, mctx, scaffolder.Exclude("^go.mod$"),
