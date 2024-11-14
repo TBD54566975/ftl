@@ -2,11 +2,11 @@
 package echo
 
 import (
-	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
-type EchoClient func(context.Context, string) (string, error)
+type EchoClient = ftl.Verb[string, string]
 
 func init() {
 	reflection.Register(

@@ -76,7 +76,6 @@ Subscribers can have a retry policy. For example:
 <!-- go -->
 
 ```go
-//ftl:subscribe exampleSubscription
 //ftl:retry 5 1s catch recoverPaymentProcessing
 func ProcessPayment(ctx context.Context, payment Payment) error {
 ...

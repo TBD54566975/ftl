@@ -49,11 +49,17 @@ type OptionalTimeVerbClient func(context.Context, ftl.Option[stdtime.Time]) (ftl
 
 type ParameterizedObjectVerbClient func(context.Context, ParameterizedType[string]) (ParameterizedType[string], error)
 
+type PrimitiveParamVerbClient func(context.Context, int) (string, error)
+
+type PrimitiveResponseVerbClient func(context.Context, string) (int, error)
+
 type SinkVerbClient func(context.Context, string) error
 
 type SourceVerbClient func(context.Context) (string, error)
 
 type StringArrayVerbClient func(context.Context, []string) ([]string, error)
+
+type StringEnumVerbClient func(context.Context, ShapeWrapper) (ShapeWrapper, error)
 
 type StringMapVerbClient func(context.Context, map[string]string) (map[string]string, error)
 
@@ -65,8 +71,22 @@ type TestObjectVerbClient func(context.Context, TestObject) (TestObject, error)
 
 type TimeVerbClient func(context.Context, stdtime.Time) (stdtime.Time, error)
 
+type TypeEnumVerbClient func(context.Context, AnimalWrapper) (AnimalWrapper, error)
+
+type TypeWrapperEnumVerbClient func(context.Context, TypeEnumWrapper) (TypeEnumWrapper, error)
+
+type ValueEnumVerbClient func(context.Context, ColorWrapper) (ColorWrapper, error)
+
 func init() {
 	reflection.Register(
+		reflection.SumType[Animal](
+			*new(Cat),
+			*new(Dog),
+		),
+		reflection.SumType[TypeWrapperEnum](
+			*new(Scalar),
+			*new(StringList),
+		),
 		reflection.ExternalType(*new(did.DID)),
 		reflection.ProvideResourcesForVerb(
 			BoolVerb,
@@ -129,6 +149,12 @@ func init() {
 			ParameterizedObjectVerb,
 		),
 		reflection.ProvideResourcesForVerb(
+			PrimitiveParamVerb,
+		),
+		reflection.ProvideResourcesForVerb(
+			PrimitiveResponseVerb,
+		),
+		reflection.ProvideResourcesForVerb(
 			SinkVerb,
 		),
 		reflection.ProvideResourcesForVerb(
@@ -136,6 +162,9 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			StringArrayVerb,
+		),
+		reflection.ProvideResourcesForVerb(
+			StringEnumVerb,
 		),
 		reflection.ProvideResourcesForVerb(
 			StringMapVerb,
@@ -151,6 +180,15 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			TimeVerb,
+		),
+		reflection.ProvideResourcesForVerb(
+			TypeEnumVerb,
+		),
+		reflection.ProvideResourcesForVerb(
+			TypeWrapperEnumVerb,
+		),
+		reflection.ProvideResourcesForVerb(
+			ValueEnumVerb,
 		),
 	)
 }

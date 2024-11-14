@@ -17,7 +17,7 @@ type OrderPizzaResponse struct {
 }
 
 //ftl:verb export
-func OrderPizza(ctx context.Context, req OrderPizzaRequest) (OrderPizzaResponse, error) {
+func OrderPizza(ctx context.Context, req OrderPizzaRequest, topic NewOrderTopic) (OrderPizzaResponse, error) {
 	randomID := rand.Intn(1000)
 	p := Pizza{
 		ID:       randomID,
@@ -25,13 +25,13 @@ func OrderPizza(ctx context.Context, req OrderPizzaRequest) (OrderPizzaResponse,
 		Customer: req.Customer,
 	}
 	ftl.LoggerFromContext(ctx).Infof("Ordering pizza with ID: %d", randomID)
-	NewOrderTopic.Publish(ctx, p)
+	topic.Publish(ctx, p)
 	return OrderPizzaResponse{ID: randomID}, nil
 }
 
-var _ = ftl.Subscription(PizzaReadyTopic, "deliverPizzaSub")
+type DeliverPizzaSub = ftl.SubscriptionHandle[PizzaReadyTopic, DeliverPizzaClient, Pizza]
 
-//ftl:subscribe deliverPizzaSub
+//ftl:verb
 func DeliverPizza(ctx context.Context, pizza Pizza) error {
 	ftl.LoggerFromContext(ctx).Infof("Delivering pizza: %v", pizza)
 	return nil

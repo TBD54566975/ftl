@@ -29,8 +29,8 @@ type PublishInvoiceRequest struct {
 }
 
 //ftl:verb
-func PublishInvoice(ctx context.Context, req PublishInvoiceRequest) error {
-	Invoices.Publish(ctx, Invoice{Amount: req.Amount})
+func PublishInvoice(ctx context.Context, req PublishInvoiceRequest, invoices Invoices) error {
+	invoices.Publish(ctx, Invoice{Amount: req.Amount})
 	return nil
 }
 
@@ -39,4 +39,4 @@ type Invoice struct {
 }
 
 //ftl:export
-var Invoices = ftl.Topic[Invoice]("invoices")
+type Invoices = ftl.TopicHandle[Invoice]

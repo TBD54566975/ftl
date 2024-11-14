@@ -9,19 +9,19 @@ import (
 )
 
 //ftl:export
-var TestTopic = ftl.Topic[PubSubEvent]("testTopic")
+type TestTopic = ftl.TopicHandle[PubSubEvent]
 
 type PubSubEvent struct {
 	Time time.Time
 }
 
 //ftl:verb
-func PublishTen(ctx context.Context) error {
+func PublishTen(ctx context.Context, topic TestTopic) error {
 	logger := ftl.LoggerFromContext(ctx)
 	for i := 0; i < 10; i++ {
 		t := time.Now()
 		logger.Infof("Publishing %v", t)
-		err := TestTopic.Publish(ctx, PubSubEvent{Time: t})
+		err := topic.Publish(ctx, PubSubEvent{Time: t})
 		if err != nil {
 			return err
 		}
@@ -30,20 +30,20 @@ func PublishTen(ctx context.Context) error {
 }
 
 //ftl:verb
-func PublishOne(ctx context.Context) error {
+func PublishOne(ctx context.Context, topic TestTopic) error {
 	logger := ftl.LoggerFromContext(ctx)
 	t := time.Now()
 	logger.Infof("Publishing %v", t)
-	return TestTopic.Publish(ctx, PubSubEvent{Time: t})
+	return topic.Publish(ctx, PubSubEvent{Time: t})
 }
 
 //ftl:export
-var Topic2 = ftl.Topic[PubSubEvent]("topic2")
+type Topic2 = ftl.TopicHandle[PubSubEvent]
 
 //ftl:verb
-func PublishOneToTopic2(ctx context.Context) error {
+func PublishOneToTopic2(ctx context.Context, topic Topic2) error {
 	logger := ftl.LoggerFromContext(ctx)
 	t := time.Now()
 	logger.Infof("Publishing to topic_2 %v", t)
-	return Topic2.Publish(ctx, PubSubEvent{Time: t})
+	return topic.Publish(ctx, PubSubEvent{Time: t})
 }

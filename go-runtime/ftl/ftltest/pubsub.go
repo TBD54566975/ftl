@@ -67,28 +67,6 @@ func (f *fakePubSub) fetchTopicState(topic *schema.Ref) *topicState {
 	return ts
 }
 
-// addSubscriber adds a subscriber to the fake FTL instance. Each subscriber included in the test must be manually added
-func addSubscriber[E any](f *fakePubSub, sub ftl.SubscriptionHandle[E], sink ftl.Sink[E]) {
-	f.pubSubLock.Lock()
-	defer f.pubSubLock.Unlock()
-
-	if _, ok := f.subscriptions[sub.Name]; !ok {
-		f.subscriptions[sub.Name] = &subscription{
-			name:   sub.Name,
-			topic:  sub.Topic,
-			errors: map[int]error{},
-		}
-		f.fetchTopicState(sub.Topic).subscriptionCount++
-	}
-
-	f.subscribers[sub.Name] = append(f.subscribers[sub.Name], func(ctx context.Context, event any) error {
-		if event, ok := event.(E); ok {
-			return sink(ctx, event)
-		}
-		return fmt.Errorf("unexpected event type %T for subscription %s", event, sub.Name)
-	})
-}
-
 // eventsForTopic returns all events published to a topic
 func eventsForTopic[E any](ctx context.Context, f *fakePubSub, topic ftl.TopicHandle[E]) []E {
 	// Make sure all published events make it into our pubsub state
@@ -108,41 +86,6 @@ func eventsForTopic[E any](ctx context.Context, f *fakePubSub, topic ftl.TopicHa
 		}
 	}
 	return events
-}
-
-// resultsForSubscription returns all consumed events and whether an error was returned
-func resultsForSubscription[E any](ctx context.Context, f *fakePubSub, handle ftl.SubscriptionHandle[E]) []SubscriptionResult[E] {
-	f.pubSubLock.Lock()
-	defer f.pubSubLock.Unlock()
-
-	logger := log.FromContext(ctx).Scope("pubsub")
-	results := []SubscriptionResult[E]{}
-
-	subscription, ok := f.subscriptions[handle.Name]
-	if !ok {
-		return results
-	}
-	ts := f.fetchTopicState(subscription.topic)
-	count := subscription.cursor.Default(-1)
-	if !subscription.isExecuting {
-		count++
-	}
-	for i := range count {
-		e := ts.events[i]
-		if event, ok := e.(E); ok {
-			result := SubscriptionResult[E]{
-				Event: event,
-			}
-			if err, ok := subscription.errors[i]; ok {
-				result.Error = ftl.Some(err)
-			}
-			results = append(results, result)
-		} else {
-			logger.Warnf("unexpected event type %T for subscription %s", e, handle.Name)
-		}
-
-	}
-	return results
 }
 
 func (f *fakePubSub) watchPubSub(ctx context.Context) {

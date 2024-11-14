@@ -6,6 +6,7 @@ import (
 	ftlbuiltin "ftl/builtin"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
 type GetNonceClient func(context.Context, GetNonceRequest) (GetNonceResponse, error)
@@ -19,6 +20,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			PostAgent,
+			server.TopicHandle[Agent]("origin", "agentBroadcast"),
 		),
 	)
 }

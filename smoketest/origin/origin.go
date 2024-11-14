@@ -12,7 +12,7 @@ import (
 var nonce = ftl.Config[string]("nonce")
 
 //ftl:export
-var AgentBroadcast = ftl.Topic[Agent]("agentBroadcast")
+type AgentBroadcast = ftl.TopicHandle[Agent]
 
 type Agent struct {
 	ID            int       `json:"id"`
@@ -28,14 +28,14 @@ type PostAgentResponse struct {
 type PostAgentErrorResponse string
 
 //ftl:ingress POST /ingress/agent
-func PostAgent(ctx context.Context, req builtin.HttpRequest[Agent, ftl.Unit, ftl.Unit]) (builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse], error) {
+func PostAgent(ctx context.Context, req builtin.HttpRequest[Agent, ftl.Unit, ftl.Unit], topic AgentBroadcast) (builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse], error) {
 	agent := Agent{
 		ID:            req.Body.ID,
 		Alias:         req.Body.Alias,
 		LicenseToKill: req.Body.LicenseToKill,
 		HiredAt:       req.Body.HiredAt,
 	}
-	err := AgentBroadcast.Publish(ctx, agent)
+	err := topic.Publish(ctx, agent)
 	if err != nil {
 		return builtin.HttpResponse[PostAgentResponse, PostAgentErrorResponse]{
 			Status: 500,

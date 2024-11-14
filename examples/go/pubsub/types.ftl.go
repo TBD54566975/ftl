@@ -4,6 +4,7 @@ package pubsub
 import (
 	"context"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
+	"github.com/TBD54566975/ftl/go-runtime/server"
 )
 
 type CookPizzaClient func(context.Context, Pizza) error
@@ -16,12 +17,14 @@ func init() {
 	reflection.Register(
 		reflection.ProvideResourcesForVerb(
 			CookPizza,
+			server.TopicHandle[Pizza]("pubsub", "pizzaReadyTopic"),
 		),
 		reflection.ProvideResourcesForVerb(
 			DeliverPizza,
 		),
 		reflection.ProvideResourcesForVerb(
 			OrderPizza,
+			server.TopicHandle[Pizza]("pubsub", "newOrderTopic"),
 		),
 	)
 }

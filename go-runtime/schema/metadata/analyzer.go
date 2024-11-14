@@ -126,12 +126,6 @@ func extractMetadata(pass *analysis.Pass, node ast.Node, doc *ast.CommentGroup) 
 				MaxBackoff: dt.MaxBackoff,
 				Catch:      dt.Catch().Ptr(),
 			})
-		case *common.DirectiveSubscriber:
-			newSchType = &schema.Verb{}
-			metadata = append(metadata, &schema.MetadataSubscriber{
-				Pos:  common.GoPosToSchemaPos(pass.Fset, dt.Pos),
-				Name: dt.Name,
-			})
 		case *common.DirectiveTypeMap:
 			newSchType = &schema.TypeAlias{}
 			metadata = append(metadata, &schema.MetadataTypeMap{

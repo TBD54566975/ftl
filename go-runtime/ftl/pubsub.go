@@ -3,21 +3,13 @@ package ftl
 import (
 	"context"
 
-	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
 	"github.com/TBD54566975/ftl/internal/schema"
 )
 
-// Topic declares a topic
+// TopicHandle accesses a topic
 //
 // Topics publish events, and subscriptions can listen to them.
-func Topic[E any](name string) TopicHandle[E] {
-	return TopicHandle[E]{Ref: &schema.Ref{
-		Name:   name,
-		Module: reflection.Module(),
-	}}
-}
-
 type TopicHandle[E any] struct {
 	Ref *schema.Ref
 }
@@ -27,14 +19,9 @@ func (t TopicHandle[E]) Publish(ctx context.Context, event E) error {
 	return internal.FromContext(ctx).PublishEvent(ctx, t.Ref, event)
 }
 
-type SubscriptionHandle[E any] struct {
-	Topic *schema.Ref
-	Name  string
-}
-
-// Subscription declares a subscription to a topic
-//
-// Sinks can consume events from the subscription by including a "ftl:subscibe <subscription_name>" directive
-func Subscription[E any](topic TopicHandle[E], name string) SubscriptionHandle[E] {
-	return SubscriptionHandle[E]{Name: name, Topic: topic.Ref}
+// SubscriptionHandle declares a subscription to a topic for the provided Sink
+// T: the topic handle type
+// S: the generated sink client type
+// E: the event type
+type SubscriptionHandle[T TopicHandle[E], S, E any] struct {
 }

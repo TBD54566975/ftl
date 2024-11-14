@@ -76,7 +76,7 @@ func contextWithFakeFTL(ctx context.Context, options ...Option) context.Context 
 		options:       options,
 	}
 	ctx = internal.WithContext(ctx, fake)
-	fake.pubSub = newFakePubSub(ctx)
+	// fake.pubSub = newFakePubSub(ctx)
 	return ctx
 }
 

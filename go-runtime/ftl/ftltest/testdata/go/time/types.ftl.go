@@ -2,11 +2,11 @@
 package time
 
 import (
-	"context"
+	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 )
 
-type TimeClient func(context.Context, TimeRequest) (TimeResponse, error)
+type TimeClient = ftl.Verb[TimeRequest, TimeResponse]
 
 func init() {
 	reflection.Register(
