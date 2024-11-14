@@ -2,6 +2,7 @@ package slices
 
 import (
 	"cmp"
+	"iter"
 	"sort"
 )
 
@@ -105,6 +106,20 @@ func FindVariant[T any, U any](slice []U) (T, bool) {
 	return zero, false
 }
 
+// FilterVariants finds all elements in a slice that can be cast to the given type.
+func FilterVariants[T any, U any](slice []U) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for _, el := range slice {
+			if found, ok := any(el).(T); ok {
+				if !yield(found) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// Unique returns a new slice containing only the unique elements of the input, with the order preserved.
 func Unique[T comparable](slice []T) []T {
 	seen := make(map[T]struct{})
 	result := make([]T, 0, len(slice))

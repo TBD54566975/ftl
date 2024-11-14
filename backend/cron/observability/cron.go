@@ -3,6 +3,7 @@ package observability
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/alecthomas/types/optional"
 	"go.opentelemetry.io/otel"
@@ -20,12 +21,24 @@ const (
 
 	cronJobKilledStatus      = "killed"
 	cronJobFailedStartStatus = "failed_start"
+
+	deploymentMeterName = "ftl.deployments.cron"
 )
 
 type CronMetrics struct {
 	jobsActive    metric.Int64UpDownCounter
 	jobsCompleted metric.Int64Counter
 	jobLatency    metric.Int64Histogram
+}
+
+var Cron *CronMetrics
+
+func init() {
+	var err error
+	Cron, err = initCronMetrics()
+	if err != nil {
+		panic(fmt.Errorf("could not initialize cron metrics: %w", err))
+	}
 }
 
 func initCronMetrics() (*CronMetrics, error) {
@@ -107,4 +120,12 @@ func cronAttributes(job model.CronJob, maybeStatus optional.Option[string]) metr
 		attributes = append(attributes, attribute.String(observability.OutcomeStatusNameAttribute, status))
 	}
 	return metric.WithAttributes(attributes...)
+}
+
+func wrapErr(signalName string, err error) error {
+	return fmt.Errorf("failed to create %q signal: %w", signalName, err)
+}
+
+func timeSinceMS(start time.Time) int64 {
+	return time.Since(start).Milliseconds()
 }

@@ -38,6 +38,7 @@ var (
 	parser = participle.MustBuild[Pattern](parserOptions...)
 )
 
+// Pattern represents a cron schedule.
 type Pattern struct {
 	Duration   *string     `parser:"@(Number ('s' | 'm' | 'h'))"`
 	DayOfWeek  *DayOfWeek  `parser:"| @('Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat' | 'Sun')"`
