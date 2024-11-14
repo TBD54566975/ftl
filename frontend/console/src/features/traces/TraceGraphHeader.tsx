@@ -2,6 +2,7 @@ import { Activity03Icon } from 'hugeicons-react'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRequestTraceEvents } from '../../api/timeline/use-request-trace-events'
+import { Button } from '../../components/Button'
 import { totalDurationForRequest } from './traces.utils'
 
 export const TraceGraphHeader = ({ requestKey, eventId }: { requestKey?: string; eventId: bigint }) => {
@@ -16,19 +17,14 @@ export const TraceGraphHeader = ({ requestKey, eventId }: { requestKey?: string;
   }
 
   return (
-    <div className='flex items-center justify-between'>
+    <div className='flex items-center justify-between mb-1'>
       <span className='text-xs font-mono'>
         Total <span>{totalEventDuration}ms</span>
       </span>
 
-      <button
-        type='button'
-        title='View trace'
-        onClick={() => navigate(`/traces/${requestKey}?event_id=${eventId}`)}
-        className='flex items-center p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer'
-      >
-        <Activity03Icon className='w-5 h-5' />
-      </button>
+      <Button variant='secondary' size='sm' onClick={() => navigate(`/traces/${requestKey}?event_id=${eventId}`)} title='View trace'>
+        <Activity03Icon className='size-5' />
+      </Button>
     </div>
   )
 }

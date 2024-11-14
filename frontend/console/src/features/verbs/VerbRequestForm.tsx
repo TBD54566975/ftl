@@ -1,4 +1,3 @@
-import { Copy01Icon } from 'hugeicons-react'
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { CodeEditor } from '../../components/CodeEditor'
 import { ResizableVerticalPanels } from '../../components/ResizableVerticalPanels'
@@ -194,6 +193,7 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
         requestPath={fullRequestPath(module, verb)}
         readOnly={!isHttpIngress(verb)}
         onSubmit={handleSubmit}
+        handleCopyButton={handleCopyButton}
       />
       <div>
         <div className='border-b border-gray-200 dark:border-white/10'>
@@ -216,14 +216,6 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
                 </button>
               ))}
             </nav>
-            <button
-              type='button'
-              title='Copy'
-              className='flex items-center p-1 rounded text-indigo-500 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer'
-              onClick={handleCopyButton}
-            >
-              <Copy01Icon className='size-5' />
-            </button>
           </div>
         </div>
       </div>

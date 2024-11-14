@@ -1,6 +1,6 @@
 import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
 import { ArrowDown01Icon, CheckmarkSquare02Icon, MinusSignSquareIcon, SquareIcon } from 'hugeicons-react'
-import { Divider } from './Divider'
+import { Button } from './Button'
 
 export interface MultiselectOpt {
   group?: string
@@ -77,7 +77,7 @@ export const Multiselect = ({
     <div className='w-full'>
       <Listbox multiple value={selectedOpts} onChange={onChange}>
         <div className='relative w-[calc(100%-0.75rem)]'>
-          <ListboxButton className='w-full m-2 py-1 px-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-900 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'>
+          <ListboxButton className='w-full m-2 py-1 px-2 border border-gray-300 dark:border-gray-600 rounded shadow-sm text-sm bg-white dark:bg-gray-900 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'>
             <span className='block truncate w-[calc(100%-30px)] h-5 text-left'>{getSelectionText(selectedOpts, allOpts)}</span>
             <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center'>
               <ArrowDown01Icon className='w-5 text-gray-400' />
@@ -87,7 +87,7 @@ export const Multiselect = ({
         <ListboxOptions
           anchor='bottom'
           transition
-          className='w-[var(--button-width)] min-w-48 mt-1 pt-1 rounded-md border dark:border-white/5 bg-white dark:bg-gray-800 transition duration-100 ease-in truncate drop-shadow-lg z-20'
+          className='w-[var(--button-width)] min-w-48 ml-2 pt-1 rounded-md border dark:border-white/5 bg-white dark:bg-gray-800 transition duration-100 ease-in truncate drop-shadow-lg z-20'
         >
           {allOpts
             .filter((o) => !o.group)
@@ -102,22 +102,14 @@ export const Multiselect = ({
             ...allOpts.filter((o) => o.group === group).map((o) => <Option key={o.key} o={o} p='6' />),
           ])}
 
-          <div className='w-full text-center text-xs mt-2'>
-            <Divider />
-            <div className='flex'>
-              <div
-                className='flex-1 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-indigo-600 dark:text-indigo-400 cursor-pointer text-center'
-                onClick={() => onChange(allOpts)}
-              >
+          <div className='w-full text-center text-xs'>
+            <div className='flex gap-2 p-2'>
+              <Button variant='primary' size='xs' onClick={() => onChange(allOpts)} title='Select all' fullWidth>
                 Select all
-              </div>
-              <Divider vertical />
-              <div
-                className='flex-1 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-indigo-600 dark:text-indigo-400 cursor-pointer text-center'
-                onClick={() => onChange([])}
-              >
+              </Button>
+              <Button variant='primary' size='xs' onClick={() => onChange([])} title='Deselect all' fullWidth>
                 Deselect all
-              </div>
+              </Button>{' '}
             </div>
           </div>
         </ListboxOptions>

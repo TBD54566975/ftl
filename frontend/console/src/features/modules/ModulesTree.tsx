@@ -1,6 +1,7 @@
 import { ArrowRight01Icon, ArrowShrink02Icon, CircleArrowRight02Icon, CodeFolderIcon, ViewIcon, ViewOffSlashIcon } from 'hugeicons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Button } from '../../components/Button'
 import { Multiselect, sortMultiselectOpts } from '../../components/Multiselect'
 import type { MultiselectOpt } from '../../components/Multiselect'
 import { classNames } from '../../utils'
@@ -180,23 +181,19 @@ export const ModulesTree = ({ modules }: { modules: ModuleTreeItem[] }) => {
           <span className='w-full'>
             <Multiselect allOpts={declTypeMultiselectOpts} selectedOpts={selectedDeclTypes} onChange={msOnChange} />
           </span>
-          <button
+          <Button
             id='hide-exported'
-            type='button'
-            className='flex items-center p-1 ml-1 mr-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+            variant='secondary'
+            size='sm'
             onClick={() => setHideUnexportedState(!hideUnexported)}
             title='Show/hide unexported'
+            className='mr-1'
           >
             {hideUnexported ? <ViewOffSlashIcon className='size-5 ' /> : <ViewIcon className='size-5' />}
-          </button>
-          <button
-            type='button'
-            className='flex items-center p-1 mr-2 rounded-md bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-            onClick={collapseAll}
-            title='Collapse all modules'
-          >
-            <ArrowShrink02Icon className='size-5 ' />
-          </button>
+          </Button>
+          <Button variant='secondary' size='sm' onClick={collapseAll} title='Collapse all modules' className='mr-1'>
+            <ArrowShrink02Icon className='size-5' />
+          </Button>
         </div>
         <ul>
           {modules.map((m) => (
