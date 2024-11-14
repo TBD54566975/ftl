@@ -524,7 +524,10 @@ func scaffoldBuildTemplateAndTidy(ctx context.Context, config moduleconfig.AbsMo
 		if err := exec.Command(wgctx, log.Debug, config.Dir, "go", "fmt", ftlTypesFilename).RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to format module dir: %w", config.Dir, err)
 		}
-		return filesTransaction.ModifiedFiles(filepath.Join(config.Dir, "go.mod"), filepath.Join(config.Dir, "go.sum"), filepath.Join(config.Dir, ftlTypesFilename))
+		if err := filesTransaction.ModifiedFiles(filepath.Join(config.Dir, "go.mod"), filepath.Join(config.Dir, "go.sum"), filepath.Join(config.Dir, ftlTypesFilename)); err != nil {
+			return fmt.Errorf("could not files as modified after tidying module package: %w", err)
+		}
+		return nil
 	})
 	wg.Go(func() error {
 		if !mainModuleCtxChanged {
@@ -537,9 +540,12 @@ func scaffoldBuildTemplateAndTidy(ctx context.Context, config moduleconfig.AbsMo
 		if err := exec.Command(wgctx, log.Debug, mainDir, "go", "fmt", "./...").RunStderrError(wgctx); err != nil {
 			return fmt.Errorf("%s: failed to format main dir: %w", mainDir, err)
 		}
-		return filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(mainDir, "go.sum"))
+		if err := filesTransaction.ModifiedFiles(filepath.Join(mainDir, "go.mod"), filepath.Join(mainDir, "go.sum")); err != nil {
+			return fmt.Errorf("could not files as modified after tidying main package: %w", err)
+		}
+		return nil
 	})
-	return wg.Wait()
+	return wg.Wait() //nolint:wrapcheck
 }
 
 type mainModuleContextBuilder struct {
