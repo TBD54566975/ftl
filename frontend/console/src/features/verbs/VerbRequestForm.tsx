@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { Button } from '../../components/Button'
 import { CodeEditor } from '../../components/CodeEditor'
 import { ResizableVerticalPanels } from '../../components/ResizableVerticalPanels'
 import { useClient } from '../../hooks/use-client'
@@ -181,6 +182,21 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
     }
   }, [verb, bodyTextKey])
 
+  const handleCopyBody = () => {
+    navigator.clipboard
+      .writeText(bodyText)
+      .then(() => {
+        showNotification({
+          title: 'Copied to clipboard',
+          message: 'Request body copied to clipboard',
+          type: NotificationType.Info,
+        })
+      })
+      .catch((err) => {
+        console.error('Failed to copy text: ', err)
+      })
+  }
+
   const bottomText = response || error || ''
   const schemaString = verb ? JSON.stringify(simpleJsonSchema(verb)) : ''
 
@@ -226,13 +242,14 @@ export const VerbRequestForm = ({ module, verb }: { module?: Module; verb?: Verb
               {activeTabId === 'body' && (
                 <div className='h-full'>
                   <div className='relative h-full'>
-                    <button
-                      type='button'
-                      onClick={handleResetBody}
-                      className='text-sm absolute top-2 right-2 z-10 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-1 px-2 rounded'
-                    >
-                      Reset
-                    </button>
+                    <div className='absolute top-2 right-2 z-10 flex gap-2'>
+                      <Button variant='secondary' size='xs' title='Copy' onClick={handleCopyBody}>
+                        Copy
+                      </Button>
+                      <Button variant='secondary' size='xs' type='button' title='Reset' onClick={handleResetBody}>
+                        Reset
+                      </Button>
+                    </div>
                     <CodeEditor id='body-editor' value={bodyText} onTextChanged={handleBodyTextChanged} schema={schemaString} />
                   </div>
                 </div>
