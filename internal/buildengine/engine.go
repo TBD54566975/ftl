@@ -650,7 +650,7 @@ func (e *Engine) watchForEventsToPublish(ctx context.Context) {
 			}
 			isIdle = true
 
-			if e.devModeEndpointUpdates != nil && isFirstRound {
+			if e.devMode && isFirstRound {
 				logger := log.FromContext(ctx)
 				if len(moduleErrors) > 0 {
 					logger.Errorf(errors.Join(maps.Values(moduleErrors)...), "Initial build failed")

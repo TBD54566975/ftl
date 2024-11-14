@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -38,11 +39,14 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/sha256"
 	islices "github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 const BuildLockTimeout = time.Minute
+const SchemaFile = "schema.pb"
+const ErrorFile = "errors.pb"
 
 //sumtype:decl
 type updateEvent interface{ updateEvent() }
@@ -83,17 +87,14 @@ type Service struct {
 	updatesTopic          *pubsub.Topic[updateEvent]
 	acceptsContextUpdates atomic.Value[bool]
 	scaffoldFiles         *zip.Reader
-	devMode               bool
 }
 
 var _ langconnect.LanguageServiceHandler = &Service{}
 
 func New(scaffoldFiles *zip.Reader) *Service {
-	devMode := os.Getenv("FTL_DEV_MODE") == "true"
 	return &Service{
 		updatesTopic:  pubsub.New[updateEvent](),
 		scaffoldFiles: scaffoldFiles,
-		devMode:       devMode,
 	}
 }
 
@@ -171,7 +172,7 @@ func (s *Service) SyncStubReferences(ctx context.Context, req *connect.Request[l
 // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
 // calls.
 func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
-	if s.devMode && req.Msg.RebuildAutomatically {
+	if req.Msg.RebuildAutomatically {
 		return s.handleDevModeRequest(ctx, req, stream)
 	}
 	events := make(chan updateEvent, 32)
@@ -250,19 +251,20 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 	if err != nil {
 		return fmt.Errorf("could not allocate port: %w", err)
 	}
-	errorFile := filepath.Join(buildCtx.Config.DeployDir, "errors.pb")
-	schemaFile := filepath.Join(buildCtx.Config.DeployDir, "schema.pb")
-	info, _ := os.Stat(errorFile)
-	errorChangeTime := info.ModTime()
-	info, _ = os.Stat(schemaFile)
-	schemaChangeTime := info.ModTime()
+	errorFile := filepath.Join(buildCtx.Config.DeployDir, ErrorFile)
+	schemaFile := filepath.Join(buildCtx.Config.DeployDir, SchemaFile)
+	os.Remove(errorFile)
+	os.Remove(schemaFile)
+	errorHash := sha256.SHA256{}
+	schemaHash := sha256.SHA256{}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = log.ContextWithLogger(ctx, logger)
+	bind := fmt.Sprintf("http://localhost:%d", address.Port)
 	go func() {
-		logger.Infof("Using build command '%s'", buildCtx.Config.Build)
-		command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", buildCtx.Config.Build)
-		command.Env = append(command.Env, fmt.Sprintf("FTL_BIND=http://127.0.0.1:%d", address.Port))
+		logger.Infof("Using build command '%s'", buildCtx.Config.DevModeBuild)
+		command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", buildCtx.Config.DevModeBuild)
+		command.Env = append(command.Env, fmt.Sprintf("FTL_BIND=%s", bind))
 		command.Stdout = os.Stdout
 		command.Stderr = os.Stderr
 		err = command.Run()
@@ -274,27 +276,36 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 		cancel()
 	}()
 
+	schemaChangeTicker := time.Tick(100 * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
-			_ = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
-				BuildFailure: &langpb.BuildFailure{
-					IsAutomaticRebuild: !first,
-					ContextId:          buildCtx.ID,
-					Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
-				}}})
 			return nil
-		case <-time.After(100 * time.Millisecond):
-			info, _ := os.Stat(errorFile)
-			changed := false
-			if errorChangeTime != info.ModTime() {
-				changed = true
-				errorChangeTime = info.ModTime()
+		case <-schemaChangeTicker:
+			if !first {
+				// Force a hot reload via HTTP request
+				resp, err := http.Head(bind)
+				if err == nil {
+					resp.Body.Close()
+				}
 			}
-			info, _ = os.Stat(schemaFile)
-			if schemaChangeTime != info.ModTime() {
-				changed = true
-				schemaChangeTime = info.ModTime()
+
+			changed := false
+			file, err := os.ReadFile(errorFile)
+			if err == nil {
+				sum := sha256.Sum(file)
+				if sum != errorHash {
+					changed = true
+					errorHash = sum
+				}
+			}
+			file, err = os.ReadFile(schemaFile)
+			if err == nil {
+				sum := sha256.Sum(file)
+				if sum != schemaHash {
+					changed = true
+					schemaHash = sum
+				}
 			}
 			if changed {
 				logger.Infof("File change detected, rebuilding")
@@ -340,6 +351,7 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 							IsAutomaticRebuild: !first,
 							Module:             moduleProto,
 							DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", address.Port)),
+							Deploy:             []string{SchemaFile},
 						},
 					},
 				})
@@ -440,7 +452,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 }
 
 func readSchema(bctx buildContext) (*schemapb.Module, error) {
-	path := filepath.Join(bctx.Config.DeployDir, "schema.pb")
+	path := filepath.Join(bctx.Config.DeployDir, SchemaFile)
 	moduleSchema, err := schema.ModuleFromProtoFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read schema for module: %s from %s %w", bctx.Config.Module, path, err)
@@ -623,19 +635,13 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 	buildGradleKts := filepath.Join(dir, "build.gradle.kts")
 	if fileExists(pom) {
 		defaults.LanguageConfig.Fields["build-tool"] = structpb.NewStringValue(JavaBuildToolMaven)
-		if s.devMode {
-			defaults.Build = ptr("mvn quarkus:dev")
-		} else {
-			defaults.Build = ptr("mvn -B package")
-		}
+		defaults.DevModeBuild = ptr("mvn quarkus:dev")
+		defaults.Build = ptr("mvn -B package")
 		defaults.DeployDir = "target"
 	} else if fileExists(buildGradle) || fileExists(buildGradleKts) {
 		defaults.LanguageConfig.Fields["build-tool"] = structpb.NewStringValue(JavaBuildToolGradle)
-		if s.devMode {
-			defaults.Build = ptr("gradle quarkusDev")
-		} else {
-			defaults.Build = ptr("gradle build")
-		}
+		defaults.DevModeBuild = ptr("gradle quarkusDev")
+		defaults.Build = ptr("gradle build")
 		defaults.DeployDir = "build"
 	} else {
 		return nil, fmt.Errorf("could not find JVM build file in %s", dir)

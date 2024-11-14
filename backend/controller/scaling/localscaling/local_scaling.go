@@ -45,8 +45,8 @@ type localScaling struct {
 }
 
 type devModeRunner struct {
-	uri     url.URL
-	running bool
+	uri           url.URL
+	deploymentKey string
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
@@ -193,11 +193,11 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	devUri := optional.None[url.URL]()
 	if devEndpoint != nil {
 		devUri = optional.Some(devEndpoint.uri)
-		if devEndpoint.running {
+		if devEndpoint.deploymentKey == deploymentKey {
 			// Already running, don't start another
 			return nil
 		}
-		devEndpoint.running = true
+		devEndpoint.deploymentKey = deploymentKey
 	}
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 	logger := log.FromContext(ctx)
@@ -249,16 +249,13 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 	runnerCtx, cancel := context.WithCancel(runnerCtx)
 	info.runner = optional.Some(runnerInfo{cancelFunc: cancel, port: bind.Port()})
 
-	if devEndpoint != nil {
-		devEndpoint.running = true
-	}
 	go func() {
 		logger.Debugf("Starting runner: %s", config.Key)
 		err := runner.Start(runnerCtx, config)
 		l.lock.Lock()
 		defer l.lock.Unlock()
 		if devEndpoint != nil {
-			devEndpoint.running = true
+			devEndpoint.deploymentKey = ""
 		}
 		// Don't count context.Canceled as an a restart error
 		if err != nil && !errors.Is(err, context.Canceled) {

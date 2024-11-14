@@ -10,12 +10,13 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class ModuleConfig(_message.Message):
-    __slots__ = ("name", "dir", "language", "deploy_dir", "build", "build_lock", "generated_schema_dir", "watch", "language_config")
+    __slots__ = ("name", "dir", "language", "deploy_dir", "build", "devModeBuild", "build_lock", "generated_schema_dir", "watch", "language_config")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DIR_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_FIELD_NUMBER: _ClassVar[int]
     DEPLOY_DIR_FIELD_NUMBER: _ClassVar[int]
     BUILD_FIELD_NUMBER: _ClassVar[int]
+    DEVMODEBUILD_FIELD_NUMBER: _ClassVar[int]
     BUILD_LOCK_FIELD_NUMBER: _ClassVar[int]
     GENERATED_SCHEMA_DIR_FIELD_NUMBER: _ClassVar[int]
     WATCH_FIELD_NUMBER: _ClassVar[int]
@@ -25,11 +26,12 @@ class ModuleConfig(_message.Message):
     language: str
     deploy_dir: str
     build: str
+    devModeBuild: str
     build_lock: str
     generated_schema_dir: str
     watch: _containers.RepeatedScalarFieldContainer[str]
     language_config: _struct_pb2.Struct
-    def __init__(self, name: _Optional[str] = ..., dir: _Optional[str] = ..., language: _Optional[str] = ..., deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., dir: _Optional[str] = ..., language: _Optional[str] = ..., deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., devModeBuild: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class ProjectConfig(_message.Message):
     __slots__ = ("dir", "name", "no_git", "hermit")
@@ -93,20 +95,22 @@ class ModuleConfigDefaultsRequest(_message.Message):
     def __init__(self, dir: _Optional[str] = ...) -> None: ...
 
 class ModuleConfigDefaultsResponse(_message.Message):
-    __slots__ = ("deploy_dir", "build", "build_lock", "generated_schema_dir", "watch", "language_config")
+    __slots__ = ("deploy_dir", "build", "devModeBuild", "build_lock", "generated_schema_dir", "watch", "language_config")
     DEPLOY_DIR_FIELD_NUMBER: _ClassVar[int]
     BUILD_FIELD_NUMBER: _ClassVar[int]
+    DEVMODEBUILD_FIELD_NUMBER: _ClassVar[int]
     BUILD_LOCK_FIELD_NUMBER: _ClassVar[int]
     GENERATED_SCHEMA_DIR_FIELD_NUMBER: _ClassVar[int]
     WATCH_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_CONFIG_FIELD_NUMBER: _ClassVar[int]
     deploy_dir: str
     build: str
+    devModeBuild: str
     build_lock: str
     generated_schema_dir: str
     watch: _containers.RepeatedScalarFieldContainer[str]
     language_config: _struct_pb2.Struct
-    def __init__(self, deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    def __init__(self, deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., devModeBuild: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class DependenciesRequest(_message.Message):
     __slots__ = ("module_config",)

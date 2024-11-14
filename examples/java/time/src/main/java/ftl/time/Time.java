@@ -10,6 +10,6 @@ public class Time {
     @Verb
     @Export
     public TimeResponse time() {
-        return new TimeResponse(OffsetDateTime.now(), "foo");
+        return new TimeResponse(OffsetDateTime.now(), "foo bar");
     }
 }

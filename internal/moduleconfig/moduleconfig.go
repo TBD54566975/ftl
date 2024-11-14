@@ -24,6 +24,8 @@ type ModuleConfig struct {
 	Module   string `toml:"module"`
 	// Build is the command to build the module.
 	Build string `toml:"build"`
+	// Build is the command to build the module in dev mode.
+	DevModeBuild string `toml:"dev-mode-build"`
 	// BuildLock is file lock path to prevent concurrent builds of a module.
 	BuildLock string `toml:"build-lock"`
 	// DeployDir is the directory to deploy from, relative to the module directory.
@@ -58,6 +60,7 @@ type CustomDefaults struct {
 	Watch              []string
 	BuildLock          optional.Option[string]
 	Build              optional.Option[string]
+	DevModeBuild       optional.Option[string]
 	GeneratedSchemaDir optional.Option[string]
 
 	// only the root keys in LanguageConfig are used to find missing values that can be defaulted
@@ -149,6 +152,9 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	// Custom defaults
 	if defaultValue, ok := customDefaults.Build.Get(); ok && c.Build == "" {
 		c.Build = defaultValue
+	}
+	if defaultValue, ok := customDefaults.DevModeBuild.Get(); ok && c.DevModeBuild == "" {
+		c.DevModeBuild = defaultValue
 	}
 	if c.BuildLock == "" {
 		if defaultValue, ok := customDefaults.BuildLock.Get(); ok {

@@ -37,6 +37,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			dir:      "testdata/kotlin/echo",
 			expected: moduleconfig.CustomDefaults{
 				Build:              optional.Some("mvn -B package"),
+				DevModeBuild:       optional.Some("mvn quarkus:dev"),
 				DeployDir:          "target",
 				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
 				Watch:              watch,
@@ -50,6 +51,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			dir:      "testdata/kotlin/external",
 			expected: moduleconfig.CustomDefaults{
 				Build:              optional.Some("mvn -B package"),
+				DevModeBuild:       optional.Some("mvn quarkus:dev"),
 				DeployDir:          "target",
 				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
 				Watch:              watch,

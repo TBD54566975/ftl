@@ -60,9 +60,6 @@ func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string
 		return fmt.Errorf("failed to find plugin for %s: %w", language, err)
 	}
 	envvars := []string{"FTL_NAME=" + name}
-	if devMode {
-		envvars = append(envvars, "FTL_DEV_MODE=true")
-	}
 	plugin, cmdCtx, err := plugin.Spawn(ctx,
 		log.FromContext(ctx).GetLevel(),
 		name,
