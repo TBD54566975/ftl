@@ -387,13 +387,13 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	// These two steps take the longest, and only sometimes depend on each other.
 	// After both have completed, we will scaffold out the build template and only use the optimistic compile
 	// if the extracted schema has not caused any changes.
-	extractResultChan := make(chan result.Result[extract.Result])
+	extractResultChan := make(chan result.Result[extract.Result], 1)
 	go func() {
 		logger.Debugf("Extracting schema")
 		extractResultChan <- result.From(extract.Extract(config.Dir))
 	}()
-	optimisticHashesChan := make(chan watch.FileHashes)
-	optimisticCompileChan := make(chan error)
+	optimisticHashesChan := make(chan watch.FileHashes, 1)
+	optimisticCompileChan := make(chan error, 1)
 	go func() {
 		hashes, err := fileHashesForOptimisticCompilation(config)
 		if err != nil {
