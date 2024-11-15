@@ -10,10 +10,12 @@ import (
 	"github.com/jpillora/backoff"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/backend/cron/observability"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 	"github.com/TBD54566975/ftl/internal/cron"
 	"github.com/TBD54566975/ftl/internal/log"
+	"github.com/TBD54566975/ftl/internal/model"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -108,8 +110,20 @@ func run(ctx context.Context, verbClient CallClient, changes chan *ftlv1.PullSch
 			cronQueue[0] = job
 			orderQueue(cronQueue)
 
+			cronModel := model.CronJob{
+				// TODO: We don't have the runner key available here.
+				Key:           model.NewCronJobKey(job.module, job.verb.Name),
+				Verb:          schema.Ref{Module: job.module, Name: job.verb.Name},
+				Schedule:      job.pattern.String(),
+				StartTime:     time.Now(),
+				NextExecution: job.next,
+			}
+			observability.Cron.JobStarted(ctx, cronModel)
 			if err := callCronJob(ctx, verbClient, job); err != nil {
+				observability.Cron.JobFailed(ctx, cronModel)
 				logger.Errorf(err, "Failed to execute cron job")
+			} else {
+				observability.Cron.JobSuccess(ctx, cronModel)
 			}
 		}
 	}

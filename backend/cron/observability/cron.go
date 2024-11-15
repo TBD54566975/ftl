@@ -19,9 +19,6 @@ const (
 	cronMeterName            = "ftl.cron"
 	cronJobFullNameAttribute = "ftl.cron.job.full_name"
 
-	cronJobKilledStatus      = "killed"
-	cronJobFailedStartStatus = "failed_start"
-
 	deploymentMeterName = "ftl.deployments.cron"
 )
 
@@ -84,24 +81,12 @@ func (m *CronMetrics) JobSuccess(ctx context.Context, job model.CronJob) {
 	m.jobCompleted(ctx, job, observability.SuccessStatus)
 }
 
-func (m *CronMetrics) JobKilled(ctx context.Context, job model.CronJob) {
-	m.jobCompleted(ctx, job, cronJobKilledStatus)
-}
-
-func (m *CronMetrics) JobFailedStart(ctx context.Context, job model.CronJob) {
-	completionAttributes := cronAttributes(job, optional.Some(cronJobFailedStartStatus))
-
-	elapsed := timeSinceMS(job.NextExecution)
-	m.jobLatency.Record(ctx, elapsed, completionAttributes)
-	m.jobsCompleted.Add(ctx, 1, completionAttributes)
-}
-
 func (m *CronMetrics) JobFailed(ctx context.Context, job model.CronJob) {
 	m.jobCompleted(ctx, job, observability.FailureStatus)
 }
 
 func (m *CronMetrics) jobCompleted(ctx context.Context, job model.CronJob, status string) {
-	elapsed := timeSinceMS(job.NextExecution)
+	elapsed := timeSinceMS(job.StartTime)
 
 	m.jobsActive.Add(ctx, -1, cronAttributes(job, optional.None[string]()))
 
