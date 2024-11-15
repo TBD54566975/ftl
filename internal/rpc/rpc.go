@@ -264,8 +264,8 @@ func AlwaysRetry() func(error) bool {
 }
 
 // RetryStreamingServerStream will repeatedly call handler with responses from
-// the stream returned by "rpc" until handler returns an error or the context is
-// cancelled.
+// the stream returned by "rpc" until either the context is cancelled or the
+// errorRetryCallback returns false.
 func RetryStreamingServerStream[Req, Resp any](
 	ctx context.Context,
 	name string,

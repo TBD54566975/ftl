@@ -15,7 +15,6 @@ var (
 	Deployment *DeploymentMetrics
 	Ingress    *IngressMetrics
 	PubSub     *PubSubMetrics
-	Cron       *CronMetrics
 	Controller *ControllerTracing
 	Timeline   *TimelineMetrics
 )
@@ -33,8 +32,6 @@ func init() {
 	Ingress, err = initIngressMetrics()
 	errs = errors.Join(errs, err)
 	PubSub, err = initPubSubMetrics()
-	errs = errors.Join(errs, err)
-	Cron, err = initCronMetrics()
 	errs = errors.Join(errs, err)
 	Controller = initControllerTracing()
 	Timeline, err = initTimelineMetrics()
