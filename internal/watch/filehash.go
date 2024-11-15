@@ -60,15 +60,16 @@ func CompareFileHashes(oldFiles, newFiles FileHashes) []FileChange {
 	return changes
 }
 
-// ComputeFileHashes computes the SHA256 hash of all (non-git-ignored) files in
-// the given directory.
-func computeFileHashes(dir string, patterns []string) (FileHashes, error) {
+// ComputeFileHashes computes the SHA256 hash of all files in the given directory.
+//
+// If skipGitIgnoredFiles is true, files that are ignored by git will be skipped.
+func ComputeFileHashes(dir string, skipGitIgnoredFiles bool, patterns []string) (FileHashes, error) {
 	// Watch paths are allowed to be outside the deploy directory.
 	fileHashes := make(FileHashes)
 	rootDirs := computeRootDirs(dir, patterns)
 
 	for _, rootDir := range rootDirs {
-		err := WalkDir(rootDir, func(srcPath string, entry fs.DirEntry) error {
+		err := WalkDir(rootDir, skipGitIgnoredFiles, func(srcPath string, entry fs.DirEntry) error {
 			if entry.IsDir() {
 				return nil
 			}
@@ -77,6 +78,9 @@ func computeFileHashes(dir string, patterns []string) (FileHashes, error) {
 				return err
 			}
 			if !matched {
+				if patterns[0] == "*" {
+					return fmt.Errorf("file %s:%s does not match any: %s", rootDir, srcPath, patterns)
+				}
 				return nil
 			}
 			fileHashes[srcPath] = hash

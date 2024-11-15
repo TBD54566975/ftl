@@ -22,8 +22,12 @@ var ErrSkip = errors.New("skip directory")
 //
 // It will adhere to .gitignore files. The callback "fn" can return ErrSkip to
 // skip recursion.
-func WalkDir(dir string, fn func(path string, d fs.DirEntry) error) error {
-	return walkDir(dir, initGitIgnore(dir), fn)
+func WalkDir(dir string, skipGitIgnoredFiles bool, fn func(path string, d fs.DirEntry) error) error {
+	var ignores []string
+	if skipGitIgnoredFiles {
+		ignores = initGitIgnore(dir)
+	}
+	return walkDir(dir, ignores, fn)
 }
 
 // Depth-first walk of dir executing fn after each entry.

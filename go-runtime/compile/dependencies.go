@@ -24,7 +24,7 @@ func extractDependenciesAndImports(config moduleconfig.AbsModuleConfig) (deps []
 	importsMap := map[string]bool{}
 	dependencies := map[string]bool{}
 	fset := token.NewFileSet()
-	err = watch.WalkDir(config.Dir, func(path string, d fs.DirEntry) error {
+	err = watch.WalkDir(config.Dir, true, func(path string, d fs.DirEntry) error {
 		if !d.IsDir() {
 			return nil
 		}
