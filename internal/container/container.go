@@ -83,6 +83,18 @@ func Run(ctx context.Context, image, name string, hostPort, containerPort int, v
 		return err
 	}
 
+	exists, err := DoesExist(ctx, name, optional.Some(image))
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		err = Pull(ctx, image)
+		if err != nil {
+			return err
+		}
+	}
+
 	config := container.Config{
 		Image: image,
 	}
