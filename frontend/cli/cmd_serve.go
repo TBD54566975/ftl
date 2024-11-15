@@ -121,11 +121,13 @@ func (s *serveCmd) run(
 	if !s.DisableGrafana && !bool(s.ObservabilityConfig.ExportOTEL) {
 		err := dev.SetupGrafana(ctx, s.GrafanaImage)
 		if err != nil {
-			return fmt.Errorf("failed to setup grafana image: %w", err)
+			logger.Errorf(err, "Failed to setup grafana image")
+		} else {
+			logger.Infof("Grafana started at http://localhost:3000")
+			os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+			os.Setenv("OTEL_METRIC_EXPORT_INTERVAL", "1000")
+			s.ObservabilityConfig.ExportOTEL = true
 		}
-		os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
-		os.Setenv("OTEL_METRIC_EXPORT_INTERVAL", "1000")
-		s.ObservabilityConfig.ExportOTEL = true
 	}
 	err := observability.Init(ctx, false, "", "ftl-serve", ftl.Version, s.ObservabilityConfig)
 	if err != nil {
