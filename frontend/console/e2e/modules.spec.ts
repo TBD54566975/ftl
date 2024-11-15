@@ -6,6 +6,7 @@ test('shows active modules', async ({ page }) => {
   await modulesNavItem.click()
   await expect(page).toHaveURL(/\/modules$/)
 
+  await page.waitForSelector('[data-module-row]')
   const moduleNames = await page.$$eval('[data-module-row]', (elements) => elements.map((el) => el.getAttribute('data-module-row')))
 
   const expectedModuleNames = ['cron', 'time', 'pubsub', 'http', 'echo']
