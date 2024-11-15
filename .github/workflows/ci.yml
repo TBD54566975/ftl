@@ -280,6 +280,8 @@ jobs:
         run: just pnpm-install
       - name: Build Language Plugins
         run: just build-language-plugins
+      - name: Pull Registry
+        run: docker image pull registry:2
       - name: Console e2e
         run: just e2e-frontend
   integration-shard:

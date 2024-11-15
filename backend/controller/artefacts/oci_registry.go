@@ -3,43 +3,42 @@ package artefacts
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	googleremote "github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content"
+	"oras.land/oras-go/v2/content/memory"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 
-	"github.com/TBD54566975/ftl/backend/controller/artefacts/internal/sql"
-	"github.com/TBD54566975/ftl/backend/libdal"
-	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/sha256"
 )
 
-const (
-	ModuleBlobsPrefix = "ftl/modules/"
-)
+var _ Service = &OCIArtefactService{}
 
-type ContainerConfig struct {
-	Registry       string `help:"OCI container registry host:port" env:"FTL_ARTEFACTS_REGISTRY"`
-	Username       string `help:"OCI container registry username" env:"FTL_ARTEFACTS_USER"`
-	Password       string `help:"OCI container registry password" env:"FTL_ARTEFACTS_PWD"`
-	AllowPlainHTTP bool   `help:"Allows OCI container requests to accept plain HTTP responses" env:"FTL_ARTEFACTS_ALLOW_HTTP"`
+type RegistryConfig struct {
+	Registry      string `help:"OCI container registry, in the form host[:port]/repository" env:"FTL_ARTEFACT_REGISTRY"`
+	Username      string `help:"OCI container registry username" env:"FTL_ARTEFACT_REGISTRY_USERNAME"`
+	Password      string `help:"OCI container registry password" env:"FTL_ARTEFACT_REGISTRY_PASSWORD"`
+	AllowInsecure bool   `help:"Allows the use of insecure HTTP based registries." env:"FTL_ARTEFACT_REGISTRY_ALLOW_INSECURE"`
 }
 
-type ContainerService struct {
-	host        string
-	repoFactory func() (*remote.Repository, error)
-
-	// in the interim releases and artefacts will continue to be linked via the `deployment_artefacts` table
-	Handle *libdal.Handle[ContainerService]
-	db     sql.Querier
+type OCIArtefactService struct {
+	repository    string
+	repoFactory   func() (*remote.Repository, error)
+	auth          authn.AuthConfig
+	allowInsecure bool
 }
 
 type ArtefactRepository struct {
@@ -56,13 +55,16 @@ type ArtefactBlobs struct {
 	Size      int64
 }
 
-func NewContainerService(c ContainerConfig, conn libdal.Connection) *ContainerService {
+func NewForTesting() *OCIArtefactService {
+	return NewOCIRegistryStorage(RegistryConfig{Registry: "127.0.0.1:15000/ftl-tests", AllowInsecure: true})
+}
+
+func NewOCIRegistryStorage(c RegistryConfig) *OCIArtefactService {
 	// Connect the registry targeting the specified container
 	repoFactory := func() (*remote.Repository, error) {
-		ref := fmt.Sprintf("%s/%s", c.Registry, ModuleBlobsPrefix)
-		reg, err := remote.NewRepository(ref)
+		reg, err := remote.NewRepository(c.Registry)
 		if err != nil {
-			return nil, fmt.Errorf("unable to connect to container registry '%s': %w", ref, err)
+			return nil, fmt.Errorf("unable to connect to container registry '%s': %w", c.Registry, err)
 		}
 
 		reg.Client = &auth.Client{
@@ -73,29 +75,23 @@ func NewContainerService(c ContainerConfig, conn libdal.Connection) *ContainerSe
 				Password: c.Password,
 			}),
 		}
-		reg.PlainHTTP = c.AllowPlainHTTP
+		reg.PlainHTTP = c.AllowInsecure
 
 		return reg, nil
 	}
 
-	return &ContainerService{
-		host:        c.Registry,
-		repoFactory: repoFactory,
-		Handle: libdal.New(conn, func(h *libdal.Handle[ContainerService]) *ContainerService {
-			return &ContainerService{
-				host:        c.Registry,
-				repoFactory: repoFactory,
-				Handle:      h,
-				db:          sql.New(h.Connection),
-			}
-		}),
+	return &OCIArtefactService{
+		repository:    c.Registry,
+		repoFactory:   repoFactory,
+		auth:          authn.AuthConfig{Username: c.Username, Password: c.Password},
+		allowInsecure: c.AllowInsecure,
 	}
 }
 
-func (s *ContainerService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
+func (s *OCIArtefactService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
 	repo, err := s.repoFactory()
 	if err != nil {
-		return nil, nil, fmt.Errorf("unable to connect to container registry '%s': %w", s.host, err)
+		return nil, nil, fmt.Errorf("unable to connect to container registry '%s': %w", s.repository, err)
 	}
 	set := make(map[sha256.SHA256]bool)
 	for _, d := range digests {
@@ -122,45 +118,101 @@ func (s *ContainerService) GetDigestsKeys(ctx context.Context, digests []sha256.
 }
 
 // Upload uploads the specific artifact as a raw blob and links it to a manifest to prevent GC
-func (s *ContainerService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
+func (s *OCIArtefactService) Upload(ctx context.Context, artefact Artefact) (sha256.SHA256, error) {
 	repo, err := s.repoFactory()
+	logger := log.FromContext(ctx)
 	if err != nil {
-		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s': %w", s.host, err)
+		return sha256.SHA256{}, fmt.Errorf("unable to connect to repository '%s': %w", s.repository, err)
 	}
-	desc := content.NewDescriptorFromBytes("application/x-octet-stream", artefact.Content)
-	if err = repo.Push(ctx, desc, bytes.NewReader(artefact.Content)); err != nil {
-		return sha256.SHA256{}, fmt.Errorf("unable to upload module blob to repository: %w", err)
+
+	// 2. Pack the files and tag the packed manifest
+	artifactType := "application/vnd.ftl.artifact"
+
+	store := memory.New()
+	desc, err := pushBlob(ctx, artifactType, artefact.Content, store)
+	if err != nil {
+		return sha256.SHA256{}, fmt.Errorf("unable to push to in memory repository %w", err)
 	}
+	tag := desc.Digest.Hex()
+	parseSHA256, err := sha256.ParseSHA256(tag)
+	if err != nil {
+		return sha256.SHA256{}, fmt.Errorf("unable to parse sha %w", err)
+	}
+	artefact.Digest = parseSHA256
+	logger.Debugf("Tagging module blob with digest '%s'", tag)
+
+	fileDescriptors := []ocispec.Descriptor{desc}
+	var configBlob []byte
+	configDesc, err := pushBlob(ctx, ocispec.MediaTypeImageConfig, configBlob, store) // push config blob
+	if err != nil {
+		return sha256.SHA256{}, fmt.Errorf("unable to push config to in memory repository %w", err)
+	}
+	manifestBlob, err := generateManifestContent(configDesc, fileDescriptors...)
+	if err != nil {
+		return sha256.SHA256{}, fmt.Errorf("unable to generate manifest content %w", err)
+	}
+	manifestDesc, err := pushBlob(ctx, ocispec.MediaTypeImageManifest, manifestBlob, store) // push manifest blob
+	if err != nil {
+		return sha256.SHA256{}, fmt.Errorf("unable to push manifest to in memory repository %w", err)
+	}
+	if err = store.Tag(ctx, manifestDesc, tag); err != nil {
+		return sha256.SHA256{}, fmt.Errorf("unable to tag in memory repository %w", err)
+	}
+
+	// 4. Copy from the file store to the remote repository
+	_, err = oras.Copy(ctx, store, tag, repo, tag, oras.DefaultCopyOptions)
+	if err != nil {
+		return sha256.SHA256{}, fmt.Errorf("unable to upload artifact: %w", err)
+	}
+
 	return artefact.Digest, nil
 }
 
-func (s *ContainerService) Download(ctx context.Context, digest sha256.SHA256) (io.ReadCloser, error) {
-	ref := createModuleRepositoryPathFromDigest(digest)
-	registry, err := s.repoFactory()
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to registry '%s/%s': %w", s.host, ref, err)
+func (s *OCIArtefactService) Download(ctx context.Context, dg sha256.SHA256) (io.ReadCloser, error) {
+	// ORAS is really annoying, and needs you to know the size of the blob you're downloading
+	// So we are using google's go-containerregistry to do the actual download
+	// This is not great, we should remove oras at some point
+	opts := []name.Option{}
+	if s.allowInsecure {
+		opts = append(opts, name.Insecure)
 	}
-	_, stream, err := oras.Fetch(ctx, registry, createModuleRepositoryReferenceFromDigest(s.host, digest), oras.DefaultFetchOptions)
+	newDigest, err := name.NewDigest(fmt.Sprintf("%s@sha256:%s", s.repository, dg.String()), opts...)
 	if err != nil {
-		return nil, fmt.Errorf("unable to download artefact: %w", err)
+		return nil, fmt.Errorf("unable to create digest '%s': %w", dg, err)
 	}
-	return stream, nil
+	layer, err := googleremote.Layer(newDigest, googleremote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		return nil, fmt.Errorf("unable to read layer '%s': %w", newDigest, err)
+	}
+	uncompressed, err := layer.Uncompressed()
+	if err != nil {
+		return nil, fmt.Errorf("unable to read uncompressed layer '%s': %w", newDigest, err)
+	}
+	return uncompressed, nil
 }
 
-func (s *ContainerService) GetReleaseArtefacts(ctx context.Context, releaseID int64) ([]ReleaseArtefact, error) {
-	return getDatabaseReleaseArtefacts(ctx, s.db, releaseID)
+func pushBlob(ctx context.Context, mediaType string, blob []byte, target oras.Target) (desc ocispec.Descriptor, err error) {
+	desc = ocispec.Descriptor{ // Generate descriptor based on the media type and blob content
+		MediaType: mediaType,
+		Digest:    digest.FromBytes(blob), // Calculate digest
+		Size:      int64(len(blob)),       // Include blob size
+	}
+	err = target.Push(ctx, desc, bytes.NewReader(blob)) // Push the blob to the registry target
+	if err != nil {
+		return desc, fmt.Errorf("unable to push blob: %w", err)
+	}
+	return desc, nil
 }
 
-func (s *ContainerService) AddReleaseArtefact(ctx context.Context, key model.DeploymentKey, ra ReleaseArtefact) error {
-	return addReleaseArtefacts(ctx, s.db, key, ra)
-}
-
-// createModuleRepositoryPathFromDigest creates the path to the repository, relative to the registries root
-func createModuleRepositoryPathFromDigest(digest sha256.SHA256) string {
-	return fmt.Sprintf("%s/%s:latest", ModuleBlobsPrefix, hex.EncodeToString(digest[:]))
-}
-
-// createModuleRepositoryReferenceFromDigest creates the URL used to connect to the repository
-func createModuleRepositoryReferenceFromDigest(host string, digest sha256.SHA256) string {
-	return fmt.Sprintf("%s/%s", host, createModuleRepositoryPathFromDigest(digest))
+func generateManifestContent(config ocispec.Descriptor, layers ...ocispec.Descriptor) ([]byte, error) {
+	content := ocispec.Manifest{
+		Config:    config, // Set config blob
+		Layers:    layers, // Set layer blobs
+		Versioned: specs.Versioned{SchemaVersion: 2},
+	}
+	json, err := json.Marshal(content)
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal manifest content: %w", err)
+	}
+	return json, nil // Get json content
 }

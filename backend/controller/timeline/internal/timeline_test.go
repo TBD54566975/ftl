@@ -33,10 +33,10 @@ func TestTimeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := timeline2.New(ctx, conn, encryption)
-	registry := artefacts.New(conn)
 	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timeline)
 
-	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
+	registry := artefacts.NewForTesting()
+	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, registry)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 
@@ -318,9 +318,9 @@ func TestDeleteOldEvents(t *testing.T) {
 	assert.NoError(t, err)
 
 	timeline := timeline2.New(ctx, conn, encryption)
-	registry := artefacts.New(conn)
+	registry := artefacts.NewForTesting()
 	pubSub := pubsub.New(ctx, conn, encryption, optional.None[pubsub.AsyncCallListener](), timeline)
-	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub)
+	controllerDAL := controllerdal.New(ctx, conn, encryption, pubSub, registry)
 
 	var testContent = bytes.Repeat([]byte("sometestcontentthatislongerthanthereadbuffer"), 100)
 	var testSha sha256.SHA256

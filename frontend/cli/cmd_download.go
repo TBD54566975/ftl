@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/internal/download"
@@ -14,5 +15,9 @@ type downloadCmd struct {
 }
 
 func (d *downloadCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
-	return download.Artefacts(ctx, client, d.Deployment, d.Dest)
+	err := download.Artefacts(ctx, client, d.Deployment, d.Dest)
+	if err != nil {
+		return fmt.Errorf("failed to download artefacts: %w", err)
+	}
+	return nil
 }

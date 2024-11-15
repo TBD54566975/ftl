@@ -154,13 +154,6 @@ sql:
         out: "internal/configuration/dal/internal/sql"
   - <<: *daldir
     queries:
-      - backend/controller/artefacts/internal/sql/queries.sql
-    gen:
-      go:
-        <<: *gengo
-        out: "backend/controller/artefacts/internal/sql"
-  - <<: *daldir
-    queries:
       - backend/controller/leases/dbleaser/internal/sql/queries.sql
     gen:
       go:

@@ -11,6 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/TBD54566975/ftl/backend/controller"
+	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -26,13 +27,14 @@ import (
 )
 
 type boxRunCmd struct {
-	Recreate          bool          `help:"Recreate the database."`
-	DSN               string        `help:"DSN for the database." default:"${boxdsn}" env:"FTL_CONTROLLER_DSN"`
-	IngressBind       *url.URL      `help:"Bind address for the ingress server." default:"http://0.0.0.0:8891" env:"FTL_INGRESS_BIND"`
-	Bind              *url.URL      `help:"Bind address for the FTL controller." default:"http://0.0.0.0:8892" env:"FTL_BIND"`
-	RunnerBase        *url.URL      `help:"Base bind address for FTL runners." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
-	Dir               string        `arg:"" help:"Directory to scan for precompiled modules." default:"."`
-	ControllerTimeout time.Duration `help:"Timeout for Controller start." default:"30s"`
+	Recreate          bool                     `help:"Recreate the database."`
+	DSN               string                   `help:"DSN for the database." default:"${boxdsn}" env:"FTL_CONTROLLER_DSN"`
+	IngressBind       *url.URL                 `help:"Bind address for the ingress server." default:"http://0.0.0.0:8891" env:"FTL_INGRESS_BIND"`
+	Bind              *url.URL                 `help:"Bind address for the FTL controller." default:"http://0.0.0.0:8892" env:"FTL_BIND"`
+	RunnerBase        *url.URL                 `help:"Base bind address for FTL runners." default:"http://127.0.0.1:8893" env:"FTL_RUNNER_BIND"`
+	Dir               string                   `arg:"" help:"Directory to scan for precompiled modules." default:"."`
+	ControllerTimeout time.Duration            `help:"Timeout for Controller start." default:"30s"`
+	Registry          artefacts.RegistryConfig `embed:"" prefix:"oci-"`
 }
 
 func (b *boxRunCmd) Run(
@@ -58,7 +60,7 @@ func (b *boxRunCmd) Run(
 	if err != nil {
 		return fmt.Errorf("failed to create runner port allocator: %w", err)
 	}
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, []*url.URL{b.Bind}, "", false)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, []*url.URL{b.Bind}, "", false, b.Registry)
 	if err != nil {
 		return fmt.Errorf("failed to create runner autoscaler: %w", err)
 	}

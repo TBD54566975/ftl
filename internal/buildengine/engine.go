@@ -299,7 +299,7 @@ func New(ctx context.Context, client DeployClient, projectConfig projectconfig.C
 		return e, nil
 	}
 	schemaSync := e.startSchemaSync(ctx)
-	go rpc.RetryStreamingServerStream(ctx, backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync, rpc.AlwaysRetry())
+	go rpc.RetryStreamingServerStream(ctx, "build-engine", backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync, rpc.AlwaysRetry())
 	return e, nil
 }
 
