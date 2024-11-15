@@ -22,6 +22,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/localdebug"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
+	"github.com/TBD54566975/ftl/internal/observability"
 )
 
 var _ scaling.RunnerScaling = &localScaling{}
@@ -42,6 +43,7 @@ type localScaling struct {
 	prevRunnerSuffix int
 	ideSupport       optional.Option[localdebug.IDEIntegration]
 	registryConfig   artefacts.RegistryConfig
+	enableOtel       bool
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
@@ -82,7 +84,7 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, registryConfig artefacts.RegistryConfig) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, registryConfig artefacts.RegistryConfig, enableOtel bool) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
@@ -97,6 +99,7 @@ func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*u
 		prevRunnerSuffix:    -1,
 		debugPorts:          map[string]*localdebug.DebugInfo{},
 		registryConfig:      registryConfig,
+		enableOtel:          enableOtel,
 	}
 	if enableIDEIntegration && configPath != "" {
 		local.ideSupport = optional.Ptr(localdebug.NewIDEIntegration(configPath))
@@ -201,6 +204,9 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		Deployment:         deploymentKey,
 		DebugPort:          debugPort,
 		Registry:           l.registryConfig,
+		ObservabilityConfig: observability.Config{
+			ExportOTEL: observability.ExportOTELFlag(l.enableOtel),
+		},
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)

@@ -280,25 +280,6 @@ debug *args:
   dlv_pid=$!
   wait "$dlv_pid"
 
-# Run `ftl dev` with the given args after setting the necessary envar.
-otel-dev *args:
-  #!/bin/bash
-  set -euo pipefail
-
-  export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${OTEL_GRPC_PORT}"
-  export OTEL_METRIC_EXPORT_INTERVAL=${OTEL_METRIC_EXPORT_INTERVAL}
-  # Uncomment this line for much richer debug logs
-  # export FTL_O11Y_LOG_LEVEL="debug"
-  ftl dev {{args}}
-
-# runs the otel-lgtm observability stack locallt which includes
-# an otel collector, loki (for logs), prometheus metrics db (for metrics), tempo (trace storage) and grafana (for visualization)
-observe:
-  docker compose up otel-lgtm
-
-observe-stop:
-  docker compose down otel-lgtm
-
 localstack:
     docker compose up localstack -d --wait
 

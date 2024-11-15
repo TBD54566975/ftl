@@ -33,7 +33,7 @@ func SetupRegistry(ctx context.Context, image string, port int) error {
 			return fmt.Errorf("failed to close listener: %w", err)
 		}
 
-		err = container.Run(ctx, image, ftlRegistryName, port, 5000, optional.None[string]())
+		err = container.Run(ctx, image, ftlRegistryName, map[int]int{port: 5000}, optional.None[string]())
 		if err != nil {
 			return fmt.Errorf("failed to run registry container: %w", err)
 		}
@@ -54,7 +54,7 @@ func SetupRegistry(ctx context.Context, image string, port int) error {
 		logger.Debugf("Reusing existing docker container %s on port %d for image registry", ftlRegistryName, port)
 	}
 
-	err = WaitForRegistryReady(ctx, port)
+	err = WaitForPortReady(ctx, port)
 	if err != nil {
 		return fmt.Errorf("registry container failed to be healthy: %w", err)
 	}
@@ -62,16 +62,16 @@ func SetupRegistry(ctx context.Context, image string, port int) error {
 	return nil
 }
 
-func WaitForRegistryReady(ctx context.Context, port int) error {
+func WaitForPortReady(ctx context.Context, port int) error {
 
 	timeout := time.After(10 * time.Minute)
 	retry := time.NewTicker(5 * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("context cancelled waiting for registry")
+			return fmt.Errorf("context cancelled waiting for container")
 		case <-timeout:
-			return fmt.Errorf("timed out waiting for registry to be healthy")
+			return fmt.Errorf("timed out waiting for container to be healthy")
 		case <-retry.C:
 			url := fmt.Sprintf("http://127.0.0.1:%d", port)
 

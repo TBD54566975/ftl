@@ -19,8 +19,6 @@ services:
       retries: 60
       start_period: 80s
   otel-lgtm:
-    profiles:
-      - infra
     image: grafana/otel-lgtm
     platform: linux/amd64
     ports:
