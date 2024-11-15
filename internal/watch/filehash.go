@@ -60,8 +60,9 @@ func CompareFileHashes(oldFiles, newFiles FileHashes) []FileChange {
 	return changes
 }
 
-// ComputeFileHashes computes the SHA256 hash of all (non-git-ignored) files in
-// the given directory.
+// ComputeFileHashes computes the SHA256 hash of all files in the given directory.
+//
+// If skipGitIgnoredFiles is true, files that are ignored by git will be skipped.
 func ComputeFileHashes(dir string, skipGitIgnoredFiles bool, patterns []string) (FileHashes, error) {
 	// Watch paths are allowed to be outside the deploy directory.
 	fileHashes := make(FileHashes)
