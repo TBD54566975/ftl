@@ -6,11 +6,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/alecthomas/assert/v2"
+
 	"github.com/TBD54566975/ftl/internal/exec"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
-	"github.com/alecthomas/assert/v2"
 )
 
 func TestBuild(t *testing.T) {
@@ -19,7 +20,7 @@ func TestBuild(t *testing.T) {
 	assert.NoError(t, err)
 	ctx := log.ContextWithNewDefaultLogger(context.Background())
 	assert.NoError(t, os.RemoveAll(filepath.Join(moduleDir, ".venv")))
-	assert.NoError(t, exec.Command(ctx, log.Debug, moduleDir, "uv", "sync", "-n").Run())
+	assert.NoError(t, exec.Command(ctx, log.Debug, moduleDir, "uv", "sync").Run())
 
 	t.Run("schema extraction", func(t *testing.T) {
 		config := moduleconfig.AbsModuleConfig{
