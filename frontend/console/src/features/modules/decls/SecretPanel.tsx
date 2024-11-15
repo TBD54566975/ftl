@@ -9,9 +9,7 @@ export const SecretPanel = ({ value, schema, moduleName, declName }: { value: Se
   }
   return (
     <div className='py-2 px-4'>
-      <PanelHeader exported={false} comments={value.secret?.comments}>
-        Secret: {moduleName}.{declName}
-      </PanelHeader>
+      <PanelHeader title='Secret' declRef={`${moduleName}.${declName}`} exported={false} comments={value.secret?.comments} />
       <div className='-mx-3.5'>
         <Schema schema={schema} />
       </div>

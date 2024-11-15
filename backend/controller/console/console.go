@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/TBD54566975/ftl/backend/controller/admin"
 	"github.com/TBD54566975/ftl/backend/controller/dal"
 	dalmodel "github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/backend/controller/timeline"
@@ -29,14 +30,16 @@ import (
 type ConsoleService struct {
 	dal      *dal.DAL
 	timeline *timeline.Service
+	admin    *admin.AdminService
 }
 
 var _ pbconsoleconnect.ConsoleServiceHandler = (*ConsoleService)(nil)
 
-func NewService(dal *dal.DAL, timeline *timeline.Service) *ConsoleService {
+func NewService(dal *dal.DAL, timeline *timeline.Service, admin *admin.AdminService) *ConsoleService {
 	return &ConsoleService{
 		dal:      dal,
 		timeline: timeline,
+		admin:    admin,
 	}
 }
 
@@ -888,6 +891,35 @@ func eventDALToProto(event timeline.Event) *pbconsole.Event {
 	default:
 		panic(fmt.Errorf("unknown event type %T", event))
 	}
+}
+
+func (c *ConsoleService) GetConfig(ctx context.Context, req *connect.Request[pbconsole.GetConfigRequest]) (*connect.Response[pbconsole.GetConfigResponse], error) {
+	resp, err := c.admin.ConfigGet(ctx, connect.NewRequest(&ftlv1.GetConfigRequest{
+		Ref: &ftlv1.ConfigRef{
+			Module: req.Msg.Module,
+			Name:   req.Msg.Name,
+		},
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get config: %w", err)
+	}
+	return connect.NewResponse(&pbconsole.GetConfigResponse{
+		Value: resp.Msg.Value,
+	}), nil
+}
+
+func (c *ConsoleService) SetConfig(ctx context.Context, req *connect.Request[pbconsole.SetConfigRequest]) (*connect.Response[pbconsole.SetConfigResponse], error) {
+	_, err := c.admin.ConfigSet(ctx, connect.NewRequest(&ftlv1.SetConfigRequest{
+		Ref: &ftlv1.ConfigRef{
+			Module: req.Msg.Module,
+			Name:   req.Msg.Name,
+		},
+		Value: req.Msg.Value,
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("failed to set config: %w", err)
+	}
+	return connect.NewResponse(&pbconsole.SetConfigResponse{}), nil
 }
 
 func graph(sch *schema.Schema) map[string][]string {

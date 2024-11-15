@@ -324,6 +324,25 @@ message GetEventsResponse {
   optional int64 cursor = 2;
 }
 
+message GetConfigRequest {
+  string name = 1;
+  optional string module = 2;
+}
+
+message GetConfigResponse {
+  bytes value = 1;
+}
+
+message SetConfigRequest {
+  string name = 1;
+  optional string module = 2;
+  bytes value = 3;
+}
+
+message SetConfigResponse {
+  bytes value = 1;
+}
+
 service ConsoleService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -334,4 +353,7 @@ service ConsoleService {
   rpc StreamModules(StreamModulesRequest) returns (stream StreamModulesResponse);
   rpc StreamEvents(StreamEventsRequest) returns (stream StreamEventsResponse);
   rpc GetEvents(EventsQuery) returns (GetEventsResponse);
+
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
 }

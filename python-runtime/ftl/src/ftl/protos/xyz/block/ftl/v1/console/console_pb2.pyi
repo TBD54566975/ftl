@@ -519,3 +519,33 @@ class GetEventsResponse(_message.Message):
     events: _containers.RepeatedCompositeFieldContainer[Event]
     cursor: int
     def __init__(self, events: _Optional[_Iterable[_Union[Event, _Mapping]]] = ..., cursor: _Optional[int] = ...) -> None: ...
+
+class GetConfigRequest(_message.Message):
+    __slots__ = ("name", "module")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    MODULE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    module: str
+    def __init__(self, name: _Optional[str] = ..., module: _Optional[str] = ...) -> None: ...
+
+class GetConfigResponse(_message.Message):
+    __slots__ = ("value",)
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    value: bytes
+    def __init__(self, value: _Optional[bytes] = ...) -> None: ...
+
+class SetConfigRequest(_message.Message):
+    __slots__ = ("name", "module", "value")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    MODULE_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    module: str
+    value: bytes
+    def __init__(self, name: _Optional[str] = ..., module: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
+
+class SetConfigResponse(_message.Message):
+    __slots__ = ("value",)
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    value: bytes
+    def __init__(self, value: _Optional[bytes] = ...) -> None: ...

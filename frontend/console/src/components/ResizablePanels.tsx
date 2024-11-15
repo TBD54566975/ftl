@@ -12,8 +12,9 @@ interface ResizablePanelsProps {
   topBarHeight?: number
   rightPanelHeader: React.ReactNode
   rightPanelPanels: ExpandablePanelProps[]
-  bottomPanelContent: React.ReactNode
+  bottomPanelContent?: React.ReactNode
   mainContent: React.ReactNode
+  storageKeyPrefix?: string
 }
 
 export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
@@ -25,9 +26,10 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
   rightPanelPanels,
   bottomPanelContent,
   mainContent,
+  storageKeyPrefix = 'default',
 }) => {
-  const [rightPanelWidth, setRightPanelWidth] = useLocalStorage<number>('rightPanelWidth', initialRightPanelWidth)
-  const [bottomPanelHeight, setBottomPanelHeight] = useLocalStorage<number>('bottomPanelHeight', initialBottomPanelHeight)
+  const [rightPanelWidth, setRightPanelWidth] = useLocalStorage<number>(`${storageKeyPrefix}_rightPanelWidth`, initialRightPanelWidth)
+  const [bottomPanelHeight, setBottomPanelHeight] = useLocalStorage<number>(`${storageKeyPrefix}_bottomPanelHeight`, initialBottomPanelHeight)
 
   const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false)
   const [isDraggingVertical, setIsDraggingVertical] = useState(false)
@@ -72,7 +74,12 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
       onMouseLeave={stopDragging}
     >
       <div className='flex flex-1'>
-        <div style={{ maxHeight: `calc(100vh - ${bottomPanelHeight + 46}px)` }} className='flex-1 flex-col min-h-64'>
+        <div
+          style={{
+            maxHeight: bottomPanelContent ? `calc(100vh - ${bottomPanelHeight + 46}px)` : '100vh',
+          }}
+          className='flex-1 flex-col min-h-64'
+        >
           {mainContent}
         </div>
         <div
@@ -81,20 +88,27 @@ export const ResizablePanels: React.FC<ResizablePanelsProps> = ({
           style={{ width: '3px', cursor: 'col-resize' }}
         />
         <div
-          style={{ width: `${rightPanelWidth}px`, maxHeight: `calc(100vh - ${bottomPanelHeight + 46}px)` }}
+          style={{
+            width: `${rightPanelWidth}px`,
+            maxHeight: bottomPanelContent ? `calc(100vh - ${bottomPanelHeight + 46}px)` : '100vh',
+          }}
           className='flex flex-col h-full overflow-y-scroll'
         >
           <RightPanel header={rightPanelHeader} panels={rightPanelPanels} />
         </div>
       </div>
-      <div
-        className='cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600'
-        onMouseDown={startDraggingVertical}
-        style={{ height: '3px', cursor: 'row-resize' }}
-      />
-      <div style={{ height: `${bottomPanelHeight}px` }} className='overflow-auto'>
-        {bottomPanelContent}
-      </div>
+      {bottomPanelContent && (
+        <>
+          <div
+            className='cursor-row-resize bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600'
+            onMouseDown={startDraggingVertical}
+            style={{ height: '3px', cursor: 'row-resize' }}
+          />
+          <div style={{ height: `${bottomPanelHeight}px` }} className='overflow-auto'>
+            {bottomPanelContent}
+          </div>
+        </>
+      )}
     </div>
   )
 }
