@@ -168,7 +168,7 @@ func Start(
 	logger.Debugf("Advertising as %s", config.Advertise)
 
 	admin := admin.NewAdminService(cm, sm, svc.dal)
-	console := console.NewService(svc.dal, svc.timeline)
+	console := console.NewService(svc.dal, svc.timeline, admin)
 
 	ingressHandler := otelhttp.NewHandler(http.Handler(svc), "ftl.ingress")
 	if len(config.AllowOrigins) > 0 {

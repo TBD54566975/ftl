@@ -1,3 +1,4 @@
+import { ResizablePanels } from '../../../components/ResizablePanels'
 import type { Data } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { Schema } from '../schema/Schema'
 import { PanelHeader } from './PanelHeader'
@@ -11,17 +12,30 @@ export const DataPanel = ({ value, schema, moduleName, declName }: { value: Data
   if (!decl) {
     return
   }
-  const maybeTypeParams = decl.typeParameters.length === 0 ? '' : `<${decl.typeParameters.map((p) => p.name).join(', ')}>`
+
   return (
-    <div className='py-2 px-4'>
-      <PanelHeader exported={decl.export} comments={decl.comments}>
-        data: {moduleName}.{declName}
-        {maybeTypeParams}
-      </PanelHeader>
-      <div className='-mx-3.5'>
-        <Schema schema={schema} />
-      </div>
-      <References references={value.references} />
+    <div className='h-full'>
+      <ResizablePanels
+        mainContent={
+          <div className='p-4'>
+            <div className=''>
+              <PanelHeader title='Data' declRef={`${moduleName}.${declName}`} exported={decl.export} comments={decl.comments} />
+              <div className='-mx-3.5'>
+                <Schema schema={schema} />
+              </div>
+            </div>
+          </div>
+        }
+        rightPanelHeader={undefined}
+        rightPanelPanels={[
+          {
+            title: 'References',
+            expanded: true,
+            children: <References references={value.references} />,
+          },
+        ]}
+        storageKeyPrefix='dataPanel'
+      />
     </div>
   )
 }

@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { EventsQuery, GetEventsResponse, GetModulesRequest, GetModulesResponse, StreamEventsRequest, StreamEventsResponse, StreamModulesRequest, StreamModulesResponse } from "./console_pb.js";
+import { EventsQuery, GetConfigRequest, GetConfigResponse, GetEventsResponse, GetModulesRequest, GetModulesResponse, SetConfigRequest, SetConfigResponse, StreamEventsRequest, StreamEventsResponse, StreamModulesRequest, StreamModulesResponse } from "./console_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.console.ConsoleService
@@ -59,6 +59,24 @@ export const ConsoleService = {
       name: "GetEvents",
       I: EventsQuery,
       O: GetEventsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetConfig
+     */
+    getConfig: {
+      name: "GetConfig",
+      I: GetConfigRequest,
+      O: GetConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.SetConfig
+     */
+    setConfig: {
+      name: "SetConfig",
+      I: SetConfigRequest,
+      O: SetConfigResponse,
       kind: MethodKind.Unary,
     },
   }

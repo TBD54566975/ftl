@@ -6,9 +6,7 @@ import { References } from './References'
 export const DatabasePanel = ({ value, schema, moduleName, declName }: { value: Database; schema: string; moduleName: string; declName: string }) => {
   return (
     <div className='py-2 px-4'>
-      <PanelHeader exported={false} comments={value.database?.comments}>
-        Database: {moduleName}.{declName}
-      </PanelHeader>
+      <PanelHeader title='Database' declRef={`${moduleName}.${declName}`} exported={false} comments={value.database?.comments} />
       <div className='-mx-3.5'>
         <Schema schema={schema} />
       </div>

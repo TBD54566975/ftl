@@ -48,6 +48,12 @@ const (
 	// ConsoleServiceGetEventsProcedure is the fully-qualified name of the ConsoleService's GetEvents
 	// RPC.
 	ConsoleServiceGetEventsProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetEvents"
+	// ConsoleServiceGetConfigProcedure is the fully-qualified name of the ConsoleService's GetConfig
+	// RPC.
+	ConsoleServiceGetConfigProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetConfig"
+	// ConsoleServiceSetConfigProcedure is the fully-qualified name of the ConsoleService's SetConfig
+	// RPC.
+	ConsoleServiceSetConfigProcedure = "/xyz.block.ftl.v1.console.ConsoleService/SetConfig"
 )
 
 // ConsoleServiceClient is a client for the xyz.block.ftl.v1.console.ConsoleService service.
@@ -58,6 +64,8 @@ type ConsoleServiceClient interface {
 	StreamModules(context.Context, *connect.Request[console.StreamModulesRequest]) (*connect.ServerStreamForClient[console.StreamModulesResponse], error)
 	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest]) (*connect.ServerStreamForClient[console.StreamEventsResponse], error)
 	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
+	GetConfig(context.Context, *connect.Request[console.GetConfigRequest]) (*connect.Response[console.GetConfigResponse], error)
+	SetConfig(context.Context, *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error)
 }
 
 // NewConsoleServiceClient constructs a client for the xyz.block.ftl.v1.console.ConsoleService
@@ -96,6 +104,16 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceGetEventsProcedure,
 			opts...,
 		),
+		getConfig: connect.NewClient[console.GetConfigRequest, console.GetConfigResponse](
+			httpClient,
+			baseURL+ConsoleServiceGetConfigProcedure,
+			opts...,
+		),
+		setConfig: connect.NewClient[console.SetConfigRequest, console.SetConfigResponse](
+			httpClient,
+			baseURL+ConsoleServiceSetConfigProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -106,6 +124,8 @@ type consoleServiceClient struct {
 	streamModules *connect.Client[console.StreamModulesRequest, console.StreamModulesResponse]
 	streamEvents  *connect.Client[console.StreamEventsRequest, console.StreamEventsResponse]
 	getEvents     *connect.Client[console.EventsQuery, console.GetEventsResponse]
+	getConfig     *connect.Client[console.GetConfigRequest, console.GetConfigResponse]
+	setConfig     *connect.Client[console.SetConfigRequest, console.SetConfigResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.console.ConsoleService.Ping.
@@ -133,6 +153,16 @@ func (c *consoleServiceClient) GetEvents(ctx context.Context, req *connect.Reque
 	return c.getEvents.CallUnary(ctx, req)
 }
 
+// GetConfig calls xyz.block.ftl.v1.console.ConsoleService.GetConfig.
+func (c *consoleServiceClient) GetConfig(ctx context.Context, req *connect.Request[console.GetConfigRequest]) (*connect.Response[console.GetConfigResponse], error) {
+	return c.getConfig.CallUnary(ctx, req)
+}
+
+// SetConfig calls xyz.block.ftl.v1.console.ConsoleService.SetConfig.
+func (c *consoleServiceClient) SetConfig(ctx context.Context, req *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error) {
+	return c.setConfig.CallUnary(ctx, req)
+}
+
 // ConsoleServiceHandler is an implementation of the xyz.block.ftl.v1.console.ConsoleService
 // service.
 type ConsoleServiceHandler interface {
@@ -142,6 +172,8 @@ type ConsoleServiceHandler interface {
 	StreamModules(context.Context, *connect.Request[console.StreamModulesRequest], *connect.ServerStream[console.StreamModulesResponse]) error
 	StreamEvents(context.Context, *connect.Request[console.StreamEventsRequest], *connect.ServerStream[console.StreamEventsResponse]) error
 	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
+	GetConfig(context.Context, *connect.Request[console.GetConfigRequest]) (*connect.Response[console.GetConfigResponse], error)
+	SetConfig(context.Context, *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error)
 }
 
 // NewConsoleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -176,6 +208,16 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 		svc.GetEvents,
 		opts...,
 	)
+	consoleServiceGetConfigHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetConfigProcedure,
+		svc.GetConfig,
+		opts...,
+	)
+	consoleServiceSetConfigHandler := connect.NewUnaryHandler(
+		ConsoleServiceSetConfigProcedure,
+		svc.SetConfig,
+		opts...,
+	)
 	return "/xyz.block.ftl.v1.console.ConsoleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ConsoleServicePingProcedure:
@@ -188,6 +230,10 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 			consoleServiceStreamEventsHandler.ServeHTTP(w, r)
 		case ConsoleServiceGetEventsProcedure:
 			consoleServiceGetEventsHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetConfigProcedure:
+			consoleServiceGetConfigHandler.ServeHTTP(w, r)
+		case ConsoleServiceSetConfigProcedure:
+			consoleServiceSetConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -215,4 +261,12 @@ func (UnimplementedConsoleServiceHandler) StreamEvents(context.Context, *connect
 
 func (UnimplementedConsoleServiceHandler) GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetEvents is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetConfig(context.Context, *connect.Request[console.GetConfigRequest]) (*connect.Response[console.GetConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetConfig is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) SetConfig(context.Context, *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.SetConfig is not implemented"))
 }

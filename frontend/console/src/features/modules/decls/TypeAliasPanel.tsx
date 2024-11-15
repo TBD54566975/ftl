@@ -9,9 +9,7 @@ export const TypeAliasPanel = ({ value, schema, moduleName, declName }: { value:
   }
   return (
     <div className='py-2 px-4'>
-      <PanelHeader exported={!!value.typealias?.export} comments={value.typealias?.comments}>
-        Type Alias: {moduleName}.{declName}
-      </PanelHeader>
+      <PanelHeader title='Type Alias' declRef={`${moduleName}.${declName}`} exported={!!value.typealias?.export} comments={value.typealias?.comments} />
       <div className='-mx-3.5'>
         <Schema schema={schema} />
       </div>

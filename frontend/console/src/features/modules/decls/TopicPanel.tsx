@@ -9,9 +9,7 @@ export const TopicPanel = ({ value, schema, moduleName, declName }: { value: Top
   }
   return (
     <div className='py-2 px-4'>
-      <PanelHeader exported={!!value.topic?.export} comments={value.topic?.comments}>
-        Topic: {moduleName}.{declName}
-      </PanelHeader>
+      <PanelHeader title='Topic' declRef={`${moduleName}.${declName}`} exported={!!value.topic?.export} comments={value.topic?.comments} />
       <div className='-mx-3.5'>
         <Schema schema={schema} />
       </div>

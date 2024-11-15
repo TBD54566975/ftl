@@ -14,9 +14,7 @@ export const EnumPanel = ({ value, schema, moduleName, declName }: { value: Enum
   }
   return (
     <div className='py-2 px-4'>
-      <PanelHeader exported={decl.export} comments={decl.comments}>
-        {enumType(decl)} Enum: {moduleName}.{declName}
-      </PanelHeader>
+      <PanelHeader title={enumType(decl)} declRef={`${moduleName}.${declName}`} exported={decl.export} comments={decl.comments} />
       <div className='-mx-3.5'>
         <Schema schema={schema} />
       </div>

@@ -9,9 +9,7 @@ export const SubscriptionPanel = ({ value, schema, moduleName, declName }: { val
   }
   return (
     <div className='py-2 px-4'>
-      <PanelHeader exported={false} comments={value.subscription?.comments}>
-        Subscription: {moduleName}.{declName}
-      </PanelHeader>
+      <PanelHeader title='Subscription' declRef={`${moduleName}.${declName}`} exported={false} comments={value.subscription?.comments} />
       <div className='-mx-3.5'>
         <Schema schema={schema} />
       </div>
