@@ -21,12 +21,6 @@ func TestExtractModuleDepsKotlin(t *testing.T) {
 }
 
 func TestJavaConfigDefaults(t *testing.T) {
-	watch := []string{
-		"pom.xml",
-		"src/**",
-		"build/generated",
-		"target/generated-sources",
-	}
 	for _, tt := range []struct {
 		language string
 		dir      string
@@ -40,7 +34,6 @@ func TestJavaConfigDefaults(t *testing.T) {
 				DevModeBuild:       optional.Some("mvn quarkus:dev"),
 				DeployDir:          "target",
 				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
-				Watch:              watch,
 				LanguageConfig: map[string]any{
 					"build-tool": "maven",
 				},
@@ -54,7 +47,6 @@ func TestJavaConfigDefaults(t *testing.T) {
 				DevModeBuild:       optional.Some("mvn quarkus:dev"),
 				DeployDir:          "target",
 				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
-				Watch:              watch,
 				LanguageConfig: map[string]any{
 					"build-tool": "maven",
 				},
