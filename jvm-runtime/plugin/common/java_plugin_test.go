@@ -37,6 +37,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			dir:      "testdata/kotlin/echo",
 			expected: moduleconfig.CustomDefaults{
 				Build:              optional.Some("mvn -B package"),
+				DevModeBuild:       optional.Some("mvn quarkus:dev"),
 				DeployDir:          "target",
 				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
 				Watch:              watch,
@@ -50,6 +51,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			dir:      "testdata/kotlin/external",
 			expected: moduleconfig.CustomDefaults{
 				Build:              optional.Some("mvn -B package"),
+				DevModeBuild:       optional.Some("mvn quarkus:dev"),
 				DeployDir:          "target",
 				GeneratedSchemaDir: optional.Some("src/main/ftl-module-schema"),
 				Watch:              watch,
@@ -67,7 +69,7 @@ func TestJavaConfigDefaults(t *testing.T) {
 			dir, err := filepath.Abs(tt.dir)
 			assert.NoError(t, err)
 
-			plugin, err := languageplugin.New(ctx, t.TempDir(), "java", "test")
+			plugin, err := languageplugin.New(ctx, t.TempDir(), "java", "test", false)
 			assert.NoError(t, err)
 			t.Cleanup(func() {
 				_ = plugin.Kill() //nolint:errcheck

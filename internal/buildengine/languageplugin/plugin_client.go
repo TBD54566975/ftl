@@ -55,17 +55,18 @@ func newClientImpl(ctx context.Context, dir, language, name string) (*pluginClie
 func (p *pluginClientImpl) start(ctx context.Context, dir, language, name string) error {
 	cmdName := "ftl-language-" + language
 	cmdPath, err := exec.LookPath(cmdName)
+
 	if err != nil {
 		return fmt.Errorf("failed to find plugin for %s: %w", language, err)
 	}
-
+	envvars := []string{"FTL_NAME=" + name}
 	plugin, cmdCtx, err := plugin.Spawn(ctx,
 		log.FromContext(ctx).GetLevel(),
 		name,
 		dir,
 		cmdPath,
 		langconnect.NewLanguageServiceClient,
-		plugin.WithEnvars("FTL_NAME="+name),
+		plugin.WithEnvars(envvars...),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to spawn plugin for %s: %w", name, err)

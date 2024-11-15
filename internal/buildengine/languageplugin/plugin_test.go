@@ -14,6 +14,7 @@ import (
 	"github.com/alecthomas/types/result"
 
 	"connectrpc.com/connect"
+
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -84,6 +85,7 @@ func buildContextFromProto(proto *langpb.BuildContext) (BuildContext, error) {
 			Realm:              "test",
 			Module:             proto.ModuleConfig.Name,
 			Build:              optional.Ptr(proto.ModuleConfig.Build).Default(""),
+			DevModeBuild:       optional.Ptr(proto.ModuleConfig.DevModeBuild).Default(""),
 			DeployDir:          proto.ModuleConfig.DeployDir,
 			GeneratedSchemaDir: optional.Ptr(proto.ModuleConfig.GeneratedSchemaDir).Default(""),
 			Watch:              proto.ModuleConfig.Watch,

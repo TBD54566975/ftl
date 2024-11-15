@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/types/optional"
-	structpb "google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -100,6 +100,9 @@ func ModuleConfigToProto(config moduleconfig.AbsModuleConfig) (*ModuleConfig, er
 	if config.Build != "" {
 		proto.Build = &config.Build
 	}
+	if config.DevModeBuild != "" {
+		proto.DevModeBuild = &config.DevModeBuild
+	}
 	if config.GeneratedSchemaDir != "" {
 		proto.GeneratedSchemaDir = &config.GeneratedSchemaDir
 	}
@@ -122,6 +125,7 @@ func ModuleConfigFromProto(proto *ModuleConfig) moduleconfig.AbsModuleConfig {
 		Watch:              proto.Watch,
 		Language:           proto.Language,
 		Build:              proto.GetBuild(),
+		DevModeBuild:       proto.GetDevModeBuild(),
 		BuildLock:          proto.BuildLock,
 		GeneratedSchemaDir: proto.GetGeneratedSchemaDir(),
 	}

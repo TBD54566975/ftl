@@ -49,23 +49,30 @@ export class ModuleConfig extends Message<ModuleConfig> {
   build?: string;
 
   /**
+   * DevModeBuild is the command to build the module in dev mode.
+   *
+   * @generated from field: optional string dev_mode_build = 6;
+   */
+  devModeBuild?: string;
+
+  /**
    * Build lock path to prevent concurrent builds
    *
-   * @generated from field: string build_lock = 6;
+   * @generated from field: string build_lock = 7;
    */
   buildLock = "";
 
   /**
    * The directory to generate protobuf schema files into. These can be picked up by language specific build tools
    *
-   * @generated from field: optional string generated_schema_dir = 7;
+   * @generated from field: optional string generated_schema_dir = 8;
    */
   generatedSchemaDir?: string;
 
   /**
    * Patterns to watch for file changes
    *
-   * @generated from field: repeated string watch = 8;
+   * @generated from field: repeated string watch = 9;
    */
   watch: string[] = [];
 
@@ -73,7 +80,7 @@ export class ModuleConfig extends Message<ModuleConfig> {
    * LanguageConfig contains any metadata specific to a specific language.
    * These are stored in the ftl.toml file under the same key as the language (eg: "go", "java")
    *
-   * @generated from field: google.protobuf.Struct language_config = 9;
+   * @generated from field: google.protobuf.Struct language_config = 10;
    */
   languageConfig?: Struct;
 
@@ -90,10 +97,11 @@ export class ModuleConfig extends Message<ModuleConfig> {
     { no: 3, name: "language", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "deploy_dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 6, name: "build_lock", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 7, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 8, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 9, name: "language_config", kind: "message", T: Struct },
+    { no: 6, name: "dev_mode_build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "build_lock", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 10, name: "language_config", kind: "message", T: Struct },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfig {
@@ -474,23 +482,30 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
   build?: string;
 
   /**
+   * Dev mode build command, if different from the regular build command
+   *
+   * @generated from field: optional string dev_mode_build = 3;
+   */
+  devModeBuild?: string;
+
+  /**
    * Build lock path to prevent concurrent builds
    *
-   * @generated from field: optional string build_lock = 3;
+   * @generated from field: optional string build_lock = 4;
    */
   buildLock?: string;
 
   /**
    * Default relative path to the directory containing generated schema files
    *
-   * @generated from field: optional string generated_schema_dir = 4;
+   * @generated from field: optional string generated_schema_dir = 5;
    */
   generatedSchemaDir?: string;
 
   /**
    * Default patterns to watch for file changes, relative to the module directory
    *
-   * @generated from field: repeated string watch = 5;
+   * @generated from field: repeated string watch = 6;
    */
   watch: string[] = [];
 
@@ -498,7 +513,7 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
    * Default language specific configuration.
    * These defaults are filled in by looking at each root key only. If the key is not present, the default is used.
    *
-   * @generated from field: google.protobuf.Struct language_config = 6;
+   * @generated from field: google.protobuf.Struct language_config = 7;
    */
   languageConfig?: Struct;
 
@@ -512,10 +527,11 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "deploy_dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 3, name: "build_lock", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 4, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 5, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 6, name: "language_config", kind: "message", T: Struct },
+    { no: 3, name: "dev_mode_build", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "build_lock", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 5, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 6, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 7, name: "language_config", kind: "message", T: Struct },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfigDefaultsResponse {
@@ -1095,13 +1111,28 @@ export class BuildSuccess extends Message<BuildSuccess> {
   deploy: string[] = [];
 
   /**
+   * Name of the docker image to use for the runner
+   *
+   * @generated from field: string docker_image = 5;
+   */
+  dockerImage = "";
+
+  /**
    * Errors contains any errors that occurred during the build
    * No errors can have a level of ERROR, instead a BuildFailure should be sent
    * Instead this is useful for INFO and WARN level errors.
    *
-   * @generated from field: xyz.block.ftl.v1.language.ErrorList errors = 5;
+   * @generated from field: xyz.block.ftl.v1.language.ErrorList errors = 6;
    */
   errors?: ErrorList;
+
+  /**
+   * Dev mode endpoint URI. If this is set then rather than trying to deploy the module, FTL will start a runner that
+   * connects to this endpoint.
+   *
+   * @generated from field: optional string dev_endpoint = 7;
+   */
+  devEndpoint?: string;
 
   constructor(data?: PartialMessage<BuildSuccess>) {
     super();
@@ -1115,7 +1146,9 @@ export class BuildSuccess extends Message<BuildSuccess> {
     { no: 2, name: "is_automatic_rebuild", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 3, name: "module", kind: "message", T: Module },
     { no: 4, name: "deploy", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 5, name: "errors", kind: "message", T: ErrorList },
+    { no: 5, name: "docker_image", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "errors", kind: "message", T: ErrorList },
+    { no: 7, name: "dev_endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildSuccess {

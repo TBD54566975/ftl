@@ -18,6 +18,7 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
@@ -186,7 +187,6 @@ type Engine struct {
 	parallelism      int
 	modulesToBuild   *xsync.MapOf[string, bool]
 	buildEnv         []string
-	devMode          bool
 	startTime        optional.Option[time.Time]
 
 	// events coming in from plugins
@@ -200,6 +200,9 @@ type Engine struct {
 
 	// topic to subscribe to engine events
 	EngineUpdates *pubsub.Topic[EngineEvent]
+
+	devModeEndpointUpdates chan scaling.DevModeEndpoints
+	devMode                bool
 }
 
 type Option func(o *Engine)
@@ -217,9 +220,10 @@ func BuildEnv(env []string) Option {
 }
 
 // WithDevMode sets the engine to dev mode.
-func WithDevMode(devMode bool) Option {
+func WithDevMode(updates chan scaling.DevModeEndpoints) Option {
 	return func(o *Engine) {
-		o.devMode = devMode
+		o.devModeEndpointUpdates = updates
+		o.devMode = true
 	}
 }
 
@@ -1000,7 +1004,7 @@ func (e *Engine) build(ctx context.Context, moduleName string, builtModules map[
 		Schema:       sch,
 		Dependencies: meta.module.Dependencies(Raw),
 		BuildEnv:     e.buildEnv,
-	}, e.devMode)
+	}, e.devMode, e.devModeEndpointUpdates)
 	if err != nil {
 		if errors.Is(err, errInvalidateDependencies) {
 			// Do not start a build directly as we are already building out a graph of modules.
@@ -1045,7 +1049,7 @@ func (e *Engine) gatherSchemas(
 }
 
 func (e *Engine) newModuleMeta(ctx context.Context, config moduleconfig.UnvalidatedModuleConfig) (moduleMeta, error) {
-	plugin, err := languageplugin.New(ctx, config.Dir, config.Language, config.Module)
+	plugin, err := languageplugin.New(ctx, config.Dir, config.Language, config.Module, e.devMode)
 	if err != nil {
 		return moduleMeta{}, fmt.Errorf("could not create plugin for %s: %w", config.Module, err)
 	}
@@ -1107,7 +1111,7 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rawEngineUpdates <- ModuleBuildStarted{Config: meta.module.Config, IsAutoRebuild: true}
 
 				case languageplugin.AutoRebuildEndedEvent:
-					_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result)
+					_, deploy, err := handleBuildResult(ctx, e.projectConfig, meta.module.Config, event.Result, nil)
 					if err != nil {
 						e.rawEngineUpdates <- ModuleBuildFailed{Config: meta.module.Config, IsAutoRebuild: true, Error: err}
 						if errors.Is(err, errInvalidateDependencies) {
@@ -1120,10 +1124,12 @@ func (e *Engine) watchForPluginEvents(originalCtx context.Context) {
 					e.rawEngineUpdates <- ModuleBuildSuccess{Config: meta.module.Config, IsAutoRebuild: true}
 
 					e.rawEngineUpdates <- ModuleDeployStarted{Module: event.Module}
+
 					if err := Deploy(ctx, e.projectConfig, meta.module, deploy, 1, true, e.client); err != nil {
 						e.rawEngineUpdates <- ModuleDeployFailed{Module: event.Module, Error: err}
 						continue
 					}
+
 					e.rawEngineUpdates <- ModuleDeploySuccess{Module: event.Module}
 				}
 			case languageplugin.PluginDiedEvent:

@@ -10,12 +10,13 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class ModuleConfig(_message.Message):
-    __slots__ = ("name", "dir", "language", "deploy_dir", "build", "build_lock", "generated_schema_dir", "watch", "language_config")
+    __slots__ = ("name", "dir", "language", "deploy_dir", "build", "dev_mode_build", "build_lock", "generated_schema_dir", "watch", "language_config")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DIR_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_FIELD_NUMBER: _ClassVar[int]
     DEPLOY_DIR_FIELD_NUMBER: _ClassVar[int]
     BUILD_FIELD_NUMBER: _ClassVar[int]
+    DEV_MODE_BUILD_FIELD_NUMBER: _ClassVar[int]
     BUILD_LOCK_FIELD_NUMBER: _ClassVar[int]
     GENERATED_SCHEMA_DIR_FIELD_NUMBER: _ClassVar[int]
     WATCH_FIELD_NUMBER: _ClassVar[int]
@@ -25,11 +26,12 @@ class ModuleConfig(_message.Message):
     language: str
     deploy_dir: str
     build: str
+    dev_mode_build: str
     build_lock: str
     generated_schema_dir: str
     watch: _containers.RepeatedScalarFieldContainer[str]
     language_config: _struct_pb2.Struct
-    def __init__(self, name: _Optional[str] = ..., dir: _Optional[str] = ..., language: _Optional[str] = ..., deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., dir: _Optional[str] = ..., language: _Optional[str] = ..., deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., dev_mode_build: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class ProjectConfig(_message.Message):
     __slots__ = ("dir", "name", "no_git", "hermit")
@@ -93,20 +95,22 @@ class ModuleConfigDefaultsRequest(_message.Message):
     def __init__(self, dir: _Optional[str] = ...) -> None: ...
 
 class ModuleConfigDefaultsResponse(_message.Message):
-    __slots__ = ("deploy_dir", "build", "build_lock", "generated_schema_dir", "watch", "language_config")
+    __slots__ = ("deploy_dir", "build", "dev_mode_build", "build_lock", "generated_schema_dir", "watch", "language_config")
     DEPLOY_DIR_FIELD_NUMBER: _ClassVar[int]
     BUILD_FIELD_NUMBER: _ClassVar[int]
+    DEV_MODE_BUILD_FIELD_NUMBER: _ClassVar[int]
     BUILD_LOCK_FIELD_NUMBER: _ClassVar[int]
     GENERATED_SCHEMA_DIR_FIELD_NUMBER: _ClassVar[int]
     WATCH_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_CONFIG_FIELD_NUMBER: _ClassVar[int]
     deploy_dir: str
     build: str
+    dev_mode_build: str
     build_lock: str
     generated_schema_dir: str
     watch: _containers.RepeatedScalarFieldContainer[str]
     language_config: _struct_pb2.Struct
-    def __init__(self, deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    def __init__(self, deploy_dir: _Optional[str] = ..., build: _Optional[str] = ..., dev_mode_build: _Optional[str] = ..., build_lock: _Optional[str] = ..., generated_schema_dir: _Optional[str] = ..., watch: _Optional[_Iterable[str]] = ..., language_config: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class DependenciesRequest(_message.Message):
     __slots__ = ("module_config",)
@@ -207,18 +211,22 @@ class AutoRebuildStarted(_message.Message):
     def __init__(self, context_id: _Optional[str] = ...) -> None: ...
 
 class BuildSuccess(_message.Message):
-    __slots__ = ("context_id", "is_automatic_rebuild", "module", "deploy", "errors")
+    __slots__ = ("context_id", "is_automatic_rebuild", "module", "deploy", "docker_image", "errors", "dev_endpoint")
     CONTEXT_ID_FIELD_NUMBER: _ClassVar[int]
     IS_AUTOMATIC_REBUILD_FIELD_NUMBER: _ClassVar[int]
     MODULE_FIELD_NUMBER: _ClassVar[int]
     DEPLOY_FIELD_NUMBER: _ClassVar[int]
+    DOCKER_IMAGE_FIELD_NUMBER: _ClassVar[int]
     ERRORS_FIELD_NUMBER: _ClassVar[int]
+    DEV_ENDPOINT_FIELD_NUMBER: _ClassVar[int]
     context_id: str
     is_automatic_rebuild: bool
     module: _schema_pb2.Module
     deploy: _containers.RepeatedScalarFieldContainer[str]
+    docker_image: str
     errors: ErrorList
-    def __init__(self, context_id: _Optional[str] = ..., is_automatic_rebuild: bool = ..., module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., deploy: _Optional[_Iterable[str]] = ..., errors: _Optional[_Union[ErrorList, _Mapping]] = ...) -> None: ...
+    dev_endpoint: str
+    def __init__(self, context_id: _Optional[str] = ..., is_automatic_rebuild: bool = ..., module: _Optional[_Union[_schema_pb2.Module, _Mapping]] = ..., deploy: _Optional[_Iterable[str]] = ..., docker_image: _Optional[str] = ..., errors: _Optional[_Union[ErrorList, _Mapping]] = ..., dev_endpoint: _Optional[str] = ...) -> None: ...
 
 class BuildFailure(_message.Message):
     __slots__ = ("context_id", "is_automatic_rebuild", "errors", "invalidate_dependencies")
