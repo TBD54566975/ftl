@@ -27,6 +27,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/TBD54566975/ftl"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -57,11 +58,16 @@ type Config struct {
 	Deployment            string                   `help:"The deployment this runner is for." env:"FTL_DEPLOYMENT"`
 	DebugPort             int                      `help:"The port to use for debugging." env:"FTL_DEBUG_PORT"`
 	Registry              artefacts.RegistryConfig `embed:"" prefix:"oci-"`
+	ObservabilityConfig   ftlobservability.Config  `embed:"" prefix:"o11y-"`
 }
 
 func Start(ctx context.Context, config Config) error {
 	ctx, doneFunc := context.WithCancel(ctx)
 	defer doneFunc()
+	err := ftlobservability.Init(ctx, false, "", "ftl-runner", ftl.Version, config.ObservabilityConfig)
+	if err != nil {
+		return fmt.Errorf("failed to initialise observability: %w", err)
+	}
 	hostname, err := os.Hostname()
 	if err != nil {
 		observability.Runner.StartupFailed(ctx)

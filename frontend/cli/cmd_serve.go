@@ -51,6 +51,8 @@ type serveCmd struct {
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	DatabaseImage       string               `help:"The container image to start for the database" default:"postgres:15.8" env:"FTL_DATABASE_IMAGE" hidden:""`
 	RegistryImage       string               `help:"The container image to start for the image registry" default:"registry:2" env:"FTL_REGISTRY_IMAGE" hidden:""`
+	GrafanaImage        string               `help:"The container image to start for the automatic Grafana instance" default:"grafana/otel-lgtm" env:"FTL_GRAFANA_IMAGE" hidden:""`
+	DisableGrafana      bool                 `help:"Disable the automatic Grafana that is started if no telemetry collector is specified." default:"false"`
 	controller.CommonConfig
 	provisioner.CommonProvisionerConfig
 }
@@ -116,6 +118,15 @@ func (s *serveCmd) run(
 		logger.Debugf("Starting FTL with %d controller(s)", s.Controllers)
 	}
 
+	if !s.DisableGrafana && !bool(s.ObservabilityConfig.ExportOTEL) {
+		err := dev.SetupGrafana(ctx, s.GrafanaImage)
+		if err != nil {
+			return fmt.Errorf("failed to setup grafana image: %w", err)
+		}
+		os.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+		os.Setenv("OTEL_METRIC_EXPORT_INTERVAL", "1000")
+		s.ObservabilityConfig.ExportOTEL = true
+	}
 	err := observability.Init(ctx, false, "", "ftl-serve", ftl.Version, s.ObservabilityConfig)
 	if err != nil {
 		return fmt.Errorf("observability init failed: %w", err)
@@ -174,7 +185,7 @@ func (s *serveCmd) run(
 		provisionerAddresses = append(provisionerAddresses, bind)
 	}
 
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, registry)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, controllerAddresses, projConfig.Path, devMode && !projConfig.DisableIDEIntegration, registry, bool(s.ObservabilityConfig.ExportOTEL))
 	if err != nil {
 		return err
 	}

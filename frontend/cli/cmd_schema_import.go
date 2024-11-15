@@ -156,7 +156,7 @@ func (s *schemaImportCmd) setup(ctx context.Context) error {
 			return err
 		}
 
-		err = container.Run(ctx, "ollama/ollama", ollamaContainerName, s.OllamaPort, 11434, optional.Some(ollamaVolume))
+		err = container.Run(ctx, "ollama/ollama", ollamaContainerName, map[int]int{s.OllamaPort: 11434}, optional.Some(ollamaVolume))
 		if err != nil {
 			return err
 		}

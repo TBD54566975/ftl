@@ -60,7 +60,7 @@ func (b *boxRunCmd) Run(
 	if err != nil {
 		return fmt.Errorf("failed to create runner port allocator: %w", err)
 	}
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, []*url.URL{b.Bind}, "", false, b.Registry)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, []*url.URL{b.Bind}, "", false, b.Registry, false)
 	if err != nil {
 		return fmt.Errorf("failed to create runner autoscaler: %w", err)
 	}

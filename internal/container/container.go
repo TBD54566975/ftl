@@ -77,7 +77,7 @@ func Pull(ctx context.Context, imageName string) error {
 }
 
 // Run starts a new detached container with the given image, name, port map, and (optional) volume mount.
-func Run(ctx context.Context, image, name string, hostPort, containerPort int, volume optional.Option[string]) error {
+func Run(ctx context.Context, image, name string, hostToContainerPort map[int]int, volume optional.Option[string], env ...string) error {
 	cli, err := dockerClient.Get(ctx)
 	if err != nil {
 		return err
@@ -96,21 +96,23 @@ func Run(ctx context.Context, image, name string, hostPort, containerPort int, v
 	}
 
 	config := container.Config{
-		Image: image,
+		Image:        image,
+		Env:          env,
+		ExposedPorts: map[nat.Port]struct{}{},
+	}
+	bindings := nat.PortMap{}
+	for k, v := range hostToContainerPort {
+		containerNatPort := nat.Port(fmt.Sprintf("%d/tcp", v))
+		bindings[containerNatPort] = []nat.PortBinding{{HostPort: strconv.Itoa(k)}}
+		config.ExposedPorts[containerNatPort] = struct{}{}
 	}
 
-	containerNatPort := nat.Port(fmt.Sprintf("%d/tcp", containerPort))
 	hostConfig := container.HostConfig{
+		PublishAllPorts: true,
 		RestartPolicy: container.RestartPolicy{
 			Name: container.RestartPolicyAlways,
 		},
-		PortBindings: nat.PortMap{
-			containerNatPort: []nat.PortBinding{
-				{
-					HostPort: strconv.Itoa(hostPort),
-				},
-			},
-		},
+		PortBindings: bindings,
 	}
 	if v, ok := volume.Get(); ok {
 		hostConfig.Binds = []string{v}
@@ -132,6 +134,7 @@ func Run(ctx context.Context, image, name string, hostPort, containerPort int, v
 // RunDB runs a new detached postgres container with the given name and exposed port.
 func RunDB(ctx context.Context, name string, port int, image string) error {
 	cli, err := dockerClient.Get(ctx)
+
 	if err != nil {
 		return err
 	}
