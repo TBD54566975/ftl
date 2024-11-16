@@ -50,12 +50,12 @@ class ListConfigRequest(_message.Message):
 class ListConfigResponse(_message.Message):
     __slots__ = ("configs",)
     class Config(_message.Message):
-        __slots__ = ("refPath", "value")
-        REFPATH_FIELD_NUMBER: _ClassVar[int]
+        __slots__ = ("ref_path", "value")
+        REF_PATH_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
-        refPath: str
+        ref_path: str
         value: bytes
-        def __init__(self, refPath: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
+        def __init__(self, ref_path: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
     CONFIGS_FIELD_NUMBER: _ClassVar[int]
     configs: _containers.RepeatedCompositeFieldContainer[ListConfigResponse.Config]
     def __init__(self, configs: _Optional[_Iterable[_Union[ListConfigResponse.Config, _Mapping]]] = ...) -> None: ...
@@ -111,12 +111,12 @@ class ListSecretsRequest(_message.Message):
 class ListSecretsResponse(_message.Message):
     __slots__ = ("secrets",)
     class Secret(_message.Message):
-        __slots__ = ("refPath", "value")
-        REFPATH_FIELD_NUMBER: _ClassVar[int]
+        __slots__ = ("ref_path", "value")
+        REF_PATH_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
-        refPath: str
+        ref_path: str
         value: bytes
-        def __init__(self, refPath: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
+        def __init__(self, ref_path: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
     SECRETS_FIELD_NUMBER: _ClassVar[int]
     secrets: _containers.RepeatedCompositeFieldContainer[ListSecretsResponse.Secret]
     def __init__(self, secrets: _Optional[_Iterable[_Union[ListSecretsResponse.Secret, _Mapping]]] = ...) -> None: ...

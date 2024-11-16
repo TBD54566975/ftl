@@ -220,7 +220,7 @@ export class ListConfigResponse extends Message<ListConfigResponse> {
  */
 export class ListConfigResponse_Config extends Message<ListConfigResponse_Config> {
   /**
-   * @generated from field: string refPath = 1;
+   * @generated from field: string ref_path = 1;
    */
   refPath = "";
 
@@ -237,7 +237,7 @@ export class ListConfigResponse_Config extends Message<ListConfigResponse_Config
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.ListConfigResponse.Config";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "refPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "ref_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
@@ -577,7 +577,7 @@ export class ListSecretsResponse extends Message<ListSecretsResponse> {
  */
 export class ListSecretsResponse_Secret extends Message<ListSecretsResponse_Secret> {
   /**
-   * @generated from field: string refPath = 1;
+   * @generated from field: string ref_path = 1;
    */
   refPath = "";
 
@@ -594,7 +594,7 @@ export class ListSecretsResponse_Secret extends Message<ListSecretsResponse_Secr
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.ListSecretsResponse.Secret";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "refPath", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "ref_path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
