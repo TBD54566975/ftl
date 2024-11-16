@@ -30,7 +30,7 @@ message ListConfigRequest {
 }
 message ListConfigResponse {
   message Config {
-    string refPath = 1;
+    string ref_path = 1;
     optional bytes value = 2;
   }
   repeated Config configs = 1;
@@ -80,7 +80,7 @@ message ListSecretsRequest {
 }
 message ListSecretsResponse {
   message Secret {
-    string refPath = 1;
+    string ref_path = 1;
     optional bytes value = 2;
   }
   repeated Secret secrets = 1;

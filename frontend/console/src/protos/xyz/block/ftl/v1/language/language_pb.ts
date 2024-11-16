@@ -342,9 +342,9 @@ export class CreateModuleRequest extends Message<CreateModuleRequest> {
   /**
    * Flags contains any values set for those configured in the GetCreateModuleFlags call
    *
-   * @generated from field: google.protobuf.Struct Flags = 4;
+   * @generated from field: google.protobuf.Struct flags = 4;
    */
-  Flags?: Struct;
+  flags?: Struct;
 
   constructor(data?: PartialMessage<CreateModuleRequest>) {
     super();
@@ -357,7 +357,7 @@ export class CreateModuleRequest extends Message<CreateModuleRequest> {
     { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "project_config", kind: "message", T: ProjectConfig },
-    { no: 4, name: "Flags", kind: "message", T: Struct },
+    { no: 4, name: "flags", kind: "message", T: Struct },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateModuleRequest {
@@ -688,7 +688,7 @@ export class BuildContext extends Message<BuildContext> {
  */
 export class BuildContextUpdatedRequest extends Message<BuildContextUpdatedRequest> {
   /**
-   * @generated from field: xyz.block.ftl.v1.language.BuildContext buildContext = 1;
+   * @generated from field: xyz.block.ftl.v1.language.BuildContext build_context = 1;
    */
   buildContext?: BuildContext;
 
@@ -700,7 +700,7 @@ export class BuildContextUpdatedRequest extends Message<BuildContextUpdatedReque
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.language.BuildContextUpdatedRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "buildContext", kind: "message", T: BuildContext },
+    { no: 1, name: "build_context", kind: "message", T: BuildContext },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): BuildContextUpdatedRequest {
@@ -874,12 +874,12 @@ export class Position extends Message<Position> {
   line = protoInt64.zero;
 
   /**
-   * @generated from field: int64 startColumn = 3;
+   * @generated from field: int64 start_column = 3;
    */
   startColumn = protoInt64.zero;
 
   /**
-   * @generated from field: int64 endColumn = 4;
+   * @generated from field: int64 end_column = 4;
    */
   endColumn = protoInt64.zero;
 
@@ -893,8 +893,8 @@ export class Position extends Message<Position> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "line", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "startColumn", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 4, name: "endColumn", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "start_column", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 4, name: "end_column", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Position {

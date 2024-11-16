@@ -70,7 +70,7 @@ message CreateModuleRequest {
   ProjectConfig project_config = 3;
 
   // Flags contains any values set for those configured in the GetCreateModuleFlags call
-  google.protobuf.Struct Flags = 4;
+  google.protobuf.Struct flags = 4;
 }
 
 // Response to a create module request.
@@ -133,7 +133,7 @@ message BuildContext {
 }
 
 message BuildContextUpdatedRequest {
-  BuildContext buildContext = 1;
+  BuildContext build_context = 1;
 }
 
 message BuildContextUpdatedResponse {}
@@ -164,8 +164,8 @@ message Error {
 message Position {
   string filename = 1;
   int64 line = 2;
-  int64 startColumn = 3;
-  int64 endColumn = 4;
+  int64 start_column = 3;
+  int64 end_column = 4;
 }
 
 message ErrorList {

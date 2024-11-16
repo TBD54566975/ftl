@@ -71,7 +71,7 @@ class GetCreateModuleFlagsResponse(_message.Message):
     def __init__(self, flags: _Optional[_Iterable[_Union[GetCreateModuleFlagsResponse.Flag, _Mapping]]] = ...) -> None: ...
 
 class CreateModuleRequest(_message.Message):
-    __slots__ = ("name", "dir", "project_config", "Flags")
+    __slots__ = ("name", "dir", "project_config", "flags")
     NAME_FIELD_NUMBER: _ClassVar[int]
     DIR_FIELD_NUMBER: _ClassVar[int]
     PROJECT_CONFIG_FIELD_NUMBER: _ClassVar[int]
@@ -79,8 +79,8 @@ class CreateModuleRequest(_message.Message):
     name: str
     dir: str
     project_config: ProjectConfig
-    Flags: _struct_pb2.Struct
-    def __init__(self, name: _Optional[str] = ..., dir: _Optional[str] = ..., project_config: _Optional[_Union[ProjectConfig, _Mapping]] = ..., Flags: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
+    flags: _struct_pb2.Struct
+    def __init__(self, name: _Optional[str] = ..., dir: _Optional[str] = ..., project_config: _Optional[_Union[ProjectConfig, _Mapping]] = ..., flags: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class CreateModuleResponse(_message.Message):
     __slots__ = ()
@@ -135,10 +135,10 @@ class BuildContext(_message.Message):
     def __init__(self, id: _Optional[str] = ..., module_config: _Optional[_Union[ModuleConfig, _Mapping]] = ..., schema: _Optional[_Union[_schema_pb2.Schema, _Mapping]] = ..., dependencies: _Optional[_Iterable[str]] = ..., build_env: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class BuildContextUpdatedRequest(_message.Message):
-    __slots__ = ("buildContext",)
-    BUILDCONTEXT_FIELD_NUMBER: _ClassVar[int]
-    buildContext: BuildContext
-    def __init__(self, buildContext: _Optional[_Union[BuildContext, _Mapping]] = ...) -> None: ...
+    __slots__ = ("build_context",)
+    BUILD_CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    build_context: BuildContext
+    def __init__(self, build_context: _Optional[_Union[BuildContext, _Mapping]] = ...) -> None: ...
 
 class BuildContextUpdatedResponse(_message.Message):
     __slots__ = ()
@@ -171,16 +171,16 @@ class Error(_message.Message):
     def __init__(self, msg: _Optional[str] = ..., level: _Optional[_Union[Error.ErrorLevel, str]] = ..., pos: _Optional[_Union[Position, _Mapping]] = ..., type: _Optional[_Union[Error.ErrorType, str]] = ...) -> None: ...
 
 class Position(_message.Message):
-    __slots__ = ("filename", "line", "startColumn", "endColumn")
+    __slots__ = ("filename", "line", "start_column", "end_column")
     FILENAME_FIELD_NUMBER: _ClassVar[int]
     LINE_FIELD_NUMBER: _ClassVar[int]
-    STARTCOLUMN_FIELD_NUMBER: _ClassVar[int]
-    ENDCOLUMN_FIELD_NUMBER: _ClassVar[int]
+    START_COLUMN_FIELD_NUMBER: _ClassVar[int]
+    END_COLUMN_FIELD_NUMBER: _ClassVar[int]
     filename: str
     line: int
-    startColumn: int
-    endColumn: int
-    def __init__(self, filename: _Optional[str] = ..., line: _Optional[int] = ..., startColumn: _Optional[int] = ..., endColumn: _Optional[int] = ...) -> None: ...
+    start_column: int
+    end_column: int
+    def __init__(self, filename: _Optional[str] = ..., line: _Optional[int] = ..., start_column: _Optional[int] = ..., end_column: _Optional[int] = ...) -> None: ...
 
 class ErrorList(_message.Message):
     __slots__ = ("errors",)
