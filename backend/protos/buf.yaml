@@ -1,5 +1,6 @@
 version: v1
 breaking:
+  ignore_unstable_packages: true
   ignore:
     - xyz/block/ftl/v1beta1
   use:
@@ -7,3 +8,4 @@ breaking:
 lint:
   use:
     - BASIC
+    - SERVICE_SUFFIX

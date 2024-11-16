@@ -26,6 +26,16 @@ class Array(_message.Message):
     element: Type
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., element: _Optional[_Union[Type, _Mapping]] = ...) -> None: ...
 
+class Artefact(_message.Message):
+    __slots__ = ("digest", "path", "executable")
+    DIGEST_FIELD_NUMBER: _ClassVar[int]
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    EXECUTABLE_FIELD_NUMBER: _ClassVar[int]
+    digest: bytes
+    path: str
+    executable: bool
+    def __init__(self, digest: _Optional[bytes] = ..., path: _Optional[str] = ..., executable: bool = ...) -> None: ...
+
 class Bool(_message.Message):
     __slots__ = ("pos",)
     POS_FIELD_NUMBER: _ClassVar[int]
@@ -353,20 +363,24 @@ class Module(_message.Message):
     def __init__(self, pos: _Optional[_Union[Position, _Mapping]] = ..., comments: _Optional[_Iterable[str]] = ..., builtin: bool = ..., name: _Optional[str] = ..., decls: _Optional[_Iterable[_Union[Decl, _Mapping]]] = ..., runtime: _Optional[_Union[ModuleRuntime, _Mapping]] = ...) -> None: ...
 
 class ModuleRuntime(_message.Message):
-    __slots__ = ("create_time", "language", "min_replicas", "os", "arch", "image")
+    __slots__ = ("create_time", "language", "min_replicas", "os", "arch", "image", "artefacts", "deployment")
     CREATE_TIME_FIELD_NUMBER: _ClassVar[int]
     LANGUAGE_FIELD_NUMBER: _ClassVar[int]
     MIN_REPLICAS_FIELD_NUMBER: _ClassVar[int]
     OS_FIELD_NUMBER: _ClassVar[int]
     ARCH_FIELD_NUMBER: _ClassVar[int]
     IMAGE_FIELD_NUMBER: _ClassVar[int]
+    ARTEFACTS_FIELD_NUMBER: _ClassVar[int]
+    DEPLOYMENT_FIELD_NUMBER: _ClassVar[int]
     create_time: _timestamp_pb2.Timestamp
     language: str
     min_replicas: int
     os: str
     arch: str
     image: str
-    def __init__(self, create_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., language: _Optional[str] = ..., min_replicas: _Optional[int] = ..., os: _Optional[str] = ..., arch: _Optional[str] = ..., image: _Optional[str] = ...) -> None: ...
+    artefacts: _containers.RepeatedCompositeFieldContainer[Artefact]
+    deployment: str
+    def __init__(self, create_time: _Optional[_Union[_timestamp_pb2.Timestamp, _Mapping]] = ..., language: _Optional[str] = ..., min_replicas: _Optional[int] = ..., os: _Optional[str] = ..., arch: _Optional[str] = ..., image: _Optional[str] = ..., artefacts: _Optional[_Iterable[_Union[Artefact, _Mapping]]] = ..., deployment: _Optional[str] = ...) -> None: ...
 
 class Optional(_message.Message):
     __slots__ = ("pos", "type")

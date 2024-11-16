@@ -6,12 +6,28 @@ RELEASE := "build/release"
 VERSION := `git describe --tags --always | sed -e 's/^v//'`
 TIMESTAMP := `date +%s`
 SCHEMA_OUT := "backend/protos/xyz/block/ftl/v1/schema/schema.proto"
-ZIP_DIRS := "go-runtime/compile/build-template go-runtime/compile/external-module-template go-runtime/compile/main-work-template internal/projectinit/scaffolding go-runtime/scaffolding jvm-runtime/java/scaffolding jvm-runtime/kotlin/scaffolding python-runtime/compile/build-template python-runtime/compile/external-module-template python-runtime/scaffolding"
+ZIP_DIRS := "go-runtime/compile/build-template " + \
+            "go-runtime/compile/external-module-template " + \
+            "go-runtime/compile/main-work-template " + \
+            "internal/projectinit/scaffolding " + \
+            "go-runtime/scaffolding " + \
+            "jvm-runtime/java/scaffolding " + \
+            "jvm-runtime/kotlin/scaffolding " + \
+            "python-runtime/compile/build-template " + \
+            "python-runtime/compile/external-module-template " + \
+            "python-runtime/scaffolding"
 CONSOLE_ROOT := "frontend/console"
 FRONTEND_OUT := CONSOLE_ROOT + "/dist/index.html"
 EXTENSION_OUT := "frontend/vscode/dist/extension.js"
-PROTOS_IN := "backend/protos/xyz/block/ftl/v1/schema/schema.proto backend/protos/xyz/block/ftl/v1/console/console.proto backend/protos/xyz/block/ftl/v1/ftl.proto"
-PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go backend/protos/xyz/block/ftl/v1/ftl.pb.go backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
+PROTOS_IN := "backend/protos"
+PROTOS_OUT := "backend/protos/xyz/block/ftl/v1/console/console.pb.go " + \
+              "backend/protos/xyz/block/ftl/v1/ftl.pb.go " + \
+              "backend/protos/xyz/block/ftl/v1/schema/schema.pb.go " + \
+              "backend/protos/xyz/block/ftl/v2alpha1/ftl.pb.go " + \
+              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/console/console_pb.ts " + \
+              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/ftl_pb.ts " + \
+              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/runtime_pb.ts " + \
+              CONSOLE_ROOT + "/src/protos/xyz/block/ftl/v1/schema/schema_pb.ts"
 
 _help:
   @just -l
@@ -182,18 +198,18 @@ pnpm-install:
 
 # Regenerate protos
 build-protos:
-  @mk {{SCHEMA_OUT}} : internal/schema -- "just go2proto"
-  @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "just build-protos-unconditionally"
+  @mk {{SCHEMA_OUT}} : internal/schema -- "@just go2proto"
+  @mk {{PROTOS_OUT}} : {{PROTOS_IN}} -- "@just build-protos-unconditionally"
 
 # Generate .proto files from .go types.
 go2proto:
-  go2proto -o "{{SCHEMA_OUT}}" \
+  @mk "{{SCHEMA_OUT}}" : cmd/go2proto internal/schema -- go2proto -o "{{SCHEMA_OUT}}" \
     -O 'go_package="github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema;schemapb"' \
     -O 'java_multiple_files=true' \
     xyz.block.ftl.v1.schema ./internal/schema.Schema && buf format -w && buf lint
 
 # Unconditionally rebuild protos
-build-protos-unconditionally: pnpm-install go2proto
+build-protos-unconditionally: lint-protos pnpm-install go2proto
   cd backend/protos && buf generate
 
 # Run integration test(s)
@@ -226,6 +242,7 @@ ensure-frozen-migrations:
 test-backend:
   @gotestsum --hide-summary skipped --format-hide-empty-pkg -- -short -fullpath ./...
 
+# Run shell script tests
 test-scripts:
   GIT_COMMITTER_NAME="CI" \
     GIT_COMMITTER_EMAIL="no-reply@tbd.email" \
@@ -233,9 +250,11 @@ test-scripts:
     GIT_AUTHOR_EMAIL="no-reply@tbd.email" \
     scripts/tests/test-ensure-frozen-migrations.sh
 
+# Test the frontend
 test-frontend: build-frontend
   @cd {{CONSOLE_ROOT}} && pnpm run test
 
+# Run end-to-end tests on the frontend
 e2e-frontend: build-frontend
   @cd {{CONSOLE_ROOT}} && npx playwright install --with-deps && pnpm run e2e
 
@@ -243,12 +262,17 @@ e2e-frontend: build-frontend
 lint-frontend: build-frontend
   @cd {{CONSOLE_ROOT}} && pnpm run lint && tsc
 
+# Lint .proto files
+lint-protos:
+  @buf lint
+
 # Lint the backend
 lint-backend:
   @golangci-lint run --new-from-rev=$(git merge-base origin/main HEAD) ./...
   @lint-commit-or-rollback ./backend/...
   @go-check-sumtype ./...
 
+# Lint shell scripts.
 lint-scripts:
   #!/bin/bash
   set -euo pipefail

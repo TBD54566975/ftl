@@ -19,6 +19,15 @@ import (
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
 
+type Artefact struct {
+	Digest     []byte `protobuf:"1"`
+	Path       string `protobuf:"2"`
+	Executable bool   `protobuf:"3"`
+}
+
+// TODO: Split various runtimes into sum types similar to Metadata? Different parts of the runtime will be populated by
+// different systems, and so won't be available at the same time.
+
 type ModuleRuntime struct {
 	CreateTime  time.Time `protobuf:"1"`
 	Language    string    `protobuf:"2"`
@@ -27,7 +36,10 @@ type ModuleRuntime struct {
 	Arch        string    `protobuf:"5,optional"`
 	// Image is the name of the runner image. Defaults to "ftl0/ftl-runner".
 	// Must not include a tag, as FTL's version will be used as the tag.
-	Image string `protobuf:"6,optional"`
+	Image     string      `protobuf:"6,optional"`
+	Artefacts []*Artefact `protobuf:"7,optional"`
+	// Deployment is the deployment key for the module. This will be populated by the provisioner.
+	Deployment string `protobuf:"8,optional"`
 }
 
 type Module struct {
