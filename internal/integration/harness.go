@@ -161,11 +161,19 @@ func WithProvisionerConfig(config string) Option {
 	}
 }
 
+// WithDevMode starts the server using FTL dev, so modules are deployed automatically on change
+func WithDevMode() Option {
+	return func(o *options) {
+		o.devMode = true
+	}
+}
+
 type options struct {
 	languages         []string
 	testDataDir       string
 	ftlConfigPath     string
 	startController   bool
+	devMode           bool
 	startProvisioner  bool
 	provisionerConfig string
 	requireJava       bool
@@ -296,7 +304,12 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			if opts.startController {
 				Infof("Starting ftl cluster")
 
-				args := []string{filepath.Join(binDir, "ftl"), "serve", "--recreate"}
+				command := []string{"serve", "--recreate"}
+				if opts.devMode {
+					command = []string{"dev"}
+				}
+
+				args := append([]string{filepath.Join(binDir, "ftl")}, command...)
 				if !opts.console {
 					args = append(args, "--no-console")
 				}
@@ -309,7 +322,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 						args = append(args, "--provisioner-plugin-config="+configFile)
 					}
 				}
-				ctx = startProcess(ctx, t, args...)
+				ctx = startProcess(ctx, t, tmpDir, opts.devMode, args...)
 			}
 			if opts.startController || opts.kube {
 				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
@@ -335,6 +348,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 				realT:         t,
 				Language:      language,
 				kubeNamespace: kubeNamespace,
+				devMode:       opts.devMode,
 				kubeClient:    optional.Ptr(kubeClient),
 			}
 			defer dumpKubePods(ctx, ic.kubeClient, ic.kubeNamespace)
@@ -415,6 +429,7 @@ type TestContext struct {
 	// Set if the test is running on kubernetes
 	kubeClient    optional.Option[kubernetes.Clientset]
 	kubeNamespace string
+	devMode       bool
 
 	Controller  ftlv1connect.ControllerServiceClient
 	Provisioner provisionerconnect.ProvisionerServiceClient
@@ -501,10 +516,13 @@ func (l *logWriter) Write(p []byte) (n int, err error) {
 }
 
 // startProcess runs a binary in the background and terminates it when the test completes.
-func startProcess(ctx context.Context, t testing.TB, args ...string) context.Context {
+func startProcess(ctx context.Context, t testing.TB, tempDir string, devMode bool, args ...string) context.Context {
 	t.Helper()
 	ctx, cancel := context.WithCancel(ctx)
 	cmd := ftlexec.Command(ctx, log.Debug, "..", args[0], args[1:]...)
+	if devMode {
+		cmd.Dir = tempDir
+	}
 	err := cmd.Start()
 	assert.NoError(t, err)
 	terminated := make(chan bool)

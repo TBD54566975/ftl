@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -228,7 +227,7 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 	}()
 
 	schemaChangeTicker := time.NewTicker(100 * time.Millisecond)
-	forceReloadTicker := time.NewTicker(time.Second)
+	defer schemaChangeTicker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -236,22 +235,6 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 		case bc := <-events:
 			buildCtx = bc.buildCtx
 		case <-schemaChangeTicker.C:
-			select {
-			// We only force a reload every second, but we check for schema changes every 100ms
-			case <-forceReloadTicker.C:
-				if !first {
-					// Force a hot reload via HTTP request
-					req, err := http.NewRequestWithContext(ctx, http.MethodHead, bind, nil) // #nosec
-					// We don't do anything on error here
-					if err == nil {
-						resp, err := http.DefaultClient.Do(req)
-						if err == nil {
-							resp.Body.Close()
-						}
-					}
-				}
-			default:
-			}
 
 			changed := false
 			file, err := os.ReadFile(errorFile)
@@ -276,16 +259,8 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 				}
 				buildErrs, err := loadProtoErrors(buildCtx.Config)
 				if err != nil {
-					err = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
-						BuildFailure: &langpb.BuildFailure{
-							IsAutomaticRebuild: !first,
-							ContextId:          buildCtx.ID,
-							Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
-						}}})
-					if err != nil {
-						return fmt.Errorf("could not send build event: %w", err)
-					}
-					first = false
+					// This is likely a transient error
+					logger.Errorf(err, "failed to load build errors")
 					continue
 				}
 				if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
@@ -305,16 +280,8 @@ func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request
 
 				moduleProto, err := readSchema(buildCtx)
 				if err != nil {
-					err = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
-						BuildFailure: &langpb.BuildFailure{
-							IsAutomaticRebuild: !first,
-							ContextId:          buildCtx.ID,
-							Errors:             &langpb.ErrorList{Errors: []*langpb.Error{{Msg: err.Error(), Level: langpb.Error_ERROR, Type: langpb.Error_FTL}}},
-						}}})
-					if err != nil {
-						return fmt.Errorf("could not send build event: %w", err)
-					}
-					first = false
+					// This is likely a transient error
+					logger.Errorf(err, "failed to schema")
 					continue
 				}
 
@@ -378,7 +345,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.Bu
 	}
 	logger.Infof("Using build command '%s'", config.Build)
 	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
-	err = command.RunBuffered(ctx)
+	err = command.Run()
 	if err != nil {
 		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{&langpb.BuildFailure{
 			IsAutomaticRebuild: autoRebuild,

@@ -274,6 +274,31 @@ func Wait(module string) Action {
 	}
 }
 
+// WaitWithTimeout for the given module to deploy.
+func WaitWithTimeout(module string, timeout time.Duration) Action {
+	return func(t testing.TB, ic TestContext) {
+		Infof("Waiting for %s to become ready", module)
+		deadline := time.After(timeout)
+		tick := time.NewTicker(time.Millisecond * 100)
+		defer tick.Stop()
+		for {
+			select {
+			case <-deadline:
+				t.Fatalf("deployment of module %q not found", module)
+				return
+			case <-tick.C:
+				status, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+				assert.NoError(t, err)
+				for _, deployment := range status.Msg.Deployments {
+					if deployment.Name == module {
+						return
+					}
+				}
+			}
+		}
+	}
+}
+
 func Sleep(duration time.Duration) Action {
 	return func(t testing.TB, ic TestContext) {
 		Infof("Sleeping for %s", duration)
@@ -411,6 +436,18 @@ func VerifySchema(check func(ctx context.Context, t testing.TB, sch *schemapb.Sc
 			return
 		}
 		check(ic.Context, t, sch.Msg.GetSchema())
+	}
+}
+
+// VerifyControllerStatus lets you test the current controller status
+func VerifyControllerStatus(check func(ctx context.Context, t testing.TB, status *ftlv1.StatusResponse)) Action {
+	return func(t testing.TB, ic TestContext) {
+		sch, err := ic.Controller.Status(ic, connect.NewRequest(&ftlv1.StatusRequest{}))
+		if err != nil {
+			t.Errorf("failed to get schema: %v", err)
+			return
+		}
+		check(ic.Context, t, sch.Msg)
 	}
 }
 

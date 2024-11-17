@@ -78,7 +78,6 @@ func (s *serveCmd) Run(
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
 	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaClient, s.Recreate, nil)
-
 }
 
 //nolint:maintidx
