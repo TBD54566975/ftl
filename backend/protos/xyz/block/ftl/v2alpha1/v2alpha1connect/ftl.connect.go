@@ -19,7 +19,7 @@ import (
 // generated with a version of connect newer than the one compiled into your binary. You can fix the
 // problem by either regenerating this code with an older version of connect or updating the connect
 // version compiled into your binary.
-const _ = connect.IsAtLeastVersion0_1_0
+const _ = connect.IsAtLeastVersion1_7_0
 
 const (
 	// SchemaServiceName is the fully-qualified name of the SchemaService service.
@@ -75,17 +75,20 @@ func NewSchemaServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 		ping: connect.NewClient[v1.PingRequest, v1.PingResponse](
 			httpClient,
 			baseURL+SchemaServicePingProcedure,
-			opts...,
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
 		),
 		getSchema: connect.NewClient[v2alpha1.GetSchemaRequest, v2alpha1.GetSchemaResponse](
 			httpClient,
 			baseURL+SchemaServiceGetSchemaProcedure,
-			opts...,
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
 		),
 		pullSchema: connect.NewClient[v2alpha1.PullSchemaRequest, v2alpha1.PullSchemaResponse](
 			httpClient,
 			baseURL+SchemaServicePullSchemaProcedure,
-			opts...,
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+			connect.WithClientOptions(opts...),
 		),
 		upsertModule: connect.NewClient[v2alpha1.UpsertModuleRequest, v2alpha1.UpsertModuleResponse](
 			httpClient,
@@ -156,17 +159,20 @@ func NewSchemaServiceHandler(svc SchemaServiceHandler, opts ...connect.HandlerOp
 	schemaServicePingHandler := connect.NewUnaryHandler(
 		SchemaServicePingProcedure,
 		svc.Ping,
-		opts...,
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
 	)
 	schemaServiceGetSchemaHandler := connect.NewUnaryHandler(
 		SchemaServiceGetSchemaProcedure,
 		svc.GetSchema,
-		opts...,
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
 	)
 	schemaServicePullSchemaHandler := connect.NewServerStreamHandler(
 		SchemaServicePullSchemaProcedure,
 		svc.PullSchema,
-		opts...,
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
+		connect.WithHandlerOptions(opts...),
 	)
 	schemaServiceUpsertModuleHandler := connect.NewUnaryHandler(
 		SchemaServiceUpsertModuleProcedure,

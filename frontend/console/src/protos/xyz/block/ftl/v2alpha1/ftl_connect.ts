@@ -4,7 +4,7 @@
 // @ts-nocheck
 
 import { PingRequest, PingResponse } from "../v1/ftl_pb.js";
-import { MethodKind } from "@bufbuild/protobuf";
+import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
 import { DeleteModuleRequest, DeleteModuleResponse, GetSchemaRequest, GetSchemaResponse, PullSchemaRequest, PullSchemaResponse, UpsertModuleRequest, UpsertModuleResponse } from "./ftl_pb.js";
 
 /**
@@ -25,6 +25,7 @@ export const SchemaService = {
       I: PingRequest,
       O: PingResponse,
       kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
      * GetSchema returns the current full schema for the cluster.
@@ -36,6 +37,7 @@ export const SchemaService = {
       I: GetSchemaRequest,
       O: GetSchemaResponse,
       kind: MethodKind.Unary,
+      idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
      * PullSchema returns a stream of module schema changes for the cluster.
@@ -47,6 +49,7 @@ export const SchemaService = {
       I: PullSchemaRequest,
       O: PullSchemaResponse,
       kind: MethodKind.ServerStreaming,
+      idempotency: MethodIdempotency.NoSideEffects,
     },
     /**
      * UpsertModule creates or replaces a module in the schema.

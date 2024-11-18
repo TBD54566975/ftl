@@ -51,11 +51,17 @@ message DeleteModuleResponse {}
 
 // SchemaService is the central source of truth for the FTL schema.
 service SchemaService {
-  rpc Ping(v1.PingRequest) returns (v1.PingResponse); // For now we need to use the v1 types to comply with the interface.
+  rpc Ping(v1.PingRequest) returns (v1.PingResponse) { // For now we need to use the v1 types to comply with the interface.
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
   // GetSchema returns the current full schema for the cluster.
-  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
   // PullSchema returns a stream of module schema changes for the cluster.
-  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse);
+  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
 
   // UpsertModule creates or replaces a module in the schema.
   rpc UpsertModule(UpsertModuleRequest) returns (UpsertModuleResponse);

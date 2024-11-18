@@ -103,55 +103,6 @@ export class Array extends Message<Array> {
 }
 
 /**
- * @generated from message xyz.block.ftl.v1.schema.Artefact
- */
-export class Artefact extends Message<Artefact> {
-  /**
-   * @generated from field: bytes digest = 1;
-   */
-  digest = new Uint8Array(0);
-
-  /**
-   * @generated from field: string path = 2;
-   */
-  path = "";
-
-  /**
-   * @generated from field: bool executable = 3;
-   */
-  executable = false;
-
-  constructor(data?: PartialMessage<Artefact>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "xyz.block.ftl.v1.schema.Artefact";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "digest", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "executable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Artefact {
-    return new Artefact().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): Artefact {
-    return new Artefact().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): Artefact {
-    return new Artefact().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: Artefact | PlainMessage<Artefact> | undefined, b: Artefact | PlainMessage<Artefact> | undefined): boolean {
-    return proto3.util.equals(Artefact, a, b);
-  }
-}
-
-/**
  * @generated from message xyz.block.ftl.v1.schema.Bool
  */
 export class Bool extends Message<Bool> {
@@ -1771,14 +1722,9 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
   image?: string;
 
   /**
-   * @generated from field: repeated xyz.block.ftl.v1.schema.Artefact artefacts = 7;
+   * @generated from field: optional string endpoint = 7;
    */
-  artefacts: Artefact[] = [];
-
-  /**
-   * @generated from field: optional string deployment = 8;
-   */
-  deployment?: string;
+  endpoint?: string;
 
   constructor(data?: PartialMessage<ModuleRuntime>) {
     super();
@@ -1794,8 +1740,7 @@ export class ModuleRuntime extends Message<ModuleRuntime> {
     { no: 4, name: "os", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 5, name: "arch", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "image", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 7, name: "artefacts", kind: "message", T: Artefact, repeated: true },
-    { no: 8, name: "deployment", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleRuntime {

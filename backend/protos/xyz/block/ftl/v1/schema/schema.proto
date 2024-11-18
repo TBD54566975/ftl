@@ -21,12 +21,6 @@ message Array {
   Type element = 2;
 }
 
-message Artefact {
-  bytes digest = 1;
-  string path = 2;
-  bool executable = 3;
-}
-
 message Bool {
   optional Position pos = 1;
 }
@@ -233,8 +227,7 @@ message ModuleRuntime {
   optional string os = 4;
   optional string arch = 5;
   optional string image = 6;
-  repeated Artefact artefacts = 7;
-  optional string deployment = 8;
+  optional string endpoint = 7;
 }
 
 message Optional {
