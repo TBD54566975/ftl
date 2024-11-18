@@ -8,7 +8,6 @@ import (
 	"net/url"
 
 	"connectrpc.com/connect"
-
 	"github.com/alecthomas/types/pubsub"
 
 	"github.com/TBD54566975/ftl"
