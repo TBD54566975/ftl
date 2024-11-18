@@ -54,6 +54,12 @@ const (
 	// ConsoleServiceSetConfigProcedure is the fully-qualified name of the ConsoleService's SetConfig
 	// RPC.
 	ConsoleServiceSetConfigProcedure = "/xyz.block.ftl.v1.console.ConsoleService/SetConfig"
+	// ConsoleServiceGetSecretProcedure is the fully-qualified name of the ConsoleService's GetSecret
+	// RPC.
+	ConsoleServiceGetSecretProcedure = "/xyz.block.ftl.v1.console.ConsoleService/GetSecret"
+	// ConsoleServiceSetSecretProcedure is the fully-qualified name of the ConsoleService's SetSecret
+	// RPC.
+	ConsoleServiceSetSecretProcedure = "/xyz.block.ftl.v1.console.ConsoleService/SetSecret"
 )
 
 // ConsoleServiceClient is a client for the xyz.block.ftl.v1.console.ConsoleService service.
@@ -66,6 +72,8 @@ type ConsoleServiceClient interface {
 	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
 	GetConfig(context.Context, *connect.Request[console.GetConfigRequest]) (*connect.Response[console.GetConfigResponse], error)
 	SetConfig(context.Context, *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error)
+	GetSecret(context.Context, *connect.Request[console.GetSecretRequest]) (*connect.Response[console.GetSecretResponse], error)
+	SetSecret(context.Context, *connect.Request[console.SetSecretRequest]) (*connect.Response[console.SetSecretResponse], error)
 }
 
 // NewConsoleServiceClient constructs a client for the xyz.block.ftl.v1.console.ConsoleService
@@ -114,6 +122,16 @@ func NewConsoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			baseURL+ConsoleServiceSetConfigProcedure,
 			opts...,
 		),
+		getSecret: connect.NewClient[console.GetSecretRequest, console.GetSecretResponse](
+			httpClient,
+			baseURL+ConsoleServiceGetSecretProcedure,
+			opts...,
+		),
+		setSecret: connect.NewClient[console.SetSecretRequest, console.SetSecretResponse](
+			httpClient,
+			baseURL+ConsoleServiceSetSecretProcedure,
+			opts...,
+		),
 	}
 }
 
@@ -126,6 +144,8 @@ type consoleServiceClient struct {
 	getEvents     *connect.Client[console.EventsQuery, console.GetEventsResponse]
 	getConfig     *connect.Client[console.GetConfigRequest, console.GetConfigResponse]
 	setConfig     *connect.Client[console.SetConfigRequest, console.SetConfigResponse]
+	getSecret     *connect.Client[console.GetSecretRequest, console.GetSecretResponse]
+	setSecret     *connect.Client[console.SetSecretRequest, console.SetSecretResponse]
 }
 
 // Ping calls xyz.block.ftl.v1.console.ConsoleService.Ping.
@@ -163,6 +183,16 @@ func (c *consoleServiceClient) SetConfig(ctx context.Context, req *connect.Reque
 	return c.setConfig.CallUnary(ctx, req)
 }
 
+// GetSecret calls xyz.block.ftl.v1.console.ConsoleService.GetSecret.
+func (c *consoleServiceClient) GetSecret(ctx context.Context, req *connect.Request[console.GetSecretRequest]) (*connect.Response[console.GetSecretResponse], error) {
+	return c.getSecret.CallUnary(ctx, req)
+}
+
+// SetSecret calls xyz.block.ftl.v1.console.ConsoleService.SetSecret.
+func (c *consoleServiceClient) SetSecret(ctx context.Context, req *connect.Request[console.SetSecretRequest]) (*connect.Response[console.SetSecretResponse], error) {
+	return c.setSecret.CallUnary(ctx, req)
+}
+
 // ConsoleServiceHandler is an implementation of the xyz.block.ftl.v1.console.ConsoleService
 // service.
 type ConsoleServiceHandler interface {
@@ -174,6 +204,8 @@ type ConsoleServiceHandler interface {
 	GetEvents(context.Context, *connect.Request[console.EventsQuery]) (*connect.Response[console.GetEventsResponse], error)
 	GetConfig(context.Context, *connect.Request[console.GetConfigRequest]) (*connect.Response[console.GetConfigResponse], error)
 	SetConfig(context.Context, *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error)
+	GetSecret(context.Context, *connect.Request[console.GetSecretRequest]) (*connect.Response[console.GetSecretResponse], error)
+	SetSecret(context.Context, *connect.Request[console.SetSecretRequest]) (*connect.Response[console.SetSecretResponse], error)
 }
 
 // NewConsoleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -218,6 +250,16 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 		svc.SetConfig,
 		opts...,
 	)
+	consoleServiceGetSecretHandler := connect.NewUnaryHandler(
+		ConsoleServiceGetSecretProcedure,
+		svc.GetSecret,
+		opts...,
+	)
+	consoleServiceSetSecretHandler := connect.NewUnaryHandler(
+		ConsoleServiceSetSecretProcedure,
+		svc.SetSecret,
+		opts...,
+	)
 	return "/xyz.block.ftl.v1.console.ConsoleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ConsoleServicePingProcedure:
@@ -234,6 +276,10 @@ func NewConsoleServiceHandler(svc ConsoleServiceHandler, opts ...connect.Handler
 			consoleServiceGetConfigHandler.ServeHTTP(w, r)
 		case ConsoleServiceSetConfigProcedure:
 			consoleServiceSetConfigHandler.ServeHTTP(w, r)
+		case ConsoleServiceGetSecretProcedure:
+			consoleServiceGetSecretHandler.ServeHTTP(w, r)
+		case ConsoleServiceSetSecretProcedure:
+			consoleServiceSetSecretHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -269,4 +315,12 @@ func (UnimplementedConsoleServiceHandler) GetConfig(context.Context, *connect.Re
 
 func (UnimplementedConsoleServiceHandler) SetConfig(context.Context, *connect.Request[console.SetConfigRequest]) (*connect.Response[console.SetConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.SetConfig is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) GetSecret(context.Context, *connect.Request[console.GetSecretRequest]) (*connect.Response[console.GetSecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.GetSecret is not implemented"))
+}
+
+func (UnimplementedConsoleServiceHandler) SetSecret(context.Context, *connect.Request[console.SetSecretRequest]) (*connect.Response[console.SetSecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.console.ConsoleService.SetSecret is not implemented"))
 }

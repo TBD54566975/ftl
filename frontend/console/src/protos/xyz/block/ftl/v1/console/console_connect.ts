@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { EventsQuery, GetConfigRequest, GetConfigResponse, GetEventsResponse, GetModulesRequest, GetModulesResponse, SetConfigRequest, SetConfigResponse, StreamEventsRequest, StreamEventsResponse, StreamModulesRequest, StreamModulesResponse } from "./console_pb.js";
+import { EventsQuery, GetConfigRequest, GetConfigResponse, GetEventsResponse, GetModulesRequest, GetModulesResponse, GetSecretRequest, GetSecretResponse, SetConfigRequest, SetConfigResponse, SetSecretRequest, SetSecretResponse, StreamEventsRequest, StreamEventsResponse, StreamModulesRequest, StreamModulesResponse } from "./console_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.console.ConsoleService
@@ -77,6 +77,24 @@ export const ConsoleService = {
       name: "SetConfig",
       I: SetConfigRequest,
       O: SetConfigResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.GetSecret
+     */
+    getSecret: {
+      name: "GetSecret",
+      I: GetSecretRequest,
+      O: GetSecretResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc xyz.block.ftl.v1.console.ConsoleService.SetSecret
+     */
+    setSecret: {
+      name: "SetSecret",
+      I: SetSecretRequest,
+      O: SetSecretResponse,
       kind: MethodKind.Unary,
     },
   }

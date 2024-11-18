@@ -343,6 +343,25 @@ message SetConfigResponse {
   bytes value = 1;
 }
 
+message GetSecretRequest {
+  string name = 1;
+  optional string module = 2;
+}
+
+message GetSecretResponse {
+  bytes value = 1;
+}
+
+message SetSecretRequest {
+  string name = 1;
+  optional string module = 2;
+  bytes value = 3;
+}
+
+message SetSecretResponse {
+  bytes value = 1;
+}
+
 service ConsoleService {
   // Ping service for readiness.
   rpc Ping(PingRequest) returns (PingResponse) {
@@ -356,4 +375,7 @@ service ConsoleService {
 
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
   rpc SetConfig(SetConfigRequest) returns (SetConfigResponse);
+
+  rpc GetSecret(GetSecretRequest) returns (GetSecretResponse);
+  rpc SetSecret(SetSecretRequest) returns (SetSecretResponse);
 }

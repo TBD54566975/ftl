@@ -549,3 +549,33 @@ class SetConfigResponse(_message.Message):
     VALUE_FIELD_NUMBER: _ClassVar[int]
     value: bytes
     def __init__(self, value: _Optional[bytes] = ...) -> None: ...
+
+class GetSecretRequest(_message.Message):
+    __slots__ = ("name", "module")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    MODULE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    module: str
+    def __init__(self, name: _Optional[str] = ..., module: _Optional[str] = ...) -> None: ...
+
+class GetSecretResponse(_message.Message):
+    __slots__ = ("value",)
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    value: bytes
+    def __init__(self, value: _Optional[bytes] = ...) -> None: ...
+
+class SetSecretRequest(_message.Message):
+    __slots__ = ("name", "module", "value")
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    MODULE_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    module: str
+    value: bytes
+    def __init__(self, name: _Optional[str] = ..., module: _Optional[str] = ..., value: _Optional[bytes] = ...) -> None: ...
+
+class SetSecretResponse(_message.Message):
+    __slots__ = ("value",)
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    value: bytes
+    def __init__(self, value: _Optional[bytes] = ...) -> None: ...
