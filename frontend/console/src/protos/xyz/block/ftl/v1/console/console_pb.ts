@@ -2527,3 +2527,169 @@ export class SetConfigResponse extends Message<SetConfigResponse> {
   }
 }
 
+/**
+ * @generated from message xyz.block.ftl.v1.console.GetSecretRequest
+ */
+export class GetSecretRequest extends Message<GetSecretRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: optional string module = 2;
+   */
+  module?: string;
+
+  constructor(data?: PartialMessage<GetSecretRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.GetSecretRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSecretRequest {
+    return new GetSecretRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSecretRequest {
+    return new GetSecretRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSecretRequest {
+    return new GetSecretRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSecretRequest | PlainMessage<GetSecretRequest> | undefined, b: GetSecretRequest | PlainMessage<GetSecretRequest> | undefined): boolean {
+    return proto3.util.equals(GetSecretRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.GetSecretResponse
+ */
+export class GetSecretResponse extends Message<GetSecretResponse> {
+  /**
+   * @generated from field: bytes value = 1;
+   */
+  value = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<GetSecretResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.GetSecretResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSecretResponse {
+    return new GetSecretResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSecretResponse {
+    return new GetSecretResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSecretResponse {
+    return new GetSecretResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSecretResponse | PlainMessage<GetSecretResponse> | undefined, b: GetSecretResponse | PlainMessage<GetSecretResponse> | undefined): boolean {
+    return proto3.util.equals(GetSecretResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.SetSecretRequest
+ */
+export class SetSecretRequest extends Message<SetSecretRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: optional string module = 2;
+   */
+  module?: string;
+
+  /**
+   * @generated from field: bytes value = 3;
+   */
+  value = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<SetSecretRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.SetSecretRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "module", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetSecretRequest {
+    return new SetSecretRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetSecretRequest {
+    return new SetSecretRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetSecretRequest {
+    return new SetSecretRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetSecretRequest | PlainMessage<SetSecretRequest> | undefined, b: SetSecretRequest | PlainMessage<SetSecretRequest> | undefined): boolean {
+    return proto3.util.equals(SetSecretRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.console.SetSecretResponse
+ */
+export class SetSecretResponse extends Message<SetSecretResponse> {
+  /**
+   * @generated from field: bytes value = 1;
+   */
+  value = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<SetSecretResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.console.SetSecretResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "value", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SetSecretResponse {
+    return new SetSecretResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SetSecretResponse {
+    return new SetSecretResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SetSecretResponse {
+    return new SetSecretResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SetSecretResponse | PlainMessage<SetSecretResponse> | undefined, b: SetSecretResponse | PlainMessage<SetSecretResponse> | undefined): boolean {
+    return proto3.util.equals(SetSecretResponse, a, b);
+  }
+}
+

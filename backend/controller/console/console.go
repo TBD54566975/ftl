@@ -922,6 +922,35 @@ func (c *ConsoleService) SetConfig(ctx context.Context, req *connect.Request[pbc
 	return connect.NewResponse(&pbconsole.SetConfigResponse{}), nil
 }
 
+func (c *ConsoleService) GetSecret(ctx context.Context, req *connect.Request[pbconsole.GetSecretRequest]) (*connect.Response[pbconsole.GetSecretResponse], error) {
+	resp, err := c.admin.SecretGet(ctx, connect.NewRequest(&ftlv1.GetSecretRequest{
+		Ref: &ftlv1.ConfigRef{
+			Name:   req.Msg.Name,
+			Module: req.Msg.Module,
+		},
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secret: %w", err)
+	}
+	return connect.NewResponse(&pbconsole.GetSecretResponse{
+		Value: resp.Msg.Value,
+	}), nil
+}
+
+func (c *ConsoleService) SetSecret(ctx context.Context, req *connect.Request[pbconsole.SetSecretRequest]) (*connect.Response[pbconsole.SetSecretResponse], error) {
+	_, err := c.admin.SecretSet(ctx, connect.NewRequest(&ftlv1.SetSecretRequest{
+		Ref: &ftlv1.ConfigRef{
+			Name:   req.Msg.Name,
+			Module: req.Msg.Module,
+		},
+		Value: req.Msg.Value,
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("failed to set secret: %w", err)
+	}
+	return connect.NewResponse(&pbconsole.SetSecretResponse{}), nil
+}
+
 func graph(sch *schema.Schema) map[string][]string {
 	out := make(map[string][]string)
 	for _, module := range sch.Modules {
