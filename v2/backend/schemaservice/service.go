@@ -54,10 +54,7 @@ func Start(ctx context.Context, config Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to initialise observability: %w", err)
 	}
-	svc := &Service{
-		changes: pubsub.New[deploymentChange](),
-		state:   NewState(),
-	}
+	svc := New()
 	logger.Debugf("Starting SchemaService on %s", config.Bind)
 	err = rpc.Serve(ctx, config.Bind,
 		rpc.GRPC(ftlpbconnect.NewSchemaServiceHandler, svc),
@@ -67,6 +64,13 @@ func Start(ctx context.Context, config Config) error {
 		return fmt.Errorf("failed to start SchemaService: %w", err)
 	}
 	return nil
+}
+
+func New() *Service {
+	return &Service{
+		state:   NewState(),
+		changes: pubsub.New[deploymentChange](),
+	}
 }
 
 var _ ftlpbconnect.SchemaServiceHandler = (*Service)(nil)
