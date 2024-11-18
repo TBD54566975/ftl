@@ -36,7 +36,6 @@ type Querier interface {
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
 	GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngressRoutesRow, error)
 	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
-
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([][]byte, error)
 	GetDeployment(ctx context.Context, key model.DeploymentKey) (GetDeploymentRow, error)
