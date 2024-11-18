@@ -32,11 +32,7 @@ jobs:
           echo "Latest release: $latest_release"
           echo "LATEST_VERSION=${latest_release#v}" >> "$GITHUB_ENV"
       - name: Check out the last tagged release
-        uses: actions/checkout@v4
-        with:
-          ref: v${{ env.LATEST_VERSION }}
-          fetch-depth: 1
-          fetch-tags: true
+        run: git checkout v${{ env.LATEST_VERSION }}
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Build Cache
@@ -56,10 +52,9 @@ jobs:
           echo "Running smoke test on the tagged release images"
           SKIP_KUBE_FULL_DEPLOY=true go test -v -timeout 15m -tags smoketest -run '^Test' ./smoketest
       - name: Check out HEAD of the current branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 1
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: git checkout "$HEAD_REF"
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Build Language Plugins
