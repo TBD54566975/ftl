@@ -28,6 +28,7 @@ wait-for-kube:
   while [ -z "$(kubectl get pod ftl-postgresql-0)" ]; do sleep 1; done
   kubectl wait --for=condition=ready pod/ftl-postgresql-0 --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m
+  kubectl wait --for=condition=available deployment/registry --timeout=5m
   sleep 1
   ftl status || sleep 5 && ftl status
 
