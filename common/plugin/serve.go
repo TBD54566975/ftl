@@ -174,7 +174,9 @@ func allocatePort() (*net.TCPAddr, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to allocate port: %w", err)
 	}
-	_ = l.Close()
+	if err := l.Close(); err != nil {
+		return nil, fmt.Errorf("could not close connection during port check: %w", err)
+	}
 	return l.Addr().(*net.TCPAddr), nil //nolint:forcetypeassert
 }
 
