@@ -36,3 +36,8 @@ runner:
 
 istio:
   enabled: true
+
+registry:
+  repository: "ftl-registry:5000/ftl-artefacts"
+  allowInsecure: "true"
+  create: true
