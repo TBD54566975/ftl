@@ -5,6 +5,10 @@ ingress:
     ingress.kubernetes.io/ssl-redirect: "false"
     kubernetes.io/ingress.class: traefik
 controller:
+  podAnnotations:
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+    sidecar.istio.io/logLevel: "debug"
   service:
     ports:
       - name: "http-8892"
@@ -14,11 +18,21 @@ controller:
       - name: "http-8891"
         port: 8891
 provisioner:
+  podAnnotations:
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+    sidecar.istio.io/logLevel: "debug"
   enabled: true
   service:
     ports:
       - name: "http-8893"
         port: 8893
+
+runner:
+  podAnnotations:
+    proxy.istio.io/config: |
+      holdApplicationUntilProxyStarts: true
+    sidecar.istio.io/logLevel: "debug"
 
 istio:
   enabled: true
