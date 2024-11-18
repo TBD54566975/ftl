@@ -614,7 +614,9 @@ func setPOMProperties(ctx context.Context, baseDir string, transaction watch.Mod
 	ftlVersion := ftl.Version
 	// If we are running in dev mode, ftl.Version will be "dev"
 	// If we are running on CI it is a git sha
-	if ftlVersion == "dev" || !strings.Contains(ftlVersion, ".") {
+	normalRelease := regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+	normal := normalRelease.MatchString(ftlVersion)
+	if !normal {
 		ftlVersion = "1.0-SNAPSHOT"
 	}
 
