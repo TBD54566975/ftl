@@ -269,10 +269,16 @@ export enum ModuleContextResponse_DBType {
    * @generated from enum value: POSTGRES = 0;
    */
   POSTGRES = 0,
+
+  /**
+   * @generated from enum value: MYSQL = 1;
+   */
+  MYSQL = 1,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ModuleContextResponse_DBType)
 proto3.util.setEnumType(ModuleContextResponse_DBType, "xyz.block.ftl.v1.ModuleContextResponse.DBType", [
   { no: 0, name: "POSTGRES" },
+  { no: 1, name: "MYSQL" },
 ]);
 
 /**

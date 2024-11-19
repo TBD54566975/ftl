@@ -40,7 +40,7 @@ func init() {
 		),
 		reflection.ProvideResourcesForVerb(
 			Two,
-			server.PostgresDatabaseHandle[FooConfig](),
+			server.DatabaseHandle[FooConfig]("postgres"),
 		),
 		reflection.ProvideResourcesForVerb(
 			CallsTwoAndThree,

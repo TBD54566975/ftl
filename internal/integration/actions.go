@@ -456,7 +456,7 @@ func Fail(next Action, msg string, args ...any) Action {
 // fetched and returns a row's column values
 func GetRow(t testing.TB, ic TestContext, database, query string, fieldCount int) []any {
 	Infof("Querying %s: %s", database, query)
-	db, err := sql.Open("pgx", dsn.DSN(database))
+	db, err := sql.Open("pgx", dsn.PostgresDSN(database))
 	assert.NoError(t, err)
 	defer db.Close()
 	actual := make([]any, fieldCount)
@@ -505,7 +505,7 @@ func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
 		dbName += "_test"
 	}
 	Infof("Creating database %s", dbName)
-	db, err := sql.Open("pgx", dsn.DSN("ftl"))
+	db, err := sql.Open("pgx", dsn.PostgresDSN("ftl"))
 	assert.NoError(t, err, "failed to open database connection")
 	t.Cleanup(func() {
 		err := db.Close()
@@ -536,7 +536,7 @@ func DropDBAction(t testing.TB, dbName string) Action {
 
 func DropDB(t testing.TB, dbName string) {
 	Infof("Dropping database %s", dbName)
-	db, err := sql.Open("pgx", dsn.DSN("postgres"))
+	db, err := sql.Open("pgx", dsn.PostgresDSN("postgres"))
 	assert.NoError(t, err, "failed to open database connection")
 
 	terminateDanglingConnections(t, db, dbName)

@@ -29,8 +29,8 @@ public class DatasourceProcessor {
         List<Decl> decls = new ArrayList<>();
         List<String> namedDatasources = new ArrayList<>();
         for (var ds : datasources) {
-            if (!ds.getDbKind().equals("postgresql")) {
-                throw new RuntimeException("only postgresql is supported not " + ds.getDbKind());
+            if (!ds.getDbKind().equals("postgresql") && !ds.getDbKind().equals("mysql")) {
+                throw new RuntimeException("only postgresql and mysql is supported not " + ds.getDbKind());
             }
             //default name is <default> which is not a valid name
             String sanitisedName = ds.getName().replace("<", "").replace(">", "");
@@ -50,7 +50,7 @@ public class DatasourceProcessor {
             }
             decls.add(
                     Decl.newBuilder().setDatabase(
-                            Database.newBuilder().setType("postgres").setName(sanitisedName))
+                            Database.newBuilder().setType(ds.getDbKind()).setName(sanitisedName))
                             .build());
         }
         generatedResourceBuildItemBuildProducer.produce(new GeneratedResourceBuildItem(FTLConfigSource.DATASOURCE_NAMES,

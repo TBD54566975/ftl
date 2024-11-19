@@ -209,7 +209,7 @@ func (b *boxCmd) Run(
 		}{
 			Name:   b.Name,
 			GOARCH: runtime.GOARCH,
-			DSN:    dsn.DSN("ftl", dsn.Host("db"), dsn.Port(5432)),
+			DSN:    dsn.PostgresDSN("ftl", dsn.Host("db"), dsn.Port(5432)),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to write compose file: %w", err)

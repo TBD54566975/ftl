@@ -112,7 +112,7 @@ type Config struct {
 }
 
 func (c *Config) SetDefaults() {
-	if err := kong.ApplyDefaults(c, kong.Vars{"dsn": dsn.DSN("ftl")}); err != nil {
+	if err := kong.ApplyDefaults(c, kong.Vars{"dsn": dsn.PostgresDSN("ftl")}); err != nil {
 		panic(err)
 	}
 	if c.Advertise == nil {
@@ -753,6 +753,21 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	// Initialize checksum to -1; a zero checksum does occur when the context contains no settings
 	lastChecksum := int64(-1)
 
+	dbTypes := map[string]modulecontext.DBType{}
+	deps, err := s.dal.GetActiveDeployments(ctx)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get deployments: %w", err))
+	}
+	for _, dep := range deps {
+		if dep.Module == name {
+			for _, decl := range dep.Schema.Decls {
+				if db, ok := decl.(*schema.Database); ok {
+					dbTypes[db.Name] = modulecontext.DBTypeFromString(db.Type)
+				}
+			}
+			break
+		}
+	}
 	for {
 		h := sha.New()
 
@@ -764,11 +779,10 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 		}
-		databases, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets)
+		databases, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets, dbTypes)
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
 		}
-
 		if err := hashConfigurationMap(h, configs); err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on configs: %w", err))
 		}
@@ -1097,7 +1111,7 @@ func (s *Service) CreateDeployment(ctx context.Context, req *connect.Request[ftl
 			if err := s.sm.Set(ctx, configuration.NewRef(module.Name, key), db.Runtime.DSN); err != nil {
 				return nil, fmt.Errorf("could not set database secret %s: %w", key, err)
 			}
-			logger.Infof("Database declaration: %s -> %s", db.Name, db.Runtime.DSN)
+			logger.Infof("Database declaration: %s -> %s type %s", db.Name, db.Runtime.DSN, db.Type)
 		}
 	}
 

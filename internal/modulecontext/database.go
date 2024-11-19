@@ -39,12 +39,25 @@ type DBType ftlv1.ModuleContextResponse_DBType
 
 const (
 	DBTypePostgres = DBType(ftlv1.ModuleContextResponse_POSTGRES)
+	DBTypeMySQL    = DBType(ftlv1.ModuleContextResponse_MYSQL)
 )
+
+func DBTypeFromString(dt string) DBType {
+	switch dt {
+	case "mysql":
+		return DBTypeMySQL
+	default:
+		// A bit yuck, but we can fix this later
+		return DBTypePostgres
+	}
+}
 
 func (x DBType) String() string {
 	switch x {
 	case DBTypePostgres:
 		return "Postgres"
+	case DBTypeMySQL:
+		return "MySQL"
 	default:
 		panic(fmt.Sprintf("unknown DB type: %s", strconv.Itoa(int(x))))
 	}

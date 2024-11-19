@@ -29,7 +29,7 @@ func TestDatabase(t *testing.T) {
 
 func TestMigrate(t *testing.T) {
 	dbName := "ftl_test"
-	dbUri := dsn.DSN(dbName)
+	dbUri := dsn.PostgresDSN(dbName)
 
 	q := func() in.Action {
 		return in.QueryRow(dbName, "SELECT version FROM schema_migrations WHERE version = '20240704103403'", "20240704103403")

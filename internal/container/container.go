@@ -132,26 +132,8 @@ func Run(ctx context.Context, image, name string, hostToContainerPort map[int]in
 	return nil
 }
 
-// RunDB runs a new detached postgres container with the given name and exposed port.
-func RunDB(ctx context.Context, name string, port int, image string) error {
-	cli, err := dockerClient.Get(ctx)
-
-	if err != nil {
-		return err
-	}
-
-	exists, err := DoesExist(ctx, name, optional.Some(image))
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		err = Pull(ctx, image)
-		if err != nil {
-			return err
-		}
-	}
-
+// RunPostgres runs a new detached postgres container with the given name and exposed port.
+func RunPostgres(ctx context.Context, name string, port int, image string) error {
 	config := container.Config{
 		Image: image,
 		Env:   []string{"POSTGRES_PASSWORD=secret"},
@@ -177,6 +159,56 @@ func RunDB(ctx context.Context, name string, port int, image string) error {
 				},
 			},
 		},
+	}
+	return runDB(ctx, name, image, config, hostConfig)
+}
+
+// RunMySQL runs a new detached postgres container with the given name and exposed port.
+func RunMySQL(ctx context.Context, name string, port int, image string) error {
+	config := container.Config{
+		Image: image,
+		Env:   []string{"MYSQL_PASSWORD=secret", "MYSQL_DATABASE=ftl", "MYSQL_ROOT_PASSWORD=secret", "MYSQL_USER=mysql"},
+		Healthcheck: &container.HealthConfig{
+			Test:        []string{"CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=secret"},
+			Interval:    time.Second,
+			Retries:     60,
+			Timeout:     60 * time.Second,
+			StartPeriod: 80 * time.Second,
+		},
+	}
+
+	hostConfig := container.HostConfig{
+		RestartPolicy: container.RestartPolicy{
+			Name: container.RestartPolicyAlways,
+		},
+		PortBindings: nat.PortMap{
+			"3306/tcp": []nat.PortBinding{
+				{
+					HostPort: strconv.Itoa(port),
+				},
+			},
+		},
+	}
+	return runDB(ctx, name, image, config, hostConfig)
+}
+
+func runDB(ctx context.Context, name string, image string, config container.Config, hostConfig container.HostConfig) error {
+	cli, err := dockerClient.Get(ctx)
+
+	if err != nil {
+		return fmt.Errorf("failed to get docker client: %w", err)
+	}
+
+	exists, err := DoesExist(ctx, name, optional.Some(image))
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		err = Pull(ctx, image)
+		if err != nil {
+			return err
+		}
 	}
 
 	created, err := cli.ContainerCreate(ctx, &config, &hostConfig, nil, nil, name)

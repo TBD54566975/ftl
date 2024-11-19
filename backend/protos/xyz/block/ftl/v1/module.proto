@@ -38,6 +38,7 @@ message ModuleContextResponse {
 
   enum DBType {
     POSTGRES = 0;
+    MYSQL = 1;
   }
 
   message DSN {

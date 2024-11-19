@@ -10,6 +10,7 @@ import (
 )
 
 const PostgresDatabaseType = "postgres"
+const MySQLDatabaseType = "mysql"
 
 //protobuf:3
 type Database struct {
@@ -17,7 +18,7 @@ type Database struct {
 	Runtime *DatabaseRuntime `parser:"" protobuf:"31634,optional"`
 
 	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Type     string   `parser:"'database' @'postgres'" protobuf:"4"`
+	Type     string   `parser:"'database' @('postgres'|'mysql')" protobuf:"4"`
 	Name     string   `parser:"@Ident" protobuf:"3"`
 }
 

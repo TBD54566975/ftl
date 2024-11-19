@@ -22,6 +22,8 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional
 	switch getDBType(pass, node) {
 	case postgres:
 		return extractDatabase(pass, obj, node, schema.PostgresDatabaseType, comments)
+	case mysql:
+		return extractDatabase(pass, obj, node, schema.MySQLDatabaseType, comments)
 	default:
 		return optional.None[*schema.Database]()
 	}
@@ -71,6 +73,7 @@ type dbType int
 const (
 	none dbType = iota
 	postgres
+	mysql
 )
 
 func getDBType(pass *analysis.Pass, node ast.Node) dbType {
@@ -81,6 +84,9 @@ func getDBType(pass *analysis.Pass, node ast.Node) dbType {
 	}
 	if common.IsPostgresDatabaseConfigType(pass, typ) {
 		return postgres
+	}
+	if common.IsMysqlDatabaseConfigType(pass, typ) {
+		return mysql
 	}
 	return none
 }

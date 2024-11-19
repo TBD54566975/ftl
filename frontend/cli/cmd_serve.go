@@ -46,6 +46,7 @@ type serveCmd struct {
 type serveCommonConfig struct {
 	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress, runner and language plugin will increment the port by 1" default:"http://127.0.0.1:8891"`
 	DBPort              int                  `help:"Port to use for the database." default:"15432"`
+	MysqlPort           int                  `help:"Port to use for the MySQL database, if one is required." default:"13306"`
 	RegistryPort        int                  `help:"Port to use for the registry." default:"15000"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
 	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"0" hidden:"true"`
@@ -151,7 +152,7 @@ func (s *serveCommonConfig) run(
 	registry.AllowInsecure = true
 	registry.Registry = fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort)
 	// Bring up the DB and DAL.
-	dsn, err := dev.SetupDB(ctx, s.DatabaseImage, s.DBPort, recreate)
+	dsn, err := dev.SetupPostgres(ctx, s.DatabaseImage, s.DBPort, recreate)
 	if err != nil {
 		return err
 	}
@@ -250,7 +251,7 @@ func (s *serveCommonConfig) run(
 				ID:          "controller",
 			}},
 			Default: &provisioner.ProvisionerBinding{
-				Provisioner: provisioner.NewDevProvisioner(s.DBPort),
+				Provisioner: provisioner.NewDevProvisioner(s.DBPort, s.MysqlPort),
 				ID:          "dev",
 			},
 		}

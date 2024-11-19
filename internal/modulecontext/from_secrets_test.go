@@ -17,7 +17,7 @@ func TestFromSecrets(t *testing.T) {
 		"FTL_DSN_ECHO_ECHO": []byte(`"postgres://echo:echo@localhost:5432/echo?sslmode=disable\u0026user=echo\u0026password=echo"
 `),
 	}
-	databases, err := DatabasesFromSecrets(ctx, "echo", secrets)
+	databases, err := DatabasesFromSecrets(ctx, "echo", secrets, nil)
 	assert.NoError(t, err)
 
 	response := NewBuilder("echo").AddDatabases(databases).Build().ToProto()

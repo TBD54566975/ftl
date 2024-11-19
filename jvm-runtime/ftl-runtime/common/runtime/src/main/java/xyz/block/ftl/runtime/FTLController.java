@@ -88,11 +88,10 @@ public class FTLController implements LeaseClient {
     }
 
     public Datasource getDatasource(String name) {
-        //TODO: only one database is supported at the moment
         List<ModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
         for (var i : databasesList) {
             if (i.getName().equals(name)) {
-                return Datasource.fromDSN(i.getDsn());
+                return Datasource.fromDSN(i.getDsn(), i.getType());
             }
         }
         return null;
@@ -261,34 +260,51 @@ public class FTLController implements LeaseClient {
 
     public record Datasource(String connectionString, String username, String password) {
 
-        public static Datasource fromDSN(String dsn) {
+        public static Datasource fromDSN(String dsn, ModuleContextResponse.DBType type) {
+            String prefix = type.equals(ModuleContextResponse.DBType.MYSQL) ? "jdbc:mysql" : "jdbc:postgresql";
             try {
                 URI uri = new URI(dsn);
                 String username = "";
                 String password = "";
                 String userInfo = uri.getUserInfo();
                 if (userInfo != null) {
+                    log.errorf("DSN %s  contains user info", dsn);
                     var split = userInfo.split(":");
                     username = split[0];
                     password = split[1];
                     return new Datasource(
-                            new URI("jdbc:postgresql", null, uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), null)
+                            new URI(prefix, null, uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), null)
                                     .toASCIIString(),
                             username, password);
                 } else {
+                    log.errorf("DSN %s does not contain user info", dsn);
                     //TODO: this is horrible, just quick hack for now
                     var matcher = Pattern.compile("[&?]user=([^?]*)").matcher(dsn);
                     if (matcher.find()) {
                         username = matcher.group(1);
+                        dsn = matcher.replaceAll("");
                     }
-                    dsn = matcher.replaceAll("");
                     matcher = Pattern.compile("[&?]password=([^?]*)").matcher(dsn);
                     if (matcher.find()) {
                         password = matcher.group(1);
+                        dsn = matcher.replaceAll("");
                     }
-                    dsn = matcher.replaceAll("");
-                    dsn = dsn.replaceAll("postgresql://", "jdbc:postgresql://");
-                    dsn = dsn.replaceAll("postgres://", "jdbc:postgresql://");
+                    matcher = Pattern.compile("^([^:]+):([^:]+)@").matcher(dsn);
+                    if (matcher.find()) {
+                        username = matcher.group(1);
+                        password = matcher.group(2);
+                        dsn = matcher.replaceAll("");
+                    }
+                    matcher = Pattern.compile("tcp\\(([^:)]+):([^:)]+)\\)").matcher(dsn);
+                    if (matcher.find()) {
+                        // Mysql has a messed up syntax
+                        dsn = matcher.replaceAll(matcher.group(1) + ":" + matcher.group(2));
+                    }
+                    log.errorf("DSN %s 22222", dsn);
+                    dsn = dsn.replaceAll("postgresql://", "");
+                    dsn = dsn.replaceAll("postgres://", "");
+                    dsn = dsn.replaceAll("mysql://", "");
+                    dsn = prefix + "://" + dsn;
                     return new Datasource(dsn, username, password);
                 }
             } catch (URISyntaxException e) {

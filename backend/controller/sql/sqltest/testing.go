@@ -25,7 +25,7 @@ func OpenForTesting(ctx context.Context, t testing.TB) *sql.DB {
 	assert.NoError(t, err)
 	t.Cleanup(func() { _ = release() }) //nolint:errcheck
 
-	conn, err := databasetesting.CreateForDevel(ctx, dsn.DSN("ftl-test"), true)
+	conn, err := databasetesting.CreateForDevel(ctx, dsn.PostgresDSN("ftl-test"), true)
 	assert.NoError(t, err)
 	t.Cleanup(func() { assert.NoError(t, conn.Close()) })
 	return conn

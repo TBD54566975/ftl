@@ -46,6 +46,8 @@ func init() {
 {{- range $dbs}}
 		{{- if eq .Type "postgres" }}
 		reflection.Database[{{ trimModuleQualifier $moduleName .TypeName }}]("{{.Name}}", server.InitPostgres),
+		{{- else if eq .Type "mysql" }}
+		reflection.Database[{{ trimModuleQualifier $moduleName .TypeName }}]("{{.Name}}", server.InitMySQL),
 		{{- end }}
 {{- end}}
 {{- range $verbs}}
@@ -66,9 +68,7 @@ func init() {
             	{{- end }}
                 {{- end }}
                 {{- with getDatabaseHandle . }}
-                	{{- if eq .Type "postgres" }}
-			server.PostgresDatabaseHandle[{{ trimModuleQualifier $moduleName .TypeName }}](),
-                	{{- end }}
+			server.DatabaseHandle[{{ trimModuleQualifier $moduleName .TypeName }}]("{{.Type}}"),
                 {{- end }}
 			{{- end}}
 		),
