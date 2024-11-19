@@ -81,6 +81,9 @@ func createContainerService(release *releaseCmd) (*artefacts.OCIArtefactService,
 	}
 	conn.SetMaxIdleConns(release.MaxIdleDBConnections)
 	conn.SetMaxOpenConns(release.MaxOpenDBConnections)
-
-	return artefacts.NewOCIRegistryStorage(release.Registry), nil
+	storage, err := artefacts.NewOCIRegistryStorage(release.Registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OCI registry storage: %w", err)
+	}
+	return storage, nil
 }

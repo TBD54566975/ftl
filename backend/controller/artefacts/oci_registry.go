@@ -39,6 +39,7 @@ type OCIArtefactService struct {
 	repoFactory   func() (*remote.Repository, error)
 	auth          authn.AuthConfig
 	allowInsecure bool
+	puller        *googleremote.Puller
 }
 
 type ArtefactRepository struct {
@@ -56,11 +57,19 @@ type ArtefactBlobs struct {
 }
 
 func NewForTesting() *OCIArtefactService {
-	return NewOCIRegistryStorage(RegistryConfig{Registry: "127.0.0.1:15000/ftl-tests", AllowInsecure: true})
+	storage, err := NewOCIRegistryStorage(RegistryConfig{Registry: "127.0.0.1:15000/ftl-tests", AllowInsecure: true})
+	if err != nil {
+		panic(err)
+	}
+	return storage
 }
 
-func NewOCIRegistryStorage(c RegistryConfig) *OCIArtefactService {
+func NewOCIRegistryStorage(c RegistryConfig) (*OCIArtefactService, error) {
 	// Connect the registry targeting the specified container
+	puller, err := googleremote.NewPuller()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create puller for registry '%s': %w", c.Registry, err)
+	}
 	repoFactory := func() (*remote.Repository, error) {
 		reg, err := remote.NewRepository(c.Registry)
 		if err != nil {
@@ -85,7 +94,8 @@ func NewOCIRegistryStorage(c RegistryConfig) *OCIArtefactService {
 		repoFactory:   repoFactory,
 		auth:          authn.AuthConfig{Username: c.Username, Password: c.Password},
 		allowInsecure: c.AllowInsecure,
-	}
+		puller:        puller,
+	}, nil
 }
 
 func (s *OCIArtefactService) GetDigestsKeys(ctx context.Context, digests []sha256.SHA256) (keys []ArtefactKey, missing []sha256.SHA256, err error) {
@@ -180,7 +190,7 @@ func (s *OCIArtefactService) Download(ctx context.Context, dg sha256.SHA256) (io
 	if err != nil {
 		return nil, fmt.Errorf("unable to create digest '%s': %w", dg, err)
 	}
-	layer, err := googleremote.Layer(newDigest, googleremote.WithAuthFromKeychain(authn.DefaultKeychain))
+	layer, err := googleremote.Layer(newDigest, googleremote.WithAuthFromKeychain(authn.DefaultKeychain), googleremote.Reuse(s.puller))
 	if err != nil {
 		return nil, fmt.Errorf("unable to read layer '%s': %w", newDigest, err)
 	}

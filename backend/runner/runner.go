@@ -339,7 +339,11 @@ func (s *Service) deploy(ctx context.Context) error {
 			return fmt.Errorf("failed to create deployment directory: %w", err)
 		}
 	}
-	err = download.ArtefactsFromOCI(ctx, s.controllerClient, key, deploymentDir, artefacts.NewOCIRegistryStorage(s.config.Registry))
+	storage, err := artefacts.NewOCIRegistryStorage(s.config.Registry)
+	if err != nil {
+		return fmt.Errorf("failed to create OCI registry storage: %w", err)
+	}
+	err = download.ArtefactsFromOCI(ctx, s.controllerClient, key, deploymentDir, storage)
 	if err != nil {
 		observability.Deployment.Failure(ctx, optional.Some(key.String()))
 		return fmt.Errorf("failed to download artefacts: %w", err)

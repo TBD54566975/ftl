@@ -296,7 +296,11 @@ func New(
 	}
 	svc.schemaState.Store(schemaState{routes: map[string]Route{}, schema: &schema.Schema{}})
 
-	svc.registry = artefacts.NewOCIRegistryStorage(config.Registry)
+	storage, err := artefacts.NewOCIRegistryStorage(config.Registry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OCI registry storage: %w", err)
+	}
+	svc.registry = storage
 
 	timelineSvc := timeline.New(ctx, conn, encryption)
 	svc.timeline = timelineSvc
