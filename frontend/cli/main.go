@@ -215,6 +215,10 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		kctx.FatalIfErrorf(err)
 		kctx.Bind(logger)
 
+		schemaServiceClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.Endpoint.String(), log.Error)
+		ctx = rpc.ContextWithClient(ctx, schemaServiceClient)
+		kctx.BindTo(schemaServiceClient, (*ftlv1connect.SchemaServiceClient)(nil))
+
 		controllerServiceClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.Endpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, controllerServiceClient)
 		kctx.BindTo(controllerServiceClient, (*ftlv1connect.ControllerServiceClient)(nil))
@@ -233,7 +237,7 @@ func makeBindContext(logger *log.Logger, cancel context.CancelFunc) terminal.Kon
 		})
 		kctx.FatalIfErrorf(err)
 
-		kongcompletion.Register(kctx.Kong, kongcompletion.WithPredictors(terminal.Predictors(ctx, controllerServiceClient)))
+		kongcompletion.Register(kctx.Kong, kongcompletion.WithPredictors(terminal.Predictors(ctx, schemaServiceClient)))
 
 		verbServiceClient := rpc.Dial(ftlv1connect.NewVerbServiceClient, cli.Endpoint.String(), log.Error)
 		ctx = rpc.ContextWithClient(ctx, verbServiceClient)

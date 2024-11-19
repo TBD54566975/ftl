@@ -23,7 +23,7 @@ type getSchemaCmd struct {
 	Modules  []string `help:"Modules to include" type:"string" optional:""`
 }
 
-func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+func (g *getSchemaCmd) Run(ctx context.Context, client ftlv1connect.SchemaServiceClient) error {
 	resp, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 	if err != nil {
 		return err

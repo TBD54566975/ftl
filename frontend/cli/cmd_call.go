@@ -28,8 +28,12 @@ type callCmd struct {
 	Request string         `arg:"" optional:"" help:"JSON5 request payload." default:"{}"`
 }
 
-func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli ftlv1connect.ControllerServiceClient) error {
-	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait, client); err != nil {
+func (c *callCmd) Run(
+	ctx context.Context,
+	verbClient ftlv1connect.VerbServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
+) error {
+	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait, verbClient); err != nil {
 		return err
 	}
 
@@ -46,19 +50,25 @@ func (c *callCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient
 
 	logger.Debugf("Calling %s", c.Verb)
 
-	return callVerb(ctx, client, ctlCli, c.Verb, requestJSON)
+	return callVerb(ctx, verbClient, schemaClient, c.Verb, requestJSON)
 }
 
-func callVerb(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli ftlv1connect.ControllerServiceClient, verb reflection.Ref, requestJSON []byte) error {
+func callVerb(
+	ctx context.Context,
+	verbClient ftlv1connect.VerbServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
+	verb reflection.Ref,
+	requestJSON []byte,
+) error {
 	logger := log.FromContext(ctx)
 	// otherwise, we have a match so call the verb
-	resp, err := client.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{
+	resp, err := verbClient.Call(ctx, connect.NewRequest(&ftlv1.CallRequest{
 		Verb: verb.ToProto(),
 		Body: requestJSON,
 	}))
 
 	if cerr := new(connect.Error); errors.As(err, &cerr) && cerr.Code() == connect.CodeNotFound {
-		suggestions, err := findSuggestions(ctx, ctlCli, verb)
+		suggestions, err := findSuggestions(ctx, schemaClient, verb)
 
 		// If we have suggestions, return a helpful error message, otherwise continue to the original error.
 		if err == nil {
@@ -84,11 +94,15 @@ func callVerb(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli
 // findSuggestions looks up the schema and finds verbs that are similar to the one that was not found
 // it uses the levenshtein distance to determine similarity - if the distance is less than 40% of the length of the verb,
 // it returns an error if no closely matching suggestions are found
-func findSuggestions(ctx context.Context, client ftlv1connect.ControllerServiceClient, verb reflection.Ref) ([]string, error) {
+func findSuggestions(
+	ctx context.Context,
+	schemaClient ftlv1connect.SchemaServiceClient,
+	verb reflection.Ref,
+) ([]string, error) {
 	logger := log.FromContext(ctx)
 
 	// lookup the verbs
-	res, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	res, err := schemaClient.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 	if err != nil {
 		return nil, err
 	}

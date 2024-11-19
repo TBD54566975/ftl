@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package xyz.block.ftl.v1;
+
+import "xyz/block/ftl/v1/ftl.proto";
+import "xyz/block/ftl/v1/schema/schema.proto";
+
+option go_package = "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1;ftlv1";
+option java_multiple_files = true;
+
+message GetSchemaRequest {}
+message GetSchemaResponse {
+  schema.Schema schema = 1;
+}
+
+enum DeploymentChangeType {
+  DEPLOYMENT_ADDED = 0;
+  DEPLOYMENT_REMOVED = 1;
+  DEPLOYMENT_CHANGED = 2;
+}
+
+message PullSchemaRequest {}
+message PullSchemaResponse {
+  string deployment_key = 1;
+  string module_name = 2;
+  // For deletes this will not be present.
+  optional schema.Module schema = 4;
+  // If true there are more schema changes immediately following this one as part of the initial batch.
+  // If false this is the last schema change in the initial batch, but others may follow later.
+  bool more = 3;
+  DeploymentChangeType change_type = 5;
+}
+
+service SchemaService {
+  // Ping service for readiness.
+  rpc Ping(PingRequest) returns (PingResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Get the full schema.
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Pull schema changes from the Controller.
+  //
+  // Note that if there are no deployments this will block indefinitely, making it unsuitable for
+  // just retrieving the schema. Use GetSchema for that.
+  rpc PullSchema(PullSchemaRequest) returns (stream PullSchemaResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}

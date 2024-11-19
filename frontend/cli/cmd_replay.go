@@ -25,11 +25,15 @@ type replayCmd struct {
 	Verb reflection.Ref `arg:"" required:"" help:"Full path of Verb to call." predictor:"verbs"`
 }
 
-func (c *replayCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClient, ctlCli ftlv1connect.ControllerServiceClient) error {
+func (c *replayCmd) Run(
+	ctx context.Context,
+	verbClient ftlv1connect.VerbServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
+) error {
 	// Wait timeout is for both pings to complete, not each ping individually
 	startTime := time.Now()
 
-	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait, client); err != nil {
+	if err := rpc.Wait(ctx, backoff.Backoff{Max: time.Second * 2}, c.Wait, verbClient); err != nil {
 		return fmt.Errorf("failed to wait for client: %w", err)
 	}
 
@@ -42,7 +46,7 @@ func (c *replayCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClie
 
 	// First check the verb is valid
 	// lookup the verbs
-	res, err := ctlCli.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	res, err := schemaClient.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 	if err != nil {
 		return fmt.Errorf("failed to get schema: %w", err)
 	}
@@ -64,7 +68,7 @@ func (c *replayCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClie
 		}
 	}
 	if !found {
-		suggestions, err := findSuggestions(ctx, ctlCli, c.Verb)
+		suggestions, err := findSuggestions(ctx, schemaClient, c.Verb)
 		// if we have suggestions, return a helpful error message. otherwise continue to the original error
 		if err == nil {
 			return fmt.Errorf("verb not found: %s\n\nDid you mean one of these?\n%s", c.Verb, strings.Join(suggestions, "\n"))
@@ -102,5 +106,5 @@ func (c *replayCmd) Run(ctx context.Context, client ftlv1connect.VerbServiceClie
 	logger.Infof("Calling %s with body:", c.Verb)
 	status.PrintJSON(ctx, []byte(requestJSON))
 	logger.Infof("Response:")
-	return callVerb(ctx, client, ctlCli, c.Verb, []byte(requestJSON))
+	return callVerb(ctx, verbClient, schemaClient, c.Verb, []byte(requestJSON))
 }

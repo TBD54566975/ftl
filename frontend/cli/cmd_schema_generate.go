@@ -29,15 +29,15 @@ type schemaGenerateCmd struct {
 	ReconnectDelay time.Duration `help:"Delay before attempting to reconnect to FTL." default:"5s"`
 }
 
-func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+func (s *schemaGenerateCmd) Run(ctx context.Context, client ftlv1connect.SchemaServiceClient) error {
 	if s.Watch == 0 {
 		return s.oneOffGenerate(ctx, client)
 	}
 	return s.hotReload(ctx, client)
 }
 
-func (s *schemaGenerateCmd) oneOffGenerate(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
-	response, err := client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+func (s *schemaGenerateCmd) oneOffGenerate(ctx context.Context, schemaClient ftlv1connect.SchemaServiceClient) error {
+	response, err := schemaClient.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 	if err != nil {
 		return fmt.Errorf("failed to get schema: %w", err)
 	}
@@ -48,7 +48,7 @@ func (s *schemaGenerateCmd) oneOffGenerate(ctx context.Context, client ftlv1conn
 	return s.regenerateModules(log.FromContext(ctx), modules)
 }
 
-func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.ControllerServiceClient) error {
+func (s *schemaGenerateCmd) hotReload(ctx context.Context, client ftlv1connect.SchemaServiceClient) error {
 	watch := watcher.New()
 	defer watch.Close()
 

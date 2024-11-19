@@ -6,7 +6,7 @@ require github.com/TBD54566975/ftl v0.206.1
 
 require (
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
-	github.com/alecthomas/types v0.16.0 // indirect
+	github.com/alecthomas/types v0.17.0 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
 	github.com/swaggest/jsonschema-go v0.3.72 // indirect

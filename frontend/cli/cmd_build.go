@@ -16,7 +16,12 @@ type buildCmd struct {
 	BuildEnv    []string `help:"Environment variables to set for the build."`
 }
 
-func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig projectconfig.Config) error {
+func (b *buildCmd) Run(
+	ctx context.Context,
+	controllerClient ftlv1connect.ControllerServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
+	projConfig projectconfig.Config,
+) error {
 	if len(b.Dirs) == 0 {
 		b.Dirs = projConfig.AbsModuleDirs()
 	}
@@ -27,7 +32,15 @@ func (b *buildCmd) Run(ctx context.Context, client ftlv1connect.ControllerServic
 	// Cancel build engine context to ensure all language plugins are killed.
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	engine, err := buildengine.New(ctx, client, projConfig, b.Dirs, buildengine.BuildEnv(b.BuildEnv), buildengine.Parallelism(b.Parallelism))
+	engine, err := buildengine.New(
+		ctx,
+		controllerClient,
+		schemaClient,
+		projConfig,
+		b.Dirs,
+		buildengine.BuildEnv(b.BuildEnv),
+		buildengine.Parallelism(b.Parallelism),
+	)
 	if err != nil {
 		return err
 	}

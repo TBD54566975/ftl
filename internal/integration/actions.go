@@ -405,7 +405,7 @@ func VerifyKubeState(check func(ctx context.Context, t testing.TB, namespace str
 // VerifySchema lets you test the current schema
 func VerifySchema(check func(ctx context.Context, t testing.TB, sch *schemapb.Schema)) Action {
 	return func(t testing.TB, ic TestContext) {
-		sch, err := ic.Controller.GetSchema(ic, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+		sch, err := ic.Schema.GetSchema(ic, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 		if err != nil {
 			t.Errorf("failed to get schema: %v", err)
 			return
@@ -417,7 +417,7 @@ func VerifySchema(check func(ctx context.Context, t testing.TB, sch *schemapb.Sc
 // VerifySchemaVerb lets you test the current schema for a specific verb
 func VerifySchemaVerb(module string, verb string, check func(ctx context.Context, t testing.TB, schema *schemapb.Schema, verb *schemapb.Verb)) Action {
 	return func(t testing.TB, ic TestContext) {
-		sch, err := ic.Controller.GetSchema(ic, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+		sch, err := ic.Schema.GetSchema(ic, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 		if err != nil {
 			t.Errorf("failed to get schema: %v", err)
 			return

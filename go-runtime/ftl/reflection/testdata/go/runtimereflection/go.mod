@@ -16,7 +16,7 @@ require (
 	github.com/alecthomas/concurrency v0.0.2 // indirect
 	github.com/alecthomas/participle/v2 v2.1.1 // indirect
 	github.com/alecthomas/repr v0.4.0 // indirect
-	github.com/alecthomas/types v0.16.0 // indirect
+	github.com/alecthomas/types v0.17.0 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/danieljoos/wincred v1.2.2 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect

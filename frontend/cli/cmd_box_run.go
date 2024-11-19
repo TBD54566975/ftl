@@ -77,12 +77,13 @@ func (b *boxRunCmd) Run(
 	})
 
 	// Wait for the controller to come up.
-	client := ftlv1connect.NewControllerServiceClient(rpc.GetHTTPClient(b.Bind.String()), b.Bind.String())
-	if err := rpc.Wait(ctx, backoff.Backoff{}, b.ControllerTimeout, client); err != nil {
+	controllerClient := ftlv1connect.NewControllerServiceClient(rpc.GetHTTPClient(b.Bind.String()), b.Bind.String())
+	schemaClient := ftlv1connect.NewSchemaServiceClient(rpc.GetHTTPClient(b.Bind.String()), b.Bind.String())
+	if err := rpc.Wait(ctx, backoff.Backoff{}, b.ControllerTimeout, controllerClient); err != nil {
 		return fmt.Errorf("controller failed to start: %w", err)
 	}
 
-	engine, err := buildengine.New(ctx, client, projConfig, []string{b.Dir})
+	engine, err := buildengine.New(ctx, controllerClient, schemaClient, projConfig, []string{b.Dir})
 	if err != nil {
 		return fmt.Errorf("failed to create build engine: %w", err)
 	}

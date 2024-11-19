@@ -64,12 +64,15 @@ func (s *serveCmd) Run(
 	cm *manager.Manager[configuration.Configuration],
 	sm *manager.Manager[configuration.Secrets],
 	projConfig projectconfig.Config,
+	controllerClient ftlv1connect.ControllerServiceClient,
+	provisionerClient provisionerconnect.ProvisionerServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
 ) error {
 	bindAllocator, err := bind.NewBindAllocator(s.Bind, 2)
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaClient)
 }
 
 //nolint:maintidx
@@ -81,10 +84,11 @@ func (s *serveCmd) run(
 	initialised optional.Option[chan bool],
 	devMode bool,
 	bindAllocator *bind.BindAllocator,
+	controllerClient ftlv1connect.ControllerServiceClient,
+	provisionerClient provisionerconnect.ProvisionerServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
 ) error {
 	logger := log.FromContext(ctx)
-	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-	provisionerClient := rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
 
 	if s.Background {
 		if s.Stop {
@@ -256,7 +260,7 @@ func (s *serveCmd) run(
 		}
 
 		wg.Go(func() error {
-			if err := provisioner.Start(provisionerCtx, config, registry, controllerClient); err != nil {
+			if err := provisioner.Start(provisionerCtx, config, registry, controllerClient, schemaClient); err != nil {
 				logger.Errorf(err, "provisioner%d failed: %v", i, err)
 				return fmt.Errorf("provisioner%d failed: %w", i, err)
 			}
