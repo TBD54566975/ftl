@@ -10,7 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 )
 
-func Predictors(ctx context.Context, client ftlv1connect.ControllerServiceClient) map[string]complete.Predictor {
+func Predictors(ctx context.Context, client ftlv1connect.SchemaServiceClient) map[string]complete.Predictor {
 	return map[string]complete.Predictor{
 		"verbs": &verbPredictor{
 			Client: client,
@@ -20,7 +20,7 @@ func Predictors(ctx context.Context, client ftlv1connect.ControllerServiceClient
 }
 
 type verbPredictor struct {
-	Client ftlv1connect.ControllerServiceClient
+	Client ftlv1connect.SchemaServiceClient
 	Ctx    context.Context
 }
 

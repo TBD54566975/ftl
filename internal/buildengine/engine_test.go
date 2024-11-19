@@ -20,7 +20,7 @@ func TestGraph(t *testing.T) {
 		Path: filepath.Join(t.TempDir(), "ftl-project.toml"),
 		Name: "test",
 	}
-	engine, err := buildengine.New(ctx, nil, projConfig, []string{"testdata/alpha", "testdata/other", "testdata/another"})
+	engine, err := buildengine.New(ctx, nil, nil, projConfig, []string{"testdata/alpha", "testdata/other", "testdata/another"})
 	assert.NoError(t, err)
 
 	defer engine.Close()

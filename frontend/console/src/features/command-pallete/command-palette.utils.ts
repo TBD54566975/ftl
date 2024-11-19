@@ -1,5 +1,5 @@
 import { type HugeiconsProps, PackageIcon } from 'hugeicons-react'
-import type { PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/controller_pb'
+import type { PullSchemaResponse } from '../../protos/xyz/block/ftl/v1/schemaservice_pb'
 import { declIcon, declTypeName, declUrl } from '../modules/module.utils'
 
 export interface PaletteItem {

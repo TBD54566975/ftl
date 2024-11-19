@@ -43,10 +43,11 @@ func main() {
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
 	controllerClient := rpc.Dial(ftlv1connect.NewControllerServiceClient, cli.ProvisionerConfig.ControllerEndpoint.String(), log.Error)
+	schemaClient := rpc.Dial(ftlv1connect.NewSchemaServiceClient, cli.ProvisionerConfig.ControllerEndpoint.String(), log.Error)
 
 	registry, err := provisioner.RegistryFromConfigFile(ctx, cli.ProvisionerConfig.PluginConfigFile, controllerClient)
 	kctx.FatalIfErrorf(err, "failed to create provisioner registry")
 
-	err = provisioner.Start(ctx, cli.ProvisionerConfig, registry, controllerClient)
+	err = provisioner.Start(ctx, cli.ProvisionerConfig, registry, controllerClient, schemaClient)
 	kctx.FatalIfErrorf(err, "failed to start provisioner")
 }

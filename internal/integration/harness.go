@@ -292,6 +292,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			var controller ftlv1connect.ControllerServiceClient
 			var console pbconsoleconnect.ConsoleServiceClient
 			var provisioner provisionerconnect.ProvisionerServiceClient
+			var schema ftlv1connect.SchemaServiceClient
 			if opts.startController {
 				Infof("Starting ftl cluster")
 
@@ -313,6 +314,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 			if opts.startController || opts.kube {
 				controller = rpc.Dial(ftlv1connect.NewControllerServiceClient, "http://localhost:8892", log.Debug)
 				console = rpc.Dial(pbconsoleconnect.NewConsoleServiceClient, "http://localhost:8892", log.Debug)
+				schema = rpc.Dial(ftlv1connect.NewSchemaServiceClient, "http://localhost:8892", log.Debug)
 			}
 			if opts.startProvisioner {
 				provisioner = rpc.Dial(provisionerconnect.NewProvisionerServiceClient, "http://localhost:8893", log.Debug)
@@ -339,6 +341,7 @@ func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 
 			if opts.startController || opts.kube {
 				ic.Controller = controller
+				ic.Schema = schema
 				ic.Console = console
 
 				Infof("Waiting for controller to be ready")
@@ -415,6 +418,7 @@ type TestContext struct {
 
 	Controller  ftlv1connect.ControllerServiceClient
 	Provisioner provisionerconnect.ProvisionerServiceClient
+	Schema      ftlv1connect.SchemaServiceClient
 	Console     pbconsoleconnect.ConsoleServiceClient
 	Verbs       ftlv1connect.VerbServiceClient
 

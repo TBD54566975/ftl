@@ -116,14 +116,23 @@ Bring the box down:
 	`
 }
 
-func (b *boxCmd) Run(ctx context.Context, client ftlv1connect.ControllerServiceClient, projConfig projectconfig.Config) error {
+func (b *boxCmd) Run(
+	ctx context.Context,
+	controllerClient ftlv1connect.ControllerServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
+	projConfig projectconfig.Config,
+) error {
 	if len(b.Build.Dirs) == 0 {
 		b.Build.Dirs = projConfig.AbsModuleDirs()
 	}
 	if len(b.Build.Dirs) == 0 {
 		return errors.New("no directories specified")
 	}
-	engine, err := buildengine.New(ctx, client, projConfig, b.Build.Dirs, buildengine.BuildEnv(b.Build.BuildEnv), buildengine.Parallelism(b.Build.Parallelism))
+	engine, err := buildengine.New(
+		ctx, controllerClient, schemaClient, projConfig, b.Build.Dirs,
+		buildengine.BuildEnv(b.Build.BuildEnv),
+		buildengine.Parallelism(b.Build.Parallelism),
+	)
 	if err != nil {
 		return err
 	}

@@ -40,15 +40,23 @@ func (c *Config) SetDefaults() {
 
 type Service struct {
 	controllerClient ftlv1connect.ControllerServiceClient
+	schemaClient     ftlv1connect.SchemaServiceClient
 	currentResources map[string]*ResourceGraph
 	registry         *ProvisionerRegistry
 }
 
 var _ provisionerconnect.ProvisionerServiceHandler = (*Service)(nil)
 
-func New(ctx context.Context, config Config, controllerClient ftlv1connect.ControllerServiceClient, registry *ProvisionerRegistry) (*Service, error) {
+func New(
+	ctx context.Context,
+	config Config,
+	controllerClient ftlv1connect.ControllerServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
+	registry *ProvisionerRegistry,
+) (*Service, error) {
 	return &Service{
 		controllerClient: controllerClient,
+		schemaClient:     schemaClient,
 		currentResources: map[string]*ResourceGraph{},
 		registry:         registry,
 	}, nil
@@ -133,13 +141,19 @@ func replaceOutputs(to []*provproto.Resource, from []*provproto.Resource) error 
 }
 
 // Start the Provisioner. Blocks until the context is cancelled.
-func Start(ctx context.Context, config Config, registry *ProvisionerRegistry, controllerClient ftlv1connect.ControllerServiceClient) error {
+func Start(
+	ctx context.Context,
+	config Config,
+	registry *ProvisionerRegistry,
+	controllerClient ftlv1connect.ControllerServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
+) error {
 	config.SetDefaults()
 
 	logger := log.FromContext(ctx)
 	logger.Debugf("Starting FTL provisioner")
 
-	svc, err := New(ctx, config, controllerClient, registry)
+	svc, err := New(ctx, config, controllerClient, schemaClient, registry)
 	if err != nil {
 		return err
 	}
@@ -221,7 +235,7 @@ func (s *Service) UploadArtefact(ctx context.Context, req *connect.Request[ftlv1
 }
 
 func (s *Service) GetSchema(ctx context.Context, req *connect.Request[ftlv1.GetSchemaRequest]) (*connect.Response[ftlv1.GetSchemaResponse], error) {
-	resp, err := s.controllerClient.GetSchema(ctx, req)
+	resp, err := s.schemaClient.GetSchema(ctx, req)
 	if err != nil {
 		logger := log.FromContext(ctx)
 		logger.Errorf(err, "get schema failed")
@@ -232,7 +246,7 @@ func (s *Service) GetSchema(ctx context.Context, req *connect.Request[ftlv1.GetS
 
 func (s *Service) PullSchema(ctx context.Context, req *connect.Request[ftlv1.PullSchemaRequest], to *connect.ServerStream[ftlv1.PullSchemaResponse]) error {
 	logger := log.FromContext(ctx)
-	stream, err := s.controllerClient.PullSchema(ctx, req)
+	stream, err := s.schemaClient.PullSchema(ctx, req)
 	if err != nil {
 		logger.Errorf(err, "pull schema failed")
 		return fmt.Errorf("call to ftl-controller failed: %w", err)

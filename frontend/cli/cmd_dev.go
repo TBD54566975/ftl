@@ -37,10 +37,14 @@ type devCmd struct {
 func (d *devCmd) Run(
 	ctx context.Context,
 	k *kong.Kong,
+	kctx *kong.Context,
 	cm *manager.Manager[configuration.Configuration],
 	sm *manager.Manager[configuration.Secrets],
 	projConfig projectconfig.Config,
 	bindContext terminal.KongContextBinder,
+	schemaClient ftlv1connect.SchemaServiceClient,
+	controllerClient ftlv1connect.ControllerServiceClient,
+	provisionerClient provisionerconnect.ProvisionerServiceClient,
 ) error {
 	startTime := time.Now()
 	if len(d.Build.Dirs) == 0 {
@@ -50,9 +54,7 @@ func (d *devCmd) Run(
 		return errors.New("no directories specified")
 	}
 
-	controllerClient := rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
-	terminal.LaunchEmbeddedConsole(ctx, k, bindContext, controllerClient)
-
+	terminal.LaunchEmbeddedConsole(ctx, k, bindContext, schemaClient)
 	var client buildengine.DeployClient = controllerClient
 	if d.ServeCmd.Provisioners > 0 {
 		client = rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
@@ -85,15 +87,15 @@ func (d *devCmd) Run(
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
-			err := d.ServeCmd.Run(ctx, cm, sm, projConfig)
+			_, err := kctx.Call(d.ServeCmd.Run)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to stop server: %w", err)
 			}
 			d.ServeCmd.Stop = false
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator)
+			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaClient)
 		})
 	}
 
@@ -114,7 +116,7 @@ func (d *devCmd) Run(
 			})
 		}
 
-		engine, err := buildengine.New(ctx, client, projConfig, d.Build.Dirs, opts...)
+		engine, err := buildengine.New(ctx, client, schemaClient, projConfig, d.Build.Dirs, opts...)
 		if err != nil {
 			return err
 		}

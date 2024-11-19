@@ -55,7 +55,7 @@ func BeginGrpcScaling(ctx context.Context, url url.URL, leaser leases.Leaser, ha
 }
 
 func runGrpcScaling(ctx context.Context, url url.URL, handler func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error) {
-	client := rpc.Dial(ftlv1connect.NewControllerServiceClient, url.String(), log.Error)
+	client := rpc.Dial(ftlv1connect.NewSchemaServiceClient, url.String(), log.Error)
 	ctx = rpc.ContextWithClient(ctx, client)
 
 	logger := log.FromContext(ctx)

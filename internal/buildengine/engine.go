@@ -175,6 +175,7 @@ type rebuildRequest struct {
 // Engine for building a set of modules.
 type Engine struct {
 	client           DeployClient
+	schemaClient     SchemaClient
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectConfig    projectconfig.Config
 	moduleDirs       []string
@@ -236,10 +237,18 @@ func WithStartTime(startTime time.Time) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client DeployClient, projectConfig projectconfig.Config, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(
+	ctx context.Context,
+	client DeployClient,
+	schemaClient SchemaClient,
+	projectConfig projectconfig.Config,
+	moduleDirs []string,
+	options ...Option,
+) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
+		schemaClient:     schemaClient,
 		projectConfig:    projectConfig,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
@@ -299,7 +308,7 @@ func New(ctx context.Context, client DeployClient, projectConfig projectconfig.C
 		return e, nil
 	}
 	schemaSync := e.startSchemaSync(ctx)
-	go rpc.RetryStreamingServerStream(ctx, "build-engine", backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync, rpc.AlwaysRetry())
+	go rpc.RetryStreamingServerStream(ctx, "build-engine", backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, schemaClient.PullSchema, schemaSync, rpc.AlwaysRetry())
 	return e, nil
 }
 
@@ -308,7 +317,7 @@ func New(ctx context.Context, client DeployClient, projectConfig projectconfig.C
 func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
 	logger := log.FromContext(ctx)
 	// Blocking schema sync from the controller.
-	psch, err := e.client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
+	psch, err := e.schemaClient.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
 	if err == nil {
 		sch, err := schema.FromProto(psch.Msg.Schema)
 		if err == nil {

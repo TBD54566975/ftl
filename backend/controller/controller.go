@@ -191,6 +191,7 @@ func Start(
 			rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewModuleServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewControllerServiceHandler, svc),
+			rpc.GRPC(ftlv1connect.NewSchemaServiceHandler, svc),
 			rpc.GRPC(ftlv1connect.NewAdminServiceHandler, admin),
 			rpc.GRPC(pbconsoleconnect.NewConsoleServiceHandler, console),
 			rpc.HTTP("/", consoleHandler),
@@ -208,6 +209,7 @@ func Start(
 
 var _ ftlv1connect.ControllerServiceHandler = (*Service)(nil)
 var _ ftlv1connect.VerbServiceHandler = (*Service)(nil)
+var _ ftlv1connect.SchemaServiceHandler = (*Service)(nil)
 
 type clients struct {
 	verb ftlv1connect.VerbServiceClient

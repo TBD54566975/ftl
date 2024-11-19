@@ -491,7 +491,7 @@ func (r *terminalStatusLine) SetMessage(message string) {
 	r.manager.recalculateLines()
 }
 
-func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) {
+func LaunchEmbeddedConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.SchemaServiceClient) {
 	sm := FromContext(ctx)
 	if _, ok := sm.(*terminalStatusManager); ok {
 		go func() {

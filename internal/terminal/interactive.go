@@ -26,7 +26,7 @@ type KongContextBinder func(ctx context.Context, kctx *kong.Context) context.Con
 
 type exitPanic struct{}
 
-func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.ControllerServiceClient) error {
+func RunInteractiveConsole(ctx context.Context, k *kong.Kong, binder KongContextBinder, client ftlv1connect.SchemaServiceClient) error {
 
 	if !readline.DefaultIsTerminal() {
 		return nil
@@ -142,7 +142,7 @@ func errorf(format string, args ...any) {
 
 type FTLCompletion struct {
 	app    *kong.Kong
-	client ftlv1connect.ControllerServiceClient
+	client ftlv1connect.SchemaServiceClient
 	ctx    context.Context
 }
 

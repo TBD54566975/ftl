@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "./ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, GetSchemaRequest, GetSchemaResponse, ProcessListRequest, ProcessListResponse, PullSchemaRequest, PullSchemaResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./controller_pb.js";
+import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetCertificationRequest, GetCertificationResponse, GetDeploymentArtefactsRequest, GetDeploymentArtefactsResponse, GetDeploymentRequest, GetDeploymentResponse, ProcessListRequest, ProcessListResponse, RegisterRunnerRequest, RegisterRunnerResponse, ReplaceDeployRequest, ReplaceDeployResponse, ResetSubscriptionRequest, ResetSubscriptionResponse, StatusRequest, StatusResponse, StreamDeploymentLogsRequest, StreamDeploymentLogsResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "./controller_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1.ControllerService
@@ -163,31 +163,6 @@ export const ControllerService = {
       I: StreamDeploymentLogsRequest,
       O: StreamDeploymentLogsResponse,
       kind: MethodKind.ClientStreaming,
-    },
-    /**
-     * Get the full schema.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ControllerService.GetSchema
-     */
-    getSchema: {
-      name: "GetSchema",
-      I: GetSchemaRequest,
-      O: GetSchemaResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * Pull schema changes from the Controller.
-     *
-     * Note that if there are no deployments this will block indefinitely, making it unsuitable for
-     * just retrieving the schema. Use GetSchema for that.
-     *
-     * @generated from rpc xyz.block.ftl.v1.ControllerService.PullSchema
-     */
-    pullSchema: {
-      name: "PullSchema",
-      I: PullSchemaRequest,
-      O: PullSchemaResponse,
-      kind: MethodKind.ServerStreaming,
     },
     /**
      * Reset the cursor for a subscription to the head of its topic.

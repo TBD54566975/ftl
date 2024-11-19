@@ -5,7 +5,7 @@
 
 import { PingRequest, PingResponse } from "../../v1/ftl_pb.js";
 import { MethodIdempotency, MethodKind } from "@bufbuild/protobuf";
-import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, GetSchemaRequest, GetSchemaResponse, PullSchemaRequest, PullSchemaResponse, ReplaceDeployRequest, ReplaceDeployResponse, StatusRequest, StatusResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "../../v1/controller_pb.js";
+import { CreateDeploymentRequest, CreateDeploymentResponse, GetArtefactDiffsRequest, GetArtefactDiffsResponse, ReplaceDeployRequest, ReplaceDeployResponse, StatusRequest, StatusResponse, UpdateDeployRequest, UpdateDeployResponse, UploadArtefactRequest, UploadArtefactResponse } from "../../v1/controller_pb.js";
 
 /**
  * @generated from service xyz.block.ftl.v1beta1.provisioner.ProvisionerService
@@ -76,24 +76,6 @@ export const ProvisionerService = {
       I: ReplaceDeployRequest,
       O: ReplaceDeployResponse,
       kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc xyz.block.ftl.v1beta1.provisioner.ProvisionerService.GetSchema
-     */
-    getSchema: {
-      name: "GetSchema",
-      I: GetSchemaRequest,
-      O: GetSchemaResponse,
-      kind: MethodKind.Unary,
-    },
-    /**
-     * @generated from rpc xyz.block.ftl.v1beta1.provisioner.ProvisionerService.PullSchema
-     */
-    pullSchema: {
-      name: "PullSchema",
-      I: PullSchemaRequest,
-      O: PullSchemaResponse,
-      kind: MethodKind.ServerStreaming,
     },
   }
 } as const;

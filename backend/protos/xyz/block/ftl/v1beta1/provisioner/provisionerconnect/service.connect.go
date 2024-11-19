@@ -54,12 +54,6 @@ const (
 	// ProvisionerServiceReplaceDeployProcedure is the fully-qualified name of the ProvisionerService's
 	// ReplaceDeploy RPC.
 	ProvisionerServiceReplaceDeployProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/ReplaceDeploy"
-	// ProvisionerServiceGetSchemaProcedure is the fully-qualified name of the ProvisionerService's
-	// GetSchema RPC.
-	ProvisionerServiceGetSchemaProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/GetSchema"
-	// ProvisionerServicePullSchemaProcedure is the fully-qualified name of the ProvisionerService's
-	// PullSchema RPC.
-	ProvisionerServicePullSchemaProcedure = "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/PullSchema"
 )
 
 // ProvisionerServiceClient is a client for the xyz.block.ftl.v1beta1.provisioner.ProvisionerService
@@ -72,8 +66,6 @@ type ProvisionerServiceClient interface {
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
 	UpdateDeploy(context.Context, *connect.Request[v1.UpdateDeployRequest]) (*connect.Response[v1.UpdateDeployResponse], error)
 	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
-	GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error)
-	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest]) (*connect.ServerStreamForClient[v1.PullSchemaResponse], error)
 }
 
 // NewProvisionerServiceClient constructs a client for the
@@ -123,16 +115,6 @@ func NewProvisionerServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			baseURL+ProvisionerServiceReplaceDeployProcedure,
 			opts...,
 		),
-		getSchema: connect.NewClient[v1.GetSchemaRequest, v1.GetSchemaResponse](
-			httpClient,
-			baseURL+ProvisionerServiceGetSchemaProcedure,
-			opts...,
-		),
-		pullSchema: connect.NewClient[v1.PullSchemaRequest, v1.PullSchemaResponse](
-			httpClient,
-			baseURL+ProvisionerServicePullSchemaProcedure,
-			opts...,
-		),
 	}
 }
 
@@ -145,8 +127,6 @@ type provisionerServiceClient struct {
 	createDeployment *connect.Client[v1.CreateDeploymentRequest, v1.CreateDeploymentResponse]
 	updateDeploy     *connect.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
 	replaceDeploy    *connect.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
-	getSchema        *connect.Client[v1.GetSchemaRequest, v1.GetSchemaResponse]
-	pullSchema       *connect.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
 }
 
 // Ping calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.Ping.
@@ -184,16 +164,6 @@ func (c *provisionerServiceClient) ReplaceDeploy(ctx context.Context, req *conne
 	return c.replaceDeploy.CallUnary(ctx, req)
 }
 
-// GetSchema calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.GetSchema.
-func (c *provisionerServiceClient) GetSchema(ctx context.Context, req *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error) {
-	return c.getSchema.CallUnary(ctx, req)
-}
-
-// PullSchema calls xyz.block.ftl.v1beta1.provisioner.ProvisionerService.PullSchema.
-func (c *provisionerServiceClient) PullSchema(ctx context.Context, req *connect.Request[v1.PullSchemaRequest]) (*connect.ServerStreamForClient[v1.PullSchemaResponse], error) {
-	return c.pullSchema.CallServerStream(ctx, req)
-}
-
 // ProvisionerServiceHandler is an implementation of the
 // xyz.block.ftl.v1beta1.provisioner.ProvisionerService service.
 type ProvisionerServiceHandler interface {
@@ -204,8 +174,6 @@ type ProvisionerServiceHandler interface {
 	CreateDeployment(context.Context, *connect.Request[v1.CreateDeploymentRequest]) (*connect.Response[v1.CreateDeploymentResponse], error)
 	UpdateDeploy(context.Context, *connect.Request[v1.UpdateDeployRequest]) (*connect.Response[v1.UpdateDeployResponse], error)
 	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
-	GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error)
-	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error
 }
 
 // NewProvisionerServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -250,16 +218,6 @@ func NewProvisionerServiceHandler(svc ProvisionerServiceHandler, opts ...connect
 		svc.ReplaceDeploy,
 		opts...,
 	)
-	provisionerServiceGetSchemaHandler := connect.NewUnaryHandler(
-		ProvisionerServiceGetSchemaProcedure,
-		svc.GetSchema,
-		opts...,
-	)
-	provisionerServicePullSchemaHandler := connect.NewServerStreamHandler(
-		ProvisionerServicePullSchemaProcedure,
-		svc.PullSchema,
-		opts...,
-	)
 	return "/xyz.block.ftl.v1beta1.provisioner.ProvisionerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProvisionerServicePingProcedure:
@@ -276,10 +234,6 @@ func NewProvisionerServiceHandler(svc ProvisionerServiceHandler, opts ...connect
 			provisionerServiceUpdateDeployHandler.ServeHTTP(w, r)
 		case ProvisionerServiceReplaceDeployProcedure:
 			provisionerServiceReplaceDeployHandler.ServeHTTP(w, r)
-		case ProvisionerServiceGetSchemaProcedure:
-			provisionerServiceGetSchemaHandler.ServeHTTP(w, r)
-		case ProvisionerServicePullSchemaProcedure:
-			provisionerServicePullSchemaHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -315,12 +269,4 @@ func (UnimplementedProvisionerServiceHandler) UpdateDeploy(context.Context, *con
 
 func (UnimplementedProvisionerServiceHandler) ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.ReplaceDeploy is not implemented"))
-}
-
-func (UnimplementedProvisionerServiceHandler) GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.GetSchema is not implemented"))
-}
-
-func (UnimplementedProvisionerServiceHandler) PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1beta1.provisioner.ProvisionerService.PullSchema is not implemented"))
 }

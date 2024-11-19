@@ -18,9 +18,7 @@ import (
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/terminal"
 	"github.com/TBD54566975/ftl/internal/watch"
@@ -31,7 +29,12 @@ type schemaDiffCmd struct {
 	Color         bool    `help:"Enable colored output regardless of TTY."`
 }
 
-func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig projectconfig.Config) error {
+func (d *schemaDiffCmd) Run(
+	ctx context.Context,
+	currentURL *url.URL,
+	projConfig projectconfig.Config,
+	schemaClient ftlv1connect.SchemaServiceClient,
+) error {
 	var other *schema.Schema
 	var err error
 	sameModulesOnly := false
@@ -42,12 +45,12 @@ func (d *schemaDiffCmd) Run(ctx context.Context, currentURL *url.URL, projConfig
 
 		other, err = localSchema(ctx, projConfig)
 	} else {
-		other, err = schemaForURL(ctx, d.OtherEndpoint)
+		other, err = schemaForURL(ctx, schemaClient, d.OtherEndpoint)
 	}
 	if err != nil {
 		return fmt.Errorf("failed to get other schema: %w", err)
 	}
-	current, err := schemaForURL(ctx, *currentURL)
+	current, err := schemaForURL(ctx, schemaClient, *currentURL)
 	if err != nil {
 		return fmt.Errorf("failed to get current schema: %w", err)
 	}
@@ -129,9 +132,8 @@ func localSchema(ctx context.Context, projectConfig projectconfig.Config) (*sche
 	return sch, nil
 }
 
-func schemaForURL(ctx context.Context, url url.URL) (*schema.Schema, error) {
-	client := rpc.Dial(ftlv1connect.NewControllerServiceClient, url.String(), log.Error)
-	resp, err := client.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
+func schemaForURL(ctx context.Context, schemaClient ftlv1connect.SchemaServiceClient, url url.URL) (*schema.Schema, error) {
+	resp, err := schemaClient.PullSchema(ctx, connect.NewRequest(&ftlv1.PullSchemaRequest{}))
 	if err != nil {
 		return nil, fmt.Errorf("url %s: failed to pull schema: %w", url.String(), err)
 	}

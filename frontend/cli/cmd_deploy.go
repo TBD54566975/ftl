@@ -7,7 +7,6 @@ import (
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/buildengine"
 	"github.com/TBD54566975/ftl/internal/projectconfig"
-	"github.com/TBD54566975/ftl/internal/rpc"
 )
 
 type deployCmd struct {
@@ -17,18 +16,28 @@ type deployCmd struct {
 	Build          buildCmd `embed:""`
 }
 
-func (d *deployCmd) Run(ctx context.Context, projConfig projectconfig.Config) error {
+func (d *deployCmd) Run(
+	ctx context.Context,
+	projConfig projectconfig.Config,
+	provisionerClient provisionerconnect.ProvisionerServiceClient,
+	controllerClient ftlv1connect.ControllerServiceClient,
+	schemaClient ftlv1connect.SchemaServiceClient,
+) error {
 	var client buildengine.DeployClient
 	if d.UseProvisioner {
-		client = rpc.ClientFromContext[provisionerconnect.ProvisionerServiceClient](ctx)
+		client = provisionerClient
 	} else {
-		client = rpc.ClientFromContext[ftlv1connect.ControllerServiceClient](ctx)
+		client = controllerClient
 	}
 
 	// Cancel build engine context to ensure all language plugins are killed.
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	engine, err := buildengine.New(ctx, client, projConfig, d.Build.Dirs, buildengine.BuildEnv(d.Build.BuildEnv), buildengine.Parallelism(d.Build.Parallelism))
+	engine, err := buildengine.New(
+		ctx, client, schemaClient, projConfig, d.Build.Dirs,
+		buildengine.BuildEnv(d.Build.BuildEnv),
+		buildengine.Parallelism(d.Build.Parallelism),
+	)
 	if err != nil {
 		return err
 	}

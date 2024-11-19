@@ -71,12 +71,6 @@ const (
 	// ControllerServiceStreamDeploymentLogsProcedure is the fully-qualified name of the
 	// ControllerService's StreamDeploymentLogs RPC.
 	ControllerServiceStreamDeploymentLogsProcedure = "/xyz.block.ftl.v1.ControllerService/StreamDeploymentLogs"
-	// ControllerServiceGetSchemaProcedure is the fully-qualified name of the ControllerService's
-	// GetSchema RPC.
-	ControllerServiceGetSchemaProcedure = "/xyz.block.ftl.v1.ControllerService/GetSchema"
-	// ControllerServicePullSchemaProcedure is the fully-qualified name of the ControllerService's
-	// PullSchema RPC.
-	ControllerServicePullSchemaProcedure = "/xyz.block.ftl.v1.ControllerService/PullSchema"
 	// ControllerServiceResetSubscriptionProcedure is the fully-qualified name of the
 	// ControllerService's ResetSubscription RPC.
 	ControllerServiceResetSubscriptionProcedure = "/xyz.block.ftl.v1.ControllerService/ResetSubscription"
@@ -118,13 +112,6 @@ type ControllerServiceClient interface {
 	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context) *connect.ClientStreamForClient[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
-	// Get the full schema.
-	GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error)
-	// Pull schema changes from the Controller.
-	//
-	// Note that if there are no deployments this will block indefinitely, making it unsuitable for
-	// just retrieving the schema. Use GetSchema for that.
-	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest]) (*connect.ServerStreamForClient[v1.PullSchemaResponse], error)
 	// Reset the cursor for a subscription to the head of its topic.
 	ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error)
 }
@@ -205,16 +192,6 @@ func NewControllerServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			baseURL+ControllerServiceStreamDeploymentLogsProcedure,
 			opts...,
 		),
-		getSchema: connect.NewClient[v1.GetSchemaRequest, v1.GetSchemaResponse](
-			httpClient,
-			baseURL+ControllerServiceGetSchemaProcedure,
-			opts...,
-		),
-		pullSchema: connect.NewClient[v1.PullSchemaRequest, v1.PullSchemaResponse](
-			httpClient,
-			baseURL+ControllerServicePullSchemaProcedure,
-			opts...,
-		),
 		resetSubscription: connect.NewClient[v1.ResetSubscriptionRequest, v1.ResetSubscriptionResponse](
 			httpClient,
 			baseURL+ControllerServiceResetSubscriptionProcedure,
@@ -238,8 +215,6 @@ type controllerServiceClient struct {
 	updateDeploy           *connect.Client[v1.UpdateDeployRequest, v1.UpdateDeployResponse]
 	replaceDeploy          *connect.Client[v1.ReplaceDeployRequest, v1.ReplaceDeployResponse]
 	streamDeploymentLogs   *connect.Client[v1.StreamDeploymentLogsRequest, v1.StreamDeploymentLogsResponse]
-	getSchema              *connect.Client[v1.GetSchemaRequest, v1.GetSchemaResponse]
-	pullSchema             *connect.Client[v1.PullSchemaRequest, v1.PullSchemaResponse]
 	resetSubscription      *connect.Client[v1.ResetSubscriptionRequest, v1.ResetSubscriptionResponse]
 }
 
@@ -308,16 +283,6 @@ func (c *controllerServiceClient) StreamDeploymentLogs(ctx context.Context) *con
 	return c.streamDeploymentLogs.CallClientStream(ctx)
 }
 
-// GetSchema calls xyz.block.ftl.v1.ControllerService.GetSchema.
-func (c *controllerServiceClient) GetSchema(ctx context.Context, req *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error) {
-	return c.getSchema.CallUnary(ctx, req)
-}
-
-// PullSchema calls xyz.block.ftl.v1.ControllerService.PullSchema.
-func (c *controllerServiceClient) PullSchema(ctx context.Context, req *connect.Request[v1.PullSchemaRequest]) (*connect.ServerStreamForClient[v1.PullSchemaResponse], error) {
-	return c.pullSchema.CallServerStream(ctx, req)
-}
-
 // ResetSubscription calls xyz.block.ftl.v1.ControllerService.ResetSubscription.
 func (c *controllerServiceClient) ResetSubscription(ctx context.Context, req *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error) {
 	return c.resetSubscription.CallUnary(ctx, req)
@@ -359,13 +324,6 @@ type ControllerServiceHandler interface {
 	ReplaceDeploy(context.Context, *connect.Request[v1.ReplaceDeployRequest]) (*connect.Response[v1.ReplaceDeployResponse], error)
 	// Stream logs from a deployment
 	StreamDeploymentLogs(context.Context, *connect.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect.Response[v1.StreamDeploymentLogsResponse], error)
-	// Get the full schema.
-	GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error)
-	// Pull schema changes from the Controller.
-	//
-	// Note that if there are no deployments this will block indefinitely, making it unsuitable for
-	// just retrieving the schema. Use GetSchema for that.
-	PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error
 	// Reset the cursor for a subscription to the head of its topic.
 	ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error)
 }
@@ -442,16 +400,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 		svc.StreamDeploymentLogs,
 		opts...,
 	)
-	controllerServiceGetSchemaHandler := connect.NewUnaryHandler(
-		ControllerServiceGetSchemaProcedure,
-		svc.GetSchema,
-		opts...,
-	)
-	controllerServicePullSchemaHandler := connect.NewServerStreamHandler(
-		ControllerServicePullSchemaProcedure,
-		svc.PullSchema,
-		opts...,
-	)
 	controllerServiceResetSubscriptionHandler := connect.NewUnaryHandler(
 		ControllerServiceResetSubscriptionProcedure,
 		svc.ResetSubscription,
@@ -485,10 +433,6 @@ func NewControllerServiceHandler(svc ControllerServiceHandler, opts ...connect.H
 			controllerServiceReplaceDeployHandler.ServeHTTP(w, r)
 		case ControllerServiceStreamDeploymentLogsProcedure:
 			controllerServiceStreamDeploymentLogsHandler.ServeHTTP(w, r)
-		case ControllerServiceGetSchemaProcedure:
-			controllerServiceGetSchemaHandler.ServeHTTP(w, r)
-		case ControllerServicePullSchemaProcedure:
-			controllerServicePullSchemaHandler.ServeHTTP(w, r)
 		case ControllerServiceResetSubscriptionProcedure:
 			controllerServiceResetSubscriptionHandler.ServeHTTP(w, r)
 		default:
@@ -550,14 +494,6 @@ func (UnimplementedControllerServiceHandler) ReplaceDeploy(context.Context, *con
 
 func (UnimplementedControllerServiceHandler) StreamDeploymentLogs(context.Context, *connect.ClientStream[v1.StreamDeploymentLogsRequest]) (*connect.Response[v1.StreamDeploymentLogsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.StreamDeploymentLogs is not implemented"))
-}
-
-func (UnimplementedControllerServiceHandler) GetSchema(context.Context, *connect.Request[v1.GetSchemaRequest]) (*connect.Response[v1.GetSchemaResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.GetSchema is not implemented"))
-}
-
-func (UnimplementedControllerServiceHandler) PullSchema(context.Context, *connect.Request[v1.PullSchemaRequest], *connect.ServerStream[v1.PullSchemaResponse]) error {
-	return connect.NewError(connect.CodeUnimplemented, errors.New("xyz.block.ftl.v1.ControllerService.PullSchema is not implemented"))
 }
 
 func (UnimplementedControllerServiceHandler) ResetSubscription(context.Context, *connect.Request[v1.ResetSubscriptionRequest]) (*connect.Response[v1.ResetSubscriptionResponse], error) {
