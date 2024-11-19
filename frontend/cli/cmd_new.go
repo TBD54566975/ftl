@@ -55,7 +55,19 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 		return optionalPlugin, fmt.Errorf("could not find new command")
 	}
 
-	plugin, err := languageplugin.New(ctx, pluginDir(), language, "new")
+	projConfigPath, ok := projectconfig.DefaultConfigPath().Get()
+	if !ok {
+		return optionalPlugin, fmt.Errorf("could not find project config path")
+	}
+	_, err = projectconfig.Load(ctx, projConfigPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return optionalPlugin, fmt.Errorf(`could not find FTL project config: try running "ftl init"`)
+		}
+		return optionalPlugin, fmt.Errorf("could not load project config: %w", err)
+	}
+
+	plugin, err := languageplugin.New(ctx, filepath.Dir(projConfigPath), language, "new")
 	if err != nil {
 		return optionalPlugin, fmt.Errorf("could not create plugin for %v: %w", language, err)
 	}
@@ -78,15 +90,6 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 	}
 	newCmdNode.Flags = append(newCmdNode.Flags, flags...)
 	return optional.Some(plugin), nil
-}
-
-// pluginDir returns the directory to base the plugin working directory off of.
-// It tries to find the root directory of the project, or uses "." as a fallback.
-func pluginDir() string {
-	if configPath, ok := projectconfig.DefaultConfigPath().Get(); ok {
-		return filepath.Dir(configPath)
-	}
-	return "."
 }
 
 func (i newCmd) Run(ctx context.Context, ktctx *kong.Context, config projectconfig.Config, plugin *languageplugin.LanguagePlugin) error {
