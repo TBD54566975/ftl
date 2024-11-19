@@ -89,6 +89,8 @@ type Result struct {
 	Module *schema.Module
 	// NativeNames maps schema nodes to their native Go names.
 	NativeNames NativeNames
+	// VerbResourceParamOrder contains the order of resource parameters for each verb.
+	VerbResourceParamOrder map[*schema.Verb][]common.VerbResourceParam
 	// Errors is a list of errors encountered during schema extraction.
 	Errors []builderrors.Error
 }
@@ -142,16 +144,18 @@ type refResult struct {
 	fqName optional.Option[string]
 }
 
+// used to combine result data across passes (each pass analyzes one package within the module)
 type combinedData struct {
 	module *schema.Module
 	errs   []builderrors.Error
 
-	nativeNames         NativeNames
-	functionCalls       map[schema.Position]finalize.FunctionCall
-	verbs               map[types.Object]*schema.Verb
-	refResults          map[schema.RefKey]refResult
-	extractedDecls      map[schema.Decl]types.Object
-	externalTypeAliases sets.Set[*schema.TypeAlias]
+	nativeNames            NativeNames
+	functionCalls          map[schema.Position]finalize.FunctionCall
+	verbs                  map[types.Object]*schema.Verb
+	verbResourceParamOrder map[*schema.Verb][]common.VerbResourceParam
+	refResults             map[schema.RefKey]refResult
+	extractedDecls         map[schema.Decl]types.Object
+	externalTypeAliases    sets.Set[*schema.TypeAlias]
 	// for detecting duplicates
 	typeUniqueness   map[string]tuple.Pair[types.Object, schema.Position]
 	globalUniqueness map[string]tuple.Pair[types.Object, schema.Position]
@@ -159,15 +163,16 @@ type combinedData struct {
 
 func newCombinedData(diagnostics []analysis.SimpleDiagnostic) *combinedData {
 	return &combinedData{
-		errs:                diagnosticsToSchemaErrors(diagnostics),
-		nativeNames:         make(NativeNames),
-		functionCalls:       make(map[schema.Position]finalize.FunctionCall),
-		verbs:               make(map[types.Object]*schema.Verb),
-		refResults:          make(map[schema.RefKey]refResult),
-		extractedDecls:      make(map[schema.Decl]types.Object),
-		externalTypeAliases: sets.NewSet[*schema.TypeAlias](),
-		typeUniqueness:      make(map[string]tuple.Pair[types.Object, schema.Position]),
-		globalUniqueness:    make(map[string]tuple.Pair[types.Object, schema.Position]),
+		errs:                   diagnosticsToSchemaErrors(diagnostics),
+		nativeNames:            make(NativeNames),
+		functionCalls:          make(map[schema.Position]finalize.FunctionCall),
+		verbs:                  make(map[types.Object]*schema.Verb),
+		verbResourceParamOrder: make(map[*schema.Verb][]common.VerbResourceParam),
+		refResults:             make(map[schema.RefKey]refResult),
+		extractedDecls:         make(map[schema.Decl]types.Object),
+		externalTypeAliases:    sets.NewSet[*schema.TypeAlias](),
+		typeUniqueness:         make(map[string]tuple.Pair[types.Object, schema.Position]),
+		globalUniqueness:       make(map[string]tuple.Pair[types.Object, schema.Position]),
 	}
 }
 
@@ -183,6 +188,7 @@ func (cd *combinedData) update(fr finalize.Result) {
 	copyFailedRefs(cd.refResults, fr.Failed)
 	maps.Copy(cd.nativeNames, fr.NativeNames)
 	maps.Copy(cd.functionCalls, fr.FunctionCalls)
+	maps.Copy(cd.verbResourceParamOrder, fr.VerbResourceParamOrder)
 }
 
 func (cd *combinedData) toResult() Result {
@@ -192,9 +198,10 @@ func (cd *combinedData) toResult() Result {
 	cd.errorDirectVerbInvocations()
 	builderrors.SortErrorsByPosition(cd.errs)
 	return Result{
-		Module:      cd.module,
-		NativeNames: cd.nativeNames,
-		Errors:      cd.errs,
+		Module:                 cd.module,
+		NativeNames:            cd.nativeNames,
+		VerbResourceParamOrder: cd.verbResourceParamOrder,
+		Errors:                 cd.errs,
 	}
 }
 
