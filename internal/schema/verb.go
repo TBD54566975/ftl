@@ -135,6 +135,10 @@ func (v *Verb) AddDatabase(db *Ref) {
 	v.Metadata = append(v.Metadata, &MetadataDatabases{Calls: []*Ref{db}})
 }
 
+func (v *Verb) SortMetadata() {
+	sortMetadata(v.Metadata)
+}
+
 func (v *Verb) GetMetadataIngress() optional.Option[*MetadataIngress] {
 	if m, ok := slices.FindVariant[*MetadataIngress](v.Metadata); ok {
 		return optional.Some(m)

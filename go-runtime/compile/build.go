@@ -25,6 +25,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
+	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
@@ -549,10 +550,11 @@ func scaffoldBuildTemplateAndTidy(ctx context.Context, config moduleconfig.AbsMo
 }
 
 type mainModuleContextBuilder struct {
-	sch         *schema.Schema
-	mainModule  *schema.Module
-	nativeNames extract.NativeNames
-	imports     map[string]string
+	sch                     *schema.Schema
+	mainModule              *schema.Module
+	nativeNames             extract.NativeNames
+	verbResourceParamOrders map[*schema.Verb][]common.VerbResourceParam
+	imports                 map[string]string
 }
 
 func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVersion, projectName string,
@@ -565,10 +567,11 @@ func buildMainModuleContext(sch *schema.Schema, result extract.Result, goModVers
 		Modules: append(sch.Modules, result.Module),
 	}
 	builder := &mainModuleContextBuilder{
-		sch:         combinedSch,
-		mainModule:  result.Module,
-		nativeNames: result.NativeNames,
-		imports:     imports(result.Module, false),
+		sch:                     combinedSch,
+		mainModule:              result.Module,
+		nativeNames:             result.NativeNames,
+		verbResourceParamOrders: result.VerbResourceParamOrder,
+		imports:                 imports(result.Module, false),
 	}
 	return builder.build(goModVersion, ftlVersion, projectName, sharedModulesPaths, replacements)
 }
@@ -799,62 +802,67 @@ func (b *mainModuleContextBuilder) processExternalTypeAlias(alias *schema.TypeAl
 
 func (b *mainModuleContextBuilder) processVerb(verb *schema.Verb) (goVerb, error) {
 	var resources []verbResource
-	for _, m := range verb.Metadata {
-		switch md := m.(type) {
-		case *schema.MetadataCalls:
-			for _, call := range md.Calls {
-				resolved, ok := b.sch.Resolve(call).Get()
-				if !ok {
-					return goVerb{}, fmt.Errorf("failed to resolve %s client, used by %s.%s", call,
-						b.mainModule.Name, verb.Name)
-				}
-				callee, ok := resolved.(*schema.Verb)
-				if !ok {
-					return goVerb{}, fmt.Errorf("%s.%s uses %s client, but %s is not a verb",
-						b.mainModule.Name, verb.Name, call, call)
-				}
-				calleeNativeName, ok := b.nativeNames[call]
-				if !ok {
-					return goVerb{}, fmt.Errorf("missing native name for verb client %s", call)
-				}
-				calleeverb, err := b.getGoVerb(calleeNativeName, callee)
-				if err != nil {
-					return goVerb{}, err
-				}
-				resources = append(resources, verbClient{
-					calleeverb,
-				})
-			}
-		case *schema.MetadataDatabases:
-			for _, call := range md.Calls {
-				resolved, ok := b.sch.Resolve(call).Get()
-				if !ok {
-					return goVerb{}, fmt.Errorf("failed to resolve %s database, used by %s.%s", call,
-						b.mainModule.Name, verb.Name)
-				}
-				db, ok := resolved.(*schema.Database)
-				if !ok {
-					return goVerb{}, fmt.Errorf("%s.%s uses %s database handle, but %s is not a database",
-						b.mainModule.Name, verb.Name, call, call)
-				}
-
-				dbHandle, err := b.processDatabase(call.Module, db)
-				if err != nil {
-					return goVerb{}, err
-				}
-				resources = append(resources, dbHandle)
-			}
-
-		default:
-			// TODO: implement other resources
-		}
+	verbResourceParams, ok := b.verbResourceParamOrders[verb]
+	if !ok {
+		return goVerb{}, fmt.Errorf("missing verb resource param order for %s", verb.Name)
 	}
-
+	for _, m := range verbResourceParams {
+		resource, err := b.getVerbResource(verb, m)
+		if err != nil {
+			return goVerb{}, err
+		}
+		resources = append(resources, resource)
+	}
 	nativeName, ok := b.nativeNames[verb]
 	if !ok {
 		return goVerb{}, fmt.Errorf("missing native name for verb %s", verb.Name)
 	}
 	return b.getGoVerb(nativeName, verb, resources...)
+}
+
+func (b *mainModuleContextBuilder) getVerbResource(verb *schema.Verb, param common.VerbResourceParam) (verbResource, error) {
+	ref := param.Ref
+	switch param.Type.(type) {
+	case *schema.MetadataCalls:
+		resolved, ok := b.sch.Resolve(ref).Get()
+		if !ok {
+			return verbClient{}, fmt.Errorf("failed to resolve %s client, used by %s.%s", ref,
+				b.mainModule.Name, verb.Name)
+		}
+		callee, ok := resolved.(*schema.Verb)
+		if !ok {
+			return verbClient{}, fmt.Errorf("%s.%s uses %s client, but %s is not a verb",
+				b.mainModule.Name, verb.Name, ref, ref)
+		}
+		calleeNativeName, ok := b.nativeNames[ref]
+		if !ok {
+			return verbClient{}, fmt.Errorf("missing native name for verb client %s", ref)
+		}
+		calleeverb, err := b.getGoVerb(calleeNativeName, callee)
+		if err != nil {
+			return verbClient{}, err
+		}
+		return verbClient{
+			calleeverb,
+		}, nil
+	case *schema.MetadataDatabases:
+		resolved, ok := b.sch.Resolve(ref).Get()
+		if !ok {
+			return goDBHandle{}, fmt.Errorf("failed to resolve %s database, used by %s.%s", ref,
+				b.mainModule.Name, verb.Name)
+		}
+		db, ok := resolved.(*schema.Database)
+		if !ok {
+			return goDBHandle{}, fmt.Errorf("%s.%s uses %s database handle, but %s is not a database",
+				b.mainModule.Name, verb.Name, ref, ref)
+		}
+
+		return b.processDatabase(ref.Module, db)
+
+	default:
+		// TODO: implement other resources
+		return nil, fmt.Errorf("unsupported resource type for verb %q", verb.Name)
+	}
 }
 
 func (b *mainModuleContextBuilder) processDatabase(moduleName string, db *schema.Database) (goDBHandle, error) {

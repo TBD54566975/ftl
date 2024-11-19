@@ -303,6 +303,7 @@ func ValidateModule(module *Module) error {
 			}
 
 		case *Verb:
+			n.SortMetadata()
 			merr = append(merr, validateVerbMetadata(scopes, module, n)...)
 
 		case *Data:
@@ -401,6 +402,87 @@ func getDeclSortingPriority(decl Decl) int {
 		priority = 8
 	case *Verb:
 		priority = 9
+	}
+	return priority
+}
+
+func sortMetadata(md []Metadata) {
+	sort.SliceStable(md, func(i, j int) bool {
+		iMd := md[i]
+		jMd := md[j]
+		sortMetadataType(iMd)
+		sortMetadataType(jMd)
+		iPriority := getMetadataSortingPriority(iMd)
+		jPriority := getMetadataSortingPriority(jMd)
+		return iPriority < jPriority
+	})
+}
+
+func sortMetadataType(md Metadata) {
+	sortRefs := func(refs []*Ref) {
+		sort.SliceStable(refs, func(i, j int) bool {
+			if refs[i].Module == refs[j].Module {
+				return refs[i].Name < refs[j].Name
+			}
+			return refs[i].Module < refs[j].Module
+		})
+	}
+
+	switch m := md.(type) {
+	case *MetadataAlias:
+		return
+	case *MetadataCalls:
+		sortRefs(m.Calls)
+	case *MetadataConfig:
+		sortRefs(m.Config)
+	case *MetadataCronJob:
+		return
+	case *MetadataDatabases:
+		sortRefs(m.Calls)
+	case *MetadataEncoding:
+		return
+	case *MetadataIngress:
+		return
+	case *MetadataRetry:
+		return
+	case *MetadataSecrets:
+		sortRefs(m.Secrets)
+	case *MetadataSubscriber:
+		return
+	case *MetadataTypeMap:
+		return
+	case *MetadataPublisher:
+		sortRefs(m.Topics)
+	}
+}
+
+func getMetadataSortingPriority(metadata Metadata) int {
+	priority := 0
+	switch metadata.(type) {
+	case *MetadataIngress:
+		priority = 1
+	case *MetadataAlias:
+		priority = 2
+	case *MetadataEncoding:
+		priority = 3
+	case *MetadataCalls:
+		priority = 4
+	case *MetadataDatabases:
+		priority = 5
+	case *MetadataSecrets:
+		priority = 6
+	case *MetadataConfig:
+		priority = 7
+	case *MetadataCronJob:
+		priority = 8
+	case *MetadataPublisher:
+		priority = 9
+	case *MetadataSubscriber:
+		priority = 10
+	case *MetadataRetry:
+		priority = 11
+	case *MetadataTypeMap:
+		priority = 12
 	}
 	return priority
 }

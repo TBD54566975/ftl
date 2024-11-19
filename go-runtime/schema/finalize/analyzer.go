@@ -37,6 +37,8 @@ type Result struct {
 	NativeNames map[schema.Node]string
 	// FunctionCalls contains all function calls; key is the parent function, value is the called functions.
 	FunctionCalls map[schema.Position]FunctionCall
+	// VerbResourceParamOrder contains the order of resource parameters for each verb.
+	VerbResourceParamOrder map[*schema.Verb][]common.VerbResourceParam
 }
 
 type FunctionCall struct {
@@ -54,6 +56,7 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 	// for identifying duplicates
 	declKeys := make(map[string]types.Object)
 	nativeNames := make(map[schema.Node]string)
+	verbParamOrder := make(map[*schema.Verb][]common.VerbResourceParam)
 	for obj, fact := range common.GetAllFactsExtractionStatus(pass) {
 		switch f := fact.(type) {
 		case *common.ExtractedDecl:
@@ -66,6 +69,13 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 				extracted[f.Decl] = obj
 				declKeys[f.Decl.String()] = obj
 				nativeNames[f.Decl] = common.GetNativeName(obj)
+			}
+			if v, ok := f.Decl.(*schema.Verb); ok {
+				paramOrder, ok := common.GetFactForObject[*common.VerbResourceParamOrder](pass, obj).Get()
+				if !ok {
+					common.NoEndColumnErrorf(pass, obj.Pos(), "failed to extract verb schema")
+				}
+				verbParamOrder[v] = paramOrder.Resources
 			}
 		case *common.FailedExtraction:
 			failed[schema.RefKey{Module: moduleName, Name: strcase.ToUpperCamel(obj.Name())}] = obj
@@ -82,12 +92,13 @@ func Run(pass *analysis.Pass) (interface{}, error) {
 		}
 	}
 	return Result{
-		ModuleName:     moduleName,
-		ModuleComments: extractModuleComments(pass),
-		Extracted:      extracted,
-		Failed:         failed,
-		NativeNames:    nativeNames,
-		FunctionCalls:  getFunctionCalls(pass),
+		ModuleName:             moduleName,
+		ModuleComments:         extractModuleComments(pass),
+		Extracted:              extracted,
+		Failed:                 failed,
+		NativeNames:            nativeNames,
+		FunctionCalls:          getFunctionCalls(pass),
+		VerbResourceParamOrder: verbParamOrder,
 	}, nil
 }
 
