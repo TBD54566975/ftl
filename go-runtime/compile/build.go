@@ -14,7 +14,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/result"
 	"github.com/block/scaffolder"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/TBD54566975/ftl"
 	extract "github.com/TBD54566975/ftl/go-runtime/schema"
+	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/exec"
