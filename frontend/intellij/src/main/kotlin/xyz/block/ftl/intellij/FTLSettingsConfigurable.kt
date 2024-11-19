@@ -32,7 +32,7 @@ class FTLSettingsConfigurable : Configurable {
   override fun apply() {
     val state = AppSettings.getInstance().state
     state.lspServerPath = mySettingsComponent?.getLspServerPath() ?: "ftl"
-    state.lspServerArguments = mySettingsComponent?.getLspServerArguments() ?: " dev --recreate --lsp"
+    state.lspServerArguments = mySettingsComponent?.getLspServerArguments() ?: " dev --lsp"
     state.lspServerStopArguments = mySettingsComponent?.getLspServerStopArguments() ?: "serve --stop"
   }
 

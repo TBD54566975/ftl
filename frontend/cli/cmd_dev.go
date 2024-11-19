@@ -47,6 +47,8 @@ func (d *devCmd) Run(
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 ) error {
 	startTime := time.Now()
+	// Dev always recreated the DB
+	d.ServeCmd.Recreate = true
 	if len(d.Build.Dirs) == 0 {
 		d.Build.Dirs = projConfig.AbsModuleDirs()
 	}

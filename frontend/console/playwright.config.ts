@@ -40,7 +40,7 @@ const config: PlaywrightTestConfig = {
     },
   ],
   webServer: {
-    command: process.env.CI ? 'ftl dev --recreate -j1' : 'ftl dev --recreate',
+    command: process.env.CI ? 'ftl dev -j1' : 'ftl dev',
     url: 'http://localhost:8892',
     reuseExistingServer: !process.env.CI,
     /* If the test ends up needing to pull the postgres docker image, this can take a while. Give it a few minutes. */
