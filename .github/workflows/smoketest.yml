@@ -19,11 +19,9 @@ jobs:
           # this might remove tools that are actually needed,
           # if set to "true" but frees about 6 GB
           tool-cache: false
-
       - name: Checkout the repository with full history
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
           fetch-depth: 0
           fetch-tags: true
       - name: Get last tagged release
@@ -31,6 +29,7 @@ jobs:
           latest_release=$(git tag --sort=-v:refname | grep -v v1 | head -n 1)
           echo "Latest release: $latest_release"
           echo "LATEST_VERSION=${latest_release#v}" >> "$GITHUB_ENV"
+          echo "CURRENT_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - name: Check out the last tagged release
         run: git checkout v${{ env.LATEST_VERSION }}
       - name: Init Hermit
@@ -52,9 +51,7 @@ jobs:
           echo "Running smoke test on the tagged release images"
           SKIP_KUBE_FULL_DEPLOY=true go test -v -timeout 15m -tags smoketest -run '^Test' ./smoketest
       - name: Check out HEAD of the current branch
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-        run: git checkout "$HEAD_REF"
+        run: git checkout "$CURRENT_COMMIT"
       - name: Init Hermit
         uses: cashapp/activate-hermit@v1
       - name: Build Language Plugins
