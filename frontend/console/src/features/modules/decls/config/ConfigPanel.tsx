@@ -1,13 +1,16 @@
 import { useContext, useEffect, useState } from 'react'
-import { Button } from '../../../components/Button'
-import { CodeEditor } from '../../../components/CodeEditor'
-import { ResizablePanels } from '../../../components/ResizablePanels'
-import { useClient } from '../../../hooks/use-client'
-import { ConsoleService } from '../../../protos/xyz/block/ftl/v1/console/console_connect'
-import type { Config } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { NotificationType, NotificationsContext } from '../../../providers/notifications-provider'
-import { DeclDefaultPanels } from './DeclDefaultPanels'
-import { PanelHeader } from './PanelHeader'
+import { Button } from '../../../../components/Button'
+import { CodeEditor } from '../../../../components/CodeEditor'
+import { ResizablePanels } from '../../../../components/ResizablePanels'
+import { useClient } from '../../../../hooks/use-client'
+import { ConsoleService } from '../../../../protos/xyz/block/ftl/v1/console/console_connect'
+import type { Config } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { NotificationType, NotificationsContext } from '../../../../providers/notifications-provider'
+import { declIcon } from '../../module.utils'
+import { DeclDefaultPanels } from '../DeclDefaultPanels'
+import { PanelHeader } from '../PanelHeader'
+import { RightPanelHeader } from '../RightPanelHeader'
+import { configPanels } from './ConfigRightPanels'
 
 export const ConfigPanel = ({ value, schema, moduleName, declName }: { value: Config; schema: string; moduleName: string; declName: string }) => {
   const client = useClient(ConsoleService)
@@ -80,8 +83,8 @@ export const ConfigPanel = ({ value, schema, moduleName, declName }: { value: Co
             </div>
           </div>
         }
-        rightPanelHeader={undefined}
-        rightPanelPanels={DeclDefaultPanels(schema, value.references)}
+        rightPanelHeader={<RightPanelHeader Icon={declIcon('config', decl)} title={declName} />}
+        rightPanelPanels={[...configPanels(value), ...DeclDefaultPanels(schema, value.references)]}
         storageKeyPrefix='configPanel'
       />
     </div>

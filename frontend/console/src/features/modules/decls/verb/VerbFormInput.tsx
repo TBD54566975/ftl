@@ -1,5 +1,5 @@
 import { Copy01Icon } from 'hugeicons-react'
-import { Button } from '../../components/Button'
+import { Button } from '../../../../components/Button'
 
 export const VerbFormInput = ({
   requestType,

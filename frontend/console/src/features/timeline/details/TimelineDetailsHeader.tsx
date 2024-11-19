@@ -5,7 +5,7 @@ import type { Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { SidePanelContext } from '../../../providers/side-panel-provider'
 import { formatTimestampShort } from '../../../utils'
 import { logLevelBadge, logLevelText } from '../../logs/log.utils'
-import { refString } from '../../verbs/verb.utils'
+import { refString } from '../../modules/decls/verb/verb.utils'
 import { TimelineDetailsColorBar } from './TimelineDetailsColorBar'
 
 export const TimelineDetailsHeader = ({ event }: { event: Event }) => {

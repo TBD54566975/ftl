@@ -17,7 +17,7 @@ import {
 import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { Config, Data, Database, Decl, Enum, Secret, Subscription, Topic, TypeAlias, Verb } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
 import type { MetadataCalls, Ref } from '../../protos/xyz/block/ftl/v1/schema/schema_pb'
-import { verbCalls } from '../verbs/verb.utils'
+import { verbCalls } from './decls/verb/verb.utils'
 
 interface InCall {
   module: string

@@ -1,6 +1,6 @@
 import type { CronScheduledEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatTimestampShort } from '../../utils/date.utils.ts'
-import { refString } from '../verbs/verb.utils'
+import { refString } from '../modules/decls/verb/verb.utils.ts'
 
 export const TimelineCronScheduled = ({ cron }: { cron: CronScheduledEvent }) => {
   const verbRef = (cron.verbRef?.module && refString(cron.verbRef)) || 'unknown'

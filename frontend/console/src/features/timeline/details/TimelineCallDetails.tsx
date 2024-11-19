@@ -3,9 +3,9 @@ import { CodeBlock } from '../../../components/CodeBlock'
 import type { CallEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
+import { refString } from '../../modules/decls/verb/verb.utils'
 import { TraceGraph } from '../../traces/TraceGraph'
 import { TraceGraphHeader } from '../../traces/TraceGraphHeader'
-import { refString } from '../../verbs/verb.utils'
 
 export const TimelineCallDetails = ({ event }: { event: Event }) => {
   const call = event.entry.value as CallEvent

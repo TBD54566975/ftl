@@ -1,9 +1,9 @@
 import { InboxUploadIcon } from 'hugeicons-react'
 import { Link } from 'react-router-dom'
-import { RightPanelAttribute } from '../../components/RightPanelAttribute'
-import type { Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import type { ExpandablePanelProps } from '../console/ExpandablePanel'
-import { Schema } from '../modules/schema/Schema'
+import { RightPanelAttribute } from '../../../../components/RightPanelAttribute'
+import type { Verb } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
+import type { ExpandablePanelProps } from '../../../console/ExpandablePanel'
+import { Schema } from '../../schema/Schema'
 import { type VerbRef, httpRequestPath, ingress, isHttpIngress, verbCalls } from './verb.utils'
 
 const PanelRow = ({ verb }: { verb: VerbRef }) => {

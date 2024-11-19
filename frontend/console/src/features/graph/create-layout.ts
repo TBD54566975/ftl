@@ -1,6 +1,6 @@
 import type { Edge, Node } from 'reactflow'
 import type { Module, Topology } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { verbCalls } from '../verbs/verb.utils'
+import { verbCalls } from '../modules/decls/verb/verb.utils'
 import { configHeight } from './ConfigNode'
 import { groupPadding } from './GroupNode'
 import { secretHeight } from './SecretNode'

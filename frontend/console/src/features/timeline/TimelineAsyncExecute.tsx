@@ -1,5 +1,5 @@
 import type { AsyncExecuteEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { refString } from '../verbs/verb.utils'
+import { refString } from '../modules/decls/verb/verb.utils'
 import { asyncEventTypeString } from './timeline.utils'
 
 export const TimelineAsyncExecute = ({ asyncExecute }: { asyncExecute: AsyncExecuteEvent }) => {
