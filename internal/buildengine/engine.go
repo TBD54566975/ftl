@@ -10,15 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/alecthomas/types/optional"
 	"github.com/alecthomas/types/pubsub"
-	"github.com/jpillora/backoff"
 	"github.com/puzpuzpuz/xsync/v3"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
-	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 	"github.com/TBD54566975/ftl/internal/buildengine/languageplugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
@@ -27,12 +24,8 @@ import (
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 	"github.com/TBD54566975/ftl/internal/watch"
+	schemaserviceclient "github.com/TBD54566975/ftl/v2/schemaservice/client"
 )
-
-type schemaChange struct {
-	ChangeType ftlv1.DeploymentChangeType
-	*schema.Module
-}
 
 // moduleMeta is a wrapper around a module that includes the last build's start time.
 type moduleMeta struct {
@@ -175,12 +168,12 @@ type rebuildRequest struct {
 // Engine for building a set of modules.
 type Engine struct {
 	client           DeployClient
+	schemaChanges    *pubsub.Topic[schemaserviceclient.Change]
 	moduleMetas      *xsync.MapOf[string, moduleMeta]
 	projectConfig    projectconfig.Config
 	moduleDirs       []string
 	watcher          *watch.Watcher // only watches for module toml changes
 	controllerSchema *xsync.MapOf[string, *schema.Module]
-	schemaChanges    *pubsub.Topic[schemaChange]
 	cancel           func()
 	parallelism      int
 	modulesToBuild   *xsync.MapOf[string, bool]
@@ -236,16 +229,22 @@ func WithStartTime(startTime time.Time) Option {
 // pull in missing schemas.
 //
 // "dirs" are directories to scan for local modules.
-func New(ctx context.Context, client DeployClient, projectConfig projectconfig.Config, moduleDirs []string, options ...Option) (*Engine, error) {
+func New(
+	ctx context.Context,
+	client DeployClient,
+	projectConfig projectconfig.Config,
+	moduleDirs []string,
+	options ...Option,
+) (*Engine, error) {
 	ctx = rpc.ContextWithClient(ctx, client)
 	e := &Engine{
 		client:           client,
+		schemaChanges:    pubsub.New[schemaserviceclient.Change](),
 		projectConfig:    projectConfig,
 		moduleDirs:       moduleDirs,
 		moduleMetas:      xsync.NewMapOf[string, moduleMeta](),
 		watcher:          watch.NewWatcher("ftl.toml"),
 		controllerSchema: xsync.NewMapOf[string, *schema.Module](),
-		schemaChanges:    pubsub.New[schemaChange](),
 		pluginEvents:     make(chan languageplugin.PluginEvent, 128),
 		parallelism:      runtime.NumCPU(),
 		modulesToBuild:   xsync.NewMapOf[string, bool](),
@@ -298,47 +297,50 @@ func New(ctx context.Context, client DeployClient, projectConfig projectconfig.C
 	if client == nil {
 		return e, nil
 	}
-	schemaSync := e.startSchemaSync(ctx)
-	go rpc.RetryStreamingServerStream(ctx, "build-engine", backoff.Backoff{Max: time.Second}, &ftlv1.PullSchemaRequest{}, client.PullSchema, schemaSync, rpc.AlwaysRetry())
+	if err := e.startSchemaSync(ctx, schemaserviceclient.NewFromTopic(ctx, client, e.schemaChanges)); err != nil {
+		return nil, fmt.Errorf("failed to start schema sync: %w", err)
+	}
 	return e, nil
 }
 
-// Sync module schema changes from the FTL controller, as well as from manual
+// Sync module schema changes from the SchemaService if it's available, as well as from manual
 // updates, and merge them into a single schema map.
-func (e *Engine) startSchemaSync(ctx context.Context) func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
-	logger := log.FromContext(ctx)
-	// Blocking schema sync from the controller.
-	psch, err := e.client.GetSchema(ctx, connect.NewRequest(&ftlv1.GetSchemaRequest{}))
-	if err == nil {
-		sch, err := schema.FromProto(psch.Msg.Schema)
-		if err == nil {
-			for _, module := range sch.Modules {
-				e.controllerSchema.Store(module.Name, module)
-			}
-		} else {
-			logger.Debugf("Failed to parse schema from controller: %s", err)
-		}
-	} else {
-		logger.Debugf("Failed to get schema from controller: %s", err)
-	}
-
-	// Sync module schema changes from the controller into the schema event source.
-	return func(ctx context.Context, msg *ftlv1.PullSchemaResponse) error {
-		switch msg.ChangeType {
-		case ftlv1.DeploymentChangeType_DEPLOYMENT_ADDED, ftlv1.DeploymentChangeType_DEPLOYMENT_CHANGED:
-			sch, err := schema.ModuleFromProto(msg.Schema)
-			if err != nil {
-				return err
-			}
-			e.controllerSchema.Store(sch.Name, sch)
-			e.schemaChanges.Publish(schemaChange{ChangeType: msg.ChangeType, Module: sch})
-
-		case ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED:
-			e.controllerSchema.Delete(msg.ModuleName)
-			e.schemaChanges.Publish(schemaChange{ChangeType: msg.ChangeType, Module: nil})
-		}
+//
+// Blocks until the initial full schema sync is complete.
+func (e *Engine) startSchemaSync(ctx context.Context, client *schemaserviceclient.Client) error {
+	sub := client.Subscribe(nil)
+	// If the service is unavailable, we can still build, but we won't have updates.
+	if err := client.Ping(ctx); err != nil {
 		return nil
 	}
+	if err := client.WaitForInitialSync(ctx); err != nil {
+		return fmt.Errorf("failed to wait for initial batch: %w", err)
+	}
+	initialSyncComplete := make(chan struct{})
+	go func() {
+		seenInitialBatch := false
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case change := <-sub:
+				switch change := change.(type) {
+				case *schemaserviceclient.Upserted:
+					e.controllerSchema.Store(change.Name, change.Module)
+
+				case *schemaserviceclient.Removed:
+					e.controllerSchema.Delete(change.Name)
+				}
+				if !seenInitialBatch && !change.IsInitialBatch() {
+					close(initialSyncComplete)
+					seenInitialBatch = true
+				}
+			}
+		}
+	}()
+	<-initialSyncComplete
+	return nil
 }
 
 // Close stops the Engine's schema sync.
@@ -484,7 +486,7 @@ func (e *Engine) Dev(ctx context.Context, period time.Duration) error {
 func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration) error {
 	logger := log.FromContext(ctx)
 
-	schemaChanges := make(chan schemaChange, 128)
+	schemaChanges := make(chan schemaserviceclient.Change, 128)
 	e.schemaChanges.Subscribe(schemaChanges)
 	defer func() {
 		e.schemaChanges.Unsubscribe(schemaChanges)
@@ -576,8 +578,9 @@ func (e *Engine) watchForModuleChanges(ctx context.Context, period time.Duration
 
 				_ = e.BuildAndDeploy(ctx, 1, true, event.Config.Module) //nolint:errcheck
 			}
-		case change := <-schemaChanges:
-			if change.ChangeType == ftlv1.DeploymentChangeType_DEPLOYMENT_REMOVED {
+		case event := <-schemaChanges:
+			change, ok := event.(schemaserviceclient.Upserted)
+			if !ok {
 				continue
 			}
 			existingHash, ok := moduleHashes[change.Name]
