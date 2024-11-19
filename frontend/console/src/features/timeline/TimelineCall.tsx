@@ -1,5 +1,5 @@
 import type { CallEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { refString } from '../verbs/verb.utils'
+import { refString } from '../modules/decls/verb/verb.utils'
 
 export const TimelineCall = ({ call }: { call: CallEvent }) => {
   const title = `${call.sourceVerbRef?.module ? `${refString(call.sourceVerbRef)} -> ` : ''}${call.destinationVerbRef ? refString(call.destinationVerbRef) : ''}`

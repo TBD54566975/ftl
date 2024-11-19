@@ -9,6 +9,7 @@ export const DeclDefaultPanels = (schema: string, references: Ref[]) => {
   panels.push({
     title: 'Schema',
     expanded: true,
+    padding: 'p-2',
     children: <Schema schema={schema} />,
   })
 

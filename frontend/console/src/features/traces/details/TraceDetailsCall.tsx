@@ -3,7 +3,7 @@ import { CodeBlock } from '../../../components/CodeBlock'
 import type { CallEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
-import { refString } from '../../verbs/verb.utils'
+import { refString } from '../../modules/decls/verb/verb.utils'
 
 export const TraceDetailsCall = ({ event }: { event: Event }) => {
   const call = event.entry.value as CallEvent

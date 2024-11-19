@@ -3,7 +3,7 @@ import { CodeBlock } from '../../../components/CodeBlock'
 import type { Event, PubSubPublishEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
-import { refString } from '../../verbs/verb.utils'
+import { refString } from '../../modules/decls/verb/verb.utils'
 
 export const TraceDetailsPubsubPublish = ({ event }: { event: Event }) => {
   const pubsubPublish = event.entry.value as PubSubPublishEvent

@@ -1,5 +1,5 @@
 import type { IngressEvent } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { refString } from '../verbs/verb.utils'
+import { refString } from '../modules/decls/verb/verb.utils'
 
 export const TimelineIngress = ({ ingress }: { ingress: IngressEvent }) => {
   const title = `Ingress ${ingress.method} ${ingress.path}`

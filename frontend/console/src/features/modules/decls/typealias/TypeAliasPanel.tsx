@@ -1,7 +1,7 @@
-import type { TypeAlias } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { Schema } from '../schema/Schema'
-import { PanelHeader } from './PanelHeader'
-import { References } from './References'
+import type { TypeAlias } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Schema } from '../../schema/Schema'
+import { PanelHeader } from '../PanelHeader'
+import { References } from '../References'
 
 export const TypeAliasPanel = ({ value, schema, moduleName, declName }: { value: TypeAlias; schema: string; moduleName: string; declName: string }) => {
   if (!value || !schema) {

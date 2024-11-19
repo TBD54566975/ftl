@@ -3,8 +3,8 @@ import { CodeBlock } from '../../../components/CodeBlock'
 import type { AsyncExecuteEvent, Event } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration } from '../../../utils/date.utils'
 import { DeploymentCard } from '../../deployments/DeploymentCard'
+import { refString } from '../../modules/decls/verb/verb.utils'
 import { asyncEventTypeString } from '../../timeline/timeline.utils'
-import { refString } from '../../verbs/verb.utils'
 
 export const TraceDetailsAsyncCall = ({ event }: { event: Event }) => {
   const asyncCall = event.entry.value as AsyncExecuteEvent

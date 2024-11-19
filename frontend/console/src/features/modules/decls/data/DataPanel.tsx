@@ -1,8 +1,11 @@
-import { ResizablePanels } from '../../../components/ResizablePanels'
-import type { Data } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { Schema } from '../schema/Schema'
-import { PanelHeader } from './PanelHeader'
-import { References } from './References'
+import { ResizablePanels } from '../../../../components/ResizablePanels'
+import type { Data } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { declIcon } from '../../module.utils'
+import { Schema } from '../../schema/Schema'
+import { DeclDefaultPanels } from '../DeclDefaultPanels'
+import { PanelHeader } from '../PanelHeader'
+import { RightPanelHeader } from '../RightPanelHeader'
+import { dataPanels } from './DataRightPanels'
 
 export const DataPanel = ({ value, schema, moduleName, declName }: { value: Data; schema: string; moduleName: string; declName: string }) => {
   if (!value || !schema) {
@@ -26,14 +29,8 @@ export const DataPanel = ({ value, schema, moduleName, declName }: { value: Data
             </div>
           </div>
         }
-        rightPanelHeader={undefined}
-        rightPanelPanels={[
-          {
-            title: 'References',
-            expanded: true,
-            children: <References references={value.references} />,
-          },
-        ]}
+        rightPanelHeader={<RightPanelHeader Icon={declIcon('data', decl)} title={declName} />}
+        rightPanelPanels={[...dataPanels(value), ...DeclDefaultPanels(schema, value.references)]}
         storageKeyPrefix='dataPanel'
       />
     </div>

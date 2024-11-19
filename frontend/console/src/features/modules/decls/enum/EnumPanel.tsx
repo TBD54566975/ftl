@@ -1,7 +1,7 @@
-import type { Enum } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { Schema } from '../schema/Schema'
-import { PanelHeader } from './PanelHeader'
-import { References } from './References'
+import type { Enum } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Schema } from '../../schema/Schema'
+import { PanelHeader } from '../PanelHeader'
+import { References } from '../References'
 import { enumType } from './enum.utils'
 
 export const EnumPanel = ({ value, schema, moduleName, declName }: { value: Enum; schema: string; moduleName: string; declName: string }) => {

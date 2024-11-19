@@ -2,9 +2,9 @@ import { AttributeBadge } from '../../../components/AttributeBadge'
 import { DeploymentCard } from '../../../features/deployments/DeploymentCard'
 import { TraceGraph } from '../../../features/traces/TraceGraph'
 import { TraceGraphHeader } from '../../../features/traces/TraceGraphHeader'
-import { refString } from '../../../features/verbs/verb.utils'
 import type { Event, PubSubPublishEvent } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { formatDuration } from '../../../utils/date.utils'
+import { refString } from '../../modules/decls/verb/verb.utils'
 
 export const TimelinePubSubPublishDetails = ({ event }: { event: Event }) => {
   const pubSubPublish = event.entry.value as PubSubPublishEvent
