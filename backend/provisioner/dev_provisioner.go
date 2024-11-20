@@ -3,6 +3,7 @@ package provisioner
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/XSAM/otelsql"
 	_ "github.com/go-sql-driver/mysql"
@@ -38,39 +39,61 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 		if err != nil {
 			return nil, fmt.Errorf("failed to wait for mysql to be ready: %w", err)
 		}
-		conn, err := otelsql.Open("mysql", mysqlDSN)
-		if err != nil {
-			return nil, fmt.Errorf("failed to connect to mysql: %w", err)
-		}
-		defer conn.Close()
-
-		res, err := conn.Query("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", dbName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to query database: %w", err)
-		}
-		defer res.Close()
-		if res.Next() {
-			_, err = conn.ExecContext(ctx, "DROP DATABASE "+dbName)
-			if err != nil {
-				return nil, fmt.Errorf("failed to drop database: %w", err)
+		timeout := time.After(10 * time.Second)
+		retry := time.NewTicker(100 * time.Millisecond)
+		defer retry.Stop()
+		for {
+			select {
+			case <-timeout:
+				return nil, fmt.Errorf("failed to query database: %w", err)
+			case <-retry.C:
+				var ret *provisioner.Resource
+				ret, err = establishMySQLDB(ctx, rc, mysqlDSN, dbName, mysql, mysqlPort)
+				if err != nil {
+					logger.Debugf("failed to establish mysql database: %s", err.Error())
+					continue
+				}
+				return ret, nil
 			}
+
 		}
 
-		_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create database: %w", err)
-		}
-
-		if mysql.Mysql == nil {
-			mysql.Mysql = &provisioner.MysqlResource{}
-		}
-		dsn := dsn.MySQLDSN(dbName, dsn.Port(mysqlPort))
-		mysql.Mysql.Output = &provisioner.MysqlResource_MysqlResourceOutput{
-			WriteDsn: dsn,
-			ReadDsn:  dsn,
-		}
-		return rc.Resource, nil
 	}
+}
+
+func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysqlDSN string, dbName string, mysql *provisioner.Resource_Mysql, mysqlPort int) (*provisioner.Resource, error) {
+	conn, err := otelsql.Open("mysql", mysqlDSN)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to mysql: %w", err)
+	}
+	defer conn.Close()
+
+	res, err := conn.Query("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", dbName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query database: %w", err)
+	}
+	defer res.Close()
+	if res.Next() {
+		_, err = conn.ExecContext(ctx, "DROP DATABASE "+dbName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to drop database: %w", err)
+		}
+	}
+
+	_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create database: %w", err)
+	}
+
+	if mysql.Mysql == nil {
+		mysql.Mysql = &provisioner.MysqlResource{}
+	}
+	dsn := dsn.MySQLDSN(dbName, dsn.Port(mysqlPort))
+	mysql.Mysql.Output = &provisioner.MysqlResource_MysqlResourceOutput{
+		WriteDsn: dsn,
+		ReadDsn:  dsn,
+	}
+	return rc.Resource, nil
 }
 
 func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string) (*provisioner.Resource, error) {

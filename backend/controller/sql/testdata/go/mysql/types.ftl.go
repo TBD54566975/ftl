@@ -9,12 +9,18 @@ import (
 
 type InsertClient func(context.Context, InsertRequest) (InsertResponse, error)
 
+type QueryClient func(context.Context) (map[string]string, error)
+
 func init() {
 	reflection.Register(
-		reflection.Database[MyDbConfig](server.InitPostgres),
+		reflection.Database[MyDbConfig]("testdb", server.InitMySQL),
 		reflection.ProvideResourcesForVerb(
 			Insert,
-			server.PostgresDatabaseHandle[MyDbConfig](),
+			server.DatabaseHandle[MyDbConfig]("mysql"),
+		),
+		reflection.ProvideResourcesForVerb(
+			Query,
+			server.DatabaseHandle[MyDbConfig]("mysql"),
 		),
 	)
 }

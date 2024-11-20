@@ -19,6 +19,8 @@ services:
       retries: 60
       start_period: 80s
   mysql:
+    profiles:
+      - mysql
     image: mysql:8.4.3
     environment:
       MYSQL_ROOT_PASSWORD: secret

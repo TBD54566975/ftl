@@ -88,10 +88,8 @@ public class FTLController implements LeaseClient {
     }
 
     public Datasource getDatasource(String name) {
-        log.errorf("GET DATASOURCE");
         List<ModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
         for (var i : databasesList) {
-            log.errorf("DSN %s %s", i.getName(), i.getDsn());
             if (i.getName().equals(name)) {
                 return Datasource.fromDSN(i.getDsn(), i.getType());
             }
