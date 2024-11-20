@@ -23,7 +23,7 @@ export const TopicPanel = ({ value, schema, moduleName, declName }: { value: Top
         mainContent={
           <div className='p-4'>
             <div className=''>
-              <PanelHeader title='Data' declRef={`${moduleName}.${declName}`} exported={decl.export} comments={decl.comments} />
+              <PanelHeader title='Topic' declRef={`${moduleName}.${declName}`} exported={decl.export} comments={decl.comments} />
               <div className='-mx-3.5'>
                 <Schema schema={schema} />
               </div>

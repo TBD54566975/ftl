@@ -23,7 +23,7 @@ export const SubscriptionPanel = ({ value, schema, moduleName, declName }: { val
         mainContent={
           <div className='p-4'>
             <div className=''>
-              <PanelHeader title='Data' declRef={`${moduleName}.${declName}`} exported={false} comments={decl.comments} />
+              <PanelHeader title='Subscription' declRef={`${moduleName}.${declName}`} exported={false} comments={decl.comments} />
               <div className='-mx-3.5'>
                 <Schema schema={schema} />
               </div>
