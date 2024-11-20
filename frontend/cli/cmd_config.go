@@ -70,7 +70,7 @@ func (s *configListCmd) Run(ctx context.Context, adminClient admin.Client) error
 
 	for _, config := range resp.Msg.Configs {
 		fmt.Printf("%s", config.RefPath)
-		if config.Value != nil && len(config.Value) > 0 {
+		if len(config.Value) > 0 {
 			fmt.Printf(" = %s\n", config.Value)
 		} else {
 			fmt.Println()
