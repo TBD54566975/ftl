@@ -91,6 +91,7 @@ class ProductPage extends HookConsumerWidget {
               ElevatedButton(
                 onPressed: () {
                   isAdding.value = true;
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
                   ref
                       .read(cartProvider.notifier)
                       .addItem(
@@ -99,9 +100,8 @@ class ProductPage extends HookConsumerWidget {
                       )
                       .then((value) {
                     isAdding.value = false;
-
                     const snackBar = SnackBar(content: Text('Added to cart!'));
-                    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                    scaffoldMessenger.showSnackBar(snackBar);
                   });
                 },
                 child: const Text('Add to Cart'),
