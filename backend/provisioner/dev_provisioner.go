@@ -28,7 +28,7 @@ func NewDevProvisioner(postgresPort int) *InMemProvisioner {
 			dbName := strcase.ToLowerCamel(module) + "_" + strcase.ToLowerCamel(id)
 
 			if postgresDSN == "" {
-				// We assume that the DB hsas already been started when running in dev mode
+				// We assume that the DB has already been started when running in dev mode
 				pdsn, err := dev.WaitForDBReady(ctx, postgresPort)
 				if err != nil {
 					return nil, fmt.Errorf("failed to wait for postgres to be ready: %w", err)
