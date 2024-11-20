@@ -758,11 +758,23 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 	if err != nil {
 		return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get deployments: %w", err))
 	}
+	databases := map[string]modulecontext.Database{}
 	for _, dep := range deps {
 		if dep.Module == name {
 			for _, decl := range dep.Schema.Decls {
 				if db, ok := decl.(*schema.Database); ok {
-					dbTypes[db.Name] = modulecontext.DBTypeFromString(db.Type)
+					dbType, err := modulecontext.DBTypeFromString(db.Type)
+					if err != nil {
+						// Not much we can do here
+						continue
+					}
+					dbTypes[db.Name] = dbType
+					if db.Runtime != nil {
+						databases[db.Name] = modulecontext.Database{
+							DSN:    db.Runtime.DSN,
+							DBType: dbType,
+						}
+					}
 				}
 			}
 			break
@@ -779,10 +791,14 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get secrets: %w", err))
 		}
-		databases, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets, dbTypes)
+		secretDbs, err := modulecontext.DatabasesFromSecrets(ctx, name, secrets, dbTypes)
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not get databases: %w", err))
 		}
+		for k, v := range secretDbs {
+			databases[k] = v
+		}
+
 		if err := hashConfigurationMap(h, configs); err != nil {
 			return connect.NewError(connect.CodeInternal, fmt.Errorf("could not detect change on configs: %w", err))
 		}

@@ -49,11 +49,16 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 			return nil, fmt.Errorf("failed to query database: %w", err)
 		}
 		defer res.Close()
-		if !res.Next() {
-			_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
+		if res.Next() {
+			_, err = conn.ExecContext(ctx, "DROP DATABASE "+dbName)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create database: %w", err)
+				return nil, fmt.Errorf("failed to drop database: %w", err)
 			}
+		}
+
+		_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create database: %w", err)
 		}
 
 		if mysql.Mysql == nil {
@@ -95,11 +100,24 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 			return nil, fmt.Errorf("failed to query database: %w", err)
 		}
 		defer res.Close()
-		if !res.Next() {
-			_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
+		if res.Next() {
+			// Terminate any dangling connections.
+			_, err = conn.ExecContext(ctx, `
+			SELECT pid, pg_terminate_backend(pid)
+			FROM pg_stat_activity
+			WHERE datname = $1 AND pid <> pg_backend_pid()`,
+				dbName)
+			if err != nil {
+				return nil, fmt.Errorf("failed to kill existing backends: %w", err)
+			}
+			_, err = conn.ExecContext(ctx, "DROP DATABASE "+dbName)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create database: %w", err)
 			}
+		}
+		_, err = conn.ExecContext(ctx, "CREATE DATABASE "+dbName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create database: %w", err)
 		}
 
 		if pg.Postgres == nil {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/alecthomas/types/once"
+	_ "github.com/go-sql-driver/mysql" // Register MySQL driver
 	_ "github.com/jackc/pgx/v5/stdlib" // Register Postgres driver
 )
 

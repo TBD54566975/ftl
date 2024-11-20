@@ -82,7 +82,7 @@ func SetupDatabase(ctx context.Context, image string, port int, containerName st
 
 func WaitForPostgresReady(ctx context.Context, port int) (string, error) {
 	logger := log.FromContext(ctx)
-	err := container.PollContainerHealth(ctx, postgresContainerName, 10*time.Second)
+	err := container.PollContainerHealth(ctx, postgresContainerName, 10*time.Minute)
 	if err != nil {
 		return "", fmt.Errorf("db container failed to be healthy: %w", err)
 	}
@@ -94,7 +94,7 @@ func WaitForPostgresReady(ctx context.Context, port int) (string, error) {
 
 func WaitForMySQLReady(ctx context.Context, port int) (string, error) {
 	logger := log.FromContext(ctx)
-	err := container.PollContainerHealth(ctx, mysqlContainerName, 10*time.Second)
+	err := container.PollContainerHealth(ctx, mysqlContainerName, 10*time.Minute)
 	if err != nil {
 		return "", fmt.Errorf("db container failed to be healthy: %w", err)
 	}

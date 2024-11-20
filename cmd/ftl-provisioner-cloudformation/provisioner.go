@@ -24,9 +24,12 @@ import (
 )
 
 const (
-	PropertyPsqlReadEndpoint  = "psql:read_endpoint"
-	PropertyPsqlWriteEndpoint = "psql:write_endpoint"
-	PropertyPsqlMasterUserARN = "psql:master_user_secret_arn"
+	PropertyPsqlReadEndpoint   = "psql:read_endpoint"
+	PropertyPsqlWriteEndpoint  = "psql:write_endpoint"
+	PropertyPsqlMasterUserARN  = "psql:master_user_secret_arn"
+	PropertyMySQLReadEndpoint  = "mysql:read_endpoint"
+	PropertyMySQLWriteEndpoint = "mysql:write_endpoint"
+	PropertyMySQLMasterUserARN = "mysql:master_user_secret_arn"
 )
 
 type Config struct {
@@ -132,13 +135,23 @@ func (c *CloudformationProvisioner) createTemplate(req *provisioner.ProvisionReq
 	template := goformation.NewTemplate()
 	for _, resourceCtx := range req.DesiredResources {
 		var templater ResourceTemplater
-		if _, ok := resourceCtx.Resource.Resource.(*provisioner.Resource_Postgres); ok {
+		switch resourceCtx.Resource.Resource.(type) {
+		case *provisioner.Resource_Postgres:
 			templater = &PostgresTemplater{
 				resourceID: resourceCtx.Resource.ResourceId,
 				cluster:    req.FtlClusterId,
 				module:     req.Module,
 				config:     c.confg,
 			}
+		case *provisioner.Resource_Mysql:
+			templater = &MySQLTemplater{
+				resourceID: resourceCtx.Resource.ResourceId,
+				cluster:    req.FtlClusterId,
+				module:     req.Module,
+				config:     c.confg,
+			}
+		default:
+			continue
 		}
 
 		if err := templater.AddToTemplate(template); err != nil {

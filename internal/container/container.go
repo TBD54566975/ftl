@@ -334,8 +334,11 @@ func PollContainerHealth(ctx context.Context, containerName string, timeout time
 				return fmt.Errorf("failed to inspect container: %w", err)
 			}
 
-			if inspect.State.Health.Status == types.Healthy {
-				return nil
+			state := inspect.State
+			if state != nil && state.Health != nil {
+				if state.Health.Status == types.Healthy {
+					return nil
+				}
 			}
 		}
 	}

@@ -27,6 +27,12 @@ services:
       MYSQL_DATABASE: ftl
     ports:
       - "13306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=secret"]
+      interval: 1s
+      timeout: 60s
+      retries: 60
+      start_period: 80s
   otel-lgtm:
     image: grafana/otel-lgtm
     platform: linux/amd64

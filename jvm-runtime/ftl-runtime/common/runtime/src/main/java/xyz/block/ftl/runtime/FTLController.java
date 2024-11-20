@@ -88,8 +88,10 @@ public class FTLController implements LeaseClient {
     }
 
     public Datasource getDatasource(String name) {
+        log.errorf("GET DATASOURCE");
         List<ModuleContextResponse.DSN> databasesList = getModuleContext().getDatabasesList();
         for (var i : databasesList) {
+            log.errorf("DSN %s %s", i.getName(), i.getDsn());
             if (i.getName().equals(name)) {
                 return Datasource.fromDSN(i.getDsn(), i.getType());
             }
@@ -268,7 +270,6 @@ public class FTLController implements LeaseClient {
                 String password = "";
                 String userInfo = uri.getUserInfo();
                 if (userInfo != null) {
-                    log.errorf("DSN %s  contains user info", dsn);
                     var split = userInfo.split(":");
                     username = split[0];
                     password = split[1];
@@ -277,14 +278,13 @@ public class FTLController implements LeaseClient {
                                     .toASCIIString(),
                             username, password);
                 } else {
-                    log.errorf("DSN %s does not contain user info", dsn);
                     //TODO: this is horrible, just quick hack for now
-                    var matcher = Pattern.compile("[&?]user=([^?]*)").matcher(dsn);
+                    var matcher = Pattern.compile("[&?]user=([^?&]*)").matcher(dsn);
                     if (matcher.find()) {
                         username = matcher.group(1);
                         dsn = matcher.replaceAll("");
                     }
-                    matcher = Pattern.compile("[&?]password=([^?]*)").matcher(dsn);
+                    matcher = Pattern.compile("[&?]password=([^?&]*)").matcher(dsn);
                     if (matcher.find()) {
                         password = matcher.group(1);
                         dsn = matcher.replaceAll("");
@@ -300,7 +300,6 @@ public class FTLController implements LeaseClient {
                         // Mysql has a messed up syntax
                         dsn = matcher.replaceAll(matcher.group(1) + ":" + matcher.group(2));
                     }
-                    log.errorf("DSN %s 22222", dsn);
                     dsn = dsn.replaceAll("postgresql://", "");
                     dsn = dsn.replaceAll("postgres://", "");
                     dsn = dsn.replaceAll("mysql://", "");
