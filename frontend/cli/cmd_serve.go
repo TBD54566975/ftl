@@ -283,7 +283,7 @@ func (s *serveCommonConfig) run(
 			return fmt.Errorf("provisioner failed to start: %w", err)
 		}
 	}
-	logger.Infof("Controller started in %s", time.Since(start))
+	logger.Infof("Controller started in %.2fs", time.Since(start).Seconds())
 
 	if len(projConfig.Commands.Startup) > 0 {
 		for _, cmd := range projConfig.Commands.Startup {
