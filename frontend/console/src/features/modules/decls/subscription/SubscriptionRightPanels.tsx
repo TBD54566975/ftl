@@ -7,7 +7,10 @@ export const subscriptionPanels = (subscription: Subscription) => {
     {
       title: 'Details',
       expanded: true,
-      children: [<RightPanelAttribute key='name' name='Name' value={subscription.subscription?.name} />],
+      children: [
+        <RightPanelAttribute key='name' name='Name' value={subscription.subscription?.name} />,
+        <RightPanelAttribute key='topic' name='Topic' value={subscription.subscription?.topic?.name} />,
+      ],
     },
   ] as ExpandablePanelProps[]
 }

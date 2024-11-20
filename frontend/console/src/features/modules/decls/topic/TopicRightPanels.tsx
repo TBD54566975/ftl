@@ -7,7 +7,10 @@ export const topicPanels = (topic: Topic) => {
     {
       title: 'Details',
       expanded: true,
-      children: [<RightPanelAttribute key='name' name='Name' value={topic.topic?.name} />],
+      children: [
+        <RightPanelAttribute key='name' name='Name' value={topic.topic?.name} />,
+        <RightPanelAttribute key='export' name='Event' value={topic.topic?.event?.value.case} />,
+      ],
     },
   ] as ExpandablePanelProps[]
 }

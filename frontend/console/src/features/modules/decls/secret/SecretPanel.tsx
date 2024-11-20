@@ -1,5 +1,5 @@
-import { Button } from '@headlessui/react'
 import { useContext, useEffect, useState } from 'react'
+import { Button } from '../../../../components/Button'
 import { CodeEditor } from '../../../../components/CodeEditor'
 import { ResizablePanels } from '../../../../components/ResizablePanels'
 import { useClient } from '../../../../hooks/use-client'
@@ -24,10 +24,20 @@ export const SecretPanel = ({ value, schema, moduleName, declName }: { value: Se
 
   const handleGetSecret = () => {
     setIsLoading(true)
-    client.getSecret({ module: moduleName, name: declName }).then((resp) => {
-      setSecretValue(new TextDecoder().decode(resp.value))
-      setIsLoading(false)
-    })
+    client
+      .getSecret({ module: moduleName, name: declName })
+      .then((resp) => {
+        setSecretValue(new TextDecoder().decode(resp.value))
+        setIsLoading(false)
+      })
+      .catch((error) => {
+        setIsLoading(false)
+        notification?.showNotification({
+          title: 'Failed to get secret',
+          message: error.message,
+          type: NotificationType.Error,
+        })
+      })
   }
 
   const handleSetSecret = () => {
