@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -83,6 +84,10 @@ func (d *devCmd) Run(
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
+
+	// Default to allowing all origins and headers for console requests in local dev mode.
+	d.ServeCmd.AllowOrigins = []*url.URL{{Scheme: "*", Host: "*"}}
+	d.ServeCmd.AllowHeaders = []string{"*"}
 
 	devModeEndpointUpdates := make(chan scaling.DevModeEndpoints, 1)
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready

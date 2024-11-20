@@ -58,7 +58,7 @@ func (s *secretListCmd) Run(ctx context.Context, adminClient admin.Client) error
 	}
 	for _, secret := range resp.Msg.Secrets {
 		fmt.Printf("%s", secret.RefPath)
-		if secret.Value != nil && len(secret.Value) > 0 {
+		if len(secret.Value) > 0 {
 			fmt.Printf(" = %s\n", secret.Value)
 		} else {
 			fmt.Println()
