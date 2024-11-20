@@ -67,7 +67,8 @@ func prepareNewCmd(ctx context.Context, k *kong.Kong, args []string) (optionalPl
 		return optionalPlugin, fmt.Errorf("could not load project config: %w", err)
 	}
 
-	plugin, err := languageplugin.New(ctx, filepath.Dir(projConfigPath), language, "new")
+	plugin, err := languageplugin.New(ctx, filepath.Dir(projConfigPath), language, "new", false)
+
 	if err != nil {
 		return optionalPlugin, fmt.Errorf("could not create plugin for %v: %w", language, err)
 	}

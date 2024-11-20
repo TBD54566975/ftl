@@ -21,6 +21,7 @@ import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
+import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
@@ -30,6 +31,7 @@ import io.quarkus.deployment.builditem.ApplicationInfoBuildItem;
 import io.quarkus.deployment.builditem.CombinedIndexBuildItem;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
 import io.quarkus.deployment.builditem.RunTimeConfigBuilderBuildItem;
+import io.quarkus.deployment.builditem.ShutdownContextBuildItem;
 import io.quarkus.deployment.builditem.SystemPropertyBuildItem;
 import io.quarkus.deployment.pkg.builditem.OutputTargetBuildItem;
 import io.quarkus.grpc.deployment.BindableServiceBuildItem;
@@ -198,5 +200,11 @@ public class ModuleProcessor {
             BuildProducer<RequireSocketHttpBuildItem> socket) throws IOException {
         socket.produce(RequireSocketHttpBuildItem.MARKER);
         virtual.produce(RequireVirtualHttpBuildItem.MARKER);
+    }
+
+    @Record(ExecutionTime.RUNTIME_INIT)
+    @BuildStep(onlyIf = IsDevelopment.class)
+    void hotReload(ShutdownContextBuildItem shutdownContextBuildItem, FTLRecorder recorder) {
+        recorder.startReloadTimer(shutdownContextBuildItem);
     }
 }

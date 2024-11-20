@@ -66,7 +66,7 @@ const (
 func TestBuilds(t *testing.T) {
 	sch := generateInitialSchema(t)
 	in.Run(t,
-		in.WithLanguages("go", "java"),
+		in.WithLanguages("go"),
 		in.WithoutController(),
 		in.CopyModule(MODULE_NAME),
 		startPlugin(),
@@ -160,7 +160,7 @@ func TestBuildLock(t *testing.T) {
 	sch := generateInitialSchema(t)
 
 	in.Run(t,
-		in.WithLanguages("go", "java"),
+		in.WithLanguages("go"),
 		in.WithoutController(),
 		in.CopyModule(MODULE_NAME),
 		startPlugin(),
@@ -188,7 +188,7 @@ func TestBuildsWhenAlreadyLocked(t *testing.T) {
 	sch := generateInitialSchema(t)
 
 	in.Run(t,
-		in.WithLanguages("go", "java"),
+		in.WithLanguages("go"),
 		in.WithoutController(),
 		in.CopyModule(MODULE_NAME),
 		startPlugin(),

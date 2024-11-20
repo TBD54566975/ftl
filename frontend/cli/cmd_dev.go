@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1beta1/provisioner/provisionerconnect"
 	"github.com/TBD54566975/ftl/internal/bind"
@@ -83,11 +84,12 @@ func (d *devCmd) Run(
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
 
+	devModeEndpointUpdates := make(chan scaling.DevModeEndpoints, 1)
 	// cmdServe will notify this channel when startup commands are complete and the controller is ready
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
-			err := d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaClient, true)
+			err := d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaClient, true, nil)
 			if err != nil {
 				return fmt.Errorf("failed to stop server: %w", err)
 			}
@@ -95,7 +97,7 @@ func (d *devCmd) Run(
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaClient, true)
+			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaClient, true, devModeEndpointUpdates)
 		})
 	}
 
@@ -107,7 +109,7 @@ func (d *devCmd) Run(
 		}
 		starting.Close()
 
-		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(true), buildengine.WithStartTime(startTime)}
+		opts := []buildengine.Option{buildengine.Parallelism(d.Build.Parallelism), buildengine.BuildEnv(d.Build.BuildEnv), buildengine.WithDevMode(devModeEndpointUpdates), buildengine.WithStartTime(startTime)}
 		if d.Lsp {
 			d.languageServer = lsp.NewServer(ctx)
 			ctx = log.ContextWithLogger(ctx, log.FromContext(ctx).AddSink(lsp.NewLogSink(d.languageServer)))

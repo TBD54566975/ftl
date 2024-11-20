@@ -12,6 +12,7 @@ import (
 
 	"github.com/TBD54566975/ftl/backend/controller"
 	"github.com/TBD54566975/ftl/backend/controller/artefacts"
+	"github.com/TBD54566975/ftl/backend/controller/scaling"
 	"github.com/TBD54566975/ftl/backend/controller/scaling/localscaling"
 	"github.com/TBD54566975/ftl/backend/controller/sql/databasetesting"
 	"github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/ftlv1connect"
@@ -60,7 +61,7 @@ func (b *boxRunCmd) Run(
 	if err != nil {
 		return fmt.Errorf("failed to create runner port allocator: %w", err)
 	}
-	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, []*url.URL{b.Bind}, "", false, b.Registry, false)
+	runnerScaling, err := localscaling.NewLocalScaling(bindAllocator, []*url.URL{b.Bind}, "", false, b.Registry, false, make(<-chan scaling.DevModeEndpoints))
 	if err != nil {
 		return fmt.Errorf("failed to create runner autoscaler: %w", err)
 	}

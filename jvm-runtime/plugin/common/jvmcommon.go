@@ -29,6 +29,7 @@ import (
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	langconnect "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language/languagepbconnect"
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
+	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal"
 	"github.com/TBD54566975/ftl/internal/builderrors"
 	"github.com/TBD54566975/ftl/internal/errors"
@@ -37,24 +38,17 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/sha256"
 	islices "github.com/TBD54566975/ftl/internal/slices"
-	"github.com/TBD54566975/ftl/internal/watch"
 )
 
 const BuildLockTimeout = time.Minute
-
-//sumtype:decl
-type updateEvent interface{ updateEvent() }
+const SchemaFile = "schema.pb"
+const ErrorFile = "errors.pb"
 
 type buildContextUpdatedEvent struct {
 	buildCtx buildContext
 }
-
-func (buildContextUpdatedEvent) updateEvent() {}
-
-type filesUpdatedEvent struct{}
-
-func (filesUpdatedEvent) updateEvent() {}
 
 // buildContext contains contextual information needed to build.
 type buildContext struct {
@@ -79,7 +73,7 @@ func buildContextFromProto(proto *langpb.BuildContext) (buildContext, error) {
 }
 
 type Service struct {
-	updatesTopic          *pubsub.Topic[updateEvent]
+	updatesTopic          *pubsub.Topic[buildContextUpdatedEvent]
 	acceptsContextUpdates atomic.Value[bool]
 	scaffoldFiles         *zip.Reader
 }
@@ -88,7 +82,7 @@ var _ langconnect.LanguageServiceHandler = &Service{}
 
 func New(scaffoldFiles *zip.Reader) *Service {
 	return &Service{
-		updatesTopic:  pubsub.New[updateEvent](),
+		updatesTopic:  pubsub.New[buildContextUpdatedEvent](),
 		scaffoldFiles: scaffoldFiles,
 	}
 }
@@ -167,85 +161,158 @@ func (s *Service) SyncStubReferences(ctx context.Context, req *connect.Request[l
 // rebuild must include the latest build context id provided by the request or subsequent BuildContextUpdated
 // calls.
 func (s *Service) Build(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
-	events := make(chan updateEvent, 32)
-	s.updatesTopic.Subscribe(events)
-	defer s.updatesTopic.Unsubscribe(events)
-
-	// cancel context when stream ends so that watcher can be stopped
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	if req.Msg.RebuildAutomatically {
+		return s.handleDevModeRequest(ctx, req, stream)
+	}
 
 	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return err
 	}
 
-	watchPatterns, err := relativeWatchPatterns(buildCtx.Config.Dir, buildCtx.Config.Watch)
+	// Initial build
+	if err := buildAndSend(ctx, stream, buildCtx, false); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) handleDevModeRequest(ctx context.Context, req *connect.Request[langpb.BuildRequest], stream *connect.ServerStream[langpb.BuildEvent]) error {
+	logger := log.FromContext(ctx)
+
+	// cancel context when stream ends so that watcher can be stopped
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	events := make(chan buildContextUpdatedEvent, 32)
+	s.updatesTopic.Subscribe(events)
+	defer s.updatesTopic.Unsubscribe(events)
+	first := true
+	buildCtx, err := buildContextFromProto(req.Msg.BuildContext)
 	if err != nil {
 		return err
 	}
+	release, err := flock.Acquire(ctx, buildCtx.Config.BuildLock, BuildLockTimeout)
+	if err != nil {
+		return fmt.Errorf("could not acquire build lock: %w", err)
+	}
+	defer release() //nolint:errcheck
+	address, err := plugin.AllocatePort()
+	if err != nil {
+		return fmt.Errorf("could not allocate port: %w", err)
+	}
+	errorFile := filepath.Join(buildCtx.Config.DeployDir, ErrorFile)
+	schemaFile := filepath.Join(buildCtx.Config.DeployDir, SchemaFile)
+	os.Remove(errorFile)
+	os.Remove(schemaFile)
+	errorHash := sha256.SHA256{}
+	schemaHash := sha256.SHA256{}
 
-	watcher := watch.NewWatcher(watchPatterns...)
-	if req.Msg.RebuildAutomatically {
-		s.acceptsContextUpdates.Store(true)
-		defer s.acceptsContextUpdates.Store(false)
-
-		if err := watchFiles(ctx, watcher, buildCtx, events); err != nil {
-			return err
+	ctx = log.ContextWithLogger(ctx, logger)
+	bind := fmt.Sprintf("http://localhost:%d", address.Port)
+	go func() {
+		logger.Infof("Using build command '%s'", buildCtx.Config.DevModeBuild)
+		command := exec.Command(ctx, log.Debug, buildCtx.Config.Dir, "bash", "-c", buildCtx.Config.DevModeBuild)
+		command.Env = append(command.Env, fmt.Sprintf("FTL_BIND=%s", bind))
+		command.Stdout = os.Stdout
+		command.Stderr = os.Stderr
+		err = command.RunBuffered(ctx)
+		if err != nil {
+			logger.Errorf(err, "Dev mode process exited with error")
+		} else {
+			logger.Infof("Dev mode process exited")
 		}
-	}
+		cancel()
+	}()
 
-	// Initial build
-	if err := buildAndSend(ctx, stream, buildCtx, false, watcher.GetTransaction(buildCtx.Config.Dir)); err != nil {
-		return err
-	}
-	if !req.Msg.RebuildAutomatically {
-		return nil
-	}
-
-	// Watch for changes and build as needed
+	schemaChangeTicker := time.NewTicker(100 * time.Millisecond)
+	defer schemaChangeTicker.Stop()
 	for {
 		select {
-		case e := <-events:
-			var isAutomaticRebuild bool
-			buildCtx, isAutomaticRebuild = buildContextFromPendingEvents(ctx, buildCtx, events, e)
-			if isAutomaticRebuild {
+		case <-ctx.Done():
+			return nil
+		case bc := <-events:
+			buildCtx = bc.buildCtx
+		case <-schemaChangeTicker.C:
+
+			changed := false
+			file, err := os.ReadFile(errorFile)
+			if err == nil {
+				sum := sha256.Sum(file)
+				if sum != errorHash {
+					changed = true
+					errorHash = sum
+				}
+			}
+			file, err = os.ReadFile(schemaFile)
+			if err == nil {
+				sum := sha256.Sum(file)
+				if sum != schemaHash {
+					changed = true
+					schemaHash = sum
+				}
+			}
+			if changed {
+				if !first {
+					logger.Infof("New schema detected, doing fast redeploy")
+				}
+				buildErrs, err := loadProtoErrors(buildCtx.Config)
+				if err != nil {
+					// This is likely a transient error
+					logger.Errorf(err, "failed to load build errors")
+					continue
+				}
+				if builderrors.ContainsTerminalError(langpb.ErrorsFromProto(buildErrs)) {
+					// skip reading schema
+					err = stream.Send(&langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{
+						BuildFailure: &langpb.BuildFailure{
+							IsAutomaticRebuild: !first,
+							ContextId:          buildCtx.ID,
+							Errors:             buildErrs,
+						}}})
+					if err != nil {
+						return fmt.Errorf("could not send build event: %w", err)
+					}
+					first = false
+					continue
+				}
+
+				moduleProto, err := readSchema(buildCtx)
+				if err != nil {
+					// This is likely a transient error
+					logger.Errorf(err, "failed to schema")
+					continue
+				}
+
 				err = stream.Send(&langpb.BuildEvent{
-					Event: &langpb.BuildEvent_AutoRebuildStarted{
-						AutoRebuildStarted: &langpb.AutoRebuildStarted{
-							ContextId: buildCtx.ID,
+					Event: &langpb.BuildEvent_BuildSuccess{
+						BuildSuccess: &langpb.BuildSuccess{
+							ContextId:          req.Msg.BuildContext.Id,
+							IsAutomaticRebuild: !first,
+							Module:             moduleProto,
+							DevEndpoint:        ptr(fmt.Sprintf("http://localhost:%d", address.Port)),
+							Deploy:             []string{SchemaFile},
 						},
 					},
 				})
 				if err != nil {
-					return fmt.Errorf("could not send auto rebuild started event: %w", err)
+					return fmt.Errorf("could not send build event: %w", err)
 				}
+				first = false
 			}
-			if err = buildAndSend(ctx, stream, buildCtx, isAutomaticRebuild, watcher.GetTransaction(buildCtx.Config.Dir)); err != nil {
-				return err
-			}
-		case <-ctx.Done():
-			log.FromContext(ctx).Infof("Build call ending - ctx cancelled")
-			return nil
+
 		}
 	}
 }
 
-func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction watch.ModifyFilesTransaction) (*langpb.BuildEvent, error) {
+func build(ctx context.Context, bctx buildContext, autoRebuild bool) (*langpb.BuildEvent, error) {
 	logger := log.FromContext(ctx)
 	release, err := flock.Acquire(ctx, bctx.Config.BuildLock, BuildLockTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("could not acquire build lock: %w", err)
 	}
 	defer release() //nolint:errcheck
-	if err := transaction.Begin(); err != nil {
-		return nil, fmt.Errorf("could not start a file transaction: %w", err)
-	}
-	defer func() {
-		if terr := transaction.End(); terr != nil {
-			logger.Errorf(terr, "failed to end file transaction")
-		}
-	}()
 
 	deps, err := extractDependencies(bctx.Config.Module, bctx.Config.Dir)
 	if err != nil {
@@ -270,7 +337,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 		return nil, fmt.Errorf("failed to build module %q: %w", config.Module, err)
 	}
 	if javaConfig.BuildTool == JavaBuildToolMaven {
-		if err := setPOMProperties(ctx, config.Dir, transaction); err != nil {
+		if err := setPOMProperties(ctx, config.Dir); err != nil {
 			// This is not a critical error, things will probably work fine
 			// TBH updating the pom is maybe not the best idea anyway
 			logger.Warnf("unable to update ftl.version in %s: %s", config.Dir, err.Error())
@@ -278,7 +345,7 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 	}
 	logger.Infof("Using build command '%s'", config.Build)
 	command := exec.Command(ctx, log.Debug, config.Dir, "bash", "-c", config.Build)
-	err = command.RunBuffered(ctx)
+	err = command.Run()
 	if err != nil {
 		return &langpb.BuildEvent{Event: &langpb.BuildEvent_BuildFailure{&langpb.BuildFailure{
 			IsAutomaticRebuild: autoRebuild,
@@ -301,19 +368,10 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 			}}}, nil
 	}
 
-	moduleSchema, err := schema.ModuleFromProtoFile(filepath.Join(config.DeployDir, "schema.pb"))
+	moduleProto, err := readSchema(bctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read schema for module: %w", err)
+		return nil, err
 	}
-
-	moduleSchema.Runtime = &schema.ModuleRuntime{
-		CreateTime:  time.Now(),
-		Language:    bctx.Config.Language,
-		MinReplicas: 1,
-		Image:       "ftl0/ftl-runner-jvm",
-	}
-
-	moduleProto := moduleSchema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildSuccess{
 			BuildSuccess: &langpb.BuildSuccess{
@@ -325,6 +383,24 @@ func build(ctx context.Context, bctx buildContext, autoRebuild bool, transaction
 			},
 		},
 	}, nil
+}
+
+func readSchema(bctx buildContext) (*schemapb.Module, error) {
+	path := filepath.Join(bctx.Config.DeployDir, SchemaFile)
+	moduleSchema, err := schema.ModuleFromProtoFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read schema for module: %s from %s %w", bctx.Config.Module, path, err)
+	}
+
+	moduleSchema.Runtime = &schema.ModuleRuntime{
+		CreateTime:  time.Now(),
+		Language:    bctx.Config.Language,
+		MinReplicas: 1,
+		Image:       "ftl0/ftl-runner-jvm",
+	}
+
+	moduleProto := moduleSchema.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	return moduleProto, nil
 }
 
 // BuildContextUpdated is called whenever the build context is update while a Build call with "rebuild_automatically" is active.
@@ -347,84 +423,12 @@ func (s *Service) BuildContextUpdated(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&langpb.BuildContextUpdatedResponse{}), nil
 }
 
-func watchFiles(ctx context.Context, watcher *watch.Watcher, buildCtx buildContext, events chan updateEvent) error {
-	watchTopic, err := watcher.Watch(ctx, time.Second, []string{buildCtx.Config.Dir})
-	if err != nil {
-		return fmt.Errorf("could not watch for file changes: %w", err)
-	}
-	log.FromContext(ctx).Debugf("Watching for file changes: %s", buildCtx.Config.Dir)
-	watchEvents := make(chan watch.WatchEvent, 32)
-	watchTopic.Subscribe(watchEvents)
-
-	// We need watcher to calculate file hashes before we do initial build so we can detect changes
-	select {
-	case e := <-watchEvents:
-		_, ok := e.(watch.WatchEventModuleAdded)
-		if !ok {
-			return fmt.Errorf("expected module added event, got: %T", e)
-		}
-	case <-time.After(3 * time.Second):
-		return fmt.Errorf("expected module added event, got no event")
-	case <-ctx.Done():
-		return fmt.Errorf("context done: %w", ctx.Err())
-	}
-
-	go func() {
-		for {
-			select {
-			case e := <-watchEvents:
-				if change, ok := e.(watch.WatchEventModuleChanged); ok {
-					log.FromContext(ctx).Infof("Found file changes: %s", change)
-					events <- filesUpdatedEvent{}
-				}
-
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-	return nil
-}
-
-// buildContextFromPendingEvents processes all pending events to determine the latest context and whether the build is automatic.
-func buildContextFromPendingEvents(ctx context.Context, buildCtx buildContext, events chan updateEvent, firstEvent updateEvent) (newBuildCtx buildContext, isAutomaticRebuild bool) {
-	allEvents := []updateEvent{firstEvent}
-	// find any other events in the queue
-	for {
-		select {
-		case e := <-events:
-			allEvents = append(allEvents, e)
-		case <-ctx.Done():
-			return buildCtx, false
-		default:
-			// No more events waiting to be processed
-			hasExplicitBuilt := false
-			for _, e := range allEvents {
-				switch e := e.(type) {
-				case buildContextUpdatedEvent:
-					buildCtx = e.buildCtx
-					hasExplicitBuilt = true
-				case filesUpdatedEvent:
-				}
-
-			}
-			switch e := firstEvent.(type) {
-			case buildContextUpdatedEvent:
-				buildCtx = e.buildCtx
-				hasExplicitBuilt = true
-			case filesUpdatedEvent:
-			}
-			return buildCtx, !hasExplicitBuilt
-		}
-	}
-}
-
 // buildAndSend builds the module and sends the build event to the stream.
 //
 // Build errors are sent over the stream as a BuildFailure event.
 // This function only returns an error if events could not be send over the stream.
-func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], buildCtx buildContext, isAutomaticRebuild bool, transaction watch.ModifyFilesTransaction) error {
-	buildEvent, err := build(ctx, buildCtx, isAutomaticRebuild, transaction)
+func buildAndSend(ctx context.Context, stream *connect.ServerStream[langpb.BuildEvent], buildCtx buildContext, isAutomaticRebuild bool) error {
+	buildEvent, err := build(ctx, buildCtx, isAutomaticRebuild)
 	if err != nil {
 		buildEvent = buildFailure(buildCtx, isAutomaticRebuild, builderrors.Error{
 			Type:  builderrors.FTL,
@@ -452,18 +456,6 @@ func buildFailure(buildCtx buildContext, isAutomaticRebuild bool, errs ...builde
 	}
 }
 
-func relativeWatchPatterns(moduleDir string, watchPaths []string) ([]string, error) {
-	relativePaths := make([]string, len(watchPaths))
-	for i, path := range watchPaths {
-		relative, err := filepath.Rel(moduleDir, path)
-		if err != nil {
-			return nil, fmt.Errorf("could create relative path for watch pattern: %w", err)
-		}
-		relativePaths[i] = relative
-	}
-	return relativePaths, nil
-}
-
 const JavaBuildToolMaven string = "maven"
 const JavaBuildToolGradle string = "gradle"
 
@@ -483,9 +475,7 @@ func loadJavaConfig(languageConfig any, language string) (JavaConfig, error) {
 func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request[langpb.ModuleConfigDefaultsRequest]) (*connect.Response[langpb.ModuleConfigDefaultsResponse], error) {
 	defaults := langpb.ModuleConfigDefaultsResponse{
 		GeneratedSchemaDir: ptr("src/main/ftl-module-schema"),
-		// Watch defaults to files related to maven and gradle
-		Watch:          []string{"pom.xml", "src/**", "build/generated", "target/generated-sources"},
-		LanguageConfig: &structpb.Struct{Fields: map[string]*structpb.Value{}},
+		LanguageConfig:     &structpb.Struct{Fields: map[string]*structpb.Value{}},
 	}
 	dir := req.Msg.Dir
 	pom := filepath.Join(dir, "pom.xml")
@@ -493,10 +483,12 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 	buildGradleKts := filepath.Join(dir, "build.gradle.kts")
 	if fileExists(pom) {
 		defaults.LanguageConfig.Fields["build-tool"] = structpb.NewStringValue(JavaBuildToolMaven)
+		defaults.DevModeBuild = ptr("mvn quarkus:dev")
 		defaults.Build = ptr("mvn -B package")
 		defaults.DeployDir = "target"
 	} else if fileExists(buildGradle) || fileExists(buildGradleKts) {
 		defaults.LanguageConfig.Fields["build-tool"] = structpb.NewStringValue(JavaBuildToolGradle)
+		defaults.DevModeBuild = ptr("gradle quarkusDev")
 		defaults.Build = ptr("gradle build")
 		defaults.DeployDir = "build"
 	} else {
@@ -609,7 +601,7 @@ func extractKotlinFTLImports(self, dir string) ([]string, error) {
 
 // setPOMProperties updates the ftl.version properties in the
 // pom.xml file in the given base directory.
-func setPOMProperties(ctx context.Context, baseDir string, transaction watch.ModifyFilesTransaction) error {
+func setPOMProperties(ctx context.Context, baseDir string) error {
 	logger := log.FromContext(ctx)
 	ftlVersion := ftl.Version
 	// If we are running in dev mode, ftl.Version will be "dev"
@@ -656,7 +648,6 @@ func setPOMProperties(ctx context.Context, baseDir string, transaction watch.Mod
 	if err != nil {
 		return fmt.Errorf("unable to write %s: %w", pomFile, err)
 	}
-	err = transaction.ModifiedFiles(pomFile)
 	if err != nil {
 		return fmt.Errorf("could not mark %s as modified: %w", pomFile, err)
 	}

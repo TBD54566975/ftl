@@ -44,9 +44,31 @@ type localScaling struct {
 	ideSupport       optional.Option[localdebug.IDEIntegration]
 	registryConfig   artefacts.RegistryConfig
 	enableOtel       bool
+
+	devModeEndpointsUpdates <-chan scaling.DevModeEndpoints
+	devModeEndpoints        map[string]*devModeRunner
+}
+
+type devModeRunner struct {
+	uri           url.URL
+	deploymentKey string
 }
 
 func (l *localScaling) Start(ctx context.Context, endpoint url.URL, leaser leases.Leaser) error {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case devEndpoints := <-l.devModeEndpointsUpdates:
+				l.lock.Lock()
+				l.devModeEndpoints[devEndpoints.Module] = &devModeRunner{
+					uri: devEndpoints.Endpoint,
+				}
+				l.lock.Unlock()
+			}
+		}
+	}()
 	scaling.BeginGrpcScaling(ctx, endpoint, leaser, l.handleSchemaChange)
 	return nil
 }
@@ -84,22 +106,24 @@ type runnerInfo struct {
 	port       string
 }
 
-func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, registryConfig artefacts.RegistryConfig, enableOtel bool) (scaling.RunnerScaling, error) {
+func NewLocalScaling(portAllocator *bind.BindAllocator, controllerAddresses []*url.URL, configPath string, enableIDEIntegration bool, registryConfig artefacts.RegistryConfig, enableOtel bool, devModeEndpoints <-chan scaling.DevModeEndpoints) (scaling.RunnerScaling, error) {
 
 	cacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return nil, err
 	}
 	local := localScaling{
-		lock:                sync.Mutex{},
-		cacheDir:            cacheDir,
-		runners:             map[string]map[string]*deploymentInfo{},
-		portAllocator:       portAllocator,
-		controllerAddresses: controllerAddresses,
-		prevRunnerSuffix:    -1,
-		debugPorts:          map[string]*localdebug.DebugInfo{},
-		registryConfig:      registryConfig,
-		enableOtel:          enableOtel,
+		lock:                    sync.Mutex{},
+		cacheDir:                cacheDir,
+		runners:                 map[string]map[string]*deploymentInfo{},
+		portAllocator:           portAllocator,
+		controllerAddresses:     controllerAddresses,
+		prevRunnerSuffix:        -1,
+		debugPorts:              map[string]*localdebug.DebugInfo{},
+		registryConfig:          registryConfig,
+		enableOtel:              enableOtel,
+		devModeEndpointsUpdates: devModeEndpoints,
+		devModeEndpoints:        map[string]*devModeRunner{},
 	}
 	if enableIDEIntegration && configPath != "" {
 		local.ideSupport = optional.Ptr(localdebug.NewIDEIntegration(configPath))
@@ -171,6 +195,17 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		return nil
 	default:
 	}
+
+	devEndpoint := l.devModeEndpoints[info.module]
+	devURI := optional.None[url.URL]()
+	if devEndpoint != nil {
+		devURI = optional.Some(devEndpoint.uri)
+		if devEndpoint.deploymentKey == deploymentKey {
+			// Already running, don't start another
+			return nil
+		}
+		devEndpoint.deploymentKey = deploymentKey
+	}
 	controllerEndpoint := l.controllerAddresses[len(l.runners)%len(l.controllerAddresses)]
 	logger := log.FromContext(ctx)
 
@@ -207,6 +242,7 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		ObservabilityConfig: observability.Config{
 			ExportOTEL: observability.ExportOTELFlag(l.enableOtel),
 		},
+		DevEndpoint: devURI,
 	}
 
 	simpleName := fmt.Sprintf("runner%d", keySuffix)
@@ -229,10 +265,12 @@ func (l *localScaling) startRunner(ctx context.Context, deploymentKey string, in
 		err := runner.Start(runnerCtx, config)
 		l.lock.Lock()
 		defer l.lock.Unlock()
+		if devEndpoint != nil {
+			devEndpoint.deploymentKey = ""
+		}
+		// Don't count context.Canceled as an a restart error
 		if err != nil && !errors.Is(err, context.Canceled) {
 			logger.Errorf(err, "Runner failed: %s", err)
-		} else {
-			// Don't count context.Canceled as an a restart error
 			info.exits++
 		}
 		if info.exits >= maxExits {

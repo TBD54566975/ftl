@@ -7,12 +7,14 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+
 	langpb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/language"
 	"github.com/TBD54566975/ftl/internal/slices"
 
-	"github.com/TBD54566975/ftl/internal/moduleconfig"
 	"github.com/alecthomas/assert/v2"
 	"github.com/alecthomas/types/optional"
+
+	"github.com/TBD54566975/ftl/internal/moduleconfig"
 )
 
 func TestParseImportsFromTestData(t *testing.T) {
@@ -113,6 +115,7 @@ func defaultsFromProto(proto *langpb.ModuleConfigDefaultsResponse) moduleconfig.
 		DeployDir:          proto.DeployDir,
 		Watch:              proto.Watch,
 		Build:              optional.Ptr(proto.Build),
+		DevModeBuild:       optional.Ptr(proto.DevModeBuild),
 		GeneratedSchemaDir: optional.Ptr(proto.GeneratedSchemaDir),
 		LanguageConfig:     proto.LanguageConfig.AsMap(),
 	}

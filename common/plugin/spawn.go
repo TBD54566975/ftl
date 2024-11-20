@@ -114,7 +114,7 @@ func Spawn[Client PingableClient](
 	}
 
 	// Find a free port.
-	addr, err := allocatePort()
+	addr, err := AllocatePort()
 	if err != nil {
 		return nil, nil, err
 	}

@@ -22,16 +22,18 @@ message ModuleConfig {
   string deploy_dir = 4;
   // Build is the command to build the module.
   optional string build = 5;
+  // DevModeBuild is the command to build the module in dev mode.
+  optional string dev_mode_build = 6;
   // Build lock path to prevent concurrent builds
-  string build_lock = 6;
+  string build_lock = 7;
   // The directory to generate protobuf schema files into. These can be picked up by language specific build tools
-  optional string generated_schema_dir = 7;
+  optional string generated_schema_dir = 8;
   // Patterns to watch for file changes
-  repeated string watch = 8;
+  repeated string watch = 9;
 
   // LanguageConfig contains any metadata specific to a specific language.
   // These are stored in the ftl.toml file under the same key as the language (eg: "go", "java")
-  google.protobuf.Struct language_config = 9;
+  google.protobuf.Struct language_config = 10;
 }
 
 // ProjectConfig contains the configuration for a project, found in the ftl-project.toml file.
@@ -94,18 +96,21 @@ message ModuleConfigDefaultsResponse {
   // Default build command
   optional string build = 2;
 
+  // Dev mode build command, if different from the regular build command
+  optional string dev_mode_build = 3;
+
   // Build lock path to prevent concurrent builds
-  optional string build_lock = 3;
+  optional string build_lock = 4;
 
   // Default relative path to the directory containing generated schema files
-  optional string generated_schema_dir = 4;
+  optional string generated_schema_dir = 5;
 
   // Default patterns to watch for file changes, relative to the module directory
-  repeated string watch = 5;
+  repeated string watch = 6;
 
   // Default language specific configuration.
   // These defaults are filled in by looking at each root key only. If the key is not present, the default is used.
-  google.protobuf.Struct language_config = 6;
+  google.protobuf.Struct language_config = 7;
 }
 
 message DependenciesRequest {
@@ -208,11 +213,17 @@ message BuildSuccess {
   schema.Module module = 3;
   // Paths for files/directories to be deployed
   repeated string deploy = 4;
+  // Name of the docker image to use for the runner
+  string docker_image = 5;
 
   // Errors contains any errors that occurred during the build
   // No errors can have a level of ERROR, instead a BuildFailure should be sent
   // Instead this is useful for INFO and WARN level errors.
-  ErrorList errors = 5;
+  ErrorList errors = 6;
+
+  // Dev mode endpoint URI. If this is set then rather than trying to deploy the module, FTL will start a runner that
+  // connects to this endpoint.
+  optional string dev_endpoint = 7;
 }
 
 // BuildFailure should be sent when a build fails.
