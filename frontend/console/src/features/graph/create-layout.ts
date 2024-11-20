@@ -32,11 +32,11 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
         position: { x: x, y: groupY },
         data: { title: module.name, item: module },
         type: 'groupNode',
-        draggable: true,
+        draggable: false,
         style: {
           width: groupWidth,
           height: moduleHeight(module),
-          zIndex: 1,
+          zIndex: 0,
         },
       })
 
@@ -47,14 +47,14 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
           position: { x: 20, y: y },
           connectable: false,
           data: { title: secret.secret?.name, item: secret },
-          type: 'secretNode',
+          type: 'secretNodesss',
           parentNode: module.name,
           style: {
             width: groupWidth - 40,
             height: secretHeight,
           },
           draggable: false,
-          zIndex: 2,
+          zIndex: 1,
         })
         y += secretHeight + ITEM_SPACING
       }
@@ -72,7 +72,7 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
             height: configHeight,
           },
           draggable: false,
-          zIndex: 2,
+          zIndex: 1,
         })
         y += configHeight + ITEM_SPACING
       }
@@ -92,7 +92,7 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
             height: verbHeight,
           },
           draggable: false,
-          zIndex: 2,
+          zIndex: 1,
         })
 
         const uniqueEdgeIds = new Set<string>()
@@ -107,6 +107,7 @@ export const layoutNodes = (modules: Module[], topology: Topology | undefined) =
                 target: `${call.module}.${call.name}`,
                 style: { stroke: 'rgb(251 113 133)' },
                 animated: true,
+                zIndex: 3,
               })
             }
           }
