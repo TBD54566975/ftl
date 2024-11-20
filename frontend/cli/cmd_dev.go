@@ -69,7 +69,7 @@ func (d *devCmd) Run(
 	}
 
 	if d.InitDB {
-		dsn, err := dev.SetupDB(ctx, d.ServeCmd.DatabaseImage, d.ServeCmd.DBPort, true)
+		dsn, err := dev.SetupPostgres(ctx, d.ServeCmd.DatabaseImage, d.ServeCmd.DBPort, true)
 		if err != nil {
 			return fmt.Errorf("failed to setup database: %w", err)
 		}

@@ -19,7 +19,7 @@ var cli struct {
 
 func main() {
 	kctx := kong.Parse(&cli, kong.Vars{
-		"dsn": dsn.DSN("ftl"),
+		"dsn": dsn.PostgresDSN("ftl"),
 	})
 	ctx := log.ContextWithLogger(context.Background(), log.Configure(os.Stderr, cli.Config))
 	conn, err := databasetesting.CreateForDevel(ctx, cli.DSN, cli.Recreate)

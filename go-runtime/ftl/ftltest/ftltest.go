@@ -532,6 +532,8 @@ func GetDatabaseHandle[T ftl.DatabaseConfig]() (ftl.DatabaseHandle[T], error) {
 	switch reflectedDB.DBType {
 	case "postgres":
 		dbType = ftl.DatabaseTypePostgres
+	case "mysql":
+		dbType = ftl.DatabaseTypeMysql
 	default:
 		return ftl.DatabaseHandle[T]{}, fmt.Errorf("unsupported database type %v", reflectedDB.DBType)
 	}

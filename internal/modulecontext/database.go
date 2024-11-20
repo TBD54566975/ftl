@@ -3,6 +3,7 @@ package modulecontext
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	ftlv1 "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1"
 )
@@ -39,12 +40,25 @@ type DBType ftlv1.ModuleContextResponse_DBType
 
 const (
 	DBTypePostgres = DBType(ftlv1.ModuleContextResponse_POSTGRES)
+	DBTypeMySQL    = DBType(ftlv1.ModuleContextResponse_MYSQL)
 )
+
+func DBTypeFromString(dt string) (DBType, error) {
+	dt = strings.ToLower(dt)
+	if dt == "postgres" {
+		return DBTypePostgres, nil
+	} else if dt == "mysql" {
+		return DBTypeMySQL, nil
+	}
+	return 0, fmt.Errorf("unknown DB type: %s", dt)
+}
 
 func (x DBType) String() string {
 	switch x {
 	case DBTypePostgres:
-		return "Postgres"
+		return "postgres"
+	case DBTypeMySQL:
+		return "mysql"
 	default:
 		panic(fmt.Sprintf("unknown DB type: %s", strconv.Itoa(int(x))))
 	}

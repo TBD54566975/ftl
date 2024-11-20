@@ -11,7 +11,7 @@ import (
 // DatabasesFromSecrets finds DSNs in secrets and creates a map of databases.
 //
 // Secret keys should be in the format FTL_DSN_<MODULENAME>_<DBNAME>
-func DatabasesFromSecrets(ctx context.Context, module string, secrets map[string][]byte) (map[string]Database, error) {
+func DatabasesFromSecrets(ctx context.Context, module string, secrets map[string][]byte, types map[string]DBType) (map[string]Database, error) {
 	databases := map[string]Database{}
 	for sName, maybeDSN := range secrets {
 		if !strings.HasPrefix(sName, "FTL_DSN_") {
@@ -31,7 +31,7 @@ func DatabasesFromSecrets(ctx context.Context, module string, secrets map[string
 		if err := encoding.Unmarshal(maybeDSN, &dsn); err != nil {
 			return nil, fmt.Errorf("could not unmarshal DSN %q: %w", maybeDSN, err)
 		}
-		db, err := NewDatabase(DBTypePostgres, dsn)
+		db, err := NewDatabase(types[dbName], dsn)
 		if err != nil {
 			return nil, fmt.Errorf("could not create database %q with DSN %q: %w", dbName, maybeDSN, err)
 		}

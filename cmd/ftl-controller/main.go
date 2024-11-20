@@ -46,7 +46,7 @@ func main() {
 		kong.Vars{
 			"version":   ftl.Version,
 			"timestamp": time.Unix(t, 0).Format(time.RFC3339),
-			"dsn":       dsn.DSN("ftl"),
+			"dsn":       dsn.PostgresDSN("ftl"),
 		},
 	)
 	cli.ControllerConfig.SetDefaults()

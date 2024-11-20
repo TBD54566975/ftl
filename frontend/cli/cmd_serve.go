@@ -47,12 +47,13 @@ type serveCmd struct {
 type serveCommonConfig struct {
 	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress, runner and language plugin will increment the port by 1" default:"http://127.0.0.1:8891"`
 	DBPort              int                  `help:"Port to use for the database." default:"15432"`
+	MysqlPort           int                  `help:"Port to use for the MySQL database, if one is required." default:"13306"`
 	RegistryPort        int                  `help:"Port to use for the registry." default:"15000"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
 	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"0" hidden:"true"`
 	Background          bool                 `help:"Run in the background." default:"false"`
 	Stop                bool                 `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
-	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"1m"`
+	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"10s"`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	DatabaseImage       string               `help:"The container image to start for the database" default:"postgres:15.8" env:"FTL_DATABASE_IMAGE" hidden:""`
 	RegistryImage       string               `help:"The container image to start for the image registry" default:"registry:2" env:"FTL_REGISTRY_IMAGE" hidden:""`
@@ -154,7 +155,7 @@ func (s *serveCommonConfig) run(
 	registry.AllowInsecure = true
 	registry.Registry = fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort)
 	// Bring up the DB and DAL.
-	dsn, err := dev.SetupDB(ctx, s.DatabaseImage, s.DBPort, recreate)
+	dsn, err := dev.SetupPostgres(ctx, s.DatabaseImage, s.DBPort, recreate)
 	if err != nil {
 		return err
 	}
@@ -254,7 +255,7 @@ func (s *serveCommonConfig) run(
 				ID:          "controller",
 			}},
 			Default: &provisioner.ProvisionerBinding{
-				Provisioner: provisioner.NewDevProvisioner(s.DBPort),
+				Provisioner: provisioner.NewDevProvisioner(s.DBPort, s.MysqlPort),
 				ID:          "dev",
 			},
 		}

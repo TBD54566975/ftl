@@ -18,7 +18,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/modulecontext"
 )
 
-func PostgresDatabaseHandle[T ftl.DatabaseConfig]() reflection.VerbResource {
+func DatabaseHandle[T ftl.DatabaseConfig](dbtype string) reflection.VerbResource {
 	typ := reflect.TypeFor[T]()
 	var config T
 	if typ.Kind() == reflect.Ptr {
@@ -29,33 +29,40 @@ func PostgresDatabaseHandle[T ftl.DatabaseConfig]() reflection.VerbResource {
 
 	return func() reflect.Value {
 		reflectedDB := reflection.GetDatabase[T]()
-		db := ftl.NewDatabaseHandle(config, ftl.DatabaseTypePostgres, reflectedDB.DB)
+		db := ftl.NewDatabaseHandle(config, ftl.DatabaseType(dbtype), reflectedDB.DB)
 		return reflect.ValueOf(db)
 	}
 }
 
 func InitPostgres(ref reflection.Ref) *reflection.ReflectedDatabaseHandle {
+	return InitDatabase(ref, "postgres", modulecontext.DBTypePostgres, "pgx")
+}
+func InitMySQL(ref reflection.Ref) *reflection.ReflectedDatabaseHandle {
+	return InitDatabase(ref, "mysql", modulecontext.DBTypeMySQL, "mysql")
+}
+
+func InitDatabase(ref reflection.Ref, dbtype string, protoDBtype modulecontext.DBType, driver string) *reflection.ReflectedDatabaseHandle {
 	return &reflection.ReflectedDatabaseHandle{
 		Name:   ref.Name,
-		DBType: "postgres",
+		DBType: dbtype,
 		DB: once.Once(func(ctx context.Context) (*sql.DB, error) {
 			logger := log.FromContext(ctx)
 
 			provider := modulecontext.FromContext(ctx).CurrentContext()
-			dsn, err := provider.GetDatabase(ref.Name, modulecontext.DBTypePostgres)
+			dsn, err := provider.GetDatabase(ref.Name, protoDBtype)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get database %q: %w", ref.Name, err)
 			}
 
 			logger.Debugf("Opening database: %s", ref.Name)
-			db, err := otelsql.Open("pgx", dsn)
+			db, err := otelsql.Open(driver, dsn)
 			if err != nil {
 				return nil, fmt.Errorf("failed to open database %q: %w", ref.Name, err)
 			}
 
 			// sets db.system and db.name attributes
 			metricAttrs := otelsql.WithAttributes(
-				semconv.DBSystemPostgreSQL,
+				semconv.DBSystemKey.String(dbtype),
 				semconv.DBNameKey.String(ref.Name),
 				attribute.Bool("ftl.is_user_service", true),
 			)

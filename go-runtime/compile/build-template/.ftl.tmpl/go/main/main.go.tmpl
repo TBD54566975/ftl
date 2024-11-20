@@ -28,6 +28,8 @@ func init() {
 {{- range $dbs}}
 		{{- if eq .Type "postgres" }}
 		reflection.Database[{{.TypeName}}]("{{.Name}}", server.InitPostgres),
+		{{- else if eq .Type "mysql" }}
+        reflection.Database[{{.TypeName}}]("{{.Name}}", server.InitMySQL),
 		{{- end }}
 {{- end}}
 {{- range $verbs}}
@@ -46,9 +48,7 @@ func init() {
             	{{- end -}}
                 {{- end }}
                 {{- with getDatabaseHandle . }}
-                	{{- if eq .Type "postgres" }}
-			server.PostgresDatabaseHandle[{{.TypeName}}](),
-                	{{- end }}
+			server.DatabaseHandle[{{.TypeName}}]("{{.Type}}"),
                 {{- end }}
 			{{- end}}
 		),

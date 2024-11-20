@@ -14,18 +14,35 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
-const ftlContainerName = "ftl-db-1"
+const postgresContainerName = "ftl-db-1"
+const mysqlContainerName = "ftl-mysql-1"
 
-func SetupDB(ctx context.Context, image string, port int, recreate bool) (string, error) {
+func SetupPostgres(ctx context.Context, image string, port int, recreate bool) (string, error) {
+	dsn, err := SetupDatabase(ctx, image, port, postgresContainerName, 5432, WaitForPostgresReady, container.RunPostgres)
+	if err != nil {
+		return "", fmt.Errorf("failed to create database: %w", err)
+	}
+	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
+	if err != nil {
+		return "", fmt.Errorf("failed to create database: %w", err)
+	}
+	return dsn, nil
+}
+
+func SetupMySQL(ctx context.Context, image string, port int) (string, error) {
+	return SetupDatabase(ctx, image, port, mysqlContainerName, 3306, WaitForMySQLReady, container.RunMySQL)
+}
+
+func SetupDatabase(ctx context.Context, image string, port int, containerName string, containerPort int, waitForReady func(ctx context.Context, port int) (string, error), runContainer func(ctx context.Context, name string, port int, image string) error) (string, error) {
 	logger := log.FromContext(ctx)
 
-	exists, err := container.DoesExist(ctx, ftlContainerName, optional.Some(image))
+	exists, err := container.DoesExist(ctx, containerName, optional.Some(image))
 	if err != nil {
 		return "", fmt.Errorf("failed to check if container exists: %w", err)
 	}
 
 	if !exists {
-		logger.Debugf("Creating docker container '%s' for postgres db", ftlContainerName)
+		logger.Debugf("Creating docker container '%s' for db", containerName)
 
 		// check if port s.DBPort is already in use
 		if l, err := net.Listen("tcp", fmt.Sprintf(":%d", port)); err != nil {
@@ -34,49 +51,55 @@ func SetupDB(ctx context.Context, image string, port int, recreate bool) (string
 			return "", fmt.Errorf("failed to close listener: %w", err)
 		}
 
-		err = container.RunDB(ctx, ftlContainerName, port, image)
+		err = runContainer(ctx, containerName, port, image)
 		if err != nil {
 			return "", fmt.Errorf("failed to run db container: %w", err)
 		}
 
-		recreate = true
 	} else {
 		// Start the existing container
-		err = container.Start(ctx, ftlContainerName)
+		err = container.Start(ctx, containerName)
 		if err != nil {
 			return "", fmt.Errorf("failed to start existing db container: %w", err)
 		}
 
 		// Grab the port from the existing container
-		port, err = container.GetContainerPort(ctx, ftlContainerName, 5432)
+		port, err = container.GetContainerPort(ctx, containerName, containerPort)
 		if err != nil {
 			return "", fmt.Errorf("failed to get port from existing db container: %w", err)
 		}
 
-		logger.Debugf("Reusing existing docker container %s on port %d for postgres db", ftlContainerName, port)
+		logger.Debugf("Reusing existing docker container %s on port %d for db", containerName, port)
 	}
 
-	dsn, err := WaitForDBReady(ctx, port)
+	dsn, err := waitForReady(ctx, port)
 	if err != nil {
 		return "", fmt.Errorf("db container failed to be healthy: %w", err)
-	}
-
-	_, err = databasetesting.CreateForDevel(ctx, dsn, recreate)
-	if err != nil {
-		return "", fmt.Errorf("failed to create database: %w", err)
 	}
 
 	return dsn, nil
 }
 
-func WaitForDBReady(ctx context.Context, port int) (string, error) {
+func WaitForPostgresReady(ctx context.Context, port int) (string, error) {
 	logger := log.FromContext(ctx)
-	err := container.PollContainerHealth(ctx, ftlContainerName, 10*time.Second)
+	err := container.PollContainerHealth(ctx, postgresContainerName, 10*time.Minute)
 	if err != nil {
 		return "", fmt.Errorf("db container failed to be healthy: %w", err)
 	}
 
-	dsn := dsn.DSN("ftl", dsn.Port(port))
+	dsn := dsn.PostgresDSN("ftl", dsn.Port(port))
 	logger.Debugf("Postgres DSN: %s", dsn)
+	return dsn, nil
+}
+
+func WaitForMySQLReady(ctx context.Context, port int) (string, error) {
+	logger := log.FromContext(ctx)
+	err := container.PollContainerHealth(ctx, mysqlContainerName, 10*time.Minute)
+	if err != nil {
+		return "", fmt.Errorf("db container failed to be healthy: %w", err)
+	}
+
+	dsn := dsn.MySQLDSN("ftl", dsn.Port(port))
+	logger.Debugf("MySQL DSN: %s", dsn)
 	return dsn, nil
 }

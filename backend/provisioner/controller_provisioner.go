@@ -25,8 +25,9 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 			logger.Infof("provisioning module: %s", module)
 
 			for _, dep := range rc.Dependencies {
-				if psql, ok := dep.Resource.(*provisioner.Resource_Postgres); ok {
-					if psql.Postgres == nil || psql.Postgres.Output == nil {
+				switch r := dep.Resource.(type) {
+				case *provisioner.Resource_Postgres:
+					if r.Postgres == nil || r.Postgres.Output == nil {
 						return nil, fmt.Errorf("postgres resource has not been provisioned")
 					}
 
@@ -35,8 +36,21 @@ func NewControllerProvisioner(client ftlv1connect.ControllerServiceClient) *InMe
 						return nil, fmt.Errorf("failed to find database declaration: %w", err)
 					}
 					decl.Runtime = &schemapb.DatabaseRuntime{
-						Dsn: psql.Postgres.Output.WriteDsn,
+						Dsn: r.Postgres.Output.WriteDsn,
 					}
+				case *provisioner.Resource_Mysql:
+					if r.Mysql == nil || r.Mysql.Output == nil {
+						return nil, fmt.Errorf("mysql resource has not been provisioned")
+					}
+
+					decl, err := findDBDecl(dep.ResourceId, mod.Module.Schema)
+					if err != nil {
+						return nil, fmt.Errorf("failed to find database declaration: %w", err)
+					}
+					decl.Runtime = &schemapb.DatabaseRuntime{
+						Dsn: r.Mysql.Output.WriteDsn,
+					}
+				default:
 				}
 			}
 

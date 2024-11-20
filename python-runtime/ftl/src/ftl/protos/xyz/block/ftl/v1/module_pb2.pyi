@@ -48,7 +48,9 @@ class ModuleContextResponse(_message.Message):
     class DBType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
         __slots__ = ()
         POSTGRES: _ClassVar[ModuleContextResponse.DBType]
+        MYSQL: _ClassVar[ModuleContextResponse.DBType]
     POSTGRES: ModuleContextResponse.DBType
+    MYSQL: ModuleContextResponse.DBType
     class Ref(_message.Message):
         __slots__ = ("module", "name")
         MODULE_FIELD_NUMBER: _ClassVar[int]

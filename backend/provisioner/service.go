@@ -120,6 +120,9 @@ func replaceOutputs(to []*provproto.Resource, from []*provproto.Resource) error 
 		switch r := r.Resource.(type) {
 		case *provproto.Resource_Mysql:
 			if mysqlFrom, ok := existing.Resource.(*provproto.Resource_Mysql); ok && mysqlFrom.Mysql != nil {
+				if r.Mysql == nil {
+					r.Mysql = &provproto.MysqlResource{}
+				}
 				r.Mysql.Output = mysqlFrom.Mysql.Output
 			}
 		case *provproto.Resource_Postgres:
