@@ -72,6 +72,6 @@ info: Starting FTL with 1 controller(s)
 ftl: error: ERROR: relation "fsm_executions" does not exist (SQLSTATE 42P01)
 ```
 
-Run again with `ftl dev --recreate`. This usually indicates that your DB has an old schema.
+Run again with `ftl dev`. This usually indicates that your DB has an old schema.
 
 This can occur when FTL has been upgraded with schema changes, making the database out of date. While in alpha we do not use schema migrations, so this won't occur once we hit a stable release.

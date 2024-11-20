@@ -1,6 +1,6 @@
 # Start the FTL backend with hot-reloading
 dev:
-  ftl dev --recreate --allow-origins '*'
+  ftl dev --allow-origins '*'
 
 gen-mobile:
   ftl schema generate mobile/templates/ online-boutique/mobile/lib/api --watch=5s

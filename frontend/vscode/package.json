@@ -31,9 +31,7 @@
         },
         "ftl.devCommandFlags": {
           "type": "array",
-          "default": [
-            "--recreate"
-          ],
+          "default": [],
           "items": {
             "type": "string"
           },

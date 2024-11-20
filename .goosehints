@@ -44,7 +44,7 @@ NOTE: ftl dev command will run things as a server so you will need to run it as 
 
 ### Development Mode
 ```bash
-ftl dev --recreate ./examples/go
+ftl dev ./examples/go
 ```
 
 ### With OpenTelemetry

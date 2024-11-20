@@ -39,10 +39,14 @@ import (
 )
 
 type serveCmd struct {
+	Recreate bool `help:"Recreate the database even if it already exists." default:"false"`
+	serveCommonConfig
+}
+
+type serveCommonConfig struct {
 	Bind                *url.URL             `help:"Starting endpoint to bind to and advertise to. Each controller, ingress, runner and language plugin will increment the port by 1" default:"http://127.0.0.1:8891"`
 	DBPort              int                  `help:"Port to use for the database." default:"15432"`
 	RegistryPort        int                  `help:"Port to use for the registry." default:"15000"`
-	Recreate            bool                 `help:"Recreate the database even if it already exists." default:"false"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
 	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"0" hidden:"true"`
 	Background          bool                 `help:"Run in the background." default:"false"`
@@ -72,11 +76,11 @@ func (s *serveCmd) Run(
 	if err != nil {
 		return fmt.Errorf("could not create bind allocator: %w", err)
 	}
-	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaClient)
+	return s.run(ctx, projConfig, cm, sm, optional.None[chan bool](), false, bindAllocator, controllerClient, provisionerClient, schemaClient, s.Recreate)
 }
 
 //nolint:maintidx
-func (s *serveCmd) run(
+func (s *serveCommonConfig) run(
 	ctx context.Context,
 	projConfig projectconfig.Config,
 	cm *manager.Manager[configuration.Configuration],
@@ -87,6 +91,7 @@ func (s *serveCmd) run(
 	controllerClient ftlv1connect.ControllerServiceClient,
 	provisionerClient provisionerconnect.ProvisionerServiceClient,
 	schemaClient ftlv1connect.SchemaServiceClient,
+	recreate bool,
 ) error {
 	logger := log.FromContext(ctx)
 
@@ -146,7 +151,7 @@ func (s *serveCmd) run(
 	registry.AllowInsecure = true
 	registry.Registry = fmt.Sprintf("127.0.0.1:%d/ftl", s.RegistryPort)
 	// Bring up the DB and DAL.
-	dsn, err := dev.SetupDB(ctx, s.DatabaseImage, s.DBPort, s.Recreate)
+	dsn, err := dev.SetupDB(ctx, s.DatabaseImage, s.DBPort, recreate)
 	if err != nil {
 		return err
 	}

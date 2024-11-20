@@ -33,11 +33,11 @@ Configure the FTL extension by setting the following options in your Visual Stud
   }
   ```
 
-- `ftl.devCommandFlags`: Defines flags to pass to the FTL executable when starting the development environment. The default is ["--recreate"].
+- `ftl.devCommandFlags`: Defines flags to pass to the FTL executable when starting the development environment.
 
   ```json
   {
-    "ftl.devCommandFlags": ["--recreate", "--parallelism=4"]
+    "ftl.devCommandFlags": ["--parallelism=4"]
   }
   ```
 
