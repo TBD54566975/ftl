@@ -1,3 +1,6 @@
+_help:
+  @just -l
+
 # Start the FTL backend with hot-reloading
 dev:
   ftl dev --allow-origins '*'
