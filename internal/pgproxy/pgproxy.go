@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgproto3"
+
+	"github.com/TBD54566975/ftl/internal/log"
 )
 
 // PgProxy is a configurable proxy for PostgreSQL connections
