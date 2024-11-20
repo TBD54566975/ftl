@@ -25,11 +25,11 @@ import (
 )
 
 type devCmd struct {
-	Watch          time.Duration `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
-	NoServe        bool          `help:"Do not start the FTL server." default:"false"`
-	Lsp            bool          `help:"Run the language server." default:"false"`
-	ServeCmd       serveCmd      `embed:""`
-	InitDB         bool          `help:"Initialize the database and exit." default:"false"`
+	Watch          time.Duration     `help:"Watch template directory at this frequency and regenerate on change." default:"500ms"`
+	NoServe        bool              `help:"Do not start the FTL server." default:"false"`
+	Lsp            bool              `help:"Run the language server." default:"false"`
+	ServeCmd       serveCommonConfig `embed:""`
+	InitDB         bool              `help:"Initialize the database and exit." default:"false"`
 	languageServer *lsp.Server
 	Build          buildCmd `embed:""`
 }
@@ -68,7 +68,7 @@ func (d *devCmd) Run(
 	}
 
 	if d.InitDB {
-		dsn, err := dev.SetupDB(ctx, d.ServeCmd.DatabaseImage, d.ServeCmd.DBPort, d.ServeCmd.Recreate)
+		dsn, err := dev.SetupDB(ctx, d.ServeCmd.DatabaseImage, d.ServeCmd.DBPort, true)
 		if err != nil {
 			return fmt.Errorf("failed to setup database: %w", err)
 		}
@@ -87,7 +87,7 @@ func (d *devCmd) Run(
 	controllerReady := make(chan bool, 1)
 	if !d.NoServe {
 		if d.ServeCmd.Stop {
-			_, err := kctx.Call(d.ServeCmd.Run)
+			err := d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaClient, true)
 			if err != nil {
 				return fmt.Errorf("failed to stop server: %w", err)
 			}
@@ -95,7 +95,7 @@ func (d *devCmd) Run(
 		}
 
 		g.Go(func() error {
-			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaClient)
+			return d.ServeCmd.run(ctx, projConfig, cm, sm, optional.Some(controllerReady), true, bindAllocator, controllerClient, provisionerClient, schemaClient, true)
 		})
 	}
 

@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/go-connections/nat"
 
 	"github.com/TBD54566975/ftl/internal/log"
@@ -67,10 +68,10 @@ func Pull(ctx context.Context, imageName string) error {
 	}
 	defer reader.Close()
 
-	logger := log.FromContext(ctx)
-	_, err = io.Copy(logger.WriterAt(log.Info), reader)
-	if err != nil {
-		return fmt.Errorf("failed to stream pull: %w", err)
+	logger := log.FromContext(ctx).Scope(imageName)
+	w := logger.WriterAt(log.Info)
+	if err := jsonmessage.DisplayJSONMessagesStream(reader, w, 0, false, nil); err != nil {
+		return fmt.Errorf("failed to display pull messages: %w", err)
 	}
 
 	return nil

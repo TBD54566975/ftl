@@ -61,7 +61,7 @@ ftl new go . alice
 Start FTL in one terminal:
 
 ```sh file=test.sh region=start
-ftl dev --wait-for=alice --recreate .
+ftl dev --wait-for=alice .
 ```
 
 Then in a second terminal run the following:
