@@ -10,7 +10,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-var defaultName = ftl.Config[string]("default")
+type Default = ftl.Config[string]
 
 // An echo request.
 type EchoRequest struct {
@@ -24,7 +24,7 @@ type EchoResponse struct {
 // Echo returns a greeting with the current time.
 //
 //ftl:verb export
-func Echo(ctx context.Context, req EchoRequest, tc time.TimeClient) (EchoResponse, error) {
+func Echo(ctx context.Context, req EchoRequest, tc time.TimeClient, defaultName Default) (EchoResponse, error) {
 	tresp, err := tc(ctx, time.TimeRequest{})
 	if err != nil {
 		return EchoResponse{}, err

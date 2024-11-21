@@ -1,4 +1,4 @@
-package config
+package secret
 
 import (
 	"go/ast"
@@ -13,38 +13,38 @@ import (
 )
 
 // Extractor extracts topics.
-var Extractor = common.NewResourceDeclExtractor[*schema.Config]("config", Extract, matchFunc)
+var Extractor = common.NewResourceDeclExtractor[*schema.Secret]("secret", Extract, matchFunc)
 
-func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional.Option[*schema.Config] {
+func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional.Option[*schema.Secret] {
 	idxExpr, ok := node.Type.(*ast.IndexExpr)
 	if !ok {
-		common.Errorf(pass, node, "unsupported config type")
-		return optional.None[*schema.Config]()
+		common.Errorf(pass, node, "unsupported secret type")
+		return optional.None[*schema.Secret]()
 	}
 
 	typ, ok := common.ExtractType(pass, idxExpr.Index).Get()
 	if !ok {
-		common.Errorf(pass, node, "unsupported config type")
-		return optional.None[*schema.Config]()
+		common.Errorf(pass, node, "unsupported secret type")
+		return optional.None[*schema.Secret]()
 	}
 
 	name := strcase.ToLowerCamel(node.Name.Name)
 	if !schema.ValidateName(name) {
-		common.Errorf(pass, node, "config names must be valid identifiers")
-		return optional.None[*schema.Config]()
+		common.Errorf(pass, node, "secret names must be valid identifiers")
+		return optional.None[*schema.Secret]()
 	}
 
-	cfg := &schema.Config{
+	secret := &schema.Secret{
 		Pos:  common.GoPosToSchemaPos(pass.Fset, node.Pos()),
 		Name: name,
 		Type: typ,
 	}
 	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {
-		cfg.Comments = md.Comments
+		secret.Comments = md.Comments
 	}
-	return optional.Some(cfg)
+	return optional.Some(secret)
 }
 
 func matchFunc(pass *analysis.Pass, node ast.Node, obj types.Object) bool {
-	return common.GetVerbResourceType(pass, obj) == common.VerbResourceTypeConfig
+	return common.GetVerbResourceType(pass, obj) == common.VerbResourceTypeSecret
 }

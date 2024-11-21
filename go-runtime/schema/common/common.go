@@ -30,6 +30,10 @@ var (
 	FtlTopicHandlePath = "github.com/TBD54566975/ftl/go-runtime/ftl.TopicHandle"
 	// FtlSubscriptionHandlePath is the path to the FTL subscription handle type.
 	FtlSubscriptionHandlePath = "github.com/TBD54566975/ftl/go-runtime/ftl.SubscriptionHandle"
+	// FtlConfigTypePath is the path to the FTL config handle type.
+	FtlConfigTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Config"
+	// FtlSecretTypePath is the path to the FTL secret handle type.
+	FtlSecretTypePath = "github.com/TBD54566975/ftl/go-runtime/ftl.Secret" //nolint:gosec
 
 	extractorRegistery = xsync.NewMapOf[reflect.Type, ExtractDeclFunc[schema.Decl, ast.Node]]()
 )
@@ -88,15 +92,6 @@ type matchFunc func(pass *analysis.Pass, node ast.Node, obj types.Object) bool
 
 // ExtractResourceDeclFunc extracts a schema resource declaration from the given node.
 type ExtractResourceDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.TypeSpec) optional.Option[T]
-
-// ExtractCallDeclFunc extracts a schema declaration from the given node.
-type ExtractCallDeclFunc[T schema.Decl] func(pass *analysis.Pass, object types.Object, node *ast.GenDecl, callExpr *ast.CallExpr, callPath string) optional.Option[T]
-
-// NewCallDeclExtractor extracts declarations from call expressions, e.g. `ftl.Subscription("name")`.
-func NewCallDeclExtractor[T schema.Decl](name string, extractFunc ExtractCallDeclFunc[T], callPaths ...string) *analysis.Analyzer {
-	type Tag struct{} // Tag uniquely identifies the fact type for this extractor.
-	return NewExtractor(name, (*DefaultFact[Tag])(nil), runExtractCallDeclsFunc[T](extractFunc, callPaths...))
-}
 
 // ExtractorResult contains the results of an extraction pass.
 type ExtractorResult struct {
@@ -167,45 +162,6 @@ func runExtractResourceDeclsFunc[T schema.Decl](extractFunc ExtractResourceDeclF
 				return
 			}
 			decl := extractFunc(pass, obj, node)
-			if d, ok := decl.Get(); ok {
-				MarkSchemaDecl(pass, obj, d)
-			}
-		})
-		return NewExtractorResult(pass), nil
-	}
-}
-
-func runExtractCallDeclsFunc[T schema.Decl](extractFunc ExtractCallDeclFunc[T], callPaths ...string) func(pass *analysis.Pass) (interface{}, error) {
-	return func(pass *analysis.Pass) (interface{}, error) {
-		in := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector) //nolint:forcetypeassert
-		nodeFilter := []ast.Node{
-			(*ast.GenDecl)(nil),
-		}
-		in.Preorder(nodeFilter, func(n ast.Node) {
-			node := n.(*ast.GenDecl) //nolint:forcetypeassert
-			callExpr, ok := CallExprFromVar(node).Get()
-			if !ok {
-				return
-			}
-			obj, ok := GetObjectForNode(pass.TypesInfo, node).Get()
-			if !ok {
-				return
-			}
-			_, fn := Deref[*types.Func](pass, callExpr.Fun)
-			if fn == nil {
-				return
-			}
-			callPath := fn.FullName()
-			var matchesPath bool
-			for _, path := range callPaths {
-				if callPath == path {
-					matchesPath = true
-				}
-			}
-			if !matchesPath {
-				return
-			}
-			decl := extractFunc(pass, obj, node, callExpr, callPath)
 			if d, ok := decl.Get(); ok {
 				MarkSchemaDecl(pass, obj, d)
 			}
@@ -834,10 +790,12 @@ type VerbResourceType int
 
 const (
 	VerbResourceTypeNone VerbResourceType = iota
-	VerbResourceTypeVerbClient
+	VerbResourceTypeConfig
 	VerbResourceTypeDatabaseHandle
-	VerbResourceTypeTopicHandle
+	VerbResourceTypeSecret
 	VerbResourceTypeSubscriptionHandle
+	VerbResourceTypeTopicHandle
+	VerbResourceTypeVerbClient
 )
 
 func GetVerbResourceType(pass *analysis.Pass, obj types.Object) VerbResourceType {
@@ -850,13 +808,20 @@ func GetVerbResourceType(pass *analysis.Pass, obj types.Object) VerbResourceType
 
 	switch t := obj.Type().(type) {
 	case *types.Named:
-		switch {
-		case isDatabaseHandleType(pass, t):
-			return VerbResourceTypeDatabaseHandle
-		case IsTopicHandleType(t):
+		switch t.Obj().Pkg().Path() + "." + t.Obj().Name() {
+		case FtlDatabaseHandlePath:
+			if isDatabaseHandleType(pass, t) {
+				return VerbResourceTypeDatabaseHandle
+			}
+			return VerbResourceTypeNone
+		case FtlTopicHandlePath:
 			return VerbResourceTypeTopicHandle
-		case t.Obj().Pkg().Path()+"."+t.Obj().Name() == FtlSubscriptionHandlePath:
+		case FtlSubscriptionHandlePath:
 			return VerbResourceTypeSubscriptionHandle
+		case FtlConfigTypePath:
+			return VerbResourceTypeConfig
+		case FtlSecretTypePath:
+			return VerbResourceTypeSecret
 		}
 
 		if _, ok := t.Underlying().(*types.Signature); !ok {
@@ -876,15 +841,7 @@ func GetVerbResourceType(pass *analysis.Pass, obj types.Object) VerbResourceType
 	}
 }
 
-func IsTopicHandleType(named *types.Named) bool {
-	return named.Obj().Pkg().Path()+"."+named.Obj().Name() == FtlTopicHandlePath
-}
-
 func isDatabaseHandleType(pass *analysis.Pass, named *types.Named) bool {
-	if named.Obj().Pkg().Path()+"."+named.Obj().Name() != FtlDatabaseHandlePath {
-		return false
-	}
-
 	if named.TypeParams().Len() != 1 {
 		return false
 	}

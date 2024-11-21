@@ -16,13 +16,14 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/call"
 	"github.com/TBD54566975/ftl/go-runtime/schema/common"
 	"github.com/TBD54566975/ftl/go-runtime/schema/config"
-	"github.com/TBD54566975/ftl/go-runtime/schema/configsecret"
 	"github.com/TBD54566975/ftl/go-runtime/schema/data"
 	"github.com/TBD54566975/ftl/go-runtime/schema/database"
 	"github.com/TBD54566975/ftl/go-runtime/schema/enum"
 	"github.com/TBD54566975/ftl/go-runtime/schema/finalize"
 	"github.com/TBD54566975/ftl/go-runtime/schema/initialize"
 	"github.com/TBD54566975/ftl/go-runtime/schema/metadata"
+	"github.com/TBD54566975/ftl/go-runtime/schema/resourceconfig"
+	"github.com/TBD54566975/ftl/go-runtime/schema/secret"
 	"github.com/TBD54566975/ftl/go-runtime/schema/subscription"
 	"github.com/TBD54566975/ftl/go-runtime/schema/topic"
 	"github.com/TBD54566975/ftl/go-runtime/schema/transitive"
@@ -50,19 +51,20 @@ var extractors = [][]*analysis.Analyzer{
 		metadata.Extractor,
 	},
 	{
-		config.Extractor,
+		resourceconfig.Extractor,
 		// must run before typeenumvariant.Extractor; typeenum.Extractor determines all possible discriminator
 		// interfaces and typeenumvariant.Extractor determines any types that implement these
 		typeenum.Extractor,
 	},
 	{
-		configsecret.Extractor,
+		config.Extractor,
 		data.Extractor,
 		database.Extractor,
 		topic.Extractor,
 		typealias.Extractor,
 		typeenumvariant.Extractor,
 		valueenumvariant.Extractor,
+		secret.Extractor,
 	},
 	{
 		call.Extractor,

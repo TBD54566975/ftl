@@ -53,6 +53,12 @@ func init() {
                 {{- with getTopicHandle . }}
 			server.TopicHandle[{{.EventType.TypeName}}]("{{.Module}}", "{{.Name}}"),
                 {{- end }}
+				{{- with getConfigHandle . }}
+			server.Config[{{.Type.TypeName}}]("{{.Module}}", "{{.Name}}"),
+				{{- end }}
+				{{- with getSecretHandle . }}
+			server.Secret[{{.Type.TypeName}}]("{{.Module}}", "{{.Name}}"),
+				{{- end }}
 			{{- end}}
 		),
 {{- end}}

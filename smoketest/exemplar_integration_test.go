@@ -39,7 +39,7 @@ func TestExemplarIntegration(t *testing.T) {
 			fmt.Println(output)
 		}),
 
-		in.ExecWithOutput("ftl", []string{"config", "set", "relay.log_file", "--inline", logFilePath}, func(output string) {
+		in.ExecWithOutput("ftl", []string{"config", "set", "relay.logFile", "--inline", logFilePath}, func(output string) {
 			fmt.Println(output)
 		}),
 

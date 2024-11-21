@@ -29,6 +29,10 @@ func (r resource) toMetadataType() (schema.Metadata, error) {
 		return &schema.MetadataDatabases{}, nil
 	case common.VerbResourceTypeTopicHandle:
 		return &schema.MetadataPublisher{}, nil
+	case common.VerbResourceTypeConfig:
+		return &schema.MetadataConfig{}, nil
+	case common.VerbResourceTypeSecret:
+		return &schema.MetadataSecrets{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported resource type")
 	}
@@ -85,6 +89,10 @@ func Extract(pass *analysis.Pass, node *ast.FuncDecl, obj types.Object) optional
 				verb.AddDatabase(r.ref)
 			case common.VerbResourceTypeTopicHandle:
 				verb.AddTopicPublish(r.ref)
+			case common.VerbResourceTypeConfig:
+				verb.AddConfig(r.ref)
+			case common.VerbResourceTypeSecret:
+				verb.AddSecret(r.ref)
 			default:
 				common.Errorf(pass, param, "unsupported verb parameter type; verbs must have the "+
 					"signature func(Context, Request?, Resources...)")
@@ -196,7 +204,7 @@ func resolveResource(pass *analysis.Pass, typ ast.Expr) (*resource, error) {
 			Module: module,
 			Name:   db.Name,
 		}
-	case common.VerbResourceTypeTopicHandle:
+	case common.VerbResourceTypeTopicHandle, common.VerbResourceTypeSecret, common.VerbResourceTypeConfig:
 		var ok bool
 		if ref, ok = common.ExtractSimpleRefWithCasing(pass, typ, strcase.ToLowerCamel).Get(); !ok {
 			return nil, fmt.Errorf("unsupported verb parameter type; expected ftl.TopicHandle[Event]")

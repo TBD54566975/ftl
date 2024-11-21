@@ -9,13 +9,13 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-var empty = ftl.Config[string](1)
+type DifferentDeclDupl = ftl.Config[string]
 
-// var duplConfig = ftl.Config[string]("FTL_ENDPOINT")
-var goodConfig = ftl.Config[string]("FTL_CONFIG_ENDPOINT")
+// duplicated in child.go
+type FtlConfigEndpoint = ftl.Config[string]
 
-// var duplSecret = ftl.Secret[string]("FTL_ENDPOINT")
-var goodSecret = ftl.Secret[string]("FTL_SECRET_ENDPOINT")
+// duplicated in child.go
+type FtlSecretEndpoint = ftl.Secret[string]
 
 type DuplDbConfig struct {
 	ftl.DefaultPostgresDatabaseConfig
@@ -115,7 +115,7 @@ type PrivateData struct{}
 
 func (PrivateData) exportedTypeEnum() {}
 
-var invalidConfig = ftl.Config[string]("not an identifier")
+// type sa9d8s!aksd = ftl.Config[string]
 
 // There can be only one
 //

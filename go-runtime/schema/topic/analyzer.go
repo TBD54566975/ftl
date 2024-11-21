@@ -28,9 +28,15 @@ func Extract(pass *analysis.Pass, obj types.Object, node *ast.TypeSpec) optional
 		return optional.None[*schema.Topic]()
 	}
 
+	name := strcase.ToLowerCamel(node.Name.Name)
+	if !schema.ValidateName(name) {
+		common.Errorf(pass, node, "topic names must be valid identifiers")
+		return optional.None[*schema.Topic]()
+	}
+
 	topic := &schema.Topic{
 		Pos:   common.GoPosToSchemaPos(pass.Fset, node.Pos()),
-		Name:  strcase.ToLowerCamel(node.Name.Name),
+		Name:  name,
 		Event: typ,
 	}
 	if md, ok := common.GetFactForObject[*common.ExtractedMetadata](pass, obj).Get(); ok {

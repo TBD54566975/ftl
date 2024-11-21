@@ -33,10 +33,10 @@ func TestFtlTestProjectNotLoadedInContext(t *testing.T) {
 
 	// This should panic suggesting to use ftltest.WithDefaultProjectFile()
 	PanicsWithErr(t, "ftltest.WithDefaultProjectFile()", func() {
-		_ = ftl.Secret[string]("moo").Get(ctx)
+		_ = ftl.Secret[string]{Ref: reflection.Ref{Module: "test", Name: "moo"}}.Get(ctx)
 	})
 	PanicsWithErr(t, "ftltest.WithDefaultProjectFile()", func() {
-		_ = ftl.Config[string]("moo").Get(ctx)
+		_ = ftl.Config[string]{Ref: reflection.Ref{Module: "test", Name: "moo"}}.Get(ctx)
 	})
 }
 
@@ -54,8 +54,8 @@ func TestFtlTextContextExtension(t *testing.T) {
 		assert.Equal(t, "foobar", config, "overwrites configuration values from the new file")
 	})
 	t.Run("extends with a new config value", func(t *testing.T) {
-		configA := ftl.ConfigValue[string]{Ref: reflection.Ref{Module: "ftl/test", Name: "configA"}}
-		configB := ftl.ConfigValue[string]{Ref: reflection.Ref{Module: "ftl/test", Name: "configB"}}
+		configA := ftl.Config[string]{Ref: reflection.Ref{Module: "ftl/test", Name: "configA"}}
+		configB := ftl.Config[string]{Ref: reflection.Ref{Module: "ftl/test", Name: "configB"}}
 
 		original := Context(WithConfig(configA, "a"), WithConfig(configB, "b"))
 		extended := SubContext(original, WithConfig(configA, "a.2"))
@@ -69,8 +69,8 @@ func TestFtlTextContextExtension(t *testing.T) {
 		assert.Equal(t, "b", config, "retains other config from the original context")
 	})
 	t.Run("extends with a new secret value", func(t *testing.T) {
-		secretA := ftl.SecretValue[string]{Ref: reflection.Ref{Module: "ftl/test", Name: "secretA"}}
-		secretB := ftl.SecretValue[string]{Ref: reflection.Ref{Module: "ftl/test", Name: "secretB"}}
+		secretA := ftl.Secret[string]{Ref: reflection.Ref{Module: "ftl/test", Name: "secretA"}}
+		secretB := ftl.Secret[string]{Ref: reflection.Ref{Module: "ftl/test", Name: "secretB"}}
 
 		original := Context(WithSecret(secretA, "a"), WithSecret(secretB, "b"))
 		extended := SubContext(original, WithSecret(secretA, "a.2"))

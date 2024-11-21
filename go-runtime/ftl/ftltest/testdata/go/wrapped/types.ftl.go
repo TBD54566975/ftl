@@ -17,6 +17,8 @@ func init() {
 		reflection.ProvideResourcesForVerb(
 			Inner,
 			server.VerbClient[ftltime.TimeClient, ftltime.TimeRequest, ftltime.TimeResponse](),
+			server.Config[string]("wrapped", "config"),
+			server.Secret[string]("wrapped", "secret"),
 		),
 		reflection.ProvideResourcesForVerb(
 			Outer,

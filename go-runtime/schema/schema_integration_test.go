@@ -532,9 +532,9 @@ func testErrorReporting(t *testing.T) {
 
 	// failing/failing.go
 	expectedParent := []string{
-		`12:13-34: expected string literal for argument at index 0`,
-		`15:18: duplicate config declaration for "failing.FTL_CONFIG_ENDPOINT"; already declared at "37:18"`,
-		`18:18: duplicate secret declaration for "failing.FTL_SECRET_ENDPOINT"; already declared at "38:18"`,
+		`12:6: duplicate config declaration for "failing.differentDeclDupl"; already declared at "40:6"`,
+		`15:6: duplicate config declaration for "failing.ftlConfigEndpoint"; already declared at "37:6"`,
+		`18:6: duplicate secret declaration for "failing.ftlSecretEndpoint"; already declared at "38:6"`,
 		`20:6: duplicate database declaration for "failing.testdb"; already declared at "42:6"`,
 		`27:2-10: unsupported type "error" for field "BadParam"`,
 		`30:2-17: unsupported type "uint64" for field "AnotherBadParam"`,
@@ -560,8 +560,6 @@ func testErrorReporting(t *testing.T) {
 		`84:3: unexpected directive "ftl:verb"`,
 		`93:6-18: "BadValueEnum" is a value enum and cannot be tagged as a variant of type enum "TypeEnum" directly`,
 		`102:6-35: "BadValueEnumOrderDoesntMatter" is a value enum and cannot be tagged as a variant of type enum "TypeEnum" directly`,
-		`114:6: schema declaration with name "PrivateData" already exists for module "failing"; previously declared at "40:25"`,
-		`118:21-60: config names must be valid identifiers`,
 		`124:1: schema declaration contains conflicting directives`,
 		`124:1-26: only one directive expected when directive "ftl:enum" is present, found multiple`,
 		`146:6-45: enum discriminator "TypeEnum3" cannot contain exported methods`,

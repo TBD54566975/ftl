@@ -6,7 +6,7 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 )
 
-var empty = ftl.Config[string]("hi")
+type Empty = ftl.Config[string]
 
 //ftl:cron * * * * * 9999
 func BadYear(ctx context.Context) error {

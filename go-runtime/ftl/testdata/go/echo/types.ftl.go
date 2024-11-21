@@ -15,7 +15,7 @@ func init() {
 		reflection.ProvideResourcesForVerb(
 			Echo,
 			server.VerbClient[ftltime.TimeClient, ftltime.TimeRequest, ftltime.TimeResponse](),
-			server.Config[string]("echo", "defaultName"),
+			server.Config[string]("echo", "default"),
 		),
 	)
 }

@@ -175,7 +175,7 @@ func WithProjectFile(path string) Option {
 //		ftltest.WithConfig(exampleEndpoint, "https://example.com"),
 //		// ... other options
 //	)
-func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) Option {
+func WithConfig[T ftl.ConfigType](config ftl.Config[T], value T) Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
@@ -199,7 +199,7 @@ func WithConfig[T ftl.ConfigType](config ftl.ConfigValue[T], value T) Option {
 //		ftltest.WithSecret(privateKey, "abc123"),
 //		// ... other options
 //	)
-func WithSecret[T ftl.SecretType](secret ftl.SecretValue[T], value T) Option {
+func WithSecret[T ftl.SecretType](secret ftl.Secret[T], value T) Option {
 	return Option{
 		rank: other,
 		apply: func(ctx context.Context, state *OptionsState) error {
