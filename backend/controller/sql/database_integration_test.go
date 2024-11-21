@@ -14,7 +14,6 @@ import (
 func TestDatabase(t *testing.T) {
 	in.Run(t,
 		in.WithLanguages("go", "java"),
-		in.WithProvisioner(),
 		// deploy real module against "testdb"
 		in.CopyModule("database"),
 		in.Deploy("database"),
@@ -30,7 +29,6 @@ func TestDatabase(t *testing.T) {
 func TestMySQL(t *testing.T) {
 	in.Run(t,
 		in.WithLanguages("go", "java"),
-		in.WithProvisioner(),
 		// deploy real module against "testdb"
 		in.CopyModule("mysql"),
 		in.Deploy("mysql"),
@@ -55,6 +53,7 @@ func TestMigrate(t *testing.T) {
 
 	in.Run(t,
 		in.WithoutController(),
+		in.WithoutProvisioner(),
 		in.DropDBAction(t, dbName),
 		in.Fail(q(), "Should fail because the database does not exist."),
 		in.Exec("ftl", "migrate", "--dsn", dbUri),
