@@ -20,7 +20,7 @@ var cli struct {
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	LogConfig           log.Config           `embed:"" prefix:"log-"`
 
-	Listen string `name:"listen" short:"l" help:"Address to listen on." env:"FTL_PROXY_PG_LISTEN" default:"127.0.0.1:5678"`
+	pgproxy.Config
 }
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 	err = observability.Init(ctx, false, "", "ftl-provisioner", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	proxy := pgproxy.New(cli.Listen, func(ctx context.Context, params map[string]string) (string, error) {
+	proxy := pgproxy.New(cli.Config, func(ctx context.Context, params map[string]string) (string, error) {
 		return "postgres://localhost:5432/postgres?user=" + params["user"], nil
 	})
 	if err := proxy.Start(ctx); err != nil {

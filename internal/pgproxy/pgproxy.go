@@ -11,6 +11,10 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 )
 
+type Config struct {
+	Listen string `name:"listen" short:"l" help:"Address to listen on." env:"FTL_PROXY_PG_LISTEN" default:"127.0.0.1:5678"`
+}
+
 // PgProxy is a configurable proxy for PostgreSQL connections
 type PgProxy struct {
 	listenAddress      string
@@ -26,9 +30,9 @@ type DSNConstructor func(ctx context.Context, params map[string]string) (string,
 //
 // address is the address to listen on for incoming connections.
 // connectionFn is a function that constructs a new connection string from parameters of the incoming connection.
-func New(address string, connectionFn DSNConstructor) *PgProxy {
+func New(config Config, connectionFn DSNConstructor) *PgProxy {
 	return &PgProxy{
-		listenAddress:      address,
+		listenAddress:      config.Listen,
 		connectionStringFn: connectionFn,
 	}
 }
