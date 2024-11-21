@@ -23,11 +23,11 @@ export const DeclPanel = () => {
 
   const modules = useStreamModules()
   const declSchema = useMemo(
-    () => (moduleName && !!modules?.data ? declSchemaFromModules(moduleName, declName, modules?.data) : undefined),
+    () => (moduleName && !!modules?.data ? declSchemaFromModules(moduleName, declName, modules?.data.modules) : undefined),
     [moduleName, declName, modules?.data],
   )
 
-  const decl = useMemo(() => declFromModules(moduleName, declCase, declName, modules?.data), [modules?.data, moduleName, declCase, declName])
+  const decl = useMemo(() => declFromModules(moduleName, declCase, declName, modules?.data?.modules), [modules?.data, moduleName, declCase, declName])
   if (!declSchema || !decl) {
     return
   }

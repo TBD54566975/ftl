@@ -3,15 +3,19 @@ import { type NavigateFunction, useNavigate } from 'react-router-dom'
 import { useModules } from '../../api/modules/use-modules'
 import { Loader } from '../../components/Loader'
 import { ResizablePanels } from '../../components/ResizablePanels'
-import { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { Config, Data, Database, Enum, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
 import { type FTLNode, GraphPane } from '../graph/GraphPane'
 import { configPanels } from '../modules/decls/config/ConfigRightPanels'
+import { dataPanels } from '../modules/decls/data/DataRightPanels'
+import { databasePanels } from '../modules/decls/database/DatabaseRightPanels'
+import { enumPanels } from '../modules/decls/enum/EnumRightPanels'
+import { secretPanels } from '../modules/decls/secret/SecretRightPanels'
+import { verbPanels } from '../modules/decls/verb/VerbRightPanel'
 import { Timeline } from '../timeline/Timeline'
 import type { ExpandablePanelProps } from './ExpandablePanel'
-import { modulePanels } from './right-panel/ModulePanels'
-import { headerForNode } from './right-panel/RightPanelHeader'
-import { secretPanels } from './right-panel/SecretPanels'
-import { verbPanels } from './right-panel/VerbPanels'
+import { modulePanels } from './ModulePanels'
+import { headerForNode } from './RightPanelHeader'
+// import { verbPanels } from './right-panel/VerbPanels'
 
 export const ConsolePage = () => {
   const modules = useModules()
@@ -42,14 +46,24 @@ const panelsForNode = (modules: Module[], node: FTLNode | null, navigate: Naviga
   if (node instanceof Module) {
     return modulePanels(modules, node, navigate)
   }
-  if (node instanceof Verb) {
-    return verbPanels(node)
+
+  if (node instanceof Config) {
+    return configPanels(node)
   }
   if (node instanceof Secret) {
     return secretPanels(node)
   }
-  if (node instanceof Config) {
-    return configPanels(node)
+  if (node instanceof Database) {
+    return databasePanels(node)
+  }
+  if (node instanceof Enum) {
+    return enumPanels(node)
+  }
+  if (node instanceof Data) {
+    return dataPanels(node)
+  }
+  if (node instanceof Verb) {
+    return verbPanels(node)
   }
   return [] as ExpandablePanelProps[]
 }

@@ -3,21 +3,25 @@ import type { ExpandablePanelProps } from '../../console/ExpandablePanel'
 import { Schema } from '../schema/Schema'
 import { References } from './References'
 
-export const DeclDefaultPanels = (schema: string, references: Ref[]) => {
+export const DeclDefaultPanels = (schema?: string, references?: Ref[]) => {
   const panels = [] as ExpandablePanelProps[]
 
-  panels.push({
-    title: 'Schema',
-    expanded: true,
-    padding: 'p-2',
-    children: <Schema schema={schema} />,
-  })
+  if (schema?.trim()) {
+    panels.push({
+      title: 'Schema',
+      expanded: true,
+      padding: 'p-2',
+      children: <Schema schema={schema} />,
+    })
+  }
 
-  panels.push({
-    title: 'References',
-    expanded: true,
-    children: <References references={references} />,
-  })
+  if (references?.length) {
+    panels.push({
+      title: 'References',
+      expanded: true,
+      children: <References references={references} />,
+    })
+  }
 
   return panels
 }

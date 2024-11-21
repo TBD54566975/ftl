@@ -12,7 +12,7 @@ export const ModulePanel = () => {
     if (!modules?.data) {
       return
     }
-    return modules.data.find((module) => module.name === moduleName)
+    return modules.data.modules.find((module) => module.name === moduleName)
   }, [modules?.data, moduleName])
 
   useEffect(() => {

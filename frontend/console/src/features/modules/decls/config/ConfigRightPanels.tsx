@@ -1,8 +1,9 @@
 import { RightPanelAttribute } from '../../../../components/RightPanelAttribute'
 import type { Config } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { ExpandablePanelProps } from '../../../console/ExpandablePanel'
+import { DeclDefaultPanels } from '../DeclDefaultPanels'
 
-export const configPanels = (config: Config) => {
+export const configPanels = (config: Config, schema?: string) => {
   return [
     {
       title: 'Details',
@@ -12,5 +13,6 @@ export const configPanels = (config: Config) => {
         <RightPanelAttribute key='type' name='Type' value={config.config?.type?.value.case ?? ''} />,
       ],
     },
+    ...DeclDefaultPanels(schema, config.references),
   ] as ExpandablePanelProps[]
 }

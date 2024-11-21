@@ -375,10 +375,12 @@ class StreamModulesRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class StreamModulesResponse(_message.Message):
-    __slots__ = ("modules",)
+    __slots__ = ("modules", "topology")
     MODULES_FIELD_NUMBER: _ClassVar[int]
+    TOPOLOGY_FIELD_NUMBER: _ClassVar[int]
     modules: _containers.RepeatedCompositeFieldContainer[Module]
-    def __init__(self, modules: _Optional[_Iterable[_Union[Module, _Mapping]]] = ...) -> None: ...
+    topology: Topology
+    def __init__(self, modules: _Optional[_Iterable[_Union[Module, _Mapping]]] = ..., topology: _Optional[_Union[Topology, _Mapping]] = ...) -> None: ...
 
 class EventsQuery(_message.Message):
     __slots__ = ("filters", "limit", "order")

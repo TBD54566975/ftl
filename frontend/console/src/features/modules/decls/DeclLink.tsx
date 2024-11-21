@@ -62,7 +62,7 @@ export const DeclLink = ({
   }
   const modules = useStreamModules()
   const decl = useMemo(
-    () => (moduleName && !!modules?.data ? declSchemaFromModules(moduleName, declName, modules?.data) : undefined),
+    () => (moduleName && !!modules?.data ? declSchemaFromModules(moduleName, declName, modules?.data.modules) : undefined),
     [moduleName, declName, modules?.data],
   )
   const [isHovering, setIsHovering] = useState(false)

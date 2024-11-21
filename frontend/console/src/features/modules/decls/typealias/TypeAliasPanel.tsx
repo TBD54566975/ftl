@@ -2,7 +2,6 @@ import { ResizablePanels } from '../../../../components/ResizablePanels'
 import type { TypeAlias } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { declIcon } from '../../module.utils'
 import { Schema } from '../../schema/Schema'
-import { DeclDefaultPanels } from '../DeclDefaultPanels'
 import { PanelHeader } from '../PanelHeader'
 import { RightPanelHeader } from '../RightPanelHeader'
 import { typeAliasPanels } from './TypeAliasRightPanels'
@@ -31,7 +30,7 @@ export const TypeAliasPanel = ({ value, schema, moduleName, declName }: { value:
           </div>
         }
         rightPanelHeader={<RightPanelHeader Icon={declIcon('typealias', decl)} title={declName} />}
-        rightPanelPanels={[...typeAliasPanels(value), ...DeclDefaultPanels(schema, value.references)]}
+        rightPanelPanels={typeAliasPanels(value, schema)}
         storageKeyPrefix='typeAliasPanel'
       />
     </div>

@@ -2,23 +2,22 @@ import { useCallback, useEffect } from 'react'
 import ReactFlow, { Background, Controls, useEdgesState, useNodesState, useReactFlow, ReactFlowProvider } from 'reactflow'
 import 'reactflow/dist/style.css'
 import React from 'react'
-import { useModules } from '../../api/modules/use-modules'
-import type { Config, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
-import { ConfigNode } from './ConfigNode'
+import { useStreamModules } from '../../api/modules/use-stream-modules'
+import type { Config, Data, Database, Enum, Module, Secret, Verb } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { DeclNode } from './DeclNode'
 import { GroupNode } from './GroupNode'
-import { SecretNode } from './SecretNode'
 import { VerbNode } from './VerbNode'
 import { layoutNodes } from './create-layout'
-const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode, secretNode: SecretNode, configNode: ConfigNode }
+const nodeTypes = { groupNode: GroupNode, verbNode: VerbNode, declNode: DeclNode }
 
-export type FTLNode = Module | Verb | Secret | Config
+export type FTLNode = Module | Verb | Secret | Config | Data | Database | Enum
 
 interface GraphPaneProps {
   onTapped?: (item: FTLNode | null) => void
 }
 
 const GraphPaneInner: React.FC<GraphPaneProps> = ({ onTapped }) => {
-  const modules = useModules()
+  const modules = useStreamModules()
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [selectedNode, setSelectedNode] = React.useState<FTLNode | null>(null)
@@ -63,19 +62,14 @@ const GraphPaneInner: React.FC<GraphPaneProps> = ({ onTapped }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <div
-        style={{
-          position: 'absolute',
-          top: 10,
-          left: 10,
-          zIndex: 4,
-          background: 'white',
-          padding: '8px',
-          borderRadius: '4px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        }}
-      >
-        <select value={selectedModule} onChange={(e) => handleModuleSelect(e.target.value)} style={{ padding: '4px 8px', minWidth: '200px' }}>
+      <div className='absolute bottom-3.5 left-12 z-10'>
+        <select
+          value={selectedModule}
+          onChange={(e) => handleModuleSelect(e.target.value)}
+          className='w-48 px-2 py-1 text-sm dark:bg-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm
+            dark:hover:bg-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-0
+            backdrop-blur-sm'
+        >
           <option value=''>Select a module...</option>
           {moduleNodes.map((node) => (
             <option key={node.id} value={node.id}>

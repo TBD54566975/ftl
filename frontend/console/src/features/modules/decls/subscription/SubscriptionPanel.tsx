@@ -2,7 +2,6 @@ import { ResizablePanels } from '../../../../components/ResizablePanels'
 import type { Subscription } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { declIcon } from '../../module.utils'
 import { Schema } from '../../schema/Schema'
-import { DeclDefaultPanels } from '../DeclDefaultPanels'
 import { PanelHeader } from '../PanelHeader'
 import { RightPanelHeader } from '../RightPanelHeader'
 import { subscriptionPanels } from './SubscriptionRightPanels'
@@ -31,7 +30,7 @@ export const SubscriptionPanel = ({ value, schema, moduleName, declName }: { val
           </div>
         }
         rightPanelHeader={<RightPanelHeader Icon={declIcon('subscription', decl)} title={declName} />}
-        rightPanelPanels={[...subscriptionPanels(value), ...DeclDefaultPanels(schema, value.references)]}
+        rightPanelPanels={subscriptionPanels(value, schema)}
         storageKeyPrefix='subscriptionPanel'
       />
     </div>

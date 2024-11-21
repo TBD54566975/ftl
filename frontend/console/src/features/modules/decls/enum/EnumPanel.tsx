@@ -2,7 +2,6 @@ import { ResizablePanels } from '../../../../components/ResizablePanels'
 import type { Enum } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { declIcon } from '../../module.utils'
 import { Schema } from '../../schema/Schema'
-import { DeclDefaultPanels } from '../DeclDefaultPanels'
 import { PanelHeader } from '../PanelHeader'
 import { RightPanelHeader } from '../RightPanelHeader'
 import { enumPanels } from './EnumRightPanels'
@@ -15,6 +14,7 @@ export const EnumPanel = ({ value, schema, moduleName, declName }: { value: Enum
   if (!decl) {
     return
   }
+
   return (
     <div className='h-full'>
       <ResizablePanels
@@ -29,7 +29,7 @@ export const EnumPanel = ({ value, schema, moduleName, declName }: { value: Enum
           </div>
         }
         rightPanelHeader={<RightPanelHeader Icon={declIcon('enum', decl)} title={declName} />}
-        rightPanelPanels={[...enumPanels(value), ...DeclDefaultPanels(schema, value.references)]}
+        rightPanelPanels={enumPanels(value, schema)}
         storageKeyPrefix='enumPanel'
       />
     </div>

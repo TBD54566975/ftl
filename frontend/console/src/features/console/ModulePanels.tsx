@@ -1,19 +1,10 @@
-import {
-  ArrowLeftRightIcon,
-  CodeSquareIcon,
-  FunctionIcon,
-  InboxDownloadIcon,
-  InboxUploadIcon,
-  LinkSquare02Icon,
-  Settings02Icon,
-  SquareLock02Icon,
-} from 'hugeicons-react'
+import { ArrowLeftRightIcon, FunctionIcon, InboxDownloadIcon, InboxUploadIcon, LinkSquare02Icon, Settings02Icon, SquareLock02Icon } from 'hugeicons-react'
 import type { NavigateFunction } from 'react-router-dom'
-import { CodeBlock } from '../../../components'
-import { RightPanelAttribute } from '../../../components/RightPanelAttribute'
-import type { Module } from '../../../protos/xyz/block/ftl/v1/console/console_pb'
-import { callsIn, callsOut } from '../../modules/module.utils'
-import type { ExpandablePanelProps } from '../ExpandablePanel'
+import { RightPanelAttribute } from '../../components/RightPanelAttribute'
+import type { Module } from '../../protos/xyz/block/ftl/v1/console/console_pb'
+import { callsIn, callsOut } from '../modules/module.utils'
+import { Schema } from '../modules/schema/Schema'
+import type { ExpandablePanelProps } from './ExpandablePanel'
 
 export const modulePanels = (allModules: Module[], module: Module, navigate: NavigateFunction): ExpandablePanelProps[] => {
   const panels = []
@@ -83,15 +74,9 @@ export const modulePanels = (allModules: Module[], module: Module, navigate: Nav
   })
 
   panels.push({
-    icon: CodeSquareIcon,
     title: 'Schema',
-    expanded: false,
-    children: (
-      <div className='p-0'>
-        <CodeBlock code={module.schema} language='json' />
-      </div>
-    ),
-    padding: 'p-0',
+    expanded: true,
+    children: <Schema schema={module.schema} />,
   })
 
   return panels

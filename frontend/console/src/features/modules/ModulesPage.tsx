@@ -7,7 +7,7 @@ import { getTreeWidthFromLS, moduleTreeFromStream, setTreeWidthInLS } from './mo
 
 export const ModulesPage = ({ body }: { body: React.ReactNode }) => {
   const modules = useStreamModules()
-  const tree = useMemo(() => moduleTreeFromStream(modules?.data || []), [modules?.data])
+  const tree = useMemo(() => moduleTreeFromStream(modules?.data?.modules || []), [modules?.data])
   const [treeWidth, setTreeWidth] = useState(getTreeWidthFromLS())
 
   function setTreeWidthWithLS(newWidth: number) {

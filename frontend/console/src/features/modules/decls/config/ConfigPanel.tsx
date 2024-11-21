@@ -7,7 +7,6 @@ import { ConsoleService } from '../../../../protos/xyz/block/ftl/v1/console/cons
 import type { Config } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { NotificationType, NotificationsContext } from '../../../../providers/notifications-provider'
 import { declIcon } from '../../module.utils'
-import { DeclDefaultPanels } from '../DeclDefaultPanels'
 import { PanelHeader } from '../PanelHeader'
 import { RightPanelHeader } from '../RightPanelHeader'
 import { configPanels } from './ConfigRightPanels'
@@ -84,7 +83,7 @@ export const ConfigPanel = ({ value, schema, moduleName, declName }: { value: Co
           </div>
         }
         rightPanelHeader={<RightPanelHeader Icon={declIcon('config', decl)} title={declName} />}
-        rightPanelPanels={[...configPanels(value), ...DeclDefaultPanels(schema, value.references)]}
+        rightPanelPanels={configPanels(value, schema)}
         storageKeyPrefix='configPanel'
       />
     </div>

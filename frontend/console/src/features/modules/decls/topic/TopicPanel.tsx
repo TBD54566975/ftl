@@ -2,7 +2,6 @@ import { ResizablePanels } from '../../../../components/ResizablePanels'
 import type { Topic } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { declIcon } from '../../module.utils'
 import { Schema } from '../../schema/Schema'
-import { DeclDefaultPanels } from '../DeclDefaultPanels'
 import { PanelHeader } from '../PanelHeader'
 import { RightPanelHeader } from '../RightPanelHeader'
 import { topicPanels } from './TopicRightPanels'
@@ -31,7 +30,7 @@ export const TopicPanel = ({ value, schema, moduleName, declName }: { value: Top
           </div>
         }
         rightPanelHeader={<RightPanelHeader Icon={declIcon('topic', decl)} title={declName} />}
-        rightPanelPanels={[...topicPanels(value), ...DeclDefaultPanels(schema, value.references)]}
+        rightPanelPanels={topicPanels(value, schema)}
         storageKeyPrefix='topicPanel'
       />
     </div>
