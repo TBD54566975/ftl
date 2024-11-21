@@ -48,7 +48,7 @@ func DoesExist(ctx context.Context, name string, image optional.Option[string]) 
 	}
 	for _, c := range containers {
 		if c.Image != imageName {
-			logger.Infof("possible database version mismatch, expecting to use container image %s for container with name %s, bit it was already running with image %s", image, name, c.Image)
+			logger.Infof("possible database version mismatch, expecting to use container image %s for container with name %s, but it was already running with image %s", image, name, c.Image)
 			break
 		}
 	}
