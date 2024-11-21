@@ -110,8 +110,8 @@ func getDBType(pass *analysis.Pass, receiver *ast.Ident, receiverType types.Type
 		return common.DatabaseTypePostgres
 	}
 	if common.IsMysqlDatabaseConfigType(pass, receiverType) {
-		return common.DatabaseTypeMysql
+		return common.DatabaseTypeMySQL
 	}
-	common.Errorf(pass, receiver, "unsupported database type")
+	common.Errorf(pass, receiver, "unsupported database type %s", receiverType.String())
 	return ""
 }

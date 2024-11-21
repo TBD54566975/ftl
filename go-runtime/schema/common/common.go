@@ -789,7 +789,7 @@ func IsPostgresDatabaseConfigType(pass *analysis.Pass, typ types.Type) bool {
 
 // IsMysqlDatabaseConfigType will return true if the provided type implements the `MysqlDatabaseConfig` type.
 func IsMysqlDatabaseConfigType(pass *analysis.Pass, typ types.Type) bool {
-	return implementsType(pass, typ, "github.com/TBD54566975/ftl/go-runtime/ftl", "MysqlDatabaseConfig")
+	return implementsType(pass, typ, "github.com/TBD54566975/ftl/go-runtime/ftl", "MySQLDatabaseConfig")
 }
 
 func implementsType(pass *analysis.Pass, typ types.Type, pkg string, name string) bool {

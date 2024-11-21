@@ -14,6 +14,7 @@ func (MyDbConfig) Name() string { return "testdb" }
 
 type InsertRequest struct {
 	Data string
+	Id   int
 }
 
 type InsertResponse struct{}
@@ -31,6 +32,7 @@ func Insert(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDbCo
 func persistRequest(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDbConfig]) error {
 	_, err := db.Get(ctx).Exec(`CREATE TABLE IF NOT EXISTS requests
 	       (
+id SERIAL PRIMARY KEY,
 	         data TEXT,
 	         created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
 	         updated_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc')
@@ -38,7 +40,7 @@ func persistRequest(ctx context.Context, req InsertRequest, db ftl.DatabaseHandl
 	if err != nil {
 		return err
 	}
-	_, err = db.Get(ctx).Exec("INSERT INTO requests (data) VALUES ($1);", req.Data)
+	_, err = db.Get(ctx).Exec("INSERT INTO requests (id,data) VALUES ($1, $2);", req.Id, req.Data)
 	if err != nil {
 		return err
 	}

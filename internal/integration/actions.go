@@ -518,13 +518,6 @@ func QueryRow(database string, query string, expected ...interface{}) Action {
 	}
 }
 
-// Create a database for use by a module.
-func CreateDBAction(module, dbName string, isTest bool) Action {
-	return func(t testing.TB, ic TestContext) {
-		CreateDB(t, module, dbName, isTest)
-	}
-}
-
 func terminateDanglingConnections(t testing.TB, db *sql.DB, dbName string) {
 	t.Helper()
 
@@ -534,35 +527,6 @@ func terminateDanglingConnections(t testing.TB, db *sql.DB, dbName string) {
 		WHERE datname = $1 AND pid <> pg_backend_pid()`,
 		dbName)
 	assert.NoError(t, err)
-}
-
-func CreateDB(t testing.TB, module, dbName string, isTestDb bool) {
-	// insert test suffix if needed when actually setting up db
-	if isTestDb {
-		dbName += "_test"
-	}
-	Infof("Creating database %s", dbName)
-	db, err := sql.Open("pgx", dsn.PostgresDSN("ftl"))
-	assert.NoError(t, err, "failed to open database connection")
-	t.Cleanup(func() {
-		err := db.Close()
-		assert.NoError(t, err)
-	})
-
-	err = db.Ping()
-	assert.NoError(t, err, "failed to ping database")
-
-	_, err = db.Exec("DROP DATABASE IF EXISTS " + dbName)
-	assert.NoError(t, err, "failed to delete existing database")
-
-	_, err = db.Exec("CREATE DATABASE " + dbName)
-	assert.NoError(t, err, "failed to create database")
-
-	t.Cleanup(func() {
-		terminateDanglingConnections(t, db, dbName)
-		_, err = db.Exec("DROP DATABASE " + dbName)
-		assert.NoError(t, err)
-	})
 }
 
 func DropDBAction(t testing.TB, dbName string) Action {

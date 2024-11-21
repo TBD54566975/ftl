@@ -138,7 +138,7 @@ type DatabaseType string
 
 const (
 	DatabaseTypePostgres DatabaseType = "postgres"
-	DatabaseTypeMysql    DatabaseType = "mysql"
+	DatabaseTypeMySQL    DatabaseType = "mysql"
 )
 
 // DatabaseConfig marks a database node with an extracted configuration value.
