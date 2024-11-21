@@ -38,12 +38,12 @@ type DefaultPostgresDatabaseConfig struct{}
 func (DefaultPostgresDatabaseConfig) db() {} //nolint:unused
 func (DefaultPostgresDatabaseConfig) pg() {} //nolint:unused
 
-type MysqlDatabaseConfig interface {
+type MySQLDatabaseConfig interface {
 	DatabaseConfig
 	mysql()
 }
 
-// DefaultMySQLDatabaseConfig is a default implementation of MysqlDatabaseConfig. It does not provide
+// DefaultMySQLDatabaseConfig is a default implementation of MySQLDatabaseConfig. It does not provide
 // an implementation for the Name method and should be embedded in a struct that does.
 type DefaultMySQLDatabaseConfig struct{}
 

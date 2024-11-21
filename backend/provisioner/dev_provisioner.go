@@ -32,7 +32,7 @@ func provisionMysql(mysqlPort int) InMemResourceProvisionerFn {
 		logger := log.FromContext(ctx)
 		logger.Infof("provisioning mysql database: %s_%s", module, id)
 
-		dbName := strcase.ToLowerCamel(module) + "_" + strcase.ToLowerCamel(id)
+		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 
 		// We assume that the DB hsas already been started when running in dev mode
 		mysqlDSN, err := dev.SetupMySQL(ctx, "mysql:8.4.3", mysqlPort)
@@ -96,6 +96,31 @@ func establishMySQLDB(ctx context.Context, rc *provisioner.ResourceContext, mysq
 	return rc.Resource, nil
 }
 
+func ProvisionPostgresForTest(ctx context.Context, module string, id string) (string, error) {
+	rc := &provisioner.ResourceContext{}
+	rc.Resource = &provisioner.Resource{
+		Resource: &provisioner.Resource_Postgres{},
+	}
+	res, err := provisionPostgres(15432)(ctx, rc, module, id+"_test")
+	if err != nil {
+		return "", err
+	}
+
+	return res.GetPostgres().GetOutput().GetWriteDsn(), nil
+}
+
+func ProvisionMySQLForTest(ctx context.Context, module string, id string) (string, error) {
+	rc := &provisioner.ResourceContext{}
+	rc.Resource = &provisioner.Resource{
+		Resource: &provisioner.Resource_Mysql{},
+	}
+	res, err := provisionMysql(13306)(ctx, rc, module, id+"_test")
+	if err != nil {
+		return "", err
+	}
+	return res.GetMysql().GetOutput().GetWriteDsn(), nil
+}
+
 func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provisioner.ResourceContext, module string, id string) (*provisioner.Resource, error) {
 	return func(ctx context.Context, rc *provisioner.ResourceContext, module, id string) (*provisioner.Resource, error) {
 		pg, ok := rc.Resource.Resource.(*provisioner.Resource_Postgres)
@@ -105,7 +130,7 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 		logger := log.FromContext(ctx)
 		logger.Infof("provisioning postgres database: %s_%s", module, id)
 
-		dbName := strcase.ToLowerCamel(module) + "_" + strcase.ToLowerCamel(id)
+		dbName := strcase.ToLowerSnake(module) + "_" + strcase.ToLowerSnake(id)
 
 		// We assume that the DB has already been started when running in dev mode
 		postgresDSN, err := dev.WaitForPostgresReady(ctx, postgresPort)
@@ -153,4 +178,5 @@ func provisionPostgres(postgresPort int) func(ctx context.Context, rc *provision
 		}
 		return rc.Resource, nil
 	}
+
 }

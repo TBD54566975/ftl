@@ -3,10 +3,8 @@ package ftltest
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"reflect"
 	"sort"
@@ -14,6 +12,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // SQL driver
 
+	"github.com/TBD54566975/ftl/backend/provisioner"
 	"github.com/TBD54566975/ftl/go-runtime/ftl"
 	"github.com/TBD54566975/ftl/go-runtime/ftl/reflection"
 	"github.com/TBD54566975/ftl/go-runtime/internal"
@@ -223,51 +222,30 @@ func WithDatabase[T ftl.DatabaseConfig]() Option {
 		apply: func(ctx context.Context, state *OptionsState) error {
 			cfg := defaultDatabaseConfig[T]()
 			name := cfg.Name()
-			fftl := internal.FromContext(ctx)
-			originalDSN, err := getDSNFromSecret(fftl, moduleGetter(), name)
-			if err != nil {
-				return fmt.Errorf("could not get DSN for database %q, try adding ftltest.WithProject[MyConfig] as an option with ftltest.Context(...): %w", name, err)
+			switch any(cfg).(type) {
+			case ftl.PostgresDatabaseConfig:
+				dsn, err := provisioner.ProvisionPostgresForTest(ctx, moduleGetter(), name)
+				if err != nil {
+					return fmt.Errorf("could not provision database %q: %w", name, err)
+				}
+				// replace original database with test database
+				replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypePostgres, dsn)
+				if err != nil {
+					return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
+				}
+				state.databases[name] = replacementDB
+			case ftl.MySQLDatabaseConfig:
+				dsn, err := provisioner.ProvisionMySQLForTest(ctx, moduleGetter(), name)
+				if err != nil {
+					return fmt.Errorf("could not provision database %q: %w", name, err)
+				}
+				// replace original database with test database
+				replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypeMySQL, dsn)
+				if err != nil {
+					return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
+				}
+				state.databases[name] = replacementDB
 			}
-
-			// convert DSN by appending "_test" to table name
-			// postgres DSN format: postgresql://[user[:password]@][netloc][:port][/dbname][?param1=value1&...]
-			// source: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
-			dsnURL, err := url.Parse(originalDSN)
-			if err != nil {
-				return fmt.Errorf("could not parse DSN: %w", err)
-			}
-			if dsnURL.Path == "" {
-				return fmt.Errorf("DSN for %s must include table name: %s", name, originalDSN)
-			}
-			dsnURL.Path += "_test"
-			dsn := dsnURL.String()
-
-			// connect to db and clear out the contents of each table
-			sqlDB, err := sql.Open("pgx", dsn)
-			if err != nil {
-				return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
-			}
-			_, err = sqlDB.ExecContext(ctx, `DO $$
-		DECLARE
-			table_name text;
-		BEGIN
-			FOR table_name IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
-			LOOP
-				EXECUTE 'ALTER TABLE ' || quote_ident(table_name) || ' DISABLE TRIGGER ALL;';
-				EXECUTE 'DELETE FROM ' || quote_ident(table_name) || ';';
-				EXECUTE 'ALTER TABLE ' || quote_ident(table_name) || ' ENABLE TRIGGER ALL;';
-			END LOOP;
-		END $$;`)
-			if err != nil {
-				return fmt.Errorf("could not clear tables in database %q: %w", name, err)
-			}
-
-			// replace original database with test database
-			replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypePostgres, dsn)
-			if err != nil {
-				return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
-			}
-			state.databases[name] = replacementDB
 			return nil
 		},
 	}

@@ -49,7 +49,7 @@ func InitDatabase(ref reflection.Ref, dbtype string, protoDBtype modulecontext.D
 			logger := log.FromContext(ctx)
 
 			provider := modulecontext.FromContext(ctx).CurrentContext()
-			dsn, err := provider.GetDatabase(ref.Name, protoDBtype)
+			dsn, testDB, err := provider.GetDatabase(ref.Name, protoDBtype)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get database %q: %w", ref.Name, err)
 			}
@@ -71,7 +71,12 @@ func InitDatabase(ref reflection.Ref, dbtype string, protoDBtype modulecontext.D
 				return nil, fmt.Errorf("failed to register database metrics: %w", err)
 			}
 			db.SetConnMaxIdleTime(time.Minute)
-			db.SetMaxOpenConns(20)
+			if testDB {
+				// In tests we always close the connections, as the DB being clean might invalidate pooled connections
+				db.SetMaxIdleConns(0)
+			} else {
+				db.SetMaxOpenConns(20)
+			}
 			return db, nil
 		}),
 	}

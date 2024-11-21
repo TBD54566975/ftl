@@ -156,18 +156,18 @@ func (m ModuleContext) GetSecret(name string, value any) error {
 // Returns an error if no database with that name is found or it is not the
 // expected type. When in a testing context (via ftltest), an error is returned
 // if the database is not a test database.
-func (m ModuleContext) GetDatabase(name string, dbType DBType) (string, error) {
+func (m ModuleContext) GetDatabase(name string, dbType DBType) (string, bool, error) {
 	db, ok := m.databases[name]
 	if !ok {
-		return "", fmt.Errorf("missing DSN for database %s", name)
+		return "", false, fmt.Errorf("missing DSN for database %s", name)
 	}
 	if db.DBType != dbType {
-		return "", fmt.Errorf("database %s does not match expected type of %s", name, dbType)
+		return "", false, fmt.Errorf("database %s does not match expected type of %s", name, dbType)
 	}
 	if m.isTesting && !db.isTestDB {
-		return "", fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase[MyConfig]() as an option with ftltest.Context(...)", name)
+		return "", false, fmt.Errorf("accessing non-test database %q while testing: try adding ftltest.WithDatabase[MyConfig]() as an option with ftltest.Context(...)", name)
 	}
-	return db.DSN, nil
+	return db.DSN, db.isTestDB, nil
 }
 
 // LeaseClient is the interface for acquiring, heartbeating and releasing leases
