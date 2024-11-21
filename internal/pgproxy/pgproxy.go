@@ -49,17 +49,21 @@ func (p *PgProxy) Start(ctx context.Context) error {
 			logger.Errorf(err, "failed to accept connection")
 			continue
 		}
-		go p.handleConnection(ctx, conn)
+		go HandleConnection(ctx, conn, p.connectionStringFn)
 	}
 }
 
-func (p *PgProxy) handleConnection(ctx context.Context, conn net.Conn) {
+// HandleConnection proxies a single connection.
+//
+// This should be run as the first thing after accepting a connection.
+// It will block until the connection is closed.
+func HandleConnection(ctx context.Context, conn net.Conn, connectionFn DSNConstructor) {
 	defer conn.Close()
 
 	logger := log.FromContext(ctx)
 	logger.Infof("new connection established: %s", conn.RemoteAddr())
 
-	backend, startup, err := p.connectBackend(ctx, conn)
+	backend, startup, err := connectBackend(ctx, conn)
 	if err != nil {
 		logger.Errorf(err, "failed to connect backend")
 		return
@@ -67,16 +71,15 @@ func (p *PgProxy) handleConnection(ctx context.Context, conn net.Conn) {
 	logger.Debugf("startup message: %+v", startup)
 	logger.Debugf("backend connected: %s", conn.RemoteAddr())
 
-	frontend, err := p.connectFrontend(ctx, startup)
+	dsn, err := connectionFn(ctx, startup.Parameters)
 	if err != nil {
-		logger.Errorf(err, "failed to connect frontend")
-		backend.Send(&pgproto3.ErrorResponse{
-			Severity: "FATAL",
-			Message:  err.Error(),
-		})
-		if err := backend.Flush(); err != nil {
-			logger.Errorf(err, "failed to flush backend error response")
-		}
+		handleBackendError(ctx, backend, err)
+		return
+	}
+
+	frontend, err := connectFrontend(ctx, dsn)
+	if err != nil {
+		handleBackendError(ctx, backend, err)
 		return
 	}
 	logger.Debugf("frontend connected")
@@ -88,15 +91,27 @@ func (p *PgProxy) handleConnection(ctx context.Context, conn net.Conn) {
 		return
 	}
 
-	if err := p.proxy(ctx, backend, frontend); err != nil {
+	if err := proxy(ctx, backend, frontend); err != nil {
 		logger.Warnf("disconnecting %s due to: %s", conn.RemoteAddr(), err)
 		return
 	}
 	logger.Infof("terminating connection to %s", conn.RemoteAddr())
 }
 
+func handleBackendError(ctx context.Context, backend *pgproto3.Backend, err error) {
+	logger := log.FromContext(ctx)
+	logger.Errorf(err, "backend error")
+	backend.Send(&pgproto3.ErrorResponse{
+		Severity: "FATAL",
+		Message:  err.Error(),
+	})
+	if err := backend.Flush(); err != nil {
+		logger.Errorf(err, "failed to flush backend error response")
+	}
+}
+
 // connectBackend establishes a connection according to https://www.postgresql.org/docs/current/protocol-flow.html
-func (p *PgProxy) connectBackend(_ context.Context, conn net.Conn) (*pgproto3.Backend, *pgproto3.StartupMessage, error) {
+func connectBackend(_ context.Context, conn net.Conn) (*pgproto3.Backend, *pgproto3.StartupMessage, error) {
 	backend := pgproto3.NewBackend(conn, conn)
 
 	for {
@@ -127,12 +142,7 @@ func (p *PgProxy) connectBackend(_ context.Context, conn net.Conn) (*pgproto3.Ba
 	}
 }
 
-func (p *PgProxy) connectFrontend(ctx context.Context, startup *pgproto3.StartupMessage) (*pgproto3.Frontend, error) {
-	dsn, err := p.connectionStringFn(ctx, startup.Parameters)
-	if err != nil {
-		return nil, err
-	}
-
+func connectFrontend(ctx context.Context, dsn string) (*pgproto3.Frontend, error) {
 	conn, err := pgconn.Connect(ctx, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to backend: %w", err)
@@ -142,7 +152,7 @@ func (p *PgProxy) connectFrontend(ctx context.Context, startup *pgproto3.Startup
 	return frontend, nil
 }
 
-func (p *PgProxy) proxy(ctx context.Context, backend *pgproto3.Backend, frontend *pgproto3.Frontend) error {
+func proxy(ctx context.Context, backend *pgproto3.Backend, frontend *pgproto3.Frontend) error {
 	logger := log.FromContext(ctx)
 	frontendMessages := make(chan pgproto3.BackendMessage)
 	backendMessages := make(chan pgproto3.FrontendMessage)
