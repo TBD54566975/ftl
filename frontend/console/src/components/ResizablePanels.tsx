@@ -1,8 +1,8 @@
 import type React from 'react'
 import { useState } from 'react'
 import type { ExpandablePanelProps } from '../features/console/ExpandablePanel'
-import RightPanel from '../features/console/right-panel/RightPanel'
 import useLocalStorage from '../hooks/use-local-storage'
+import RightPanel from './RightPanel'
 
 interface ResizablePanelsProps {
   initialRightPanelWidth?: number

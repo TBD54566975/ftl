@@ -1,6 +1,7 @@
 import { RightPanelAttribute } from '../../../../components/RightPanelAttribute'
 import type { Data } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { ExpandablePanelProps } from '../../../console/ExpandablePanel'
+import { DeclDefaultPanels } from '../DeclDefaultPanels'
 
 export const dataPanels = (data: Data) => {
   return [
@@ -9,5 +10,6 @@ export const dataPanels = (data: Data) => {
       expanded: true,
       children: [<RightPanelAttribute key='name' name='Name' value={data.data?.name} />],
     },
+    ...DeclDefaultPanels(data.schema, data.references),
   ] as ExpandablePanelProps[]
 }

@@ -217,6 +217,7 @@ message GetModulesResponse {
 message StreamModulesRequest {}
 message StreamModulesResponse {
   repeated Module modules = 1;
+  Topology topology = 2;
 }
 
 // Query for events.

@@ -7,7 +7,6 @@ import { ConsoleService } from '../../../../protos/xyz/block/ftl/v1/console/cons
 import type { Secret } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { NotificationType, NotificationsContext } from '../../../../providers/notifications-provider'
 import { declIcon } from '../../module.utils'
-import { DeclDefaultPanels } from '../DeclDefaultPanels'
 import { PanelHeader } from '../PanelHeader'
 import { RightPanelHeader } from '../RightPanelHeader'
 import { secretPanels } from './SecretRightPanels'
@@ -95,7 +94,7 @@ export const SecretPanel = ({ value, schema, moduleName, declName }: { value: Se
           </div>
         }
         rightPanelHeader={<RightPanelHeader Icon={declIcon('secret', decl)} title={declName} />}
-        rightPanelPanels={[...secretPanels(value), ...DeclDefaultPanels(schema, value.references)]}
+        rightPanelPanels={secretPanels(value, schema)}
         storageKeyPrefix='secretPanel'
       />
     </div>

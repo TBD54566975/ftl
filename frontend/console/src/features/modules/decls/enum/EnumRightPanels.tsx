@@ -1,8 +1,9 @@
 import { RightPanelAttribute } from '../../../../components/RightPanelAttribute'
 import type { Enum } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import type { ExpandablePanelProps } from '../../../console/ExpandablePanel'
+import { DeclDefaultPanels } from '../DeclDefaultPanels'
 
-export const enumPanels = (enumDecl: Enum) => {
+export const enumPanels = (enumDecl: Enum, schema?: string) => {
   return [
     {
       title: 'Details',
@@ -12,5 +13,6 @@ export const enumPanels = (enumDecl: Enum) => {
         <RightPanelAttribute key='type' name='Type' value={enumDecl.enum?.type?.value.case} />,
       ],
     },
+    ...DeclDefaultPanels(schema, enumDecl.references),
   ] as ExpandablePanelProps[]
 }

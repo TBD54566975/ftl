@@ -2,7 +2,6 @@ import { ResizablePanels } from '../../../../components/ResizablePanels'
 import type { Data } from '../../../../protos/xyz/block/ftl/v1/console/console_pb'
 import { declIcon } from '../../module.utils'
 import { Schema } from '../../schema/Schema'
-import { DeclDefaultPanels } from '../DeclDefaultPanels'
 import { PanelHeader } from '../PanelHeader'
 import { RightPanelHeader } from '../RightPanelHeader'
 import { dataPanels } from './DataRightPanels'
@@ -30,7 +29,7 @@ export const DataPanel = ({ value, schema, moduleName, declName }: { value: Data
           </div>
         }
         rightPanelHeader={<RightPanelHeader Icon={declIcon('data', decl)} title={declName} />}
-        rightPanelPanels={[...dataPanels(value), ...DeclDefaultPanels(schema, value.references)]}
+        rightPanelPanels={[...dataPanels(value)]}
         storageKeyPrefix='dataPanel'
       />
     </div>

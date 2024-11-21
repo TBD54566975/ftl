@@ -1540,6 +1540,11 @@ export class StreamModulesResponse extends Message<StreamModulesResponse> {
    */
   modules: Module[] = [];
 
+  /**
+   * @generated from field: xyz.block.ftl.v1.console.Topology topology = 2;
+   */
+  topology?: Topology;
+
   constructor(data?: PartialMessage<StreamModulesResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1549,6 +1554,7 @@ export class StreamModulesResponse extends Message<StreamModulesResponse> {
   static readonly typeName = "xyz.block.ftl.v1.console.StreamModulesResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "modules", kind: "message", T: Module, repeated: true },
+    { no: 2, name: "topology", kind: "message", T: Topology },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): StreamModulesResponse {

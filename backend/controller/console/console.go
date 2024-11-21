@@ -403,6 +403,21 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	builtin := schema.Builtins()
 	sch.Modules = append(sch.Modules, builtin)
 
+	// Get topology
+	sorted, err := buildengine.TopologicalSort(graph(sch))
+	if err != nil {
+		return fmt.Errorf("failed to sort modules: %w", err)
+	}
+	topology := &pbconsole.Topology{
+		Levels: make([]*pbconsole.TopologyGroup, len(sorted)),
+	}
+	for i, level := range sorted {
+		group := &pbconsole.TopologyGroup{
+			Modules: level,
+		}
+		topology.Levels[i] = group
+	}
+
 	refMap, err := getSchemaRefs(sch)
 	if err != nil {
 		return fmt.Errorf("failed to find references: %w", err)
@@ -427,7 +442,8 @@ func (c *ConsoleService) sendStreamModulesResp(ctx context.Context, stream *conn
 	modules = append(modules, builtinModule)
 
 	err = stream.Send(&pbconsole.StreamModulesResponse{
-		Modules: modules,
+		Modules:  modules,
+		Topology: topology,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to send StreamModulesResponse to stream: %w", err)
