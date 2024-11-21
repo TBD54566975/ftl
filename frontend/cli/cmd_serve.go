@@ -50,7 +50,7 @@ type serveCommonConfig struct {
 	MysqlPort           int                  `help:"Port to use for the MySQL database, if one is required." default:"13306"`
 	RegistryPort        int                  `help:"Port to use for the registry." default:"15000"`
 	Controllers         int                  `short:"c" help:"Number of controllers to start." default:"1"`
-	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"0" hidden:"true"`
+	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"1"`
 	Background          bool                 `help:"Run in the background." default:"false"`
 	Stop                bool                 `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
 	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"10s"`

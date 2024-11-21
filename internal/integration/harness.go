@@ -82,6 +82,7 @@ func WithKubernetes() Option {
 	return func(o *options) {
 		o.kube = true
 		o.startController = false
+		o.startProvisioner = false
 	}
 }
 
@@ -144,13 +145,10 @@ func WithoutController() Option {
 	}
 }
 
-// WithProvisioner is a Run* option that starts the provisioner service.
-// if set, all deployments are done through the provisioner
-func WithProvisioner() Option {
+// WithoutProvisioner is a Run* option that disables starting the provisioner service.
+func WithoutProvisioner() Option {
 	return func(o *options) {
-		o.startProvisioner = true
-		// provisioner always needs a controller to talk to
-		o.startController = true
+		o.startProvisioner = false
 	}
 }
 
@@ -192,9 +190,10 @@ func Run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 func run(t *testing.T, actionsOrOptions ...ActionOrOption) {
 	t.Helper()
 	opts := options{
-		startController: true,
-		languages:       []string{"go"},
-		envars:          map[string]string{},
+		startController:  true,
+		startProvisioner: true,
+		languages:        []string{"go"},
+		envars:           map[string]string{},
 	}
 	actions := []Action{}
 	for _, opt := range actionsOrOptions {
