@@ -1,0 +1,8 @@
+FROM ubuntu:24.04
+
+WORKDIR /root/
+
+COPY docker-build/ftl-cron .
+EXPOSE 8893
+
+CMD ["/root/ftl-cron"]
