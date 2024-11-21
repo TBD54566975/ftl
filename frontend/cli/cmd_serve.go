@@ -53,7 +53,7 @@ type serveCommonConfig struct {
 	Provisioners        int                  `short:"p" help:"Number of provisioners to start." default:"1"`
 	Background          bool                 `help:"Run in the background." default:"false"`
 	Stop                bool                 `help:"Stop the running FTL instance. Can be used with --background to restart the server" default:"false"`
-	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"10s"`
+	StartupTimeout      time.Duration        `help:"Timeout for the server to start up." default:"10s" env:"FTL_STARTUP_TIMEOUT"`
 	ObservabilityConfig observability.Config `embed:"" prefix:"o11y-"`
 	DatabaseImage       string               `help:"The container image to start for the database" default:"postgres:15.8" env:"FTL_DATABASE_IMAGE" hidden:""`
 	RegistryImage       string               `help:"The container image to start for the image registry" default:"registry:2" env:"FTL_REGISTRY_IMAGE" hidden:""`
