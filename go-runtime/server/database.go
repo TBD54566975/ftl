@@ -47,7 +47,6 @@ func InitDatabase(ref reflection.Ref, dbtype string, protoDBtype modulecontext.D
 		DBType: dbtype,
 		DB: once.Once(func(ctx context.Context) (*sql.DB, error) {
 			logger := log.FromContext(ctx)
-
 			provider := modulecontext.FromContext(ctx).CurrentContext()
 			dsn, testDB, err := provider.GetDatabase(ref.Name, protoDBtype)
 			if err != nil {

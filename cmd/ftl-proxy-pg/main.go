@@ -38,10 +38,10 @@ func main() {
 	err = observability.Init(ctx, false, "", "ftl-provisioner", ftl.Version, cli.ObservabilityConfig)
 	kctx.FatalIfErrorf(err, "failed to initialize observability")
 
-	proxy := pgproxy.New(cli.Config, func(ctx context.Context, params map[string]string) (string, error) {
+	proxy := pgproxy.New(cli.Config.Listen, func(ctx context.Context, params map[string]string) (string, error) {
 		return "postgres://localhost:5432/postgres?user=" + params["user"], nil
 	})
-	if err := proxy.Start(ctx); err != nil {
+	if err := proxy.Start(ctx, nil); err != nil {
 		kctx.FatalIfErrorf(err, "failed to start proxy")
 	}
 }

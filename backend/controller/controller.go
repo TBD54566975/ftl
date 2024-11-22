@@ -769,7 +769,8 @@ func (s *Service) GetModuleContext(ctx context.Context, req *connect.Request[ftl
 						continue
 					}
 					dbTypes[db.Name] = dbType
-					if db.Runtime != nil {
+					// TODO: Move the DSN resolution to the runtime once MySQL proxy is working
+					if db.Runtime != nil && dbType == modulecontext.DBTypeMySQL {
 						databases[db.Name] = modulecontext.Database{
 							DSN:    db.Runtime.DSN,
 							DBType: dbType,
