@@ -52,6 +52,7 @@ message Database {
   repeated string comments = 2;
   string type = 4;
   string name = 3;
+  repeated Metadata metadata = 5;
 }
 
 message DatabaseRuntime {
@@ -143,6 +144,7 @@ message Metadata {
     MetadataIngress ingress = 2;
     MetadataPublisher publisher = 12;
     MetadataRetry retry = 6;
+    MetadataSQLMigration sql_migration = 13;
     MetadataSecrets secrets = 11;
     MetadataSubscriber subscriber = 7;
     MetadataTypeMap type_map = 8;
@@ -199,6 +201,11 @@ message MetadataRetry {
   string min_backoff = 3;
   string max_backoff = 4;
   optional Ref catch = 5;
+}
+
+message MetadataSQLMigration {
+  optional Position pos = 1;
+  string digest = 2;
 }
 
 message MetadataSecrets {

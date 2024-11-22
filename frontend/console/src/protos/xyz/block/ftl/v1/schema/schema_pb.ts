@@ -333,6 +333,11 @@ export class Database extends Message<Database> {
    */
   name = "";
 
+  /**
+   * @generated from field: repeated xyz.block.ftl.v1.schema.Metadata metadata = 5;
+   */
+  metadata: Metadata[] = [];
+
   constructor(data?: PartialMessage<Database>) {
     super();
     proto3.util.initPartial(data, this);
@@ -346,6 +351,7 @@ export class Database extends Message<Database> {
     { no: 2, name: "comments", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "metadata", kind: "message", T: Metadata, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Database {
@@ -1049,6 +1055,12 @@ export class Metadata extends Message<Metadata> {
     case: "retry";
   } | {
     /**
+     * @generated from field: xyz.block.ftl.v1.schema.MetadataSQLMigration sql_migration = 13;
+     */
+    value: MetadataSQLMigration;
+    case: "sqlMigration";
+  } | {
+    /**
      * @generated from field: xyz.block.ftl.v1.schema.MetadataSecrets secrets = 11;
      */
     value: MetadataSecrets;
@@ -1084,6 +1096,7 @@ export class Metadata extends Message<Metadata> {
     { no: 2, name: "ingress", kind: "message", T: MetadataIngress, oneof: "value" },
     { no: 12, name: "publisher", kind: "message", T: MetadataPublisher, oneof: "value" },
     { no: 6, name: "retry", kind: "message", T: MetadataRetry, oneof: "value" },
+    { no: 13, name: "sql_migration", kind: "message", T: MetadataSQLMigration, oneof: "value" },
     { no: 11, name: "secrets", kind: "message", T: MetadataSecrets, oneof: "value" },
     { no: 7, name: "subscriber", kind: "message", T: MetadataSubscriber, oneof: "value" },
     { no: 8, name: "type_map", kind: "message", T: MetadataTypeMap, oneof: "value" },
@@ -1532,6 +1545,49 @@ export class MetadataRetry extends Message<MetadataRetry> {
 
   static equals(a: MetadataRetry | PlainMessage<MetadataRetry> | undefined, b: MetadataRetry | PlainMessage<MetadataRetry> | undefined): boolean {
     return proto3.util.equals(MetadataRetry, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1.schema.MetadataSQLMigration
+ */
+export class MetadataSQLMigration extends Message<MetadataSQLMigration> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string digest = 2;
+   */
+  digest = "";
+
+  constructor(data?: PartialMessage<MetadataSQLMigration>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.MetadataSQLMigration";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MetadataSQLMigration {
+    return new MetadataSQLMigration().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MetadataSQLMigration {
+    return new MetadataSQLMigration().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MetadataSQLMigration {
+    return new MetadataSQLMigration().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MetadataSQLMigration | PlainMessage<MetadataSQLMigration> | undefined, b: MetadataSQLMigration | PlainMessage<MetadataSQLMigration> | undefined): boolean {
+    return proto3.util.equals(MetadataSQLMigration, a, b);
   }
 }
 

@@ -191,6 +191,11 @@ func metadataToSchema(s *schemapb.Metadata) Metadata {
 			Topics: refListToSchema(s.Publisher.Topics),
 		}
 
+	case *schemapb.Metadata_SqlMigration:
+		return &MetadataSQLMigration{
+			Pos:    PosFromProto(s.SqlMigration.Pos),
+			Digest: s.SqlMigration.Digest,
+		}
 	default:
 		panic(fmt.Sprintf("unhandled metadata type: %T", s))
 	}

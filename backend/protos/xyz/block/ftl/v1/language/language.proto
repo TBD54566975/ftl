@@ -34,6 +34,9 @@ message ModuleConfig {
   // LanguageConfig contains any metadata specific to a specific language.
   // These are stored in the ftl.toml file under the same key as the language (eg: "go", "java")
   google.protobuf.Struct language_config = 10;
+
+  // The directory containing the SQL migration files
+  string sql_migration_dir = 11;
 }
 
 // ProjectConfig contains the configuration for a project, found in the ftl-project.toml file.
@@ -111,6 +114,9 @@ message ModuleConfigDefaultsResponse {
   // Default language specific configuration.
   // These defaults are filled in by looking at each root key only. If the key is not present, the default is used.
   google.protobuf.Struct language_config = 7;
+
+  // Default directory containing the SQL migration files
+  string sql_migration_dir = 8;
 }
 
 message DependenciesRequest {

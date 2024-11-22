@@ -9,16 +9,18 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Resource(_message.Message):
-    __slots__ = ("resource_id", "postgres", "mysql", "module")
+    __slots__ = ("resource_id", "postgres", "mysql", "module", "sql_migration")
     RESOURCE_ID_FIELD_NUMBER: _ClassVar[int]
     POSTGRES_FIELD_NUMBER: _ClassVar[int]
     MYSQL_FIELD_NUMBER: _ClassVar[int]
     MODULE_FIELD_NUMBER: _ClassVar[int]
+    SQL_MIGRATION_FIELD_NUMBER: _ClassVar[int]
     resource_id: str
     postgres: PostgresResource
     mysql: MysqlResource
     module: ModuleResource
-    def __init__(self, resource_id: _Optional[str] = ..., postgres: _Optional[_Union[PostgresResource, _Mapping]] = ..., mysql: _Optional[_Union[MysqlResource, _Mapping]] = ..., module: _Optional[_Union[ModuleResource, _Mapping]] = ...) -> None: ...
+    sql_migration: SqlMigrationResource
+    def __init__(self, resource_id: _Optional[str] = ..., postgres: _Optional[_Union[PostgresResource, _Mapping]] = ..., mysql: _Optional[_Union[MysqlResource, _Mapping]] = ..., module: _Optional[_Union[ModuleResource, _Mapping]] = ..., sql_migration: _Optional[_Union[SqlMigrationResource, _Mapping]] = ...) -> None: ...
 
 class PostgresResource(_message.Message):
     __slots__ = ("output",)
@@ -45,6 +47,17 @@ class MysqlResource(_message.Message):
     OUTPUT_FIELD_NUMBER: _ClassVar[int]
     output: MysqlResource.MysqlResourceOutput
     def __init__(self, output: _Optional[_Union[MysqlResource.MysqlResourceOutput, _Mapping]] = ...) -> None: ...
+
+class SqlMigrationResource(_message.Message):
+    __slots__ = ("output", "digest")
+    class SqlMigrationResourceOutput(_message.Message):
+        __slots__ = ()
+        def __init__(self) -> None: ...
+    OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    DIGEST_FIELD_NUMBER: _ClassVar[int]
+    output: SqlMigrationResource.SqlMigrationResourceOutput
+    digest: str
+    def __init__(self, output: _Optional[_Union[SqlMigrationResource.SqlMigrationResourceOutput, _Mapping]] = ..., digest: _Optional[str] = ...) -> None: ...
 
 class ModuleResource(_message.Message):
     __slots__ = ("output", "schema", "artefacts", "labels")

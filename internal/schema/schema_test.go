@@ -27,6 +27,7 @@ module todo {
 
   // A database
   database postgres testdb
+	+migration sha256:8cc04c75ab7967eb2ec82e11e886831e00b7cb00507e9a8ecf400bdc599eccfd
 
   export data CreateRequest {
     name {String: String}? +alias json "rqn"
@@ -157,6 +158,7 @@ Module
   Secret
     String
   Database
+    MetadataSQLMigration
   Data
     Field
       Optional
@@ -729,6 +731,7 @@ module todo {
   secret secretValue String
   // A database
   database postgres testdb
+    +migration sha256:8cc04c75ab7967eb2ec82e11e886831e00b7cb00507e9a8ecf400bdc599eccfd
 
   export data CreateRequest {
     name {String: String}? +alias json "rqn"
@@ -819,6 +822,7 @@ var testSchema = MustValidate(&Schema{
 					Comments: []string{"A database"},
 					Name:     "testdb",
 					Type:     "postgres",
+					Metadata: []Metadata{&MetadataSQLMigration{Digest: "8cc04c75ab7967eb2ec82e11e886831e00b7cb00507e9a8ecf400bdc599eccfd"}},
 				},
 				&Data{
 					Name:   "CreateRequest",

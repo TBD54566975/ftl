@@ -50,11 +50,12 @@ func (filesUpdatedEvent) updateEvent() {}
 
 // buildContext contains contextual information needed to build.
 type buildContext struct {
-	ID           string
-	Config       moduleconfig.AbsModuleConfig
-	Schema       *schema.Schema
-	Dependencies []string
-	BuildEnv     []string
+	ID              string
+	Config          moduleconfig.AbsModuleConfig
+	Schema          *schema.Schema
+	Dependencies    []string
+	BuildEnv        []string
+	AdditionalFiles []string
 }
 
 func buildContextFromProto(proto *langpb.BuildContext) (buildContext, error) {
@@ -404,7 +405,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	}
 	defer release() //nolint:errcheck
 
-	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, buildCtx.Dependencies, buildCtx.BuildEnv, transaction, ongoingState, false)
+	m, buildErrs, additionalFiles, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, buildCtx.Dependencies, buildCtx.BuildEnv, transaction, ongoingState, false)
 	if err != nil {
 		if errors.Is(err, compile.ErrInvalidateDependencies) {
 			return &langpb.BuildEvent{
@@ -429,6 +430,8 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	}
 
 	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	deploy := []string{"main", "launch"}
+	deploy = append(deploy, additionalFiles...)
 	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildSuccess{
 			BuildSuccess: &langpb.BuildSuccess{
@@ -436,7 +439,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 				IsAutomaticRebuild: isAutomaticRebuild,
 				Errors:             langpb.ErrorsToProto(buildErrs),
 				Module:             moduleProto,
-				Deploy:             []string{"main", "launch"},
+				Deploy:             deploy,
 			},
 		},
 	}, nil

@@ -174,10 +174,22 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 						validateRetries(module, md, optional.Some(n.Request), scopes, optional.Some(schema))
 
 					case *MetadataCronJob, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap,
-						*MetadataEncoding, *MetadataSecrets, *MetadataPublisher:
+						*MetadataEncoding, *MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration:
 					}
 				}
-
+			case *Database:
+				found := false
+				for _, md := range n.Metadata {
+					switch md := md.(type) {
+					case *MetadataSQLMigration:
+						if found {
+							merr = append(merr, fmt.Errorf("database %q has multiple migration metadata", n.Name))
+						}
+						found = true
+					default:
+						merr = append(merr, fmt.Errorf("metadata %q is not valid on databases", strings.TrimSpace(md.String())))
+					}
+				}
 			case *Enum:
 				if n.IsValueEnum() {
 					for _, v := range n.Variants {
@@ -198,13 +210,14 @@ func ValidateModuleInSchema(schema *Schema, m optional.Option[*Module]) (*Schema
 				}
 				return next()
 
-			case *Array, *Bool, *Bytes, *Data, *Database, Decl, *Field, *Float,
+			case *Array, *Bool, *Bytes, *Data, Decl, *Field, *Float,
 				IngressPathComponent, *IngressPathLiteral, *IngressPathParameter,
 				*Int, *Map, Metadata, *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataCronJob,
 				*MetadataIngress, *MetadataAlias, *MetadataSecrets, *Module, *Optional, *Schema, *TypeAlias,
 				*String, *Time, Type, *Unit, *Any, *TypeParameter, *EnumVariant, *MetadataRetry,
 				Value, *IntValue, *StringValue, *TypeValue, *Config, *Secret, Symbol, Named,
-				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher:
+				*MetadataSubscriber, *Subscription, *Topic, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
+				*MetadataSQLMigration:
 			}
 			return next()
 		})
@@ -353,7 +366,8 @@ func ValidateModule(module *Module) error {
 			*MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataIngress, *MetadataCronJob, *MetadataAlias,
 			*MetadataSecrets, IngressPathComponent, *IngressPathLiteral, *IngressPathParameter, *Optional,
 			*Unit, *Any, *TypeParameter, *Enum, *EnumVariant, *IntValue, *StringValue, *TypeValue,
-			*Config, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher:
+			*Config, *Secret, *MetadataSubscriber, *MetadataTypeMap, *MetadataEncoding, *MetadataPublisher,
+			*MetadataSQLMigration:
 
 		case Named, Symbol, Type, Metadata, Value, Decl: // Union types.
 		}
@@ -453,6 +467,8 @@ func sortMetadataType(md Metadata) {
 		return
 	case *MetadataPublisher:
 		sortRefs(m.Topics)
+	case *MetadataSQLMigration:
+		return
 	}
 }
 
@@ -483,6 +499,8 @@ func getMetadataSortingPriority(metadata Metadata) int {
 		priority = 11
 	case *MetadataTypeMap:
 		priority = 12
+	case *MetadataSQLMigration:
+		priority = 13
 	}
 	return priority
 }
@@ -681,7 +699,7 @@ func validateVerbMetadata(scopes Scopes, module *Module, n *Verb) (merr []error)
 			subErrs := validateVerbSubscriptions(module, n, md, scopes, optional.None[*Schema]())
 			merr = append(merr, subErrs...)
 		case *MetadataCalls, *MetadataConfig, *MetadataDatabases, *MetadataAlias, *MetadataTypeMap, *MetadataEncoding,
-			*MetadataSecrets, *MetadataPublisher:
+			*MetadataSecrets, *MetadataPublisher, *MetadataSQLMigration:
 		}
 	}
 	return

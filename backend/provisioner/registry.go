@@ -16,6 +16,7 @@ import (
 	"github.com/TBD54566975/ftl/common/plugin"
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/schema"
+	"github.com/TBD54566975/ftl/internal/slices"
 )
 
 // provisionerPluginConfig is a map of provisioner name to resources it supports
@@ -189,6 +190,7 @@ func resourceEqual(desired, existing *provisioner.Resource) bool {
 			&provisioner.MysqlResource_MysqlResourceOutput{},
 			&provisioner.PostgresResource_PostgresResourceOutput{},
 			&provisioner.ModuleResource_ModuleResourceOutput{},
+			&provisioner.SqlMigrationResource_SqlMigrationResourceOutput{},
 		),
 	)
 }
@@ -201,6 +203,7 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 	if err != nil {
 		return nil, fmt.Errorf("invalid module schema for module %s: %w", msg.Schema.Name, err)
 	}
+	edges := make([]*ResourceEdge, 0)
 
 	for _, decl := range module.Decls {
 		if db, ok := decl.(*schema.Database); ok {
@@ -218,6 +221,18 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 			default:
 				return nil, fmt.Errorf("unknown db type: %s", db.Type)
 			}
+
+			if migration, ok := slices.FindVariant[*schema.MetadataSQLMigration](db.Metadata); ok {
+				id := decl.GetName() + "-migration-" + migration.Digest
+				deps = append(deps, &provisioner.Resource{
+					ResourceId: id,
+					Resource:   &provisioner.Resource_SqlMigration{SqlMigration: &provisioner.SqlMigrationResource{Digest: migration.Digest}},
+				})
+				edges = append(edges, &ResourceEdge{
+					from: id,
+					to:   decl.GetName(),
+				})
+			}
 		}
 	}
 
@@ -231,12 +246,11 @@ func ExtractResources(msg *ftlv1.CreateDeploymentRequest) (*ResourceGraph, error
 			},
 		},
 	}
-	edges := make([]*ResourceEdge, len(deps))
-	for i, dep := range deps {
-		edges[i] = &ResourceEdge{
+	for _, dep := range deps {
+		edges = append(edges, &ResourceEdge{
 			from: root.ResourceId,
 			to:   dep.ResourceId,
-		}
+		})
 	}
 
 	result := &ResourceGraph{

@@ -321,9 +321,9 @@ func (s *OngoingState) reset() {
 // Build the given module.
 func Build(ctx context.Context, projectRootDir, stubsRoot string, config moduleconfig.AbsModuleConfig,
 	sch *schema.Schema, deps, buildEnv []string, filesTransaction watch.ModifyFilesTransaction, ongoingState *OngoingState,
-	devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, err error) {
+	devMode bool) (moduleSch optional.Option[*schema.Module], buildErrors []builderrors.Error, additionalDeployFiles []string, err error) {
 	if err := filesTransaction.Begin(); err != nil {
-		return moduleSch, nil, fmt.Errorf("could not start a file transaction: %w", err)
+		return moduleSch, nil, nil, fmt.Errorf("could not start a file transaction: %w", err)
 	}
 	defer func() {
 		if terr := filesTransaction.End(); terr != nil {
@@ -339,22 +339,22 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	// Check dependencies
 	newDeps, imports, err := extractDependenciesAndImports(config)
 	if err != nil {
-		return moduleSch, nil, fmt.Errorf("could not extract dependencies: %w", err)
+		return moduleSch, nil, nil, fmt.Errorf("could not extract dependencies: %w", err)
 	}
 	importsChanged := ongoingState.checkIfImportsChanged(imports)
 	if !slices.Equal(islices.Sort(newDeps), islices.Sort(deps)) {
 		// dependencies have changed
-		return moduleSch, nil, ErrInvalidateDependencies
+		return moduleSch, nil, nil, ErrInvalidateDependencies
 	}
 
 	replacements, goModVersion, err := updateGoModule(filepath.Join(config.Dir, "go.mod"))
 	if err != nil {
-		return moduleSch, nil, err
+		return moduleSch, nil, nil, err
 	}
 
 	goVersion := runtime.Version()[2:]
 	if semver.Compare("v"+goVersion, "v"+goModVersion) < 0 {
-		return moduleSch, nil, fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
+		return moduleSch, nil, nil, fmt.Errorf("go version %q is not recent enough for this module, needs minimum version %q", goVersion, goModVersion)
 	}
 
 	logger := log.FromContext(ctx)
@@ -365,7 +365,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 
 	err = os.MkdirAll(buildDir, 0750)
 	if err != nil {
-		return moduleSch, nil, fmt.Errorf("failed to create build directory: %w", err)
+		return moduleSch, nil, nil, fmt.Errorf("failed to create build directory: %w", err)
 	}
 
 	var sharedModulesPaths []string
@@ -381,7 +381,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 		SharedModulesPaths: sharedModulesPaths,
 		IncludeMainPackage: mainPackageExists(config),
 	}, scaffolder.Exclude("^go.mod$"), scaffolder.Functions(funcs)); err != nil {
-		return moduleSch, nil, fmt.Errorf("failed to scaffold zip: %w", err)
+		return moduleSch, nil, nil, fmt.Errorf("failed to scaffold zip: %w", err)
 	}
 
 	// In parallel, extract schema and optimistically compile.
@@ -410,12 +410,12 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	// wait for schema extraction to complete
 	extractResult, err := (<-extractResultChan).Result()
 	if err != nil {
-		return moduleSch, nil, fmt.Errorf("could not extract schema: %w", err)
+		return moduleSch, nil, nil, fmt.Errorf("could not extract schema: %w", err)
 	}
 	if builderrors.ContainsTerminalError(extractResult.Errors) {
 		// Only bail if schema errors contain elements at level ERROR.
 		// If errors are only at levels below ERROR (e.g. INFO, WARN), the schema can still be used.
-		return moduleSch, extractResult.Errors, nil
+		return moduleSch, extractResult.Errors, nil, nil
 	}
 
 	logger.Debugf("Generating main package")
@@ -423,22 +423,22 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	if pcpath, ok := projectconfig.DefaultConfigPath().Get(); ok {
 		pc, err := projectconfig.Load(ctx, pcpath)
 		if err != nil {
-			return moduleSch, nil, fmt.Errorf("failed to load project config: %w", err)
+			return moduleSch, nil, nil, fmt.Errorf("failed to load project config: %w", err)
 		}
 		projectName = pc.Name
 	}
 	mctx, err := buildMainModuleContext(sch, extractResult, goModVersion, projectName, sharedModulesPaths, replacements)
 	if err != nil {
-		return moduleSch, nil, err
+		return moduleSch, nil, nil, err
 	}
 	mainModuleCtxChanged := ongoingState.checkIfMainModuleContextChanged(mctx)
 	if err := scaffoldBuildTemplateAndTidy(ctx, config, mainDir, importsChanged, mainModuleCtxChanged, mctx, funcs, filesTransaction); err != nil {
-		return moduleSch, nil, err // nolint:wrapcheck
+		return moduleSch, nil, nil, err // nolint:wrapcheck
 	}
 
 	logger.Debugf("Writing launch script")
 	if err := writeLaunchScript(buildDir); err != nil {
-		return moduleSch, nil, err
+		return moduleSch, nil, nil, err
 	}
 
 	// Compare main package hashes to when we optimistically compiled
@@ -449,7 +449,7 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 			// Wait for optimistic compile to complete if there has been no changes
 			if len(changes) == 0 && (<-optimisticCompileChan) == nil {
 				logger.Debugf("Accepting optimistic compilation")
-				return optional.Some(extractResult.Module), extractResult.Errors, nil
+				return optional.Some(extractResult.Module), extractResult.Errors, extractResult.MigrationFiles, nil
 			}
 			logger.Debugf("Discarding optimistic compilation due to file changes: %s", strings.Join(islices.Map(changes, func(change watch.FileChange) string {
 				p, err := filepath.Rel(config.Dir, change.Path)
@@ -464,9 +464,9 @@ func Build(ctx context.Context, projectRootDir, stubsRoot string, config modulec
 	logger.Debugf("Compiling")
 	err = compile(ctx, mainDir, buildEnv, devMode)
 	if err != nil {
-		return moduleSch, nil, err
+		return moduleSch, nil, nil, err
 	}
-	return optional.Some(extractResult.Module), extractResult.Errors, nil
+	return optional.Some(extractResult.Module), extractResult.Errors, extractResult.MigrationFiles, nil
 }
 
 func fileHashesForOptimisticCompilation(config moduleconfig.AbsModuleConfig) (watch.FileHashes, error) {
