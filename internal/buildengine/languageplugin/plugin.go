@@ -244,6 +244,7 @@ func customDefaultsFromProto(proto *langpb.ModuleConfigDefaultsResponse) modulec
 		BuildLock:          optional.Ptr(proto.BuildLock),
 		GeneratedSchemaDir: optional.Ptr(proto.GeneratedSchemaDir),
 		LanguageConfig:     proto.LanguageConfig.AsMap(),
+		SQLMigrationDir:    proto.SqlMigrationDir,
 	}
 }
 

@@ -72,6 +72,7 @@ func TestGoConfigDefaults(t *testing.T) {
 					"go.sum",
 					"../../../../go-runtime/ftl/**/*.go",
 				},
+				SQLMigrationDir: "db",
 			},
 		},
 		{
@@ -85,6 +86,7 @@ func TestGoConfigDefaults(t *testing.T) {
 					"../../../../go-runtime/ftl/**/*.go",
 					"../../../../go-runtime/schema/testdata/**/*.go",
 				},
+				SQLMigrationDir: "db",
 			},
 		},
 	} {
@@ -118,5 +120,6 @@ func defaultsFromProto(proto *langpb.ModuleConfigDefaultsResponse) moduleconfig.
 		DevModeBuild:       optional.Ptr(proto.DevModeBuild),
 		GeneratedSchemaDir: optional.Ptr(proto.GeneratedSchemaDir),
 		LanguageConfig:     proto.LanguageConfig.AsMap(),
+		SQLMigrationDir:    proto.SqlMigrationDir,
 	}
 }

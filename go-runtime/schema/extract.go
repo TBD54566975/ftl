@@ -129,6 +129,7 @@ func Extract(moduleDir string) (Result, error) {
 		return Result{}, err
 	}
 	return combineAllPackageResults(results, diagnostics)
+
 }
 
 type refResultType int

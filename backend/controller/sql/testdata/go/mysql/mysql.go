@@ -36,16 +36,7 @@ func Query(ctx context.Context, db ftl.DatabaseHandle[MyDbConfig]) (map[string]s
 }
 
 func persistRequest(ctx context.Context, req InsertRequest, db ftl.DatabaseHandle[MyDbConfig]) error {
-	_, err := db.Get(ctx).Exec(`CREATE TABLE IF NOT EXISTS requests
-(
-  data TEXT,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);`)
-	if err != nil {
-		return err
-	}
-	_, err = db.Get(ctx).Exec("INSERT INTO requests (data) VALUES (?);", req.Data)
+	_, err := db.Get(ctx).Exec("INSERT INTO requests (data) VALUES (?);", req.Data)
 	if err != nil {
 		return err
 	}

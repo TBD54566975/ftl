@@ -65,6 +65,12 @@ func handleBuildResult(ctx context.Context, projectConfig projectconfig.Config, 
 
 	logger.Infof("Module built (%.2fs)", time.Since(result.StartTime).Seconds())
 
+	migrationFiles, err := handleDatabaseMigrations(config.Dir, config.SQLMigrationDirectory, result.Schema)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to extract migrations %w", err)
+	}
+	result.Deploy = append(result.Deploy, migrationFiles...)
+
 	// write schema proto to deploy directory
 	schemaBytes, err := proto.Marshal(result.Schema.ToProto())
 	if err != nil {

@@ -228,6 +228,14 @@ func WithDatabase[T ftl.DatabaseConfig]() Option {
 				if err != nil {
 					return fmt.Errorf("could not provision database %q: %w", name, err)
 				}
+				dir, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("could not get working dir")
+				}
+				err = provisioner.RunPostgresMigration(ctx, dsn, dir, name)
+				if err != nil {
+					return fmt.Errorf("could not migrate database %q: %w", name, err)
+				}
 				// replace original database with test database
 				replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypePostgres, dsn)
 				if err != nil {
@@ -239,12 +247,21 @@ func WithDatabase[T ftl.DatabaseConfig]() Option {
 				if err != nil {
 					return fmt.Errorf("could not provision database %q: %w", name, err)
 				}
+				dir, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("could not get working dir")
+				}
+				err = provisioner.RunMySQLMigration(ctx, dsn, dir, name)
+				if err != nil {
+					return fmt.Errorf("could not migrate database %q: %w", name, err)
+				}
 				// replace original database with test database
 				replacementDB, err := modulecontext.NewTestDatabase(modulecontext.DBTypeMySQL, dsn)
 				if err != nil {
 					return fmt.Errorf("could not create database %q with DSN %q: %w", name, dsn, err)
 				}
 				state.databases[name] = replacementDB
+
 			}
 			return nil
 		},

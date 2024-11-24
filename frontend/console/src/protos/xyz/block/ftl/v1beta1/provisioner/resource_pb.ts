@@ -42,6 +42,12 @@ export class Resource extends Message<Resource> {
      */
     value: ModuleResource;
     case: "module";
+  } | {
+    /**
+     * @generated from field: xyz.block.ftl.v1beta1.provisioner.SqlMigrationResource sql_migration = 105;
+     */
+    value: SqlMigrationResource;
+    case: "sqlMigration";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<Resource>) {
@@ -56,6 +62,7 @@ export class Resource extends Message<Resource> {
     { no: 102, name: "postgres", kind: "message", T: PostgresResource, oneof: "resource" },
     { no: 103, name: "mysql", kind: "message", T: MysqlResource, oneof: "resource" },
     { no: 104, name: "module", kind: "message", T: ModuleResource, oneof: "resource" },
+    { no: 105, name: "sql_migration", kind: "message", T: SqlMigrationResource, oneof: "resource" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Resource {
@@ -232,6 +239,80 @@ export class MysqlResource_MysqlResourceOutput extends Message<MysqlResource_Mys
 
   static equals(a: MysqlResource_MysqlResourceOutput | PlainMessage<MysqlResource_MysqlResourceOutput> | undefined, b: MysqlResource_MysqlResourceOutput | PlainMessage<MysqlResource_MysqlResourceOutput> | undefined): boolean {
     return proto3.util.equals(MysqlResource_MysqlResourceOutput, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.SqlMigrationResource
+ */
+export class SqlMigrationResource extends Message<SqlMigrationResource> {
+  /**
+   * @generated from field: xyz.block.ftl.v1beta1.provisioner.SqlMigrationResource.SqlMigrationResourceOutput output = 1;
+   */
+  output?: SqlMigrationResource_SqlMigrationResourceOutput;
+
+  /**
+   * @generated from field: string digest = 2;
+   */
+  digest = "";
+
+  constructor(data?: PartialMessage<SqlMigrationResource>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.SqlMigrationResource";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "output", kind: "message", T: SqlMigrationResource_SqlMigrationResourceOutput },
+    { no: 2, name: "digest", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SqlMigrationResource {
+    return new SqlMigrationResource().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SqlMigrationResource {
+    return new SqlMigrationResource().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SqlMigrationResource {
+    return new SqlMigrationResource().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SqlMigrationResource | PlainMessage<SqlMigrationResource> | undefined, b: SqlMigrationResource | PlainMessage<SqlMigrationResource> | undefined): boolean {
+    return proto3.util.equals(SqlMigrationResource, a, b);
+  }
+}
+
+/**
+ * @generated from message xyz.block.ftl.v1beta1.provisioner.SqlMigrationResource.SqlMigrationResourceOutput
+ */
+export class SqlMigrationResource_SqlMigrationResourceOutput extends Message<SqlMigrationResource_SqlMigrationResourceOutput> {
+  constructor(data?: PartialMessage<SqlMigrationResource_SqlMigrationResourceOutput>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1beta1.provisioner.SqlMigrationResource.SqlMigrationResourceOutput";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SqlMigrationResource_SqlMigrationResourceOutput {
+    return new SqlMigrationResource_SqlMigrationResourceOutput().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SqlMigrationResource_SqlMigrationResourceOutput {
+    return new SqlMigrationResource_SqlMigrationResourceOutput().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SqlMigrationResource_SqlMigrationResourceOutput {
+    return new SqlMigrationResource_SqlMigrationResourceOutput().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SqlMigrationResource_SqlMigrationResourceOutput | PlainMessage<SqlMigrationResource_SqlMigrationResourceOutput> | undefined, b: SqlMigrationResource_SqlMigrationResourceOutput | PlainMessage<SqlMigrationResource_SqlMigrationResourceOutput> | undefined): boolean {
+    return proto3.util.equals(SqlMigrationResource_SqlMigrationResourceOutput, a, b);
   }
 }
 

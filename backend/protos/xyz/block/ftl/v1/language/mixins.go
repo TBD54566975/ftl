@@ -119,15 +119,16 @@ func ModuleConfigToProto(config moduleconfig.AbsModuleConfig) (*ModuleConfig, er
 // ModuleConfigFromProto converts a protobuf ModuleConfig to a moduleconfig.AbsModuleConfig.
 func ModuleConfigFromProto(proto *ModuleConfig) moduleconfig.AbsModuleConfig {
 	config := moduleconfig.AbsModuleConfig{
-		Module:             proto.Name,
-		Dir:                proto.Dir,
-		DeployDir:          proto.DeployDir,
-		Watch:              proto.Watch,
-		Language:           proto.Language,
-		Build:              proto.GetBuild(),
-		DevModeBuild:       proto.GetDevModeBuild(),
-		BuildLock:          proto.BuildLock,
-		GeneratedSchemaDir: proto.GetGeneratedSchemaDir(),
+		Module:                proto.Name,
+		Dir:                   proto.Dir,
+		DeployDir:             proto.DeployDir,
+		Watch:                 proto.Watch,
+		Language:              proto.Language,
+		Build:                 proto.GetBuild(),
+		DevModeBuild:          proto.GetDevModeBuild(),
+		BuildLock:             proto.BuildLock,
+		GeneratedSchemaDir:    proto.GetGeneratedSchemaDir(),
+		SQLMigrationDirectory: proto.GetSqlMigrationDir(),
 	}
 	if proto.LanguageConfig != nil {
 		config.LanguageConfig = proto.LanguageConfig.AsMap()

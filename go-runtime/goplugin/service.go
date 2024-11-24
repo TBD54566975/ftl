@@ -165,8 +165,9 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 		return nil, err
 	}
 	return connect.NewResponse(&langpb.ModuleConfigDefaultsResponse{
-		Watch:     watch,
-		DeployDir: deployDir,
+		Watch:           watch,
+		DeployDir:       deployDir,
+		SqlMigrationDir: "db",
 	}), nil
 }
 
@@ -429,6 +430,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	}
 
 	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
+	deploy := []string{"main", "launch"}
 	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildSuccess{
 			BuildSuccess: &langpb.BuildSuccess{
@@ -436,7 +438,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 				IsAutomaticRebuild: isAutomaticRebuild,
 				Errors:             langpb.ErrorsToProto(buildErrs),
 				Module:             moduleProto,
-				Deploy:             []string{"main", "launch"},
+				Deploy:             deploy,
 			},
 		},
 	}, nil

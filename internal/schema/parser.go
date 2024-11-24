@@ -24,12 +24,13 @@ var (
 	typeUnion     = append(nonOptionalTypeUnion, &Optional{})
 	metadataUnion = []Metadata{&MetadataCalls{}, &MetadataConfig{}, &MetadataIngress{}, &MetadataCronJob{},
 		&MetadataDatabases{}, &MetadataAlias{}, &MetadataRetry{}, &MetadataSecrets{}, &MetadataSubscriber{},
-		&MetadataTypeMap{}, &MetadataEncoding{}, &MetadataPublisher{}}
+		&MetadataTypeMap{}, &MetadataEncoding{}, &MetadataPublisher{}, &MetadataSQLMigration{}}
 	ingressUnion = []IngressPathComponent{&IngressPathLiteral{}, &IngressPathParameter{}}
 	valueUnion   = []Value{&StringValue{}, &IntValue{}, &TypeValue{}}
 
 	Lexer = lexer.MustSimple([]lexer.SimpleRule{
 		{Name: "EOL", Pattern: `[\r\n]`},
+		{Name: "SHA256", Pattern: `\b[A-za-z0-9]{64}\b`},
 		{Name: "Whitespace", Pattern: `\s+`},
 		{Name: "Ident", Pattern: `\b[a-zA-Z_][a-zA-Z0-9_]*\b`},
 		{Name: "Comment", Pattern: `//.*`},

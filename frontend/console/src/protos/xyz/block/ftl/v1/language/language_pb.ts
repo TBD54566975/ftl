@@ -84,6 +84,13 @@ export class ModuleConfig extends Message<ModuleConfig> {
    */
   languageConfig?: Struct;
 
+  /**
+   * The directory containing the SQL migration files
+   *
+   * @generated from field: string sql_migration_dir = 11;
+   */
+  sqlMigrationDir = "";
+
   constructor(data?: PartialMessage<ModuleConfig>) {
     super();
     proto3.util.initPartial(data, this);
@@ -102,6 +109,7 @@ export class ModuleConfig extends Message<ModuleConfig> {
     { no: 8, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 9, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 10, name: "language_config", kind: "message", T: Struct },
+    { no: 11, name: "sql_migration_dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfig {
@@ -517,6 +525,13 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
    */
   languageConfig?: Struct;
 
+  /**
+   * Default directory containing the SQL migration files
+   *
+   * @generated from field: string sql_migration_dir = 8;
+   */
+  sqlMigrationDir = "";
+
   constructor(data?: PartialMessage<ModuleConfigDefaultsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -532,6 +547,7 @@ export class ModuleConfigDefaultsResponse extends Message<ModuleConfigDefaultsRe
     { no: 5, name: "generated_schema_dir", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 6, name: "watch", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 7, name: "language_config", kind: "message", T: Struct },
+    { no: 8, name: "sql_migration_dir", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ModuleConfigDefaultsResponse {

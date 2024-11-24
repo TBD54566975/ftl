@@ -18,6 +18,7 @@ message Resource {
     PostgresResource postgres = 102;
     MysqlResource mysql = 103;
     ModuleResource module = 104;
+    SqlMigrationResource sql_migration = 105;
   }
 }
 
@@ -39,6 +40,12 @@ message MysqlResource {
     string write_dsn = 2;
   }
   MysqlResourceOutput output = 1;
+}
+
+message SqlMigrationResource {
+  message SqlMigrationResourceOutput {}
+  SqlMigrationResourceOutput output = 1;
+  string digest = 2;
 }
 
 message ModuleResource {

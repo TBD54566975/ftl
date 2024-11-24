@@ -99,6 +99,8 @@ func metadataListToProto(nodes []Metadata) []*schemapb.Metadata {
 		case *MetadataPublisher:
 			v = &schemapb.Metadata_Publisher{Publisher: n.ToProto().(*schemapb.MetadataPublisher)}
 
+		case *MetadataSQLMigration:
+			v = &schemapb.Metadata_SqlMigration{SqlMigration: n.ToProto().(*schemapb.MetadataSQLMigration)}
 		default:
 			panic(fmt.Sprintf("unhandled metadata type %T", n))
 		}

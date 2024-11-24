@@ -17,23 +17,31 @@ type Database struct {
 	Pos     Position         `parser:"" protobuf:"1,optional"`
 	Runtime *DatabaseRuntime `parser:"" protobuf:"31634,optional"`
 
-	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Type     string   `parser:"'database' @('postgres'|'mysql')" protobuf:"4"`
-	Name     string   `parser:"@Ident" protobuf:"3"`
+	Comments []string   `parser:"@Comment*" protobuf:"2"`
+	Type     string     `parser:"'database' @('postgres'|'mysql')" protobuf:"4"`
+	Name     string     `parser:"@Ident" protobuf:"3"`
+	Metadata []Metadata `parser:"@@*" protobuf:"5"`
 }
 
 var _ Decl = (*Database)(nil)
 var _ Symbol = (*Database)(nil)
 
-func (d *Database) Position() Position     { return d.Pos }
-func (*Database) schemaDecl()              {}
-func (*Database) schemaSymbol()            {}
-func (d *Database) schemaChildren() []Node { return nil }
-func (d *Database) Redact()                { d.Runtime = nil }
+func (d *Database) Position() Position { return d.Pos }
+func (*Database) schemaDecl()          {}
+func (*Database) schemaSymbol()        {}
+func (d *Database) schemaChildren() []Node {
+	children := []Node{}
+	for _, c := range d.Metadata {
+		children = append(children, c)
+	}
+	return children
+}
+func (d *Database) Redact() { d.Runtime = nil }
 func (d *Database) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, EncodeComments(d.Comments))
 	fmt.Fprintf(w, "database %s %s", d.Type, d.Name)
+	fmt.Fprint(w, indent(encodeMetadata(d.Metadata)))
 	return w.String()
 }
 
@@ -44,6 +52,7 @@ func (d *Database) ToProto() proto.Message {
 		Name:     d.Name,
 		Type:     d.Type,
 		Runtime:  d.Runtime.ToProto(),
+		Metadata: metadataListToProto(d.Metadata),
 	}
 }
 
@@ -57,6 +66,7 @@ func DatabaseFromProto(s *schemapb.Database) *Database {
 		Name:     s.Name,
 		Type:     s.Type,
 		Runtime:  DatabaseRuntimeFromProto(s.Runtime),
+		Metadata: metadataListToSchema(s.Metadata),
 	}
 }
 

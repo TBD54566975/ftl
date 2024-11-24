@@ -243,12 +243,19 @@ func (s *serveCommonConfig) run(
 		provisionerCtx := log.ContextWithLogger(ctx, logger.Scope(scope))
 
 		// default local dev provisioner
-		registry := &provisioner.ProvisionerRegistry{
-			Provisioners: []*provisioner.ProvisionerBinding{{
-				Provisioner: provisioner.NewControllerProvisioner(controllerClient),
-				Types:       []provisioner.ResourceType{provisioner.ResourceTypeModule},
-				ID:          "controller",
-			}},
+		provisionerRegistry := &provisioner.ProvisionerRegistry{
+			Provisioners: []*provisioner.ProvisionerBinding{
+				{
+					Provisioner: provisioner.NewControllerProvisioner(controllerClient),
+					Types:       []provisioner.ResourceType{provisioner.ResourceTypeModule},
+					ID:          "controller",
+				},
+				{
+					Provisioner: provisioner.NewSQLMigrationProvisioner(registry),
+					Types:       []provisioner.ResourceType{provisioner.ResourceTypeSQLMigration},
+					ID:          "migration",
+				},
+			},
 			Default: &provisioner.ProvisionerBinding{
 				Provisioner: provisioner.NewDevProvisioner(s.DBPort, s.MysqlPort),
 				ID:          "dev",
@@ -261,11 +268,11 @@ func (s *serveCommonConfig) run(
 			if err != nil {
 				return fmt.Errorf("failed to create provisioner registry: %w", err)
 			}
-			registry = r
+			provisionerRegistry = r
 		}
 
 		wg.Go(func() error {
-			if err := provisioner.Start(provisionerCtx, config, registry, controllerClient, schemaClient); err != nil {
+			if err := provisioner.Start(provisionerCtx, config, provisionerRegistry, controllerClient, schemaClient); err != nil {
 				logger.Errorf(err, "provisioner%d failed: %v", i, err)
 				return fmt.Errorf("provisioner%d failed: %w", i, err)
 			}

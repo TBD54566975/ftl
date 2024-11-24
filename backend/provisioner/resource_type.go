@@ -8,10 +8,11 @@ import (
 type ResourceType string
 
 const (
-	ResourceTypeUnknown  ResourceType = "unknown"
-	ResourceTypePostgres ResourceType = "postgres"
-	ResourceTypeMysql    ResourceType = "mysql"
-	ResourceTypeModule   ResourceType = "module"
+	ResourceTypeUnknown      ResourceType = "unknown"
+	ResourceTypePostgres     ResourceType = "postgres"
+	ResourceTypeMysql        ResourceType = "mysql"
+	ResourceTypeModule       ResourceType = "module"
+	ResourceTypeSQLMigration ResourceType = "sql-migration"
 )
 
 // TypeOf returns the resource type of the given resource
@@ -23,6 +24,8 @@ func TypeOf(r *provisioner.Resource) ResourceType {
 		return ResourceTypeMysql
 	case *provisioner.Resource_Postgres:
 		return ResourceTypePostgres
+	case *provisioner.Resource_SqlMigration:
+		return ResourceTypeSQLMigration
 	default:
 		return ResourceTypeUnknown
 	}
