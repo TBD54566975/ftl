@@ -38,6 +38,8 @@ type ModuleConfig struct {
 	// LanguageConfig is a map of language specific configuration.
 	// It is saved in the toml with the value of Language as the key.
 	LanguageConfig map[string]any `toml:"-"`
+	// SQLMigrationDirectory is the directory to look for SQL migrations.
+	SQLMigrationDirectory string `toml:"sql-migration-directory"`
 }
 
 func (c *ModuleConfig) UnmarshalTOML(data []byte) error {
@@ -65,6 +67,9 @@ type CustomDefaults struct {
 
 	// only the root keys in LanguageConfig are used to find missing values that can be defaulted
 	LanguageConfig map[string]any `toml:"-"`
+
+	// SQLMigrationDir is the directory to look for SQL migrations.
+	SQLMigrationDir string
 }
 
 // LoadConfig from a directory.
@@ -124,6 +129,7 @@ func (c ModuleConfig) Abs() AbsModuleConfig {
 	}
 	clone.Dir = dir
 	clone.DeployDir = filepath.Clean(filepath.Join(clone.Dir, clone.DeployDir))
+	clone.SQLMigrationDirectory = filepath.Clean(filepath.Join(clone.Dir, clone.SQLMigrationDirectory))
 	if !strings.HasPrefix(clone.DeployDir, clone.Dir) {
 		panic(fmt.Sprintf("deploy-dir %q is not beneath module directory %q", clone.DeployDir, clone.Dir))
 	}
@@ -165,6 +171,10 @@ func (c UnvalidatedModuleConfig) FillDefaultsAndValidate(customDefaults CustomDe
 	}
 	if c.DeployDir == "" {
 		c.DeployDir = customDefaults.DeployDir
+	}
+	if c.SQLMigrationDirectory == "" {
+		c.SQLMigrationDirectory = customDefaults.SQLMigrationDir
+
 	}
 	if defaultValue, ok := customDefaults.GeneratedSchemaDir.Get(); ok && c.GeneratedSchemaDir == "" {
 		c.GeneratedSchemaDir = defaultValue

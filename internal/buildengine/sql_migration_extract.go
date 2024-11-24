@@ -1,4 +1,4 @@
-package migration
+package buildengine
 
 import (
 	"archive/tar"
@@ -16,7 +16,7 @@ import (
 )
 
 // ExtractSQLMigrations extracts all migrations from the given directory and returns the updated schema and a list of migration files to deploy.
-func ExtractSQLMigrations(migrationsDir string, targetDir string, sch *schema.Module) ([]string, error) {
+func extractSQLMigrations(migrationsDir string, targetDir string, sch *schema.Module) ([]string, error) {
 	paths, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -117,4 +117,22 @@ func createMigrationTarball(migrationDir string, target string) error {
 		}
 	}
 	return nil
+}
+
+func handleDatabaseMigrations(moduleDir string, dbDir string, module *schema.Module) ([]string, error) {
+	target := filepath.Join(moduleDir, ".ftl", "migrations")
+	err := os.MkdirAll(target, 0770) // #nosec
+	if err != nil {
+		return nil, fmt.Errorf("failed to create migration directory: %w", err)
+	}
+	migrations, err := extractSQLMigrations(dbDir, target, module)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract migrations: %w", err)
+	}
+	relativeFiles := []string{}
+	for _, file := range migrations {
+		filePath := filepath.Join("migrations", file)
+		relativeFiles = append(relativeFiles, filePath)
+	}
+	return relativeFiles, nil
 }

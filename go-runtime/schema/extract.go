@@ -3,8 +3,6 @@ package schema
 import (
 	"fmt"
 	"go/types"
-	"os"
-	"path/filepath"
 
 	"github.com/TBD54566975/golang-tools/go/analysis"
 	"github.com/TBD54566975/golang-tools/go/analysis/passes/inspect"
@@ -34,7 +32,6 @@ import (
 	"github.com/TBD54566975/ftl/go-runtime/schema/valueenumvariant"
 	"github.com/TBD54566975/ftl/go-runtime/schema/verb"
 	"github.com/TBD54566975/ftl/internal/builderrors"
-	"github.com/TBD54566975/ftl/internal/migration"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/schema/strcase"
 )
@@ -96,8 +93,6 @@ type Result struct {
 	VerbResourceParamOrder map[*schema.Verb][]common.VerbResourceParam
 	// Errors is a list of errors encountered during schema extraction.
 	Errors []builderrors.Error
-	// MigrationFiles is a list of db migration files generated during schema extraction.
-	MigrationFiles []string
 }
 
 var orderedAnalyzers []*analysis.Analyzer
@@ -133,26 +128,8 @@ func Extract(moduleDir string) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	result, err := combineAllPackageResults(results, diagnostics)
-	if err != nil {
-		return Result{}, err
-	}
-	target := filepath.Join(moduleDir, ".ftl", "migrations")
-	err = os.MkdirAll(target, 0770) // #nosec
-	if err != nil {
-		return Result{}, fmt.Errorf("failed to create migration directory: %w", err)
-	}
-	migrations, err := migration.ExtractSQLMigrations(filepath.Join(moduleDir, "db"), target, result.Module)
-	if err != nil {
-		return Result{}, fmt.Errorf("failed to extract migrations: %w", err)
-	}
-	relativeFiles := []string{}
-	for _, file := range migrations {
-		filePath := filepath.Join("migrations", file)
-		relativeFiles = append(relativeFiles, filePath)
-	}
-	result.MigrationFiles = relativeFiles
-	return result, nil
+	return combineAllPackageResults(results, diagnostics)
+
 }
 
 type refResultType int

@@ -1,4 +1,4 @@
-package migration
+package buildengine
 
 import (
 	"os"
@@ -28,7 +28,7 @@ func TestExtractMigrations(t *testing.T) {
 		sch := &schema.Module{Decls: []schema.Decl{db}}
 
 		// Test
-		files, err := ExtractSQLMigrations(migrationsDir, targetDir, sch)
+		files, err := extractSQLMigrations(migrationsDir, targetDir, sch)
 		assert.NoError(t, err)
 
 		// Validate results
@@ -49,7 +49,7 @@ func TestExtractMigrations(t *testing.T) {
 		targetDir := t.TempDir()
 		sch := &schema.Module{Decls: []schema.Decl{}}
 
-		files, err := ExtractSQLMigrations(migrationsDir, targetDir, sch)
+		files, err := extractSQLMigrations(migrationsDir, targetDir, sch)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(files))
 	})
@@ -59,7 +59,7 @@ func TestExtractMigrations(t *testing.T) {
 		targetDir := t.TempDir()
 		sch := &schema.Module{Decls: []schema.Decl{}}
 
-		files, err := ExtractSQLMigrations(migrationsDir, targetDir, sch)
+		files, err := extractSQLMigrations(migrationsDir, targetDir, sch)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(files))
 	})

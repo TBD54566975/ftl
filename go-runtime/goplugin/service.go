@@ -50,12 +50,11 @@ func (filesUpdatedEvent) updateEvent() {}
 
 // buildContext contains contextual information needed to build.
 type buildContext struct {
-	ID              string
-	Config          moduleconfig.AbsModuleConfig
-	Schema          *schema.Schema
-	Dependencies    []string
-	BuildEnv        []string
-	AdditionalFiles []string
+	ID           string
+	Config       moduleconfig.AbsModuleConfig
+	Schema       *schema.Schema
+	Dependencies []string
+	BuildEnv     []string
 }
 
 func buildContextFromProto(proto *langpb.BuildContext) (buildContext, error) {
@@ -166,8 +165,9 @@ func (s *Service) ModuleConfigDefaults(ctx context.Context, req *connect.Request
 		return nil, err
 	}
 	return connect.NewResponse(&langpb.ModuleConfigDefaultsResponse{
-		Watch:     watch,
-		DeployDir: deployDir,
+		Watch:           watch,
+		DeployDir:       deployDir,
+		SqlMigrationDir: "db",
 	}), nil
 }
 
@@ -405,7 +405,7 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 	}
 	defer release() //nolint:errcheck
 
-	m, buildErrs, additionalFiles, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, buildCtx.Dependencies, buildCtx.BuildEnv, transaction, ongoingState, false)
+	m, buildErrs, err := compile.Build(ctx, projectRoot, stubsRoot, buildCtx.Config, buildCtx.Schema, buildCtx.Dependencies, buildCtx.BuildEnv, transaction, ongoingState, false)
 	if err != nil {
 		if errors.Is(err, compile.ErrInvalidateDependencies) {
 			return &langpb.BuildEvent{
@@ -431,7 +431,6 @@ func build(ctx context.Context, projectRoot, stubsRoot string, buildCtx buildCon
 
 	moduleProto := module.ToProto().(*schemapb.Module) //nolint:forcetypeassert
 	deploy := []string{"main", "launch"}
-	deploy = append(deploy, additionalFiles...)
 	return &langpb.BuildEvent{
 		Event: &langpb.BuildEvent_BuildSuccess{
 			BuildSuccess: &langpb.BuildSuccess{
