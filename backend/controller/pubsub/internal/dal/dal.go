@@ -3,6 +3,7 @@ package dal
 import (
 	"context"
 	"fmt"
+	sl "slices"
 	"strings"
 	"time"
 
@@ -275,15 +276,6 @@ func (d *DAL) CreateSubscriptions(ctx context.Context, key model.DeploymentKey, 
 		if !ok {
 			continue
 		}
-		if !hasSubscribers(s, module.Decls) {
-			// Ignore subscriptions without subscribers
-			// This ensures that controllers don't endlessly try to progress subscriptions without subscribers
-			// https://github.com/TBD54566975/ftl/issues/1685
-			//
-			// It does mean that a subscription will reset to the topic's head if all subscribers are removed and then later re-added
-			logger.Debugf("Skipping upsert of subscription %s for %s due to lack of subscribers", s.Name, key)
-			continue
-		}
 		subscriptionKey := model.NewSubscriptionKey(module.Name, s.Name)
 		result, err := d.db.UpsertSubscription(ctx, dalsql.UpsertSubscriptionParams{
 			Key:         subscriptionKey,
@@ -305,66 +297,42 @@ func (d *DAL) CreateSubscriptions(ctx context.Context, key model.DeploymentKey, 
 	return nil
 }
 
-func hasSubscribers(subscription *schema.Subscription, decls []schema.Decl) bool {
-	for _, d := range decls {
-		verb, ok := d.(*schema.Verb)
-		if !ok {
-			continue
-		}
-		for _, md := range verb.Metadata {
-			subscriber, ok := md.(*schema.MetadataSubscriber)
-			if !ok {
-				continue
-			}
-			if subscriber.Name == subscription.Name {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 func (d *DAL) CreateSubscribers(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 	logger := log.FromContext(ctx)
-	for _, decl := range module.Decls {
-		v, ok := decl.(*schema.Verb)
+	for s := range slices.FilterVariants[*schema.Subscription](module.Decls) {
+		v, ok := slices.Find(sl.Collect(slices.FilterVariants[*schema.Verb](module.Decls)), func(verb *schema.Verb) bool {
+			return verb.Name == s.Subscriber.Name
+		})
 		if !ok {
-			continue
+			return fmt.Errorf("could not find subscriber %q for subscription %q", s.Subscriber.Name, s.Name)
 		}
-		for _, md := range v.Metadata {
-			s, ok := md.(*schema.MetadataSubscriber)
-			if !ok {
-				continue
+		retryParams := schema.RetryParams{}
+		var err error
+		if retryMd, ok := slices.FindVariant[*schema.MetadataRetry](v.Metadata); ok {
+			retryParams, err = retryMd.RetryParams()
+			if err != nil {
+				return fmt.Errorf("could not parse retry parameters for %q: %w", v.Name, err)
 			}
-			sinkRef := schema.RefKey{
+		}
+		subscriberKey := model.NewSubscriberKey(module.Name, s.Name, v.Name)
+		err = d.db.InsertSubscriber(ctx, dalsql.InsertSubscriberParams{
+			Key:              subscriberKey,
+			Module:           module.Name,
+			SubscriptionName: s.Name,
+			Deployment:       key,
+			Sink: schema.RefKey{
 				Module: module.Name,
 				Name:   v.Name,
-			}
-			retryParams := schema.RetryParams{}
-			var err error
-			if retryMd, ok := slices.FindVariant[*schema.MetadataRetry](v.Metadata); ok {
-				retryParams, err = retryMd.RetryParams()
-				if err != nil {
-					return fmt.Errorf("could not parse retry parameters for %q: %w", v.Name, err)
-				}
-			}
-			subscriberKey := model.NewSubscriberKey(module.Name, s.Name, v.Name)
-			err = d.db.InsertSubscriber(ctx, dalsql.InsertSubscriberParams{
-				Key:              subscriberKey,
-				Module:           module.Name,
-				SubscriptionName: s.Name,
-				Deployment:       key,
-				Sink:             sinkRef,
-				RetryAttempts:    int32(retryParams.Count),
-				Backoff:          sqltypes.Duration(retryParams.MinBackoff),
-				MaxBackoff:       sqltypes.Duration(retryParams.MaxBackoff),
-				CatchVerb:        retryParams.Catch,
-			})
-			if err != nil {
-				return fmt.Errorf("could not insert subscriber: %w", libdal.TranslatePGError(err))
-			}
-			logger.Debugf("Inserted subscriber %s for %s", subscriberKey, key)
+			},
+			RetryAttempts: int32(retryParams.Count),
+			Backoff:       sqltypes.Duration(retryParams.MinBackoff),
+			MaxBackoff:    sqltypes.Duration(retryParams.MaxBackoff),
+			CatchVerb:     retryParams.Catch,
+		})
+		if err != nil {
+			return fmt.Errorf("could not insert subscriber: %w", libdal.TranslatePGError(err))
 		}
+		logger.Debugf("Inserted subscriber %s for %s", subscriberKey, key)
 	}
 	return nil
 }

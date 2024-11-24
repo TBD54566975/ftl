@@ -13,9 +13,10 @@ import (
 type Subscription struct {
 	Pos Position `parser:"" protobuf:"1,optional"`
 
-	Comments []string `parser:"@Comment*" protobuf:"2"`
-	Name     string   `parser:"'subscription' @Ident" protobuf:"3"`
-	Topic    *Ref     `parser:"@@" protobuf:"4"`
+	Comments   []string `parser:"@Comment*" protobuf:"2"`
+	Name       string   `parser:"'subscription' @Ident" protobuf:"3"`
+	Topic      *Ref     `parser:"(@@" protobuf:"4"`
+	Subscriber *Ref     `parser:": @@)" protobuf:"4"`
 }
 
 var _ Decl = (*Subscription)(nil)
@@ -34,7 +35,7 @@ func (s *Subscription) IsExported() bool { return false }
 func (s *Subscription) String() string {
 	w := &strings.Builder{}
 	fmt.Fprint(w, EncodeComments(s.Comments))
-	fmt.Fprintf(w, "subscription %s %v", s.Name, s.Topic)
+	fmt.Fprintf(w, "subscription %s (%v : %v)", s.Name, s.Topic, s.Subscriber)
 	return w.String()
 }
 
