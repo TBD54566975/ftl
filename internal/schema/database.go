@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	schemapb "github.com/TBD54566975/ftl/backend/protos/xyz/block/ftl/v1/schema"
 )
@@ -14,8 +15,8 @@ const MySQLDatabaseType = "mysql"
 
 //protobuf:3
 type Database struct {
-	Pos     Position         `parser:"" protobuf:"1,optional"`
-	Runtime *DatabaseRuntime `parser:"" protobuf:"31634,optional"`
+	Pos     Position        `parser:"" protobuf:"1,optional"`
+	Runtime DatabaseRuntime `parser:"" protobuf:"31634,optional"`
 
 	Comments []string   `parser:"@Comment*" protobuf:"2"`
 	Type     string     `parser:"'database' @('postgres'|'mysql')" protobuf:"4"`
@@ -46,12 +47,21 @@ func (d *Database) String() string {
 }
 
 func (d *Database) ToProto() proto.Message {
+	var runtime *schemapb.DatabaseRuntime
+	if d.Runtime != nil {
+		r, ok := d.Runtime.ToProto().(*schemapb.DatabaseRuntime)
+		if !ok {
+			panic(fmt.Sprintf("unknown database runtime type: %T", d.Runtime))
+		}
+		runtime = r
+	}
+
 	return &schemapb.Database{
 		Pos:      posToProto(d.Pos),
 		Comments: d.Comments,
 		Name:     d.Name,
 		Type:     d.Type,
-		Runtime:  d.Runtime.ToProto(),
+		Runtime:  runtime,
 		Metadata: metadataListToProto(d.Metadata),
 	}
 }
@@ -70,20 +80,45 @@ func DatabaseFromProto(s *schemapb.Database) *Database {
 	}
 }
 
-type DatabaseRuntime struct {
-	DSN string `parser:"" protobuf:"1"`
+type DatabaseRuntime interface {
+	Symbol
+	databaseRuntime()
 }
 
-func (d *DatabaseRuntime) ToProto() *schemapb.DatabaseRuntime {
+//protobuf:1
+type DSNDatabaseRuntime struct {
+	Pos Position `parser:"" protobuf:"1,optional"`
+
+	DSN string `parser:"" protobuf:"2"`
+}
+
+var _ DatabaseRuntime = (*DSNDatabaseRuntime)(nil)
+
+func (d *DSNDatabaseRuntime) Position() Position { return d.Pos }
+func (d *DSNDatabaseRuntime) databaseRuntime()   {}
+func (d *DSNDatabaseRuntime) String() string     { return d.DSN }
+func (d *DSNDatabaseRuntime) ToProto() protoreflect.ProtoMessage {
 	if d == nil {
 		return nil
 	}
-	return &schemapb.DatabaseRuntime{Dsn: d.DSN}
+	return &schemapb.DatabaseRuntime{
+		Value: &schemapb.DatabaseRuntime_DsnDatabaseRuntime{
+			DsnDatabaseRuntime: &schemapb.DSNDatabaseRuntime{Dsn: d.DSN},
+		},
+	}
 }
 
-func DatabaseRuntimeFromProto(s *schemapb.DatabaseRuntime) *DatabaseRuntime {
+func (d *DSNDatabaseRuntime) schemaChildren() []Node { return nil }
+func (d *DSNDatabaseRuntime) schemaSymbol()          {}
+
+func DatabaseRuntimeFromProto(s *schemapb.DatabaseRuntime) DatabaseRuntime {
 	if s == nil {
 		return nil
 	}
-	return &DatabaseRuntime{DSN: s.Dsn}
+	switch s := s.Value.(type) {
+	case *schemapb.DatabaseRuntime_DsnDatabaseRuntime:
+		return &DSNDatabaseRuntime{DSN: s.DsnDatabaseRuntime.Dsn}
+	default:
+		panic(fmt.Sprintf("unknown database runtime type: %T", s))
+	}
 }

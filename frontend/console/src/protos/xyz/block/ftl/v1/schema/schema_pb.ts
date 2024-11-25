@@ -232,6 +232,49 @@ export class Config extends Message<Config> {
 }
 
 /**
+ * @generated from message xyz.block.ftl.v1.schema.DSNDatabaseRuntime
+ */
+export class DSNDatabaseRuntime extends Message<DSNDatabaseRuntime> {
+  /**
+   * @generated from field: optional xyz.block.ftl.v1.schema.Position pos = 1;
+   */
+  pos?: Position;
+
+  /**
+   * @generated from field: string dsn = 2;
+   */
+  dsn = "";
+
+  constructor(data?: PartialMessage<DSNDatabaseRuntime>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "xyz.block.ftl.v1.schema.DSNDatabaseRuntime";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "pos", kind: "message", T: Position, opt: true },
+    { no: 2, name: "dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DSNDatabaseRuntime {
+    return new DSNDatabaseRuntime().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DSNDatabaseRuntime {
+    return new DSNDatabaseRuntime().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DSNDatabaseRuntime {
+    return new DSNDatabaseRuntime().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DSNDatabaseRuntime | PlainMessage<DSNDatabaseRuntime> | undefined, b: DSNDatabaseRuntime | PlainMessage<DSNDatabaseRuntime> | undefined): boolean {
+    return proto3.util.equals(DSNDatabaseRuntime, a, b);
+  }
+}
+
+/**
  * @generated from message xyz.block.ftl.v1.schema.Data
  */
 export class Data extends Message<Data> {
@@ -376,9 +419,15 @@ export class Database extends Message<Database> {
  */
 export class DatabaseRuntime extends Message<DatabaseRuntime> {
   /**
-   * @generated from field: string dsn = 1;
+   * @generated from oneof xyz.block.ftl.v1.schema.DatabaseRuntime.value
    */
-  dsn = "";
+  value: {
+    /**
+     * @generated from field: xyz.block.ftl.v1.schema.DSNDatabaseRuntime dsn_database_runtime = 1;
+     */
+    value: DSNDatabaseRuntime;
+    case: "dsnDatabaseRuntime";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<DatabaseRuntime>) {
     super();
@@ -388,7 +437,7 @@ export class DatabaseRuntime extends Message<DatabaseRuntime> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "xyz.block.ftl.v1.schema.DatabaseRuntime";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "dsn", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 1, name: "dsn_database_runtime", kind: "message", T: DSNDatabaseRuntime, oneof: "value" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DatabaseRuntime {
