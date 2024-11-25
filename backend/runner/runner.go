@@ -24,6 +24,7 @@ import (
 	"github.com/alecthomas/types/optional"
 	"github.com/jpillora/backoff"
 	"github.com/otiai10/copy"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -39,6 +40,7 @@ import (
 	"github.com/TBD54566975/ftl/internal/log"
 	"github.com/TBD54566975/ftl/internal/model"
 	ftlobservability "github.com/TBD54566975/ftl/internal/observability"
+	"github.com/TBD54566975/ftl/internal/pgproxy"
 	"github.com/TBD54566975/ftl/internal/rpc"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
@@ -129,7 +131,42 @@ func Start(ctx context.Context, config Config) error {
 		cancelFunc:         doneFunc,
 		devEndpoint:        config.DevEndpoint,
 	}
-	err = svc.deploy(ctx)
+
+	deploymentKey, err := model.ParseDeploymentKey(config.Deployment)
+	if err != nil {
+		observability.Deployment.Failure(ctx, optional.None[string]())
+		svc.cancelFunc()
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
+	}
+
+	module, err := svc.getModule(ctx, deploymentKey)
+	if err != nil {
+		return fmt.Errorf("failed to get module: %w", err)
+	}
+
+	pgProxyStarted := make(chan optional.Option[pgproxy.Started])
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return svc.startPgProxy(ctx, module, pgProxyStarted)
+	})
+	g.Go(func() error {
+		select {
+		case pgProxy := <-pgProxyStarted:
+			return svc.startDeployment(ctx, deploymentKey, module, pgProxy)
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	})
+
+	return fmt.Errorf("failure in runner: %w", g.Wait())
+}
+
+func (s *Service) startDeployment(ctx context.Context, key model.DeploymentKey, module *schema.Module, pgProxyOpt optional.Option[pgproxy.Started]) error {
+	if pgProxy, ok := pgProxyOpt.Get(); ok {
+		os.Setenv("FTL_PROXY_POSTGRES_ADDRESS", fmt.Sprintf("127.0.0.1:%d", pgProxy.Address.Port))
+	}
+
+	err := s.deploy(ctx, key, module)
 	if err != nil {
 		// If we fail to deploy we just exit
 		// Kube or local scaling will start a new instance to continue
@@ -137,17 +174,15 @@ func Start(ctx context.Context, config Config) error {
 		// It is managed externally by the scaling system
 		return err
 	}
-
 	go func() {
-		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.RegisterRunner, svc.registrationLoop)
-		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, controllerClient.StreamDeploymentLogs, svc.streamLogsLoop)
+		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, s.controllerClient.RegisterRunner, s.registrationLoop)
+		go rpc.RetryStreamingClientStream(ctx, backoff.Backoff{}, s.controllerClient.StreamDeploymentLogs, s.streamLogsLoop)
 	}()
-
-	return rpc.Serve(ctx, config.Bind,
-		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, svc),
-		rpc.HTTP("/", svc),
-		rpc.HealthCheck(svc.healthCheck),
-	)
+	return fmt.Errorf("failure in runner: %w", rpc.Serve(ctx, s.config.Bind,
+		rpc.GRPC(ftlv1connect.NewVerbServiceHandler, s),
+		rpc.HTTP("/", s),
+		rpc.HealthCheck(s.healthCheck),
+	))
 }
 
 func newIdentityStore(ctx context.Context, config Config, key model.RunnerKey, controllerClient ftlv1connect.ControllerServiceClient) (*identity.Store, error) {
@@ -294,25 +329,31 @@ func (s *Service) Ping(ctx context.Context, req *connect.Request[ftlv1.PingReque
 	return connect.NewResponse(&ftlv1.PingResponse{}), nil
 }
 
-func (s *Service) deploy(ctx context.Context) error {
+func (s *Service) getModule(ctx context.Context, key model.DeploymentKey) (*schema.Module, error) {
+	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: s.config.Deployment}))
+	if err != nil {
+		observability.Deployment.Failure(ctx, optional.Some(key.String()))
+		return nil, fmt.Errorf("failed to get deployment: %w", err)
+	}
+
+	module, err := schema.ModuleFromProto(gdResp.Msg.Schema)
+	if err != nil {
+		observability.Deployment.Failure(ctx, optional.Some(key.String()))
+		return nil, fmt.Errorf("invalid module: %w", err)
+	}
+	return module, nil
+}
+
+func (s *Service) deploy(ctx context.Context, key model.DeploymentKey, module *schema.Module) error {
 	logger := log.FromContext(ctx)
+
 	if err, ok := s.registrationFailure.Load().Get(); ok {
 		observability.Deployment.Failure(ctx, optional.None[string]())
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("failed to register runner: %w", err))
 	}
 
-	key, err := model.ParseDeploymentKey(s.config.Deployment)
-	if err != nil {
-		observability.Deployment.Failure(ctx, optional.None[string]())
-		s.cancelFunc()
-		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid deployment key: %w", err))
-	}
-
 	observability.Deployment.Started(ctx, key.String())
 	defer observability.Deployment.Completed(ctx, key.String())
-
-	deploymentLogger := s.getDeploymentLogger(ctx, key)
-	ctx = log.ContextWithLogger(ctx, deploymentLogger)
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -321,25 +362,18 @@ func (s *Service) deploy(ctx context.Context) error {
 		return errors.New("already deployed")
 	}
 
-	gdResp, err := s.controllerClient.GetDeployment(ctx, connect.NewRequest(&ftlv1.GetDeploymentRequest{DeploymentKey: s.config.Deployment}))
-	if err != nil {
-		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return fmt.Errorf("failed to get deployment: %w", err)
-	}
-	module, err := schema.ModuleFromProto(gdResp.Msg.Schema)
-	if err != nil {
-		observability.Deployment.Failure(ctx, optional.Some(key.String()))
-		return fmt.Errorf("invalid module: %w", err)
-	}
+	deploymentLogger := s.getDeploymentLogger(ctx, key)
+	ctx = log.ContextWithLogger(ctx, deploymentLogger)
+
 	deploymentDir := filepath.Join(s.config.DeploymentDir, module.Name, key.String())
 	if s.config.TemplateDir != "" {
-		err = copy.Copy(s.config.TemplateDir, deploymentDir)
+		err := copy.Copy(s.config.TemplateDir, deploymentDir)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
 			return fmt.Errorf("failed to copy template directory: %w", err)
 		}
 	} else {
-		err = os.MkdirAll(deploymentDir, 0700)
+		err := os.MkdirAll(deploymentDir, 0700)
 		if err != nil {
 			observability.Deployment.Failure(ctx, optional.Some(key.String()))
 			return fmt.Errorf("failed to create deployment directory: %w", err)
@@ -377,7 +411,7 @@ func (s *Service) deploy(ctx context.Context) error {
 		deployment, cmdCtx, err := plugin.Spawn(
 			unstoppable.Context(verbCtx),
 			log.FromContext(ctx).GetLevel(),
-			gdResp.Msg.Schema.Name,
+			module.Name,
 			deploymentDir,
 			"./launch",
 			ftlv1connect.NewVerbServiceClient,
@@ -567,4 +601,45 @@ func (s *Service) healthCheck(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 	writer.WriteHeader(http.StatusServiceUnavailable)
+}
+
+func (s *Service) startPgProxy(ctx context.Context, module *schema.Module, started chan<- optional.Option[pgproxy.Started]) error {
+	logger := log.FromContext(ctx)
+
+	databases := map[string]*schema.Database{}
+	for _, decl := range module.Decls {
+		if db, ok := decl.(*schema.Database); ok && db.Type == "postgres" {
+			databases[db.Name] = db
+		}
+	}
+
+	if len(databases) == 0 {
+		started <- optional.None[pgproxy.Started]()
+		return nil
+	}
+
+	// Map the channel to the optional.Option[pgproxy.Started] type.
+	channel := make(chan pgproxy.Started)
+	go func() {
+		select {
+		case pgProxy := <-channel:
+			started <- optional.Some(pgProxy)
+		case <-ctx.Done():
+			return
+		}
+	}()
+
+	if err := pgproxy.New(":0", func(ctx context.Context, params map[string]string) (string, error) {
+		db, ok := databases[params["database"]]
+		if !ok {
+			return "", fmt.Errorf("database %s not found", params["database"])
+		}
+		logger.Debugf("Resolved DSN (%s): %s", params["database"], db.Runtime.DSN)
+
+		return db.Runtime.DSN, nil
+	}).Start(ctx, channel); err != nil {
+		return fmt.Errorf("failed to start pgproxy: %w", err)
+	}
+
+	return nil
 }

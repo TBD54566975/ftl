@@ -2,7 +2,9 @@ package pgproxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -30,15 +32,19 @@ type DSNConstructor func(ctx context.Context, params map[string]string) (string,
 //
 // address is the address to listen on for incoming connections.
 // connectionFn is a function that constructs a new connection string from parameters of the incoming connection.
-func New(config Config, connectionFn DSNConstructor) *PgProxy {
+func New(listenAddress string, connectionFn DSNConstructor) *PgProxy {
 	return &PgProxy{
-		listenAddress:      config.Listen,
+		listenAddress:      listenAddress,
 		connectionStringFn: connectionFn,
 	}
 }
 
-// Start the proxy.
-func (p *PgProxy) Start(ctx context.Context) error {
+type Started struct {
+	Address *net.TCPAddr
+}
+
+// Start the proxy
+func (p *PgProxy) Start(ctx context.Context, started chan<- Started) error {
 	logger := log.FromContext(ctx)
 
 	listener, err := net.Listen("tcp", p.listenAddress)
@@ -46,6 +52,14 @@ func (p *PgProxy) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to listen on %s: %w", p.listenAddress, err)
 	}
 	defer listener.Close()
+
+	if started != nil {
+		addr, ok := listener.Addr().(*net.TCPAddr)
+		if !ok {
+			panic("failed to get TCP address")
+		}
+		started <- Started{Address: addr}
+	}
 
 	for {
 		conn, err := listener.Accept()
@@ -70,6 +84,10 @@ func HandleConnection(ctx context.Context, conn net.Conn, connectionFn DSNConstr
 	backend, startup, err := connectBackend(ctx, conn)
 	if err != nil {
 		logger.Errorf(err, "failed to connect backend")
+		return
+	}
+	if backend == nil {
+		logger.Infof("client disconnected without startup message: %s", conn.RemoteAddr())
 		return
 	}
 	logger.Debugf("startup message: %+v", startup)
@@ -115,14 +133,21 @@ func handleBackendError(ctx context.Context, backend *pgproto3.Backend, err erro
 }
 
 // connectBackend establishes a connection according to https://www.postgresql.org/docs/current/protocol-flow.html
-func connectBackend(_ context.Context, conn net.Conn) (*pgproto3.Backend, *pgproto3.StartupMessage, error) {
+func connectBackend(ctx context.Context, conn net.Conn) (*pgproto3.Backend, *pgproto3.StartupMessage, error) {
+	logger := log.FromContext(ctx)
+
 	backend := pgproto3.NewBackend(conn, conn)
 
 	for {
 		startup, err := backend.ReceiveStartupMessage()
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to receive startup message: %w", err)
+		if errors.Is(err, io.EOF) {
+			// some clients just terminate the connection and open a new one if it does not support SSL / GSS encryption
+			return nil, nil, nil
+		} else if err != nil {
+			return nil, nil, fmt.Errorf("failed to receive startup message from %s: %w", conn.RemoteAddr(), err)
 		}
+
+		logger.Debugf("received startup message: %T from %s", startup, conn.RemoteAddr())
 
 		switch startup := startup.(type) {
 		case *pgproto3.SSLRequest:

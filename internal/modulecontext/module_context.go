@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -158,7 +159,12 @@ func (m ModuleContext) GetSecret(name string, value any) error {
 // if the database is not a test database.
 func (m ModuleContext) GetDatabase(name string, dbType DBType) (string, bool, error) {
 	db, ok := m.databases[name]
+	// TODO: Remove databases from the context once we have a way to inject test dbs in some other way
 	if !ok {
+		if dbType == DBTypePostgres {
+			proxyAddress := os.Getenv("FTL_PROXY_POSTGRES_ADDRESS")
+			return "postgres://" + proxyAddress + "/" + name, false, nil
+		}
 		return "", false, fmt.Errorf("missing DSN for database %s", name)
 	}
 	if db.DBType != dbType {
