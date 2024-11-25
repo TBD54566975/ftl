@@ -73,8 +73,6 @@ type CLI struct {
 	Interactive interactiveCmd            `cmd:"" help:"Interactive mode." default:""`
 	Dev         devCmd                    `cmd:"" help:"Develop FTL modules. Will start the FTL cluster, build and deploy all modules found in the specified directories, and watch for changes."`
 	Serve       serveCmd                  `cmd:"" help:"Start the FTL server."`
-	Box         boxCmd                    `cmd:"" help:"Build a self-contained Docker container for running a set of module."`
-	BoxRun      boxRunCmd                 `cmd:"" hidden:"" help:"Run FTL inside an ftl-in-a-box container"`
 	Completion  kongcompletion.Completion `cmd:"" help:"Outputs shell code for initialising tab completions."`
 
 	// Specify the 1Password vault to access secrets from.
@@ -178,7 +176,6 @@ func createKongApplication(cli any, csm *currentStatusManager) *kong.Kong {
 			"numcpu":  strconv.Itoa(runtime.NumCPU()),
 			"gitroot": gitRoot,
 			"dsn":     dsn.PostgresDSN("ftl"),
-			"boxdsn":  dsn.PostgresDSN("ftl", dsn.Port(5432)),
 		},
 		kong.Exit(func(code int) {
 			if sm, ok := csm.statusManager.Get(); ok {

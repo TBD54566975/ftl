@@ -3,37 +3,14 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/TBD54566975/ftl/internal/exec"
 	. "github.com/TBD54566975/ftl/internal/integration"
-	"github.com/TBD54566975/ftl/internal/log"
 )
-
-func TestBox(t *testing.T) {
-	t.Skip("skipping due to timeouts")
-
-	// Need a longer timeout to wait for FTL inside Docker.
-	t.Setenv("FTL_INTEGRATION_TEST_TIMEOUT", "30s")
-	Infof("Building local ftl0/ftl-box:latest Docker image")
-	ctx := log.ContextWithNewDefaultLogger(context.Background())
-	err := exec.Command(ctx, log.Debug, "../..", "docker", "build", "-t", "ftl0/ftl-box:latest", "--progress=plain", "--platform=linux/amd64", "-f", "Dockerfile.box", ".").Run()
-	assert.NoError(t, err)
-	Run(t,
-		WithoutController(),
-		CopyModule("time"),
-		CopyModule("echo"),
-		Exec("ftl", "box", "echo", "--compose=echo-compose.yml"),
-		Exec("docker", "compose", "-f", "echo-compose.yml", "up", "--wait"),
-		Call[Obj, Obj]("echo", "echo", Obj{"name": "Alice"}, nil),
-		Exec("docker", "compose", "-f", "echo-compose.yml", "down", "--rmi", "local"),
-	)
-}
 
 func TestConfigsWithController(t *testing.T) {
 	Run(t, configActions(t)...)
