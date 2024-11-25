@@ -1,0 +1,8 @@
+FROM ubuntu:24.04
+
+WORKDIR /root/
+
+COPY docker-build/ftl-http-ingress .
+EXPOSE 8891
+
+CMD ["/root/ftl-http-ingress"]

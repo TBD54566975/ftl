@@ -1,0 +1,24 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    {{- include "ftl.labels" . | nindent 4 }}
+  name: {{ include "ftl.fullname" . }}-http-ingress
+  {{- if .Values.ingress.service.annotations }}
+  annotations:
+    {{- toYaml .Values.service.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  ports:
+    {{- range .Values.ingress.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      protocol: {{ .protocol | default "TCP" }}
+      targetPort: {{ .targetPort }}
+    {{- end }}
+  selector:
+    {{- include "ftl-http-ingress.selectorLabels" . | nindent 4 }}
+  type: {{ .Values.controller.ingressService.type | default "ClusterIP" }}
+
+{{- end }}

@@ -17,7 +17,7 @@ start: setup full-deploy
 
 rm: teardown
 
-full-deploy: build-controller build-runners build-provisioner setup-istio-cluster build-cron
+full-deploy: build-controller build-runners build-provisioner setup-istio-cluster build-cron build-http-ingress
   #!/bin/bash
   kubectl rollout restart deployment ftl-controller || true # if this exists already restart it to get the latest image
   just apply || sleep 5 # wait for CRDs to be created, the initial apply will usually fail
@@ -28,6 +28,7 @@ wait-for-kube:
   while [ -z "$(kubectl get pod ftl-postgresql-0)" ]; do sleep 1; done
   kubectl wait --for=condition=ready pod/ftl-postgresql-0 --timeout=5m
   kubectl wait --for=condition=available deployment/ftl-controller --timeout=5m
+  kubectl wait --for=condition=available deployment/ftl-http-ingress --timeout=5m
   kubectl wait --for=condition=available deployment/registry --timeout=5m
   sleep 1
   ftl status || sleep 5 && ftl status
@@ -116,7 +117,7 @@ build-executables:
   # it is way faster than building in the docker files
   java -version #make sure hermit has downloaded Java
   mkdir -p "docker-build"
-  cd ../ && GOARCH=amd64 GOOS=linux CGO_ENABLED=0 just build ftl-controller ftl-runner ftl-initdb ftl ftl-provisioner ftl-provisioner-cloudformation ftl-cron
+  cd ../ && GOARCH=amd64 GOOS=linux CGO_ENABLED=0 just build ftl-controller ftl-runner ftl-initdb ftl ftl-provisioner ftl-provisioner-cloudformation ftl-cron ftl-http-ingress
   cp ../build/release/* ./docker-build/
 
 build-controller: build-executables setup-registry setup-istio-cluster
@@ -143,7 +144,12 @@ build-cron: build-executables setup-registry setup-istio-cluster
   docker tag ftl-cron:latest {{registry_local}}/ftl-cron:latest
   docker push {{registry_local}}/ftl-cron:latest
 
-build: build-controller build-runners build-provisioner build-cron
+build-http-ingress: build-executables setup-registry setup-istio-cluster
+  docker build --platform linux/amd64 -t ftl-http-ingress:latest -f Dockerfile.http-ingress.test .
+  docker tag ftl-http-ingress:latest {{registry_local}}/ftl-http-ingress:latest
+  docker push {{registry_local}}/ftl-http-ingress:latest
+
+build: build-controller build-runners build-provisioner build-cron build-http-ingress
 
 deploy path:
 	#!/usr/bin/env bash

@@ -93,28 +93,9 @@ type Controller struct {
 }
 
 type Status struct {
-	Controllers   []Controller
-	Runners       []Runner
-	Deployments   []Deployment
-	IngressRoutes []IngressRouteEntry
-}
-
-type IngressRoute struct {
-	Runner     model.RunnerKey
-	Deployment model.DeploymentKey
-	Endpoint   string
-	Path       string
-	Module     string
-	Verb       string
-	Method     string
-}
-
-type IngressRouteEntry struct {
-	Deployment model.DeploymentKey
-	Module     string
-	Verb       string
-	Method     string
-	Path       string
+	Controllers []Controller
+	Runners     []Runner
+	Deployments []Deployment
 }
 
 type DeploymentArtefact struct {

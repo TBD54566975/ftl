@@ -4,6 +4,11 @@ ingress:
   annotations:
     ingress.kubernetes.io/ssl-redirect: "false"
     kubernetes.io/ingress.class: traefik
+  ingressAnnotations:
+    ingress.kubernetes.io/ssl-redirect: "false"
+    kubernetes.io/ingress.class: traefik
+
+
 controller:
   podAnnotations:
     proxy.istio.io/config: |

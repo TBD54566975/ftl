@@ -91,13 +91,32 @@ jobs:
           name: docker-cron-artifact
           path: artifacts/ftl-cron
           retention-days: 1
+  build-http-ingress:
+    name: Build HTTP Ingress Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Init Hermit
+        uses: cashapp/activate-hermit@v1.1.3
+      - name: Build
+        run: |
+          just build-docker http-ingress
+          mkdir -p artifacts/ftl-provisioner
+          docker save -o artifacts/ftl-http-ingress/ftl-http-ingress.tar ftl0/ftl-http-ingress:latest
+      - name: Temporarily save Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-http-ingress-artifact
+          path: artifacts/ftl-http-ingress
+          retention-days: 1
   release-docker:
     name: Release Assets
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    needs: [build-runners, build-controller, build-provisioner, build-cron]
+    needs: [build-runners, build-controller, build-provisioner, build-cron, build-http-ingress]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -130,6 +149,11 @@ jobs:
         with:
           name: docker-cron-artifact
           path: artifacts/ftl-cron
+      - name: Retrieve HTTP Ingress Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-http-ingress-artifact
+          path: artifacts/ftl-http-ingress
       - name: Load Runner Docker image
         run: docker load -i artifacts/ftl-runner/ftl-runner.tar
       - name: Load JVM Runner Docker image
@@ -140,6 +164,8 @@ jobs:
         run: docker load -i artifacts/ftl-provisioner/ftl-provisioner.tar
       - name: Load Cron Docker image
         run: docker load -i artifacts/ftl-cron/ftl-cron.tar
+      - name: Load HTTP Ingress Docker image
+        run: docker load -i artifacts/ftl-http-ingress/ftl-http-ingress.tar
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -163,6 +189,9 @@ jobs:
           docker tag ftl0/ftl-cron:latest ftl0/ftl-cron:"$GITHUB_SHA"
           docker tag ftl0/ftl-cron:latest ftl0/ftl-cron:"$version"
           docker push -a ftl0/ftl-cron
+          docker tag ftl0/ftl-http-ingress:latest ftl0/ftl-http-ingress:"$GITHUB_SHA"
+          docker tag ftl0/ftl-http-ingress:latest ftl0/ftl-http-ingress:"$version"
+          docker push -a ftl0/ftl-http-ingress
 
   create-go-release:
     name: Release Go Binaries

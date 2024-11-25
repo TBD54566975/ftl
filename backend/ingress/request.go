@@ -11,15 +11,14 @@ import (
 
 	"github.com/alecthomas/types/optional"
 
-	"github.com/TBD54566975/ftl/backend/controller/dal/model"
 	"github.com/TBD54566975/ftl/internal/schema"
 	"github.com/TBD54566975/ftl/internal/slices"
 )
 
-// BuildRequestBody extracts the HttpRequest body from an HTTP request.
-func BuildRequestBody(route *model.IngressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
+// buildRequestBody extracts the HttpRequest body from an HTTP request.
+func buildRequestBody(route *ingressRoute, r *http.Request, sch *schema.Schema) ([]byte, error) {
 	verb := &schema.Verb{}
-	err := sch.ResolveToType(&schema.Ref{Name: route.Verb, Module: route.Module}, verb)
+	err := sch.ResolveToType(&schema.Ref{Name: route.verb, Module: route.module}, verb)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +34,7 @@ func BuildRequestBody(route *model.IngressRoute, r *http.Request, sch *schema.Sc
 
 	if metadata, ok := verb.GetMetadataIngress().Get(); ok && metadata.Type == "http" {
 		pathParametersMap := map[string]string{}
-		matchSegments(route.Path, r.URL.Path, func(segment, value string) {
+		matchSegments(route.path, r.URL.Path, func(segment, value string) {
 			pathParametersMap[segment] = value
 		})
 		pathParameters, err := manglePathParameters(pathParametersMap, request, sch)

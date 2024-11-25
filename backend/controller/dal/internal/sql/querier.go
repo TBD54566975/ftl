@@ -24,7 +24,6 @@ type Querier interface {
 	CompleteEventForSubscription(ctx context.Context, name string, module string) error
 	CreateAsyncCall(ctx context.Context, arg CreateAsyncCallParams) (int64, error)
 	CreateDeployment(ctx context.Context, moduleName string, schema []byte, key model.DeploymentKey) error
-	CreateIngressRoute(ctx context.Context, arg CreateIngressRouteParams) error
 	CreateRequest(ctx context.Context, origin Origin, key model.RequestKey, sourceAddr string) error
 	DeleteSubscribers(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriberKey, error)
 	DeleteSubscriptions(ctx context.Context, deployment model.DeploymentKey) ([]model.SubscriptionKey, error)
@@ -34,7 +33,6 @@ type Querier interface {
 	GetActiveControllers(ctx context.Context) ([]Controller, error)
 	GetActiveDeploymentSchemas(ctx context.Context) ([]GetActiveDeploymentSchemasRow, error)
 	GetActiveDeployments(ctx context.Context) ([]GetActiveDeploymentsRow, error)
-	GetActiveIngressRoutes(ctx context.Context) ([]GetActiveIngressRoutesRow, error)
 	GetActiveRunners(ctx context.Context) ([]GetActiveRunnersRow, error)
 	// Return the digests that exist in the database.
 	GetArtefactDigests(ctx context.Context, digests [][]byte) ([][]byte, error)
@@ -46,8 +44,6 @@ type Querier interface {
 	GetDeploymentsWithArtefacts(ctx context.Context, digests [][]byte, schema []byte, count int64) ([]GetDeploymentsWithArtefactsRow, error)
 	GetDeploymentsWithMinReplicas(ctx context.Context) ([]GetDeploymentsWithMinReplicasRow, error)
 	GetExistingDeploymentForModule(ctx context.Context, name string) (GetExistingDeploymentForModuleRow, error)
-	// Get the runner endpoints corresponding to the given ingress route.
-	GetIngressRoutes(ctx context.Context) ([]GetIngressRoutesRow, error)
 	GetModulesByID(ctx context.Context, ids []int64) ([]Module, error)
 	GetNextEventForSubscription(ctx context.Context, consumptionDelay sqltypes.Duration, topic model.TopicKey, cursor optional.Option[model.TopicEventKey]) (GetNextEventForSubscriptionRow, error)
 	GetProcessList(ctx context.Context) ([]GetProcessListRow, error)
